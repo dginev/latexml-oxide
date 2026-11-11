@@ -1,0 +1,22 @@
+% mechanism: REVTeX's `\maketitle` lets `\author` to `\@gobble` (revtex4-2.cls:2676), so a document's later
+%   `\renewcommand{\author}` takes effect, as in TeX: the switch lifts the binding's lock on the setters it lets
+%   (revtex4_cls.rs `switch_off_author_block_after_maketitle`), in the same scope
+% witness: 2412.14256 (`authors_short.tex` typesets its author list after `\maketitle`); study CL160
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "T / Ann Able1 , Bob Baker2 / 1 Univ X / Text."
+% engines: rust int159b: 0 errors, `Info:ignore:\author` (the redefinition refused), two invented creators, the body
+%   "1, 2"; int160b (RB1): the names lost silently, the body "1, 2". RB1c: as expected
+% expect:  0 errors, 0 warnings; no creator; the body "Ann Able<sup>1</sup>, Bob Baker<sup>2</sup>", then "1 Univ X"
+% status:  GREEN
+\documentclass{revtex4-2}
+\begin{document}
+\title{T}
+\author{~}
+\maketitle
+{\renewcommand{\author}[2]{#1$^{#2}$}
+\renewcommand{\affiliation}[2]{$^{#1}$ #2\\}
+\author{Ann Able}{1}, \author{Bob Baker}{2}
+
+\affiliation{1}{Univ X}
+}
+Text.
+\end{document}

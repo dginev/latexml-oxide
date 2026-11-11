@@ -242,27 +242,16 @@ LoadDefinitions!({
   Digest!("\\InputIfFileExists{\\jobname.rty}{}{}")?;
 });
 
-/// REVTeX's `\maketitle` switches the author block's setters off once it has set the block (revtex4-2.cls:2670-2684 and
-/// revtex4-1.cls:2649-2662 `\frontmatter@maketitle`, revtex4.cls:4709-4717 `\maketitle`: `\let\and\relax`,
-/// `\let\affiliation\@gobble`, `\let\author\@gobble`, `\let\email\@gobble`, `\let\thanks\@gobble`) and leaves `\title`
-/// the setter it was (revtex4.cls:4259-4263 `\renewcommand\title[2][]{\def\@title{#2}…}`), so a block the document
-/// repeats after it (a supplement's) prints nothing. The kernel `\maketitle` relaxes `\title`, `\author`, `\date`
-/// (sect05.rs `\lx@maketitle@cleanup`): the repeat's names and title printed as body text, and its
-/// `\affiliation`/`\email` reached the last author (2401.15572, 1801.07635, 1812.00931, 2510.13035, 2602.09975,
-/// 2307.07324, 2001.07542, 2111.12484). Local `\let`s, as the class has them, after the kernel's global cleanup;
-/// `\title` stores its argument silently (`\lx@deposit@title`). Like the cleanup, they yield to a document's own
-/// `\maketitle` (`\maketitle:redefined`; 2509.25344 defines one without them) and to its own `\frontmatter@maketitle`,
-/// which no binding defines (2111.12484 copies the class's with these lines commented out, and its PDF prints the
-/// supplement's block again). `\date` stays the kernel's: a block a document re-enables `\maketitle` for prints its
-/// date (2606.04868), which a silent setter would lose (`revtex_date_after_maketitle_prints_as_text_red.tex`). The
-/// class's other lines (its stores emptied, `\@AF@join` an error, revtex4-1/4-2's `\abstract` undefined) are not
-/// ported: the stores are not ours, and an undefined `{abstract}` would lose the text. A subfile's block is read inside
-/// the group its fake `{document}` opens (subfiles_sty.rs), which undoes these, as subfiles.sty's own group does in
-/// pdflatex: there the PDF prints the block again, and its `\affiliation`s still reach the last author
-/// (`revtex_subfile_repeated_author_block_red.tex`). Not in revtex4_support_sty.rs, which aastex, emulateapj and
-/// quantumarticle load, and only when the document's class is REVTeX's own (`is_document_class`): aastex_cls.rs loads
-/// this binding as its base, and AASTeX's `\maketitle` is its own (aastex701.cls:13231-13266 switches off only
-/// `\affiliation` and `\author`, and prints an appendix's block).
+/// REVTeX's `\maketitle` switches the author block off (revtex4-2.cls:2670-2684, revtex4-1.cls:2649-2662,
+/// revtex4.cls:4709-4717: `\affiliation`, `\author`, `\email`, `\thanks` to `\@gobble`, `\and` to `\relax`), so a block
+/// a document repeats after it (a supplement's) prints nothing (2401.15572, 1801.07635, 1812.00931, 2510.13035,
+/// 2602.09975, 2307.07324, 2001.07542, 2111.12484). Only that block is switched off, from its first `\author` on; a
+/// setter the document uses only after `\maketitle` keeps its text, as authored text is kept (FIDELITY_CHARTER §2;
+/// 1309.4768, 1106.2389, 2304.09163), and `\title`, `\date` stay the kernel's
+/// (2606.04868 prints a re-enabled block's date). The class's `\let` lets a document's
+/// later `\renewcommand` of these through (2412.14256), so their locks lift in the same scope. It yields to a
+/// document's own `\maketitle` (2509.25344) or `\frontmatter@maketitle` (2111.12484); a subfile's group undoes it.
+/// Only under REVTeX's own classes: aastex_cls.rs loads this binding, and aastex701.cls:13231-13266 is its own.
 pub(crate) fn switch_off_author_block_after_maketitle() -> Result<()> {
   if !["revtex4", "revtex4-1", "revtex4-2"]
     .into_iter()
@@ -270,13 +259,16 @@ pub(crate) fn switch_off_author_block_after_maketitle() -> Result<()> {
   {
     return Ok(());
   }
+  DefMacro!(
+    "\\lx@revtex@repeated@author",
+    r"\let\and\relax\let\affiliation\@gobble\let\email\@gobble\let\thanks\@gobble\@gobble"
+  );
   DefPrimitive!("\\lx@revtex@maketitle@setters", sub[_args] {
     if !lookup_bool("\\maketitle:redefined") && lookup_definition(&T_CS!("\\frontmatter@maketitle"))?.is_none() {
-      let_i(&T_CS!("\\and"), &T_CS!("\\relax"), None);
+      let_i(&T_CS!("\\author"), &T_CS!("\\lx@revtex@repeated@author"), None);
       for cs in ["\\affiliation", "\\author", "\\email", "\\thanks"] {
-        let_i(&T_CS!(cs), &T_CS!("\\@gobble"), None);
+        assign_value(&s!("{cs}:locked"), false, None);
       }
-      let_i(&T_CS!("\\title"), &T_CS!("\\lx@deposit@title"), None);
     }
     Ok(())
   });
