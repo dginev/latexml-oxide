@@ -34084,11 +34084,11 @@ and Bob Baker", `Error:frontmatter:merged_creators`, under article, eptcs and IE
 copy of `\thanks` printed the kernel's note and the creator held none; a copy of `\footnote` had its note text ("footnote",
 the mark, "Univ A") read into the name.
 
-**Now.** Before the by-name bindings, `copies_bound_by_meaning` collects the commands the block reaches — spelled in its
+**Now.** Before the by-name bindings, `let_copies_of_bound_commands` collects the commands the block reaches — spelled in its
 tokens, or held in the bodies of the document's own macros it spells (`DefinitionOrigin::Document`, at most 256 macros
-per block) — whose meaning is a `BOUND_BY_MEANING` command's own definition (`\and`, `\And`, `\AND`, `\\`, `\thanks`,
-`\footnote`): `\ifx` equal to the command now (`state::x_equals`) and that definition made for it (its `get_cs` is the
-command), so a `\relax` or an undefined name is no copy of a separator a class `\let` to `\relax` or left undefined.
+per block) — whose meaning is the own definition of an `ALWAYS_BOUND` command flagged bound by meaning (`\and`, `\And`,
+`\AND`, `\\`, `\thanks`, `\footnote`): `\ifx` equal to the command now (`state::x_equals`) and `defined_as` it (that
+definition made for it), so a `\relax` or an undefined name is no copy of a separator a class `\let` to `\relax` or left undefined.
 Each is `\let` to the command's event constructor, in the rehearsal's group. A name bound by its own name
 (`ALWAYS_BOUND`, `BOUND_WHEN_DEFINED`: fixacm.sty's `\let\alignauthor\and`, 1801.02123) or one the binding declares a
 block break keeps that binding. Class macros are not read into: a copy a class's own code makes (latex.ltx's

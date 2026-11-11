@@ -1,5 +1,5 @@
 //! Guards for SEP1: the rehearsal binds a `\let` copy of an author-line command by its meaning
-//! (`observer/rehearsal.rs` `copies_bound_by_meaning`, OXIDIZED_DESIGN_DIVERGENCES #994). TeX's `\let\nx\and` makes
+//! (`observer/rehearsal.rs` `let_copies_of_bound_commands`, OXIDIZED_DESIGN_DIVERGENCES #994). TeX's `\let\nx\and` makes
 //! `\nx` the separator; bound by name only, the copy kept the kernel `\and`'s meaning (a constructor printing " and "),
 //! the block held no `Sep(And)` and the names merged into one creator, where pdflatex and Perl give two (OC1's `\let`
 //! probe). The copies of `\thanks` and `\footnote` take the same path: each is its command's note.

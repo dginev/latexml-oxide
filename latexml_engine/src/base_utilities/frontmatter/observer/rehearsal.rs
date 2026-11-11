@@ -554,42 +554,44 @@ const SINK_MEANING: &str = "\\lx@fm@obs@add@meaning";
 const CREATOR_CALL: &str = "\\lx@fm@obs@creatorcall";
 
 /// The commands the rehearsal binds to the event constructors, always (the article `\author` line's own vocabulary,
-/// and the frontmatter API's queueing sink, frozen otherwise).
-const ALWAYS_BOUND: &[(&str, &str)] = &[
-  ("\\and", AUTHOR_AND),
-  ("\\And", "\\lx@fm@obs@And"),
-  ("\\AND", "\\lx@fm@obs@AND"),
-  ("\\\\", ROW_BREAK),
-  ("\\newline", ROW_BREAK),
-  ("\\linebreak", ROW_BREAK),
-  ("\\par", "\\lx@fm@obs@par"),
-  ("\\thanks", "\\lx@fm@obs@thanks"),
-  ("\\footnote", "\\lx@fm@obs@footnote"),
-  ("\\footnotetext", "\\lx@fm@obs@notetext"),
-  ("\\footnotemark", "\\lx@fm@obs@footnotemark"),
-  ("\\label", "\\lx@fm@obs@label"),
+/// and the frontmatter API's queueing sink, frozen otherwise), and whether a `\let` copy of the command is bound as it
+/// is, by its meaning ([`let_copies_of_bound_commands`]): the author line's separators, its row break and its notes. TeX's
+/// `\let\nx\and` makes `\nx` the separator, which pdflatex and Perl part the names at (OXIDIZED_DESIGN_DIVERGENCES #994).
+const ALWAYS_BOUND: &[(&str, &str, bool)] = &[
+  ("\\and", AUTHOR_AND, true),
+  ("\\And", "\\lx@fm@obs@And", true),
+  ("\\AND", "\\lx@fm@obs@AND", true),
+  ("\\\\", ROW_BREAK, true),
+  ("\\newline", ROW_BREAK, false),
+  ("\\linebreak", ROW_BREAK, false),
+  ("\\par", "\\lx@fm@obs@par", false),
+  ("\\thanks", "\\lx@fm@obs@thanks", true),
+  ("\\footnote", "\\lx@fm@obs@footnote", true),
+  ("\\footnotetext", "\\lx@fm@obs@notetext", false),
+  ("\\footnotemark", "\\lx@fm@obs@footnotemark", false),
+  ("\\label", "\\lx@fm@obs@label", false),
   // (inside author content `\inst` is the affiliation request, `\lx@author@withinst`)
-  ("\\inst", "\\lx@fm@obs@mark"),
-  ("\\lx@annotate@frontmatter", "\\lx@fm@obs@annotate"),
-  ("\\lx@request@frontmatter@annotation", "\\lx@fm@obs@request"),
+  ("\\inst", "\\lx@fm@obs@mark", false),
+  ("\\lx@annotate@frontmatter", "\\lx@fm@obs@annotate", false),
+  (
+    "\\lx@request@frontmatter@annotation",
+    "\\lx@fm@obs@request",
+    false,
+  ),
 ];
 
-/// The [`ALWAYS_BOUND`] commands a copy of is bound as the command is, by its meaning ([`copies_bound_by_meaning`]): the
-/// author line's separators, its row break and its notes. TeX's `\let\nx\and` makes `\nx` the separator, which pdflatex
-/// and Perl part the names at (OXIDIZED_DESIGN_DIVERGENCES #994).
-const BOUND_BY_MEANING: &[&str] = &["\\and", "\\And", "\\AND", "\\\\", "\\thanks", "\\footnote"];
-
-/// How many of the document's own macros [`copies_bound_by_meaning`] reads into, at most, from one block.
+/// How many of the document's own macros [`let_copies_of_bound_commands`] reads into, at most, from one block.
 const COPY_SEARCH_MACROS: usize = 256;
 
-/// The `\let` copies of a [`BOUND_BY_MEANING`] command the block's tokens reach — spelled in it, or held in a macro of the
-/// document's own it spells (`\newcommand\aut{Ann \nx Bob}`, `\author{\aut}`) — each with the event constructor the
-/// command is bound to: a command whose meaning is the command's own definition (`\ifx` equal, and that definition made
-/// for it, so a `\relax` or an undefined name is no copy of a separator `\let` to `\relax` or left undefined). Read
-/// before the bindings change any meaning; a name bound by its own name, or one the binding declares a block break, is
-/// left to those. The kernel's `\and` is a constructor printing " and " (`sect05.rs`): bound by name only, the copy kept
-/// it, the names merged into one creator (OC1's `\let` probe; article, eptcs, IEEEtran journal).
-fn copies_bound_by_meaning(
+/// The `\let` copies of an [`ALWAYS_BOUND`] command bound by its meaning that the block's tokens reach — spelled in it,
+/// or held in a macro of the document's own it spells (`\newcommand\aut{Ann \nx Bob}`, `\author{\aut}`) — each with the
+/// event constructor the command is bound to: a command whose meaning is the command's own definition (`\ifx` equal,
+/// and `defined_as` it, that definition made for it, so a `\relax` or an undefined name is no copy of a separator `\let`
+/// to `\relax` or left undefined). Read before the bindings change any meaning; a name bound by its own name, or one
+/// the binding declares a block break, is left to those. The kernel's `\and` is a constructor printing " and "
+/// (`sect05.rs`): bound by name only, the copy kept it, the names merged into one creator (OC1's `\let` probe; article,
+/// eptcs, IEEEtran journal).
+fn let_copies_of_bound_commands(
   tokens: &Tokens,
   block_breaks: &[(&str, BreakKind)],
 ) -> Vec<(Token, &'static str)> {
@@ -599,32 +601,28 @@ fn copies_bound_by_meaning(
   let mut pending: Vec<Token> = tokens.unlist_ref().iter().rev().copied().collect();
   let mut macros = 0;
   while let Some(t) = pending.pop() {
-    if !matches!(t.code, Catcode::CS | Catcode::ACTIVE) || seen.contains(&t) {
+    if !t.is_executable() || seen.contains(&t) {
       continue;
     }
     seen.push(t);
     let by_name = t.with_cs_name(|name| {
-      ALWAYS_BOUND.iter().any(|(cs, _)| *cs == name)
+      ALWAYS_BOUND.iter().any(|(cs, ..)| *cs == name)
         || BOUND_WHEN_DEFINED.iter().any(|(cs, ..)| *cs == name)
         || block_breaks.iter().any(|(cs, _)| *cs == name)
     });
     if by_name {
       continue;
     }
-    let Ok(Some(defn)) = lookup_definition(&t) else {
-      continue;
-    };
-    let made_for = *defn.get_cs();
-    let separator = BOUND_BY_MEANING
-      .iter()
-      .find(|cs| made_for == T_CS!(**cs) && x_equals(&t, &made_for));
-    if let Some(cs) = separator {
-      if let Some((_, target)) = ALWAYS_BOUND.iter().find(|(bound, _)| bound == cs) {
-        found.push((t, *target));
-      }
+    let copied = ALWAYS_BOUND.iter().find(|(cs, _, by_meaning)| {
+      let command = T_CS!(*cs);
+      *by_meaning && t.defined_as(&command) && x_equals(&t, &command)
+    });
+    if let Some((_, target, _)) = copied {
+      found.push((t, *target));
       continue;
     }
     if macros < COPY_SEARCH_MACROS
+      && let Ok(Some(defn)) = lookup_definition(&t)
       && defn.is_expandable()
       && defn.get_origin() == DefinitionOrigin::Document
       && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
@@ -693,13 +691,13 @@ const TITLE_FOOTNOTE_HOOK: &str = crate::latex_constructs::TITLE_THEFOOTNOTE;
 /// `\\affiliation`'s `\\def\\ex{\\end{tabular}}` closing the tabular its `\\bx` opened, `perfect_kernel_batchz4`; an
 /// `\\author`'s `\\etab` closing the block's own) keeps its meaning, in any rehearsal; a command the binding declares a
 /// block break keeps its meaning. Before any of it, a `\let` copy of a separator or note command the block reaches is
-/// bound as the command is ([`copies_bound_by_meaning`]: `\let\nx\and` parts the names).
+/// bound as the command is ([`let_copies_of_bound_commands`]: `\let\nx\and` parts the names).
 fn install_event_bindings(
   tokens: &Tokens,
   title_marks: TitleMarks,
   block_breaks: &[(&str, BreakKind)],
 ) -> Result<()> {
-  for (copy, target) in copies_bound_by_meaning(tokens, block_breaks) {
+  for (copy, target) in let_copies_of_bound_commands(tokens, block_breaks) {
     let_i(&copy, &T_CS!(target), None);
   }
   for t in tokens.unlist_ref() {
@@ -715,7 +713,7 @@ fn install_event_bindings(
       let_i(t, &T_CS!(target), None);
     }
   }
-  for (cs, target) in ALWAYS_BOUND {
+  for (cs, target, _) in ALWAYS_BOUND {
     let_i(&T_CS!(*cs), &T_CS!(*target), None);
   }
   if in_block_content() {
@@ -821,7 +819,7 @@ fn prints_a_bound_break(between: &[Token]) -> bool {
   between.iter().any(|t| {
     ALWAYS_BOUND
       .iter()
-      .any(|(cs, target)| *target == ROW_BREAK && *t == T_CS!(*cs))
+      .any(|(cs, target, _)| *target == ROW_BREAK && *t == T_CS!(*cs))
   })
 }
 
