@@ -243,31 +243,32 @@ LoadDefinitions!({
 });
 
 /// REVTeX's `\maketitle` switches the author block off (revtex4-2.cls:2670-2684, revtex4-1.cls:2649-2662,
-/// revtex4.cls:4709-4717: `\affiliation`, `\author`, `\email`, `\thanks` to `\@gobble`, `\and` to `\relax`), so a block
-/// a document repeats after it (a supplement's) prints nothing (2401.15572, 1801.07635, 1812.00931, 2510.13035,
-/// 2602.09975, 2307.07324, 2001.07542, 2111.12484). Only that block is switched off, from its first `\author` on; a
-/// setter the document uses only after `\maketitle` keeps its text, as authored text is kept (FIDELITY_CHARTER §2;
-/// 1309.4768, 1106.2389, 2304.09163), and `\title`, `\date` stay the kernel's
-/// (2606.04868 prints a re-enabled block's date). The class's `\let` lets a document's
-/// later `\renewcommand` of these through (2412.14256), so their locks lift in the same scope. It yields to a
-/// document's own `\maketitle` (2509.25344) or `\frontmatter@maketitle` (2111.12484); a subfile's group undoes it.
-/// Only under REVTeX's own classes: aastex_cls.rs loads this binding, and aastex701.cls:13231-13266 is its own.
+/// revtex4.cls:4709-4717); ours from a repeated block's first `\author` on, its new words counted (OD #1003: 2401.15572,
+/// 1801.07635, 1812.00931, 2510.13035, 2602.09975, 2307.07324, 2001.07542; lone setters kept: 1309.4768, 1106.2389, 2304.09163).
 pub(crate) fn switch_off_author_block_after_maketitle() -> Result<()> {
+  // (not AASTeX's, which loads this binding: aastex701.cls:13231-13266 is its own)
   if !["revtex4", "revtex4-1", "revtex4-2"]
     .into_iter()
     .any(is_document_class)
   {
     return Ok(());
   }
+  // (local `\let`s: a repeat's `\author` inside a group, `{\author{Ann}}\email{…}`, switches off only to its end)
   DefMacro!(
     "\\lx@revtex@repeated@author",
-    r"\let\and\relax\let\affiliation\lx@revtex@repeated@gobble\let\email\lx@revtex@repeated@gobble\let\thanks\lx@revtex@repeated@gobble\@gobble"
+    r"\let\and\relax\let\affiliation\lx@revtex@repeated@gobble\let\email\lx@revtex@repeated@gobble@url\let\thanks\lx@revtex@repeated@gobble\lx@revtex@repeated@gobble"
   );
-  // (the repeat's contacts the content check counts: a word the output lacks raises its Warning, 1206.0114, 1903.12442)
+  // (the repeat's names and contacts the content check counts: a new word the output lacks warns, 1206.0114, 1903.12442)
   DefPrimitive!("\\lx@revtex@repeated@gobble{}", sub[(content)] {
     fm_record_switched_off_call(&content);
   });
+  // (an address read as the live `\email` reads it, `ann_x@x.org` whole: review revRB1c probe q2)
+  DefPrimitive!("\\lx@revtex@repeated@gobble@url Semiverbatim", sub[(content)] {
+    fm_record_switched_off_call(&content);
+  });
   DefPrimitive!("\\lx@revtex@maketitle@setters", sub[_args] {
+    // (a document's own `\maketitle` or `\frontmatter@maketitle` wins, 2509.25344, 2111.12484; `\title`, `\date` stay
+    // the kernel's, 2606.04868; the class's `\let` lets a later `\renewcommand` through, so the locks lift, 2412.14256)
     if !lookup_bool("\\maketitle:redefined") && lookup_definition(&T_CS!("\\frontmatter@maketitle"))?.is_none() {
       let_i(&T_CS!("\\author"), &T_CS!("\\lx@revtex@repeated@author"), None);
       for cs in ["\\affiliation", "\\author", "\\email", "\\thanks"] {

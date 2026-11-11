@@ -17,7 +17,7 @@ use super::{
   events::{EmailMeaning, Event, EventKind, HeldError, lex_body_with_inks},
   field_notes::{EnvironmentStep, FieldCreator},
   rehearsal::{past_line_break, past_tabular_call},
-  resolver::printed_words,
+  resolver::{ink_words, printed_words, reads_as},
   *,
 };
 use crate::latex_constructs::class_titlepage_key;
@@ -322,6 +322,8 @@ pub(in crate::base_utilities) struct Ledger {
   pub replaced:   BTreeSet<(usize, Option<(u16, u16)>)>,
   /// the entries the last binding's `\author` body made, a later `\author` clears them ([`record_author_body_clear`])
   author_body:    (usize, usize),
+  /// the words and addresses the entries before `.0` hold and the switched-off calls fed ([`record_switched_off_call`])
+  held:           (usize, (BTreeSet<String>, BTreeSet<String>)),
 }
 
 impl Ledger {
@@ -1282,21 +1284,64 @@ pub(in crate::base_utilities) fn record_author_body_end() {
 }
 
 /// Record the argument of a call a class switched off after its title block (REVTeX's repeated author block,
-/// revtex4_cls.rs): the content check counts its text as printed, so a word the output lacks is counted, not silent
-/// (1206.0114, 1903.12442); a call repeating an earlier call's text adds none (2001.07542, 1812.00931, 2305.19055).
+/// revtex4_cls.rs): the content check counts the words no earlier call holds, so a lost one warns (1206.0114, 1903.12442;
+/// OXIDIZED_DESIGN_DIVERGENCES #1003).
 pub fn record_switched_off_call(content: &Tokens) {
-  if records_now() {
-    let text = content_text(content);
-    with_ledger(|ledger| {
-      let repeats = ledger.entries().iter().any(|entry| {
-        matches!(entry, Entry::Api(call)
-          if content_text(&call.content).split_whitespace().eq(text.split_whitespace()))
-      });
-      if !repeats {
-        ledger.unrecorded.push(text);
-      }
-    });
+  if !records_now() {
+    return;
   }
+  let text = content_text(content);
+  with_ledger(|ledger| {
+    let (from, mut held) = std::mem::take(&mut ledger.held);
+    let hold = |text: &str, held: &mut (BTreeSet<String>, BTreeSet<String>)| {
+      let (words, addresses) = ink_words(text);
+      held.0.extend(words.iter().map(|w| w.to_lowercase()));
+      held.1.extend(addresses);
+    };
+    // (an entry's text as spelled and as its rehearsal printed it: `\UX` and `Universit{\"a}t X`, review revRB1c S1)
+    for entry in &ledger.entries()[from.min(ledger.entries().len())..] {
+      match entry {
+        Entry::Author(block) => {
+          hold(&content_text(&block.tokens), &mut held);
+          if let Outcome::Events { events, .. } = &block.outcome {
+            hold(&events::printed_text(events), &mut held);
+          }
+        },
+        Entry::Api(call) if !call.cleared => {
+          hold(&content_text(&call.content), &mut held);
+          hold(&events::printed_text(&call.events), &mut held);
+        },
+        _ => {},
+      }
+    }
+    let (words, addresses) = ink_words(&text);
+    let held_word = |word: &str| {
+      let word = word.to_lowercase();
+      held.0.contains(&word)
+        || text.read_past.iter().any(|(past, places)| {
+          *past == word && held.0.iter().any(|other| reads_as(&word, places, other))
+        })
+    };
+    let new: Vec<String> = words
+      .into_iter()
+      .filter(|word| !held_word(word))
+      .chain(addresses.into_iter().filter(|a| !held.1.contains(a)))
+      .collect();
+    if !new.is_empty() {
+      let read_past = text
+        .read_past
+        .iter()
+        .filter(|(past, _)| new.iter().any(|word| word.to_lowercase() == *past))
+        .cloned()
+        .collect();
+      let text = new.join(" ");
+      hold(&text, &mut held);
+      ledger
+        .unrecorded
+        .push(ContentText { text: text.into(), read_past });
+    }
+    ledger.held = (ledger.entries().len(), held);
+  });
 }
 
 /// Record that the frontmatter API's Cut took an uncut copy of a printed list it cut out of the queue (`content`, a

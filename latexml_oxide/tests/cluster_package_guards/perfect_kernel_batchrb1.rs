@@ -41,13 +41,21 @@ type Case<'a> = (&'a str, String, &'a [&'a [&'a str]], &'a str, &'a str);
 /// `\affiliation`, `\email` or `\thanks` used only after `\maketitle` stays the live setter (1309.4768, 1106.2389,
 /// 2304.09163), until a repeated block's `\author` (the lone affiliation then a block), and a `\renewcommand{\author}`
 /// after it takes effect (2412.14256). Red (int159a): Bob Baker also held "Univ X, Town" and the body read "Text.
-/// Supplement Ann Able Bob Baker More."; red (int160b): the RB1c rows' contacts, thanks text and names lost.
+/// Supplement Ann Able Bob Baker More."; red (int160b): the RB1c rows' contacts, thanks text and names lost. RB1d's
+/// rows: a repeat's new name warns (review revRB1c B1; red: silent), a duplicate spelled through a macro or with an
+/// underscore address does not (S1; red: a Warning), a variant address names only its new words (S2, 1903.12442).
 #[test]
 fn revtex_maketitle_switches_the_author_block_off() {
   let block = repro!("revtex_repeated_author_block_after_maketitle_prints_nothing");
   let title = repro!("revtex_title_after_maketitle_prints_as_text");
   let lone_contacts = repro!(class: "revtex_lone_email_thanks_after_maketitle_are_kept");
   let new_words = repro!("revtex_repeated_block_new_words_kept_red");
+  let new_author = repro!("revtex_repeated_block_new_author_kept_red");
+  let spelled = repro!("revtex_repeated_block_macro_spelled_duplicate_is_silent");
+  let (by_macro, by_letters) = (
+    r#"\UX, Stra\ss e 1, M\"unchen"#,
+    r#"Universit{\"a}t X, Stra{\ss}e 1, M{\"u}nchen"#,
+  );
   let two: &[&[&str]] = &[
     &[
       "Ann Able",
@@ -66,7 +74,7 @@ fn revtex_maketitle_switches_the_author_block_off() {
     "affiliation=Univ X, Town",
   ]];
   let bob_email: &[&[&str]] = &[&["Ann Able"], &["Bob Baker", "email=bob.baker@y.org"]];
-  let cases: [Case; 16] = [
+  let cases: [Case; 21] = [
     (
       "revtex4-2",
       block.to_string(),
@@ -183,14 +191,62 @@ fn revtex_maketitle_switches_the_author_block_off() {
       "Text. Supplement More.",
       "",
     ),
+    (
+      "repeat with a new author",
+      new_author.to_string(),
+      one,
+      "Text. Erratum More.",
+      "",
+    ),
+    (
+      "repeat adding an author",
+      new_author.replace(
+        "\\author{Dan Doe}\n",
+        "\\author{Ann Able}\n\\affiliation{Univ X, Town}\n\\author{Carl Cole}\n",
+      ),
+      one,
+      "Text. Erratum More.",
+      "",
+    ),
+    (
+      "repeat spelled through a macro",
+      spelled.to_string(),
+      &[&["Ann Able", "affiliation=Universität X, Straße 1, München"]],
+      "Text. More.",
+      "",
+    ),
+    (
+      "repeat spelled out, the first through a macro",
+      spelled
+        .replace(by_macro, "@")
+        .replace(by_letters, by_macro)
+        .replace('@', by_letters),
+      &[&["Ann Able", "affiliation=Universität X, Straße 1, München"]],
+      "Text. More.",
+      "",
+    ),
+    (
+      "repeat with an underscore address",
+      block.replace("ann.able@x.org", "ann_able@x.org"),
+      &[
+        &[
+          "Ann Able",
+          "email=ann_able@x.org",
+          "affiliation=Univ X, Town",
+        ],
+        two[1],
+      ],
+      "Text. Supplement More.",
+      "",
+    ),
   ];
-  // (the rows whose repeat carries words the output lacks: the content check's one Warning names them, 1206.0114,
-  // 1903.12442; every other row, the pure duplicate repeats among them, warns nothing)
+  // (the rows whose repeat carries words no earlier call holds: the content check's one Warning names them alone,
+  // 1206.0114, 1903.12442; every other row, the pure duplicates however spelled among them, warns nothing)
   let counted = [
     (
       "lone affiliation, then a repeated block",
-      "Frontmatter content check: 4 words the author blocks print are missing from the placed frontmatter: Hamlet \
-       Univ W ann@w.org.",
+      "Frontmatter content check: 3 words the author blocks print are missing from the placed frontmatter: Hamlet W \
+       ann@w.org.",
     ),
     (
       "repeat with a new thanks",
@@ -199,8 +255,16 @@ fn revtex_maketitle_switches_the_author_block_off() {
     ),
     (
       "repeat with a variant address",
-      "Frontmatter content check: 6 words the author blocks print are missing from the placed frontmatter: 1 Main \
-       Street Town Univ X.",
+      "Frontmatter content check: 3 words the author blocks print are missing from the placed frontmatter: 1 Main \
+       Street.",
+    ),
+    (
+      "repeat with a new author",
+      "Frontmatter content check: 2 words the author blocks print are missing from the placed frontmatter: Dan Doe.",
+    ),
+    (
+      "repeat adding an author",
+      "Frontmatter content check: 2 words the author blocks print are missing from the placed frontmatter: Carl Cole.",
     ),
   ];
   for (name, tex, expected, body, holds) in cases {

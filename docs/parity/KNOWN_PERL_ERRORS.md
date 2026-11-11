@@ -19258,8 +19258,10 @@ REVTeX's `\frontmatter@maketitle` (revtex4-2.cls:2670-2684, revtex4-1.cls:2649-2
 Perl's revtex bindings do not: the second block's calls queue after the title block and every repeated contact lands
 on the last author (PERL-ORIGIN, 0 errors). Rust fixed it in RB1 (the class's switch-off through `\lx@maketitle@body`,
 only where the document class is revtex): witnesses 1801.07635, 1812.00931, 2001.07542, 2602.09975, 2312.13577,
-2111.12484. Since RB1c only a repeated block is switched off, from its first `\author` on; a setter used only after
-`\maketitle` keeps its text, as Perl's does (FIDELITY_CHARTER §2; 1309.4768, 1106.2389, 2304.09163). Minimal trigger:
+2111.12484. Since RB1c only a repeated block is switched off, from its first `\author` on: a lone `\affiliation`,
+`\email` or `\thanks` after `\maketitle` keeps its text, as Perl's does (FIDELITY_CHARTER §2; 1309.4768, 1106.2389,
+2304.09163); the block's names and contacts are dropped, and the words no earlier call holds are counted by the
+frontmatter content check's Warning, not kept (OXIDIZED_DESIGN_DIVERGENCES #1003; 1206.0114, 1903.12442). Minimal trigger:
 
 ```latex
 \documentclass{revtex4-2}

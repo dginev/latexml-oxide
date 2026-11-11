@@ -823,7 +823,11 @@ fn read_past(past: &mut BTreeMap<String, Vec<(usize, bool)>>, text: &ContentText
 /// ink prints (`física`): `other`'s base letters ([`base_letters`]) are `word`'s, with at most one `i` or `j` where a
 /// one-letter control word was, the letter a dotless `\i`/`\j` printed — no other letter, and none elsewhere (`lu` is
 /// no `liu`). The one test both content-text reconciles share.
-fn reads_as(word: &str, places: &[(usize, bool)], other: &str) -> bool {
+pub(in crate::base_utilities::frontmatter::observer) fn reads_as(
+  word: &str,
+  places: &[(usize, bool)],
+  other: &str,
+) -> bool {
   fn fits(word: &[char], other: &[char], places: &[usize]) -> bool {
     let Some((&at, rest)) = places.split_first() else {
       return word == other;
