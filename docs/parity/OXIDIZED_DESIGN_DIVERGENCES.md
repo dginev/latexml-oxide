@@ -34078,8 +34078,8 @@ run on the repro; its mechanism not traced: `\lx@add@authors` splits by `SplitTo
 
 **Before.** The rehearsal bound the author line's vocabulary by name only (`observer/rehearsal.rs`
 `install_event_bindings`, `ALWAYS_BOUND`: `\and` to `\lx@fm@obs@and`, `\\` to `\lx@fm@obs@break`, `\thanks`, `\footnote`
-to their events). A `\let` copy kept the command's own meaning — the kernel `\and` a constructor printing " and "
-(`sect05.rs`), eptcs's and IEEEtran's their class macros — so the block held no `Sep(And)` to cut: one creator "Ann Able
+to their events). A `\let` copy kept the command's own meaning (the kernel `\and` a constructor printing " and ",
+`sect05.rs`), so the block held no `Sep(And)` to cut: one creator "Ann Able
 and Bob Baker", `Error:frontmatter:merged_creators`, under article, eptcs and IEEEtran journal (OC1's `\let` probe); a
 copy of `\thanks` printed the kernel's note and the creator held none; a copy of `\footnote` had its note text ("footnote",
 the mark, "Univ A") read into the name.
@@ -34098,8 +34098,11 @@ block break keeps that binding. Class macros are not read into: a copy a class's
 `\author`/`\authors` argument): a copy of `\and`/`\And`/`\AND` used in an author argument, 0 papers beyond fixacm's
 `\alignauthor` (bound by name already; 294 papers define such a copy, 289 of them in a class or package); of `\\`, 5
 (all `\newline`, bound by name); of `\thanks`, 73 (72 `\footnote`, bound by name; acl.sty's `\Thanks`, 2407.16574); of
-`\footnote`, 170 (169 `\thanks`, bound by name; www-notes.cls's `\Affiliation`, 1712.07684, `\@gobble` when the block is
-rehearsed). Not bound by meaning: the rest of `ALWAYS_BOUND` (`\par`, `\label`, `\footnotemark`, `\footnotetext`,
+`\footnote`, 170 (169 `\thanks`, bound by name; www-notes.cls's `\Affiliation`, 1712.07684, `\let` to `\footnote` only inside
+`\preauthor`, `\@gobble` outside it). Byte-diff against OC1b (3,283 papers: the scan's 570, the article 614, the llncs
+699, int152c's stage2 1,434; 3,263 converted on both sides, the other 20 on neither): one paper changed, 2407.16574,
+better (its two `\Thanks` notes, a `pubnote` each before, now Eunseop Yoon's and Chang D. Yoo's, as the PDF marks them);
+E/F/W totals equal on every list. Not bound by meaning: the rest of `ALWAYS_BOUND` (`\par`, `\label`, `\footnotemark`, `\footnotetext`,
 `\newline`, `\linebreak`, `\inst`), whose copies (`\endgraf`, `\@@par`) are kernel and class internals.
 
 Guards `perfect_kernel_batchsep1::{a_let_copy_of_and_parts_the_names, eptcs_cells_part_at_a_let_copy_of_and,
