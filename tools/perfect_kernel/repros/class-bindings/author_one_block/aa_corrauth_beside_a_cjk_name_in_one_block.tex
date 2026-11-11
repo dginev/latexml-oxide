@@ -1,16 +1,18 @@
-% mechanism: aa's `\author` still splits by spelling (`aa_cls.rs` `\lx@splitting{\lx@add@author@split}{\and\And}`): with
-%   the whole list one `\lx@add@author@split` call, a `CJK*` environment in one name and `\corrauth` in another, the
-%   emitter writes the corresponding contact as its item (`\lx@frontmatter@itemonly{ann@x.edu}`), not the call
-%   (`\corrauth{ann@x.edu}`), and the contact loses `name="Corresponding author: "` — a mechanism of its own, not the
-%   queue's name reading (P2-1b; trial rule 5), so aa keeps its split
+% mechanism: aa's `\author` hands its whole list to the reading in one `\lx@add@author@split` call (Option C P2-1c, OD
+%   #993). A `{CJK*}` environment leaves horizontal mode (cjk_sty.rs `before_digest => leave_horizontal`), whose `\par`
+%   packs the block's line so far into a paragraph list (`stomach::repack_horizontal`); the events' walker read that
+%   list as a braced group (events/mod.rs `paragraph_is_no_group`), so an earlier name's `\inst` became a mark whose group
+%   held the contact after it, and the emitter wrote the contact by its text (emit.rs `in_a_mark`) — a paragraph is no
+%   group (TeX's `\par` closes none)
 % witness: 2608.21138 (aa 2026: `Katarzyna~M.~Dutkowska \inst{\ref{STRW}}\corrauth{…} \and Bin
 %          Jia(\begin{CJK*}{UTF8}{gbsn}贾彬\end{CJK*}) \inst{\ref{STRW}} \and …`)
-% oracle:  pdflatex (TL 2025, -no-shell-escape, 2608.21138's aa.cls, lineno.sty, linenoaa.sty) 0 errors: "Ann M. Able1⋆ ,
-%          Bob Baker(贾彬)1, 2 , and Cid Cole2", footnote "Corresponding author: ann@x.edu"
-% engines: rust P21 and P21b (split by spelling) = the contact `name="Corresponding author: "`; P21 with aa's split
-%          removed = the same contact with no `name`
-% expect:  0 errors, 0 warnings; Ann M. Able's contact role=corresponding name="Corresponding author: " ann@x.edu
-% status:  GREEN while aa splits by spelling (P21b); RED on a build without that split — catalog, no guard (the aa batch)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, 2608.21138's aa.cls, lineno.sty, linenoaa.sty; TL 2025 ships no aa.cls)
+%          0 errors: "Ann M. Able1⋆ , Bob Baker(贾彬)1, 2 , and Cid Cole2", footnote "Corresponding author: ann@x.edu"
+% engines: rust int158a (split by spelling) = the contact `name="Corresponding author: "`; int158a with aa's split
+%          removed = the same contact with no `name`; P21c = int158a's XML
+% expect:  0 errors, 0 warnings; Ann M. Able (corresponding "Corresponding author: " ann@x.edu, University of X), Bob
+%          Baker(贾彬) (University of X, University of Y), Cid Cole (University of Y)
+% status:  RED (int158a without aa's split) -> GREEN (P21c) — perfect_kernel_batchp21c::a_contact_keeps_its_call_beside_a_cjk_name
 % preload: ar5iv.sty
 \documentclass{aa}
 \usepackage{CJKutf8}

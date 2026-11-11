@@ -149,7 +149,7 @@ fn a_mark_of_refs_requests_every_key() {
       "C Ann Able [ref:ia,ref:ib] | line:names",
       "  a Univ X | api:labelseq api:ref-label",
       "  a Univ Y | api:labelseq api:ref-label",
-      "C Bob Baker [ref:ib] | line:names",
+      "C Bob Baker [ref:ib] | line:names sep:column",
       "  a Univ Y | api:labelseq api:ref-label",
     ],
   );
@@ -157,10 +157,10 @@ fn a_mark_of_refs_requests_every_key() {
     "C Ann Able [ref:ia,ref:ib] | line:names",
     "  a Univ X | api:labelseq api:ref-label",
     "  a Univ Y | api:labelseq api:ref-label",
-    "C Bob Baker [2,ref:ic] | line:names",
+    "C Bob Baker [2,ref:ic] | line:names sep:column",
     "  a Univ Y | api:labelseq",
     "  a Univ Z | api:labelseq api:ref-label",
-    "C Cid Cole [ref:ia,ref:ic] | line:names",
+    "C Cid Cole [ref:ia,ref:ic] | line:names sep:column",
     "  a Univ X | api:labelseq api:ref-label",
     "  a Univ Z | api:labelseq api:ref-label",
   ]);
@@ -172,16 +172,16 @@ fn a_mark_of_refs_requests_every_key() {
     "C Ann Able [ref:ia,ref:ib] | line:names",
     "  a Univ X | api:labelseq api:ref-label",
     "  a Univ Y | api:labelseq api:ref-label",
-    "C Bob Baker [ref:ia,ref:ic] | line:names",
+    "C Bob Baker [ref:ia,ref:ic] | line:names sep:column",
     "  a Univ X | api:labelseq api:ref-label",
     "  a Univ Z | api:labelseq api:ref-label",
-    "C Cid Cole [ref:ia,ref:ic] | line:names",
+    "C Cid Cole [ref:ia,ref:ic] | line:names sep:column",
     "  a Univ X | api:labelseq api:ref-label",
     "  a Univ Z | api:labelseq api:ref-label",
-    "C Dee Dunn [ref:ib,ref:ic] | line:names",
+    "C Dee Dunn [ref:ib,ref:ic] | line:names sep:column",
     "  a Univ Y | api:labelseq api:ref-label",
     "  a Univ Z | api:labelseq api:ref-label",
-    "C Eve Eng [1,ref:ib] | line:names",
+    "C Eve Eng [1,ref:ib] | line:names sep:column",
     "  a Univ X | api:labelseq",
     "  a Univ Y | api:labelseq api:ref-label",
   ]);
@@ -192,7 +192,7 @@ fn a_mark_of_refs_requests_every_key() {
     "C Ann Able [ref:ia] | line:names",
     "  a Univ X | api:labelseq api:ref-label",
     "  c orcid 0000-0001-2345-6789 | owner:adjacent",
-    "C Bob Baker [2] | line:names",
+    "C Bob Baker [2] | line:names sep:column",
     "  a Univ Y | api:labelseq",
     "  c orcid 0000-0002-3456-7890 | owner:adjacent",
   ]);
@@ -284,7 +284,7 @@ fn a_publication_note_email_is_placed_by_the_chain() {
     &[
       "C Ann Able [1] | line:names",
       "  a Univ X | api:labelseq",
-      "C Bob Baker [2] | line:names",
+      "C Bob Baker [2] | line:names sep:column",
       "  a Univ Y | api:labelseq",
       "  c email bob.baker@y.org | api:document-note owner:spelled api:note-spelled ruling3:one-per-print",
     ],
@@ -296,7 +296,7 @@ fn a_publication_note_email_is_placed_by_the_chain() {
       "C O. Kochukhov [1] | line:names",
       "  a Univ X | api:labelseq",
       "  c email oleg@x.se | api:document-note owner:corresponding api:note-name ruling3:one-per-print",
-      "C D. Shulyak [2] | line:names",
+      "C D. Shulyak [2] | line:names sep:column",
       "  a Univ Y | api:labelseq",
     ],
   );
@@ -311,7 +311,7 @@ fn a_publication_note_email_is_placed_by_the_chain() {
       "C Ann Able [1] | line:names",
       "  a Univ X | api:labelseq",
       "  c email ann@x.org | api:labelseq api:inner-contact owner:inner-email owner:spelled",
-      "C Bob Baker [2] | line:names",
+      "C Bob Baker [2] | line:names sep:column",
       "  a Univ Y | api:labelseq",
       "B email office@y.org | api:document-note owner:block ruling3:one-per-print",
     ],
@@ -489,7 +489,7 @@ fn a_note_names_a_creator_only_by_their_whole_name() {
       "Bob Baker"
     };
     let email = format!("email={address}");
-    let creator = format!("C {second} [2] | line:names");
+    let creator = format!("C {second} [2] | line:names sep:column");
     let block = format!("B email {address} | api:document-note owner:block ruling3:one-per-print");
     assert_reading(
       repro,
@@ -524,9 +524,17 @@ fn a_note_names_a_creator_only_by_their_whole_name() {
       "  a Univ Y | api:labelseq",
     ],
   );
-  for repro in [
-    repro!("aa_offprints_colon_after_the_name.tex"),
-    repro!("llncs_thanks_name_before_a_colon.tex"),
+  // (aa's list is one block the reading cuts at its `\and`, so Bob Baker's name opens its second column, P2-1c; llncs still
+  // splits by spelling, P2-3)
+  for (repro, bob) in [
+    (
+      repro!("aa_offprints_colon_after_the_name.tex"),
+      "C Bob Baker [2] | line:names sep:column",
+    ),
+    (
+      repro!("llncs_thanks_name_before_a_colon.tex"),
+      "C Bob Baker [2] | line:names",
+    ),
   ] {
     assert_reading(
       repro,
@@ -540,7 +548,7 @@ fn a_note_names_a_creator_only_by_their_whole_name() {
         "C Ann Able [1] | line:names",
         "  a Univ X | api:labelseq",
         "  c email carl@z.org | api:document-note owner:corresponding api:note-name ruling3:one-per-print",
-        "C Bob Baker [2] | line:names",
+        bob,
         "  a Univ Y | api:labelseq",
       ],
     );
@@ -584,7 +592,7 @@ fn a_note_email_of_no_bindings_meaning_stays_the_notes_text() {
     &[
       "C Ann Able [1] | line:names",
       "  a Univ X | api:labelseq",
-      "C Bob Baker [2] | line:names",
+      "C Bob Baker [2] | line:names sep:column",
       "  a Univ Y | api:labelseq",
     ],
   );

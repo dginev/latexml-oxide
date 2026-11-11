@@ -990,6 +990,14 @@ struct Walker {
   inks:          InkTable,
 }
 
+/// Whether `d` is a paragraph's list: the line `stomach::repack_horizontal` (or a vertical box's repack) packs, whose `mode`
+/// property says `horizontal` (Perl's `List(@para, mode => 'horizontal')`, Stomach.pm:452-475) — a braced group's list has
+/// none.
+fn paragraph_is_no_group(d: &Digested) -> bool {
+  d.get_property("mode")
+    .is_some_and(|mode| mode.eq_text("horizontal"))
+}
+
 /// Whether `atoms` hold no word and no event: what may stand beside a mark's formula in its group.
 fn no_word(atoms: &[Atom]) -> bool {
   atoms.iter().all(|atom| match atom {
@@ -1092,6 +1100,16 @@ impl Walker {
             script: false,
             formula: None,
           });
+        }
+      },
+      // (a paragraph, the line a `\par` packs — an explicit one, or the one a vertical command or an environment that leaves
+      // horizontal mode inserts, `stomach::leave_horizontal`: CJK's `{CJK*}` — is no group: TeX's `\par` closes none, so what it
+      // holds stands at the level around it. Read as a group, the paragraph a later name's `\begin{CJK*}` closed made the first
+      // name's `\inst` a mark whose group held the `\corrauth` after it, which was then written by its text, its `name` lost
+      // (2608.21138, `paragraph_is_no_group`)
+      DigestedData::List(l) if paragraph_is_no_group(d) => {
+        for child in l.borrow().boxes.iter() {
+          self.walk(child, nest);
         }
       },
       DigestedData::List(l) => {
