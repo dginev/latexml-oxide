@@ -3049,7 +3049,13 @@ fn analysis() -> Rc<Analysis> {
   let mut resolved = reading.clone();
   let cuts = entry_cuts(&reading, &mut resolved);
   with_ledger(|ledger| {
-    let written = Written::new(ledger, &reading);
+    let keys = plan::written_keys(&reading);
+    let written = Written::new(ledger, &reading, |a| {
+      keys
+        .get(&std::ptr::from_ref(a))
+        .cloned()
+        .unwrap_or_default()
+    });
     let made = Rc::new(Analysis {
       generation,
       checks: check_blocks(ledger, &written),

@@ -4,7 +4,7 @@
 //! left of the S2b writer's plan (OXIDIZED_DESIGN_DIVERGENCES #837 "S2b"), whose comparison with the placed
 //! frontmatter and DOM operations were deleted with it (DEL4).
 
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 
 use super::{
   super::{
@@ -66,6 +66,20 @@ pub(super) fn contact_key(a: &Assoc) -> Key {
     "orcid" => (Kind::Contact("orcid".into()), norm(orcid_id(&a.text))),
     role => (Kind::Contact(role.to_string()), norm(&a.text)),
   }
+}
+
+/// Each item of `resolved` (its creators' and its block's) by its address, with the key the emit reads its entry by
+/// (`emit::item_call`'s `key.1`: [`creator_items`], [`block_items`]); what the picture check reads an item's written span
+/// by (`resolver::words::Written::new`), so the two can't differ (an ORCID keyed by its identifier: review revIMG1b
+/// finding 2). An item of no letter or digit has none, nor its entry.
+pub(super) fn written_keys(resolved: &Resolved) -> HashMap<*const Assoc, String> {
+  resolved
+    .creators
+    .iter()
+    .flat_map(creator_items)
+    .chain(block_items(resolved))
+    .map(|((_, key), a)| (std::ptr::from_ref(a), key))
+    .collect()
 }
 
 /// The author block's own items, as the comparison keys them ([`wanted`]).

@@ -1,0 +1,19 @@
+% witness: review revIMG1b finding 1 (probe t5_hspacefill): an image parted from a URL by `\hspace{\fill}` on a later line,
+%          fill glue that is not the `\hfill` primitive
+% oracle:  pdflatex 0 errors: the image at the line's left edge, "https://example.org/x" at its right, the column set by the
+%          wider affiliation line; the fill's offset is a placement detail, the image the line's, beside its link
+% engines: rust int157a2 = the image dropped, 0 warnings; IMG1 = the image inside the url contact; IMG1b = the image
+%          inside the url contact (the lexer's fill flag is `\hfil`/`\hfill`'s alone)
+% expect:  0 errors, 0 warnings; Ann Able, her affiliation, her url contact holding the image then the link
+%          (`events::place_pictures` joins past any gap, fill glue included: content before placement)
+% status:  RED (int157a2: dropped silently) -> GREEN (IMG1, IMG1b, IMG1c: kept)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx}\usepackage{url}\usepackage{hyperref}
+\title{T}
+\author{Ann Able \\ Zebra University, Department of Very Long Names and Places \\
+\includegraphics[width=1cm]{example-image}\hspace{\fill}\url{https://example.org/x}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

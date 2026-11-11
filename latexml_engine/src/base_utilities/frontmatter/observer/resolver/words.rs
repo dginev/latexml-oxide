@@ -302,9 +302,12 @@ pub(in crate::base_utilities::frontmatter::observer) struct Written {
 }
 
 impl Written {
+  /// `entry_key` gives an item's key as the emit reads its entry by (`emitter::plan::written_keys`: an ORCID by its
+  /// identifier, a picture note by its place), so each item holds the span the emit writes it from.
   pub(in crate::base_utilities::frontmatter::observer) fn new(
     ledger: &Ledger,
     resolved: &Resolved,
+    entry_key: impl Fn(&Assoc) -> String,
   ) -> Self {
     let mut counts: BTreeMap<usize, BTreeMap<String, usize>> = BTreeMap::new();
     let mut write = |at: usize, text: &str| {
@@ -358,15 +361,16 @@ impl Written {
           if a.rule.contains("ruling3:written-out") || resolved.dropped.contains(a) {
             unread.insert(item);
           }
-          // (what it writes: its entry's span, the emit's (`entry_span_in`), wider than its source span where its text
-          // runs on past layout — an affiliation holding the URL after an image, `Zebra University, \includegraphics{…}
-          // \url{…}`, review revIMG1 finding 1 — and its source span where the entry can't be read so)
+          // (what it writes: its entry's span, the emit's (`entry_span_in`, by the emit's key: `entry_key`), wider than
+          // its source span where its text runs on past layout — an affiliation holding the URL after an image, `Zebra
+          // University, \includegraphics{…} \url{…}`, review revIMG1 finding 1 — and its source span where the entry
+          // can't be read so)
           if let Some(span) = span
             && !resolved.dropped.contains(a)
           {
             let written = match ledger.entries().get(at) {
               Some(Entry::Author(block)) => match &block.outcome {
-                Outcome::Events { events, .. } => entry_span_in(events, span, &norm(&a.text)),
+                Outcome::Events { events, .. } => entry_span_in(events, span, &entry_key(a)),
                 _ => None,
               },
               _ => None,
