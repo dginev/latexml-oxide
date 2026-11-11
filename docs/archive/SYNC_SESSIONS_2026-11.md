@@ -1867,6 +1867,23 @@ The flip's facts are live in `perfect_kernel/SILENT_LOSS_INVENTORY.md` "Bundle i
 - fm_checks vs int153d: merged/lost 130 → 133 (the six NE5 blocks); 2402.02104's content check 0 distinct words lost; gone: 1208.0597, 1409.0597, 2407.13730, 2606.19583; 0907.1243's lost "dagger diamond star" are the math token names of its marks.
 - flip200 per paper 69.21 % at `=2`.
 
+## Bundle int158a — Option C P2-1 outside llncs, P2-4 (eptcs), the glued e-mail label
+
+On `pk/int158a` after the int157a push (`fcf7747d29`); every batch reviewed and merged. Its open residuals are live in
+[`../perfect_kernel/SILENT_LOSS_INVENTORY.md`](../perfect_kernel/SILENT_LOSS_INVENTORY.md) "Bundle int158a — the
+residual".
+
+- **P2-1, the author `\lx@splitting` family without llncs (OD #993 "P2-1 … P2-1d"):**
+  - **P21:** OmniBus (inst_support), ptephy and webofc hand the whole list to the reading in one `\lx@add@author@split` call; webofc declares `break_parts_names` (every `\\` author line a name). ptephy 1703.03737, 1904.07398 and nine comment witnesses lose the last name's stray mark; 2301.07825's address goes to its owner.
+  - **P21b:** sv_support the same; the queue's name reader parts a whole entry at its own `\and`s whatever they mean (every sv class redefines `\and` in its `\@maketitle`).
+  - **P21c:** aa the same; the events walker walks a paragraph's list (`mode=horizontal`, a `{CJK*}`'s `\par` repack) as no group, so 2608.21138's `\corrauth` keeps its name; 2408.11004, 2509.22322 and 2604.10287 better; 1407.3707 lateral.
+  - **P21d:** P21's regression on the OmniBus path, found by revP24b — a name with an affiliation command after an `\and` (`\and Bob Baker\institute{Univ B}`) read with its contact's text as the earlier names' affiliation. The reading's shared column now reads the column's own ink (`column_own_text`); nucl-th0308018 1 → 2 creators; the kernel `article` route improves the same way.
+- **P2-4, eptcs (P24, P24b, OD #991 (8)):** the cells are cut where the separator query reads a kernel `\and`, at the separator's own run (`own_run` leaves an environment closed right before it, a glued `\end{tabular}`, to the environment). The `\and` rejoin is gone. One `ArgSeparator::span` serves eptcs and the sv queue reader (P21b's `position` dropped); byte-identical on eptcs, sv, aa and stage2.
+- **The glued e-mail label (RC-GL, GL1, GL1b, OD #956/#992):** a label glued to its address (`Email:zz@x.org`) names the contact as the spaced form does, the address the content and a valid `mailto:`; a second glued label joins the first's name (`joined_line_label`). This was a Rust-only regression against Perl (OD #956's glued-label arm). hep-ph9606235, astro-ph0001190, hep-ph0411269, 2206.00543, astro-ph0107243 and gr-qc0212108 are better; ~380 arXiv papers projected.
+- **Reviews:** revP24 NO-SHIP (B1, a separator glued to `\end{tabular}` lost its cut) → P24b; revGL1 NO-SHIP (a second label replaced the first's name) → GL1b; revBT1 NO-SHIP (a name split by a link lost its only count) → BT1b, not in this bundle. Two writer misreports corrected by reviewers (P21b's second mechanism, P24's ink-span guess).
+- **Holdout rule:** writer P21d ran a line count on the spent v3 holdout file (output discarded, no id seen); reported to the user, and the brief wording widened to "never pass the holdout file to any command in any form".
+- **The chain** (`chain/out/int158a/`): pending.
+
 ## Bundle int157a — Option C P1 on both routes, separators by meaning, P2-0, the image before a URL
 
 On `pk/int157a` after the int156a push (`e25c1a4881`); every batch reviewed and merged. Its open residuals are live in

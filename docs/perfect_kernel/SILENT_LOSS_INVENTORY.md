@@ -1874,6 +1874,33 @@ do not block the E/F rerun.
 - Kept from CR8c: its logo on the first marked line after bold names (`polyu-logo.png` on its 4 authors; guard `perfect_kernel_batchcr8::image_on_the_first_marked_line_is_kept`); settled dead-end: a picture note in place (CR8c's attempt, reverted) merged 2505.21327's two URL lines into one affiliation.
 - State: fixed (IMG1, IMG1b, IMG1c).
 
+### Bundle int158a — the residual (OD #956, #991, #992, #993)
+
+- Landed: P21, P21b, P21c, P21d (Option C P2-1 outside llncs), P24/P24b (P2-4 eptcs), GL1/GL1b (the glued e-mail label).
+- **Known REDs (catalog repros):**
+  - ptephy's last mark glued to the list's closing brace stays in the name (`author_one_block/ptephy_author_list_glued_trailing_mark_stays_red`);
+  - three spaced e-mail labels leave two in the address and lose a colon (`email_three_spaced_labels_lose_a_colon_red`);
+  - two contacts on one name after an `\and` split between authors (`omnibus_author_name_with_two_institutes_after_and_red`);
+  - an sv `\begin{tabular}…\end{tabular}\and` list is not read as the authors' list (`svjour3_author_table_glued_to_and_list_stays_red`);
+  - a CJK part inside the `\corrauth` author's own name writes the contact twice (P21c's catalog repro).
+- **Pre-existing, synthetic:**
+  - emulateapj `\affil` glued e-mail line → a nameless creator;
+  - a REVTeX affiliation footnote with two labels stays a `<pubnote>`;
+  - `Email:Mail:zz@…` makes no e-mail contact;
+  - eptcs `\end{tabular}\\ Univ A\and` puts "Univ A" on Bob as well;
+  - a user environment whose end prints a word makes it a creator (counted);
+  - sv `\newcommand\sep{ \and\relax}` gives "and Bob Baker";
+  - aa/sv with no class file lose an `\institute` inside `\author` (counted);
+  - appolb's `\address` after the last of `A \and B` sits on B only (appolb.cls:194 prints it under both, nucl-th0308018).
+- **Overcount:** the by-text Warning counts a name written by text even when it held no markup (4 ptephy witnesses, 2604.09547, …). BT1 fixes it; BT1b keeps the count where a link or note split the name (revBT1 B1).
+- **Proposed batches:**
+  - P2-2 (S2 institute splits), P2-3 (llncs);
+  - eptcs's table-of-names route into the reading;
+  - an eptcs table after a cell spelling no name → a nameless creator;
+  - T8 in the reading (a renewed `\and` gives two creators where pdflatex prints one column);
+  - the reading's per-contact ownership (two contacts on one name);
+  - items written by text decided from their digested ink.
+
 ### Bundle int157a — the residual (OD #993, #994, #995, #989)
 
 - Landed: OC1 + OC1c (Option C P1 on the block and API routes), SEP1 + SEP1b (separators bound by meaning), P20 (P2-0, the
