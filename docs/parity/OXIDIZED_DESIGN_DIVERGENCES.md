@@ -15522,7 +15522,7 @@ that starts with a mark (`$^{1}$Univ A`, or one piece of `$^1$… \\ $^2$…` li
 (`\lx@sv@institute@unlabelled` → `\lx@add@affiliation@marked`, 63i), its lines labelled by their marks.
 
 svjour3's `\author` splits each `\and` piece at its commas, " and " and " \& " (`\lx@add@author@split`, as llncs and
-inst do since 63e; Perl split at commas only): `\author{A and B \and C}` is three people (1406.5162, 2105.12728, both
+inst do since 63e; Perl split at commas only; since P2-1b the whole list is one call the reading cuts, #993): `\author{A and B \and C}` is three people (1406.5162, 2105.12728, both
 `Error:frontmatter:merged_creators` before). Guard `perfect_kernel_batch63::author_svjour3_and_piece_splits`. Open RED
 repros: `author_svjour3_mbox_list_splits` (`\author{\mbox{A \and B}}`, 2105.05947) and
 `svjour3_name_only_piece_shares_the_next_institute` (`\institute{A \and B \at X}`, 1709.00485).
@@ -34195,9 +34195,29 @@ its plain text, its markup lost`, an overcount: the shape `\name{\fname{…} \su
 the emitter's by-text writer warns on every piece it writes by text (queued: warn only when the piece's events held
 markup). The marks stay when glued to the list's closing brace (RED repro
 `author_one_block/ptephy_author_list_glued_trailing_mark_stays_red`). OmniBus 2301.07825's jesmith@ address goes to
-Jane E. Smith, whose `\footnotemark[3]` is the note printing it. aa's and sv_support's splits stay (one queued block there changes what reads the queue per author
-entry: P2-1b), llncs's too (P2-3). Guards `perfect_kernel_batchp21::{an_author_list_is_one_block_the_reading_cuts,
+Jane E. Smith, whose `\footnotemark[3]` is the note printing it. aa's and sv_support's splits stayed (one queued block
+there changes what reads the queue per author entry: P2-1b, below), llncs's too (P2-3). Guards
+`perfect_kernel_batchp21::{an_author_list_is_one_block_the_reading_cuts,
 webofc_a_macro_held_line_break_parts_names}`; repros `class-bindings/author_one_block/`.
+
+**P2-1b (P21b): sv_support's split removed, aa's kept.** sv_support's `\author` makes one `\lx@add@author@split{#1}`
+call. The queue's readers read each queued `ltx:creator` entry as one name, so the whole list was one: the
+`\lx@sv@institute@` gate (an itemized `\institute` list spelling two or more queued names whole is the authors' list) failed,
+and the list and every address went to the last author (2312.14898). `queue_reading.rs` `queued_author_names_spelled`
+now parts each entry first (`entry_names`) where the reading cuts it: at each `\and`-family separator not inside a layout container (a brace group is none, so
+`{A \and B}` parts inside its braces) that `argument_separators` reads and that is one of the entry's own tokens (its new `ArgSeparator::position`, which a
+macro `\and` has too: it is the separator, not a macro holding one), whatever it means at `\institute` — the rehearsal binds `\and` whatever it means (`ALWAYS_BOUND`), and each sv class sets its
+own in its `\@maketitle` before the names print (svjour3.cls:608 in 2312.14898's copy; svjour, svmult and svproc likewise, revP21b), so a document's `\renewcommand\and{\unskip, }` still gives three creators and
+the shared list, as P21's split did. A macro-held separator and an entry the query cannot read (`None`) part nothing:
+the entry stays one name. The queue readers, by route: changed, `queued_author_names_spelled` (one caller,
+`sv_support_sty.rs` `\lx@sv@institute@`); unchanged, `queued_author_name_prints` (it reads all the names' words together,
+so a part changes nothing), `queued_author_marks`, `queued_requesters` and `queued_name_marks` (one entry per position;
+the kernel `\author`'s block is one entry too, so parting their positions is the plan's P4 row). aa keeps its split:
+without it, `\corrauth`'s contact loses `name="Corresponding author: "` when another name holds a `CJK*` environment
+(2608.21138): the emitter writes the contact as its item (`\lx@frontmatter@itemonly{…}`), not as the `\corrauth` call, a
+mechanism of its own (catalog repro `class-bindings/author_one_block/aa_corrauth_beside_a_cjk_name_in_one_block.tex`).
+Guard `perfect_kernel_batchp21b::sv_institute_list_reads_a_whole_author_entry_by_its_names`; repros
+`class-bindings/author_one_block/svjour3_institute_list_names_a_whole_author_block{,_document_and}.tex`.
 
 ### 994. The rehearsal binds a `\let` copy of an author-line separator or note command by its meaning, as the command it copies (SEP1)
 

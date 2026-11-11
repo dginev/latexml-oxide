@@ -64,9 +64,13 @@ impl SepMeaning {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct ArgSeparator {
   /// the command of the family the rehearsal read (`\and`, `\And`, `\AND`: `SepKind::And`)
-  pub command: &'static str,
+  pub command:  &'static str,
   /// the meaning of the token that printed it, where the query is made
-  pub meaning: SepMeaning,
+  pub meaning:  SepMeaning,
+  /// where that token is in the argument, when it is one of the argument's own tokens (a literal, a `\let` copy, an
+  /// active character, the command itself whatever it means): `None` where a macro holds the separator or no span was
+  /// read (`printing_token`), so a caller parting the argument there finds no token to part at
+  pub position: Option<u16>,
 }
 
 /// The kinds of meaning a definition origin says, for a meaning that is not the kernel separator's.
@@ -105,12 +109,22 @@ fn meaning_of(token: &Token) -> SepMeaning {
 /// a `\let` copy, an active character) where it is no macro; else the family's command the rehearsal read (`command`) —
 /// a macro holding the separator, whose call the span covers (`\newcommand\aut{Ann \and Bob}`), a class's macro `\and`
 /// itself or a copy of it (`rehearsal::let_copies_of_bound_commands` binds a copy only where it means what the command
-/// means), a `\csname and\endcsname` (which names the command), a span not read.
-fn printing_token(content: &[Token], span: Option<(u16, u16)>, command: &'static str) -> Token {
-  let run = span.and_then(|(s, t)| content.get(usize::from(s)..usize::from(t)));
+/// means), a `\csname and\endcsname` (which names the command), a span not read. With it, the position of the one token
+/// in `content`, where it is that token or the family's command itself ([`ArgSeparator::position`]).
+fn printing_token(
+  content: &[Token],
+  span: Option<(u16, u16)>,
+  command: &'static str,
+) -> (Token, Option<u16>) {
+  let run = span.and_then(|(s, t)| Some((s, content.get(usize::from(s)..usize::from(t))?)));
   match run {
-    Some([one]) if !matches!(lookup_meaning(one), Some(Stored::Expandable(_))) => *one,
-    _ => T_CS!(command),
+    Some((at, [one])) if !matches!(lookup_meaning(one), Some(Stored::Expandable(_))) => {
+      (*one, Some(at))
+    },
+    // (the family's command itself, which the rehearsal binds by its name whatever it means here: a macro `\and` is no
+    // macro holding a separator but the separator, at its own position)
+    Some((at, [one])) if *one == T_CS!(command) => (T_CS!(command), Some(at)),
+    _ => (T_CS!(command), None),
   }
 }
 
@@ -158,10 +172,14 @@ pub fn argument_separators(arg: &Tokens) -> Result<Option<Vec<ArgSeparator>>> {
     return Ok(None);
   };
   let separators = events.iter().filter_map(|e| match e.kind {
-    EventKind::Sep(SepKind::And(command)) if e.nest == 0 => Some(ArgSeparator {
-      command,
-      meaning: meaning_of(&printing_token(content, e.span, command)),
-    }),
+    EventKind::Sep(SepKind::And(command)) if e.nest == 0 => {
+      let (token, position) = printing_token(content, e.span, command);
+      Some(ArgSeparator {
+        command,
+        meaning: meaning_of(&token),
+        position,
+      })
+    },
     _ => None,
   });
   Ok(Some(separators.collect()))

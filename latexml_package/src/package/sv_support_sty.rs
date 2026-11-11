@@ -55,11 +55,13 @@ LoadDefinitions!({
   DefMacro!("\\mailname", "\\textit{Correspondence}");
 
   // Single \author containing multiple authors separated by \and  (Perl PR #2767)
-  // Each `\and` piece is split at its commas, " and " and " \& " (`\lx@add@author@split`, as llncs; 63h): `\author{A and
-  // B \and C}` is three people, where Perl split at commas only (1406.5162, 2105.12728).
+  // The whole list is one `\lx@add@author@split` call, which the reading cuts at its `\and`s, commas, " and " and " \& "
+  // (as llncs; 63h; Option C P2-1b, OXIDIZED_DESIGN_DIVERGENCES #993): `\author{A and B \and C}` is three people, where
+  // Perl split at `\and` and commas only (1406.5162, 2105.12728). The queue's name reader parts the one entry at its
+  // `\and`s for `\institute` (`queued_author_names_spelled`, 2312.14898).
   DefMacro!(
     "\\author{}",
-    "\\lx@clear@creators[role=author]\\lx@splitting{\\lx@add@author@split}{\\and\\And}{#1}\\lx@author@trailing"
+    "\\lx@clear@creators[role=author]\\lx@add@author@split{#1}\\lx@author@trailing"
   );
   // Single \institute containing name \at institute \and ... repeating.
   // Note that the name corresponds to (but probably won't match exactly!) an author name
@@ -155,7 +157,7 @@ LoadDefinitions!({
     // 2108.10893, 2305.05654)
     if !address.is_empty()
       && !structure.is_empty()
-      && queued_author_names_spelled(&Tokens::new(line.clone())) > 1
+      && queued_author_names_spelled(&Tokens::new(line.clone()))? > 1
     {
       named.extend(split_email_calls(&words).1);
       return Ok(Invocation!(

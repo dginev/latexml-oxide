@@ -212,18 +212,57 @@ pub fn queued_author_name_prints(text: &Tokens) -> bool {
 /// How many queued authors' names (`queued_name`) `text` spells whole: each author whose name's words (as
 /// [`queued_author_name_prints`] reads them) stand together, in order, among the words `text` prints. svjour3's
 /// `\institute{\begin{itemize}\item[\Letter] Ann Able \\ \email{…} \item[] Bob Baker \\ \email{…} \at \item[1]
-/// Univ X …}` names its list's authors before the one `\at` (2312.14898): two or more names it no one by.
-pub fn queued_author_names_spelled(text: &Tokens) -> usize {
+/// Univ X …}` names its list's authors before the one `\at` (2312.14898): two or more names it no one by. A whole author
+/// list queued as one entry (sv_support's `\author{A \and B}`, one `\lx@add@author@split` call the reading cuts) is
+/// parted at its separators first (`entry_names`), so each of its names is counted as a name of its own.
+pub fn queued_author_names_spelled(text: &Tokens) -> Result<usize> {
   let written = printed_words(text);
-  queued_author_name_words()
-    .into_iter()
-    .filter(|name| {
-      !name.is_empty()
+  let mut spelled = 0;
+  for entry in queued_author_names() {
+    for name in entry_names(&entry)? {
+      let name = printed_words(&name);
+      if !name.is_empty()
         && written
           .windows(name.len())
           .any(|run| run == name.as_slice())
-    })
-    .count()
+      {
+        spelled += 1;
+      }
+    }
+  }
+  Ok(spelled)
+}
+
+/// The names one queued author entry holds: the entry parted where the reading cuts its names, at each `\and`-family
+/// separator not inside a layout container (a brace group is none) the rehearsal reads ([`argument_separators`],
+/// OXIDIZED_DESIGN_DIVERGENCES #995) that is one
+/// of the entry's own tokens (a literal, a `\let` copy, an active character), whatever it means where the query is
+/// made: the rehearsal binds `\and` as the separator whatever it means (`rehearsal::ALWAYS_BOUND`), so the reading writes
+/// a creator per piece there, and svjour3, the one class whose binding asks, sets its own `\and` in its `\@maketitle`
+/// before the names print (svjour3.cls:608; svjour, svmult and svproc likewise), so a document's `\renewcommand\and`
+/// before it changes no part. A macro holding a separator
+/// gives no token to part at. An entry the query could not read (`None`: no rehearsal made, over its allowance, a group
+/// left open) is one name, as it is with no separator: unread is not "no separator", and keeping the entry whole is the
+/// reading before any part was known.
+fn entry_names(name: &Tokens) -> Result<Vec<Tokens>> {
+  let Some(separators) = argument_separators(name)? else {
+    return Ok(vec![name.clone()]);
+  };
+  let content = name.unlist_ref();
+  let mut names = Vec::new();
+  let mut from = 0;
+  for separator in separators {
+    if let Some(at) = separator.position
+      && let Some(name) = content.get(from..usize::from(at))
+    {
+      names.push(Tokens::new(name.to_vec()));
+      from = usize::from(at) + 1;
+    }
+  }
+  names.push(Tokens::new(
+    content.get(from..).unwrap_or_default().to_vec(),
+  ));
+  Ok(names)
 }
 
 /// The words `tokens` print as a name-shape test reads them ([`visible_name_text`]), accents aside, lowercased.
@@ -237,13 +276,18 @@ fn printed_words(tokens: &Tokens) -> Vec<String> {
 
 /// Each queued author's name ([`queued_name`]) as its [`printed_words`], in queue order.
 fn queued_author_name_words() -> Vec<Vec<String>> {
+  queued_author_names().iter().map(printed_words).collect()
+}
+
+/// Each queued author entry's name ([`queued_name`]), in queue order.
+fn queued_author_names() -> Vec<Tokens> {
   with_value("frontmatter_raw", |v| match v {
     Some(Stored::FrontmatterRaw(queue)) => queue
       .iter()
       .filter(|entry| {
         entry.0 == "ltx:creator" && entry.1.get("role").map(String::as_str) == Some("author")
       })
-      .map(|entry| printed_words(&queued_name(&entry.2)))
+      .map(|entry| queued_name(&entry.2))
       .collect(),
     _ => Vec::new(),
   })

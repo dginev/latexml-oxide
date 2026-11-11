@@ -1,0 +1,39 @@
+% mechanism: sv_support's whole author list is one `\lx@add@author@split` call (Option C P2-1b, OD #993); the queue's name
+%   reader parts it where the reading cuts (`queue_reading.rs` `entry_names`): at each `\and` not inside a layout
+%   container that is one of its own tokens, whatever `\and` means at `\institute` — here the document's macro, which
+%   svjour3 replaces in its `\@maketitle` before the names print (svjour3.cls:608); the separator query gives the macro `\and` its own position
+%   (`separators.rs` `printing_token`, `ArgSeparator::position`, OD #995)
+% witness: synthetic (2312.14898's shape under a document `\renewcommand\and`; of the 405 sv papers two define `\and`
+%          inside a macro, 0807.3898's JEL list and 2312.06540's `\texorpdfstring` one, both byte-identical to P21)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, 2312.14898's svjour3.cls and svglov3.clo) 0 errors: "Ann Able 1 · Bob
+%          Baker 1 · Cid Cole 2" (svjour3's own `\and`), the institute footnote as without the redefinition
+% engines: rust P21 (split by spelling) = each author its own address, the list on the block's nameless creator; P21
+%          with sv_support's split removed, and an intermediate P21b build whose query gave a macro `\and` no position =
+%          the three addresses and the list on Cid Cole; P21b = P21's XML
+% expect:  0 errors, 0 warnings; Ann Able 1 (ann@x.edu), Bob Baker 1 (bob@x.edu), Cid Cole 2 (cid@y.edu), the list shared
+% status:  RED (P21 without the split; the intermediate build) -> GREEN (P21b) — perfect_kernel_batchp21b::sv_institute_list_reads_a_whole_author_entry_by_its_names
+% preload: ar5iv.sty
+\documentclass[smallextended]{svjour3}
+\renewcommand\and{\unskip, }
+\begin{document}
+\title{T}
+\author{{Ann Able} \textsuperscript{1} \and \\
+        {Bob Baker} \textsuperscript{1} \and
+        {Cid Cole} \textsuperscript{2}
+}
+\institute{
+    \begin{itemize}
+        \item[$\ast$] {Ann Able} \\
+                \email{ann@x.edu} \\
+        \item[] {Bob Baker} \\
+                \email{bob@x.edu} \\
+        \item[] {Cid Cole} \\
+                \email{cid@y.edu} \\
+        \at
+        \item[\textsuperscript{1}] University of X
+        \item[\textsuperscript{2}] University of Y
+    \end{itemize}
+}
+\maketitle
+Text.
+\end{document}

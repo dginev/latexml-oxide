@@ -1,0 +1,40 @@
+% mechanism: sv_support's `\author` hands its whole list to the reading in one `\lx@add@author@split` call (no
+%   `\lx@splitting` by spelling, Option C P2-1b, OD #993); the queue's name reader parts that one entry at its kernel
+%   `\and`s (`queue_reading.rs` `entry_names`, by `argument_separators`' meaning and position, OD #995), so an
+%   `\institute` list spelling two or more of its names is the authors' list (`queued_author_names_spelled`)
+% witness: 2312.14898 (svjour3: `\author{{Wendkûuni C. Ouédraogo} \textsuperscript{1} \and \\ … {Tegawend\'e F.
+%          Bissyand\'e} \textsuperscript{1}}`, `\institute{\begin{itemize}\item[\Letter] {Wendkûuni C. Ouédraogo} \\
+%          \email{…} \\ … \at \item[\textsuperscript{1}] SnT Centre, … \end{itemize}}`, seven names before the one `\at`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, 2312.14898's svjour3.cls and svglov3.clo) 0 errors: "Ann Able 1 · Bob
+%          Baker 1 · Cid Cole 2", and in the institute footnote "∗ Ann Able", "E-mail: ann@x.edu", "Bob Baker", "E-mail:
+%          bob@x.edu", "Cid Cole", "E-mail: cid@y.edu", "1 University of X", "2 University of Y"
+% engines: rust P21 (split by spelling) = each author its own address, the list on the block's nameless creator; P21 with
+%          sv_support's split removed and no part in the reader = the three addresses and the list on Cid Cole alone;
+%          P21b = P21's XML
+% expect:  0 errors, 0 warnings; Ann Able 1 (ann@x.edu), Bob Baker 1 (bob@x.edu), Cid Cole 2 (cid@y.edu), and the list
+%          shared on the block's creator (#159); the names keep their `\textsuperscript` digit, as on P21
+% status:  RED (P21 without sv_support's split) -> GREEN (P21b) — perfect_kernel_batchp21b::sv_institute_list_reads_a_whole_author_entry_by_its_names
+% preload: ar5iv.sty
+\documentclass[smallextended]{svjour3}
+\begin{document}
+\title{T}
+\author{{Ann Able} \textsuperscript{1} \and \\
+        {Bob Baker} \textsuperscript{1} \and
+        {Cid Cole} \textsuperscript{2}
+}
+\institute{
+    \begin{itemize}
+        \item[$\ast$] {Ann Able} \\
+                \email{ann@x.edu} \\
+        \item[] {Bob Baker} \\
+                \email{bob@x.edu} \\
+        \item[] {Cid Cole} \\
+                \email{cid@y.edu} \\
+        \at
+        \item[\textsuperscript{1}] University of X
+        \item[\textsuperscript{2}] University of Y
+    \end{itemize}
+}
+\maketitle
+Text.
+\end{document}
