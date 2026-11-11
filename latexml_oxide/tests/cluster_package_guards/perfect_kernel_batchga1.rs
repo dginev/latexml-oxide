@@ -8,9 +8,10 @@ use super::perfect_kernel_batch46::{convert_with, error_count, warning_count};
 
 /// A whole element: its tag, identifying attributes, the element.
 type Element = (&'static str, &'static [&'static str], &'static str);
-/// One repro: its file, the exact Error and Warning counts, the "assuming 0" Warnings among them, the first Error's head
+/// One repro: its preload (`RAW` where the CLI's raw loading matters), its file, the exact Error and Warning counts, the "assuming 0" Warnings among them, the first Error's head
 /// (empty for none), and whole elements.
 type Row = (
+  Option<&'static str>,
   &'static str,
   usize,
   usize,
@@ -19,10 +20,14 @@ type Row = (
   &'static [Element],
 );
 
+/// The CLI's raw loading of packages without a binding.
+const RAW: &str = "[rawstyles,rawclasses]latexml.sty";
+
 const ROWS: &[Row] = &[
   // The undefined `\c@nosuch` read by `\the`: Perl's two errors (pdflatex's two `!`), no "assuming 0" Warning; "Value: 0."
   // as Perl and the PDF.
   (
+    None,
     include_str!(
       "../../../tools/perfect_kernel/repros/macro-state/undefined_counter_register_is_an_error.tex"
     ),
@@ -35,6 +40,7 @@ const ROWS: &[Row] = &[
   // `\arabic{nosuch}` keeps `CounterValue`'s Warning; `\value{nosuch}` read as a number is the undefined control
   // sequence (an Error, as Perl) and "Missing number" (a Warning, as Perl).
   (
+    None,
     include_str!(
       "../../../tools/perfect_kernel/repros/macro-state/counter_readers_keep_their_leniency.tex"
     ),
@@ -47,6 +53,7 @@ const ROWS: &[Row] = &[
   // subfig's `\ContinuedFloat` in a float type without a sub-float counter (subfig.sty:587's `\@ifundefined` guard):
   // the number steps back, no sub-counter is touched, nothing is reported. Witness 1910.02851.
   (
+    None,
     include_str!(
       "../../../tools/perfect_kernel/repros/captions-floats/subfig_continuedfloat_in_a_float_without_subfloats.tex"
     ),
@@ -87,6 +94,7 @@ const ROWS: &[Row] = &[
   // inside a cell's text and in a `\textbf`; back to 0 after the table, as pdflatex prints. Witness: the manual
   // non-decimal-units (26 errors on GA1).
   (
+    None,
     include_str!(
       "../../../tools/perfect_kernel/repros/alignment-bindings/tabularray_rownum_colnum_counters.tex"
     ),
@@ -109,14 +117,15 @@ const ROWS: &[Row] = &[
   // `\c@rownum` is a count whatever loaded first (colortbl.sty:269-274; tabularray.sty:185, :1682): xcolor's `[table]`
   // before tabularray (2601.01074, 2409.12172: GA1b's `expected:register` Warnings, cells "b0.2"/"d0"), and in the
   // same document a `\rowcolors` tabular whose rows read the count colortbl.sty:261 steps (`\the\rownum`, `\number`,
-  // `\therownum`; on int160a1 3 errors 12 warnings), each cell as pdflatex. Its one Warning is this harness's: in-process
-  // raw loading is off, so tabularray's `ninecolors` (required with xcolor) is `missing_file` (the CLI loads it: 0 W).
+  // `\therownum`; on int160a1 3 errors 12 warnings), each cell as pdflatex. Converted with raw loading on (`RAW`), as
+  // the CLI does, so tabularray's `ninecolors` (required with xcolor) loads: 0 W (review revGA1c).
   (
+    Some(RAW),
     include_str!(
       "../../../tools/perfect_kernel/repros/alignment-bindings/tabularray_after_xcolor_table_rownum_is_a_count.tex"
     ),
     0,
-    1,
+    0,
     0,
     "",
     &[
@@ -140,13 +149,14 @@ const ROWS: &[Row] = &[
     ],
   ),
   // The other load order: tabularray's `\c@rownum` first, colortbl.sty:272 lets `\rownum` to it (xcolor `[table]`);
-  // the harness's `ninecolors` Warning as above.
+  // raw loading on, as above.
   (
+    Some(RAW),
     include_str!(
       "../../../tools/perfect_kernel/repros/alignment-bindings/tabularray_before_xcolor_table_rownum_is_a_count.tex"
     ),
     0,
-    1,
+    0,
     0,
     "",
     &[(
@@ -159,6 +169,7 @@ const ROWS: &[Row] = &[
   ),
   // colortbl alone after tabularray: `\rownum` is tabularray's per-cell count (GA1b "b0.1", "d0": a second count).
   (
+    None,
     include_str!(
       "../../../tools/perfect_kernel/repros/alignment-bindings/tabularray_before_colortbl_rownum_is_its_count.tex"
     ),
@@ -176,6 +187,7 @@ const ROWS: &[Row] = &[
   ),
   // xcolor `[table]` alone, `\therownum` outside a table: colortbl's count, "row 0" (GA1b: 2 Warnings).
   (
+    None,
     include_str!("../../../tools/perfect_kernel/repros/graphics-tikz/colortbl_therownum.tex"),
     0,
     0,
@@ -186,6 +198,7 @@ const ROWS: &[Row] = &[
   // `\c@rowcount` counts no empty last row (tabularray.sty:3722-3731): a trailing `\hline`, `\\[2pt]` … `\\*`, the
   // `expand=` path (`\lx@tblr@rules@shape`) and a `\SetCell[r=2]` table (GA1b "a3", "c3.2", "xm4.2", "z3/4").
   (
+    None,
     include_str!(
       "../../../tools/perfect_kernel/repros/alignment-bindings/tabularray_rowcount_counts_no_empty_last_row.tex"
     ),
@@ -237,8 +250,8 @@ const ROWS: &[Row] = &[
 /// Error, whole elements.
 #[test]
 fn an_undefined_counter_register_is_the_error_tex_raises() {
-  for (tex, errors, warnings, assuming, first_error, elements) in ROWS {
-    let (stderr, xml) = convert_with(tex, None);
+  for (preload, tex, errors, warnings, assuming, first_error, elements) in ROWS {
+    let (stderr, xml) = convert_with(tex, *preload);
     let head = tex.lines().next().unwrap_or_default();
     assert_eq!(error_count(&stderr), *errors, "{head}\n{stderr}");
     assert_eq!(warning_count(&stderr), *warnings, "{head}\n{stderr}");
