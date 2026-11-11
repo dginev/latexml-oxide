@@ -34633,3 +34633,47 @@ macro-held `\and` would drop the tail's words, as the written one already does; 
 byte-identity of the gates against int158a: the P26 report. Guards `perfect_kernel_batchp26::{an_in_place_line_is_the_classs_where_a_separator_means_the_kernels,
 a_displaced_and_list_is_read_by_meaning, a_numbered_store_route_tries_the_numbering_by_meaning}`; repros
 `sectioning-frontmatter/{inplace_contact_kernel_and_line_stays_the_classs,inplace_contact_class_and_line_is_the_apis,inplace_contact_copied_or_held_kernel_and_stays_the_classs,inplace_contact_kernel_and_copy_under_a_renewed_and,inplace_contact_and_inside_a_box_or_note_parts_no_line,displaced_csname_and_institutes_stay_the_classs}.tex`.
+
+### 1001. A note an author's name or contact holds is the creator's, beside it (FN1)
+
+**Perl.** `\footnotemark[<n>]` makes its `ltx:note` (`role="footnotemark"`) where it stands, and `relocateFootnote`
+(latex_constructs.pool.ltxml:498-520) fills that node with the `\footnotetext[<n>]` content. After an author's name
+the node is inside `ltx:personname`: `<personname>Bob Baker<note mark="1" role="footnote">…Note B.</note></personname>`,
+so a reader of the name gets "Bob Baker * * footnote * Note B." Our port did the same on every class route (article,
+IEEEtran, authblk, llncs, elsarticle, revtex4-2, OmniBus; RT1's F17; witness 2104.12292).
+
+**Rust.** The `ltx:personname` close, and the close of an `ltx:contact` whose parent is the `ltx:creator`, move each
+`ltx:note` they hold (one not nested in another note) out to the creator, right after the name or contact, in order:
+its `mark`, tags and id kept, as a `\thanks` note sits beside the name (`queue_digest.rs` `lift_notes_beside`, called
+first in `frontmatter_api.rs`'s two hooks). A wrapper that held the mark alone and is left empty
+(`Bob Baker{\small\footnotemark[2]}`) is removed, and the text a lifted note or wrapper stood between is joined
+(`join_texts_after`), so the whole-name bold rule and the punctuation strip see the name alone and trim its end whole
+(`Kent-Andre Mardal \footnotemark[2] \footnotemark[3]`, 1612.03574). A contact still in the `role="pending"` holder of
+annotations placed by label is left alone (a note lifted there had no label and was orphaned, three Warnings and the
+marks lost on revtex's `\affiliation{\footnotemark[1]Univ A}`, 1607.07280); its clone placed in the creator closes again
+and is lifted there. The note is moved, not copied, so `relocate_footnote` still finds it when the text comes after the
+names. An unpaired mark (a `\footnotemark` whose text prints another number, or one naming a `\thanks` note) moves
+the same way, still `role="footnotemark"`. Reason: semantic markup — the name holds the name; no word is dropped or
+added. `\footnote{…}` in `\author` was already the creator's `role="note"` contact (`\lx@add@note`).
+
+Not changed: two authors sharing one `\footnotemark[1]` and one `\footnotetext[1]` still get the text twice, once
+per mark (Perl's pairing, and `resolver/post.rs` `answer_note_texts`'s for 1405.4582): a pairing rule, Known RED
+`sectioning-frontmatter/author_shared_footnotemark_text_written_twice_red.tex`. ptephy's `\name` token writer's own
+marks and labels (`class-bindings/ptephy_*_footnotemark_*_red.tex`) stay RED: its notes are now beside the name, its
+label text is not this rule's. `\textsuperscript{\footnotemark[1]}` in an article name prints a mark with no note
+(the text a document footnote, as pdflatex prints the two apart). An endnotes mark (`role="endnotemark"`) moves the
+same way; a `$^,$` printed between two marks stays at the name's end (`Bob Baker<sup>,</sup>`,
+`perfect_kernel_batchne2::a_mark_after_its_names_note_stays_with_it`). Known RED, base's and not the lift's:
+`sectioning-frontmatter/{author_href_footnotemark_mark_written_twice_red,author_footnotemark_texts_take_a_sized_marks_size_red}.tex`.
+
+A block written whole (one creator, the Warning saying so) holds its notes after the joint name, in order, each with
+its mark (main session's ruling on FN1, 2026-11-11): `perfect_kernel_batchne2::a_mark_on_no_name_writes_the_block_whole`,
+`perfect_kernel_batchcl9::overlapping_names_keep_the_macros_marks`, `perfect_kernel_batchcr7::a_split_stating_a_false_owner_keeps_the_block_whole`,
+`perfect_kernel_batchpb::a_split_losing_a_name_keeps_the_block_whole`. Twenty guards that pinned the note inside the
+name were updated with this reason (FN1b report).
+
+Guards `perfect_kernel_batchfn1::{footnotemark_note_is_the_creators_beside_the_name,
+footnotemark_in_an_affiliation_is_the_creators_note_beside_it, footnotemark_in_a_wrapper_leaves_the_name_alone,
+footnote_in_the_author_is_the_creators_note_contact, spaced_marks_leave_the_name_end_trimmed}`, and
+`perfect_kernel_batchfms2a2r7::a_notes_mark_is_answered_by_its_footnotemark` (the pending holder: 0 Warnings); repros
+`sectioning-frontmatter/{author_footnotemark_note_is_the_creators_beside_the_name,author_footnotemark_note_beside_the_name_omnibus,author_footnotemark_text_before_maketitle_beside_the_name,author_bare_footnotemark_beside_the_name,affiliation_footnotemark_note_beside_the_contact,author_footnotemark_in_a_wrapper_beside_the_name,author_footnote_in_the_name_is_the_creators_note,author_two_footnotemarks_name_end_trimmed}.tex`.

@@ -138,6 +138,9 @@ fn an_undefined_command_past_a_mark_or_a_note_errs_in_the_name() {
 /// run to where its piece's tokens end and takes it no more — one Error, one ERROR stub (review revERR2c finding 1: ERR2
 /// wrote two stubs for its one Error; the user's ruling "never twice"; Perl and pdflatex one). With the mark's option and
 /// an address after it, the same. Distinct: the apart mark's grown piece, which the scan past it must see.
+/// FN1 (OD #1001; the user's ruling 2026-11-11): the marks the name held are the creator's, right after
+/// `</personname>` in order (before the `\thanks` note, which the reading writes after them), the one stub kept
+/// in the name; pin updated (the notes' move only).
 #[test]
 fn an_undefined_command_after_a_footnotemark_writes_one_stub() {
   let (log, xml) = convert(
@@ -147,10 +150,9 @@ fn an_undefined_command_after_a_footnotemark_writes_one_stub() {
   assert_eq!(undefined_errors(&log), ["\\foo"], "{log}");
   assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
   assert_eq!(creator_elements(&xml), [
-    "<creator role=\"author\">\n    <personname>Ann Able<note mark=\"*\" role=\"footnotemark\" \
-     xml:id=\"footnote1\"><tags>\n          <tag>*</tag>\n          <tag role=\"refnum\">*</tag>\n          <tag \
-     role=\"typerefnum\">footnote *</tag>\n        </tags></note><ERROR \
-     class=\"undefined\">\\foo</ERROR></personname>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ann Able<ERROR class=\"undefined\">\\foo</ERROR></personname>\n    \
+     <note mark=\"*\" role=\"footnotemark\" xml:id=\"footnote1\"><tags>\n        <tag>*</tag>\n        <tag \
+     role=\"refnum\">*</tag>\n        <tag role=\"typerefnum\">footnote *</tag>\n      </tags></note>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n  </creator>",
   ]);
   let (log, xml) = convert(
@@ -161,11 +163,10 @@ fn an_undefined_command_after_a_footnotemark_writes_one_stub() {
   assert_eq!(undefined_errors(&log), ["\\foo"], "{log}");
   assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
   assert_eq!(creator_elements(&xml), [
-    "<creator role=\"author\">\n    <personname>Ann Able<note mark=\"\u{2020}\" role=\"footnotemark\" \
-     xml:id=\"footnotex1\"><tags>\n          <tag>\u{2020}</tag>\n          <tag role=\"refnum\">\u{2020}</tag>\n          \
-     <tag role=\"typerefnum\">footnote \u{2020}</tag>\n        </tags></note><ERROR \
-     class=\"undefined\">\\foo</ERROR></personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\">ann@x.org</contact>\n  \
-     </creator>",
+    "<creator role=\"author\">\n    <personname>Ann Able<ERROR class=\"undefined\">\\foo</ERROR></personname>\n    \
+     <note mark=\"\u{2020}\" role=\"footnotemark\" xml:id=\"footnotex1\"><tags>\n        <tag>\u{2020}</tag>\n        \
+     <tag role=\"refnum\">\u{2020}</tag>\n        <tag role=\"typerefnum\">footnote \u{2020}</tag>\n      \
+     </tags></note>\n    <contact name=\"Email:\u{a0}\" role=\"email\">ann@x.org</contact>\n  </creator>",
   ]);
   // A separator written apart counts to where its tokens end too (`$^,$` grew over `\foo`): one stub, in source order,
   // between the marks (review revDEL5b finding 1; pdflatex 1 error, Perl one stub).
@@ -177,13 +178,13 @@ fn an_undefined_command_after_a_footnotemark_writes_one_stub() {
   assert_eq!(undefined_errors(&log), ["\\foo"], "{log}");
   assert_eq!((error_count(&log), warning_count(&log)), (1, 0), "{log}");
   assert_eq!(creator_elements(&xml), [
-    "<creator role=\"author\">\n    <personname>Ann Able<note mark=\"*\" role=\"footnotemark\" \
-     xml:id=\"footnotex1\"><tags>\n          <tag>*</tag>\n          <tag role=\"refnum\">*</tag>\n          <tag \
-     role=\"typerefnum\">footnote *</tag>\n        </tags></note><sup>,</sup><ERROR \
-     class=\"undefined\">\\foo</ERROR><note mark=\"\u{2020}\" role=\"footnotemark\" xml:id=\"footnotex2\"><tags>\n          \
-     <tag>\u{2020}</tag>\n          <tag role=\"refnum\">\u{2020}</tag>\n          <tag role=\"typerefnum\">footnote \
-     \u{2020}</tag>\n        </tags></note></personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_note\" \
-     role=\"thanks\">Univ X.</note>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ann Able<sup>,</sup><ERROR \
+     class=\"undefined\">\\foo</ERROR></personname>\n    <note mark=\"*\" role=\"footnotemark\" \
+     xml:id=\"footnotex1\"><tags>\n        <tag>*</tag>\n        <tag role=\"refnum\">*</tag>\n        <tag \
+     role=\"typerefnum\">footnote *</tag>\n      </tags></note>\n    <note mark=\"\u{2020}\" role=\"footnotemark\" \
+     xml:id=\"footnotex2\"><tags>\n        <tag>\u{2020}</tag>\n        <tag role=\"refnum\">\u{2020}</tag>\n        \
+     <tag role=\"typerefnum\">footnote \u{2020}</tag>\n      </tags></note>\n    <note class=\"ltx_note_frontmatter \
+     ltx_thanks_note\" role=\"thanks\">Univ X.</note>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n  </creator>",
   ]);
 }

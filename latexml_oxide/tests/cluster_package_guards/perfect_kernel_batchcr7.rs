@@ -271,6 +271,8 @@ fn a_split_gives_the_corresponding_author_the_left_address() {
 /// The fail-safe (review revCR7c S1, B1's class without cicp.cls): Perl's split gives each `\\` line to its piece's last
 /// name, so `… and Carl Cole\affil{1}\\ \affil{1} Univ X\\ \affil{2} Univ Y` gave Carl Univ Y, whose mark 2 Carl doesn't
 /// print (CR7c: Carl both, Ann and Bob nothing). The block is written whole, the Warning saying so: one creator.
+/// FN1 (OD #1001; the user's ruling 2026-11-11, which accepts this shape): a block written whole holds its notes
+/// after the joint name, each with its mark, so the name reads without their tags; pin updated (the notes' move only).
 #[test]
 fn a_split_stating_a_false_owner_keeps_the_block_whole() {
   let (log, xml) = run(repro!("cr7d_split_affil_line_false_owner"));
@@ -291,12 +293,13 @@ fn a_split_stating_a_false_owner_keeps_the_block_whole() {
        <Math mode=\"inline\" tex=\"{}^{\\textrm{,}}\" text=\"^[,]\" xml:id=\"m3\"><XMath xml:id=\"m3.1\">\
        <XMApp role=\"FLOATSUPERSCRIPT\" scriptpos=\"1\" xml:id=\"m3.1.1\"><XMText xml:id=\"m3.1.1.1\">\
        <text fontsize=\"70%\" xml:id=\"m3.1.1.1.1\">,</text></XMText></XMApp></XMath></Math>\
-       <note mark=\"*\" role=\"footnote\" xml:id=\"footnotex1\"><tags><tag>*</tag>\
-       <tag role=\"refnum\">*</tag><tag role=\"typerefnum\">footnote *</tag>\
-       </tags>Corresponding author.</note>, and Carl Cole<sup xml:id=\"id3\">\
+       , and Carl Cole<sup xml:id=\"id3\">\
        <text font=\"italic\" xml:id=\"id3.1\">1</text></sup><break/><sup xml:id=\"id4\">\
        <text font=\"italic\" xml:id=\"id4.1\">1</text></sup> Univ X<break/><sup xml:id=\"id5\">\
-       <text font=\"italic\" xml:id=\"id5.1\">2</text></sup> Univ Y</personname></creator>",
+       <text font=\"italic\" xml:id=\"id5.1\">2</text></sup> Univ Y</personname>\
+       <note mark=\"*\" role=\"footnote\" xml:id=\"footnotex1\"><tags><tag>*</tag>\
+       <tag role=\"refnum\">*</tag><tag role=\"typerefnum\">footnote *</tag>\
+       </tags>Corresponding author.</note></creator>",
     ],
     "{xml}"
   );

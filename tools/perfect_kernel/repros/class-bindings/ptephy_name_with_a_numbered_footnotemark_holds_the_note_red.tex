@@ -6,9 +6,11 @@
 % oracle:  pdflatex (TL 2025, -no-shell-escape, 1304.2086's ptephy.cls, a stand-in PDF for its logo graphic `newlogo`)
 %   0 errors: "Ann Able†1", "1 Univ X", footnote "† Note A."
 % engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 0 warnings; creator "Ann Able 2 footnote 2 2 footnote 2
-%   Note A. 1" with a note "2 footnote 2 2 footnote 2 Note A." and Univ X; perl not run
+%   Note A. 1" with a note "2 footnote 2 2 footnote 2 Note A." and Univ X; perl not run. FN1 (`latexml_oxide.FN1-rel`,
+%   OD #1001): 0 errors, 0 warnings; the note is the creator's, beside the name, but the name is "Ann Able1" (the
+%   writer's label text "1" kept in it): still red on the label, not on the note
 % expect:  0 errors, 0 warnings; creator Ann Able (Univ X) with the note "Note A."; no mark text in the name
-% status:  RED (int158a; RR1 gap 5)
+% status:  RED (int158a; RR1 gap 5; FN1: the label left)
 % preload: ar5iv.sty
 \documentclass{ptephy}
 \begin{document}

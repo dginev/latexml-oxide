@@ -60,14 +60,16 @@ fn footmisc_symbol_numbered_footnotetext_pairs_with_its_mark() {
 /// {\fnsymbol{footnote}}` (the idiom of 2412.20504, 0903.0014, 2006.14582), and the body's first note is "1". Red
 /// (int51a): "1"/"1" and the body note "1" only because nothing stepped; the 78k draft unpaired them. Repro
 /// sectioning-frontmatter/article_title_block_marks_in_fnsymbol.
+/// FN1 (OD #1001; the user's ruling 2026-11-11): the note the name held is the creator's, right after
+/// `</personname>`, its mark, tags and text kept; pin updated (the note's move only).
 #[test]
 fn article_title_block_marks_in_fnsymbol() {
   let xml = assert_each(
     repro!("sectioning-frontmatter/article_title_block_marks_in_fnsymbol.tex"),
     "creator",
     &[
-      r#"<creator role="author"><personname>Ann<note mark="*" role="footnote" xml:id="footnotex1"><tags><tag>*</tag><tag role="refnum">*</tag><tag role="typerefnum">footnote *</tag></tags>Equal.</note></personname></creator>"#,
-      r#"<creator before="  " role="author"><personname>Bob<note mark="†" role="footnote" xml:id="footnotex2"><tags><tag>†</tag><tag role="refnum">†</tag><tag role="typerefnum">footnote †</tag></tags>Intern.</note></personname></creator>"#,
+      r#"<creator role="author"><personname>Ann</personname><note mark="*" role="footnote" xml:id="footnotex1"><tags><tag>*</tag><tag role="refnum">*</tag><tag role="typerefnum">footnote *</tag></tags>Equal.</note></creator>"#,
+      r#"<creator before="  " role="author"><personname>Bob</personname><note mark="†" role="footnote" xml:id="footnotex2"><tags><tag>†</tag><tag role="refnum">†</tag><tag role="typerefnum">footnote †</tag></tags>Intern.</note></creator>"#,
     ],
   );
   latexml::util::test::assert_element(
@@ -82,6 +84,8 @@ fn article_title_block_marks_in_fnsymbol() {
 /// `\footnotemark[1]` is "1" and pairs with `\footnotetext[1]`; under `notitlepage` (:204-213) the mark is "∗" and the
 /// text "1", which pdflatex prints apart; they pair by the number they stand for (`relocate_footnote`'s `_fnvalue`).
 /// pdflatex 0 errors: "Ann1" / "1 Equal."; "Ann∗" / "1 Equal.".
+/// FN1 (OD #1001; the user's ruling 2026-11-11): the note the name held is the creator's, right after
+/// `</personname>`, its mark, tags and text kept; pin updated (the note's move only).
 #[test]
 fn report_title_page_marks_stay_arabic() {
   let tex = r"\documentclass{report}
@@ -93,17 +97,19 @@ fn report_title_page_marks_stay_arabic() {
 Body\footnote{first}.
 \end{document}";
   assert_each(tex, "creator", &[
-    r#"<creator role="author"><personname>Ann<note mark="1" role="footnote" xml:id="Ch0.footnotex1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>Equal.</note></personname></creator>"#,
+    r#"<creator role="author"><personname>Ann</personname><note mark="1" role="footnote" xml:id="Ch0.footnotex1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>Equal.</note></creator>"#,
   ]);
   let tex = tex.replace("{report}", "[notitlepage]{report}");
   assert_each(&tex, "creator", &[
-    r#"<creator role="author"><personname>Ann<note mark="*" role="footnote" xml:id="Ch0.footnotex1"><tags><tag>*</tag><tag role="refnum">*</tag><tag role="typerefnum">footnote *</tag></tags>Equal.</note></personname></creator>"#,
+    r#"<creator role="author"><personname>Ann</personname><note mark="*" role="footnote" xml:id="Ch0.footnotex1"><tags><tag>*</tag><tag role="refnum">*</tag><tag role="typerefnum">footnote *</tag></tags>Equal.</note></creator>"#,
   ]);
 }
 
 /// A mark and a text printing no common mark pair by the counter value they stand for: article's title marks
 /// `\footnotemark[2]` "†", the `\footnotetext[2]` after `\maketitle` prints "2" (2505.14146); pdflatex prints them
 /// apart ("A†", notes "1 First." and "2 Second."), the author pairs them. `[1]` answers no mark and stays a text.
+/// FN1 (OD #1001; the user's ruling 2026-11-11): the note the name held is the creator's, right after
+/// `</personname>`, its mark, tags and text kept; pin updated (the note's move only).
 #[test]
 fn title_mark_pairs_with_its_text_by_number() {
   let xml = assert_each(
@@ -118,7 +124,7 @@ Body.
 \end{document}",
     "creator",
     &[
-      r#"<creator role="author"><personname>A<note mark="†" role="footnote" xml:id="footnotex1"><tags><tag>†</tag><tag role="refnum">†</tag><tag role="typerefnum">footnote †</tag></tags>Second.</note></personname></creator>"#,
+      r#"<creator role="author"><personname>A</personname><note mark="†" role="footnote" xml:id="footnotex1"><tags><tag>†</tag><tag role="refnum">†</tag><tag role="typerefnum">footnote †</tag></tags>Second.</note></creator>"#,
     ],
   );
   latexml::util::test::assert_element(
@@ -234,6 +240,8 @@ fn declared_title_thefootnote_prints_the_marks_the_observer_labels() {
 /// `\fnsymbol` "∗ Equal contribution." (pdflatex 0 errors: "A∗ B", notes "∗ Equal contribution.", "1 one"). Witnesses
 /// 2507.05750 (footmisc `symbol`), 1405.7962 (a title's `\footnotemark`); red in the first cut of 78o r3, which kept
 /// every counted title mark to the title block.
+/// FN1 (OD #1001; the user's ruling 2026-11-11): the note the name held is the creator's, right after
+/// `</personname>`, its mark, tags and text kept; pin updated (the note's move only).
 #[test]
 fn title_bare_footnotemark_pairs_with_a_numbered_body_text() {
   assert_each(
@@ -247,7 +255,7 @@ Body\footnote{one}.
 \end{document}",
     "creator",
     &[
-      r#"<creator role="author"><personname>A<note mark="*" role="footnote" xml:id="footnote1"><tags><tag>*</tag><tag role="refnum">*</tag><tag role="typerefnum">footnote *</tag></tags>Equal contribution.</note></personname></creator>"#,
+      r#"<creator role="author"><personname>A</personname><note mark="*" role="footnote" xml:id="footnote1"><tags><tag>*</tag><tag role="refnum">*</tag><tag role="typerefnum">footnote *</tag></tags>Equal contribution.</note></creator>"#,
       r#"<creator before="  " role="author"><personname>B</personname></creator>"#,
     ],
   );

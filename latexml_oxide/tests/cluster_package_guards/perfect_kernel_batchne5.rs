@@ -34,6 +34,8 @@ fn run(tex: &str) -> (String, String) {
 /// `\lx@add@authors` splits it at its `\and`s (CR7, OD #988: it was one whole-block creator, Perl's tabular branch), a
 /// counted Warning, its pieces digested in order: five creators, the notes and Cat's recalled mark † kept, as pdflatex
 /// prints them.
+/// FN1 (OD #1001; the user's ruling 2026-11-11): the note the name held is the creator's, right after
+/// `</personname>`, so the name reads without its tags; pin updated (the note's move only).
 #[test]
 fn a_declaration_reading_past_its_span_writes_the_block_as_perl_splits_it() {
   let (log, xml) = run(repro!("ne5_decl_reads_past"));
@@ -50,7 +52,7 @@ fn a_declaration_reading_past_its_span_writes_the_block_as_perl_splits_it() {
     [
       row(&["Ann Able", "note=Univ A. Email: ann@a.at."]),
       row(&["Bob Baker", "note=Univ B. Emails: bob@b.il, cat@b.il."]),
-      row(&["Cat Cole \u{2020} \u{2020} footnote \u{2020}"]),
+      row(&["Cat Cole"]),
       row(&["Dan Dunn", "note=Univ C."]),
       row(&["Eve Ernst", "note=Univ D."]),
     ],

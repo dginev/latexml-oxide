@@ -144,6 +144,8 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // (moved here from latex_constructs per PR #2767; the existing Rust
   // punctuation-strip port is carried over).
   Tag!("ltx:personname", after_close => sub[document, node] {
+    // A note in the name is the creator's, beside it (first: the name's last text is then cleaned without it)
+    lift_notes_beside(document, node)?;
     // Normalize a whole-name bold BEFORE the punctuation strip, so the unwrapped
     // text is punctuation-cleaned like a plain name (html_feedback#61).
     unwrap_whole_name_bold(document, node)?;
@@ -283,6 +285,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     clean_trailing_break(document, node)?;
   });
   Tag!("ltx:contact", after_close => sub[document, node] {
+    lift_notes_beside(document, node)?;
     clean_trailing_break(document, node)?;
   });
 

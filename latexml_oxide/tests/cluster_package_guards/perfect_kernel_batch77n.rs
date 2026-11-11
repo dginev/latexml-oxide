@@ -133,6 +133,8 @@ fn centered_parbox_names_in_a_group_split() {
 
 /// A document's own note macro (`\blackthanks{…}` → `\thanks`) among `{\rm …}`-grouped names (2506.03876): five
 /// authors, the notes Ann Able's and Dan Dorn's.
+/// FN1 (OD #1001; the user's ruling 2026-11-11): the note the name held is the creator's, right after
+/// `</personname>`, its mark, tags and text kept; pin updated (the note's move only).
 #[test]
 fn note_macro_among_names_is_the_names_note() {
   let xml = convert_repro!("author_note_macro_among_names.tex");
@@ -157,8 +159,8 @@ fn note_macro_among_names_is_the_names_note() {
     ),
     creator(
       false,
-      &format!("Bob Baker{}", mark("1", "*")),
-      &affiliation("Univ B")
+      "Bob Baker",
+      &format!("{} {}", mark("1", "*"), affiliation("Univ B"))
     ),
     creator(false, "Cat Cole", &affiliation("Univ C")),
     creator(
@@ -172,8 +174,8 @@ fn note_macro_among_names_is_the_names_note() {
     ),
     creator(
       false,
-      &format!("Eve Ess{}", mark("2", "†")),
-      &affiliation("Univ B")
+      "Eve Ess",
+      &format!("{} {}", mark("2", "†"), affiliation("Univ B"))
     ),
   ]);
 }

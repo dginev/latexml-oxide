@@ -1,0 +1,19 @@
+% mechanism: a bare `\footnotemark` after a name whose `\footnotetext` after `\maketitle` prints another number
+%   (article resets the counter): the mark stays a mark (`role="footnotemark"`, pdflatex prints the two apart) and,
+%   as a note of the name, sits beside it (queue_digest.rs `lift_notes_beside`, OD #1001)
+% witness: synthetic (2410.15031's `Sascha Gritzbach\footnotemark[1]`, a mark naming a `\thanks` note, is this shape)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able∗ Bob Baker", footnote "0 Note A."
+% engines: int159a2: 0 errors, 0 warnings; `<personname>Ann Able<note mark="*" role="footnotemark">…</note>`; the
+%   text a document-level `<note mark="0" role="footnotetext">`
+% expect:  0 errors, 0 warnings; `<personname>Ann Able</personname>` then the `role="footnotemark"` note "*"; the
+%   document's footnotetext "Note A." kept
+% status:  RED (int159a2) -> GREEN (FN1)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able\footnotemark \and Bob Baker}
+\begin{document}
+\maketitle
+\footnotetext{Note A.}
+Text.
+\end{document}

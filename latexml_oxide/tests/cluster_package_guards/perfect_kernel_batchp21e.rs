@@ -79,6 +79,8 @@ fn a_paragraph_in_a_box_stays_a_group() {
 /// `\parbox`; its owner Ann Able is int157a's, the address printed in Cy Cole's footnote — pre-existing, outside this
 /// batch). That row pins a KNOWN-WRONG owner (SILENT_LOSS_INVENTORY "Bundle int158a — the residual"): a change moving
 /// the address to Cy Cole is a fix, not a regression; update the row then.
+/// FN1 (OD #1001; the user's ruling 2026-11-11): the note the name held is the creator's, right after
+/// `</personname>`, so the name reads without its tags; pin updated (the note's move only).
 #[test]
 fn a_paragraph_in_a_box_keeps_a_contacts_markup() {
   let cases = [
@@ -95,8 +97,8 @@ fn a_paragraph_in_a_box_keeps_a_contacts_markup() {
       (0, 2),
       rows(&[
         &["Team X: Ann Able 1", "email=team@x.org"],
-        // (the `\footnotemark`'s note, its tags' text, in the name: int157a's)
-        &["Bob Baker 1 footnote 1 1 footnote 1 2"],
+        // (the `\footnotemark`'s note beside the name, FN1; its tags' text was in the name on int157a)
+        &["Bob Baker 2"],
         &["Cy Cole 3"],
       ]),
       "<contact name=\"Email:\u{a0}\" role=\"email\"><ref class=\"ltx_href\" href=\"mailto:team@x.org\">team@x.org</ref></contact>",
