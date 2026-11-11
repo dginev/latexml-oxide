@@ -1527,7 +1527,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // printing token's definition, whether it is the kernel layer's `\and` constructor (`get_cs()` against `KERNEL_SEPARATOR`),
   // the trap-T8 test `frontmatter_stores::kernel_and_list` makes —, never its spelling: a decision by definition, OD #995)
   ("frontmatter (rest)", 29),
-  ("frontmatter_stores", 527),
+  // (P26, 527 -> 526: the stores' `\and` gates ask the separator query by meaning, `and_separators`, OD #995 P2-6; the
+  // spelling read only where the query answers `None`: one spelled read fewer)
+  ("frontmatter_stores", 526),
   ("gretsi_cls.rs", 14),
   // (CR10a, 119 -> 128: the class's author body is read as tokens before it is digested, as `author_block_body` reads it —
   // a names block nested in another's spliced in (`unnested_name_blocks`, 1511.03982), the alias `\authorblockN`'s grades,

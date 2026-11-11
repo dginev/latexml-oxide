@@ -1,0 +1,29 @@
+% A raw class's in-place `\address` lines whose `\and` sits inside a `\parbox`'s table or a `\thanks` note's table:
+% no separator of the line (the query reads the line's own level, nest 0, `argument_separators`, OD #995, P2-6), so
+% `frontmatter_stores.rs` `kernel_and_list` keeps neither line the class's: both are Ann Able's addresses, the note her
+% thanks. By spelling (int158a) the literal `\and` anywhere kept the first line the class's and set the second as a
+% body paragraph too. The kernel's `\and` in the table cell prints the word " and " where pdflatex sets a column, in
+% both outputs; in the API's contact the content check counts it (one Warning).
+% witness: synthetic (marks inside boxes and note bodies, the int158a lessons)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Univ A, Town   Lab X   Lab Y", "Univ B, City1", the
+%          footnote "Visiting   Lab Z   Lab W"
+% engines: rust int158a = 0 errors, 0 warnings, both lines the class's, the note a pubnote; P26 = 0 errors, 1 warning
+%          (the content check's "and"), both lines Ann Able's addresses, the note her `thanks`; perl = no raw class load
+% expect:  0 errors, 1 warning; Ann Able's addresses "Univ A, Town" with the parbox's table, and "Univ B, City"
+% status:  GREEN (P26, a change of int158a's output by the query's nest-0 rule; guard
+%          perfect_kernel_batchp26::an_in_place_line_is_the_classs_where_a_separator_means_the_kernels)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{ipand.cls}
+\ProvidesClass{ipand}
+\LoadClass{article}
+\newcommand\address[1]{\par{\small\begin{tabular}[t]{c}#1\end{tabular}}\par}
+\end{filecontents*}
+\documentclass{ipand}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\address{Univ A, Town \parbox[t]{3cm}{\begin{tabular}{c}Lab X\and Lab Y\end{tabular}}}
+\address{Univ B, City\thanks{Visiting \begin{tabular}{c}Lab Z\and Lab W\end{tabular}}}
+\maketitle
+Body.
+\end{document}

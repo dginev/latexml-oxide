@@ -34,8 +34,9 @@ pub enum SepMeaning {
   /// binding's `\let` copies: `inst_support_sty.rs:66` `\AND`, `ijcai_sty.rs:33-34` `\AND`/`\And`, `epl_cls.rs:109`
   /// `\And` — their definition is `\and`'s own, so they read `Kernel`, not `Binding`): the
   /// kernel's author-line column, which the blocks' readings part names at. The definition must be `\and`'s own (its
-  /// `get_cs()`), a kernel layer's: narrower than `frontmatter_stores::kernel_and_list`, which takes any pool constructor —
-  /// `texvc_sty.rs:132`'s `\let\and\land` is `raw` here and kernel there (P2-6, which swaps that gate, meets it)
+  /// `get_cs()`), a kernel layer's: narrower than the pool-constructor test `frontmatter_stores::kernel_and_list` made
+  /// before P2-6, which now asks this (`texvc_sty.rs:132`'s `\let\and\land` is `raw`, no kernel separator; that test
+  /// is the gate's reading only where the query answers `None`)
   Kernel,
   /// a binding's own definition (its code, a fallback class's, a stand-in's or a borrowing's,
   /// `DefinitionOrigin::is_binding_made`), whatever it prints: aas_support's real `\and` (`aas_support_sty.rs:358`), the
@@ -89,7 +90,7 @@ fn made_by(origin: DefinitionOrigin) -> SepMeaning {
 }
 
 /// The kernel layer's separator, `latex_constructs/sect05.rs`'s `\and` constructor: the definition a kernel meaning must be
-/// (`\And` and `\AND` are `\let` to it), as `frontmatter_stores::kernel_and_list` reads it.
+/// (`\And` and `\AND` are `\let` to it), the one `frontmatter_stores::kernel_and_list` asks for (P2-6).
 const KERNEL_SEPARATOR: &str = "\\and";
 
 /// What `token` means now ([`SepMeaning`]): the kernel separator is the [`KERNEL_SEPARATOR`] constructor a kernel layer

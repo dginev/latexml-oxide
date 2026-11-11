@@ -520,6 +520,9 @@ mod perfect_kernel_batchp24;
 /// P24b: P24's fix round — a separator's own tokens (`ArgSeparator::span`) leave a glued `\end{tabular}` to the table;
 /// one field for eptcs's cells and the queue's name reader (OD #991 (8), #993, #995).
 mod perfect_kernel_batchp24b;
+/// P26: Option C P2-6 — the stores' `\and` gates read an argument's separators by meaning (`argument_separators`), not
+/// by spelling: a rerouted in-place line, a displaced store's list, the numbered store route (OD #995).
+mod perfect_kernel_batchp26;
 mod perfect_kernel_batchpb;
 /// PC3: two false undefined-command Errors of the frontmatter rehearsal — a title-code command after an e-mail
 /// keeps its argument (pazh), a class's own `\email` reads its argument unexpanded (1802.01191); OD #983.
