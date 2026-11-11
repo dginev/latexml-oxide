@@ -33808,8 +33808,10 @@ role="email">`: the content kept, pdflatex printing the two side by side as for 
 `fm_photo_before_mailto_is_in_the_email`, a known shape, catalog only). Fill glue parts the two in print only by the
 column's slack (pdflatex: the image at the line's left edge and the link at its right when a wider line sets the column,
 side by side when the image's line is the widest); that offset is a placement detail, so the image stays with the link,
-content before placement (review revIMG1b finding 1; IMG1b had counted the `\hfill` shape and lost the image, while
-`\hspace{\fill}` still joined; repro `fm_image_hfill_before_url_is_kept`). One leading a mark, an e-mail not printed as a link
+content before placement (review revIMG1b finding 1; repro `fm_image_hfill_before_url_is_kept`). The contact as
+written holds a space between the graphic and the `<ref>` for `\hfill` and none for `\hspace{\fill}` or `\hskip 0pt plus
+1fil`, so in HTML the image touches the link there; no content is lost (guard `image_parted_from_a_url_by_fill_is_kept`,
+its `between` column; revIMG1c). One leading a mark, an e-mail not printed as a link
 (`\texttt{ann@x.org}`) or an address has no place: a note there made the mark-led affiliation its plain text (+2
 Warnings), and a run printing an address is written as the e-mail's text, so `place_pictures` joins no address run. Such
 a picture is counted: an image has no word for the word check (`lost_inks`), so the check has a picture half, span
