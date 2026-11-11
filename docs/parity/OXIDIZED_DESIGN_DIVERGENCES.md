@@ -30229,7 +30229,15 @@ that prints nothing, spacing (a phantom's ink, `is_spacing_item`) and a script (
 mark); a seam (`INK_SEAM`) at a printing whatsit's and each of its arguments' edges and around each alignment cell (an
 accent built as an alignment runs on: combelow's `Babe\cb{s}` is "babes", 2007.07526, which r1 parted to "babe"); no
 quantity argument and no environment's required argument (`settings_arguments`: `{CJK}`'s `{UTF8}{gbsn}`); a mark
-(`INK_INSERT`) before an `\insert`'s material. The print of the latest `\maketitle` before the authors are sealed is
+(`INK_INSERT`) before an `\insert`'s material. A column break ends the words before it: LaTeX's stand-in for
+article.cls's `\@maketitle` runs `\@author` with `\and` as the document has it, as article.cls:209-229's tabular does —
+the kernel's (`\and`, Perl latex_constructs.pool.ltxml:1071 `DefConstructorI('\and', undef, " and ")`) and its `\let`
+copies a whatsit printing nothing, a space, as latex.ltx's `\end{tabular}\hskip 1em \@plus.17fil\begin{tabular}` ends a
+column in print; a class's or document's printing a word (`\def\and{\unskip\ und\ \ignorespaces}`) prints it. Until
+FX25 the stand-in let `\and` to `\relax`, which leaves nothing: `Inst X\and Bob` read "xbob", and a loss beside it was
+one unknown word, an Info `class_text`, uncounted (RR1 gap 24, 2511.15315). Guards
+`perfect_kernel_batchfx25::{the_check_print_ends_words_at_a_kernel_and, the_check_print_keeps_a_class_and_word,
+a_loss_beside_an_appended_and_is_held_or_counted}`. The print of the latest `\maketitle` before the authors are sealed is
 the one checked (a later one supersedes, #406; a supplement's after the seal is none, `frontmatter_entry_sealed`).
 **The check** (`Tag ltx:document after_close_late`; base_utilities/frontmatter/title_page_check.rs
 `check_title_page_words`): each content word of the print (`net_content_words`, the scorer's) is looked for in the

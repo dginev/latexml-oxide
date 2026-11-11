@@ -5054,7 +5054,11 @@ pub(crate) fn title_page_replay_tokens(inject: &[Token]) -> Option<Tokens> {
 /// `\lx@maketitle@body` runs `\@maketitle`. The fields hold the document's values; labels and index entries are
 /// gobbled, while a footnote is typeset, and an author's note (`\thanks`, `\@firstofone` here) is typeset in place, as
 /// a store the class prints in one is printed (review probes `fn`: "KW: alpha, beta" in the title page's footnote;
-/// `fnt`: `\@author\thanks{KW: \@keywords}`).
+/// `fnt`: `\@author\thanks{KW: \@keywords}`). The stand-in for article.cls's `\@maketitle` runs `\@author` with `\and`
+/// as the document has it, as article.cls's tabular does: the kernel's is a whatsit printing no word, a word end for
+/// `ink_word_text` as latex.ltx's column break is in print (`Inst X\and Bob` is no word "XBob"), and a class's or
+/// document's printing a word (`\def\and{\unskip\ und\ \ignorespaces}`) prints it (FX25; the `\relax` it was let to
+/// left no material, so a loss beside it read as one unknown word, uncounted: RR1 gap 24, 2511.15315).
 /// `inject`: as [`title_page_deposit_tokens`].
 pub(crate) fn title_page_print_tokens(inject: &[Token]) -> Tokens {
   // (a raw file's or a binding's `\@maketitle`; not the kernel's empty one, a document's teaser appended to it)
@@ -5072,10 +5076,8 @@ pub(crate) fn title_page_print_tokens(inject: &[Token]) -> Tokens {
   }
   if !class_maketitle {
     run.extend(
-      mouth::tokenize_internal(
-        r"\def\@maketitle{{\@title\par}{\let\and\relax\@author\par}{\@date\par}}",
-      )
-      .unlist(),
+      mouth::tokenize_internal(r"\def\@maketitle{{\@title\par}{\@author\par}{\@date\par}}")
+        .unlist(),
     );
   }
   run.extend_from_slice(inject);
