@@ -1,0 +1,17 @@
+% mechanism: extreport's default `titlepage` (extreport.cls:28) makes `\maketitle` the inline title page (extreport.cls:198-229),
+%   which prints `\@author` with its appended tail; the document's `\@maketitle` is not run
+% witness: synthetic (review revTP1c)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "A Title / Alice A Bob B / <date> / Body."
+% engines: TP1c: Alice A, Bob B, 0 warnings; TP1 at integration: the same
+% expect:  creators Alice A and Bob B, 0 errors, 0 warnings, no `frontmatter:annotated`
+% status:  GREEN. Guard perfect_kernel_batchfx24::an_author_tail_the_title_page_prints_is_read
+% preload: ar5iv.sty
+\documentclass{extreport}
+\makeatletter\def\@maketitle{\begin{center}{\Large\@title}\end{center}}\makeatother
+\begin{document}
+\title{A Title}
+\author{Alice A}
+\makeatletter\g@addto@macro\@author{\and Bob B}\makeatother
+\maketitle
+Body.
+\end{document}

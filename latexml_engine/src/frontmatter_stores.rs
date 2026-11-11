@@ -3348,9 +3348,11 @@ fn route_and_hand_displaced() -> Result<Vec<Digested>> {
       .and_then(plain_value_text)
       .is_some()
   }) {
-    match crate::latex_constructs::speculative_title_page_run(title_page_print_tokens(&[]))? {
-      crate::latex_constructs::SpeculativeRun::Printed(real) => {
-        confirmed_printed(&stores, &printed, &letters, &real)
+    // (the title-page reading's text, its run with the document's own values)
+    let reading = crate::latex_constructs::title_page_reading::title_page_reading()?;
+    match reading.outcome {
+      crate::latex_constructs::title_page_reading::RunOutcome::Printed => {
+        confirmed_printed(&stores, &printed, &letters, &reading.text)
       },
       _ => printed,
     }
@@ -4940,9 +4942,10 @@ pub fn before_title_page_runs() -> Result<()> {
       .and_then(plain_value_text)
       .is_some()
   }) {
-    match crate::latex_constructs::speculative_title_page_run(title_page_print_tokens(&[]))? {
-      crate::latex_constructs::SpeculativeRun::Printed(real) => {
-        confirmed_printed(&all, &printed, &letters, &real)
+    let reading = crate::latex_constructs::title_page_reading::title_page_reading()?;
+    match reading.outcome {
+      crate::latex_constructs::title_page_reading::RunOutcome::Printed => {
+        confirmed_printed(&all, &printed, &letters, &reading.text)
       },
       _ => printed,
     }
@@ -5652,13 +5655,14 @@ fn decide_unset_nulls(rerouted: &[String]) -> Result<()> {
         && lookup_meaning(&T_CS!(&s!("\\{}", store_of(name)))).is_none()
     })
     .collect();
-  // (a deposit runs unless `\@maketitle` is the kernel's empty one)
-  let deposits = match lookup_meaning(&T_CS!("\\@maketitle")) {
-    Some(Stored::Expandable(d)) => {
-      matches!(d.get_expansion(), Some(ExpansionBody::Tokens(t)) if !t.is_empty())
-    },
-    _ => true,
-  };
+  // (a deposit runs unless `\@maketitle` is the kernel's, or empty)
+  let deposits = !crate::latex_constructs::maketitle_is_kernels()
+    && match lookup_meaning(&T_CS!("\\@maketitle")) {
+      Some(Stored::Expandable(d)) => {
+        matches!(d.get_expansion(), Some(ExpansionBody::Tokens(t)) if !t.is_empty())
+      },
+      _ => true,
+    };
   let replay = title_page_replay_tokens(&[]);
   if unset.is_empty() || (!deposits && replay.is_none()) {
     return Ok(());
@@ -7519,13 +7523,15 @@ fn braced_group_ends_the_keywords() -> Result<bool> {
 /// read as the `\author` argument is (RR1 gap 24; witness 2511.15315).
 /// At `\maketitle` with no `\author` call handed, the tail of a binding's `\@author` the setters never stored
 /// ([`seen_author_tail`]: authblk's, 2511.15315).
-/// Either route reads a tail only where the title page in force prints `\@author` ([`title_page_prints_author`]):
-/// one that prints only the title (a document's or a raw class's `\maketitle` or `\@maketitle`) prints neither the
-/// names nor the lines appended (review revFX24 finding 1).
+/// Either route reads a tail only where the title page in force prints it: at `\maketitle`, as the title-page reading
+/// says (`latex_constructs::title_page_reading`: its run of the page a raw file or the document wrote, else the walk of
+/// it, else the declaration of the binding owning `\author`, `fm_author_tail_declared`), before it (an appending
+/// `\author`'s flush) by the walk and the declaration alone ([`own_title_page_prints_author`]). One that prints only
+/// the title (a document's or a raw class's `\maketitle` or `\@maketitle`) prints neither the names nor the lines
+/// appended (review revFX24 finding 1); a document's addition to LaTeX's `\@maketitle`, or a `\let` copy of it, prints
+/// both (revFX24b, TP1); amsart under a document's `\@maketitle` printing `\@author` prints the tail its own page
+/// would not (FX26's RED, TP1).
 fn author_tail_calls(at_maketitle: bool) -> Result<Vec<Token>> {
-  if !title_page_prints_author() {
-    return Ok(Vec::new());
-  }
   // (`under_block`: the binding route's tail, printed under the whole block)
   let (handed, made, under_block) = match lookup_value("lx_author_handed") {
     Some(Stored::Tokens(handed)) => (handed, lookup_int("lx_author_made"), false),
@@ -7543,6 +7549,14 @@ fn author_tail_calls(at_maketitle: bool) -> Result<Vec<Token>> {
     return Ok(Vec::new());
   }
   let tail = &current[handed.len()..];
+  let printed = if at_maketitle {
+    crate::latex_constructs::title_page_reading::title_page_reading()?.tail_printed()
+  } else {
+    own_title_page_prints_author().or_else(fm_author_tail_declared)
+  };
+  if printed != Some(true) {
+    return Ok(Vec::new());
+  }
   // (the tail's first top-level `\and`, by spelling as the stores' numbered split is: P26)
   let and = T_CS!("\\and");
   let mut depth = 0i32;
@@ -7570,15 +7584,11 @@ fn author_tail_calls(at_maketitle: bool) -> Result<Vec<Token>> {
 }
 
 /// The value of `\@author` when the frontmatter last took an author from a binding's setter that keeps its own list
-/// (`lx_author_seen`, `note_author_seen`), when the binding owning `\author` declares the class's title page prints
-/// `\@author` with what is appended to it (`Policy::author_tail`: authblk, whose own `\@author` prints the block, authblk.sty:167-171;
-/// llncs, whose `\@maketitle` prints `\@author`, llncs.cls:1035) and creators are queued. The tail appended after it is
-/// printed under the whole block: every queued creator's. A binding that does not declare it is not this route:
-/// amsart's title page prints `\authors`, elsarticle's its own `\elsauthors`.
+/// (`lx_author_seen`, `note_author_seen`), when creators are queued. The tail appended after it is printed under the
+/// whole block: every queued creator's — where the title page in force prints it ([`author_tail_calls`]: authblk's own
+/// `\@author` prints the block, authblk.sty:167-171, llncs's `\@maketitle` prints `\@author`, llncs.cls:1035, as their
+/// bindings declare, `AuthorPage::Block`; not amsart's page, which prints `\authors`, nor elsarticle's `\elsauthors`).
 fn seen_author_tail() -> Result<Option<(Tokens, i64)>> {
-  if !fm_author_tail_printed() {
-    return Ok(None);
-  }
   let Some(Stored::Tokens(seen)) = lookup_value("lx_author_seen") else {
     return Ok(None);
   };
@@ -7589,27 +7599,29 @@ fn seen_author_tail() -> Result<Option<(Tokens, i64)>> {
   Ok(Some((seen, creators as i64)))
 }
 
-/// Does the title page in force print `\@author`, as the code that runs at `\maketitle` reads it? A stand-in copy's own
-/// title page answers for itself ([`copy_title_page_prints`]). Else the title page a raw file or the document defined —
-/// the refused `\maketitle` (`\lx@dropped@maketitle`), else a `\@maketitle` of the file's or the document's own — is
-/// walked through the live code it reaches (`reads_of_branches`, the switches as they are; the macros a raw file or the
-/// document defined): it prints `\@author` when it reads it, or reaches LaTeX's or a binding's `\maketitle` or
-/// `\@maketitle` by its current meaning (a `\let` copy of the current `\maketitle` the body calls), which print it
-/// (article.cls:247; a binding's title page is the frontmatter's). An addition to LaTeX's empty `\@maketitle`, a copy of
-/// it, or a copy of `\@author` is not seen (revFX24b; REDs `article_author_tail_*_is_lost_red`). With neither, the title page is LaTeX's or the binding's, and prints it. A raw class's own
+/// Does the title page of the file's or the document's own print `\@author`, as the code that runs at `\maketitle`
+/// reads it? A stand-in copy's own title page answers for itself ([`copy_title_page_prints`]). Else the title page a raw
+/// file or the document defined — the refused `\maketitle` (`\lx@dropped@maketitle`), else a `\@maketitle` of the
+/// file's or the document's own — is walked through the live code it reaches (`reads_of_branches`, the switches as they
+/// are; the macros a raw file or the document defined): it prints `\@author` when it reads it, or reaches LaTeX's or a
+/// binding's `\maketitle` or `\@maketitle` by its current meaning (a `\let` copy of the current `\maketitle` the body
+/// calls), or the kernel's marker of LaTeX's own `\@maketitle` (`\lx@kernel@maketitle`: an addition to it or a `\let`
+/// copy of it, revFX24b), which print it (article.cls:247; a binding's title page is the frontmatter's). A copy of
+/// `\@author` is not seen (RED `article_author_tail_printed_through_let_copy_of_author_is_lost_red`). `None` when there
+/// is no such title page: the page is LaTeX's or the binding's (`fm_author_tail_declared`). A raw class's own
 /// `\maketitle` that prints only the title, or a document's `\renewcommand\maketitle`/`\def\@maketitle`, does not
-/// (review revFX24 finding 1; 2511.15315's procdoc2.cls:77 does).
-fn title_page_prints_author() -> bool { own_title_page_prints_author().unwrap_or(true) }
-
-/// [`title_page_prints_author`]'s answer from a title page of the file's or the document's own (or a stand-in copy's),
-/// `None` when there is none: the title page is LaTeX's or the binding's.
-fn own_title_page_prints_author() -> Option<bool> {
+/// (review revFX24 finding 1; 2511.15315's procdoc2.cls:77 does). The title-page reading's answer where its run cannot
+/// give one (`latex_constructs::title_page_reading`), and the answer before `\maketitle`.
+pub(crate) fn own_title_page_prints_author() -> Option<bool> {
   if let Some(prints) = copy_title_page_prints(&T_CS!("\\@author")) {
     return Some(prints);
   }
   let own = |cs: &Token| body_from(cs, &[DefinitionOrigin::File, DefinitionOrigin::Document]);
   let maketitle = T_CS!("\\@maketitle");
-  let root = own(&T_CS!("\\lx@dropped@maketitle")).or_else(|| own(&maketitle))?;
+  // (a `\@maketitle` of the file's or the document's own only where it is the page in force: the `\maketitle` that runs
+  // runs it, `own_maketitle`, TP1b)
+  let root = own(&T_CS!("\\lx@dropped@maketitle"))
+    .or_else(|| own(&maketitle).filter(|_| crate::latex_constructs::own_maketitle()))?;
   let target = T_CS!("\\@author").get_cs_name();
   // (LaTeX's title page, which prints `\@author`: the kernel's `\maketitle` and `\@maketitle`, and a copy of either)
   let latex_maketitle = T_CS!("\\maketitle");
@@ -7639,6 +7651,11 @@ fn own_title_page_prints_author() -> Option<bool> {
       match own(&cs) {
         Some(callee) => work.push(callee),
         None if is_title_page(&cs) => return Some(true),
+        // (LaTeX's own `\@maketitle` or the kernel's marker in it, by identity, reached directly, in an addition to it or
+        // in a `\let` copy: the class's page, which the declaration answers for)
+        None if crate::latex_constructs::is_latex_maketitle(&cs) => {
+          return fm_author_tail_declared();
+        },
         None => {},
       }
     }
@@ -7646,43 +7663,16 @@ fn own_title_page_prints_author() -> Option<bool> {
   Some(false)
 }
 
-/// What `\@author` held when the frontmatter last took an author from a binding's setter (`lx_author_seen`, kept by
-/// `\lx@author@tail` for the check that runs after it), when a document appended to it since and the title page in force
-/// positively does not print what it appended: the title-page check's evidence (OXIDIZED_DESIGN_DIVERGENCES #953, FX27,
-/// FX27b), which reports a lost word only that tail prints as one the title page annotates, an Info, not as a printed
-/// word's loss. Not printed: a title page of the file's or the document's own that does not reach `\@author`
-/// ([`own_title_page_prints_author`]: authblk under a document's `\@maketitle` printing the title alone), or, with none,
-/// a binding's page that prints its own author list, as the binding owning `\author` declares for the document class
-/// (`fm_author_tail_unprinted`, `Policy::own_author_page`: amsart's `\authors`, elsarticle's `\elsauthors`, acmart's
-/// `\addresses`; pdflatex prints no "Bob B"), and OmniBus's, the fallback's guess for an unknown class. Every other title
-/// page is taken to print it, a lost word staying a Warning: LaTeX's `\author` in force (the kernel's, a raw file's, the
-/// document's: `fm_author_is_latex_own`, the check's stand-in being LaTeX's page — even where the walk says not, its
-/// known false negatives: revFX24b's REDs `article_author_tail_*_is_lost_red`), an own title page reaching `\@author`
-/// (amsart under a document's `\@maketitle` printing it), and any binding not declaring its page (IEEEtran, mnras,
-/// REVTeX, whose pages print the tail — revFX27's probes —, authblk and llncs, which declare that they do:
-/// `Policy::author_tail`). The caller asks only where the check ran its stand-in; a title page it ran of a file's or a
-/// binding's own (titling's `\@maketitle`, titling.sty:166-180) is its own evidence.
-pub(crate) fn unverified_author_tail_prefix() -> Result<Option<Tokens>> {
-  if fm_author_is_latex_own() {
-    return Ok(None);
-  }
-  let seen = match lookup_value("lx_author_seen") {
-    Some(Stored::Tokens(seen)) => seen,
-    _ => match lookup_value("lx_author_tail_seen") {
-      Some(Stored::Tokens(seen)) => seen,
-      _ => return Ok(None),
-    },
-  };
-  let Some(current) = store_value("author")? else {
-    return Ok(None);
-  };
-  let (prefix, current) = (seen.unlist_ref(), current.unlist_ref());
-  if current.len() <= prefix.len() || current[..prefix.len()] != *prefix {
-    return Ok(None);
-  }
-  let unprinted =
-    own_title_page_prints_author().map_or_else(fm_author_tail_unprinted, |prints| !prints);
-  Ok(unprinted.then_some(seen))
+/// What `\@author` held when the frontmatter last took its authors: the value the kernel's `\author` stored
+/// (`lx_author_handed`), else the value it held as a binding's setter queued them (`lx_author_seen`); what a document
+/// appends to it follows (`\lx@author@tail`, the title-page reading's marks).
+pub(crate) fn author_taken_prefix() -> Option<Tokens> {
+  ["lx_author_handed", "lx_author_seen"]
+    .iter()
+    .find_map(|key| match lookup_value(key) {
+      Some(Stored::Tokens(prefix)) => Some(prefix),
+      _ => None,
+    })
 }
 
 /// Records the value of `\@author` as an author is queued (`queue_front_matter`): the
@@ -7753,7 +7743,7 @@ fn is_blank(value: &Tokens) -> bool {
 
 /// The value of the setter `\<name>`'s store (`\@<name>`, or the one rule (a) found: [`store_of`]): its expansion, when it is a parameterless macro (a
 /// `\newcommand`-defined value carries an empty parameter list, as in `\lx@deposit@maketitle`).
-fn store_value(name: &str) -> Result<Option<Tokens>> {
+pub(crate) fn store_value(name: &str) -> Result<Option<Tokens>> {
   let Some(defn) = lookup_definition(&T_CS!(&s!("\\{}", store_of(name))))? else {
     return Ok(None);
   };
@@ -8053,11 +8043,10 @@ LoadDefinitions!({
     Ok(Tokens::new(calls))
   });
   DefMacro!("\\lx@author@tail", sub[_args] {
+    // (what `\@author` held before a document appended to it, for this `\maketitle`'s title-page readings, which mark
+    // where the appended part begins: its records are cleared here, the check reads after)
+    crate::latex_constructs::title_page_reading::note_author_prefix(author_taken_prefix());
     let calls = author_tail_calls(true)?;
-    // (the binding route's record kept past this `\maketitle`'s clearing, for the title-page check that runs after it:
-    // `unverified_author_tail_prefix`)
-    let seen = lookup_value("lx_author_seen").unwrap_or(Stored::Bool(false));
-    assign_value("lx_author_tail_seen", seen, Some(Scope::Global));
     assign_value("lx_author_handed", Stored::Bool(false), Some(Scope::Global));
     assign_value("lx_author_seen", Stored::Bool(false), Some(Scope::Global));
     Ok(Tokens::new(calls))

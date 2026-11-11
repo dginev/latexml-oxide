@@ -206,15 +206,34 @@ fn a_looping_stored_argument_is_budgeted() {
 /// A run over budget stops at any read: in a group, a cell, math, a list, a figure, an `\edef`, a `\csname`, a number, an
 /// `\input`. Whichever it is, the XML is the one no run's end touched, with no Error. Distinct path: the rollback of a run
 /// a read ended, at the budgets that end the print's run and the argument's in each of those (`kit/check_budget_sweep.sh`, over
-/// every third budget, found none different).
+/// every third budget, found none different). Its second row: the stores' confirming check over budget, which keeps the
+/// sentinel runs' answer unconfirmed, erring toward "printed" (a store kept, no word dropped; no unbudgeted run: TP1b,
+/// OXIDIZED_DESIGN_DIVERGENCES #953, review revTP1 S2), the XML the same and one Warning at each budget.
 #[test]
 fn a_run_over_budget_leaves_no_trace() {
-  let tex = repro!("check_budget_run_leaves_no_trace");
-  let (log, xml) = converted(tex, 0, false);
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  for budget in [1, 2000, 40_000] {
-    let (over, over_xml) = converted(tex, budget, false);
-    assert_eq!((error_count(&over), warning_count(&over)), (0, 1), "{over}");
-    assert_eq!(over_xml, xml, "budget {budget}");
+  // (repro, the Warnings with no budget, the budgets)
+  let rows: [(&str, usize, &[usize]); 2] = [
+    (repro!("check_budget_run_leaves_no_trace"), 0, &[
+      1, 2000, 40_000,
+    ]),
+    (
+      repro!("check_store_confirm_over_budget_keeps_the_sentinel_answer"),
+      1,
+      &[1],
+    ),
+  ];
+  for (tex, warnings, budgets) in rows {
+    let (log, xml) = converted(tex, 0, false);
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, warnings),
+      "{log}"
+    );
+    for budget in budgets {
+      let (over, over_xml) = converted(tex, *budget, false);
+      assert_eq!((error_count(&over), warning_count(&over)), (0, 1), "{over}");
+      assert!(over.contains("frontmatter:check_budget"), "{over}");
+      assert_eq!(over_xml, xml, "budget {budget}");
+    }
   }
 }

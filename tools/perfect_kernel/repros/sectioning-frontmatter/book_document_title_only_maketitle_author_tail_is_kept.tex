@@ -1,0 +1,18 @@
+% mechanism: book defaults to `titlepage` (book.cls:50-51), whose `\maketitle` prints its own page with `\@author` and
+%   runs no `\@maketitle` (book.cls:181-204): a document's title-only `\@maketitle` prints nowhere and the tail appended
+%   to `\@author` is read (`MaketitleRuns::WithoutTitlepage`; TP1c, OXIDIZED_DESIGN_DIVERGENCES #953)
+% witness: synthetic (TP1c brief, the default)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "A Title / Alice A Bob B / <date>" then "Body." (page 2)
+% engines: int160a0: Alice A, 1 warning "… bob"; TP1b, TP1c: Alice A, Bob B, 0 warnings; perl not run
+% expect:  0 errors, 0 warnings; creators Alice A, Bob B
+% status:  GREEN (TP1b, TP1c). Guard perfect_kernel_batchfx24::an_author_tail_the_title_page_prints_is_read
+% preload: ar5iv.sty
+\documentclass{book}
+\makeatletter\def\@maketitle{\begin{center}{\Large\@title}\end{center}}\makeatother
+\begin{document}
+\title{A Title}
+\author{Alice A}
+\makeatletter\g@addto@macro\@author{\and Bob B}\makeatother
+\maketitle
+Body.
+\end{document}

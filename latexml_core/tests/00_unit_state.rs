@@ -395,3 +395,49 @@ fn semiverbatim() {
   begin_semiverbatim(None);
   assert!(end_semiverbatim().is_ok());
 }
+
+/// The state's generation (`state_generation`, the title-page reading's cache key, TP1b) never says "unchanged" of a
+/// state that changed: a reading made inside a group must not be read after the group's end restored what it read (a
+/// read, a change inside a group, a read after it), and a rollback puts back the generation it began with without the
+/// numbers drawn inside the journal being drawn again (ABA). A LaTeXML-internal value (`lx…`) draws none: a computation
+/// reading one keys on it itself. A write in place (the mode's) draws one.
+#[test]
+fn state_generation_changes_with_every_change_of_the_state() {
+  set_state(State::new(StateOptions::default()));
+  assign_value("foo", s!("bar"), Some(Scope::Global));
+  let before = state_generation();
+  // (a change inside a group, then the group's end)
+  push_frame();
+  assign_value("foo", s!("baz"), Some(Scope::Local));
+  let inside = state_generation();
+  assert_ne!(inside, before, "a local assignment");
+  assert!(pop_frame().is_ok());
+  let after = state_generation();
+  assert_ne!(
+    after, inside,
+    "the group's end restored foo: no reading made inside it holds"
+  );
+  // (a rollback: the generation it began with, and a later change draws a number never drawn)
+  let start = state_generation();
+  let journal = begin_assignment_journal().expect("a journal");
+  assign_value("foo", s!("qux"), Some(Scope::Global));
+  let journaled = state_generation();
+  assert!(journal.rollback(), "the rollback");
+  assert_eq!(
+    state_generation(),
+    start,
+    "the rollback puts the state's generation back"
+  );
+  assign_value("foo", s!("quux"), Some(Scope::Global));
+  assert_ne!(
+    state_generation(),
+    journaled,
+    "no generation is drawn twice"
+  );
+  // (a LaTeXML-internal value draws none; a write in place draws one)
+  let now = state_generation();
+  assign_value("lx_flag", true, Some(Scope::Global));
+  assert_eq!(state_generation(), now, "an lx… value");
+  assign_value_inplace("foo", s!("in place"));
+  assert_ne!(state_generation(), now, "a write in place");
+}

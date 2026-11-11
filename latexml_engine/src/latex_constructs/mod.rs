@@ -538,7 +538,7 @@ pub const TITLE_THEFOOTNOTE: &str = "\\lx@title@thefootnote";
 /// The title block of a class whose `\maketitle` marks its notes in `\@fnsymbol` — article, report and book (and
 /// extarticle, extreport, extbook, copies of them; article.cls:203-205, report.cls:211, book.cls:217, in the
 /// `\if@titlepage` false branch: `titlepage`, report's and book's default (:50-51) and an option of all three, keeps
-/// `\thefootnote`, `titlepage_default` `Some(..)`), siamltex (siamltex.cls:156-159, no title-page form, `None`) — when
+/// `\thefootnote`, `titlepage_default` `Some(..)`, the fallback for the binding's `\if@titlepage` after its options), siamltex (siamltex.cls:156-159, no title-page form, `None`) — when
 /// that class is the document's (`is_document_class`): the notes of the title, the authors and the date are marked so,
 /// and the footnote counter is set back to 0 after `\maketitle` (article.cls:190, :223; siamltex.cls:175), so the body's
 /// notes count from 1. The marks are made where the frontmatter digests the fields (`enter_title_footnotes`):
@@ -551,27 +551,19 @@ pub const TITLE_THEFOOTNOTE: &str = "\\lx@title@thefootnote";
 /// `\lx@title@footnote@step`), and `\footnotemark[\arabic{footnote}]` after an author's `\footnote` is that note's "∗"
 /// (2201.11183 "Zhenan Fan∗1, Huang Fang∗2"; 2111.13260 "Suhani Vora1 *, Noha Radwan1 *").
 pub fn declare_fnsymbol_title_block(class: &str, titlepage_default: Option<bool>) -> Result<()> {
+  // (the class's `\if@titlepage` after its options, as the class reads it to define its `\maketitle`: article.cls:169,
+  // report.cls:175, book.cls:181; the binding declares it and its options, its default the fallback)
+  let titlepage = titlepage_default.map(|default| {
+    if_condition(&T_CS!("\\if@titlepage"))
+      .ok()
+      .flatten()
+      .unwrap_or(default)
+  });
+  if let Some(titlepage) = titlepage {
+    assign_value(&class_titlepage_key(class), titlepage, Some(Scope::Global));
+  }
   if !is_document_class(class) {
     return Ok(());
-  }
-  let mut options = String::new();
-  for list in [s!("\\opt@{class}.cls"), s!("\\@classoptionslist")] {
-    if let Some(defn) = lookup_definition(&T_CS!(list))?
-      && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
-    {
-      options = body.to_string();
-      break;
-    }
-  }
-  let mut titlepage = titlepage_default;
-  if let Some(titlepage) = titlepage.as_mut() {
-    for option in options.split(',').map(str::trim) {
-      match option {
-        "titlepage" => *titlepage = true,
-        "notitlepage" => *titlepage = false,
-        _ => {},
-      }
-    }
   }
   // (its `\thanks` steps the counter under a title page too: article.cls:173, :241, latex.ltx:17215)
   assign_value("lx_title_counts_footnotes", true, Some(Scope::Global));
@@ -589,6 +581,11 @@ pub fn declare_fnsymbol_title_block(class: &str, titlepage_default: Option<bool>
   AddToMacro!("\\lx@maketitle@body", "\\setcounter{footnote}{0}");
   Ok(())
 }
+
+/// The state key under which [`declare_fnsymbol_title_block`] keeps whether `class` (`article`, `report`, `book`, …) has
+/// its title page (`\if@titlepage` true after its options), so its `\maketitle` runs no `\@maketitle`
+/// (`ledger::class_maketitle_runs`, `MaketitleRuns::WithoutTitlepage`, TP1c).
+pub fn class_titlepage_key(class: &str) -> String { s!("lx_class_titlepage:{class}") }
 
 /// Before a note is made in the title block (a field the frontmatter digests: the title, an author, the date) of a
 /// class whose title marks its notes in a `\thefootnote` of its own ([`TITLE_THEFOOTNOTE`],
@@ -8676,9 +8673,10 @@ pub use sect04::kernel_chapter_with_warning;
 mod sect05;
 pub use sect05::note_title_page_part;
 pub(crate) use sect05::{
-  SpeculativeRun, assigned_parts_holding, class_author_reader_body, keep_class_author_reader,
-  replay_class_begin_code, speculative_isolated_run, speculative_title_page_run,
-  speculative_word_run, tail_reads_ahead, title_page_deposit_tokens, title_page_print_tokens,
+  SpeculativeRun, assigned_parts_holding, class_author_reader_body, is_latex_maketitle,
+  keep_class_author_reader, maketitle_is_kernels, own_maketitle, replay_class_begin_code,
+  speculative_isolated_run, speculative_title_page_run, speculative_word_run, tail_reads_ahead,
+  title_page_deposit_tokens, title_page_mark, title_page_print_tokens, title_page_reading,
   title_page_replay_tokens,
 };
 mod reference_math_slots;

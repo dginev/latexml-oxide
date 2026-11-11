@@ -20,6 +20,7 @@ use super::{
   resolver::printed_words,
   *,
 };
+use crate::latex_constructs::class_titlepage_key;
 
 /// How a block's tokens got their positions in the author field. Positions are per call: a block's start where the
 /// field's own stamps end (`lx_field_base_2`, which the document's tokens carry: a block printing `\@author` reads them
@@ -532,38 +533,79 @@ pub(in crate::base_utilities) fn policy_binding(owner: &str) -> String {
 /// load noted).
 pub(in crate::base_utilities) fn author_binding() -> String { meaning_owner(AUTHOR) }
 
-/// Whether the binding owning the `\author` meaning now (`author_binding`) declares that the class's title page prints
-/// what a document appends to `\@author` (`policy::declares_author_tail_printed`: authblk.sty, llncs.cls).
-pub fn author_tail_printed() -> bool { policy::declares_author_tail_printed(&author_binding()) }
-
-/// Whether the title page in force positively does not print `\@author`, so what a document appends to it prints
-/// nowhere: the binding owning the `\author` meaning (`author_binding`) declares that the document class's page prints
-/// its own author list (`policy::declares_own_author_page`: ams_support.sty under amsart, amsproc, amsbook;
-/// elsart_support_core.sty under elsarticle; acmart.cls) — keyed to the document class (`CLASS_BINDINGS`' first), as
-/// such a binding loads under classes whose page may print it (OmniBus's autoload of ams_support.sty, old elsart.cls);
-/// or the document class is the fallback's guess for a class with no binding (OmniBus, `OmniBus:fallback`), whose real
-/// page is unknown (brief FX27). Any other binding's page is taken to print it: a lost word stays a Warning
-/// (OXIDIZED_DESIGN_DIVERGENCES #953, FX27b: IEEEtran, mnras and REVTeX print the tail).
-pub fn author_tail_unprinted() -> bool {
-  if lookup_bool("OmniBus:fallback") {
-    return true;
-  }
+/// Whether the title page in force prints what a document appends to `\@author`, by declaration — where no code of
+/// the class's or the document's own ran to say (the title-page reading, `latex_constructs::title_page_reading`):
+/// - printed under LaTeX's `\author` — the kernel's, a raw file's or the document's own (`author_binding`: `kernel`,
+///   `raw`, `document`), whose page article.cls's is (article.cls:236-251); a binding class that keeps the kernel's
+///   `\author` answers `kernel` too, its stand-in print counted, the safe side (FX27, OXIDIZED_DESIGN_DIVERGENCES #953);
+/// - printed where the binding owning `\author` declares its class prints it ([`policy::AuthorPage::Block`]: authblk.sty,
+///   llncs.cls);
+/// - not printed where it declares the document class's page prints its own author list ([`policy::AuthorPage::Own`]:
+///   ams_support.sty under amsart, amsproc, amsbook; elsart_support_core.sty under elsarticle; acmart.cls) — keyed to the
+///   document class (`CLASS_BINDINGS`' first), as such a binding loads under classes whose page may print it (OmniBus's
+///   autoload of ams_support.sty, old elsart.cls) —, or where the document class is the fallback's guess for a class
+///   with no binding (OmniBus, `OmniBus:fallback`), whose real page is unknown (brief FX27);
+/// - unknown (`None`) under any other binding: IEEEtran, mnras and REVTeX print the tail (FX27b), so a lost word stays a
+///   Warning, though no creator is made of it.
+pub fn author_tail_declared() -> Option<bool> {
   let owner = author_binding();
-  CLASS_BINDINGS.with(|c| {
-    c.borrow()
-      .0
-      .first()
-      .is_some_and(|class| policy::declares_own_author_page(&owner, class))
-  })
+  if matches!(owner.as_str(), "kernel" | "raw" | "document") {
+    return Some(true);
+  }
+  if lookup_bool("OmniBus:fallback") {
+    return Some(false);
+  }
+  match policy::declared_author_page(&owner) {
+    Some(policy::AuthorPage::Block) => Some(true),
+    Some(policy::AuthorPage::Own(classes)) => CLASS_BINDINGS
+      .with(|c| {
+        c.borrow()
+          .0
+          .first()
+          .is_some_and(|class| classes.contains(&class.as_str()))
+      })
+      .then_some(false),
+    _ => None,
+  }
 }
 
-/// Whether LaTeX's `\author` — the kernel's, a raw file's or the document's own (`author_binding`: `kernel`, `raw`,
-/// `document`) — is in force, not a binding's (amsart's, elsarticle's, authblk's, OmniBus's `fallback`): then the
-/// title page the title-page check's stand-in prints is taken as the one in force (LaTeX's, article.cls:236-251), and
-/// what a document appends to `\@author` as printed. A binding class that keeps the kernel's `\author` answers `kernel`
-/// too: its stand-in print stays counted, the safe side (FX27, OXIDIZED_DESIGN_DIVERGENCES #953).
-pub fn author_is_latex_own() -> bool {
-  matches!(author_binding().as_str(), "kernel" | "raw" | "document")
+/// Whether the document class's `\maketitle` runs `\@maketitle`, as a binding the class loaded declares it for the
+/// class (`CLASS_BINDINGS`' first; [`policy::TitlePageDecl::maketitle_runs`]: ams_support.sty for amsart, amsproc,
+/// amsbook; IEEEtran.cls; mn2e_support.sty for mnras; elsart_support_core.sty for elsarticle and acmart.cls, which never
+/// run it), else the kernel's declaration: article.cls, report.cls and book.cls run it only without their title page,
+/// as their `\if@titlepage` stood after their options (`MaketitleRuns::WithoutTitlepage`, kept by
+/// `latex_constructs::declare_fnsymbol_title_block`; TP1c). `Some(true)` with no class binding (a raw class: its own
+/// `\maketitle`, which the title-page reading replays, or LaTeX's); `None` for a class no declaration names (REVTeX)
+/// and the fallback's guess for a class with no binding (OmniBus), whose page is unknown.
+pub fn class_maketitle_runs() -> Option<bool> {
+  if lookup_bool("OmniBus:fallback") {
+    return None;
+  }
+  CLASS_BINDINGS.with(|c| {
+    let c = c.borrow();
+    let Some(class) = c.0.first() else {
+      return Some(true);
+    };
+    let runs = c
+      .0
+      .iter()
+      .find_map(|binding| policy::declared_maketitle_runs(binding, class))
+      .or_else(|| {
+        policy::KERNEL
+          .title_page
+          .maketitle_runs
+          .iter()
+          .find(|(name, ..)| name == class)
+          .map(|(_, runs, _)| *runs)
+      })?;
+    Some(match runs {
+      policy::MaketitleRuns::Always => true,
+      policy::MaketitleRuns::Never => false,
+      policy::MaketitleRuns::WithoutTitlepage => !lookup_bool(&class_titlepage_key(
+        class.strip_suffix(".cls").unwrap_or(class),
+      )),
+    })
+  })
 }
 
 /// The binding owning the tracked command `n`'s meaning now ([`author_binding`]'s reading, for any of

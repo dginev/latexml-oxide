@@ -29,6 +29,11 @@ pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   binding: "sv_support.sty",
   inst_after_comma: true,
   email_in_place: true,
+  // (svjour3.cls:608 sets its own `\and` where `\maketitle` prints the authors: the separator query's, TP2)
+  title_page: FmTitlePageDecl {
+    title_and: &[("svjour3.cls", "svjour3.cls:608")],
+    ..FM_KERNEL_CONVENTIONS.title_page
+  },
   cite: "svjour3.cls `\\inst` (`\\unskip`), :303 `\\email`; svmult.cls:2304, svjour.cls:256; OD #807, #913",
   ..FM_KERNEL_CONVENTIONS
 };

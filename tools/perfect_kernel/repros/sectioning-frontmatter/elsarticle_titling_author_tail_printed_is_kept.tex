@@ -1,15 +1,15 @@
-% mechanism: amsart with `\usepackage{titling}`: titling's `\@maketitle` prints `\@author`, so a tail appended to it
+% mechanism: elsarticle with `\usepackage{titling}`: titling's `\@maketitle` prints `\@author`, so a tail appended to it
 %   (`\g@addto@macro\@author{\and Bob B}`) prints; the reading makes no creator of it (the binding route reads a tail only
 %   under an `author_tail` declaration). Counted on int159a (the title-page check's Warning "bob"); FX26/FX26b's
 %   class-binding declaration silenced it (revFX26b finding 1, parked for TP1: the one title-page reading)
-% witness: synthetic (revFX26b); 0 census papers combine titling with amsart
+% witness: synthetic (revFX26b); 0 census papers combine titling with elsarticle
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: the tail "Bob B" printed under the title
 % expect:  Bob B a creator (or, while not read, the loss counted by one Warning)
-% status:  RED (int159a, FX27: counted by 1 Warning "bob", not read: titling's binding `\@maketitle` reads `\@author`,
-%   so the check runs it, its print its own evidence; guard
-%   perfect_kernel_batchfx24::an_author_tail_printed_but_not_read_is_counted)
+% status:  GREEN since TP1 (was RED, counted by 1 Warning "bob"): titling's binding `\@maketitle` runs as written in the
+%   title-page reading's run, which prints the tail, its own evidence over elsarticle's declaration: creators Alice A, Bob B;
+%   E=0 W=0. Guard perfect_kernel_batchfx24::an_author_tail_the_title_page_prints_is_read
 % preload: ar5iv.sty
-\documentclass{amsart}
+\documentclass{elsarticle}
 \usepackage{titling}
 \begin{document}
 \title{A Title}

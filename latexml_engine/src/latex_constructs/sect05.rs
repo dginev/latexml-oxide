@@ -3,9 +3,14 @@
 //! Split verbatim from the single `LoadDefinitions!` body (2026-09-03); the
 //! definitions run in the original order from `super::load_definitions`.
 
+use std::cell::RefCell;
+
 use latexml_core::definition::origin::{DefinitionOrigin, with_origin};
 
 use super::*;
+
+#[path = "title_page_reading.rs"]
+pub(crate) mod title_page_reading;
 
 /// latex.ltx `\@parse@version`: `YYYY-MM-DD` / `YYYY/MM/DD` → `YYYYMMDD`, 0 if unparsable.
 fn parse_version_date(s: &str) -> i64 {
@@ -1270,7 +1275,34 @@ pub(crate) fn load() -> Result<()> {
   // double-print the title; the common case holds only the injected content).
   // The `\ifx…\@empty` guard makes this a no-op for the vast majority of papers.
   // Witness arXiv:2506.23854 (html_feedback#4281).
-  DefMacro!("\\@maketitle", "");
+  // (3) It holds one marker, `\lx@kernel@maketitle`, empty here: where LaTeX's own `\@maketitle` stands. A title-page
+  // run (`title_page_print_tokens`) puts article.cls's page there, so a document's or a raw file's addition to LaTeX's
+  // `\@maketitle`, or a `\let` copy of it, runs as written around it (TP1, OXIDIZED_DESIGN_DIVERGENCES #953).
+  DefMacro!("\\lx@kernel@maketitle", "");
+  DefMacro!("\\@maketitle", "\\lx@kernel@maketitle");
+  // The title-page reading's marks (`title_page_reading`), each printing nothing: where `\@author` begins, where what a
+  // document appended to it begins and ends (read where they stand, by their definitions: [`title_page_mark`]); the
+  // `\and` family where `\@author` prints, and article.cls's stand-in running, noted as they are digested.
+  DefConstructor!("\\lx@title@page@author", "");
+  DefConstructor!("\\lx@title@page@tail", "");
+  DefConstructor!("\\lx@title@page@tail@end", "");
+  // (LaTeX's own `\@maketitle` and its marker, and the marks, kept as defined here: read by identity, not by name)
+  let defined = |cs: &str| lookup_definition(&T_CS!(cs)).ok().flatten();
+  KERNEL_TITLE_DEFS.set(Some(KernelTitleDefs {
+    maketitle: defined("\\@maketitle"),
+    marker:    defined("\\lx@kernel@maketitle"),
+    marks:     [
+      (defined("\\lx@title@page@author"), INK_AUTHOR),
+      (defined("\\lx@title@page@tail"), INK_TAIL),
+      (defined("\\lx@title@page@tail@end"), INK_TAIL_END),
+    ],
+  }));
+  DefPrimitive!("\\lx@title@page@family", {
+    title_page_reading::note_family();
+  });
+  DefPrimitive!("\\lx@title@page@stand@in", {
+    title_page_reading::note_stand_in();
+  });
   // `\lx@captured@stores` nulls, inside the deposit group, every store K11
   // handed to the frontmatter at this `\maketitle` (`frontmatter_stores.rs`
   // redefines it once a raw class's stores are rerouted), so a kept
@@ -1667,9 +1699,8 @@ pub(crate) fn load() -> Result<()> {
   // over (`\maketitle:redefined`, recorded at the locked drop, state.rs).
   // Guard: `perfect_kernel_batch54::maketitle_cleanup_yields_to_a_class_redefinition`.
   DefPrimitive!("\\lx@maketitle@cleanup", sub[_args] {
-    // (the binding route's `\@author` record `\lx@author@tail` kept for this title page's check, which has run:
-    // frontmatter_stores.rs `unverified_author_tail_prefix`)
-    assign_value("lx_author_tail_seen", Stored::Bool(false), Some(Scope::Global));
+    // (this title page's readings, and the `\@author` prefix `\lx@author@tail` kept for them: `title_page_reading`)
+    title_page_reading::end_title_page_epoch();
     if !lookup_bool("\\maketitle:redefined") {
       for cs in ["\\maketitle", "\\title", "\\author", "\\date"] {
         let_i(&T_CS!(cs), &T_CS!("\\relax"), Some(Scope::Global));
@@ -3096,11 +3127,11 @@ fn skip_no_op_argument(body: &[Token], mut i: usize, p: &Parameter) -> usize {
 
 thread_local! {
   /// The local definitions a replayed class setter made (`\lx@replay@capture`), for [`replay_class_setter`].
-  static REPLAY_CAPTURED: std::cell::RefCell<Vec<(SymStr, Stored)>> =
-    const { std::cell::RefCell::new(Vec::new()) };
+  static REPLAY_CAPTURED: RefCell<Vec<(SymStr, Stored)>> =
+    const { RefCell::new(Vec::new()) };
   /// The stores the replayed setter's own body defines (`defined_stores`), for `\lx@replay@capture`.
-  static REPLAY_BODY_STORES: std::cell::RefCell<Vec<SymStr>> =
-    const { std::cell::RefCell::new(Vec::new()) };
+  static REPLAY_BODY_STORES: RefCell<Vec<SymStr>> =
+    const { RefCell::new(Vec::new()) };
 }
 
 /// Run a raw class's own frontmatter setter that the lock refused (`\lx@dropped@<name>`, state.rs) for its side
@@ -4993,6 +5024,10 @@ const TITLE_PAGE_FIELDS: &str = r"\let\@title\@empty\let\@author\@empty\let\@dat
 /// kernel's fields and the stores the frontmatter carries read as empty. `inject`: definitions made just before
 /// `\@maketitle` runs — a speculative run's sentinel values (frontmatter_stores.rs `before_title_page_runs`).
 pub(crate) fn title_page_deposit_tokens(inject: &[Token]) -> Tokens {
+  // (LaTeX's own, the kernel's marker alone: nothing to deposit, as `\@empty`)
+  if maketitle_is_kernels() {
+    return Tokens::default();
+  }
   let mut tokens = mouth::tokenize_internal(TeXString::assembled(s!(
     r"\ifx\@maketitle\@empty\else{{{TITLE_PAGE_FIELDS}\let\and\relax\lx@captured@stores\lx@dropped@env@stores\lx@replay@records"
   )))
@@ -5067,8 +5102,13 @@ pub(crate) fn title_page_replay_tokens(inject: &[Token]) -> Option<Tokens> {
 /// `\and` was let to left no material, so a loss beside it read as one unknown word, uncounted: RR1 gap 24,
 /// 2511.15315).
 /// `inject`: as [`title_page_deposit_tokens`].
+/// The stand-in stands where LaTeX's `\@maketitle` would: at the kernel's marker (`\lx@kernel@maketitle`), which a
+/// raw file's or the document's addition to it (`\g@addto@macro\@maketitle`) or `\let` copy keeps, so the addition
+/// runs as written around it; and in place of a `\@maketitle` no raw file, binding or document defined (TP1), or one
+/// the `\maketitle` that runs never runs ([`own_maketitle`], TP1b). A document's own `\@maketitle` otherwise runs as
+/// written, as pdflatex runs it (TP0's probe p2: a title-only one prints "A Title",
+/// where the stand-in printed the authors too).
 pub(crate) fn title_page_print_tokens(inject: &[Token]) -> Tokens {
-  let class_maketitle = class_at_maketitle();
   let mut run = mouth::tokenize_internal(
     r"{\let\thanks\@firstofone\let\label\@gobble\let\index\@gobble\let\lx@maketitle@body\lx@print@maketitle",
   )
@@ -5078,13 +5118,14 @@ pub(crate) fn title_page_print_tokens(inject: &[Token]) -> Tokens {
   if lookup_value(CLASS_AUTHOR_READER).is_some() {
     run.push(T_CS!("\\lx@class@author@reader"));
   }
-  if !class_maketitle {
-    run.extend(
-      mouth::tokenize_internal(
-        r"\def\@maketitle{{\@title\par}{\begin{tabular}[t]{c}\@author\end{tabular}\par}{\@date\par}}",
-      )
-      .unlist(),
-    );
+  run.extend(
+    mouth::tokenize_internal(
+      r"\def\lx@kernel@maketitle{\lx@title@page@stand@in{\@title\par}{\begin{tabular}[t]{c}\@author\end{tabular}\par}{\@date\par}}",
+    )
+    .unlist(),
+  );
+  if !own_maketitle() {
+    run.extend(mouth::tokenize_internal(r"\let\@maketitle\lx@kernel@maketitle").unlist());
   }
   run.extend_from_slice(inject);
   if replays_class_maketitle() {
@@ -5101,12 +5142,94 @@ pub(crate) fn title_page_print_tokens(inject: &[Token]) -> Tokens {
   Tokens::new(run)
 }
 
-/// Is `\@maketitle` a raw file's or a binding's ([`title_page_print_tokens`] runs it, not its stand-in for article.cls's)?
-/// Not the kernel's empty one, nor a document's teaser appended to it.
-fn class_at_maketitle() -> bool {
-  matches!(lookup_meaning(&T_CS!("\\@maketitle")),
-    Some(Stored::Expandable(ref d)) if matches!(d.get_origin(), DefinitionOrigin::File | DefinitionOrigin::Binding)
-      && matches!(d.get_expansion(), Some(ExpansionBody::Tokens(body)) if !body.is_empty()))
+/// Is `\@maketitle` a raw file's, a binding's or the document's, and the title page in force
+/// ([`title_page_print_tokens`] runs it as written, its stand-in for article.cls's only at the kernel's marker it may
+/// hold)? Not the kernel's own ([`maketitle_is_kernels`]), nor an empty one. One a raw file or the document defined is
+/// the page in force only where the `\maketitle` that runs runs `\@maketitle` (TP1b, OXIDIZED_DESIGN_DIVERGENCES #953):
+/// a class's or the document's own refused `\maketitle`, which the run replays ([`replays_class_maketitle`]: it reaches
+/// `\@maketitle` or not as written), else the document class's, as its binding declares it (`fm_class_maketitle_runs`:
+/// amsart's, IEEEtran's, mnras's do; elsarticle's and acmart's never do, so pdflatex prints none of a document's
+/// `\@maketitle` there; article's, report's and book's do only without their title page, as their `\if@titlepage`
+/// stood after their options, TP1c). Under a class no binding declares (REVTeX), a document's is not taken for its
+/// page, and a raw file's is, as before the reading ran the document's own.
+pub(crate) fn own_maketitle() -> bool {
+  let origin = match lookup_meaning(&T_CS!("\\@maketitle")) {
+    Some(Stored::Expandable(ref d)) if matches!(d.get_expansion(), Some(ExpansionBody::Tokens(body)) if !body.is_empty()) => {
+      d.get_origin()
+    },
+    _ => return false,
+  };
+  match origin {
+    DefinitionOrigin::Binding => !maketitle_is_kernels(),
+    DefinitionOrigin::File | DefinitionOrigin::Document => {
+      replays_class_maketitle()
+        || fm_class_maketitle_runs().unwrap_or(origin == DefinitionOrigin::File)
+    },
+    _ => false,
+  }
+}
+
+/// LaTeX's own `\@maketitle` and its marker, and the title-page reading's marks with the characters
+/// [`ink_word_text`] reads for them, as [`load`] defined them.
+struct KernelTitleDefs {
+  maketitle: Option<Rc<dyn Definition>>,
+  marker:    Option<Rc<dyn Definition>>,
+  marks:     [(Option<Rc<dyn Definition>>, char); 3],
+}
+
+thread_local! {
+  static KERNEL_TITLE_DEFS: RefCell<Option<KernelTitleDefs>> = const { RefCell::new(None) };
+}
+
+/// Is `definition` the one [`load`] made of `pick`'s?
+fn is_kernel_title_def(
+  definition: &Rc<dyn Definition>,
+  pick: impl Fn(&KernelTitleDefs) -> Option<&Rc<dyn Definition>>,
+) -> bool {
+  KERNEL_TITLE_DEFS.with_borrow(|defs| {
+    defs
+      .as_ref()
+      .and_then(pick)
+      .is_some_and(|kernel| Rc::ptr_eq(kernel, definition))
+  })
+}
+
+/// Is `cs`'s meaning LaTeX's own `\@maketitle` or its marker (`\lx@kernel@maketitle`), by identity — `\@maketitle` as
+/// the kernel defined it, a `\let` copy of it, or the marker reached in an addition to it?
+pub(crate) fn is_latex_maketitle(cs: &Token) -> bool {
+  lookup_definition(cs)
+    .ok()
+    .flatten()
+    .is_some_and(|definition| {
+      is_kernel_title_def(&definition, |defs| defs.maketitle.as_ref())
+        || is_kernel_title_def(&definition, |defs| defs.marker.as_ref())
+    })
+}
+
+/// Is `\@maketitle` the kernel's (LaTeX's page, which prints the frontmatter: nothing to deposit)?
+pub(crate) fn maketitle_is_kernels() -> bool {
+  lookup_definition(&T_CS!("\\@maketitle"))
+    .ok()
+    .flatten()
+    .is_some_and(|definition| is_kernel_title_def(&definition, |defs| defs.maketitle.as_ref()))
+}
+
+/// The character [`ink_word_text`] reads for a mark of the title-page reading's run (`definition`, a whatsit's), by its
+/// definition: where `\@author` begins, where what a document appended to it begins and where it ends.
+pub(crate) fn title_page_mark(definition: &Rc<dyn Definition>) -> Option<char> {
+  KERNEL_TITLE_DEFS.with_borrow(|defs| {
+    defs.as_ref().and_then(|defs| {
+      defs
+        .marks
+        .iter()
+        .find(|(mark, _)| {
+          mark
+            .as_ref()
+            .is_some_and(|mark| Rc::ptr_eq(mark, definition))
+        })
+        .map(|(_, c)| *c)
+    })
+  })
 }
 
 /// Does [`title_page_print_tokens`] run the class's own refused `\maketitle` ([`title_page_replay_tokens`])?
@@ -5170,18 +5293,26 @@ pub(crate) fn speculative_word_run(tokens: Tokens) -> Result<SpeculativeRun> {
 /// unstamped, as the observer's rehearsal does: a register's box `\usebox` hands back to the fields, stamped, became an
 /// `ltx:text` of its own in the document.
 fn checks_word_run(tokens: Tokens, isolated: bool) -> Result<SpeculativeRun> {
+  Ok(
+    match checks_run(tokens, isolated, &[(ink_word_text, Some(INK_INSERT))])? {
+      Ok(mut texts) => SpeculativeRun::Printed(texts.swap_remove(0)),
+      Err(run) => run,
+    },
+  )
+}
+
+/// [`checks_word_run`], its material read by each of `readers` ([`speculative_run_read`]).
+fn checks_run(
+  tokens: Tokens,
+  isolated: bool,
+  readers: &[RunReader],
+) -> Result<std::result::Result<Vec<String>, SpeculativeRun>> {
   let Some(budget) = check_run_budget() else {
-    return Ok(SpeculativeRun::OverBudget(0));
+    return Ok(Err(SpeculativeRun::OverBudget(0)));
   };
   let left = check_reads_left();
   let ledger = FieldLedgerScope::begin();
-  let run = speculative_run(
-    tokens,
-    isolated,
-    ink_word_text,
-    Some(INK_INSERT),
-    Some(budget),
-  );
+  let run = speculative_run_read(tokens, isolated, readers, Some(budget));
   drop(ledger);
   DebugFeature!(
     "frontmatter",
@@ -5191,103 +5322,34 @@ fn checks_word_run(tokens: Tokens, isolated: bool) -> Result<SpeculativeRun> {
   run
 }
 
-/// latex.ltx's `\thanks` (ltsect.dtx `\thanks`): a footnote mark, its text appended to `\@thanks`, which only the
-/// `\maketitle` that runs `\@thanks` prints (article.cls's, after `\@maketitle`: [`note_title_page_print`]).
-const LATEX_THANKS: &str = r"\long\def\thanks#1{\footnotemark\protected@xdef\@thanks{\@thanks\protect\footnotetext[\the\c@footnote]{#1}}}";
-
-/// What the class's whole title page prints at this `\maketitle` ([`title_page_print_tokens`], its fields holding the
-/// document's values), read with where its words end ([`ink_word_text`]) and noted for the check of its words against
-/// the output (`base_utilities::frontmatter::title_page_check`, OXIDIZED_DESIGN_DIVERGENCES #953). `\today` prints
-/// nothing in it: the conversion's date is no word of the document's (a class printing `\@date` at its default). An
-/// author's note (`\thanks`) is the class's own when a raw file defined one (`\lx@dropped@thanks` where the kernel's
-/// lock refused it), else latex.ltx's ([`LATEX_THANKS`]): its text prints where `\@thanks` runs — LaTeX's
-/// `\maketitle` (`\lx@print@thanks`), or a class's own that runs it —, set apart as its footnote is (`Ann
-/// Able\thanks{Lunar Institute}` is no word "AbleLunar"), and nowhere when the class never runs it (review probe p3:
-/// drcls's `\maketitle` runs `\thanks{Draft}` with no `\@thanks`, and pdflatex prints no "Draft"). Not inside a
-/// deposit or a replay (the title page they run is this one), nor when no run can be made or kept.
+/// What the class's whole title page prints at this `\maketitle`, read with where its words end, noted for the check of
+/// its words against the output (`base_utilities::frontmatter::title_page_check`, OXIDIZED_DESIGN_DIVERGENCES #953): the
+/// title-page reading's ([`title_page_reading::title_page_reading`]), with what it prints without what a document
+/// appended to `\@author` where the title page in force is known not to print that (the check reports a lost word only
+/// the appended text prints as one the page annotates, an Info: FX27). Not inside a deposit or a replay (the title page
+/// they run is this one), nor when no run can be made or kept.
 pub(crate) fn note_title_page_print() -> Result<()> {
   if lookup_bool("lx_depositing_class_maketitle") || lookup_bool("lx_replaying_class_setter") {
     return Ok(());
   }
-  let class_thanks = |cs: &str| matches!(lookup_meaning(&T_CS!(cs)), Some(Stored::Expandable(ref d)) if !d.get_origin().is_latexml_owned());
-  let thanks = if lookup_meaning(&T_CS!("\\lx@dropped@thanks")).is_some() {
-    r"\let\thanks\lx@dropped@thanks"
-  } else if class_thanks("\\thanks") {
-    r"\let\thanks\lx@check@thanks"
-  } else {
-    LATEX_THANKS
-  };
-  let inject = mouth::tokenize_internal(TeXString::assembled(s!(
-    r"\let\today\@empty{thanks}\def\lx@print@thanks{{\@thanks}}"
-  )))
-  .unlist();
-  // (the class's own `\thanks` kept aside before the run sets the net's in its place)
-  let mut tokens = mouth::tokenize_internal(r"{\let\lx@check@thanks\thanks").unlist();
-  // (and the Infos building the run gives — a `\maketitle` body not replayable — are the deposit's, which gives them)
-  let hold = util::logger::DiagnosticsHold::begin();
-  tokens.extend(title_page_print_tokens(&inject).unlist());
-  hold.discard();
-  tokens.push(T_END!());
-  match checks_word_run(Tokens::new(tokens), false)? {
-    SpeculativeRun::Printed(text) => {
+  let reading = title_page_reading::title_page_reading()?;
+  match reading.outcome {
+    title_page_reading::RunOutcome::Printed => {
       DebugFeature!(
         "frontmatter",
         "FRONT the title page prints: {}",
-        text.replace(INK_SEAM, "|")
+        reading.words.replace(INK_SEAM, "|")
       );
-      let untailed = untailed_title_page_print(&inject)?;
-      note_title_page_printed(&text, untailed.as_deref());
+      let untailed = (reading.tail_printed() == Some(false) && reading.untailed != reading.words)
+        .then_some(reading.untailed.as_str());
+      note_title_page_printed(&reading.words, untailed);
     },
-    SpeculativeRun::OverBudget(read) => {
+    title_page_reading::RunOutcome::OverBudget(read) => {
       note_check_left_out(s!("the class's title page, after {read} tokens read"), 0)
     },
-    SpeculativeRun::Aborted | SpeculativeRun::Unavailable => {},
+    title_page_reading::RunOutcome::Aborted | title_page_reading::RunOutcome::Unavailable => {},
   }
   Ok(())
-}
-
-/// What [`note_title_page_print`]'s run prints with `\@author` as the binding's setter left it, before the document
-/// appended to it, when that run was the stand-in for article.cls's `\@maketitle` (no title page of a raw file's or a
-/// binding's own ran: its print is its own evidence; nor a raw class's `\@author` reader) and the title page in force
-/// positively does not print what was appended (frontmatter_stores.rs `unverified_author_tail_prefix`): the title-page
-/// check reports a lost word only the appended text prints as annotated, an Info (OXIDIZED_DESIGN_DIVERGENCES #953,
-/// FX27). `None` otherwise, or when the run gives no print. `inject`: the first run's.
-fn untailed_title_page_print(inject: &[Token]) -> Result<Option<String>> {
-  if lookup_value(CLASS_AUTHOR_READER).is_some()
-    || class_at_maketitle()
-    || replays_class_maketitle()
-  {
-    return Ok(None);
-  }
-  let Some(prefix) = crate::frontmatter_stores::unverified_author_tail_prefix()? else {
-    return Ok(None);
-  };
-  let mut tokens = mouth::tokenize_internal(r"{\let\lx@check@thanks\thanks").unlist();
-  let mut inject = inject.to_vec();
-  inject.extend(mouth::tokenize_internal(r"\def\@author{").unlist());
-  // (a parameter token of the stored value doubled, as a definition's body holds it)
-  for token in prefix.unlist_ref() {
-    inject.push(*token);
-    if token.get_catcode() == Catcode::PARAM {
-      inject.push(*token);
-    }
-  }
-  inject.push(T_END!());
-  let hold = util::logger::DiagnosticsHold::begin();
-  tokens.extend(title_page_print_tokens(&inject).unlist());
-  hold.discard();
-  tokens.push(T_END!());
-  Ok(match checks_word_run(Tokens::new(tokens), false)? {
-    SpeculativeRun::Printed(text) => {
-      DebugFeature!(
-        "frontmatter",
-        "FRONT the title page prints, before the appended \\@author: {}",
-        text.replace(INK_SEAM, "|")
-      );
-      Some(text)
-    },
-    _ => None,
-  })
 }
 
 /// [`speculative_title_page_run`], in a mouth of its own when `isolated` ([`speculative_isolated_run`]), its text read
@@ -5304,8 +5366,26 @@ fn speculative_run(
   insert_mark: Option<char>,
   budget: Option<usize>,
 ) -> Result<SpeculativeRun> {
+  Ok(
+    match speculative_run_read(tokens, isolated, &[(read, insert_mark)], budget)? {
+      Ok(mut texts) => SpeculativeRun::Printed(texts.swap_remove(0)),
+      Err(run) => run,
+    },
+  )
+}
+
+/// A text reader of a speculative run's material, with the mark it sets before each `\insert`'s ([`speculative_run`]).
+pub(crate) type RunReader = (fn(&Digested, &mut String), Option<char>);
+
+/// [`speculative_run`], its material read by each of `readers` in turn: their texts when it printed, else how it ended.
+fn speculative_run_read(
+  tokens: Tokens,
+  isolated: bool,
+  readers: &[RunReader],
+  budget: Option<usize>,
+) -> Result<std::result::Result<Vec<String>, SpeculativeRun>> {
   let Some(journal) = begin_assignment_journal() else {
-    return Ok(SpeculativeRun::Unavailable);
+    return Ok(Err(SpeculativeRun::Unavailable));
   };
   let _speculative = speculative_digestion();
   const FLAGS: [&str; 3] = [
@@ -5368,15 +5448,20 @@ fn speculative_run(
   });
   stomach_mark.restore();
   let text = match &result {
-    Ok(digested) => {
-      let mut text = String::new();
-      read(digested, &mut text);
-      for insert in &inserts {
-        text.extend(insert_mark);
-        read(insert, &mut text);
-      }
-      Some(text)
-    },
+    Ok(digested) => Some(
+      readers
+        .iter()
+        .map(|(read, insert_mark)| {
+          let mut text = String::new();
+          read(digested, &mut text);
+          for insert in &inserts {
+            text.extend(*insert_mark);
+            read(insert, &mut text);
+          }
+          text
+        })
+        .collect::<Vec<_>>(),
+    ),
     Err(_) => None,
   };
   drop(muted);
@@ -5401,7 +5486,7 @@ fn speculative_run(
     }
     unwound?;
     unwind_box_lists_to(boxes);
-    return Ok(SpeculativeRun::OverBudget(reads));
+    return Ok(Err(SpeculativeRun::OverBudget(reads)));
   }
   if let Err(err) = result {
     // A resource Fatal (the conversion's deadline, its memory budget, a runaway limit) is the document's, and so is
@@ -5424,7 +5509,7 @@ fn speculative_run(
       "\\maketitle",
       "A speculative run of the class's title page ended in a Fatal error, discarded with it: no store counts as printed by it"
     );
-    return Ok(SpeculativeRun::Aborted);
+    return Ok(Err(SpeculativeRun::Aborted));
   }
   if undone {
     hold.discard();
@@ -5438,8 +5523,8 @@ fn speculative_run(
   }
   unwound?;
   Ok(match text {
-    Some(text) if undone => SpeculativeRun::Printed(text),
-    _ => SpeculativeRun::Unavailable,
+    Some(texts) if undone => Ok(texts),
+    _ => Err(SpeculativeRun::Unavailable),
   })
 }
 

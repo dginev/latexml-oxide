@@ -8,7 +8,7 @@ use crate::prelude::*;
 /// `reads_as_affiliation` per line, Z18e); `\email` prints in
 /// place (llncs.cls:897), so a `\thanks{Corresponding: A. Able, \email{…}}` names its address's owner. `written`:
 /// the observer's writer writes llncs's creators (FM stage 7, OD #922; a paper whose reading it cannot apply keeps
-/// today's output). `author_tail`: `\@maketitle` prints `\@author` (llncs.cls:1035), what a document appends to
+/// today's output). `title_page` `Block`: `\@maketitle` prints `\@author` (llncs.cls:1035), what a document appends to
 /// it too, which this binding's `\author` does not store (FX24b, OD #996).
 pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   name: "llncs",
@@ -17,7 +17,10 @@ pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   and_inline: true,
   author_lines: true,
   email_in_place: true,
-  author_tail: true,
+  title_page: FmTitlePageDecl {
+    author: FmAuthorPage::Block,
+    ..FM_KERNEL_CONVENTIONS.title_page
+  },
   cite: "llncs.cls:870-885, 894-897; OD #791 (2405.16615, 2512.08621), #792 (2604.11038), #807 (2401.16957), #913",
   ..FM_KERNEL_CONVENTIONS
 };

@@ -1,0 +1,20 @@
+% mechanism: amsart with a document's addition to `\@maketitle` (`\g@addto@macro`) and a tail appended to `\@author`: the
+%   title-page reading's run puts article.cls's page at the kernel's marker, so its print of the tail is no evidence of
+%   amsart's page; the binding's declaration answers (`AuthorPage::Own`: amsart prints `\authors`), so the tail is not
+%   read and the check reports "bob" as annotated, an Info (FX27)
+% witness: synthetic (TP1 sibling of revFX24b's appended-`\@maketitle` RED)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: page 1 "A TITLE / ALICE A / extra / Body." — no "Bob B"
+% engines: int160a and TP1: one creator Alice A, 0 warnings, Info "annotates 1 word(s) … bob"; a first TP1 draft made Bob B
+%   a creator (its walk took the marker for a print of `\@author`)
+% expect:  one creator Alice A, 0 errors, 0 warnings, the Info
+% status:  GREEN. Guard perfect_kernel_batchfx24::an_author_tail_the_title_page_does_not_print_is_not_read
+% preload: ar5iv.sty
+\documentclass{amsart}
+\makeatletter\g@addto@macro\@maketitle{\par\centerline{extra}}\makeatother
+\begin{document}
+\title{A Title}
+\author{Alice A}
+\makeatletter\g@addto@macro\@author{\and Bob B}\makeatother
+\maketitle
+Body.
+\end{document}

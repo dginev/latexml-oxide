@@ -791,6 +791,15 @@ const WORDLESS: &[&str] = &[
 /// `speculative_run`): what follows it is the page foot's, not the title page's text running on.
 pub const INK_INSERT: char = '\u{3}';
 
+/// The characters [`ink_word_text`] reads for the marks the title-page reading's run prints, each a constructor printing
+/// nothing (sect05.rs `title_page_mark`, by its definition), where it stands. No word holds them; the reading takes them
+/// out of the text it keeps. Where `\@author` begins:
+pub const INK_AUTHOR: char = '\u{4}';
+/// Where what a document appended to `\@author` begins ([`INK_AUTHOR`]).
+pub const INK_TAIL: char = '\u{5}';
+/// Where what a document appended to `\@author` ends ([`INK_AUTHOR`]).
+pub const INK_TAIL_END: char = '\u{6}';
+
 /// The mark [`ink_word_text`] sets at the edges of a whatsit that prints: no word ends there in the text it reads
 /// (`Jos\'e`, `\textbf{Ab}le`), but where a word does not continue across it, the pieces are words of their own
 /// (`\centerline{Ann Able}\centerline{MIT}`, "Able" and "MIT").
@@ -802,6 +811,13 @@ pub const INK_SEAM: char = '\u{1}';
 /// accent built as an alignment runs on (combelow's `\cb{s}`, `Babe\cb{s}-Bolyai` "Babes", 2007.07526), an author
 /// table's cells end their words. The title page's printed words (`base_utilities::frontmatter::title_page_check`).
 pub fn ink_word_text(d: &Digested, out: &mut String) {
+  // (a mark the title-page reading set in its run, where it stands, by its definition: [`INK_AUTHOR`])
+  if let DigestedData::Whatsit(w) = d.data()
+    && let Some(mark) = crate::latex_constructs::title_page_mark(&w.borrow().get_definition())
+  {
+    out.push(mark);
+    return;
+  }
   // (spacing — a phantom's invisible ink, a kern, `\quad` — and a script print no word: a script is a mark)
   if let DigestedData::Whatsit(w) = d.data()
     && (is_spacing_item(d)

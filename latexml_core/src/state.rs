@@ -280,6 +280,8 @@ pub struct AssignmentJournal {
   /// each box whose `\\wd`, `\\ht` or `\\dp` was set, the property's value then, oldest first: a property of the box itself, which
   /// a register's binding shares ([`journal_box_dimension`])
   box_dimensions: Vec<(Digested, &'static str, Option<Stored>)>,
+  /// the state's generation when it began ([`state_generation`]), which a rollback puts back
+  generation:     u64,
 }
 /// A key's values in its table (`None`: unbound) and its assignment counts by frame id.
 type JournalEntry = (Option<VecDeque<Stored>>, Vec<(u64, usize)>);
@@ -1054,6 +1056,7 @@ impl State {
   /// Record `key`'s bindings in the open assignment journal before its first assignment since the journal began.
   #[inline]
   fn journal_touch(&mut self, table_name: TableName, key: SymStr) {
+    note_state_change(table_name, key);
     if table_name == TableName::Meaning && !self.meaning_recorders.is_empty() {
       self.record_meaning(key);
     }
@@ -1068,6 +1071,7 @@ impl State {
   /// assignment outside one pays nothing for it: the test sits past the guard's.
   #[inline]
   fn journal_touch_assignment(&mut self, table_name: TableName, key: SymStr, global: bool) {
+    note_state_change(table_name, key);
     if table_name == TableName::Meaning && !self.meaning_recorders.is_empty() {
       self.record_meaning(key);
     }
@@ -4418,6 +4422,7 @@ impl<T: Clone + Default + 'static> DocumentState<T> {
 /// Note for an open assignment journal that the box in the register `key` is about to have its dimension `property` set
 /// (`\\wd`, `\\ht`, `\\dp`): a property of the box itself, which no binding's value holds.
 pub fn journal_box_dimension(key: &str, property: &'static str) {
+  next_generation();
   if !JOURNAL_GUARD_LIVE.get() {
     return;
   }
@@ -6125,6 +6130,7 @@ pub fn begin_assignment_journal() -> Option<AssignmentJournalGuard> {
     saved: rustc_hash::FxHashMap::default(),
     fallback: rustc_hash::FxHashMap::default(),
     box_dimensions: Vec::new(),
+    generation: GENERATION.get(),
   });
   JOURNAL_GUARD_LIVE.set(true);
   Some(AssignmentJournalGuard { open: true })
@@ -6216,6 +6222,40 @@ pub fn swap_meaning_log(buffer: &mut Vec<MeaningAssigned>) {
 /// for the next [`begin_assignment_journal`] to discard.
 static JOURNAL_GUARD_LIVE: std::cell::Cell<bool> = std::cell::Cell::new(false);
 
+#[thread_local]
+/// The state's generation ([`state_generation`]).
+static GENERATION: std::cell::Cell<u64> = std::cell::Cell::new(0);
+
+#[thread_local]
+/// The last generation drawn ([`next_generation`]): it only grows, so no number is drawn twice.
+static LAST_GENERATION: std::cell::Cell<u64> = std::cell::Cell::new(0);
+
+/// A new generation for a state that changed: one never drawn before, also after a rollback put an earlier one back.
+fn next_generation() {
+  let next = LAST_GENERATION.get() + 1;
+  LAST_GENERATION.set(next);
+  GENERATION.set(next);
+}
+
+/// A write to `key` of `table_name`, in place or not ([`State::journal_touch`]): a new generation, but for a
+/// LaTeXML-internal value's (a key `lx…` in the value table: a frontmatter flag, which no TeX code reads).
+#[inline]
+fn note_state_change(table_name: TableName, key: SymStr) {
+  if table_name != TableName::Value || arena::first_bytes::<2>(key) != Some(*b"lx") {
+    next_generation();
+  }
+}
+
+/// The state's generation: a computation over the state's definitions, registers and values may be kept while it is
+/// unchanged (frontmatter's title-page reading, `latex_constructs::title_page_reading`). Every write to the state draws
+/// a new one — an assignment, a write in place (the mode, a mapping's entry, a box's `\wd`, `\ht` or `\dp`), a group's
+/// end that restores what was assigned in it ([`pop_frame`]) — but a LaTeXML-internal value's (a key `lx…` in the value
+/// table: a frontmatter flag, which no TeX code reads; a computation that reads one keys on it itself), and a journal
+/// rolled back ([`AssignmentJournalGuard::rollback`]) puts back the one it began with, with the state. A generation is
+/// never drawn twice, so it can say "changed" of a state the same again (a group's end, a write of the same value), never
+/// "unchanged" of one that changed.
+pub fn state_generation() -> u64 { GENERATION.get() }
+
 /// The open assignment journal ([`begin_assignment_journal`]).
 #[must_use = "an assignment journal is kept or rolled back"]
 pub struct AssignmentJournalGuard {
@@ -6302,6 +6342,7 @@ impl AssignmentJournalGuard {
         },
       }
     }
+    GENERATION.set(journal.generation);
     true
   }
 }
@@ -6754,6 +6795,10 @@ pub fn pop_frame() -> Result<()> {
       let undo_table = popped_frame.table(*table_name);
       let state_table = state.table_mut(*table_name);
       for (key, undo_count) in undo_table.iter() {
+        // (a value restored is a change of the state's: [`state_generation`])
+        if *undo_count > 0 {
+          note_state_change(*table_name, *key);
+        }
         // Typically only 1 value to shift off the table, unless scopes have been activated.
         let named_table = state_table.get_mut(key).unwrap();
         for _ in 0..*undo_count {

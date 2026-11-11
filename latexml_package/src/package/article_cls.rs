@@ -21,8 +21,6 @@ LoadDefinitions!( {
     "openany",
     "onecolumn",
     "twocolumn",
-    "notitlepage",
-    "titlepage",
   ]
   .iter()
   {
@@ -54,6 +52,12 @@ LoadDefinitions!( {
   // KNOWN_PERL_ERRORS #469: Perl's options are no-ops, as book's were for hep-ph0207204).
   DeclareOption!("oneside", r"\@twosidefalse\@mparswitchfalse");
   DeclareOption!("twoside", r"\@twosidetrue\@mparswitchtrue");
+  // article.cls:50-51, :91-93: `\if@titlepage`, false unless `titlepage` (Perl's no-op options leave it false), which
+  // a class or document may test and which decides its `\maketitle` (article.cls:169-219: `declare_fnsymbol_title_block`,
+  // the kernel's `MaketitleRuns::WithoutTitlepage`, TP1c). Declared before ProcessOptions, so the options run.
+  RawTeX!(r"\newif\if@titlepage \@titlepagefalse");
+  DeclareOption!("titlepage", r"\@titlepagetrue");
+  DeclareOption!("notitlepage", r"\@titlepagefalse");
   ProcessOptions!();
   // The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`): article.cls's in two
   // columns, as its size file sets it for the paper and size options (`standard_class_twocolumn_page`: 229.5pt
@@ -84,8 +88,6 @@ LoadDefinitions!( {
 
   TeX!(r"
   \newif\if@restonecol
-  \newif\if@titlepage
-  \@titlepagefalse
   ");
 
   //**********************************************************************
