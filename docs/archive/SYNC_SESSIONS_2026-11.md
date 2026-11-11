@@ -1867,6 +1867,24 @@ The flip's facts are live in `perfect_kernel/SILENT_LOSS_INVENTORY.md` "Bundle i
 - fm_checks vs int153d: merged/lost 130 → 133 (the six NE5 blocks); 2402.02104's content check 0 distinct words lost; gone: 1208.0597, 1409.0597, 2407.13730, 2606.19583; 0907.1243's lost "dagger diamond star" are the math token names of its marks.
 - flip200 per paper 69.21 % at `=2`.
 
+## Bundle int156a — the e0 fence hardened, the bundle's small REDs, aa's entry name
+
+On `pk/int156a` after the int155a push (`8670d33a6c`), head `fcbd29e747`; every batch reviewed and merged. Its open
+residuals are live in [`../perfect_kernel/SILENT_LOSS_INVENTORY.md`](../perfect_kernel/SILENT_LOSS_INVENTORY.md)
+"Bundle int156a — the residual".
+
+- E0h: the e0 fence pins the old reader's 81 exports, its 1,702 lines and the Cut/Kind's lines exactly; no namesake
+  exempt (revE0h B1 fixed by the main session). RA0: a title-code definee declared with no parameters is taken and prints
+  (OD #983). Z18o2: an aas stopgap line in its author's own printed group keeps that owner; the flush reads `_stopgap`
+  (OD #992). MB1: a labelled line named by one rule, `entry_line_label`. MB2: aa's `\mail` name "Correspondence to: " as
+  aa.cls prints it (OD #944). Z18n stopped under the brief rules' rule 5 and was folded into Option C P2.
+- **The chain** (`chain/out/int156a/`): gates 8026/8026, clippy 0, doc 0, dumps 0/0; A/B 28,354 papers, 23 changed (all
+  frontmatter), E 45,818 → 45,818, F 172 → 172 — its worse list only 1710.01722 (near the A/B's 180 s, load-sensitive); stage2
+  0 creators changed; nets 136, worse 0; manual sweep #170 G1-G4 0, G5 57 (as #169); cost all within +0.21 % (1507.02068
+  +0.057 %).
+- **The brief trial:** 6 first reviews under rules 1-5 (2 NO-SHIP, both coverage overclaims, vs 3/6 before); the user kept
+  them and added rule 6 (a coverage claim names its routes), with a retrospective after 10 uses.
+
 ## Bundle int155a — `author_block/` deleted and the push's REDs fixed
 
 On `pk/int155a` after the int154a push (`1969cb34cb`), head `92f7f78adb`; every batch reviewed and merged. Its open
