@@ -252,11 +252,11 @@ fn entry_names(name: &Tokens) -> Result<Vec<Tokens>> {
   let mut names = Vec::new();
   let mut from = 0;
   for separator in separators {
-    if let Some(at) = separator.position
-      && let Some(name) = content.get(from..usize::from(at))
+    if let Some((start, end)) = separator.span
+      && let Some(name) = content.get(from..start)
     {
       names.push(Tokens::new(name.to_vec()));
-      from = usize::from(at) + 1;
+      from = end;
     }
   }
   names.push(Tokens::new(

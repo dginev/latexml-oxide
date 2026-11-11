@@ -504,6 +504,9 @@ mod perfect_kernel_batchp20;
 /// which cuts it at its `\and` (webofc: at its `\\` too, the binding's `break_parts_names`); no split by spelling (OD #993).
 mod perfect_kernel_batchp21;
 mod perfect_kernel_batchp21b;
+/// P24: Option C P2-4 — eptcs's author block cut where its separators are by meaning (`argument_separators`), not by
+/// spelling (OD #991, #995).
+mod perfect_kernel_batchp24;
 mod perfect_kernel_batchpb;
 /// PC3: two false undefined-command Errors of the frontmatter rehearsal — a title-code command after an e-mail
 /// keeps its argument (pazh), a class's own `\email` reads its argument unexpanded (1802.01191); OD #983.
