@@ -39,6 +39,11 @@ pub fn queue_front_matter(tag: &str, attr: Option<&KeyVals>, command: Tokens) {
   );
   // (the frontmatter observer's ledger: OXIDIZED_DESIGN_DIVERGENCES #837)
   record_api_call(tag, attr, &command);
+  // (what `\@author` holds as a creator is queued: the prefix of a tail appended to it after,
+  // `frontmatter_stores::author_tail_calls`)
+  if tag == "ltx:creator" {
+    crate::frontmatter_stores::note_author_seen();
+  }
   note_document_sets_front_matter(
     tag,
     &attr

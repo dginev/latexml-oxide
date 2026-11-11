@@ -1,13 +1,14 @@
 % mechanism: a class's `\coauthor`/`\affil` appending `\and <name>` and `\\<line>` to `\@author` without `\author`:
-%   everything after the `\author` call is lost (frontmatter_stores.rs `author_tail_calls`, :7471; the P26
+%   the rows before the first `\and` are the `\author` call's creator's, the rest one more author block
+%   (frontmatter_stores.rs `author_tail_calls`); before FX24 everything after the `\author` call was lost (the P26
 %   report's minimal input, probe p6)
 % witness: 2511.15315 (an appended tail lost); synthetic class
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: two columns "Alice A | Bob B" over "Inst X | Inst Y"
 % engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 1 warning ("The title page prints 1 word(s) … does not
 %   hold: inst"); one creator Alice A with no affiliation: "Inst X", "Bob B" and "Inst Y" lost, counted as 1
-%   word; perl not run
+%   word. FX24: 0 errors, 0 warnings; Alice A (author-block row Inst X), Bob B (Inst Y); perl not run
 % expect:  0 errors, 0 warnings; creators Alice A (Inst X), Bob B (Inst Y)
-% status:  RED (int158a; RR1 gap 24c)
+% status:  RED (int158a; RR1 gap 24c) -> GREEN (FX24; guard perfect_kernel_batchfx24::a_class_coauthor_after_its_rows_is_kept)
 % preload: ar5iv.sty
 \begin{filecontents*}[overwrite]{lxauthtaill.cls}
 \NeedsTeXFormat{LaTeX2e}

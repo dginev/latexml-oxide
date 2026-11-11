@@ -1529,7 +1529,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("frontmatter (rest)", 29),
   // (P26, 527 -> 526: the stores' `\and` gates ask the separator query by meaning, `and_separators`, OD #995 P2-6; the
   // spelling read only where the query answers `None`: one spelled read fewer)
-  ("frontmatter_stores", 526),
+  // (FX24, 526 -> 528: `seen_author_tail` asks whether the value `\@author` held as a binding's authors were queued is the
+  // kernel's empty one (`\@empty`, or spaces: the setter stored nothing in it, authblk's) and whether a raw class's own
+  // `\@maketitle` holds `\@author` (procdoc2.cls:77, 2511.15315) — the class's code, not a document's spelling; OD #996)
+  ("frontmatter_stores", 528),
   ("gretsi_cls.rs", 14),
   // (CR10a, 119 -> 128: the class's author body is read as tokens before it is digested, as `author_block_body` reads it —
   // a names block nested in another's spliced in (`unnested_name_blocks`, 1511.03982), the alias `\authorblockN`'s grades,
