@@ -4004,7 +4004,8 @@ fn respell_emails(document: &mut Document) -> Result<()> {
       .any(|c| c.get_content().trim() == address.trim());
     // (a copy the owner already holds is dropped, not kept: a paper repeating its author block for a supplement lands the
     // second block's `\email` calls on the last creator, 2307.07324, 1801.07635, 1810.03867, 2510.13035, 2001.07542,
-    // 2608.31160 — so "printed under both" cannot be told from that here, and 2502.15891's real duplicate reads as the base
+    // 2608.31160 — under REVTeX only a block a subfile repeats since RB1, its `\maketitle` switching `\email` off
+    // otherwise, revtex4_cls.rs `switch_off_author_block_after_maketitle` — so "printed under both" cannot be told from that here, and 2502.15891's real duplicate reads as the base
     // did: `email_own_call_printed_under_both_stays_on_both_red`, review of bundle int139b)
     if !held {
       let mut target = authors[owner].clone();

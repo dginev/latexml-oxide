@@ -1,0 +1,27 @@
+% mechanism: a `\maketitle` inside a group (`\begingroup`, 2510.13035's `{bibunit}`): revtex's switch-off of the
+%   author-block commands is local, so pdflatex prints the second block in full after the group; our kernel cleanup
+%   (sect05.rs:1669) is global, so only `\affiliation` comes back and Bob gets Univ X as well. The same mechanism as the
+%   subfiles RED (a group undoing the switch). revRB1 finding 2, pre-existing (int159a = RB1b)
+% witness: 2510.13035 (pdflatex fatal on the paper itself); minimal repro synthetic
+% expect:  the second block's authors their own affiliations, as pdflatex prints them
+% status:  RED (int159a, RB1b)
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\begin{document}
+\begingroup
+\title{T}
+\author{Ann Able}
+\affiliation{Univ X}
+\author{Bob Baker}
+\affiliation{Univ Y}
+\maketitle
+Text.
+\endgroup
+\title{Supplement}
+\author{Ann Able}
+\affiliation{Univ X}
+\author{Bob Baker}
+\affiliation{Univ Y}
+\maketitle
+More.
+\end{document}

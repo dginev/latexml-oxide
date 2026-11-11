@@ -1,0 +1,47 @@
+% RED (RB1): a REVTeX paper whose title page and supplement are two subfiles, each with its own author block and
+%   `\maketitle`: each subfile is read inside a group (subfiles.sty:126-131 `\begingroup…\endgroup` in pdflatex; our fake
+%   `{document}`'s mode group, subfiles_sty.rs), which undoes the switched-off setters of the first block's `\maketitle`
+%   (revtex4_cls.rs `switch_off_author_block_after_maketitle`), so the PDF prints the block twice; ours reads the second
+%   block's `\affiliation`/`\email` as contacts of the last author, and its names and title as body text. A second
+%   mechanism (a re-printed block matched to the creators it repeats), not RB1's.
+% witness: 2401.15572 (Liqin Ke + Purdue and ORNL), 2307.07324 (Uhrig + DLR)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "T / Ann Able / Univ X, Town / Bob Baker / Univ Y, City /
+%   Text. / Supplement / Ann Able / Univ X, Town / Bob Baker / Univ Y, City / More."
+% engines: rust int159a, RB1: 0 errors; Bob Baker holds Univ Y, City and Univ X, Town; the paragraph "Text. Supplement
+%   Ann Able Bob Baker More."
+% expect:  0 errors; Ann Able (ann.able@x.org, Univ X, Town); Bob Baker (bob.baker@y.org, Univ Y, City) only
+% status:  RED
+\begin{filecontents*}{rbonemain.tex}
+\documentclass[revtex_subfile_repeated_author_block_red.tex]{subfiles}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\email{ann.able@x.org}
+\affiliation{Univ X, Town}
+\author{Bob Baker}
+\email{bob.baker@y.org}
+\affiliation{Univ Y, City}
+\maketitle
+Text.
+\end{document}
+\end{filecontents*}
+\begin{filecontents*}{rbonesupp.tex}
+\documentclass[revtex_subfile_repeated_author_block_red.tex]{subfiles}
+\begin{document}
+\title{Supplement}
+\author{Ann Able}
+\email{ann.able@x.org}
+\affiliation{Univ X, Town}
+\author{Bob Baker}
+\email{bob.baker@y.org}
+\affiliation{Univ Y, City}
+\maketitle
+More.
+\end{document}
+\end{filecontents*}
+\documentclass[aps,prl]{revtex4-2}
+\usepackage{subfiles}
+\begin{document}
+\subfile{rbonemain}
+\subfile{rbonesupp}
+\end{document}

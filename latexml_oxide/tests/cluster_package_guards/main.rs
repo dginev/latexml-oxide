@@ -548,6 +548,9 @@ mod perfect_kernel_batchr1;
 /// RA0: a title-code definee declared with no parameters (`\newcommand`'s `[0]`) is taken by the name it follows;
 /// OD #983.
 mod perfect_kernel_batchra0;
+/// RB1: REVTeX's `\maketitle` switches the author block's setters off and keeps `\title` a silent setter, so a
+/// repeated block prints nothing (revtex4_cls.rs `switch_off_author_block_after_maketitle`).
+mod perfect_kernel_batchrb1;
 mod perfect_kernel_batchrc1;
 mod perfect_kernel_batchs5;
 /// SEP1: the rehearsal binds a `\let` copy of `\and`, `\\`, `\thanks` or `\footnote` by its meaning, as the command it

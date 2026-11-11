@@ -19248,3 +19248,23 @@ defining it (`reading::HeldUndefined`): 0 Errors, the affiliation "Univ X" (OXID
 command with an argument the title code defines, right after an e-mail call (pazhastl.cls:112's `\def\address##1{…}`:
 `\author{Ann Able\email{ann@x.org}\address{1}}`, Perl 1 Error `\address`), is no real undefined command for the e-mail
 piece either (`content::Field::held_undefined_at`): 0 Errors, `\address{1}` the name's mark (1108.4222, 2607.07582; PC3).
+
+## 1220. REVTeX: an author block repeated after `\maketitle` (a supplement) puts every repeated contact on the last author
+
+REVTeX's `\frontmatter@maketitle` (revtex4-2.cls:2670-2684, revtex4-1.cls:2649-2662, revtex4.cls:4709-4717) lets
+`\affiliation`, `\author`, `\email` and `\thanks` to no-ops after `\maketitle`, so a repeated block prints nothing.
+Perl's revtex bindings do not: the second block's calls queue after the title block and every repeated contact lands
+on the last author (PERL-ORIGIN, 0 errors). Rust fixed it faithfully to the class in RB1 (the class's own switch-off
+through `\lx@maketitle@body`, only where the document class is revtex): witnesses 1801.07635, 1812.00931, 2001.07542,
+2602.09975, 2304.09163, 2312.13577, 2111.12484. Minimal trigger:
+
+```latex
+\documentclass{revtex4-2}
+\begin{document}
+\title{T}\author{Ann Able}\affiliation{Univ X}\maketitle
+Text.
+\author{Ann Able}\affiliation{Univ X}\author{Bob Baker}\affiliation{Univ Y}\maketitle
+More.
+\end{document}
+```
+
