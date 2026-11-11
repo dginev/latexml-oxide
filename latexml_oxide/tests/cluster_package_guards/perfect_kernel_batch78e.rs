@@ -105,18 +105,6 @@ fn llncs_author_line_break_options_with_inst_marks() {
   ]);
 }
 
-/// aa's template shape `\fnmsep\thanks{\email{…}}` (aa.cls v9.1 :761): the e-mail is the author's contact and the thanks
-/// note it emptied is none (ruling 2026-10-21, `\lx@annotate@frontmatter@now`); an author's own empty `\thanks{}` is no
-/// note either (ruling 2026-10-30, batch 92e, OD #916; Perl keeps it). Red (int45b): an empty thanks note on Ann Able.
-/// The rev78e review's finding 2 (webofc's 2409.01693 the same shape). Repro
-/// class-bindings/aa_thanks_email_leaves_no_empty_note.
-/// Asserts the clean conversion alone (0 Errors, 0 Warnings); the reading described is a RED at the emitter
-/// (`docs/parity/FRONTMATTER_REDS_AT_EMIT2.tsv`), not checked here.
-#[test]
-fn aa_thanks_email_leaves_no_empty_note() {
-  repro_with!("class-bindings/aa_thanks_email_leaves_no_empty_note.tex",);
-}
-
 /// jinstpub.sty's frontmatter is jheppub's (jinstpub.sty:111-140): the labelled affiliations on their authors, the
 /// e-mail and the `\note` the first author's contacts, the keywords; its equations are numbered within sections (:335)
 /// and its caption label closed by a period (:362-378; the label's bold under the class caption fonts knob alone,
@@ -233,35 +221,5 @@ fn jinstpub_edited_header_is_a_preprint_note() {
     &[],
     "<pubnote role=\"preprint\">Prepared for submission to JINST \
      (FERMILAB-PUB-21-079-ND-SCD)</pubnote>",
-  );
-}
-
-/// vmsta.cls (2014-2018 copies) writes each e-mail to the `.aux` for a later run's title page (:242-256 `\@email`) and
-/// appends each address to its title page's list (:381-390): they are the authors' contacts, an `\address[a]` the
-/// affiliation of the authors labelled `a`. Red (int45b): no e-mail, the addresses paragraphs after the title page.
-/// Witnesses 1508.02842, 1801.00977, 1411.4499, 1506.02940, 1601.01109. Repro
-/// class-bindings/vmsta/vmsta_emails_and_addresses_are_contacts.
-/// Asserts the clean conversion alone (0 Errors, 0 Warnings); the reading described is a RED at the emitter
-/// (`docs/parity/FRONTMATTER_REDS_AT_EMIT2.tsv`), not checked here.
-#[test]
-fn vmsta_emails_and_addresses_are_contacts() {
-  repro_with!(
-    "class-bindings/vmsta/vmsta_emails_and_addresses_are_contacts.tex",
-    ("vmsta.cls", "class-bindings/vmsta/vmsta.cls")
-  );
-}
-
-/// The 2018+ vmsta.cls copies take the e-mail inside the author (`\ead`, :1263-1297) and keep the addresses in their
-/// own list (`\address@optarg`, :871-920); the class's own `\author` still counts the e-mails for its check at
-/// `\end{frontmatter}` (:550-565). Red (int45b): no e-mail, no affiliation, both printed by the deposited title page.
-/// Witnesses 1805.02511, 1810.09681, 2001.02487, 1912.07948. Repro
-/// class-bindings/vmsta_2018/vmsta_2018_emails_and_addresses_are_contacts.
-/// Asserts the clean conversion alone (0 Errors, 0 Warnings); the reading described is a RED at the emitter
-/// (`docs/parity/FRONTMATTER_REDS_AT_EMIT2.tsv`), not checked here.
-#[test]
-fn vmsta_2018_emails_and_addresses_are_contacts() {
-  repro_with!(
-    "class-bindings/vmsta_2018/vmsta_2018_emails_and_addresses_are_contacts.tex",
-    ("vmsta.cls", "class-bindings/vmsta_2018/vmsta.cls")
   );
 }

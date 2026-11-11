@@ -5,7 +5,8 @@
 % oracle:  pdflatex (article) 0 errors: "Ann Able1, 2Bob Baker"
 % engines: rust 78f r1 = "1,2" on Ann Able, Bob Baker bare; int47a = Ann Able's 1, Bob Baker's 2
 % expect:  0 errors, 0 warnings; Ann Able with her 1, Bob Baker with his 2
-% status:  RED (78f r1) -> GREEN (78f r2)
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: Ann Able shows "1,2" and Bob Baker none (Bob's 2 given to Ann); 78f's guard kept only the counts after DEL1
+% status:  RED (78f r1) -> GREEN (78f r2) -> RED (int160a, HG1)
 % preload: ar5iv.sty
 \documentclass{article}
 \newcommand{\inst}[1]{$^{#1}$}

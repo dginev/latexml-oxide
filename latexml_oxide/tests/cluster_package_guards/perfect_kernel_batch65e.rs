@@ -349,15 +349,6 @@ fn ptephy_textsuperscript_legend_line() {
   ]);
 }
 
-/// A symbol mark the author's own email shows as well (`$^{*}$gh@x.edu`) stays on the name too, as the PDF prints it
-/// on both ("GREG HUNT1,∗", "∗ GH@X.EDU"; 1910.00401): only a mark the placed contact drops is answered. Repro sectioning-frontmatter/symbol_mark_shown_by_its_email.
-#[test]
-fn symbol_mark_shown_by_its_email() {
-  convert_clean(include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/symbol_mark_shown_by_its_email.tex"
-  ));
-}
-
 /// OSA: a `\text…` command before an address without a braced argument (`\email{\textasteriskcentered able@x.edu}`)
 /// is the address's text, not a mark inside a font command (whose slice ran backwards: a panic). The address's `*` is
 /// Perl parity (textcomp.sty.ltxml:128 maps `\textasteriskcentered` to ASCII `*`; pdflatex prints `∗`). Repro

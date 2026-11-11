@@ -47,16 +47,6 @@ fn both_ways(tex: &str) -> String {
   squash(&eager)
 }
 
-/// revtex's names line ending in a team, `… and the GAPS Team` (1708.04166, 15 names one creator): two creators, each
-/// with the team as its collaboration and the institute its mark names; the marks stay on the names, as the binding
-/// keeps them. A team listed with "and" and marked, `… and LHD experimental group$^{1}$` (1711.07097, 11 names one
-/// creator and the merge Error): the same two, the mark no part of the contact.
-#[test]
-fn team_piece_of_a_names_line_is_a_collaboration() {
-  let tex = repro!("author_names_line_team_piece_is_a_collaboration");
-  both_ways(tex);
-}
-
 /// A `(XYZ Collaboration)` line under revtex's marked names (2410.11607): no part of the last name, where Perl's weld
 /// (Base_Utility.pool.ltxml:700-701) put it — each name's collaboration. The line break closing an entry is no part of
 /// it (`notes::trim_trailing_separator`, batch 99a; was a trailing `<break/>`).
@@ -81,14 +71,6 @@ fn collaboration_line_under_marked_names_is_each_names() {
     )
     .as_str(),
   ]);
-}
-
-/// `… Bob Baker$^{2}$ for the XYZ and ABC Collaborations` (dev census c3): the pieces the names split parted at the
-/// marks and at "and" are one collaboration again, each name's — not the creators "for the XYZ" and "ABC
-/// Collaborations".
-#[test]
-fn names_speaking_for_two_collaborations_carry_one_contact() {
-  both_ways(repro!("author_names_for_two_collaborations_is_one_contact"));
 }
 
 /// A bracketed collaboration after a name (0910.4381's `J.~Zapatero$^{5}$ (The MAGIC Collaboration), A.~Falcone…`):
@@ -138,16 +120,6 @@ fn collaboration_line_under_unmarked_names_covers_its_group() {
   ]);
 }
 
-/// An `\and` group that is only a collaboration's name before the names (1912.05868's `\small H.E.S.S. Collaboration
-/// \and H.~Abdalla …` shape): a heading over every name after it, no creator, its contact first on each, as it prints
-/// above them (rev97cd D1; was after the affiliation). A call naming nothing else keeps it the author it is
-/// (`\author{The ATLAS Collaboration}`).
-#[test]
-fn collaboration_heading_group_covers_the_names_after_it() {
-  let tex = repro!("author_collaboration_heading_group_covers_names_after");
-  both_ways(tex);
-}
-
 /// What names no collaboration stays as it was: a team or group line unframed under a name (`Machine Learning Group`,
 /// 2205.00756; `Google Brain Team`) is its affiliation; a collaboration word before an institution's (`The ATLAS
 /// Collaboration Office, CERN`) an affiliation; a surname holding an institution's word (aastex
@@ -172,16 +144,6 @@ fn team_words_and_company_surnames_name_no_collaboration() {
                  B.~Baker\\altaffilmark{2}}\n\\altaffiltext{1}{Univ A}\n\\altaffiltext{2}{Univ B}\n\\maketitle\nBody.\n\
                  \\end{document}\n";
   both_ways(company);
-}
-
-/// A heading's colon is the line's own, outside every group (2407.21626's `MeerKLASS Collaboration\thanks{Corresponding
-/// authors:}: Matilde …`, 2601.03873's `\parbox{\textwidth}{\Large{ MAGIC Collaboration: K.~Abe$^{1}$, …}}`: cut inside
-/// the note or the box, the braces did not close — a Fatal): the names each with the heading's collaboration, the note
-/// a thanks pubnote; the line inside a box no heading of the line's, read as before.
-#[test]
-fn a_heading_colon_is_the_lines_own() {
-  let tex = repro!("author_collaboration_heading_colon_outside_groups");
-  both_ways(tex);
 }
 
 /// A collaboration line between a name and its institution (0910.2149's `On Behalf Of The ATLAS Collaboration \\
@@ -240,31 +202,4 @@ fn unframed_collaboration_with_its_address_and_the_team_stay_affiliations() {
     )
     .as_str(),
   ]);
-}
-
-/// A collaboration's name broken after "and" (1210.5341's `the \textit{Fermi} Pulsar Search Consortium and \\ the
-/// \textit{Fermi} Pulsar Timing Consortium`): one contact holding both, after the one the names line speaks for — marked
-/// (the line loop) and unmarked (a group's lines) (rev97cd D3: the affiliation "… Search Consortium and" beside the
-/// collaboration "… Timing Consortium").
-#[test]
-fn collaboration_broken_after_and_is_one_contact() {
-  let tex = repro!("author_collaboration_broken_after_and_is_one_contact");
-  both_ways(tex);
-}
-
-/// A collaboration opening an `\and` group (the reviewer's probe q01: `… \\ (ATLAS Collaboration) \\ … \and CMS
-/// Collaboration \\ Cid Cole$^{3}$, Dan Dee$^{3}$ …`): the heading of that group's names, not a companion of the group
-/// before's collaboration (rev97cd D4: CMS on Ann Able and Bob Baker).
-#[test]
-fn collaboration_opening_an_and_group_heads_its_names() {
-  both_ways(repro!("author_collaboration_after_and_heads_its_own_group"));
-}
-
-/// A trailing `\and` group naming only a collaboration covers every name before it that carries none (`annotate=new`,
-/// aas_support.sty.ltxml:126), unmarked (rev97cd D5: a third creator) and marked (D5: the last name only), its contact
-/// where it prints — after the institutions unmarked, before the marked lines under the whole row.
-#[test]
-fn trailing_collaboration_group_covers_every_name() {
-  let tex = repro!("author_trailing_collaboration_group_covers_every_name");
-  both_ways(tex);
 }

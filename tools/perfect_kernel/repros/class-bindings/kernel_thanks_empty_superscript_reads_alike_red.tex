@@ -6,7 +6,8 @@
 %          `<note role="thanks"/>` (the superscript already taken out)
 % expect:  0 errors, 0 warnings; the XML and the observer alike: Ann's note kept, its empty superscript an element of
 %          its own (in doubt, ink), Bob's note its text; a mark of the name's own (`\textsuperscript{}` beside it) no mark
-% status:  RED (92e r2) -> GREEN (92e r3)
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: Ann's note (an empty superscript) dropped, Bob's "B" kept; 92e's guard kept only the counts after DEL1
+% status:  RED (92e r2) -> GREEN (92e r3) -> RED (int160a, HG1)
 % preload: ar5iv.sty
 \documentclass{article}
 \begin{document}

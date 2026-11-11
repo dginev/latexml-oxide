@@ -8,7 +8,8 @@
 % expect:  0 errors, 0 warnings; the notes of Ann to Eve, kept; no note for Fay. (Ann's `\colorbox{red}{}` and Eve's
 %          `\mbox{\colorbox{yellow}{\strut}}` construct an empty `ltx:text` with no `backgroundcolor`: the colour of a
 %          box with no text is lost in the XML, as in the base — a rendering gap, not this test's)
-% status:  RED (92e r2) -> GREEN (92e r3)
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: the notes of Ann to Eve (colour boxes) dropped, none counted; 92e's guard kept only the counts after DEL1
+% status:  RED (92e r2) -> GREEN (92e r3) -> RED (int160a, HG1)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{xcolor}

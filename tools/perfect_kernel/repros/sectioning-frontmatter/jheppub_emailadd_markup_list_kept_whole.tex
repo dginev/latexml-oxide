@@ -7,7 +7,9 @@
 %          "E-mail: zq1@x.org, bbaker@x.org"
 % engines: rust 78f r1 = two contacts, the `\mbox` dropped; int47a = one contact on Ann Able (the n-th rule)
 % expect:  0 errors, 0 warnings; one contact of both addresses, the author block's (one place for two authors)
-% status:  RED (78f r1) -> GREEN (78f r2)
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: the list one contact on its last author, Bob Baker, as
+%          perfect_kernel_batchbc1 pins it (BC1r2: a copy an author holds is no orphan); 78f's counts-only guard deleted
+% status:  RED (78f r1) -> GREEN (78f r2) -> GREEN on its last author (HG1; perfect_kernel_batchbc1)
 % preload: ar5iv.sty
 \documentclass[a4paper,11pt]{article}
 \usepackage{jheppub}

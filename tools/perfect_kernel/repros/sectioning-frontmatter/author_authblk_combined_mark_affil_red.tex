@@ -4,7 +4,8 @@
 % engines: rust int32a = both with Univ X; 77n r3 = Ann alone (the marked path labels the affiliation by its first mark
 %          only)
 % expect:  0 errors, 0 warnings; 2 creators, both with Univ X (a combined mark keeps authblk's run)
-% status:  RED (77n r3) -> GREEN (77n r4)
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: both with Univ X (its "1,2" kept in the line), but Ann's printed mark 1 dropped while Bob shows his 2; 77n's guard kept only the counts after DEL1
+% status:  RED (77n r3) -> GREEN (77n r4) -> RED (int160a, HG1)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{authblk}

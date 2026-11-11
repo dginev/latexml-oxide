@@ -177,19 +177,6 @@ fn space_parted_names_share_the_address() {
   ]);
 }
 
-/// The ruling's negatives keep their creators: a name with its own lines keeps them, names an `\and` parts share none,
-/// one name keeps its lines, and lines labelled by the names' symbol marks go to the names carrying them, without the
-/// mark (2505.23260, 2109.13296: were both on the last name; batch 77p r9, `apart_line_calls`). It also pins a
-/// known-wrong residual, as it stands until its SYNC_STATUS row lands: a row of addresses parted by space too (set by
-/// position) — Univ C on Dan Dorn, Cat Cole with none, "Univ D" an invented creator (row "an address row parted by
-/// space, laid out by position").
-/// Asserts the clean conversion alone (0 Errors, 0 Warnings); the reading described is a RED at the emitter
-/// (`docs/parity/FRONTMATTER_REDS_AT_EMIT2.tsv`), not checked here.
-#[test]
-fn space_parted_names_negatives_pin_residuals() {
-  convert_repro!("author_space_parted_names_negatives.tex");
-}
-
 /// The class-bindings repro's log and squashed XML for aero.cls's `\ADsetup` shapes, with the class excerpt `cls` beside
 /// it, its conversion free of errors and warnings.
 fn convert_aero(tex: &str, cls: &str) -> String {

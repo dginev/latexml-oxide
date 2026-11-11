@@ -6,7 +6,8 @@
 % expect:  0 errors, 0 warnings; "Yuliya Mishura" with the e-mail myus@univ.kiev.ua and the affiliation Univ A, "Ivan
 %          Voronov" with ivan@univ.kiev.ua and Univ B; the class's check finds its e-mails (no "At least one email
 %          address is required!")
-% status:  RED (int45b) -> GREEN (78e)
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: each author's affiliation, but no e-mail (myus@univ.kiev.ua, ivan@univ.kiev.ua lost silently); 78e's guard kept only the counts after DEL1
+% status:  RED (int45b) -> GREEN (78e) -> RED (int160a, HG1)
 % preload: ar5iv.sty
 \documentclass{vmsta}
 \begin{document}

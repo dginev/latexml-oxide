@@ -4,7 +4,8 @@
 % engines: rust int117a = 0 errors, the n-th address on the n-th author (Perl ijcai.sty.ltxml:50-53); Perl: the same
 % expect:  0 errors, 0 warnings; the same: a list of one address per author that no spelling contradicts is in author
 %          order (FIDELITY_CHARTER §4, OD #805, #908); x1@ Ann Able's, y2@ Bob Baker's, z3@ Cid Cole's
-% status:  GREEN (int117a, kept by 88b)
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: x1@a.org, y2@b.org and z3@c.org on a nameless block creator, none on its author; 88b's guard kept only the counts after DEL1
+% status:  GREEN (int117a, kept by 88b) -> RED (int160a, HG1)
 % preload: ar5iv.sty
 \begin{filecontents*}[overwrite]{ijcai.sty}
 \ProvidesPackage{ijcai}

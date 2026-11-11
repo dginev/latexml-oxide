@@ -8,7 +8,8 @@
 %          (the blank ones empty or a space); Perl keeps all (`<contact role="thanks">`)
 % expect:  0 errors, 0 warnings; the notes of Ann (a rule), Bob and Cat (a framed box) and Dan (a leader); no
 %          pubnote, and no note for Eve, Fay, Gil or Ida
-% status:  RED (92e r1) -> GREEN (92e r2)
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: the notes of Ann (a rule), Bob and Cat (a framed box) and Dan (a leader) dropped, none counted; 92e's guard kept only the counts after DEL1
+% status:  RED (92e r1) -> GREEN (92e r2) -> RED (int160a, HG1)
 % preload: ar5iv.sty
 \documentclass{article}
 \begin{document}

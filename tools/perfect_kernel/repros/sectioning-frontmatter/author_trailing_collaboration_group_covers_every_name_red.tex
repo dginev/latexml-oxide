@@ -7,7 +7,8 @@
 % engines: rust 97d r1: a third creator "The XYZ Collaboration"; perl: three creators
 % expect:  0 errors, 0 warnings; two creators, Ann Able (Univ X) and Bob Baker (Univ Y), each with `<contact
 %   role="collaboration">The XYZ Collaboration</contact>` after its institution, as it prints after them
-% status:  RED (97d r1) -> GREEN (97d r2)
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: "The XYZ Collaboration" a creator of its own, Ann Able and Bob Baker without it; 97d's guard kept only the counts after DEL1
+% status:  RED (97d r1) -> GREEN (97d r2) -> RED (int160a, HG1)
 % preload: ar5iv.sty
 \documentclass{article}
 \begin{document}

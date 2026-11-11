@@ -150,33 +150,6 @@ fn wileynjd_state_address_part() {
   ]);
 }
 
-/// 64qa: ptephy's `\name{…}{marks}` requests the affiliations its marks label, each `\affil{mark}{…}` of the
-/// `\address` one of them (1211.4904, 1412.6580). Repro sectioning-frontmatter/ptephy_name_marks_link_affiliations.
-#[test]
-fn ptephy_name_marks_link_affiliations() {
-  convert_clean(include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ptephy_name_marks_link_affiliations.tex"
-  ));
-}
-
-/// 64qa: what an `\address` of `\affil`s prints beside them — the author's own `${}^1$` before each — stays out of the
-/// body (1807.02967). Repro sectioning-frontmatter/ptephy_address_marks_of_its_own_set_aside.
-#[test]
-fn ptephy_address_marks_of_its_own_set_aside() {
-  convert_clean(include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ptephy_address_marks_of_its_own_set_aside.tex"
-  ));
-}
-
-/// 64qa: an `\address` without `\affil` is one affiliation, and ptephy_v1.cls:1400-1401's `\fname`/`\surname` print
-/// their argument (1304.0533). Repro sectioning-frontmatter/ptephy_address_without_affil.
-#[test]
-fn ptephy_address_without_affil() {
-  convert_clean(include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ptephy_address_without_affil.tex"
-  ));
-}
-
 /// 64qa: quantumarticle.cls:1266-1279 loads tikz at `\begin{document}`, and with it graphicx (2110.03913). Repro
 /// singletons/quantumarticle_loads_tikz_graphicx.
 #[test]
@@ -195,25 +168,6 @@ fn quantumarticle_loads_tikz_graphicx() {
   );
 }
 
-/// 64qa: an `\address` with a single-argument `\affil` is the lines it prints, `\affil{1}` the mark ptephy.cls:1390
-/// prints (1703.03659), or authblk-TI's `\affil{text}` an affiliation of its own. Repro
-/// sectioning-frontmatter/ptephy_v1_affil_single_argument.
-#[test]
-fn ptephy_v1_affil_single_argument() {
-  convert_clean(include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ptephy_v1_affil_single_argument.tex"
-  ));
-}
-
-/// 64qa: a `\thanks` among a name's marks is its note (1306.3810), and the text an `\address` prints beside its
-/// `\affil`s an address of its own (1401.4647). Repro sectioning-frontmatter/ptephy_name_thanks_and_address_text.
-#[test]
-fn ptephy_name_thanks_and_address_text() {
-  convert_clean(include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ptephy_name_thanks_and_address_text.tex"
-  ));
-}
-
 /// 64qa: macro marks (`\name{K.~Fushimi}{\Tokushima,}\thanks{Now at …}`, 1801.03251; `{\AFFicrr,\AFFipmu}`,
 /// 2209.07273) are expanded before the kernel reads the author line, so they link and a `\thanks` after them stays a
 /// note. Repro sectioning-frontmatter/ptephy_name_macro_marks_split.
@@ -227,25 +181,6 @@ fn ptephy_name_macro_marks_split() {
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Lab B</contact>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cy Coe</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_address\" role=\"thanks\" xml:id=\"id1\">Now at Lab C</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>"
   ]);
-}
-
-/// 64qa: a footnote symbol glued to a mark is a mark of its own (`{1\ast}` is `1,∗`, `{2\dagger}` `2,†`; 1512.04524,
-/// 1408.5182), and an email the address text leads with a symbol is that symbol's author's (1401.4647). The `\ast`
-/// author is the middle one of three. Repro sectioning-frontmatter/ptephy_glued_marks.
-#[test]
-fn ptephy_glued_marks() {
-  convert_clean(include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ptephy_glued_marks.tex"
-  ));
-}
-
-/// 64qa: in an `\address` with a single-argument `\affil`, an email after a mark-only `\affil{\dag}` is the `\dag`
-/// author's, another the `\ast` author's (1601.07691). Repro sectioning-frontmatter/ptephy_dag_affil_email.
-#[test]
-fn ptephy_dag_affil_email() {
-  convert_clean(include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ptephy_dag_affil_email.tex"
-  ));
 }
 
 /// 64qa: unlabelled affiliations in a row are all the authors' (`annotate=run`; 1605.07339). Repro
@@ -272,16 +207,4 @@ fn ptephy_v1_authblk_interleaved() {
     "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact>\n  </creator>",
     "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Lab B</contact>\n  </creator>"
   ]);
-}
-
-/// 64qa: two `\name`s with only a line break (or a commented-out comma) between them are two people, as the class
-/// prints them side by side (2210.05569, 1512.04524, 2101.03480); `\collaborator{(The X Collaboration)}`
-/// (ptephy_v1.cls:1403; 2101.03480, 2404.08725) was one more creator until 106c, and is now the collaboration contact
-/// of the four names before it (FIDELITY_CHARTER §4, OXIDIZED_DESIGN_DIVERGENCES #967). Repro
-/// sectioning-frontmatter/ptephy_names_without_separator.
-#[test]
-fn ptephy_names_without_separator() {
-  convert_clean(include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ptephy_names_without_separator.tex"
-  ));
 }

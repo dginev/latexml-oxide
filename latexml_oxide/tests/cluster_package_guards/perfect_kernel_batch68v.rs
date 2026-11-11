@@ -246,7 +246,8 @@ fn batch68v_replayed_author_keeps_collaboration_switch() {
 /// class-bindings/vmsta/vmsta_name_parts: a command the class's own (refused) `\author` defines for the author's text
 /// is made while a frontmatter field is digested (`lx_frontmatter_item`, frontmatter_stores.rs
 /// `refused_environment_definition`): vmsta.cls:278-283 `\fnm` (1508.02842, 1411.4499, 1601.01109), in a cut-down copy no
-/// binding answers (vmsta.cls itself has the vmsta binding since 77t, `perfect_kernel_batch77t::vmsta_title_page_name_parts`).
+/// binding answers (vmsta.cls itself has the vmsta binding since 77t; its name parts RED since HG1,
+/// `class-bindings/vmsta/vmsta_title_page_name_parts_red`).
 #[test]
 fn batch68v_vmsta_author_name_parts() {
   let (counts, log, xml) = repro_with!(

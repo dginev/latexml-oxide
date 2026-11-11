@@ -14,7 +14,8 @@
 %   the XYZABC Collaborations"
 % expect:  0 errors, 0 warnings; two creators, Ann Able (Univ A) and Bob Baker (Univ B), each with
 %   `<contact role="collaboration">for the XYZ and ABC Collaborations</contact>`
-% status:  RED (97b) -> GREEN (97d)
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: the line split into two collaboration contacts, "for the XYZ" and "ABC Collaborations", the "and" lost; 97d's guard kept only the counts after DEL1
+% status:  RED (97b) -> GREEN (97d) -> RED (int160a, HG1)
 % preload: ar5iv.sty
 \documentclass{article}
 \begin{document}

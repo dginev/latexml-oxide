@@ -5,7 +5,8 @@
 % engines: rust 77t r1 (bf9f65aac9) = 0 errors, the personname "Voronov" (the first name stored, never printed)
 % expect:  0 errors, 0 warnings; the creators "Yuliya Mishura" and "VoronovIvan" (the pending first name printed at
 %          the author content's end)
-% status:  RED (77t r1) -> GREEN (77t r2)
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: "Yu.Yuliya Mishura" (the initials kept) and "Ivan Voronov" (not the printed "VoronovIvan"); 77t's guard kept only the counts after DEL1
+% status:  RED (77t r1) -> GREEN (77t r2) -> RED (int160a, HG1)
 % preload: ar5iv.sty
 \documentclass{vmsta}
 \begin{document}

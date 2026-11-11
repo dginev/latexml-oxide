@@ -278,3 +278,202 @@ fn hollow_guards_restored_read_as_printed() {
     },
   ]);
 }
+
+/// Marked author blocks the counts-only guards DEL1 left (its audit's misses), each as pdflatex prints it.
+#[test]
+fn marked_blocks_restored_read_as_printed() {
+  assert_rows(&[
+    Row {
+      repro:    repro!("sectioning-frontmatter/ieee_shared_block/starred_names_one_line"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann (Al) Able*</personname><contact name="Affiliation: " role="affiliation">University of X, City</contact><contact name="Email: " role="email">ann@x.edu</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" role="thanks">*The first two authors contributed equally to this work.</note></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker*</personname><contact name="Affiliation: " role="affiliation">University of X, City</contact><contact name="Email: " role="email">bob@x.edu</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" role="thanks">*The first two authors contributed equally to this work.</note></creator>"#,
+        r#"<creator before="  " role="author"><personname>Cy Cole</personname><contact name="Affiliation: " role="affiliation">University of X, City</contact><contact name="Email: " role="email">cy@x.edu</contact></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("sectioning-frontmatter/author_bf_rows_with_blank_line"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks">Core.</note></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname></creator>"#,
+        r#"<creator before="  " role="author"><personname>Cat Cole</personname></creator>"#,
+        r#"<creator before="  " role="author"><personname>Dan Dee</personname></creator>"#,
+        r#"<creator before="  " role="author"><personname>Eve Eck</personname><contact name="Affiliation: " role="affiliation"><text font="bold">Univ A</text></contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Fay Fox</personname></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("sectioning-frontmatter/author_unmarked_affiliation_after_marked_names"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able<sup>1</sup></personname><contact name="Affiliation: " role="affiliation"> Department of Physics, University of Somewhere</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation"> Department of Physics, University of Somewhere</contact><contact name="Affiliation: " role="affiliation">Univ B</contact></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("sectioning-frontmatter/author_declaration_vspace_led_affiliation_line"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann</personname><contact name="Affiliation: " role="affiliation"><text fontsize="90%">Univ A</text></contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob</personname><contact name="Affiliation: " role="affiliation"><text fontsize="90%">Univ B</text></contact></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("sectioning-frontmatter/ptephy_name_marks_link_affiliations"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">Univ A, Tokyo</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker<sup>∗</sup></personname><contact name="Affiliation: " role="affiliation">Univ A, Tokyo</contact><contact name="Affiliation: " role="affiliation">Lab B, Kyoto</contact><contact name="Email: " role="email">bob@example.org</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Cy Coe</personname><contact name="Affiliation: " role="affiliation">Lab B, Kyoto</contact></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("sectioning-frontmatter/ptephy_address_marks_of_its_own_set_aside"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">Univ A, Tokyo </contact><contact name="Email: " role="email">ann@example.org</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation">Lab B, Kyoto</contact></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("sectioning-frontmatter/ptephy_address_without_affil"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        "<creator role=\"author\"><personname>Ann Able∗</personname><contact name=\"Affiliation: \" role=\"affiliation\">Univ A, Tokyo\n</contact><contact name=\"Email: \" role=\"email\">ann@example.org</contact></creator>",
+      ]),
+    },
+    Row {
+      repro:    repro!("sectioning-frontmatter/ptephy_v1_affil_single_argument"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation"><sup class="ltx_markedasmath">1</sup>Univ A, Tokyo</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation"><sup class="ltx_markedasmath">2</sup>Lab B, Kyoto</contact></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("sectioning-frontmatter/ptephy_name_thanks_and_address_text"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able<sup>∗</sup></personname><contact name="Affiliation: " role="affiliation">Univ A, Tokyo</contact><contact name="Email: " role="email">ann@example.org</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker<sup>†</sup></personname><note class="ltx_note_frontmatter ltx_thanks_address" role="thanks">Present address: Lab C</note><contact name="Affiliation: " role="affiliation">Lab B, Kyoto</contact><contact name="Email: " role="email">bob@example.org</contact></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("sectioning-frontmatter/ptephy_glued_marks"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">Univ A</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker<sup>∗</sup></personname><contact name="Affiliation: " role="affiliation">Univ A</contact><contact name="Email: " role="email">bob@example.org</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Cy Coe<sup>†</sup></personname><contact name="Affiliation: " role="affiliation">Lab B</contact><contact name="Email: " role="email">cy@example.org</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Di Dee</personname><contact name="Affiliation: " role="affiliation">Lab B</contact></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("sectioning-frontmatter/ptephy_dag_affil_email"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able<sup>∗</sup></personname><contact name="Affiliation: " role="affiliation">Graduate School, Osaka Univ</contact><contact name="Email: " role="email">ann@example.org</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker†</personname><contact name="Affiliation: " role="affiliation">Graduate School, Osaka Univ</contact><contact name="Email: " role="email">bob@example.org</contact></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("sectioning-frontmatter/ptephy_names_without_separator"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able</personname><contact role="collaboration">(The X Collaboration)</contact><contact name="Affiliation: " role="affiliation">Univ A</contact><contact name="Affiliation: " role="affiliation">Lab B</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker<sup>∗</sup></personname><contact role="collaboration">(The X Collaboration)</contact><contact name="Affiliation: " role="affiliation">Univ A</contact><contact name="Email: " role="email">bob@example.org</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Cy Coe</personname><contact role="collaboration">(The X Collaboration)</contact><contact name="Affiliation: " role="affiliation">Lab B</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Di Dee</personname><contact role="collaboration">(The X Collaboration)</contact><contact name="Affiliation: " role="affiliation">Univ A</contact></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("sectioning-frontmatter/author_ptephy_unlabelled_affil_after_labelled"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann</personname><contact name="Affiliation: " role="affiliation">Univ X</contact><contact name="Affiliation: " role="affiliation">Univ Z</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob</personname><contact name="Affiliation: " role="affiliation">Univ Y</contact><contact name="Affiliation: " role="affiliation">Univ Z</contact></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("class-bindings/aa_thanks_email_leaves_no_empty_note"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Email: " role="email"><text font="typewriter">ann@x.org</text></contact><contact name="Affiliation: " role="affiliation">Univ A</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation">Univ B</contact></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("class-bindings/revtex_sub_lettered_mark_every_line_answered"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>A. One</personname><contact role="collaboration">(X Collaboration)</contact><contact name="Affiliation: " role="affiliation"><text font="italic"> Alpha University, Beijing</text></contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>B. Two</personname><contact role="collaboration">(X Collaboration)</contact><contact name="Affiliation: " role="affiliation"><text font="italic"> Beta Institute, Rome</text></contact><contact name="Affiliation: " role="affiliation"><text font="italic"> Also at Delta College, Oslo</text></contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>C. Three</personname><contact role="collaboration">(X Collaboration)</contact><contact name="Affiliation: " role="affiliation"><text font="italic"> Gamma Lab, Paris</text></contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>D. Four<sup>23A</sup></personname><contact role="collaboration">(X Collaboration)</contact><contact name="Affiliation: " role="affiliation"><text font="italic"> (A)Zeta Lab, Turin; (B)Eta Lab, Milan</text></contact></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("class-bindings/revtex_unsplit_labelled_address_block_lands_once"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>A. One</personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">1</text></sup>Alpha University, Beijing</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>B. Two<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup>Beta Institute, Rome</contact></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("sectioning-frontmatter/author_names_line_team_piece_is_a_collaboration"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able<sup><text font="italic">1</text></sup></personname><contact role="collaboration">the GAPS Team</contact><contact name="Affiliation: " role="affiliation">Univ A</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact role="collaboration">the GAPS Team</contact><contact name="Affiliation: " role="affiliation">Univ B</contact></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("sectioning-frontmatter/espcrc_addressmark_key"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Slavo Kratochvila</personname></creator>"#,
+        r#"<creator before="  " role="author"><personname>Philippe de Forcrand</personname></creator>"#,
+        r#"<creator role="author"><contact name="Address: " role="address">ETH Zürich</contact><contact name="Address: " role="address">CERN</contact></creator>"#,
+      ]),
+    },
+  ]);
+}

@@ -103,15 +103,6 @@ fn assert_creators_on_both_builds(tex: &str, expected: &[&[&str]]) {
   assert_eq!(cli_creators(tex, true), expected, "the binary, --streaming");
 }
 
-/// The ijcai binding's `\author`: a list of one address per author, none spelling another, is in author order (the
-/// charter's consistent-order evidence) — the n-th on the n-th author, Perl's answer. A no-regression check, not
-/// red/green: the base gives the same. (The one unmarked `\affiliations` line is the first author's, Perl's
-/// `labelseq=author`.)
-#[test]
-fn ijcai_binding_email_list_in_author_order_keeps_perl_order() {
-  eager_creators(repro!("ijcai_binding_emails_in_author_order.tex"));
-}
-
 /// 2011.00505's shape (cas-sc): `\address[1]{Univ X}` and `\address[2]{Univ Y}` go to the authors carrying those
 /// labels, each an affiliation as cas-common.sty files it — where both went to the last author once an `[orcid=…]`
 /// broke the positional reading — and the same without the ORCID.

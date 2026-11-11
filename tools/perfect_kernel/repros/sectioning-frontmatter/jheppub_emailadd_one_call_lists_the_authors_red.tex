@@ -9,7 +9,8 @@
 % engines: rust int47a = one contact "zq1@x.org, bbaker@x.org, wy7@y.org" on Ann Able (Perl's n-th rule, one call);
 %          perl the same
 % expect:  0 errors, 0 warnings; zq1@ Ann Able's, bbaker@ Bob Baker's, wy7@ Cat Cole's
-% status:  RED (int47a) -> GREEN (78f)
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: bbaker@ Bob Baker's, but zq1@x.org and wy7@y.org on a nameless block creator (Ann Able's, Cat Cole's by the list's order); 78f's guard kept only the counts after DEL1
+% status:  RED (int47a) -> GREEN (78f) -> RED (int160a, HG1)
 % preload: ar5iv.sty
 \documentclass[a4paper,11pt]{article}
 \usepackage{jheppub}

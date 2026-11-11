@@ -10,7 +10,8 @@
 %   Consortium"; perl: not run
 % expect:  0 errors, 0 warnings; one creator, Ann Able: collaboration "on behalf of the XYZ Collaboration",
 %   collaboration "the ABC Search Consortium and the ABC Timing Consortium", affiliation Univ A
-% status:  RED (97d r1) -> GREEN (97d r2)
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: "the ABC Search Consortium and<break/>the ABC Timing Consortium" an affiliation of Ann Able, not a collaboration; 97d's guard kept only the counts after DEL1
+% status:  RED (97d r1) -> GREEN (97d r2) -> RED (int160a, HG1)
 % preload: ar5iv.sty
 \documentclass{article}
 \begin{document}

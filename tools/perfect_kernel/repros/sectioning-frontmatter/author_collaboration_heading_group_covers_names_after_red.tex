@@ -7,7 +7,8 @@
 % engines: rust 97b: three creators, "XYZ Collaboration" one; perl: not run
 % expect:  0 errors, 0 warnings; two creators, Ann Able (Univ A) and Bob Baker (Univ B), each with
 %   `<contact role="collaboration">XYZ Collaboration</contact>` before the affiliation, as the heading prints above
-% status:  RED (97b) -> GREEN (97d)
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: "XYZ Collaboration" a creator of its own, Ann Able and Bob Baker without the collaboration contact; 97d's guard kept only the counts after DEL1
+% status:  RED (97b) -> GREEN (97d) -> RED (int160a, HG1)
 % preload: ar5iv.sty
 \documentclass{article}
 \begin{document}
