@@ -42,7 +42,9 @@ fn owned(expected: &[&[&str]]) -> Vec<Vec<String>> {
 
 /// A `\let` copy of `\and` parts the names on the kernel's route — article's `\author`, IEEEtran journal's
 /// `\lx@add@authors` — spelled in the line or held in a macro of the document's own (`\author{\aut}`, the search reading
-/// into the document's macros). The macro row's two Warnings are the emitter writing names its events don't spell (a
+/// into the document's macros), or taken before the document renews `\and` (`\let\nx\and\renewcommand\and{…}`: the copy
+/// keeps the separator, compared with no current `\and`; SEP1: one merged creator, revSEP1 finding 1). The macro row's
+/// two Warnings are the emitter writing names its events don't spell (a
 /// macro's expansion: P3, as OC1's macro-held rows).
 #[test]
 fn a_let_copy_of_and_parts_the_names() {
@@ -67,6 +69,13 @@ fn a_let_copy_of_and_parts_the_names() {
         "author_let_copy_of_and_in_a_macro_parts_the_names"
       ),
       (0, 2),
+    ),
+    (
+      row!(
+        "sectioning-frontmatter",
+        "author_let_copy_of_and_before_renewal_parts_the_names"
+      ),
+      (0, 0),
     ),
   ] {
     let (log, xml) = run(tex);
@@ -110,7 +119,9 @@ fn eptcs_cells_part_at_a_let_copy_of_and() {
 
 /// A `\let` copy of `\thanks` (acl.sty's `\let\Thanks\thanks`, 2407.16574) or of `\footnote` in the author line is
 /// its command's note on the author, as the command written out is (OC1b: the `\thanks` copy's note lost from the
-/// creator; the `\footnote` copy's text read into the name, "Ann Able * * footnote * Univ A").
+/// creator; the `\footnote` copy's text read into the name, "Ann Able * * footnote * Univ A"). So is a copy taken before
+/// the document renews `\thanks` (`\let\oldthanks\thanks\renewcommand\thanks[1]{}`; SEP1: the note lost from the creator,
+/// revSEP1 finding 1).
 #[test]
 fn a_let_copy_of_a_note_command_is_its_note() {
   for ((name, tex), first) in [
@@ -118,6 +129,14 @@ fn a_let_copy_of_a_note_command_is_its_note() {
       row!(
         "sectioning-frontmatter",
         "author_let_copy_of_thanks_is_the_note"
+      ),
+      "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <note class=\"ltx_note_frontmatter \
+       ltx_thanks_note\" role=\"thanks\">Univ A, ann@a.org</note>\n  </creator>",
+    ),
+    (
+      row!(
+        "sectioning-frontmatter",
+        "author_let_copy_of_thanks_before_renewal_is_the_note"
       ),
       "<creator role=\"author\">\n    <personname>Ann Able</personname>\n    <note class=\"ltx_note_frontmatter \
        ltx_thanks_note\" role=\"thanks\">Univ A, ann@a.org</note>\n  </creator>",

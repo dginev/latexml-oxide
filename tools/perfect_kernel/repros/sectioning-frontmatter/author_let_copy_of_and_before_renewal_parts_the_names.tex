@@ -1,0 +1,20 @@
+% mechanism: a `\let` copy of `\and` taken before the document renews `\and` (`\let\nx\and`, then
+%   `\renewcommand\and{\unskip\ and\ }`): TeX's `\nx` keeps the kernel's separator and parts the names. The copy scan
+%   (rehearsal.rs `let_copies_of_bound_commands`, OD #994) asked that the copy be `\ifx`-equal to the CURRENT `\and` as
+%   well, so a copy older than the renewal stayed unbound and digested to the kernel's " and ": one merged creator.
+%   Now a copy is bound when its meaning is a definition made for the command by the kernel, a class or a package, not
+%   by the document (`defined_as`, its origin)
+% witness: revSEP1 finding 1 (the stale-copy probe)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able" and "Bob Baker" side by side, two columns
+% engines: SEP1: one creator "Ann Able and Bob Baker", 1 error, 1 warning
+% expect:  0 errors, 0 warnings; creators Ann Able, Bob Baker
+% status:  GREEN (SEP1b; guard perfect_kernel_batchsep1)
+\documentclass{article}
+\let\nx\and
+\renewcommand\and{\unskip\ and\ }
+\title{T}
+\author{Ann Able \nx Bob Baker}
+\begin{document}
+\maketitle
+Text.
+\end{document}
