@@ -56,8 +56,14 @@ LoadDefinitions!({
   // handling; wiring them to the affiliation annotation is a separate follow-up.
   DefMacro!("\\author[]{}",
     "\\lx@add@author@split{#2}\\lx@author@trailing");
+  // \institute{list}: one `labelseq=affiliation` contact call per institute (Perl L36-38 splits by spelling at
+  // `\and`/`\And`), cut at the kernel's `\and` by meaning as well — a macro holding only the separator, a `\let` copy
+  // where the document renewed `\and` — which the spelling missed, so a piece holding an `\email` is one call of its
+  // own, not one call the emitter writes whole for every author (Option C P2-2, OXIDIZED_DESIGN_DIVERGENCES #995;
+  // `\lx@splitting@by@meaning`, the cut eptcs's cells share). A separator the spelling cut keeps its cut whatever it
+  // means (a renewed `\and`); one a macro holds together with institutes stays in its piece, which the reading cuts.
   DefMacro!("\\institute{}",
-    "\\lx@clear@frontmatter{ltx:contact}[role=affiliation]\\lx@splitting{\\lx@add@contact[role=affiliation,labelseq=affiliation]}{\\and\\And}{#1}");
+    "\\lx@clear@frontmatter{ltx:contact}[role=affiliation]\\lx@splitting@by@meaning{\\lx@add@contact[role=affiliation,labelseq=affiliation]}{\\and\\And}{#1}");
   DefMacro!("\\inst{}", "\\lx@request@frontmatter@annotation[affiliation]{#1}");
 
   // \and variants — Perl L41-45

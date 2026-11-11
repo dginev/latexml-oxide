@@ -74,6 +74,8 @@ pub use defs::frontmatter_api::{
   },
   email_lines::line_is_email_list,
 };
+// (`\lx@splitting`'s expansion, for a binding that splits a list itself: aa's `\institute`, Option C P2-2)
+pub use defs::general::split_calls;
 mod frontmatter;
 pub use frontmatter::*;
 mod util_text;

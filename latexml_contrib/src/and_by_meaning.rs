@@ -4,8 +4,9 @@
 //! meaning the kernel's `\and` — held in a macro of the document's, a `\let` copy —, which the spelling missed. A
 //! written `\and` stays a separator whatever the document made it (trap T8): these classes set their own `\and` where
 //! they print the block ([`and_runs`]), and where they do not (ecai, gretsi) today's cut is kept. P2-4's eptcs `cells`
-//! (`eptcs_cls.rs`) cuts at the kernel meaning alone; the two are written apart until one shared helper serves both
-//! (the extraction P22b names).
+//! (`eptcs_cls.rs`) and P2-2's institute lists cut at the kernel meaning alone through the engine's shared
+//! `kernel_separator_runs` (`observer/separators.rs`, P22b); [`and_runs`] is written apart and moves onto it at the
+//! helpers' unification.
 use std::collections::BTreeMap;
 
 use latexml_package::prelude::*;

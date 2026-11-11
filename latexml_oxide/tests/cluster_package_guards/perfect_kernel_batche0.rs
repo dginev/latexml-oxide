@@ -1503,7 +1503,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("defs/frontmatter_fields/", 66),
   ("defs/general", 8),
   ("epl_cls.rs", 43),
-  ("eptcs_cls.rs", 28),
+  // (P22b, 28 -> 18: its unit scanners — a group, an environment, a macro's argument — moved unchanged to `tokens.rs`
+  // with the cut its cells and the `\institute` lists share, as that row says; none added)
+  ("eptcs_cls.rs", 18),
   // (raised by one at Z14: the lexer's own constructor, `\lx@fm@obs@affil@marked`, as the row's others; nothing a document spells;
   // by one at N2r2: `raw_lines`' break arm holding the `\and` family too, two lines, the whatsits' definitions, 2106.06418;
   // by one at IO3b: the lexer's arm for the rehearsal's own constructor `\lx@fm@obs@creatorcall`, as the row's others — a
@@ -1615,7 +1617,11 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("rest /math_cleanup.rs", 0),
   ("rest /misc.rs", 14),
   ("rest /mod.rs", 0),
-  ("rest /tokens.rs", 26),
+  // (P22b, 26 -> 36: `tokens_top_level_units`, `tokens_unit_end`, `tokens_read_argument`, `tokens_environment_end`
+  // moved unchanged from `eptcs_cls.rs` (28 -> 18), beside `split_tokens`, whose brace and environment units they are:
+  // `kernel_separator_runs` keeps the query's cuts at whole units, for eptcs's cells and the `\institute` lists of
+  // inst_support and aa (Option C P2-2, OD #995); 28 + 26 = 18 + 36, none added)
+  ("rest /tokens.rs", 36),
   ("rest /util_text.rs", 25),
   ("revtex4_support_sty.rs", 12),
   ("shared_row", 13),

@@ -34469,10 +34469,12 @@ it (`own_run`: an environment closed right before the separator — an `\end{tab
   (an item the reading places apart, which a whole piece would print again) — `\institute{Univ X \email{a@x} \and Univ
   Y}` is written by text, each author's institute (one counted Warning each), the e-mail to its owner.
 
-**Who calls them** (P2-4: eptcs's cells, the query, `eptcs_cls.rs` `cells`; P2-5: l_aa, ecai, interact, pasj00, gretsi, lipics, `and_by_meaning::and_runs`). **Who will call them** (the P2P batches, by its rule-6 scan: `lx@splitting`, `split_tokens(`, `SplitDelim::`, literal
+**Who calls them** (P2-4: eptcs's cells, the query, `eptcs_cls.rs` `cells`; P2-2: OmniBus's and aa's `\institute`, the
+query through `split_at_kernel_separators`, below; P2-5: l_aa, ecai, interact, pasj00, gretsi, lipics,
+`and_by_meaning::and_runs`). **Who will call them** (the P2P batches, by its rule-6 scan: `lx@splitting`, `split_tokens(`, `SplitDelim::`, literal
 `\and`/`\And`/`\AND` in `latexml_package/src`, `latexml_contrib/src`, `frontmatter_stores.rs`, `base_utilities/defs`,
 `frontmatter/classify`): the emitter's cut — P2-2 (S2: `inst_support_sty.rs:58`, `aa_cls.rs:93` and its gate :75-80,
-`sv_support_sty.rs:69`), P2-3 (llncs `:189`, gate :208), P2-6 (the numbered stores, `frontmatter_stores.rs:3148-3151`);
+`sv_support_sty.rs:69`; P22b took the first two through the query instead, below), P2-3 (llncs `:189`, gate :208), P2-6 (the numbered stores, `frontmatter_stores.rs:3148-3151`);
 the query — P2-2 (aa :80), P2-5 (`l_aa_cls.rs:108`, `latexml_contrib/src/ecai_cls.rs:56`), P2-6
 (`frontmatter_stores.rs` :3216, :3225 `kernel_and_list`, :3239, :3378, :7483, :7697), P2-7 (`authblk_sty.rs` :125,
 :211). Not enumerated by that scan (P2P's list): the engine beyond those directories (observer, insert, place);
@@ -34480,6 +34482,67 @@ the query — P2-2 (aa :80), P2-5 (`l_aa_cls.rs:108`, `latexml_contrib/src/ecai_
 line_marks.rs:16, cut.rs, kind.rs: P4); `classify/separators.rs:212-224`, `name_text.rs:36`,
 `old_reader/space_parted.rs:205`, ijcai.rs (P3/P4); splits on `\\` alone or commas; `\def\and{…}` meanings (argument
 passing, stays). The scan is heuristic (one macro level, no class-file wrappers).
+
+**P2-2 (P22b, P22c): landed by the binding's cut, not the emitter's.** OmniBus's `\institute` (`inst_support_sty.rs`,
+which webofc and ieeetj load too) and aa's (`aa_cls.rs` `\lx@aa@institute@dispatch`) cut their list first at the
+kernel's `\and` by meaning, then each segment at `\and`/`\And` by spelling, and queue one `\lx@add@contact[role=affiliation,labelseq=affiliation]`
+call per piece, so the reading and the emitter see the calls they saw before. The one shared helper is
+`observer/separators.rs` `kernel_separator_runs` (re-exported with `split_at_kernel_separators`): the own runs
+(`ArgSeparator::span`) of the separators the query reads `Kernel`, each whole units of the argument's top level (no
+group or environment holds them), `None` where the query reads nothing; eptcs's `cells` (P2-4) now calls it instead
+of its own copy (its unit scanners moved unchanged to `base_utilities/tokens.rs`, beside `split_tokens`:
+`tokens_top_level_units`, `tokens_unit_end`, `tokens_read_argument`, `tokens_environment_end`).
+`split_at_kernel_separators(arg, delims)` cuts `arg` at every such run where it stands, as eptcs's `cells` does, and
+splits each segment between the runs by spelling unchanged (`tokens.rs` `split_tokens_segment`: its trimming, its
+protection of braces, math, parentheses and environments inside the segment, and its empty last piece dropped on the
+list's last segment only — a segment a run ends keeps it, as the whole list's split keeps the piece a delimiter ends);
+no token is rewritten. It returns the pieces with the number of runs that hold no delimiter by `split_tokens`' match
+(`tokens.rs` `delimiter_token_matches`): the cuts by meaning alone. What it adds: a macro holding only `\and`, and a
+`\let` copy of the kernel's `\and` made before the document renews `\and` (the spelling's alias match reads the renewed
+meaning). A run inside balanced parentheses, which the spelling split protects, is cut too, as TeX's column break parts
+them — a written kernel `\and` as well as a copy or a macro-held one (`Univ A (North \myand South), Town` gives
+"Univ A (North" and "South), Town"; pdflatex breaks the column there) — and a macro-held `\and` opening or closing the
+list is a cut with nothing on its far side ("Univ A" and "Univ B" where the base gave "and Univ A" and "Univ B and";
+pdflatex prints no "and"). In each the base had written an "and" the PDF does not print, which the content check
+counted with a Warning (revP22c N1, synthetic).
+P22b's first form wrote each missed run as a literal `\and` and let the spelling split cut it: where the split protected
+the run (in parentheses) the piece printed what `\and` meant then, not the author's token — after `\let\myand\and
+\renewcommand\and{\unskip, }`, "Univ A (North, South)" for the base's "(North and South)" (review revP22b B1); cutting
+first rewrites nothing. T8: a separator the spelling cut keeps
+its cut whatever the query says it means (`Raw`: a document's renewed `\and`, an undefined `\And`; `Binding`: amsmath's
+`\And`), since today's output depends on it and aa.cls's title-time `\and` (:866) parts its institutes there whatever the
+preamble made of it; a macro holding institutes and the separator together has no span and stays one piece, which the
+reading cuts (pins rows 3 and 6). Routes changed (rule 6):
+- `inst_support_sty.rs` `\institute`: `\lx@splitting` → `\lx@splitting@by@meaning` (`base_utilities/defs/general.rs`,
+  `\lx@splitting`'s expansion shared as `split_calls`);
+- `aa_cls.rs` `\lx@aa@institute@dispatch`: the gate counts each cut by meaning alone made on top of the written top-level
+  `\and`s (a macro-held `\and` gives two pieces, not the sole institute; aa.cls's own count misses it, its title-time
+  `\and` numbers it), and the dispatch writes the pieces' calls itself (`split_calls`; `\lx@aa@institute@split`
+  deleted), so each cut by meaning the gate counts is one the calls are made from (revP22b S1: P22b counted a run its
+  split then protected, one piece sent to the split route rather than the sole institute's). A written `\and` at the
+  argument's top level that the spelling split protects (inside `$…$` or an environment) is still counted and not cut,
+  as on the base (revP22c N2; no pdflatex-clean shape found);
+- `eptcs_cls.rs` `cells`: the shared helper, no change of output.
+
+Not routed, open: sv_support (`sv_support_sty.rs:71`; each piece's `\at` is parsed as it expands, `\lx@sv@institute@`,
+so that reading moves first) and llncs (`llncs_cls.rs:189`, gate :208; P2-3, its pieces' `\inst` set their labels,
+`\lx@affiliation@withinst`). Byte-identical against the spelling split (`2ff10b7ff9`, `kit/conv.sh`) on 3,006 papers
+(aa 563, sv 406, OmniBus 200, webofc 30, eptcs 73, raw-class 300, stage2 1,434; 6 with no main file), E/F/W equal on
+each; 0909.4443's one difference is a run-to-run math-id variance of the base (both binaries give one md5 on a rerun).
+That run was P22b's form; the cut-first form (P22c) is byte-identical against the same base on 1,811 of them: all of
+aa 563, sv 406, OmniBus 200, webofc 30, eptcs 73 and raw-class 300, and 239 of stage2's 1,434 (6 with no main file;
+E/F/W equal on each; 0909.4443 as above, its md5 that of P22b's).
+Settled dead-end (P22): one `labelseq` call per `\institute`, cut and written per piece by the emitter
+(`emit::labelseq_call_cut`), changed 52 of 2,903 papers, 12 worse (1501.07092, 2312.03835, 1010.3154, 2602.02910,
+2309.12272; 0803.4304 reordered): the emitter's state keyed by the call's ledger index (`separate`/`by_pieces`/
+`written_again`, `in_perl_order`, the address take-out's `EntryCut`) treats one cut call's pieces as one entry. Guards
+`perfect_kernel_batchp22b::an_institute_list_cut_at_the_kernel_and_by_meaning` (repros
+`class-bindings/institute_one_call/{omnibus,aa}_institute_list_macro_held_separator.tex`,
+`omnibus_institute_list_let_copy_after_renewed_and.tex`),
+`perfect_kernel_batchp22b::a_kernel_and_inside_parentheses_cut_where_it_stands` (P22c; repros
+`omnibus_institute_list_let_copy_inside_parentheses.tex`, `aa_institute_list_macro_held_separator_inside_parentheses.tex`)
+and the pins
+`perfect_kernel_batchp22::an_institute_list_split_by_spelling_today`, unchanged.
 
 **P2-5 (P25): the small gates and cuts find a macro-held `\and`.** l_aa's `\institute` gate (`several`), ecai's
 `\author` gate (`and_list`), interact's `\author` (an `\and` in a `\name` or `\affil` printing the class's "and ",
@@ -34502,8 +34565,9 @@ E/F/W) against int158a on the 271 census papers of the seven P2-5 classes and a 
 324 of stage2's 1,434 (the writer's 174 and revP25's 150). Left: **aistats's `columns`**
 (`aistats_sty.rs:108-112`, :571): it parts at the copy's own `\And`, `\AND`, `\ANDD` (read raw, so `Raw` to the query,
 as a document's renewal is; `\ANDD` is no separator of the query's family) — reading the copy's column break by meaning
-needs a rule the query does not have (brief rule 5). eptcs's `cells` (P2-4) cuts at `Kernel` alone; the two are written
-apart until one shared helper serves both (P22b). Guards `perfect_kernel_batchp25`; repros
+needs a rule the query does not have (brief rule 5). eptcs's `cells` (P2-4) and P2-2's institute lists cut at `Kernel`
+alone through the shared `kernel_separator_runs` (P22b); `and_runs` is written apart and moves onto it at the helpers'
+unification. Guards `perfect_kernel_batchp25`; repros
 `class-bindings/and_by_meaning/`.
 
 Guards `perfect_kernel_batchp20::{the_separator_query_reads_the_kernel_meanings,

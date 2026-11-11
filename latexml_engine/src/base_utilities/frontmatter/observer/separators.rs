@@ -234,3 +234,86 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   });
   Ok(())
 }
+
+/// The own runs ([`ArgSeparator::span`]) of `arg`'s separators that mean the kernel's `\and` ([`SepMeaning::Kernel`]):
+/// written, held in a macro of the document's that holds only the separator, or a `\let` copy, as the query reads them
+/// by meaning ([`argument_separators`]), each a run of whole units of `arg`'s top level (no group or environment holds
+/// it, [`tokens_unit_end`]), in order and apart; `None` where the query reads nothing (no rehearsal made, over its allowance, a
+/// group left open), for which a caller cuts by spelling. A separator of another meaning — a class's, a binding's or the
+/// document's renewed `\and`, amsmath's `\And` — is no run here (trap T8: what it prints is its caller's to say), nor
+/// one a macro holds together with ink (no span: the reading cuts that one at its `Sep(And)`, #993). The cut two bindings'
+/// routes share (Option C P2, OXIDIZED_DESIGN_DIVERGENCES #995): eptcs's cells (P2-4, `eptcs_cls.rs`) and the
+/// `\institute` lists of inst_support and aa ([`split_at_kernel_separators`], P2-2).
+pub fn kernel_separator_runs(arg: &Tokens) -> Result<Option<Vec<(usize, usize)>>> {
+  let Some(separators) = argument_separators(arg)? else {
+    return Ok(None);
+  };
+  let tokens = arg.unlist_ref();
+  let units = tokens_top_level_units(tokens);
+  let mut runs = Vec::new();
+  let mut from = 0;
+  for (start, end) in separators
+    .iter()
+    .filter(|found| found.meaning == SepMeaning::Kernel)
+    .filter_map(|found| found.span)
+  {
+    if start < from || !units.contains(&start) || !units.contains(&end) {
+      continue;
+    }
+    runs.push((start, end));
+    from = end;
+  }
+  Ok(Some(runs))
+}
+
+/// `arg` split as [`split_tokens_delimited`] splits it at `delims`, cut first at each [`kernel_separator_runs`] run:
+/// each segment between the runs split by spelling as it is, never a token rewritten (a run is cut where it stands,
+/// eptcs's cells' way), the segment a run ends keeping its last piece even when empty ([`split_tokens_segment`]: the
+/// split of the whole list keeps a piece a delimiter ends) and each segment's first piece the run before it as its
+/// delimiter; and the number of runs cut that hold no delimiter of `delims` by spelling (`split_tokens`' match,
+/// [`delimiter_token_matches`]): the cuts by meaning alone — a macro holding only `\and`, a `\let` copy of the kernel's
+/// `\and` where the document renewed `\and`. A run is cut inside balanced parentheses too, which the spelling split
+/// protects, as TeX's column break parts them (`Univ A (North \myand South)` after a document's `\let\myand\and`), and
+/// a run the spelling also cuts is cut once. The spelling's cuts in the segments stay, whatever their token means (a
+/// document's renewed `\and`, an undefined `\And`: trap T8, the cut the split made before, which aa.cls's own
+/// title-time `\and` keeps, aa.cls:866), as do its trimming and its protections inside a segment. Where the query reads
+/// nothing or finds no run, the spelling split of `arg` alone. Option C P2-2 (OXIDIZED_DESIGN_DIVERGENCES #995): the
+/// `\institute` lists of inst_support (`\lx@splitting@by@meaning`) and aa (`aa_cls.rs` `\lx@aa@institute@dispatch`),
+/// one contact call per piece.
+pub fn split_at_kernel_separators(
+  arg: Tokens,
+  delims: Vec<SplitDelim>,
+) -> Result<(DelimitedPieces, usize)> {
+  let runs = match kernel_separator_runs(&arg)? {
+    Some(runs) if !runs.is_empty() => runs,
+    _ => return Ok((split_tokens_delimited(arg, delims), 0)),
+  };
+  let spelled = |t: &Token| {
+    delims
+      .iter()
+      .any(|d| matches!(d, SplitDelim::Token(d) if delimiter_token_matches(d, t)))
+  };
+  let tokens = arg.unlist_ref();
+  let mut pieces = Vec::new();
+  let mut by_meaning = 0;
+  let mut before: Vec<Token> = Vec::new();
+  let mut from = 0;
+  // (each run, then the end of the list)
+  for run in runs.into_iter().map(Some).chain([None]) {
+    let (to, ended_by_cut) = run.map_or((tokens.len(), false), |(start, _)| (start, true));
+    let segment = Tokens::new(tokens[from..to].to_vec());
+    let mut split = split_tokens_segment(segment, delims.clone(), ended_by_cut);
+    if let Some((first, _)) = split.first_mut() {
+      *first = std::mem::take(&mut before);
+    }
+    pieces.extend(split);
+    if let Some((start, end)) = run {
+      if !tokens[start..end].iter().any(spelled) {
+        by_meaning += 1;
+      }
+      before = tokens[start..end].to_vec();
+      from = end;
+    }
+  }
+  Ok((pieces, by_meaning))
+}

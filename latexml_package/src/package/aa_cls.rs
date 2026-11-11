@@ -73,9 +73,17 @@ LoadDefinitions!({
   // B3). Several institutes split as inst_support's (OD #53); an empty `\institute{}` adds none.
   DefMacro!("\\institute{}",
     "\\lx@clear@frontmatter{ltx:contact}[role=affiliation]\\lx@aa@institute@dispatch{#1}");
+  // (Several pieces are cut first at the kernel's `\and` by meaning — a macro holding only the separator, a `\let` copy
+  // where the document renewed `\and`, inside parentheses too, as TeX's column break — then by spelling, no token
+  // rewritten, one contact call each, a piece holding an `\email` too: `split_at_kernel_separators`, the cut eptcs's cells
+  // share, Option C P2-2, OXIDIZED_DESIGN_DIVERGENCES #995. Each cut by meaning alone made counts with the written ones:
+  // aa.cls's count misses them, but its title-time `\and` (:866) prints each a numbered institute. A written top-level
+  // `\and` the spelling split protects — inside `$…$` or an environment — is counted but not cut, as before; revP22c N2.)
   DefMacro!("\\lx@aa@institute@dispatch{}", sub[(body)] {
+    let delims = vec![SplitDelim::Token(T_CS!("\\and")), SplitDelim::Token(T_CS!("\\And"))];
+    let (cut, by_meaning) = split_at_kernel_separators(body.clone(), delims)?;
     let mut depth = 0i32;
-    let mut pieces = 1usize;
+    let mut pieces = 1 + by_meaning;
     for t in body.unlist_ref() {
       match t.get_catcode() {
         Catcode::BEGIN => depth += 1,
@@ -85,15 +93,11 @@ LoadDefinitions!({
       }
     }
     let ink = body.unlist_ref().iter().any(|t| t.get_catcode() != Catcode::SPACE);
-    let target = if pieces == 1 && ink {
-      T_CS!("\\lx@aa@institute@sole")
-    } else {
-      T_CS!("\\lx@aa@institute@split")
-    };
-    Ok(Invocation!(target, vec![Some(body)]))
+    if pieces == 1 && ink {
+      return Ok(Invocation!(T_CS!("\\lx@aa@institute@sole"), vec![Some(body)]));
+    }
+    Ok(split_calls(&TokenizeInternal!("\\lx@add@contact[role=affiliation,labelseq=affiliation]"), cut))
   });
-  DefMacro!("\\lx@aa@institute@split{}",
-    "\\lx@splitting{\\lx@add@contact[role=affiliation,labelseq=affiliation]}{\\and\\And}{#1}");
   // (its `\email`s are read as llncs's are — aa_support's `\email` the kernel's `\lx@add@email`, a class e-mail command
   // the shared row parts its lines by: `\institute{Univ A, City A, \email{ann@a.org}}` gives the address to the author
   // it spells and the institute to every author; both had been the block's, 1312.1871, 2310.16880 — review rev92c r2

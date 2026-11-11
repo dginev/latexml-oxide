@@ -180,30 +180,16 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // Note: Perl tests `$delimiters ?` — a Tokens object is always truthy,
     // so the split always applies (an empty delimiter list yields one piece).
     let delims: Vec<SplitDelim> = delimiters.unlist().into_iter().map(SplitDelim::from).collect();
-    let mut result: Vec<Token> = Vec::new();
-    let line_break = T_CS!("\\\\");
-    for (delimiter, piece) in split_tokens_delimited(tokens, delims) {
-      // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #804): a piece after a `\\` delimiter (a split at line breaks, which no
-      // Perl binding makes: llncs's `\inst` list; webofc's `\author` until P2-1, now one block the reading cuts, OD #993)
-      // starts without the break's `*` and `[…]`, which are no text (`B\inst{2}\\*[2mm] C\inst{1}` made a creator
-      // "*[2mm] C"; the rev78e review's finding 6)
-      let piece = if delimiter == [line_break] {
-        let with_break: Vec<Token> = std::iter::once(line_break).chain(piece.unlist()).collect();
-        let mut stripped = strip_linebreak_options(Tokens::new(with_break)).unlist();
-        stripped.remove(0);
-        while stripped.first() == Some(&T_SPACE!()) {
-          stripped.remove(0);
-        }
-        Tokens::new(stripped)
-      } else {
-        piece
-      };
-      result.extend(op.unlist_ref().iter().copied());
-      result.push(T_BEGIN!());
-      result.extend(piece.unlist());
-      result.push(T_END!());
-    }
-    Ok(Tokens::new(result))
+    Ok(split_calls(&op, split_tokens_delimited(tokens, delims)))
+  });
+  // Rust-only (Option C P2-2, OXIDIZED_DESIGN_DIVERGENCES #995): `\lx@splitting@by@meaning{op}{delims}{tokens}` —
+  // `\lx@splitting`, cut first at the kernel's `\and` by meaning, then each segment at the delimiters by spelling
+  // (`split_at_kernel_separators`: a macro holding only `\and`, a `\let` copy of the kernel's `\and` where the document
+  // renewed `\and`; no token rewritten), one `op` per piece; inst_support's `\institute` list.
+  DefMacro!("\\lx@splitting@by@meaning{}{}{}", sub[(op, delimiters, tokens)] {
+    let delims: Vec<SplitDelim> = delimiters.unlist().into_iter().map(SplitDelim::from).collect();
+    let (pieces, _) = split_at_kernel_separators(tokens, delims)?;
+    Ok(split_calls(&op, pieces))
   });
 
   // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #805): `\lx@split@addresses{op}{list}` — `op{address}` for each address of a
@@ -278,4 +264,34 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     Ok(Tokens::new(result))
   });
   Ok(())
+}
+
+/// `op{piece}` for each piece of a split list, each paired with the delimiter before it (`split_tokens_delimited`,
+/// `split_at_kernel_separators`): `\lx@splitting`'s expansion, and `\lx@splitting@by@meaning`'s and aa's
+/// (`aa_cls.rs` `\lx@aa@institute@dispatch`).
+pub fn split_calls(op: &Tokens, pieces: DelimitedPieces) -> Tokens {
+  let mut result: Vec<Token> = Vec::new();
+  let line_break = T_CS!("\\\\");
+  for (delimiter, piece) in pieces {
+    // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #804): a piece after a `\\` delimiter (a split at line breaks, which no
+    // Perl binding makes: llncs's `\inst` list; webofc's `\author` until P2-1, now one block the reading cuts, OD #993)
+    // starts without the break's `*` and `[…]`, which are no text (`B\inst{2}\\*[2mm] C\inst{1}` made a creator
+    // "*[2mm] C"; the rev78e review's finding 6)
+    let piece = if delimiter == [line_break] {
+      let with_break: Vec<Token> = std::iter::once(line_break).chain(piece.unlist()).collect();
+      let mut stripped = strip_linebreak_options(Tokens::new(with_break)).unlist();
+      stripped.remove(0);
+      while stripped.first() == Some(&T_SPACE!()) {
+        stripped.remove(0);
+      }
+      Tokens::new(stripped)
+    } else {
+      piece
+    };
+    result.extend(op.unlist_ref().iter().copied());
+    result.push(T_BEGIN!());
+    result.extend(piece.unlist());
+    result.push(T_END!());
+  }
+  Tokens::new(result)
 }
