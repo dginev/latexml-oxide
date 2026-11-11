@@ -172,7 +172,9 @@ fn a_block_line_with_accents_is_cut() {
 /// name set letter by letter with `\ls` is its word space, not a gap parting two names (1510.04254, 1403.3574,
 /// astro-ph0406083: each name read as two or three, re-parted by the writer in 97e r1). The reading is today's. Since 99a
 /// jfm's marked `\affiliation` list is the names' affiliations, cut at its marks by the frontmatter API
-/// (OXIDIZED_DESIGN_DIVERGENCES #954; was one note at the block).
+/// (OXIDIZED_DESIGN_DIVERGENCES #954; was one note at the block). Since P2-1 OmniBus's `\author` queues the list as one
+/// block the reading cuts (OD #993), where its split by spelling queued one per `\and` piece: Cy Cole's name opens the
+/// block's second `\and` column (`sep:column`), the creators the same.
 #[test]
 fn a_letter_spaced_name_is_one_name() {
   let tex = repro!("jfm_letter_spaced_name_is_one_name.tex");
@@ -187,7 +189,7 @@ fn a_letter_spaced_name_is_one_name() {
     &[
       "C A N N A. A B L E [1] | line:names",
       "  a Univ A, Town A | api:leading-mark",
-      "C C Y C O L E [2] | line:names",
+      "C C Y C O L E [2] | line:names sep:column",
       "  a Univ B, Town B | api:leading-mark",
     ],
   );
