@@ -2584,8 +2584,8 @@ pub(in crate::base_utilities) fn lex_with_inks(
   lex_walked(digested, false)
 }
 
-/// [`lex_with_inks`] of a note's body (a footnote's, a `\thanks`'s, a footnote text's), a link's text or a contact's,
-/// lexed on its own: no paragraph of it is the block's, so each stays a group ([`paragraph_is_no_group`]).
+/// [`lex_with_inks`] of a note's body (a footnote's, a `\thanks`'s, a footnote text's), a link's text, a contact's or a
+/// box whatsit's lines (`raw_lines`), lexed on its own: no paragraph of it is the block's, so each stays a group ([`paragraph_is_no_group`]).
 pub(in crate::base_utilities) fn lex_body_with_inks(
   digested: &Digested,
 ) -> (Vec<Event>, Vec<Formula>, InkTable) {

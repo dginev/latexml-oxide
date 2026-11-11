@@ -34320,8 +34320,9 @@ Warning — on int158a once with its `name` and once without, here twice with it
 `aa_corrauth_after_a_cjk_name_in_one_block.tex`.
 
 **P2-1c's scope (P21e): only a paragraph of the block's own list is no group.** The walker flattens a paragraph's list
-only where it is a child of the walked block's list (`Walker::lists` one) in a walk of a block (`lex_with_inks`), not
-of a note's body, a link's text or a contact's, which the walker lexes on its own (`lex_body_with_inks`,
+only where it is a child of the walked list (`Walker::lists` one) in a walk by `lex_with_inks` — a block's, or a
+creator call's content alone (`reading.rs`, `separators.rs`, `emit.rs` callers) — not of a note's body, a link's text,
+a contact's or a box whatsit's lines (`raw_lines`), which the walker lexes on its own (`lex_body_with_inks`,
 `Walker::body`). A paragraph inside a box's body (a minipage, a varwidth, a `\parbox`: one list deeper), inside a braced
 group, or inside a note's body stays a group, as before P21c. Flattened there, the box became a mark's group:
 `enclose` spans the box by `deep_span`, which reaches its unshown position and width arguments, so 2608.17538's

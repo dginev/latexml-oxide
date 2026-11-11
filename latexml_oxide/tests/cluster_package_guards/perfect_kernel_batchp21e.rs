@@ -77,7 +77,8 @@ fn a_paragraph_in_a_box_stays_a_group() {
 /// group, so the contact is written from its source run, not as its address alone. Two rows, two contact writers: an
 /// e-mail line's `\texttt` (2402.02104, authblk `{minipage}`) and a `\thanks`'s `\href{mailto:…}` (2601.03873, mnras
 /// `\parbox`; its owner Ann Able is int157a's, the address printed in Cy Cole's footnote — pre-existing, outside this
-/// batch).
+/// batch). That row pins a KNOWN-WRONG owner (SILENT_LOSS_INVENTORY "Bundle int158a — the residual"): a change moving
+/// the address to Cy Cole is a fix, not a regression; update the row then.
 #[test]
 fn a_paragraph_in_a_box_keeps_a_contacts_markup() {
   let cases = [
