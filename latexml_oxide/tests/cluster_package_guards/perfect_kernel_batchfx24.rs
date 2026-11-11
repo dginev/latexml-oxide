@@ -19,6 +19,16 @@ macro_rules! repro {
   };
 }
 
+/// A row of [`an_author_tail_the_title_page_does_not_print_is_not_read`]: the shape, its repro, its Warning count,
+/// whether "bob" is annotated, the creators.
+type Row = (
+  &'static str,
+  &'static str,
+  usize,
+  bool,
+  &'static [&'static [&'static str]],
+);
+
 fn owned(rows: &[&[&str]]) -> Vec<Vec<String>> {
   rows
     .iter()
@@ -127,8 +137,7 @@ fn an_author_tail_the_title_page_does_not_print_is_not_read() {
   let alice_x: &[&[&str]] = &[&["Alice A", "affiliation=Inst X"]];
   let annotated = "Info:frontmatter:annotated The title page annotates 1 word(s) that its output does not hold: bob";
   let alice: &[&[&str]] = &[&["Alice A"]];
-  // (shape, repro, its Warning count, whether "bob" is annotated, the creators)
-  let rows: [(&str, &str, usize, bool, &[&[&str]]); 9] = [
+  let rows: [Row; 9] = [
     (
       "document \\maketitle, \\and tail",
       repro!("article_author_and_tail_unprinted_by_own_maketitle_makes_no_creator.tex"),
