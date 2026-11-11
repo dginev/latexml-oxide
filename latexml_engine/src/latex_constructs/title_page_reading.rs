@@ -118,9 +118,7 @@ fn read_values() -> [Option<Stored>; 4] { READ_VALUES.map(lookup_value) }
 fn kept_reading() -> Option<Rc<TitlePageReading>> {
   READING.with_borrow(|r| {
     r.as_ref()
-      .filter(|((watch, values), _)| {
-        state_unchanged_since(*watch) && *values == read_values()
-      })
+      .filter(|((watch, values), _)| state_unchanged_since(*watch) && *values == read_values())
       .map(|(_, reading)| Rc::clone(reading))
   })
 }
