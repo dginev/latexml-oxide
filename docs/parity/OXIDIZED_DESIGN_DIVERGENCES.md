@@ -33982,7 +33982,7 @@ Baker's alone, as pdflatex prints it, its 2 Warnings the emitter's names by text
 `class-bindings/eptcs/eptcs_author_{table_then_a_macro_held_and,table_then_a_let_copy_of_and,macro_held_and_then_a_table,let_copy_of_and_then_a_table,macro_held_and_then_a_table_no_lines,let_copy_of_and_then_a_table_no_lines,macro_holding_names_and_the_and}.tex`.
 P24b's guard `perfect_kernel_batchp24b::eptcs_a_separator_glued_to_a_table_end_opens_a_column` (repros
 `class-bindings/eptcs/eptcs_author_table_{glued_to_and,comment_then_and,relax_then_and,glued_to_a_macro_held_and,glued_to_a_let_copy_of_and}.tex`:
-every row red on P24, the macro row red on int157a too, Univ C on all three authors); byte-identical against int158a
+every row red on P24, the next column's institute on every author; the macro row red on int157a too); byte-identical against int158a
 (`3d274f02df`) (`kit/conv.sh`, both binaries; every XML byte and every Error, Fatal and Warning count equal) on the 73 eptcs census
 papers, P21b's sv and aa lists (405 and 560 papers; 4 ids have no main file for either binary) and the stage2 1,434.
 Residual, outside this mechanism (the reading's owner of a column's line): a table of names after another cell whose
