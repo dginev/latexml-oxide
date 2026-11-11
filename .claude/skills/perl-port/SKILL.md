@@ -58,8 +58,9 @@ WISDOM #38):
   *in horizontal mode*), which tells you which state must be true upstream.
 
 - **Where Perl approximates TeX, follow TeX in both.** BM (Bruce Miller, LaTeXML's author, Q&A 2026-11-05): Perl
-  rarely traded fidelity for speed; its divergences mostly come from not understanding what TeX does, or from not
-  finding readable code that does it. Fix toward TeX, and add the Perl side to the upstream patch list
+  "seldom (if ever?)" traded fidelity for speed; it "may more often be lost due to not understanding what TeX really is
+  doing", or to not finding readable code that does it. Fix toward TeX, record the divergence in
+  `OXIDIZED_DESIGN_DIVERGENCES.md`, and add the Perl side to the upstream patch list
   (`~/data/pk_agents/main/bruce_qa/ACTIONS.md` QA80; "We take patches!").
 
 ### 1c — The shape of a binding (BM's priorities)
@@ -73,7 +74,9 @@ WISDOM #38):
 
 The ideal binding loads the real package and overrides only the macros that carry semantics; with no semantics, the raw
 package alone. Where TeX reads irregularly (`\hbox` takes `\bgroup`; one argument changes how the next is read), mirror
-TeX's reading: a user-facing macro expanding to an internal `\lx@…` constructor. Use the definers wherever they fit.
+TeX's reading — only where TeX's reading requires it — with a user-facing macro expanding to an internal `\lx@…`
+constructor, the alias kept so reversion shows the user-level name (the general macro-face design is after the merge).
+Use the definers wherever they fit.
 Comments stay short: one or two lines, plus the Perl line range and witness ids.
 
 ## 2 — Find the Rust home: `docs/parity/ORGANIZATION.md`

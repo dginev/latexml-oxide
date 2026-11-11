@@ -57,8 +57,9 @@ Your review is the writer's next brief: make every finding something a fix round
   without a reason is a SHOULD-FIX ("long comments are a dead giveaway"; one or two lines, witness ids and
   Perl/tex.web refs, the argument in the OD entry); a reversion or `tex=` showing an `\lx@` internal is a
   finding (reversion gives user-level macros); splitting an overloaded element, class or attribute needs a
-  census of its earlier uses; a speculative run (title-page reading, rehearsal) authoring content for an
-  undeclared class is a BLOCKER.
+  census of its earlier uses; a speculative run (title-page reading, rehearsal) inventing content or
+  assigning a frontmatter role (creator, contact, date, note) for an undeclared class is a BLOCKER (revTP1 B1;
+  printed text kept in the body is not that).
 
 ## How to report
 Each finding:

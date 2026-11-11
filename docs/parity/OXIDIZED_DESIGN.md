@@ -39,7 +39,8 @@ This file is the **index + overview**. The detail lives in a themed family:
   organization, abstractions, and naming. Diverge only when Rust's type system
   enables a meaningfully better representation, or the Perl behavior is a known
   bug — and record it in [OXIDIZED_DESIGN_DIVERGENCES.md](OXIDIZED_DESIGN_DIVERGENCES.md). Literal in the data model
-  and the interfaces, idiomatic Rust inside (BM, Q8.3); where Perl approximates TeX, follow TeX and offer Perl the fix.
+  and the interfaces, idiomatic Rust inside (BM, Q8.3); where Perl approximates TeX, follow TeX, record the divergence in
+  [OXIDIZED_DESIGN_DIVERGENCES.md](OXIDIZED_DESIGN_DIVERGENCES.md) and offer Perl the fix.
 - **Meaningful types for untyped Perl.** Replace strings / arrayrefs / blessed
   hashrefs with enums, structs, and newtypes that make invalid states
   unrepresentable — without changing observable behavior.

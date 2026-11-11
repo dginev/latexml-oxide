@@ -28,7 +28,8 @@ missing image, a broken `\ref` or `\cite`, and the like — the fixes are usuall
   Bruce's preference, my rule to drop the items was for initial simplicity"): material before `\maketitle` and page marks
   (`\markboth`/`\markright`, running heads, letterheads) go into an element designed with BM, its HTML display to be
   settled (BM: "somewhat analogous to \markboth … we may want an element or elements that can preserve these").
-  Until that lands, the 2026-10-01 rule holds: furniture is dropped, as in Perl; footnotes, frontmatter notes and
+  Page numbers stay dropped (HTML has no pages). Until the element lands, the 2026-10-01 rule holds: furniture is
+  dropped, as in Perl; footnotes, frontmatter notes and
   corresponding-author lines stay even when a class prints them in a header, footer or margin.
 - **Generated content follows Perl**: a table of contents a class's `\maketitle` prints (JHEP/JINST) is not emitted;
   the reader's navigation comes from the HTML (2026-10-21).

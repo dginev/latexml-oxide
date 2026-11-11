@@ -17,6 +17,10 @@ GENUINE-RUST-ONLY, confirmed same-host — justifies code changes. Reach for the
 
 ## Golden rules (non-negotiable — violating these has burned us repeatedly)
 
+0. **An upstream `t/` golden is a spec only for the feature its test targets** (BM, the Bruce Miller Q&A 2026-11-05,
+   Q1.3: "they are always snapshots; but with aspirations to be specifications"). A difference outside the tested
+   feature is judged by TeX and the semantics, not by the golden.
+
 1. **Never downgrade errors to cheat the task.** A change that makes Rust emit
    *fewer* `Error:`/`Fatal:` than Perl on the same paper is a **divergence**, not
    a fix — it needs explicit proof Perl emits the same severity, or user

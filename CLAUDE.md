@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-> **This is a Perl-to-Rust translation project.** Every translated entry must follow tightly the original semantics and nuances of the Perl source. Read the Perl source first, translate precisely; do not invent new abstractions, rename concepts, or simplify behavior unless documented as an intentional divergence in `docs/parity/OXIDIZED_DESIGN.md`. The Perl code is the ground truth.
+> **This is a Perl-to-Rust translation project.** Every translated entry must follow tightly the original semantics and nuances of the Perl source. Read the Perl source first, translate precisely; do not invent new abstractions, rename concepts, or simplify behavior unless documented as an intentional divergence in `docs/parity/OXIDIZED_DESIGN.md`. The Perl code is the ground truth for the design, data model and interfaces; where Perl approximates TeX itself, real TeX (tex.web, latex.ltx, the package source, pdflatex) decides behaviour, recorded as a divergence and offered to Perl as a patch (DG 2026-08-31; BM — Bruce Miller, LaTeXML's author — 2026-11-05: fidelity is "seldom (if ever?) traded for speed" but "may more often be lost due to not understanding what TeX really is doing").
 
 ## Active priorities: faithful parity + beyond-Perl arXiv runs
 
