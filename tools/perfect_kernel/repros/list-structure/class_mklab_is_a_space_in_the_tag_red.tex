@@ -1,0 +1,13 @@
+% mechanism: memoir.cls:4580 (latex.ltx:15859) `\let\makelabel\@mklab`, `\@mklab#1{\hfil #1}` (latex.ltx:15963): the
+%   `\hfil` that right-aligns a label in its box reaches the tag of an `\item[…]` as a leading space.
+% witness: synthetic (found by ML1 beside QA45).
+% oracle:  pdflatex 0 errors: "x three" (no space: the `\hfil` is glue in the label box).
+% engines: rust int160a and ML1: `<tag> x</tag>`; Perl 0.8.8 (memoir unbound, OmniBus) "x", 1 E (`\memfontenc`).
+% expect:  0 errors, 1 warning (memoir.cls:5454 `\@iffirstamp`); `<tag>x</tag>`.
+% status:  RED (ML1)
+\documentclass{memoir}
+\begin{document}
+\begin{list}{--}{}
+\item[x] three
+\end{list}
+\end{document}
