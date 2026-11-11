@@ -379,8 +379,11 @@ const MOVED_CUT_KIND_EMISSIONS: &[(&str, usize)] = &[
 /// (`email_line_calls`, no new emission). MB1 lowered it to 2,188: the naming of a labelled line — the class's name of
 /// the entry before the line's own label, and an e-mail label's line — moved to the label rule's file,
 /// `frontmatter/classify/email_block_calls.rs` (`entry_line_label`, `email_line_label`), one match for both readers of the
-/// Kind step (review revZ18o N1).
-const MOVED_CUT_KIND_CODE_LINES: usize = 2_188;
+/// Kind step (review revZ18o N1). IV1 raised it by 54, accepted as debt by the main session (2026-11-11) and retired
+/// by the P4 port of these readers onto the digested reading (the brief's sites, study IV0): `email_lines.rs` `spacing_formulas_as_space` and `formula_prints_spacing_alone` (a formula of spacing alone is
+/// glue, no text of an address: 2205.14113, 2302.05182; OD #972), applied at the head of `email_line_calls`, in the Kind
+/// step's address lines and in `math_glyphs_as_printed` — how an address prints, no owner decided.
+const MOVED_CUT_KIND_CODE_LINES: usize = 2_242;
 
 /// The fence on the moved Cut and Kind: they take no new decision either (review revZ18a check 3).
 #[test]
@@ -507,6 +510,10 @@ fn old_reader_exports() -> std::collections::BTreeSet<String> {
 /// one of the one engine's (`mark_prints_nothing` from `ijcai.rs` into `classify/marks.rs`) would stop counting with no
 /// test edited. A name that leaves this list was deleted, or moved with its uses rerouted: the commit that lowers the pin
 /// says which, and the review reads it. A name added is a new item of the old reader's, which takes none. 81 at E0h.
+/// IV1 added one, accepted as debt by the main session (2026-11-11) and retired by the P4 port of these readers onto
+/// the digested reading (the brief's site, study IV0): `email_lines.rs` `spacing_formulas_as_space`, how an address line
+/// prints (a formula of spacing alone is glue, no text of an address: 2205.14113, 2302.05182; OD #972), no owner decided;
+/// its predicate `formula_prints_spacing_alone` is private (revIV1 NIT 1).
 const OLD_READER_EXPORTS: &[&str] = &[
   "AddressPlacement",
   "CUT_COPY_PLACE",
@@ -580,6 +587,7 @@ const OLD_READER_EXPORTS: &[&str] = &[
   "space_parted_names",
   "space_parted_rows_joined",
   "spaced_name_separators",
+  "spacing_formulas_as_space",
   "starts_with_footnote_symbol",
   "take_author_annotations",
   "text_tokens",
@@ -1492,7 +1500,12 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("defs/frontmatter_api", 8),
   // (Z18j, 63 -> 109: moved from `author_block` with its code, as that row says; MB1, 109 -> 108: one moved to `classify`, as
   // that row says)
-  ("defs/frontmatter_api/", 108),
+  // (IV1, 108 -> 114, accepted as debt by the main session (2026-11-11) and retired by the P4 port of these readers
+  // onto the digested reading: `email_lines.rs` `spacing_formulas_as_space` and
+  // `formula_prints_spacing_alone` — how an address line prints, a formula of spacing alone glue, no text of an address
+  // (2205.14113's `$~\quad~~$`, 2302.05182's `a@x $\quad$ b@y`; OD #972), no owner decided; the shifts and spacing it
+  // reads are the line's tokens, before any digestion, as `math_glyphs_as_printed`'s)
+  ("defs/frontmatter_api/", 114),
   // (CR4, 21 -> 28: `address_as_printed`'s `math_glyphs_as_printed`, the API's e-mail/URL reading — how an address prints,
   // `$\sim$` its glyph "∼" (1301.1466, math0608476; OD #972), no owner decided: a sibling of `math_braces_as_printed`, whose
   // reads `defs/frontmatter_fields/` holds; it reads the Semiverbatim argument's tokens, which no event says)
