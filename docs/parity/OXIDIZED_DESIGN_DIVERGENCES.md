@@ -14199,8 +14199,7 @@ cjs-rcs-article's `\author`/`\affil` pairs) hands each call's tail before storin
 (`\lx@author@flush`). A class binding that builds `\@author` itself (revtex, acmart) never records
 a value, and a tail holding `\and` (more authors) is left alone. Guards
 `perfect_kernel_batch59::{author_block_appended_after_author_is_kept,
-author_block_follows_each_author, author_block_after_a_replaced_author,
-}` and repro `author_block_orphan_mark_is_kept_red` (RED since int160a; HG1). Open: the template's `\addresslink` marks (`\let` to
+author_block_follows_each_author, author_block_after_a_replaced_author}` and repro `author_block_orphan_mark_is_kept_red` (RED since int160a; HG1). Open: the template's `\addresslink` marks (`\let` to
 `\textsuperscript`) are not recognized as author marks, so its rows annotate every author; a marked
 row is placed after the unmarked ones; a tail holding `\and` is dropped (pdflatex prints more
 authors); a stored value with `\and` gives its tail to every creator of the call (LaTeX prints it
@@ -29266,10 +29265,11 @@ the base binary): three papers' output changed — 1311.0586 (aastex, 1 → 7 cr
 
 **Left.** In 2410.11607: the `75A,75C` marks (institute 75's `(A)…; (B)…` parts) unanswered, their institutes one
 nameless creator; the collaboration line welded into the last name (OPEN_ROWS.md:810 ruling); a mark-covered list with a
-`NON_NAME_WORDS` word in a surname stays whole (F3, the word lists). Guards `perfect_kernel_batch97a` (three; since HG1 two rows of
+`NON_NAME_WORDS` word in a surname stays whole (F3, the word lists). Guards `perfect_kernel_batch97a` (three; since HG1/HG1b four rows of
 `perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed`, the module removed); repros
-sectioning-frontmatter/`author_marked_list_lowercase_particle_merges` (RED → GREEN),
-`author_marked_list_with_an_unmarked_name_is_a_reported_merge`, `author_marked_names_beside_a_team_are_a_reported_merge`.
+sectioning-frontmatter/`author_marked_list_lowercase_particle_merges` (the merge GREEN; its separators RED,
+`author_marked_list_keeps_its_printed_separators_red`),
+`author_marked_list_with_an_unmarked_name_is_a_reported_merge`, `author_marked_names_beside_a_team_move_their_and_red`.
 
 ### 944. A take-out removes what it read and nothing else TeX prints: aa's `\mail` labelled as its copy prints it, an emptied entry's label kept, a store's label read before its printed occurrence, a marked split's separators kept (Perl: `\mail` always "Correspondence to " as an address; no take-out, no K11, no marked split)
 
