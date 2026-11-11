@@ -536,7 +536,7 @@ pub(in crate::base_utilities) fn author_binding() -> String { meaning_owner(AUTH
 /// what a document appends to `\@author` (`policy::declares_author_tail_printed`: authblk.sty, llncs.cls).
 pub fn author_tail_printed() -> bool { policy::declares_author_tail_printed(&author_binding()) }
 
-/// Whether LaTeX's `\author` — the kernel's, a raw file's or the document's own ([`author_binding`]: `kernel`, `raw`,
+/// Whether LaTeX's `\author` — the kernel's, a raw file's or the document's own (`author_binding`: `kernel`, `raw`,
 /// `document`) — is in force, not a binding's (amsart's, elsarticle's, authblk's, OmniBus's `fallback`): then the
 /// title page the title-page check's stand-in prints is taken as the one in force (LaTeX's, article.cls:236-251), and
 /// what a document appends to `\@author` as printed. A binding class that keeps the kernel's `\author` answers `kernel`
