@@ -1,3 +1,6 @@
+% note:    written on pk/FX26 (parked for TP1); `Policy::author_tail` and `title_page_prints_author_tail` named below are
+%   FX26's, not int159a's. On int159a the reading makes no creator of the tail and the title-page check counts it
+%   (Warning "bob"): the loss is counted, the creator still lost
 % mechanism: under amsart, whose binding declares its title page prints no `\@author` tail (`Policy::author_tail`
 %   `Unprinted`: amsart's prints `\authors`), a document's `\def\@maketitle` printing `\@author` prints what is
 %   appended to it (amsart's `\author` stores nothing there, so only the tail). The walk says printed
