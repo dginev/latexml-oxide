@@ -307,9 +307,9 @@ fn an_address_others_spell_is_not_the_named_authors() {
     &[
       "C X. Wang [1] | line:names",
       "  a Univ X | api:labelseq",
-      "C Y. Wang [1] | line:names",
+      "C Y. Wang [1] | line:names sep:column",
       "  a Univ X | api:labelseq",
-      "C Z. Li [2] | line:names",
+      "C Z. Li [2] | line:names sep:column",
       "  a Univ Y | api:labelseq",
       "B email wang@x.org | api:document-note owner:block ruling3:one-per-print",
     ],

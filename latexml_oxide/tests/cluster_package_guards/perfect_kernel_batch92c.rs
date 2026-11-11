@@ -33,7 +33,7 @@ fn aa_author_replaces_and_keys_aa_blocks() {
     &[
       "C Bob Baker [1] | line:names",
       "  a Univ X | api:labelseq",
-      "C Cid Cole [2] | line:names",
+      "C Cid Cole [2] | line:names sep:column",
       "  a Univ Y | api:labelseq",
       "B email carl@z.org | api:document-note owner:block ruling3:one-per-print",
     ],
@@ -107,7 +107,7 @@ fn aa_sole_institute_is_the_rows() {
     ]]),
     &[
       "C Ann Able [1,2] | line:names",
-      "C Bob Baker [2] | line:names",
+      "C Bob Baker [2] | line:names sep:column",
       "B affiliation 1 Univ A, City A 2 Univ B, City B | api:labelseq label:unrequested owner:block",
     ],
   );
@@ -121,7 +121,7 @@ fn aa_sole_institute_is_the_rows() {
       "C Ann Able [] | line:names",
       "  a Univ A, City | api:labelseq api:share:authors",
       "  c email ann@a.org | api:labelseq api:inner-contact api:share:authors owner:spelled",
-      "C Bob Baker [] | line:names",
+      "C Bob Baker [] | line:names sep:column",
       "  a Univ A, City | api:labelseq api:share:authors",
     ],
   );

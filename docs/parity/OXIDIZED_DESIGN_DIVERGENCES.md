@@ -34212,12 +34212,37 @@ the shared list, as P21's split did. A macro-held separator and an entry the que
 the entry stays one name. The queue readers, by route: changed, `queued_author_names_spelled` (one caller,
 `sv_support_sty.rs` `\lx@sv@institute@`); unchanged, `queued_author_name_prints` (it reads all the names' words together,
 so a part changes nothing), `queued_author_marks`, `queued_requesters` and `queued_name_marks` (one entry per position;
-the kernel `\author`'s block is one entry too, so parting their positions is the plan's P4 row). aa keeps its split:
-without it, `\corrauth`'s contact loses `name="Corresponding author: "` when another name holds a `CJK*` environment
-(2608.21138): the emitter writes the contact as its item (`\lx@frontmatter@itemonly{…}`), not as the `\corrauth` call, a
-mechanism of its own (catalog repro `class-bindings/author_one_block/aa_corrauth_beside_a_cjk_name_in_one_block.tex`).
+the kernel `\author`'s block is one entry too, so parting their positions is the plan's P4 row). aa kept its split here:
+without it, `\corrauth`'s contact lost `name="Corresponding author: "` when a later name held a `CJK*` environment
+(2608.21138), the emitter writing the contact as its item (`\lx@frontmatter@itemonly{…}`), not as the `\corrauth` call —
+the events' walker's, a mechanism of its own (P2-1c, below).
 Guard `perfect_kernel_batchp21b::sv_institute_list_reads_a_whole_author_entry_by_its_names`; repros
 `class-bindings/author_one_block/svjour3_institute_list_names_a_whole_author_block{,_document_and}.tex`.
+
+**P2-1c (P21c): aa's split removed; P2-1 is complete outside llncs.** aa's `\author` makes one
+`\lx@add@author@split{#2}` call after its clear (`aa_cls.rs`). What kept the split was the events' walker, not the
+emitter: a `{CJK*}` environment leaves horizontal mode (`cjk_sty.rs` `before_digest => leave_horizontal`), whose `\par`
+packs the block's line so far into a paragraph list (`stomach::repack_horizontal`, Perl's `List(@para, mode =>
+'horizontal')`), and the walker read every inner list as a braced group (`events/mod.rs` `Walker::walk`), so the
+paragraph made an earlier name's `\inst` a mark whose group held the contact after it; the emitter writes a contact a
+mark's formula holds by its text (`emit.rs` `in_a_mark`, the ORCID-icon rule), so `\corrauth` lost its `name` and an
+`\email` its typewriter font. With the split, each name was its own block and no paragraph held the contact. A
+paragraph's list (its `mode` property `horizontal`; a group's list has none) is now no group: its boxes are walked at
+the level around it (`paragraph_is_no_group`), as TeX's `\par` closes no group. The S1 routes now: inst_support's,
+ptephy's, webofc's (P2-1), sv_support's (P2-1b) and aa's `\author` make one call; llncs's `\lx@llncs@author@split`
+still splits (P2-3), and the `\institute` splits (aa, inst_support, sv_support, llncs) are not author splits. Byte
+identity against int158a over aa's 563 papers, the stage2 1,434 and 2608.21138: 1,990 identical, 3 with no main file on
+both, 4 changed, all by the split's removal alone (the no-split build gives the same XML): 2408.11004, 2509.22322,
+2604.10287, whose `\author{\small …}` now sets `fontsize="90%"` on every name, as pdflatex sets the whole list (the
+first name alone had it); 1407.3707, lateral: its note "Corresponding authors: R. López-Coto, \email{rlopez@…}, D.
+Hadasch, \email{hadasch@…}" (on López-Coto, `$^\star$` on Hadasch) gives López-Coto his address and loses Hadasch's on
+int158a, and gives Hadasch his and loses López-Coto's now, each loss counted by the content check's Warning. 2608.21138
+keeps `name="Corresponding author: "`. Residual, not root-caused (RED catalog repro
+`aa_corrauth_before_a_cjk_part_of_its_own_name_red.tex`): a `{CJK*}` in the `\corrauth` author's own name, after the
+call (`Ann Able\inst{1}\corrauth{a@x} (\begin{CJK*}…\end{CJK*})`), writes the contact twice, with the content check's
+Warning — on int158a once with its `name` and once without, here twice with it. Guard `perfect_kernel_batchp21c::a_contact_keeps_its_call_beside_a_cjk_name`; repros
+`class-bindings/author_one_block/aa_{corrauth,email}_beside_a_cjk_name_in_one_block.tex`,
+`aa_corrauth_after_a_cjk_name_in_one_block.tex`.
 
 ### 994. The rehearsal binds a `\let` copy of an author-line separator or note command by its meaning, as the command it copies (SEP1)
 

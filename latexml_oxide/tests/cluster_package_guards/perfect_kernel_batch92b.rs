@@ -71,10 +71,10 @@ fn an_entry_email_printing_one_address_is_placed_by_the_chain() {
   assert_reading(repro!("aa_inner_email_is_its_spellers.tex"), None, &[
     "C Ann Able [1] | line:names",
     "  a Univ X | api:labelseq",
-    "C Bob Baker [1] | line:names",
+    "C Bob Baker [1] | line:names sep:column",
     "  a Univ X | api:labelseq",
     "  c email bob.baker@x.org | api:labelseq api:inner-contact owner:inner-email owner:spelled",
-    "C Cid Cole [2] | line:names",
+    "C Cid Cole [2] | line:names sep:column",
     "  a Univ Y | api:labelseq",
   ]);
 }
@@ -93,10 +93,10 @@ fn a_numbered_entry_owned_by_a_hand_mark_is_ruling_ones() {
     &[
       "C Ann Able [1] | line:names",
       "  a Univ X | api:labelseq ruling1:request",
-      "C Bob Baker [1,2] | line:names",
+      "C Bob Baker [1,2] | line:names sep:column",
       "  a Univ X | api:labelseq ruling1:request",
       "  a Univ Y | api:labelseq ruling1:request",
-      "C Cid Cole [2] | line:names",
+      "C Cid Cole [2] | line:names sep:column",
       "  a Univ Y | api:labelseq ruling1:request",
     ],
   );
@@ -116,9 +116,9 @@ fn a_numbered_entry_whose_lines_marks_lead_is_split_at_them() {
     &[
       "C Ann Able [1] | line:names",
       "  a Univ X | api:leading-mark",
-      "C Bob Baker [2] | line:names",
+      "C Bob Baker [2] | line:names sep:column",
       "  a Univ Y, Town | api:leading-mark",
-      "C Cid Cole [1,2] | line:names",
+      "C Cid Cole [1,2] | line:names sep:column",
       "  a Univ X | api:leading-mark",
       "  a Univ Y, Town | api:leading-mark",
     ],
@@ -133,9 +133,9 @@ fn a_numbered_entry_whose_lines_marks_lead_is_split_at_them() {
       "C Ann Able [1] | line:names",
       "  a Univ X | api:leading-mark",
       "  c email ann.able@y.org | api:label",
-      "C Bob Baker [2] | line:names",
+      "C Bob Baker [2] | line:names sep:column",
       "  a Univ Y | api:leading-mark",
-      "C Cid Cole [1,2] | line:names",
+      "C Cid Cole [1,2] | line:names sep:column",
       "  a Univ X | api:leading-mark",
       "  a Univ Y | api:leading-mark",
     ],
@@ -153,7 +153,7 @@ fn a_numbered_entry_whose_lines_marks_lead_is_split_at_them() {
     &[
       "C Ann Able [1] | line:names",
       "  a Univ X | api:leading-mark",
-      "C Bob Baker [2] | line:names",
+      "C Bob Baker [2] | line:names sep:column",
       "  a Univ Y Contact: X Office | api:leading-mark",
     ],
   );
@@ -177,9 +177,9 @@ fn a_mark_is_keyed_by_its_printed_text() {
     &[
       "C Ann Able [1] | line:names",
       "  a Univ X | api:labelseq",
-      "C Bob Baker [2] | line:names",
+      "C Bob Baker [2] | line:names sep:column",
       "  a ESO | api:labelseq",
-      "C Cid Cole [1,2] | line:names",
+      "C Cid Cole [1,2] | line:names sep:column",
       "  a Univ X | api:labelseq",
       "  a ESO | api:labelseq",
     ],

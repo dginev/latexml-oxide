@@ -398,7 +398,7 @@ fn ref_mark_takes_the_label_of_its_institute() {
     [
       "C Ann Able [ref:ia] | line:names",
       "  a Inst A | api:labelseq api:ref-label",
-      "C Bob Baker [ref:ib] | line:names",
+      "C Bob Baker [ref:ib] | line:names sep:column",
       "  a Inst B | api:labelseq api:ref-label",
     ]
   );

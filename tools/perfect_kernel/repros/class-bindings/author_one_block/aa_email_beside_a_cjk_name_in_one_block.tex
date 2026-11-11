@@ -1,0 +1,34 @@
+% mechanism: aa's `\author` hands its whole list to the reading in one `\lx@add@author@split` call (Option C P2-1c, OD
+%   #993). A `{CJK*}` environment leaves horizontal mode (cjk_sty.rs `before_digest => leave_horizontal`), whose `\par`
+%   packs the block's line so far into a paragraph list (`stomach::repack_horizontal`); the events' walker read that
+%   list as a braced group (events/mod.rs `paragraph_is_no_group`), so an earlier name's `\inst` became a mark whose group
+%   held the contact after it, and the emitter wrote the contact by its text (emit.rs `in_a_mark`) — a paragraph is no
+%   group (TeX's `\par` closes none)
+% witness: 2608.21138's shape with aa_support's `\email` (`\lx@add@email{\lx@address@urlfont{#1}}`) for `\corrauth`: the
+%          emitter's e-mail branch (the address's font from its events), not the call's
+% oracle:  pdflatex (TL 2025, -no-shell-escape, 2608.21138's aa.cls, lineno.sty, linenoaa.sty) 0 errors: "Ann M. Able1 ,
+%          Bob Baker(贾彬)1, 2 , and Cid Cole2"; aa.cls:1112, :1117 (`\maketitle`) set `\email` to `\unskip` in the
+%          author line, so the address prints nowhere — the binding keeps it as the author's contact (unchanged here)
+% engines: rust int158a = the address in typewriter type (`<text font="typewriter">`); int158a with aa's split removed =
+%          the address as plain text; P21c = int158a's XML
+% expect:  0 errors, 0 warnings; Ann M. Able (email "Email: " ann@x.edu in typewriter, University of X), Bob Baker(贾彬)
+%          (University of X, University of Y), Cid Cole (University of Y)
+% status:  RED (int158a without aa's split) -> GREEN (P21c) — perfect_kernel_batchp21c::a_contact_keeps_its_call_beside_a_cjk_name
+% preload: ar5iv.sty
+\documentclass{aa}
+\usepackage{CJKutf8}
+\begin{document}
+\title{T}
+\author{
+         Ann~M.~Able \inst{\ref{X}}\email{ann@x.edu}
+    \and Bob Baker(\begin{CJK*}{UTF8}{gbsn}贾彬\end{CJK*}) \inst{\ref{X},\ref{Y}}
+    \and Cid Cole\inst{\ref{Y}}
+}
+\institute{
+             University of X\label{X}
+        \and University of Y\label{Y}
+}
+\abstract{A}{B}{C}{D}{E}
+\maketitle
+Text.
+\end{document}

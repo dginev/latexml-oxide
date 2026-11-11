@@ -53,14 +53,17 @@ LoadDefinitions!({
   declare_panel_page(256.0748, 523.5307, last_class_option(&["onecolumn", "twocolumn"]) != Some("onecolumn"));
   RequirePackage!("aa_support");
   // aa.cls defines no `\author`: the kernel's `\def\author#1{\gdef\@author{#1}}` keeps the last call's names, so this
-  // binding's `\author` clears the authors queued before it, then splits as inst_support's (its `[marks]` and its
-  // `\and`/`\And` pieces, OD #53) — the class's own, said with the API's primitives (OXIDIZED_DESIGN #920, #922; Perl
-  // inst_support.sty.ltxml:33-35 clears on every call). inst_support's own `\author` keeps stacking, for the classes
+  // binding's `\author` clears the authors queued before it, then hands the whole list to the reading in one
+  // `\lx@add@author@split` call, which cuts it at its `\and`s (Option C P2-1c, OXIDIZED_DESIGN_DIVERGENCES #993; it split
+  // by spelling at `\and`/`\And` before, as inst_support, OD #53; its `[marks]` are dropped either way) — the class's
+  // own, said with the API's primitives (OXIDIZED_DESIGN #920, #922; Perl inst_support.sty.ltxml:33-35 clears on every
+  // call). A `{CJK*}` name in the list closes a paragraph of the block, which is no group (2608.21138, events/mod.rs
+  // `paragraph_is_no_group`). inst_support's own `\author` keeps stacking, for the classes
   // that reach it through OmniBus. Defining it here makes this binding the owner of aa's `\author`, so its blocks are
   // keyed `aa.cls` and read by this binding's conventions (`ledger::note_binding_load`). The 16 aa census papers with
   // two calls (pop92b6: their second calls in comments or conditionals) change nothing.
   DefMacro!("\\author[]{}",
-    "\\lx@clear@creators[role=author]\\lx@splitting{\\lx@add@author@split}{\\and\\And}{#2}\\lx@author@trailing");
+    "\\lx@clear@creators[role=author]\\lx@add@author@split{#2}\\lx@author@trailing");
   // aa.cls:736-757 counts the `\institute`'s pieces at its `\and`s (`\aa@nbinstitutes`), and `\aainstitutename`
   // (:886-899) prints a sole institute unnumbered under the whole author row (`\ifnum\aa@nbinstitutes=1
   // \noindent\ignorespaces`), several each numbered: the sole one is every author's unless the class's own `\inst{n}`
