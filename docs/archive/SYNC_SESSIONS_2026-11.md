@@ -1886,7 +1886,17 @@ residual".
 - **Reviews:** revP24 NO-SHIP (B1, a separator glued to `\end{tabular}` lost its cut) → P24b; revGL1 NO-SHIP (a second label replaced the first's name) → GL1b. Two writer misreports were corrected by reviewers (P21b's second mechanism, P24's ink-span guess). revP21c missed P21c's box-paragraph scope: its minipage/parbox probes held no mark.
 - **BT1 parked:** the by-text Warning made precise, three NO-SHIPs, each a new way a name loses content silently: a link splitting it, a mark inside it, text after its last word. Branch `pk/BT1` `70430bd1b7` is kept; the base's overcounting Warning stays. The redesign (BT2) compares a name's written text with everything its segment prints.
 - **Holdout rule:** writer P21d ran a line count on the spent v3 holdout file (output discarded, no id seen); reported to the user, and the brief wording widened to "never pass the holdout file to any command in any form".
-- **The chain** (`chain/out/int158a/`): pending.
+- **The chain** (`chain/out/int158a/`, run after P21e and EJ1): gates 8067/8067, cortex 10/10, clippy 0, doc 0; A/B 28,354 papers,
+  25 changed, worse 0, E 45,818 → 45,818, F 172 → 172.
+  - Better: GL1's label into the contact's name (1004.2679, 1612.04174, 1810.01214, 1908.02033, 2206.00543, 2602.20199,
+    astro-ph0107243, hep-ex0412059, hep-ph9606235, nucl-th0009090); e-mails to their spelled owners (1704.03540,
+    1709.08471, 1911.10289, 2609.24676); P21c's `\small` on every name (2408.11004, 2509.22322, 2604.10287); EJ1's
+    duplicate e-mail notes removed (1605.09777 and 1902.06735, which int157a wrote twice; 1904.02213).
+  - int157a's output less the accepted trailing newline: 1406.5876, 2206.01959, 1904.07135. Lateral: 1407.3707 (one right
+    address each side, both losses counted). Load noise: 1307.6774 (W 147 → 146, as in int157a's chain).
+  - Stage2 0 creators changed; nets 136, worse 0; cost all within +0.06 % (1507.02068 +0.039 %, 1901.01540 +0.043 %,
+    2005.08745 +0.002 %, 2103.04797 +0.059 %, b5_fill1000 −0.031 %, hello −0.105 %).
+  - Manual sweep #172 G1-G4 0, G5 58 → 57.
 
 ## Bundle int157a — Option C P1 on both routes, separators by meaning, P2-0, the image before a URL
 
