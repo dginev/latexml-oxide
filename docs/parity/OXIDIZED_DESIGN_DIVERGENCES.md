@@ -1718,7 +1718,7 @@ run, `$\qquad$` count, and the space a name sets before its own note or `\footno
 around the whole is transparent, as for the "and" word. No `\thanks` boundary is a separator (simulated on 64 papers: 6-7
 wrong, none fixed whole). What the kernel read then does with a line is article's, including its misreadings:
 `Dr.\quad Ann Able`, `Ann Able\quad Ph.D.` and `J.\hspace{1pt}Smith` part as two (0 real cases in about 54k papers; RED
-`authblk_title_suffix_one_name_red`, `authblk_small_hspace_in_name_red`). Witnesses: 2610.06709 (`\qquad`), 2610.18435 (`\hspace{2.5em}`), 2610.28573 (`\quad\quad`),
+`authblk_title_suffix_one_name` (green since ST1), `authblk_small_hspace_in_name` (green since ST1)). Witnesses: 2610.06709 (`\qquad`), 2610.18435 (`\hspace{2.5em}`), 2610.28573 (`\quad\quad`),
 2610.06737, 2610.23936, 2605.10201 (one creator → 8, its legends read); 2609.17614, 2303.15964, 1509.08403, 2610.10873
 (`\\`); 2609.29752, 2610.11655, 2610.13276, 2610.24224 (the mark no creator); unchanged 2610.39888, 2610.04525,
 2610.19494, 2610.17900, 2610.03185. Guards `perfect_kernel_batch108a`; updated
@@ -1792,7 +1792,7 @@ stays there.**
   `article`: parted from the name it digests in the line's contact, where `\footnote` is `\lx@add@pubnote`. **Perl keeps it a
   note on the creator under authblk (2601.20363, run; a `pubnote` only without authblk), and so did base, inside the merged
   name.** The text is kept and the owner is lost, against charter §4's sole author; RED
-  `authblk_footnote_line_under_sole_author_red` (2601.20363, 2605.13069), for the Link step. 2610.07278's `pubnote`, an IEEE
+  `authblk_footnote_line_under_sole_author` (green since ST1) (2601.20363, 2605.13069), for the Link step. 2610.07278's `pubnote`, an IEEE
   copyright line, is right.
 - *Settled, not changed.* `zhanfa@` (2606.04547) is spelled by no name: base's holder was the order among misread names, and with
   `niwangze@` open (its author's row an affiliation in both) elimination holds. `\textsuperscript{*1}` asks for 1, so an entry
@@ -32266,7 +32266,7 @@ wrapper, a list the reader cannot part) stays as printed and is counted, once pe
 after the writer). A list after a depth-0 line break inside one font wrapper stays (1805.08616 unwarned, one line;
 2408.05517, 2609.38967 warned; #966's 2311.04121 exclusion). The
 `$^*$` legend read as a nameless creator beside unspelled list entries
-(`email_list_unspelled_entries_legend_becomes_creator_red.tex`) is unchanged.
+(`email_list_unspelled_entries_legend_becomes_creator.tex` (green since ST1)) is unchanged.
 
 **Reach (round 2, final).** The same A/B vs int138a: 23 papers changed their frontmatter, all better — round 1's 20
 plus three e-mails moved by the transliteration ruling (1502.02658 `akuepper@` to Andreas H.W. Küpper, astro-ph0611772
@@ -32604,7 +32604,7 @@ the raw macro would pass them alone. **Left, each a fallback (speed only):** `\n
 
 **The rehearsal's read budget** (R1's `gullet::read_budget`): 8,000,000 reads a run, 24,000,000 a conversion, a skip counted in `Warning:frontmatter:rehearsal_budget`; the data in the census. The content check's own rehearsals under `=2` (a block's own call, `ApiCall::inside_events`) read from an allowance of their own, one run's reads a conversion (`rehearsal::for_the_check`), and their skips are in no Warning (nothing written depends on them; guard `perfect_kernel_batchrc1::the_checks_rehearsals_leave_the_budget`). A block looping where nothing prints it no longer costs a conversion its limits. Guard `a_looping_block_ends_in_the_rehearsal_budget`.
 
-**Open:** the writer's second real digestion of a cut entry says the content's Error twice and moves auto-numbered `xml:id`s: RED `writer_second_digestion_says_an_error_twice_red`. A group no formula's alone, or going on after a mark away from a line's start, is uncut where the base cut it, nothing lost: RED `affiliation_cut_group_siblings_stay_uncut_red`. No Lua in a rehearsal can lose a cut: RED `rehearsal_no_lua_loses_a_cut_red`.
+**Since ST1:** the writer's second real digestion of a cut entry says the content's Error once (`writer_second_digestion_says_an_error_twice`, green; pdflatex's one ifthen error). **Open:** whether it still moves auto-numbered `xml:id`s is unguarded (the guard masks ids; revST1). A group no formula's alone, or going on after a mark away from a line's start, is uncut where the base cut it, nothing lost: RED `affiliation_cut_group_siblings_stay_uncut_red`. No Lua in a rehearsal can lose a cut: RED `rehearsal_no_lua_loses_a_cut_red`.
 
 ### 979. The reading's rules that move today's output, and a line the writer makes is cut of the addresses it took out (Perl: one creator per `@authorsplits` piece, no reading)
 

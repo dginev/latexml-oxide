@@ -2,6 +2,7 @@
 % witness: none (scratch names holding a setter's text globally occur only in non-frontmatter code in dev3's classes)
 % engines: 108b no Warning and no Info; "Lunar Institute" absent from the XML; pdflatex prints it
 % expect:  the `unread_store` Info names it
+% engines: int159a (ST1): INVALID as committed: `cscratch_tmp.cls` was never committed (pdflatex: "File `cscratch_tmp.cls' not found"), so OmniBus reads \address itself and "Lunar Institute" is kept; the mechanism is not exercised. RED until its class is restored
 \documentclass{cscratch_tmp}
 \title{A Title}\author{Ann Able}
 \address{Lunar Institute}

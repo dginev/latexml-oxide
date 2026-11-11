@@ -5,7 +5,7 @@
 % oracle:  pdflatex 0 errors: "A Title / Ann Able1" + footnote "1 Corresponding author: ann.able@lunar.org"
 % engines: rust 106s r2: 1 Warning naming "corresponding lunar org"
 % expect:  the class's label word "corresponding" in the class_text Info, the document's address words in the Warning
-% status: RED (106s residual — leave the \documentclass/\LoadClass files out of the author's text)
+% status:  RED (106s residual — leave the \documentclass/\LoadClass files out of the author's text) -> GREEN (perfect_kernel_batchst1::cut_runs_and_counts_read_as_printed, int159a; ST1: the output matched the expect on 140bbb3d67)
 \begin{filecontents*}[overwrite]{jcls.cls}
 \ProvidesClass{jcls}\LoadClass{article}
 \newcommand\corr[1]{\expandafter\gdef\csname nc@corr\endcsname{#1}}

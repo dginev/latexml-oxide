@@ -6,7 +6,7 @@
 % oracle:  pdflatex 0 errors: "Ann Bee1 and Carl Dee∗1" / "1Univ X" / "∗Email: wr@x.org" / footnote "∗Corresponding author."
 % engines: rust 106a r2: the address at the block as `<sup>∗</sup>wr@x.org` (nothing lost or misattributed)
 % expect:  0 errors, 0 warnings; wr@x.org on Carl Dee, named "Email: "
-% status: RED (synthetic; Bundle 4 residual — read the thanks note's implicit fnsymbol mark)
+% status:  RED (synthetic; Bundle 4 residual — read the thanks note's implicit fnsymbol mark) -> GREEN (perfect_kernel_batchst1::author_blocks_read_as_printed, int159a; ST1: the output matched the expect on 140bbb3d67)
 \documentclass{article}
 \usepackage{authblk}
 \title{T}

@@ -88,15 +88,12 @@ fn alpha_beta(ann: &str, bo: &str, bo_name: &str, cy: &str) -> String {
 /// one-line list, out of the authors' order, of names written with accent and letter commands only — `B\"acker`,
 /// `Wei{\ss}enborn`, `Hj\o rth`, `Fl\aa ten` (the author block's e-mail line reader, `NameKeys::of` over the source
 /// tokens). Red (int138a): the split list glued into Cy Coe's affiliation; the one-line list given out by position, each
-/// address to the wrong author. Repros sectioning-frontmatter/email_list_umlaut_transliteration_split_red,
+/// address to the wrong author. Repros sectioning-frontmatter/email_list_umlaut_transliteration_split,
 /// email_list_accent_command_transliteration.
 #[test]
 fn a_local_part_spells_its_author_through_the_transliteration() {
   assert_eq!(
-    creators_with(
-      repro!("email_list_umlaut_transliteration_split_red"),
-      (0, 0)
-    ),
+    creators_with(repro!("email_list_umlaut_transliteration_split"), (0, 0)),
     alpha_beta(
       r#"<text font="typewriter">ann.able@alpha.edu</text>"#,
       r#"<text font="typewriter">bo.baecker@alpha.edu</text>"#,
@@ -138,7 +135,7 @@ fn a_local_part_spells_its_author_through_the_transliteration() {
 /// block creator (OD #159) — three bare lines (each an entry line of its own, `entry_lines` joins them), four addresses
 /// for three authors, two unspelled. Red (int138a): the lines glued into the affiliation, 0 warnings; round 1 gave each
 /// unspelled entry to the block. The control, the same list on one line: the block's e-mail line reader gives `xq.zz@`
-/// to Bo Baker, as on int138a. Repros sectioning-frontmatter/email_list_split_unspelled_entry_glued_red,
+/// to Bo Baker, as on int138a. Repros sectioning-frontmatter/email_list_split_unspelled_entry_glued,
 /// email_list_domain_on_next_line, email_list_split_unspelled_entry_by_elimination, email_list_split_three_bare_lines,
 /// email_list_one_line_unspelled_entry_control.
 #[test]
@@ -151,7 +148,7 @@ fn a_split_address_list_is_read_whatever_its_entries_spell() {
     r#"<text font="typewriter">cy.coe@alpha.edu</text>"#,
   );
   assert_eq!(
-    creators_with(repro!("email_list_split_unspelled_entry_glued_red"), (0, 0)),
+    creators_with(repro!("email_list_split_unspelled_entry_glued"), (0, 0)),
     by_order
   );
 }

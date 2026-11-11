@@ -1,4 +1,4 @@
-% RED (rev107e2 finding 1, synthetic; 107e r2's isotope rule): a wrapped entry mark followed by a comma-joined address,
+% Was RED (rev107e2 finding 1, synthetic; 107e r2's isotope rule): a wrapped entry mark followed by a comma-joined address,
 %   `\textit{$^1$Univ A}, Rome $|$ \textit{$^2$Inst B}, Paris` (twin: `{\small $^1$Univ A}, Rome {\small $^2$Inst B},
 %   Paris`). 107e r1 cut both right; r2's rule (a wrapper is its entry's only when nothing but a separator follows it up
 %   to the next mark / break / paragraph end, `notes.rs` ~744-757) declines, and the run stays whole on Ann ("Univ A ,
@@ -8,6 +8,7 @@
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Lee1 and Bob Ray2 / 1Univ A, Rome | 2Inst B, Paris"
 % engines: rust 107e r2 (46908df2db): one entry on Ann, Bob none; 107e r1 (9aa48402bf): right
 % expect:  0 errors; Ann Lee: "Univ A, Rome"; Bob Ray (no stray 2): "Inst B, Paris"; no `|` in either
+% status:  RED -> GREEN (perfect_kernel_batchst1::cut_runs_and_counts_read_as_printed, int159a; ST1: the output matched the expect on 140bbb3d67)
 \documentclass{article}
 \begin{document}
 \title{T}

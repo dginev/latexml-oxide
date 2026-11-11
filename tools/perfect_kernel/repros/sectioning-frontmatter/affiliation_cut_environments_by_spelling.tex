@@ -7,7 +7,7 @@
 % engines: Perl has no cut. A macro pair, `\let` copies: E 1, W 1, the last cell "d" lost, on int142a and Z3r3 alike (false negatives). `\detokenize`, `\ifx`: the two entries one, nothing lost, E 0 (false positives, against int142a).
 %   The array in a formula: one entry on Z4a (its frames counted twice); the switch on, Z4a: a tabular's, a center's cells lost, `ff`'s piece replaced by "2 Univ Y", the array's "a" twice
 % expect:  0 errors, 0 warnings; affiliation "1 Univ X a b c d" and "2 Univ Y"; the other shapes two entries too
-% status:  RED (revZ3r2) -> GREEN (perfect_kernel_batchz4::an_environment_by_its_frames, OD #980)
+% status:  RED (revZ3r2) -> GREEN (perfect_kernel_batchz4::an_environment_by_its_frames, OD #980); renamed without `_red` (ST1)
 \documentclass{revtex4-1}
 \def\bx{\begin{tabular}{cc}}\def\ex{\end{tabular}}
 \let\bb\begin\let\ee\end

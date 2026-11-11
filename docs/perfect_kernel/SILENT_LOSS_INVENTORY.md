@@ -1028,7 +1028,7 @@ do not block the E/F rerun.
 
 - **Z14's REDs and follow-ups (revZ14r2, SHIP)** — OPEN.
 - (1) **An affiliation line's addresses come out but its label word stays**, glued across the `\\`: 2002.06945 reads `…Imperial College London, UKEmail` and declines (output byte-identical, correct); sibling `\IEEEauthorblockN{Ann Able, Bob Baker \IEEEauthorblockA{Univ A\\ Email: ann@a.org, bob@b.org}}` (pdflatex clean) is written at Z14, declined at Z14r2, equal to int143b.
-- Fix: take the label word with the addresses, as `address_runs` does for a names row; repro `sectioning-frontmatter/z14_affiliation_label_word_left_red.tex`.
+- Fix: take the label word with the addresses, as `address_runs` does for a names row; repro `sectioning-frontmatter/z14_affiliation_label_word_left.tex` (green since ST1).
 - (2) **The narrowed heading row needs a person cue on every piece** (`labels.rs` `later_line_is_names`): `Cat Cole$^1$\\ Authors: Ann Able and Bob Baker\\ $^1$Univ A` and `Editor: A. Able, Bob Baker` read one creator with the row as an affiliation, as int143b; repro `z14_heading_row_plain_names_red.tex`.
 - (3) `given_back` in `ab_audit fmshadow` carries no paper id per row: add one, so that the papers it fires on (3 in popZ01, 6 each on dev3 and devh10k) can be read
 - Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Z14's REDs and follow-ups (revZ14r2, SHIP)".
@@ -1038,7 +1038,7 @@ do not block the E/F rerun.
 - **Z14r3's REDs (revZ14r3, SHIP; the reading's repairs had their two fix rounds, so these go to the next reading batch)** — OPEN.
 - (1) **A surname glued to its address goes with it** (`resolver/lines.rs:477-486` `names_without_addresses`, this round): `\author{Ann Able(ann@a.org)}` reads as `Ann`; the writer declines, so the output is int143b's (Z14r2 wrote `Ann Able` + e-mail).
 - Fix: cut where the address starts inside its word, stepping back only over glued punctuation (a bar, an em dash, an opening parenthesis), never letters; repro `sectioning-frontmatter/z14r3_address_glued_to_a_surname_red.tex`.
-- (2) **Addresses glued by a dash or a comma** (earlier rounds; int143b the same): `Ann Able---ann@a.org` gives name `Ann`, e-mail `Able—ann@a.org` (`labels.rs` `plain_addresses` ~:1125), and the guard `an_address_glued_to_a_dash_leaves_the_name` pins the e-mail text with its dashes; `Ann Able,ann@a.org` makes a second creator `ann@a.org`; repros `plain_address_glued_by_a_dash_red.tex`, `plain_address_glued_by_a_comma_red.tex`.
+- (2) **Addresses glued by a dash or a comma** (earlier rounds; int143b the same): `Ann Able---ann@a.org` gives name `Ann`, e-mail `Able—ann@a.org` (`labels.rs` `plain_addresses` ~:1125), and the guard `an_address_glued_to_a_dash_leaves_the_name` pins the e-mail text with its dashes; `Ann Able,ann@a.org` makes a second creator `ann@a.org`; repros `plain_address_glued_by_a_dash_red.tex`, `plain_address_glued_by_a_comma.tex` (green since ST1).
 - (3) **Lines with the same text under two marks are one entry** (entries keyed by text; the any-order join can't use one twice, the take-out declines): Ann's spelled address stays in Cat Cole's affiliation; `an_only_carriers_address_beside_others_is_not_written` pins int143b's fallback as green; repro `z14r3_same_line_text_under_two_marks_red.tex`, with the OPEN `entry_address_owners` row (2403.12766).
 - Report `agent_reports/2026-11-07_revZ14r3_report.md`
 - Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Z14r3's REDs (revZ14r3, SHIP; the reading's repairs had thei".
@@ -1066,7 +1066,7 @@ do not block the E/F rerun.
 
 ### Z3: spans from the digested list, the rehearsal's isolation (int143b; OD #978) — the residual
 
-- **Z3: spans from the digested list, the rehearsal's isolation (int143b; OD #978) — the residual** (landed; the row verbatim in [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md)): RED `writer_second_digestion_says_an_error_twice_red`; `#[ignore]`d REDs of `perfect_kernel_batchz3`: `affiliation_cut_environments_by_spelling_red`, `affiliation_cut_group_siblings_stay_uncut_red`, `rehearsal_no_lua_loses_a_cut_red`.
+- **Z3: spans from the digested list, the rehearsal's isolation (int143b; OD #978) — the residual** (landed; the row verbatim in [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md)): RED `writer_second_digestion_says_an_error_twice` (green since ST1); `#[ignore]`d REDs of `perfect_kernel_batchz3`: `affiliation_cut_environments_by_spelling`, `affiliation_cut_group_siblings_stay_uncut_red`, `rehearsal_no_lua_loses_a_cut_red`.
 - Open: the rehearsal has no read budget yet (`rehearse`, `emitter::plan::cut` to take `gullet::read_budget` when R1 lands); a file only a rehearsal reads stays in `RAW_READ_PATHS`; package-level thread-locals not read one by one; the marked-lines path keeps a printed mark on `$\rm ^{1}$` lines (`aastex_affil_font_switched_marks_cut_with_their_lines`, Z6's); an entry cut at a mark a plain group's switch opens loses it (`{\it $^3$Univ Z}`, base the same: `block_line_mark_in_its_wrapper_whatever_prints_it`).
 - State: OPEN (residual)
 - Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Z3: spans from the digested list, the rehearsal's isolation ".
@@ -1182,7 +1182,7 @@ do not block the E/F rerun.
 
 ### Bundle 5's plan (landed as int139c) — the residual
 
-- **Bundle 5's plan (landed as int139c) — the residual** (landed; the row verbatim in [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md)): side RED `email_list_unspelled_entries_legend_becomes_creator_red`.
+- **Bundle 5's plan (landed as int139c) — the residual** (landed; the row verbatim in [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md)): side RED `email_list_unspelled_entries_legend_becomes_creator` (green since ST1).
 - State: OPEN (residual)
 
 ### 100b: one Kind for the addresses inside affiliation entries, one Link chain (OD #956; int129a) — the residual
@@ -1333,7 +1333,7 @@ do not block the E/F rerun.
 ### 106a: an address line kept as affiliation text (OD #966) — the residual
 
 - **106a: an address line kept as affiliation text (OD #966) — the residual** (landed; the row verbatim in [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md)): open: 2410.09681's template line, a line break inside a font wrapper (2311.04121), a phrase-led `\altaffiliation`; RED (rev106a2) the older route places by order.
-- REDs: `addr_line_authblk_two_carriers_line_marks_red` (the older route), `addr_line_authblk_thanks_requested_mark_red` (a `\thanks`-requested mark unread by `author_mark_keys`); left: an address inside a legend note (2312.10429, 2501.04244).
+- REDs: `addr_line_authblk_two_carriers_line_marks_red` (the older route), `addr_line_authblk_thanks_requested_mark` (green since ST1) (a `\thanks`-requested mark unread by `author_mark_keys`); left: an address inside a legend note (2312.10429, 2501.04244).
 - Also open: a phrase-led `\altaffiliation{Correspondence should be sent to a, b and c.}` (1209.3452); tagged runs `a@x (Matvey)` (2512.10975); `{a@mails., b@}tsinghua.edu.cn` (2602.07769); an affiliation the observer's writer makes after the flush (mn2e, 2008.08137); a template `{name.surname}@ 1polytechnique.edu` (2009.04283); e-mail contacts holding lists or names (2004.13933, 2005.04027, 2510.11067, 1512.01552, 2404.09958); class contacts other than affiliations (elsarticle 2310.13481, a `\thanks` 2509.07695, amsart `\address` glued to `\email` 2301.00107); unspelled addresses to the block (2608.22602's `chris241`, `chand158`); recorded: 1310.7913's unmarked `Corresponding Authors: a, b` names the e-mails rather than becoming a note (#961 needs a printed mark).
 - State: OPEN (residual)
 - Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "106a: an address line kept as affiliation text (OD #966) — t".
@@ -1345,7 +1345,7 @@ do not block the E/F rerun.
 - a `\thanks` in the third of several still recurses;
 - a class word equal to a document word counted the document's;
 - the placeholder ruling.
-- Those REDs: `check_class_let_thanks_gobble_red`, `check_class_let_thanks_footnote_red`, `check_shipped_class_text_is_not_the_authors_red`, `check_document_sty_macro_body_counts_red`.
+- Those REDs: `check_class_let_thanks_gobble_red`, `check_class_let_thanks_footnote_red`, `check_shipped_class_text_is_not_the_authors` (green since ST1), `check_document_sty_macro_body_counts_red`.
 - The sibling: opendatalab's `\let\oldmaketitle\maketitle` (2601.09733).
 - State: OPEN (residual)
 
@@ -1369,7 +1369,7 @@ do not block the E/F rerun.
 ### 107a: an address spells its author by transliteration — the residual
 
 - **107a: an address spells its author by transliteration — the residual** (landed; the row verbatim in [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md)): left: a list after a depth-0 break inside one font wrapper (2408.05517, 2609.38967, 1805.08616).
-- RED `email_list_unspelled_entries_legend_becomes_creator_red` unchanged.
+- RED `email_list_unspelled_entries_legend_becomes_creator` (green since ST1) unchanged.
 - State: OPEN (residual)
 
 ### 107b: a names list not parted (OD #897 "107b") — the residual
@@ -1377,7 +1377,7 @@ do not block the E/F rerun.
 - **107b: a names list not parted (OD #897 "107b") — the residual** (landed; the row verbatim in [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md)): `\mbox{S.~Burke-Spolaor,$^{12,13}$}` keeps the comma (1809.10744);
 - a `\shortstack` and the tabular/minipage blocks stay one author;
 - REDs `author_row_of_name_shaped_institutions_red`, `author_space_tie_between_two_names_red`.
-- RED `author_sub_lettered_mark_shown_on_name_red` (1202.2048).
+- RED `author_sub_lettered_mark_shown_on_name` (green since ST1) (1202.2048).
 - Also 1505.05811's empty-mark `${}^{\mathsf{}}$` continuation lines go to the block creator, no word lost (F4).
 - State: OPEN (residual)
 
@@ -1397,8 +1397,8 @@ do not block the E/F rerun.
 
 ### 107e: a marked run cut whatever parts it (OD #954) — the residual
 
-- **107e: a marked run cut whatever parts it (OD #954) — the residual** (landed; the row verbatim in [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md)): open: 2605.25195's legend (the writer declines its URL line's owner); REDs `cut_run_wrapped_entry_then_comma_address_red`, `cut_run_group_entry_then_comma_address_red`.
-- Also `cut_run_legend_after_wrapped_entry_ending_in_a_group_red`, `cut_run_nested_wrapper_per_entry_red`.
+- **107e: a marked run cut whatever parts it (OD #954) — the residual** (landed; the row verbatim in [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md)): open: 2605.25195's legend (the writer declines its URL line's owner); REDs `cut_run_wrapped_entry_then_comma_address` (green since ST1), `cut_run_group_entry_then_comma_address` (green since ST1).
+- Also `cut_run_legend_after_wrapped_entry_ending_in_a_group` (green since ST1), `cut_run_nested_wrapper_per_entry` (green since ST1).
 - Also open: the kernel alone welds a legend line into the entry above it after any run (base the same); plain isotope forms `$^{1}$Lab for $^{3}$He Studies` still cut (base the same); an entry led by two marks labelled by its first only (2411.03010); the unmarked last name revtex prints the head's number on holds nothing (2109.01501's Oshiyama, 1903.07834's Matos-Abiague); the kernel cut shows no mark and repeats no lead declaration (2603.19086, 2609.20163); consecutive marked/unmarked `\affiliation` calls (gr-qc0611116); PoS `\footnotesize` group in `\author` (1509.01480); 2309.12239's two unspelled addresses on the last name (ADDR-b); pre-existing: a stray space before a comma after a wrapper, a legend line directly under the names becomes extra creators.
 - State: OPEN (residual)
 - Full row (verbatim): [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "107e: a marked run cut whatever parts it (OD #954) — the res".
@@ -1421,7 +1421,7 @@ do not block the E/F rerun.
 
 ### 108a: authors merged under authblk (2610.06709; OD #52(h)) — the residual
 
-- **108a: authors merged under authblk (2610.06709; OD #52(h)) — the residual** (landed; the row verbatim in [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md)): left: `\footnote` under a sole authblk author (2601.20363, 2605.13069; RED `authblk_footnote_line_under_sole_author_red`); 2505.05785 (RED `email_spelled_part_of_a_hyphen_name_red`); 2606.04547, 2412.13509; REDs `authblk_institution_line_before_affil_red`, `authblk_legend_swallows_contact_lines_red`, `authblk_title_suffix_one_name_red`, `authblk_small_hspace_in_name_red`.
+- **108a: authors merged under authblk (2610.06709; OD #52(h)) — the residual** (landed; the row verbatim in [`archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md)): left: `\footnote` under a sole authblk author (2601.20363, 2605.13069; RED `authblk_footnote_line_under_sole_author` (green since ST1)); 2505.05785 (RED `email_spelled_part_of_a_hyphen_name_red`); 2606.04547, 2412.13509; REDs `authblk_institution_line_before_affil_red`, `authblk_legend_swallows_contact_lines_red`, `authblk_title_suffix_one_name` (green since ST1), `authblk_small_hspace_in_name` (green since ST1).
 - RED `authblk_link_macro_under_names_stays_merged_uncounted_red` (2601.07891); the trade, recorded: "as many left, in order" requires the order to hold, so out-of-order lists go to the block (2606.04646, 2605.26032, 2102.08716); int140a's open: 2511.07187 (`Name -- \url{…}\\ …`: 3 of 4 authors read as affiliation lines, no self-check fires).
 - Also int140a's open: cpc-hepnp's `1;1)` could part into its affiliation and its note instead of counting a lost mark (#431); an e-mail keeps a glued mark in its text, `cak29@mail.aub.edu *` (2609.25833), `*archnalakhani@` (1201.5255).
 - State: OPEN (residual)

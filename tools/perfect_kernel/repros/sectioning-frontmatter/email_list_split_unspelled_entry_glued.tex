@@ -1,8 +1,8 @@
-% RED (html_feedback #7233, synthetic): a `{…}@domain` list split over two `\texttt` lines (`\\` between) with one
+% Was RED (html_feedback #7233, synthetic): a `{…}@domain` list split over two `\texttt` lines (`\\` between) with one
 %   entry that spells no author (`xq.zz`) is not read as addresses at all: both lines stay glued into the last
 %   affiliation, "Department of Physics, University of Beta {ann.able,xq.zz, cy.coe}@alpha.edu", every e-mail
 %   unlinked, no Warning. The one-line list with the same entry reads right (each spelled address on its author), so
-%   only the split-list path lacks the per-entry fail-safe. Twin of email_list_umlaut_transliteration_split_red.tex.
+%   only the split-list path lacks the per-entry fail-safe. Twin of email_list_umlaut_transliteration_split.tex.
 % witness: html_feedback #7233 (the split Jülich list; its unspelled entry was `mo.schaeffler`)
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: the list printed on two lines under the two affiliations
 % engines: rust int138a (106t on a783b56cce): 3 creators, Cy Coe's affiliation holds the whole list, 0 warnings; rust
@@ -13,7 +13,7 @@
 %   author-order list — three addresses for three authors, `ann.able` and `cy.coe` at their authors' places
 %   (OXIDIZED_DESIGN_DIVERGENCES #805), so `xq.zz`, second, is Bo Baker's; else elimination (77p r4); else the block
 %   (OD #159's block creator). Round 1 expected the block, skipping the order and elimination steps.
-% status:  RED (int138a) -> GREEN (107a)
+% status:  RED (int138a) -> GREEN (107a); renamed without `_red` (ST1)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage[T1]{fontenc}
