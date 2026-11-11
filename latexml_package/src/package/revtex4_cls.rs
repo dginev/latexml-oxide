@@ -261,8 +261,12 @@ pub(crate) fn switch_off_author_block_after_maketitle() -> Result<()> {
   }
   DefMacro!(
     "\\lx@revtex@repeated@author",
-    r"\let\and\relax\let\affiliation\@gobble\let\email\@gobble\let\thanks\@gobble\@gobble"
+    r"\let\and\relax\let\affiliation\lx@revtex@repeated@gobble\let\email\lx@revtex@repeated@gobble\let\thanks\lx@revtex@repeated@gobble\@gobble"
   );
+  // (the repeat's contacts the content check counts: a word the output lacks raises its Warning, 1206.0114, 1903.12442)
+  DefPrimitive!("\\lx@revtex@repeated@gobble{}", sub[(content)] {
+    fm_record_switched_off_call(&content);
+  });
   DefPrimitive!("\\lx@revtex@maketitle@setters", sub[_args] {
     if !lookup_bool("\\maketitle:redefined") && lookup_definition(&T_CS!("\\frontmatter@maketitle"))?.is_none() {
       let_i(&T_CS!("\\author"), &T_CS!("\\lx@revtex@repeated@author"), None);

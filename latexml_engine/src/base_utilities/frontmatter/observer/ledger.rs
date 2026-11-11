@@ -311,8 +311,9 @@ pub(in crate::base_utilities) struct Ledger {
   /// the contacts recorded that print nothing, in call order ([`UnprintedCall`])
   pub unprinted:  Vec<UnprintedCall>,
   /// the contents' texts ([`content_text`]) of the queued creator calls the emitter took out of the queue that no
-  /// recorded call is (a stand-in binding's copy's, [`records_now`]), in queue order: what the content check counts them
-  /// by (`emitter::emit::emit_commands`, `resolver::placed::content_check`)
+  /// recorded call is (a stand-in binding's copy's, [`records_now`]), in queue order, and the calls a class switched off
+  /// ([`record_switched_off_call`]): what the content check counts them by (`emitter::emit::emit_commands`,
+  /// `resolver::placed::content_check`)
   pub unrecorded: Vec<ContentText>,
   /// what a list setter call the emitter wrote replaces as its clear (`\lx@clear@frontmatter{ltx:contact}[role=affiliation]`)
   /// would at the block, which pdflatex never prints: an affiliation call queued before the block (its ledger index, no
@@ -1277,6 +1278,16 @@ pub(in crate::base_utilities) fn record_author_body_clear() {
 pub(in crate::base_utilities) fn record_author_body_end() {
   if records_now() {
     with_ledger(|ledger| ledger.author_body.1 = ledger.entries().len());
+  }
+}
+
+/// Record the argument of a call a class switched off after its title block (REVTeX's repeated author block,
+/// revtex4_cls.rs): the content check counts its text as printed, so a word the output lacks is counted, not silent
+/// (1206.0114, 1903.12442); a call repeating an earlier one's words adds none.
+pub fn record_switched_off_call(content: &Tokens) {
+  if records_now() {
+    let text = content_text(content);
+    with_ledger(|ledger| ledger.unrecorded.push(text));
   }
 }
 

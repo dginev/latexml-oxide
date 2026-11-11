@@ -1,11 +1,13 @@
 % mechanism: the live setters after `\maketitle` switch off at the repeated block's first `\author` (revtex4_cls.rs
 %   `switch_off_author_block_after_maketitle`): the lone `\affiliation` before it is kept for both authors, the block's
-%   own `\affiliation`, `\email` and names drop (they repeat printed text); its `\title` prints as text, as int159b
+%   name and contacts drop, its new words counted by the frontmatter content check's Warning (as 1206.0114's);
+%   its `\title` prints as text, as int159b
 % witness: synthetic (1309.4768's lone affiliation with 1801.07635's supplement block)
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "T / Ann Able and Bob Baker / Text. / 2 / More."
 % engines: rust int159b: 0 errors, both authors hold Univ X and Univ W, Ann also ann@w.org, the body "Text. Supplement
-%   Ann Able More."; int160b (RB1): no affiliation, the body "Text. More.". RB1c: as expected
-% expect:  0 errors, 0 warnings; Ann Able (Univ X, Town); Bob Baker (Univ X, Town); the body "Text. Supplement More."
+%   Ann Able More."; int160b (RB1): no affiliation, the body "Text. More.", 0 warnings. RB1c: as expected
+% expect:  0 errors, 1 warning ("Frontmatter content check: 4 words … missing …: Hamlet Univ W ann@w.org."); Ann Able
+%   (Univ X, Town); Bob Baker (Univ X, Town); the body "Text. Supplement More."
 % status:  GREEN
 \documentclass[aps,prl]{revtex4-2}
 \begin{document}

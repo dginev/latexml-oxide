@@ -1,13 +1,15 @@
 % RED (RB1c): a block repeated after `\maketitle` is switched off from its first `\author` on (revtex4_cls.rs
 %   `switch_off_author_block_after_maketitle`), also where its calls carry words the first block lacks: a `\thanks`
 %   and a variant address are lost silently. pdflatex prints none of the block (revtex4-2.cls:2670-2684), but authored
-%   text is kept (FIDELITY_CHARTER §2). The fix needs a second mechanism: match the repeat to the creators it repeats
-%   and keep (or count by a Warning) what it does not repeat.
+%   text is kept (FIDELITY_CHARTER §2). Since RB1c the loss is counted: the repeat's switched-off calls feed the
+%   frontmatter content check (`fm_record_switched_off_call`), whose Warning names the words the output lacks. The fix
+%   needs a second mechanism: match the repeat to the creators it repeats and keep what it does not repeat.
 % witness: 1206.0114 (the repeat's `\thanks` "To whom correspondence…"), 1903.12442 (the repeat's `\address` "Ny
 %   Munkegade 120, DK 8000 Aarhus C")
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "T / Ann Able / Univ X, Town / Text. / 2 / More."
 % engines: rust int159b: 0 errors; Ann Able holds both addresses, the body "Text. Supplement Ann Able Corresponding
-%   author. More."; int160b (RB1): 0 errors, 0 warnings, the body "Text. More."; RB1c: the body "Text. Supplement More."
+%   author. More."; int160b (RB1): 0 errors, 0 warnings, the body "Text. More."; RB1c: the body "Text. Supplement More.",
+%   1 Warning "Frontmatter content check: 8 words … missing …: 1 author Corresponding Main Street Town Univ X."
 % expect:  "Corresponding author." and "Univ X, Main Street 1, Town" kept (or their loss counted by a Warning); the
 %   repeated name not printed
 % status:  RED
