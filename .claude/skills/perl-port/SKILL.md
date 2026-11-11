@@ -57,6 +57,25 @@ WISDOM #38):
   real gate (e.g. `hmode+vskip: head_for_vmode` — `\vskip` ends a paragraph only
   *in horizontal mode*), which tells you which state must be true upstream.
 
+- **Where Perl approximates TeX, follow TeX in both.** BM (Bruce Miller, LaTeXML's author, Q&A 2026-11-05): Perl
+  rarely traded fidelity for speed; its divergences mostly come from not understanding what TeX does, or from not
+  finding readable code that does it. Fix toward TeX, and add the Perl side to the upstream patch list
+  (`~/data/pk_agents/main/bruce_qa/ACTIONS.md` QA80; "We take patches!").
+
+### 1c — The shape of a binding (BM's priorities)
+
+1. Its interface matches the package's definitions (arguments, mode, the internal macros other packages read), and the
+   output is reasonable.
+2. Definitions that carry semantics become specific elements (constructors), or an annotation (`class`, `role`).
+3. Reversion gives user-level macros and their arguments, never `\lx@` internals.
+4. A lock is the last resort, against redefinitions that bypass the semantic macro; `\let` in a group and wrapping
+   patches (`\pretocmd`, `\apptocmd`, `\g@addto@macro`) still take effect.
+
+The ideal binding loads the real package and overrides only the macros that carry semantics; with no semantics, the raw
+package alone. Where TeX reads irregularly (`\hbox` takes `\bgroup`; one argument changes how the next is read), mirror
+TeX's reading: a user-facing macro expanding to an internal `\lx@…` constructor. Use the definers wherever they fit.
+Comments stay short: one or two lines, plus the Perl line range and witness ids.
+
 ## 2 — Find the Rust home: `docs/parity/ORGANIZATION.md`
 
 It maps each Perl `.pool.ltxml` → `latexml_engine/src/<file>.rs` (38 of 40 are
