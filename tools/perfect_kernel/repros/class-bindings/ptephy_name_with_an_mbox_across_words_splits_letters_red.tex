@@ -1,0 +1,19 @@
+% mechanism: an `\mbox` spanning a word break inside a ptephy name: the token writer separates the box's text with
+%   spaces ("An n Ab le Cole") (ptephy_cls.rs `\name`; revBT1c pre-existing)
+% witness: synthetic (revBT1c; no census paper by shape)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, 1304.2086's ptephy.cls, a stand-in PDF for its logo graphic `newlogo`)
+%   0 errors: "Ann Able Cole1", "1 Univ X"
+% engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 0 warnings; creator "An n Ab le Cole" (Univ X), uncounted;
+%   perl not run
+% expect:  0 errors, 0 warnings; creator "Ann Able Cole" (Univ X)
+% status:  RED (int158a; RR1 gap 7)
+% preload: ar5iv.sty
+\documentclass{ptephy}
+\begin{document}
+\title{T}
+\author{\name{An\mbox{n Ab}le Cole}{1}
+}
+\address{\affil{1}{Univ X}}
+\maketitle
+Text.
+\end{document}

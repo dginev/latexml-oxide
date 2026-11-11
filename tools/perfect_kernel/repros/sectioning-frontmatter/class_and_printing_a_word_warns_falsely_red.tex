@@ -1,0 +1,27 @@
+% mechanism: a class whose `\and` prints a word (`\def\and{\unskip\ und\ \ignorespaces}`) inside an `\address` line:
+%   the content check counts "und" as a word the author blocks do not print, though the PDF prints it (a
+%   false Warning; revP26 probe c3/w). The same `\def` in a document preamble gives no Warning (the address
+%   is body text)
+% witness: synthetic (revP26); by shape 2506.20056, 2509.05738, 2510.17333 define `\and` as " und " under ngerman
+%   only, and are English
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Univ A, Town und Univ B, City", "Ann Able"
+% engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 1 warning ("1 words or addresses appear in the placed
+%   frontmatter more often than the author blocks print them: und"); creator Ann Able with the address "Univ A,
+%   Town und Univ B, City"; perl not run
+% expect:  0 errors, 0 warnings; creator Ann Able with the address "Univ A, Town und Univ B, City"
+% status:  RED (int158a; RR1 gap 25)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{ipword.cls}
+\ProvidesClass{ipword}
+\LoadClass{article}
+\def\and{\unskip\ und\ \ignorespaces}
+\newcommand\address[1]{\par{\small\begin{tabular}[t]{c}#1\end{tabular}}\par}
+\end{filecontents*}
+\documentclass{ipword}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\address{Univ A, Town \and Univ B, City}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,21 @@
+% mechanism: a `$^{1}$` inside ptephy's `\name{…}` is written into the name with the `{marks}` argument's text: the
+%   token writer copies the mark's text (ptephy_cls.rs `\name`, the emitter's by-tokens name; BT1c report
+%   SYNC note)
+% witness: synthetic for ptephy; the same mark text in a name on the spconf `\name` route: 1707.04373 ("Yi Liu 1",
+%   "Liang He 1", …)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, 1304.2086's ptephy.cls, a stand-in PDF for its logo graphic `newlogo`)
+%   0 errors: "Ann Able11,∗ and Bob Baker2,†", "1 Univ X", "2 Univ Y"
+% engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 1 warning (Bob Baker's plain-text overcount); creators
+%   "Ann Able 1 1,∗" (Univ X), "Bob Baker" (Univ Y): the marks' text in Ann's name, uncounted; perl not run
+% expect:  0 errors; creators Ann Able (Univ X), Bob Baker (Univ Y); no mark text in a name
+% status:  RED (int158a; RR1 gap 3)
+% preload: ar5iv.sty
+\documentclass{ptephy}
+\begin{document}
+\title{T}
+\author{\name{Ann Able$^{1}$}{1,\ast} and \name{\fname{Bob} \surname{Baker}}{2,\dag}
+}
+\address{\affil{1}{Univ X}\affil{2}{Univ Y}}
+\maketitle
+Text.
+\end{document}

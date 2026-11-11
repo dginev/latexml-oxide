@@ -1,0 +1,28 @@
+% mechanism: a class's `\coauthor`/`\affil` appending `\and <name>` and `\\<line>` to `\@author` without `\author`:
+%   everything after the `\author` call is lost (frontmatter_stores.rs `author_tail_calls`, :7471; the P26
+%   report's minimal input, probe p6)
+% witness: 2511.15315 (an appended tail lost); synthetic class
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: two columns "Alice A | Bob B" over "Inst X | Inst Y"
+% engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 1 warning ("The title page prints 1 word(s) … does not
+%   hold: inst"); one creator Alice A with no affiliation: "Inst X", "Bob B" and "Inst Y" lost, counted as 1
+%   word; perl not run
+% expect:  0 errors, 0 warnings; creators Alice A (Inst X), Bob B (Inst Y)
+% status:  RED (int158a; RR1 gap 24c)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{lxauthtaill.cls}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{lxauthtaill}
+\LoadClass{article}
+\newcommand\affil[1]{\g@addto@macro\@author{\\#1}}
+\newcommand\coauthor[1]{\g@addto@macro\@author{\and #1}}
+\end{filecontents*}
+\documentclass{lxauthtaill}
+\begin{document}
+\title{T}
+\author{Alice A}
+\affil{Inst X}
+\coauthor{Bob B}
+\affil{Inst Y}
+\maketitle
+Body.
+\end{document}

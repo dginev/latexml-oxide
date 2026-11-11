@@ -1,0 +1,17 @@
+% mechanism: an amsart `\author{\parbox{…}{… Ann Able\textsuperscript{1}\endgraf Univ X\endgraf\texttt{…}}}`: the
+%   box's paragraphs are glued, so the name runs into the address and the address into the e-mail (revP21e
+%   pre-existing, the same on int157a)
+% witness: synthetic (revP21e)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "ANN ABLE1", "UNIV X", "ANN@X.ORG"
+% engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 1 warning ("writes \"Ann Able1Univ\" as its plain text");
+%   creator "Ann Able1Univ" with an e-mail "Xann@x.org"; perl not run
+% expect:  0 errors, 0 warnings; creator Ann Able with Univ X and e-mail ann@x.org
+% status:  RED (int158a; RR1 gap 12)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{\parbox{0.8\textwidth}{\centering Ann Able\textsuperscript{1}\endgraf Univ X\endgraf \texttt{ann@x.org}}}
+\maketitle
+Text.
+\end{document}

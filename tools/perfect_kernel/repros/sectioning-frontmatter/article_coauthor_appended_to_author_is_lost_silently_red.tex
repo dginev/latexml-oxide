@@ -1,0 +1,25 @@
+% mechanism: a macro appending `\and <name>` to `\@author` without `\author` (`\g@addto@macro\@author`): the stores
+%   keep only the `\author` call's text, so the appended column is lost (frontmatter_stores.rs
+%   `author_tail_calls`, :7471), and the title-page check glues the words on either side of `\and` into one
+%   (title_page_check.rs:1756, an Info `class_text` "xbob"), so the loss is counted by nothing (P26 report,
+%   revP26)
+% witness: 2511.15315 (procdoc2/authblk: `\g@addto@macro\@author{\\[0.5em]\small\texttt{…}, …}` appends three e-mails;
+%   int158a holds none, the check counts 2 words "ucl uk"); classes defining such an appender: jaa.cls,
+%   pramana.cls `\addauthor` (1812.09143, 2409.20452 ship it, unused)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: two columns "Alice A | Bob B" over "Inst X | Inst Y"
+% engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 0 warnings; one creator Alice A (Inst X): "Bob B" and
+%   "Inst Y" lost, uncounted; perl not run
+% expect:  0 errors, 0 warnings; creators Alice A (Inst X), Bob B (Inst Y)
+% status:  RED (int158a; RR1 gap 24)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\newcommand\coauthor[1]{\g@addto@macro\@author{\and #1}}
+\makeatother
+\begin{document}
+\title{A Title}
+\author{Alice A\\Inst X}
+\coauthor{Bob B\\Inst Y}
+\maketitle
+Body.
+\end{document}
