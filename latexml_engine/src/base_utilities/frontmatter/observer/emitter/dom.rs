@@ -65,14 +65,9 @@ pub(super) struct Front {
   pub pubnotes: Vec<String>,
 }
 
-/// Text compared by its letters and digits alone, lowercased (the deleted `ab_audit fmshadow`'s `norm`).
-pub(super) fn norm(text: &str) -> String {
-  text
-    .chars()
-    .filter(|c| c.is_alphanumeric())
-    .flat_map(char::to_lowercase)
-    .collect()
-}
+// (text compared by its letters and digits alone, lowercased: the resolver's, which reads an entry's written span by it,
+// `resolver::entry_span_in`)
+pub(super) use super::super::resolver::norm;
 
 pub(super) fn is(node: &Node, qname: &str) -> bool {
   node.get_type() == Some(NodeType::ElementNode) && document::get_node_qname(node) == pin(qname)

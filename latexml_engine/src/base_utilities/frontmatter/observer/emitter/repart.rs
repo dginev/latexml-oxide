@@ -9,17 +9,14 @@ use super::{
   super::{
     events::{EventKind, SepKind},
     ledger::{Entry, Outcome},
-    resolver::read_events,
+    resolver::{entry_span_in, read_events},
   },
   dom::norm,
   plan::block_span_tokens,
   *,
 };
 
-/// The span of a block's entry the reading keys `key`, its source `span` its first event's (an entry of several pieces,
-/// `$^1$Department of Physics, Univ X, Japan`, is sourced at its first Name: 2307.03384): through the events printed
-/// after it, until their ink joined is the entry's text — over the lines an unmarked line continued — `None` when it
-/// never is (a note, a mark, or other ink first).
+/// The span of a block's entry the reading keys `key` ([`entry_span_in`] on the block's events at ledger index `index`).
 pub(super) fn entry_span(index: usize, span: (u16, u16), key: &str) -> Option<(u16, u16)> {
   with_ledger(|ledger| {
     let Some(Entry::Author(block)) = ledger.entries().get(index) else {
@@ -28,29 +25,7 @@ pub(super) fn entry_span(index: usize, span: (u16, u16), key: &str) -> Option<(u
     let Outcome::Events { events, .. } = &block.outcome else {
       return None;
     };
-    let first = events
-      .iter()
-      .position(|e| e.kind != EventKind::Layout && e.span.is_some_and(|s| s.0 == span.0))?;
-    let (mut joined, mut end) = (String::new(), span.1);
-    for event in &events[first..] {
-      match &event.kind {
-        EventKind::Name | EventKind::Contact => joined.push_str(&norm(&event.text)),
-        // (the word "and" inside an entry is the entry's: `Computer Science and Engineering`, 1304.1574)
-        EventKind::Sep(SepKind::Word(word)) => joined.push_str(&norm(word)),
-        EventKind::Sep(_) | EventKind::Break | EventKind::Layout => continue,
-        _ => return None,
-      }
-      if let Some((_, e)) = event.span {
-        end = end.max(e);
-      }
-      if joined == key {
-        return Some((span.0, end));
-      }
-      if !key.starts_with(&joined) {
-        return None;
-      }
-    }
-    None
+    entry_span_in(events, span, key)
   })
 }
 

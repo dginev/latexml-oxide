@@ -33774,10 +33774,8 @@ one; a picture leading an affiliation line moved after it, its markup lost.
 **Left** (pre-existing, recorded, not changed): a LaTeX `picture` environment in `\author` is read as text, as before
 (`\begin{picture}(10,10)\put(0,0){Qwerty}\end{picture}` → the name "Ann Able Qwerty", the same words pdflatex prints). A
 picture inside a name (`Ann \tikz\draw…; Able`) parts it in two creators (the base: 3 creators, 1 Error). An image in
-a later line before ink that is not a run of text (a mark, an address, a URL) stays a Layout event nothing writes, lost
-silently: 2503.08161's `\includegraphics{hf-logo.png} \texttt{\small\url{…}}`; a note for it, in its place or at its
-line's end, made two such lines' URLs one affiliation, their markup lost (2505.21327), so it was not taken (RED
-`sectioning-frontmatter/fm_image_before_url_is_a_note`). The HTML of these notes is #990.
+a later line before a mark or an address stays a Layout event nothing writes, counted (below). The HTML of these notes is
+#990.
 
 Repros `sectioning-frontmatter/fm_picture_text_in_author_is_a_note`, `fm_picture_textless_in_author_is_a_note`,
 `fm_picture_textless_in_thanks_stays_in_note`, `fm_picture_glued_to_a_separator_ends_the_note`,
@@ -33798,7 +33796,52 @@ e-mails with 0 Warnings. The readers now walk a whatsit's printed properties (`u
 each author's e-mail, and the content check's one Warning on the brace-group spelling, the unboxed line's too (repro
 `sectioning-frontmatter/fcolorbox_email_line_in_author`; guard `perfect_kernel_batchcr10b::fcolorbox_email_line_in_author`).
 
-**Known silent loss (review revCR8c finding 2; pre-existing, the base drops it too):** an image on a later line whose next event is not a run of text (before a URL, a mark or an address) stays a Layout event no written entry covers (`events/mod.rs` `place_pictures`, the `let … else` branch ~2645-2656), and `resolver/words.rs` `lost_inks` compares words only, so nothing counts it: 2503.08161's `hf-logo.png` (RED `fm_image_before_url_is_a_note`). A count of every Layout image left (tried, reverted: `scratch_CR8c/image_warning_attempt.patch`) also flags an icon the URL contact writes with its link (`perfect_kernel_batch77y::icon_parted_from_its_link_goes_with_it`, 2505.21327's `\huggingface` logos), so the count needs the written entries' span coverage, not the word check — open, in the silent-loss inventory.
+**An image before a URL, a mark or an address (IMG1, IMG1b, IMG1c; reviews revCR8c finding 2, revIMG1, revIMG1b).** An image leading a
+link on a later line — a `role="url"` Contact event, `\url` or `\href` — past font switches and any gap (a space,
+`\quad`, `\hspace{3cm}`, however wide, and fill glue: `\hfill`, `\hspace{\fill}`, `\hskip 0pt plus 1fil`) is that
+link's: `place_pictures` grows the contact's span over it (the image stays an event of its own), and the contact is
+written from its tokens with the icon before the link, as pdflatex prints it — 2503.08161's `\includegraphics{hf-logo.png} \texttt{\small\url{…}}` (its four URL copies) and 2601.17879's
+`\github \quad \url{…}`, both dropped with 0 Warnings before; 2505.21327's `{\github\ \texttt{\url{…}}}` lines, which a
+note in place merged into one affiliation (CR8c, reverted), are byte-identical. An e-mail printed as a link
+(`\href{mailto:…}{…}`, `\url{ann@x.org}`) is such a link, so a photo before it is written inside its `<contact
+role="email">`: the content kept, pdflatex printing the two side by side as for any link (repro
+`fm_photo_before_mailto_is_in_the_email`, a known shape, catalog only). Fill glue parts the two in print only by the
+column's slack (pdflatex: the image at the line's left edge and the link at its right when a wider line sets the column,
+side by side when the image's line is the widest); that offset is a placement detail, so the image stays with the link,
+content before placement (review revIMG1b finding 1; IMG1b had counted the `\hfill` shape and lost the image, while
+`\hspace{\fill}` still joined; repro `fm_image_hfill_before_url_is_kept`). One leading a mark, an e-mail not printed as a link
+(`\texttt{ann@x.org}`) or an address has no place: a note there made the mark-led affiliation its plain text (+2
+Warnings), and a run printing an address is written as the e-mail's text, so `place_pictures` joins no address run. Such
+a picture is counted: an image has no word for the word check (`lost_inks`), so the check has a picture half, span
+coverage — `Written::unwritten_pictures` counts every image or picture note of a block whose span lies inside no written
+item's span (items a ruling dropped aside; no span, counted), and `emit::warn_unwritten_pictures` raises one Warning per
+block ("holds no place for N picture(s) its author block prints; they are lost") unless the block is written whole. An
+item's span there is the span the emit writes it from, its entry's (`resolver::words::entry_span_in`, the emitter's
+`repart::entry_span` reads the same), read by the emit's own key (`plan::written_keys`: an ORCID by its identifier, a
+picture note by its place; review revIMG1b finding 2): an affiliation running on past an image to a link, `Zebra University,
+\includegraphics{…} \url{…}`, holds the image (review revIMG1 finding 1: its source span alone gave a false loss Warning).
+It reads the items written, not the join: `Web: \includegraphics{…} \url{…}` is written as one affiliation holding the
+image, and the link label pass (`insert::kind_link_and_grade_contacts`, `strip_before_link`) then strips it with the
+label's text — counted there by its own Warning ("drops N picture(s) printed between the label … and its link"), each
+picture once, a `ltx:graphics` inside a `ltx:picture` its picture's (review revIMG1b finding 3); keeping
+it in the contact is that pass's change, proposed apart. Routes the check does not see, enumerated from `check_blocks` (it walks
+`live_blocks`' `Outcome::Events` author blocks, their top-level events) and from the emit's item writers (`emit.rs`
+`item_call`'s text branches): (1) an image a later line's run of text joins (`place_pictures`' Name join) leaves no
+picture event, the run's words being the word check's; (2) a picture inside a note's `inner` events (`\thanks{…}`, a
+footnote) is the note's, not iterated; (3) a block written whole is not checked (its tokens keep its pictures); (4) an API
+call's entries (`\affiliation{…}`, `\institute{…}`, `\IEEEauthorblockA{…}`, any `Outcome` not `Events`) are not walked;
+(5) an item written by its text (the e-mail branch, "a macro's span", "span letters differ") is held by its span though
+its text drops a picture inside it — a possible under-count, unprobed on a real paper (revIMG1's `\texttt{img addr}` is
+counted, as its image is a Layout event outside the e-mail's span). Repros
+`sectioning-frontmatter/fm_image_before_url_is_in_the_url`, `fm_image_before_mark_is_counted`,
+`fm_image_before_address_is_counted`, `fm_image_before_labelled_url_is_counted`, `author_icon_macro_quad_before_url`,
+`fm_image_inside_affiliation_before_url_is_kept`, `fm_image_quad_inside_affiliation_before_url_is_kept`,
+`fm_image_glued_inside_affiliation_before_url_is_kept`, `fm_image_hfill_before_url_is_kept`,
+`fm_image_hspace_fill_before_url_is_kept`, `fm_image_hskip_fil_before_url_is_kept`,
+`fm_picture_holding_image_before_labelled_url_is_counted_once`; guards
+`perfect_kernel_batchimg1::{image_before_a_url_is_in_the_url, image_before_a_mark_is_counted,
+image_before_an_address_is_counted, image_after_a_url_label_is_counted, image_inside_an_affiliation_before_a_url_is_kept,
+image_parted_from_a_url_by_fill_is_kept}`, `perfect_kernel_batch77y::icon_parted_from_its_link_goes_with_it`.
 
 ### 990. An unmarked frontmatter note renders inline, with no dagger (CR8c)
 

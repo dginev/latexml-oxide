@@ -20,6 +20,52 @@ pub(in crate::base_utilities::frontmatter::observer) fn printed_words(
     .filter(|w| !w.is_empty())
 }
 
+/// Text compared by its letters and digits alone, lowercased (the deleted `ab_audit fmshadow`'s `norm`): how the emitter
+/// keys an item, and [`entry_span_in`] reads its entry.
+pub(in crate::base_utilities::frontmatter::observer) fn norm(text: &str) -> String {
+  text
+    .chars()
+    .filter(|c| c.is_alphanumeric())
+    .flat_map(char::to_lowercase)
+    .collect()
+}
+
+/// The span of a block's entry the reading keys `key` (its text by [`norm`]), its source `span` its first event's (an entry
+/// of several pieces, `$^1$Department of Physics, Univ X, Japan`, is sourced at its first Name: 2307.03384): through the
+/// `events` printed after it, until their ink joined is the entry's text — over the lines an unmarked line continued, past
+/// the layout between (an image: `Zebra University, \includegraphics{…} \url{…}` one affiliation, review revIMG1
+/// finding 1) — `None` when it never is (a note, a mark, or other ink first). The span the emitter writes the entry from
+/// (`emitter::repart::entry_span`), and what holds a block's pictures ([`Written::unwritten_pictures`]).
+pub(in crate::base_utilities::frontmatter::observer) fn entry_span_in(
+  events: &[Event],
+  span: (u16, u16),
+  key: &str,
+) -> Option<(u16, u16)> {
+  let first = events
+    .iter()
+    .position(|e| e.kind != EventKind::Layout && e.span.is_some_and(|s| s.0 == span.0))?;
+  let (mut joined, mut end) = (String::new(), span.1);
+  for event in &events[first..] {
+    match &event.kind {
+      EventKind::Name | EventKind::Contact => joined.push_str(&norm(&event.text)),
+      // (the word "and" inside an entry is the entry's: `Computer Science and Engineering`, 1304.1574)
+      EventKind::Sep(SepKind::Word(word)) => joined.push_str(&norm(word)),
+      EventKind::Sep(_) | EventKind::Break | EventKind::Layout => continue,
+      _ => return None,
+    }
+    if let Some((_, e)) = event.span {
+      end = end.max(e);
+    }
+    if joined == key {
+      return Some((span.0, end));
+    }
+    if !key.starts_with(&joined) {
+      return None;
+    }
+  }
+  None
+}
+
 /// The words a multiset of them counts: [`printed_words`], lowercased.
 pub(in crate::base_utilities::frontmatter::observer) fn words_of(
   text: &str,
@@ -241,6 +287,8 @@ pub(in crate::base_utilities::frontmatter::observer) struct Written {
   /// text)
   spans:     BTreeSet<(usize, (u16, u16))>,
   contacts:  BTreeSet<(usize, (u16, u16))>,
+  /// the spans of the items it writes, none a ruling dropped: what holds a block's pictures ([`Self::unwritten_pictures`])
+  holding:   BTreeSet<(usize, (u16, u16))>,
   /// per source, its creators (their index in [`Resolved::creators`]) and names
   names:     BTreeMap<usize, Vec<(usize, String)>>,
   /// per source, the e-mail addresses it writes as items, lowercased, as often as one holder holds each: what an ink's
@@ -254,9 +302,12 @@ pub(in crate::base_utilities::frontmatter::observer) struct Written {
 }
 
 impl Written {
+  /// `entry_key` gives an item's key as the emit reads its entry by (`emitter::plan::written_keys`: an ORCID by its
+  /// identifier, a picture note by its place), so each item holds the span the emit writes it from.
   pub(in crate::base_utilities::frontmatter::observer) fn new(
     ledger: &Ledger,
     resolved: &Resolved,
+    entry_key: impl Fn(&Assoc) -> String,
   ) -> Self {
     let mut counts: BTreeMap<usize, BTreeMap<String, usize>> = BTreeMap::new();
     let mut write = |at: usize, text: &str| {
@@ -286,6 +337,7 @@ impl Written {
     // `mtablo@postech.ac.kr` written twice for the block)
     let mut items: BTreeMap<(Source, &str, &str), usize> = BTreeMap::new();
     let mut unread: BTreeSet<(Source, &str, &str)> = BTreeSet::new();
+    let mut holding = BTreeSet::new();
     let holders = resolved
       .creators
       .iter()
@@ -308,6 +360,22 @@ impl Written {
           *here.entry(item).or_default() += 1;
           if a.rule.contains("ruling3:written-out") || resolved.dropped.contains(a) {
             unread.insert(item);
+          }
+          // (what it writes: its entry's span, the emit's (`entry_span_in`, by the emit's key: `entry_key`), wider than
+          // its source span where its text runs on past layout — an affiliation holding the URL after an image, `Zebra
+          // University, \includegraphics{…} \url{…}`, review revIMG1 finding 1 — and its source span where the entry
+          // can't be read so)
+          if let Some(span) = span
+            && !resolved.dropped.contains(a)
+          {
+            let written = match ledger.entries().get(at) {
+              Some(Entry::Author(block)) => match &block.outcome {
+                Outcome::Events { events, .. } => entry_span_in(events, span, &entry_key(a)),
+                _ => None,
+              },
+              _ => None,
+            };
+            holding.insert((at, written.unwrap_or(span)));
           }
         }
       }
@@ -387,11 +455,38 @@ impl Written {
       anywhere,
       spans,
       contacts,
+      holding,
       names,
       addresses,
       read,
       named,
     }
+  }
+
+  /// The pictures of the block at ledger index `index` (an image, the Layout event of an `\includegraphics`; a picture note,
+  /// `events::PICTURE_NOTE`) that no item it writes holds: each one's span inside no written item's span, or no span to
+  /// tell (fail toward flagging). An image has no word, so the word check ([`Self::lost_inks`]) cannot miss it: the image
+  /// leading a mark or an address on a later line, which `events::place_pictures` has no place for
+  /// (`\includegraphics{…} $^{1}$Zebra University`, `\includegraphics{…} \texttt{ann@x.org}`), was lost silently. One a URL
+  /// contact's span holds (2503.08161's `hf-logo.png`, 2505.21327's icons) or its own note's is written.
+  pub(in crate::base_utilities::frontmatter::observer) fn unwritten_pictures(
+    &self,
+    index: usize,
+    events: &[Event],
+  ) -> usize {
+    let of_index = || {
+      self
+        .holding
+        .range((index, (0, 0))..=(index, (u16::MAX, u16::MAX)))
+    };
+    events
+      .iter()
+      .filter(|e| is_image(e) || events::is_picture_note(e))
+      .filter(|e| {
+        e.span
+          .is_none_or(|(s, t)| !of_index().any(|&(_, (from, to))| from <= s && t <= to))
+      })
+      .count()
   }
 
   /// The words the reading writes of the block or call at `index` more times than its `events` print them (the other side
@@ -789,8 +884,10 @@ enum Holder {
 /// they print.
 #[derive(Debug)]
 pub(in crate::base_utilities::frontmatter::observer) struct BlockCheck {
-  pub lost:   Vec<LostInk>,
-  pub excess: Vec<(String, bool)>,
+  pub lost:     Vec<LostInk>,
+  pub excess:   Vec<(String, bool)>,
+  /// how many of its pictures no written item holds ([`Written::unwritten_pictures`])
+  pub pictures: usize,
 }
 
 /// The author blocks of the ledger whose authors an output holds, with their ledger index: what a later call replaced or
@@ -827,13 +924,15 @@ pub(in crate::base_utilities::frontmatter::observer) fn check_blocks(
   let mut checks = BTreeMap::new();
   for (index, block) in live_blocks(ledger) {
     if let Outcome::Events { events, .. } = &block.outcome {
+      let pictures = written.unwritten_pictures(index, events);
       // (a command's ink inside a word its letters, as the reading reads them: `lines::words_through_one_command`)
       let events = &words_through_one_command(events);
       let check = BlockCheck {
-        lost:   written.lost_inks(index, events, true),
+        lost: written.lost_inks(index, events, true),
         excess: written.excess(index, events),
+        pictures,
       };
-      if !check.lost.is_empty() || !check.excess.is_empty() {
+      if !check.lost.is_empty() || !check.excess.is_empty() || check.pictures > 0 {
         checks.insert(index, check);
       }
     }

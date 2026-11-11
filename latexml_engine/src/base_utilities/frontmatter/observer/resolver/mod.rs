@@ -309,8 +309,8 @@ pub(in crate::base_utilities::frontmatter::observer) use placed::{
   Placed, PlacedItem, PlacedKind, content_check,
 };
 pub(in crate::base_utilities::frontmatter::observer) use words::{
-  BlockCheck, LostInk, Written, check_blocks, own_email_label, printed_email_label, printed_words,
-  reads_as_email_label,
+  BlockCheck, LostInk, Written, check_blocks, entry_span_in, norm, own_email_label,
+  printed_email_label, printed_words, reads_as_email_label,
 };
 
 /// A block's events as the resolver reads them (`Resolver::block`): an alignment environment ending the block read as

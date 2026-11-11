@@ -186,7 +186,7 @@ fn an_unmarked_frontmatter_note_renders_inline_without_a_dagger() {
 }
 
 /// `xml` without its `candidates="…"` attributes.
-fn without_candidates(xml: &str) -> String {
+pub(super) fn without_candidates(xml: &str) -> String {
   let mut out = String::new();
   let mut rest = xml;
   while let Some(at) = rest.find(" candidates=\"") {

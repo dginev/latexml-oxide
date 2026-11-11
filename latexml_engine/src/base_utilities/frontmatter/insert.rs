@@ -964,7 +964,31 @@ fn kind_link_and_grade_contacts(document: &mut Document) -> Result<()> {
     }
     // (a label naming the link before it: the contact's name, as printed)
     if let Some((label, link)) = link_label(document, &contact) {
+      // (a picture printed before the link, `Web: \includegraphics{…} \url{…}`, goes with the label's text: counted, as
+      // the emitter's picture check counts one no item writes (OXIDIZED_DESIGN_DIVERGENCES #989; review revIMG1 —
+      // keeping it in the contact is a change of this pass, proposed apart); each picture once, a `ltx:graphics` inside
+      // a `ltx:picture` its picture's (review revIMG1b finding 3)
+      let pictures = |document: &mut Document| {
+        document
+          .findnodes(
+            ".//ltx:graphics[not(ancestor::ltx:picture)] | .//ltx:picture",
+            Some(&contact),
+          )
+          .len()
+      };
+      let before = pictures(document);
       strip_before_link(document, &contact, &link);
+      let lost = before.saturating_sub(pictures(document));
+      if lost > 0 {
+        Warn!(
+          "unexpected",
+          "frontmatter",
+          s!(
+            "The frontmatter's link label pass drops {lost} picture(s) printed between the label '{label}' and its \
+             link; they are lost"
+          )
+        );
+      }
       document.set_attribute(&mut contact, LINK_LABEL, &s!("{label} "))?;
     }
     if let Some(link) = sole_link(document, &contact) {
