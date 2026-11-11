@@ -1,0 +1,21 @@
+% RED (review revRB1d S4): a repeat whose `\author` sits in a group, `{\author{Dan Doe}\affiliation{…}}\email{dan@q.org}`,
+%   switches the setters off only to the group's end (local `\let`s, revtex4_cls.rs), so the following `\email` stays
+%   live and lands on the last author of the first block. TeX's `\maketitle` switch lasts (revtex4-2.cls:2670-2684).
+% witness: synthetic
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "T / Ann Able / Univ X, Town / Text. / 2 / More."
+% engines: rust int160b: Ann Able (Univ X, Town), the address dropped as TeX; RB1d: Ann Able holds email dan@q.org.
+% expect:  no contact moved to Ann Able (the address dropped, or counted)
+% status:  RED
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\affiliation{Univ X, Town}
+\maketitle
+Text.
+\clearpage
+{\author{Dan Doe}\affiliation{Univ Q, Village}}
+\email{dan@q.org}
+\maketitle
+More.
+\end{document}

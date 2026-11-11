@@ -1285,7 +1285,7 @@ pub(in crate::base_utilities) fn record_author_body_end() {
 
 /// Record the argument of a call a class switched off after its title block (REVTeX's repeated author block,
 /// revtex4_cls.rs): the content check counts the words no earlier call holds, so a lost one warns (1206.0114, 1903.12442;
-/// OXIDIZED_DESIGN_DIVERGENCES #1003).
+/// a repeat's initials, 2305.19055); a pure repeat feeds nothing (2001.07542, 1812.00931; OXIDIZED_DESIGN_DIVERGENCES #1003).
 pub fn record_switched_off_call(content: &Tokens) {
   if !records_now() {
     return;

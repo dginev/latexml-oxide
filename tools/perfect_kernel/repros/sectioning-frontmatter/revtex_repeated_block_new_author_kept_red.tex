@@ -7,7 +7,7 @@
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "T / Ann Able / Univ X, Town / Text. / 2 / More."
 % engines: rust int159b: "Text. Erratum Dan Doe More."; RB1c (round 2): the body "Text. Erratum More.", 0 warnings;
 %   RB1d: the same body, 1 Warning "Frontmatter content check: 2 words … missing …: Dan Doe."
-% expect:  "Dan Doe" kept
+% expect:  "Dan Doe" kept as body text, as int159b ("Text. Erratum Dan Doe More.")
 % status:  RED
 \documentclass[aps,prl]{revtex4-2}
 \begin{document}

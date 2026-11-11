@@ -35013,13 +35013,19 @@ frontmatter content check (`Ledger::unrecorded`) only the words and addresses no
 check reads them: each entry's text both as spelled (`content_text`) and as its rehearsal printed it, an accent or a
 dotless letter read past matched by `resolver::placed::reads_as`. A pure repeat, also one spelled through a macro
 (`\UX` for `Universit\"at X`) or with braced accents, feeds nothing and warns nothing (the gobbled `\email` reads
-its argument Semiverbatim, as the live one does, so `ann_x@x.org` stays one address); a new name ("Dan Doe"), a new
+its argument Semiverbatim — `_` and `@` other as the live one reads them, `%` a comment as under TeX's `\@gobble` —
+so `ann_x@x.org` stays one address); a new name ("Dan Doe"), a new
 `\thanks` (1206.0114), the new words of a variant address (1903.12442: "120 C DK Munkegade Ny", not the words it
 shares) or a repeated name's initials (2305.19055 "A C J P R", 1903.12442 "M T") raise the check's "N words … missing"
 Warning naming them. Keeping them needs the repeat matched to the creators it repeats, a
 second mechanism: RED `sectioning-frontmatter/{revtex_repeated_block_new_words_kept_red,revtex_repeated_block_new_author_kept_red}.tex`.
 Known RED (pre-existing): a repeat's `\altaffiliation` stays live and lands on the last author, where TeX's
 `\@AF@join@error` prints nothing (`revtex_repeated_block_altaffiliation_on_last_author_red.tex`).
+Known REDs from review revRB1d (synthetic, uncounted): a new name or address spelled through a macro is not read
+(the gobbled argument is read as spelled; `revtex_repeated_block_macro_spelled_new_words_red`); a new name whose words all
+print elsewhere is held word by word (`revtex_repeated_block_new_name_of_held_words_red`); a repeat's `\author` in a group
+switches off only to the group's end, so a following `\email` lands on the last author
+(`revtex_repeated_block_in_a_group_email_on_last_author_red`).
 
 Guard `perfect_kernel_batchrb1::revtex_maketitle_switches_the_author_block_off` (one row per shape, exact Error and
 Warning counts, whole creators, the body text).

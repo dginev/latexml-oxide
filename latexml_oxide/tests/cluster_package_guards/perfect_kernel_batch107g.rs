@@ -68,7 +68,8 @@ fn a_list_a_mark_leads_is_no_carriers_where_it_spells_others() {
 /// 1810.03867, 2510.13035, 2001.07542, 2608.31160; the bundle int139b A/B). Since RB1 REVTeX's `\maketitle` switches the
 /// second block off from its `\author` on (revtex4_cls.rs `switch_off_author_block_after_maketitle`;
 /// revtex4-2.cls:2670-2684), so its names no longer print as body text; its `\title` does, as int159b (RB1c: authored
-/// text kept, though pdflatex prints none of it), and this REVTeX repro no longer reaches `respell_emails`' `held` branch (a copy the owner already holds dropped), which a subfile's block
+/// text kept, though pdflatex prints none of it), and this REVTeX repro no longer reaches `respell_emails`' `held`
+/// branch (a copy the owner already holds dropped), which a subfile's block
 /// (2307.07324, 2401.15572) and other classes' (1810.03867, bmvc2k) still reach.
 #[test]
 fn a_repeated_author_block_copies_no_address_onto_the_last_author() {

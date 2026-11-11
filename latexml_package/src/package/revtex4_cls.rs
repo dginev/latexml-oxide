@@ -262,7 +262,7 @@ pub(crate) fn switch_off_author_block_after_maketitle() -> Result<()> {
   DefPrimitive!("\\lx@revtex@repeated@gobble{}", sub[(content)] {
     fm_record_switched_off_call(&content);
   });
-  // (an address read as the live `\email` reads it, `ann_x@x.org` whole: review revRB1c probe q2)
+  // (`_` and `@` other as the live `\email` reads them, `ann_x@x.org` whole; `%` a comment as under `\@gobble`: revRB1c q2)
   DefPrimitive!("\\lx@revtex@repeated@gobble@url Semiverbatim", sub[(content)] {
     fm_record_switched_off_call(&content);
   });
