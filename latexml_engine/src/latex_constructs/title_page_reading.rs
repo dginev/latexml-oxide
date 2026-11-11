@@ -92,9 +92,9 @@ impl TitlePageReading {
   }
 }
 
-/// The LaTeXML-internal values the reading reads, which the state's watch ([`watch_state`]) does not see: `\@author`'s prefix kept by
-/// the frontmatter (`author_taken_prefix`), whether a deposit runs the class's title page (`replays_class_maketitle`)
-/// and a raw class's own `\@author` reader ([`CLASS_AUTHOR_READER`]).
+/// The LaTeXML-internal values the reading reads, which the state's watch ([`watch_state`]) does not see:
+/// `\@author`'s prefix kept by the frontmatter (`author_taken_prefix`), whether a deposit runs the class's title page
+/// (`replays_class_maketitle`) and a raw class's own `\@author` reader ([`CLASS_AUTHOR_READER`]).
 const READ_VALUES: [&str; 4] = [
   "lx_author_handed",
   "lx_author_seen",
@@ -109,14 +109,17 @@ type ReadingKey = (u64, [Option<Stored>; 4]);
 type KeptReading = (ReadingKey, Rc<TitlePageReading>);
 
 /// The key of a reading made now: it begins the state's watch.
-fn reading_key() -> ReadingKey { (watch_state(), READ_VALUES.map(lookup_value)) }
+fn reading_key() -> ReadingKey { (watch_state(), read_values()) }
+
+/// The values of [`READ_VALUES`] now.
+fn read_values() -> [Option<Stored>; 4] { READ_VALUES.map(lookup_value) }
 
 /// The reading made, while the state it read is unchanged.
 fn kept_reading() -> Option<Rc<TitlePageReading>> {
   READING.with_borrow(|r| {
     r.as_ref()
       .filter(|((watch, values), _)| {
-        state_unchanged_since(*watch) && *values == READ_VALUES.map(lookup_value)
+        state_unchanged_since(*watch) && *values == read_values()
       })
       .map(|(_, reading)| Rc::clone(reading))
   })

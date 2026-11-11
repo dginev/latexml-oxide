@@ -1053,7 +1053,8 @@ impl State {
     }
   }
 
-  /// Record `key`'s bindings in the open assignment journal before its first assignment since the journal began.
+  /// Record `key`'s bindings in the open assignment journal before its first assignment since the journal began, and
+  /// end the watch held ([`watch_state`]).
   #[inline]
   fn journal_touch(&mut self, table_name: TableName, key: SymStr) {
     if table_name == TableName::Meaning && !self.meaning_recorders.is_empty() {
@@ -4440,7 +4441,8 @@ impl<T: Clone + Default + 'static> DocumentState<T> {
 }
 
 /// Note for an open assignment journal that the box in the register `key` is about to have its dimension `property` set
-/// (`\\wd`, `\\ht`, `\\dp`): a property of the box itself, which no binding's value holds.
+/// (`\\wd`, `\\ht`, `\\dp`): a property of the box itself, which no binding's value holds. Also ends the watch held
+/// ([`watch_state`]).
 pub fn journal_box_dimension(key: &str, property: &'static str) {
   if !WRITES_WATCHED.get() {
     return;

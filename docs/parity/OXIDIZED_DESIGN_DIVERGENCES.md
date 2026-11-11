@@ -30697,7 +30697,8 @@ the lost "bob" an Info; one printing the title alone leaves the check reading th
 number never begun before) that every write ends — an assignment, a write in place (the mode, a mapping, a box's `\wd`,
 a font's parameter), a group's end that restores values (`pop_frame`) — and a rollback puts back the watch its journal
 began with (no ABA); a write tests one flag, a journal's or a watch's (`WRITES_WATCHED`; RK1: a count drawn at every
-write cost +841 instructions per `\loop` iteration, study PF160); the LaTeXML-internal values the reading reads, which the watch leaves out, are in its key (`lx_author_handed`, `lx_author_seen`,
+write cost +841 instructions per `\loop` iteration, study PF160); the LaTeXML-internal values the reading reads,
+which the watch leaves out, are in its key (`lx_author_handed`, `lx_author_seen`,
 `lx_depositing_class_maketitle`, `lx_class_author_reader`). LaTeX's own `\@maketitle`, its marker and the run's marks are
 read by definition identity (sect05.rs `is_latex_maketitle`, `maketitle_is_kernels`, `title_page_mark`), not by name.
 **Decision (review revTP1 S2):** over the check's read budget the reading has no text, and the stores' confirming check
