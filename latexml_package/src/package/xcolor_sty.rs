@@ -1537,26 +1537,16 @@ LoadDefinitions!({
       }
     },
     after_digest => sub[whatsit] {
-      // Read row number from state (set by start_row before digest) instead of
-      // borrowing the alignment, which is already mutably borrowed during start_row.
-      let n = lookup_value("alignmentRowNumber")
-        .and_then(|v| match v {
-          Stored::Int(i) => Some(i as usize),
-          Stored::Number(num) => Some(num.value_of() as usize),
-          _ => None,
-        })
-        .unwrap_or(0);
-      // colortbl.sty:261 `\@rowc@lors`: under a `\rowcolors` every row steps colortbl's count `\rownum`
-      // (`\global\advance\rownum\@ne`, from the `\global\rownum=\z@` of :238), so a row reads its own number
-      // (`\number\rownum`, `\therownum`), as the binding's macro gives it where `\rownum` is no count.
-      if lookup_value("tabular_row_color_first").is_some()
-        && let Some(rownum) = lookup_definition(&T_CS!("\\rownum"))?
-        && rownum.is_register()
-      {
-        let n = i64::try_from(n).unwrap_or(i64::MAX);
-        rownum.set_value(RegisterValue::Number(Number::new(n)), Some(Scope::Global), Vec::new());
-      }
       if if_condition(&T_CS!("\\if@rowcolors"))?.unwrap_or(false) {
+        // Read row number from state (set by start_row before digest) instead of
+        // borrowing the alignment, which is already mutably borrowed during start_row.
+        let n = lookup_value("alignmentRowNumber")
+          .and_then(|v| match v {
+            Stored::Int(i) => Some(i as usize),
+            Stored::Number(num) => Some(num.value_of() as usize),
+            _ => None,
+          })
+          .unwrap_or(0);
         let first = match lookup_value("tabular_row_color_first") {
           Some(Stored::Number(num)) => num.value_of() as usize,
           _ => 1,
@@ -1601,12 +1591,9 @@ LoadDefinitions!({
     properties => { Ok(stored_map!("alignmentSkippable" => true)) });
   RawTeX!(r"\let\@tabular@row@before@xcolor\lx@tabular@row@before@xcolor");
 
-  // Perl xcolor L744-748: \rownum returns current row number from alignment. Kept as `\lx@xcolor@rownum`, which
-  // `\rownum` is let to unless colortbl's count is already there: xcolor.sty defines no `\rownum` (colortbl.sty:269-274
-  // does), so the colortbl binding knows this macro for the binding's own and allocates its count in its place
-  // (`[table]`, any load order).
+  // Perl xcolor L744-748: \rownum returns current row number from alignment
   def_macro(
-    T_CS!("\\lx@xcolor@rownum"),
+    T_CS!("\\rownum"),
     None,
     Some(ExpansionBody::Closure(Rc::new(|_args: Vec<ArgWrap>| {
       match lookup_alignment() { Some(alignment) => {
@@ -1626,9 +1613,6 @@ LoadDefinitions!({
     }))),
     None,
   )?;
-  if !has_meaning(&T_CS!("\\rownum")) {
-    Let!("\\rownum", "\\lx@xcolor@rownum");
-  }
 
   // \rowcolor — only define stub if colortbl not loaded
   if !has_meaning(&T_CS!("\\rowcolor")) {

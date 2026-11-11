@@ -232,21 +232,14 @@ LoadDefinitions!({
 
   // Perl L93: \minrowclearance
   DefRegister!("\\minrowclearance", Dimension::new(0));
-  // colortbl.sty:269-275: the count `\rownum` that `\rowcolors` steps, `\c@rownum` the same register, and `\therownum`
-  // (colortbl-DE prints it). The xcolor binding's `\rownum` (Perl xcolor.sty.ltxml:744, the alignment's row number) is
-  // no definition of xcolor.sty, so it gives way to the count here: `\c@rownum` is a count whatever loaded first, as
-  // tabularray's `\int_zero_new:N \c@rownum` and `\int_set:Nn` need (`\usepackage[table]{xcolor}` before tabularray:
-  // 2601.01074, 2409.12172). Under `\rowcolors` the xcolor binding's row hook steps the count (colortbl.sty:261).
-  if let (Some(rownum), Some(perl)) = (
-    lookup_definition(&T_CS!("\\rownum"))?,
-    lookup_definition(&T_CS!("\\lx@xcolor@rownum"))?,
-  ) && Rc::ptr_eq(&rownum, &perl)
-  {
-    RawTeX!(r"\let\rownum\@undefined");
-  }
+  // colortbl.sty:269-274 the `rownum` counter `\rowcolors` steps and
+  // `\therownum` (colortbl-DE prints it).
+  // (`\providecommand`-shaped: the xcolor binding's `\rowcolors` already owns
+  // a `rownum` counter when it loaded first — re-allocating it zeroed every
+  // `\rowcolors` row, golden `65_graphics::xcolors`.)
   RawTeX!(
-    r"\@ifundefined{rownum}{\@ifundefined{c@rownum}{\newcount\rownum\let\c@rownum\rownum}{\let\rownum\c@rownum}}%
-{\let\c@rownum\rownum}
+    r"\ifdefined\rownum\else\newcount\rownum\fi
+\@ifundefined{c@rownum}{\let\c@rownum\rownum}{}
 \providecommand\therownum{\arabic{rownum}}"
   );
 });
