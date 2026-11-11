@@ -3,7 +3,7 @@
 //! once. The rehearsal queues the setter's entry and the emitter writes it as queued (emit.rs `recover_queued`); a note
 //! the emitter writes from its argument digests the setter again, which since P21 (OmniBus's `\author` one block) wrote
 //! a second `<note role="email">` (1406.5876, 1904.02213, 1904.07135, 2206.01959). The item entry names its block
-//! (`emit::SETTERS_OF`), and `\lx@add@frontmatter@now` writes nothing inside it. The repros compile clean with pdflatex
+//! (`emit::SETTERS_RECOVERED`), and `\lx@add@frontmatter@now` writes nothing inside it. The repros compile clean with pdflatex
 //! (TL 2025's ejpecp.cls); the guards assert every creator's name and contacts, in order, the note elements whole, and
 //! the exact Error and Warning counts.
 

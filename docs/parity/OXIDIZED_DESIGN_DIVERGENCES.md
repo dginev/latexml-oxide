@@ -34348,7 +34348,7 @@ whose argument ends in a space (`\BEMAIL{dong.yao@duke.edu} }`), was written twi
 emitter writes from a block whose rehearsal ran such a setter opens with `\lx@frontmatter@setters@of{<the block's ledger
 index>}`, which sets `emit::SETTERS_RECOVERED` (cleared for every queued entry, `place::digest_queued_entry`) where the
 recovery wrote that block's entries, at this flush or an earlier one. Under it `\lx@add@frontmatter@now` writes nothing
-(not a creator). The recovery stays the one writer, so each address is one note, where int157a placed it: the four
+(not a creator). The recovery stays the one writer, so each address is one note, in the PDF's author order: the four
 papers 1, 2, 2, 4 notes, one per address (1904.02213 better than int157a). The note keeps its markup (no Warning) and
 its whitespace before the `\EMAIL` (`Univ X⏎`; int157a's text was `Univ X`). A note closing the block is still written
 by its text, with its Warning. An API call's items are not marked: the recovery writes no call the reading writes from
