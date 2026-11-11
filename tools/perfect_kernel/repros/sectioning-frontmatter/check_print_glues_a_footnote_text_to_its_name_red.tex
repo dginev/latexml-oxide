@@ -1,0 +1,22 @@
+% mechanism: the title-page check's print (sect05.rs `title_page_print_tokens`, read by `ink_word_text`) glues a
+%   `\footnote`'s text in `\@author` to the word before it: the check's Warning names "bob brownmoon" for the lost
+%   "Bob Brown" and "Moon note" (revFX25b N2; pre-existing, int159a0 and FX25b alike; no count lost, the words glued)
+% witness: synthetic (revFX25b probe p5/fn)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Alice Able1 | Bob Brown2" over "Polar Lab | Lunar
+%   Institute", "Some Day", the feet "1 Fn note", "2 Moon note"
+% engines: int159a0, FX25b: the check's Warning holds the glued "brownmoon" (the appended column lost, RR1 gap 24)
+% expect:  the check's words apart: "bob brown" and "moon note" counted as words, none glued to a footnote's text
+% status:  RED (revFX25b N2, catalogued at integration, int159a)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\newcommand\coauthor[1]{\g@addto@macro\@author{\and #1}}
+\makeatother
+\begin{document}
+\title{A Title}
+\author{Alice Able\footnote{Fn note}\\Polar Lab}
+\coauthor{Bob Brown\footnote{Moon note}\\Lunar Institute}
+\date{Some Day}
+\maketitle
+Body.
+\end{document}

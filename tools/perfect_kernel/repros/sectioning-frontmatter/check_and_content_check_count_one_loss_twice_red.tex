@@ -1,0 +1,22 @@
+% mechanism: one lost word counted by two Warnings. A raw tabular juggle in `\author` with a tie between
+%   (`\end{tabular}~\begin{tabular}{c}`) leaves the block's rehearsal a group open, and "Dept" is lost from the output.
+%   The emitter's content check counts it (`Warning:unexpected:frontmatter`, resolver::placed::content_check: `Dept`),
+%   and since FX25b the title-page check counts it too (`Warning:frontmatter:unclaimed`: `dept`), its print holding
+%   "Dept" as pdflatex sets it. title_page_check.rs skips a word the unclaimed-text net already counted
+%   (`note_net_counted`), not one the content check counted
+% witness: synthetic (the shape of 1401.6981's sig-alternate juggle; that paper's own output and Warnings are the same
+%   on int159a0 and FX25b); the same tex as author_raw_tabular_juggle_counted.tex, whose guard pins the two Warnings
+%   (perfect_kernel_batchfs1::an_open_group_rehearsals_words_are_counted)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "A One" and "Dept" both printed (pdftotext "T Dept A One")
+% engines: int159a0, FX25: 0 errors, 1 warning (content check "Dept"); FX25b: 0 errors, 2 warnings (content check
+%   "Dept", title-page check "dept"); creators A One, "Dept" lost on all three; perl not run
+% expect:  0 errors; "Dept" kept, or its loss counted by one Warning
+% status:  RED (FX25b)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{A One \end{tabular}~\begin{tabular}{c} Dept}
+\maketitle
+Text.
+\end{document}
