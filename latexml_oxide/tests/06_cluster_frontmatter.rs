@@ -1290,7 +1290,8 @@ fn frontmatter_sn_jnl_abstract_env_after_title() {
 /// affiliation stub does not surface as an empty `<contact role="affiliation"/>`
 /// (arXiv/html_feedback#6881, witness 2608.11332). The e-mail line under the
 /// row is each address its owner's, as the shared institute's is
-/// (OXIDIZED_DESIGN_DIVERGENCES #901, `share_row_contacts`; FIDELITY_CHARTER §4):
+/// (OXIDIZED_DESIGN_DIVERGENCES #901 — the reading's and the emitter's; the old row split `share_row_contacts` was deleted in
+/// P27b; FIDELITY_CHARTER §4):
 /// `alice@` Alice Smith's, `bob@` Bob Jones's — before 85b r2 the brace list
 /// went whole to both, inheriting the institute's label (Perl
 /// `Base_Utility.pool.ltxml` L498-500).

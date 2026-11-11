@@ -79,7 +79,7 @@ fn a_block_item_keeps_the_orphan_rules() {
 
 /// The block's own creator is no annotation's parent by place (BC1r2): an unlabelled annotation goes to the last named
 /// creator before it, as before the emitter wrote one. Witness 2009.10916 (byte-identical to int149a `=2`). Since Z18c
-/// llncs's restated `\institute`'s second `\email` is the entry's, written by its label (`shared_row::entry_email_cut`):
+/// llncs's restated `\institute`'s second `\email` is the entry's, written by its label (`classify::entry_email_cut`):
 /// the Link step's chain gives both unspelled addresses under Bo Li's one entry to the block, each once (FIDELITY_CHARTER
 /// §4, several unspelled under one name are no one name's) — it had stayed on Bo Li as an unlabelled annotation and
 /// on the block too, counted.

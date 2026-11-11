@@ -534,6 +534,9 @@ mod perfect_kernel_batchp26;
 /// P27: Option C P2-7 — authblk's `\author` gates ask the separator query for a kernel `\and` by meaning, and the
 /// reading's `annotate=run:<cap>` counts `\author` calls (OD #993, #995).
 mod perfect_kernel_batchp27;
+/// P27b: Option C P2-7's S8 half — a no-block flush holding a class's row contact (`_share`) is written by the emitter;
+/// `share_row_contacts` deleted (OD #901).
+mod perfect_kernel_batchp27b;
 mod perfect_kernel_batchpb;
 /// PC3: two false undefined-command Errors of the frontmatter rehearsal — a title-code command after an e-mail
 /// keeps its argument (pazh), a class's own `\email` reads its argument unexpanded (1802.01191); OD #983.

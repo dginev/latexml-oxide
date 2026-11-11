@@ -1,5 +1,5 @@
 //! Red/green guards for batch 85b: llncs's one `\institute` is every author's (OXIDIZED_DESIGN_DIVERGENCES #901,
-//! `share_row_contacts`; llncs binding `latexml_package/src/package/llncs_cls.rs`). llncs.cls:868-886 prints a sole
+//! the reading's and the emitter's since the flip; the old row split `share_row_contacts` deleted in P27b; llncs binding `latexml_package/src/package/llncs_cls.rs`). llncs.cls:868-886 prints a sole
 //! institute (no `\and` in it) unnumbered under the whole author row; with no `\inst` mark picking it, each author is
 //! its author, and its `\email` lines are lines under the row, each address the author it spells (FIDELITY_CHARTER §4).
 //! It had been a nameless creator under the names, no author affiliated (20 of the frontmatter scorer's 56 llncs papers:
@@ -169,7 +169,7 @@ fn llncs_several_or_empty_institutes_are_not_shared() {
   );
 }
 
-/// Each `\email` call is decided on its own (`row_email_calls`): `\institute{Univ X\\ \email{able@x.edu},
+/// Each `\email` call is decided on its own (the old row split's `row_email_calls`, deleted in P27b; the emitter's entry cut since): `\institute{Univ X\\ \email{able@x.edu},
 /// \email{\{zz@x.edu\}}}` (the r1 review's q03) gives able@ to Ann Able by spelling and the braced single address to Bob
 /// Baker by place. 2410.04091's three `\email{\{…\}}` are its three authors' in order. A call the reader cannot part
 /// (`{zz,yy}@x.edu`, 2206.10050) and one it parts into pieces no whole address (`[zz@insa-, yy@insa-]rouen.fr`,
@@ -243,7 +243,7 @@ fn llncs_each_email_call_is_decided_alone() {
 #[test]
 fn llncs_address_in_institute_note_is_never_shared() {
   let tex = repro!("llncs_address_in_institute_note_is_never_shared.tex");
-  // (since 92c r3 a `\thanks` inside the institute is no line of it — `shared_row/emails.rs` `note_argument` — so the
+  // (since 92c r3 a `\thanks` inside the institute is no line of it — `classify/entry_emails.rs` `note_argument` since P27b — so the
   // sole institute is every author's, as llncs prints it under the names, and `baker@x.edu` is Bob Baker's by
   // spelling; the note's sentence stays the note's)
   let xml = assert_creators(tex, &[&["Ann Able", "affiliation=Univ X"], &[
@@ -345,7 +345,7 @@ fn llncs_corresponding_author_takes_the_left_address() {
 }
 
 /// A line of the shared institute holding an `@` outside an `\email` call is an e-mail line of the row, read with the
-/// address reader, each address its owner's (`holds_raw_address`, `raw_line_unit`; the re-review's finding 1, 19 census
+/// address reader, each address its owner's (the old split's `holds_raw_address`, `raw_line_unit`, deleted in P27b; the re-review's finding 1, 19 census
 /// papers): 1103.2027's `{\tt \{joxan,navas,andrews\}@…}` as `\texttt{…}` (s20) and `\url{{…}@…}` (1809.11127) alike,
 /// an `Email:` label before it the contact's name (0712.2737), `\href{mailto:…}{…}` its spelled owner's (2408.03209,
 /// s30); 1307.8067's `\urldef`'d `\mailsa` read as the text it prints. A line of the shared institute the reader cannot

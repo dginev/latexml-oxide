@@ -327,7 +327,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn read_events(
 /// A block's events with each run of link pieces that reads as addresses only once their inks are joined one e-mail
 /// contact, the run's addresses — `\url{robin.andre@ira.uka.de}, \{\url{sebastian.schlag, christian.schulz}\}\url{@kit.edu}`,
 /// `\url{christian.schulz}\url{@univie.ac.at}` (1710.01968): each link read apart was a URL, `@univie.ac.at` on every
-/// author, `christian.schulz @univie.ac.at` too. The old split's raw address line (`shared_row::row_email_calls`), read
+/// author, `christian.schulz @univie.ac.at` too. The old split's raw address line (`row_email_calls`, deleted at P27b), read
 /// as the line prints: a line of links (`url`) with a piece printing no `@` among them, between them only separators and
 /// the braces of a list of local parts. Only the run of pieces is joined, through the ink that completes its addresses
 /// (its span the first ink's start to the last ink's end); a link that is a whole address on its own after such a run
@@ -575,7 +575,7 @@ struct Resolver {
   /// the block being read's section markers (`Input::Block`'s `markers`)
   block_markers:      Vec<u16>,
   /// the flush's one contact declaring a run and sharing (`_share=authors,annotate=run`: cas's unlabelled
-  /// `\affiliation`), every author's as `shared_row::share_row_contacts` shares it — with two or more, each its run's
+  /// `\affiliation`), every author's as the old split shared it (`share_row_contacts`, deleted at P27b) — with two or more, each its run's
   /// (2201.00009, 2506.17280, 2106.02306; 2202.06096)
   sole_shared_run:    bool,
   /// a note's links, and the notes they may empty, placed once every name is read (`answer_note_links`)
@@ -1240,7 +1240,7 @@ pub fn resolve_with(
 ) -> Resolved {
   let mut resolver = Resolver::new();
   let mut policy: &'static Policy = &policy::KERNEL;
-  // (counted across the whole queue, as `share_row_contacts` counts them)
+  // (counted across the whole queue, as the old split's `share_row_contacts` counted them)
   resolver.sole_shared_run = inputs
     .iter()
     .filter(|input| {
@@ -1439,8 +1439,8 @@ pub fn resolve_with(
 }
 
 /// Whether a contact call is every author's share unless marks pick it (`_share=authors`: llncs's sole `\institute`, aa's,
-/// `shared_row::share_row_contacts`) — the reading's sharing (`Resolver::share_unpicked`) and the writer's labels that go
-/// with its e-mail calls (`emitter::emit::item_call`, `shared_row::entry_email_cut`).
+/// OD #901) — the reading's sharing (`Resolver::share_unpicked`) and the writer's labels that go
+/// with its e-mail calls (`emitter::emit::item_call`, `classify::entry_email_cut`).
 pub(in crate::base_utilities::frontmatter::observer) fn shares_the_row(attrs: &str) -> bool {
   attr_value(attrs, "_share") == Some("authors")
 }

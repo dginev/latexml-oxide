@@ -1711,7 +1711,7 @@ fn link_entry_addresses(document: &mut Document, only: Option<&HashSet<String>>)
         None
       } else {
         let text = content.trim();
-        // (one address in printed braces is that address, as a row contact's reader reads it (`shared_row`'s
+        // (one address in printed braces is that address, as an entry's e-mail cut reads it (`classify::entry_emails`'
         // `single_braced`): `\email{\{fatima.iribu@gmail.com\}}`, 2410.04091 — left whole, it stayed on every carrier)
         let braced_one = listed.len() == 1
           && text
@@ -2368,7 +2368,7 @@ fn kind_address_lines(document: &mut Document) -> Result<HashSet<String>> {
         .flatten();
       // (else the line read again with its links' inks joined, where a link printing a piece of an address stood in
       // the way: taken only where the whole line is the run of addresses, behind its label or none — the old split's
-      // raw address line, `shared_row::row_email_calls`, read past a document's macros as printed (1504.01099,
+      // raw address line, `row_email_calls` (deleted at P27b), read past a document's macros as printed (1504.01099,
       // 1710.01968))
       if cut.is_none() && !read {
         let mut joined = LineText {

@@ -32,6 +32,7 @@ use crate::base_utilities::{
     frontmatter_fields::orcid_icon_link,
   },
   frontmatter::{
+    classify::shared_call_item,
     fallback::{
       PerlAuthorBranch, PerlCalls, perl_author_branch, perl_author_calls,
       tabular_juggles_in_a_whole_block, whole_block_author,
@@ -55,7 +56,6 @@ use crate::base_utilities::{
     },
     place::DEFERRED_TO_FLUSH_END,
     relocate::{BLOCK_ZONE, FOOTER_ZONE},
-    shared_row::shared_call_item,
   },
 };
 
@@ -1161,7 +1161,19 @@ const NO_BLOCK: &str = "no author block";
 
 /// Why the emitter stays out of the paper the ledger holds: no block, or a block no rehearsal read. A block calling a
 /// binding's list setter is read as any other, its setter's calls written as they are ([`list_setter_runs`]).
-fn stays_out() -> Option<&'static str> {
+///
+/// A flush with no block whose queue `commands` holds a class's row contact (`_share=authors`: llncs's sole
+/// `\institute`, OXIDIZED_DESIGN_DIVERGENCES #901) is written all the same: its creators are the API's calls (authblk's
+/// `\author` under llncs, each one `\lx@add@creator`), and the reading places the row contact on every author, an
+/// `\inst{n}`-picked one on its authors (`llncs_authblk_calls_share_the_sole_institute.tex`,
+/// `llncs_authblk_calls_inst_marks_pick_the_institutes.tex`). Only such a flush: one without a row contact stays out (an
+/// icml-style paper's labelled API contacts and legends, which the reading does not place yet; P27's S8 measure).
+fn stays_out(commands: &[RawFrontmatter]) -> Option<&'static str> {
+  let row_contact = || {
+    commands
+      .iter()
+      .any(|(tag, attrs, _)| tag == "ltx:contact" && attrs.contains_key("_share"))
+  };
   with_ledger(|ledger| {
     let mut blocks = 0;
     for entry in ledger.entries() {
@@ -1174,7 +1186,7 @@ fn stays_out() -> Option<&'static str> {
         }
       }
     }
-    (blocks == 0).then_some(NO_BLOCK)
+    (blocks == 0 && !row_contact()).then_some(NO_BLOCK)
   })
 }
 
@@ -1427,7 +1439,7 @@ fn one_address(call: &Tokens, address: &str) -> Result<Tokens> {
   // reads the argument, past the positions: counted, its link lost)
   let font = inks.first().and_then(|e| e.font.clone());
   // (a list written in plain characters and control symbols — `\email{\{able,baker\}@x.edu}`, as the old split
-  // wrote each address of it (`shared_row::row_email_calls`): its text is all it printed, so writing an address of it
+  // wrote each address of it (`row_email_calls`, deleted at P27b): its text is all it printed, so writing an address of it
   // as text loses no markup, and no Warning counts one (2501.11774's `\email{\{kalinowski, lromao, …\}@inf.puc-rio.br}`);
   // a control symbol prints its one character (`\{`, `\}`, `\_`, the content text's control-symbol test
   // `ledger::symbol`). The text written is tested too: one holding a control sequence's name or a tie lost what it
@@ -1435,7 +1447,7 @@ fn one_address(call: &Tokens, address: &str) -> Result<Tokens> {
   // `…hk~~`); a well-formedness test would count `\{a,b\}@x\_y.org`'s `a@x_y.org`, all it prints (review revZ18d finding 1)
   // A math shift or a group's brace around printed characters prints nothing of its own (2206.10050's
   // `\email{{jsliwinski,wattenhofer}@ethz.ch}`), nor a separator between the list's addresses (a tie, spacing:
-  // `shared_row::is_call_separator`), which the address written holds none of (1701.08125's
+  // `classify::is_call_separator`), which the address written holds none of (1701.08125's
   // `$\{$stomforde$|$bsick$\}$@uni-kassel.de;~cms@…`, which the old split wrote as text too): no markup lost.
   let plain = !address.contains(['\\', '~'])
     && content[from..to].iter().all(|t| {
@@ -4502,7 +4514,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
   if rehearsal::rehearsing() {
     return Ok(false);
   }
-  if let Some(why) = stays_out() {
+  if let Some(why) = stays_out(commands) {
     DebugFeature!("frontmatter", "FRONT emit stays out: {why}");
     // (a paper with no author block whose creator calls hold their own `\and`s: each such call written as the creators
     // its pieces are, the rest of the queue digested as Perl's — `creator_call_cut`)

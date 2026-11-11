@@ -1016,7 +1016,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn listed_addresses(
 /// takes the separators before it (`Trieste, Italy, (ann@x.org)` leaves `Trieste, Italy`; cond-mat0607219's `FAX:
 /// 951-827-2425; email: rlake@…` its `FAX: 951-827-2425` before the break), a run opening it those after it, a run
 /// that is its line the line's break too — the last line the separators the line before ends in as well, as a row
-/// contact's e-mail unit takes them (`shared_row::row_email_calls`: `CVLab, EPFL, \\ \texttt{\{…\}@epfl.ch}` leaves
+/// contact's e-mail unit took them (the old split's `row_email_calls`, deleted at P27b: `CVLab, EPFL, \\ \texttt{\{…\}@epfl.ch}` leaves
 /// `CVLab, EPFL`, 2407.18381) —, a run between two separators the one after it (`FAX: 1, email: a@x.org, Jan.
 /// 4` leaves `FAX: 1, Jan. 4`), a run between a word and a separator the spaces before it (`Univ X (a@x.org), City`
 /// leaves `Univ X, City`); and a cut between two spaces one of them (N1: `Univ Y, ann@x.org, Phone` leaves `Univ Y,

@@ -26310,8 +26310,9 @@ row; `\inst{n}` (:894) numbers each author's when there are several. Perl number
 (llncs.cls.ltxml:46-49), which no author requests without `\inst{1}`, and its prefix-stripped fallback strands it on
 the first author (KNOWN_PERL_ERRORS #1195); #159 had kept it once on a nameless creator under the names, so no author
 had an affiliation (20 of the frontmatter scorer's 56 llncs sample papers). Ours: the binding queues the sole
-institute with `_share=authors` (`\lx@llncs@institute@sole`), and the frontmatter's flush (`share_row_contacts`,
-base_utilities/frontmatter/shared_row.rs, before anything is digested) makes it every author's unless it is picked:
+institute with `_share=authors` (`\lx@llncs@institute@sole`), and the frontmatter's reading (`Resolver::share_unpicked`,
+`answer_shared_emails`, written by the emitter with or without an author block; until P27b the old row split,
+`share_row_contacts` in `frontmatter/shared_row.rs`, shaped the queue before digestion) makes it every author's unless it is picked:
 only the class's own request picks it, a command requesting a labelled annotation (`\inst{1}`) with a number; a
 hand-typed `$^{1}$` (2607.02596), a paper's mark macro (`\affmark{1}`, `\printfnsymbol{1}`: 1804.05870, 2007.07423,
 2102.12877, 2403.11865) and llncs's `\fnmsep` are answered by no one and pick nothing (`\inst{*}`, 2207.04574, and an
@@ -26319,10 +26320,11 @@ empty `\inst{}`, 2604.20229, neither). Not shared, as before: an institute holdi
 a paper macro raising its argument bare, `\textsuperscript{#1}`: 2608.21425's `\affmark{1} City University … \quad
 \affmark{2} …`), a shown mark numbering another institute than the first (`Ann Able$^{1,2}$` over `{1} Univ A \\ {2}
 Univ B`: several institutes numbered by hand, astro-ph0305539's shape), an empty `\institute{}` (none, 2407.13764).
-Shared, each author's content requests `row:shared`, which the contact sets as its own label, so it is digested once
-and placed on every author as an `\inst`-picked one is.
+Shared, the old split had each author's content request `row:shared`, which the contact set as its own label, so it was
+digested once and placed on every author as an `\inst`-picked one is.
 
-Its e-mail lines are lines under the row, taken out of the contact and each decided on its own (`row_email_calls`); the contact's lines are its `\\`/`\newline`/`\par` parts. With several authors, a line
+(The row split this paragraph describes was deleted in P27b, below: `row_email_calls` and `holds_raw_address` are gone,
+these lines the reading's and the emitter's entry cut's, `classify/entry_emails.rs`.) Its e-mail lines are lines under the row, taken out of the contact and each decided on its own (`row_email_calls`); the contact's lines are its `\\`/`\newline`/`\par` parts. With several authors, a line
 holding an `@` outside the class's `\email` calls — at any depth, a note's too, or in what a command of the paper's
 own on it prints (a parameterless macro's body; a `\urldef`'d command's text, which `\urldef` keeps beside it,
 url_sty.rs) — is an e-mail line (`holds_raw_address`): `{\tt \{joxan,navas,andrews\}@…}` (1103.2027), `\texttt{…}`,
@@ -26364,8 +26366,8 @@ connective between two calls (`\email{a} and \email{b}`, `\&`, `or`: the r4 re-r
 separator and stays the institute's, every author's — a residual. A shared contact's `\email` inside its `\thanks` (no other `@` in it) stays in the
 note, given its owner's label in place; as int114a, the address leaves the note's sentence. Every address goes through
 `\lx@row@email{label}{address}` (llncs's sets its `\emailname`). An e-mail digested inside a shared contact all the
-same (a paper's own `\email` macro) never inherits `row:shared`: it keeps its own label, else is the block's
-(`SHARED_ROW_LABEL`, `\lx@annotate@frontmatter@now`). So in a shared institute an address the rule reads, and a
+same (a paper's own `\email` macro) never inherited `row:shared` (the old split's `SHARED_ROW_LABEL` in
+`\lx@annotate@frontmatter@now`, deleted at P27b with the only writer of `row:shared`; 2410.04091 byte-identical). So in a shared institute an address the rule reads, and a
 label it recognises, is one author's or the block's, never every author's; a shared contact every line of which is
 taken is none. An `\inst{1}`-picked institute is its picked authors' as the marks decide, and the block is the
 shared path's fail-safe only: a piece leaves it only when it is an address the reader reads and an owner is found for
@@ -26429,8 +26431,8 @@ several. **One** such entry in the queue is every author's, before it and after 
 (2201.00009, 2511.22218, 2106.02306, 2606.24054; it had been the author's before it, and an entry above every author a
 nameless creator's). **Two or more** are each its run's, the authors since the entry before it, read by authoring
 order as elsarticle reads an unlabelled `\address` (`annotate=run`, `\lx@els@shared`; main-session decision, review
-rev104d B1): `share_row_contacts` drops `_share` from every row contact declaring `annotate=run` when there are
-several, so `\author{Liu}\address{RC}\author{Sun}\author{Zhang}\address{UCAS}` is Liu's RC, Sun's and Zhang's UCAS
+rev104d B1): the reading counts them across the queue (`Resolver::sole_shared_run`; the old split's
+`share_row_contacts` dropped `_share` from every row contact declaring `annotate=run`) when there are several, so `\author{Liu}\address{RC}\author{Sun}\author{Zhang}\address{UCAS}` is Liu's RC, Sun's and Zhang's UCAS
 (2202.06096; round 1 had given every author both) and the interleaved `Ann; X; Bob; Y` each author the entry after
 it. llncs's and aa's `_share` entries declare no run and are unchanged. Once an `\author[…]` is marked, the marks link
 the labelled entries and an unlabelled one stays the author's before it (R1), as elsarticle's own does. Under runs an
@@ -26449,6 +26451,24 @@ an_llncs_labelled_email_list_on_the_institute_line_is_spelled, an_llncs_lone_bra
 updated `perfect_kernel_batch63::cas_affiliation_before_authors_shared` (the one entry above two authors now on both).
 Open: cas's `{augroup}` environment is undefined in the binding (`Error:undefined:{augroup}`, int130a the same), so an
 entry shared within one author group is read across the groups (SYNC row 104d).
+
+P27b (Option C P2-7's S8 half): the old row split is deleted. It shaped the queue for Perl's digestion only where the
+emitter stayed out: a flush with no author block holding a `_share` contact (llncs + authblk, each `\author` call one
+`\lx@add@creator`), and an llncs or aa block no rehearsal read (over its budget, a rehearsal Fatal, out of positions).
+The second is digested as Perl's since, the shared institute's e-mail lines no longer cut out of it: the affiliation
+keeps their separators, `Univ X, City <break/>, ` (no word lost; RED
+`sectioning-frontmatter/llncs_unread_block_sole_institute_email_lines_red.tex`, synthetic, revP27b). The emitter's `stays_out` (`emit.rs`) now lets such a flush through, reading
+the queue: the reading shares or picks the contact as for a block. Not every no-block flush: lifting the stay-out for
+all of them misplaced icml's labelled contacts and legends (18 of z18n_declined40 worse, P27's measure). Deleted:
+`share_row_contacts`, `marks_pick`, `row_email_calls` and their readers (`frontmatter/shared_row.rs`, `shared_row/`),
+`SHARED_ROW_LABEL`'s branch in `\lx@annotate@frontmatter@now`, the owner rules only the split called
+(`row_address_owners`, `row_address_spelled_owners`); moved unchanged to `frontmatter/classify/entry_emails.rs`: the
+emitter's entry cut (`entry_email_cut`, `shared_call_item`) and the text rules (`is_call_separator`,
+`is_whole_address`). `\lx@row@email` and `\lx@row@email@named` stay (the entry cut writes them). Byte-identical with
+int159a1 on the 1,030 papers of the batch's populations whose sources load a `_share` class (llncs, aa, cas-dc,
+cas-sc, eptcs), 2410.04091 and 1911.10035 among them. Guards `perfect_kernel_batchp27b::{llncs_authblk_calls_share_the_sole_institute,
+llncs_authblk_calls_inst_marks_pick_the_institutes}`; repros `sectioning-frontmatter/llncs_authblk_calls_share_the_sole_institute.tex`,
+`llncs_authblk_calls_inst_marks_pick_the_institutes.tex`.
 
 ### 902. imsart's `{keyword}` blocks are the VTeX classes' markup; an amsart document's own stored `\subjclass`/`\keywords` reach the frontmatter (Perl: one keyword kept; lost)
 
@@ -32740,7 +32760,7 @@ current author (Perl's `\lx@add@email`), so it is the note owner's e-mail, not a
 \email{amiedlar@vt.edu}.}`, both addresses Ning Wan's as off and Perl. Off: byte-identical. Guard `perfect_kernel_batchlo4`.
 *Switch-off mechanisms ported* (P2), each with the switch on alone, the switch-off code the spec: (C) cas's one unlabelled
 `\affiliation` (`_share=authors,annotate=run`, `cas_labelled_entry`) is every author's, before it and after it, as
-`shared_row::share_row_contacts` shares it when it is the queue's only one (`Resolver::sole_shared_run`, answered in
+the old split's `share_row_contacts` shared it (deleted at P27b) when it is the queue's only one (`Resolver::sole_shared_run`, answered in
 `answer_pending`): the reading gave it to its run, the first author (2506.17280, 2106.02306, 2201.00009, 2207.13923,
 2411.19633, 2606.24054). (NT) A role note is the note the switch-off output writes: a `\thanks` whose text opens with a mark
 the names request is an affiliation entry only where `\lx@add@thanks` makes it one (`starts_with_affiliation_mark`, OD #52:
@@ -33284,8 +33304,8 @@ separators and label; every entry the emitter writes from an API call (llncs und
 llncs papers), `…; Email: ;`, `Unity Technologies Corresponding author:`, svjour3's "Univ B " — and its e-mail calls
 after the first stayed on the last author as their own call (`owner:call`): three addresses under three names gave the
 third author two. **Now:** (1) an affiliation-kind entry the emitter writes from an API call
-(`emitter::emit::item_call`) is written by `shared_row::entry_email_cut`, which cuts by the row's own unit cut, one copy
-both callers share (`row_email_calls` and it: `unit_cut`, `UnitCut::labelled_address`, the reassembly `kept_without`,
+(`emitter::emit::item_call`) is written by `entry_email_cut` (`classify/entry_emails.rs` since P27b), which cuts by the row's own unit cut, one copy
+both callers shared (`row_email_calls` and it: `unit_cut`, `UnitCut::labelled_address`, the reassembly `kept_without`,
 the call reader `read_call`; Z18d, review revZ18c S1): each class e-mail call takes the separators before it back to the text or call before it, the e-mail label naming it
 (`Email:`, its contact's name) and a label of its own (`call_label`: `Corresponding author:`, `(Corresponding author)`,
 in its text); a line break stays where text the entry keeps follows (2310.01324's `\url` line); an entry whose inner
@@ -33328,7 +33348,7 @@ own cuts each call with its e-mail label and its own label (`entry_email_cut`'s 
 (`shared_call_item`, by the same `unit_cut`/`read_call`/`labelled_address`): the e-mail label its name (104d's `USA;\@
 Email: \email{\{aable,bbaker,ccole\}@a.edu}`, each part "Email: "), a label of its own in its content, to the address's
 owner or the block (s23's `Corresponding author email:`, 2410.06985); `one_address`'s plain test admits a math shift, a
-group's brace and a separator in the list (`shared_row::is_call_separator`: a tie), which the address written holds none
+group's brace and a separator in the list (`classify::is_call_separator`: a tie), which the address written holds none
 of (1701.08125's `$\{$stomforde$|$bsick$\}$@…;~cms@…`; 2206.10050's `\email{{jsliwinski,wattenhofer}@ethz.ch}`, whose
 two "markup lost" Warnings were spurious); `resolver::shares_the_row` is the one reading of `_share=authors`. Z18g (the old split's
 line rules restated on the reading; Z18f's two REDs green): (7) a `_share=authors` entry's e-mail call written
@@ -33372,13 +33392,12 @@ yanyibo70@ are typewriter `mailto` links to their whole addresses; 1710.01968's 
 typewriter italic 90%, its three other addresses text in italic, counted. (9) takes the old split's labelled-line rule: a later line opened
 by an e-mail label is the block's e-mail, the label its name (`insert::cut_email_label`; astro-ph0007270's `e-mail:
 gil@…`). llncs names an e-mail no call names by its own `\emailname~` (`\lx@contact@email@name`), not the kernel's
-"Email:" (1504.01099). **Two copies, not one:** rules (7)-(9) are restated on the reading; the token-level
-`shared_row::row_email_calls` still holds them and runs whenever the emitter declines a paper (`place.rs`
-`share_row_contacts`, llncs and aa, `_share=authors`). Shared between the two: the label test (`is_email_label`), the
-address test (`is_whole_address`) and the unit cut (`unit_cut`, `read_call`, `labelled_address`); the line tests (an unread
-later line, a first line printing an address, a unit whose addresses go one way) are each written twice, on tokens and on
-the reading's events or the DOM, and are deleted with the declined path. No disagreement is known beyond the labelled line,
-now ported. Residual: a run's link that targets no whole address (a `\url` piece, an `\href` to a page) is lost, counted on each
+"Email:" (1504.01099). **One copy since P27b:** rules (7)-(9) are restated on the reading; the token-level
+`row_email_calls`, which ran whenever the emitter declined a no-block flush (`place.rs` `share_row_contacts`, llncs and
+aa, `_share=authors`), was deleted with it (#901), the emitter writing such a flush. Left of it, in
+`classify/entry_emails.rs`, the entry cut's own: the label test (`is_email_label`), the address test (`is_whole_address`)
+and the unit cut (`unit_cut`, `read_call`, `labelled_address`). No disagreement was known beyond the labelled line,
+ported. Residual: a run's link that targets no whole address (a `\url` piece, an `\href` to a page) is lost, counted on each
 address of the run written as text; a joined run's addresses that the resolver gives to one `\and` column's author are
 dealt among the authors in print order, not by the owners' spelling (`\{\url{bob, ann}\}\url{@x.org}` gives Ann Able
 bob@: review revZ18h S-b, RED `class-bindings/article_author_url_pieces_owner_spelling.tex`, no guard; synthetic, none of
@@ -34380,7 +34399,7 @@ too. The e0 pin `TOKEN_READS` `authblk_sty.rs` 23 → 22. The gates still call t
 `lines_under_names_read_as_names`, `line_breaks_as_name_separators` and `holds_a_macro_printing_a_link` (the layout
 separators, not the `\and` family), so no old-reader line is freed. The S8 half of P2-7, the emitter writing the declined
 no-author-block flushes so that `shared_row::share_row_contacts` and `shared_row/` can go, is not done here (a batch of
-its own): `share_row_contacts`' only effect found is a no-block llncs flush of several authblk `\author` calls
+its own, P27b: #901's last paragraph): `share_row_contacts`' only effect found is a no-block llncs flush of several authblk `\author` calls
 (`\lx@add@creator` each), where the emitter, let through for a flush holding a `_share` contact, gives the same output;
 letting every no-block flush through misplaces icml's labelled contacts. Byte-identical with int158a on authblk's census
 (1,569 of 1,571 compared), stage2 (1,434), a 300-paper raw-class sample (299), z18n_declined40 (40) and

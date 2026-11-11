@@ -32,7 +32,5 @@ mod cover_order;
 pub use cover_order::*;
 mod relocate;
 pub use relocate::*;
-mod shared_row;
-pub(in crate::base_utilities) use shared_row::*;
 pub(in crate::base_utilities) mod observer;
 pub use observer::*;

@@ -903,7 +903,7 @@ pub fn entry_address_owners(
     })
     .collect();
   // (the one address left on the block of several carriers: the carrier marked the corresponding author's, when they own no
-  // other address of the run — the old split's row e-mail owners, `shared_row::row_email_calls`)
+  // other address of the run — the old split's row e-mail owners, `row_email_calls`, deleted at P27b)
   let left: Vec<usize> = (0..owners.len())
     .filter(|&at| owners[at].0.is_none())
     .collect();
@@ -920,8 +920,8 @@ pub fn entry_address_owners(
   owners
 }
 
-/// What [`entry_address_owners`] reads beyond the spelling (the old split's row e-mail owners, `shared_row::row_email_calls`'s
-/// `row_address_owners`, Z18c): every name each address spells (`spellers`) — one spelling several names alike, none of
+/// What [`entry_address_owners`] reads beyond the spelling (the old split's row e-mail owners, `row_email_calls`'
+/// `row_address_owners`, Z18c; both deleted at P27b): every name each address spells (`spellers`) — one spelling several names alike, none of
 /// them the carrier at its place, puts the run in no order: `x1@, x2@, lee@` under Ann Lee, Bob Lee and Cid Cole is the
 /// block's (repro llncs_ambiguous_spelling_is_no_place), while 2102.08148's `jtchen721@` at Jintai Chen's place beside
 /// Danny Z. Chen stays his —; and the one carrier marked the corresponding author (a note naming them so, or a legend
@@ -1068,42 +1068,4 @@ pub(in crate::base_utilities) fn label_pieces(operand: &[Token]) -> Option<Vec<T
     kept.extend(label);
   }
   (!kept.is_empty()).then_some(kept)
-}
-
-/// The place among a row's `names` of the owner of each of `addresses`, the e-mail addresses printed under the row:
-/// the name it spells; else, in a list of one address per name that every spelled address
-/// agrees with, the name at its place; else `None`, the row's names' (FIDELITY_CHARTER §4). An address several names
-/// spell agrees with the list only when the name at its place is one of them: `lee@x.edu` at Cid Cole's place under
-/// "Ann Lee, Bob Lee and Cid Cole" spells another author than the one there, so the list is in no author order (the
-/// 85b review's r01; [`addresses_in_order`](crate::base_utilities::defs::frontmatter_api::email_lines::addresses_in_order) reads such an address as none's). A list of local parts the reader could
-/// not part (`{zz|yy}@x.edu`, [`lists_local_parts`]) is several authors' address, so no list holding one is one address
-/// per name (user ruling R10: the block's).
-pub(in crate::base_utilities) fn row_address_owners(
-  names: &[Tokens],
-  addresses: &[String],
-) -> Vec<Option<usize>> {
-  let keys: Vec<NameKeys> = names.iter().map(NameKeys::of).collect();
-  let in_order = addresses.len() == names.len()
-    && addresses.iter().enumerate().all(|(at, address)| {
-      let spelled = spelled_owners(&keys, address);
-      !lists_local_parts(address) && (spelled.is_empty() || spelled.contains(&at))
-    });
-  addresses
-    .iter()
-    .enumerate()
-    .map(|(at, address)| spelled_owner(&keys, address).or(in_order.then_some(at)))
-    .collect()
-}
-
-/// The owner of each of `addresses` among a row's `names` by its spelling alone ([`spelled_owner`]), when the
-/// addresses printed under the row are not all read, so no list of them is known to be one per name.
-pub(in crate::base_utilities) fn row_address_spelled_owners(
-  names: &[Tokens],
-  addresses: &[String],
-) -> Vec<Option<usize>> {
-  let keys: Vec<NameKeys> = names.iter().map(NameKeys::of).collect();
-  addresses
-    .iter()
-    .map(|address| spelled_owner(&keys, address))
-    .collect()
 }

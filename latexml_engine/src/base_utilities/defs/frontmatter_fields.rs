@@ -500,7 +500,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     ]))
   });
   // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #901): an address of the e-mail line under a whole row of names, placed by
-  // its owner's label (`row:atN`, or `addresses:block`; `share_row_contacts`), `#2` set in the class command's font. A
+  // the label the frontmatter emitter gives it (`classify::entry_email_cut`), `#2` set in the class command's font. A
   // class whose own e-mail contact has a name of its own sets it here (llncs's `\emailname`).
   DefMacro!("\\lx@row@email{}{}", "\\lx@add@email[label={#1}]{#2}");
   // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #901): such an address under the e-mail label printed before it (`Email:

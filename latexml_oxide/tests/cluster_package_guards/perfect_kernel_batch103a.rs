@@ -5,7 +5,7 @@
 //! the flush's Link step writes an e-mail out only where the two readings of it agree, so no local part is ever lost
 //! (frontmatter/insert.rs `link_entry_addresses`; OXIDIZED_DESIGN_DIVERGENCES #956). Code paths: the flush's
 //! write-out of an e-mail an `\inst`-marked institute prints, and the address reader on llncs's shared institute row
-//! (`shared_row::row_email_calls`) and on a hand-marked institute list (`affiliations::place_address_runs`). Each guard
+//! (the old `shared_row::row_email_calls`, deleted in P27b; the emitter's entry cut since) and on a hand-marked institute list (`affiliations::place_address_runs`). Each guard
 //! converts its repros under `tools/perfect_kernel/repros/sectioning-frontmatter/` and asserts no Error or Warning and
 //! every creator's name and contacts (role and text) in order. Witness 2112.00969 (batch 100b's regression: `dzyang`
 //! lost).
@@ -40,7 +40,7 @@ fn assert_creators(tex: &str, expected: &[&[&str]]) {
 }
 
 /// The author block's address reader (`email_addresses`) on llncs's one institute: the shared row (no `\inst` marks,
-/// `shared_row::row_email_calls`) and a list whose entries hand-printed marks label (`$^1$ … $^2$ …`, the witness's
+/// the old `shared_row::row_email_calls`, deleted in P27b) and a list whose entries hand-printed marks label (`$^1$ … $^2$ …`, the witness's
 /// shape, 2112.00969: `affiliations::place_address_runs`). The line's unspaced list is written out, each address the
 /// author it spells. Red (int130a): the shared row's line one address of a nameless creator; the marked list's
 /// `dzyang` lost.

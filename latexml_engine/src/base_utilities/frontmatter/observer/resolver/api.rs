@@ -374,7 +374,7 @@ impl Resolver {
     }
     // (a class's sole institute under the names, `_share=authors` (llncs's, aa's): with several authors a later line of
     // it printing addresses alone, outside the class's e-mail calls, is an e-mail line of the row, each address read
-    // apart and placed as a call's — today's reads the row so (`shared_row::row_email_calls`, OD #901): aa
+    // apart and placed as a call's — the old split read the row so (`row_email_calls`, deleted at P27b; OD #901): aa
     // 2506.20360's `\email{guolianglv@sina.com};{chunhuazhu@sina.cn}` gave the second address to the institute's
     // text, which then differed from today's and held the writing back)
     let row_lines;
@@ -946,7 +946,7 @@ impl Resolver {
       return;
     }
     // (the flush's one shared run: every author's, before it and after it, once every name is read — `answer_pending`, as
-    // `shared_row::share_row_contacts` places it: cas prints the entry list under the whole row of names, 2506.17280,
+    // the old split placed it (`share_row_contacts`, deleted at P27b): cas prints the entry list under the whole row of names, 2506.17280,
     // 2106.02306, 2201.00009, 2207.13923, 2411.19633, 2606.24054; P2 C)
     if self.sole_shared_run && !note && shares_a_run(attrs) {
       let at = self.pending.len();

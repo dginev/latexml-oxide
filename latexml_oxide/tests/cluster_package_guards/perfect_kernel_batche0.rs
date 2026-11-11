@@ -1478,7 +1478,11 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (MB1, 386 -> 387: the class's name of an entry before a line's own label moved unchanged from `kind.rs` to
   // `email_block_calls.rs` `entry_line_label`, beside the label rule, `split_email_label`; `defs/frontmatter_api/` 109 ->
   // 108, none added)
-  ("classify", 387),
+  // (P27b, 387 -> 443: `shared_row/`'s survivors moved unchanged to `classify/entry_emails.rs` (+56) — the emitter's entry
+  // e-mail cut (`entry_email_cut`, `shared_call_item`) and the reader, unit cut and reassembly it shares since Z18d
+  // (`read_call`, `unit_cut`, `kept_without`, review revZ18c S1); the rows `shared_row` (13) and `shared_row/emails` (65)
+  // gone, 78 = 56 + 22 deleted with `share_row_contacts` and `row_email_calls`; none added)
+  ("classify", 443),
   // (E0h: the rest of `author_block/` Z18m moved unchanged to `classify/old_reader/`, split off from `classify`'s row)
   ("old_reader", 131),
   ("defs/author_macros", 20),
@@ -1626,10 +1630,6 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("rest /tokens.rs", 36),
   ("rest /util_text.rs", 25),
   ("revtex4_support_sty.rs", 12),
-  ("shared_row", 13),
-  // (Z18c 65 -> 68: `entry_email_cut`'s copy of the row's unit cut and reassembly; Z18d 68 -> 65: the copy gone, the entry's
-  // cut and the row's split share one cut, reader and reassembly — `unit_cut`, `read_call`, `kept_without`, review revZ18c S1)
-  ("shared_row/emails", 65),
   ("sv_support_sty.rs", 35),
   ("webofc_cls.rs", 0),
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with the emitter's vocabulary, 924 = 826 + 98; none added)
@@ -1698,8 +1698,6 @@ const FRONTMATTER_AREAS: &[(&str, &str)] = &[
   // (the "Knowledge in, driver out, one pass" move: Perl's whole-block fallback and its own preparation, moved unchanged from `author_block/`)
   ("fallback", "fallback.rs"),
   ("owners", "observer/resolver/owners.rs"),
-  ("shared_row/emails", "shared_row/emails.rs"),
-  ("shared_row", "shared_row.rs"),
   ("relocate", "relocate.rs"),
   ("place", "place.rs"),
   ("queue_digest", "queue_digest.rs"),

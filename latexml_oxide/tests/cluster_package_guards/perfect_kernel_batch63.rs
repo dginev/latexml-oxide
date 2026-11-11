@@ -1369,7 +1369,8 @@ fn svjour3_sole_author_keeps_the_institute() {
 }
 
 /// 63h: the same for llncs, whose `\institute` without `\inst` went to a name-less creator even under one author (#159).
-/// Since 85b its e-mail is a line under the names (`share_row_contacts`, #901), which takes the space before it.
+/// Since 85b its e-mail is a line under the names (#901; the old row split `share_row_contacts`, deleted in P27b), which
+/// takes the space before it.
 /// Repro sectioning-frontmatter/llncs_sole_author_keeps_the_institute.
 #[test]
 fn llncs_sole_author_keeps_the_institute() {
