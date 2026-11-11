@@ -1866,16 +1866,13 @@ do not block the E/F rerun.
 - Reviews: revNE1, revNE2, revNE2r2, revX1, revX2, revCL9b, revCL10 (and the fix rounds' re-reviews).
 - Reports: `agent_reports/2026-11-07_{F1,F1r2,revF1,revF1r2,N1,revN1,LO1,revLO1,N2,revN2,N2r2,LO2,revLO2,LO2r2,revLO2r2,tests_sort}_report.md`, `2026-11-09_{NE1,NE2,NE1w,NE2w,NE2b,NE2c,NE3,CL5,CL6,CL7,CL8,CL8b,CL9,CL9b,CL9c,CL10,revNE1,revNE2,revNE2r2,revX1,revX2,revCL9b,revCL10}_report.md`, `2026-11-08_{T1,revT1,N2r3,revN2r3,LO3,revLO3,LO4,revLO4,RD1,P2,revP2,P2r2,revP2r2,RC1,revRC1,revG1,revG2,revG3,revBC1,revG5,revH1,revH2,revH3,revI1,revI2,revI3,revI4,revI5,revI6,revI7,revI8,cw78,ts9}_report.md`
 
-### An image before a URL, mark or address on a frontmatter line is dropped silently (CR8c; OD #989)
+### An image before a URL, mark or address on a frontmatter line is dropped silently (CR8c; OD #989) — fixed (IMG1)
 
-- **Known silent loss, open:** 2503.08161's `hf-logo.png`, an image before a URL on its line, is dropped with 0 frontmatter Warnings (revCR8c finding 2, confirmed on both binaries); its logo on the first marked line after bold names is kept since CR8c (`polyu-logo.png` on its 4 authors; guard `perfect_kernel_batchcr8::image_on_the_first_marked_line_is_kept`).
-- RED repro `sectioning-frontmatter/fm_image_before_url_is_a_note.tex`, no guard.
-- Drop site: `events::place_pictures` (`observer/events/mod.rs` ~2645-2656) places a picture only on a names line, at a line end or inside a later line's text; one that leads a URL, mark or address piece has no place and is not written.
-- Why the content check cannot see it: an image has no words, so the word count (`resolver::placed`) has nothing to miss.
-- A naive count of Layout images false-flags the icons a URL contact writes (guard 77y, 2505.21327); a sound Warning needs span coverage — every picture's span inside some written item's span.
-- Reverted attempts: CR8c's note in place and at the line's end kept the image but merged 2505.21327's two `{\github\ \url{…}} \\ {\huggingface\ \url{…}}` URL lines into one affiliation (markup lost, +1 W); the Warning attempt's patch is `/home/deyan/data/pk_wt/scratch_CR8c/image_warning_attempt.patch`.
-- Fix: place the picture as a note at its line (the picture ruling, user 2026-11-10 "A note, kept whole") or count it by span coverage.
-- State: open (main session at the CR8b/CR8c merge `08460a0ea6`).
+- **Fixed (IMG1):** an image leading a URL on a later line is the URL contact's (`events::place_pictures` grows its span over the image): 2503.08161's `hf-logo.png` kept on its four URL copies, 2601.17879's `\github \quad \url{…}` icon kept (repro `author_icon_macro_quad_before_url`), 2505.21327 byte-identical; guards `perfect_kernel_batchimg1::image_before_a_url_is_in_the_url`, `perfect_kernel_batch77y::icon_parted_from_its_link_goes_with_it`.
+- **Counted, not kept:** an image leading a mark or an address, or one the written item's span does not hold (`Web: \includegraphics{…} \url{…}`), raises one Warning per block by span coverage (`Written::unwritten_pictures`, `emit::warn_unwritten_pictures`); guards `perfect_kernel_batchimg1::{image_before_a_mark_is_counted, image_before_an_address_is_counted, image_after_a_url_label_is_counted}`.
+- Unchecked routes: an image a later line's run of text joins (its words the word check's), a picture inside an API call.
+- Kept from CR8c: its logo on the first marked line after bold names (`polyu-logo.png` on its 4 authors; guard `perfect_kernel_batchcr8::image_on_the_first_marked_line_is_kept`); the reverted note attempt (`/home/deyan/data/pk_wt/scratch_CR8c/image_warning_attempt.patch`) merged 2505.21327's two URL lines into one affiliation.
+- State: fixed (IMG1).
 
 ### Bundle int156a — the residual (OD #983, #944, #992)
 

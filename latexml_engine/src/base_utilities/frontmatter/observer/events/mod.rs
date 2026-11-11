@@ -2643,7 +2643,7 @@ pub(in crate::base_utilities) fn lex_with_inks(
 /// an event of its own, for the content check), the contact written from its tokens with the icon in place, as pdflatex prints it (2503.08161's `\includegraphics{hf-logo.png}
 /// \texttt{\small\url{…}}`, 2505.21327's `{\github\ \texttt{\url{…}}}`, 2601.17879's `\github \quad \url{…}`: each icon
 /// lost silently). An image leading any other ink of a later line — a mark, an e-mail contact, a run printing an address —
-/// has no place and stays as it is, counted by the content check (`resolver::words::unwritten_pictures`). A pgf/TikZ
+/// has no place and stays as it is, counted by the content check (`resolver::words::Written::unwritten_pictures`). A pgf/TikZ
 /// picture is a note already and stays one.
 fn place_pictures(events: &mut Vec<Event>) {
   let image = |e: &Event| {
@@ -2699,7 +2699,7 @@ fn place_pictures(events: &mut Vec<Event>) {
         .find(|&j| !font_switch(&events[j]) && !gap(&events[j]))
         .filter(|&j| url(&events[j]));
       // (the image stays an event of its own, inside the contact's span: what the content check finds held by the item
-      // written, `resolver::words::unwritten_pictures` — a URL the reading writes by its label's text, `Web:
+      // written, `resolver::words::Written::unwritten_pictures` — a URL the reading writes by its label's text, `Web:
       // \includegraphics{…} \url{…}`, holds it not, counted)
       if let Some(link) = link.filter(|_| !picture && line > 0 && !ends_line) {
         events[link].span = join_span(events[i].span, events[link].span);
@@ -2710,7 +2710,7 @@ fn place_pictures(events: &mut Vec<Event>) {
       // mark, an e-mail contact, a run printing an address — stays the Layout event it is, which nothing writes: a note
       // there broke the line's reading (`\includegraphics{…} $^{1}$Zebra University` its affiliation written as its text,
       // `\includegraphics{…} \texttt{ann@x.org}` its e-mail too, the note lost), and an address run is written as its text,
-      // a picture joined into it lost with it. The content check counts it (`resolver::words::unwritten_pictures`))
+      // a picture joined into it lost with it. The content check counts it (`resolver::words::Written::unwritten_pictures`))
       if !picture && (line == 0 || ends_line) {
         events[i] = picture_note(&events[i]);
       }
