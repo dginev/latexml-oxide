@@ -34335,6 +34335,27 @@ a_paragraph_in_a_box_keeps_a_contacts_markup}`; repros `class-bindings/author_on
 `amsart_dedicatory_{box,parbox}_paragraph_stays_a_group.tex`, `authblk_minipage_paragraph_keeps_a_typewriter_email.tex`,
 `mnras_parbox_paragraph_keeps_a_mailto_link.tex`.
 
+**P2-1's setters in notes (EJ1): a setter inside an emitted note writes its entry once.** A frontmatter setter that
+makes no creator, run inside an author block (ejpecp's `\EMAIL`, `\@add@frontmatter{ltx:note}[role=email]{#1}`, in a
+`\footnote` or `\thanks` of `\AUTHORS`), is noted by the rehearsal (`AuthorBlock::queued`) and written by the emitter as
+queued (`emit.rs` `recover_queued`). A note the emitter writes from its argument (`note_argument`) digested the setter a
+second time. Under P21's one block (OmniBus's `\author`, which ejpecp loads) every note followed by a space or an `\and`
+is written from its argument; int157a's split by spelling trimmed each piece, so its note mostly closed the piece and
+was written by its text (a "note no argument" Warning), running no setter. Hence a second `<note role="email">` per such
+note (int157a → P21e): 1406.5876 1 → 2, 1904.02213 3 → 4, 2206.01959 2 → 3, 1904.07135 4 → 8. 1904.02213's second note,
+whose argument ends in a space (`\BEMAIL{dong.yao@duke.edu} }`), was written twice by int157a already. Now an item the
+emitter writes from a block whose rehearsal ran such a setter opens with `\lx@frontmatter@setters@of{<the block's ledger
+index>}`, which sets `emit::SETTERS_RECOVERED` (cleared for every queued entry, `place::digest_queued_entry`) where the
+recovery wrote that block's entries, at this flush or an earlier one. Under it `\lx@add@frontmatter@now` writes nothing
+(not a creator). The recovery stays the one writer, so each address is one note, where int157a placed it: the four
+papers 1, 2, 2, 4 notes, one per address (1904.02213 better than int157a). The note keeps its markup (no Warning) and
+its whitespace before the `\EMAIL` (`Univ X⏎`; int157a's text was `Univ X`). A note closing the block is still written
+by its text, with its Warning. An API call's items are not marked: the recovery writes no call the reading writes from
+(`written`), so the item runs the setter itself. Guard
+`perfect_kernel_batchej1::a_setter_in_an_author_note_writes_its_entry_once`; repros `sectioning-frontmatter/`
+`ejpecp_footnote_email_setter_written_once.tex`, `ejpecp_footnote_emails_between_authors_written_once.tex`,
+`ejpecp_thanks_email_setter_written_once.tex`.
+
 ### 994. The rehearsal binds a `\let` copy of an author-line separator or note command by its meaning, as the command it copies (SEP1)
 
 **Perl.** `\let\nx\and` then `\author{Ann Able \nx Bob Baker}` gives two creators, Ann Able and Bob Baker (Perl 0.8.8,

@@ -335,6 +335,13 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     if rehearsal::rehearsing() && tag != "ltx:creator" {
       rehearsal::note_frozen_entry(&tag, kv.as_ref(), &now_command(None, &tag_tks, kv.as_ref(), Some(&content))?);
     }
+    // (a setter inside an item the emitter wrote from an author block whose setters' entries it wrote as queued
+    // (`emit::recover_queued`, `emit::SETTERS_RECOVERED`) writes nothing more: that entry is this setter's — ejpecp's
+    // `\EMAIL` in a `\footnote` of `\AUTHORS` wrote a second `<note role="email">`, 1406.5876, 1904.07135)
+    if tag != "ltx:creator" && !rehearsal::rehearsing() && lookup_bool(SETTERS_RECOVERED) {
+      DebugFeature!("frontmatter", "FRONT drop {tag}: its block's setters' entries are written as queued");
+      return Ok(Vec::new());
+    }
     // %options = digested keyvals hash; role read from the UNdigested keyvals
     // (Careful! Multiple values — Perl getValue returns the last one.)
     let mut options = TagAttrs::default();
@@ -672,6 +679,13 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   DefPrimitive!("\\lx@frontmatter@queued{}", sub[(place)] {
     let place: i64 = place.to_string().parse().unwrap_or(1);
     assign_value(QUEUE_ORDINAL_COUNTER, Stored::Int(place - 1), Some(Scope::Global));
+    Ok(Vec::new())
+  });
+  // (an emitted item of the author block at this ledger index, whose setters' entries, where the emitter wrote them as
+  // queued, its digestion writes no more: `emit::SETTERS_RECOVERED`; 1406.5876)
+  DefPrimitive!("\\lx@frontmatter@setters@of{}", sub[(index)] {
+    let recovered = setters_recovered(&index.to_string());
+    assign_value(SETTERS_RECOVERED, Stored::Bool(recovered), Some(Scope::Local));
     Ok(Vec::new())
   });
   // (an entry as `\\lx@annotate@frontmatter` queues it, its lines of addresses read, on `@now`)

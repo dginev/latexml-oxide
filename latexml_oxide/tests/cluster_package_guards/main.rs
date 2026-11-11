@@ -432,6 +432,9 @@ mod perfect_kernel_batchcr8;
 mod perfect_kernel_batchdel3;
 mod perfect_kernel_batche0;
 mod perfect_kernel_batche1x;
+/// EJ1: a frontmatter setter inside an emitted item of an author block writes its entry once — ejpecp's `\EMAIL` in a
+/// `\footnote` or `\thanks` of `\AUTHORS` (1406.5876, 1904.02213, 1904.07135, 2206.01959; OD #993).
+mod perfect_kernel_batchej1;
 mod perfect_kernel_batcherr2;
 mod perfect_kernel_batchf1;
 mod perfect_kernel_batchfb2a;
