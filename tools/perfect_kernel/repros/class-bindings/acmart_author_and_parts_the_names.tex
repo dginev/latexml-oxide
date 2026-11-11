@@ -4,9 +4,9 @@
 %   `Sep(And)` event inside its `\lx@personname` Layout (nest 1), its own level (`resolver::api::creator_call_pieces`;
 %   the cut OC1b tried tested nest 0 and never fired). The emitter, which otherwise stays out of a paper with no author
 %   block (emit.rs `stays_out`), writes the call as one call per piece (`emit::cut_creator_calls`, `creator_call_cut`):
-%   the call's own command, keyvals and wrappers, the `\lx@author@withinst` group holding the tokens between two
-%   `\and`s, its positions from a fresh rehearsal of the content (the ledger's events carry none). Siblings on the
-%   token path: `acmart_author_{csname,active,wrapper}_and_parts_the_names.tex`; the macro-held one is written by text
+%   the call's own command, keyvals and wrappers, the `\lx@author@withinst` group holding each piece's tokens (from
+%   its first event's position to its last's), by positions from a fresh rehearsal of the content (the ledger's events
+%   carry none). Siblings on the token path: `acmart_author_{csname,active,wrapper}_and_parts_the_names.tex`; the macro-held one is written by text
 %   (`acmart_author_macro_held_and_parts_the_names.tex`). An `\affiliation`, a `\thanks` or a brace group around the
 %   names with the `\and` makes TL 2025's acmart loop (pdflatex "TeX capacity exceeded" at `\maketitle`): invalid input
 %   there, so none here (an `\email` is fine: `acmart_author_and_call_beside_a_block_parts_the_names.tex`)

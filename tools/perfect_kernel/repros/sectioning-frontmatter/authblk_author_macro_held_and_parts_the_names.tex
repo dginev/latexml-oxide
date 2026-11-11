@@ -13,9 +13,9 @@
 % engines: Perl 0.8.8: one creator "Ann Able and Bob Baker" by authblk.sty.ltxml:52-55's spelling check (not run);
 %   int156a (OC1b-rel): Cy Cole (Univ C), "Ann Able and Bob Baker" (Univ X, Univ Y), Dee Dunn (Univ D), 1 error
 %   (`merged_creators`), 1 warning
-% expect:  0 errors, 2 warnings (each name written by its text, "a creator call whose `\and`s a macro holds with its
-%   names, cut at them"); creators Cy Cole (Univ C), Ann Able (Univ X, Univ Y), Bob Baker (Univ X, Univ Y), Dee Dunn
-%   (Univ D)
+% expect:  0 errors, 2 warnings (each name written by its text, "a creator call cut where a macro holds its names and
+%   the separators between them"); creators Cy Cole (Univ C), Ann Able (Univ X, Univ Y), Bob Baker (Univ X, Univ Y),
+%   Dee Dunn (Univ D)
 % status:  RED (int156a) -> GREEN (OC1c; guard perfect_kernel_batchoc1c::an_api_creator_call_parts_at_its_own_and)
 \documentclass{article}
 \usepackage{authblk}

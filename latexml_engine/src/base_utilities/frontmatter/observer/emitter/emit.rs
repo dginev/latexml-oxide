@@ -4024,12 +4024,6 @@ fn creator_call_cut(call: &ApiCall) -> Result<Option<Vec<Tokens>>> {
       clear.then_some((s, t))
     })
     .collect();
-  let trimmed = |run: &[Token]| -> Vec<Token> {
-    let blank = |t: &Token| t.get_catcode() == Catcode::SPACE || *t == T_CS!("\\ ");
-    let start = run.iter().position(|t| !blank(t)).unwrap_or(run.len());
-    let end = run.iter().rposition(|t| !blank(t)).map_or(start, |e| e + 1);
-    run[start..end].to_vec()
-  };
   let balanced = |run: &[Token]| {
     let mut depth = 0i32;
     run.iter().all(|t| {
@@ -4037,19 +4031,40 @@ fn creator_call_cut(call: &ApiCall) -> Result<Option<Vec<Tokens>>> {
       depth >= 0
     }) && depth == 0
   };
+  // (each piece's run: from its first event's position to its last's — the spaces around the `\and`, a control space after
+  // a `\csname and\endcsname`, left out — or, where that run is no balanced one, everything between the two `\and`s)
+  let segments: Vec<&[Event]> = events
+    .split(|e| e.nest == own && matches!(e.kind, EventKind::Sep(events::SepKind::And(_))))
+    .collect();
   let runs: Option<Vec<Vec<Token>>> = spans.and_then(|spans| {
-    let mut from = group + 1;
+    let mut bounds = vec![group + 1];
+    for (s, t) in &spans {
+      bounds.push(*s);
+      bounds.push(*t);
+    }
+    bounds.push(close);
     let mut runs = Vec::new();
-    for (s, t) in spans.into_iter().chain(std::iter::once((close, close))) {
-      let run = trimmed(content.get(from..s)?);
-      if !balanced(&run) {
-        return None;
+    for (k, segment) in segments.iter().enumerate() {
+      if !segment.iter().any(|e| e.kind == EventKind::Name) {
+        continue;
       }
-      // (a piece of no token, `\and \and`, none: it holds no name)
-      if !run.is_empty() {
-        runs.push(run);
-      }
-      from = t;
+      let (from, to) = (*bounds.get(2 * k)?, *bounds.get(2 * k + 1)?);
+      let held: Vec<(usize, usize)> = segment
+        .iter()
+        .filter(|e| e.nest >= own && !matches!(e.kind, EventKind::Sep(_)))
+        .filter_map(|e| e.span)
+        .map(|(a, b)| (usize::from(a), usize::from(b)))
+        .collect();
+      let tight = held
+        .iter()
+        .map(|(a, _)| *a)
+        .min()
+        .zip(held.iter().map(|(_, b)| *b).max())
+        .filter(|&(a, b)| from <= a && a < b && b <= to)
+        .and_then(|(a, b)| content.get(a..b))
+        .filter(|run| balanced(run));
+      let run = tight.or_else(|| content.get(from..to).filter(|run| balanced(run)))?;
+      runs.push(run.to_vec());
     }
     Some(runs)
   });
@@ -4072,7 +4087,9 @@ fn creator_call_cut(call: &ApiCall) -> Result<Option<Vec<Tokens>>> {
         .map(|piece| {
           let names: Vec<&Event> = piece.iter().filter(|e| e.kind == EventKind::Name).collect();
           by_text(
-            Some("a creator call whose `\\and`s a macro holds with its names, cut at them"),
+            Some(
+              "a creator call cut where a macro holds its names and the separators between them",
+            ),
             events::events_text(&names).trim(),
           )
         })
@@ -4118,41 +4135,40 @@ fn with_last_group(command: &Tokens, content: Vec<Token>) -> Option<Tokens> {
 }
 
 /// A queued annotation's `annotate={run:<cap>}` (authblk's unlabelled `\affil`, `authblk_sty.rs` `affil_run`: the
-/// creators queued since the last `\affil`): the cap, and the call with it raised by `more`. `None` for a call of no such
-/// key.
+/// creators queued since the last `\affil`), its cap read off the ledger's record of the call (`ApiCall::attrs`): the cap,
+/// and the call with it raised by `more`, its other keys as they stand. `None` for a call of no such key.
 fn run_cap(command: &Tokens, more: usize) -> Option<(usize, Tokens)> {
+  let attrs = with_ledger(|ledger| {
+    ledger.entries().iter().find_map(|entry| match entry {
+      Entry::Api(call) if call.command.as_ref() == Some(command) => Some(call.attrs.clone()),
+      _ => None,
+    })
+  })?;
+  let cap: usize = attrs
+    .split(',')
+    .find_map(|pair| pair.trim().strip_prefix("annotate="))?
+    .trim_matches(|c| c == '{' || c == '}')
+    .strip_prefix("run:")?
+    .trim()
+    .parse()
+    .ok()?;
   let v = command.unlist_ref();
   let (Some(open), Some(close)) = key_list_bounds(v) else {
     return None;
   };
-  let (mut depth, mut from) = (0, open + 1);
-  for i in open + 1..=close {
-    depth += v[i].group_step();
-    if i == close
-      || (depth == 0 && v[i].get_catcode() == Catcode::OTHER && v[i].with_str(|s| s == ","))
-    {
-      let pair: String = v[from..i]
-        .iter()
-        .map(|t| t.with_str(ToString::to_string))
-        .collect();
-      // (its value braced as the queue holds it, `annotate={run:1}`, or not)
-      if let Some(value) = pair.trim().strip_prefix("annotate=")
-        && let Some(cap) = value
-          .trim()
-          .trim_start_matches('{')
-          .trim_end_matches('}')
-          .strip_prefix("run:")
-        && let Ok(cap) = cap.trim().parse::<usize>()
-      {
-        let mut out = v[..from].to_vec();
-        out.extend(internal(&s!("annotate={{run:{}}}", cap + more)));
-        out.extend_from_slice(&v[i..]);
-        return Some((cap, Tokens::new(out)));
-      }
-      from = i + 1;
+  let mut out = v[..=open].to_vec();
+  for (k, (key, pair, _)) in key_pairs(v, open, close).into_iter().enumerate() {
+    if k > 0 {
+      out.push(T_OTHER!(","));
+    }
+    if key == "annotate" {
+      out.extend(internal(&s!("annotate={{run:{}}}", cap + more)));
+    } else {
+      out.extend_from_slice(pair);
     }
   }
-  None
+  out.extend_from_slice(&v[close..]);
+  Some((cap, Tokens::new(out)))
 }
 
 /// The queued entries of a paper with no author block whose creator calls are cut ([`creator_call_cut`]), each replaced
@@ -4183,7 +4199,7 @@ fn cut_creator_calls(commands: &mut Vec<RawFrontmatter>) -> Result<()> {
     };
     DebugFeature!(
       "frontmatter",
-      "FRONT emit: creator call {} cut at its own \\and into {}",
+      "FRONT emit: creator call {} cut at its own separators into {}",
       call.index,
       pieces.len()
     );

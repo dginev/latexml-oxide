@@ -1584,7 +1584,11 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // Z18e 19 -> 20: llncs's `\author` lines (`Policy::author_lines`), a line over the next line of its column reading as
   // an institution starts a row — the `reads_as_affiliation` per line moved from the binding's split it replaces
   // (`\lx@llncs@author`, whose reads leave llncs_cls.rs), one `is_institution` on the lines' printed text)
-  ("resolver", 20),
+  // OC1c 20 -> 21: `api::creator_call_level`, the Layout of the API's own `\lx@personname` wrapper by its role — the
+  // container `\lx@add@author` writes around every creator call's argument (`{\lx@personname{#2}}`,
+  // Base_Utility.pool.ltxml:585-589), no name a document spells — whose inside is the call's own level for a `Sep(And)`
+  // (OD #993, the API route); also among `OBSERVER_BACKSLASH_LITERALS`' `resolver`
+  ("resolver", 21),
   // (DEL1 24 -> 20: the old driver's unit tests of `name_and_trailing_email`, `leading_symbol_labels`, `weldable_line`,
   // `continues_the_line`, `person_over_institution` and `strip_linebreak_options_keeping_gaps` deleted)
   // (Z18l, 19 -> 18: the tests of the deleted `labelled_emails` and `mailto_line` deleted with them)
@@ -1891,8 +1895,9 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   // meaning to print it (6); the `\emailAdd` binding's constructor (1); `calls_the_api`, a digested whatsit by its definition,
   // the rehearsal's own `\lx@fm@obs@annotate` (1) — no decision on a name a document spells)
   ("rehearsal", 136),
-  // (also among `resolver`'s 18 in `TOKEN_READS`: a `'\\'` read of a label, a call's hook)
-  ("resolver", 3),
+  // (also among `resolver`'s 18 in `TOKEN_READS`: a `'\\'` read of a label, a call's hook; OC1c 3 -> 4: the API's own
+  // `\lx@personname` wrapper's Layout role, `api::creator_call_level`, as `TOKEN_READS` says)
+  ("resolver", 4),
   // (the "Knowledge in, driver out, one pass" move: the old reader's owner logic, moved unchanged from `author_block/`, its literals with it; none added)
   ("resolver/owners", 4),
   ("reading", 7),

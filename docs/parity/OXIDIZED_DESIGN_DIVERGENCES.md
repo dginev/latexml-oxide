@@ -34043,15 +34043,18 @@ authblk's and ecai's where their spelling test finds no separator (`authblk_sty.
 piece holding ink holds a name (one inside a container of the name or a note is that container's; `Ann Able \and
 \thanks{…}` stays whole). OC1b's cut tested nest 0 and never fired (measured by an event print on `acm_mixblock.tex`). The
 emitter writes such a call as one creator call per piece (`emit::creator_call_cut`): the call's own command, keyvals (role,
-label, annotations) and wrappers, the group holding the `\and`s holding the tokens between two of them, by positions from a
-fresh rehearsal of the content (the ledger's events carry none, `ApiCall::errors`), where each `\and`'s own tokens (a
-literal one, `\csname and\endcsname`, an active character) part no ink; else, a macro holding names and `\and`s together
+label, annotations) and wrappers, the group holding the `\and`s holding the piece's run — from its first event's position to its last's, or
+all between its two `\and`s where that run is unbalanced — by positions from a fresh rehearsal of the content (the
+ledger's events carry none, `ApiCall::errors`), where each `\and`'s own tokens (a literal one, `\csname and\endcsname`, an
+active character) part no ink; else, a macro holding names and `\and`s together
 (`\author{\aut}`), each name by its text with a counted Warning (`by_text`), only where each piece prints its name alone
 (else the call stays whole, its merge counted by `merged_creators`). In a paper with no author block, where the emitter
 otherwise stays out (`emit.rs` `stays_out`), the queued entry is replaced by its pieces' calls (`cut_creator_calls`), the
 rest of the queue digested as Perl's, and an `annotate={run:<cap>}` after it (authblk's unlabelled `\affil`, `affil_run`,
-the authors queued since the last `\affil`) counts the pieces, so the `\affil` goes to every name, as pdflatex prints it
-under the shared mark. Beside a block the emission's per-creator loop writes each creator of the cut call as its piece, its
+the authors queued since the last `\affil`) counts the pieces (its cap read off the ledger's `ApiCall::attrs`), so the `\affil` goes to every name,
+as pdflatex prints it under the shared mark. The wrapper is told by its Layout role, the API's own container, not a
+document's spelling: the e0 fences' `resolver` pins rose by one each (`TOKEN_READS` 20 → 21,
+`OBSERVER_BACKSLASH_LITERALS` 3 → 4), the emitter's none. Beside a block the emission's per-creator loop writes each creator of the cut call as its piece, its
 own `author:N`. Witnesses 1909.10278 (one merged creator, E 1 → two, the affiliation on both and the shared
 `\email{{dlerch,dmegias}@uoc.edu}` on the last, as the PDF prints it under both; E 0) and 2501.11185 (one merged creator
 holding both institutes, W 1 → two, each with its institute line, W 0); 15 of the census's 873 acmart papers spell a
