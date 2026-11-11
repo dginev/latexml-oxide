@@ -1,8 +1,10 @@
-% A paper repeating its author block for a supplement copies no address onto the last creator: the second block's `\email`
-%   calls land there, and a copy the owner already holds is dropped.
+% A paper repeating its author block for a supplement copies no address onto the last creator: before RB1 the second
+%   block's `\email` calls landed there, and a copy the owner already held was dropped.
 % witness: 2307.07324, 1801.07635, 1810.03867, 2510.13035, 2001.07542, 2608.31160
-% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: each \maketitle prints the block with each author's own address
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: the first \maketitle prints the block with each author's own
+%   address; the second block prints nothing (revtex4-2.cls:2670-2684)
 % engines: rust int139a (107g's "stays on both" rule): Bob Baker holds ann.able@ too; int138a: right
+%   RB1: right, and the second block prints nothing (REVTeX's `\maketitle` switches its setters off), as pdflatex
 % expect:  0 errors; Ann Able ann.able@x.org; Bob Baker bob.baker@y.org; no copies
 \documentclass[aps,prl]{revtex4-2}
 \begin{document}

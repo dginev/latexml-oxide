@@ -1,3 +1,4 @@
+use super::revtex4_cls;
 use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -155,6 +156,8 @@ LoadDefinitions!({
   // `perfect_kernel_batch78j::revtex_citations_sort_and_compress`.
   Digest!("\\PassOptionsToPackage{sort&compress}{natbib}")?;
   RequirePackage!("revtex4_support");
+  // revtex4-1.cls:2649-2662: the author block's setters switched off after `\maketitle` (`revtex4_cls.rs`).
+  revtex4_cls::switch_off_author_block_after_maketitle()?;
   // revtex4-1.cls:7046, revtex4-2.cls:7067 `\let\NAT@merge\thr@@`: `\cite{a,*b}` merges b's entry into a's
   // (`natbib_sty::natbib_merge_citations`; REVTeX 4.0 does not merge). 1808.00247.
   if !lookup_bool("revtex_nomerge") {
