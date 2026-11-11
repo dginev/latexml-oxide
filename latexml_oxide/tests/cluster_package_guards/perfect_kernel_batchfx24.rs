@@ -268,7 +268,8 @@ fn an_llncs_author_tail_is_kept() {
 /// printed tail, so the check reports "bob" as annotated, an Info, not a Warning (FX27, the user's ruling of 2026-11-11:
 /// the author may mean it hidden, no damage can be claimed). int159a pinned it at 1 Warning (`ff7473bd2c`); FX26/FX26b's
 /// binding declaration, which dropped the tail from the check's print, is parked (revFX26, revFX26b: it silenced a
-/// counted loss), its mechanism not merged.
+/// counted loss), its mechanism not merged. Its second conversion is one loss with words of both severities (FX27's
+/// split). Distinct from the tables: the Info alone, then the Warning and the Info side by side.
 #[test]
 fn an_amsart_author_append_invents_no_creator() {
   let (log, xml) = run(
@@ -276,6 +277,25 @@ fn an_amsart_author_append_invents_no_creator() {
      \\makeatletter\\g@addto@macro\\@author{\\and Bob B}\\makeatother\n\\maketitle\nBody.\n\\end{document}\n",
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert!(
+    log.contains(
+      "Info:frontmatter:annotated The title page annotates 1 word(s) that its output does not hold: bob"
+    ),
+    "{log}"
+  );
+  assert_eq!(creators(&xml), owned(&[&["Alice A"]]), "{xml}");
+  // (one loss with words of both severities: "zed", appended to `\@title`, amsart's page prints — a Warning, a real loss,
+  // RED —; "bob" only the `\@author` tail prints — the Info. int159a: one Warning "zed bob")
+  let (log, xml) = run(repro!(
+    "amsart_title_tail_lost_beside_an_annotated_author_tail_red.tex"
+  ));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  assert!(
+    log.contains(
+      "Warning:frontmatter:unclaimed The title page prints 1 word(s) of the document's that its output does not hold: zed"
+    ),
+    "{log}"
+  );
   assert!(
     log.contains(
       "Info:frontmatter:annotated The title page annotates 1 word(s) that its output does not hold: bob"
