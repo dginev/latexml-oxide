@@ -32,6 +32,7 @@ macro_rules! row {
     )
   };
 }
+pub(super) use row;
 
 /// The repros' stand-in class, written from scratch (no code of eptcs.cls).
 const CLASS: &str =
@@ -69,7 +70,7 @@ fn assert_rows_warned(rows: &[(&str, &str)], warnings: usize, expected: &[&[&str
 
 /// Each row converts clean to the creators `expected`.
 #[track_caller]
-fn assert_rows(rows: &[(&str, &str)], expected: &[&[&str]]) {
+pub(super) fn assert_rows(rows: &[(&str, &str)], expected: &[&[&str]]) {
   assert_rows_warned(rows, 0, expected)
 }
 

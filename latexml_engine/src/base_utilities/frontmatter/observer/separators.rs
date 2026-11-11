@@ -20,6 +20,7 @@ use latexml_core::{definition::origin::DefinitionOrigin, token::AUTHOR_PROV_POS_
 
 use super::{
   events::{Event, EventKind, SepKind, lex_events},
+  field_notes::EnvironmentStep,
   ledger::field_stamped,
   policy::TitleMarks,
   rehearsal::{Rehearsal, for_a_query, rehearse},
@@ -68,10 +69,12 @@ pub struct ArgSeparator {
   /// the meaning of the token that printed it, where the query is made
   pub meaning: SepMeaning,
   /// its own tokens in the argument, `start..end` (a literal `\and`, a macro holding only the separator, a `\let` copy,
-  /// a `\csname and\endcsname`), where they print nothing else: no name, mark, contact or note's span meets them, the
+  /// a `\csname and\endcsname`; a `\relax` before it, which prints nothing; never an `\end{tabular}` glued to it, which
+  /// is the table's, `own_run`), where they print nothing else: no name, mark, contact or note's span meets them, the
   /// criterion of the emitter's cut (`emit::cut_at_separators`, #993). `None` where the span is unread or the tokens
   /// print ink too (a macro holding names and the separator together, `\newcommand\aut{Ann \and Bob}`): no cut by
-  /// tokens parts them, the reading's cut does (P2-4's eptcs cells, OXIDIZED_DESIGN_DIVERGENCES #991)
+  /// tokens parts them, the reading's cut does. Its callers part an argument there: P2-4's eptcs cells
+  /// (OXIDIZED_DESIGN_DIVERGENCES #991 (8)) and the queue's name reader (`queue_reading::entry_names`, #993 P2-1b)
   pub span:    Option<(usize, usize)>,
 }
 
@@ -107,7 +110,7 @@ fn meaning_of(token: &Token) -> SepMeaning {
   }
 }
 
-/// The token whose meaning a separator has, its span `span` of `content`: the one token the span covers (a literal `\and`,
+/// The token whose meaning a separator has, its own run `span` ([`own_run`]): the one token the span covers (a literal `\and`,
 /// a `\let` copy, an active character) where it is no macro; else the family's command the rehearsal read (`command`) —
 /// a macro holding the separator, whose call the span covers (`\newcommand\aut{Ann \and Bob}`), a class's macro `\and`
 /// itself or a copy of it (`rehearsal::let_copies_of_bound_commands` binds a copy only where it means what the command
@@ -120,10 +123,28 @@ fn printing_token(content: &[Token], span: Option<(u16, u16)>, command: &'static
   }
 }
 
-/// A separator's span `span` as positions, where no ink event's span meets it — no name, mark, contact or note prints
-/// from its tokens ([`ArgSeparator::span`]).
-fn own_tokens(events: &[Event], span: Option<(u16, u16)>) -> Option<(usize, usize)> {
-  let (s, t) = span?;
+/// A separator's span `span` past the environments closed right before it (`environments`, the rehearsal's steps): its
+/// own run of the argument. An invocation making no box leaves its cover for the next box (core
+/// `token::field_cover_pending_merge`, OD #715), so a separator's box covers an `\end{tabular}` glued to it
+/// (`\end{tabular}\and`, `\end{tabular}%⏎\and`; `\end{tabular}\relax\and` covers the `\relax` too, which is the
+/// separator's as a font switch before a name is the name's). Those tokens close the table and are the environment's,
+/// as the emitter's balanced runs take them (`emitter::Field::balanced`), not the separator's. A step reaching the span's
+/// end leaves it whole: the separator keeps a token.
+fn own_run(environments: &[EnvironmentStep], span: Option<(u16, u16)>) -> Option<(u16, u16)> {
+  let (mut s, t) = span?;
+  while let Some(step) = environments
+    .iter()
+    .find(|step| !step.opens && step.start <= s && s < step.end && step.end < t)
+  {
+    s = step.end;
+  }
+  Some((s, t))
+}
+
+/// A separator's own run `run` ([`own_run`]) as positions, where no ink event's span meets it — no name, mark, contact
+/// or note prints from its tokens ([`ArgSeparator::span`]).
+fn own_tokens(events: &[Event], run: Option<(u16, u16)>) -> Option<(usize, usize)> {
+  let (s, t) = run?;
   let inks = |e: &&Event| {
     matches!(
       e.kind,
@@ -175,17 +196,21 @@ pub fn argument_separators(arg: &Tokens) -> Result<Option<Vec<ArgSeparator>>> {
   let Rehearsal::Done {
     value: events,
     left_open: false,
+    environments,
     ..
   } = read
   else {
     return Ok(None);
   };
   let separators = events.iter().filter_map(|e| match e.kind {
-    EventKind::Sep(SepKind::And(command)) if e.nest == 0 => Some(ArgSeparator {
-      command,
-      meaning: meaning_of(&printing_token(content, e.span, command)),
-      span: own_tokens(&events, e.span),
-    }),
+    EventKind::Sep(SepKind::And(command)) if e.nest == 0 => {
+      let run = own_run(&environments, e.span);
+      Some(ArgSeparator {
+        command,
+        meaning: meaning_of(&printing_token(content, run, command)),
+        span: own_tokens(&events, run),
+      })
+    },
     _ => None,
   });
   Ok(Some(separators.collect()))
