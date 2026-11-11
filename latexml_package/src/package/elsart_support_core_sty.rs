@@ -25,6 +25,9 @@ pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   // :805, :848 — a document's tail on `\@author` prints nowhere, FX27b; not old elsart.cls's, unverified)
   title_page: FmTitlePageDecl {
     author: FmAuthorPage::Own(&["elsarticle.cls"]),
+    // (its `\maketitle` never runs `\@maketitle`, `\elsarticleprelims\pprintMaketitle` and its journal variants:
+    // elsarticle.cls:918-989; a document's own prints nowhere, TP1b)
+    maketitle_runs: &[("elsarticle.cls", false, "elsarticle.cls:918-989")],
     ..FM_KERNEL_CONVENTIONS.title_page
   },
   cite: "elsarticle.cls:656-662, :819, :836; elsart.cls v2.18 :1107-1108, :1135-1164; OD #948 (1108.0201)",

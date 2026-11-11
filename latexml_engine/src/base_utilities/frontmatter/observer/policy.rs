@@ -65,11 +65,17 @@ pub enum AuthorPage {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct TitlePageDecl {
   /// what it prints for the authors
-  pub author:    AuthorPage,
+  pub author:         AuthorPage,
   /// the document classes whose title page sets an `\and` of its own where it prints the authors, each with the line
   /// that sets it (aa.cls:866, svjour3.cls:608): the separator's meaning at the print, which the call site's is not.
   /// Recorded for the separator query (TP2); empty: the meaning the document gives it (article.cls never sets `\and`)
-  pub title_and: &'static [(&'static str, &'static str)],
+  pub title_and:      &'static [(&'static str, &'static str)],
+  /// the document classes (their bindings' file names) whose `\maketitle` runs `\@maketitle` (`true`) or never does
+  /// (`false`), each with the line that shows it: where it runs it, a `\@maketitle` the document or a package defines is
+  /// the title page in force, as pdflatex prints it (TP1b, OXIDIZED_DESIGN_DIVERGENCES #953); where it never does,
+  /// article.cls's stand-in stands for the class's page, and the declaration ([`Self::author`]) answers. A class no
+  /// declaration names is unknown: a document's `\@maketitle` is not taken for its page (`ledger::class_maketitle_runs`)
+  pub maketitle_runs: &'static [(&'static str, bool, &'static str)],
 }
 
 /// One family's association conventions, as its binding declares them ([`declare_frontmatter_conventions`]).
@@ -172,8 +178,11 @@ pub const KERNEL: Policy = Policy {
   keyed_labels:      false,
   block_breaks:      &[],
   title_page:        TitlePageDecl {
-    author:    AuthorPage::Kernel,
-    title_and: &[],
+    author:         AuthorPage::Kernel,
+    title_and:      &[],
+    // (article.cls's `\maketitle` without `titlepage`, its default; report.cls and book.cls default to `titlepage`,
+    // whose `\maketitle` prints its own page, report.cls:176-198, book.cls:182-204: undeclared)
+    maketitle_runs: &[("article.cls", true, "article.cls:203-219")],
   },
   cite:              "Perl Base_Utility.pool.ltxml:676-700 (@authorsplits, positionOf); FIDELITY_CHARTER §4; OD #925",
 };
@@ -245,6 +254,20 @@ pub fn has_entry(binding: &str) -> bool { declared(binding).is_some() }
 /// Whether a binding declared that its class's `\email` prints in place ([`Policy::email_in_place`], any of its hooks).
 pub fn declares_email_in_place(binding: &str) -> bool {
   declared(binding).is_some_and(|d| d.iter().any(|p| p.email_in_place))
+}
+
+/// Whether `binding` declared that the `\maketitle` of `class` (its binding's file name) runs `\@maketitle`
+/// ([`TitlePageDecl::maketitle_runs`], any of its hooks), `None` when it declared neither.
+pub fn declared_maketitle_runs(binding: &str, class: &str) -> Option<bool> {
+  declared(binding).and_then(|d| {
+    d.iter().find_map(|p| {
+      p.title_page
+        .maketitle_runs
+        .iter()
+        .find(|(name, ..)| *name == class)
+        .map(|(_, runs, _)| *runs)
+    })
+  })
 }
 
 /// What `binding` declared its class's title page prints for the authors ([`TitlePageDecl::author`]: the first of its

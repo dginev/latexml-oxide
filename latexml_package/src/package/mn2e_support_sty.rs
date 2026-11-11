@@ -10,6 +10,11 @@ use crate::prelude::*;
 pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   name: "mn2e",
   binding: "mn2e_support.sty",
+  // (mnras.cls's `\maketitle` runs `\@maketitle`: mnras.cls:1055-1062; a document's own is the page in force, TP1b)
+  title_page: FmTitlePageDecl {
+    maketitle_runs: &[("mnras.cls", true, "mnras.cls:1055-1062")],
+    ..FM_KERNEL_CONVENTIONS.title_page
+  },
   cite: "mnras.cls:1072-1079 (`\\newauthor`: the one author tabular); OD #942 (0810.2791)",
   ..FM_KERNEL_CONVENTIONS
 };

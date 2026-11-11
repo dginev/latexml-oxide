@@ -133,14 +133,18 @@ fn an_authblk_email_line_appended_to_author_is_kept() {
 /// unknown page), so the check reports it as annotated, an Info, not a Warning (FX27/FX27b, the user's ruling of
 /// 2026-11-11; int158a-int159a: 1 Warning "The title page prints …"). A document's `\@maketitle` runs as written in
 /// the title-page reading's run (TP1), so under authblk and article it prints no "bob" at all, as pdflatex does
-/// (int160a: the stand-in printed it — authblk's an Info, article's a false Warning). Distinct: the gate of both routes,
-/// and the Info side of the check's evidence rule.
+/// (int160a: the stand-in printed it — authblk's an Info, article's a false Warning) — but only where the class's
+/// `\maketitle` runs `\@maketitle` (TP1b, `TitlePageDecl::maketitle_runs`): elsarticle's and acmart's never do, so a
+/// document's `\@maketitle` printing `\@author` makes no creator of the tail there (TP1 invented "Bob B", review revTP1
+/// B1), and one printing the title alone leaves the check reading the stand-in's words, not the title alone. Distinct:
+/// the gate of both routes, the Info side of the check's evidence rule, and the `\maketitle` that runs no
+/// `\@maketitle`.
 #[test]
 fn an_author_tail_the_title_page_does_not_print_is_not_read() {
   let alice_x: &[&[&str]] = &[&["Alice A", "affiliation=Inst X"]];
   let annotated = "Info:frontmatter:annotated The title page annotates 1 word(s) that its output does not hold: bob";
   let alice: &[&[&str]] = &[&["Alice A"]];
-  let rows: [Row; 11] = [
+  let rows: [Row; 14] = [
     (
       "document \\maketitle, \\and tail",
       repro!("article_author_and_tail_unprinted_by_own_maketitle_makes_no_creator.tex"),
@@ -215,6 +219,27 @@ fn an_author_tail_the_title_page_does_not_print_is_not_read() {
       "OmniBus, an unknown class (its one Warning the missing class's)",
       repro!("omnibus_unknown_class_author_tail_is_annotated.tex"),
       1,
+      true,
+      alice,
+    ),
+    (
+      "elsarticle, document \\@maketitle printing \\@author",
+      repro!("elsarticle_author_tail_under_document_maketitle_is_annotated.tex"),
+      0,
+      true,
+      alice,
+    ),
+    (
+      "acmart, document \\@maketitle printing \\@author",
+      repro!("acmart_author_tail_under_document_maketitle_is_annotated.tex"),
+      0,
+      true,
+      alice,
+    ),
+    (
+      "elsarticle, document title-only \\@maketitle",
+      repro!("elsarticle_document_title_only_maketitle_tail_is_annotated.tex"),
+      0,
       true,
       alice,
     ),
@@ -299,16 +324,17 @@ fn an_author_tail_printed_but_not_read_is_counted() {
 /// (`\g@addto@macro`) or a `\let` copy of it — the kernel's `\@maketitle` holds the marker where the run puts
 /// article.cls's page — amsart under a document's `\@maketitle` printing `\@author`, and titling's binding
 /// `\@maketitle` (titling.sty:166-180) over amsart and elsarticle, each run its own evidence over the class binding's
-/// declaration (FX26's and revFX26b's REDs). pdflatex prints "Bob B" in each (the repros' headers). Red (int160a): Alice A
-/// alone, 1 Warning "bob" each. Distinct: the run's evidence on both routes, kernel and
-/// binding.
+/// declaration (FX26's and revFX26b's REDs), and IEEEtran under a document's `\@maketitle` printing `\@author` (its
+/// `\maketitle` runs `\@maketitle`, as its binding declares, `TitlePageDecl::maketitle_runs`: TP1b). pdflatex prints
+/// "Bob B" in each (the repros' headers). Red (int160a): Alice A alone, 1 Warning "bob" each. Distinct: the run's
+/// evidence on both routes, kernel and binding.
 #[test]
 fn an_author_tail_the_title_page_prints_is_read() {
   let alice_bob_x: &[&[&str]] = &[&["Alice A", "affiliation=Inst X"], &[
     "Bob B",
     "affiliation=Inst Y",
   ]];
-  let rows: [(&str, &str, &[&[&str]]); 5] = [
+  let rows: [(&str, &str, &[&[&str]]); 6] = [
     (
       "article, appended \\@maketitle",
       repro!("article_author_tail_under_appended_maketitle_is_kept.tex"),
@@ -332,6 +358,11 @@ fn an_author_tail_the_title_page_prints_is_read() {
     (
       "elsarticle, titling",
       repro!("elsarticle_titling_author_tail_printed_is_kept.tex"),
+      &[&["Alice A"], &["Bob B"]],
+    ),
+    (
+      "IEEEtran, document \\@maketitle printing \\@author",
+      repro!("ieeetran_author_tail_printed_by_document_maketitle_is_kept.tex"),
       &[&["Alice A"], &["Bob B"]],
     ),
   ];

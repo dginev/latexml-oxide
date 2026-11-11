@@ -7618,7 +7618,10 @@ pub(crate) fn own_title_page_prints_author() -> Option<bool> {
   }
   let own = |cs: &Token| body_from(cs, &[DefinitionOrigin::File, DefinitionOrigin::Document]);
   let maketitle = T_CS!("\\@maketitle");
-  let root = own(&T_CS!("\\lx@dropped@maketitle")).or_else(|| own(&maketitle))?;
+  // (a `\@maketitle` of the file's or the document's own only where it is the page in force: the `\maketitle` that runs
+  // runs it, `own_maketitle`, TP1b)
+  let root = own(&T_CS!("\\lx@dropped@maketitle"))
+    .or_else(|| own(&maketitle).filter(|_| crate::latex_constructs::own_maketitle()))?;
   let target = T_CS!("\\@author").get_cs_name();
   // (LaTeX's title page, which prints `\@author`: the kernel's `\maketitle` and `\@maketitle`, and a copy of either)
   let latex_maketitle = T_CS!("\\maketitle");
@@ -7634,7 +7637,6 @@ pub(crate) fn own_title_page_prints_author() -> Option<bool> {
       _ => false,
     })
   };
-  let kernel_marker = T_CS!("\\lx@kernel@maketitle");
   let mut seen: FxHashSet<SymStr> = FxHashSet::default();
   let mut work = vec![root];
   while let Some(body) = work.pop() {
@@ -7649,13 +7651,9 @@ pub(crate) fn own_title_page_prints_author() -> Option<bool> {
       match own(&cs) {
         Some(callee) => work.push(callee),
         None if is_title_page(&cs) => return Some(true),
-        // (LaTeX's own `\@maketitle`, the kernel's marker, reached directly or in a `\let` copy: the class's page, which
-        // the declaration answers for)
-        None
-          if cs == kernel_marker
-            || matches!(lookup_meaning(&cs), Some(Stored::Expandable(d))
-            if matches!(d.get_expansion(), Some(ExpansionBody::Tokens(body)) if body.unlist_ref().contains(&kernel_marker))) =>
-        {
+        // (LaTeX's own `\@maketitle` or the kernel's marker in it, by identity, reached directly, in an addition to it or
+        // in a `\let` copy: the class's page, which the declaration answers for)
+        None if crate::latex_constructs::is_latex_maketitle(&cs) => {
           return fm_author_tail_declared();
         },
         None => {},
@@ -7663,6 +7661,18 @@ pub(crate) fn own_title_page_prints_author() -> Option<bool> {
     }
   }
   Some(false)
+}
+
+/// What `\@author` held when the frontmatter last took its authors: the value the kernel's `\author` stored
+/// (`lx_author_handed`), else the value it held as a binding's setter queued them (`lx_author_seen`); what a document
+/// appends to it follows (`\lx@author@tail`, the title-page reading's marks).
+pub(crate) fn author_taken_prefix() -> Option<Tokens> {
+  ["lx_author_handed", "lx_author_seen"]
+    .iter()
+    .find_map(|key| match lookup_value(key) {
+      Some(Stored::Tokens(prefix)) => Some(prefix),
+      _ => None,
+    })
 }
 
 /// Records the value of `\@author` as an author is queued (`queue_front_matter`): the
@@ -8035,11 +8045,7 @@ LoadDefinitions!({
   DefMacro!("\\lx@author@tail", sub[_args] {
     // (what `\@author` held before a document appended to it, for this `\maketitle`'s title-page readings, which mark
     // where the appended part begins: its records are cleared here, the check reads after)
-    let prefix = ["lx_author_handed", "lx_author_seen"].iter().find_map(|key| match lookup_value(key) {
-      Some(Stored::Tokens(prefix)) => Some(prefix),
-      _ => None,
-    });
-    crate::latex_constructs::title_page_reading::note_author_prefix(prefix);
+    crate::latex_constructs::title_page_reading::note_author_prefix(author_taken_prefix());
     let calls = author_tail_calls(true)?;
     assign_value("lx_author_handed", Stored::Bool(false), Some(Scope::Global));
     assign_value("lx_author_seen", Stored::Bool(false), Some(Scope::Global));

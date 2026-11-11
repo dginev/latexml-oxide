@@ -568,6 +568,36 @@ pub fn author_tail_declared() -> Option<bool> {
   }
 }
 
+/// Whether the document class's `\maketitle` runs `\@maketitle`, as a binding the class loaded declares it for the
+/// class (`CLASS_BINDINGS`' first; [`policy::TitlePageDecl::maketitle_runs`]: ams_support.sty for amsart, amsproc,
+/// amsbook; IEEEtran.cls; mn2e_support.sty for mnras; elsart_support_core.sty for elsarticle and acmart.cls, which never
+/// run it), else the kernel's declaration (article.cls). `Some(true)` with no class binding (a raw class: its own
+/// `\maketitle`, which the title-page reading replays, or LaTeX's); `None` for a class no declaration names (REVTeX,
+/// report and book under `titlepage`) and the fallback's guess for a class with no binding (OmniBus), whose page is
+/// unknown.
+pub fn class_maketitle_runs() -> Option<bool> {
+  if lookup_bool("OmniBus:fallback") {
+    return None;
+  }
+  CLASS_BINDINGS.with(|c| {
+    let c = c.borrow();
+    let Some(class) = c.0.first() else {
+      return Some(true);
+    };
+    c.0
+      .iter()
+      .find_map(|binding| policy::declared_maketitle_runs(binding, class))
+      .or_else(|| {
+        policy::KERNEL
+          .title_page
+          .maketitle_runs
+          .iter()
+          .find(|(name, ..)| name == class)
+          .map(|(_, runs, _)| *runs)
+      })
+  })
+}
+
 /// The binding owning the tracked command `n`'s meaning now ([`author_binding`]'s reading, for any of
 /// [`OWNED_COMMANDS`]); `kernel` when it has none.
 fn meaning_owner(n: usize) -> String {

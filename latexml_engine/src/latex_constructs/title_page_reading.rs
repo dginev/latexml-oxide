@@ -1,13 +1,14 @@
 //! The title-page reading (TP1; OXIDIZED_DESIGN_DIVERGENCES #953, #996): what the class's whole title page prints at
 //! this `\maketitle`, from one speculative run of it with the document's own values ([`title_page_print_tokens`]),
-//! kept while the state it read is unchanged (`state_generation`), so every consumer reads the same run:
+//! kept while the state it read is unchanged (`state_generation`, and the LaTeXML-internal values it reads,
+//! `READ_VALUES`), so every consumer reads the same run:
 //! - the title-page check's words ([`super::note_title_page_print`]), and what they are without what a document
 //!   appended to `\@author`;
 //! - the confirming check of the stores' sentinel runs (frontmatter_stores.rs `confirmed_printed`), its text;
 //! - whether that appended tail prints, which decides whether the frontmatter reads it (frontmatter_stores.rs
 //!   `author_tail_calls`).
 //!
-//! The run marks where `\@author` begins and where its tail begins and ends (util_text.rs `INK_MARKS`), records the
+//! The run marks where `\@author` begins and where its tail begins and ends (sect05.rs `title_page_mark`), records the
 //! `\and` family where `\@author` first prints (for the separator query, TP2), and whether article.cls's stand-in ran
 //! (the kernel's `\@maketitle`, `\lx@kernel@maketitle`). Its tail answer is its own only where code a raw file or the
 //! document wrote ran and the stand-in did not; else the binding's declaration answers
@@ -23,9 +24,11 @@ pub(crate) enum TitlePageSource {
   /// the class's (or the document's) own refused `\maketitle`, replayed ([`title_page_replay_tokens`]'s conditions)
   Replay,
   /// a `\@maketitle` a raw file, a binding or the document defined, run as written (with article.cls's page at the
-  /// kernel's marker, if it holds one)
+  /// kernel's marker, if it holds one), where it is the title page in force (`own_maketitle`: the `\maketitle` that runs
+  /// runs it, TP1b)
   Own(DefinitionOrigin),
-  /// article.cls's page, for the kernel's `\@maketitle` or one no raw file, binding or document defined
+  /// article.cls's page, for the kernel's `\@maketitle`, one no raw file, binding or document defined, or one the
+  /// `\maketitle` that runs never runs (elsarticle's, acmart's)
   StandIn,
 }
 
@@ -89,9 +92,28 @@ impl TitlePageReading {
   }
 }
 
+/// The LaTeXML-internal values the reading reads, which [`state_generation`] does not count: `\@author`'s prefix kept by
+/// the frontmatter (`author_taken_prefix`), whether a deposit runs the class's title page (`replays_class_maketitle`)
+/// and a raw class's own `\@author` reader ([`CLASS_AUTHOR_READER`]).
+const READ_VALUES: [&str; 4] = [
+  "lx_author_handed",
+  "lx_author_seen",
+  "lx_depositing_class_maketitle",
+  CLASS_AUTHOR_READER,
+];
+
+/// What a reading was made of: the state's generation ([`state_generation`]) and [`READ_VALUES`].
+type ReadingKey = (u64, [Option<Stored>; 4]);
+
+/// A reading made, with what it was made of.
+type KeptReading = (ReadingKey, Rc<TitlePageReading>);
+
+/// The key of a reading made now.
+fn reading_key() -> ReadingKey { (state_generation(), READ_VALUES.map(lookup_value)) }
+
 thread_local! {
-  /// The reading made, with the state's generation it read ([`state_generation`]).
-  static READING: RefCell<Option<(u64, Rc<TitlePageReading>)>> = const { RefCell::new(None) };
+  /// The reading made, with what it was made of ([`reading_key`]).
+  static READING: RefCell<Option<KeptReading>> = const { RefCell::new(None) };
   /// What `\@author` held before a document appended to it, as `\lx@author@tail` found it at this `\maketitle`
   /// ([`note_author_prefix`]): the frontmatter's records of it are cleared there, the check reads after.
   static PREFIX: RefCell<Option<Tokens>> = const { RefCell::new(None) };
@@ -142,10 +164,10 @@ const LATEX_THANKS: &str = r"\long\def\thanks#1{\footnotemark\protected@xdef\@th
 /// where it begins and where what a document appended to it begins and ends ([`author_marks`]), unless a raw class's own
 /// `\@author` reader replaces it in the run.
 pub(crate) fn title_page_reading() -> Result<Rc<TitlePageReading>> {
-  let generation = state_generation();
+  let key = reading_key();
   if let Some(reading) = READING.with_borrow(|r| {
     r.as_ref()
-      .filter(|(at, _)| *at == generation)
+      .filter(|(at, _)| *at == key)
       .map(|(_, reading)| Rc::clone(reading))
   }) {
     return Ok(reading);
@@ -242,11 +264,11 @@ pub(crate) fn title_page_reading() -> Result<Rc<TitlePageReading>> {
     }
   );
   let reading = Rc::new(reading);
-  READING.set(Some((generation, Rc::clone(&reading))));
+  READING.set(Some((key, Rc::clone(&reading))));
   Ok(reading)
 }
 
-/// The definition of `\@author` the reading's run makes, marked ([`INK_MARKS`](crate::base_utilities::util_text::INK_MARKS)):
+/// The definition of `\@author` the reading's run makes, marked ([`title_page_mark`](super::title_page_mark)):
 /// `\@author`'s value, after `\lx@title@page@author` (and the `\and` family's note), the part a document appended to it
 /// since the frontmatter took its authors — after the value the kernel's `\author` stored (`lx_author_handed`), or the
 /// value `\@author` held as a binding's setter queued them (`lx_author_seen`), as `\lx@author@tail` found it at this
@@ -262,14 +284,9 @@ fn author_marks() -> Result<Option<(Vec<Token>, bool)>> {
   if current.is_empty() {
     return Ok(None);
   }
-  let prefix = PREFIX.with_borrow(Clone::clone).or_else(|| {
-    ["lx_author_handed", "lx_author_seen"]
-      .iter()
-      .find_map(|key| match lookup_value(key) {
-        Some(Stored::Tokens(prefix)) => Some(prefix),
-        _ => None,
-      })
-  });
+  let prefix = PREFIX
+    .with_borrow(Clone::clone)
+    .or_else(crate::frontmatter_stores::author_taken_prefix);
   let current = current.unlist_ref();
   let split = prefix.and_then(|prefix| {
     let prefix = prefix.unlist_ref();

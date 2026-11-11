@@ -30631,11 +30631,11 @@ an_author_tail_the_title_page_does_not_print_is_not_read, an_author_tail_printed
 **TP1: one title-page reading.** What the class's whole title page prints at `\maketitle` is read once
 (`latex_constructs::title_page_reading`, a `TitlePageReading`): one speculative run with the document's own values
 (`title_page_print_tokens`, the check's thanks and `\today`), under the check's read budget (`checks_run`), read for its
-words (`ink_word_text`) and its text (`ink_text`), and kept while the state is unchanged (`state_generation`, a count
-of assignments a rolled-back journal puts back; LaTeXML-internal `lx…` values aside). The check, the stores'
+words (`ink_word_text`) and its text (`ink_text`), and kept while the state is unchanged (`state_generation`, TP1b below,
+and the LaTeXML-internal values it reads). The check, the stores'
 confirming check (`confirmed_printed`, before: two more unbudgeted runs) and the author tail (`author_tail_calls`, before:
 a walk of its own) read it. The run defines `\@author` with marks that print nothing (`\lx@title@page@author`,
-`\lx@title@page@tail`, `\lx@title@page@tail@end`, read where they stand: util_text.rs `INK_MARKS`), notes the `\and`
+`\lx@title@page@tail`, `\lx@title@page@tail@end`, read where they stand by their definitions: sect05.rs `title_page_mark`), notes the `\and`
 family's meanings where `\@author` first prints (recorded for the separator query, TP2), and whether article.cls's
 stand-in ran. Its source: a replayed refused `\maketitle`, a `\@maketitle` of a raw file's, a binding's or the
 document's own, or the stand-in. **The stand-in stands at a marker:** the kernel's `\@maketitle` holds
@@ -30647,6 +30647,38 @@ the same `title_page_print_tokens`. Binding declarations: `Policy::title_page` (
 Kernel/Block/Own, absorbing FX24b's `author_tail` and FX27b's `own_author_page`; `title_and`, the classes whose page sets
 its own `\and`, aa.cls:866 and svjour3.cls:608, recorded for TP2). Perl reads no title page
 (latex_constructs.pool.ltxml:1099-1113). Guard `perfect_kernel_batchfx24::an_author_tail_the_title_page_prints_is_read`.
+
+**TP1b: a `\@maketitle` of the document's or a file's own is the page in force only where the `\maketitle` that runs
+runs `\@maketitle`.** That is a replayed refused `\maketitle` (it reaches `\@maketitle` or not as written), else the
+document class's, as a binding the class loaded declares it (`TitlePageDecl::maketitle_runs`, read by
+`ledger::class_maketitle_runs` for the first of the class's bindings; sect05.rs `own_maketitle`): runs it — article.cls
+(the kernel's declaration, article.cls:203-219), amsart, amsproc, amsbook (ams_support.sty; amsart.cls:600-610,
+amsproc.cls:576-586, amsbook.cls:1334-1337), IEEEtran.cls (:4753-4775), mnras (mn2e_support.sty; mnras.cls:1055-1062);
+never runs it — elsarticle (elsart_support_core.sty; elsarticle.cls:918-989, `\elsarticleprelims\pprintMaketitle` and
+its journal variants) and acmart.cls (:2226-2379). With no class binding (a raw class) it is taken to run it; under a
+class no declaration names (REVTeX, whose `\maketitle` is `\frontmatter@maketitle`, revtex4-2.cls:3130-3134; report and
+book under their default `titlepage`, report.cls:176-198, book.cls:182-204; OmniBus's guess) a document's `\@maketitle`
+is not taken for its page and a raw file's is, as before TP1. Where it is not the page in force, the run stands
+article.cls's page in and the binding's declaration answers (`AuthorPage`), and the walk (`own_title_page_prints_author`)
+does not start from it: under elsarticle or acmart a document `\def\@maketitle{…\@author…}` with
+`\g@addto@macro\@author{\and Bob B}` makes no creator Bob B (TP1 made one, review revTP1 B1; pdflatex prints no Bob),
+the lost "bob" an Info; one printing the title alone leaves the check reading the stand-in's words, not the title alone
+(the mirror of TP0's p2). The reading's key is honest (review revTP1 S1): `state_generation` draws a number never drawn
+before at every write to the state — an assignment, a write in place (the mode, a mapping, a box's `\wd`), a group's end
+that restores values (`pop_frame`) — and a rollback puts back only the current one (no ABA); the LaTeXML-internal values
+the reading reads, which the count leaves out, are in its key (`lx_author_handed`, `lx_author_seen`,
+`lx_depositing_class_maketitle`, `lx_class_author_reader`). LaTeX's own `\@maketitle`, its marker and the run's marks are
+read by definition identity (sect05.rs `is_latex_maketitle`, `maketitle_is_kernels`, `title_page_mark`), not by name.
+**Decision (review revTP1 S2):** over the check's read budget the reading has no text, and the stores' confirming check
+keeps the sentinel runs' answer unconfirmed — no unbudgeted run (before TP1 two ran, which the budget exists to bound).
+That answer errs toward "printed": a store the page may print stays carried, so no source word the PDF may print is
+dropped; what goes unchecked is named by the `check_budget` Warning (repro
+`check_store_confirm_over_budget_keeps_the_sentinel_answer`: the XML the unbudgeted one's). The confirming text is the
+reading's, whose run empties `\today` and routes LaTeX's `\thanks` through `\@thanks` (before: `\thanks` printed in
+place, no inject): a date or a note's text is no store value it confirms. Guards
+`perfect_kernel_batchfx24::{an_author_tail_the_title_page_does_not_print_is_not_read,
+an_author_tail_the_title_page_prints_is_read}` (elsarticle, acmart, the title-only sibling; IEEEtran),
+`perfect_kernel_batchr1::a_run_over_budget_leaves_no_trace`, `00_unit_state::state_generation_changes_with_every_change_of_the_state`.
 
 ### 954. A contact holding two or more marked entries is cut at its marks in the frontmatter API, for every binding (Perl: one contact, the marks printed in it)
 

@@ -54,8 +54,8 @@ pub use events::{
   PrintedLabel as FmPrintedLabel, SepKind as FmSepKind,
 };
 pub use ledger::{
-  author_tail_declared as fm_author_tail_declared, note_binding_load,
-  record_note_text as fm_record_note_text,
+  author_tail_declared as fm_author_tail_declared, class_maketitle_runs as fm_class_maketitle_runs,
+  note_binding_load, record_note_text as fm_record_note_text,
 };
 pub(in crate::base_utilities) use ledger::{
   field_stamped, note_field_stamp, record_api_call, record_author_body_clear,

@@ -41,6 +41,12 @@ pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
   // :752-754; amsbook.cls:1356 — a document's tail on `\@author` prints nowhere, FX27b)
   title_page: FmTitlePageDecl {
     author: FmAuthorPage::Own(&["amsart.cls", "amsproc.cls", "amsbook.cls"]),
+    // (their `\maketitle` runs `\@maketitle`: a document's own is the page in force, TP1b)
+    maketitle_runs: &[
+      ("amsart.cls", true, "amsart.cls:600-610"),
+      ("amsproc.cls", true, "amsproc.cls:576-586"),
+      ("amsbook.cls", true, "amsbook.cls:1334-1337"),
+    ],
     ..FM_KERNEL_CONVENTIONS.title_page
   },
   // (the second family: 0.38 % unclassified over 2,903 census papers, a seeded classified sample 33 of 34 right, none

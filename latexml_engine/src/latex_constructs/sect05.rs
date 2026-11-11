@@ -3,6 +3,8 @@
 //! Split verbatim from the single `LoadDefinitions!` body (2026-09-03); the
 //! definitions run in the original order from `super::load_definitions`.
 
+use std::cell::RefCell;
+
 use latexml_core::definition::origin::{DefinitionOrigin, with_origin};
 
 use super::*;
@@ -1279,11 +1281,22 @@ pub(crate) fn load() -> Result<()> {
   DefMacro!("\\lx@kernel@maketitle", "");
   DefMacro!("\\@maketitle", "\\lx@kernel@maketitle");
   // The title-page reading's marks (`title_page_reading`), each printing nothing: where `\@author` begins, where what a
-  // document appended to it begins and ends (read where they stand: util_text.rs `INK_MARKS`); the `\and` family where
-  // `\@author` prints, and article.cls's stand-in running, noted as they are digested.
+  // document appended to it begins and ends (read where they stand, by their definitions: [`title_page_mark`]); the
+  // `\and` family where `\@author` prints, and article.cls's stand-in running, noted as they are digested.
   DefConstructor!("\\lx@title@page@author", "");
   DefConstructor!("\\lx@title@page@tail", "");
   DefConstructor!("\\lx@title@page@tail@end", "");
+  // (LaTeX's own `\@maketitle` and its marker, and the marks, kept as defined here: read by identity, not by name)
+  let defined = |cs: &str| lookup_definition(&T_CS!(cs)).ok().flatten();
+  KERNEL_TITLE_DEFS.set(Some(KernelTitleDefs {
+    maketitle: defined("\\@maketitle"),
+    marker:    defined("\\lx@kernel@maketitle"),
+    marks:     [
+      (defined("\\lx@title@page@author"), INK_AUTHOR),
+      (defined("\\lx@title@page@tail"), INK_TAIL),
+      (defined("\\lx@title@page@tail@end"), INK_TAIL_END),
+    ],
+  }));
   DefPrimitive!("\\lx@title@page@family", {
     title_page_reading::note_family();
   });
@@ -3114,11 +3127,11 @@ fn skip_no_op_argument(body: &[Token], mut i: usize, p: &Parameter) -> usize {
 
 thread_local! {
   /// The local definitions a replayed class setter made (`\lx@replay@capture`), for [`replay_class_setter`].
-  static REPLAY_CAPTURED: std::cell::RefCell<Vec<(SymStr, Stored)>> =
-    const { std::cell::RefCell::new(Vec::new()) };
+  static REPLAY_CAPTURED: RefCell<Vec<(SymStr, Stored)>> =
+    const { RefCell::new(Vec::new()) };
   /// The stores the replayed setter's own body defines (`defined_stores`), for `\lx@replay@capture`.
-  static REPLAY_BODY_STORES: std::cell::RefCell<Vec<SymStr>> =
-    const { std::cell::RefCell::new(Vec::new()) };
+  static REPLAY_BODY_STORES: RefCell<Vec<SymStr>> =
+    const { RefCell::new(Vec::new()) };
 }
 
 /// Run a raw class's own frontmatter setter that the lock refused (`\lx@dropped@<name>`, state.rs) for its side
@@ -5091,8 +5104,9 @@ pub(crate) fn title_page_replay_tokens(inject: &[Token]) -> Option<Tokens> {
 /// `inject`: as [`title_page_deposit_tokens`].
 /// The stand-in stands where LaTeX's `\@maketitle` would: at the kernel's marker (`\lx@kernel@maketitle`), which a
 /// raw file's or the document's addition to it (`\g@addto@macro\@maketitle`) or `\let` copy keeps, so the addition
-/// runs as written around it; and in place of a `\@maketitle` no raw file, binding or document defined (TP1). A
-/// document's own `\@maketitle` runs as written, as pdflatex runs it (TP0's probe p2: a title-only one prints "A Title",
+/// runs as written around it; and in place of a `\@maketitle` no raw file, binding or document defined (TP1), or one
+/// the `\maketitle` that runs never runs ([`own_maketitle`], TP1b). A document's own `\@maketitle` otherwise runs as
+/// written, as pdflatex runs it (TP0's probe p2: a title-only one prints "A Title",
 /// where the stand-in printed the authors too).
 pub(crate) fn title_page_print_tokens(inject: &[Token]) -> Tokens {
   let mut run = mouth::tokenize_internal(
@@ -5128,21 +5142,93 @@ pub(crate) fn title_page_print_tokens(inject: &[Token]) -> Tokens {
   Tokens::new(run)
 }
 
-/// Is `\@maketitle` a raw file's, a binding's or the document's ([`title_page_print_tokens`] runs it as written, its
-/// stand-in for article.cls's only at the kernel's marker it may hold)? Not the kernel's own ([`maketitle_is_kernels`]),
-/// nor an empty one.
-fn own_maketitle() -> bool {
-  !maketitle_is_kernels()
-    && matches!(lookup_meaning(&T_CS!("\\@maketitle")),
-    Some(Stored::Expandable(ref d)) if matches!(d.get_origin(), DefinitionOrigin::File | DefinitionOrigin::Binding | DefinitionOrigin::Document)
-      && matches!(d.get_expansion(), Some(ExpansionBody::Tokens(body)) if !body.is_empty()))
+/// Is `\@maketitle` a raw file's, a binding's or the document's, and the title page in force
+/// ([`title_page_print_tokens`] runs it as written, its stand-in for article.cls's only at the kernel's marker it may
+/// hold)? Not the kernel's own ([`maketitle_is_kernels`]), nor an empty one. One a raw file or the document defined is
+/// the page in force only where the `\maketitle` that runs runs `\@maketitle` (TP1b, OXIDIZED_DESIGN_DIVERGENCES #953):
+/// a class's or the document's own refused `\maketitle`, which the run replays ([`replays_class_maketitle`]: it reaches
+/// `\@maketitle` or not as written), else the document class's, as its binding declares it (`fm_class_maketitle_runs`:
+/// article's, amsart's, IEEEtran's, mnras's do; elsarticle's and acmart's never do, so pdflatex prints none of a
+/// document's `\@maketitle` there). Under a class no binding declares (REVTeX), a document's is not taken for its
+/// page, and a raw file's is, as before the reading ran the document's own.
+pub(crate) fn own_maketitle() -> bool {
+  let origin = match lookup_meaning(&T_CS!("\\@maketitle")) {
+    Some(Stored::Expandable(ref d)) if matches!(d.get_expansion(), Some(ExpansionBody::Tokens(body)) if !body.is_empty()) => {
+      d.get_origin()
+    },
+    _ => return false,
+  };
+  match origin {
+    DefinitionOrigin::Binding => !maketitle_is_kernels(),
+    DefinitionOrigin::File | DefinitionOrigin::Document => {
+      replays_class_maketitle()
+        || fm_class_maketitle_runs().unwrap_or(origin == DefinitionOrigin::File)
+    },
+    _ => false,
+  }
 }
 
-/// Is `\@maketitle` the kernel's, its marker alone (LaTeX's page, which prints the frontmatter: nothing to deposit)?
+/// LaTeX's own `\@maketitle` and its marker, and the title-page reading's marks with the characters
+/// [`ink_word_text`] reads for them, as [`load`] defined them.
+struct KernelTitleDefs {
+  maketitle: Option<Rc<dyn Definition>>,
+  marker:    Option<Rc<dyn Definition>>,
+  marks:     [(Option<Rc<dyn Definition>>, char); 3],
+}
+
+thread_local! {
+  static KERNEL_TITLE_DEFS: RefCell<Option<KernelTitleDefs>> = const { RefCell::new(None) };
+}
+
+/// Is `definition` the one [`load`] made of `pick`'s?
+fn is_kernel_title_def(
+  definition: &Rc<dyn Definition>,
+  pick: impl Fn(&KernelTitleDefs) -> Option<&Rc<dyn Definition>>,
+) -> bool {
+  KERNEL_TITLE_DEFS.with_borrow(|defs| {
+    defs
+      .as_ref()
+      .and_then(pick)
+      .is_some_and(|kernel| Rc::ptr_eq(kernel, definition))
+  })
+}
+
+/// Is `cs`'s meaning LaTeX's own `\@maketitle` or its marker (`\lx@kernel@maketitle`), by identity — `\@maketitle` as
+/// the kernel defined it, a `\let` copy of it, or the marker reached in an addition to it?
+pub(crate) fn is_latex_maketitle(cs: &Token) -> bool {
+  lookup_definition(cs)
+    .ok()
+    .flatten()
+    .is_some_and(|definition| {
+      is_kernel_title_def(&definition, |defs| defs.maketitle.as_ref())
+        || is_kernel_title_def(&definition, |defs| defs.marker.as_ref())
+    })
+}
+
+/// Is `\@maketitle` the kernel's (LaTeX's page, which prints the frontmatter: nothing to deposit)?
 pub(crate) fn maketitle_is_kernels() -> bool {
-  matches!(lookup_meaning(&T_CS!("\\@maketitle")),
-    Some(Stored::Expandable(ref d)) if matches!(d.get_expansion(),
-      Some(ExpansionBody::Tokens(body)) if *body.unlist_ref() == [T_CS!("\\lx@kernel@maketitle")]))
+  lookup_definition(&T_CS!("\\@maketitle"))
+    .ok()
+    .flatten()
+    .is_some_and(|definition| is_kernel_title_def(&definition, |defs| defs.maketitle.as_ref()))
+}
+
+/// The character [`ink_word_text`] reads for a mark of the title-page reading's run (`definition`, a whatsit's), by its
+/// definition: where `\@author` begins, where what a document appended to it begins and where it ends.
+pub(crate) fn title_page_mark(definition: &Rc<dyn Definition>) -> Option<char> {
+  KERNEL_TITLE_DEFS.with_borrow(|defs| {
+    defs.as_ref().and_then(|defs| {
+      defs
+        .marks
+        .iter()
+        .find(|(mark, _)| {
+          mark
+            .as_ref()
+            .is_some_and(|mark| Rc::ptr_eq(mark, definition))
+        })
+        .map(|(_, c)| *c)
+    })
+  })
 }
 
 /// Does [`title_page_print_tokens`] run the class's own refused `\maketitle` ([`title_page_replay_tokens`])?
