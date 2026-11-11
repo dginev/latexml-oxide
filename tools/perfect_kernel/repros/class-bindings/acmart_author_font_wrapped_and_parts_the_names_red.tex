@@ -1,0 +1,7 @@
+% RED (synthetic, review revOC1c2 finding 1; introduced by OC1c2's ink rule; no corpus paper in the 2,612 byte-diffed)
+% oracle:  pdflatex 0 errors: "Ann Able; Bob Baker" (acmart, two authors)
+% engines: rust OC1c (round 0) = two creators, E0 W0; OC1c2 = one merged creator, E 1 (`merged_creators`, the base's
+%          counted merge): a name's span starts at the font command that opens it (`\textsc`), before the group's
+%          brace, so the ink check (`emit.rs` `creator_call_cut`) reads it as ink outside the `\and`'s group
+% fix:     test the tokens outside the group, not the events' spans — rehearse the content with the group emptied and
+%          keep the call whole only if that yields a Name, Mark, Contact or Note (keeps p2, p3 and `{…}$^*$` whole)
