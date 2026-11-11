@@ -34522,6 +34522,9 @@ so that reading moves first) and llncs (`llncs_cls.rs:189`, gate :208; P2-3, its
 `\lx@affiliation@withinst`). Byte-identical against the spelling split (`2ff10b7ff9`, `kit/conv.sh`) on 3,006 papers
 (aa 563, sv 406, OmniBus 200, webofc 30, eptcs 73, raw-class 300, stage2 1,434; 6 with no main file), E/F/W equal on
 each; 0909.4443's one difference is a run-to-run math-id variance of the base (both binaries give one md5 on a rerun).
+That run was P22b's form; the cut-first form (P22c) is byte-identical against the same base on 1,811 of them: all of
+aa 563, sv 406, OmniBus 200, webofc 30, eptcs 73 and raw-class 300, and 239 of stage2's 1,434 (6 with no main file;
+E/F/W equal on each; 0909.4443 as above, its md5 that of P22b's).
 Settled dead-end (P22): one `labelseq` call per `\institute`, cut and written per piece by the emitter
 (`emit::labelseq_call_cut`), changed 52 of 2,903 papers, 12 worse (1501.07092, 2312.03835, 1010.3154, 2602.02910,
 2309.12272; 0803.4304 reordered): the emitter's state keyed by the call's ledger index (`separate`/`by_pieces`/
