@@ -23,6 +23,7 @@ use latexml::util::test::convert_with;
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
   perfect_kernel_batch77d::{assert_no_merged_names, creator, creators, squash},
+  perfect_kernel_batchcr8::without_candidates,
 };
 
 /// A `sectioning-frontmatter` repro's squashed XML, its conversion free of errors and warnings.
@@ -185,12 +186,20 @@ fn symbol_line_in_a_font_command_goes_by_its_marks() {
 
 /// An icon a `\quad` parts from the link after it (`\github \quad \url{…}`, 2601.17879's
 /// `\def\github{\raisebox{-1.5pt}{\includegraphics…}}`; the r8 re-review's finding 9) goes with the link: one URL contact
-/// of the block. Was the icon alone an affiliation of the last author, the URL on it too (77p r11).
+/// of the block. Was the icon alone an affiliation of the last author, the URL on it too (77p r11); then the URL alone,
+/// the icon dropped with no Warning (int157a2): the icon in the URL contact, before its link (IMG1, `place_pictures`' URL
+/// join past the `\quad`'s gap, the image nested in its `\raisebox`).
 #[test]
 fn icon_parted_from_its_link_goes_with_it() {
   let xml = convert_repro!("author_icon_macro_quad_before_url.tex");
   assert_no_merged_names(&xml);
   // (the icon's file as the TeX tree holds it: where that tree is, aside)
+  assert!(
+    without_candidates(&xml).contains(
+      r#"<creator role="author"> <contact name="URL: " role="url"><text yoffset="-1.5pt" xml:id="id2"><graphics graphic="example-image" options="height=10.00002pt,keepaspectratio=true" xml:id="g1a"/></text> <ref class="ltx_url" font="typewriter" href="https://github.com/x/y">https://github.com/x/y</ref></contact> </creator>"#
+    ),
+    "{xml}"
+  );
 }
 
 /// A link to a bare domain printing the domain's name in lower case (`\href{https://www.deepseek.com}{deepseek-ai}`)

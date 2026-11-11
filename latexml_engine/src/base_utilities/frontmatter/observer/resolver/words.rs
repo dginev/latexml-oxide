@@ -241,6 +241,8 @@ pub(in crate::base_utilities::frontmatter::observer) struct Written {
   /// text)
   spans:     BTreeSet<(usize, (u16, u16))>,
   contacts:  BTreeSet<(usize, (u16, u16))>,
+  /// the spans of the items it writes, none a ruling dropped: what holds a block's pictures ([`Self::unwritten_pictures`])
+  holding:   BTreeSet<(usize, (u16, u16))>,
   /// per source, its creators (their index in [`Resolved::creators`]) and names
   names:     BTreeMap<usize, Vec<(usize, String)>>,
   /// per source, the e-mail addresses it writes as items, lowercased, as often as one holder holds each: what an ink's
@@ -286,6 +288,7 @@ impl Written {
     // `mtablo@postech.ac.kr` written twice for the block)
     let mut items: BTreeMap<(Source, &str, &str), usize> = BTreeMap::new();
     let mut unread: BTreeSet<(Source, &str, &str)> = BTreeSet::new();
+    let mut holding = BTreeSet::new();
     let holders = resolved
       .creators
       .iter()
@@ -308,6 +311,11 @@ impl Written {
           *here.entry(item).or_default() += 1;
           if a.rule.contains("ruling3:written-out") || resolved.dropped.contains(a) {
             unread.insert(item);
+          }
+          if let Some(span) = span
+            && !resolved.dropped.contains(a)
+          {
+            holding.insert((at, span));
           }
         }
       }
@@ -387,11 +395,38 @@ impl Written {
       anywhere,
       spans,
       contacts,
+      holding,
       names,
       addresses,
       read,
       named,
     }
+  }
+
+  /// The pictures of the block at ledger index `index` (an image, the Layout event of an `\includegraphics`; a picture note,
+  /// `events::PICTURE_NOTE`) that no item it writes holds: each one's span inside no written item's span, or no span to
+  /// tell (fail toward flagging). An image has no word, so the word check ([`Self::lost_inks`]) cannot miss it: the image
+  /// leading a mark or an address on a later line, which `events::place_pictures` has no place for
+  /// (`\includegraphics{…} $^{1}$Zebra University`, `\includegraphics{…} \texttt{ann@x.org}`), was lost silently. One a URL
+  /// contact's span holds (2503.08161's `hf-logo.png`, 2505.21327's icons) or its own note's is written.
+  pub(in crate::base_utilities::frontmatter::observer) fn unwritten_pictures(
+    &self,
+    index: usize,
+    events: &[Event],
+  ) -> usize {
+    let of_index = || {
+      self
+        .holding
+        .range((index, (0, 0))..=(index, (u16::MAX, u16::MAX)))
+    };
+    events
+      .iter()
+      .filter(|e| is_image(e) || events::is_picture_note(e))
+      .filter(|e| {
+        e.span
+          .is_none_or(|(s, t)| !of_index().any(|&(_, (from, to))| from <= s && t <= to))
+      })
+      .count()
   }
 
   /// The words the reading writes of the block or call at `index` more times than its `events` print them (the other side
@@ -789,8 +824,10 @@ enum Holder {
 /// they print.
 #[derive(Debug)]
 pub(in crate::base_utilities::frontmatter::observer) struct BlockCheck {
-  pub lost:   Vec<LostInk>,
-  pub excess: Vec<(String, bool)>,
+  pub lost:     Vec<LostInk>,
+  pub excess:   Vec<(String, bool)>,
+  /// how many of its pictures no written item holds ([`Written::unwritten_pictures`])
+  pub pictures: usize,
 }
 
 /// The author blocks of the ledger whose authors an output holds, with their ledger index: what a later call replaced or
@@ -827,13 +864,15 @@ pub(in crate::base_utilities::frontmatter::observer) fn check_blocks(
   let mut checks = BTreeMap::new();
   for (index, block) in live_blocks(ledger) {
     if let Outcome::Events { events, .. } = &block.outcome {
+      let pictures = written.unwritten_pictures(index, events);
       // (a command's ink inside a word its letters, as the reading reads them: `lines::words_through_one_command`)
       let events = &words_through_one_command(events);
       let check = BlockCheck {
-        lost:   written.lost_inks(index, events, true),
+        lost: written.lost_inks(index, events, true),
         excess: written.excess(index, events),
+        pictures,
       };
-      if !check.lost.is_empty() || !check.excess.is_empty() {
+      if !check.lost.is_empty() || !check.excess.is_empty() || check.pictures > 0 {
         checks.insert(index, check);
       }
     }

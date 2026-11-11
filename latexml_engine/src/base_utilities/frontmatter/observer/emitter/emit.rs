@@ -3910,6 +3910,24 @@ fn warn_excess(index: usize, words: &[(String, bool)], whole: bool) {
   );
 }
 
+/// The counted Warning of the pictures an author block prints that no item the emit writes holds
+/// ([`BlockCheck::pictures`]), once per block over the flushes: an image has no word for the word check to miss. A block
+/// written whole keeps them in its tokens.
+fn warn_unwritten_pictures(index: usize, pictures: usize) {
+  let once = s!("pictures|{index}");
+  if lookup_mapping(EMITTED_ITEMS, &once).is_some() {
+    return;
+  }
+  assign_mapping(EMITTED_ITEMS, &once, Some(Stored::Bool(true)));
+  Warn!(
+    "unexpected",
+    "frontmatter",
+    s!(
+      "The frontmatter emitter's reading holds no place for {pictures} picture(s) its author block prints; they are lost"
+    )
+  );
+}
+
 /// The counted Warning of an author block written whole because a name or an item of its reading joins ink across an
 /// alignment's cells ([`crosses_columns`], [`joined_across_cells`]), once per block over the flushes.
 fn warn_across_cells(index: usize) {
@@ -4480,6 +4498,9 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     }
     if !check.excess.is_empty() {
       warn_excess(index, &check.excess, whole);
+    }
+    if check.pictures > 0 && !whole {
+      warn_unwritten_pictures(index, check.pictures);
     }
   }
   // (the blocks calling a binding's list setter, whose entries its call queues as it is digested: `list_setter_runs`)
