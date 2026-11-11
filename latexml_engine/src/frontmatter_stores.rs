@@ -74,7 +74,10 @@ use latexml_core::{
 };
 use rustc_hash::FxHashSet;
 
-use crate::prelude::*;
+use crate::{
+  base_utilities::{FmArgSeparator, FmSepMeaning, argument_separators},
+  prelude::*,
+};
 
 /// The definers a store is made with: `\gdef\@name{#1}`, `\def`, `\xdef`/`\edef`, LaTeX's `\protected@xdef`, and
 /// `\g@addto@macro\@name{#1}` (an accumulating store).
@@ -2232,7 +2235,7 @@ fn run_in_contact_setter(name: &str) -> bool {
 /// own content, where a call printing no line of its own is part of the name's text, nor in the title page's deposit
 /// ([`in_the_title_page_deposit`]).
 fn class_contact_run_in(api: Tokens, class: Tokens) -> Result<Tokens> {
-  if in_the_title_page_deposit() || kernel_and_list(last_group(&class)) {
+  if in_the_title_page_deposit() || kernel_and_list(last_group(&class))? {
     return Ok(class);
   }
   let line = last_group(&class);
@@ -2284,7 +2287,7 @@ fn class_contact_run_in(api: Tokens, class: Tokens) -> Result<Tokens> {
 /// the API's. The API's line is placed by its leading label ([`by_its_label`]); a call in the title page's deposit is the
 /// class's ([`in_the_title_page_deposit`]).
 fn class_contact(api: Tokens, class: Tokens, in_place: bool) -> Result<Tokens> {
-  if in_the_title_page_deposit() || kernel_and_list(last_group(&class)) {
+  if in_the_title_page_deposit() || kernel_and_list(last_group(&class))? {
     return Ok(class);
   }
   if creator_entry_in_progress()
@@ -3208,24 +3211,58 @@ fn displaced_in_doubt(entries: &[Tokens]) -> Result<bool> {
   Ok(false)
 }
 
+/// The `\and`-family separators a store's line or argument holds at its own level, by meaning — the binding-callable
+/// query (`argument_separators`, OXIDIZED_DESIGN_DIVERGENCES #995, Option C P2-6): a written `\and`, one a macro of the
+/// document's or the class's holds, a `\let` copy, a `\csname and\endcsname`, never one a box, a table or a note of the
+/// line holds — each with what it means where the gate asks. `None` where no rehearsal could read them (a call inside one,
+/// over the queries' allowance, a group left open): the gate then reads the line's spelling, as before P2-6.
+fn and_separators(line: &[Token]) -> Result<Option<Vec<FmArgSeparator>>> {
+  argument_separators(&Tokens::new(line.to_vec()))
+}
+
+/// Does a line hold an `\and`-family separator at its own level ([`and_separators`]), whatever it means where the gate
+/// asks: what it prints is the class's title page's to decide (caosp's numbers, cauinst's `\par`, sifrev's own
+/// `\split@rg`), so a gate reading one keeps the class's text or tries the class's numbering — no name is parted by it.
+/// Unread, a literal `\and` anywhere in the line, the spelling the gates read before P2-6.
+fn holds_and_separators(line: &[Token]) -> Result<bool> {
+  Ok(match and_separators(line)? {
+    Some(separators) => !separators.is_empty(),
+    None => line.contains(&T_CS!("\\and")),
+  })
+}
+
 /// Does a contact line hold an `\and` list the class's title page does not number (`class_numbered_institutes` reads one
 /// that it does): the class's own entry markup, which the kernel's `\and` prints " and " — a call in doubt, the class's
 /// line (`displaced_argument_in_doubt`; [`kernel_and_list`]; review rev99b B2: astro-ph9805069's
 /// four institutes as one contact with "and" written in; sifrev.cls's `\institute`, its own `\split@rg` over `\and`,
-/// 1704.03333).
-fn unnumbered_and_list(line: &[Token], store: Option<&str>) -> bool {
-  line.contains(&T_CS!("\\and"))
-    && class_numbered_institutes(&Tokens::new(line.to_vec()), store).is_none()
+/// 1704.03333). The separators by meaning ([`holds_and_separators`]: held in a macro, a `\let` copy, P2-6).
+fn unnumbered_and_list(line: &[Token], store: Option<&str>) -> Result<bool> {
+  Ok(
+    holds_and_separators(line)?
+      && class_numbered_institutes(&Tokens::new(line.to_vec()), store).is_none(),
+  )
 }
 
 /// [`unnumbered_and_list`], for a line a rerouted in-place, stored or run-in setter's call hands the API where it is
-/// called ([`class_contact`], [`class_contact_run_in`]): only while `\and` is the kernel's own (sect05.rs's `\and`
-/// constructor, " and "), which invents the word — a class or a binding defining `\and` for its lines has the API print
-/// that (smfart.cls's `\address{Nazi Boni University, … \and Université …}`, "&", 2508.07946).
-fn kernel_and_list(line: &[Token]) -> bool {
-  unnumbered_and_list(line, None)
-    && matches!(lookup_meaning(&T_CS!("\\and")), Some(Stored::Constructor(defn))
-      if matches!(defn.origin, DefinitionOrigin::Pool | DefinitionOrigin::Unknown))
+/// called ([`class_contact`], [`class_contact_run_in`]): only where a separator of the line is the kernel's own `\and`
+/// (sect05.rs's constructor, " and ", which invents the word) by its meaning where the setter is called
+/// ([`and_separators`]: `FmSepMeaning::Kernel` — a `\let` copy of it and one a macro holds too, trap T8 of the P2 plan:
+/// the rehearsal reads every `\and` as a separator, so the gate asks what it means) — a class or a binding defining
+/// `\and` for its lines has the API print that (smfart.cls's `\address{Nazi Boni University, … \and Université …}`,
+/// "&", 2508.07946). Unread ([`and_separators`]'s `None`), the spelling and the meaning of `\and` itself, as before P2-6:
+/// a literal `\and` while `\and` is any pool constructor.
+fn kernel_and_list(line: &[Token]) -> Result<bool> {
+  let kernel = match and_separators(line)? {
+    Some(separators) => separators
+      .iter()
+      .any(|separator| separator.meaning == FmSepMeaning::Kernel),
+    None => {
+      line.contains(&T_CS!("\\and"))
+        && matches!(lookup_meaning(&T_CS!("\\and")), Some(Stored::Constructor(defn))
+          if matches!(defn.origin, DefinitionOrigin::Pool | DefinitionOrigin::Unknown))
+    },
+  };
+  Ok(kernel && class_numbered_institutes(&Tokens::new(line.to_vec()), None).is_none())
 }
 
 /// Does a displaced setter's argument hold the class's own structure, which the API cannot read as an entry's text: a
@@ -3236,17 +3273,21 @@ fn kernel_and_list(line: &[Token]) -> bool {
 /// mark the readers read ([`leading_mark`]'s `\inst`, `\textsuperscript`) — cta-author.cls's `\address{\add{1}{…}
 /// \add{2}{…}\email{…}}`, whose entries and marks only its `\add` makes (2307.11112: routed whole, the three authors were
 /// read as one)? Then the call is in doubt and stays the class's text.
-fn displaced_argument_in_doubt(arg: &Tokens, store: Option<&str>, redefined: &[Token]) -> bool {
+fn displaced_argument_in_doubt(
+  arg: &Tokens,
+  store: Option<&str>,
+  redefined: &[Token],
+) -> Result<bool> {
   // (the class's own entry separators: an `\and` list its title page does not number — `class_numbered_institutes`
   // reads one that it does —, whose `\and` the kernel prints " and " (astro-ph9805069's four institutes as one
   // contact of every author, "and" written three times; sifrev.cls's own `\split@rg`, 1704.03333; review rev99b B2), and
   // a `\\` or `\par` the title page defines anew where it prints the store (`separators_redefined`))
   let toks = arg.unlist_ref();
-  if unnumbered_and_list(toks, store) || redefined.iter().any(|separator| toks.contains(separator))
+  if unnumbered_and_list(toks, store)? || redefined.iter().any(|separator| toks.contains(separator))
   {
-    return true;
+    return Ok(true);
   }
-  toks.iter().any(|t| {
+  Ok(toks.iter().any(|t| {
     if t.get_catcode() != Catcode::CS
       || t.with_cs_name(|n| matches!(n, "\\inst" | "\\textsuperscript" | "\\@textsuperscript"))
     {
@@ -3267,7 +3308,7 @@ fn displaced_argument_in_doubt(arg: &Tokens, store: Option<&str>, redefined: &[T
       || matches!(lookup_meaning(t), Some(Stored::Expandable(d))
         if d.get_origin() == DefinitionOrigin::File
           && d.get_parameters().is_some_and(|p| !p.get_parameters().is_empty()))
-  })
+  }))
 }
 
 /// At `\maketitle` (`\lx@store@defaults`, before K11's stores are handed on — an editor store makes its creator after
@@ -3375,13 +3416,14 @@ fn route_displaced(records: Vec<DisplacedRecord>, printed: &str) -> Result<()> {
       continue;
     }
     let store = record.store.with_str(ToString::to_string);
-    if record.arg.unlist_ref().contains(&T_CS!("\\and")) {
+    // (an `\and`-family separator by meaning, `holds_and_separators`: whether the class's title page numbers the entries)
+    if holds_and_separators(record.arg.unlist_ref())? {
       note_and_numbering(&record.store)?;
     }
     let entries = displaced_entries(&record.arg, Some(&store));
     let redefined = readers.separators_redefined(&record.store, &[T_CS!("\\\\"), T_CS!("\\par")]);
     if displaced_in_doubt(&entries)?
-      || displaced_argument_in_doubt(&record.arg, Some(&store), &redefined)
+      || displaced_argument_in_doubt(&record.arg, Some(&store), &redefined)?
     {
       Info!(
         "frontmatter",
@@ -7690,11 +7732,12 @@ pub fn harvest_stores(at_maketitle: bool) -> Result<Vec<Digested>> {
       assign_value(&s!("lx_store_handed_{name}"), true, Some(Scope::Global));
       continue;
     }
-    // (an `\and` list of affiliations: whether the class's title page numbers its entries, which the authors' numeric
-    // marks pick — `class_numbered_institutes`, at `\lx@add@store@affiliations`)
+    // (an `\and` list of affiliations, its separators by meaning (`holds_and_separators`): whether the class's title
+    // page numbers its entries, which the authors' numeric marks pick — `class_numbered_institutes`, at
+    // `\lx@add@store@affiliations`)
     if at_maketitle
       && api.starts_with("\\lx@add@store@affiliations")
-      && value.unlist_ref().contains(&T_CS!("\\and"))
+      && holds_and_separators(value.unlist_ref())?
     {
       note_and_numbering(&T_CS!(&s!("\\{store}")))?;
     }

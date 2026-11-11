@@ -34432,9 +34432,9 @@ it (`own_run`: an environment closed right before the separator — an `\end{tab
   reported with its family command and the meaning of the token that printed it, read outside the rehearsal, the one in
   force at the call site (the binding's `\author`, `\institute`):
   - `Kernel`: the kernel layer's `\and` constructor (`latex_constructs/sect05.rs`, which `\And`/`\AND` are `\let` to), the
-    definition `\and`'s own (`get_cs()`). Narrower than `frontmatter_stores.rs` `kernel_and_list`, which takes any pool
-    constructor: `texvc_sty.rs:132` `Let!("\\and", "\\land")` is `Raw` here and kernel there — P2-6, which swaps that
-    gate, meets it.
+    definition `\and`'s own (`get_cs()`). Narrower than the pool-constructor test `frontmatter_stores.rs` `kernel_and_list`
+    made before P2-6, which now asks this (P2-6, below): `texvc_sty.rs:132` `Let!("\\and", "\\land")` is `Raw`, no kernel
+    separator; the old test is the gate's reading only where the query answers `None`.
   - `Binding` (`DefinitionOrigin::is_binding_made`), whatever the definition prints: aas_support's real `\and`
     (`aas_support_sty.rs:358`), stand-ins for a class's column break printing a space or nothing (colm2025
     `colm2025_conference_sty.rs:23-24` `\And`/`\AND`, `jmlr_cls.rs:104` and `jmlr2e_sty.rs:35` `\And`, `jair_sty.rs:22,24`
@@ -34513,3 +34513,26 @@ a_numbered_contact_call_is_written_a_call_per_piece}`; repros
 `sectioning-frontmatter/{separators_query_kernel_meanings,separators_query_class_meanings,separators_query_binding_meaning,separators_query_binding_column_breaks,separators_query_spends_no_reading_budget,separators_query_group_left_open}.tex`,
 `sectioning-frontmatter/labelseq_contact_call_cut_at_{its_and,a_macro_held_and}.tex`; Known RED
 `sectioning-frontmatter/separators_query_jmlr_title_time_and_red.tex`.
+
+**P2-6 (P26): the stores' `\and` gates ask the query.** `frontmatter_stores.rs` reads a store line's or argument's
+separators through `argument_separators` (`and_separators`; `None` keeps each gate's spelling reading, as before):
+- `kernel_and_list` (`class_contact`, `class_contact_run_in`: a rerouted in-place or run-in setter's line is the class's)
+  holds where a separator of the line's own level is `Kernel` — a written `\and`, a `\let` copy, one a document macro
+  holds, a copy saved before the document renewed `\and`; the token's meaning, not `\and`'s (trap T8: smfart's `&`,
+  2508.07946, and a renewed `\and` stay the API's). An `\and` inside a `\parbox` or a note is no separator of the line
+  (nest 0): such a line is now the API's contact, where the spelling kept it the class's.
+- `unnumbered_and_list` (`displaced_argument_in_doubt`; astro-ph9805069, 1704.03333) and the gates before
+  `note_and_numbering` (the displaced route; K11's `\lx@add@store@affiliations` at `\maketitle`) hold for any separator
+  of the family at the argument's own level, whatever it means (`holds_and_separators`): the class's title page gives
+  it its meaning, and the gate only keeps the class's text or tries its numbering.
+
+Left by spelling (rule 3 of the P26 brief: each a mechanism of its own): the numbered split
+(`displaced_entries`' `split_tokens` over `class_numbered_institutes`' output, and its gate, which reads the same
+spelling as `affiliations.rs` `class_numbered_institutes`, P4; a macro-held numbered list is still every author's);
+nowfnt's `\and` → `\\` in a note (`hand_untypeset_stores`, 2108.12618), whose replacement is a reading rule ("a
+`Sep(And)` in a pubnote is a `Break`"); `author_tail_calls`' `\and` gate (a tail holding another author: by meaning a
+macro-held `\and` would drop the tail's words, as the written one already does; the loss comes first);
+`note_and_numbering`'s own `\and` list (sentinel entries the run prints, no reading of the document). Corpus
+byte-identity of the gates against int158a: the P26 report. Guards `perfect_kernel_batchp26::{an_in_place_line_is_the_classs_where_a_separator_means_the_kernels,
+a_displaced_and_list_is_read_by_meaning, a_numbered_store_route_tries_the_numbering_by_meaning}`; repros
+`sectioning-frontmatter/{inplace_contact_kernel_and_line_stays_the_classs,inplace_contact_class_and_line_is_the_apis,inplace_contact_copied_or_held_kernel_and_stays_the_classs,inplace_contact_kernel_and_copy_under_a_renewed_and,inplace_contact_and_inside_a_box_or_note_parts_no_line,displaced_csname_and_institutes_stay_the_classs}.tex`.
