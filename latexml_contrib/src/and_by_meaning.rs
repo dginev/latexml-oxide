@@ -43,10 +43,13 @@ impl AndRuns {
 }
 
 /// The `\and`s of `tokens` ([`AndRuns`]): each token spelled as one of `spelled`, whatever it means where the binding
-/// reads it (the parts the binding cut before P2-5: these classes print their own `\and` where they set the block —
-/// interact.cls:266 `\def\author#1{\def\and{and }…}`, pasj00.cls:1878 `\def\and{…and…}` in `\maketitle`, lipics.cls:553
-/// `\let\and\AB@pand` — over a document's renewed one), and each separator the query reads meaning the kernel's `\and`:
-/// held in a macro of the document's, a `\let` copy (its own run), which the spelling missed.
+/// reads it (the parts the binding cut before P2-5). l_aa, interact and pasj00 print their own `\and` where they set the
+/// block, over a document's renewed one (l-aa.sty:412 inside `\institutename`'s group, interact.cls:266
+/// `\def\author#1{\def\and{and }…}`, pasj00.cls:1878 `\def\and{…and…}` in `\maketitle`). lipics (v2019+: a global
+/// `\def\and{\newline}`, lipics-v2021.cls:758), ecai (ecai.cls:889, global) and gretsi (no `\and` of its own) honour a
+/// renewal, so a written renewed `\and` should not cut there: today's spelled cut is kept for them pending the helpers'
+/// unification (Kernel-only, eptcs `cells`' rule; revP25 finding 1). And each separator the query reads meaning the
+/// kernel's `\and`: held in a macro of the document's, a `\let` copy (its own run), which the spelling missed.
 pub fn and_runs(tokens: &[Token], spelled: &[Token]) -> Result<AndRuns> {
   let mut runs: BTreeMap<usize, usize> = tokens
     .iter()

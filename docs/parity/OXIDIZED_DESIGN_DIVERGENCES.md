@@ -34486,16 +34486,20 @@ passing, stays). The scan is heuristic (one macro level, no class-file wrappers)
 interact.cls:266; one before a later `\name` nothing), pasj00's `pasj_author_list` cut, gretsi's `without_separators`
 (v1.3 `\auteurs`) and lipics's `split_on_and` (the affiliations slot) part at the runs `and_by_meaning::and_runs`
 gives (`latexml_contrib/src/and_by_meaning.rs`): each `\and` written in the argument, as before, whatever the document
-made it — interact (`\author` sets `\def\and{and }`), pasj00 (`\maketitle`, pasj00.cls:1878) and lipics.cls (:553
-`\let\and\AB@pand`) print their own `\and` over a document's renewed one — and each separator the query reads `Kernel`
+made it — l_aa (l-aa.sty:412), interact (`\author` sets `\def\and{and }`) and pasj00 (`\maketitle`, pasj00.cls:1878)
+print their own `\and` over a document's renewed one; lipics (v2019+, a global `\def\and{\newline}`,
+lipics-v2021.cls:758), ecai (ecai.cls:889) and gretsi honour a renewal, so their spelled cut is kept only pending the
+helpers' unification, where they cut at `Kernel` only as eptcs's `cells` does (revP25 finding 1: a renewed
+`\and{ \& }` in lipics' affiliations prints one line "Uni X & Inst Y"; int158a and P25 alike give two, the "&" lost,
+synthetic) — and each separator the query reads `Kernel`
 at its own run (`ArgSeparator::span`), held in a macro of the document's, which the spelling missed; a gate also counts
 a kernel separator whose span is `None` (a macro holding names and the `\and`). interact reads an `\affil`'s or
 `\email`'s argument on its own: the block query leaves a note's separators to the note. Found by the rule-6 scan above
 at P25's base (`T_CS!("\\and")`, `split_tokens(`, `SplitDelim`, `\lx@splitting` in those files). Red on int158a, green
 since: l_aa (both authors one institute "Univ A and Univ B"), lipics ("Uni X and Inst Y"), interact's `\name` (Ann Able
 without her affiliation) and `\affil` (two affiliations for the class's "Univ A and Univ B"). Byte-identical (XML and
-E/F/W) against int158a on the 271 census papers of the seven P2-5 classes and a 300-paper raw-class sample, and on the
-174 of stage2's 1,434 converted. Left: **aistats's `columns`**
+E/F/W) against int158a on the 271 census papers of the seven P2-5 classes and a 300-paper raw-class sample, and on
+324 of stage2's 1,434 (the writer's 174 and revP25's 150). Left: **aistats's `columns`**
 (`aistats_sty.rs:108-112`, :571): it parts at the copy's own `\And`, `\AND`, `\ANDD` (read raw, so `Raw` to the query,
 as a document's renewal is; `\ANDD` is no separator of the query's family) — reading the copy's column break by meaning
 needs a rule the query does not have (brief rule 5). eptcs's `cells` (P2-4) cuts at `Kernel` alone; the two are written
