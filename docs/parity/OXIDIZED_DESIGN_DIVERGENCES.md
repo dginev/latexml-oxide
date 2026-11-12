@@ -35204,14 +35204,23 @@ the level its words print at, inside the box when one box holds them all (names 
 `\institution{…}`), a note's leading label counted for a list. A cut that labels no entry of a one-entry list leaves it
 whole (the call cut again would not end). The binding's own cutter (`binding_cut_list_attr`) and the token gate
 (`queued_creators_have_marks`) are deleted.
+IEEEtran's `\author` reads an `\IEEEauthorblockA` at the top level of another's argument (after its mark, after the
+outer's own lines, or in a `\thanks` the bare-run wrapper holds) as a block of its own, the outer's text around it bare
+text again, as conference mode prints each block on rows of its own (IEEEtran.cls:4653-4665); marks alone before it are
+its label (`ieeetran_cls.rs` `unnested_affiliation_blocks`; 1710.07993, 2004.11080, 2107.11588, 2605.02682, 1405.1593:
+each outer mark had been an affiliation alone, or a nested marked block went to the wrong authors). A bare run before
+the block's `\IEEEauthorblockA` led by an ordinal (`3\textsuperscript{rd}Cy Cole`, `leads_with_ordinal`) is a names
+block where a names block leads with one, the template's name lines (1806.11431; as an affiliation it took the block's
+authors).
 **Why**: one cut for every printed list; the binding's former cut dropped the marks it cut at (2601.01850, 1204.4183).
 **Witnesses**: IEEEtran 1705.01774, 1801.04010, 1504.01072, 1811.06030, 2310.18257, 2511.18221, 2512.10732,
 2609.16600 (each the base's entries with their marks shown); 2508.17623 (names in a `\parbox`, the link line kept);
 1801.00540 ("Red Hat Inc.," keeps its comma); 2605.05837 (the funding `\thanks` once); iopart 1205.6912.
-**Guard**: `perfect_kernel_batchc1::marked_list_cut_as_its_binding_declares` (11 rows).
+**Guard**: `perfect_kernel_batchc1::marked_list_cut_as_its_binding_declares` (16 rows).
 **Open (post-merge REDs)**: `ieee_marked_list_email_block_last_address_nameless_red`,
 `ieee_marked_list_star_led_names_entries_nameless_red`, `iopart_marked_list_unmarked_first_line_every_authors_red` (the
-base's placements, pinned as today with each mark shown).
+base's placements, pinned as today with each mark shown); `ieee_nested_affiliation_block_in_group_red` (an inner block
+inside a group of the outer's argument stays nested).
 
 ### 1010. pgfmath reads a number and a control-sequence operand as pgf's parser does (PGR1)
 

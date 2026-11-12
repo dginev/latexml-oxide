@@ -1,0 +1,18 @@
+% mechanism: an `\IEEEauthorblockA` nested inside a group of another's argument (`{\small …}`) is not lifted out
+%   (ieeetran_cls.rs `unnested_affiliation_blocks` reads the argument's top level only): its call runs inside the outer's
+% witness: synthetic (P4cR2's sibling sweep of 1710.07993's shape; none in the IEEEtran author_marks census of 717)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "∗Dept A, Univ A, Town", "†Dept B, Univ B, City"
+% engines: P4b2, P4cR2: each outer mark an affiliation alone ("*"), then the entry unmarked
+% expect:  0 errors, 0 warnings; Ann Able and Cy Cole "* Dept A, Univ A, Town", Bob Baker "† Dept B, Univ B, City"
+% status:  RED (P4cR2)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}, Bob Baker\IEEEauthorrefmark{2}, Cy Cole\IEEEauthorrefmark{1}}\\
+\IEEEauthorblockA{\IEEEauthorrefmark{1}{\small\IEEEauthorblockA{Dept A, Univ A, Town}}}\\
+\IEEEauthorblockA{\IEEEauthorrefmark{2}{\small\IEEEauthorblockA{Dept B, Univ B, City}}}}
+\maketitle
+Body.
+\end{document}

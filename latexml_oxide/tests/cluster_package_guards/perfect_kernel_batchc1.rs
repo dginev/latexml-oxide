@@ -361,7 +361,9 @@ fn notes(xml: &str) -> Vec<String> {
 /// Option C P4c: a binding's marked list (`\lx@add@affiliation@marked`, IEEEtran's `\IEEEauthorblockA`, iopart's
 /// `\address`) is cut by the API's Cut as the binding declares it (`MARKED_LIST_CUT`, OD #1009): at every mark, an
 /// address line entry text, legends and notes notes, no placement attribute; each mark shown (Q1). One row a witness's
-/// shape (red on the P4c WIP): its Warning count, every creator's name and contacts, every note.
+/// shape (red on the P4c WIP): its Warning count, every creator's name and contacts, every note. IEEEtran's author-block
+/// preprocessing ahead of the Cut too (P4cR2): a nested affiliation block a block of its own (its lone leading marks
+/// its label), an ordinal-led bare line a name.
 #[test]
 fn marked_list_cut_as_its_binding_declares() {
   macro_rules! repro {
@@ -551,6 +553,106 @@ fn marked_list_cut_as_its_binding_declares() {
         "affiliation=† Univ B, Town B.",
       ]],
       &["pubnote:thanks=Supported by Grant 1."],
+    ),
+    // (an affiliation block nested in another's after its mark spliced into it — 1710.07993, red on P4b2: each mark
+    // alone an affiliation)
+    (
+      repro!("ieee_nested_affiliation_block_after_mark"),
+      0,
+      &[
+        &["Ann Able *", "affiliation=* Dept A, Univ A, Town"],
+        &["Bob Baker †", "affiliation=† Dept B, Univ B, City"],
+        &["Cy Cole *", "affiliation=* Dept A, Univ A, Town"],
+      ],
+      &[],
+    ),
+    // (an affiliation block nested after the outer's own lines a block of its own — 2605.02682, red on P4b2: Cy Cole†
+    // given "* Equal Contribution")
+    (
+      repro!("ieee_nested_legend_block_after_own_lines"),
+      0,
+      &[
+        &[
+          "Ann Able *",
+          "affiliation=Cisco Systems, Town",
+          "email=ann@c.com",
+        ],
+        &[
+          "Bob Baker *",
+          "affiliation=Cisco Systems, Town",
+          "email=bob@c.com",
+        ],
+        &[
+          "Cy Cole †",
+          "affiliation=Cisco Systems, Town",
+          "email=cy@c.com",
+        ],
+      ],
+      &[
+        "note:thanks=* Equal Contribution",
+        "note:thanks=* Equal Contribution",
+        "note:thanks=† Senior Author",
+      ],
+    ),
+    // (the blocks of a `\thanks` after the names, the note before them the document's — 1405.1593, red on P4b2: Bob
+    // Baker's "* Dept A")
+    (
+      repro!("ieee_affiliation_blocks_in_a_thanks"),
+      0,
+      &[
+        &[
+          "Ann Able *",
+          "affiliation=* Dept A, Univ A, Town",
+          "email=ann@a.edu",
+        ],
+        &[
+          "Bob Baker †",
+          "affiliation=† Dept B, Univ B, City",
+          "email=bob@b.edu",
+        ],
+        &[
+          "Cy Cole *",
+          "affiliation=* Dept A, Univ A, Town",
+          "email=cole@a.edu",
+        ],
+      ],
+      &["pubnote:thanks=Funded by a grant."],
+    ),
+    // (a bare ordinal-led run before the shared block a name line — 1806.11431, red on P4b2: an affiliation taking the
+    // authors, 2 Warnings; the "2 nd" on Ann's name is the in-block split, ieee_shared_block/ordinal_names)
+    (
+      repro!("ieee_ordinal_name_line_before_shared_block"),
+      0,
+      &[
+        &[
+          "1 st Ann Able 2 nd",
+          "affiliation=School of Technology University of X Town, Country",
+          "email=ann@x.edu",
+        ],
+        &[
+          "Bob Baker",
+          "affiliation=School of Technology University of X Town, Country",
+          "email=bob@x.edu",
+        ],
+        &[
+          "3 rd Cy Cole",
+          "affiliation=School of Technology University of X Town, Country",
+          "email=cy@x.edu",
+        ],
+      ],
+      &[],
+    ),
+    // (its counter-case: no names block leads with an ordinal, so the ordinal-led line stays an affiliation; the 2
+    // Warnings are the content check's pair for "3rd", the base's)
+    (
+      repro!("ieee_ordinal_floor_line_names_unnumbered"),
+      2,
+      &[&[
+        "Ann Able",
+        "affiliation=3 rd Floor, Bldg 2",
+        "affiliation=School A Town A",
+      ]],
+      &[],
     ),
     // (RED, the base's: "Univ A, Town A" Cy Cole's alone — iopart_marked_list_unmarked_first_line_every_authors_red)
     (

@@ -1831,6 +1831,19 @@ fn math_number_mark_at(tokens: &[Token], at: usize) -> Option<(Vec<Token>, usize
   .then(|| (tokens[start..start + digits].to_vec(), close + 1))
 }
 
+/// Does `tokens` open with an ordinal, a number and its suffix ([`ordinal_suffix_at`]), past spaces: IEEEtran's template
+/// leads each name line with one (`3\textsuperscript{rd} Cy Cole`; 1806.11431).
+pub fn leads_with_ordinal(tokens: &[Token]) -> bool {
+  let start = tokens.iter().take_while(|t| **t == T_SPACE!()).count();
+  let digits = tokens[start..]
+    .iter()
+    .take_while(|t| {
+      t.get_catcode() == Catcode::OTHER && t.with_str(|s| s.chars().all(|c| c.is_ascii_digit()))
+    })
+    .count();
+  digits > 0 && ordinal_suffix_at(tokens, start + digits)
+}
+
 /// Does an ordinal suffix start at `at`, glued to the number before it ([`is_ordinal_suffix`]): a run of letters that
 /// is the whole word, `rd` before a space or a comma, not the `St` of `Stanford`, nor an uppercase `St` before a `.` or
 /// a space and a capital, the word "Saint" (`$1$St. Petersburg`, `$3$St Andrews`; review rev104c2 F3 — a lowercase
