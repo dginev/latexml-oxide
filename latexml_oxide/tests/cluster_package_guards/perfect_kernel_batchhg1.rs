@@ -630,6 +630,38 @@ fn marked_blocks_restored_read_as_printed() {
         r#"<creator before="  " role="author"><personname>Bob Two<sup>†</sup></personname><contact name="Affiliation: " role="affiliation"><sup>†</sup>Univ B</contact><contact name="Emails: " role="email">bob@y.org</contact></creator>"#,
       ]),
     },
+    // (P6f: a list's lines cut at the kernel's `\and` by meaning, `classify::affiliation_lines` — a document macro holding
+    // it, a `\csname and\endcsname`; base: "Univ Alpha and Univ Beta" one entry, 1 warning)
+    Row {
+      repro:    repro!("sectioning-frontmatter/beamer_institute_macro_held_and_parts_entries"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">Univ Alpha</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation">Univ Beta</contact></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("sectioning-frontmatter/beamer_institute_csname_and_parts_entries"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">Univ Alpha</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation">Univ Beta</contact></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("sectioning-frontmatter/beamer_institute_macro_held_and_marked_entries"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">Univ Alpha, Town A</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation">Univ Beta</contact></creator>"#,
+      ]),
+    },
     Row {
       repro:    repro!("class-bindings/acmart_country_glued_mark_requests_each_entry"),
       files:    &[],

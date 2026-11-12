@@ -100,13 +100,13 @@ pub(in crate::base_utilities) fn lines_starts(
 /// Whether an entry of a list `stuff` starts (`marks`) inside an environment the list opens, after the line's first
 /// (`\begin{minipage}{…}\affmark{1} Univ A, \affmark{2} Univ B\end{minipage}`): no cut there may hold half of it, so
 /// the list is read by its tokens, as before its starts were read — llncs's route and the cutter alike (revP4b4a2 B3).
-pub fn starts_inside_environment(stuff: &Tokens, marks: &ListMarks) -> bool {
+pub fn starts_inside_environment(stuff: &Tokens, marks: &ListMarks) -> Result<bool> {
   let Some(starts) = &marks.starts else {
-    return false;
+    return Ok(false);
   };
   let v = stuff.unlist_ref();
-  let lines = split_tokens_delimited(stuff.clone(), author_affil_splits());
-  line_ranges(v, &lines).is_some_and(|ranges| environment_lines(v, ranges, starts).is_none())
+  let lines = affiliation_lines(stuff)?;
+  Ok(line_ranges(v, &lines).is_some_and(|ranges| environment_lines(v, ranges, starts).is_none()))
 }
 
 /// `ranges` (lines of `v`) joined where a break stands inside an environment `v` opens, each with its first line's

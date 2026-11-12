@@ -1392,7 +1392,10 @@ in the "author" arm (`split_author_line`):
    Authors written "Alice and Bob" still split, because " and " is a
    name separator inside `split_author_line`. (An affiliation list's
    lines are cut by the same list since P6d, which folded the former
-   `affil_splits` into `author_affil_splits`.)
+   `affil_splits` into `author_affil_splits`, and first at the kernel's
+   `\and` by meaning since P6f, `classify::affiliation_lines`: a
+   document's macro holding it or a `\csname and\endcsname` cuts as the
+   spelled `\and`, the line after it an entry of its own.)
 
 **Why:** arXiv 2605.00347 (colm2026 class) lists 13 authors across three
 `\textbf{…}` lines with `$^{1,2,3,*}$` affiliation markers. Perl and the

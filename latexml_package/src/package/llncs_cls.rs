@@ -233,7 +233,7 @@ LoadDefinitions!({
     // The marks \lx@add@affiliations keys its superscript-label branch on, as printed (2608.21425's `\affmark{1}`);
     // where an entry starts inside an environment the list opens, its tokens', as its cutter reads it (revP4b4a2 B3).
     let marks = list_marks(&body, "llncs_institute")?;
-    let marked = if starts_inside_environment(&body, &marks) {
+    let marked = if starts_inside_environment(&body, &marks)? {
       author_mark_position(&body).is_some()
     } else {
       marks.prints
