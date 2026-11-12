@@ -35190,8 +35190,6 @@ first, binds the names only where one survives (pgf's order, DTL1g), returns cal
 (`pgfmath_code_tex.rs`). Reason: the staged rule (2) — only TeX errs, and the recovery carries the meaning the author wrote.
 Guard `error_boundary::perfect_kernel_error_boundary` (the calc rows and their safe twin).
 
-apart from `Info:` lines in a log. Guard `cluster_cli::debug_feature_scope::debug_feature_prints_only_its_feature`.
-
 ### 1008. A `cmd/<name>/<hook>` hook on a command LaTeXML binds does not run: a Warning for the document's code, an Info for a class's or package's (QA47A)
 
 **Perl.** `\AddToHook` is a no-op (latex_base.pool.ltxml:833): no generic command hook runs, none is reported.
