@@ -597,10 +597,8 @@ impl Converter {
   /// streaming restart or a supplement is a converter of its own and is told again.
   pub fn note_main_source(&mut self, source: &str) { self.compile_route = compile_route(source); }
   pub fn initialize_session(&mut self) -> Result<()> {
-    // The field provenance is per conversion (OXIDIZED_DESIGN #715): reset here too, for the callers that initialize a
-    // session without `prepare_session` (the test harnesses, the streaming sweeps), before any preamble is digested.
-    latexml_core::document::reset_field_provenance();
-    // …and so is the frontmatter observer's ledger (OXIDIZED_DESIGN_DIVERGENCES #837)
+    // The engine crate's per-conversion state (the core's is `latexml_core::reset_conversion_state`, run by
+    // `initialize_singletons`): the frontmatter observer's ledger (OXIDIZED_DESIGN_DIVERGENCES #837)
     latexml_engine::base_utilities::reset_fm_reading();
     // …and the title-page check's spill notes (OXIDIZED_DESIGN_DIVERGENCES #953)
     latexml_engine::base_utilities::reset_title_page_check();
@@ -1151,10 +1149,6 @@ impl Converter {
     &'preplifetime mut self,
     _opts: &'preplifetime Config,
   ) -> Result<()> {
-    // The engine crate's per-conversion state (the core's is `latexml_core::reset_conversion_state`, at the session's
-    // `initialize_report`): a persistent worker converts many papers per thread.
-    latexml_engine::base_utilities::reset_fm_reading();
-    latexml_engine::base_utilities::reset_title_page_check();
     if !self.ready {
       self.initialize_session()?
     }

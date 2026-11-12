@@ -2560,15 +2560,32 @@ fn read_standard_class_derivative(file: &str, path: &str, in_expl3: bool) -> Res
   let setters_before = crate::binding::store_setters::snapshot()?;
   // (the binding loaded last is the standard class's, whose load just ended: its own names are the class's)
   let class_names = stand_in_last_load_names();
-  STANDARD_CLASS_DERIVATIVE.with(|reads| reads.borrow_mut().push(class_names));
+  let derivative = StandardClassDerivativeRead::enter(class_names);
   let class_read = crate::binding::store_setters::RawClassRead::begin();
   let read = load_tex_definitions(file, path, false, true, in_expl3, true);
   drop(class_read);
-  STANDARD_CLASS_DERIVATIVE.with(|reads| reads.borrow_mut().pop());
+  drop(derivative);
   read?;
   crate::binding::store_setters::mark_raw(&setters_before)?;
   UNCLAIMED_RAW_CLASS_READS.set(UNCLAIMED_RAW_CLASS_READS.get() + 1);
   Ok(())
+}
+
+/// A standard-class derivative's read (`STANDARD_CLASS_DERIVATIVE`), popped however it ends: a panic a worker catches
+/// would leave its class's names for the next paper's reads.
+struct StandardClassDerivativeRead;
+
+impl StandardClassDerivativeRead {
+  fn enter(class_names: HashSet<SymStr>) -> Self {
+    STANDARD_CLASS_DERIVATIVE.with(|reads| reads.borrow_mut().push(class_names));
+    StandardClassDerivativeRead
+  }
+}
+
+impl Drop for StandardClassDerivativeRead {
+  fn drop(&mut self) {
+    let _ = STANDARD_CLASS_DERIVATIVE.try_with(|reads| reads.borrow_mut().pop());
+  }
 }
 
 /// A stand-in binding's name while its load runs (`STAND_IN_BINDINGS`): a package its load loads first records it
@@ -6504,6 +6521,17 @@ fn preload_font_map_keyed(encoding: &str, keys: FontmapKeySyms) -> Result<()> {
 #[cfg(test)]
 mod declared_info_tests {
   use super::*;
+
+  /// A standard-class derivative's read a panic unwinds out of leaves no entry: the next read is no derivative's.
+  #[test]
+  fn a_derivative_read_a_panic_ends_is_popped() {
+    let unwound = std::panic::catch_unwind(|| {
+      let _read = StandardClassDerivativeRead::enter(HashSet::default());
+      panic!("a binding's bug");
+    });
+    assert!(unwound.is_err());
+    assert!(STANDARD_CLASS_DERIVATIVE.with(|reads| reads.borrow().is_empty()));
+  }
 
   /// `\Provides…` text as latex.ltx's `\xdef` leaves it: the kernel's `\space` and `\ ` read as spaces
   /// (cite.sty `[2015/02/27 \space v 5.5]`); a file's own macros (listings.sty:22-23 `\filedate\space\fileversion`,

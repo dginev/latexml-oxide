@@ -1,0 +1,25 @@
+% A document whose eager digestion turns into streaming pass 1 (the RSS transition, not `--streaming=true`, which gives
+% the eager XML here) numbers a paragraph a display math splits as no paragraph: its first part's `<p xml:id="S1.p1.1">`
+% becomes `id1`, and the parts after it shift (`S1.p1.2` → `S1.p1.1`, its `<text>` `S1.p1.2.1` → `S1.p1.1.1`), in
+% each section. The spill decision reads the process's resident set (stomach.rs `spill_watermark_bytes`), so the same
+% paper converts eager alone and streamed after others in one process (sibling of
+% babel_language_marks_each_streamed_section_red; revST3b's probe).
+% witness: synthetic (2507.13358's id renumbering, ST3b census)
+% oracle:  pdflatex (TL 2025) 0 errors: "1 One", "First words of a paragraph", "x = 1", "Bold end.", "2 Two"
+% engines: ST3b (e2f4fe7e79), `LATEXML_SPILL_AT_MIB=1 LATEXML_SOFT_YIELD_MIN_BOXES=1`: `<p xml:id="id1">First words of
+%          a paragraph</p>`, `<p xml:id="S1.p1.1">and its last words.`, `<p xml:id="id2">Text two</p>`; eager and
+%          `--streaming=true`: `<p xml:id="S1.p1.1">`, `<p xml:id="S1.p1.2">`, `<p xml:id="S2.p1.1">`
+% expect:  0 errors; streamed XML == eager XML
+% status:  RED
+% moves:   STRM (post-merge): a row converting it with the transition forced in-process (`set_spill_watermark_override`,
+%          `set_soft_yield_min_boxes(1)`, as `116_adaptive_streaming` does), XML == eager.
+\documentclass{article}
+\begin{document}
+\section{One}
+First words of a paragraph
+\[ x = 1 \]
+and its last words.
+\textbf{Bold} end.
+\section{Two}
+Text two \[ y \] after.
+\end{document}

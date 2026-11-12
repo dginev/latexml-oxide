@@ -59,13 +59,26 @@ fn diagnostics(log: &str) -> Vec<&str> {
     .collect()
 }
 
-/// Each row: the documents converted before, the document, whether they share its directory, its (Error, Warning)
-/// counts and a line its log carries that many times. After them on one thread, the document has its counts, its
-/// diagnostics and its XML byte for byte as alone.
+/// A row: the documents converted before and what each of their logs counts, the document, whether they share its
+/// directory, its (Error, Warning) counts and a line its log carries that many times.
+struct Row {
+  name:          &'static str,
+  before:        Vec<Doc>,
+  /// Each earlier document's (Error, Warning, times the row's line) counts, its own conversion's.
+  before_counts: (usize, usize, Option<usize>),
+  document:      Doc,
+  one_dir:       bool,
+  counts:        (usize, usize),
+  line:          Option<(&'static str, usize)>,
+}
+
+/// After the documents before it on one thread, each with its own counts, the document has its counts, its diagnostics
+/// and its XML byte for byte as alone.
 #[test]
 fn a_document_after_another_on_one_thread_is_the_document_alone() {
   let keyval = repro!("macro-state/unknown_keyval_key_warns_in_each_document.tex");
   let subjclass = repro!("macro-state/unknown_frontmatter_key_noted_in_each_document.tex");
+  let listing = repro!("macro-state/listing_body_file_named_in_each_document.tex");
   let chain = |extra: &str| Doc {
     tex:   repro!(
       "stand-in-copies/text_defaults/chain/copy_newcommand_through_a_chained_base_class_errs.tex"
@@ -99,53 +112,76 @@ fn a_document_after_another_on_one_thread_is_the_document_alone() {
     )],
   };
   let rows = [
-    (
-      "unknown KeyVals key, Warning",
-      vec![doc(keyval)],
-      doc(keyval),
-      false,
-      (0, 1),
-      Some(("unknown KeyVals key 'detect-inline-weight'", 1)),
-    ),
-    (
-      "unknown 'Frontmatter' key, Info",
-      vec![doc(subjclass)],
-      doc(subjclass),
-      false,
-      (0, 0),
-      Some(("unknown KeyVals key 'scheme'", 1)),
-    ),
-    (
-      "90a elsarticle row after its predecessor",
-      vec![doc(repro!(
+    Row {
+      name:          "unknown KeyVals key, Warning",
+      before:        vec![doc(keyval)],
+      before_counts: (0, 1, Some(1)),
+      document:      doc(keyval),
+      one_dir:       false,
+      counts:        (0, 1),
+      line:          Some(("unknown KeyVals key 'detect-inline-weight'", 1)),
+    },
+    Row {
+      name:          "unknown 'Frontmatter' key, Info",
+      before:        vec![doc(subjclass)],
+      before_counts: (0, 0, Some(1)),
+      document:      doc(subjclass),
+      one_dir:       false,
+      counts:        (0, 0),
+      line:          Some(("unknown KeyVals key 'scheme'", 1)),
+    },
+    Row {
+      name:          "90a elsarticle row after its predecessor",
+      before:        vec![doc(repro!(
         "sectioning-frontmatter/revtex_affiliation_requested_in_formula_marks_part_one_line.tex"
       ))],
-      doc(repro!(
+      before_counts: (0, 0, None),
+      document:      doc(repro!(
         "sectioning-frontmatter/elsarticle_address_requested_in_formula_marks_part_one_line.tex"
       )),
-      false,
-      (0, 0),
-      None,
-    ),
-    (
-      "class load record (a base class of the same name)",
-      vec![chain("\\def\\bibname{Literature}\n")],
-      chain(""),
-      false,
-      (0, 0),
-      Some(("Command \\bibname already defined", 0)),
-    ),
-    (
-      "raw read record (one directory)",
-      vec![loadclass()],
-      loadclass(),
-      true,
-      (2, 0),
-      Some(("Command \\refname already defined", 1)),
-    ),
+      one_dir:       false,
+      counts:        (0, 0),
+      line:          None,
+    },
+    Row {
+      name:          "class load record (a base class of the same name)",
+      before:        vec![chain("\\def\\bibname{Literature}\n")],
+      before_counts: (1, 0, Some(1)),
+      document:      chain(""),
+      one_dir:       false,
+      counts:        (0, 0),
+      line:          Some(("Command \\bibname already defined", 0)),
+    },
+    Row {
+      name:          "raw read record (one directory)",
+      before:        vec![loadclass()],
+      before_counts: (2, 0, Some(1)),
+      document:      loadclass(),
+      one_dir:       true,
+      counts:        (2, 0),
+      line:          Some(("Command \\refname already defined", 1)),
+    },
+    Row {
+      name:          "a listing body's file, numbered per conversion",
+      before:        vec![doc(listing)],
+      before_counts: (0, 0, Some(1)),
+      document:      doc(listing),
+      one_dir:       false,
+      counts:        (0, 0),
+      line:          Some(("lx-LTXexample-1.tmp", 1)),
+    },
   ];
   let mut failures = Vec::new();
-  for (name, before, document, one_dir, counts, line) in rows {
+  for row in rows {
+    let Row {
+      name,
+      before,
+      before_counts,
+      document,
+      one_dir,
+      counts,
+      line,
+    } = row;
     let alone_dir = tempfile::tempdir().expect("a document directory");
     let alone =
       convert_on_one_thread(write_in(alone_dir.path(), &[&document]), Some("ar5iv.sty")).remove(0);
@@ -163,13 +199,20 @@ fn a_document_after_another_on_one_thread_is_the_document_alone() {
         .flat_map(|(doc, dir)| write_in(dir.path(), &[doc]))
         .collect()
     };
-    let after = convert_on_one_thread(sources, Some("ar5iv.sty"))
-      .pop()
-      .expect("the document");
+    let mut runs = convert_on_one_thread(sources, Some("ar5iv.sty"));
+    let after = runs.pop().expect("the document");
     let found = |log: &str| {
       let times = line.map(|(line, _)| log.matches(line).count());
       (error_count(log), warning_count(log), times)
     };
+    for (i, (log, _)) in runs.iter().enumerate() {
+      if found(log) != before_counts {
+        failures.push(format!(
+          "{name}: document {i} before, counts {:?}, want {before_counts:?}\n{log}",
+          found(log)
+        ));
+      }
+    }
     let want = (counts.0, counts.1, line.map(|(_, times)| times));
     if found(&alone.0) != want || found(&after.0) != want {
       failures.push(format!(
