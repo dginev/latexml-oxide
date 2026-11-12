@@ -1264,10 +1264,11 @@ fn authblk_names_show_their_printed_marks() {
 
 /// revP4b2 S1: the API Cut's cost gate (`may_open_with_mark`) reads on past a macro printing nothing — an empty body
 /// (`\newcommand\affilfont{}`), one of only braces, `\empty` two deep — to the list's first mark, so the list is cut once
-/// (`--debug=frontmatter`'s cut line). Red on P4b2 for the braces' body: no cut, the observer reading the list.
+/// (`--debug=frontmatter`'s cut line). Red on P4b2 for the braces' body: no cut, the observer reading the list. P6e: a run
+/// of nine empty macros, read on by the gates' one walk (`argument_marks::walk`), 8 deep by nesting.
 #[test]
 fn api_cut_gate_reads_past_empty_bodies() {
-  let rows: [(&str, &str); 2] = [
+  let rows: [(&str, &str); 3] = [
     (
       "api_cut_gate_empty_macro_before_marks",
       include_str!(
@@ -1278,6 +1279,12 @@ fn api_cut_gate_reads_past_empty_bodies() {
       "api_cut_gate_nested_empty_macro_before_marks",
       include_str!(
         "../../../tools/perfect_kernel/repros/sectioning-frontmatter/api_cut_gate_nested_empty_macro_before_marks.tex"
+      ),
+    ),
+    (
+      "api_cut_gate_run_of_empty_macros_before_marks",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/api_cut_gate_run_of_empty_macros_before_marks.tex"
       ),
     ),
   ];

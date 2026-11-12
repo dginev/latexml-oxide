@@ -206,8 +206,8 @@ impl NameKeys {
   }
 
   /// The keys of a name as it prints, its letters unfolded, and of its transliteration (`Müller` "mueller", the
-  /// letters [`resolver::transliteration`] spells, the others as printed): whom `insert::respell_emails` and the
-  /// frontmatter observer's `Resolver::respell_emails` move an author's e-mail to, an address spelling that author as
+  /// letters [`resolver::transliteration`] spells, the others as printed): whom the frontmatter observer's
+  /// `Resolver::respell_emails` moves an author's e-mail to, an address spelling that author as
   /// printed — a transliterated spelling is one (user ruling 2026-11-05: `joerg.mueller@` is Jörg Müller's, "also
   /// written Joerg Mueller"; `\email{mueller-group@x.de}` on Anna Smith's own call moves to `\author{J\"org M\"uller}`
   /// as its ASCII twin does, FIDELITY_CHARTER §4 #420), a base-letter fold is not (`muller-group@` stays). Each word in
@@ -723,9 +723,8 @@ fn full_score(part: &LocalPart, keys: &NameKeys) -> usize { spelling_score(keys,
 /// `zhonggong.hc@` on Chao Huang's, no Wang Hong's "hong", 2609.11148) — but for an address set after the last author
 /// (`last`), which no name's position claims: it is the name's that spells it, the holder's not standing there even weakly
 /// (`tpengqy@` after Y. J. Shang, Q. Y. Peng's, 2004.06253; #420's count, 22 of 24 addresses set after the last author his;
-/// `kkwongar@` stays on Wong Kam-Kwai beside Hiu Tung Wong, 2608.26715). Read by
-/// `insert::respell_emails` and the observer's `Resolver::respell_emails`, which else move it to the name spelling it
-/// better.
+/// `kkwongar@` stays on Wong Kam-Kwai beside Hiu Tung Wong, 2608.26715). Read by the observer's
+/// `Resolver::respell_emails`, which else moves it to the name spelling it better.
 pub(in crate::base_utilities) fn own_call_keeps(
   holder: &NameKeys,
   owner: &NameKeys,

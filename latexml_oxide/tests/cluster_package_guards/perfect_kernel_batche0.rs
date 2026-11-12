@@ -1609,7 +1609,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (P5c, 39 -> 43, pending the main session's decision: `argument_marks::typed_text`, the name-text query's cost gate
   // before its rehearsal — a name of characters and groups alone prints its characters (`queued_author_name_keys`); the
   // token keys it replaces, `contacts.rs` `queued_author_name_keys`, read every name's spelling)
-  ("frontmatter (rest)", 43),
+  // (P6e, 43 -> 35: those three gates are one walk, `argument_marks::walk`, its catcodes read once, each gate a predicate
+  // on what it meets)
+  ("frontmatter (rest)", 35),
   // (P26, 527 -> 526: the stores' `\and` gates ask the separator query by meaning, `and_separators`, OD #995 P2-6; the
   // spelling read only where the query answers `None`: one spelled read fewer)
   // (FX24b, 526 -> 527: `title_page_prints_author` walks the title page a raw file or the document defined for a read of

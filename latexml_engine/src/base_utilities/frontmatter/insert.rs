@@ -93,7 +93,6 @@ pub fn insert_frontmatter(document: &mut Document) -> Result<()> {
   let answered = answered_labels(document);
   relocate_annotations(document)?;
   link_entry_addresses(document, None)?;
-  respell_emails(document)?;
   let unshown_marks = show_unanswered_marks(document, &answered)?;
   drop_empty_contacts(document)?;
   drop_repeated_orcids(document);
@@ -3918,102 +3917,6 @@ pub(super) fn block_creator(document: &mut Document, authors: &[Node]) -> Result
     return Ok(None);
   }
   Ok(Some(creator))
-}
-
-/// FIDELITY_CHARTER §4, "ownership by evidence, never by bare position": an e-mail contact one address alone fills,
-/// on an author it does not spell, goes to the one author it spells — an `\email` call placed by its `annotate=last`
-/// after a one-call author list (AASTeX 5's `\author{Ann Able and Bob Baker}\email{able@x.org}`: 0911.3506
-/// `bourouaine@mps.mpg.de` on Eckart Marsch, 1506.04035, 1203.1317, 0904.0560 — 92 of the 688 aas census papers); a copy
-/// the author it spells holds already is dropped. An address that spells no one, or several, stays (`spelled_owner`).
-/// Guard `perfect_kernel_batch81::an_email_call_goes_to_the_author_it_spells`.
-fn respell_emails(document: &mut Document) -> Result<()> {
-  let authors = document.findnodes("//ltx:creator[@role='author'][ltx:personname]", None);
-  if authors.len() < 2 {
-    return Ok(());
-  }
-  // (each name read as printed, a transliterated spelling counted as one — whom an address is moved to
-  // (`NameKeys::as_printed`: `joerg.mueller@` Jörg Müller's, user ruling 2026-11-05) —; and as an address spells it —
-  // base letters too (`NameKeys::of`) — which only keeps an address on the author it spells so: `javier.martinez@ugr.es`
-  // spells Javier Martínez-López, its holder, by base letters, so it stays, though as printed it spells Carlos Javier
-  // Navarro alone (brief 95c G6, 2410.00275); `muller-group@x.de` on Anna Smith's own `\email` stays, though by base
-  // letters it spells Jörg Müller — no target is picked by them (brief 95c r2 B1, FIDELITY_CHARTER §4 #420) —, where
-  // `mueller-group@x.de` moves to him, as its ASCII twin beside `Jorg Mueller` does (OXIDIZED_DESIGN_DIVERGENCES #970))
-  let names: Vec<String> = authors
-    .iter()
-    .map(|author| {
-      document
-        .findnode("ltx:personname", Some(author))
-        .map(|person| person.get_content())
-        .unwrap_or_default()
-    })
-    .collect();
-  let keys: Vec<NameKeys> = names
-    .iter()
-    .map(|name| NameKeys::as_printed(&Tokens::new(ExplodeText!(name))))
-    .collect();
-  let base_keys: Vec<NameKeys> = names
-    .iter()
-    .map(|name| NameKeys::of(&Tokens::new(ExplodeText!(name))))
-    .collect();
-  let mut moves: Vec<(Node, usize)> = Vec::new();
-  for (at, author) in authors.iter().enumerate() {
-    for contact in document.findnodes("ltx:contact[@role='email']", Some(author)) {
-      // (one a mark's label placed — a marked e-mail line — is no bare position: `*baker@x.org` under `A. Able*`; a fuzzy
-      // label, a name, that placed it nowhere left it at the call's position: `\correspondingauthor{…}\email{…}`,
-      // 2003.00016, 2003.11098, 2204.06937)
-      if contact
-        .get_attribute("_label")
-        .is_some_and(|label| !label.is_empty() && !label.starts_with("fuzzy:"))
-      {
-        continue;
-      }
-      // (its one address, a lead word aside: `\email{Email: pdrew@utexas.edu}`, 2003.00016)
-      let text = contact.get_content();
-      if text.matches('@').count() != 1 {
-        continue;
-      }
-      let Some(address) = text
-        .split_whitespace()
-        .find(|word| word.contains('@'))
-        .map(|word| word.trim_matches(|c: char| !c.is_alphanumeric()))
-      else {
-        continue;
-      };
-      // (an e-mail its holder's own name spells as well as another's stays: a tie never moves an own call, `yang91@` on
-      // Yang Zhang's own call beside Hengyun Yang, 1707.09730; `ricky_ang@` on Lay Kee Ang's, 2604.02636 — FIDELITY_CHARTER
-      // §4 #420; a longer spelling does, `sanderson@` on Mark Anderson's call, review rev107f finding 3, `dongsu.kim@` on
-      // Jang Soo Kim's, 0902.4311: `own_call_keeps`)
-      if let Some(owner) = spelled_owner(&keys, address)
-        && owner != at
-        && !own_call_keeps(
-          &base_keys[at],
-          &keys[owner],
-          address,
-          at + 1 == authors.len(),
-        )
-      {
-        moves.push((contact, owner));
-      }
-    }
-  }
-  for (contact, owner) in moves {
-    let address = contact.get_content();
-    let held = document
-      .findnodes("ltx:contact[@role='email']", Some(&authors[owner]))
-      .iter()
-      .any(|c| c.get_content().trim() == address.trim());
-    // (a copy the owner already holds is dropped, not kept: a paper repeating its author block for a supplement lands the
-    // second block's `\email` calls on the last creator, 2307.07324, 1801.07635, 1810.03867, 2510.13035, 2001.07542,
-    // 2608.31160 — under REVTeX only a block a subfile repeats since RB1, its `\maketitle` switching `\email` off
-    // otherwise, revtex4_cls.rs `switch_off_author_block_after_maketitle` — so "printed under both" cannot be told from that here, and 2502.15891's real duplicate reads as the base
-    // did: `email_own_call_printed_under_both_stays_on_both_red`, review of bundle int139b)
-    if !held {
-      let mut target = authors[owner].clone();
-      document.append_clone(&mut target, vec![contact.clone()])?;
-    }
-    document.remove_node(contact);
-  }
-  Ok(())
 }
 
 /// The authors of the row, the block's own creator aside

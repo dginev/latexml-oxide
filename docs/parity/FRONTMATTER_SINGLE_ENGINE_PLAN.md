@@ -266,7 +266,7 @@ deciders on events (2607.20672, nlin0310001).
   end, Z1), Sep (column, comma, "and", gap with width), Break (with role), Contact, Note (inner marks and contacts),
   Layout (box, cell, font change); beside them Declaration and the held errors (Z1).
 - **Already compliant:** the lexer's tests on printed Unicode (`lexer.rs:66,112-116,307,319,363`), the resolver
-  (`resolver/`), `fmshadow/classes.rs`, `insert.rs` `respell_emails`, `cover_order.rs`, `field_ink.rs`,
+  (`resolver/`), `fmshadow/classes.rs`, `cover_order.rs`, `field_ink.rs`,
   `titlepage_layout.rs`. Font switches never become ink (`font_key`, `events/mod.rs:426`).
 
 ## Gaps in the event model (all ten landed: Z1, Z2)
@@ -469,7 +469,7 @@ error that shows downstream as a wrong owner is a **Cut** residual.
 | **Cut** | Where does a printed piece end? | about 9 readers per signal family: old reader (3A), observer lexer and `lines.rs`, writer `cut`/`repart.rs`, binding pre-splitters, scorer |
 | **Kind** | What is the piece: person, affiliation, address, e-mail, note, collaboration, remark, spacer? | inventoried (the 2026-10-29 inventory, `archive/FRONTMATTER_DIGESTED_REFACTOR_2026-11-07.md` 3B-3E), not unified; two `reads_as_names` (`author_block/marks.rs:106` on tokens, `observer/resolver/lines.rs:381` on text), three collaboration word lists |
 | **Group** | Which entries form a unit: `\and` column, names row, run, collaboration group, the block? | 14 sites with four meanings (owner, scope, positional domain, temporal run). Both engines model it inside (`resolver/mod.rs:311,313` `group`/`column`; `author_block/line_kinds.rs:23-33` `LinkOwner::Group`); it is lost at the API (`annotate=N`) and in the observer's output (`Resolved{creators,block}` `resolver/mod.rs:85-88`, writer `Owner{Creator,Block}` `emitter/plan.rs:41`) |
-| **Link** | Which entry, group or block owns each item? | ruled (steps 1→4 above), **run by neither engine**: both apply step 3 → 1 → 2 (`insert.rs:89-92`: `distribute_upfront_contacts` → `relocate_annotations` → `respell_emails`; `resolver/mod.rs:765-774`: `distribute_upfront` → `answer_pending` → `answer_sequence` → `respell_emails` → `sole_author_takes_the_block`); about 10 owner chains, each with its own order |
+| **Link** | Which entry, group or block owns each item? | ruled (steps 1→4 above), **run by neither engine**: both apply step 3 → 1 → 2 (`insert.rs:89-92`: `distribute_upfront_contacts` → `relocate_annotations`, its `respell_emails` deleted at P6e; `resolver/mod.rs:765-774`: `distribute_upfront` → `answer_pending` → `answer_sequence` → `respell_emails` → `sole_author_takes_the_block`); about 10 owner chains, each with its own order |
 | **Emit** | Is the reading written? | the writer gates each family and declines whole papers on one unexplained difference (W3) |
 
 **Signals are read once.** Today a mark is read by about 17 mechanisms in 6 representations (tokens, source strings,
