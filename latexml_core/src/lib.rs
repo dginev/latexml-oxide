@@ -230,7 +230,7 @@ pub struct CoreOptions {
 /// A size property as a Dimension: a Dimension itself, a Glue's natural
 /// size, and a MuGlue/MuDimension (scaled mu, 1mu = font size/18) in scaled
 /// points at the current font size; `None` for anything else.
-fn stored_dimension(s: Option<&Stored>) -> Option<Dimension> {
+pub fn stored_dimension(s: Option<&Stored>) -> Option<Dimension> {
   match s {
     Some(Stored::Dimension(d)) => Some(*d),
     Some(Stored::Glue(g)) => Some(Dimension::new(g.value_of())),
@@ -442,45 +442,42 @@ pub trait BoxOps: Object {
         _ => val.into(),
       }
     }
-    Ok(match self.get_property("width") {
-      Some(val) => coerce_mu(&val),
-      None => match self.get_property("cached_width") {
-        Some(val) => coerce_mu(&val),
-        None => Some(RegisterValue::Dimension(Dimension::default())),
+    // A declared width that is no dimension (a String attribute: diagbox, `\rotate[f]`) falls through.
+    let declared = |key: &str| self.get_property(key).and_then(|val| coerce_mu(&val));
+    Ok(
+      match declared("width").or_else(|| declared("cached_width")) {
+        Some(width) => Some(width),
+        None => Some(RegisterValue::Dimension(
+          self.compute_size(options.unwrap_or_default())?.0,
+        )),
       },
-    })
+    )
   }
   /// sets a "height" property value, for sizing
   fn set_height<T: Into<Stored>>(&mut self, width: T) { self.set_property("height", width); }
   /// gets the "height" property value, if any.
   /// Checks "height", then "cached_height", then computes from font if needed.
   fn get_height(&self) -> Option<RegisterValue> {
-    match self.get_property("height") {
-      Some(val) => (&*val).into(),
-      None => match self.get_property("cached_height") {
-        Some(val) => (&*val).into(),
-        None => match self.compute_size(HashMap::default()) {
-          Ok((_, h, _)) => Some(RegisterValue::Dimension(h)),
-          _ => Some(RegisterValue::Dimension(Dimension::default())),
-        },
-      },
-    }
+    let declared = |key: &str| self.get_property(key).and_then(|val| (&*val).into());
+    declared("height")
+      .or_else(|| declared("cached_height"))
+      .or_else(|| match self.compute_size(HashMap::default()) {
+        Ok((_, h, _)) => Some(RegisterValue::Dimension(h)),
+        _ => Some(RegisterValue::Dimension(Dimension::default())),
+      })
   }
   /// sets a "depth" property value, for sizing
   fn set_depth<T: Into<Stored>>(&mut self, width: T) { self.set_property("depth", width); }
   /// gets the "depth" property value, if any.
   /// Checks "depth", then "cached_depth", then computes from font if needed.
   fn get_depth(&self) -> Option<RegisterValue> {
-    match self.get_property("depth") {
-      Some(val) => (&*val).into(),
-      None => match self.get_property("cached_depth") {
-        Some(val) => (&*val).into(),
-        None => match self.compute_size(HashMap::default()) {
-          Ok((_, _, d)) => Some(RegisterValue::Dimension(d)),
-          _ => Some(RegisterValue::Dimension(Dimension::default())),
-        },
-      },
-    }
+    let declared = |key: &str| self.get_property(key).and_then(|val| (&*val).into());
+    declared("depth")
+      .or_else(|| declared("cached_depth"))
+      .or_else(|| match self.compute_size(HashMap::default()) {
+        Ok((_, _, d)) => Some(RegisterValue::Dimension(d)),
+        _ => Some(RegisterValue::Dimension(Dimension::default())),
+      })
   }
   /// gets the box size as a triple of (width, height, depth)
   /// the generic implementation is immutable and will recompute the size on each call

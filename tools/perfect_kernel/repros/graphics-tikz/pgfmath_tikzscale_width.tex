@@ -1,0 +1,17 @@
+% tikzscale sizes a pgfplots picture to `width=5cm` by measuring it with `\pgfmathsetmacro{#1}{\wd\box}`
+% (tikzscale.sty:522-524) and scaling by `\requestedSize/\measuredFirst` (:392): the safe twin of the
+% box-dimension rows. With `\wd\box` read as 0 the scale clamped to 16383.99998 and every coordinate overflowed.
+% witness: 2010.05701, 2205.15714, 2311.08887, 2604.09771 (tikzscale + pgfplots).
+% status:  GREEN (DTL1). Base int160a1: 2 Errors (tikzscale "unscalable graphic"), 130 Warnings (104 "Dimension
+%          too large"), [16383.99998pt], a 22670.54 px picture.
+% oracle:  pdflatex 0 `!`: [142.26459pt] (5cm within tikzscale's accuracy); ours [142.26471pt] (pgf's own rounding).
+% expect:  0 errors, 0 warnings, the picture 142.26pt wide (196.85 px).
+\documentclass{article}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.18}
+\usepackage{tikzscale}
+\begin{document}
+\sbox0{\includegraphics[width=5cm]{pgfmath_tikzscale_width.tikz}}[\the\wd0]
+
+\includegraphics[width=5cm]{pgfmath_tikzscale_width.tikz}
+\end{document}

@@ -422,6 +422,15 @@ fn pgfmath_register_lookup(cs: &str) -> f64 {
   }
 }
 
+/// `\wd`/`\ht`/`\dp` of box `number`, in points (Perl `pgfmath_getwidth`/`getheight`/`getdepth`,
+/// pgfmath.code.tex.ltxml:499-521): the box register's own getter, a void box 0.
+fn pgfmath_box_dimension(dimension: &str, number: i64) -> f64 {
+  match lookup_register(dimension, vec![ArgWrap::Number(Number::new(number))]) {
+    Ok(Some(RegisterValue::Dimension(d))) => d.value_of() as f64 / 65536.0,
+    _ => 0.0,
+  }
+}
+
 // ==================== Built-in Function Application ====================
 
 /// TeX units recognized by the parser (Perl L714-715)
@@ -1374,12 +1383,18 @@ mod pgfmath_grammar {
     Ok(result)
   }
 
-  /// term := factor (('*'|'/') factor)*
+  /// term := factor (('*'|'/') factor | 'r')* — postfix `r` (deg, precedence 600) is below `*` and `/` (700) and
+  /// applies to the product so far (pgfmathparser.code.tex:900-919: `4/2r` is (4/2)r, 114.59155 in pdflatex).
   fn term(i: &mut In) -> ModalResult<f64> {
     let mut result = factor(i)?;
     loop {
       sb(i);
       match first(i) {
+        Some(b'r') if !second(i).map(|c| c.is_ascii_alphabetic()).unwrap_or(false) => {
+          bump(i, 1);
+          result = result.to_degrees();
+          i.state.int_result = false;
+        },
         Some(b'*') => {
           bump(i, 1);
           number_wanted(i);
@@ -1403,29 +1418,24 @@ mod pgfmath_grammar {
     Ok(result)
   }
 
-  /// factor := simplefactor '^' simplefactor | simplefactor ('!'|'r')*
+  /// factor := simplefactor ('^' simplefactor | '!')* — `^` (precedence 900) left-associative (`2^3^2` 64.0), postfix
+  /// `!` (800) on the power (`2^2!` 24.0) (pgfmathparser.code.tex:902, 918; pdflatex).
   fn factor(i: &mut In) -> ModalResult<f64> {
-    let base = simplefactor(i)?;
-    sb(i);
-    if eat(i, b'^') {
-      number_wanted(i);
-      let exp = simplefactor(i)?;
-      number_wanted(i);
-      i.state.int_result = false; // exponentiation yields a real
-      return Ok(base.powf(exp));
-    }
-    let mut result = base;
+    let mut result = simplefactor(i)?;
     loop {
       sb(i);
       match first(i) {
+        Some(b'^') => {
+          bump(i, 1);
+          number_wanted(i);
+          let exp = simplefactor(i)?;
+          number_wanted(i);
+          i.state.int_result = false; // exponentiation yields a real
+          result = result.powf(exp);
+        },
         Some(b'!') if second(i) != Some(b'=') => {
           bump(i, 1);
           result = pgfmath_factorial(result as i64);
-          i.state.int_result = false;
-        },
-        Some(b'r') if !second(i).map(|c| c.is_ascii_alphabetic()).unwrap_or(false) => {
-          bump(i, 1);
-          result = result.to_degrees();
           i.state.int_result = false;
         },
         _ => break,
@@ -1452,8 +1462,11 @@ mod pgfmath_grammar {
         return Ok(val);
       },
       Some(b'-') => {
+        // Unary minus is pgf's `neg` at precedence 500 (pgfmathfunctions.basic.code.tex:46-49), below `r` (600),
+        // `*` and `/` (700), `!` (800) and `^` (900): it negates the whole term after it (`-2^2` -4.0, `-3!` -6.0,
+        // `8/-2*2` -2.0, `2^-1*3` 0.125 in pdflatex; witness 2311.02367's `exp(-(\y)^2)`).
         bump(i, 1);
-        let value = -simplefactor(i)?;
+        let value = -term(i)?;
         number_wanted(i);
         i.state.int_result = false;
         return Ok(value);
@@ -1901,10 +1914,49 @@ mod pgfmath_grammar {
       return Some(value);
     }
     let cs = &i.input[..1 + n];
+    if matches!(cs, "\\wd" | "\\ht" | "\\dp") {
+      let dimension = cs;
+      let cp = i.checkpoint();
+      bump(i, 1 + n);
+      if let Some(number) = box_number(i) {
+        i.state.units_declared = true;
+        return Some(super::pgfmath_box_dimension(dimension, number));
+      }
+      i.reset(&cp);
+    }
     let value = pgfmath_register_lookup(cs);
     bump(i, 1 + n);
     i.state.units_declared = true;
     Some(value)
+  }
+
+  /// The box after `\wd`/`\ht`/`\dp`: a register holding its number (`\wd\mybox`, Perl's `/\\wd/ CS`,
+  /// pgfmath.code.tex.ltxml:696-701, tikzscale.sty:522-524 `\pgfmathsetmacro{#1}{#2\tikzscale@measuredSize}`), or
+  /// decimal digits (`\wd0`, which TeX and pgf read; Perl's grammar reads none and returns 0).
+  fn box_number(i: &mut In) -> Option<i64> {
+    let b = i.input.as_bytes();
+    let spaces = b.iter().take_while(|c| **c == b' ').count();
+    let rest = &b[spaces..];
+    if rest.first() == Some(&b'\\') {
+      let n = rest[1..]
+        .iter()
+        .take_while(|c| c.is_ascii_alphabetic() || **c == b'@')
+        .count();
+      if n == 0 {
+        return None;
+      }
+      let cs = &i.input[spaces..spaces + 1 + n];
+      let number = pgfmath_register_lookup(cs) as i64;
+      bump(i, spaces + 1 + n);
+      return Some(number);
+    }
+    let digits = rest.iter().take_while(|c| c.is_ascii_digit()).count();
+    if digits == 0 {
+      return None;
+    }
+    let number = i.input[spaces..spaces + digits].parse().ok()?;
+    bump(i, spaces + digits);
+    Some(number)
   }
 
   fn read_identifier(i: &mut In) -> String {
@@ -2675,6 +2727,27 @@ mod pgfmath_golden_tests {
       ("{1}+{2}", "3.0@-"),
       (" 1 + { 2 } ", "3.0@-"),
       ("2*3pt", "6.0@u"),
+      // DTL1: pgf's operator precedences (pgfmathparser.code.tex:898-919, `neg` 500 at
+      // pgfmathfunctions.basic.code.tex:46-49): unary minus negates the whole term after it, `^` is
+      // left-associative under a postfix `!`, `r` applies to the product so far. pdflatex/pgf TL2025
+      // values; where pgf's own series rounds the last digit the row says so (2311.02367).
+      ("-2^2", "-4.0@-"),
+      ("-3!", "-6.0@-"),
+      ("2^-1", "0.5@-"),
+      ("-(2)^2", "-4.0@-"),
+      ("exp(-(1)^2)", "0.36788@-"), // pdflatex 0.36787 (pgf's exp series), Perl 0.36788
+      ("8/-2*2", "-2.0@-"),
+      ("2^-1*3", "0.125@-"),
+      ("2*-3^2", "-18.0@-"),
+      ("-2^2+1", "-3.0@-"),
+      ("3--2^2", "7.0@-"),
+      ("-2^-2", "-0.25@-"),
+      ("-2pt^2", "-4.0@u"),
+      ("2^3^2", "64.0@-"),
+      ("2^2!", "24.0@-"),
+      ("-2^2!", "-24.0@-"),
+      ("4/2r", "114.59156@-"),   // pdflatex 114.59155
+      ("1+2*3r", "344.77468@-"), // pdflatex 344.77466
     ];
     for (expr, expected) in golden {
       assert_eq!(&describe(expr), expected, "pgfmath diverged on {expr:?}");

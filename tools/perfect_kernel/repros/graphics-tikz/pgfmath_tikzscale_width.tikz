@@ -1,0 +1,5 @@
+\begin{tikzpicture}
+\begin{axis}[width=6cm,height=4cm]
+\addplot coordinates {(0,0) (1,1) (2,4)};
+\end{axis}
+\end{tikzpicture}
