@@ -1,0 +1,23 @@
+% mechanism: the emitter's address cut (`observer/emitter/address_cut.rs`, "its wrapper"): a cut box body's e-mail line
+%   (`\parbox{…}{\scriptsize … \\ \emailmark~Email: \texttt{a@x.org}}`) is written as its wrapper `\texttt{…}` alone, the
+%   size the body's declarations set (and the cutter now puts on the piece) left out
+% witness: 2608.21425 (its `\emailmark~Email: \texttt{nancyzhzhai@gmail.com}`; P4b4abase had it at 70 %)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1† and Bob Baker2" over "1 Univ A 2 Univ B /
+%   † Email: a@x.org", all script size
+% engines: rust P4b4abase: 0 errors, the whole box one affiliation; P4b4a3: 0 errors, each name its entry at 70 %,
+%   Ann Able's e-mail `<text font="typewriter">` with no fontsize
+% expect:  0 errors, 0 warnings; Ann Able "1 Univ A" and her e-mail at 70 %, Bob Baker "2 Univ B"
+% status:  RED (P4b4a, P4b4a3: the e-mail's size; no word lost)
+% moves:   post-merge (the emitter's address cut, a mechanism of its own)
+\documentclass{llncs}
+\newcommand{\affmark}[1]{\textsuperscript{#1}}
+\newcommand{\emailmark}{\textsuperscript{\ensuremath{\dagger}}}
+\begin{document}
+\title{A Title}
+\author{Ann Able\affmark{1}\emailmark \and Bob Baker\affmark{2}}
+\institute{\parbox{\linewidth}{\centering\scriptsize
+\affmark{1} Univ A \quad \affmark{2} Univ B\\
+\emailmark~Email: \texttt{a@x.org}}}
+\maketitle
+Body.
+\end{document}

@@ -51,9 +51,9 @@ pub(in crate::base_utilities) mod separators;
 // (the marks query, Option C F0)
 pub(in crate::base_utilities) use argument_marks::count_unread as count_unread_marks;
 pub use argument_marks::{
-  PrintedMark, argument_marks, is_label_mark, leads_with_label, marks_as_printed,
-  prints_list_marks, prints_marks, prints_marks_and_labels, prints_requested_marks,
-  requested_entry_labels,
+  ListMarks, PrintedMark, RequestedEntries, argument_marks, is_label_mark, leads_with_label,
+  list_marks, marks_as_printed, prints_list_marks, prints_marks, prints_marks_and_labels,
+  prints_requested_marks, requested_entry_labels,
 };
 pub(in crate::base_utilities) use emitter::{
   EMITTING, NAMES_SHOWN_LABELS, SETTERS_RECOVERED, block_creator_written, calls::*,

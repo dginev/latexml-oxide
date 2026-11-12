@@ -228,15 +228,16 @@ fn a_script_before_printed_ink_or_on_a_base_is_text() {
         r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation">Univ Y</contact></creator>"#,
       ]),
     },
-    // (pinned RED: the cut inside `$5^{2}$` writes the formula on both sides, its duplicated "5" counted)
+    // (P4b4a: the cut inside `$5^{2}$` closes the formula and opens it again, its base Able's, its script Bob's label;
+    // the formula had been written on both sides, its duplicated "5" counted)
     Row {
-      repro:    repro!("revtex_affiliation_requested_exponent_on_a_number_parts_the_line_red"),
+      repro:    repro!("revtex_affiliation_requested_exponent_on_a_number_parts_the_line"),
       files:    &[],
-      counts:   (0, 1),
-      lines:    &["the placed frontmatter more often than the author blocks print them: 5."],
+      counts:   (0, 0),
+      lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able<sup><text font="italic">1</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">1</text></sup>Univ X, Lab <Math mode="inline" tex="5^{2}" text="5 ^ 2"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok meaning="5" role="NUMBER">5</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math></contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><Math mode="inline" tex="5^{2}" text="5 ^ 2"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="post1"/><XMTok meaning="5" role="NUMBER">5</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math>Univ Y</contact></creator>"#,
+        r#"<creator role="author"><personname>Ann Able<sup><text font="italic">1</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">1</text></sup>Univ X, Lab <Math mode="inline" tex="5" text="5"><XMath><XMTok meaning="5" role="NUMBER">5</XMTok></XMath></Math></contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup>Univ Y</contact></creator>"#,
       ]),
     },
     // (P4c: a number mark no name requests glued to the word after it, after a comma, is that word's prescript, in the

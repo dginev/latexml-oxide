@@ -223,17 +223,94 @@ pub fn prints_list_marks(arg: &Tokens, caller: &str) -> Result<bool> {
     count_unread(caller);
     return Ok(author_mark_position(arg).is_some());
   };
+  Ok(list_prints_marks(&events))
+}
+
+/// [`prints_list_marks`] of a list's events.
+fn list_prints_marks(events: &[Event]) -> bool {
+  let own = at_own_level(events);
+  events
+    .iter()
+    .zip(own)
+    .filter(|(_, own)| *own)
+    .any(|(e, _)| {
+      own_mark(e)
+        || (e.kind == EventKind::Note && e.inner.iter().any(|m| m.line_first && own_mark(m)))
+    })
+}
+
+/// A list's marks as its cutter reads them ([`list_marks`]).
+pub struct ListMarks {
+  /// it prints a mark ([`prints_list_marks`])
+  pub prints: bool,
+  /// where its entries' opening marks stand in it, as the API Cut's decision cuts it (`events::entry_heads`); `None`
+  /// unread
+  pub starts: Option<Vec<usize>>,
+  /// where every mark it prints at its level stands, and a note opening with a label (as `prints_list_marks` reads them)
+  pub marked: Option<Vec<usize>>,
+}
+
+/// Whether a list `arg` prints a mark ([`prints_list_marks`]) and where the marks opening its entries stand, the one
+/// reading of its entries for its cutter and the Cut's decision (`requested_entry_labels`): a mark a document macro prints
+/// (`\newcommand\ua{\textsuperscript{1}}`) or one in a group (`{\it \affmark{1} Univ A}`) opens one as `$^{1}$` does.
+/// Unread, the starts are none, counted for `caller`, and a mark printed is the tokens' (`author_mark_position`).
+pub fn list_marks(arg: &Tokens, caller: &str) -> Result<ListMarks> {
+  let Some(events) = mark_events(arg)? else {
+    count_unread(caller);
+    let prints = author_mark_position(arg).is_some();
+    return Ok(ListMarks {
+      prints,
+      starts: None,
+      marked: None,
+    });
+  };
+  let prints = list_prints_marks(&events);
+  if !prints {
+    return Ok(ListMarks {
+      prints,
+      starts: Some(Vec::new()),
+      marked: Some(Vec::new()),
+    });
+  }
+  // (the queued names' marks read first: the entries part at the marks they request, `events::names_requested`)
+  queued_author_marks()?;
+  // (where a mark stands: in a formula on no base where the formula does, `$\rm ^{2}$`, `\( ^{4} \)`; on a base where it
+  // prints, `Lab $5^{2}$Univ Y`; a note opening with a label where the note does, 1504.01072)
+  let at = |mark: &Event| {
+    match &mark.formula {
+      Some(formula) if formula.base == Some(events::MarkBase::Floating) => {
+        formula.span.or(mark.span)
+      },
+      _ => mark.span,
+    }
+    .map(|(start, _)| usize::from(start))
+  };
+  let starts: Option<Vec<usize>> = events::entry_heads(&events)
+    .iter()
+    .filter(|head| own_mark(head))
+    .map(at)
+    .collect();
   let own = at_own_level(&events);
-  Ok(
-    events
-      .iter()
-      .zip(own)
-      .filter(|(_, own)| *own)
-      .any(|(e, _)| {
-        own_mark(e)
-          || (e.kind == EventKind::Note && e.inner.iter().any(|m| m.line_first && own_mark(m)))
-      }),
-  )
+  let marked: Option<Vec<usize>> = events
+    .iter()
+    .zip(own)
+    .filter(|(_, own)| *own)
+    .filter_map(|(e, _)| {
+      if own_mark(e) {
+        Some(at(e))
+      } else if e.kind == EventKind::Note && e.inner.iter().any(|m| m.line_first && own_mark(m)) {
+        Some(e.span.map(|(start, _)| usize::from(start)))
+      } else {
+        None
+      }
+    })
+    .collect();
+  let starts = starts.zip(marked);
+  if starts.is_none() {
+    count_unread(caller);
+  }
+  let (starts, marked) = starts.unzip();
+  Ok(ListMarks { prints, starts, marked })
 }
 
 /// A mark an argument prints ([`marks_as_printed`]).
@@ -350,25 +427,40 @@ fn first_may_be_mark(tokens: &[Token], depth: u8) -> bool {
   }
 }
 
+/// The entries of a list a name requests ([`requested_entry_labels`]).
+#[derive(Default)]
+pub struct RequestedEntries {
+  /// the labels, distinct, each with the queue positions of the names requesting it
+  pub labels:      Vec<(String, Vec<usize>)>,
+  /// where the mark opening the list's first entry stands in it, when its entries are cut
+  pub first_start: Option<usize>,
+}
+
 /// The labels, distinct, set by the marks that open the entries of a list `arg`, its entries as the observer cuts an API
 /// call (`events::mark_led_pieces`), each with the queue positions of the names requesting it, a label no name
 /// requests left out: the API Cut's decision and its copy rule (`cut::cut_list`). Unread, none — the list stays whole for
 /// the observer to read —, counted for `caller`.
-pub fn requested_entry_labels(arg: &Tokens, caller: &str) -> Result<Vec<(String, Vec<usize>)>> {
+pub fn requested_entry_labels(arg: &Tokens, caller: &str) -> Result<RequestedEntries> {
   if !may_open_with_mark(arg) {
-    return Ok(Vec::new());
+    return Ok(RequestedEntries::default());
   }
   let Some(events) = mark_events(arg)? else {
     count_unread(caller);
-    return Ok(Vec::new());
+    return Ok(RequestedEntries::default());
   };
   if !events.iter().any(own_mark) {
-    return Ok(Vec::new());
+    return Ok(RequestedEntries::default());
   }
   // (the queued names' marks read first: the pieces part at the marks they request, `events::names_requested`)
   queued_author_marks()?;
   let mut labels: Vec<(String, Vec<usize>)> = Vec::new();
-  for piece in events::mark_led_pieces(&events) {
+  let pieces = events::mark_led_pieces(&events);
+  let first_start = pieces
+    .first()
+    .and_then(|piece| piece.iter().find(|e| e.kind == EventKind::Mark))
+    .and_then(|mark| mark.span)
+    .map(|(start, _)| usize::from(start));
+  for piece in pieces {
     // (the label `\lx@sup@setlabel@affiliation` sets: the first of the mark's printed labels, `set_label`)
     let Some(label) = piece
       .iter()
@@ -388,5 +480,5 @@ pub fn requested_entry_labels(arg: &Tokens, caller: &str) -> Result<Vec<(String,
       labels.push((label, requesters));
     }
   }
-  Ok(labels)
+  Ok(RequestedEntries { labels, first_start })
 }

@@ -1,0 +1,20 @@
+% mechanism: the list cutter (`classify::entry_starts` `cut_at_starts`): a box around part of a line (`\mbox{\affmark{2}
+%   Univ B} Town Z`) cut inside, the box closed on the first piece and reopened on the second; the separator before
+%   the cut is the box's opening, not the comma, so `trim_trailing_separator` keeps the comma and an empty `\mbox{}`
+% witness: synthetic (revP4b4a S1, probe b4_partbox)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1, Bob Baker2, and Cy Cole3" over "1 Univ A, 2 Univ B
+%   Town Z / 3 Univ C"
+% engines: rust P4b4abase: 0 errors, 0 warnings, the institute on a nameless creator; P4b4a, P4b4a3: 0 errors,
+%   0 warnings, each name its entry, Ann Able's "1 Univ A," with its comma (and an empty box)
+% expect:  0 errors, 0 warnings; Ann Able "1 Univ A", Bob Baker "2 Univ B Town Z", Cy Cole "3 Univ C"
+% status:  RED (P4b4a3: the trailing comma; no word lost)
+% moves:   post-merge
+\documentclass{llncs}
+\newcommand{\affmark}[1]{\textsuperscript{#1}}
+\begin{document}
+\title{A Title}
+\author{Ann Able\affmark{1} \and Bob Baker\affmark{2} \and Cy Cole\affmark{3}}
+\institute{\affmark{1} Univ A, \mbox{\affmark{2} Univ B} Town Z\\ \affmark{3} Univ C}
+\maketitle
+Body.
+\end{document}

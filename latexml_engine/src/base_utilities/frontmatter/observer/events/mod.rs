@@ -2398,12 +2398,33 @@ pub(in crate::base_utilities) fn mark_led_pieces(events: &[Event]) -> Vec<Vec<Ev
 /// `Town, $^2$Univ B`, parts them, as between an API call's): an in-block contact's entries are its printed lines
 /// (`labelled_entries`).
 fn mark_led_pieces_keeping(events: &[Event], punctuation: bool) -> Vec<Vec<Event>> {
-  let first_ink = events.iter().find(|e| {
-    inked(e) && !(e.kind == EventKind::Name && !e.text.chars().any(char::is_alphanumeric))
-  });
-  if first_ink.is_none_or(|e| e.kind != EventKind::Mark) {
+  if first_ink(events).is_none_or(|e| e.kind != EventKind::Mark) {
     return Vec::new();
   }
+  let pieces = pieces_at_marks(events, punctuation);
+  if pieces.len() < 2 { Vec::new() } else { pieces }
+}
+
+/// The first ink of `events` an entry is read from: no name of punctuation alone.
+fn first_ink(events: &[Event]) -> Option<&Event> {
+  events.iter().find(|e| {
+    inked(e) && !(e.kind == EventKind::Name && !e.text.chars().any(char::is_alphanumeric))
+  })
+}
+
+/// The first ink of each entry of a list `events`, cut as [`mark_led_pieces`] cuts one, a list of one entry or one
+/// whose first ink is no mark too: the mark that opens each entry, where one does — where a list's cutter starts its
+/// entries (`affiliations::entry_calls`).
+pub(in crate::base_utilities) fn entry_heads(events: &[Event]) -> Vec<Event> {
+  pieces_at_marks(events, false)
+    .iter()
+    .filter_map(|piece| first_ink(piece).cloned())
+    .collect()
+}
+
+/// [`mark_led_pieces_keeping`]'s cut, of a list of any first ink and any number of entries.
+fn pieces_at_marks(events: &[Event], punctuation: bool) -> Vec<Vec<Event>> {
+  let first_ink = first_ink(events);
   // (a mark glued to the ink before it that labels as the leading mark does — a number after numbers, a letter after
   // letters — with a name right after it opens the next entry: `\institution{$^{1}$University of Illinois …, USA
   // $^{2}$Amazon.com Inc, CA, USA}` lexed "USA" "2" "Amazon.com Inc" — the call's content has no positions to show the
@@ -2516,7 +2537,7 @@ fn mark_led_pieces_keeping(events: &[Event], punctuation: bool) -> Vec<Vec<Event
       piece.pop();
     }
   }
-  if pieces.len() < 2 { Vec::new() } else { pieces }
+  pieces
 }
 
 /// An in-block contact's entry read from its leading marks: its labels, its text, its span, and for an entry of a cut

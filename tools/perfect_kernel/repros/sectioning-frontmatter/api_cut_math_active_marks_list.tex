@@ -1,7 +1,7 @@
 % mechanism: the API Cut's decision reads the list's marks as digested (`requested_entry_labels`, Option C
 %   P4b2): `^` math-active (catcode 12, mathcode "8000, as breqn sets it from `\begin{document}` by flexisym), so
-%   no superscript token spells the marks; the rehearsal digests them as superscripts, the per-line cutter parts no
-%   line (tokens, P4b4), so the list stays whole and the observer gives each name its entry
+%   no superscript token spells the marks; the rehearsal digests them as superscripts; the Cut leaves the list whole
+%   (P4b4a: no cut is made, `--debug=frontmatter`) and the observer gives each name its entry
 % witness: synthetic (P4b2; breqn's math-active `^`, 2504.02633)
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2", "1Univ A, Town A, 2Univ B, Town B"
 % engines: P4b and P4b2: the creators below, byte-identical

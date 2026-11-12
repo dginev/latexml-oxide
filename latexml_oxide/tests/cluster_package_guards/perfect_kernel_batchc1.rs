@@ -175,6 +175,18 @@ fn queued_marks_read_as_digested() {
       )
     };
   }
+  macro_rules! llncs {
+    ($name:literal) => {
+      (
+        $name,
+        include_str!(concat!(
+          "../../../tools/perfect_kernel/repros/class-bindings/",
+          $name,
+          ".tex"
+        )),
+      )
+    };
+  }
   let rows: &[Row] = &[
     (repro!("queue_marks_revtex_marked_list"), 0, &[
       &["Ann Able 1", "affiliation=1 Univ A, Town A"],
@@ -265,6 +277,73 @@ fn queued_marks_read_as_digested() {
       &["Ann Able 1", "affiliation=1 Univ A, Town A"],
       &["Bob Baker 2", "affiliation=2 Univ B, Town B"],
     ]),
+    // (P4b4a: the cutter starts an entry where the Cut's decision reads one, `list_marks` — a line led by an unrequested
+    // macro mark its own entry, as `$^{3}$`'s; llncs's `\affmark` lines with an unmarked continuation, in font groups, two
+    // on one wrapped line, each beside its `$^{1}$` twin, unchanged)
+    (repro!("api_cut_macro_marks_unrequested_line"), 0, &[
+      &["Ann Able 1", "address=1 Univ A, Town A"],
+      &["Bob Baker 2", "address=2 Univ B, Town B"],
+      &["Cy Cole 1", "address=1 Univ A, Town A"],
+      &["address=3 Univ C, Town C"],
+    ]),
+    (
+      llncs!("llncs_institute_macro_marks_continuation_line"),
+      0,
+      &[
+        &["Ann Able 1", "affiliation=1 Univ A, Town A Street A"],
+        &["Bob Baker 2", "affiliation=2 Univ B, Town B"],
+        &["email=b@x.org"],
+      ],
+    ),
+    (
+      llncs!("llncs_institute_math_marks_continuation_line"),
+      0,
+      &[
+        &["Ann Able 1", "affiliation=1 Univ A, Town A Street A"],
+        &["Bob Baker 2", "affiliation=2 Univ B, Town B"],
+        &["email=b@x.org"],
+      ],
+    ),
+    (llncs!("llncs_institute_macro_marks_in_font_groups"), 0, &[
+      &["Ann Able 1", "affiliation=1 Univ A, Town A Street A"],
+      &["Bob Baker 2", "affiliation=2 Univ B, Town B"],
+    ]),
+    (llncs!("llncs_institute_math_marks_in_font_groups"), 0, &[
+      &["Ann Able 1", "affiliation=1 Univ A, Town A Street A"],
+      &["Bob Baker 2", "affiliation=2 Univ B, Town B"],
+    ]),
+    (
+      llncs!("llncs_institute_macro_marks_one_line_and_wrapped"),
+      0,
+      &[&["Ann Able 1", "affiliation=1 Univ A"], &[
+        "Bob Baker 2",
+        "affiliation=2 Univ B",
+      ]],
+    ),
+    // (P4b4a3, revP4b4a B1: no line break or cut inside an environment the list opens — a start inside one in a line, a
+    // line break inside one; the `\affmark` rows of a `tabular` pinned as the base had them, Ann Able's three lines RED)
+    (
+      llncs!("llncs_institute_math_marks_minipage_parbox_line"),
+      0,
+      &[
+        &["Ann Able 1", "affiliation=1 Univ A"],
+        &["Bob Baker 2", "affiliation=2 Univ B"],
+        &["Cy Cole 3", "affiliation=3 Univ C"],
+      ],
+    ),
+    (llncs!("llncs_institute_math_marks_center_lines"), 0, &[
+      &["Ann Able 1", "affiliation=1 Univ A"],
+      &["Bob Baker 2", "affiliation=2 Univ B"],
+    ]),
+    (
+      llncs!("llncs_institute_macro_marks_tabular_rows_red"),
+      1,
+      &[
+        &["Ann Able 1", "affiliation=1 Univ A 2 Univ B 3 Univ C"],
+        &["Bob Baker 2", "affiliation=2 Univ B"],
+        &["Cy Cole 3", "affiliation=3 Univ C"],
+      ],
+    ),
   ];
   for ((name, tex), warnings, expected) in rows {
     let (log, xml) = run(tex);

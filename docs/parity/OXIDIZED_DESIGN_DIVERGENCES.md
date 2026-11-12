@@ -27225,8 +27225,8 @@ affiliation sources hold a superscript glued to letters) convert byte-identical;
 ISO1b's requested script on REVTeX's, elsarticle's, the kernel's, authblk's, IEEEtran's and an unknown class's path,
 ISO1c's spaced names requesting their marks in three orders, an in-word mark requesting none and the unrequested line
 kept one contact).
-RED (pinned, its Warning counting it): a requested exponent's cut writes `$5^{2}$` on both sides
-(`revtex_affiliation_requested_exponent_on_a_number_parts_the_line_red`). Left: a mark whose formula ends and that letters follow
+A requested exponent's cut closes the formula at the mark and opens it again, its base the entry's before it
+(`revtex_affiliation_requested_exponent_on_a_number_parts_the_line`, P4b4a; it had written `$5^{2}$` on both sides). Left: a mark whose formula ends and that letters follow
 glued after a comma — `$^{3}$He`, `\textsuperscript{3}He`, and `$^{3}\mathrm{He}$` too, which REVTeX's queue-time
 `\affiliation` cut parts by its tokens — RED repros `revtex_affiliation_{glued,textsuperscript,mathrm}_isotope_after_a_comma_red`,
 `elsarticle_address_glued_isotope_after_a_comma_red`; an isotope's digit some author requests read as that author's
@@ -30922,10 +30922,34 @@ with its requesters — a mark a document macro prints or a math-active `^` spel
 `api_cut_math_active_marks_list`). A list whose first token, read through parameterless macros' bodies (and on past a body
 printing nothing, `\newcommand\affilfont{}`), is a letter or digit is not rehearsed (`may_open_with_mark`:
 2103.04797's 1,161 `\affiliation{\Amsterdam}`, −0.3 % instructions against P4b); the bindings' per-call reader `leads_with_label` (REVTeX's and AASTeX's `\affiliation`, sv's `\institute`, jfm, ws_procl, interspeech, IEEEtran) asks the same gate (CST1: 2103.04797 −10.5 %, 1901.01540 −2.6 % against int164a, byte-identical). The marks queries' own gate before their rehearsal (`may_mark`, in `mark_events`: `marks_as_printed`, `argument_marks`, the names' `queued_author_marks`) reads a whole argument so — a command through its parameterless body, the tie, `\relax`, an accent and a primitive or `\chardef` printing no mark character read past, a body's character a mark as the lexer reads one (`is_mark_char`), a command the rehearsal binds (`rehearsal::rebinds`) or any other a possible mark — so 2103.04797's `\affiliation{\Amsterdam}` and 1901.01540's tied, accented names (`M.~Soares-Santos`) are not rehearsed (CST2: rehearsals 3,297 → 2,156 and 4,155 → 2,646; instructions −9.7 % and −4.7 % against int165a, byte-identical). The gate reads no character typed straight into the argument as a mark: the earlier gate rehearsed any argument holding a command, so a `*` typed beside a tie or an accent (`\author{A.~Smith*}`, `Jos\'e Smith*`) was read as a mark, and REVTeX's names stood bare beside a nameless creator holding the block; now both authors hold both lines, as for the untied `A. Smith*` and as the PDF reads ("A. Smith* and B. Jones / 1Uni One, Town / 2Uni Two, Town"), and IEEEtran's tied names read as its untied twin's (no paper of the A/B changed; revCST2; guard row `revtex_typed_star_after_tie_or_accent_is_name_text`). A `*` a macro body or a `\chardef` prints, a `\relax`- or `\protect`-led body and a body past the gate's 8 levels stay rehearsed (rows `revtex_macro_and_chardef_printed_stars_are_marks`, `revtex_relax_protect_led_and_deep_mark_macros_are_marks`). An argument rehearsed for another command (`A. Smith\,*`, `B.\ Jones*`) still has its typed `*` read as a mark by the rehearsal, the block nameless (RED `revtex_typed_star_beside_thin_or_control_space_nameless_red`, post-merge). Unread (a rehearsal left a group open), none: the list stays whole for the observer, counted
-(`--debug=frontmatter_marks`). The per-line cutter (`entry_calls`) still parts lines by tokens (P4b4), so a list whose
-requested entries it parts fewer than two of stays whole too (`cut_list`'s fail-safe): 2608.21425's list in a
-`\parbox`, llncs's `\affmark` lines (RED `llncs_institute_hand_marks_cut_red`); the uncut copies give way only once
-the list is cut. Read before the queue's marks, the pieces
+(`--debug=frontmatter_marks`). The cutter (`entry_calls`, the Cut's and every binding list's) reads the same reading
+(Option C P4b4a, `argument_marks::list_marks`: the starts `events::entry_heads` gives, the same cut of a list of one
+entry or one led by unmarked text, and where each mark the list prints at its level stands): a line printing no mark
+(nor a note opening with one) continues the entry above it; a line is cut at its later starts, inside a wrapper too (the
+wrapper repeated with its declarations; a box the whole line is set in, `\parbox{\linewidth}{$^1$Univ A\\ $^2$Univ B}`,
+`\mbox`, `\hbox`, dropped: what pdflatex prints are its lines, each piece led by the font, size and colour declarations
+the body or line opens with (`notes::list_lead_declarations`, the Cut's own), read by meaning (`notes::sets_font`:
+`\ifx`'s test against LaTeX's declarations, a `\let` copy too), never a macro printing text (`\mydept`, `\ldots`: printed
+once, on the first piece; revP4b4a2 B1), and no piece, the first included, with an alignment (`\centering`,
+`\raggedright`, `\raggedleft`, ragged2e's: `notes::aligns`), the dropped box's or the paragraph's (2608.21425's
+`\centering\scriptsize`: every entry at 70 %, no mark a `<sup class="ltx_centering">`; revP4b4a2 B2; REVTeX's and
+llncs's `\parbox` lists, `perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed`) and inside a formula at a
+mark on a base (closed and opened again); a mark on no base starts where its formula does (`classify::entry_starts`).
+No line break or cut stands inside an environment the list opens (P4b4a3, revP4b4a B1): the lines it spans are one. A
+start after its line's first inside one leaves the whole list to its tokens, as the base read it, the cutter and
+llncs's choice of shape (c) alike (`entry_starts::starts_inside_environment`; revP4b4a2 B3): on
+`\institute{\begin{minipage}{…}\affmark{1} Univ A, \affmark{2} Univ B\end{minipage}}` the minipage once, on a nameless
+creator (the base's output, owners post-merge); on 2506.05954's `\begin{footnotesize} ${}^a…\\ ${}^b…`, each name its
+line, as the base had them (P4b4a's cut gave 2 Errors). Of closing and reopening the environment (its arguments' count is
+its definition's, not the tokens') and leaving the list uncut, the simpler. A `tabular`'s `\affmark` rows keep the
+base's owners, Ann Able all three lines (RED `llncs_institute_macro_marks_tabular_rows_red`, post-merge); the list's
+opening declarations end at its first start (`\ua` printing `\textsuperscript{1}` is none); a line whose marks lead its
+notes is cut inside the note by its tokens (the `\thanks` idiom); and llncs's shape (c) is read from the marks the
+institute prints (`list_marks`). Unread, the
+tokens (`author_mark_position`, `marker_leads`), counted. A list whose requested entries the cutter parts fewer than two
+of still stays whole (`cut_list`'s fail-safe); the uncut copies give way only once the list is cut. Guards
+`perfect_kernel_batchc1::queued_marks_read_as_digested` (P4b4a rows), `perfect_kernel_batchz18g::llncs_institute_hand_marks_cut`
+(2608.21425). Read before the queue's marks, the pieces
 part at stale requests (`names_requested`): P4b part 1's port gave the unrequested `3 Univ C` to the mark-1 names.
 
 **jfm** (latexml_contrib jfm_cls.rs): `\affiliation{…}` led by marks the names show is `\lx@add@affiliation[annotate=all]`,

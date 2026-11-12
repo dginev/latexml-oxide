@@ -6,8 +6,8 @@
 %   ISO1 = 2 warnings, Able the whole line, Baker none; ISO1b = 1 warning ("5" duplicated), Able "¹Univ X, Lab 5²", Baker
 %   "5²Univ Y"
 % expect:  0 errors, 0 warnings; Able "Univ X, Lab 5"; Baker "Univ Y" (the formula's base Able's, its script Baker's label)
-% status:  RED (ISO1b: the duplicated base counted by its Warning) — perfect_kernel_batch90a pins it; open: a cut inside a
-%   formula writes the whole formula on both sides
+% status:  RED (ISO1b: the duplicated base counted by its Warning) -> GREEN (P4b4a: the cutter cuts inside the formula
+%   at the mark, closing it and opening it again, `classify::entry_starts`; guard perfect_kernel_batch90a)
 % preload: ar5iv.sty
 \documentclass{revtex4-1}
 \begin{document}
