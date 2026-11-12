@@ -501,16 +501,12 @@ const FONT_DECLARATIONS_WITH_ARGUMENTS: &[&str] = &[
   "\\usefont",
 ];
 
-/// Whether `t` means a font, size or colour declaration: LaTeX's taking no argument (`frontmatter_stores::LAYOUT`'s
-/// head up to `\selectfont`, as `fonts::font_declaration`) or [`FONT_DECLARATIONS_WITH_ARGUMENTS`], or a `\let` copy of
-/// one (`\ifx`'s test, `x_equals`).
+/// Whether `t` means a font, size or colour declaration: LaTeX's taking no argument (`frontmatter_stores::
+/// FONT_DECLARATIONS`, as `fonts::font_declaration` reads them; `\tt`, `\LARGE`, 2508.08560) or
+/// [`FONT_DECLARATIONS_WITH_ARGUMENTS`], or a `\let` copy of one (`\ifx`'s test, `x_equals`).
 pub(in crate::base_utilities) fn sets_font(t: &Token) -> bool {
-  let layout = crate::frontmatter_stores::LAYOUT;
-  let end = layout
-    .iter()
-    .position(|n| *n == "\\selectfont")
-    .map_or(0, |k| k + 1);
-  means_one_of(t, &layout[..end]) || means_one_of(t, FONT_DECLARATIONS_WITH_ARGUMENTS)
+  means_one_of(t, crate::frontmatter_stores::FONT_DECLARATIONS)
+    || means_one_of(t, FONT_DECLARATIONS_WITH_ARGUMENTS)
 }
 
 /// Whether `t` means a paragraph alignment (`\centering`, `\raggedright`, `\raggedleft`, ragged2e's, a `\let` copy):

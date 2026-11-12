@@ -1,0 +1,18 @@
+% mechanism: the list cutter's carried lead (`classify::notes` `lead_declarations` -> `sets_font`): a cut piece carries a
+%   font declaration of LaTeX's whole set by meaning (`frontmatter_stores::FONT_DECLARATIONS`: `\tt`, `\LARGE`,
+%   `\huge`, `\Huge`, ...)
+% witness: synthetic (revP4b4a3 should-fix 1, P4b4aR's P4DEC RED); the real paper is the `\emph\@affiliation` twin,
+%   2508.08560
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2" over "1 Univ Alpha, 2 Univ Beta",
+%          the line in typewriter (CMTT9)
+% engines: int165a, int166a: Ann Able "1 Univ Alpha" typewriter, Bob Baker "2 Univ Beta" with no font
+% expect:  0 errors, 0 warnings; Ann Able "1 Univ Alpha", Bob Baker "2 Univ Beta", each `font="typewriter"`
+% status:  RED (int165a, int166a) -> GREEN (P4b4f; guard perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed)
+\documentclass{llncs}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1}$ \and Bob Baker$^{2}$}
+\institute{\tt $^{1}$Univ Alpha, $^{2}$Univ Beta}
+\maketitle
+Body.
+\end{document}

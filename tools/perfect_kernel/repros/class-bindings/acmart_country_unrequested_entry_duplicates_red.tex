@@ -1,0 +1,19 @@
+% mechanism: P4b4a's cut of an acmart `\country{$^1$…, $^2$…, $^3$…}` list (classify/entry_starts.rs:64-90 cuts only at the
+%   requested starts, SUSPECTED): an entry no author requests runs on inside the piece before it, and acmart keeps both
+%   copies — the requester of 1 holds "1 A Univ, 2 B Lab" AND "1 A Univ". int165a gave the unrequested entry to a
+%   nameless creator. A 13-entry list (`$^{2}$` Bob) does the same ("2 Univ B, 3 … 11 Univ K" + "2 Univ B").
+% witness: synthetic (revP4b4f b3_acm_unreq, b2_acm13; the real acmart `\country` papers 2409.11440, 2511.20671 request
+%          every entry and are right)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "Ann One1, Bob Two3" over "1A Univ, 2B Lab, 3C Inst"
+% engines: rust int165a: Ann "1 A Univ", Bob "3 C Inst", a nameless creator "2 B Lab", 0 W; rust int166a and P4b4f:
+%          Ann "1 A Univ, 2 B Lab" and "1 A Univ", Bob "3 C Inst", 1 W
+% expect:  Ann "1 A Univ", Bob "3 C Inst", "2 B Lab" on no author twice (a nameless creator as int165a, or counted)
+% status:  RED (revP4b4f, int167a) — moves: post-merge (ACMDUP)
+\documentclass[sigconf]{acmart}
+\begin{document}
+\title{T}
+\author{Ann One$^{1}$, Bob Two$^{3}$}
+\affiliation{\country{$^1$A Univ, $^2$B Lab, $^3$C Inst}}
+\maketitle
+x
+\end{document}

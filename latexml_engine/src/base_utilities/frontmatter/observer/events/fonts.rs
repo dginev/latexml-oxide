@@ -247,16 +247,10 @@ pub(in crate::base_utilities) fn switch_free(
   })
 }
 
-/// Whether `t` is one of LaTeX's font declarations taking no argument (`\bfseries`, `\small`, `\em`, `\selectfont`: the
-/// head of `frontmatter_stores::LAYOUT`, up to `\selectfont`), a switch whose effect every entry after it shares
-/// (`emitter::container_wrap`).
+/// Whether `t` is one of LaTeX's font declarations taking no argument (`frontmatter_stores::FONT_DECLARATIONS`), a
+/// switch whose effect every entry after it shares (`emitter::container_wrap`).
 pub(in crate::base_utilities) fn font_declaration(t: &Token) -> bool {
-  let layout = crate::frontmatter_stores::LAYOUT;
-  let fonts = layout
-    .iter()
-    .position(|n| *n == "\\selectfont")
-    .map_or(&[][..], |k| &layout[..=k]);
-  t.get_catcode() == Catcode::CS && t.with_cs_name(|n| fonts.contains(&n))
+  crate::frontmatter_stores::cs_in(t, crate::frontmatter_stores::FONT_DECLARATIONS)
 }
 
 /// LaTeX's text font commands but `\emph` (latex.ltx:14213-14226 `\DeclareTextFontCommand`): each a macro setting its

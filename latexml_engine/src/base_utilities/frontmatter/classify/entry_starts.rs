@@ -3,7 +3,7 @@
 //! closes and reopens the groups and formula it falls in.
 
 use super::*;
-use crate::base_utilities::defs::frontmatter_api::affil_splits;
+use crate::base_utilities::defs::frontmatter_api::{affil_splits, line_addresses};
 
 /// A line's entry starts (`list_marks`), from its first token, and whether it prints a mark at all.
 #[derive(Clone)]
@@ -64,17 +64,28 @@ pub(in crate::base_utilities) fn lines_starts(
   let Some(joined) = environment_lines(v, ranges, starts) else {
     return unread(lines);
   };
+  // (a start in the delimiter before a line starts that line: a mark's span may open at the spacing its reading looked
+  // past, `contribution \quad\authorrefmark{2}Equal advising`, 2601.03607)
+  let mut line_end = 0;
   joined
     .into_iter()
     .map(|(k, range)| {
-      let at = starts
+      let reach = line_end.min(range.start)..range.end;
+      line_end = range.end;
+      let mut at: Vec<usize> = starts
         .iter()
-        .filter(|at| range.contains(at))
-        .map(|at| at - range.start)
+        .filter(|at| reach.contains(at))
+        .map(|at| at.saturating_sub(range.start))
         .collect();
-      let marked = marked.iter().any(|at| range.contains(at));
+      at.dedup();
+      let marked = marked.iter().any(|at| reach.contains(at));
       let line = (lines[k].0.clone(), Tokens::new(v[range].to_vec()));
-      (line, Some(LineStarts { at, marked }))
+      // (a line of addresses is read by its tokens: its marks label its addresses, and a start may stand inside one,
+      // `$\{${\it\IEEEauthorrefmark{1}a, \IEEEauthorrefmark{3}b}$\}$@x`, 1506.02349)
+      let starts = line_addresses(&line.1)
+        .is_none()
+        .then_some(LineStarts { at, marked });
+      (line, starts)
     })
     .unzip()
 }
@@ -211,7 +222,22 @@ fn line_at_starts(line: Tokens, starts: &LineStarts) -> Vec<(Tokens, Option<bool
   // (the font, size and colour it opens with are in force on every piece, as the API Cut's `with_opening` keeps a
   // list's — 2608.21425's `\scriptsize`, revP4b4a B2; nothing printing, revP4b4a2 B1)
   let opening = list_lead_declarations(&v, Some(at[0]));
-  cut_at_starts(&v, &at[1..], at[0])
+  let mut pieces = cut_at_starts(&v, &at[1..], at[0]);
+  // (the last piece's separator trimmed inside the groups it closes, as the heads' are: `\institution{… ~$^{5}$Peking
+  // University \\ }`, 2511.20671, as `split_wrapped_affiliation_marks` trims the last wrapped piece)
+  if let Some(last) = pieces
+    .last_mut()
+    .filter(|last| last.last().is_some_and(|t| t.get_catcode() == Catcode::END))
+  {
+    let close = last
+      .iter()
+      .rposition(|t| !matches!(t.get_catcode(), Catcode::END | Catcode::SPACE))
+      .map_or(0, |i| i + 1);
+    let tail = last.split_off(close);
+    *last = trim_trailing_separator(std::mem::take(last));
+    last.extend(tail.into_iter().filter(|t| t.get_catcode() == Catcode::END));
+  }
+  pieces
     .into_iter()
     .enumerate()
     .map(|(n, piece)| {

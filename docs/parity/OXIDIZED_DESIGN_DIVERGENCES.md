@@ -30943,12 +30943,21 @@ entry or one led by unmarked text, and where each mark the list prints at its le
 wrapper repeated with its declarations; a box the whole line is set in, `\parbox{\linewidth}{$^1$Univ A\\ $^2$Univ B}`,
 `\mbox`, `\hbox`, dropped: what pdflatex prints are its lines, each piece led by the font, size and colour declarations
 the body or line opens with (`notes::list_lead_declarations`, the Cut's own), read by meaning (`notes::sets_font`:
-`\ifx`'s test against LaTeX's declarations, a `\let` copy too), never a macro printing text (`\mydept`, `\ldots`: printed
-once, on the first piece; revP4b4a2 B1), and no piece, the first included, with an alignment (`\centering`,
+`\ifx`'s test against LaTeX's declarations, a `\let` copy too; the whole set, `\tt` and `\LARGE` too, the list
+`frontmatter_stores::FONT_DECLARATIONS` the emitter's `font_declaration` reads: 2508.08560, P4b4f), never a macro
+printing text (`\mydept`, `\ldots`: printed once, on the first piece; revP4b4a2 B1), and no piece, the first included, with an alignment (`\centering`,
 `\raggedright`, `\raggedleft`, ragged2e's: `notes::aligns`), the dropped box's or the paragraph's (2608.21425's
 `\centering\scriptsize`: every entry at 70 %, no mark a `<sup class="ltx_centering">`; revP4b4a2 B2; REVTeX's and
 llncs's `\parbox` lists, `perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed`) and inside a formula at a
 mark on a base (closed and opened again); a mark on no base starts where its formula does (`classify::entry_starts`).
+A start whose span opens in the delimiter before its line (`contribution \quad\authorrefmark{2}…`, the spacing its
+reading looked past) starts that line (2601.03607); a line of addresses (`line_addresses`) is read by its tokens, its
+marks labelling addresses and a start possibly inside one (`$\{${\it\IEEEauthorrefmark{1}a, \IEEEauthorrefmark{3}b}$\}$@x`,
+1506.02349); a cut line's last piece has its separator trimmed inside the groups it closes, as the wrapped token cut
+did (`\institution{… ~$^{5}$Peking University \\ }`, 2511.20671). The starts read a name's mark as the Link step
+does: a request no mark of the list prints, its marks written together (`$^{12}$` under `$^1$A Univ, $^2$B Lab`),
+requests each (`events::names_requested` through `resolver::glued_request_parts`, `part_glued_labels`'s; 2409.11440,
+2511.20671). P4b4f (CL166: int166a's four P4b4a regressions, each paper back to int165a's output).
 No line break or cut stands inside an environment the list opens (P4b4a3, revP4b4a B1): the lines it spans are one. A
 start after its line's first inside one leaves the whole list to its tokens, as the base read it, the cutter and
 llncs's choice of shape (c) alike (`entry_starts::starts_inside_environment`; revP4b4a2 B3): on
@@ -30963,7 +30972,7 @@ institute prints (`list_marks`). Unread, the
 tokens (`author_mark_position`, `marker_leads`), counted. A list whose requested entries the cutter parts fewer than two
 of still stays whole (`cut_list`'s fail-safe); the uncut copies give way only once the list is cut. Guards
 `perfect_kernel_batchc1::queued_marks_read_as_digested` (P4b4a rows), `perfect_kernel_batchz18g::llncs_institute_hand_marks_cut`
-(2608.21425). Read before the queue's marks, the pieces
+(2608.21425), `perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed` (P4b4f rows). Read before the queue's marks, the pieces
 part at stale requests (`names_requested`): P4b part 1's port gave the unrequested `3 Univ C` to the mark-1 names.
 
 **jfm** (latexml_contrib jfm_cls.rs): `\affiliation{…}` led by marks the names show is `\lx@add@affiliation[annotate=all]`,

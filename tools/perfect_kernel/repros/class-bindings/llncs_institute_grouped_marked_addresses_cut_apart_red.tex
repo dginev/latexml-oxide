@@ -1,0 +1,19 @@
+% mechanism: an llncs `\institute` address line whose marks stand inside a brace group of addresses
+%   (`\{$^{1}$ann, $^{2}$bob\}@x.org`): the line is no line of addresses to `line_addresses`, so it is cut at its marks
+%   by its tokens and the address falls apart (the IEEEtran twin with `\_` local parts reads whole:
+%   `ieeetran_authorblocka_marked_email_list_read_whole`, 1506.02349)
+% witness: synthetic (P4b4f's sibling sweep)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "1 Univ Alpha / 2 Univ Beta / {1 ann, 2 bob}@x.org"
+% engines: int165a, int166a, P4b4f alike: 0 errors, 0 warnings; Ann Able the affiliation "{ 1 ann", Bob Baker
+%          "2 bob}@x.org" (no address whole, no word lost)
+% expect:  0 errors, 0 warnings; Ann Able "1 Univ Alpha" + ann@x.org, Bob Baker "2 Univ Beta" + bob@x.org
+% status:  RED (int165a, int166a, P4b4f)
+% moves:   post-merge
+\documentclass{llncs}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1}$ \and Bob Baker$^{2}$}
+\institute{$^{1}$Univ Alpha\\ $^{2}$Univ Beta\\ \{$^{1}$ann, $^{2}$bob\}@x.org}
+\maketitle
+Body.
+\end{document}

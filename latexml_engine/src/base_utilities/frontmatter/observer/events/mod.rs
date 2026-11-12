@@ -2299,15 +2299,35 @@ pub(in crate::base_utilities) fn names_requested(events: &[Event]) -> Vec<String
     })
     .flat_map(|at| resolver::mark_labels(ink[at].label.as_deref().unwrap_or("")))
     .collect();
-  if !own.is_empty() {
-    return own;
+  let requested = if own.is_empty() {
+    requested_labels()
+      .into_iter()
+      .map(|label| match label.strip_prefix("affiliation:") {
+        Some(key) => key.to_string(),
+        None => label,
+      })
+      .collect()
+  } else {
+    own
+  };
+  // (a request no mark of the list prints, its marks written together, requests each, as the Link step reads it:
+  // `$^{12}$` under `$^1$A Univ, $^2$B Lab`, 2409.11440, 2511.20671)
+  let known: Vec<String> = events
+    .iter()
+    .filter(|e| e.kind == EventKind::Mark)
+    .flat_map(|e| resolver::mark_labels(e.label.as_deref().unwrap_or("")))
+    .collect();
+  if known.is_empty() {
+    return requested;
   }
-  requested_labels()
+  requested
     .into_iter()
-    .map(|label| match label.strip_prefix("affiliation:") {
-      Some(key) => key.to_string(),
-      None => label,
-    })
+    .flat_map(
+      |label| match resolver::glued_request_parts(&label, &known) {
+        Some(parts) if !label.contains(':') => parts,
+        _ => vec![label],
+      },
+    )
     .collect()
 }
 

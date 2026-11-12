@@ -633,12 +633,6 @@ impl Resolver {
     if entry_labels.is_empty() {
       return;
     }
-    // (a number is parted into digits only when every entry's number is a digit: `12` under entries 1-4, 2103.10685 —
-    // never `21` under twenty numbered entries, 1501.05343)
-    let digit_entries = entry_labels
-      .iter()
-      .filter(|l| l.chars().all(|c| c.is_ascii_digit()))
-      .all(|l| l.len() == 1);
     // (each numbered entry's text, whose own sub-entries a glued mark's letter names: BESIII's `$^{67}$ University of
     // Turin and INFN, (A)University of Turin …; (B)…; (C)INFN …`, [`sub_labels`])
     let numbered: Vec<(String, &str)> = self
@@ -662,9 +656,7 @@ impl Resolver {
         let b = bare(&request);
         let prefix = &request[..request.len() - b.len()];
         if !special(&request)
-          && !entry_labels.contains(&b)
-          && (digit_entries || !b.chars().all(|c| c.is_ascii_digit()))
-          && let Some(parts) = parted_label(&b, &entry_labels, true, true)
+          && let Some(parts) = glued_request_parts(&b, &entry_labels)
         {
           let parts = sub_labels(parts, &entry_labels, &numbered);
           let alphanumeric = b.chars().all(char::is_alphanumeric);
