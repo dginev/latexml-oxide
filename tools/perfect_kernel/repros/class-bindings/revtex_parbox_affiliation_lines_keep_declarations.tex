@@ -1,0 +1,20 @@
+% mechanism: the list cutter (`classify::entry_starts` `line_at_starts`, `box_body`): a line set wholly in a box whose
+%   body opens with declarations (`\centering\scriptsize`) is cut in the body, the box dropped, each piece with the
+%   declarations the body opens with (`notes::list_lead_declarations`, as the API Cut's `with_opening`; revP4b4a B2)
+% witness: 2608.21425 (llncs `\institute{\parbox{0.98\textwidth}{\centering\scriptsize\setlength…\affmark{1} …}}`)
+% oracle:  pdflatex (TL 2025, revtex4-1, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2 / 1 Univ A, Town /
+%   2 Univ B, City", both lines small and centered
+% engines: rust P4b4abase, P4b4a: 0 errors, 0 warnings, each name its line, the first small (P4b4a: and centered), the
+%   second plain
+% expect:  0 errors, 0 warnings; each name its mark and the line its mark labels, both lines small and centered
+% status:  RED (P4b4abase, P4b4a) -> GREEN (P4b4a3), guard perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed
+% preload: ar5iv.sty
+\documentclass[aps,prl]{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$}
+\affiliation{\parbox{\linewidth}{\centering\scriptsize $^{1}$Univ A, Town\\ $^{2}$Univ B, City}}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body.
+\end{document}

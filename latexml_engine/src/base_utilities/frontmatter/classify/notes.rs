@@ -465,6 +465,21 @@ pub(in crate::base_utilities) fn lead_declarations(v: &[Token]) -> Vec<Token> {
   }
 }
 
+/// The declarations a list `v` opens with before its first entry's mark (`\itshape`, `\small`, `\color{red}`:
+/// [`lead_declarations`]), its leading spaces and groups past — before where that mark stands (`first_start`,
+/// `requested_entry_labels`), so a macro printing it (`\ua` with `\newcommand\ua{\textsuperscript{1}}`) is none.
+pub(in crate::base_utilities) fn list_lead_declarations(
+  v: &[Token],
+  first_start: Option<usize>,
+) -> Vec<Token> {
+  let end = first_start.unwrap_or(v.len()).min(v.len());
+  let start = v[..end]
+    .iter()
+    .position(|t| *t != T_SPACE!())
+    .unwrap_or(end);
+  lead_declarations(&v[start..end])
+}
+
 /// Where a line's unprinted lead ends: its spacing (`leading_spacing_end`) and its declarations
 /// (`opening_declarations`), as often as they interleave (`\vspace*{2mm}\noindent`, `\small\vspace{1mm}`). Public
 /// for authblk's `\affil` (latexml_package), which reads whether a line opens with a mark past it.

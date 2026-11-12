@@ -542,6 +542,27 @@ fn marked_blocks_restored_read_as_printed() {
         r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup>Univ B, City</contact></creator>"#,
       ]),
     },
+    // (P4b4a3, revP4b4a B2: the declarations a cut box body opens with, on every piece, 2608.21425; and a line's, unboxed)
+    Row {
+      repro:    repro!("class-bindings/revtex_parbox_affiliation_lines_keep_declarations"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able<sup><text font="italic">1</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic" fontsize="70%">1</text></sup><text align="center" fontsize="70%">Univ A, Town</text></contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic" fontsize="70%">2</text></sup><text align="center" fontsize="70%">Univ B, City</text></contact></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("class-bindings/llncs_institute_macro_marks_line_declarations"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able<sup>1</sup></personname><contact name="Affiliation: " role="affiliation"><sup><text fontsize="90%">1</text></sup><text fontsize="90%"> Univ A</text></contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker<sup>2</sup></personname><contact name="Affiliation: " role="affiliation"><sup><text fontsize="90%">2</text></sup><text fontsize="90%"> Univ B</text></contact></creator>"#,
+      ]),
+    },
     Row {
       repro:    repro!("sectioning-frontmatter/author_names_line_team_piece_is_a_collaboration"),
       files:    &[],

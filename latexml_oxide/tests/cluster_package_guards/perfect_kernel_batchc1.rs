@@ -320,6 +320,30 @@ fn queued_marks_read_as_digested() {
         "affiliation=2 Univ B",
       ]],
     ),
+    // (P4b4a3, revP4b4a B1: no line break or cut inside an environment the list opens — a start inside one in a line, a
+    // line break inside one; the `\affmark` rows of a `tabular` pinned as the base had them, Ann Able's three lines RED)
+    (
+      llncs!("llncs_institute_math_marks_minipage_parbox_line"),
+      0,
+      &[
+        &["Ann Able 1", "affiliation=1 Univ A"],
+        &["Bob Baker 2", "affiliation=2 Univ B"],
+        &["Cy Cole 3", "affiliation=3 Univ C"],
+      ],
+    ),
+    (llncs!("llncs_institute_math_marks_center_lines"), 0, &[
+      &["Ann Able 1", "affiliation=1 Univ A"],
+      &["Bob Baker 2", "affiliation=2 Univ B"],
+    ]),
+    (
+      llncs!("llncs_institute_macro_marks_tabular_rows_red"),
+      1,
+      &[
+        &["Ann Able 1", "affiliation=1 Univ A 2 Univ B 3 Univ C"],
+        &["Bob Baker 2", "affiliation=2 Univ B"],
+        &["Cy Cole 3", "affiliation=3 Univ C"],
+      ],
+    ),
   ];
   for ((name, tex), warnings, expected) in rows {
     let (log, xml) = run(tex);

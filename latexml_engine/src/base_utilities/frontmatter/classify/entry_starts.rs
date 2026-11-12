@@ -40,31 +40,71 @@ pub(in crate::base_utilities) fn line_ranges(
 }
 
 /// Each of `lines` (`split_tokens_delimited` of `stuff`) with its entry starts, as `marks` reads them; `None` for each
-/// when `marks` is none or unread (counted) — the line's tokens decide then, `author_mark_position`.
+/// when `marks` is none or unread (counted) — the line's tokens decide then, `author_mark_position`. No line break or
+/// cut stands inside an environment the list opens (`\begin{tabular}{c}\affmark{1} Univ A\\ \affmark{2} Univ B…`): its
+/// lines are one, cut only outside it, as no piece may hold half of it (revP4b4a B1).
 pub(in crate::base_utilities) fn lines_starts(
   stuff: &Tokens,
-  lines: &DelimitedPieces,
+  lines: DelimitedPieces,
   marks: Option<&ListMarks>,
-) -> Vec<Option<LineStarts>> {
+) -> (DelimitedPieces, Vec<Option<LineStarts>>) {
   let Some((Some(starts), Some(marked))) = marks.map(|marks| (&marks.starts, &marks.marked)) else {
-    return vec![None; lines.len()];
+    let n = lines.len();
+    return (lines, vec![None; n]);
   };
-  let Some(ranges) = line_ranges(stuff.unlist_ref(), lines) else {
+  let v = stuff.unlist_ref();
+  let Some(ranges) = line_ranges(v, &lines) else {
     count_unread_marks("affiliation_calls");
-    return vec![None; lines.len()];
+    let n = lines.len();
+    return (lines, vec![None; n]);
   };
-  ranges
+  let depth = environment_depths(v);
+  let mut joined: DelimitedPieces = Vec::new();
+  let mut joined_ranges: Vec<std::ops::Range<usize>> = Vec::new();
+  for (line, range) in lines.into_iter().zip(ranges) {
+    match (joined.last_mut(), joined_ranges.last_mut()) {
+      (Some((_, last)), Some(last_range)) if depth[last_range.end] > 0 => {
+        last_range.end = range.end;
+        *last = Tokens::new(v[last_range.clone()].to_vec());
+      },
+      _ => {
+        joined.push(line);
+        joined_ranges.push(range);
+      },
+    }
+  }
+  joined
     .into_iter()
-    .map(|range| {
-      let at = starts
-        .iter()
-        .filter(|at| range.contains(at))
-        .map(|at| at - range.start)
+    .zip(joined_ranges)
+    .map(|(line, range)| {
+      let in_line = starts.iter().filter(|at| range.contains(at));
+      // (the first opens the line's entry; a later one inside an environment cuts nothing)
+      let at = in_line
+        .enumerate()
+        .filter(|&(n, &at)| n == 0 || depth[at] == 0)
+        .map(|(_, at)| at - range.start)
         .collect();
       let marked = marked.iter().any(|at| range.contains(at));
-      Some(LineStarts { at, marked })
+      (line, Some(LineStarts { at, marked }))
     })
-    .collect()
+    .unzip()
+}
+
+/// The number of environments `v` opens that are open before each of its tokens, and past its end; an `\end` of one
+/// opened before `v` is none of its own.
+fn environment_depths(v: &[Token]) -> Vec<usize> {
+  let mut depth = Vec::with_capacity(v.len() + 1);
+  let mut open = 0usize;
+  for t in v {
+    depth.push(open);
+    if *t == T_CS!("\\begin") {
+      open += 1;
+    } else if *t == T_CS!("\\end") {
+      open = open.saturating_sub(1);
+    }
+  }
+  depth.push(open);
+  depth
 }
 
 /// Whether `line` starts no entry: it prints no mark at its level (`q2`'s `\affmark{1} Univ A\\ Street A`, the street);
@@ -107,7 +147,8 @@ pub(in crate::base_utilities) fn entry_pieces(
 /// before its first start stays with that entry (`Univ X \\ Present address: $^2$Univ Y`'s second line, as
 /// `\lx@add@authors` keeps it). A wrapper holding several starts (`{\it $^1$A, $^2$B}`) is cut inside, repeated on each
 /// piece with its opening declarations, as [`split_wrapped_affiliation_marks`] repeats it; a box the line is set in
-/// (`\parbox{\linewidth}{$^1$Univ A\\ $^2$Univ B}`) is not: what it prints are its lines (revtex hg1 rows).
+/// (`\parbox{\linewidth}{$^1$Univ A\\ $^2$Univ B}`) is not: what it prints are its lines (revtex hg1 rows), each with the
+/// declarations the body opens with.
 fn line_at_starts(line: Tokens, starts: &LineStarts) -> Vec<(Tokens, Option<bool>)> {
   if starts.at.is_empty() {
     return vec![(line, Some(starts.marked))];
@@ -124,9 +165,20 @@ fn line_at_starts(line: Tokens, starts: &LineStarts) -> Vec<(Tokens, Option<bool
     ),
     _ => (v, starts.at.clone()),
   };
+  // (the declarations it opens with are in force on every piece, as the API Cut's `with_opening` keeps a list's:
+  // `\parbox{…}{\centering\scriptsize \affmark{1} …}`, 2608.21425 — revP4b4a B2)
+  let opening = list_lead_declarations(v, Some(at[0]));
   cut_at_starts(v, &at[1..], at[0])
     .into_iter()
-    .map(|piece| (Tokens::new(piece), Some(true)))
+    .enumerate()
+    .map(|(n, piece)| {
+      let piece = if n > 0 && !opening.is_empty() {
+        [opening.as_slice(), piece.as_slice()].concat()
+      } else {
+        piece
+      };
+      (Tokens::new(piece), Some(true))
+    })
     .collect()
 }
 

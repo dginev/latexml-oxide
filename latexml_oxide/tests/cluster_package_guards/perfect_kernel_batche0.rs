@@ -398,8 +398,9 @@ const MOVED_CUT_KIND_EMISSIONS: &[(&str, usize)] = &[
 /// private `with_key` (its three copies deleted). P4b4a raised it to 2,223 (+14, the main session's decision): the list
 /// cutter reads where entries start as digested (`list_marks`), its callers carry each line's starts and each entry's
 /// opening mark, and the Cut's opening declarations end at the first start; the cut itself is in `classify/entry_starts.rs`.
-/// P6's compaction lowers it.
-const MOVED_CUT_KIND_CODE_LINES: usize = 2_223;
+/// P4b4a3 to 2,217: the Cut's opening declarations (`cut.rs` `notes_lead_declarations`) moved to `classify/notes.rs`
+/// (`list_lead_declarations`), the cutter's pieces their reader too. P6's compaction lowers it.
+const MOVED_CUT_KIND_CODE_LINES: usize = 2_217;
 
 /// The fence on the moved Cut and Kind: they take no new decision either (review revZ18a check 3).
 #[test]
@@ -1508,7 +1509,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (P4b4a, 443 -> 458: the list cutter's token surgery, `classify/entry_starts.rs` — where each line stands in the list,
   // the braces, `\protect` and formula a cut closes and reopens, the box a cut line is set in — and the unread fallback
   // moved from `defs/frontmatter_api/affiliations.rs`; where entries start is read as digested, `list_marks`)
-  ("classify", 458),
+  // (P4b4a3, 458 -> 461: the `\begin`/`\end` an environment the list opens is spelled by, no cut inside it (revP4b4a
+  // B1), and the Cut's opening declarations' leading spaces, moved from `defs/frontmatter_api/cut.rs`)
+  ("classify", 461),
   // (E0h: the rest of `author_block/` Z18m moved unchanged to `classify/old_reader/`, split off from `classify`'s row)
   ("old_reader", 131),
   ("defs/author_macros", 20),
@@ -1524,7 +1527,8 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (2205.14113's `$~\quad~~$`, 2302.05182's `a@x $\quad$ b@y`; OD #972), no owner decided; the shifts and spacing it
   // reads are the line's tokens, before any digestion, as `math_glyphs_as_printed`'s)
   // (F0, 114 -> 113: `numbered_marks_requested` reads the queue's printed marks, `queued_author_marks`, no operand's spelling)
-  ("defs/frontmatter_api/", 113),
+  // (P4b4a3, 113 -> 112: the Cut's opening declarations moved to `classify/notes.rs`)
+  ("defs/frontmatter_api/", 112),
   // (CR4, 21 -> 28: `address_as_printed`'s `math_glyphs_as_printed`, the API's e-mail/URL reading — how an address prints,
   // `$\sim$` its glyph "∼" (1301.1466, math0608476; OD #972), no owner decided: a sibling of `math_braces_as_printed`, whose
   // reads `defs/frontmatter_fields/` holds; it reads the Semiverbatim argument's tokens, which no event says)

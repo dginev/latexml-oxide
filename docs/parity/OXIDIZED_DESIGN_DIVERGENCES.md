@@ -30922,10 +30922,16 @@ printing nothing, `\newcommand\affilfont{}`), is a letter or digit is not rehear
 entry or one led by unmarked text, and where each mark the list prints at its level stands): a line printing no mark
 (nor a note opening with one) continues the entry above it; a line is cut at its later starts, inside a wrapper too (the
 wrapper repeated with its declarations; a box the whole line is set in, `\parbox{\linewidth}{$^1$Univ A\\ $^2$Univ B}`,
-`\mbox`, `\hbox`, dropped: what pdflatex prints are its lines, each piece cut alike — REVTeX's `\parbox` lists,
-`perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed`) and inside a formula at a mark on a base (closed and
-opened again); a mark on no
-base starts where its formula does (`classify::entry_starts`); the list's opening declarations end at its first start
+`\mbox`, `\hbox`, dropped: what pdflatex prints are its lines, each piece led by the declarations the body or line
+opens with (`notes::list_lead_declarations`, the Cut's own; 2608.21425's `\centering\scriptsize` — REVTeX's `\parbox`
+lists, `perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed`) and inside a formula at a mark on a base (closed
+and opened again); a mark on no
+base starts where its formula does (`classify::entry_starts`). No line break or cut stands inside an environment the list
+opens (P4b4a3, revP4b4a B1): the lines it spans are one, a later start inside it cuts nothing — of closing and reopening
+the environment (its arguments' count is its definition's, not the tokens') and leaving it uncut, the simpler; the
+whole-list token fallback would lose the marks llncs's shape (c), chosen by the reading, prints (`\institute{\begin{minipage}{…}\affmark{1}
+Univ A, \affmark{2} Univ B\end{minipage}}`). A `tabular`'s `\affmark` rows keep the base's owners, Ann Able all three
+lines (RED `llncs_institute_macro_marks_tabular_rows_red`, post-merge); the list's opening declarations end at its first start
 (`\ua` printing `\textsuperscript{1}` is none); a line whose marks lead its notes is cut inside the note by its tokens (the
 `\thanks` idiom); and llncs's shape (c) is read from the marks the institute prints (`prints_list_marks`). Unread, the
 tokens (`author_mark_position`, `marker_leads`), counted. A list whose requested entries the cutter parts fewer than two

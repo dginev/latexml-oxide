@@ -81,8 +81,11 @@ pub(in crate::base_utilities) fn entry_calls(
     .then(|| list_marks(&stuff, "affiliation_calls"))
     .transpose()?;
   let with_sup = marks.as_ref().is_some_and(|marks| marks.prints);
-  let lines = split_tokens_delimited(stuff.clone(), affil_splits());
-  let line_starts = lines_starts(&stuff, &lines, marks.as_ref().filter(|_| with_sup));
+  let (lines, line_starts) = lines_starts(
+    &stuff,
+    split_tokens_delimited(stuff.clone(), affil_splits()),
+    marks.as_ref().filter(|_| with_sup),
+  );
   // In a marked list, the affiliations it names, each a mark-led line (or a piece of one) with the unmarked lines
   // that follow it.
   let mut marked_entries: Vec<Vec<Token>> = Vec::new();
