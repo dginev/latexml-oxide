@@ -22792,7 +22792,7 @@ complete", the call dropped, the `\par` read again (tex.web §392, §396; #442).
 
 **Perl**: every `DefMacro`/`DefConstructor` reads its arguments across paragraphs (Expandable.pm stores `isLong` and
 never reads it); amsppt.sty.ltxml:268's `\footnote[]{}` constructor took every paragraph after a note whose `}` never
-came (KNOWN_PERL_ERRORS #1012).
+came (KNOWN_PERL_ERRORS #1014).
 
 **Rust** (77v): `ExpandableOptions::short` — a binding's macro made with `short => true` checks its arguments for
 `\par` as #442's TeX-declared macros do, wherever it is made (`Expandable::checks_par`, expandable.rs). amsppt_sty.rs's
@@ -35457,3 +35457,27 @@ pgflibrarybbox.code.tex:28-35: 1 → 0), 2109.14286 (`\pgfmathsetmacro` under `/
 printed `16,384` for 16,761), the TL manuals ddphonism (40 → 0) and tikzbrickfigurines-doc (352 → 0). **Guards**:
 `error_boundary::perfect_kernel_error_boundary` (rows `pgfmath_maxdimen_spelling_and_fpu_in_range`, 0 errors;
 `pgfmath_past_maxdimen_errs`, 7 as pdflatex).
+
+### 1014. A varwidth box measures its widest line (VARW)
+
+**TeX.** varwidth.sty `\endvarwidth` sets the box at its widest line's natural width, at most the given one. **Perl.**
+`\varwidth` = `\minipage` (KNOWN_PERL_ERRORS #1234). **Rust.** varwidth_sty.rs's `\varwidth` sets `minipage:natural_width`
+(`\lx@vwid@setup`) before `\minipage`, as the package runs `\@vwid@setup` from the minipage's `\@minipagerestore`; the minipage
+takes the flag at its begin (so a nested box does not) and, after its body, `minipage_takes_natural_width` sizes the body with
+`compute_boxes_size`'s `natural_width` option (the stacked lines' widest width instead of the paragraph width) and sets
+`width` to the lesser. Every reader takes that width: `\wd`, `\resizebox`, pgf/TikZ and tcolorbox, and the XML `width`,
+which the foreignObject of a TikZ node and the float panel grid read. A box narrower than given also carries `cssstyle`
+`width:max-content;max-width:<given>`: the HTML sizes it as varwidth does, from the browser's own text, since a CSS width at
+our metric estimate would wrap a line the PDF does not (and `fit-content` shrinks to a `\resizebox`'s scaled width, wrapping
+its cells); it rides the lone child a box folds into (a `tabular`, a figure's `block`). **Witnesses**: algxpar-doc (784 → 0 Errors),
+2401.12710 (310 → 11, the 299 overflows and 23 empty ▷ gone), 2507.12476 (Table 1's cells drawn at their content, the table
+~1.15 times its column in Chrome; VARW drew each cell 345pt wide, the table ~3 times the column). **Guards**:
+`perfect_kernel_batchvarw::{varwidth_takes_its_widest_line, varwidth_html_follows_its_content}`. **Open** (post-merge,
+`boxes-groups/varwidth_lists_and_displays_measure_red.tex`): a list (itemize, center) inside is measured at its full width;
+a display inside draws in HTML at the given width, its table's `max-width:100%` filling the `max-content` box
+(`varwidth_display_draws_at_given_width_red`); two varwidth panels under `\hfill` sit together (the panel grid reads the
+measured width);
+a numbered display and a display opening the box measure without TeX's centring shift; `\hfill` sizes as an interword space.
+Also `varwidth_colour_at_its_start_keeps_the_given_width_red` (a leading `\color` keeps the line at the given width in
+TeX), `varwidth_inline_box_beside_text_measures_the_line_red` (an inline minipage and the text after it are one line), and
+`colour_boxes_measure_their_frame_red` (`\fcolorbox` measures 0pt, `\colorbox` without `\fboxsep`; not varwidth's).

@@ -1953,8 +1953,10 @@ impl Font {
     let interline = (skip_option("lineskip"), skip_option("lineskiplimit"));
     let (mut wd, mut ht, mut dp) =
       Self::compute_boxes_size_stack(&vattach, mathaxis, &lines, interline);
-    // Perl: $wd = $maxwidth if $wd && $maxwidth (set to fill width, unless empty).
-    if wd != 0 && maxwidth != 0 {
+    // Perl: $wd = $maxwidth if $wd && $maxwidth (set to fill width, unless empty). Under `natural_width` the
+    // widest line's own width instead, as varwidth.sty's `\@vwid@measure` re-measures each line.
+    if wd != 0 && maxwidth != 0 && !matches!(options.get("natural_width"), Some(Stored::Bool(true)))
+    {
       wd = maxwidth;
     }
     // Perl: divide up totalheight, if requested.

@@ -1,0 +1,19 @@
+% witness: algxpar-doc (784 Errors: 410 `Arithmetic overflow`, 293 `pgfmath:overflow`), 2401.12710 (+299, 23 empty ▷)
+% oracle:  pdflatex 0 errors: line 1 "x ← 1 ▷ a comment"; line 2 the statement over two lines, "▷ Select method …" at
+%          its right — one ▷ per comment
+% engines: rust int164a = 4 Errors (2 `Arithmetic overflow`, 2 `pgfmath:overflow`): `\axp@SetToWidth`'s 500cm varwidth
+%          measured 14226pt, the statement's parbox width="-16384.2pt" and a second, empty "⊳" comment on line 2;
+%          perl: varwidth = minipage (KNOWN_PERL_ERRORS #1234)
+% expect:  0 errors, 0 warnings; two "⊳", one per comment; no negative width
+% status:  RED (int164a) -> GREEN (VARW: `minipage_takes_natural_width`)
+\documentclass{article}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{algxpar}
+\begin{document}
+\begin{algorithmic}[1]
+\State $x \gets 1$ \Comment{a comment}
+\Statep{a long statement text that goes on and on and on and on and on and on and on and on and on and on
+\Comment{Select method to solve, select equations to solve and more words here to make it long}}
+\end{algorithmic}
+\end{document}

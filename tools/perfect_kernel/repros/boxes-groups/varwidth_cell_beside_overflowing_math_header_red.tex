@@ -1,0 +1,19 @@
+% witness: 2502.13537 (Table 1's header: `$h(y-\varepsilon)\land h(y+\varepsilon)$` in a `p{1.5cm}` beside LyX's
+%          `cellvarwidth` "RHS of (4)" in a `c` column)
+% oracle:  pdflatex 0 errors; TeX breaks the math after `\land` inside the 1.5cm cell, and the RHS column is as narrow as
+%          "RHS" (the varwidth's widest line)
+% engines: rust VARWb = 0 errors: the RHS cell its content's width as in the PDF, but the MathML in the 1.5cm cell does not
+%          break, runs past it and overlaps "RHS" in the HTML (int164a/VARW hid it behind a 345pt RHS cell)
+% expect:  the math kept inside its cell (broken at `\land`, or the cell widened), no overlap
+% status:  RED (moves: post-merge) — inline math does not wrap in a fixed-width cell; not varwidth's measure
+\documentclass{article}
+\usepackage{array,varwidth}
+\begin{document}
+\begin{tabular}{|>{\centering}p{1.5cm}c|}
+\hline
+$h(y-\varepsilon)\land h(y+\varepsilon)$ & \begin{varwidth}[t]{\linewidth}\centering RHS\par of (4)\end{varwidth}\tabularnewline
+\hline
+0.980 & 0.02\tabularnewline
+\hline
+\end{tabular}
+\end{document}
