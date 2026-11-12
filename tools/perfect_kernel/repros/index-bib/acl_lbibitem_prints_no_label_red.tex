@@ -1,0 +1,22 @@
+% witness: 1610.02544 (acl2012.sty:268), 1506.02004 (acl2015.sty:268): the kernel's `\@lbibitem` without its printed
+%          label (`\item[]`), the label still written to `\bibcite` for `\cite`
+% oracle:  pdflatex (2 passes) 0 errors: the entry prints no label; "See [Aho and Ullman1972]."
+% engines: perl 0.8.8 = 0 Errors, the entry's display tag "[Aho and Ullman1972]"; rust GA5 the same (0 Errors, that tag
+%          and the refnum): sect11.rs `\lx@bibitem` prints the kernel's `\@biblabel` form whatever `\@lbibitem` is
+% expect:  0 errors, 0 warnings; no display tag at the entry (the refnum kept for the citation)
+% status:  RED (GA5; the shape GA5's refuted "`\@lbibitem` not the kernel's" signal met in its A/B)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+% acl2012.sty:268, acl2015.sty:268: the kernel's \@lbibitem without the printed label
+\def\@lbibitem[#1]#2{\item[]\if@filesw
+      { \def\protect##1{\string ##1\space}\immediate
+        \write\@auxout{\string\bibcite{#2}{#1}}\fi\ignorespaces}}
+\makeatother
+\begin{document}
+\begin{thebibliography}{}
+\bibitem[Aho and Ullman1972]{a} A. Aho and J. Ullman. 1972. A book.
+\end{thebibliography}
+See \cite{a}.
+\end{document}
