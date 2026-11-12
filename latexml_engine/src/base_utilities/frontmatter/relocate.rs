@@ -986,17 +986,23 @@ pub fn run_names_show_a_mark() -> Result<bool> {
     names[names.len().saturating_sub(run)..]
       .iter()
       .flatten()
-      .any(|text| requests_a_label(text)),
+      .any(|text| !requested_labels(text).is_empty()),
   )
 }
 
-/// Whether a name's mark, by its printed text (`queued_author_marks`), requests an affiliation by a label: a letter or a
-/// number first, as `argument_marks::is_label_mark` reads a printed mark (`$^{\nabla}$` none, 2402.10256), or a
-/// cross-reference.
-fn requests_a_label(text: &str) -> bool {
-  let label = text.strip_prefix("affiliation:").unwrap_or(text);
-  requests_an_affiliation(text)
-    && (label.starts_with('\\') || label.chars().next().is_some_and(char::is_alphanumeric))
+/// The affiliation labels a name's mark requests, by its printed text (`queued_author_marks`): each label piece
+/// (`printed_label_keys`) that opens with a letter, a number or a cross-reference's `\`, as `argument_marks::is_label_mark`
+/// reads a mark — `$^{*,1,2}$` requests 1 and 2, `$^{\dagger 1}$` 1, `$^{\nabla}$` none (2402.10256), `$^{\hbar}$` ℏ.
+fn requested_labels(text: &str) -> Vec<String> {
+  if !requests_an_affiliation(text) {
+    return Vec::new();
+  }
+  let mut keys = printed_label_keys(text, "affiliation");
+  keys.retain(|key| {
+    let label = key.strip_prefix("affiliation:").unwrap_or(key);
+    label.starts_with('\\') || label.chars().next().is_some_and(char::is_alphanumeric)
+  });
+  keys
 }
 
 /// Whether a name's mark, by its printed text (`queued_author_marks`), requests an affiliation: a request of another kind
@@ -1246,14 +1252,12 @@ pub(super) fn name_marks_of(command: &Tokens) -> (Vec<String>, Vec<String>) {
   (altaffil, sup)
 }
 
-/// What an affiliation block prints of the labels the queued authors' marks request (`queued_author_marks`,
-/// `requests_a_label`), read as
-/// digested (`marks_as_printed`: a document macro's mark, a math-active `^`'s, one in a box of its own): how many it holds,
-/// each once (`\address{\parbox{\linewidth}{$^{1}$Univ A\\ $^{2}$Univ B}}`: 2); how many of its lines, a box's and an
-/// environment's too, a requested mark opens, as against marks inside one line's text (`Joint Institute,
-/// \textsuperscript{1}Univ A and \textsuperscript{2}Univ B`: 0, review rev98e S2); and the requested labels it prints
-/// nowhere, bare and in the names' order (`Univ A \\ $^2$Univ B \\ $^3$Inst C` under `Ann$^{1,2}$`, `Bob$^{2,3}$`: 1 —
-/// 2109.01501, 1903.07834). Unread, by its tokens, counted for `caller`.
+/// What an affiliation block prints, read as digested (`marks_as_printed`), of the labels the queued names request
+/// (`requested_labels`): how many it holds, each once (`\parbox{\linewidth}{$^{1}$Univ A\\ $^{2}$Univ B}`: 2); how many
+/// of its lines, a box's too, such a mark opens, not marks inside a line (`Joint Institute, \textsuperscript{1}Univ A and
+/// \textsuperscript{2}Univ B`: 0, rev98e S2); the requested labels it prints nowhere, in the names' order (`Univ A \\
+/// $^2$Univ B \\ $^3$Inst C` under `Ann$^{*,1,2}$`, `Bob$^{2,3}$`: 1 — 2109.01501, 1903.07834). Unread, by its tokens,
+/// counted for `caller`.
 pub fn requested_marks(content: &Tokens, caller: &str) -> Result<RequestedMarks> {
   requested_marks_of(content, marks_as_printed(content, caller)?.as_deref())
 }
@@ -1271,12 +1275,8 @@ pub fn requested_marks_of(
     });
   };
   let mut requested: Vec<String> = Vec::new();
-  for text in queued_author_marks()?
-    .iter()
-    .flatten()
-    .filter(|text| requests_a_label(text))
-  {
-    for key in printed_label_keys(text, "affiliation") {
+  for text in queued_author_marks()?.iter().flatten() {
+    for key in requested_labels(text) {
       if !requested.contains(&key) {
         requested.push(key);
       }
@@ -2188,6 +2188,8 @@ fn group_shares_the_mark(marks: &[String], alternating: bool) -> Result<bool> {
     return Ok(false);
   }
   let names = queued_author_marks()?;
+  // (every piece, symbols too, not `requested_labels`: a name showing only `$^{*}$` shows no mark the group shares, so the
+  // line goes by the marked rule to the names that print its label)
   let scripts: Vec<Vec<String>> = names[names.len().saturating_sub(since)..]
     .iter()
     .flatten()
