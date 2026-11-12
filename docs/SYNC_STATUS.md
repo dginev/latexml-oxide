@@ -58,14 +58,14 @@ Rules that keep this file honest and mergeable:
 
   | Rank | Id | Task | Step | Weight | Status |
   |---|---|---|---|---|---|
-  | 1 | P4c | P4c: the affiliation cut incl. the API's Cut (marks shown; isotope rule R3 first) | 3 | 5 | ongoing |
+  | 1 | P4c | P4c: the one affiliation cut incl. the API's Cut, declared per binding (DG 2026-11-12 "Declared cut"; round 2, P4c2) — marks shown; ISO1's isotope rule merged | 3 | 5 | ongoing |
   | 2 | P4b | P4b: marker_leads/leads_with_mark at ~20 sites | 3 | 5 | todo |
   | 3 | P5 | Option C P5: new facts (IEEEmembership grade, "on behalf of", surname match) | 3 | 5 | todo |
   | 4 | P6 | Option C P6 + the frontmatter code/test compaction | 3 | 5 | todo |
   | 5 | P2-8b | P2-8b: IEEEtran block-call fact, grid rule in the reading | 3 | 5 | todo |
   | 6 | P2-3b | P2-3 rest: llncs one-block list (DG's option a/b pending) | 3 | 3 | todo |
   | 7 | TP3 | TP3: merge the walks; QA60 site 2; BM probes' losses (ams, session) | 3 | 3 | todo |
-  | 8 | AUT1 | AUT1 | 3 | 3 | todo |
+  | 8 | AUT1 | AUT1: macro-held names (Frontiers `\author{\Authors}` and the like, ~2,900-3,400 arXiv papers): no word lost on 36 real witnesses, but the "markup lost" Warning over-counts — count only real losses (study AUT0) | 3 | 3 | todo |
   | 9 | UNC | Uncounted losses: IEEEtran grade drops, vmsta e-mails, kernel \thanks shapes | 2 | 3 | todo |
   | 10 | CT1a-r | CT1a count design (DG ruling pending) | 2 | 1 | todo |
   | 11 | TRUTH | Bars: the truth set | 4 | 5 | todo |
@@ -172,6 +172,7 @@ Rules that keep this file honest and mergeable:
   - BD — A `\DeclareBoldMathCommand` delimiter after `\left` (1205.4484, RED); 3
   - D1 — Rulings pending: `\obeylines` `^^M`, `{framed}` items, biblatex anchors, R7 port-or-drop; 1
   - T2 — Test API stage 2: 37 test files still spawn binaries; 3
+  - MENC — `<m:menclose>` still emitted for `\cancel`/`\boxed` (MathML Core removed it; no mechanical replacement: a rendering + golden change on its own branch; deferred by DG 2026-07-30); 3
   - CI — CI under 30 minutes on `main` (workflow edits, a PR tier); its localhost study feeds CIPERF; 3
   - F1 — Per-encoding text commands, the residual; 3
   - F2 — Small RED repros (`\vadjust` scope; OPEN_ROWS' RED catalogue); 1
