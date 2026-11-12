@@ -5,7 +5,9 @@
 //! (`an_address_placed_more_often_than_printed_is_counted`, 2607.00684, 0807.0895); a block whose every word is placed once,
 //! a shared entry and an ORCID logo among them, counts nothing (`a_clean_block_counts_nothing`), nor does a mark label
 //! repeated legitimately — shared by names, per column, on footnote marks, aas's `\altaffilmark`, in a cut list, in a
-//! box (CT1a: the other direction any rule counting a label repeated as text must keep).
+//! box, glued to a name before a note's entry (CT1a, CT1ar: the other direction any rule counting a label repeated as
+//! text must keep). A mark glued to the text of another entry of its label that the writer cut at is that entry's text,
+//! counted lost (`a_glued_label_cut_as_an_entry_is_counted`, CT1ar; 2204.02412).
 
 use latexml::util::test::{error_count, warning_count};
 
@@ -129,7 +131,8 @@ fn an_address_placed_more_often_than_printed_is_counted() {
 /// A block whose every printed word is placed once counts nothing: an entry several creators share once (revtex's one
 /// `\affiliation` under two authors, 2103.04797), an ORCID link's logo beside a name, a `\thanks`, an `\inst` list; and a
 /// mark label repeated legitimately (CT1a): two names requesting the label of one entry (a block, a box's lines, revtex's
-/// cut list), each column's own line 1, a footnote mark on three names, aas's `\altaffilmark` on two authors.
+/// cut list), each column's own line 1, a footnote mark on three names, aas's `\altaffilmark` on two authors, a name's mark
+/// glued to the name just before a note holding an entry of its label (CT1ar; the note written as the base writes it).
 #[test]
 fn a_clean_block_counts_nothing() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
@@ -192,9 +195,67 @@ fn a_clean_block_counts_nothing() {
         row(&["Cat Cole", "altaffiliation=Univ Y, City"]),
       ],
     ),
+    (
+      repro!("emit_content_a_name_mark_before_a_note_entry"),
+      vec![
+        row(&[
+          "Ann Able",
+          "affiliation=Center for Astro (CAP 1 ), Univ Z",
+          "affiliation=Univ X, Town",
+        ]),
+        row(&["Bob Baker", "affiliation=Univ Y, City"]),
+      ],
+    ),
   ] {
     let (log, xml) = run(tex);
     assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+    assert_eq!(creators(&xml), expected, "{xml}");
+  }
+}
+
+/// A mark glued to the text of another entry of its label (one list labels each entry once, `calls::split_marked_pieces`)
+/// that the observer's writer cut the line at loses its word, and a separator's just before it: the content check counts
+/// them, the output as the writer cuts it (RED catalog: the events-side cutter's S1 rule, SYNC row 99a). 2204.02412's
+/// `(CAP$^3$)` (W 40 -> 41); the same past "and", in a `\parbox`, in an `\and` column of its own (CT1ar).
+#[test]
+fn a_glued_label_cut_as_an_entry_is_counted() {
+  let row = |items: &[&str]| items.iter().map(ToString::to_string).collect::<Vec<_>>();
+  let cap = |bob: &[&str]| {
+    vec![
+      row(&["Ann Able", "affiliation=Univ X, Town"]),
+      row(&[&["Bob Baker"], bob].concat()),
+    ]
+  };
+  let cut = ["affiliation=Center for Astro (CAP", "affiliation=, Univ Z"];
+  for (tex, lost, expected) in [
+    (
+      repro!("inblock_glued_repeated_label_is_entry_text_red"),
+      "3",
+      cap(&[&["affiliation=Univ Y, City"], &cut[..]].concat()),
+    ),
+    (
+      repro!("emit_content_a_glued_label_after_and_counted_red"),
+      "2 and",
+      cap(&["affiliation=Dept Y", "affiliation=Lab Q, City"]),
+    ),
+    (
+      repro!("emit_content_a_glued_label_in_a_parbox_counted_red"),
+      "3",
+      cap(&[&["affiliation=Univ Y, City"], &cut[..]].concat()),
+    ),
+    (
+      repro!("emit_content_a_glued_label_in_its_column_counted_red"),
+      "1",
+      cap(&cut),
+    ),
+  ] {
+    let (log, xml) = run(tex);
+    assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+    assert_eq!(
+      content_checks(&log),
+      (vec![lost.to_string()], vec![]),
+      "{log}"
+    );
     assert_eq!(creators(&xml), expected, "{xml}");
   }
 }

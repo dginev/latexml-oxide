@@ -40,12 +40,13 @@ use crate::base_utilities::{
     insert::NAME_PRINTED,
     observer::{
       events::{
-        self as events, EventKind, Formula, InkTable, font_declaration, inked, lex_with_inks,
-        text_font_command,
+        self as events, EventKind, Formula, InkTable, SepKind, font_declaration, inked,
+        lex_with_inks, text_font_command,
       },
       field_notes::{EnvironmentStep, FieldCreator, HeldExpansion},
       ledger::{
-        ApiCall, AuthorBlock, Unsaid, annotated_parent, content_text, field_stamped, symbol,
+        ApiCall, AuthorBlock, MarkLedEntry, Unsaid, annotated_parent, content_text, field_stamped,
+        symbol,
       },
       policy::TitleMarks,
       reading::{UNFOLD_LEVELS, unfold_held_names},
@@ -54,7 +55,7 @@ use crate::base_utilities::{
         BlockCheck, LostInk, RCreator, RuleDrop, Written, check_blocks, contact_parts,
         creator_call, creator_call_level, creator_call_pieces, is_creator_call, labelseq_pieces,
         merged_names, own_email_label, printed_email_label, read_events, shares_the_row,
-        split_pieces, split_pieces_as, uncoordinated_marks,
+        split_pieces, split_pieces_as, uncoordinated_marks, words_of,
       },
     },
     place::DEFERRED_TO_FLUSH_END,
@@ -215,6 +216,59 @@ fn with_block<R>(index: usize, default: R, f: impl FnOnce(&AuthorBlock, &[Event]
       _ => default,
     },
     _ => default,
+  })
+}
+
+/// The entry `assoc` of a block the emitter writes as the call labelled `item`, where a mark of its label leads it — the
+/// last event before its span past what prints no word (the `)` of 2204.02412's `(CAP$^3$), New York University Abu
+/// Dhabi`) — in its `\\and` column ([`MarkLedEntry`]). A cut list's marks are cut at the queue by the same reading
+/// (`calls::split_marked_pieces`), a glued one no entry's.
+fn labelled_entry(item: &str, assoc: &Assoc) -> Option<MarkLedEntry> {
+  let label = assoc.label.clone()?;
+  let (index, Some((start, end))) = assoc.source? else {
+    return None;
+  };
+  with_block(index, None, |_, events| {
+    let before = |e: &Event| e.span.is_some_and(|(_, t)| t <= start);
+    let column = events
+      .iter()
+      .filter(|e| matches!(e.kind, EventKind::Sep(SepKind::And(_) | SepKind::Column(_))))
+      .filter(|e| before(e))
+      .count();
+    let at = events.iter().rposition(|e| {
+      before(e)
+        && !(e.kind == EventKind::Name && words_of(&e.text).next().is_none())
+        && !matches!(e.kind, EventKind::Sep(SepKind::Gap { .. }))
+    })?;
+    let lead = &events[at];
+    if lead.kind != EventKind::Mark {
+      return None;
+    }
+    // (the ink it is glued to, a separator's word between at most: `calls::split_marked_pieces`'s reading)
+    let ink = |i: usize| {
+      let e: &Event = &events[i];
+      (e.kind == EventKind::Name && words_of(&e.text).next().is_some()).then_some(e.span)?
+    };
+    let mut words = Vec::new();
+    let glued = match at.checked_sub(1).map(|i| (i, &events[i].kind)) {
+      _ if lead.line_first => None,
+      Some((i, EventKind::Sep(SepKind::Word(word)))) => {
+        words.push(word.clone());
+        i.checked_sub(1).and_then(ink)
+      },
+      Some((i, _)) => ink(i),
+      None => None,
+    };
+    words.extend(words_of(&lead.text));
+    Some(MarkLedEntry {
+      item: item.to_string(),
+      list: (index, column),
+      label,
+      entry: (start, end, norm(&assoc.text)),
+      mark: lead.span,
+      glued,
+      words,
+    })
   })
 }
 
@@ -3016,7 +3070,7 @@ fn list_item_tokens(
 fn kept_breaks(piece: &[Event]) -> Vec<usize> {
   let printed = |e: &Event| match &e.kind {
     EventKind::Name => e.text.chars().any(char::is_alphanumeric),
-    EventKind::Sep(events::SepKind::Word(_)) => true,
+    EventKind::Sep(SepKind::Word(_)) => true,
     _ => false,
   };
   let mut kept = Vec::new();
@@ -3896,7 +3950,7 @@ fn printing_read_later(index: usize, resolved: &Resolved) -> bool {
       } else {
         events
           .iter()
-          .filter(|e| e.nest == 0 && matches!(e.kind, EventKind::Sep(events::SepKind::And(_))))
+          .filter(|e| e.nest == 0 && matches!(e.kind, EventKind::Sep(SepKind::And(_))))
           .filter_map(span_at)
           .map(|(s, _)| s)
           .filter(|&s| s >= to)
@@ -4490,7 +4544,7 @@ fn cut_at_separators(
   let count = pieces.len();
   let seps: Vec<&Event> = events
     .iter()
-    .filter(|e| e.nest == own && matches!(e.kind, EventKind::Sep(events::SepKind::And(_))))
+    .filter(|e| e.nest == own && matches!(e.kind, EventKind::Sep(SepKind::And(_))))
     .collect();
   // (the group each `\and` stands in, directly: the innermost brace open before it)
   let open_at = |at: usize| {
@@ -4566,7 +4620,7 @@ fn cut_at_separators(
   // (each piece's run: from its first event's position to its last's — the spaces around the `\and`, a control space after
   // a `\csname and\endcsname`, left out — or, where that run is no balanced one, everything between the two `\and`s)
   let segments: Vec<&[Event]> = events
-    .split(|e| e.nest == own && matches!(e.kind, EventKind::Sep(events::SepKind::And(_))))
+    .split(|e| e.nest == own && matches!(e.kind, EventKind::Sep(SepKind::And(_))))
     .collect();
   let runs: Option<Vec<Vec<Token>>> = spans.and_then(|spans| {
     let mut bounds = vec![inner];
@@ -4718,7 +4772,7 @@ fn labelseq_call_cut(call: &ApiCall) -> Result<Option<LabelseqCut>> {
   };
   if events
     .iter()
-    .any(|e| e.nest != 0 && matches!(e.kind, EventKind::Sep(events::SepKind::And(_))))
+    .any(|e| e.nest != 0 && matches!(e.kind, EventKind::Sep(SepKind::And(_))))
   {
     return Ok(None);
   }
@@ -5781,6 +5835,9 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       unprinted.next_if(|(at, _)| item.assoc.source.is_some_and(|(index, _)| *at <= index))
     {
       out.push(rdf_entry(at, rdf));
+    }
+    if let Some(entry) = labelled_entry(&label, item.assoc) {
+      with_ledger(|ledger| ledger.labelled.push(entry));
     }
     let tokens = item_call(
       &item.key,

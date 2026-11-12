@@ -6,9 +6,11 @@
 %   Physics (CAP$^3$), New York University Abu Dhabi\\ …}`; int125a whole, int126b and 99a split)
 % oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1, Bob Baker2,3 / 1Univ X, Town / 2Univ Y, City / 3Center for Astro
 %   (CAP3), Univ Z"
-% engines: rust int126b, 99a: Bob "Center for Astro (CAP" and ", Univ Z"; the API alone (writer off): one entry
+% engines: rust int126b, 99a: Bob "Center for Astro (CAP" and ", Univ Z"; the API alone (writer off): one entry;
+%   CT1ar: the same cut, the lost "3" counted by 1 Warning (`resolver::placed::retold_words`; 2204.02412 W 40 -> 41)
 % expect:  0 errors, 0 warnings; Bob "Univ Y, City", "Center for Astro (CAP3), Univ Z"
-% status:  RED (int126b, 99a) — deferred (SYNC row 99a: the observer's events-side cutter needs the S1 rule); no guard
+% status:  RED (int126b, 99a) — deferred (SYNC row 99a: the observer's events-side cutter needs the S1 rule); the loss
+%   counted since CT1ar (perfect_kernel_batchn2::a_glued_label_cut_as_an_entry_is_counted)
 % preload: ar5iv.sty
 \documentclass{article}
 \begin{document}

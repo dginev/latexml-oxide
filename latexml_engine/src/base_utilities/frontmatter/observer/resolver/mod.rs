@@ -295,11 +295,11 @@ use lines::*;
 pub(in crate::base_utilities::frontmatter::observer) use net::{merged_names, uncoordinated_marks};
 // (the content invariant on the placed output, under the emitter's `=2`: OD #980)
 pub(in crate::base_utilities::frontmatter::observer) use placed::{
-  Placed, PlacedItem, PlacedKind, content_check, reads_as,
+  Placed, PlacedItem, PlacedKind, content_check, reads_as, retold_words,
 };
 pub(in crate::base_utilities::frontmatter::observer) use words::{
   BlockCheck, LostInk, Written, check_blocks, entry_span_in, ink_words, norm, own_email_label,
-  printed_email_label, printed_words, reads_as_email_label,
+  printed_email_label, printed_words, reads_as_email_label, words_of,
 };
 
 /// A block's events as the resolver reads them (`Resolver::block`): an alignment environment ending the block read as
@@ -1402,10 +1402,10 @@ pub fn resolve_with(
       .runs
       .iter()
       .flat_map(|r| &r.addresses)
-      .flat_map(|a| words::words_of(a))
+      .flat_map(|a| words_of(a))
       .collect();
     for &(from, to) in &t.cuts {
-      for word in words::words_of(&t.lined[from..to]) {
+      for word in words_of(&t.lined[from..to]) {
         match addressed.iter().position(|w| *w == word) {
           Some(p) => {
             addressed.swap_remove(p);
