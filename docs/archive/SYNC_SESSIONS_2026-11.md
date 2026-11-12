@@ -2297,3 +2297,14 @@ directly; this file keeps rows only. Archived names: 65c, 64zf, 65d, 65b, 65e, 6
 from the main-stream handoff register" moved verbatim to [`perfect_kernel/OPEN_ROWS.md`](../perfect_kernel/OPEN_ROWS.md) (rule 3:
 a section past ~100 lines is its own doc). Every row there is open unless it says otherwise.
 
+
+## Bundle int162a — F0+P4d (Option C P4's foundation), the pgfmath line, EB1, RV1, QA89, DBG1+2
+
+On `pk/int162a` after the int161a push (`92ffc95a5f`); every batch reviewed and merged.
+
+- **F0 + P4d (Option C P4a/P4d):** the digested marks query (`observer/argument_marks.rs`) feeds the queue's name requests by printed text; the Cut's uncut copies give way by them (revF0 B1); `class_numbered_institutes` reads its store by meaning.
+- **DTL1e + f + g:** pgfmath's postfix `!`/`r` wait for `^` (pgf's operator stack); an expl3 box name in `\wd`; `\mydim r` keeps its space; one parse for `\pgfmathparse`/`\pgfmathsetmacro`/`\pgfmathsetlength`/`\pgfsetdash`, expanding first and binding calc's names only if one survives (KPE #1225/#1226); both units flags set globally.
+- **EB1:** one shared Error-boundary table (`error_boundary::perfect_kernel_error_boundary`, 18 rows); bibunits' `\putbib` outside every unit an Error as TeX's (KPE #1228); calc's names in pgfmath a Warning per parse (OD #1007).
+- **RV1 (QA41):** a definer reverts to the user's macro — 86,701 `\lx@inpgf@ignorespaces` gone from `tex=` on tikz/pgf papers; the `\centering` family and `\intertext` aliased (KPE #1227); an undef body reverts its arguments.
+- **QA89:** `\meaning` of a native macro prints a stable `CODE(<name>)` (OD #1005). **DBG1 + DBG2:** `--debug=NAME` enables that feature only; an undeclared feature named at the end (KPE #1224, OD #1006).
+- **Chain int162a (the one large A/B):** gates 8045/8045; A/B 28,354 → 830 changed (817 `tex=` only, RV1), E 45,788 → 45,762, F 172 → 172, Eworse 0, no word loss; CL162: 1 worse (2410.06985: a `\phantom` line in a tikz node lost — a pre-existing group-paragraph bug RV1 exposed) and 1 worse candidate (2312.00656: names lose their printed marks under flexisym, F0) → the immediate follow-ups RG1 and FMK1 (DG's pragmatic bar); stage2 creators 0; cost ≤ +0.05 %; nets 136 worse 0; sweep #177 G1-G4 0, G5 58.

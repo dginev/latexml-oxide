@@ -50,15 +50,17 @@ Rules that keep this file honest and mergeable:
 ## The task list — start here (row R, the road to the main merge)
 
 - **The task list — the single entry for the work until the merge (DG 2026-11-12: "We should have a single point of entry for work lists").** Updated at every decision and every bundle fold; status counts are read from these two tables. Weights: easy 1, medium 3, hard 5.
-- **Done since 2026-11-11:** 61 tasks (weight 165), each in its bundle's entry in `archive/SYNC_SESSIONS_2026-11.md` (EB1, QA41, ISO1, DTL1e, QA89, DBG1, DBG2, F0, P4d, done 2026-11-12, in their batch reports until their bundle's entry).
-- **Before the merge:** 3 ongoing (11), 35 to come (107), worked in Rank order — the critical path (1-12: the frontmatter's Option C, the losses, the bars), the parallel fillers (13-29), the close (30-34).
+- **Done since 2026-11-11:** 62 tasks (weight 168), each in its bundle's entry in `archive/SYNC_SESSIONS_2026-11.md` (EB1, QA41, ISO1, DTL1e, QA89, DBG1, DBG2, F0, P4d, RV1 in bundle int162a).
+- **Before the merge:** 5 ongoing (17), 34 to come (106), worked in Rank order — the critical path (1-12: the frontmatter's Option C, the losses, the bars), the parallel fillers (13-29), the close (30-34).
 - **After the merge:** 86 (224; 28 of them the old SYNC rows moved here by SYNC3) — DG's pragmatic bar (2026-11-12): regressions and high-frequency / high-impact gaps before the merge; newly found edge cases after it, unless one invalidates the approach.
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: their PRE work in the table (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA27's input → CSS, QA75, QA80 with QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45, QA84, QA92 with QA02's awaited rest), the POST / LATER / HZN rows and those DG moved post-merge in the list below (QA60 site 8 as SR4/SR5); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker (`~/data/pk_agents/main/bruce_qa/ACTIONS.md`), each deferred finding's `_red.tex` (`moves:` names its row).
 
   | Rank | Id | Task | Step | Weight | Status |
   |---|---|---|---|---|---|
-  | 1 | P4c | P4c: the one affiliation cut incl. the API's Cut, declared per binding (DG 2026-11-12 "Declared cut"; round 2, P4c2) — marks shown; ISO1's isotope rule merged | 3 | 5 | ongoing |
+  | 1 | P4c | P4c: the one affiliation cut incl. the API's Cut, declared per binding (DG 2026-11-12 "Declared cut"; round 2, P4c2) — marks shown; ISO1's isotope rule merged | 3 | 5 | ongoing (round 3, P4c3) |
+  | 1 | RG1 | RG1 — regression in int162a (RV1 exposed it; 2410.06985): a paragraph inside a group opened mid-paragraph is kept, as Perl's open-brace box keeps it (a `\phantom` line in a tikz node) | 2 | 3 | ongoing |
+  | 1 | FMK1 | FMK1 — regression in int162a (F0; 2312.00656): names keep their printed marks under `flexisym`, or the loss is counted | 3 | 3 | ongoing |
   | 2 | P4b | P4b: marker_leads/leads_with_mark at ~20 sites | 3 | 5 | todo |
   | 3 | P5 | Option C P5: new facts (IEEEmembership grade, "on behalf of", surname match) | 3 | 5 | todo |
   | 4 | P6 | Option C P6 + the frontmatter code/test compaction | 3 | 5 | todo |
@@ -70,9 +72,8 @@ Rules that keep this file honest and mergeable:
   | 10 | CT1a-r | CT1a count design (DG ruling pending) | 2 | 1 | todo |
   | 11 | TRUTH | Bars: the truth set | 4 | 5 | todo |
   | 12 | HOLD4 | Bars: fresh holdout v4 read once; 98/98 | 4 | 3 | todo |
-  | 13 | RV1 | RV1 (QA41's fix; the audit done): reversions as Perl/user — inpgf ignorespaces (~66k), centering alias, intertext | 5b | 3 | in review (5c168ceac3: 86,701 internal names gone from tex=, 0 other change) |
-  | 14 | QA47A | Hooks fix A (QA47, from QA46's study): run the kernel's begindocument lists; a Warning for bindings | 5b | 3 | ongoing |
-  | 15 | PGR1 | PGR1 (from EB1): pgfmath grammar gaps (0bp read as a binary prefix ~9% of tikz papers; \dimexpr; -4 .5) then the pgfparse Error | 5 | 3 | todo |
+  | 14 | QA47A | Hooks fix A (QA47, from QA46's study): run the kernel's begindocument lists; a Warning for bindings | 5b | 3 | ongoing (fix round QA47Ab) |
+  | 15 | PGR1 | PGR1 (from EB1): pgfmath grammar gaps (0bp read as a binary prefix ~9% of tikz papers; \dimexpr; -4 .5) then the pgfparse Error | 5 | 3 | ongoing (reviewed SHIP; next bundle) |
   | 16 | DTL1d | DTL1: out-of-range numbers → Error (OD #519 revised) | 5 | 3 | todo |
   | 17 | GA1 | GA1 + the \@listctr fix (thebibliography's enumiv) | 5 | 3 | todo |
   | 18 | GA2 | GA2 | 5 | 3 | todo |
@@ -175,6 +176,10 @@ Rules that keep this file honest and mergeable:
   - GTXT — GeneralText/XGeneralText arguments revert without braces (`\mark{x}` → `\mark xb`; Perl `\mark{x}`; RED `reversion/mark_general_text_reverts_without_braces_red`); 1
   - SHIT — `\shortintertext` reverts as `\intertext` (mathtools `\let`; the macro-face design); 1
   - PSFR — psfrag replacements rendered into the figure (after PSF1's Warning); 5
+  - PGRE — pgfmath's parse-failure Error (EB1, held by PGR1): fires on 3 pdflatex-clean papers by three mechanisms (1612.06541 tikz-cd anchors under its shipped pgf 3.0.0; 2006.16998 `\d` in `\pgfextra`; 2208.01735 collectcell + `\IfDecimal`); leftover text dropped silently until then; 3
+  - PGU — pgfmath unit conversion in scaled points (`2bp` 2.0075 vs 2.00749), pdfTeX's `px`/`nd`/`nc` and `mu` units (RED `pgfmath_units_as_tex_reads_them_red`); `08+1` octal (RED `pgfmath_octal_bad_digit_red`); 3
+  - PGCNT — a count register then a dimension (`2\myc\mydim`: pdflatex 15.0) (revPGR1); 1
+  - EBN — EB1's nits: the calc Warning's wording when calc is not loaded; the ifpdf Error row's message; the DTL1 row's whole `<para>`; one jing process per row; 1
   - MENC — `<m:menclose>` still emitted for `\cancel`/`\boxed` (MathML Core removed it; no mechanical replacement: a rendering + golden change on its own branch; deferred by DG 2026-07-30); 3
   - CI — CI under 30 minutes on `main` (workflow edits, a PR tier); its localhost study feeds CIPERF; 3
   - F1 — Per-encoding text commands, the residual; 3
@@ -201,7 +206,7 @@ Rules that keep this file honest and mergeable:
 - (5) **Non-frontmatter:** the generalization audit (GA1-GA5) before the merge; FMPERF at the end of the frontmatter work (the rehearsal, the title-page runs, the separator query, the emitter; `instructions:u` against the 2026-10-31 audit's 18 documents; one lever per batch, byte-identical); PERF; T1; ROW0A; CLEAN (keep-list to DG).
 - (5b) **The BM Q&A work** (DG 2026-11-11: "I approve your plan, let us proceed with full speed ahead"; BM's answers of 2026-11-05): done in int161a — QA45 (ML1, OD #180), QA54 fix (b) (PI1, KPE #1222), QA30 (BU1, KPE #1223), QA10 (DTL1a+b, OD #1004, KPE #1221); 2026-11-12 — QA41's audit, QA89 (OD #1005); QA60 site 8 (SR1) parked after DG's "author's group" ruling (SR4/SR5 after the merge).
 - (6) **The close:** DOCS; SWEEP (row 0's G1-G5 on the final head); CORTEX (G6, the fleet rebuild needs DG's OK); CIPERF, the last step before the merge (DG 2026-11-11: "once we merge we will start working on public issues and PRs, and start running CI instantly"; releases run the whole suite on Linux, macOS and Windows within each runner's timeout: dump formats built once per run, shard balance, the long-pole tests, table-driven guards; study `agent_reports/2026-11-11_TC0_report.md`); MPR (DG confirms).
-- **Pushed bundles:** int154a → int161a, each chain's figures in its "Bundle <label>" entry of [`archive/SYNC_SESSIONS_2026-11.md`](archive/SYNC_SESSIONS_2026-11.md); the last, int161a: gates 8041/8041, A/B 28,354 → 86 changed (0 worse), E 45,813 → 45,788, F 172 → 172.
+- **Pushed bundles:** int154a → int162a, each chain's figures in its "Bundle <label>" entry of [`archive/SYNC_SESSIONS_2026-11.md`](archive/SYNC_SESSIONS_2026-11.md); the last, int161a: gates 8041/8041, A/B 28,354 → 86 changed (0 worse), E 45,813 → 45,788, F 172 → 172.
 
 ### Detail for the live pre-merge rows
 
