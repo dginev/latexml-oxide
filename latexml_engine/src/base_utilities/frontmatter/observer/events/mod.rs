@@ -2246,18 +2246,32 @@ pub(in crate::base_utilities) fn inked(event: &Event) -> bool {
   )
 }
 
-/// The labels the names of `events` request, bare (`2`, `a`): the marks set on its own names (one after a name that opens no
-/// word), or else the queued authors' (`requested_labels`); none when no name requests one (revISO1 B1, S1).
+/// The labels the names of `events` request, bare (`2`, `a`): the marks set after a word on a line no mark leads (a name
+/// line: `Able$^{1}$ Bob` requests 1), but one glued on both sides inside a word (`NLP$^2$CT`), or else the queued
+/// authors' (`requested_labels`); none when no name requests one (revISO1 B1, S1; revISO1b B1).
 pub(in crate::base_utilities) fn names_requested(events: &[Event]) -> Vec<String> {
   let ink: Vec<&Event> = events
     .iter()
     .filter(|e| e.kind != EventKind::Layout)
     .collect();
+  // (whether each event's line is led by a mark, as `lexer::glue_in_word_marks` reads it: `$^{2}$Univ Y, Lab $10^{3}$`)
+  let mut led: Option<bool> = None;
+  let mark_led: Vec<bool> = ink
+    .iter()
+    .map(|e| {
+      match e.kind {
+        EventKind::Break | EventKind::Sep(SepKind::And(_) | SepKind::Column(_)) => led = None,
+        _ => led = led.or(Some(e.kind == EventKind::Mark)),
+      }
+      led == Some(true)
+    })
+    .collect();
   let own: Vec<String> = (1..ink.len())
     .filter(|&at| {
       ink[at].kind == EventKind::Mark
         && ink[at - 1].kind == EventKind::Name
-        && ink.get(at + 1).is_none_or(|e| e.kind != EventKind::Name)
+        && !mark_led[at]
+        && !lexer::glued_inside_a_word(ink[at - 1], ink[at], ink.get(at + 1).copied())
     })
     .flat_map(|at| resolver::mark_labels(ink[at].label.as_deref().unwrap_or("")))
     .collect();

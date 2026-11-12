@@ -592,6 +592,15 @@ fn is_symbol_run(label: &str) -> bool {
   !label.is_empty() && label.chars().all(|c| is_fnsymbol(c) || is_mark_glyph(c))
 }
 
+/// Whether a mark stands between two names with no space printed or written on either side (`NLP$^2$CT`): the in-word
+/// test's frame, which a mark after a name and a space (`Able$^{1}$ Bob`) fails.
+pub(super) fn glued_inside_a_word(before: &Event, mark: &Event, after: Option<&Event>) -> bool {
+  !mark.space_before
+    && !mark.space_after
+    && after.is_some_and(|e| e.kind == EventKind::Name)
+    && glued_in_source(Some(before), mark, after)
+}
+
 /// Whether a digit mark stands in the source between the names around it with nothing but its own math shifts (or
 /// none) between them, as `rewrite_in_word_superscripts` reads a superscript inside a word: `NLP$^2$CT`, `I$^2$R` —
 /// not `Russia\break $^2$Nuclear` (hep-ph9809222's revtex `\address`, a line break before the next entry's mark,

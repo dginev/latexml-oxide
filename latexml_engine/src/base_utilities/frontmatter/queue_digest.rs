@@ -956,7 +956,7 @@ pub fn author_creator_total() -> usize {
 pub fn queued_authors_requesting(operand: &[Token]) -> Vec<usize> { queued_requesters(operand) }
 
 /// Whether an author creator of the flush being digested printed a mark requesting the affiliation label `key`: the
-/// labels the marks of the authors the flush took from the queue request (`lx_frontmatter_requested_marks`, `place.rs`
+/// labels the marks of the authors the flush took from the queue request (`flush_requested_marks`, `place.rs`
 /// `digest_front_matter`) — what [`queued_authors_requesting`] reads before the flush takes the queue. A class's
 /// in-place `\affil[1]{Univ A}` inside `\author{ANN ABLE\textsuperscript{1} and BOB BAKER\textsuperscript{2} …}` runs
 /// while its authors digest, the queue already taken (review rev94a r6 a19, on 94b r3's
@@ -966,9 +966,28 @@ pub fn digested_authors_requesting(key: &str) -> bool {
   let labels = clean_frontmatter_labels(key, "affiliation");
   !labels.is_empty()
     && lookup_bool("lx_frontmatter_flushing")
-    && lookup_string("lx_frontmatter_requested_marks")
-      .split('\u{1}')
-      .any(|requested| labels.iter().any(|l| l == requested))
+    && flush_requested_marks()
+      .iter()
+      .any(|requested| labels.contains(requested))
+}
+
+/// The affiliation labels the marks of the authors the flush being digested took request, as `place.rs`
+/// `digest_front_matter` records them ([`set_flush_requested_marks`]).
+pub(in crate::base_utilities) fn flush_requested_marks() -> Vec<String> {
+  lookup_string("lx_frontmatter_requested_marks")
+    .split('\u{1}')
+    .filter(|label| !label.is_empty())
+    .map(String::from)
+    .collect()
+}
+
+/// Records the labels [`flush_requested_marks`] reads, local to the flush's group.
+pub(in crate::base_utilities) fn set_flush_requested_marks(labels: &[String]) {
+  assign_value(
+    "lx_frontmatter_requested_marks",
+    Stored::String(pin(labels.join("\u{1}"))),
+    Some(Scope::Local),
+  );
 }
 
 /// Whether an author creator already digested — a `\maketitle` placed it — requests the affiliation label `key`: the

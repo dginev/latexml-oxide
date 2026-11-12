@@ -478,11 +478,7 @@ pub fn digest_front_matter() -> Result<()> {
     .flat_map(|entry| author_mark_operands(entry.2.unlist_ref()))
     .flat_map(|operand| clean_frontmatter_labels(&Tokens::new(operand).to_string(), "affiliation"))
     .collect();
-  assign_value(
-    "lx_frontmatter_requested_marks",
-    Stored::String(pin(requested.join("\u{1}"))),
-    Some(Scope::Local),
-  );
+  set_flush_requested_marks(&requested);
   // (the one added step, under its switch: the queue's creators and annotations written from the reading, OD #980)
   // (a contact the class prints under the whole row of names, every author's, OXIDIZED_DESIGN_DIVERGENCES #901, is the
   // reading's: the emitter writes a flush holding one with or without an author block, `stays_out`; under a block no

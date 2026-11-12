@@ -1,0 +1,18 @@
+% mechanism: REVTeX's queue-time cut of an `\affiliation` at its marks parts the line at a spaced `\textsuperscript{3}He`
+%   no author requests (Bob shows 2): "3 He Lab" a nameless creator's, uncounted
+% witness: synthetic (revISO1b P2, probe s2)
+% oracle:  pdflatex (TL 2025 revtex4-1) 0 errors: "1Univ X / 2Univ Y 3He Lab"
+% engines: rust int160c = ISO1b = ISO1c = 0 errors, 0 warnings: Baker "²Univ Y", a nameless creator "³He Lab"
+% expect:  0 errors, 0 warnings; Able "Univ X"; Baker "²Univ Y ³He Lab" (no author shows 3)
+% status:  RED (int160c, ISO1b, ISO1c)
+% moves:   P4c (the REVTeX pre-splitter onto the reading) makes it a row of
+%   perfect_kernel_batch90a::a_script_before_printed_ink_or_on_a_base_is_text
+% preload: ar5iv.sty
+\documentclass{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able\textsuperscript{1} and Bob Baker\textsuperscript{2}}
+\affiliation{\textsuperscript{1}Univ X\\ \textsuperscript{2}Univ Y \textsuperscript{3}He Lab}
+\maketitle
+Text.
+\end{document}

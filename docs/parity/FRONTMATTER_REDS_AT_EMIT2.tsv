@@ -374,7 +374,7 @@ perfect_kernel_batch88b::ijcai_grouped_email_list_placed_by_spelling	=2 a false 
 perfect_kernel_batch88b::ijcai_email_section_lines_part_the_addresses	=2 copies the corresponding note to every author, Bob's email and the affiliation to a nameless creator	deleted
 perfect_kernel_batch90a::a_formula_mark_on_a_name_answers_its_affiliation	old engine only: the writer outcome "same"	deleted
 perfect_kernel_batch90a::a_script_inside_a_two_dimensional_layout_ends_no_line	old engine only: the writer outcome "same"	deleted
-perfect_kernel_batch90a::a_script_before_printed_ink_or_on_a_base_is_text	old engine only: the writer outcome	kept; HG1: test deleted, repro revtex_affiliation_isotope_prescript_keeps_its_line_red; ISO1: GREEN again, the test a table of eight rows (repro revtex_affiliation_isotope_prescript_keeps_its_line); ISO1b: 15 rows (a script a name requests is a label)
+perfect_kernel_batch90a::a_script_before_printed_ink_or_on_a_base_is_text	old engine only: the writer outcome	kept; HG1: test deleted, repro revtex_affiliation_isotope_prescript_keeps_its_line_red; ISO1: GREEN again, the test a table of eight rows (repro revtex_affiliation_isotope_prescript_keeps_its_line); ISO1b: 15 rows (a script a name requests is a label); ISO1c: 20 rows (a spaced name's mark is its request)
 perfect_kernel_batch90a::a_formula_printing_only_floating_scripts_is_a_mark	old engine only: the writer outcome "same"	deleted
 perfect_kernel_batch91a::just_marked_address_after_maketitle_affiliates_every_name	=2 keeps the marks as text in the names ("Ann Able 1,2")	deleted
 perfect_kernel_batch91a::cpc_hepnp_is_not_routed_until_91c	=2 a content-check Warning: ann@x.org missing from the placed frontmatter	deleted

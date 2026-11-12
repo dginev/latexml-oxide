@@ -94,6 +94,8 @@ fn a_script_before_printed_ink_or_on_a_base_is_text() {
         r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><Math mode="inline" tex="{\rm{}^{2}Lab}" text="^ 2 Lab"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok role="UNKNOWN">Lab</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math> of Chemistry, Univ Y</contact></creator>"#,
       ]),
     },
+    // (Baker's leading space is the gap printed after `$^{b}$ `, kept by the cut: every word kept, the space open,
+    // revISO1b N1)
     Row {
       repro:    repro!("revtex_affiliation_glued_and_spaced_marks_part_the_line"),
       files:    &[],
@@ -162,6 +164,64 @@ fn a_script_before_printed_ink_or_on_a_base_is_text() {
       creators: Creators::Whole(&[
         r#"<creator role="author"><personname>Ann Able<sup><text font="italic">1</text></sup></personname><contact name="Affiliation: " role="affiliation"><Math mode="inline" tex="{\rm{}^{1}Dept}" text="^ 1 Dept"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok role="UNKNOWN">Dept</XMTok><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math> of Physics, Univ X</contact></creator>"#,
         r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><Math mode="inline" tex="{\rm{}^{2}Lab}" text="^ 2 Lab"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok role="UNKNOWN">Lab</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math> of Chemistry, Univ Y</contact></creator>"#,
+      ]),
+    },
+    // (a mark after a name and a space is its request, `Able$^{1}$ Bob`: revISO1b B1, red on ISO1b — both authors the
+    // whole line, 1 W)
+    Row {
+      repro:    repro!("kernel_author_line_spaced_names_request_in_formula_marks"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation"><Math mode="inline" tex="{\rm{}^{1}Dept}" text="^ 1 Dept"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok role="UNKNOWN">Dept</XMTok><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math> of Physics, Univ X</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation"><Math mode="inline" tex="{\rm{}^{2}Lab}" text="^ 2 Lab"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok role="UNKNOWN">Lab</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math> of Chemistry, Univ Y</contact></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("kernel_author_line_spaced_names_request_reversed_in_formula_marks"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation"><Math mode="inline" tex="{\rm{}^{1}Dept}" text="^ 1 Dept"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok role="UNKNOWN">Dept</XMTok><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math> of Physics, Univ X</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation"><Math mode="inline" tex="{\rm{}^{2}Lab}" text="^ 2 Lab"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok role="UNKNOWN">Lab</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math> of Chemistry, Univ Y</contact></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("kernel_author_line_spaced_names_request_plain_then_in_formula_mark"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation"><Math mode="inline" tex="{\rm{}^{1}Dept}" text="^ 1 Dept"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok role="UNKNOWN">Dept</XMTok><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math> of Physics, Univ X</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation">Lab of Chemistry, Univ Y</contact></creator>"#,
+      ]),
+    },
+    // (no name requests a mark: the line-opening fallback reads the mid-line `${\rm ^2Lab}$` as text, one contact as
+    // pdflatex prints one line, same owner, no word lost; int160c parted it in two — revISO1b S1)
+    Row {
+      repro:    repro!("revtex_affiliation_unrequested_in_formula_marks_keep_one_contact"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation"><Math mode="inline" tex="{\rm{}^{1}Dept}" text="^ 1 Dept"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok role="UNKNOWN">Dept</XMTok><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math> of Physics, Univ X, <Math mode="inline" tex="{\rm{}^{2}Lab}" text="^ 2 Lab"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok role="UNKNOWN">Lab</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math> of Chemistry, Univ Y</contact></creator>"#,
+      ]),
+    },
+    // (a mark inside a word, `NLP$^{3}$CT`, requests nothing: the unrequested `${\rm ^{3}He}$` stays Ann's text, int160c
+    // a nameless creator's; the two Warnings are the content check's false "NLP3CT"/"NLPCT", pinned RED)
+    Row {
+      repro:    repro!("kernel_author_line_in_word_mark_requests_nothing"),
+      files:    &[],
+      counts:   (0, 2),
+      lines:    &[
+        "missing from the placed frontmatter: NLP3CT.",
+        "more often than the author blocks print them: NLPCT.",
+      ],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">NLP<sup><text font="italic">3</text></sup>CT Lab, <Math mode="inline" tex="{\rm{}^{3}He}" text="^ 3 He"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok role="UNKNOWN">He</XMTok><XMTok fontsize="70%" meaning="3" role="NUMBER">3</XMTok></XMApp></XMath></Math> Center</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation">Univ Y</contact></creator>"#,
       ]),
     },
     // (pinned RED: the cut inside `$5^{2}$` writes the formula on both sides, its duplicated "5" counted)

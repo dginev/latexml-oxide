@@ -1,0 +1,17 @@
+% mechanism: llncs's `\thanks` whose text opens with a mark its author requests (`Ann Able$^{1}$\thanks{$^{1}$ Supported
+%   by X.}`) is read as a labelled affiliation, not the author's note
+% witness: synthetic (revISO1b P3, probe t5)
+% oracle:  pdflatex (TL 2025 llncs) 0 errors: a footnote "⋆ 1 Supported by X." under Ann Able's star; "1 Univ X", "2 Univ Y"
+% engines: rust int160c = ISO1b = ISO1c = 0 errors, 0 warnings: Able affiliations " Supported by X." and "Univ X", no note
+% expect:  0 errors, 0 warnings; Able a thanks note "¹ Supported by X." and the affiliation "Univ X"; Baker "Univ Y"
+% status:  RED (int160c, ISO1b, ISO1c)
+% moves:   the llncs/thanks batch (the main session names it) makes it a row of its guard
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$\thanks{$^{1}$ Supported by X.} \and Bob Baker$^{2}$}
+\institute{Univ X \and Univ Y}
+\maketitle
+Text.
+\end{document}

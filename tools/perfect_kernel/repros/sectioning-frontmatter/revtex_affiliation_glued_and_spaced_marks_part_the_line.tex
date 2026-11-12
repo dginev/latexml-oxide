@@ -2,9 +2,11 @@
 %   (`$^{b}$ Univ Y`): the line parts at each
 % witness: synthetic (the safe side of revtex_affiliation_isotope_prescript_keeps_its_line)
 % oracle:  pdflatex (TL 2025 revtex4-1) 0 errors: "aUniv X, b Univ Y"
-% engines: rust int160c = ISO1: Able "Univ X", Baker "Univ Y"
-% expect:  0 errors, 0 warnings; Able "Univ X"; Baker "Univ Y"
-% status:  GREEN (int160c, ISO1) — perfect_kernel_batch90a::a_script_before_printed_ink_or_on_a_base_is_text
+% engines: rust int160c = ISO1 = ISO1c: Able "Univ X", Baker " Univ Y" (the space printed after `$^{b}$` opens the entry)
+% expect:  0 errors, 0 warnings; Able "Univ X"; Baker "Univ Y" (every word kept; the leading space is open: the cut keeps
+%   the gap after a spaced mark, revISO1b N1)
+% status:  GREEN on the parting (int160c, ISO1, ISO1c), the leading space pinned — perfect_kernel_batch90a::
+%   a_script_before_printed_ink_or_on_a_base_is_text
 % preload: ar5iv.sty
 \documentclass{revtex4-1}
 \begin{document}
