@@ -1,18 +1,23 @@
 % witness: synthetic (the sibling of tabu_centering_ends_the_row.tex)
-% oracle:  pdflatex 0 errors: x | - a / b; y | 1. c / d; z | • e / f; u | a box with v / w
+% oracle:  pdflatex 0 errors: x | - a / b; y | 1. c / d; z | • e / f; u | a box with v / w; m | -- g / h (an
+%          environment calling `\list` itself); q | a quote i / j (`{quote}` is a `\list`)
 % engines: rust TABU2base = 9 Errors (2 Error:unexpected:& and the mode cascade: the `\\` in the enumerate ended the
 %          row); Perl 0.8.8 has no tabu binding (`{tabu}` undefined)
 % expect:  tabu.sty:2389-2391 `\tabu@trivlist` (`\tabu@init` :705) lets `\\` back to `\@normalcr` in every list, so a
-%          `\\` in a list in a centred cell breaks the line; a `\parbox` restores it itself (latex.ltx `\@parboxrestore`)
-% status:  RED (TABU2base) -> GREEN (TABU2)
+%          `\\` in a list in a centred cell breaks the line; a `\parbox` restores it itself (latex.ltx `\@parboxrestore`).
+%          Every list runs it, as every LaTeX list runs `\@trivlist` (the m row: TABU2's per-environment hooks missed it)
+% status:  RED (TABU2base; TABU2 too, from the m row: 9 Errors, an empty document) -> GREEN (TABU2b)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{tabu}
+\newenvironment{myl}{\list{--}{}}{\endlist}
 \begin{document}
 \begin{tabu}{l>{\centering}p{4cm}}
 x & \begin{list}{-}{}\item a\\b\end{list} \\
 y & \begin{enumerate}\item c\\d\end{enumerate} \\
 z & \begin{itemize}\item e\\f\end{itemize} \\
 u & \parbox{2cm}{v\\w} \\
+m & \begin{myl}\item g\\h\end{myl} \\
+q & \begin{quote}i\\j\end{quote} \\
 \end{tabu}
 \end{document}

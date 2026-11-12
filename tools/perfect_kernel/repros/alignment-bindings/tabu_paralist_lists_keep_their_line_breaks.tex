@@ -1,0 +1,18 @@
+% witness: synthetic (revTABU2 B1, its q2)
+% oracle:  pdflatex 0 errors: x | • a / b; y | 1. c / d; z | w (paralist's compact lists are `\list`s, so tabu's
+%          `\@trivlist` addition lets their `\\` break the line)
+% engines: rust TABU2base = 9 Errors; TABU2 = 8 Errors and an empty document (its hooks named the kernel environments
+%          only); Perl 0.8.8 has no tabu binding (`{tabu}` undefined)
+% expect:  tabu.sty:2389-2391 `\tabu@trivlist` through the kernel's `\lx@trivlist@hook`: a line break in each item
+% status:  RED (TABU2base, TABU2) -> GREEN (TABU2b)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{paralist}
+\usepackage{tabu}
+\begin{document}
+\begin{tabu}{l>{\centering}p{4cm}}
+x & \begin{compactitem}\item a\\b\end{compactitem} \\
+y & \begin{compactenum}\item c\\d\end{compactenum} \\
+z & w \\
+\end{tabu}
+\end{document}

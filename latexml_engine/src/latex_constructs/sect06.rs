@@ -296,15 +296,16 @@ pub(crate) fn load() -> Result<()> {
   Let!("\\@block@cr", "\\lx@newline");
   // Perl `<ltx:quote>#body</ltx:quote>` (and `role='verse'`), its end acting on the quote it opened
   // (`quote_environment`).
+  // Each is a `\list` in latex.ltx, so it runs `\@trivlist`'s additions (`\lx@trivlist@hook`, below).
   DefEnvironment!("{quote}", sub[document, _args, props] {
     quote_environment(document, props, None)
-  }, mode => "internal_vertical");
+  }, before_digest => { run_trivlist_hook()?; }, mode => "internal_vertical");
   DefEnvironment!("{quotation}", sub[document, _args, props] {
     quote_environment(document, props, None)
-  }, mode => "internal_vertical");
+  }, before_digest => { run_trivlist_hook()?; }, mode => "internal_vertical");
   DefEnvironment!("{verse}", sub[document, _args, props] {
     quote_environment(document, props, Some("verse"))
-  }, mode => "internal_vertical");
+  }, before_digest => { run_trivlist_hook()?; }, mode => "internal_vertical");
 
   //======================================================================
   // C.6.2 List-Making environments
@@ -912,6 +913,8 @@ pub(crate) fn load() -> Result<()> {
   // Guard: `perfect_kernel_batch69b::class_redefining_trivlist_keeps_the_list`.
   // An item without `[…]` prints `\@itemlabel`, read at each `\item` (latex.ltx:15966; memoir.cls:4580; OD #180;
   // tests/structure/itemize.tex, fonts/ding.tex). Guard `perfect_kernel_batch56::list_labels_come_from_itemlabel`.
+  // What a package adds to `\@trivlist` it adds here (tabu.sty:2390 `\tabu@trivlist`); `begin_itemize` runs it.
+  DefMacro!("\\lx@trivlist@hook", "");
   DefMacro!(
     "\\@trivlist",
     r"\lx@trivlist@setup\lx@list\expandafter\def\csname fnum@\@listctr\endcsname{\@itemlabel}",

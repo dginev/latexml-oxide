@@ -2809,7 +2809,8 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   ("latexml_core/src/alignment/cell.rs", 1),
   ("latexml_core/src/alignment/normalize.rs", 1),
   ("latexml_core/src/binding/content.rs", 45),
-  ("latexml_core/src/binding/counter/dialect.rs", 31),
+  // TABU2b +1: `run_trivlist_hook` names the kernel's own `\lx@trivlist@hook` to read its meaning (empty: skipped).
+  ("latexml_core/src/binding/counter/dialect.rs", 32),
   ("latexml_core/src/binding/def/dialect.rs", 41),
   ("latexml_core/src/binding/def/replacement.rs", 3),
   ("latexml_core/src/binding/virtual_files.rs", 1),

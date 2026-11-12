@@ -2659,8 +2659,8 @@ d & e \\
   assert_eq!(xml.matches("<td").count(), 5, "{xml}");
 }
 
-/// tabu.sty's `\tabu@init` (:705-708, `\centering`/`\raggedright`/`\raggedleft` end with `\arraybackslash`, lists keep
-/// `\\` a line break), its private `|[<style>]` (:907-911) and `{tabu*}`/`{longtabu*}` (:624/:634), each repro of
+/// tabu.sty's `\tabu@init` (:705-708, `\centering`/`\raggedright`/`\raggedleft` end with `\arraybackslash`; every list,
+/// the kernel's, a package's or one calling `\list`, keeps `\\` a line break), its private `|[<style>]` (:907-911) and `{tabu*}`/`{longtabu*}` (:624/:634), each repro of
 /// `repros/alignment-bindings/` whole (ids masked); the error side keeps array's `>{\centering}p` Error (pdflatex 1).
 /// Witnesses 2210.07016, 2403.07615, 2112.12027, 1907.07986, 1909.02301, 1810.00307, 2112.10477, 2002.01722, 2006.01316,
 /// 1705.07086.
@@ -2676,7 +2676,7 @@ fn tabu_init_lets_rule_styles_and_starred_environments() {
     };
   }
   let ids = regex::Regex::new(r#" xml:id="[^"]*""#).unwrap();
-  let rows: [(&str, &str, usize, usize, &str); 6] = [
+  let rows: [(&str, &str, usize, usize, &str); 9] = [
     (
       "centering",
       repro!("tabu_centering_ends_the_row"),
@@ -2689,7 +2689,28 @@ fn tabu_init_lets_rule_styles_and_starred_environments() {
       repro!("tabu_lists_keep_their_line_breaks"),
       0,
       1,
-      r##"<document xmlns="http://dlmf.nist.gov/LaTeXML"><resource src="LaTeXML.css" type="text/css"/><resource src="ltx-article.css" type="text/css"/><para><tabular class="ltx_guessed_headers" vattach="middle"><tbody><tr><td align="left" thead="row">x</td><td align="left" vattach="top"><inline-block vattach="top" width="113.8pt"><itemize class="ltx_centering"><item><tags><tag>-</tag><tag role="typerefnum">1st item</tag></tags><para><p>a<break/>b</p></para></item></itemize></inline-block></td></tr><tr><td align="left" thead="row">y</td><td align="left" vattach="top"><inline-block vattach="top" width="113.8pt"><enumerate class="ltx_centering"><item><tags><tag>1.</tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para><p>c<break/>d</p></para></item></enumerate></inline-block></td></tr><tr><td align="left" thead="row">z</td><td align="left" vattach="top"><inline-block vattach="top" width="113.8pt"><itemize class="ltx_centering"><item><tags><tag>•</tag><tag role="typerefnum">1st item</tag></tags><para><p>e<break/>f</p></para></item></itemize></inline-block></td></tr><tr><td align="left" thead="row">u</td><td align="left" vattach="top"><inline-block width="113.8pt"><p align="center"><inline-block class="ltx_parbox" vattach="middle" width="56.9pt"><p>v</p><p>w</p></inline-block></p></inline-block></td></tr></tbody></tabular></para></document>"##,
+      r##"<document xmlns="http://dlmf.nist.gov/LaTeXML"><resource src="LaTeXML.css" type="text/css"/><resource src="ltx-article.css" type="text/css"/><para><tabular class="ltx_guessed_headers" vattach="middle"><tbody><tr><td align="left" thead="row">x</td><td align="left" vattach="top"><inline-block vattach="top" width="113.8pt"><itemize class="ltx_centering"><item><tags><tag>-</tag><tag role="typerefnum">1st item</tag></tags><para><p>a<break/>b</p></para></item></itemize></inline-block></td></tr><tr><td align="left" thead="row">y</td><td align="left" vattach="top"><inline-block vattach="top" width="113.8pt"><enumerate class="ltx_centering"><item><tags><tag>1.</tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para><p>c<break/>d</p></para></item></enumerate></inline-block></td></tr><tr><td align="left" thead="row">z</td><td align="left" vattach="top"><inline-block vattach="top" width="113.8pt"><itemize class="ltx_centering"><item><tags><tag>•</tag><tag role="typerefnum">1st item</tag></tags><para><p>e<break/>f</p></para></item></itemize></inline-block></td></tr><tr><td align="left" thead="row">u</td><td align="left" vattach="top"><inline-block width="113.8pt"><p align="center"><inline-block class="ltx_parbox" vattach="middle" width="56.9pt"><p>v</p><p>w</p></inline-block></p></inline-block></td></tr><tr><td align="left" thead="row">m</td><td align="left" vattach="top"><inline-block vattach="top" width="113.8pt"><itemize class="ltx_centering"><item><tags><tag>–</tag><tag role="typerefnum">1st item</tag></tags><para><p>g<break/>h</p></para></item></itemize></inline-block></td></tr><tr><td align="left" thead="row">q</td><td align="left" vattach="top"><inline-block vattach="top" width="113.8pt"><quote class="ltx_centering"><p>i<break/>j</p></quote></inline-block></td></tr></tbody></tabular></para></document>"##,
+    ),
+    (
+      "paralist lists",
+      repro!("tabu_paralist_lists_keep_their_line_breaks"),
+      0,
+      1,
+      r##"<document xmlns="http://dlmf.nist.gov/LaTeXML"><resource src="LaTeXML.css" type="text/css"/><resource src="ltx-article.css" type="text/css"/><para><tabular class="ltx_guessed_headers" vattach="middle"><tbody><tr><td align="left" thead="row">x</td><td align="left" vattach="top"><inline-block vattach="top" width="113.8pt"><itemize class="ltx_centering"><item><tags><tag>•</tag><tag role="typerefnum">1st item</tag></tags><para><p>a<break/>b</p></para></item></itemize></inline-block></td></tr><tr><td align="left" thead="row">y</td><td align="left" vattach="top"><inline-block vattach="top" width="113.8pt"><enumerate class="ltx_centering"><item><tags><tag>1.</tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para><p>c<break/>d</p></para></item></enumerate></inline-block></td></tr><tr><td align="left" thead="row">z</td><td align="left" vattach="top"><inline-block vattach="top" width="113.8pt"><p align="center">w</p></inline-block></td></tr></tbody></tabular></para></document>"##,
+    ),
+    (
+      "enumitem lists",
+      repro!("tabu_enumitem_lists_keep_their_line_breaks"),
+      0,
+      1,
+      r##"<document xmlns="http://dlmf.nist.gov/LaTeXML"><resource src="LaTeXML.css" type="text/css"/><resource src="ltx-article.css" type="text/css"/><para><tabular class="ltx_guessed_headers" vattach="middle"><tbody><tr><td align="left" thead="row">x</td><td align="left" vattach="top"><inline-block vattach="top" width="113.8pt"><enumerate class="ltx_centering"><item><tags><tag>1.</tag><tag role="refnum">1.</tag></tags><para><p>a<break/>b</p></para></item></enumerate></inline-block></td></tr><tr><td align="left" thead="row">y</td><td align="left" vattach="top"><inline-block vattach="top" width="113.8pt"><itemize class="ltx_centering"><item><tags><tag>*</tag><tag role="refnum">*</tag></tags><para><p>c<break/>d</p></para></item></itemize></inline-block></td></tr><tr><td align="left" thead="row">z</td><td align="left" vattach="top"><inline-block vattach="top" width="113.8pt"><p align="center">w</p></inline-block></td></tr></tbody></tabular></para></document>"##,
+    ),
+    (
+      "theorems",
+      repro!("tabu_theorems_keep_their_line_breaks"),
+      0,
+      1,
+      r##"<document xmlns="http://dlmf.nist.gov/LaTeXML"><resource src="LaTeXML.css" type="text/css"/><resource src="ltx-article.css" type="text/css"/><para><tabular class="ltx_guessed_headers" vattach="middle"><tbody><tr><td align="left" thead="row">x</td><td align="left" vattach="top"><inline-logical-block vattach="top" width="113.8pt"><theorem class="ltx_centering ltx_theorem_thm" inlist="thm theorem:thm"><tags><tag>Theorem 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Theorem 1</tag></tags><title class="ltx_runin"><tag><text font="bold">Theorem 1</text></tag><text font="bold">.</text></title><para><p><text font="italic">a<break/>b</text></p></para></theorem></inline-logical-block></td></tr><tr><td align="left" thead="row">y</td><td align="left" vattach="top"><inline-logical-block vattach="top" width="113.8pt"><proof class="ltx_centering"><title class="ltx_runin" font="italic">Proof.</title><para><p>c<break/>d∎</p></para></proof></inline-logical-block></td></tr><tr><td align="left" thead="row">z</td><td align="left" vattach="top"><inline-logical-block vattach="top" width="113.8pt"><theorem class="ltx_centering ltx_theorem_defn" inlist="thm theorem:defn"><tags><tag>Definition 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Definition 1</tag></tags><title class="ltx_runin"><tag><text font="bold">Definition 1</text></tag><text font="bold">.</text></title><para><p>e<break/>f</p></para></theorem></inline-logical-block></td></tr></tbody></tabular></para></document>"##,
     ),
     (
       "longtabu",

@@ -1,0 +1,21 @@
+% witness: synthetic (sibling of revTABU2 B1: a theorem and amsthm's proof are `\trivlist`s)
+% oracle:  pdflatex 0 errors: x | Theorem 1. a / b; y | Proof. c / d; z | Definition 1. e / f
+% engines: rust TABU2base = 7 Errors; TABU2 = 8 Errors (`\\` after tabu's `\centering` ended the row in the theorem);
+%          Perl 0.8.8 has no tabu binding (`{tabu}` undefined)
+% expect:  tabu.sty:2389-2391 `\tabu@trivlist` through the kernel's `\lx@trivlist@hook`, run by the theorem's begin
+%          (latex.ltx/amsthm.sty `\@begintheorem` = `\trivlist`) and amsthm's proof (amsthm.sty:434): a line break each
+% status:  RED (TABU2base, TABU2) -> GREEN (TABU2b)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsthm}
+\usepackage{tabu}
+\newtheorem{thm}{Theorem}
+\theoremstyle{definition}
+\newtheorem{defn}{Definition}
+\begin{document}
+\begin{tabu}{l>{\centering}p{4cm}}
+x & \begin{thm}a\\b\end{thm} \\
+y & \begin{proof}c\\d\end{proof} \\
+z & \begin{defn}e\\f\end{defn} \\
+\end{tabu}
+\end{document}
