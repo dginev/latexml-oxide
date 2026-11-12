@@ -25,7 +25,10 @@
 //! The file ends with a **retraction record**: the MathSciNet `\cprime` transliteration family was
 //! briefly always-on here and was removed 2026-07-27. The comment is kept because it carries the
 //! witnesses and the reasoning — do not re-add the family.
-use latexml_core::document::{can_auto_close, can_contain};
+use latexml_core::{
+  definition::origin::DefinitionOrigin,
+  document::{can_auto_close, can_contain},
+};
 
 use crate::{
   latex_constructs::{begin_environment_by_macro, end_environment_by_macro},
@@ -623,6 +626,56 @@ LoadDefinitions!({
 \protected\def\swshape{\not@math@alphabet\swshape\relax\fontshape\swdefault\selectfont}%
 \protected\def\sscshape{\not@math@alphabet\sscshape\relax\fontshape\sscdefault\selectfont}"
   );
+
+  // `\__hook_patch_command:Nnn` (latex.ltx:6888), which applies a `cmd/<name>/<hook>` hook from `\begin{document}`
+  // on: the kernel patches a macro; a binding (a constructor or primitive of ours; a locked macro, a Rust-bodied one, one
+  // reading LaTeXML's argument types) takes no patch until the macro faces, so its hook does not run: a Warning for the
+  // document's code, an Info for a class's or package's (as their redefinitions of a locked command, `state.rs`).
+  Let!("\\lx@hook@patch@command", "\\__hook_patch_command:Nnn");
+  DefMacro!("\\__hook_patch_command:Nnn Token {} {}", sub[(cs, name, hook)] {
+    let meaning = lookup_meaning(&cs);
+    let binding = cs.with_str(is_name_locked)
+      || match &meaning {
+        Some(Stored::Expandable(m)) => {
+          !matches!(m.get_expansion(), Some(ExpansionBody::Tokens(_)))
+            || m.get_parameters().is_some_and(|ps| {
+              ps.get_parameters().iter().any(|p| {
+                !with(p.name, |n| matches!(n, "Plain" | "Until" | "UntilBrace" | "Match" | "RequireBrace"))
+              })
+            })
+        },
+        // no macro to patch, whoever declared it (`\newtheorem`'s `\thm` is the document's)
+        Some(Stored::Constructor(_) | Stored::Primitive(_) | Stored::MathPrimitive(_)) => true,
+        _ => false,
+      };
+    if binding {
+      let hook = s!("cmd/{}/{}", name.to_string(), hook.to_string());
+      let origin = match &meaning {
+        Some(Stored::Expandable(m)) => m.origin,
+        Some(Stored::Constructor(c)) => c.origin,
+        Some(Stored::Primitive(p)) => p.origin,
+        _ => DefinitionOrigin::Unknown,
+      };
+      let command = if origin.is_latexml_owned() {
+        s!("LaTeXML's binding of {}", cs.to_string())
+      } else {
+        cs.to_string()
+      };
+      let message = s!("{command} takes no generic hook; its code does not run");
+      if document_hook_code(&hook) {
+        Warn!("hook", hook, message);
+      } else {
+        Info!("hook", hook, message);
+      }
+      return Ok(Tokens!());
+    }
+    let mut call = vec![T_CS!("\\lx@hook@patch@command"), cs, T_BEGIN!()];
+    call.extend(name.unlist());
+    call.extend([T_END!(), T_BEGIN!()]);
+    call.extend(hook.unlist());
+    call.push(T_END!());
+    Ok(Tokens::new(call))
+  }, protected => true);
 
   // `\@latexbug` — kernel macro used to mark would-be bug reports.
   // No-op stub.
@@ -1605,4 +1658,47 @@ pub(crate) fn allocate_ptex_format_registers() -> Result<()> {
     }
   }
   Ok(())
+}
+
+/// Is the document's code on `hook`? lthooks labels code by its owner (latex.ltx:5208 `\__hook_currname_or_default:`): the
+/// document's is `top-level` (:5364-5369) or a label naming no loaded class or package; `\AddToHookNext`'s carries no
+/// label (:6340), counted as the document's; a hook added in the body patches at once, before its code is stored
+/// (`\__hook_cmd_begindocument_code:` is gone, :6870).
+fn document_hook_code(hook: &str) -> bool {
+  let body = |cs: &str| match lookup_meaning(&T_CS!(cs)) {
+    Some(Stored::Expandable(m)) => match m.get_expansion() {
+      Some(ExpansionBody::Tokens(t)) => Some(t.clone()),
+      _ => None,
+    },
+    _ => None,
+  };
+  if lookup_meaning(&T_CS!("\\__hook_cmd_begindocument_code:")).is_none()
+    || ["toplevel", "next"]
+      .iter()
+      .any(|code| body(&s!("\\__hook_{code} {hook}")).is_some_and(|t| !t.is_empty()))
+  {
+    return true;
+  }
+  // l3prop's `\s__prop \__prop_pair:wn <label> \s__prop {<code>}` (l3prop)
+  let Some(prop) = body(&s!("\\g__hook_{hook}_code_prop")) else {
+    return false;
+  };
+  let (pair, mark) = (T_CS!("\\__prop_pair:wn"), T_CS!("\\s__prop"));
+  let tokens = prop.unlist();
+  let mut rest = &tokens[..];
+  while let Some(at) = rest.iter().position(|t| *t == pair) {
+    rest = &rest[at + 1..];
+    let end = rest.iter().position(|t| *t == mark).unwrap_or(rest.len());
+    let label: String = rest[..end].iter().map(ToString::to_string).collect();
+    let owner = label.split('/').next().unwrap_or_default();
+    if owner == "top-level"
+      || [".sty", ".cls"]
+        .iter()
+        .all(|ext| lookup_meaning(&T_CS!(&s!("\\ver@{owner}{ext}"))).is_none())
+    {
+      return true;
+    }
+    rest = &rest[end..];
+  }
+  false
 }

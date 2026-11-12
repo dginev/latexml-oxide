@@ -1,0 +1,14 @@
+% mechanism: a TeX primitive takes no generic hook: `\__hook_patch_command:Nnn` (latex.ltx:6888, :6909, message :7253) errs
+%   "Generic hooks cannot be added to '\hbox'". Ours cannot tell a TeX primitive from a LaTeX command it binds as a
+%   primitive (both `DefinitionOrigin::Pool`), so it gives the bindings' Warning.
+% witness: synthetic (QA47A)
+% oracle:  pdflatex 1 `!` (LaTeX hooks Error: Generic hooks cannot be added to '\hbox'), "Text x."
+% engines: rust QA47A: 0 errors, 1 warning (`cmd/hbox/before`), "Text x."; int161a: 0 errors, 0 warnings
+% expect:  1 error, 0 warnings; Text x.
+% status:  RED (QA47A)
+% moves:   post-merge (a primitive's own provenance, or the macro faces).
+\documentclass{article}
+\begin{document}
+\AddToHook{cmd/hbox/before}{Z}
+Text \hbox{x}.
+\end{document}

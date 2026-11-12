@@ -7989,7 +7989,7 @@ Trigger: `\definecolor{myred}[XC@]{rgb}{1,0,0}` — Perl: 2 errors; Rust 57q: 0 
 
 etoolbox.sty:1740-1747 (a 2020+ format): `\AfterEndPreamble` is `\AddToHook{begindocument/end}`, a one-time hook, so code added after `\begin{document}` finished runs at once. etoolbox.sty.ltxml:1718 pushes it on a list nothing reads again.
 
-Trigger: `A \AfterEndPreamble{Late}Z` — Perl and Rust 57q: "A Z"; pdflatex: "A LateZ". Rust fix (57r): once `\document` has taken the list, `\AfterEndPreamble` returns its code; Perl's `\AtEndDocument{\let\AfterEndPreamble\@gobble}` (etoolbox.sty.ltxml:1724, etoolbox.sty:1781 — after the `\endinput` a 2020+ format takes) is dropped, so code added at the document's end runs too. Open: `\document` unreads the hook code without latex.ltx's closing `\ignorespaces`, so a newline after `\begin{document}` stays a space after the hook's text (RED `macro-state/afterendpreamble_code_is_followed_by_ignorespaces`, RUST-ONLY); and `\document` fires `begindocument` and `begindocument/end` with `\hook_use:n`, not latex.ltx's `\UseOneTimeHook` (:9512, :9525), so `\AtBeginDocument` or `\AddToHook{begindocument…}` in the body is dropped (RED `macro-state/atbegindocument_in_the_body_runs_now`, shared) — the general fix, after which the 57r done flag goes.
+Trigger: `A \AfterEndPreamble{Late}Z` — Perl and Rust 57q: "A Z"; pdflatex: "A LateZ". Rust fix (57r): once `\document` has taken the list, `\AfterEndPreamble` returns its code; Perl's `\AtEndDocument{\let\AfterEndPreamble\@gobble}` (etoolbox.sty.ltxml:1724, etoolbox.sty:1781 — after the `\endinput` a 2020+ format takes) is dropped, so code added at the document's end runs too. Open: `\document` unreads the hook code without latex.ltx's closing `\ignorespaces`, so a newline after `\begin{document}` stays a space after the hook's text (RED `macro-state/afterendpreamble_code_is_followed_by_ignorespaces`, RUST-ONLY); and `\document` fired `begindocument` and `begindocument/end` with `\hook_use:n`, not latex.ltx's `\UseOneTimeHook` (:9512, :9525), so `\AtBeginDocument` or `\AddToHook{begindocument…}` in the body was dropped (shared) — now `\hook_use_once:n` (`macro-state/atbegindocument_in_the_body_runs_now` GREEN since int160a); the 57r done flag can go.
 
 **Guard**: `perfect_kernel_batch56::afterendpreamble_in_the_body_runs_now`.
 
@@ -19426,3 +19426,16 @@ Main \cite{alpha}.
 \end{document}
 ```
 
+## 1229. `\meaning` hard-codes `\protected`/`\long`/`\outer`, whatever `\escapechar`
+
+`TeX_Debugging.pool.ltxml:154-157` joins the literal strings `'\protected'`, `'\long'`, `'\outer'`; tex.web §1295
+prints them with `print_esc`, so in the current `\escapechar`. ltcmdhooks reads an `\NewDocumentCommand`'s prefixes
+under `\escapechar` `/` (latex.ltx:7011-7016), so every `cmd/<name>` hook on one misreads. PERL-ORIGIN. Rust:
+`tex_debugging.rs` prints them with the escape character, as the body's names. Guard
+`perfect_kernel_batchqa47a::batchqa47a_command_hook_rows` row `meaning_prefixes_follow_escapechar`. Minimal trigger
+(Perl `\protected\long macro:->`, pdflatex `/protected/long macro:->`):
+
+```latex
+\protected\long\def\x{}
+{\escapechar=`\/ \message{\meaning\x}}
+```

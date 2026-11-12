@@ -95,9 +95,9 @@ here is open unless its status says otherwise; when a row closes, delete it here
     ("Author, Brown, & Cole, 2001"; ours "Author et al.") and `\citeyear` prints "(2001)" (ours "2001").
   - *anchors and hooks*: RED `block-model/hyperdef_starts_the_paragraph`, RED
     `block-model/hypertarget_heading_a_paragraph_keeps_the_space` (both shared); math in a new anchor takes ids chained from
-    the anchor's (`m.m1`); RED `macro-state/afterendpreamble_code_is_followed_by_ignorespaces` (RUST-ONLY); RED
-    `macro-state/atbegindocument_in_the_body_runs_now` (fire `\document`'s hooks with `\hook_use_once:n`, then drop 57r's
-    `\AfterEndPreamble` flag).
+    the anchor's (`m.m1`); RED `macro-state/afterendpreamble_code_is_followed_by_ignorespaces` (RUST-ONLY);
+    `macro-state/atbegindocument_in_the_body_runs_now` GREEN (`\document` fires its hooks with `\hook_use_once:n`; 57r's
+    `\AfterEndPreamble` flag still to drop).
   - *layout and lists*: RED `boxes-groups/rotatebox_starts_the_paragraph` (shared); RED `fonts-nfss/ulem_custom_mark_is_rendered`
     (41 of 30,079 2605 papers; the class mapping is a design call); RED `block-model/noindent_paragraph_in_a_minipage_takes_its_id`
     (same defect as 58g's RED `noindent_paragraph_in_minipage_numbers_inside` — merge the two); ~~RED
@@ -201,8 +201,10 @@ here is open unless its status says otherwise; when a row closes, delete it here
     Ruled STAY (D15): biblatex `cite.<n>@<key>` (cms-dates-intro 80, cms-trad-appendix 4) and
     gost `back:` (770) dangling links — the surpass option needs a ruling
     (`~/data/pk_agents/main/agent_reports/2026-10-02_biblatex_idref_rootcause.md`).
-  - *kernel*: RED `singletons/register_value_absorbs_as_its_text` (`digested.rs:378`; KPE #403); RED
-    `macro-state/generic_command_hooks_run`; the loader ignores `\ver@<pkg>.sty` (memoir `\EmulatedPackage{setspace}`
+  - *kernel*: RED `singletons/register_value_absorbs_as_its_text` (`digested.rs:378`; KPE #403); `macro-state/generic_command_hooks_run`
+    GREEN (QA47A: the kernel's begin-document lists run; a binding's `cmd/` hook a counted Warning for the document's code, an Info for a class's or package's; OD #1008), RED
+    `macro-state/{command_hook_on_an_optional_argument_command_red, command_hook_on_a_tex_primitive_red}` (post-merge,
+    the macro faces); the loader ignores `\ver@<pkg>.sty` (memoir `\EmulatedPackage{setspace}`
     loads the setspace binding; see the K13 row); Perl's open-conditional report at end of input
     (Core.pm:229-233) is unported (the `\end{document}` one landed in 65c, sect02.rs); the raw
     babel `.ldf` load stays parked on the `\mdqoff` note (latexml_package lib.rs).

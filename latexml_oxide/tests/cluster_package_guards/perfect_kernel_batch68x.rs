@@ -160,7 +160,8 @@ fn babel_iflanguage_expands_in_an_edef() {
 #[test]
 fn cjs_rcs_abstracts_and_keywords_are_frontmatter() {
   // (the three Warnings are memoir.cls's, which the class loads: :5454 `\newif \@iffirstamp`, :7811
-  // `\addtodef{\endthebibliography}` — its deprecation warning pdflatex prints too — on a kernel environment end)
+  // `\addtodef{\endthebibliography}` — its deprecation warning pdflatex prints too — on a kernel environment end; its
+  // two hooks on bound commands, :5832-5833 `cmd/end@float/before`, `cmd/end@dblfloat/before`, are Infos, QA47A)
   let xml = assert_elements_with(
     include_str!(
       "../../../tools/perfect_kernel/repros/class-bindings/cjs_rcs_article_abstracts_keywords.tex"
@@ -205,12 +206,19 @@ fn cjs_rcs_abstracts_and_keywords_are_frontmatter() {
 /// Before 68x both authors without them (2609.02711).
 #[test]
 fn projlib_author_lines_are_the_authors_contacts() {
-  // (the Warning is colorist-fancy's `\setlist`, as before)
+  // (colorist-fancy's `\setlist`, as before; the packages' five hooks on bound commands do not run (QA47A): Infos for
+  // colorist-fancy's `cmd/printindex/before`, `cmd/maketitle/after` and projlib-author's `cmd/maketitle/before`; its
+  // author lines in `cmd/@author/before`/`after`, added in the body, stay Warnings until the label is read there (RED
+  // `macro-state/command_hook_a_package_adds_in_the_body_red`) — the binding carries them as the authors' contacts)
   let xml = assert_elements_with(
     include_str!("../../../tools/perfect_kernel/repros/class-bindings/projlib_author_address.tex"),
     RAW,
-    (0, 1),
-    &["Missing number (Dimension)"],
+    (0, 3),
+    &[
+      "Missing number (Dimension)",
+      r"Warning:hook:cmd/@author/before LaTeXML's binding of \@author takes no generic hook",
+      r"Warning:hook:cmd/@author/after LaTeXML's binding of \@author takes no generic hook",
+    ],
     &[],
   );
   assert_element(

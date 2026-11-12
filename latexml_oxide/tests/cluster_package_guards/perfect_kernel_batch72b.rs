@@ -391,7 +391,8 @@ fn bindings_whose_class_has_chapters_define_them() {
 /// `Error:undefined:\chapter`). In the preamble latex.ltx:18618 makes a second one `\@twoclasseserror`; this one is in
 /// the body, where :18621 `\@onlypreamble\documentclass` stops it — pdflatex's one error "Can be used only in
 /// preamble.", which we do not raise yet (SYNC_STATUS row; r3 finding 3), so 0 Errors. The one Warning is memoir's own
-/// misnamed conditional (memoir.cls:5454 `\newif \@iffirstamp`, the first load), as on 72b r3.
+/// misnamed conditional (memoir.cls:5454 `\newif \@iffirstamp`, the first load), as on 72b r3; its two hooks on bound
+/// commands are Infos (memoir.cls:5832-5833 `cmd/end@float/before`, `cmd/end@dblfloat/before`; QA47A).
 #[test]
 fn a_second_documentclass_keeps_the_first_class_chapters() {
   let tex = "\\documentclass{memoir}\n\\begin{document}\n\\chapter{One}\nText.\n\\documentclass{memoir}\n\\chapter{Two}\n\

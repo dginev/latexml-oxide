@@ -1,0 +1,16 @@
+% mechanism: the Error side of the command-hook boundary: a `cmd/<name>` hook on a register is no command the kernel
+%   can patch (`\__hook_patch_command:Nnn`, latex.ltx:6888): the kernel's own Error, once per hook, the text kept.
+% witness: synthetic (revQA47A S1)
+% oracle:  pdflatex 2 `!` "LaTeX hooks Error: Generic hooks cannot be added to '\mylen'" (and '\mycnt'); "Text 0.0pt.";
+%   Perl 0 errors (`\AddToHook` a no-op, latex_base.pool.ltxml:833).
+% engines: rust int161a: hooks never applied, 0 errors; QA47A: 2 Error:errmessage, 0 warnings.
+% expect:  2 errors, 0 warnings; "Text 0.0pt."
+% status:  GREEN (QA47A)
+\documentclass{article}
+\newlength\mylen
+\newcount\mycnt
+\AddToHook{cmd/mylen/before}{Z}
+\AddToHook{cmd/mycnt/after}{Z}
+\begin{document}
+Text \the\mylen.
+\end{document}
