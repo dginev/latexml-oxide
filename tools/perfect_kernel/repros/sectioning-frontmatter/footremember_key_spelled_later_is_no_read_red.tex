@@ -8,3 +8,13 @@
 % engines: rust FNR1base: Ann {note, Dept of Physics}, Bob "Bob Baker a" {Dept of Physics}; FNR1c: the block declined as above
 % expect:  0 errors; FNR1base's owners (the replay kept)
 % status:  RED (FNR1c) — moves: post-merge (FNRR)
+\documentclass{article}
+\newcommand{\footremember}[2]{%
+    \footnote{#2}
+    \newcounter{#1}
+    \setcounter{#1}{\value{footnote}}
+}
+\newcommand{\footrecall}[1]{\footnotemark[\value{#1}]}
+\title{T}
+\author{Ann Able\footremember{a}{Univ X.}, Bob Baker\textsuperscript{a}\\ Dept of Physics}
+\begin{document}\maketitle Body.\end{document}

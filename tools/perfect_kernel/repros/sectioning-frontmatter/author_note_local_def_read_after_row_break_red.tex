@@ -7,3 +7,7 @@
 % engines: rust FNR1base: Ann's affiliation "Dept"; FNR1c: "Dept (a)" (invented "(a)")
 % expect:  0 errors; Ann's affiliation "Dept"
 % status:  RED (FNR1c) — moves: post-merge (FNRR)
+\documentclass{article}
+\newcommand{\fr}[2]{ \footnote{#2} \def\lab{#1} }
+\title{T}\author{Ann One\fr{a}{Lab Alpha.}\\ Dept\ifdefined\lab{} (\lab)\fi \and Bob Two}
+\begin{document}\maketitle Body.\end{document}
