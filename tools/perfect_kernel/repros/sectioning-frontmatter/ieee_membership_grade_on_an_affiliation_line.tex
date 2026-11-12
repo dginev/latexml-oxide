@@ -1,0 +1,13 @@
+% witness: synthetic (review revP5a B1 sibling c2: a grade ending an unmarked affiliation line)
+% oracle:  pdflatex 0 errors: "Ann Able and Bob Baker" then "Univ A, Town, Senior Member, IEEE"
+% engines: rust P5abase = the grade dropped silently; rust P5a = a membership of both (the affiliation's holders)
+% expect:  0 errors, 0 warnings; "Univ A, Town, Senior Member, IEEE" both authors' affiliation, as printed; no membership
+% status:  RED (P5a) -> GREEN (P5a2)
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{Ann~Able and Bob~Baker\\
+Univ A, Town,~\IEEEmembership{Senior Member,~IEEE}}
+\maketitle
+Body.
+\end{document}

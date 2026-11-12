@@ -936,7 +936,7 @@ fn ends_a_dedication(nodes: &[Node]) -> bool {
 ///   \url{https://orcid.org/…}\\ \url{https://members.loria.fr/AClement}}`, 2206.10577: 107c);
 /// - a membership grade ([`reads_as_membership_grade`]: "Senior Member, IEEE" behind IEEE_lsens's
 ///   `\IEEEauthorieeemembermark{2}`, a raw class's mark, 2310.02678, 2505.15137) is its carriers' `membership` contact,
-///   as IEEEtran's `\IEEEmembership` makes one (ieeetran_cls.rs `\lx@IEEE@membership`).
+///   as IEEEtran's `\IEEEmembership` makes one (ieeetran_cls.rs `\lx@IEEE@grade`).
 ///
 /// Its printed text stays, and so do its carriers. Guards `perfect_kernel_batch106b`.
 fn kind_link_and_grade_contacts(document: &mut Document) -> Result<()> {

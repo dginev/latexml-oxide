@@ -3,8 +3,8 @@
 use crate::{
   engine::{
     base_utilities::{
-      document_notes, grade_words, leads_with_ordinal, leads_with_written_mark, names_continue,
-      notes_only_line, ordinal_name_line, prints_marks_alone, prints_nothing,
+      document_notes, grade_words, leads_with_ordinal, leads_with_written_mark, ordinal_name_line,
+      prints_marks_alone, prints_nothing, reading_author_fields, rehearsing_author_fields,
       split_top_level_lines,
     },
     latex_constructs::{FontUnit, set_theorem_within_display, symbol_box_size},
@@ -316,26 +316,49 @@ LoadDefinitions!({
   // content; preserve.
   DefMacro!("\\IEEEspecialpapernotice{}",
     "\\lx@add@frontmatter{ltx:note}[role=papernotice]{#1}");
-  // \IEEEmembership{text} — membership grade after an author name (e.g.
-  // "Senior Member, IEEE"). Perl drops it (''). An earlier Rust rendering,
-  // ",\space\textit{#1}", injected a top-level comma INTO the `\author` list;
-  // the author-splitter (`\lx@add@authors`) then split that comma and turned
-  // the membership grade into a phantom "Senior Member, IEEE" creator (witness
-  // 2508.00603, whose flat `\author{A, B, \IEEEmembership{...}, and C}` yielded
-  // 6 creators). In an author's own name line — before the first `\\` of each
-  // `\and` group, or in an `\IEEEauthorblockN` — `\author` now moves each grade
-  // in front of the comma before it (`name_memberships`) and makes it that
-  // author's unlabelled `membership` contact (`\lx@IEEE@membership`, markup a
-  // stylesheet shows or hides): "Yong Man Ro, Senior Member, IEEE" (2306.15457,
-  // 2201.01230, 2408.09035; 63l). Anywhere else (a biography heading, a `\thanks`,
-  // names misread as an affiliation line) whose author it names cannot be
-  // known, so it stays dropped there, as in Perl (2408.01902). Conference mode
-  // locks the grade out (IEEEtran.cls:6270 swallows it; pdflatex prints none)
-  // unless `\IEEEoverridecommandlockouts` lets it back in.
-  DefMacro!("\\IEEEmembership{}", "\\lx@IEEE@membership@drop{#1}");
-  DefMacro!("\\lx@IEEE@membership@drop{}", "");
-  DefMacro!("\\lx@IEEE@membership{}",
-    "\\ifCLASSOPTIONconference\\iflx@IEEE@lockouts@overridden\\lx@add@contact[role=membership]{#1}\\fi\\else\\lx@add@contact[role=membership]{#1}\\fi");
+  // \IEEEmembership{text}: the membership grade after an author's name (IEEEtran.cls:4525 prints it italic). In the
+  // frontmatter's rehearsal it is a `membership` Contact, however spelled (a macro, a `\let` copy; 2508.00603, 2306.15457,
+  // 2201.01230, 2408.09035), the resolver's for the name it follows, if one; at the flush it prints its text where the
+  // emitter wrote it: that contact, or the line it is printed on (2408.01956, 2511.20003). Elsewhere (a biography heading,
+  // the body) dropped as in Perl (IEEEtran.cls.ltxml:143; 2408.01902); an empty grade prints nothing (1805.06045).
+  // Conference mode locks it out (IEEEtran.cls:6270) unless `\IEEEoverridecommandlockouts`. OD #1016.
+  DefMacro!("\\IEEEmembership{}", "\\lx@IEEE@grade{#1}");
+  // (a comma opening or ending the grade is the list's: `Chen,~\IEEEmembership{Member,~IEEE,} Yuan-Hao~Chang`, 2408.00327;
+  // `\IEEEmembership{, Senior Member,~IEEE}`, 2503.14354. The lock-out is read here, no conditional left to expand past
+  // the grade into a note after it, 2002.05630)
+  DefConstructor!("\\lx@IEEE@unprinted{}", "");
+  DefMacro!("\\lx@IEEE@grade{}", sub[(grade)] {
+    let spacing = |t: &Token| *t == T_SPACE!() || *t == T_ACTIVE!('~') || *t == T_OTHER!(",");
+    let grade = grade.unlist();
+    let start = grade.iter().position(|t| !spacing(t)).unwrap_or(grade.len());
+    let end = grade.iter().rposition(|t| !spacing(t)).map_or(start, |at| at + 1);
+    let locked_out = T_CS!("\\ifCLASSOPTIONconference").defined_as(&T_CS!("\\iftrue"))
+      && !T_CS!("\\iflx@IEEE@lockouts@overridden").defined_as(&T_CS!("\\iftrue"));
+    if !reading_author_fields() {
+      return Ok(Tokens::new(Vec::new()));
+    }
+    // (one printing nothing is read too, its span its own, not a note's after it: `Aoyu~Wu~\IEEEmembership{}`
+    // before `\IEEEcompsocitemizethanks{…}`, 2112.12364)
+    if locked_out || start >= end {
+      return Ok(TokenizeInternal!(r"\lx@IEEE@unprinted{}"));
+    }
+    let mut printed = grade[start..end].to_vec();
+    // (what is trimmed is still read, printing nothing, so the grade's span is its whole argument: a block ending
+    // `\IEEEmembership{Senior Member,~IEEE,}}` wrote it by its text, 1811.09783)
+    if end < grade.len() {
+      printed.extend([T_CS!("\\lx@IEEE@unprinted"), T_BEGIN!()]);
+      printed.extend_from_slice(&grade[end..]);
+      printed.push(T_END!());
+    }
+    if !rehearsing_author_fields() {
+      return Ok(Tokens::new(printed));
+    }
+    let mut call = TokenizeInternal!(r"\lx@add@contact[role=membership]").unlist();
+    call.push(T_BEGIN!());
+    call.extend(printed);
+    call.push(T_END!());
+    Ok(Tokens::new(call))
+  });
   DefMacro!("\\lx@contact@membership@name", "");
   // `\author{\IEEEauthorblockN{Name}\IEEEauthorblockA{Affil}\and …}` is the
   // conference-mode author block. Perl maps `\IEEEauthorblockN{}`→`#1` (plain
@@ -376,16 +399,15 @@ LoadDefinitions!({
     let (target, body) = if body.to_string().contains("authorblockN") {
       (T_CS!("\\lx@IEEE@author@blocks"), author_block_body(body, ours)?)
     } else {
-      (T_CS!("\\lx@IEEE@author@plain"), if ours { Tokens::new(name_memberships(body.unlist())?) } else { body })
+      (T_CS!("\\lx@IEEE@author@plain"), if ours { Tokens::new(without_stop_after_grade(body.unlist())?) } else { body })
     };
     Ok(Invocation!(target, vec![Some(body)]))
   }, locked => true);
   // authblk's `\author` (a document's `\usepackage{authblk}`; the IEEEtaes and IEEEoj stubs load it) replaces the one
-  // above, so its names reach the frontmatter with each grade still `\IEEEmembership`, dropped
-  // (`\lx@IEEE@membership@drop`): every author's printed grade lost (1803.04687, 2202.10869, 2208.04191, 2307.05035,
-  // 2505.19506, 2506.05637; Perl the same, IEEEtran.cls.ltxml:143). Once authblk is loaded, its `\author` reads the
-  // grades of its names as this one does (`name_memberships`, `block_name_memberships`) and then adds the authors as
-  // authblk does — conference mode still swallowing them (`\lx@IEEE@membership`; OXIDIZED_DESIGN_DIVERGENCES #950).
+  // above; its names' grades are read as this one's are (`\lx@IEEE@grade`; Perl drops them, IEEEtran.cls.ltxml:143:
+  // 1803.04687, 2202.10869, 2208.04191, 2307.05035, 2505.19506, 2506.05637), the stop after them too
+  // (`without_stop_after_grade`, `block_grade_stops`), then the authors added as authblk adds them
+  // (OXIDIZED_DESIGN_DIVERGENCES #950).
   // A body of author blocks (`\author{\IEEEauthorblockN{Ann Able,~\IEEEmembership{Member,~IEEE}, Bob Baker and Cy
   // Coe}\thanks{…}}`; 2402.16140, 1611.02001, 1708.05281, 1810.08035, 2310.18257, 2409.09417) is read as the class's
   // own `\author` reads it (`printed_refmarks`, `author_block_body`; `\IEEEauthorblockN` one author each), its authors
@@ -430,7 +452,7 @@ LoadDefinitions!({
       call.push(T_END!());
       return Ok(Tokens::new(call));
     }
-    let body = if ours { Tokens::new(name_memberships(body.unlist())?) } else { body };
+    let body = if ours { Tokens::new(without_stop_after_grade(body.unlist())?) } else { body };
     // (its optional label exactly as written, an empty one too: authblk's `\author[]{…}` is no unlabelled `\author`,
     // 2005.04149, 2105.12254)
     let mut call = vec![T_CS!("\\lx@IEEE@AB@author")];
@@ -1153,7 +1175,7 @@ fn split_top_level(tokens: &[Token], delim: &Token) -> Vec<Vec<Token>> {
 /// returned unchanged), then any trailing bare-text run (a loose email after `\IEEEauthorblockA`) wrapped in
 /// `\IEEEauthorblockA{}` so it attaches to the creator instead of leaking into the body (arXiv 1901.07768), each
 /// affiliation block nested in another read as a block of its own (`unnested_affiliation_blocks`), then, when
-/// `\IEEEmembership` is the class's (`ours`), each name's grade made its contact (`block_name_memberships`). The old
+/// `\IEEEmembership` is the class's (`ours`), the stop after each names block's grade read (`block_grade_stops`). The old
 /// block names are read as the ones they mean first (`with_block_names`), so every step below reads only those.
 fn author_block_body(body: Tokens, ours: bool) -> Result<Tokens> {
   let body = unnested_affiliation_blocks(wrap_bare_author_block_text(
@@ -1161,7 +1183,7 @@ fn author_block_body(body: Tokens, ours: bool) -> Result<Tokens> {
     true,
   ));
   if ours {
-    block_name_memberships(body)
+    block_grade_stops(body)
   } else {
     Ok(body)
   }
@@ -1958,204 +1980,6 @@ fn roman_numeral(mut n: u32) -> String {
   out
 }
 
-/// An author list with each `\IEEEmembership{…}` of its name lines — before the first `\\` of each `\and` group —
-/// moved in front of the comma before it and made `\lx@IEEE@membership`, so the grade stays with the name it follows
-/// when the list is split at its commas (`Yong Man Ro,~\IEEEmembership{Senior Member,~IEEE}`). A grade ending in a
-/// comma carries the list's separator inside its braces (`Yun-Chih~Chen,~\IEEEmembership{Member,~IEEE,}
-/// Yuan-Hao~Chang`, 2408.00327): that comma becomes the separator after it. An empty grade (`\IEEEmembership{}`,
-/// 2408.01702) is left out. The names go on past a `\\` that the article parse reads as continuing them
-/// ([`names_continue`]: `Wenming~Li, \\ Xiaochun~Ye, …`, 2408.01902); grades past the names keep `\IEEEmembership`,
-/// which drops them.
-fn name_memberships(tokens: Vec<Token>) -> Result<Vec<Token>> {
-  let tokens = without_stop_after_grade(tokens)?;
-  let spacing = |t: &Token| *t == T_SPACE!() || *t == T_ACTIVE!('~');
-  // the end of the line opening at `from`: the next `\\` or `\and` outside groups
-  let line_end = |from: usize| {
-    let mut level = 0usize;
-    tokens[from..]
-      .iter()
-      .position(|t| {
-        match t.code {
-          Catcode::BEGIN => level += 1,
-          Catcode::END => level = level.saturating_sub(1),
-          _ => {},
-        }
-        level == 0 && (*t == T_CS!("\\\\") || *t == T_CS!("\\and"))
-      })
-      .map_or(tokens.len(), |at| from + at)
-  };
-  let mut out: Vec<Token> = Vec::new();
-  let mut depth = 0usize;
-  let mut in_names = true;
-  let mut names_start = 0;
-  let mut i = 0;
-  while i < tokens.len() {
-    let t = tokens[i];
-    if depth == 0 {
-      if t == T_CS!("\\and") {
-        in_names = true;
-        names_start = i + 1;
-      } else if t == T_CS!("\\\\") && in_names && grade_only_line(&tokens[i + 1..line_end(i + 1)]) {
-        // (a line holding only the last name's grade, its notes aside, is that name's: `and~Jussi
-        // Haapola,\\~\IEEEmembership{Member,~IEEE,}\thanks{…}`, 2202.10869 — the break no part of the names, the grade
-        // read as any other, and lost had the line been read as the block's)
-        i += 1;
-        continue;
-      } else if t == T_CS!("\\\\") {
-        in_names = in_names
-          && names_continue(
-            &Tokens::new(tokens[names_start..i].to_vec()),
-            &Tokens::new(tokens[i + 1..line_end(i + 1)].to_vec()),
-          );
-      }
-    }
-    // (a note's text is no name line: `\thanks{… \IEEEmembership{…}}` keeps the grade it names, dropped)
-    if [
-      T_CS!("\\thanks"),
-      T_CS!("\\footnote"),
-      T_CS!("\\IEEEcompsocitemizethanks"),
-    ]
-    .contains(&t)
-    {
-      let mut j = i + 1;
-      while j < tokens.len() && tokens[j] == T_SPACE!() {
-        j += 1;
-      }
-      if j < tokens.len() && tokens[j].code == Catcode::BEGIN {
-        let mut level = 0usize;
-        while j < tokens.len() {
-          match tokens[j].code {
-            Catcode::BEGIN => level += 1,
-            Catcode::END => level = level.saturating_sub(1),
-            _ => {},
-          }
-          j += 1;
-          if level == 0 {
-            break;
-          }
-        }
-        out.extend_from_slice(&tokens[i..j]);
-        i = j;
-        continue;
-      }
-    }
-    // (inside a wrapper of the names too: `{{Ann Able},~\IEEEmembership{Senior Member, IEEE}, …}`, 2112.09769;
-    // `\uppercase{K. Liu\authorrefmark{2}, J. Chen\authorrefmark{2}, \IEEEmembership{Senior, IEEE} R.C. de Lamare…}`,
-    // ieeeaccess 2209.12464)
-    if in_names && t == T_CS!("\\IEEEmembership") {
-      let mut j = i + 1;
-      while j < tokens.len() && tokens[j] == T_SPACE!() {
-        j += 1;
-      }
-      if j < tokens.len() && tokens[j].code == Catcode::BEGIN {
-        let start = j;
-        let mut level = 0usize;
-        while j < tokens.len() {
-          match tokens[j].code {
-            Catcode::BEGIN => level += 1,
-            Catcode::END => {
-              level -= 1;
-              if level == 0 {
-                break;
-              }
-            },
-            _ => {},
-          }
-          j += 1;
-        }
-        if level == 0 && j < tokens.len() {
-          let mut grade: Vec<Token> = tokens[start + 1..j].to_vec();
-          while grade.last().is_some_and(spacing) {
-            grade.pop();
-          }
-          let mut separated = grade.last() == Some(&T_OTHER!(","));
-          if separated {
-            grade.pop();
-            while grade.last().is_some_and(spacing) {
-              grade.pop();
-            }
-          }
-          let kept = out
-            .iter()
-            .rposition(|prev| !spacing(prev))
-            .map_or(0, |at| at + 1);
-          if kept > 0 && out[kept - 1] == T_OTHER!(",") {
-            out.truncate(kept - 1);
-            separated = true;
-          }
-          if grade.iter().any(|t| !spacing(t)) {
-            out.push(T_CS!("\\lx@IEEE@membership"));
-            out.push(T_BEGIN!());
-            out.extend(grade);
-            out.push(T_END!());
-          }
-          // (unless the author's own comma follows: `Zeng,~\IEEEmembership{Senior Member, IEEE},`, 2408.01956)
-          let next = tokens[j + 1..].iter().find(|t| !spacing(t));
-          if separated && next != Some(&T_OTHER!(",")) {
-            out.push(T_OTHER!(","));
-          }
-          i = j + 1;
-          continue;
-        }
-      }
-    }
-    match t.code {
-      Catcode::BEGIN => depth += 1,
-      Catcode::END => depth = depth.saturating_sub(1),
-      _ => {},
-    }
-    out.push(t);
-    i += 1;
-  }
-  Ok(out)
-}
-
-/// Whether `line` holds one `\IEEEmembership{…}` and else only spacing or authors' notes alone ([`notes_only_line`]:
-/// `\thanks{…}`, `\footnote{…}`): a grade on the line after its name ([`name_memberships`]).
-fn grade_only_line(line: &[Token]) -> bool {
-  let spacing = |t: &Token| *t == T_SPACE!() || *t == T_ACTIVE!('~') || *t == T_CS!("\\par");
-  let mut grades = 0;
-  let mut rest: Vec<Token> = Vec::with_capacity(line.len());
-  let mut depth = 0usize;
-  let mut i = 0;
-  while i < line.len() {
-    let t = line[i];
-    if depth == 0 && t == T_CS!("\\IEEEmembership") {
-      let open = i
-        + 1
-        + line[i + 1..]
-          .iter()
-          .take_while(|t| **t == T_SPACE!())
-          .count();
-      if line.get(open).is_none_or(|t| t.code != Catcode::BEGIN) {
-        return false;
-      }
-      let mut level = 0usize;
-      let Some(close) = line[open..].iter().position(|t| {
-        match t.code {
-          Catcode::BEGIN => level += 1,
-          Catcode::END => level -= 1,
-          _ => {},
-        }
-        level == 0
-      }) else {
-        return false;
-      };
-      grades += 1;
-      i = open + close + 1;
-      continue;
-    }
-    match t.code {
-      Catcode::BEGIN => depth += 1,
-      Catcode::END => depth = depth.saturating_sub(1),
-      _ => {},
-    }
-    rest.push(t);
-    i += 1;
-  }
-  grades == 1 && (rest.iter().all(spacing) || notes_only_line(&rest))
-}
-
 /// `tokens` without the full stop or semicolon that closes them right after a grade: one at the top level that only
 /// what prints no text follows — spaces, `\par`, `\\`, `\vspace{…}` and authors' notes (`\thanks{…}`, `\footnote{…}`)
 /// — and only such material parts from an `\IEEEmembership{…}` before it, or from a grade written as italic text
@@ -2164,7 +1988,7 @@ fn grade_only_line(line: &[Token]) -> bool {
 /// `\IEEEauthorblockN` (2405.10825), `…~\IEEEmembership{Fellow,~IEEE}.` + a blank line, notes and a `\\` (2510.15773),
 /// `…~\IEEEmembership{Fellow,~IEEE}` + a blank line, `\vspace{-10mm}` and notes, then `.` (2112.14209). The stop
 /// closes the block's sentence and is no part of the last author's names or grade: every reading of the names after it
-/// — whether the line after a `\\` continues them ([`names_continue`]), the block's split, a grade rejoining its name —
+/// — whether the line after a `\\` continues them, the block's split, a grade rejoining its name —
 /// took the lone "." for a word, so the last line's grades were dropped and its authors became every author's
 /// affiliation (2112.14209, 2409.11755, 2510.15773). A stop after any other text (an affiliation's) stays.
 ///
@@ -2394,9 +2218,8 @@ fn note_argument(tokens: &[Token], mut at: usize) -> (Vec<Token>, usize) {
   (tokens[at + 1..].to_vec(), tokens.len())
 }
 
-/// An explicit author-block body with the grades of each `\IEEEauthorblockN{…}` name line made its author's
-/// (`name_memberships`); a grade outside the name blocks stays `\IEEEmembership`, dropped.
-fn block_name_memberships(body: Tokens) -> Result<Tokens> {
+/// An explicit author-block body with each `\IEEEauthorblockN{…}` names block read by [`without_stop_after_grade`].
+fn block_grade_stops(body: Tokens) -> Result<Tokens> {
   let tokens = body.unlist();
   let mut out: Vec<Token> = Vec::new();
   let mut i = 0;
@@ -2435,20 +2258,19 @@ fn block_name_memberships(body: Tokens) -> Result<Tokens> {
       return Ok(Tokens::new(out));
     }
     out.push(T_BEGIN!());
-    out.extend(name_memberships(tokens[start + 1..i].to_vec())?);
+    out.extend(without_stop_after_grade(tokens[start + 1..i].to_vec())?);
     out.push(T_END!());
     i += 1;
   }
   Ok(Tokens::new(out))
 }
 
-/// Is `\IEEEmembership` still this binding's (`\lx@IEEE@membership@drop`)? A document's own definition keeps its
-/// meaning and its grades their place.
+/// Is `\IEEEmembership` still this binding's (`\lx@IEEE@grade`)? A document's own definition keeps its meaning.
 fn class_membership() -> Result<bool> {
   Ok(
     lookup_definition(&T_CS!("\\IEEEmembership"))?.is_some_and(|def| {
       matches!(def.get_expansion(), Some(ExpansionBody::Tokens(body))
-        if body.unlist_ref().first() == Some(&T_CS!("\\lx@IEEE@membership@drop")))
+        if body.unlist_ref().first() == Some(&T_CS!("\\lx@IEEE@grade")))
     }),
   )
 }

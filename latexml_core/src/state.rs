@@ -2702,8 +2702,7 @@ pub struct DroppedArgument {
 /// A binding's macro `cs` dropped its required argument `argument` — its token body never names it, nor does the
 /// binding declare it dropped by design (`Expandable::dropped_by_design`) — while a frontmatter entry the document gave
 /// is digested (`Expandable::invoke`, while [`crate::definition::origin::dropped_argument_watch`]): kept for the
-/// title-page check (latexml_engine `title_page_check`, IEEEtran's `\lx@IEEE@membership@drop`). A blank argument is
-/// not kept.
+/// title-page check (latexml_engine `title_page_check`, jmlr's `\titletag`). A blank argument is not kept.
 pub fn note_dropped_argument(cs: Token, argument: &DocumentArgument) {
   if argument.tokens.unlist_ref().iter().any(|token| {
     !matches!(

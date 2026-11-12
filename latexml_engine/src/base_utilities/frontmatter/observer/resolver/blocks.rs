@@ -453,6 +453,32 @@ impl Resolver {
             .iter()
             .filter(|e| inked(e))
             .all(|e| e.kind == EventKind::Contact);
+          // (a line printing a membership grade and notes alone, right under the names, is the name's the grade follows,
+          // the last above, never a row's: `and~Cy Coe,\\~\IEEEmembership{Member,~IEEE,}\thanks{…}`, 2202.10869; under an
+          // affiliation line it follows no name, revP5a S1)
+          let grade_line = |e: &&Event| {
+            e.kind == EventKind::Note
+              || (e.kind == EventKind::Contact && e.role.as_deref() == Some("membership"))
+          };
+          if let Some(&last) = above.last()
+            && !under_affiliation
+            && line
+              .events
+              .iter()
+              .any(|e| e.role.as_deref() == Some("membership"))
+            && line.events.iter().filter(|e| inked(e)).all(grade_line)
+          {
+            for event in &line.events {
+              match event.kind {
+                EventKind::Note => self.note(index, event, Some(last), "note:adjacent"),
+                EventKind::Contact => {
+                  self.contact_event(index, event, &[last], "line:contact membership:name-above")
+                },
+                _ => {},
+              }
+            }
+            continue;
+          }
           // (a column's first line that is one link printing a name is that name: `\href{https://orcid.org/…}
           // {\includegraphics{orcid}\hspace{1mm}Amanda A. Howard}`, 2311.06483)
           if column_first && only_contacts {
@@ -576,6 +602,10 @@ impl Resolver {
           }
           if only_contacts {
             for contact in line.events.iter().filter(|e| e.kind == EventKind::Contact) {
+              // (a grade no name comes before is no one's, never the row's: dropped, the content check counts it — revP5a B1)
+              if contact.role.as_deref() == Some("membership") {
+                continue;
+              }
               // (an in-block contact printing addresses alone is a line of addresses, whatever command made it: e-mails by
               // the owner chain among the block's names — `\IEEEauthorblockA{hanxinchi@sjtu.edu.cn, …}` under 17 names of
               // 17 `\and`-columns, 2603.28168, no affiliation of the last column's)
@@ -1247,6 +1277,11 @@ impl Resolver {
         rule: "ruling1:request".into(),
         ..assoc
       }));
+      return;
+    }
+    // (a membership grade is the name's it follows, never the block's: one after no name is dropped, counted by the content
+    // check — revP5a B1)
+    if owners.is_empty() && role == "membership" {
       return;
     }
     if owners.is_empty() {

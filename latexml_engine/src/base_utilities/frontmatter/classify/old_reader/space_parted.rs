@@ -178,7 +178,7 @@ pub(in crate::base_utilities) fn space_parted_name_line(line: &Tokens) -> bool {
 /// `\\ \textbf{Ludwig Schmidt \quad Serena Yeung-Levy} \\` under a row of names, 2507.19054). A line holding an
 /// institution word parts nothing (a name-shaped institution row still does: rev107b2 F1), so an unmarked line under one name stays its affiliation (user ruling R12), and a row of
 /// addresses set by position under the names (`A \quad B \\ Univ A \quad Univ B`) stays one. A line of names a
-/// comma parts is the comma rules' (`names_continue`), as before.
+/// comma parts is the comma rules' (`names_list_continues`), as before.
 pub(in crate::base_utilities) fn space_parted_rows_joined(stuff: Tokens) -> Tokens {
   let pieces = split_tokens_delimited(stuff.clone(), author_line_breaks());
   if pieces.len() < 2 {
@@ -191,7 +191,7 @@ pub(in crate::base_utilities) fn space_parted_rows_joined(stuff: Tokens) -> Toke
   let mut names_line = true;
   for (at, (delimiter, piece)) in pieces.into_iter().enumerate() {
     let opens = opens_a_group(&piece);
-    // (a comma list is the comma's, read as before — `names_continue`: `… Antoine Garcon,$^{1}$\\ Peter W.
+    // (a comma list is the comma's, read as before — `names_list_continues`: `… Antoine Garcon,$^{1}$\\ Peter W.
     // Graham,$^{2}$ Derek F. Jackson Kimball,$^{3}$ …`, 1901.10843, its separators printed as the commas)
     let row = at > 0
       && !opens

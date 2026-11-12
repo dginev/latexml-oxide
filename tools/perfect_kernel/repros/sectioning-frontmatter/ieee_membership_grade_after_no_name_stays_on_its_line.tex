@@ -1,0 +1,15 @@
+% witness: 2408.01956 (`\IEEEauthorblockN{…, Bruno~Clerckx,~\IEEEmembership{Fellow, IEEE}} and Rui~Zhang,~\IEEEmembership{Fellow,
+%          IEEE}`), 2511.20003; review revP5a B1 (scratch c1)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker, Fellow, IEEE, Cy Coe, Senior Member, IEEE", the footnote "All with U."
+% engines: rust P5abase = Bob's Fellow; Cy Coe's grade dropped silently (the line read as the names' affiliation);
+%          rust P5a = Cy Coe's grade a membership of Ann and Bob, every holder of that affiliation (B1)
+% expect:  0 errors, 0 warnings; Bob's Fellow; "Senior Member, IEEE" the text of the line printing it (the reading took
+%          "Cy Coe" for that line's text: no name before the grade, so no one's contact)
+% status:  RED (P5a) -> GREEN (P5a2)
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able, Bob Baker, \IEEEmembership{Fellow, IEEE}}, Cy Coe, \IEEEmembership{Senior Member, IEEE}\thanks{All with U.}}
+\maketitle
+Body.
+\end{document}

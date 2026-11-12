@@ -277,7 +277,9 @@ const OLD_READER_EMISSIONS: &[(&str, usize)] = &[
 /// revZ18m B2: not the one engine's library beside it), 1,702 = the 1,656 moved + 23 of the IJCAI split moved with them
 /// from `defs/author_macros.rs` + 23 of the new files' own (7 `use super::*;`, 16 of `old_reader/mod.rs`'s module
 /// declarations and re-exports) — no line of an item added.
-const OLD_READER_CODE_LINES: usize = 1_702;
+/// P5a lowered it to 1,544: `names_split.rs` and `names_continue`, `names_list_continues`, `notes_only_line` deleted, their
+/// last caller IEEEtran's `name_memberships` gone (OD #1016).
+const OLD_READER_CODE_LINES: usize = 1_544;
 
 /// What the fence counts in the old reader's code: its ways into the API's queue, and a convention's mode.
 const OLD_READER_NEEDLES: [&str; 4] = [
@@ -497,7 +499,6 @@ const MOVED_OLD_READER_FILES: &[&str] = &[
   "frontmatter/classify/old_reader/marks.rs",
   "frontmatter/classify/old_reader/mod.rs",
   "frontmatter/classify/old_reader/name_text.rs",
-  "frontmatter/classify/old_reader/names_split.rs",
   "frontmatter/classify/old_reader/notes.rs",
   "frontmatter/classify/old_reader/rows.rs",
   "frontmatter/classify/old_reader/separators.rs",
@@ -535,7 +536,8 @@ fn old_reader_exports() -> std::collections::BTreeSet<String> {
 /// prints (a formula of spacing alone is glue, no text of an address: 2205.14113, 2302.05182; OD #972), no owner decided;
 /// its predicate `formula_prints_spacing_alone` is private (revIV1 NIT 1). P4c (pending the main session's decision):
 /// `binding_cut_list_attr` deleted, `cut_list` added — the Cut's body, which a binding's marked list calls with its
-/// declaration (OD #1009).
+/// declaration (OD #1009). P5a: `names_continue`, `names_list_continues`, `notes_only_line` and `hoist_wrapped_separators` (with
+/// `names_split.rs`) deleted — IEEEtran's `name_memberships` was their last caller; the grade is the reading's (OD #1016).
 const OLD_READER_EXPORTS: &[&str] = &[
   "AddressPlacement",
   "CUT_COPY_PLACE",
@@ -568,7 +570,6 @@ const OLD_READER_EXPORTS: &[&str] = &[
   "frontmatter_group_first",
   "has_author_block_separator",
   "has_ijcai_section_marker",
-  "hoist_wrapped_separators",
   "holds_a_macro_printing_a_link",
   "holds_requested_marked_entries",
   "inst_prints_its_mark",
@@ -588,10 +589,7 @@ const OLD_READER_EXPORTS: &[&str] = &[
   "name_line_span",
   "name_marks_end",
   "named_email_calls",
-  "names_continue",
-  "names_list_continues",
   "notes_line_joins_names",
-  "notes_only_line",
   "notes_out_of_marks",
   "numbered_marks_requested",
   "only_marks_and_notes",
@@ -1519,8 +1517,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // environment leaves the list to its tokens (`entry_starts::starts_inside_environment`, B3). Each test is the
   // token's meaning (`x_equals`) or a group's braces, no spelling)
   ("classify", 471),
-  // (E0h: the rest of `author_block/` Z18m moved unchanged to `classify/old_reader/`, split off from `classify`'s row)
-  ("old_reader", 131),
+  // (E0h: the rest of `author_block/` Z18m moved unchanged to `classify/old_reader/`, split off from `classify`'s row;
+  // P5a, 131 -> 113: `names_continue`, `names_list_continues`, `notes_only_line`, `hoist_wrapped_separators` deleted with
+  // their last caller, IEEEtran's `name_memberships`)
+  ("old_reader", 113),
   ("defs/author_macros", 20),
   // (Z18m, a new directory: the IJCAI chain moved from `author_block` with its code, as that row says)
   ("defs/author_macros/", 64),
@@ -1610,8 +1610,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // an affiliation block nested in another is found by the class's own command and its braces, an unmarked one spliced at
   // its line breaks (`unnested_affiliation_blocks`; its lead of marks read by the binding's mark reader since P4cR2b,
   // `prints_marks_alone`; 1710.07993, 2605.02682) and a names block led by an ordinal by the number and suffix it prints
-  // (`ordinal_names`, 1806.11431); no name a document spells)
-  ("ieeetran_cls.rs", 131),
+  // (`ordinal_names`, 1806.11431); no name a document spells; P5a, 131 -> 103: `name_memberships` and `grade_only_line`
+  // deleted, the grade the reading's contact event, OD #1016)
+  ("ieeetran_cls.rs", 103),
   ("insert", 14),
   // (from `frontmatter (rest)`, 24 -> 23, at Z2r2: `\alignauthor`, out of the kernel's conventions into the binding's own table; no read)
   ("inst_support_sty.rs", 1),

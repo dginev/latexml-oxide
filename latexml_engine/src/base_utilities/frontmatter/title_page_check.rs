@@ -667,8 +667,7 @@ pub struct EntryDigestion {
 /// The frontmatter API is about to digest an entry (`\lx@add@frontmatter@now`, `\lx@annotate@frontmatter@now`:
 /// `content`, its queued content; `\lx@add@frontmatter@until`: the record `id` [`note_frontmatter_entry`] gave): when a
 /// frontmatter command of the document's queued it, the arguments a binding's macro drops while it is digested are
-/// watched (`state::note_dropped_argument`: IEEEtran's `\lx@IEEE@membership@drop` over a grade it cannot place,
-/// 1511.03982; jmlr's `\titletag[1]{}` over a published-version note, 2211.07413) until
+/// watched (`state::note_dropped_argument`: jmlr's `\titletag[1]{}` over a published-version note, 2211.07413) until
 /// [`end_frontmatter_entry_digestion`]. Not while a raw class's setter replays or a speculative run digests.
 pub fn begin_frontmatter_entry_digestion(
   content: Option<&Tokens>,

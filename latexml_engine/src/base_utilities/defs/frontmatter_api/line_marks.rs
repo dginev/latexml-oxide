@@ -111,7 +111,7 @@ pub(in crate::base_utilities) fn starts_with_footnote_symbol(line: &Tokens) -> b
     })
 }
 
-/// The notes of a line of notes only ([`notes_only_line`]), each the span `(start, end)` of `line` from its command
+/// The notes of a line of notes only, each the span `(start, end)` of `line` from its command
 /// through its closing brace; `None` when the line holds other ink.
 pub(in crate::base_utilities) fn line_notes(line: &[Token]) -> Option<Vec<(usize, usize)>> {
   let spacing = |t: &Token| *t == T_SPACE!() || *t == T_ACTIVE!('~') || *t == T_CS!("\\par");

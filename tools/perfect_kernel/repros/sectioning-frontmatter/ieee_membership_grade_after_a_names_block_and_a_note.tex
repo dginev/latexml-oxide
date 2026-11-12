@@ -1,0 +1,16 @@
+% witness: 2408.01956 (its shape: the grades of the `\IEEEauthorblockN` names theirs, the one after the block on the text of
+%          its line, the authors' `\thanks` after it)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker, Senior Member, IEEE, Cy Coe, Fellow, IEEE and Dee Dow, Fellow, IEEE"
+% engines: rust P5abase = Bob's and Cy's grades; Dee Dow's dropped silently; rust P5a = Dee Dow's "Fellow, IEEE" a
+%          membership of all three (B1: Bob both Senior Member and Fellow, as 2408.01956's Yong Zeng)
+% expect:  0 errors, 0 warnings; Bob's and Cy's grades; "and Dee Dow, Fellow, IEEE" the line's affiliation text
+% status:  RED (P5a) -> GREEN (P5a2)
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann~Able, Bob~Baker,~\IEEEmembership{Senior Member, IEEE},
+Cy~Coe,~\IEEEmembership{Fellow, IEEE}} and Dee~Dow,~\IEEEmembership{Fellow, IEEE}
+\thanks{Ann Able and Bob Baker are with Univ A.}}
+\maketitle
+Body.
+\end{document}
