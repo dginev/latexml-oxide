@@ -4034,6 +4034,29 @@ pub fn set_minipage_width(width: Dimension) -> Result<()> {
   Ok(())
 }
 
+/// The state value that makes the next `{minipage}` a varwidth box (varwidth.sty's `\varwidth`, which runs
+/// `\@vwid@setup` as the minipage's `\@minipagerestore`): set by the binding, taken by the minipage it begins.
+pub const MINIPAGE_NATURAL_WIDTH: &str = "minipage:natural_width";
+
+/// varwidth.sty's `\endvarwidth`: the box is as wide as its widest line (`\@vwid@measure`, each line's natural
+/// width), or the width it was given where that is less (`\ifdim\@vwid@<\hsize \hsize\@vwid@`). Algxpar's
+/// `\axp@SetToWidth` measures with a 500cm one (algxpar-doc, 2401.12710).
+pub fn minipage_takes_natural_width(whatsit: &mut Whatsit) -> Result<()> {
+  let (Some(Stored::Digested(body)), Some(Stored::Dimension(given))) = (
+    whatsit.get_property("body").map(|b| b.into_owned()),
+    whatsit.get_property("width").map(|w| w.into_owned()),
+  ) else {
+    return Ok(());
+  };
+  let mut options = SymHashMap::default();
+  options.insert("natural_width", Stored::Bool(true));
+  let (natural, ..) = body.compute_size(options)?;
+  whatsit.set_property("declared_width", Stored::Dimension(given));
+  let width = natural.value_of().clamp(0, given.value_of().max(0));
+  whatsit.set_property("width", Stored::Dimension(Dimension::new(width)));
+  Ok(())
+}
+
 /// Perl: beforeFloat (latex_constructs.pool.ltxml L3430-3438)
 /// Sets \@captype, adjusts \hsize for single/double column floats.
 /// `preincrement`: if Some("figure"), pre-increments the parent float counter

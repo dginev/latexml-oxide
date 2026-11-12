@@ -1,0 +1,36 @@
+% witness: algxpar-doc (784 Errors), 2401.12710 (+299): algxpar's `\axp@SetToWidth` measures with a 500cm varwidth
+% oracle:  pdflatex 0 errors; the rows' widths below (TL 2025)
+% engines: rust int164a=0 errors, every varwidth row the given width (284.52756pt; 85.35826pt for the 3cm one), the
+%          two nested in a 4cm minipage / 2cm minipage right; perl: varwidth = minipage (KNOWN_PERL_ERRORS #1232)
+% expect:  0 errors, 0 warnings; [22.3056pt] [86.19458pt] [44.00003pt] [41.62253pt] [80.02792pt] [115.13911pt]
+%          [22.3056pt] [142.26378pt] [113.81102pt] [170.71652pt] [10.5556pt] [79.2111pt] [45.58342pt] [62.1833pt]
+%          [0.0pt] [51.14253pt] [5.2778pt] [47.02785pt] [284.52756pt]; the varwidth in the text keeps width="284.5pt"
+% status:  RED (int164a) -> GREEN (VARW: `minipage_takes_natural_width`)
+% varwidth.sty `\endvarwidth` re-measures each line at its natural width and sets the box at the widest, at most the
+% width given. Row 3 (a tabular) differs from pdflatex's 44.00006pt in the tabular's own measure, as without varwidth.
+\documentclass{article}
+\usepackage{array,varwidth}
+\newlength\VWL
+\long\def\M#1{\setbox0\hbox{#1}[\the\wd0]\par}
+\begin{document}
+\M{\begin{varwidth}{10cm}short\end{varwidth}}
+\M{\begin{varwidth}{10cm}short\\a longer second line\end{varwidth}}
+\M{\begin{varwidth}{10cm}\begin{tabular}{ll}a&b\\cc&dd\end{tabular}\end{varwidth}}
+\M{\begin{varwidth}{10cm}text \[x+y=z\] more\end{varwidth}}
+\M{\begin{varwidth}{3cm}a long paragraph that will surely need to break into several lines here\end{varwidth}}
+\M{\begin{varwidth}{10cm}short\par a longer second paragraph\end{varwidth}}
+\M{\begin{varwidth}{10cm}\centering short\end{varwidth}}
+\M{\begin{varwidth}{10cm}\rule{5cm}{1pt}\end{varwidth}}
+\M{\begin{varwidth}{10cm}\begin{minipage}{4cm}x\end{minipage}\end{varwidth}}
+\M{\begin{minipage}{6cm}\begin{varwidth}{4cm}x\end{varwidth}\end{minipage}}
+\M{\begin{varwidth}{10cm}\begin{varwidth}{4cm}xy\end{varwidth}\end{varwidth}}
+\M{{\varwidth{10cm}short\endvarwidth}\begin{minipage}{2cm}x\end{minipage}}
+\M{\begin{varwidth}[t]{10cm}short\\longer line\end{varwidth}}
+\M{\begin{varwidth}{10cm}\hspace{2cm}x\end{varwidth}}
+\M{\begin{varwidth}{10cm}\end{varwidth}}
+\M{\begin{varwidth}{10cm}\large Big words\end{varwidth}}
+\settowidth\VWL{\begin{varwidth}{1cm}x\end{varwidth}}[\the\VWL]\par
+\M{\begin{tabular}{V{5cm}}short\\a longer\\\end{tabular}}
+\M{\begin{minipage}{10cm}short\end{minipage}}
+\begin{varwidth}{10cm}short\end{varwidth}
+\end{document}

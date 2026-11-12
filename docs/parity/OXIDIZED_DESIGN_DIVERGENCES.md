@@ -35425,3 +35425,17 @@ spanish: 2 false Errors each gone). **Guard**: `perfect_kernel_batchqa47a::batch
 `command_hook_on_makecaption_*`). **Open**: a plain repeat `\usepackage{caption}` after floatrow's caption3
 (`command_hook_on_makecaption_caption_repeat_without_options_red`); code on a `cmd/@makecaption` hook never runs, since LaTeXML's
 `\caption` does not go through `\@makecaption` (`command_hook_on_makecaption_code_never_runs_red`, post-merge QAHK).
+
+### 1012. A varwidth box measures its widest line (VARW)
+
+**TeX.** varwidth.sty `\endvarwidth` sets the box at its widest line's natural width, at most the given one. **Perl.**
+`\varwidth` = `\minipage` (KNOWN_PERL_ERRORS #1232). **Rust.** varwidth_sty.rs's `\varwidth` sets `minipage:natural_width`
+(`\lx@vwid@setup`) before `\minipage`, as the package runs `\@vwid@setup` from the minipage's `\@minipagerestore`; the minipage
+takes the flag at its begin (so a nested box does not) and, after its body, `minipage_takes_natural_width` sizes the body with
+`compute_boxes_size`'s `natural_width` option (the stacked lines' widest width instead of the paragraph width) and sets
+`width` to the lesser. The XML keeps the given width (`declared_width`, the attribute): our natural width is an estimate
+from font metrics, and a CSS width under it would wrap the HTML where the PDF does not. **Witnesses**: algxpar-doc (784 → 0
+Errors), 2401.12710 (310 → 11, the 299 overflows and 23 empty ▷ gone). **Guard**:
+`perfect_kernel_batchvarw::varwidth_takes_its_widest_line`. **Open** (post-merge,
+`boxes-groups/varwidth_lists_and_displays_measure_red.tex`): a list (itemize, center) inside is measured at its full width;
+a numbered display and a display opening the box measure without TeX's centring shift; `\hfill` sizes as an interword space.

@@ -867,7 +867,8 @@ pub(crate) fn load() -> Result<()> {
         .map(|a| a.to_string())
         .unwrap_or_default();
       let vattach = translate_attachment(&attachment);
-      let width = match props.get("width") {
+      // A varwidth box keeps the width it was given (`declared_width`) and measures its widest line.
+      let width = match props.get("declared_width").or_else(|| props.get("width")) {
         Some(Stored::Dimension(d)) => d.to_attribute(),
         Some(w) => w.to_string(),
         None => args.get(3).and_then(|a| a.as_ref()).map(|a| a.to_attribute())
@@ -920,6 +921,12 @@ pub(crate) fn load() -> Result<()> {
         set_minipage_width(dim)?;
         whatsit.set_property("width", Stored::Dimension(dim));
       }
+      // A varwidth (varwidth.sty `\varwidth`, its `\@vwid@setup` run by this minipage): the box's own, not a
+      // nested minipage's.
+      if lookup_bool(MINIPAGE_NATURAL_WIDTH) {
+        whatsit.set_property("natural_width", true);
+        assign_value(MINIPAGE_NATURAL_WIDTH, false, Some(Scope::Local));
+      }
       // `\\@parboxrestore`'s `\\everypar{}` (latex.ltx:16279): the box's paragraphs do not run the enclosing one's, whose
       // `\\everypar` holding this box would otherwise recurse (plweb's pl.sty:121, a `\\parbox`; `\\lx@parbox@restore`
       // has it too), and its interline values (:16284-16286): lines set as the document's, though an
@@ -938,6 +945,10 @@ pub(crate) fn load() -> Result<()> {
           let mut body = body;
           body.set_property("vattach", vattach);
         }
+      if whatsit.get_property_bool("natural_width") {
+        assign_value(MINIPAGE_NATURAL_WIDTH, false, Some(Scope::Local));
+        minipage_takes_natural_width(whatsit)?;
+      }
     }
   );
   // The width it states is a float panel's (the panel grid rule, `declare_panel_width`).
