@@ -351,6 +351,28 @@ pub(in crate::base_utilities) fn printed_label_keys(printed: &str, prefix: &str)
     .collect()
 }
 
+/// The affiliation keys a name's mark requests by its printed text: of each label, its parts ([`parted_printed_label`],
+/// a one-run label whole) that open with a letter, a digit or a cross-reference's `\` — `1∗` and `†1` request 1, `1a` 1a,
+/// `∇` none (2402.10256).
+pub(in crate::base_utilities) fn requested_label_keys(printed: &str) -> Vec<String> {
+  let opens_a_label = |key: &String| {
+    let label = key.strip_prefix("affiliation:").unwrap_or(key);
+    label.starts_with('\\') || label.chars().next().is_some_and(char::is_alphanumeric)
+  };
+  clean_frontmatter_labels(printed, "affiliation")
+    .into_iter()
+    .flat_map(|label| {
+      let mut parts = parted_printed_label(label);
+      // (a parted label's first key is the whole, which the page shows as its parts)
+      if parts.len() > 1 {
+        parts.remove(0);
+      }
+      parts.retain(opens_a_label);
+      parts
+    })
+    .collect()
+}
+
 /// The label `\lx@sup@setlabel@affiliation` sets for a mark's `operand` (#919): the first of its `printed` text's labels,
 /// else of its spelling's.
 pub(in crate::base_utilities) fn set_label(

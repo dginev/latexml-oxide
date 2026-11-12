@@ -1,6 +1,6 @@
 % mechanism: REVTeX's group rule (`group_or_marked_affiliation`): a symbol glued to a number (`$^{\dagger 1,2}$`) prints
-%   "†1"; its pieces are read apart (`printed_label_keys`: "†1", "†", "1"), and those opening with a letter or a number
-%   request lines (`relocate::requested_labels`): 1 and 2, so the unmarked head is the requested 1 no line prints
+%   "†1", one label of two parts ("†", "1"); a name requests its parts opening with a letter or a number
+%   (`requested_label_keys`): 1 and 2, so the unmarked head is the requested 1 no line prints
 % witness: synthetic (review revP4b3, probe p2)
 % oracle:  pdflatex (TL 2025, revtex4-2, -no-shell-escape) 0 errors: "Ann Able†1,2 and Bob Baker‡2,3 / Univ A, Town A /
 %          2 Univ B, Town B / 3 Univ C, Town C"

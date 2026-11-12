@@ -990,19 +990,14 @@ pub fn run_names_show_a_mark() -> Result<bool> {
   )
 }
 
-/// The affiliation labels a name's mark requests, by its printed text (`queued_author_marks`): each label piece
-/// (`printed_label_keys`) that opens with a letter, a number or a cross-reference's `\`, as `argument_marks::is_label_mark`
-/// reads a mark — `$^{*,1,2}$` requests 1 and 2, `$^{\dagger 1}$` 1, `$^{\nabla}$` none (2402.10256), `$^{\hbar}$` ℏ.
+/// The affiliation labels a name's mark requests, by its printed text (`queued_author_marks`), once a label
+/// (`requested_label_keys`): `$^{*,1,2}$` requests 1 and 2, `$^{1*,2}$` and `$^{\dagger 1,2}$` too, `$^{\nabla}$` none
+/// (2402.10256), `$^{\hbar}$` ℏ.
 fn requested_labels(text: &str) -> Vec<String> {
   if !requests_an_affiliation(text) {
     return Vec::new();
   }
-  let mut keys = printed_label_keys(text, "affiliation");
-  keys.retain(|key| {
-    let label = key.strip_prefix("affiliation:").unwrap_or(key);
-    label.starts_with('\\') || label.chars().next().is_some_and(char::is_alphanumeric)
-  });
-  keys
+  requested_label_keys(text)
 }
 
 /// Whether a name's mark, by its printed text (`queued_author_marks`), requests an affiliation: a request of another kind

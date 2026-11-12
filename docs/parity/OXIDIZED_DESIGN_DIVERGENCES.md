@@ -29865,9 +29865,12 @@ the exception.
 **Option C P4b3 (amended):** REVTeX's and AASTeX's group rule reads digested marks (`marks_as_printed`; unread, tokens,
 counted): a block's requested labels (`relocate::requested_marks`), its marks (`content_mark_labels`), its tail
 (`marks_lead_every_line`), the names' requests (`queued_author_marks`, the queue's last authors: 1901.01540). A name
-requests each label piece opening with a letter, digit or `\` (`requested_labels`: `$^{*,1,2}$` 1 and 2, `$^{\nabla}$`
-none, 2402.10256). `leading_macro_mark`, `run_names_macro_marks` stay on tokens. Guard
-`perfect_kernel_batchc1::group_rule_reads_marks_as_digested`; open REDs `revtex_*_red` of P4b3.
+requests each label once, by its parts opening with a letter, digit or `\` (`requested_label_keys`: `$^{*,1,2}$` and
+`$^{1*,2}$` 1 and 2, `$^{\nabla}$` none, 2402.10256). `leading_macro_mark`, `run_names_macro_marks` stay on tokens: read
+as digested, marks a macro prints through another go to the block, not by mark as printed (row
+`revtex_argument_macro_marks_after_commas_go_by_their_marks`). Guard `perfect_kernel_batchc1::group_rule_reads_marks_as_digested`;
+open REDs (post-merge) `revtex_math_active_name_marks_unread_red`, `revtex_ordinal_affiliation_content_check_counts_red`,
+`revtex_paren_marks_head_over_lines_red`, `revtex_symbol_glued_marks_over_parbox_lines_red`.
 
 ### 948. Every remaining observer-writer family is written in one batch (ijcai, inst_support, iopart, jheppub, jinstpub, jcappub, jpconf, sv_support and every binding owning `\author` with no declaration); a block line's letters are read as printed, a re-parted entry keeps today's role, a letter-spaced name's word space is no gap, an e-mail's corresponding owner is one of the authors it is printed for, a name read as an entry is never written onto an author; an elsarticle key is answered by its keys alone, and a name the re-part makes that names no person declines (Perl: the old reader's output, no observer)
 

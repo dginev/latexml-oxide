@@ -1034,10 +1034,11 @@ fn api_cut_gate_reads_past_empty_bodies() {
 /// `queued_author_marks`). One row a reader: a document macro's marks over the unmarked head (held, lines, the
 /// head's unprinted label), a mark in a box of its own (lines), a mark in `\textbf` (`marks_lead_every_line`), and
 /// AASTeX's `annotate=new` under macro-marked names; a mark's label pieces read apart under a symbol (`$^{*,1,2}$`,
-/// `$^{\dagger 1,2}$`: red on P4b3b, revP4b3 B1); symbol marks leading the lines (no label, no fail-safe: red on P4b3,
-/// 2402.10256); marks printed through a macro with an argument after the names' commas, which go by the marked rule
-/// (P4b3b, green on P4b3base). Red on P4b3base: the whole block on every author (macro, box), a nameless creator (bold),
-/// both lines on every author (aastex). Each: no Error, its Warning count, every creator.
+/// `$^{\dagger 1,2}$`: red on P4b3b, revP4b3 B1), a label of parts requested once (`$^{1*,2}$`: red on P4b3d, revP4b3c
+/// B1); symbol marks leading the lines (no label, no fail-safe: red on P4b3, 2402.10256); marks printed through a macro
+/// with an argument after the names' commas, which go by the marked rule (P4b3b, green on P4b3base). Red on P4b3base:
+/// the whole block on every author (macro, box), a nameless creator (bold), both lines on every author (aastex). Each:
+/// no Error, its Warning count, every creator.
 #[test]
 fn group_rule_reads_marks_as_digested() {
   macro_rules! repro {
@@ -1134,6 +1135,57 @@ fn group_rule_reads_marks_as_digested() {
         "affiliation=3 Univ C, Town C",
       ],
     ]),
+    // (P4b3e, review revP4b3c B1: a label of parts requests its letter- or digit-led parts once, `requested_label_keys`:
+    // `$^{1*,2}$` and `$^{a*,b}$` leave one requested label unprinted, the head; red on P4b3d: a nameless creator holding
+    // the block, silently; over fully marked lines green on every binary)
+    (
+      repro!("revtex_symbol_after_number_mark_head_over_lines"),
+      0,
+      &[
+        &[
+          "Ann Able 1 ∗ ,2",
+          "affiliation=Univ A, Town A",
+          "affiliation=2 Univ B, Town B",
+        ],
+        &[
+          "Bob Baker 2,3",
+          "affiliation=2 Univ B, Town B",
+          "affiliation=3 Univ C, Town C",
+        ],
+      ],
+    ),
+    (
+      repro!("revtex_symbol_after_letter_mark_head_over_lines"),
+      0,
+      &[
+        &[
+          "Ann Able a ∗ ,b",
+          "affiliation=Univ A, Town A",
+          "affiliation=b Univ B, Town B",
+        ],
+        &[
+          "Bob Baker b,c",
+          "affiliation=b Univ B, Town B",
+          "affiliation=c Univ C, Town C",
+        ],
+      ],
+    ),
+    (
+      repro!("revtex_symbol_after_number_mark_over_marked_lines"),
+      0,
+      &[
+        &[
+          "Ann Able 1 ∗ ,2",
+          "affiliation=1 Univ A, Town A",
+          "affiliation=2 Univ B, Town B",
+        ],
+        &[
+          "Bob Baker 2,3",
+          "affiliation=2 Univ B, Town B",
+          "affiliation=3 Univ C, Town C",
+        ],
+      ],
+    ),
     // (P4b3b: a symbol mark, `$^{\nabla}$`, requests no label, `requested_labels`, so the lines hold one requested label and
     // are no fail-safe block; 2402.10256)
     (
