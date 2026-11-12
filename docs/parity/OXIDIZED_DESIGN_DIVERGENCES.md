@@ -35415,7 +35415,7 @@ empty when the code is stored (`\__hook_hook_gput_code_do:nnn`, latex.ltx:5355ff
 `\lx@add@affiliations` (iopart_support.sty.ltxml:53); no list is cut at its marks, so every author gets the whole block,
 and `\IEEEauthorrefmark` expands to nothing (IEEEtran.cls.ltxml:154), so Perl prints no mark.
 
-**Rust.** A binding hands its marked list to the one Cut (`frontmatter_api::cut::cut_list`) through
+**Rust.** A binding hands its marked list to the one Cut (`frontmatter_api::cut_list`) through
 `\lx@add@affiliation@marked`/`@shared` (`author_macros.rs` `marked_list_calls`) with its declaration, `MARKED_LIST_CUT`
 (a `CutParameters`): every printed mark cuts it once the names print theirs (`affiliation_is_marked`); an address line
 behind an e-mail label is entry text; a printed comma closing the list and the notes after it stay as printed (no part

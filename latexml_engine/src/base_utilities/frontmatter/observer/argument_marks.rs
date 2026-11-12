@@ -483,8 +483,8 @@ pub struct RequestedEntries {
 
 /// The labels, distinct, set by the marks that open the entries of a list `arg`, its entries as the observer cuts an API
 /// call (`events::mark_led_pieces`), each with the queue positions of the names requesting it, a label no name
-/// requests left out: the API Cut's decision and its copy rule (`cut::cut_list`). Unread, none — the list stays whole for
-/// the observer to read —, counted for `caller`.
+/// requests left out: the API Cut's decision and its copy rule (`frontmatter_api::cut_list`). Unread, none — the list
+/// stays whole for the observer to read —, counted for `caller`.
 pub fn requested_entry_labels(arg: &Tokens, caller: &str) -> Result<RequestedEntries> {
   if !may_open_with_mark(arg) {
     return Ok(RequestedEntries::default());

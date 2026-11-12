@@ -163,7 +163,7 @@ fn pure_stores(body: &[Token], arg: usize) -> Option<Vec<Token>> {
         .get(k)
         .is_some_and(|b| b.get_catcode() == Catcode::BEGIN)
       {
-        let past = group_end(body, k)?;
+        let past = tokens_group_end(body, k)?;
         (past == k + 3 && body[k + 1].get_catcode() == Catcode::CS).then_some(())?;
         k = past;
       } else {
@@ -176,7 +176,7 @@ fn pure_stores(body: &[Token], arg: usize) -> Option<Vec<Token>> {
           k += body[k..].iter().position(|b| *b == T_OTHER!("]"))? + 1;
         }
       }
-      i = group_end(body, skip_spaces(body, k))?;
+      i = tokens_group_end(body, skip_spaces(body, k))?;
       continue;
     }
     if !cs_in(&t, STORE_DEFINERS) {
@@ -194,7 +194,7 @@ fn pure_stores(body: &[Token], arg: usize) -> Option<Vec<Token>> {
     }) {
       open += 1;
     }
-    let past = group_end(body, open)?;
+    let past = tokens_group_end(body, open)?;
     let stored = &body[open + 1..past - 1];
     if open == k + 1
       && (depth == 0 || is_global)
@@ -941,7 +941,7 @@ impl ClassReaders {
           }
         } else {
           let open = (past..body.len()).find(|&k| body[k].get_catcode() == Catcode::BEGIN);
-          match open.and_then(|open| group_end(body, open).map(|end| (open, end))) {
+          match open.and_then(|open| tokens_group_end(body, open).map(|end| (open, end))) {
             Some((open, end)) => body[open + 1..end - 1].to_vec(),
             None => Vec::new(),
           }
@@ -1014,7 +1014,7 @@ impl ClassReaders {
           continue;
         }
         if let Some((start, end, text, in_argument)) = line_label_before(body, at)
-          && balanced(&body[start..end])
+          && Tokens::slice_is_balanced(&body[start..end])
         {
           return Some(StoreLabel {
             reader,
@@ -1134,7 +1134,7 @@ impl ClassReaders {
         if body
           .get(open)
           .is_some_and(|b| b.get_catcode() == Catcode::BEGIN)
-          && let Some(past) = group_end(body, open)
+          && let Some(past) = tokens_group_end(body, open)
         {
           styles.insert(Tokens::new(body[open + 1..past - 1].to_vec()).to_string());
         }
@@ -1251,7 +1251,7 @@ impl ClassReaders {
               lines.glued = true;
             }
             if let Some(&start) = open.last()
-              && let Some(end) = group_end(body, start)
+              && let Some(end) = tokens_group_end(body, start)
             {
               let from = body[start..k]
                 .iter()
@@ -1337,7 +1337,7 @@ fn running_head_arguments(body: &[Token]) -> Vec<(usize, usize)> {
       None => continue,
     }
     for _ in 0..*nargs {
-      match group_end(body, skip_spaces(body, k)) {
+      match tokens_group_end(body, skip_spaces(body, k)) {
         Some(past) => k = past,
         None => break,
       }
@@ -1386,7 +1386,7 @@ fn head_definition_body(body: &[Token], i: usize) -> Option<(usize, usize)> {
   } else {
     return None;
   }
-  Some((k, group_end(body, k)?))
+  Some((k, tokens_group_end(body, k)?))
 }
 
 /// The index past the optional arguments (`[…]`, each with its braced groups whole) from `body[k]` on, spaces
@@ -1628,7 +1628,7 @@ fn prints_text(code: &[Token], depth: usize) -> bool {
         k += 1;
       }
       for _ in 0..*nargs {
-        match group_end(code, skip_spaces(code, k)) {
+        match tokens_group_end(code, skip_spaces(code, k)) {
           Some(past) => k = past,
           None => return true,
         }
@@ -1644,7 +1644,7 @@ fn prints_text(code: &[Token], depth: usize) -> bool {
         }
       }
       for _ in 0..2 {
-        match group_end(code, skip_spaces(code, k)) {
+        match tokens_group_end(code, skip_spaces(code, k)) {
           Some(past) => k = past,
           None => return true,
         }
@@ -1867,7 +1867,7 @@ fn written_stores(body: &[Token], arg: Option<usize>) -> Vec<(Token, bool)> {
     while open < body.len() && body[open].get_catcode() != Catcode::BEGIN {
       open += 1;
     }
-    let written = group_end(body, open).map_or(&[][..], |past| &body[open..past]);
+    let written = tokens_group_end(body, open).map_or(&[][..], |past| &body[open..past]);
     out.push((*target, holds_arg(written)));
   }
   out
@@ -2073,7 +2073,7 @@ fn prints_argument(code: &[Token], arg: usize, depth: usize) -> bool {
   // the index past one argument at `k` (a group or one token), spaces before it skipped
   let past_argument = |k: usize| -> usize {
     let k = skip_spaces(code, k);
-    group_end(code, k).unwrap_or((k + 1).min(code.len()))
+    tokens_group_end(code, k).unwrap_or((k + 1).min(code.len()))
   };
   let mut i = 0;
   while i < code.len() {
@@ -2082,7 +2082,7 @@ fn prints_argument(code: &[Token], arg: usize, depth: usize) -> bool {
       return true;
     }
     if t.get_catcode() == Catcode::BEGIN {
-      let end = group_end(code, i).unwrap_or(code.len());
+      let end = tokens_group_end(code, i).unwrap_or(code.len());
       if prints_argument(&code[i + 1..end.saturating_sub(1).max(i + 1)], arg, depth) {
         return true;
       }
@@ -3119,7 +3119,7 @@ fn without_labels(tokens: &Tokens) -> Tokens {
   while i < toks.len() {
     if toks[i] == T_CS!("\\label") {
       let k = skip_spaces(toks, i + 1);
-      if let Some(past) = group_end(toks, k) {
+      if let Some(past) = tokens_group_end(toks, k) {
         i = past;
         continue;
       }
@@ -4225,7 +4225,7 @@ fn executed_code(body: &[Token]) -> Vec<Token> {
   // the index past one argument at `k`: a group or a single token
   let argument = |k: usize| -> usize {
     let k = skip_spaces(body, k);
-    group_end(body, k).unwrap_or((k + 1).min(body.len()))
+    tokens_group_end(body, k).unwrap_or((k + 1).min(body.len()))
   };
   let mut out = Vec::with_capacity(body.len());
   let mut i = 0;
@@ -4241,7 +4241,7 @@ fn executed_code(body: &[Token]) -> Vec<Token> {
       while k < body.len() && body[k].get_catcode() != Catcode::BEGIN {
         k += 1;
       }
-      i = group_end(body, k).unwrap_or(body.len());
+      i = tokens_group_end(body, k).unwrap_or(body.len());
       continue;
     }
     if cs_in(&t, COMMANDS) {
@@ -4284,7 +4284,7 @@ fn executed_code(body: &[Token]) -> Vec<Token> {
       while k < body.len() && body[k].get_catcode() != Catcode::BEGIN {
         k += 1;
       }
-      i = group_end(body, k).unwrap_or(body.len());
+      i = tokens_group_end(body, k).unwrap_or(body.len());
       continue;
     }
     out.push(t);
@@ -6155,27 +6155,6 @@ fn skip_spaces(body: &[Token], mut i: usize) -> usize {
   i
 }
 
-/// The index past the balanced group opening at `body[i]` (a `{`), or `None` when it does not open one or never closes.
-fn group_end(body: &[Token], i: usize) -> Option<usize> {
-  if body.get(i)?.get_catcode() != Catcode::BEGIN {
-    return None;
-  }
-  let mut depth = 0usize;
-  for (k, t) in body.iter().enumerate().skip(i) {
-    match t.get_catcode() {
-      Catcode::BEGIN => depth += 1,
-      Catcode::END => {
-        depth -= 1;
-        if depth == 0 {
-          return Some(k + 1);
-        }
-      },
-      _ => {},
-    }
-  }
-  None
-}
-
 /// How a definition nested in a body makes its command: `\def`, `\gdef`, `\renewcommand` replace a meaning the name
 /// has; `\newcommand` and `\providecommand` keep it (LaTeX's `\newcommand` of a defined name is an error that leaves it,
 /// latex.ltx `\@ifdefinable`).
@@ -6248,7 +6227,7 @@ fn nested_one_arg_definition(body: &[Token], name: &str) -> Option<(Definer, Vec
         j += 1;
       }
       if digits == ["1"]
-        && let Some(past) = group_end(body, j)
+        && let Some(past) = tokens_group_end(body, j)
       {
         let own = &body[j + 1..past - 1];
         if argument_at(own).is_some() {
@@ -6280,7 +6259,7 @@ fn nested_one_arg_definition(body: &[Token], name: &str) -> Option<(Definer, Vec
     let one_arg = [T_OTHER!("["), T_OTHER!("1"), T_OTHER!("]")];
     if body.get(j..j + 3) == Some(&one_arg[..]) {
       let k = skip_spaces(body, j + 3);
-      if let Some(past) = group_end(body, k) {
+      if let Some(past) = tokens_group_end(body, k) {
         let own = &body[k + 1..past - 1];
         if argument_at(own).is_some() {
           return Some((definer, own.to_vec()));
@@ -6387,7 +6366,7 @@ fn nested_definition_of(body: &[Token], target: Token) -> Option<Vec<Token>> {
     {
       k += 1;
     }
-    let Some(past) = group_end(body, k) else {
+    let Some(past) = tokens_group_end(body, k) else {
       continue;
     };
     if body[j..past]
@@ -6836,7 +6815,7 @@ fn label_item(body: &[Token], i: usize, depth: usize, out: &mut LabelText) -> Op
     },
     Catcode::BEGIN => {
       // a group of label material: `{\bfseries Keywords:}`, `{\itshape Some key words}` (biometrika.cls:526)
-      let past = group_end(body, i)?;
+      let past = tokens_group_end(body, i)?;
       label_items(&body[i + 1..past - 1], depth, out)?;
       return Some(past);
     },
@@ -6859,7 +6838,7 @@ fn label_item(body: &[Token], i: usize, depth: usize, out: &mut LabelText) -> Op
       k += 1;
     }
     for _ in 0..*nargs {
-      k = group_end(body, skip_spaces(body, k))?;
+      k = tokens_group_end(body, skip_spaces(body, k))?;
     }
     if *cs == "\\hspace" {
       out.space();
@@ -6879,7 +6858,7 @@ fn label_item(body: &[Token], i: usize, depth: usize, out: &mut LabelText) -> Op
     if cs_in(&t, HEADINGS) && body.get(k) == Some(&T_OTHER!("*")) {
       k = skip_spaces(body, k + 1);
     }
-    let past = group_end(body, k)?;
+    let past = tokens_group_end(body, k)?;
     label_items(&body[k + 1..past - 1], depth, out)?;
     return Some(past);
   }
@@ -6976,24 +6955,6 @@ fn label_before_argument(body: &[Token]) -> Option<Tokens> {
     .map(|(t, _)| *t)
     .collect();
   label_only_begin_code(&kept)
-}
-
-/// Is `toks` balanced in its braces?
-fn balanced(toks: &[Token]) -> bool {
-  let mut depth = 0i32;
-  for t in toks {
-    match t.get_catcode() {
-      Catcode::BEGIN => depth += 1,
-      Catcode::END => {
-        depth -= 1;
-        if depth < 0 {
-          return false;
-        }
-      },
-      _ => {},
-    }
-  }
-  depth == 0
 }
 
 /// The label in the line before `body[at]` ([`ClassReaders::title_page_label`]; a line starts at a line break, a group's
@@ -7329,7 +7290,7 @@ fn enclosing_conditional(body: &[Token], branch: usize, at: usize) -> Option<(us
     match conditional_kind(&body[j]) {
       Some(ConditionalType::If) => depth += 1,
       Some(ConditionalType::Fi) if depth == 0 => {
-        return balanced(&body[open..=j]).then_some((open, j + 1));
+        return Tokens::slice_is_balanced(&body[open..=j]).then_some((open, j + 1));
       },
       Some(ConditionalType::Fi) => depth -= 1,
       _ => {},
@@ -7406,7 +7367,7 @@ fn collects_body_for_the_title_page(begin: &[Token], readers: &mut Option<ClassR
   else {
     return false;
   };
-  let Some(past) = group_end(body, k + 1) else {
+  let Some(past) = tokens_group_end(body, k + 1) else {
     return false;
   };
   argument_at(&body[k + 2..past - 1]).is_some()

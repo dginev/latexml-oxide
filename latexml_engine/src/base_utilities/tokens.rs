@@ -313,6 +313,27 @@ pub fn tokens_read_argument(tokens: &[Token], at: usize) -> (Vec<Token>, usize) 
   (tokens[start + 1..].to_vec(), tokens.len())
 }
 
+/// The index past the balanced group opening at `tokens[at]` (a `{`), or `None` when it does not open one or never closes.
+pub fn tokens_group_end(tokens: &[Token], at: usize) -> Option<usize> {
+  if tokens.get(at)?.get_catcode() != Catcode::BEGIN {
+    return None;
+  }
+  let mut depth = 0usize;
+  for (k, t) in tokens.iter().enumerate().skip(at) {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => {
+        depth -= 1;
+        if depth == 0 {
+          return Some(k + 1);
+        }
+      },
+      _ => {},
+    }
+  }
+  None
+}
+
 /// Where the environment begun at `start` ends: the place of its `\end` and the place after `\end{name}`.
 pub fn tokens_environment_end(cell: &[Token], start: usize, name: &str) -> Option<(usize, usize)> {
   let mut depth = 0usize;
