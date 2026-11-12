@@ -97,7 +97,7 @@ fn save_psfrag(stuff: Vec<Token>) {
 }
 
 /// The hooks' `afterDigest` (Perl L82-87, L105-110, L127-132) for a graphic `whatsit` of any including command
-/// (`\includegraphics`, `\epsfbox` and its `\let` copies, `\psfig`). An EPS graphic ([`eps_file`]) is where psfrag
+/// (`\includegraphics`, `\epsfbox` and its `\let` copies, `\psfig`). An EPS graphic (`eps_file`) is where psfrag
 /// places the saved fragments (psfrag.sty:46-62 `\Ginclude@eps`/`\epsfbox`) and, under a scan, the `(\\tex` strings
 /// of the file (psfrag.sty:152-209 `\pfg@scan`); they are not rendered (PSFR), so the graphic is one Warning naming
 /// each of them. The scan stays on until `\psfragscanoff` (psfrag.sty:24), where Perl resets it per graphic
