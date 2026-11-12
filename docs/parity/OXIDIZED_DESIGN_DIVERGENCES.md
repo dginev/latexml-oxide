@@ -8043,7 +8043,14 @@ a_script_binding_class_load_settles_the_chapters}`; KNOWN_PERL_ERRORS #962.
 
 **Perl behavior**: `DefMacro('\@trivlist', '\relax', locked => 1)` (pool:1732), so a raw class or package that redefines `\list` alone — memoir.cls:4580 (latex.ltx:15848 verbatim; its `adjustwidth` is `\begin{list}`), autolist.sty:37-109 — opens nothing, while `\endlist` → `\endlx@list` expects the `\lx@list` frame: "Attempt to end mode internal_vertical" on every such list (digiconfigs, memman, memexsupp, MemoirChapStyles, dlfltxb ×3, biblatex-oxref ×4, shipunov autolist ×2, … 28 docs, sweep 30).
 **Rust behavior**: `\@trivlist` = `\lx@trivlist@setup\lx@list`: starts the itemization unless the list's setup already ran `\usecounter` (which binds `itemcounter` in the current frame), then opens the `\lx@list` itemize+frame; `\endtrivlist` ends a `\trivlist` begun in its own group first (#435), else pops an `\lx@list` frame when it is on top (latex.ltx:15913 `\endlist` → `\endtrivlist`; 0802.2207 `mathtrivlist` pairs `\@trivlist` with `\endtrivlist`). The kernel `\@trivlist`'s `\@noitemerr` paths are not reproduced.
-**Why**: kernel-quality: the two closers now close what the kernel's own opener opened; our `\list`/`\trivlist` bindings are unchanged.
+**Labels (ML1, QA45)**: the item label lives in `\@itemlabel`, as latex.ltx's `\list` stores it (:15858), and the
+locked `\@trivlist` reads it at each `\item` (`\fnum@<\@listctr>` = `\@itemlabel`, defined after `\lx@list`, which
+assigns an unnumbered list's `\@listctr`): a class's own `\list` (memoir.cls:4580) and a mid-list `\def\@itemlabel`
+label as pdflatex. Perl defines `\fnum@` in its `\list` instead (latex_constructs.pool.ltxml:1642-1643, 1673), so a
+class's `\list` and a mid-list change print its default. Witnesses 1511.01113, 2212.04510, 2604.21972; guard
+`perfect_kernel_batch56::list_labels_come_from_itemlabel`.
+**Why**: kernel-quality: the two closers now close what the kernel's own opener opened, and the label comes from where
+the kernel keeps it.
 **Witnesses**: digiconfigs 5→0 errors, memman 211→104.
 **Guard**: `perfect_kernel_batch54::raw_list_opens_through_trivlist`.
 **Upstream**: not filed.

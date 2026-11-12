@@ -19273,3 +19273,15 @@ More.
 \end{document}
 ```
 
+## 1222. amsmath, lineno, microtype: Perl's bindings lack what the originals define (QA54, PI1)
+
+- amsmath.sty.ltxml declares `\iftagsleft@` (:87) but never sets it from `leqno`/`reqno` (amsmath.sty:53-55), and lacks
+  `\@@eqno`, `\@@leqno` (amsmath.sty:2766-2767) and `\veqno` (:2770-2771). Trigger: `\let\veqno\@@leqno $$a=b\veqno(1)$$`
+  → `Error:undefined:\veqno` (1409.3102 aliases it).
+- lineno.sty.ltxml loads neither etoolbox nor kvoptions (lineno.sty:264-265). Trigger: `\usepackage{lineno}`
+  `\cspreto{quote}{}` → 3 errors.
+- microtype.sty.ltxml loads etoolbox (:27-28) but not keyval (microtype.sty:189). Trigger: `\define@key` undefined.
+
+Rust (PI1): the bindings define and load what the originals do; guard
+`perfect_kernel_batch65k::internals_the_originals_define`. Upstream: on the patch list (BM Q&A QA80).
+

@@ -2268,7 +2268,7 @@ Extra braces must be added to prevent wrong output}\@ehc}
   DefConditional!("\\ifshifttag@");
   // `\if@fleqn` moved up (before the options block, Perl L53 / #2835) so the
   // `fleqn` option can `\Let` it to `\iftrue`.
-  // amsmath.sty:2767-2771, which authors alias (1409.3102 `\let\veqno\@@leqno`).
+  // amsmath.sty:2766-2767, 2770-2771, which authors alias (1409.3102 `\let\veqno\@@leqno`).
   RawTeX!(
     r"\let\@@eqno\eqno \let\@@leqno\leqno
 \let\veqno=\@@eqno \iftagsleft@ \let\veqno=\@@leqno \fi"

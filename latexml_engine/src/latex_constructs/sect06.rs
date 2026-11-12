@@ -892,10 +892,8 @@ pub(crate) fn load() -> Result<()> {
   // acmtrans2m.cls) re-`\def`s latex.ltx's `\@trivlist` for its spacing, so `\list` never opened `\lx@list` and
   // `\endlist` erred "Attempt to end mode internal_vertical" (rc_struct3 L1, est. 252 papers; 1212.6177, 1710.00867).
   // Guard: `perfect_kernel_batch69b::class_redefining_trivlist_keeps_the_list`.
-  // An item without `[…]` prints `\@itemlabel` (latex.ltx:15966), read at the `\item` as there: a class's own
-  // `\list` sets it too (memoir.cls:4580, revtex4.cls:1768; QA45). `\fnum@<\@listctr>` is defined after `\lx@list`:
-  // an unnumbered list's `\@listctr` is the `@item<level>` `begin_itemize` assigns (tests/structure/itemize.tex,
-  // fonts/ding.tex). Guard `perfect_kernel_batch56::list_labels_come_from_itemlabel`.
+  // An item without `[…]` prints `\@itemlabel`, read at each `\item` (latex.ltx:15966; memoir.cls:4580; OD #180;
+  // tests/structure/itemize.tex, fonts/ding.tex). Guard `perfect_kernel_batch56::list_labels_come_from_itemlabel`.
   DefMacro!(
     "\\@trivlist",
     r"\lx@trivlist@setup\lx@list\expandafter\def\csname fnum@\@listctr\endcsname{\@itemlabel}",

@@ -356,7 +356,7 @@ type InternalRow<'a> = ((&'a str, &'a str), &'a [(&'a str, &'a str, &'a str)]);
 
 /// Internals a binding defines where the original does (QA54), each row 0 errors and 0 warnings (red on int160b: 2, 1,
 /// 2, 3 errors, the tags inside their formulas, stray "quote" and "myk" text):
-/// - amsmath.sty:2767-2771 `\@@eqno`, `\@@leqno`, `\veqno` (1409.3102 `\let\veqno\@@leqno`), and `\veqno` under `leqno`
+/// - amsmath.sty:2766-2767, 2770-2771 `\@@eqno`, `\@@leqno`, `\veqno` (1409.3102 `\let\veqno\@@leqno`), and `\veqno` under `leqno`
 ///   (`\iftagsleft@`, :54-55): each tag (n) in its `<tag>`, the formula without it;
 /// - lineno.sty:264-265 loads etoolbox and kvoptions; microtype.sty:189 loads keyval.
 #[test]
