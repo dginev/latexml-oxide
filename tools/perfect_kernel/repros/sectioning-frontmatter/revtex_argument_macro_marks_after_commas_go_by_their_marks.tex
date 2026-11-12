@@ -1,0 +1,28 @@
+% mechanism: REVTeX `\address` lines and names marked by macros that print the mark through another macro
+%   (`\newcommand\UA{\mk{1}}`, `\newcommand\mk[1]{$^{#1}$}`), written after the names' commas: no macro mark by tokens
+%   (`relocate::leading_macro_mark`, `run_names_macro_marks`), so each line is a marked line and goes to the names
+%   showing its mark, as the PDF prints them. Read as digested (P4b3b's trial port, not shipped), the macro-mark rule
+%   (user ruling R1) sent both lines to the block, as for the `\edef\UA{$^{1}$ }` sibling
+%   (revtex_macro_marked_addresses_after_commas_go_to_the_block.tex), where the marked rule now reads the owners too
+%   (main session's question, P4b3b report).
+% witness: synthetic (hep-ph0301204's shape, the mark macro one call removed)
+% oracle:  pdflatex (TL 2025, revtex4, -no-shell-escape) 0 errors: "Ann Able,1,2 Bob Baker,2 Cat Cole,1 / 1 Uni One and /
+%          2 Uni Two"
+% engines: P4b3base, P4b3, P4b3b: as expected; P4b3b's digested trial port: three creators without affiliations and the
+%          block (a nameless creator) Uni One and Uni Two
+% expect:  0 errors, 0 warnings; Ann Able "1 Uni One", "2 Uni Two"; Bob Baker "2 Uni Two"; Cat Cole "1 Uni One"
+% status:  GREEN (guard perfect_kernel_batchc1::group_rule_reads_marks_as_digested)
+\documentclass{revtex4}
+\newcommand\mk[1]{$^{#1}$}
+\newcommand\UA{\mk{1}}
+\newcommand\UB{\mk{2}}
+\begin{document}
+\title{T}
+\author{Ann Able,\UA$^,$\UB\ Bob Baker,\UB\ Cat Cole,\UA}
+\address{\UA Uni One}
+\address{\UB Uni Two}
+\begin{abstract}A.\end{abstract}
+\maketitle
+\section{Intro}
+Text.
+\end{document}

@@ -1026,39 +1026,25 @@ fn unmarked_head_over_marked_lines(content: &Tokens) -> Result<Option<(Tokens, T
 }
 
 /// Whether `tail`, the marked rest of an affiliation block after its unmarked first entry, is lines the marked reader
-/// reads whole ([`unmarked_head_over_marked_lines`]): every top-level line, a blank one aside, opens with a mark, and no
-/// group (a box's argument, a font group) or environment holds a mark — `$^{2}$Univ B\\ \parbox{\linewidth}{$^{3}$Inst
-/// C\\ $^{4}$Lab D}` is not, its boxed lines no cut reads (review rev107e finding 2: Inst C and Lab D one entry, the
-/// head on a nameless creator).
+/// reads whole ([`unmarked_head_over_marked_lines`]): every top-level line, a blank one aside, opens with a mark, no
+/// environment stands in it and no mark is set in a box beside words, as digested — `$^{2}$Univ B\\
+/// \parbox{\linewidth}{$^{3}$Inst C\\ $^{4}$Lab D}` is not, its boxed lines no cut reads (review rev107e finding 2: Inst
+/// C and Lab D one entry, the head on a nameless creator); `\textbf{$^{2}$}Univ B` is.
 fn marks_lead_every_line(tail: &Tokens) -> Result<bool> {
   let v = tail.unlist_ref();
   if v.iter().any(|t| *t == T_CS!("\\begin")) {
     return Ok(false);
   }
+  // (no mark in a box beside words, as digested: `marks_as_printed`; unread, the cut reads none)
+  match marks_as_printed(tail, "marks_lead_every_line")? {
+    Some(marks) if marks.iter().all(|mark| mark.own_level) => {},
+    _ => return Ok(false),
+  }
   for line in split_top_level_lines(v) {
     if line.iter().all(|t| *t == T_SPACE!()) {
       continue;
     }
-    // (each top-level group's content, from its opening brace)
-    let (mut depth, mut open) = (0usize, 0usize);
-    for (i, t) in line.iter().enumerate() {
-      match t.get_catcode() {
-        Catcode::BEGIN => {
-          if depth == 0 {
-            open = i + 1;
-          }
-          depth += 1;
-        },
-        Catcode::END if depth > 0 => {
-          depth -= 1;
-          if depth == 0 && !content_marks(&Tokens::new(line[open..i].to_vec())).is_empty() {
-            return Ok(false);
-          }
-        },
-        _ => {},
-      }
-    }
-    if depth != 0 || !leads_with_label(&Tokens::new(line.to_vec()), "marks_lead_every_line")? {
+    if !leads_with_label(&Tokens::new(line.to_vec()), "marks_lead_every_line")? {
       return Ok(false);
     }
   }
@@ -1104,7 +1090,12 @@ pub(crate) fn group_or_marked_affiliation(content: Tokens, annotate: &str) -> Re
       Some(rest)
     ]));
   }
-  let marked = leads_with_label(&content, "group_or_marked_affiliation")?;
+  // (the block's marks read once, for every question below: `marks_as_printed`)
+  let printed = marks_as_printed(&content, "group_or_marked_affiliation")?;
+  let marked = match &printed {
+    Some(marks) => marks.iter().any(|mark| mark.leads),
+    None => leads_with_label(&content, "group_or_marked_affiliation")?,
+  };
   // (the fail-safe, FRONTMATTER_SINGLE_ENGINE_PLAN "The structure model" step 4: a block of two or more lines led by
   // labels the names request that this reader cannot cut into those lines — set in a box or an environment,
   // `\address{\parbox{\linewidth}{$^{1}$Univ A\\ $^{2}$Univ B}}` (a one-column tabular's rows are lines the reader
@@ -1114,11 +1105,20 @@ pub(crate) fn group_or_marked_affiliation(content: Tokens, annotate: &str) -> Re
   // inside one line's text, `Joint Institute, \textsuperscript{1}Univ A and \textsuperscript{2}Univ B, City` printed once
   // under both names, are no such block: the group's entry, a copy on each, as the PDF prints it for both; review rev98e
   // S2)
-  if !marked
-    && run_names_show_a_mark()
-    && requested_marks_held(&content) > 1
-    && requested_mark_lines(&content) > 1
-  {
+  // (two or more marks open lines, else no fail-safe: the names read only then)
+  let lines_led = printed.as_deref().is_none_or(|marks| {
+    marks
+      .iter()
+      .filter(|mark| mark.line_first && !mark.labels.is_empty())
+      .count()
+      > 1
+  });
+  let requested = if !marked && lines_led && run_names_show_a_mark()? {
+    Some(requested_marks_of(&content, printed.as_deref())?)
+  } else {
+    None
+  };
+  if let Some(requested) = requested.filter(|r| r.held > 1 && r.lines > 1) {
     // (an unmarked first entry over lines its marks lead, `\affiliation{Institute of Materials …, Japan \\ $^2$Waseda
     // Research Institute …\\ $^3$Toyota …}` under `Imoto$^{1,2}$, Imada$^{2,3}$ and Oshiyama`: the first entry is the
     // one mark the names request that no line prints — superscriptaddress numbers it 1 and prints the number once, after
@@ -1128,7 +1128,7 @@ pub(crate) fn group_or_marked_affiliation(content: Tokens, annotate: &str) -> Re
     // revtex prints the number on, when it shows no mark of its own, is not read here: it holds none of the block, as
     // before)
     if let Some((head, tail)) = unmarked_head_over_marked_lines(&content)?
-      && let [label] = requested_marks_unprinted(&content).as_slice()
+      && let [label] = requested.unprinted.as_slice()
     {
       let mut calls = Invocation!(T_CS!("\\lx@add@affiliation"), vec![
         Some(mouth::tokenize_internal(TeXString::assembled(s!(
@@ -1146,9 +1146,13 @@ pub(crate) fn group_or_marked_affiliation(content: Tokens, annotate: &str) -> Re
       Some(content)
     ]));
   }
-  let grouped = marked && queued_group_shares_the_mark(&content);
-  let declared_grouped =
-    grouped && content_marks(&content).len() == 1 && interleaved_group_shares_the_mark(&content);
+  let marks = if marked {
+    content_mark_labels_of(&content, printed.as_deref())
+  } else {
+    Vec::new()
+  };
+  let grouped = marked && queued_group_shares_the_mark(&marks)?;
+  let declared_grouped = grouped && marks.len() == 1 && interleaved_group_shares_the_mark(&marks)?;
   let attr = Some(mouth::tokenize_internal(TeXString::assembled(
     if declared_grouped {
       s!("annotate={annotate},_grouped=true")

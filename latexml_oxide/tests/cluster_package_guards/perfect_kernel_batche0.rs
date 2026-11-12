@@ -1640,7 +1640,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (P4cR2 134 -> 136: `leads_with_ordinal`, a number and its suffix past spaces, for IEEEtran's `\author`, which reads
   // tokens before digestion; it shares `ordinal_suffix_end`, the suffix rule this file already reads, as P4cR2b's
   // `ordinal_name_line` does; 1806.11431)
-  ("relocate", 136),
+  // (P4b3 136 -> 135: REVTeX's group rule reads the marks a block prints and the names' requests as digested
+  // (`requested_marks`, `content_mark_labels`, `run_names_show_a_mark`, `group_shares_the_mark`); the token readers stay
+  // only as the counted fallback of an unread argument)
+  ("relocate", 135),
   // (Z2r2: not the study's lines but what `resolver_reads` counts, a shape no reason to raise it: `text_tokens` (`text_as_tokens`
   // since E0h, its name no longer the old reader's), printed text read
   // as tokens by `is_institution` and `NameKeys` (5 with their definitions), a `'\\'` read of a label (2), a call's hook (1).
@@ -1678,7 +1681,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (TP1, 25 -> 26: `ink_word_text` read the title-page reading's own marks by their constructors' names; TP1b, 26 -> 25:
   // by definition identity, sect05.rs `title_page_mark`, review revTP1 N2)
   ("rest /util_text.rs", 25),
-  ("revtex4_support_sty.rs", 12),
+  // (P4b3 12 -> 9: `marks_lead_every_line`'s scan of each group for a mark replaced by the digested reading,
+  // `marks_as_printed`'s `own_level`: no mark in a box beside words)
+  ("revtex4_support_sty.rs", 9),
   ("sv_support_sty.rs", 35),
   ("webofc_cls.rs", 0),
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with the emitter's vocabulary, 924 = 826 + 98; none added)

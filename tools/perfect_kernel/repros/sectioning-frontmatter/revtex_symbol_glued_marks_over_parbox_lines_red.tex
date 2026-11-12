@@ -1,0 +1,20 @@
+% mechanism: REVTeX's marked affiliation cut (`_cutlist`): names whose marks glue a symbol to a number (`$^{\dagger 1}$`,
+%   `\textsuperscript{*1}` likewise) over a `\parbox` whose lines `$^{1}$`, `$^{2}$` lead: the cut takes the box as one item,
+%   labelled by its first mark, so the whole box goes to the first name and the second name holds nothing; `$^{*,1}$`
+%   names over the same box go line by line (review revP4b3 probes p3, p7, p11)
+% witness: synthetic (review revP4b3 probe p7)
+% oracle:  pdflatex (TL 2025, revtex4-2, -no-shell-escape) 0 errors: "Ann Able†1 and Bob Baker†2 / 1 Univ A, Town A /
+%          2 Univ B, Town B"
+% engines: P4b3base, P4b3b, P4b3c: Ann Able holds "1 Univ A, Town A 2 Univ B, Town B", Bob Baker none (0 errors, 0 warnings)
+% expect:  Ann Able "1 Univ A, Town A"; Bob Baker "2 Univ B, Town B"
+% status:  RED (pre-existing; reach unmeasured, post-merge)
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able$^{\dagger 1}$}
+\author{Bob Baker$^{\dagger 2}$}
+\affiliation{\parbox{\linewidth}{$^{1}$Univ A, Town A\\ $^{2}$Univ B, Town B}}
+\begin{abstract}x\end{abstract}
+\maketitle
+Text.
+\end{document}

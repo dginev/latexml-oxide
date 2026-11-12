@@ -1,0 +1,23 @@
+% mechanism: REVTeX's group rule (`group_or_marked_affiliation`): the fail-safe (`label={addresses:block}`) asks for two or
+%   more lines led by labels the names request, a label as a printed mark reads one (`relocate::requested_labels`: a letter
+%   or a number first, `argument_marks::is_label_mark`'s rule): a symbol mark (`$^{\nabla}$`) requests none, so lines led
+%   by `$^{\nabla}$` and `$^{\hbar}$` hold one requested label, no fail-safe block: each line goes to the names showing its mark
+% witness: 2402.10256 (`Luca Fabbri$^{\nabla}$\!\!\! $^{\hbar}$` over `$^{\nabla}$DIME …\\ $^{\hbar}$INFN …`: P4b3 one contact
+%   holding both lines; P4b3base and P4b3b two)
+% oracle:  pdflatex (TL 2025, revtex4, -no-shell-escape) 0 errors: "Ann Able∇ ħ and Bob Bakerħ / ∇ Univ A, Town A / ħ Univ B,
+%          Town B"
+% engines: P4b3base, P4b3b: as expected; P4b3: both names bare, one nameless creator holding "∇ Univ A, Town A ℏ Univ B,
+%          Town B"
+% expect:  0 errors, 0 warnings; Ann Able "∇ Univ A, Town A", "ℏ Univ B, Town B"; Bob Baker "ℏ Univ B, Town B"
+% status:  RED (P4b3) -> GREEN (P4b3b; guard perfect_kernel_batchc1::group_rule_reads_marks_as_digested)
+\documentclass[aps]{revtex4}
+\begin{document}
+\title{T}
+\author{Ann Able$^{\nabla}$\!\!\! $^{\hbar}$}
+\author{Bob Baker$^{\hbar}$}
+\affiliation{$^{\nabla}$Univ A, Town A\\
+$^{\hbar}$Univ B, Town B}
+\begin{abstract}x\end{abstract}
+\maketitle
+Text.
+\end{document}

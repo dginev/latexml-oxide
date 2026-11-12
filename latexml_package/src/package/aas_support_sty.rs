@@ -218,7 +218,9 @@ LoadDefinitions!({
       match leading_line_label(&line) {
         // (one entry: no further mark on the line, `\affil{$^1$Univ A, $^2$Univ B}`, 0909.3044)
         Some((label, _, rest))
-          if altaffil.contains(&label) && !sup.contains(&label) && content_marks(&rest).is_empty() =>
+          if altaffil.contains(&label)
+            && !sup.contains(&label)
+            && !prints_marks(&rest, "aas \\affiliation")? =>
         {
           entries.push((label, rest.unlist()));
         },
@@ -253,7 +255,7 @@ LoadDefinitions!({
       marked.extend(rest.unlist());
       content = Tokens::new(marked);
     }
-    let annotate = if run_names_show_a_mark() { "new" } else { "run" };
+    let annotate = if run_names_show_a_mark()? { "new" } else { "run" };
     revtex4_support_sty::group_or_marked_affiliation(content, annotate)
   });
   DefMacro!("\\altaffiliation{}", "\\lx@add@altaffiliation{#1}");

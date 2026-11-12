@@ -1192,3 +1192,206 @@ fn api_cut_gate_reads_past_empty_bodies() {
     );
   }
 }
+
+/// Option C P4b3: REVTeX's group rule reads the marks a block prints as digested (`relocate::requested_marks`,
+/// `marks_as_printed`) and the names' requests by their digested marks (`run_names_show_a_mark`,
+/// `queued_author_marks`). One row a reader: a document macro's marks over the unmarked head (held, lines, the
+/// head's unprinted label), a mark in a box of its own (lines), a mark in `\textbf` (`marks_lead_every_line`), and
+/// AASTeX's `annotate=new` under macro-marked names; a mark's label pieces read apart under a symbol (`$^{*,1,2}$`,
+/// `$^{\dagger 1,2}$`: red on P4b3b, revP4b3 B1), a label of parts requested once (`$^{1*,2}$`: red on P4b3d, revP4b3c
+/// B1); symbol marks leading the lines (no label, no fail-safe: red on P4b3, 2402.10256); marks printed through a macro
+/// with an argument after the names' commas, which go by the marked rule (P4b3b, green on P4b3base). Red on P4b3base:
+/// the whole block on every author (macro, box), a nameless creator (bold), both lines on every author (aastex). Each:
+/// no Error, its Warning count, every creator.
+#[test]
+fn group_rule_reads_marks_as_digested() {
+  macro_rules! repro {
+    ($name:literal) => {
+      (
+        $name,
+        include_str!(concat!(
+          "../../../tools/perfect_kernel/repros/sectioning-frontmatter/",
+          $name,
+          ".tex"
+        )),
+      )
+    };
+  }
+  const HEAD_OVER_LINES: &[&[&str]] = &[
+    &[
+      "Ann Able 1,2",
+      "affiliation=Univ A, Town A",
+      "affiliation=2 Univ B, Town B",
+    ],
+    &[
+      "Bob Baker 2,3",
+      "affiliation=2 Univ B, Town B",
+      "affiliation=3 Univ C, Town C",
+    ],
+    &["Cy Cole"],
+  ];
+  let rows: &[Row] = &[
+    (
+      repro!("revtex_unmarked_head_macro_mark_lines"),
+      0,
+      HEAD_OVER_LINES,
+    ),
+    (
+      repro!("revtex_unmarked_head_raisebox_mark_lines"),
+      0,
+      HEAD_OVER_LINES,
+    ),
+    (
+      repro!("revtex_unmarked_head_bold_mark_lines"),
+      0,
+      HEAD_OVER_LINES,
+    ),
+    (
+      repro!("aastex_macro_names_over_unlabelled_lines_are_no_group"),
+      0,
+      &[
+        &["Ann Able 1", "affiliation=Uni One"],
+        &["Bob Baker 1", "affiliation=Uni One"],
+        &["Cat Cole 1,2", "affiliation=Uni One", "affiliation=Uni Two"],
+      ],
+    ),
+    // (P4b3c, review revP4b3 B1: each label piece of a name's mark is read apart, `requested_labels`: `$^{*,1,2}$` requests
+    // 1 and 2, `$^{\dagger 1,2}$` too, so the unmarked head is the requested 1 no line prints, as 2109.01501's; red on
+    // P4b3b: a nameless creator holding the block (star first, glued dagger), the block copied onto both (every name
+    // star-first, superscriptaddress); the glued dagger red on P4b3base too, a nameless creator)
+    (repro!("revtex_symbol_first_mark_head_over_lines"), 0, &[
+      &[
+        "Ann Able ∗,1,2",
+        "affiliation=Univ A, Town A",
+        "affiliation=2 Univ B, Town B",
+      ],
+      &[
+        "Bob Baker 2,3",
+        "affiliation=2 Univ B, Town B",
+        "affiliation=3 Univ C, Town C",
+      ],
+    ]),
+    (
+      repro!("revtex_symbol_first_marks_on_every_name_head_over_lines"),
+      0,
+      &[
+        &[
+          "Ann Able ∗,1,2",
+          "affiliation=Univ A, Town A",
+          "affiliation=2 Univ B, Town B",
+        ],
+        &[
+          "Bob Baker †,2,3",
+          "affiliation=2 Univ B, Town B",
+          "affiliation=3 Univ C, Town C",
+        ],
+      ],
+    ),
+    (repro!("revtex_symbol_glued_mark_head_over_lines"), 0, &[
+      &[
+        "Ann Able † 1,2",
+        "affiliation=Univ A, Town A",
+        "affiliation=2 Univ B, Town B",
+      ],
+      &[
+        "Bob Baker ‡ 2,3",
+        "affiliation=2 Univ B, Town B",
+        "affiliation=3 Univ C, Town C",
+      ],
+    ]),
+    // (P4b3e, review revP4b3c B1: a label of parts requests its letter- or digit-led parts once, `requested_label_keys`:
+    // `$^{1*,2}$` and `$^{a*,b}$` leave one requested label unprinted, the head; red on P4b3d: a nameless creator holding
+    // the block, silently; over fully marked lines green on every binary)
+    (
+      repro!("revtex_symbol_after_number_mark_head_over_lines"),
+      0,
+      &[
+        &[
+          "Ann Able 1 ∗ ,2",
+          "affiliation=Univ A, Town A",
+          "affiliation=2 Univ B, Town B",
+        ],
+        &[
+          "Bob Baker 2,3",
+          "affiliation=2 Univ B, Town B",
+          "affiliation=3 Univ C, Town C",
+        ],
+      ],
+    ),
+    (
+      repro!("revtex_symbol_after_letter_mark_head_over_lines"),
+      0,
+      &[
+        &[
+          "Ann Able a ∗ ,b",
+          "affiliation=Univ A, Town A",
+          "affiliation=b Univ B, Town B",
+        ],
+        &[
+          "Bob Baker b,c",
+          "affiliation=b Univ B, Town B",
+          "affiliation=c Univ C, Town C",
+        ],
+      ],
+    ),
+    (
+      repro!("revtex_symbol_after_number_mark_over_marked_lines"),
+      0,
+      &[
+        &[
+          "Ann Able 1 ∗ ,2",
+          "affiliation=1 Univ A, Town A",
+          "affiliation=2 Univ B, Town B",
+        ],
+        &[
+          "Bob Baker 2,3",
+          "affiliation=2 Univ B, Town B",
+          "affiliation=3 Univ C, Town C",
+        ],
+      ],
+    ),
+    // (P4b3b: a symbol mark, `$^{\nabla}$`, requests no label, `requested_labels`, so the lines hold one requested label and
+    // are no fail-safe block; 2402.10256)
+    (
+      repro!("revtex_symbol_marks_lead_lines_go_by_their_marks"),
+      0,
+      &[
+        &[
+          // (`\!\!\!` prints three zero-width spaces between the marks)
+          "Ann Able ∇ \u{200b}\u{200b}\u{200b} ℏ",
+          "affiliation=∇ Univ A, Town A",
+          "affiliation=ℏ Univ B, Town B",
+        ],
+        &["Bob Baker ℏ", "affiliation=ℏ Univ B, Town B"],
+      ],
+    ),
+    // (P4b3b: marks a macro prints through another macro after the names' commas, which `run_names_macro_marks` does not
+    // read by tokens: the marked rule gives each line to the names showing its mark, as the PDF does; read as digested, the
+    // macro-mark rule would send both lines to the block, the `\edef` sibling's outcome)
+    (
+      repro!("revtex_argument_macro_marks_after_commas_go_by_their_marks"),
+      0,
+      &[
+        &["Ann Able", "affiliation=1 Uni One", "affiliation=2 Uni Two"],
+        &["Bob Baker", "affiliation=2 Uni Two"],
+        &["Cat Cole", "affiliation=1 Uni One"],
+      ],
+    ),
+  ];
+  let mut failures = Vec::new();
+  for ((name, tex), warnings, expected) in rows {
+    let (log, xml) = run(tex);
+    let expected: Vec<Vec<String>> = expected
+      .iter()
+      .map(|c| c.iter().map(|s| s.to_string()).collect())
+      .collect();
+    let got = (
+      (error_count(&log), warning_count(&log)),
+      text_creators(&xml),
+    );
+    if got != ((0, *warnings), expected) {
+      failures.push(format!("{name}: {got:?}"));
+    }
+  }
+  assert!(failures.is_empty(), "{}", failures.join("\n"));
+}

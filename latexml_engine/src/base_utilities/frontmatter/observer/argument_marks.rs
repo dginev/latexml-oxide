@@ -146,6 +146,44 @@ pub fn prints_list_marks(arg: &Tokens, caller: &str) -> Result<bool> {
   )
 }
 
+/// A mark an argument prints ([`marks_as_printed`]).
+pub struct PrintedMark {
+  /// the affiliation labels it sets (`printed_label_keys`)
+  pub labels:     Vec<String>,
+  /// its line's first ink (`Event::line_first`)
+  pub line_first: bool,
+  /// at the argument's own level (`at_own_level`), not in a box beside its words
+  pub own_level:  bool,
+  /// a label ([`is_label_mark`]) that opens what the argument prints ([`leads_with_label`])
+  pub leads:      bool,
+}
+
+/// The marks `arg` prints at any level outside its notes (in a box beside its words too, `\parbox{\linewidth}{$^{1}$Univ
+/// A\\ $^{2}$Univ B}`), a number's suffix and a `\footnotemark` none. Unread, `None`, counted for `caller`.
+pub fn marks_as_printed(arg: &Tokens, caller: &str) -> Result<Option<Vec<PrintedMark>>> {
+  let Some(events) = mark_events(arg)? else {
+    count_unread(caller);
+    return Ok(None);
+  };
+  let own = at_own_level(&events);
+  let opening = opening_mark(&events).filter(|e| is_label_mark(e));
+  Ok(Some(
+    events
+      .iter()
+      .zip(own)
+      .filter(|(e, _)| own_mark(e))
+      .map(|(mark, own_level)| PrintedMark {
+        labels: mark_request_text(mark)
+          .map(|text| printed_label_keys(&text, "affiliation"))
+          .unwrap_or_default(),
+        line_first: mark.line_first,
+        own_level,
+        leads: opening.is_some_and(|o| std::ptr::eq(o, mark)),
+      })
+      .collect(),
+  ))
+}
+
 /// Whether `arg` prints a mark of its own ([`argument_marks`]) whose label a queued name requests (`requested_labels`);
 /// unread, its tokens' marks, counted for `caller`. A class's numbered store declines its numbers for its own marks
 /// only when the names ask for them (revP4d S1: `\ma` printing `\textsuperscript{a}` under `\inst{1}`, numbered 1
