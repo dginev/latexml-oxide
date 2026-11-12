@@ -35472,8 +35472,11 @@ hold their own `\label` is cut per item (`events::item_led_pieces`: the lexer's 
 `\enumerate@item@`, `item[]` for a tagged one; decided on the reading's events of the call for both the resolver's `api` and the emitter,
 `split_pieces_as` — the writer's rehearsal at a later flush reads the meanings then, `\ukrainianpart`'s bare `\addr`,
 cmpj2.sty:649, 1212.6367): each item an entry keyed by its label (`api:ref-label`), written as the list's opening
-tokens, `\addtocounter{\@listctr}` past the items before it, the item, and the list's close (`emit::list_item_tokens`),
-so it keeps its number and tag — the list the innermost environment around the items as the digestion's frames say
+tokens, `\setcounter{\@listctr}` to one below the value the digestion stepped the item's counter to, the item, and the
+list's close (`emit::list_item_tokens`), so it keeps its number and tag as pdflatex prints them where the list sets or
+steps its counter (revCMPJ, CMPJ3: `\setcounter{enumi}{3}` after the opening under `\Alph`, D E F where counting the
+items before it gave D B C; a `\stepcounter` in item 1, 1 3 4). The value is the `\enumerate@item@` whatsit's
+`counter_value` (not in Perl), the `item` event's label — the list the innermost environment around the items as the digestion's frames say
 it (`Field::environments`, a close inside a macro too); an item that is no balanced run is its text, counted (a group
 across two items: RED `cmpj_address_list_group_across_items_red`). In an emitted entry a
 `\label` naming a counter step made inside the entry (`refstep_in_scope` against the step in scope where
@@ -35484,7 +35487,11 @@ holding it all, counted by the Warning "places an entry holding N label targets 
 (`warn_whole_entry_of_keyed_parts`; RED `cmpj_address_list_tagged_item_kept_whole_red`). The renamed copies (cmpj2e.sty
 0903.4566, cmp2em.sty cond-mat0511115) stay raw: RED `cmpj_renamed_copy_refaddr_prints_question_marks_red` (their
 list, cut too, on the nameless creator). The second title page's own `\addresses` (`\ukrainianpart`, 1212.6367) is not
-its names' — RED `cmpj_ukrainianpart_addresses_of_the_second_title_red`.
+its names' — RED `cmpj_ukrainianpart_addresses_of_the_second_title_red`. An item placed on several names carries the
+same `labels=` on each copy, so an HTML `\ref` links to the last copy (1212.6367: J. Ilnytskyi's "2" to A.
+Trokhymchuk's) — kept. Coverage: the cut's generality rests on synthetic probes (amsart, revtex, llncs, elsarticle, a
+nested list, unlabelled items, itemize, enumitem, an unknown class) and on the six cmpj witnesses below; CMPJ2's A/B
+papers with an `enumerate` in a frontmatter block did not reach the cut.
 **Witnesses**: 1212.6367, 1212.6137, 1603.02437, 1207.2995, 1310.0277, 1510.06562, 1601.01592 (cmpj2), 2112.09940,
-2403.16604, 1812.08542 (cmpj3). **Guard**: `perfect_kernel_batchcmpj1::cmpj_address_marks_print_the_second_run` (11 rows,
-seven for the cut).
+2403.16604, 1812.08542 (cmpj3). **Guard**: `perfect_kernel_batchcmpj1::cmpj_address_marks_print_the_second_run` (13 rows,
+nine for the cut).

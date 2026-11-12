@@ -1,0 +1,17 @@
+% witness: synthetic (revCMPJ p7: amsart's `\address` holding a `\ref`-keyed enumerate whose counter is set after
+%          `\begin{enumerate}`, `\theenumi` = `\Alph`; the shape of 1212.6367's cmpj list)
+% oracle:  pdflatex (TL 2025), second run, 0 errors: "Text, see D, E, F."; the address "(D) First Institute, Lviv
+%          (E) Second Institute, Kyiv (F) Third, Odesa"
+% engines: int165a: one contact, (D)(E)(F); CMPJ2: each item cut, numbered (D)(B)(C) — the items before it counted,
+%          not the counter's value — and the text's `\ref{xb}` "B"
+% expect:  0 errors, 0 warnings; A. One holds each item, (D), (E), (F), labels xa, xb, xc; the text "see D, E, F"
+% status:  GREEN (CMPJ3: perfect_kernel_batchcmpj1::cmpj_address_marks_print_the_second_run)
+\documentclass{amsart}
+\renewcommand{\theenumi}{\Alph{enumi}}
+\begin{document}
+\title{A title}
+\author{A. One}
+\address{\begin{enumerate}\setcounter{enumi}{3}\item\label{xa} First Institute, Lviv \item\label{xb} Second Institute, Kyiv \item\label{xc} Third, Odesa\end{enumerate}}
+\maketitle
+Text, see \ref{xa}, \ref{xb}, \ref{xc}.
+\end{document}

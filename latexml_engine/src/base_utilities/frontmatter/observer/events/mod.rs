@@ -250,7 +250,7 @@ pub struct Event {
   pub span:           Option<(u16, u16)>,
   /// its ink: a name's text, a mark's printed text, a contact's or a note's shown text
   pub text:           String,
-  /// a mark's label, a note's `\label`, a contact's optional label
+  /// a mark's label, a note's `\label`, a contact's optional label; an [`ITEM_STEP`]'s counter value as digested
   pub label:          Option<String>,
   /// a mark printed as a footnote symbol
   pub symbol:         bool,
@@ -1909,6 +1909,9 @@ impl Walker {
         }
         .to_string(),
       );
+      if let Some(Stored::Int(value)) = w.get_property("counter_value").as_deref() {
+        item.label = Some(value.to_string());
+      }
       self.event(item, d, nest);
     }
     // (a keyed constructor showing none of its arguments prints nothing: `\lx@frontmatter@mark`)

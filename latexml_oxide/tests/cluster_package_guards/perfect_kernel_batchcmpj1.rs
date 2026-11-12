@@ -3,11 +3,16 @@
 //! asserts the exact Error and Warning counts, every name whole, and every creator's contacts in order. Red on int164a:
 //! each name "?" (the first run's `\@ifundefined{r@…}` branch), the address list on a nameless creator. CMPJ2: the list
 //! cut per `\item` (`events::item_led_pieces`), each item on the names its `\label` is requested by, its `labels=` kept;
-//! red on CMPJ1: the whole list on every name, its items without `labels=`.
+//! red on CMPJ1: the whole list on every name, its items without `labels=`. CMPJ3: each item numbered with the value the
+//! digestion stepped its counter to; red on CMPJ2: the items before it counted, (D)(B)(C) for pdflatex's (D)(E)(F).
 
 use latexml::util::test::{error_count, warning_count};
+use regex::Regex;
 
-use super::{perfect_kernel_batchz4::run, perfect_kernel_batchz18o::assert_creators};
+use super::{
+  perfect_kernel_batch64::post_with, perfect_kernel_batchz4::run,
+  perfect_kernel_batchz18o::assert_creators,
+};
 
 macro_rules! repro {
   ($name:literal) => {
@@ -31,7 +36,7 @@ const TWO: &str = "address=2 item 2 2 item 2 Second Institute, Kyiv, Ukraine";
 const TAGGED: &str = "address=a item item a First Institute, Lviv, Ukraine 1 item 1 1 item 1 Second Institute, Kyiv, Ukraine";
 
 /// A row: its name, its repro, every name whole, every creator's name and contacts, each Warning's message, the
-/// `labels=` of the list items in document order.
+/// `labels=` of the list items in document order, and the text's `\ref`s as the HTML prints them, if checked.
 type Row<'a> = (
   &'a str,
   &'a str,
@@ -39,13 +44,15 @@ type Row<'a> = (
   &'a [&'a [&'a str]],
   Vec<&'a str>,
   &'a [&'a str],
+  Option<&'a str>,
 );
 
 /// Each binding's row: cmpj.sty (three names), cmpj2.sty with the document's options (`cm`, `eqsecnum`) and one
 /// address, cmpj3.sty with a spaced key list (`{la, lb}`, the space dropped as cmpj3.sty:663's `\@firstofone` drops it);
 /// one name requesting both; the address list cut per `\item` (CMPJ2: each item a contact keeping its number and
-/// `labels=`): items by hand with a label after the text, a later flush, a list closed by a macro, amsart's address; and
-/// the counted sides, a group across items and a tagged item.
+/// `labels=`): items by hand with a label after the text, a later flush, a list closed by a macro, amsart's address, its
+/// counter set after the opening or stepped in an item (CMPJ3); and the counted sides, a group across items and a tagged
+/// item.
 #[test]
 fn cmpj_address_marks_print_the_second_run() {
   // a name of one mark, whole
@@ -55,7 +62,7 @@ fn cmpj_address_marks_print_the_second_run() {
        labelref=\"LABEL:{key}\"/></sup></personname>"
     )
   };
-  let rows: [Row; 11] = [
+  let rows: [Row; 13] = [
     (
       "cmpj",
       repro!("cmpj_refaddr_marks_print_the_second_run"),
@@ -70,6 +77,7 @@ fn cmpj_address_marks_print_the_second_run() {
       &[&["A. One", ONE], &["B. Two", TWO], &["C. Three ,", ONE, TWO]],
       vec![],
       &["la", "lb", "la", "lb"],
+      None,
     ),
     (
       "cmpj2",
@@ -84,6 +92,7 @@ fn cmpj_address_marks_print_the_second_run() {
       ],
       vec![],
       &["la", "la"],
+      None,
     ),
     (
       "cmpj3",
@@ -101,6 +110,7 @@ fn cmpj_address_marks_print_the_second_run() {
       // library cmpj3.sty:54 loads)
       vec!["The conditional \\pgf@lib@svg@relative is being defined but doesn't start with \\if"],
       &["la", "lb", "la", "lb"],
+      None,
     ),
     // (one name requesting every label of the list holds each item)
     (
@@ -115,6 +125,7 @@ fn cmpj_address_marks_print_the_second_run() {
       &[&["A. One ,", ONE, TWO]],
       vec![],
       &["la", "lb"],
+      None,
     ),
     (
       "cmpj2, the list cut per item",
@@ -130,6 +141,7 @@ fn cmpj_address_marks_print_the_second_run() {
       &[&["A. One", ONE], &["B. Two", TWO], &["C. Three ,", ONE, TWO]],
       vec![],
       &["la", "lb", "la", "lb"],
+      None,
     ),
     // (`\item`s by hand, a label after its item's text, a group in it: each item from its `\item`, its italic kept)
     (
@@ -142,6 +154,7 @@ fn cmpj_address_marks_print_the_second_run() {
       &[&["A. One", ONE], &["B. Two", TWO]],
       vec![],
       &["la", "lb"],
+      None,
     ),
     // (cut at a later flush whose rehearsal reads `\addr` as a bare `\item`: the reading's cut, `split_pieces_as`; the
     // Ukrainian names' English items are RED `cmpj_ukrainianpart_addresses_of_the_second_title_red`)
@@ -163,6 +176,7 @@ fn cmpj_address_marks_print_the_second_run() {
       vec![],
       // (the second flush's items carry none: `\addr` is a bare `\item` there, as pdflatex reads it)
       &["la", "lb"],
+      None,
     ),
     // (a list closed by a macro of the paper's: its close read from the digestion's frames)
     (
@@ -178,6 +192,7 @@ fn cmpj_address_marks_print_the_second_run() {
       ],
       vec![],
       &["la", "lb"],
+      None,
     ),
     // (a group across two items: no item's tokens a balanced run, each item its text on its name, counted)
     (
@@ -198,6 +213,7 @@ fn cmpj_address_marks_print_the_second_run() {
          item cut without its list, its number and label lost",
       ],
       &[],
+      None,
     ),
     // (another class's address, its first `\item` right after the list's opening, whose box carries the opening's
     // position: each item from past the opening)
@@ -212,6 +228,37 @@ fn cmpj_address_marks_print_the_second_run() {
       ]],
       vec![],
       &["xa", "xb"],
+      None,
+    ),
+    // (the counter set after the opening, `\theenumi` lettered, and stepped inside an item: each item numbered with
+    // the value the digestion stepped its counter to, as pdflatex prints it — not the items before it, revCMPJ)
+    (
+      "amsart, the counter set after the opening",
+      repro!("amsart_address_list_counter_set_after_the_opening"),
+      vec!["<personname>A. One</personname>".to_string()],
+      &[&[
+        "A. One",
+        "address=(D) D item D First Institute, Lviv",
+        "address=(E) E item E Second Institute, Kyiv",
+        "address=(F) F item F Third, Odesa",
+      ]],
+      vec![],
+      &["xa", "xb", "xc"],
+      Some("Text, see D, E, F."),
+    ),
+    (
+      "amsart, the counter stepped in an item",
+      repro!("amsart_address_list_counter_stepped_in_an_item"),
+      vec!["<personname>A. One</personname>".to_string()],
+      &[&[
+        "A. One",
+        "address=(1) 1 item 1 First Institute, Lviv",
+        "address=(3) 3 item 3 Second Institute, Kyiv",
+        "address=(4) 4 item 4 Third, Odesa",
+      ]],
+      vec![],
+      &["xa", "xb", "xc"],
+      Some("Text, see 1, 3, 4."),
     ),
     // (a tagged item steps no counter: no cut, the list whole on both names, counted)
     (
@@ -224,9 +271,10 @@ fn cmpj_address_marks_print_the_second_run() {
       &[&["A. One", TAGGED], &["B. Two", TAGGED]],
       vec![WHOLE],
       &["la", "lb", "la", "lb"],
+      None,
     ),
   ];
-  for (style, tex, names, expected, warnings, labels) in rows {
+  for (style, tex, names, expected, warnings, labels, refs) in rows {
     let (log, xml) = run(tex);
     assert_eq!(
       (error_count(&log), warning_count(&log)),
@@ -258,6 +306,15 @@ fn cmpj_address_marks_print_the_second_run() {
       })
       .collect();
     assert_eq!(items, labels, "{style}: {xml}");
+    if let Some(refs) = refs {
+      let html = post_with(&xml, "resources/XSLT/LaTeXML-html5.xsl");
+      let at = html.find("Text, see").expect("the text");
+      let text = Regex::new("<[^>]*>")
+        .expect("regex")
+        .replace_all(&html[at..at + html[at..].find("</p>").expect("closed")], "")
+        .into_owned();
+      assert_eq!(text, refs, "{style}: {html}");
+    }
     if style == "cmpj2" {
       assert!(
         xml.contains("<tag role=\"refnum\">1.1</tag>"),

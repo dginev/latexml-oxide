@@ -2754,9 +2754,14 @@ fn call_pieces(call: &ApiCall) -> Result<Vec<Piece>> {
   for (at, (text, piece)) in pieces.into_iter().enumerate() {
     // (written as the whole call is, its fonts its own tokens')
     if listed {
+      // (the value the digestion stepped the item's counter to, `ITEM_STEP`'s label: a counter set or stepped in the list
+      // moves it, revCMPJ's `\setcounter{enumi}{3}` after the opening, a `\stepcounter` in an item)
+      let value = piece
+        .first()
+        .and_then(|e| e.label.as_deref()?.parse::<i64>().ok());
       let tokens = item_starts
         .as_ref()
-        .and_then(|starts| list_item_tokens(&field, starts, at))
+        .and_then(|starts| list_item_tokens(&field, starts, at, value))
         .unwrap_or_else(|| {
           by_text(
             Some("a list item cut without its list, its number and label lost"),
@@ -2826,11 +2831,16 @@ fn call_pieces(call: &ApiCall) -> Result<Vec<Piece>> {
 }
 
 /// The tokens writing the `at`-th item of the one enumerate list of `field` alone, its items starting at `starts`
-/// ([`call_pieces`]): what opens the list, the counter stepped past the items before it, the item, what closes the list —
-/// its number and its `\label` kept, as the list prints them. The list is the innermost environment around the items, as
+/// ([`call_pieces`]): what opens the list, the counter set to one below `value` (the item's own, as digested), the item,
+/// what closes the list — its number and its `\label` kept, as the list prints them. The list is the innermost environment around the items, as
 /// the digestion's frames say it (`Field::environments`, whatever spells it). `None` when none is or an item's tokens are
 /// no balanced run.
-fn list_item_tokens(field: &Field, starts: &[usize], at: usize) -> Option<Vec<Token>> {
+fn list_item_tokens(
+  field: &Field,
+  starts: &[usize],
+  at: usize,
+  value: Option<i64>,
+) -> Option<Vec<Token>> {
   let content = field.tokens;
   let pos = |p: u16| usize::from(p).checked_sub(field.base);
   let (first, last) = (*starts.first()?, *starts.last()?);
@@ -2868,9 +2878,9 @@ fn list_item_tokens(field: &Field, starts: &[usize], at: usize) -> Option<Vec<To
   }
   let mut out = content.get(..start(0)?)?.to_vec();
   if at > 0 {
-    out.extend(TokenizeInternal!(r"\expandafter\addtocounter\expandafter{\@listctr}").unlist());
+    out.extend(TokenizeInternal!(r"\expandafter\setcounter\expandafter{\@listctr}").unlist());
     out.push(T_BEGIN!());
-    out.extend(ExplodeText!(&at.to_string()));
+    out.extend(ExplodeText!(&(value? - 1).to_string()));
     out.push(T_END!());
   }
   out.extend_from_slice(item);
