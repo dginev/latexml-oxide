@@ -16894,10 +16894,12 @@ An integer constant past 2^31−1 is 2^31−1 with "Number too big" (tex.web §4
 is 0 with "Arithmetic overflow" (etex.ch `\numexpr`/`\dimexpr`). TeX errs on each, and its recovery value (TeX's bound
 or 0) is not the author's: an Error, the
 recovery value kept (the staged severity rule (3), DG 2026-11-11; 64zf's Warnings until DTL1d). pgfmath's parser result
-past ±16383.99998 errs as Perl's `Error:pgfmath:overflow` does (pgfmath.code.tex.ltxml:342-344, :391-393). Replaces
+past `\maxdimen` errs with Perl's `Error:pgfmath:overflow` (pgfmath.code.tex.ltxml:342-344, :391-393), on the dimension
+TeX holds and never on the fpu's floats (#1012). Replaces
 batch 56bq's i64-only clamp. Still silent: `\multiply` past the bound (it computes on in the i64 headroom; TeX errs and
 keeps the register) and pgfmath's function results (clamped) (REDs expansion-primitives/multiply_overflow_keeps_the_register_red, graphics-tikz/
-pgfmath_function_overflow_clamped_silently_red); a calc sum past the bound (`calc_expression_dimension_not_clamped_red`). Not
+pgfmath_function_overflow_clamped_silently_red); a calc sum past the bound (`calc_expression_dimension_not_clamped_red`); outside
+the fpu, pgfmath's unitless operands and its operations' results past the bound (`pgfmath_unitless_and_intermediate_overflow_red`). Not
 yet TeX's: an e-TeX expression checks only its final value, so an intermediate overflow that comes back in range is silent
 and a product past the i64 range keeps the bound (`clamp_arith_overflow`, one report per multiply) where etex.ch's
 `scan_expr` latches one error and returns 0 (`etex_expression_overflow_latched_once_red`). Guards `perfect_kernel_batch64zf::{number_and_dimension_overflow_clamp_and_err,
@@ -35435,3 +35437,23 @@ spanish: 2 false Errors each gone). **Guard**: `perfect_kernel_batchqa47a::batch
 `command_hook_on_makecaption_*`). **Open**: a plain repeat `\usepackage{caption}` after floatrow's caption3
 (`command_hook_on_makecaption_caption_repeat_without_options_red`); code on a `cmd/@makecaption` hook never runs, since LaTeXML's
 `\caption` does not go through `\@makecaption` (`command_hook_on_makecaption_code_never_runs_red`, post-merge QAHK).
+
+### 1012. pgfmath's overflow test reads the dimension TeX holds, and none in the fpu (DTL1h)
+
+**TeX.** pgf reads each operand into `\pgfmath@x` (`\pgfmath@x=#1pt`), where scan_dimen rounds the fraction to sp and
+stops on "Dimension too large" only at 2^30 sp (tex.web §452-453, §461): `16383.99999pt` is `\maxdimen`, printed
+16383.99998. Under `/pgf/fpu` (pgflibraryfpu.code.tex:29-46) the parser computes in floats: a sum like `12319.0+4442`
+(16761) is no dimension, and only a unit'd operand is still scanned into one. **Perl.** It tests the five-decimal
+result against 16383.99998 (pgfmath.code.tex.ltxml:342-344, :391-393): `\pgfmathparse{16383.99999pt}` errs
+(KNOWN_PERL_ERRORS #1232), and with no fpu reading its `\pgfmathsetmacro` under the fpu errs and clamps 16761 to
+16383.99998. **Rust.** `pgfmath_code_tex.rs` `exceeds_max_dimen` (|round(points·65536)| ≥ 2^30) on the parser's result
+outside the fpu (`fpu_active`, `\ifpgfmathfloatparseactive`), and `scanned_dimension` on each `<number><unit>` operand,
+in the fpu too, `\maxdimen` kept: `20000pt-10000pt` is one Error and 6383.99998, `20000pt+1` two, as pdflatex. In the
+fpu `\pgfmathparse` is pgf's own `\pgfmathfloatparse` (pgflibraryfpu.code.tex:396); the native parser serves the
+binding's direct callers (`\pgfmathsetmacro`), whose result keeps its decimal form (`16761.0` where pgf holds
+`1Y1.6761e4]`). **Witnesses**: 1811.10950 (the invclip idiom `(-16383.99999pt,-16383.99999pt) rectangle
+(16383.99999pt,16383.99999pt)`: 16 → 0 overflow Errors), 2411.12316 (tikz-bbox's `\pgfmathsetmacro` under its fpu,
+pgflibrarybbox.code.tex:28-35: 1 → 0), 2109.14286 (`\pgfmathsetmacro` under `/pgf/fpu`: 2 → 0, and the funnel figure
+printed `16,384` for 16,761), the TL manuals ddphonism (40 → 0) and tikzbrickfigurines-doc (352 → 0). **Guards**:
+`error_boundary::perfect_kernel_error_boundary` (rows `pgfmath_maxdimen_spelling_and_fpu_in_range`, 0 errors;
+`pgfmath_past_maxdimen_errs`, 7 as pdflatex).

@@ -210,7 +210,8 @@ fn def_verbatim(cs: Token, body: Tokens) -> Result<()> {
   )
 }
 
-fn newif_true(cs: &str) -> bool {
+/// Whether a `\newif` switch is true (its meaning is `\iftrue`).
+pub(crate) fn newif_true(cs: &str) -> bool {
   matches!((lookup_meaning(&T_CS!(cs)), lookup_meaning(&T_CS!("\\iftrue"))), (Some(a), Some(b)) if a == b)
 }
 

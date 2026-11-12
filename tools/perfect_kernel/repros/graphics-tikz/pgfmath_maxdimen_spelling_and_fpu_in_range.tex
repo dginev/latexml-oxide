@@ -1,0 +1,24 @@
+% `16383.99999pt` is `\maxdimen` in TeX (round_decimals → 65535, 2^30−1 sp; tex.web §452-453, §461), and the fpu
+% computes in floats with no TeX dimension (pgflibraryfpu.code.tex:29-46): pdflatex prints these values with no error.
+% witness: 1811.10950 (the invclip idiom), TL manuals ddphonism, tikzbrickfigurines-doc; 2109.14286 (\bignum, fpu).
+% status:  GREEN (DTL1h; was int164a: 14 errors (pgfmath overflow), [16,384] [16,384]).
+% oracle:  pdflatex 0 `!`, [16383.99998] [-16383.99998] [-16383.99998] [16383.99998], [16,761] [18,765];
+%          Perl 14 errors (pgfmath overflow; it has no fpu reading).
+% expect:  0 errors, 0 warnings, the pdflatex values.
+\documentclass{article}
+\usepackage{tikz}
+\usetikzlibrary{fpu}
+\tikzset{invclip/.style={clip,insert path={{[reset cm](-16383.99999pt,-16383.99999pt) rectangle (16383.99999pt,16383.99999pt)}}}}
+\newcommand{\bignum}[1]{\pgfkeys{/pgf/fpu=true}\pgfmathparse{#1}\pgfmathprintnumber[fixed]{\pgfmathresult}\pgfkeys{/pgf/fpu=false}}
+\begin{document}
+\pgfmathparse{16383.99999pt}[\pgfmathresult] \pgfmathparse{-16383.99999pt}[\pgfmathresult]
+\pgfmathparse{-16383.99999}[\pgfmathresult] \pgfmathparse{16383.99999pt+0}[\pgfmathresult]
+
+\begin{tikzpicture}
+\begin{pgfinterruptboundingbox}\path[invclip] (0,0) rectangle (1,1);\end{pgfinterruptboundingbox}
+\draw (0,0) -- (2,2);
+\end{tikzpicture}
+
+\pgfkeys{/pgf/fpu}\pgfmathsetmacro{\blocking}{12319.0+4442}\pgfmathsetmacro{\total}{\blocking+2004}\pgfkeys{/pgf/fpu=false}%
+[\bignum\blocking] [\bignum\total]
+\end{document}
