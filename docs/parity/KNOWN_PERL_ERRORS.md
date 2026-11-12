@@ -19534,3 +19534,19 @@ Errors, 2401.12710 +299), and each empty `\Comment` printed a ▷. Fixed in Rust
 \setbox0\hbox{\begin{varwidth}{10cm}short\end{varwidth}}[\the\wd0]
 \end{document}
 ```
+
+## 1235. A floating superscript rewritten into text `<sup>` takes the math default font: its digit italic
+
+TeX_Math.pool.ltxml:527-550's DefRewrite turns a Math holding only `^{…}` into text `<ltx:sup>` under
+`local $LaTeXML::BOX = getNodeBox(XMArg)`, whose font is the math default (italic): `word$^{2}$` gives
+`<sup><text font="italic">2</text></sup>`, where pdflatex prints the digit upright (CMR7, math fam 0). It reaches every
+`Name$^{1}$` affiliation mark. Rust shares it (and, inside `\textit`, repeats the italic on the sup's text where Perl
+inherits it); open in both — RED `floating_superscript_rewrite_digit_italic_red`, post-merge (SUPIT), with OD #928's
+residual for the frontmatter's mark formulas. Minimal trigger:
+
+```latex
+\documentclass{article}
+\begin{document}
+Plain word$^{2}$.
+\end{document}
+```
