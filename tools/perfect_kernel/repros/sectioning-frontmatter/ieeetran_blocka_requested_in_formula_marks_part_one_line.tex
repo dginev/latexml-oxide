@@ -1,0 +1,17 @@
+% mechanism: a script a letter prints after in its formula is a label when a name requests it: IEEEtran's `\IEEEauthorblockA` inside `\author`'s `${\rm ^2Lab}$`
+%   after a comma, under `Bob Baker$^{2}$`, parts the line (`events::lexer::glue_in_word_marks`, `names_requested`)
+% witness: synthetic (revISO1 B1, probe i1)
+% oracle:  pdflatex (TL 2025 IEEEtran) 0 errors: "Ann Able1 and Bob Baker2 1Dept of Physics, Univ X, 2Lab of Chemistry, Univ Y"
+% engines: rust int160c = 0 errors, 0 warnings, the line parted at the requested mark; ISO1 = 0 W, Able the whole line,
+%   Baker none (silent: revISO1 B1) and a stray "⁢ 2"
+% expect:  0 errors, 0 warnings; Able "¹Dept of Physics, Univ X"; Baker "²Lab of Chemistry, Univ Y"
+% status:  GREEN (ISO1b) — perfect_kernel_batch90a::a_script_before_printed_ink_or_on_a_base_is_text
+% preload: ar5iv.sty
+\documentclass{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able$^{1}$ and Bob Baker$^{2}$}
+\IEEEauthorblockA{${\rm ^1Dept}$ of Physics, Univ X, ${\rm ^2Lab}$ of Chemistry, Univ Y}}
+\maketitle
+Text.
+\end{document}

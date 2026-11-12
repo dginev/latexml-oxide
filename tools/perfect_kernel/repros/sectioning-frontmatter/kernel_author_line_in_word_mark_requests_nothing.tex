@@ -1,0 +1,18 @@
+% mechanism: a mark on a line a mark leads, here glued inside a word too (`$^{1}$NLP$^{3}$CT`), is no name's request
+%   (`events::names_requested`), so the mid-line `${\rm ^{3}He}$` no author requests is text and the line stays Ann's
+% witness: synthetic (ISO1c; the in-word shape of 2603.20851, 2605.30274)
+% oracle:  pdflatex (TL 2025 article) 0 errors: "1NLP3CT Lab, 3He Center / 2Univ Y"
+% engines: rust int160c = 2 warnings, Ann "NLP³CT Lab", a nameless creator "³He Center"; ISO1b = ISO1c = 2 warnings, Ann
+%   "NLP³CT Lab, ³He Center", Bob "Univ Y"
+% expect:  0 errors, 0 warnings; Ann "NLP³CT Lab, ³He Center"; Bob "Univ Y"
+% status:  GREEN on the owners (ISO1b, ISO1c); RED on the counts: the content check reads the placed in-word `<sup>3</sup>`
+%   as no ink, two false Warnings ("NLP3CT" missing, "NLPCT" duplicated; int160c the same) — pinned by
+%   perfect_kernel_batch90a::a_script_before_printed_ink_or_on_a_base_is_text
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$\\ $^{1}$NLP$^{3}$CT Lab, ${\rm ^{3}He}$ Center\\ $^{2}$Univ Y}
+\maketitle
+Text.
+\end{document}

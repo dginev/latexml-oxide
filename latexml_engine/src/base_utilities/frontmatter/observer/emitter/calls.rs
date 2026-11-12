@@ -259,7 +259,7 @@ pub(in crate::base_utilities) fn note_body(content: Tokens) -> Tokens {
   let toks = content.unlist();
   let lead = toks.iter().take_while(|t| **t == T_SPACE!()).count();
   let end = lead + leading_marks_end(&toks[lead..]);
-  let requested = lookup_string("lx_frontmatter_requested_marks");
+  let requested = flush_requested_marks();
   // One legend: no other mark after a space in its text (`$^{\dag}$ These authors ... $^{*}$ This author ...` is several
   // legends and a funding line in one `\thanks`, 2609.39576, which stays whole with its author), where `10 m$^{2}$`
   // is glued to its base.
@@ -276,7 +276,7 @@ pub(in crate::base_utilities) fn note_body(content: Tokens) -> Tokens {
     && mark_operands(&toks[lead..end]).iter().any(|operand| {
       clean_frontmatter_labels(&Tokens::new(operand.clone()).to_string(), "affiliation")
         .iter()
-        .any(|label| requested.split('\u{1}').any(|r| r == label))
+        .any(|label| requested.contains(label))
     });
   let split = if marks_requested { end } else { 0 };
   let mut body = toks[..split].to_vec();

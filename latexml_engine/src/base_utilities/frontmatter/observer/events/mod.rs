@@ -2248,6 +2248,54 @@ pub(in crate::base_utilities) fn inked(event: &Event) -> bool {
   )
 }
 
+/// The labels the names of `events` request, bare (`2`, `a`): the marks set after a word on a line no mark leads (a name
+/// line: `Able$^{1}$ Bob` requests 1), but one glued on both sides inside a word (`NLP$^2$CT`), or else the queued
+/// authors' (`requested_labels`); none when no name requests one (revISO1 B1, S1; revISO1b B1).
+pub(in crate::base_utilities) fn names_requested(events: &[Event]) -> Vec<String> {
+  let ink: Vec<&Event> = events
+    .iter()
+    .filter(|e| e.kind != EventKind::Layout)
+    .collect();
+  // (whether each event's line is led by a mark, as `lexer::glue_in_word_marks` reads it: `$^{2}$Univ Y, Lab $10^{3}$`)
+  let mut led: Option<bool> = None;
+  let mark_led: Vec<bool> = ink
+    .iter()
+    .map(|e| {
+      match e.kind {
+        EventKind::Break | EventKind::Sep(SepKind::And(_) | SepKind::Column(_)) => led = None,
+        _ => led = led.or(Some(e.kind == EventKind::Mark)),
+      }
+      led == Some(true)
+    })
+    .collect();
+  let own: Vec<String> = (1..ink.len())
+    .filter(|&at| {
+      ink[at].kind == EventKind::Mark
+        && ink[at - 1].kind == EventKind::Name
+        && !mark_led[at]
+        && !lexer::glued_inside_a_word(ink[at - 1], ink[at], ink.get(at + 1).copied())
+    })
+    .flat_map(|at| resolver::mark_labels(ink[at].label.as_deref().unwrap_or("")))
+    .collect();
+  if !own.is_empty() {
+    return own;
+  }
+  requested_labels()
+    .into_iter()
+    .map(|label| match label.strip_prefix("affiliation:") {
+      Some(key) => key.to_string(),
+      None => label,
+    })
+    .collect()
+}
+
+/// Whether a mark's labels are among those some name requests ([`names_requested`]).
+pub(in crate::base_utilities) fn is_requested(mark: &Event, requested: &[String]) -> bool {
+  resolver::mark_labels(mark.label.as_deref().unwrap_or(""))
+    .iter()
+    .any(|label| requested.contains(label))
+}
+
 /// The entries of an API call's or an in-block contact's content whose first ink is a mark, when two or more marks open one — a mark at its
 /// start, after a line break or after a separator (a comma, a gap, a word) with ink since the entry before (`$^{*}$Univ
 /// A,\\$^{+}$Univ B`, cond-mat0510562; `$^1$SJTU, $^2$Beihang`, 1809.03738): each entry its events up to the next,
@@ -2297,6 +2345,7 @@ fn mark_led_pieces_keeping(events: &[Event], punctuation: bool) -> Vec<Vec<Event
         e.kind == EventKind::Name && e.text.chars().next().is_some_and(char::is_alphabetic)
       })
   };
+  let requested = std::cell::OnceCell::new();
   let mut pieces: Vec<Vec<Event>> = vec![Vec::new()];
   let mut after_sep = true;
   let mut ink = false;
@@ -2304,9 +2353,15 @@ fn mark_led_pieces_keeping(events: &[Event], punctuation: bool) -> Vec<Vec<Event
     match &event.kind {
       // (a number's suffix is the entry's text, `Event::ordinal`)
       EventKind::Mark if event.ordinal => ink = true,
+      // (an exponent on a base its formula prints, `OR $97403^{3}$ Paris` — 2203.01892 —, is glued to no ink before it,
+      // unless a name requests it: `Lab $5^{2}$Univ Y` under `Bob Baker$^{2}$`, revISO1 S1)
       EventKind::Mark
         if ink
           && !after_sep
+          && (event
+            .formula
+            .is_none_or(|f| f.base != Some(MarkBase::Posted))
+            || is_requested(event, requested.get_or_init(|| names_requested(events))))
           && lead_kind.is_some()
           && kind(event) == lead_kind
           && name_follows(at) =>

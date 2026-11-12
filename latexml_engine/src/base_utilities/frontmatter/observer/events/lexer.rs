@@ -521,6 +521,12 @@ fn bracket_depth(open: u8, c: char) -> u8 {
 /// one: `$^1$A$^*$STAR`, `$^1$IHPC A$^*$STAR` (2401.15006's institute, cut at its star), whatever `Bob Baker$^{*}$` shows elsewhere.
 /// On a line no mark leads it stays a mark: `Cher$^*$Bob Baker`.
 fn glue_in_word_marks(events: Vec<Event>) -> Vec<Event> {
+  let glued_script =
+    |e: &Event| e.kind == EventKind::Mark && e.formula.is_some_and(|f| f.base.is_some() && !f.ends);
+  let requested = events
+    .iter()
+    .any(glued_script)
+    .then(|| names_requested(&events));
   let mut out: Vec<Event> = Vec::with_capacity(events.len());
   let mut events = events.into_iter().peekable();
   // (whether the line this event stands on is led by a mark; none printed yet)
@@ -551,6 +557,23 @@ fn glue_in_word_marks(events: Vec<Event>) -> Vec<Event> {
       && next.is_some_and(|e| {
         e.kind == EventKind::Name && e.text.chars().next().is_some_and(char::is_alphabetic)
       });
+    // (a script a letter or digit prints after in its own formula is the formula's text, a prescript or an exponent
+    // (`${\rm ^{3}He}$`, `${}^{87}{\rm Rb}$`; OD #911, 2105.07958's sibling), unless a name requests it (`${\rm
+    // ^2Lab}$` under `Bob Baker$^{2}$`, revISO1 B1) or, none requesting, it opens its line (`$ {\rm ^2Solid}$`, 1006.5052)
+    if glued_script(&event)
+      && match &requested {
+        Some(requested) if !requested.is_empty() => !is_requested(&event, requested),
+        _ => !event.line_first,
+      }
+      && let Some(next) = events.next_if(|e| e.kind == EventKind::Name)
+    {
+      out.push(Event {
+        text: format!("{}{}", event.text, next.text),
+        span: join_span(event.span, next.span),
+        ..next
+      });
+      continue;
+    }
     if in_word {
       let next = events.next().expect("peeked");
       let name = out.last_mut().expect("checked");
@@ -567,6 +590,15 @@ fn glue_in_word_marks(events: Vec<Event>) -> Vec<Event> {
 /// Whether a mark's label prints footnote symbols or mark glyphs alone.
 fn is_symbol_run(label: &str) -> bool {
   !label.is_empty() && label.chars().all(|c| is_fnsymbol(c) || is_mark_glyph(c))
+}
+
+/// Whether a mark stands between two names with no space printed or written on either side (`NLP$^2$CT`): the in-word
+/// test's frame, which a mark after a name and a space (`Able$^{1}$ Bob`) fails.
+pub(super) fn glued_inside_a_word(before: &Event, mark: &Event, after: Option<&Event>) -> bool {
+  !mark.space_before
+    && !mark.space_after
+    && after.is_some_and(|e| e.kind == EventKind::Name)
+    && glued_in_source(Some(before), mark, after)
 }
 
 /// Whether a digit mark stands in the source between the names around it with nothing but its own math shifts (or

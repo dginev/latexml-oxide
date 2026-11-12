@@ -27136,9 +27136,9 @@ a script (ANh01 `Ann Able$\sqrt{x^1}$`, RSh01 `Ann $\sqrt{Able^1}$`) are read, a
 (the reading through the root had made the root's script a name mark). The 44 reach and witness papers convert as
 before.
 
-Residuals, each another stage's: the writer's cut reads tokens (`emitter::plan`; stage 3): `${^{3}He}$` and
-`${}^{87}{\rm Rb}$` inside a marked line are still cut there (`written-different`, 1 Warning; RED repros
-`revtex_affiliation_braced_prescript_keeps_its_line`, `…_empty_base_prescript_…`), and a switched mark is no balanced
+Residuals, each another stage's: `${^{3}He}$` inside a marked line is still cut at its script (the reading's cut; the
+cause not settled; RED repro `revtex_affiliation_braced_prescript_keeps_its_line_red`; its `${}^{87}{\rm Rb}$`
+sibling fixed by ISO1, below), and a switched mark is no balanced
 piece (`revtex_affiliation_font_switched_marks_cut_with_their_lines`, `…_requested_switched_mark_cuts`); the mid-line
 `$\rm ^{3}$He Lab` no name requests (88c r2 q17) reads as a mark now, kept whole only because that cut declines
 (`revtex_affiliation_unrequested_mark_keeps_its_line`, which stage 3 must keep); the observer's lexer does not strip
@@ -27149,8 +27149,7 @@ order, after Univ Y).
 
 Guards: `perfect_kernel_batch90a::{a_formula_printing_only_floating_scripts_is_a_mark,
 a_script_before_printed_ink_or_on_a_base_is_text, a_formula_mark_on_a_name_answers_its_affiliation,
-a_script_inside_a_two_dimensional_layout_ends_no_line}` (module removed: DEL1 deleted three, HG1 the fourth, its repro
-`revtex_affiliation_isotope_prescript_keeps_its_line_red`; the last: repros
+a_script_inside_a_two_dimensional_layout_ends_no_line}` (DEL1 deleted three, HG1 the fourth; the last: repros
 `amsart_address_fraction_script_ends_no_line`, `amsart_address_boxed_script_ends_no_line`);
 `observer::marks::tests::{floating_scripts_before_no_letter_or_digit_are_a_mark,
 a_script_before_or_on_printed_ink_is_no_mark}` (both vocabularies, the parsed nested bases, the accented letter and
@@ -27159,6 +27158,39 @@ the two-dimensional layouts `\frac{a}{b^1}`, `\sqrt{x^1}`, `\sqrt[3]{x^1}`, `\bo
 a_parsed_prescript_on_a_word_is_text_a_script_on_a_base_the_base, the_writer_and_the_comparator_read_a_formula_alike}`
 (the last: each shape's digested and parsed XMath give one reading and one text). RED repro (stage 3):
 `amsart_address_spaced_marks_cut_with_their_lines` (`$\,^{1}$` address lines, 0804.4669's shape).
+
+**ISO1 (restored after DEL1's flip lost it with the old writer).** The rule now stands in the observer's lexer, one place
+for every reader of the events: a script a letter or digit prints after in its own formula is no Mark but the
+formula's text, folded into the Name after it (`events::lexer::glue_in_word_marks`; "3He") — unless a name requests
+it, where it is a label (`Univ X, ${\rm ^2Lab}$ of …` under `Bob Baker$^{2}$`, revISO1 B1), or, no name requesting
+marks, it opens its line (`$ {\rm ^2Solid}$ State …`, 1006.5052, which a first cut without that clause gave to the
+wrong author) —, and an exponent on a base its formula prints opens no entry by the glued-label rule unless a name
+requests it (`events::mark_led_pieces`; 2203.01892's unrequested `OR $97403^{3}$`; `Lab $5^{2}$Univ Y` under
+`Bob Baker$^{2}$`, revISO1 S1). The requested labels (`events::names_requested`) are the marks set after a word of the
+events on a line no mark leads (an in-block name line: `Ann Able$^{1}$ Bob Baker$^{2}$` requests 1 and 2, revISO1b B1;
+not `$^{2}$Univ Y, Lab $10^{3}$ Unit`'s 3), but one glued on both sides inside a word (`NLP$^2$CT`), else the queued authors' (`queue_reading::requested_labels`; once the flush took the
+queue, `queue_digest::flush_requested_marks`, now assigned before the emitter runs). No name requesting a mark, a
+mid-line script is text: `\affiliation{${\rm ^1Dept}$ …, ${\rm ^2Lab}$ …}` under an unmarked author is one contact, as
+pdflatex prints one line (int160c parted it; revISO1b S1). The content check reads a formula the
+frontmatter takes as text with its scripts, a superscript REVTeX's `\lx@frontmatter@keepsup` kept inside it too, and a
+base's scripts as a mark parting it from the ink after it ("5", "Univ"; `emitter::dom::segments`). The isotope line stays whole, its
+author's, under REVTeX's `\affiliation`, the kernel's in-block line, elsarticle's `\address` and aa's `\institute`
+(2105.07958's prescript class). A/B against int160c: 18 papers (2105.07958, 2203.01892, 1006.5052 and 15 whose
+affiliation sources hold a superscript glued to letters) convert byte-identical; the in-formula prescript is rare
+(one hit in a 40,000-zip scan). Guard `perfect_kernel_batch90a::a_script_before_printed_ink_or_on_a_base_is_text`
+(20 rows: one per reading path, the line-opening script, a control whose glued and spaced marks part the line,
+ISO1b's requested script on REVTeX's, elsarticle's, the kernel's, authblk's, IEEEtran's and an unknown class's path,
+ISO1c's spaced names requesting their marks in three orders, an in-word mark requesting none and the unrequested line
+kept one contact).
+RED (pinned, its Warning counting it): a requested exponent's cut writes `$5^{2}$` on both sides
+(`revtex_affiliation_requested_exponent_on_a_number_parts_the_line_red`). Left: a mark whose formula ends and that letters follow
+glued after a comma — `$^{3}$He`, `\textsuperscript{3}He`, and `$^{3}\mathrm{He}$` too, which REVTeX's queue-time
+`\affiliation` cut parts by its tokens — RED repros `revtex_affiliation_{glued,textsuperscript,mathrm}_isotope_after_a_comma_red`,
+`elsarticle_address_glued_isotope_after_a_comma_red`; an isotope's digit some author requests read as that author's
+label though a line of its own opens with it (`{revtex_affiliation,kernel_author_line}_requested_isotope_digit_takes_the_wrong_owner_red`),
+a spaced `\textsuperscript{3}He` a nameless creator's (`revtex_affiliation_spaced_textsuperscript_isotope_names_no_one_red`),
+both P4c's; llncs's `\thanks{$^{1}$ …}` under `Ann Able$^{1}$` read as an affiliation
+(`llncs_thanks_requested_mark_legend_read_as_affiliation_red`).
 
 ### 912. just.cls (Chinese Physics C's cpc-hepnp.cls under the PhiPsi15 name) has a binding: its `\email` is the author's e-mail and its `\address` after `\maketitle` the names' affiliations; cpc-hepnp itself waits for 91c (Perl: no binding; through OmniBus the list is one address of the last author)
 

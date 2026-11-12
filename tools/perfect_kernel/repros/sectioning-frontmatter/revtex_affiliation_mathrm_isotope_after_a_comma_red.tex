@@ -1,0 +1,17 @@
+% mechanism: REVTeX's queue-time cut of an `\affiliation` at its marks (a token reader, refactor stage 5) parts the line at a
+%   `$^` after a comma, `$^{3}\mathrm{He}$` too, whose script a letter prints after in its formula (no mark by
+%   `marks::read_formula`): the isotope's "3" lost, "He Lab" a nameless creator's
+% witness: synthetic (ISO1 sibling of revtex_affiliation_isotope_prescript_keeps_its_line; 2105.07958)
+% oracle:  pdflatex (TL 2025 revtex4-1) 0 errors: "1 Univ X / 2 Univ Y, 3He Lab"
+% engines: rust int160c = ISO1 = 0 errors, 0 warnings: Baker "Univ Y", "He Lab" a nameless creator's, the "3" dropped silently
+% expect:  0 errors, 0 warnings; Able "Univ X"; Baker "Univ Y, ³He Lab"
+% status:  RED (int160c, ISO1) — open: the queue-time pre-splitter, ISO1 report
+% preload: ar5iv.sty
+\documentclass{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$}
+\affiliation{$^{1}$Univ X\\ $^{2}$Univ Y, $^{3}\mathrm{He}$ Lab}
+\maketitle
+Text.
+\end{document}
