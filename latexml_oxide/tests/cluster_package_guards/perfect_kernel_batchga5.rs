@@ -75,6 +75,39 @@ const ROWS: &[Row] = &[
     )],
     holds:    &["After TEXT."],
   },
+  // GA4b (revGA4 p09): a nested tabular after a longtable caption goes with the caption's row (RED, GA4C post-merge),
+  // the loss counted by one Warning per table (0 on GA4); the captions and the text after the tables kept
+  Row {
+    name:     "longtable_caption_then_a_nested_tabular_red",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/alignment-bindings/longtable_caption_then_a_nested_tabular_red.tex"
+    ),
+    counts:   (0, 2),
+    elements: &[],
+    holds:    &[
+      r#"<caption><tag close=": ">Table 1</tag>Cap</caption>"#,
+      r#"<caption><tag close=": ">Table 2</tag>Two</caption>"#,
+      "After TEXT.",
+    ],
+  },
+  // GA4b: the caption's cell is a `\multicolumn`, so the column template's own text ("." of `r@{.}`, 1111.5166) is no
+  // loss; the "7" after the third caption is (1903.09068's shape), one Warning
+  Row {
+    name:     "longtable_caption_row_template_text_not_counted",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/alignment-bindings/longtable_caption_row_template_text_not_counted.tex"
+    ),
+    counts:   (0, 1),
+    elements: &[(
+      "table",
+      "xml:id=\"S0.T1\"",
+      r#"<table inlist="lot" labels="LABEL:t:a" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><caption><tag close=": ">Table 1</tag>Dot</caption><toccaption><tag close=" ">1</tag>Dot</toccaption><tabular xml:id="S0.T1.1"><tr xml:id="S0.T1.1.1"><td align="right" class="ltx_nopad_r" xml:id="S0.T1.1.1.1">1.</td><td align="left" class="ltx_nopad_l" xml:id="S0.T1.1.1.2">5</td></tr></tabular></table>"#,
+    )],
+    holds:    &[
+      r#"<caption><tag close=": ">Table 3</tag>Five</caption>"#,
+      "After TEXT.",
+    ],
+  },
   // tabularx's binding lets `\verb` to its `\TX@verb` in the environment, the kernel's after it (2404.06128,
   // 2309.04295)
   Row {

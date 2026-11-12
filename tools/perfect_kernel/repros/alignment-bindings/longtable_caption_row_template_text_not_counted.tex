@@ -1,0 +1,27 @@
+% witness: 1111.5166 (`{r@{.} l …}`, a caption row whose cell holds only the template's "."), 1903.09068
+%          (`\caption{…}\label{tab:morph}. \\`, the "." lost); GA4b (revGA4 p09)
+% oracle:  pdflatex 0 errors: "Table 1: Dot 1.5 Table 2: Bold a: x Table 3: 7 Five 1.5 After TEXT." — the caption's
+%          cell is a `\multicolumn` (longtable.sty:476 `\LT@mcol`), so the column template's "." and ":" are not
+%          printed in it; the "7" after the third caption is
+% engines: rust GA4 = 0 errors, 0 warnings, the "7" lost silently; GA4b = 0 errors, 1 Warning (table 3's row,
+%          `caption_row_notes`), the template's text of tables 1 and 2 not counted
+% expect:  0 errors, 1 warning; the three captions; table 1's row 1/5
+% status:  GREEN (GA4b; the "7" itself is GA4C's, post-merge)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{longtable,array}
+\begin{document}
+\begin{longtable}{r@{.}l}
+\caption{Dot}\label{t:a}\\
+1 & 5 \\
+\end{longtable}
+\begin{longtable}{>{\bfseries}l<{:}>{$}l<{$}}
+\caption{Bold} \\
+a & x \\
+\end{longtable}
+\begin{longtable}{r@{.}l}
+\caption{Five} 7\\
+1 & 5 \\
+\end{longtable}
+After TEXT.
+\end{document}

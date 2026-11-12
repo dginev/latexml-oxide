@@ -1,15 +1,17 @@
-% witness: synthetic (GA4C); the same class on real papers: 1903.09068 (`\caption{…}\label{tab:morph}. \\`, the "."),
-%          1009.4206 (`[t]` before the caption in its cell)
+% witness: synthetic (GA4C; revGA4 p09, the two-column shape); the same class on real papers: 1903.09068
+%          (`\caption{…}\label{tab:morph}. \\`, the "."), 1009.4206 (`[t]` before the caption in its cell)
 % oracle:  pdflatex 0 errors: longtable's caption is a `\noalign` and then a cell spanning the row
 %          (longtable.sty:476 `\LT@makecaption`); what follows it before the `\\` is set in that cell beside the caption:
-%          "Table 1: Cap" with the nested tabular x/y, then a
-% engines: rust GA4base = 0 errors, "x" lost (the global caption flag taken by the nested tabular's first `\\`, which
-%          dropped its row; the outer row kept with y); GA4 = 0 errors, x and y lost: the caption's row is the
-%          alignment's to drop (`RowDisposition::Route`) and goes whole, notes kept (`caption_row_notes`)
-% expect:  0 errors; the caption; the nested tabular x/y kept (a row of its own, the caption hoisted)
-% status:  RED (GA4base, GA4)
-% moves:   post-merge (GA4C: keep the content after the caption, not the column template's own text — a `r@{.}`
-%          column's "." is no content, 1111.5166 — which a typeset-content test of the row cannot tell apart)
+%          "Table 1: Cap" with the nested tabular x/y, "Table 2: Two" with x z/y w
+% engines: rust GA4base = 0 errors, table 1's "x" lost (the global caption flag taken by the nested tabular's first
+%          `\\`, which dropped its row), table 2 kept (the nested `&` cleared the flag); GA4 = 0 errors, 0 warnings, both
+%          nested tabulars lost: the caption's row is the alignment's to drop (`RowDisposition::Route`) and goes whole,
+%          notes kept (`caption_row_notes`); GA4b = the same, the loss counted by one Warning per table (the
+%          column template's own text not counted: longtable_caption_row_template_text_not_counted)
+% expect:  0 errors; the captions; the nested tabulars x/y and x z/y w kept (a row of their own, the caption hoisted)
+% status:  RED (GA4base, GA4, GA4b; the counts guarded by perfect_kernel_batchga5::batchga5_meaning_rows)
+% moves:   post-merge (GA4C: keep the content after the caption as a row of its own, not the column template's own
+%          text — a `r@{.}` column's "." is no content, 1111.5166)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{longtable}
@@ -17,6 +19,10 @@
 \begin{longtable}{l}
 \caption{Cap} \begin{tabular}{l} x \\ y \end{tabular}\\
 a \\
+\end{longtable}
+\begin{longtable}{l}
+\caption{Two} \begin{tabular}{ll} x & z \\ y & w\end{tabular}\\
+b \\
 \end{longtable}
 After TEXT.
 \end{document}

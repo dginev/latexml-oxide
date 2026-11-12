@@ -1430,16 +1430,9 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
         // The kernel's own `\hline` = `\noalign{\@@alignment@hline}` never
         // hit it. Guard: `perfect_kernel_batch54::noalign_body_is_executed_to_its_group_end`.
         // §785 `align_peek`: `scan_left_brace` — expanded, past spaces and `\relax` (`\noalign\relax{\hrule}`).
-        // `\noalign\\`: in a text `tabular` the kernel's `\\` (and `\tabularnewline`, latex.ltx:16576 `\let`) is
-        // `\@tabularcr` (latex.ltx:16590), `{\ifnum0=`}\fi…`, so the brace `\noalign` scans is the one `\\` opens and
-        // its `\ifnum0=`{\fi}` closes, before the `\cr` that ends an empty row: pdflatex is clean (2309.15248, svmult's
-        // `\svhline\noalign\\`; `\tabular…\endtabular` the same). Every other `\\` — array.sty's and the kernel's
-        // `\@arraycr` (`\relax\iffalse{\fi…`) of a math array, longtable's, amsmath's `\math@cr` — opens with no
-        // brace: "Missing { inserted", as TeX says. Ours expands to `\lx@hidden@cr{…}` everywhere, so the shape is told
-        // before expansion — past spaces and `\relax`, as `scan_left_brace` reads (§785) — from the token's meaning
-        // (`\ifx`-equal to `\@tabularcr`), the `\\` the alignment's binding names (`row_end`, `tabular_bindings`) and
-        // array.sty; either way the noalign material is empty and the row end is put back (it was a noalign group that
-        // never closed, and the rest of the document was lost).
+        // `\noalign\\` (past spaces and `\relax`, §785): an empty noalign and the row end, "Missing { inserted" unless
+        // the `\\` is the kernel text tabular's `\@tabularcr`, whose `{\ifnum0=`}\fi` gives the brace (latex.ltx:16590;
+        // 2309.15248). OXIDIZED_DESIGN_DIVERGENCES #514.
         let mut skipped = Vec::new();
         let raw = loop {
           match read_token()? {

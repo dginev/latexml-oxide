@@ -399,13 +399,15 @@ fn dispose_current_row(disposition: RowDisposition) {
 
 /// A caption's row goes with the caption (#534). A note in it, a `\footnote` on the caption (`\caption{…}\footnote{…}\\`),
 /// is set after the caption's text, its mark where longtable's caption cell has it (longtable.sty:476 `\LT@makecaption`;
-/// 2201.11330, lost with the row). Only notes: text before the caption in its row is pdflatex's "Misplaced \noalign"
-/// (`\begin{longtable*}{lc}[t]`'s stray `[t]`, 1009.4206), dropped with the row.
+/// 2201.11330, lost with the row). Any other content goes with the row, counted by a Warning: text before the caption
+/// (`\begin{longtable*}{lc}[t]`'s stray `[t]`, 1009.4206) or after it (1903.09068's "."; a nested tabular, RED
+/// longtable_caption_then_a_nested_tabular_red, GA4C). The caption's cell is a `\multicolumn` (`\LT@mcol`), so the
+/// column template's own text (`r@{.}`'s ".", 1111.5166) is not printed and not counted.
 fn caption_row_notes(row: &Row) {
-  // (the notes the cells hold, inside a `p` column's box too)
-  fn shown(d: &Digested, out: &mut Vec<Digested>) {
+  // (the notes the cells hold, inside a `p` column's box too; the text of what else shows)
+  fn shown(d: &Digested, out: &mut Vec<Digested>, text: &mut String) {
     match d.data() {
-      DigestedData::List(list) => list.borrow().boxes.iter().for_each(|b| shown(b, out)),
+      DigestedData::List(list) => list.borrow().boxes.iter().for_each(|b| shown(b, out, text)),
       DigestedData::Whatsit(w) => {
         let w_ref = w.borrow();
         let cs_name = w_ref.get_definition().get_cs_name().to_string();
@@ -414,17 +416,38 @@ fn caption_row_notes(row: &Row) {
         } else if cs_name == "\\lx@tabular@p@"
           && let Some(Some(body)) = w_ref.get_args().get(2)
         {
-          shown(body, out);
+          shown(body, out, text);
+        } else if typesets_content(d) {
+          text.push_str(&d.to_string());
         }
       },
+      _ if typesets_content(d) => text.push_str(&d.to_string()),
       _ => {},
     }
   }
   let mut notes = Vec::new();
+  let mut lost = false;
   for column in row.get_columns() {
     if let Some(boxes) = &column.boxes {
-      shown(boxes, &mut notes);
+      let mut text = String::new();
+      shown(boxes, &mut notes, &mut text);
+      let template: String = [&column.before, &column.after]
+        .into_iter()
+        .flatten()
+        .flat_map(|tokens| tokens.unlist_ref())
+        .filter(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER))
+        .map(|t| t.with_str(str::to_owned))
+        .collect();
+      let text: String = text.split_whitespace().collect();
+      lost |= !text.is_empty() && text != template;
     }
+  }
+  if lost {
+    Warn!(
+      "unexpected",
+      "\\caption",
+      "a longtable \\caption's row holds content besides the caption; it is dropped with the row"
+    );
   }
   if !notes.is_empty()
     && let Some(Stored::VecDigested(mut captions)) = lookup_value("LONGTABLE_CAPTIONS")
