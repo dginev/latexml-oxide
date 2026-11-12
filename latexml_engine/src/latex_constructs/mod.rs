@@ -7571,13 +7571,11 @@ pub fn begin_bibliography_clean(whatsit: &mut Whatsit) -> Result<()> {
   if let Some(cs) = lookup_value("CITE_STYLE") {
     whatsit.set_property("citestyle", cs);
   }
-  // NB: Perl's `beginBibliography` does NOT populate `#sort` here (only the
-  // `\bibstyle` DefConstructor sets the `sort` attribute, and only on a
-  // bibliography node that already exists — the bibunits path). We match that:
-  // the main `<ltx:bibliography>` carries `bibstyle`/`citestyle` but no `sort`,
-  // byte-identical to Perl. MakeBibliography derives citation-order numbering
-  // from the `bibstyle` name (html_feedback #6294), so no `sort` attribute is
-  // needed on the core node.
+  // The style's order (`setBibstyle`'s CITE_SORT), the one fact post numbers by: Perl leaves `#sort` unset here
+  // (pool:3890 `# sort=> ???`) and writes it only late (:3979). OXIDIZED_DESIGN_DIVERGENCES #116.
+  if let Some(sort) = lookup_value("CITE_SORT") {
+    whatsit.set_property("sort", sort);
+  }
   // And prepare for the likely nonsense that appears within bibliographies: the classes' `thebibliography`
   // (article.cls:573) runs `\usecounter{enumiv}` (latex.ltx:16048), which also names the list's counter; asl.cls's
   // entries read `\value{\@listctr}` (1005.4193, 0705.0395). Perl's never names it (KNOWN_PERL_ERRORS #1230).

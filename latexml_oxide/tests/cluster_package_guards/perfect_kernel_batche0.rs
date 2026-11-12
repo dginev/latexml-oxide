@@ -2235,3 +2235,59 @@ fn passes_after_the_emitter_are_an_allow_list() {
     "the content check reads the final placed document"
   );
 }
+
+/// The style names post may spell, per file: the engine's bibstyle table (`lookup_bibstyle_params`) is the one home of a
+/// style's facts. The sort fact left post (GA3: it reads the node's `sort`); what is left is a debt, the url fact
+/// (`make_bibliography.rs` `style_prints_urls`, 5 names).
+const POST_BIBSTYLE_NAMES: &[(&str, usize)] = &[("latexml_post/src/make_bibliography.rs", 5)];
+
+/// The fence: no copy of the engine's bibstyle table grows in `latexml_post/src` (GA0 finding 6: post's citation-order
+/// list had drifted from it, `jurunsrt`).
+#[test]
+fn post_keeps_no_copy_of_the_bibstyle_table() {
+  let engine = read_rust("latexml_engine/src/latex_constructs/mod.rs");
+  let start = engine
+    .code
+    .find("fn lookup_bibstyle_params")
+    .expect("the engine's bibstyle table");
+  let body = &engine.code[start..];
+  let body = &body[..body.find("_ => None").expect("the table's end")];
+  let arm = Regex::new(r#""(\d+)"\s*(=>|\|)"#).expect("arm pattern");
+  let names: std::collections::BTreeSet<String> = arm
+    .captures_iter(body)
+    .map(|c| engine.literals[c[1].parse::<usize>().expect("a literal index")].clone())
+    .collect();
+  assert!(
+    names.contains("unsrt") && names.contains("jurunsrt"),
+    "the table read: {names:?}"
+  );
+  // (a name in a list: an alternative, a match arm or a comparison; not a value, `'\u{03B1}' => "alpha"`)
+  let literal = Regex::new(r#""(\d+)""#).expect("literal pattern");
+  let mut counts = BTreeMap::new();
+  for file in rust_files("latexml_post/src") {
+    let source = read_rust(&file);
+    let n = literal
+      .captures_iter(&source.code)
+      .filter(|c| {
+        let (whole, before) = (
+          c.get(0).expect("a match"),
+          &source.code[..c.get(0).expect("a match").start()],
+        );
+        let after = source.code[whole.end()..].trim_start();
+        let listed = before.trim_end().ends_with(['|', '='])
+          || ["|", "=>", "=="].iter().any(|op| after.starts_with(op));
+        listed && names.contains(&source.literals[c[1].parse::<usize>().expect("an index")])
+      })
+      .count();
+    if n > 0 {
+      counts.insert(file, n);
+    }
+  }
+  assert_debts(
+    "the bibstyle names post spells",
+    POST_BIBSTYLE_NAMES,
+    &counts,
+    "A style's fact is written by the engine (`lookup_bibstyle_params`) onto `ltx:bibliography` and read there by \
+     post, as `sort` is (OXIDIZED_DESIGN_DIVERGENCES #116).",
+  );
+}

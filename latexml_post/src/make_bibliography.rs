@@ -1733,9 +1733,8 @@ impl Processor for MakeBibliography {
       // numbered by first citation, not alphabetically — matching the `.bst` and
       // the published PDF (html_feedback #6294). Perl always `unisort`s (it reads
       // the sort flag into `%STYLE` but ignores it), so this is a deliberate
-      // surpass-Perl. Detected from the `bibstyle` NAME — the reliable signal on
-      // the main node (Perl's `beginBibliography` never emits `sort`) — plus an
-      // explicit `sort='false'` for the bibunits `\bibstyle` path / external XML.
+      // surpass-Perl. Read from the node's `sort`, which the engine writes from the
+      // style (`CITE_SORT`; OXIDIZED_DESIGN_DIVERGENCES #116).
       // Only the non-split walk uses it; `--splitbibliography` is inherently
       // initial-major (alphabetical) and never combines with it.
       //
@@ -1750,11 +1749,7 @@ impl Processor for MakeBibliography {
         .as_deref()
         .map(|s| s.is_empty() || s == "numbers")
         .unwrap_or(true);
-      let unsorted_style = bib.get_attribute("sort").as_deref() == Some("false")
-        || bib
-          .get_attribute("bibstyle")
-          .as_deref()
-          .is_some_and(is_citation_order_style);
+      let unsorted_style = bib.get_attribute("sort").as_deref() == Some("false");
       let cite_order = (is_numeric && unsorted_style).then(|| citation_order(&doc));
       // A backend's listing keeps its own order in every style: biber applied
       // the style's sorting scheme (the `.bbl` order is the PDF's), and biblatex
@@ -3651,20 +3646,6 @@ fn format_links(doc: &PostDocument, nodes: &[Node]) -> Vec<NodeData> {
 /// map.
 fn unisort(keys: &mut [String]) {
   keys.sort_by_cached_key(|k| (collation_primary_key(k), k.clone()));
-}
-
-/// Whether a `\bibliographystyle` produces an UNSORTED (citation-order)
-/// bibliography — bibtex's `sort='false'` styles. Kept in sync with the
-/// engine's `lookup_bibstyle_params` (`latex_constructs.rs`): the two live in
-/// different crates, but both encode the same small, stable bibtex fact.
-/// `unsrt`/`unsrtnat` are the base-table unsorted styles; `ieeetr`/`IEEEtran`
-/// are the surpass-Perl additions matching the real IEEE `.bst` + PDF, and
-/// `abntex2-num` numbers by citation too (abntex2-num.bst:2021-2022).
-fn is_citation_order_style(bibstyle: &str) -> bool {
-  matches!(
-    bibstyle,
-    "unsrt" | "unsrtnat" | "ieeetr" | "IEEEtran" | "abntex2-num" | "figbib"
-  )
 }
 
 /// Whether a bibliography style prints an entry's `url` field. biblatex's

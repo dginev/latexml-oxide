@@ -1225,10 +1225,10 @@ fn bibunits_cite_resolves_against_the_main_bibliography() {
       "tests/cluster_regressions/bibunits_unit_twin.tex",
       vec![
         format!(r#"<bibref bibrefs="Smith2020" {FREE}/>"#),
-        format!(r#"<bibref bibrefs="zeta" class="ltx_cite_sort" inlist="bu1" {FREE}/>"#),
-        format!(
-          r#"<bibref bibrefs="alpha" class="ltx_cite_sort" inlist="bibliography bu1" {FREE}/>"#
-        ),
+        // (no `ltx_cite_sort`: the unit's `plain` orders its list, not a citation, and no cite.sty or natbib `sort`
+        // is loaded; the class came from reading the style's CITE_SORT as theirs, GA3)
+        format!(r#"<bibref bibrefs="zeta" inlist="bu1" {FREE}/>"#),
+        format!(r#"<bibref bibrefs="alpha" inlist="bibliography bu1" {FREE}/>"#),
         format!(r#"<bibref bibrefs="mid" {FREE}/>"#),
       ],
       // `bib` is the unit's (Abel, Zimmer), `biba` the main one; its Zimmer (biba.bib2) is
@@ -1260,7 +1260,7 @@ fn bibunits_cite_resolves_against_the_main_bibliography() {
       vec![
         format!(r#"<bibref bibrefs="alpha" {FREE}/>"#),
         format!(r#"<bibref bibrefs="zeta" inlist="bibunits_chapterbib_chapter" {FREE}/>"#),
-        format!(r#"<bibref bibrefs="mid" class="ltx_cite_sort" inlist="bu1" {FREE}/>"#),
+        format!(r#"<bibref bibrefs="mid" inlist="bu1" {FREE}/>"#),
         format!(r#"<bibref bibrefs="Smith2020" inlist="bibunits_chapterbib_chapter" {FREE}/>"#),
       ],
       // The unit's (`bib`), the chapter's (`biba`: Smith, Zimmer), the main one (`bibb`).
@@ -3163,26 +3163,97 @@ fn cluster_bib_unsrt_citation_order() {
 }
 
 /// The engine half of the fix: `\bibliographystyle{IEEEtran}` (and `{unsrt}`)
-/// reach the core `<ltx:bibliography>` as `bibstyle="…"` + `citestyle="numbers"`
-/// — the signals the post-processor keys on. `IEEEtran` in particular must be
-/// KNOWN (it maps to numeric+unsorted); before the fix it was an "unknown
-/// bibstyle". Core output carries no `sort` attribute (byte-identical to Perl,
-/// which never emits it on the main node — the post derives order from bibstyle).
+/// reach the core `<ltx:bibliography>` as `bibstyle="…"`, `citestyle="numbers"`
+/// and the style's order, `sort` (the engine's CITE_SORT, the one fact post
+/// numbers by; GA3, OXIDIZED_DESIGN_DIVERGENCES #116). `IEEEtran` in particular
+/// must be KNOWN (it maps to numeric+unsorted); before the fix it was an "unknown
+/// bibstyle".
 #[test]
 fn cluster_bib_bibstyle_is_known_numeric() {
-  for (tex, bibstyle) in [
-    ("cite_order_unsrt.tex", "unsrt"),
-    ("cite_order_ieeetran.tex", "IEEEtran"),
-    ("cite_order_plain.tex", "plain"),
+  for (tex, bibstyle, sort) in [
+    ("cite_order_unsrt.tex", "unsrt", "false"),
+    ("cite_order_ieeetran.tex", "IEEEtran", "false"),
+    ("cite_order_plain.tex", "plain", "true"),
   ] {
     let core = convert_to_xml(&format!("tests/cluster_regressions/{tex}"));
+    assert_bibliography_attributes(tex, &core, &[
+      &format!(r#" bibstyle="{bibstyle}""#),
+      r#" citestyle="numbers""#,
+      &format!(r#" sort="{sort}""#),
+    ]);
+  }
+}
+
+/// Every one of `attributes` on the document's (first) `<bibliography>` tag.
+fn assert_bibliography_attributes(tex: &str, xml: &str, attributes: &[&str]) {
+  let tag = xml
+    .find("<bibliography ")
+    .map(|i| &xml[i..i + xml[i..].find('>').unwrap_or(0)])
+    .unwrap_or_default();
+  for attribute in attributes {
     assert!(
-      core.contains(&format!(r#"bibstyle="{bibstyle}""#)),
-      "{tex}: expected bibstyle=\"{bibstyle}\" on ltx:bibliography:\n{core}"
+      tag.contains(attribute),
+      "{tex}: expected{attribute} on ltx:bibliography, got {tag}\n{xml}"
     );
-    assert!(
-      core.contains(r#"citestyle="numbers""#),
-      "{tex}: expected citestyle=\"numbers\":\n{core}"
+  }
+}
+
+/// The style's order is one fact, `sort` on `ltx:bibliography`, and a citation's own sorting another (`CITE_SORTCITES`,
+/// natbib's `sort` and cite.sty's): a style named in the preamble sorts no citation (`plain` once printed "[1, 3]" for
+/// pdflatex's "[3, 1]"), natbib's `sort` still does, and a bibunit's style reaches its own list. Rows: fixture, the
+/// tag's style attributes, the citations, the list's keys in order (pdflatex+bibtex, each fixture's header).
+#[test]
+fn cluster_bib_order_is_the_styles_sort_fact() {
+  let rows: [(&str, [&str; 3], [&str; 2], [&str; 3]); 4] = [
+    (
+      "cite_order_plain_preamble",
+      [
+        r#" bibstyle="plain""#,
+        r#" citestyle="numbers""#,
+        r#" sort="true""#,
+      ],
+      ["[3, 1]", "[2]"],
+      ["alpha", "beta", "gamma"],
+    ),
+    (
+      "natbib_plainnat_preamble",
+      [
+        r#" bibstyle="plainnat""#,
+        r#" citestyle="numbers""#,
+        r#" sort="true""#,
+      ],
+      ["[3, 1]", "[2]"],
+      ["alpha", "beta", "gamma"],
+    ),
+    (
+      "natbib_sort_unsrtnat_preamble",
+      [
+        r#" bibstyle="unsrtnat""#,
+        r#" citestyle="numbers""#,
+        r#" sort="false""#,
+      ],
+      ["[1, 2]", "[3]"],
+      ["gamma", "alpha", "beta"],
+    ),
+    (
+      "bibunits_unsrt_order",
+      [
+        r#" bibstyle="unsrt""#,
+        r#" citestyle="numbers""#,
+        r#" sort="false""#,
+      ],
+      ["[1, 2]", "[3]"],
+      ["gamma", "alpha", "beta"],
+    ),
+  ];
+  for (tex, attributes, cites, keys) in rows {
+    let x = convert_and_post_clean(&format!("tests/cluster_regressions/{tex}.tex"));
+    assert_bibliography_attributes(tex, &x, &attributes);
+    assert_eq!(inline_cite_texts(&x), cites, "{tex}: the citations\n{x}");
+    assert_eq!(
+      reference_list_keys(&x),
+      keys,
+      "{tex}: the list's order\n{x}"
     );
   }
 }
@@ -4038,7 +4109,8 @@ fn biblatex_printbibliography_empty_prenote_prints_nothing() {
 }
 
 /// 60q: natbib's `\bibpreamble` (natbib.sty:1063-1066) is typeset after the heading of a bibliography read from its
-/// `.bib` too — the `.bbl` it becomes is a `thebibliography` (OXIDIZED_DESIGN #429; KNOWN_PERL_ERRORS #325).
+/// `.bib` too — the `.bbl` it becomes is a `thebibliography` (OXIDIZED_DESIGN #429; KNOWN_PERL_ERRORS #325). The tag
+/// carries plainnat's order, `sort="true"` (GA3, OXIDIZED_DESIGN_DIVERGENCES #116; one entry, no order to differ).
 #[test]
 fn natbib_bib_bibliography_prints_its_bibpreamble() {
   let (log, xml) = latexml::util::test::convert_files_with(
@@ -4058,7 +4130,7 @@ fn natbib_bib_bibliography_prints_its_bibpreamble() {
     &xml,
     "bibliography",
     &[],
-    r#"<bibliography bibstyle="plainnat" citestyle="authoryear" files="x" inlist="toc" xml:id="bib"><title>References</title><para xml:id="bib.p1"><p>Preamble prose here.</p></para></bibliography>"#,
+    r#"<bibliography bibstyle="plainnat" citestyle="authoryear" files="x" inlist="toc" sort="true" xml:id="bib"><title>References</title><para xml:id="bib.p1"><p>Preamble prose here.</p></para></bibliography>"#,
   );
 }
 

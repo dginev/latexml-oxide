@@ -85,15 +85,16 @@ const ROWS: &[Row] = &[
       "<Math tex=\"\\displaystyle\\intertext{or}g\" text=\"[or] * g\" xml:id=\"S0.E2Xa.m2\">\n                <XMath xml:id=\"S0.E2Xa.m2.1\">\n                  <XMApp xml:id=\"S0.E2Xa.m2.1.1\">\n                    <XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok>\n                    <p class=\"ltx_intertext\" xml:id=\"S0.E2Xa.m2.1.1.2\">or</p>\n                    <XMTok font=\"italic\" role=\"UNKNOWN\">g</XMTok>\n                  </XMApp>\n                </XMath>\n              </Math>",
     ],
   ),
-  // bibunits' `\cite` in math: its `\lx@bibunits@…` primitives leave no box.
+  // bibunits' `\cite` in math: its `\lx@bibunits@…` primitives leave no box. (No `ltx_cite_sort`: the unit's `plain`
+  // orders its list, not a citation; GA3, OXIDIZED_DESIGN_DIVERGENCES #844.)
   (
     repro!("bibunits_cite_in_math_reverts_to_cite"),
     0,
     0,
     "cite",
     &[
-      "<Math mode=\"inline\" tex=\"x_{\\cite[cite]{[\\@@bibref{}{foo}{}{}]}}\" text=\"x _ [[]]\" xml:id=\"p1.m1\">\n        <XMath xml:id=\"p1.m1.1\">\n          <XMApp xml:id=\"p1.m1.1.1\">\n            <XMTok role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/>\n            <XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok>\n            <XMText xml:id=\"p1.m1.1.1.3\"><cite class=\"ltx_citemacro_cite\"><text fontsize=\"70%\" xml:id=\"p1.m1.1.1.3.1\">[</text><bibref bibrefs=\"foo\" class=\"ltx_cite_sort\" inlist=\"bu1\" separator=\",\" yyseparator=\",\"/><text fontsize=\"70%\" xml:id=\"p1.m1.1.1.3.2\">]</text></cite></XMText>\n          </XMApp>\n        </XMath>\n      </Math>",
-      "<Math mode=\"inline\" tex=\"y_{\\cite[cite]{[\\@@bibref{}{foo}{}{}]}}\" text=\"y _ [[]]\" xml:id=\"p1.m2\">\n        <XMath xml:id=\"p1.m2.1\">\n          <XMApp xml:id=\"p1.m2.1.1\">\n            <XMTok role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/>\n            <XMTok font=\"italic\" role=\"UNKNOWN\">y</XMTok>\n            <XMText xml:id=\"p1.m2.1.1.3\"><cite class=\"ltx_citemacro_cite\"><text fontsize=\"70%\" xml:id=\"p1.m2.1.1.3.1\">[</text><bibref bibrefs=\"foo\" class=\"ltx_cite_sort\" inlist=\"bibliography bu1\" separator=\",\" yyseparator=\",\"/><text fontsize=\"70%\" xml:id=\"p1.m2.1.1.3.2\">]</text></cite></XMText>\n          </XMApp>\n        </XMath>\n      </Math>",
+      "<Math mode=\"inline\" tex=\"x_{\\cite[cite]{[\\@@bibref{}{foo}{}{}]}}\" text=\"x _ [[]]\" xml:id=\"p1.m1\">\n        <XMath xml:id=\"p1.m1.1\">\n          <XMApp xml:id=\"p1.m1.1.1\">\n            <XMTok role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/>\n            <XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok>\n            <XMText xml:id=\"p1.m1.1.1.3\"><cite class=\"ltx_citemacro_cite\"><text fontsize=\"70%\" xml:id=\"p1.m1.1.1.3.1\">[</text><bibref bibrefs=\"foo\" inlist=\"bu1\" separator=\",\" yyseparator=\",\"/><text fontsize=\"70%\" xml:id=\"p1.m1.1.1.3.2\">]</text></cite></XMText>\n          </XMApp>\n        </XMath>\n      </Math>",
+      "<Math mode=\"inline\" tex=\"y_{\\cite[cite]{[\\@@bibref{}{foo}{}{}]}}\" text=\"y _ [[]]\" xml:id=\"p1.m2\">\n        <XMath xml:id=\"p1.m2.1\">\n          <XMApp xml:id=\"p1.m2.1.1\">\n            <XMTok role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/>\n            <XMTok font=\"italic\" role=\"UNKNOWN\">y</XMTok>\n            <XMText xml:id=\"p1.m2.1.1.3\"><cite class=\"ltx_citemacro_cite\"><text fontsize=\"70%\" xml:id=\"p1.m2.1.1.3.1\">[</text><bibref bibrefs=\"foo\" inlist=\"bibliography bu1\" separator=\",\" yyseparator=\",\"/><text fontsize=\"70%\" xml:id=\"p1.m2.1.1.3.2\">]</text></cite></XMText>\n          </XMApp>\n        </XMath>\n      </Math>",
     ],
   ),
   // An undef body's box reverts its argument (`\mark{x}`); `\extrafloats`, latex.ltx's macro, leaves none.

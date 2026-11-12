@@ -5496,13 +5496,20 @@ UNSORTED style (bibtex's `sort='false'`: `unsrt`, `unsrtnat`, `ieeetr`,
 list is then rendered in that same numbered order (the biblist follows
 `entry.number`, not a second `unisort`). SORTED styles (`plain`, `alpha`, `abbrv`,
 plainnat/…, and any unknown style) are unchanged — still alphabetical, identical
-to Perl. Detection is from the `bibstyle` attribute name (plus an explicit
-`sort='false'`, e.g. the bibunits `\bibstyle` path), GATED on a numeric list
-(`citestyle="numbers"`, or absent → numeric): an author-year list is always
-alphabetical by author regardless of the `.bst` sort flag. The engine's
-`lookup_bibstyle_params` also gains `ieeetr`/`IEEEtran` → `numbers`, `false`
-(Perl's base table omits them and its class binding alphabetizes IEEEtran) so the
-real IEEE `.bst` behavior is matched.
+to Perl. Post reads the order from the node's `sort` attribute alone, GATED on a numeric list
+(`citestyle="numbers"`, or absent → numeric). The engine writes `sort` from `CITE_SORT`, the
+value Perl's `setBibstyle` assigns from its `$BIBSTYLES` table (pool:3964-3970), on every
+bibliography `beginBibliography` starts (`\bibliography`, `\putbib`, the class bindings' own
+constructors), where Perl leaves `#sort` unset (pool:3890 `# sort=> ???`) and writes it only
+when `\bibstyle` finds a bibliography already built (:3979, kept). The engine's table
+(`lookup_bibstyle_params`) is the fact's one home (GA3: post's own name list had drifted from it,
+`jurunsrt`; fence `perfect_kernel_batche0::post_keeps_no_copy_of_the_bibstyle_table`). Its
+Rust additions: `ieeetr`/`IEEEtran` → `numbers`, `false` (Perl's base table omits them and its
+class binding alphabetizes IEEEtran) so the real IEEE `.bst` behavior is matched, and the
+jurabib, abnTeX2 and figbib styles. `thebibliography` (a shipped `.bbl`) carries no `sort`, as
+in Perl: its entries are already in the `.bst`'s order. Residual: the numeric gate is a proxy —
+an author-year list under an unsorted `.bst` is in citation order in the PDF (jurabib +
+`jurunsrt`; repro `index-bib/jurunsrt_lists_by_citation_red`, post-merge).
 
 **natbib/revtex arm** (html_feedback #5930/#6095): a revtex4-2 or `natbib` paper
 with `\bibliographystyle{ieeetr}` lost the style name before it reached the node —
@@ -5511,12 +5518,11 @@ author-year `\bibstyle` has no `\bibstyle@ieeetr` preset (Perl natbib.sty.ltxml
 L85-92, which flags the loss as a known FUTURE gap). The kernel
 `\bibliographystyle` now records `BIBSTYLE` (`\lx@record@bibstyle`) BEFORE
 dispatching to the possibly-gobbled `\bibstyle`, so the name reaches the node in
-every path. It records only the name, never `CITE_STYLE` — natbib owns
+every path. It records the name and its order (`CITE_SORT`), never `CITE_STYLE` — natbib owns
 numbers-vs-author-year via its options (`plainnat` is numeric in the base table
 but author-year under natbib), and the citestyle guard above keeps author-year
-natbib lists alphabetical. `beginBibliography` still emits no `sort` attribute, so
-the core node is unchanged except for the `bibstyle` name it already ought to
-carry (`thebibliography`-based lists, which read no BIBSTYLE, are untouched).
+natbib lists alphabetical (`thebibliography`-based lists, which read no BIBSTYLE,
+are untouched).
 
 **Why**: bibtex's own guarantee is that an unsorted `.bst` leaves the References
 in citation order; IEEE figure captions bake in "[2], [3], [4]" that depend on it.
@@ -5547,7 +5553,9 @@ arXiv 2602.00643 (html_feedback#5930) — `\documentclass{revtex4-2}` +
 **Guards**: `06_cluster_bibliography::cluster_bib_unsrt_citation_order`
 (unsrt + IEEEtran number gamma/alpha/beta by citation order),
 `cluster_bib_plain_stays_alphabetical` (sorted styles unchanged),
-`cluster_bib_bibstyle_is_known_numeric` (engine maps IEEEtran → numeric),
+`cluster_bib_bibstyle_is_known_numeric` (engine maps IEEEtran → numeric, unsorted),
+`cluster_bib_order_is_the_styles_sort_fact` (the `sort` fact on the preamble, natbib
+and bibunits paths; a style sorts no citation),
 `cluster_bib_natbib_numeric_citation_order` (the natbib/revtex arm),
 `cluster_bib_natbib_numeric_sorted_stays_alphabetical` +
 `cluster_bib_natbib_authoryear_stays_alphabetical` (the unsorted + numeric gates).
@@ -24636,7 +24644,9 @@ natbib's `sort`/`compress`/`sort&compress` (natbib.sty:267-271; `\NAT@sort@cites
 compressed in `\NAT@citexnum`, :401-421) and cite.sty (sorts and compresses unless `nosort`/`nocompress`, cite.sty:95,
 :272-297, :412, :415) order a citation's numbers when they typeset it, from the `.aux`. LaTeXML numbers the bibliography
 after the document, so the order is applied by the post stage: the `\@@bibref` constructor (sect11.rs
-`cite_order_class`) writes the package's choice, the values `CITE_SORT`/`CITE_COMPRESS`, as `class="ltx_cite_sort
+`cite_order_class`) writes the package's choice, the values `CITE_SORTCITES`/`CITE_COMPRESS` (not Perl's `CITE_SORT`, the
+style's list order, #116: read as this one, a `\bibliographystyle{plain}` before the citations sorted them, "[1, 3]" for
+pdflatex's "[3, 1]"), as `class="ltx_cite_sort
 ltx_cite_compress"` on the `ltx:bibref` (the schema's `Common.attributes` class: no new attribute; the bibref is
 replaced by its citation in post, so the class never reaches the HTML), and `make_bibcite` (crossref.rs) sorts the
 entries by number (those without a whole number after them, in their order, as natbib's `\NAT@nonsort@list`) and, for a
