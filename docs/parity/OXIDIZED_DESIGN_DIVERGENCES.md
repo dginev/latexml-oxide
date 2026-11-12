@@ -5507,7 +5507,9 @@ when `\bibstyle` finds a bibliography already built (:3979, kept). The engine's 
 Rust additions: `ieeetr`/`IEEEtran` → `numbers`, `false` (Perl's base table omits them and its
 class binding alphabetizes IEEEtran) so the real IEEE `.bst` behavior is matched, and the
 jurabib, abnTeX2 and figbib styles. `thebibliography` (a shipped `.bbl`) carries no `sort`, as
-in Perl: its entries are already in the `.bst`'s order. Residual: the numeric gate is a proxy —
+in Perl: its entries are already in the `.bst`'s order. XML from Perl or an older binary fed to post
+(`bibstyle="unsrt"`, no `sort`) lists alphabetically, as Perl's own post does (`make_bibliography.rs` `unsorted_style`).
+Residual: the numeric gate is a proxy —
 an author-year list under an unsorted `.bst` is in citation order in the PDF (jurabib +
 `jurunsrt`; repro `index-bib/jurunsrt_lists_by_citation_red`, post-merge).
 
@@ -23477,7 +23479,9 @@ on `web`, as pdflatex's `[Zet01]` and `[1]` (opticajnl.cls:288's and osajnl's fu
 `::each_multibib_list_reads_its_own_style`). The `.bst` fields are read once per document: the main list's style, with none
 the first declared. Limits: a `\bibliographystyle` after a suffix list takes that list's attribute (the kernel's `\bibstyle` sets
 the first `ltx:bibliography`, sect11.rs; RED index-bib/multibib_main_style_after_a_list_stays_off_that_list_red), and a suffix
-style after its own list reaches `BIBSTYLE` only. Elsewhere the fields are raw `bib-data`, as in Perl. OD #289's `annotation` and 56ie's biblatex names (the entry for the subtitle and host rows) are biblatex-only
+style after its own list reaches `BIBSTYLE` only. Where natbib took `\bibstyle`, a list records its style's name and order
+(`CITE_SORT`) as `\bibliographystyle` does (`record_bibstyle`; `06_cluster_bibliography::cluster_bib_order_is_the_styles_sort_fact`'s
+multibib rows); every list holds every cited entry (RED index-bib/multibib_lists_hold_every_entry_red, post-merge MBAL). Elsewhere the fields are raw `bib-data`, as in Perl. OD #289's `annotation` and 56ie's biblatex names (the entry for the subtitle and host rows) are biblatex-only
 accordingly. Repros index-bib/natbib_biblatex_only_fields_are_raw_data (red int47a) and its twin
 index-bib/biblatex_prints_its_own_fields, index-bib/bst_declared_biblatex_field_is_printed; guards
 `perfect_kernel_batch78i::{natbib_biblatex_only_fields_are_raw_data, biblatex_prints_its_own_fields,

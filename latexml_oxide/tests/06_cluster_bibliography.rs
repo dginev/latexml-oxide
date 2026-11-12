@@ -3257,6 +3257,40 @@ fn cluster_bib_order_is_the_styles_sort_fact() {
       "{tex}: the list's order\n{x}"
     );
   }
+  // multibib's lists after natbib took `\bibstyle` (`\lx@mb@open`, multibib_sty.rs; revGA3): each list's style
+  // attributes, then its keys in order among those pdflatex prints in it (every list holds every cited entry, MBAL).
+  type ListRow<'a> = (&'a str, [([&'a str; 2], &'a [&'a str]); 2]);
+  let multibib: [ListRow; 2] = [
+    ("multibib_natbib_list_unsrtnat", [
+      ([r#" bibstyle="plainnat""#, r#" sort="true""#], &["d"]),
+      ([r#" bibstyle="unsrtnat""#, r#" sort="false""#], &[
+        "c", "a", "b",
+      ]),
+    ]),
+    ("multibib_natbib_list_plainnat", [
+      ([r#" bibstyle="unsrtnat""#, r#" sort="false""#], &["d"]),
+      ([r#" bibstyle="plainnat""#, r#" sort="true""#], &[
+        "a", "b", "c",
+      ]),
+    ]),
+  ];
+  for (tex, expected) in multibib {
+    let x = convert_and_post_contrib_clean(&format!("tests/cluster_regressions/{tex}.tex"));
+    let bibs: Vec<String> = x
+      .split("<bibliography ")
+      .skip(1)
+      .map(|b| format!("<bibliography {b}"))
+      .collect();
+    assert_eq!(bibs.len(), 2, "{tex}: two lists\n{x}");
+    for (bib, (attributes, keys)) in bibs.iter().zip(expected) {
+      assert_bibliography_attributes(tex, bib, &attributes);
+      let listed: Vec<String> = reference_list_keys(bib)
+        .into_iter()
+        .filter(|k| keys.contains(&k.as_str()))
+        .collect();
+      assert_eq!(listed, keys, "{tex}: a list's order\n{x}");
+    }
+  }
 }
 
 /// Control: a SORTED style (`plain`) must stay ALPHABETICAL — the citation-order

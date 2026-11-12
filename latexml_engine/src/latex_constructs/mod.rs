@@ -7621,6 +7621,15 @@ fn lookup_bibstyle_params(style: &str) -> Option<(&'static str, &'static str)> {
   }
 }
 
+/// `\bibliographystyle`'s record where a package may have taken `\bibstyle` (natbib's `\@gobble`): the style's name
+/// and its list order (`CITE_SORT`) together, never `CITE_STYLE`, which that package owns.
+pub fn record_bibstyle(style: &str, scope: Option<Scope>) {
+  if let Some((_, sort)) = lookup_bibstyle_params(style) {
+    assign_value("CITE_SORT", pin(sort), scope);
+  }
+  assign_value("BIBSTYLE", pin(style), scope);
+}
+
 // Perl: setBibstyle($style) — set BIBSTYLE, CITE_STYLE, CITE_SORT
 pub fn set_bibstyle(style: &str) {
   assign_value("BIBSTYLE", pin(style), None);

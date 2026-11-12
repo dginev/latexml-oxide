@@ -414,11 +414,7 @@ pub(crate) fn load() -> Result<()> {
   // natbib/revtex arm of #6294). CITE_STYLE is deliberately NOT set here —
   // natbib owns numbers-vs-author-year via its options.
   DefPrimitive!("\\lx@record@bibstyle{}", sub[(style)] {
-    let style = Expand!(style).to_string();
-    if let Some((_, sort)) = lookup_bibstyle_params(&style) {
-      assign_value("CITE_SORT", pin(sort), Some(Scope::Global));
-    }
-    assign_value("BIBSTYLE", pin(style), Some(Scope::Global));
+    record_bibstyle(&Expand!(style).to_string(), Some(Scope::Global));
   });
   DefMacro!(
     "\\bibliographystyle Semiverbatim",
