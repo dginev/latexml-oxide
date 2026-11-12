@@ -863,6 +863,8 @@ fn streaming_pass2(
   store: &mut latexml_core::sxml::SegmentStore,
   node_fonts: &rustc_hash::FxHashMap<u64, latexml_core::common::font::Font>,
   counters: &mut Vec<(String, String)>,
+  anchors: &mut rustc_hash::FxHashMap<String, Vec<(String, String)>>,
+  index: &latexml_core::sxml::FragmentIndex,
   shared_labels: Option<Rc<rustc_hash::FxHashMap<String, String>>>,
   root_id: Option<String>,
 ) -> Result<()> {
@@ -874,6 +876,13 @@ fn streaming_pass2(
     _ => None,
   };
   let nomath = state::get_nomathparse_flag();
+  // The segment each spilled anchor is in: its counters there continue what earlier segments minted under it.
+  let mut anchors_in: rustc_hash::FxHashMap<u32, Vec<String>> = rustc_hash::FxHashMap::default();
+  for id in anchors.keys() {
+    if let Some(seg) = index.id_segment(id) {
+      anchors_in.entry(seg.0).or_default().push(id.clone());
+    }
+  }
   let segments: Vec<_> = store.ids().collect();
   // Rate-limited exactly like the pass-1 telemetry next door (see the
   // `is_power_of_two() || is_multiple_of(65536)` gate in `convert_streaming`):
@@ -935,11 +944,21 @@ fn streaming_pass2(
       // Judge the parse wrapper as the segment's REAL parent in schema
       // decisions (empty-`ltx:text` collapse etc.) — see the field docs.
       frag.fragment_parent_qname = meta.parent.as_deref().map(arena::pin);
-      // Seed the wrapper root with the carried root-level id counters, so
-      // fragment id minting continues the document-wide sequence.
+      // Seed the wrapper root with the carried id counters of the element its top nodes are minted under (the root's
+      // when no element below it has an id), so fragment id minting continues the document-wide sequence.
+      frag.fragment_anchor_id = meta.anchor.clone();
+      let seed = match &meta.anchor {
+        Some(id) => anchors.get(id).map(Vec::as_slice).unwrap_or_default(),
+        None => counters.as_slice(),
+      };
       if let Some(mut root) = frag.get_document().get_root_element() {
-        for (key, value) in counters.iter() {
+        for (key, value) in seed {
           let _ = root.set_attribute(key, value);
+        }
+      }
+      for id in anchors_in.get(&seg.0).into_iter().flatten() {
+        if let Some(carried) = anchors.get(id) {
+          frag.set_id_counters(id, carried);
         }
       }
       // No strip needed: pass 1 serializes segments FLAT (`spill_flat`), so
@@ -1034,7 +1053,13 @@ fn streaming_pass2(
       frag.prune_dangling_split_xmrefs()?;
       frag.prune_xmduals()?;
       if let Some(mut root) = frag.get_document().get_root_element() {
-        frag.finalize_subtree(&mut root)?;
+        let context = meta
+          .font
+          .as_deref()
+          .and_then(|key| frag.decode_font(key))
+          .cloned()
+          .unwrap_or_else(latexml_core::common::font::Font::text_default);
+        frag.finalize_subtree_in(&mut root, context)?;
       }
       frag.cleanup_unreferenced_xmtok_ids();
       // The parsed root is the `_lxfragment` wrapper; the spilled subtrees are
@@ -1044,14 +1069,15 @@ fn streaming_pass2(
         for child in root.get_child_nodes() {
           out.push_str(&frag.serialize_aux(&child, meta.depth, meta.noindent, false));
         }
-        // Carry the wrapper's root-level id counters to the next fragment
+        // Carry the wrapper's id counters to the next fragment under the same element
         // (finalize deliberately leaves the wrapper's bookkeeping attrs in
         // place — see finalize_rec's PostWork).
-        counters.clear();
-        for (key, value) in root.get_attributes() {
-          if key.starts_with("_ID_counter") {
-            counters.push((key, value));
-          }
+        let carried = latexml_core::document::id_counters(&root);
+        match &meta.anchor {
+          Some(id) => {
+            anchors.insert(id.clone(), carried);
+          },
+          None => *counters = carried,
         }
       }
     }
@@ -1179,6 +1205,7 @@ impl DigestionAPI for Core {
     mode: Option<DigestionMode>,
   ) -> Result<String> {
     DIGEST_SETUP_COUNT.with(|c| c.set(c.get() + 1));
+    stomach::mark_conversion_rss_baseline();
     let mut _ext = match &mode {
       Some(m) => Some(m.extension()),
       None => Some(DigestionMode::TeX.extension()),
@@ -1412,8 +1439,8 @@ impl DigestionAPI for Core {
     // content blows past it (witness: fuse at 18.8 GB with the box budget
     // untouched). `spill_watermark_bytes` owns the policy, including the
     // `--max-memory=0` case where there is no fuse to divide.
-    if let Some(watermark) = stomach::spill_watermark_bytes() {
-      stomach::set_fragment_yield_rss_soft_kb(Some(watermark / 1024));
+    if let Some(mark_kb) = stomach::spill_mark_kb() {
+      stomach::set_fragment_yield_rss_soft_kb(Some(mark_kb));
     }
 
     Ok(index)
@@ -1732,14 +1759,10 @@ impl DigestionAPI for Core {
     let mut counters: Vec<(String, String)> = document
       .get_document()
       .get_root_element()
-      .map(|root| {
-        root
-          .get_attributes()
-          .into_iter()
-          .filter(|(k, _)| k.starts_with("_ID_counter"))
-          .collect()
-      })
+      .map(|root| latexml_core::document::id_counters(&root))
       .unwrap_or_default();
+    // So do those of each element a spilled run's top nodes are minted under (SegmentMeta::anchor).
+    let mut anchors = document.take_spill_anchor_counters();
     // The document's labels, for scope resolution in every fragment and on the
     // spine (Document::rewrite_labels_shared, consulted on a local miss): the
     // spilled content's, from the pass-1 index, and those on nodes that stay on
@@ -1789,6 +1812,8 @@ impl DigestionAPI for Core {
       &mut store,
       &node_fonts,
       &mut counters,
+      &mut anchors,
+      &index,
       shared_labels.clone(),
       root_id,
     )?;
@@ -1807,6 +1832,9 @@ impl DigestionAPI for Core {
       for (key, value) in &counters {
         let _ = root.set_attribute(key, value);
       }
+    }
+    for (id, carried) in &anchors {
+      document.set_id_counters(id, carried);
     }
     // The spine resolves scope labels against the whole document, as the
     // fragments do: a label on a spilled node is not missing (its scope selects
@@ -1895,8 +1923,8 @@ impl DigestionAPI for Core {
     // transition.
     let armed_here =
       stomach::fragment_yield_budget().is_none() && stomach::fragment_yield_rss_soft_kb().is_none();
-    if armed_here && let Some(watermark) = stomach::spill_watermark_bytes() {
-      stomach::set_fragment_yield_rss_soft_kb(Some(watermark / 1024));
+    if armed_here && let Some(mark_kb) = stomach::spill_mark_kb() {
+      stomach::set_fragment_yield_rss_soft_kb(Some(mark_kb));
       // The growth floor measures the DOCUMENT's accumulation: baseline on
       // the resident set now, after the engine/dump load.
       stomach::rebaseline_soft_yield_growth();
