@@ -2,6 +2,8 @@
 //! Mark events of [`read_argument`], the one rehearsal [`super::separators`] reads too. `None` answers "unread", never
 //! "no marks"; a caller falls back to its token reading, counted ([`count_unread`]).
 
+use std::ops::ControlFlow::{self, Break, Continue};
+
 use latexml_core::definition::PrimitiveBody;
 
 use super::{
@@ -25,35 +27,70 @@ pub(in crate::base_utilities) fn count_unread(caller: &str) {
 /// parameterless macros' bodies, or a superscript; a character typed in the argument is its text. The marks queries ask
 /// it before their rehearsal (2103.04797's 1,161 `\affiliation{\Amsterdam}`, an institute's name; 1901.01540's 1,204
 /// names, `\author{M.~Soares-Santos}`: not rehearsed).
-fn may_mark(tokens: &[Token]) -> bool { marks_in(tokens, true, MACRO_DEPTH, &mut Vec::new()) }
+fn may_mark(tokens: &[Token]) -> bool {
+  walk(tokens, MACRO_DEPTH, &mut |ink| match ink {
+    Ink::Char(text, typed) if typed || !text.chars().any(is_mark_char) => Continue(()),
+    Ink::Space | Ink::Command(Prints::Nothing | Prints::NoMark) | Ink::Other(true) => Continue(()),
+    _ => Break(true),
+  })
+  .is_break()
+}
 
 /// How many macros deep the gates read a body.
 const MACRO_DEPTH: u8 = 8;
 
-/// [`may_mark`] on `tokens`, the argument's own (`typed`) or a body's, `depth` macros deep; `clean` the commands found
-/// to print no mark.
-fn marks_in(tokens: &[Token], typed: bool, depth: u8, clean: &mut Vec<Token>) -> bool {
-  tokens.iter().any(|t| match t.get_catcode() {
-    Catcode::SPACE | Catcode::BEGIN | Catcode::END => false,
-    Catcode::LETTER | Catcode::OTHER => !typed && t.with_str(|s| s.chars().any(is_mark_char)),
-    Catcode::CS | Catcode::ACTIVE => {
-      if clean.contains(t) {
-        return false;
-      }
-      let marks = match prints(t) {
-        Prints::Body(body) if depth > 0 => marks_in(body.unlist_ref(), false, depth - 1, clean),
-        Prints::Nothing | Prints::NoMark => false,
-        _ => true,
-      };
-      if !marks {
-        clean.push(*t);
-      }
-      marks
-    },
-    Catcode::SUPER => true,
-    // (a formula, a `&`: a body's read in the rehearsal)
-    _ => !typed,
-  })
+/// What the gates' walk ([`walk`]) meets, braces aside.
+enum Ink<'s> {
+  /// a character's text, `true` typed in the argument, `false` in a body
+  Char(&'s str, bool),
+  Space,
+  /// a command or an active character, a parameterless macro's body only past [`MACRO_DEPTH`]
+  Command(Prints),
+  Superscript,
+  /// any other token (a formula's shift, a `&`), `true` typed in the argument
+  Other(bool),
+}
+
+/// The marks gates' one walk: `tokens` in order, a parameterless macro's body read in its place `depth` macros deep, until
+/// `gate` breaks with its answer. A command whose reading went on is not read again.
+fn walk(
+  tokens: &[Token],
+  depth: u8,
+  gate: &mut impl FnMut(Ink<'_>) -> ControlFlow<bool>,
+) -> ControlFlow<bool> {
+  walk_in(tokens, true, depth, &mut Vec::new(), gate)
+}
+
+/// [`walk`] on the argument's own tokens (`typed`) or a body's; `read_on` the commands whose reading went on.
+fn walk_in(
+  tokens: &[Token],
+  typed: bool,
+  depth: u8,
+  read_on: &mut Vec<Token>,
+  gate: &mut impl FnMut(Ink<'_>) -> ControlFlow<bool>,
+) -> ControlFlow<bool> {
+  for t in tokens {
+    match t.get_catcode() {
+      Catcode::BEGIN | Catcode::END => {},
+      Catcode::SPACE => gate(Ink::Space)?,
+      Catcode::LETTER | Catcode::OTHER => t.with_str(|s| gate(Ink::Char(s, typed)))?,
+      Catcode::CS | Catcode::ACTIVE => {
+        if read_on.contains(t) {
+          continue;
+        }
+        match prints(t) {
+          Prints::Body(body) if depth > 0 => {
+            walk_in(body.unlist_ref(), false, depth - 1, read_on, gate)?
+          },
+          printed => gate(Ink::Command(printed))?,
+        }
+        read_on.push(*t);
+      },
+      Catcode::SUPER => gate(Ink::Superscript)?,
+      _ => gate(Ink::Other(typed))?,
+    }
+  }
+  Continue(())
 }
 
 /// What a command or an active character prints, as the marks gates read it.
@@ -210,15 +247,15 @@ fn name_text(events: &[Event]) -> String {
 /// What `tokens` print where they are characters and groups alone; else `None` (a tie too: the rehearsal reads it).
 fn typed_text(tokens: &[Token]) -> Option<String> {
   let mut text = String::new();
-  for t in tokens {
-    match t.get_catcode() {
-      Catcode::LETTER | Catcode::OTHER => t.with_str(|s| text.push_str(s)),
-      Catcode::SPACE => text.push(' '),
-      Catcode::BEGIN | Catcode::END => {},
-      _ => return None,
+  let walked = walk(tokens, 0, &mut |ink| {
+    match ink {
+      Ink::Char(s, _) => text.push_str(s),
+      Ink::Space => text.push(' '),
+      _ => return Break(false),
     }
-  }
-  Some(text)
+    Continue(())
+  });
+  walked.is_continue().then_some(text)
 }
 
 /// Whether `arg` prints a mark at any level (in a box beside its words too, `Ann\mbox{$^{1}$}`), and whether one is a
@@ -440,36 +477,16 @@ fn own_mark(event: &Event) -> bool {
   event.kind == EventKind::Mark && !event.ordinal && event.role.as_deref() != Some("footnotemark")
 }
 
-/// Whether what `arg` prints may open with a mark: its first token past spaces and braces, read through parameterless
+/// Whether what `arg` prints may open with a mark: its first ink past spaces and braces, read through parameterless
 /// macros' bodies (8 deep) and on past a body that prints nothing (`\newcommand\affilfont{}`), is no letter or digit,
 /// which TeX prints first. The readers of an opening mark ask it before their rehearsal (2103.04797's 1,161
 /// `\affiliation{\Amsterdam}`, each a macro of an institute's name, not rehearsed).
-fn may_open_with_mark(arg: &Tokens) -> bool { first_may_be_mark(arg.unlist_ref(), MACRO_DEPTH) }
-
-/// [`may_open_with_mark`] on `tokens`, `depth` macros deep.
-fn first_may_be_mark(tokens: &[Token], depth: u8) -> bool {
-  let Some(at) = tokens.iter().position(|t| {
-    !matches!(
-      t.get_catcode(),
-      Catcode::SPACE | Catcode::BEGIN | Catcode::END
-    )
-  }) else {
-    return false;
-  };
-  let first = &tokens[at];
-  match first.get_catcode() {
-    Catcode::LETTER | Catcode::OTHER => !first.with_str(|s| s.chars().all(char::is_alphanumeric)),
-    Catcode::CS | Catcode::ACTIVE if depth > 0 => match prints(first) {
-      Prints::Body(body) => {
-        let mut next = body.unlist();
-        next.extend_from_slice(&tokens[at + 1..]);
-        first_may_be_mark(&next, depth - 1)
-      },
-      Prints::Nothing => first_may_be_mark(&tokens[at + 1..], depth - 1),
-      _ => true,
-    },
-    _ => true,
-  }
+fn may_open_with_mark(arg: &Tokens) -> bool {
+  walk(arg.unlist_ref(), MACRO_DEPTH, &mut |ink| match ink {
+    Ink::Space | Ink::Command(Prints::Nothing) => Continue(()),
+    Ink::Char(text, _) => Break(!text.chars().all(char::is_alphanumeric)),
+    _ => Break(true),
+  }) == Break(true)
 }
 
 /// The entries of a list a name requests ([`requested_entry_labels`]).
