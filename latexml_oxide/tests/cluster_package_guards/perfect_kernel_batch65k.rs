@@ -357,7 +357,7 @@ type InternalRow<'a> = ((&'a str, &'a str), &'a [(&'a str, &'a str, &'a str)]);
 /// Internals a binding defines where the original does (QA54), each row 0 errors and 0 warnings (red on int160b: 2, 1,
 /// 2, 3 errors, the tags inside their formulas, stray "quote" and "myk" text):
 /// - amsmath.sty:2766-2767, 2770-2771 `\@@eqno`, `\@@leqno`, `\veqno` (1409.3102 `\let\veqno\@@leqno`), and `\veqno` under `leqno`
-///   (`\iftagsleft@`, :54-55): each tag (n) in its `<tag>`, the formula without it;
+///   (`\iftagsleft@`, :54-55): each `<equation>` whole, the formula without the tag and the tag (n) in its `<tags>`;
 /// - lineno.sty:264-265 loads etoolbox and kvoptions; microtype.sty:189 loads keyval.
 #[test]
 fn internals_the_originals_define() {
@@ -369,34 +369,19 @@ fn internals_the_originals_define() {
       ),
       &[
         (
-          "Math",
-          r#"xml:id="S0.Ex1.m2""#,
-          r#"<Math text="1" xml:id="S0.Ex1.m2"><XMath xml:id="S0.Ex1.m2.2"><XMDual xml:id="S0.Ex1.m2.2.1"><XMRef idref="S0.Ex1.m2.1" xml:id="S0.Ex1.m2.2.1.1"/><XMWrap xml:id="S0.Ex1.m2.2.1.2"><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok meaning="1" role="NUMBER" xml:id="S0.Ex1.m2.1">1</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMath></Math>"#,
+          "equation",
+          r#"xml:id="S0.Ex1""#,
+          r#"<equation xml:id="S0.Ex1"><Math mode="display" tex="a=b" text="a = b" xml:id="S0.Ex1.m1"><XMath xml:id="S0.Ex1.m1.1"><XMApp xml:id="S0.Ex1.m1.1.1"><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp></XMath></Math><tags><tag><Math text="1" xml:id="S0.Ex1.m2"><XMath xml:id="S0.Ex1.m2.2"><XMDual xml:id="S0.Ex1.m2.2.1"><XMRef idref="S0.Ex1.m2.1" xml:id="S0.Ex1.m2.2.1.1"/><XMWrap xml:id="S0.Ex1.m2.2.1.2"><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok meaning="1" role="NUMBER" xml:id="S0.Ex1.m2.1">1</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMath></Math></tag></tags></equation>"#,
         ),
         (
-          "XMApp",
-          r#"xml:id="S0.Ex1.m1.1.1""#,
-          r#"<XMApp xml:id="S0.Ex1.m1.1.1"><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp>"#,
+          "equation",
+          r#"xml:id="S0.Ex2""#,
+          r#"<equation xml:id="S0.Ex2"><Math mode="display" tex="c=d" text="c = d" xml:id="S0.Ex2.m1"><XMath xml:id="S0.Ex2.m1.1"><XMApp xml:id="S0.Ex2.m1.1.1"><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">c</XMTok><XMTok font="italic" role="UNKNOWN">d</XMTok></XMApp></XMath></Math><tags><tag><Math text="2" xml:id="S0.Ex2.m2"><XMath xml:id="S0.Ex2.m2.2"><XMDual xml:id="S0.Ex2.m2.2.1"><XMRef idref="S0.Ex2.m2.1" xml:id="S0.Ex2.m2.2.1.1"/><XMWrap xml:id="S0.Ex2.m2.2.1.2"><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok meaning="2" role="NUMBER" xml:id="S0.Ex2.m2.1">2</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMath></Math></tag></tags></equation>"#,
         ),
         (
-          "Math",
-          r#"xml:id="S0.Ex2.m2""#,
-          r#"<Math text="2" xml:id="S0.Ex2.m2"><XMath xml:id="S0.Ex2.m2.2"><XMDual xml:id="S0.Ex2.m2.2.1"><XMRef idref="S0.Ex2.m2.1" xml:id="S0.Ex2.m2.2.1.1"/><XMWrap xml:id="S0.Ex2.m2.2.1.2"><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok meaning="2" role="NUMBER" xml:id="S0.Ex2.m2.1">2</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMath></Math>"#,
-        ),
-        (
-          "XMApp",
-          r#"xml:id="S0.Ex2.m1.1.1""#,
-          r#"<XMApp xml:id="S0.Ex2.m1.1.1"><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">c</XMTok><XMTok font="italic" role="UNKNOWN">d</XMTok></XMApp>"#,
-        ),
-        (
-          "Math",
-          r#"xml:id="S0.Ex3.m2""#,
-          r#"<Math text="3" xml:id="S0.Ex3.m2"><XMath xml:id="S0.Ex3.m2.2"><XMDual xml:id="S0.Ex3.m2.2.1"><XMRef idref="S0.Ex3.m2.1" xml:id="S0.Ex3.m2.2.1.1"/><XMWrap xml:id="S0.Ex3.m2.2.1.2"><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok meaning="3" role="NUMBER" xml:id="S0.Ex3.m2.1">3</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMath></Math>"#,
-        ),
-        (
-          "XMApp",
-          r#"xml:id="S0.Ex3.m1.1.1""#,
-          r#"<XMApp xml:id="S0.Ex3.m1.1.1"><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">e</XMTok><XMTok font="italic" role="UNKNOWN">f</XMTok></XMApp>"#,
+          "equation",
+          r#"xml:id="S0.Ex3""#,
+          r#"<equation xml:id="S0.Ex3"><Math mode="display" tex="e=f" text="e = f" xml:id="S0.Ex3.m1"><XMath xml:id="S0.Ex3.m1.1"><XMApp xml:id="S0.Ex3.m1.1.1"><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">e</XMTok><XMTok font="italic" role="UNKNOWN">f</XMTok></XMApp></XMath></Math><tags><tag><Math text="3" xml:id="S0.Ex3.m2"><XMath xml:id="S0.Ex3.m2.2"><XMDual xml:id="S0.Ex3.m2.2.1"><XMRef idref="S0.Ex3.m2.1" xml:id="S0.Ex3.m2.2.1.1"/><XMWrap xml:id="S0.Ex3.m2.2.1.2"><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok meaning="3" role="NUMBER" xml:id="S0.Ex3.m2.1">3</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMath></Math></tag></tags></equation>"#,
         ),
       ],
     ),
@@ -407,14 +392,9 @@ fn internals_the_originals_define() {
       ),
       &[
         (
-          "Math",
-          r#"xml:id="S0.Ex1.m2""#,
-          r#"<Math text="1" xml:id="S0.Ex1.m2"><XMath xml:id="S0.Ex1.m2.2"><XMDual xml:id="S0.Ex1.m2.2.1"><XMRef idref="S0.Ex1.m2.1" xml:id="S0.Ex1.m2.2.1.1"/><XMWrap xml:id="S0.Ex1.m2.2.1.2"><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok meaning="1" role="NUMBER" xml:id="S0.Ex1.m2.1">1</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMath></Math>"#,
-        ),
-        (
-          "XMApp",
-          r#"xml:id="S0.Ex1.m1.1.1""#,
-          r#"<XMApp xml:id="S0.Ex1.m1.1.1"><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp>"#,
+          "equation",
+          r#"xml:id="S0.Ex1""#,
+          r#"<equation xml:id="S0.Ex1"><Math mode="display" tex="a=b" text="a = b" xml:id="S0.Ex1.m1"><XMath xml:id="S0.Ex1.m1.1"><XMApp xml:id="S0.Ex1.m1.1.1"><XMTok meaning="equals" role="RELOP">=</XMTok><XMTok font="italic" role="UNKNOWN">a</XMTok><XMTok font="italic" role="UNKNOWN">b</XMTok></XMApp></XMath></Math><tags><tag><Math text="1" xml:id="S0.Ex1.m2"><XMath xml:id="S0.Ex1.m2.2"><XMDual xml:id="S0.Ex1.m2.2.1"><XMRef idref="S0.Ex1.m2.1" xml:id="S0.Ex1.m2.2.1.1"/><XMWrap xml:id="S0.Ex1.m2.2.1.2"><XMTok role="OPEN" stretchy="false">(</XMTok><XMTok meaning="1" role="NUMBER" xml:id="S0.Ex1.m2.1">1</XMTok><XMTok role="CLOSE" stretchy="false">)</XMTok></XMWrap></XMDual></XMath></Math></tag></tags></equation>"#,
         ),
         ("p", r#"xml:id="p1.1""#, r#"<p xml:id="p1.1">L.</p>"#),
       ],

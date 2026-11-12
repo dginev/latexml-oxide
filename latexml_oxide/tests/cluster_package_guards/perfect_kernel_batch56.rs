@@ -1614,8 +1614,9 @@ fn list_setup_counter_value_survives_into_the_items() {
   }
 }
 
-/// Each `<item>`'s label `<tag>` (its inner XML) and its first paragraph's text, in document order.
-fn item_labels(xml: &str) -> Vec<(String, String)> {
+/// Each `<item>`'s printed label (the inner XML of the attribute-free `<tag>` in the `<tags>` its start tag opens; `None`
+/// when it has none) and its first paragraph's text, in document order.
+fn item_labels(xml: &str) -> Vec<(Option<String>, String)> {
   // The element `name`'s first start tag (`<name>` or `<name …>`) to its `</name>`.
   let inner = |s: &str, name: &str| -> String {
     let close = format!("</{name}>");
@@ -1628,16 +1629,25 @@ fn item_labels(xml: &str) -> Vec<(String, String)> {
       })
       .unwrap_or_default()
   };
+  let label = |item: &str| -> Option<String> {
+    let tags = item[item.find('>')? + 1..]
+      .trim_start()
+      .strip_prefix("<tags>")?;
+    let tags = &tags[..tags.find("</tags>")?];
+    let tag = &tags[tags.find("<tag>")? + "<tag>".len()..];
+    Some(tag[..tag.find("</tag>")?].to_string())
+  };
   xml
     .split("<item ")
     .skip(1)
-    .map(|item| (inner(item, "tag"), inner(item, "p")))
+    .map(|item| (label(item), inner(item, "p")))
     .collect()
 }
 
 /// latex.ltx:15858/15966: `\list` keeps its label in `\@itemlabel` and `\item` prints it, so a class's own `\list`
-/// (memoir.cls:4580, revtex4.cls:1768, aastex701.cls:1754) labels its items as ours does. Rows: the class's `\list`, and
-/// the kernel's (article) twin; each conversion's E/W exact. QA45 (revQA finding 1).
+/// (memoir.cls:4580, revtex4.cls:1768, aastex701.cls:1754) labels its items as ours does. Rows: the class's `\list`, the
+/// kernel's (article) twin, a copied `\trivlist` that clears the label, a label redefined mid-list; each conversion's E/W
+/// exact. QA45 (revQA finding 1, revML1 finding 2).
 #[test]
 fn list_labels_come_from_itemlabel() {
   // (repro, source, warnings, each item's (label, text))
@@ -1645,7 +1655,7 @@ fn list_labels_come_from_itemlabel() {
     &'static str,
     &'static str,
     usize,
-    &'static [(&'static str, &'static str)],
+    &'static [(Option<&'static str>, &'static str)],
   );
   const ROWS: &[Row] = &[
     (
@@ -1655,15 +1665,15 @@ fn list_labels_come_from_itemlabel() {
       ),
       1,
       &[
-        ("–", "one"),
-        ("*", "inner"),
-        ("–", "two"),
+        (Some("–"), "one"),
+        (Some("*"), "inner"),
+        (Some("–"), "two"),
         // The space is memoir's `\@mklab` `\hfil` (repro class_mklab_is_a_space_in_the_tag_red); the PDF prints "x".
-        (" x", "three"),
-        ("•", "four"),
-        ("(a)", "five"),
-        ("1.", "six"),
-        ("", "seven"),
+        (Some(" x"), "three"),
+        (Some("•"), "four"),
+        (Some("(a)"), "five"),
+        (Some("1."), "six"),
+        (None, "seven"),
       ],
     ),
     (
@@ -1673,13 +1683,50 @@ fn list_labels_come_from_itemlabel() {
       ),
       0,
       &[
-        ("–", "one"),
-        ("*", "inner"),
-        ("–", "two"),
-        ("x", "three"),
-        ("•", "four"),
-        ("(a)", "five"),
-        ("1.", "six"),
+        (Some("–"), "one"),
+        (Some("*"), "inner"),
+        (Some("–"), "two"),
+        (Some("x"), "three"),
+        (Some("•"), "four"),
+        (Some("(a)"), "five"),
+        (Some("1."), "six"),
+      ],
+    ),
+    (
+      "list_label_cleared_by_a_copied_trivlist",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/list-structure/list_label_cleared_by_a_copied_trivlist.tex"
+      ),
+      0,
+      &[
+        (None, "r1"),
+        (Some("W"), "r2"),
+        (None, "r3"),
+        (Some("•"), "r4"),
+        (None, "r5"),
+        (Some("•"), "r6"),
+        (Some("V"), "r7"),
+        (None, "r8"),
+        (Some("V"), "r9"),
+      ],
+    ),
+    (
+      "list_label_redefined_mid_list",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/list-structure/list_label_redefined_mid_list.tex"
+      ),
+      0,
+      &[
+        (Some("A"), "h1"),
+        (Some("B"), "h2"),
+        (Some("B"), "h3"),
+        (Some("•"), "h4"),
+        (Some("x"), "h5"),
+        (Some("P"), "h6"),
+        (Some("Q"), "h7"),
+        (Some("R"), "h8"),
+        (Some("S"), "h9"),
+        (Some("R"), "h10"),
       ],
     ),
   ];
@@ -1687,9 +1734,9 @@ fn list_labels_come_from_itemlabel() {
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{name}: {stderr}");
     assert_eq!(warning_count(&stderr), *warnings, "{name}: {stderr}");
-    let want: Vec<(String, String)> = items
+    let want: Vec<(Option<String>, String)> = items
       .iter()
-      .map(|(t, p)| (t.to_string(), p.to_string()))
+      .map(|(t, p)| (t.map(str::to_string), p.to_string()))
       .collect();
     assert_eq!(item_labels(&xml), want, "{name}:\n{xml}");
   }
