@@ -37,6 +37,14 @@ fn one_loaded_answer_on_every_load_path() {
       &[][..],
       r#"<para xml:id="p1"> <p xml:id="p1.1">hyperref not loaded. fontenc not loaded. revtex4-2 loaded. hyperref loaded.</p> </para>"#,
     ),
+    // A document takes back the mark of a package it loaded (amsmath's `\nonumber` stays in force), and marks one inside
+    // a group only.
+    (
+      "document",
+      repro!("loaded_query_reads_document_marks.tex"),
+      &[][..],
+      r#"<para xml:id="p1"> <p xml:id="p1.1">amsmath not loaded. foo loaded. foo not loaded. amsmath not loaded.</p> <equation xml:id="S0.Ex1"> <Math mode="display" tex="a=b" text="a = b" xml:id="S0.Ex1.m1"> <XMath xml:id="S0.Ex1.m1.1"> <XMApp xml:id="S0.Ex1.m1.1.1"> <XMTok meaning="equals" role="RELOP">=</XMTok> <XMTok font="italic" role="UNKNOWN">a</XMTok> <XMTok font="italic" role="UNKNOWN">b</XMTok> </XMApp> </XMath> </Math> </equation> </para>"#,
+    ),
   ] {
     let (log, xml) = convert_files_with(tex, files, Some("ar5iv.sty"));
     assert_eq!(

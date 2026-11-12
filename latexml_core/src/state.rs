@@ -3964,6 +3964,19 @@ pub fn mark_loaded(file: &str) {
   }
 }
 
+/// Take back a binding's load of `file` that its original does not make (revtex4_support's hyperref, which revtex4-2.cls
+/// never loads): its record, so the document's own request runs the binding again, and `\ver@<file>`, so
+/// `\@ifpackageloaded` is false until then. The definitions stay; the binding's other records too ([`mark_unloaded`]
+/// clears them all).
+pub fn unmark_loaded(file: &str) {
+  assign_value(&s!("{file}_loaded"), Stored::None, Some(Scope::Global));
+  assign_meaning(
+    &T_CS!(s!("\\ver@{file}")),
+    Stored::None,
+    Some(Scope::Global),
+  );
+}
+
 /// Run `read` with `file` marked loaded in the current group, its record and `\ver@<file>`, where it is not loaded:
 /// cleveref's binding reads cleveref.sty as if amsmath were loaded (Perl cleveref.sty.ltxml:23-27).
 pub fn with_pretended_load<R>(file: &str, read: impl FnOnce() -> R) -> R {

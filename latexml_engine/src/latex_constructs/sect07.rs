@@ -32,8 +32,9 @@ pub(crate) const LATEX_EQNNUM: &str = "latex_eqnnum";
 /// file; not a binding's load beyond its original (`amsmath_loaded_beyond_original`, the old aa.cls's), which counts as
 /// not loaded — so that its `\nonumber` (amsmath.sty:1268-1269) removes an `{equation}`'s number ([`LATEX_EQNNUM`]).
 /// (`state::package_loaded`: aa.cls's binding clears amsmath's load record after today's aa.cls loads it, `aa_cls.rs`,
-/// Perl aa.cls.ltxml:57; 1712.01010, 1812.04463, 2501.07980 ship that aa.cls.)
-fn amsmath_nonumber() -> bool { package_loaded("amsmath") }
+/// Perl aa.cls.ltxml:57; 1712.01010, 1812.04463, 2501.07980 ship that aa.cls.) Or its definitions read here
+/// (`load_recorded`): a document's `\let\ver@amsmath.sty\relax` takes back the mark, not amsmath's `\nonumber`.
+fn amsmath_nonumber() -> bool { package_loaded("amsmath") || load_recorded("amsmath.sty") }
 
 /// The `EQUATION_NUMBERING` key of amsmath's `{equation}` (amsmath.sty:2913-2932, where amsmath is loaded:
 /// [`amsmath_nonumber`]), whose `\nonumber` leaves its labels the number it stepped. `\incr@eqnum` is

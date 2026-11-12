@@ -35496,13 +35496,14 @@ whoever defined it — the file's `\ProvidesPackage`, another file's mark (float
 which a binding clears so that the next request runs it again (aa.cls.ltxml:57, while `\ver@amsmath.sty` stays): after
 today's aa.cls (v9.4 :201 loads amsmath) `\@ifpackageloaded{amsmath}` is false, and a document's own mark counts for
 nothing. **Rust.** `state::file_loaded` (with `package_loaded`, `class_loaded`) reads `\ver@<file>`; `\@ifl@aded` and every
-binding that asks whether a package is loaded ask it (sect07's amsmath `\nonumber`, color/xcolor, soul, booktabs, cleveref,
+binding that asks whether a package is loaded ask it (sect07's amsmath `\nonumber`, with the record: a document's
+`\let\ver@amsmath.sty\relax` leaves amsmath's definitions in force; color/xcolor, soul, booktabs, cleveref,
 hhline, subcaption, subfig, natbib's `cite`, quantumarticle, sn-jnl, changepage, OmniBus, the kernel's `array` and
 `biblatex` tests). The loader's own question — were the definitions read here — keeps the records (`load_recorded`,
 `binding_loaded`, `raw_loaded`: the autoload triggers, `\documentstyle`'s fallback, the class dispatch, amsmath's
 beyond-original load). Two writes follow: a binding that stands in for a file its original loads marks it as that load
 does (`state::mark_loaded`: thmtools's thm-patch.sty, aipproc's aipxfm.sty); revtex4_support's preload of hyperref,
-which the real class never loads, undefines `\ver@hyperref.sty` with its record; a request the records skip restores a
+which the real class never loads, undefines `\ver@hyperref.sty` with its record (`state::unmark_loaded`); a request the records skip restores a
 mark the document took back (`\let\ver@X\relax` then `\usepackage{X}` leaves X loaded, as LaTeX's reload does; the loader's
 records-only skip is the ruling of 2026-10-14). cleveref's pretense (Perl cleveref.sty.ltxml:23-27) marks amsmath both
 ways, in the group (`state::with_pretended_load`). **Witnesses**: 2501.07980, 1712.01010, 1812.04463 (aa.cls copies

@@ -36,8 +36,7 @@ LoadDefinitions!({
   // #997; 2207.13707, 2403.04828, 2508.03993, 2508.03994, 2601.20155). The preload stays, for the documents that use
   // hyperref's commands without loading it, but marked unloaded so the document's own load runs the binding again
   // (the `amsmath` precedent of aa_cls.rs, Perl aa.cls.ltxml:57), and `\@ifpackageloaded{hyperref}` is false.
-  AssignValue!("hyperref.sty_loaded" => Stored::None, Some(Scope::Global));
-  assign_meaning(&T_CS!("\\ver@hyperref.sty"), Stored::None, Some(Scope::Global));
+  unmark_loaded("hyperref.sty");
   RequirePackage!("natbib");
   RequirePackage!("revsymb");
   RequirePackage!("url");
