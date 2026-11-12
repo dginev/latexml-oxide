@@ -259,6 +259,8 @@ pub fn typesets_content(d: &Digested) -> bool {
         // A tabular or `\halign` keeps its rows in its `alignment` property (tex_tables.rs): a class's `\maketitle`
         // that is only a table typesets it (simplecv's header, brandeis-problemset's title table; dropped since 59p).
         || printed_properties(&w).iter().any(typesets_content)
+        // (a math character, its `glyph`: `\mathchar`)
+        || printed_glyph(&w).is_some()
         || w
           .get_args()
           .iter()
@@ -716,10 +718,10 @@ fn fills_generated_text(w: &Whatsit) -> bool {
     || (w.get_property("label").is_some() && w.get_property("alignmentSkippable").is_none())
 }
 
-/// The text digested material typesets, as [`typesets_content`] walks it — characters of its boxes, through lists,
-/// whatsit arguments and bodies, alignment rows and cells; never a whatsit's reversion (its source), and only the
-/// arguments it shows (`shown_arguments`): an image's file name and options are not text on the page
-/// (`\includegraphics{\@logo}`), nor is a link's target (`\href{\@url}{Home}` prints "Home"). What a speculative
+/// The text digested material typesets, as [`typesets_content`] walks it — characters of its boxes and math characters
+/// (`printed_glyph`), through lists, whatsit arguments and bodies, alignment rows and cells; never a whatsit's reversion
+/// (its source), and only the arguments it shows (`shown_arguments`): an image's file name and options are not text on
+/// the page (`\includegraphics{\@logo}`), nor is a link's target (`\href{\@url}{Home}` prints "Home"). What a speculative
 /// title-page run printed (sect05.rs `speculative_title_page_run`; review probe `logo`).
 pub fn ink_text(d: &Digested, out: &mut String) { ink_text_with(d, false, out) }
 
@@ -750,6 +752,7 @@ fn ink_text_with(d: &Digested, pictures: bool, out: &mut String) {
     },
     DigestedData::Whatsit(w) => {
       let w = w.borrow();
+      let start = out.len();
       for a in &printed_properties(&w) {
         ink_text_with(a, pictures, out);
       }
@@ -760,6 +763,11 @@ fn ink_text_with(d: &Digested, pictures: bool, out: &mut String) {
       }
       if let Ok(Some(body)) = w.get_body() {
         ink_text_with(&body, pictures, out);
+      }
+      if out.len() == start
+        && let Some(glyph) = printed_glyph(&w)
+      {
+        out.push_str(&glyph);
       }
     },
     DigestedData::Alignment(a) => {
@@ -866,6 +874,11 @@ pub fn ink_word_text(d: &Digested, out: &mut String) {
         if let Ok(Some(body)) = w.get_body() {
           ink_word_text(&body, &mut inner);
         }
+        if inner.chars().all(|c| c.is_whitespace() || c == INK_SEAM)
+          && let Some(glyph) = printed_glyph(&w)
+        {
+          inner.push_str(&glyph);
+        }
       }
       if inner.chars().all(|c| c.is_whitespace() || c == INK_SEAM) {
         out.push(' ');
@@ -906,6 +919,16 @@ const VERBATIM_PRINTERS: &[(&str, &[bool])] = &[
   ("\\lx@doi", &[true]),
   ("\\harvardurl", &[true]),
 ];
+
+/// The character a math-character whatsit prints, its `glyph` (`\mathchar`, `\delimiter`, `\mathaccent`: tex_math.rs;
+/// `\Udelimiter`), as Perl's `\mathchar` is a Box of it (TeX_Math.pool.ltxml:575-580): the text walkers print it where
+/// the whatsit shows nothing else. flexisym's digits and letters are `\mathchar`s (2312.00656's `$^{2,3}$`, no mark).
+pub(crate) fn printed_glyph(w: &Whatsit) -> Option<String> {
+  match w.get_property("glyph").as_deref() {
+    Some(Stored::String(glyph)) => Some(to_string(*glyph)).filter(|g| !g.trim().is_empty()),
+    _ => None,
+  }
+}
 
 /// The digested material a whatsit keeps in a property its constructor prints, as the text walkers read it beside its
 /// shown arguments and body: a tabular's or `\halign`'s rows (`alignment`, tex_tables.rs), and the text of color.sty's

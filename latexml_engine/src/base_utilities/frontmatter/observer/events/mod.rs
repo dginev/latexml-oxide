@@ -884,6 +884,7 @@ fn script_ink(d: &Digested, refs: bool) -> String {
       // (what any other whatsit shows, walked as `ink_text` walks it, its notes and printless references read here)
       DigestedData::Whatsit(w) => {
         let w = w.borrow();
+        let start = out.len();
         for a in &printed_properties(&w) {
           ink(a, refs, out);
         }
@@ -894,6 +895,11 @@ fn script_ink(d: &Digested, refs: bool) -> String {
         }
         if let Ok(Some(body)) = w.get_body() {
           ink(&body, refs, out);
+        }
+        if out.len() == start
+          && let Some(glyph) = printed_glyph(&w)
+        {
+          out.push_str(&glyph);
         }
         // (a math accent its glyph on its base, `accent_combining_form`: `\bar{\dag}` is `†̄`)
         out.push_str(&accent_combining_form(&w).unwrap_or_default());

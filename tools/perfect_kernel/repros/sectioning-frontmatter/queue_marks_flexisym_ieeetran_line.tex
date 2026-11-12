@@ -1,0 +1,15 @@
+% mechanism: the marks under flexisym (`\mathchar` glyphs read, `util_text::printed_glyph`) on IEEEtran's author block:
+%   the names' marks and the marked affiliations on one line
+% witness: synthetic (FMK1 sibling s6; 2312.00656's mechanism)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann One1 and Bob Two2 / 1 First Univ, 2 Second Univ"
+% engines: int162a: both creators holding "First Univ, 2 Second Univ"; FMK1 and the build without flexisym: below
+% expect:  0 errors, 0 warnings; Ann One (First Univ) / Bob Two (Second Univ)
+% status:  GREEN (guard perfect_kernel_batchc1::queued_marks_read_as_digested)
+\documentclass{IEEEtran}
+\usepackage{flexisym}
+\title{T}
+\author{Ann One$^{1}$ and Bob Two$^{2}$\\ $^1$First Univ, $^2$Second Univ}
+\begin{document}
+\maketitle
+Text.
+\end{document}

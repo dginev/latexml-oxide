@@ -157,8 +157,10 @@ type Row<'a> = ((&'a str, &'a str), usize, &'a [&'a [&'a str]]);
 /// P4S Q1, where the binding's own cut dropped them). One row a
 /// shape: a marked list, a macro printing the mark (its list keeps the printed marks, as int160c), a `\let` copy, the
 /// unknown class's path, a mark inside a box; amsart's `\address` list repeated, its macro-printed marks requested by
-/// printed text where the Cut's uncut copies give way (`place_uncut_copies`, review revF0 B1: three entries, two). Each:
-/// no Error, its Warning count, every creator's name and contacts.
+/// printed text where the Cut's uncut copies give way (`place_uncut_copies`, review revF0 B1: three entries, two); under
+/// flexisym, whose digits, letters and symbols are `\mathchar` glyphs (FMK1, 2312.00656), the marks of the twin without it
+/// (authblk's list, a boxed mark with a note, IEEEtran's line, letter and symbol marks). Each: no Error, its Warning
+/// count, every creator's name and contacts.
 #[test]
 fn queued_marks_read_as_digested() {
   macro_rules! repro {
@@ -207,6 +209,40 @@ fn queued_marks_read_as_digested() {
     (repro!("queue_marks_ams_macro_marks_repeated_list"), 0, &[
       &["Ann Able 1", "address=1 Univ A, Town A"],
       &["Bob Baker 2", "address=2 Univ B, Town B"],
+    ]),
+    // (the twins: authblk's trailing note on every name and the nameless "First Univ" are RED
+    // `authblk_noblocks_trailing_note_list_red`)
+    (repro!("queue_marks_flexisym_authblk_noblocks_list"), 0, &[
+      &["Ann One 1"],
+      &[
+        "Bob Two 1",
+        "affiliation=Second Univ",
+        "affiliation=Third Univ",
+      ],
+      &["Cy Three 1"],
+      &["affiliation=First Univ"],
+    ]),
+    (repro!("queue_marks_authblk_noblocks_list"), 0, &[
+      &["Ann One 1"],
+      &[
+        "Bob Two 1",
+        "affiliation=Second Univ",
+        "affiliation=Third Univ",
+      ],
+      &["Cy Three 1"],
+      &["affiliation=First Univ"],
+    ]),
+    (repro!("queue_marks_flexisym_authblk_boxed_note"), 1, &[
+      &["Ann One", "affiliation=1 First Univ"],
+      &["Bob Two", "affiliation=2 Second Univ"],
+    ]),
+    (repro!("queue_marks_flexisym_ieeetran_line"), 0, &[
+      &["Ann One", "affiliation=First Univ"],
+      &["Bob Two", "affiliation=Second Univ"],
+    ]),
+    (repro!("queue_marks_flexisym_letter_symbol_marks"), 0, &[
+      &["Ann One", "affiliation=First Univ"],
+      &["Bob Two", "affiliation=Second Univ"],
     ]),
   ];
   for ((name, tex), warnings, expected) in rows {
