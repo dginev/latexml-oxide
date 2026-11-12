@@ -991,7 +991,7 @@ fn preprint_printed() -> bool {
 /// and the rest, from that line; `None` when no top-level line after the first is led by a mark, the head holds a mark,
 /// the head prints nothing, or the rest is not marked lines alone ([`marks_lead_every_line`]) — then the fail-safe of
 /// [`group_or_marked_affiliation`] holds the whole block.
-fn unmarked_head_over_marked_lines(content: &Tokens) -> Option<(Tokens, Tokens)> {
+fn unmarked_head_over_marked_lines(content: &Tokens) -> Result<Option<(Tokens, Tokens)>> {
   let v = content.unlist_ref();
   let mut depth = 0usize;
   for (i, t) in v.iter().enumerate() {
@@ -1006,21 +1006,23 @@ fn unmarked_head_over_marked_lines(content: &Tokens) -> Option<(Tokens, Tokens)>
           .map_or(0, |e| e + 1);
         let head = Tokens::new(v[..end].to_vec());
         let tail = Tokens::new(v[i + 1..].to_vec());
-        if !leads_with_mark(&tail) {
+        if !leads_with_label(&tail, "unmarked_head_over_marked_lines")? {
           continue;
         }
-        return (marks_lead_every_line(&tail)
-          && author_mark_position(&head).is_none()
-          && head
-            .unlist_ref()
-            .iter()
-            .any(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER)))
-        .then_some((head, tail));
+        return Ok(
+          (marks_lead_every_line(&tail)?
+            && !prints_marks(&head, "unmarked_head_over_marked_lines")?
+            && head
+              .unlist_ref()
+              .iter()
+              .any(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER)))
+          .then_some((head, tail)),
+        );
       },
       _ => {},
     }
   }
-  None
+  Ok(None)
 }
 
 /// Whether `tail`, the marked rest of an affiliation block after its unmarked first entry, is lines the marked reader
@@ -1028,14 +1030,14 @@ fn unmarked_head_over_marked_lines(content: &Tokens) -> Option<(Tokens, Tokens)>
 /// group (a box's argument, a font group) or environment holds a mark — `$^{2}$Univ B\\ \parbox{\linewidth}{$^{3}$Inst
 /// C\\ $^{4}$Lab D}` is not, its boxed lines no cut reads (review rev107e finding 2: Inst C and Lab D one entry, the
 /// head on a nameless creator).
-fn marks_lead_every_line(tail: &Tokens) -> bool {
+fn marks_lead_every_line(tail: &Tokens) -> Result<bool> {
   let v = tail.unlist_ref();
   if v.iter().any(|t| *t == T_CS!("\\begin")) {
-    return false;
+    return Ok(false);
   }
-  split_top_level_lines(v).into_iter().all(|line| {
+  for line in split_top_level_lines(v) {
     if line.iter().all(|t| *t == T_SPACE!()) {
-      return true;
+      continue;
     }
     // (each top-level group's content, from its opening brace)
     let (mut depth, mut open) = (0usize, 0usize);
@@ -1050,14 +1052,17 @@ fn marks_lead_every_line(tail: &Tokens) -> bool {
         Catcode::END if depth > 0 => {
           depth -= 1;
           if depth == 0 && !content_marks(&Tokens::new(line[open..i].to_vec())).is_empty() {
-            return false;
+            return Ok(false);
           }
         },
         _ => {},
       }
     }
-    depth == 0 && leads_with_mark(&Tokens::new(line.to_vec()))
-  })
+    if depth != 0 || !leads_with_label(&Tokens::new(line.to_vec()), "marks_lead_every_line")? {
+      return Ok(false);
+    }
+  }
+  Ok(true)
 }
 
 /// REVTeX's `\affiliation{…}` call: a mark-led line no group shares goes to the authors showing its
@@ -1099,7 +1104,7 @@ pub(crate) fn group_or_marked_affiliation(content: Tokens, annotate: &str) -> Re
       Some(rest)
     ]));
   }
-  let marked = leads_with_mark(&content);
+  let marked = leads_with_label(&content, "group_or_marked_affiliation")?;
   // (the fail-safe, FRONTMATTER_SINGLE_ENGINE_PLAN "The structure model" step 4: a block of two or more lines led by
   // labels the names request that this reader cannot cut into those lines — set in a box or an environment,
   // `\address{\parbox{\linewidth}{$^{1}$Univ A\\ $^{2}$Univ B}}` (a one-column tabular's rows are lines the reader
@@ -1122,7 +1127,7 @@ pub(crate) fn group_or_marked_affiliation(content: Tokens, annotate: &str) -> Re
     // requested and the marked lines are the block's own top-level lines: else the fail-safe below. The last name
     // revtex prints the number on, when it shows no mark of its own, is not read here: it holds none of the block, as
     // before)
-    if let Some((head, tail)) = unmarked_head_over_marked_lines(&content)
+    if let Some((head, tail)) = unmarked_head_over_marked_lines(&content)?
       && let [label] = requested_marks_unprinted(&content).as_slice()
     {
       let mut calls = Invocation!(T_CS!("\\lx@add@affiliation"), vec![

@@ -372,9 +372,9 @@ LoadDefinitions!({
     // (a reference mark among other marks is the symbol it prints: 2312.10807, OXIDIZED_DESIGN_DIVERGENCES #968)
     let body = printed_refmarks(body);
     let (target, body) = if body.to_string().contains("authorblockN") {
-      (T_CS!("\\lx@IEEE@author@blocks"), author_block_body(body, ours))
+      (T_CS!("\\lx@IEEE@author@blocks"), author_block_body(body, ours)?)
     } else {
-      (T_CS!("\\lx@IEEE@author@plain"), if ours { Tokens::new(name_memberships(body.unlist())) } else { body })
+      (T_CS!("\\lx@IEEE@author@plain"), if ours { Tokens::new(name_memberships(body.unlist())?) } else { body })
     };
     Ok(Invocation!(target, vec![Some(body)]))
   }, locked => true);
@@ -400,7 +400,7 @@ LoadDefinitions!({
     let ours = class_membership()?;
     if body.to_string().contains("authorblockN") {
       let label_tokens = label.clone().unwrap_or_default();
-      let mut blocks = author_block_body(printed_refmarks(body.clone()), ours).unlist();
+      let mut blocks = author_block_body(printed_refmarks(body.clone()), ours)?.unlist();
       if label.is_some() {
         let blockn = T_CS!("\\IEEEauthorblockN");
         blocks = blocks
@@ -428,7 +428,7 @@ LoadDefinitions!({
       call.push(T_END!());
       return Ok(Tokens::new(call));
     }
-    let body = if ours { Tokens::new(name_memberships(body.unlist())) } else { body };
+    let body = if ours { Tokens::new(name_memberships(body.unlist())?) } else { body };
     // (its optional label exactly as written, an empty one too: authblk's `\author[]{…}` is no unlabelled `\author`,
     // 2005.04149, 2105.12254)
     let mut call = vec![T_CS!("\\lx@IEEE@AB@author")];
@@ -1152,14 +1152,14 @@ fn split_top_level(tokens: &[Token], delim: &Token) -> Vec<Vec<Token>> {
 /// `\IEEEauthorblockA{}` so it attaches to the creator instead of leaking into the body (arXiv 1901.07768), then, when
 /// `\IEEEmembership` is the class's (`ours`), each name's grade made its contact (`block_name_memberships`). The old
 /// block names are read as the ones they mean first (`with_block_names`), so every step below reads only those.
-fn author_block_body(body: Tokens, ours: bool) -> Tokens {
+fn author_block_body(body: Tokens, ours: bool) -> Result<Tokens> {
   let body = wrap_bare_author_block_text(transpose_ieee_author_grid(unnested_name_blocks(
     with_block_names(body),
   )));
   if ours {
     block_name_memberships(body)
   } else {
-    body
+    Ok(body)
   }
 }
 
@@ -1795,8 +1795,8 @@ fn roman_numeral(mut n: u32) -> String {
 /// 2408.01702) is left out. The names go on past a `\\` that the article parse reads as continuing them
 /// ([`names_continue`]: `Wenming~Li, \\ Xiaochun~Ye, …`, 2408.01902); grades past the names keep `\IEEEmembership`,
 /// which drops them.
-fn name_memberships(tokens: Vec<Token>) -> Vec<Token> {
-  let tokens = without_stop_after_grade(tokens);
+fn name_memberships(tokens: Vec<Token>) -> Result<Vec<Token>> {
+  let tokens = without_stop_after_grade(tokens)?;
   let spacing = |t: &Token| *t == T_SPACE!() || *t == T_ACTIVE!('~');
   // the end of the line opening at `from`: the next `\\` or `\and` outside groups
   let line_end = |from: usize| {
@@ -1936,7 +1936,7 @@ fn name_memberships(tokens: Vec<Token>) -> Vec<Token> {
     out.push(t);
     i += 1;
   }
-  out
+  Ok(out)
 }
 
 /// Whether `line` holds one `\IEEEmembership{…}` and else only spacing or authors' notes alone ([`notes_only_line`]:
@@ -2018,7 +2018,7 @@ fn grade_only_line(line: &[Token]) -> bool {
 /// correspondence note, whose `*` marks the first: the shared reader ties no such note to a non-last author's mark,
 /// the observer's S2c item). A note after a `\\` that already follows the grade is on such a line. Notes after a grade with no stop
 /// keep their reading, Perl's too (the last author's; KNOWN_PERL_ERRORS #534).
-fn without_stop_after_grade(mut tokens: Vec<Token>) -> Vec<Token> {
+fn without_stop_after_grade(mut tokens: Vec<Token>) -> Result<Vec<Token>> {
   let notes = [
     T_CS!("\\thanks"),
     T_CS!("\\footnote"),
@@ -2067,13 +2067,13 @@ fn without_stop_after_grade(mut tokens: Vec<Token>) -> Vec<Token> {
   };
   let end = back(&tokens, tokens.len());
   if end == 0 || ![T_OTHER!("."), T_OTHER!(";")].contains(&tokens[end - 1]) {
-    return tokens;
+    return Ok(tokens);
   }
   let stop = end - 1;
   let grade_end = back(&tokens, stop);
   // the grade's group, and `\IEEEmembership` before it
   if grade_end == 0 || tokens[grade_end - 1].code != Catcode::END {
-    return tokens;
+    return Ok(tokens);
   }
   let mut level = 0usize;
   let Some(open) = (0..grade_end).rev().find(|&j| {
@@ -2084,7 +2084,7 @@ fn without_stop_after_grade(mut tokens: Vec<Token>) -> Vec<Token> {
     }
     level == 0
   }) else {
-    return tokens;
+    return Ok(tokens);
   };
   let mut before = open;
   while before > 0 && tokens[before - 1] == T_SPACE!() {
@@ -2098,7 +2098,7 @@ fn without_stop_after_grade(mut tokens: Vec<Token>) -> Vec<Token> {
       .find(|t| **t != T_SPACE!())
       .is_some_and(|t| [T_CS!("\\em"), T_CS!("\\it"), T_CS!("\\itshape")].contains(t));
   if !membership && !(italic && grade_text(&tokens[open + 1..grade_end - 1])) {
-    return tokens;
+    return Ok(tokens);
   }
   // (each note's argument at the top level from `from`, and `tokens` with every note taken out, at any depth)
   let note_args = |tokens: &[Token], from: usize| -> Vec<Tokens> {
@@ -2134,27 +2134,18 @@ fn without_stop_after_grade(mut tokens: Vec<Token>) -> Vec<Token> {
     }
     Tokens::new(out)
   };
-  // marks by the shared reader's own tests: any mark on the names (`author_mark_position`, which sees a `\let` alias,
-  // a grouped mark, `\mbox{$^{1}$}`); a mark on the names that reads as a label, by the test a note's is read by
-  // (`leads_with_mark` on the names from that mark: `$^{1}$`, `\IEEEauthorrefmark{2}`, `$^{1,*}$`, not `$^{*}$`,
-  // `$^{\dag}$`); and a note leading with a label (`leads_with_mark`)
-  let names = without_notes(&tokens).unlist();
-  let names_any = author_mark_position(&Tokens::new(names.clone())).is_some();
-  let mut names_labelled = false;
-  let mut from = 0;
-  while let Some(at) = author_mark_position(&Tokens::new(names[from..].to_vec())) {
-    let at = from + at - 1;
-    if leads_with_mark(&Tokens::new(names[at..].to_vec())) {
-      names_labelled = true;
-      break;
-    }
-    from = at + 1;
+  // marks as digested: any mark on the names (`Ann\mbox{$^{1}$}` too), one of them a label (`$^{1}$`, `\IEEEauthorrefmark{2}`, `$^{1,*}$`, not
+  // `$^{*}$`, `$^{\dag}$`), and a note leading with a label (`leads_with_label`); unread, by their tokens, counted
+  let names = without_notes(&tokens);
+  let (names_any, names_labelled) = prints_marks_and_labels(&names, "without_stop_after_grade")?;
+  let mut notes_marked = false;
+  for note in note_args(&tokens, grade_end) {
+    notes_marked |= leads_with_label(&note, "without_stop_after_grade")?;
   }
-  let notes_marked = note_args(&tokens, grade_end).iter().any(leads_with_mark);
   // (neither the names nor a note marked; or both marked with labels; else the block as the base reads it)
   let unmarked = !names_any && !notes_marked;
   if !unmarked && !(names_labelled && notes_marked) {
-    return tokens;
+    return Ok(tokens);
   }
   tokens.remove(stop);
   if unmarked {
@@ -2175,7 +2166,7 @@ fn without_stop_after_grade(mut tokens: Vec<Token>) -> Vec<Token> {
       }
     }
   }
-  tokens
+  Ok(tokens)
 }
 
 /// Whether the text `tokens` print, commands aside, is a membership grade: the names reader's own test
@@ -2234,7 +2225,7 @@ fn note_argument(tokens: &[Token], mut at: usize) -> (Vec<Token>, usize) {
 
 /// An explicit author-block body with the grades of each `\IEEEauthorblockN{…}` name line made its author's
 /// (`name_memberships`); a grade outside the name blocks stays `\IEEEmembership`, dropped.
-fn block_name_memberships(body: Tokens) -> Tokens {
+fn block_name_memberships(body: Tokens) -> Result<Tokens> {
   let tokens = body.unlist();
   let mut out: Vec<Token> = Vec::new();
   let mut i = 0;
@@ -2270,14 +2261,14 @@ fn block_name_memberships(body: Tokens) -> Tokens {
     }
     if level != 0 || i >= tokens.len() {
       out.extend(tokens[start..].iter().copied());
-      return Tokens::new(out);
+      return Ok(Tokens::new(out));
     }
     out.push(T_BEGIN!());
-    out.extend(name_memberships(tokens[start + 1..i].to_vec()));
+    out.extend(name_memberships(tokens[start + 1..i].to_vec())?);
     out.push(T_END!());
     i += 1;
   }
-  Tokens::new(out)
+  Ok(Tokens::new(out))
 }
 
 /// Is `\IEEEmembership` still this binding's (`\lx@IEEE@membership@drop`)? A document's own definition keeps its

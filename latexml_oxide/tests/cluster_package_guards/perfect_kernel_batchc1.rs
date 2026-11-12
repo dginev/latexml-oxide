@@ -564,3 +564,65 @@ fn marked_list_cut_as_its_binding_declares() {
   }
   assert!(failures.is_empty(), "{}", failures.join("\n"));
 }
+
+/// Option C P4b: the bindings' "a label leads this argument" read as digested (`leads_with_label`), a document macro's
+/// or a class macro's mark leading as `$^{1}$` does. One row a site: jfm's `\affiliation` (red on P4bbase: the list a
+/// note), REVTeX's per-call `\affiliation`, IEEEtran's stop after a grade, the ws_procl `\address`; and the API's Cut
+/// over macro marks, pinned as today (its "marked" stays on tokens). Each: no Error, its Warning count, every creator.
+#[test]
+fn marks_lead_as_digested() {
+  macro_rules! repro {
+    ($name:literal) => {
+      (
+        $name,
+        include_str!(concat!(
+          "../../../tools/perfect_kernel/repros/sectioning-frontmatter/",
+          $name,
+          ".tex"
+        )),
+      )
+    };
+  }
+  let rows: &[Row] = &[
+    (repro!("jfm_aff_macro_marked_list"), 0, &[
+      &["Ann Able 1", "affiliation=1 Univ A, Town A"],
+      &["Bob Baker 2", "affiliation=2 Univ B, Town B"],
+    ]),
+    (repro!("revtex_macro_mark_affiliation_calls"), 0, &[
+      &["Ann Able 1", "affiliation=1 Univ A, Town A"],
+      &["Bob Baker 2", "affiliation=2 Univ B, Town B"],
+    ]),
+    (repro!("ams_cut_macro_mark_lines"), 0, &[
+      &["Ann Able 1", "address=1 Univ A, Town A"],
+      &["Bob Baker 2", "address=2 Univ B, Town B"],
+    ]),
+    (repro!("ieee_names_macro_mark_note_label"), 0, &[
+      &["Ann Able", "affiliation=Univ A, Town A."],
+      &[
+        "Bob Baker",
+        "membership=Member, IEEE",
+        "affiliation=Univ A, Town A.",
+      ],
+    ]),
+    (repro!("ws_procl_macro_mark_address"), 0, &[
+      &["A. ABLE a", "affiliation=a Univ A, Town A"],
+      &["B. BAKER b", "affiliation=b Univ B, Town B"],
+    ]),
+  ];
+  let mut failures = Vec::new();
+  for ((name, tex), warnings, expected) in rows {
+    let (log, xml) = run(tex);
+    let expected: Vec<Vec<String>> = expected
+      .iter()
+      .map(|c| c.iter().map(|s| s.to_string()).collect())
+      .collect();
+    let got = (
+      (error_count(&log), warning_count(&log)),
+      text_creators(&xml),
+    );
+    if got != ((0, *warnings), expected) {
+      failures.push(format!("{name}: {got:?}"));
+    }
+  }
+  assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
