@@ -4,7 +4,7 @@
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann One1∗ Bob Two21 / 11First Univ 2Second Univ" (authblk's
 %   own "1" after the last name and before the first piece: RED `authblk_noblocks_trailing_note_list_red`)
 % engines: int162a: both creators holding "1 First Univ 2 Second Univ"; FMK1 and the build without flexisym: below
-% expect:  0 errors, 0 warnings since P4b2b (Bob Two's bold lost UNCOUNTED: RED authblk_bold_name_markup_lost_uncounted_red); Ann One 1 (note "Note 3 here.",
+% expect:  0 errors, 0 warnings since P4b2b (Bob Two's whole-name bold unwrapped by OD #122, no loss: authblk_font_names_printed_marks); Ann One 1 (note "Note 3 here.",
 %   affiliation "1 First Univ") / Bob Two 2 (affiliation "2 Second Univ")
 % status:  GREEN (guard perfect_kernel_batchc1::queued_marks_read_as_digested)
 \documentclass{article}
