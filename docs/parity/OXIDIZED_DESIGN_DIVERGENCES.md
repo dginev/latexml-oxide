@@ -34951,14 +34951,15 @@ displaced_class_numbered_institutes_macro_held_separator}.tex`); a `\let` copy o
 
 **FMK1 (2026-11-12): a math character's glyph is ink.** Our `\mathchar`, `\delimiter`, `\Udelimiter` and `\mathaccent`
 are whatsits carrying the character in their `glyph` property (`tex_math.rs`, `latex_constructs_rust_only.rs`), where
-Perl's `\mathchar` is a Box of it (`TeX_Math.pool.ltxml:575-580`); the text walkers read no property but `alignment` and
+Perl's `\mathchar` is a Box of it (`TeX_Math.pool.ltxml:576-580`); the text walkers read no property but `alignment` and
 `text`, so a script of `\mathchar`s printed nothing. flexisym makes digits, letters and punctuation math-active
 `\mathchar`s (`\DeclareFlexSymbol`, flexisym.sty:244-258; cmbase.sym:68, 77, 128), so under it the marks query read `$^{2,3}$` as no mark
 (2312.00656: uai2023 + authblk[noblocks] + flexisym; F0's reading gave 7 creators without their marks and every
 affiliation on each, no Warning). `util_text::printed_glyph` gives the glyph a whatsit prints where it shows nothing else,
 and each reader of a whatsit's print reads it: `ink_text` (the observer's event text), `ink_word_text` (the title page
 check), `typesets_content`, the observer's `script_ink` (a mark's label) and `queue_digest::label_ink` (a printed
-label). Under flexisym a name's marks now read as without it (the twin rows). A/B against int162a on 476 papers (177
+label). Under flexisym a name's marks now read as without it (the authblk twin row without flexisym).
+A/B against int162a on 476 papers (177
 flexisym/breqn, 199 author_marks, 100 controls): E/F equal, 3 changed, all flexisym — 1809.04032 and 1903.10294 better
 (each author's own affiliation and e-mail by the marks), 2312.00656 back to int161a's shape (authblk's trailing note:
 RED `authblk_noblocks_trailing_note_list_red`). Guard `perfect_kernel_batchc1::queued_marks_read_as_digested` (rows
@@ -35224,8 +35225,9 @@ empty when the code is stored (`\__hook_hook_gput_code_do:nnn`, latex.ltx:5355ff
 
 ### 1009. A binding's marked affiliation list is cut by the API's Cut, as the binding declares it, each mark shown (Option C P4c)
 
-**Perl.** `\IEEEauthorblockA{…}` and iopart's `\address{…}` are one `\lx@add@affiliation` each
-(IEEEtran.cls.ltxml:145); no list is cut at its marks, so every author gets the whole block.
+**Perl.** `\IEEEauthorblockA{…}` is one `\lx@add@affiliation` (IEEEtran.cls.ltxml:145) and iopart's `\address{…}` one
+`\lx@add@affiliations` (iopart_support.sty.ltxml:53); no list is cut at its marks, so every author gets the whole block,
+and `\IEEEauthorrefmark` expands to nothing (IEEEtran.cls.ltxml:154), so Perl prints no mark.
 
 **Rust.** A binding hands its marked list to the one Cut (`frontmatter_api::cut::cut_list`) through
 `\lx@add@affiliation@marked`/`@shared` (`author_macros.rs` `marked_list_calls`) with its declaration, `MARKED_LIST_CUT`
@@ -35235,10 +35237,11 @@ repeated on every entry); the call's placement (`annotate=new`) is dropped, the 
 Cut keeps `API_CUT` (two requested marks, labelled address lines, the closing separator trimmed, a wrapper's trailing
 parts every entry's). Each entry shows its mark (FIDELITY_CHARTER §2, P4S Q1). The binding calls the Cut itself: a
 flush digests a block's affiliation with `\lx@annotate@frontmatter` let to its `@now`, which no Cut reads. The marks
-gate and the cutter read one fact, the marks an argument prints at its own level (`argument_marks`, `prints_list_marks`):
-the level its words print at, inside the box when one box holds them all (names in a `\parbox` or a tabular, acmart's
-`\institution{…}`), a note's leading label counted for a list. A cut that labels no entry of a one-entry list leaves it
-whole (the call cut again would not end). The binding's own cutter (`binding_cut_list_attr`) and the token gate
+gate reads the marks an argument prints at its own level (`argument_marks`, `prints_list_marks`): the level its words
+print at, inside the box when one box holds them all (names in a `\parbox` or a tabular, acmart's `\institution{…}`), a
+note's leading label counted for a list. The cutter splits the list at its top level only, so a list printed entirely
+inside one box is one entry (post-merge RED `ieee_marked_list_inside_one_parbox_is_one_entry_red`). A cut that labels no
+entry of a one-entry list leaves it whole (the call cut again would not end). The binding's own cutter (`binding_cut_list_attr`) and the token gate
 (`queued_creators_have_marks`) are deleted.
 **Why**: one cut for every printed list; the binding's former cut dropped the marks it cut at (2601.01850, 1204.4183).
 **Witnesses**: IEEEtran 1705.01774, 1801.04010, 1504.01072, 1811.06030, 2310.18257, 2511.18221, 2512.10732,

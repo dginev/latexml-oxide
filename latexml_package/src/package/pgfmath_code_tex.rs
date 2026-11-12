@@ -1692,8 +1692,8 @@ mod pgfmath_grammar {
   /// may have set (its body runs with the flag reset by `pgfmath_apply_user`,
   /// then a nested `\pgfmathparse` of a unit'd value sets it). Mirrors Perl,
   /// where the flag is a persistent global threaded through nested evaluations.
-  /// Monotonic — only ever sets the flag, matching `try_cs_register`'s
-  /// unconditional set. Call ONLY from the user-function / user-constant
+  /// Monotonic — only ever sets the flag, as `try_cs_register` does for a
+  /// dimension operand (a count leaves it). Call ONLY from the user-function / user-constant
   /// dispatch arms: builtins never touch the global, so absorbing after one
   /// would leak a stale true into a dimensionless result. Fixes
   /// `bar shift={\pgfplotbarwidth}` under `symbolic x coords` (2110.14597):

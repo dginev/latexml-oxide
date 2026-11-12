@@ -1,0 +1,16 @@
+% mechanism: an IEEEtran marked list printed entirely inside one `\parbox`: the marks gate reads the marks inside the box
+%   (`argument_marks` at its own level, OD #1009) but `cut_list`/`entry_calls` split at the list's top level only, so the
+%   whole box is one `\lx@affiliation@withsup{\parbox…}` entry: Ann's line unmarked on Ann, Bob gets both lines
+% witness: synthetic (revP4c S1)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Lee∗ , Bob Ray†", "∗ Univ A, Town A", "† Univ B, Town B"
+% engines: P4cbase 9d38af1d10 and P4c: one entry, 2 W (the same output on both)
+% expect:  0 errors, 0 warnings; "Univ A, Town A" Ann's with its mark, "Univ B, Town B" Bob's with its mark
+% status:  RED (P4cbase, P4c) — moves: post-merge (cut_list unwraps a sole box holding the list)
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{\parbox{\textwidth}{\centering Ann Lee\IEEEauthorrefmark{1}, Bob Ray\IEEEauthorrefmark{2}}}
+\IEEEauthorblockA{\parbox{\textwidth}{\centering \IEEEauthorrefmark{1}Univ A, Town A\\ \IEEEauthorrefmark{2}Univ B, Town B}}}
+\maketitle
+Body.
+\end{document}

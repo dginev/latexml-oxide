@@ -48,8 +48,9 @@ fn own_level(events: &[Event]) -> u8 {
     .unwrap_or(0)
 }
 
-/// The marks `arg` prints at its own level (the level its words print at, inside the box when one box holds them all), outside its notes (a note's marks are its `inner`), in
-/// order, each with its printed `label`; a number's suffix (`5\textsuperscript{th}`, `Event::ordinal`) is text, no mark.
+/// The marks `arg` prints at its own level (the level its words print at, inside the box when one box holds them all),
+/// outside its notes (a note's marks are its `inner`), in order, each with its printed `label`; a number's suffix
+/// (`5\textsuperscript{th}`, `Event::ordinal`) is text, no mark.
 /// A mark a document macro prints is one (`\newcommand\ua{\textsuperscript{1}}`), as is a `\let` copy's.
 pub fn argument_marks(arg: &Tokens) -> Result<Option<Vec<Event>>> {
   Ok(mark_events(arg)?.map(|events| {
@@ -93,8 +94,9 @@ pub fn prints_list_marks(arg: &Tokens, caller: &str) -> Result<bool> {
 }
 
 /// Whether `arg` prints a mark of its own ([`argument_marks`]) whose label a queued name requests (`requested_labels`);
-/// unread, its tokens' marks, counted for `caller`. A class's numbered store declines its numbers for its own marks only
-/// when the names ask for them (revP4d S1: `\ma` printing `\textsuperscript{a}` under `\inst{1}`, numbered 1 and 2).
+/// unread, its tokens' marks, counted for `caller`. A class's numbered store declines its numbers for its own marks
+/// only when the names ask for them (revP4d S1: `\ma` printing `\textsuperscript{a}` under `\inst{1}`, numbered 1
+/// and 2).
 pub fn prints_requested_marks(arg: &Tokens, caller: &str) -> Result<bool> {
   let Some(marks) = argument_marks(arg)? else {
     count_unread(caller);

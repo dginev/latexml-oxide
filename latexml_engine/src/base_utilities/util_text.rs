@@ -921,7 +921,7 @@ const VERBATIM_PRINTERS: &[(&str, &[bool])] = &[
 ];
 
 /// The character a math-character whatsit prints, its `glyph` (`\mathchar`, `\delimiter`, `\mathaccent`: tex_math.rs;
-/// `\Udelimiter`), as Perl's `\mathchar` is a Box of it (TeX_Math.pool.ltxml:575-580): the text walkers print it where
+/// `\Udelimiter`), as Perl's `\mathchar` is a Box of it (TeX_Math.pool.ltxml:576-580): the text walkers print it where
 /// the whatsit shows nothing else. flexisym's digits and letters are `\mathchar`s (2312.00656's `$^{2,3}$`, no mark).
 pub(crate) fn printed_glyph(w: &Whatsit) -> Option<String> {
   match w.get_property("glyph").as_deref() {
