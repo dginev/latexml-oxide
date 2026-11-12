@@ -285,7 +285,7 @@ kept it; check Core.
 
 Known residual: **`<m:menclose>` is still emitted** for `\cancel` / `\boxed`.
 Core removed it and there is no mechanical replacement, so it is a rendering +
-golden change needing its own branch — tracked as **`SYNC_STATUS.md` R3b**,
+golden change needing its own branch — tracked as the after-merge line **MENC** in `SYNC_STATUS.md` row R,
 deferred by user directive 2026-07-30. Don't "fix" it incidentally.
 
 ## Practical guidance
