@@ -477,6 +477,8 @@ pub(crate) fn load() -> Result<()> {
         whatsit.set_property("owntitle", "true");
       }
       digest_bibliography_preamble(whatsit)?;
+      // Then the class's `\list` (article.cls:565-571, natbib.sty:1068), which runs `\@trivlist`'s additions.
+      run_trivlist_hook()?;
       setup_pseudo_bibitem()?;
     },
     before_construct => sub[doc,whatsit] {

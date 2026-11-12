@@ -1,0 +1,17 @@
+% witness: synthetic (revTABU2 N1)
+% oracle:  pdflatex 6 `!` lines ("Illegal pream-token ([)": tabu's private `|` is its own preamble's, not a nested
+%          tabular's)
+% engines: rust TABU2base = 0 Errors, 5 Warnings (array's `|` and `[1pt]` read as columns); TABU2, TABU2b = 0 Errors
+%          (the tabu's `\NC@rewrite@|` let is inherited by the cell's tabular, so `|[1pt]` is accepted); Perl has no tabu
+%          binding
+% expect:  an Error where TeX errs, the cells a and b kept
+% status:  RED (TABU2b)
+% moves:   post-merge (id TABUN)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{tabu}
+\begin{document}
+\begin{tabu}{lc}
+x & \begin{tabular}{c|[1pt]c}a & b\end{tabular} \\
+\end{tabu}
+\end{document}

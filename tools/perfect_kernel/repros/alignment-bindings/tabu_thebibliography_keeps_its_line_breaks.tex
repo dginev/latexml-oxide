@@ -1,0 +1,17 @@
+% witness: synthetic (revTABU2b's sibling: `{thebibliography}` is a `\list`, article.cls:565-571)
+% oracle:  pdflatex 0 errors: References [1] a / b | x; y | z
+% engines: rust TABU2base = 1 Error (content kept); TABU2b = 8 Errors and an empty document (`\\` after tabu's
+%          `\centering` ended the row in the bibliography); TABU2c = 1 Error, the schema's for a bibliography in a cell's
+%          block (block-model/bibliography_in_a_table_cell_red.tex); Perl 0.8.8 has no tabu binding (`{tabu}` undefined)
+% expect:  tabu.sty:2389-2391 `\tabu@trivlist` through the kernel's `\lx@trivlist@hook`, run by `\thebibliography`
+%          where the class calls `\list`: a line break in the entry, the table whole
+% status:  RED (TABU2b) -> GREEN (TABU2c; the schema Error stays)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{tabu}
+\begin{document}
+\begin{tabu}{>{\centering}p{4cm}l}
+\begin{thebibliography}{9}\bibitem{k} a\\b\end{thebibliography} & x \\
+y & z \\
+\end{tabu}
+\end{document}

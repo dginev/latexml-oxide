@@ -1598,6 +1598,22 @@ pub struct BeginItemizeOptions {
   pub opens_no_list: bool,
 }
 
+/// Runs `\lx@trivlist@hook` in the current group: what a package adds to latex.ltx's `\@trivlist`, which every list but
+/// an in-paragraph one runs (:15862; tabu.sty:2390 `\tabu@trivlist`) and which is locked here (sect06.rs).
+pub fn run_trivlist_hook() -> Result<()> {
+  let hook = T_CS!("\\lx@trivlist@hook");
+  match lookup_meaning(&hook) {
+    None => return Ok(()),
+    Some(Stored::Expandable(defn)) if matches!(defn.expansion, Some(ExpansionBody::Tokens(ref tks)) if tks.is_empty()) =>
+    {
+      return Ok(());
+    },
+    _ => {},
+  }
+  stomach::digest(Tokens!(hook))?;
+  Ok(())
+}
+
 /// Prepare for an list (itemize/enumerate/description/etc)
 /// by determining the right counter (level)
 /// and binding the right \item ( \$type@item, if $type is defined)
@@ -1704,6 +1720,9 @@ pub fn begin_itemize(
       Tokens!(T_CS!("\\itemtyperefname")),
       global(),
     )?;
+  }
+  if !itype.starts_with("inline@") {
+    run_trivlist_hook()?;
   }
   if !itype.is_empty() {
     let itype_cs = T_CS!(s!("\\{itype}@item"));

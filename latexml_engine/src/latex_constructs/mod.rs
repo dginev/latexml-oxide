@@ -3469,6 +3469,8 @@ pub fn define_new_theorem(
   // before_digest
   let before_digest_closure: BeforeDigestClosure = Rc::new(move || {
     use_theorem_style(&thmset_for_before);
+    // A theorem is a `\trivlist` (latex.ltx `\@begintheorem`, amsthm.sty's): it runs `\@trivlist`'s additions.
+    run_trivlist_hook()?;
     let digested = digest(mouth::tokenize_internal("\\normalfont\\the\\thm@prework"))?;
     Ok(vec![digested])
   });
