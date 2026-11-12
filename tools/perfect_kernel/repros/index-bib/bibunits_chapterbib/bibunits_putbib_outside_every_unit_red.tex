@@ -1,0 +1,23 @@
+% mechanism: bibunits' `\putbib` outside every unit expands `\@startbibunitorrelax`, undefined before the first `\bibunit`
+%   (bibunits.sty), so pdflatex errs; ours reads it as a unit's bibliography and raises nothing (the Error side of the
+%   boundary, batch EB1; the Error-wherever-TeX-errs rule, 2026-11-11).
+% witness: synthetic (revBU1b PE1)
+% oracle:  pdflatex: `! Undefined control sequence` once; prints "Main [?]" and no Alpha entry
+% engines: rust int160c: 0 E 0 W, Alpha listed in an unprinted bu0 References; BU1b: 0 E 1 W (Missing Entry alpha),
+%   [alpha] dangles
+% expect:  1 Error at the main `\putbib`; the two units as today
+% status:  RED (int160c, BU1b)
+\documentclass{article}
+\usepackage{bibunits}
+\begin{document}
+Main \cite{alpha}.
+\putbib[refs]
+\begin{bibunit}[plain]
+No cite here.
+\putbib[refs]
+\end{bibunit}
+\begin{bibunit}[plain]
+Two \cite{beta}.
+\putbib[refs]
+\end{bibunit}
+\end{document}
