@@ -4,7 +4,8 @@
 %          two nested in a 4cm minipage / 2cm minipage right; perl: varwidth = minipage (KNOWN_PERL_ERRORS #1232)
 % expect:  0 errors, 0 warnings; [22.3056pt] [86.19458pt] [44.00003pt] [41.62253pt] [80.02792pt] [115.13911pt]
 %          [22.3056pt] [142.26378pt] [113.81102pt] [170.71652pt] [10.5556pt] [79.2111pt] [45.58342pt] [62.1833pt]
-%          [0.0pt] [51.14253pt] [5.2778pt] [47.02785pt] [284.52756pt]; the varwidth in the text keeps width="284.5pt"
+%          [0.0pt] [51.14253pt] [5.2778pt] [47.02785pt] [284.52756pt]; the varwidth in the text width="22.3pt", its HTML
+%          style `width:max-content;max-width:284.5pt` (VARWb; VARW kept the given 284.5pt)
 % status:  RED (int164a) -> GREEN (VARW: `minipage_takes_natural_width`)
 % varwidth.sty `\endvarwidth` re-measures each line at its natural width and sets the box at the widest, at most the
 % width given. Row 3 (a tabular) differs from pdflatex's 44.00006pt in the tabular's own measure, as without varwidth.

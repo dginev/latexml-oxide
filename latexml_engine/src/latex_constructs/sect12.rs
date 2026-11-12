@@ -867,8 +867,7 @@ pub(crate) fn load() -> Result<()> {
         .map(|a| a.to_string())
         .unwrap_or_default();
       let vattach = translate_attachment(&attachment);
-      // A varwidth box keeps the width it was given (`declared_width`) and measures its widest line.
-      let width = match props.get("declared_width").or_else(|| props.get("width")) {
+      let width = match props.get("width") {
         Some(Stored::Dimension(d)) => d.to_attribute(),
         Some(w) => w.to_string(),
         None => args.get(3).and_then(|a| a.as_ref()).map(|a| a.to_attribute())
@@ -876,6 +875,12 @@ pub(crate) fn load() -> Result<()> {
       };
       let mut attr = string_map!("class" => "ltx_minipage");
       if !width.is_empty() { attr.insert("width".to_string(), width); }
+      // A varwidth's `width` is its widest line; the HTML sizes it as varwidth does, its content's width up to the
+      // width given, so a browser font wider than the metrics does not wrap it (2507.12476's Table 1, OD #1012).
+      if let Some(Stored::Dimension(given)) = props.get("declared_width") {
+        attr.insert("cssstyle".to_string(),
+          format!("width:max-content;max-width:{}", given.to_attribute()));
+      }
       attr.insert("vattach".to_string(), vattach.to_string());
       note_panel_width_delta(props, &mut attr);
       if let Some(Stored::Digested(body)) = props.get("body") {

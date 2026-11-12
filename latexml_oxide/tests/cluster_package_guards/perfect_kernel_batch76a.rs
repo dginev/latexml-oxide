@@ -57,10 +57,17 @@ fn math_statement_td(row: u32, var: &str, n: u32) -> String {
   )
 }
 
-/// The statement cell of text-mode pseudocode row `row` (the `{varwidth}` of `\@pc@modebegin`, cryptocode.sty:763).
+/// The statement cell of text-mode pseudocode row `row` (the `{varwidth}` of `\@pc@modebegin`, cryptocode.sty:763): its
+/// text's width, at most the 113.8pt given (VARWb, OD #1012; VARW wrote the given width). pdflatex's `\small` texts are
+/// 33.48pt, 44.25pt and 37.54pt; ours measure at a larger size (a separate residual).
 fn text_statement_td(row: u32, text: &str) -> String {
+  let width = match text {
+    "first line" => "36.8pt",
+    "second line" => "47.3pt",
+    _ => "40.5pt",
+  };
   format!(
-    r#"<td align="left" xml:id="S0.Ex{row}.2"><inline-block class="ltx_markedasmath ltx_minipage" vattach="middle" width="113.8pt" xml:id="S0.Ex{row}.2.1"><p xml:id="S0.Ex{row}.2.1.1"><text fontsize="90%" xml:id="S0.Ex{row}.2.1.1.1">{text}</text></p></inline-block></td>"#
+    r#"<td align="left" xml:id="S0.Ex{row}.2"><inline-block class="ltx_markedasmath ltx_minipage" cssstyle="width:max-content;max-width:113.8pt" vattach="middle" width="{width}" xml:id="S0.Ex{row}.2.1"><p xml:id="S0.Ex{row}.2.1.1"><text fontsize="90%" xml:id="S0.Ex{row}.2.1.1.1">{text}</text></p></inline-block></td>"#
   )
 }
 

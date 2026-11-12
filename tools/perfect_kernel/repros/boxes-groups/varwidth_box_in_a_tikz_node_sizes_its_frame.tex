@@ -1,0 +1,16 @@
+% witness: synthetic (revVARW B1 `tz.tex`; the reader of the box's width in a TikZ node's foreignObject)
+% oracle:  pdflatex 0 errors; the varwidth is 43.13898pt (its widest line), the frame that plus the inner seps, B 1cm right
+% engines: rust int164a: the frame 245.44px (the box the given 6cm); rust VARW: the frame 68.92px (49.8pt) but the HTML box
+%          and its foreignObject 17.07em (the XML width the given one), the text centred outside its frame; perl:
+%          varwidth = minipage (KNOWN_PERL_ERRORS #1232)
+% expect:  0 errors, 0 warnings; the frame 68.92px; the foreignObject and the box 4.31em (its widest line), the box's HTML style
+%          `width:max-content;max-width:170.7pt` (OXIDIZED_DESIGN_DIVERGENCES #1012)
+% status:  GREEN (VARWb)
+\documentclass{article}
+\usepackage{varwidth,tikz}\usetikzlibrary{positioning}
+\begin{document}
+\begin{tikzpicture}
+\node[draw] (a) {\begin{varwidth}{6cm}\centering short text\end{varwidth}};
+\node[draw,right=1cm of a.east,anchor=west] {B};
+\end{tikzpicture}
+\end{document}

@@ -4051,8 +4051,11 @@ pub fn minipage_takes_natural_width(whatsit: &mut Whatsit) -> Result<()> {
   let mut options = SymHashMap::default();
   options.insert("natural_width", Stored::Bool(true));
   let (natural, ..) = body.compute_size(options)?;
-  whatsit.set_property("declared_width", Stored::Dimension(given));
   let width = natural.value_of().clamp(0, given.value_of().max(0));
+  // Narrower than given, the box's HTML follows its content (the minipage's `declared_width` style).
+  if width < given.value_of() {
+    whatsit.set_property("declared_width", Stored::Dimension(given));
+  }
   whatsit.set_property("width", Stored::Dimension(Dimension::new(width)));
   Ok(())
 }
