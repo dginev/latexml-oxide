@@ -1,0 +1,13 @@
+% The safe side of the out-of-range Errors: TeX's own bounds, as constants and as e-TeX results, read silently.
+% witness: synthetic (DTL1d).
+% status:  GREEN (int162a and DTL1d: 0 errors, 0 warnings).
+% oracle:  pdflatex 0 `!`, [2147483647] [16383.99998pt] [16383.99998pt] [2147483647] [16383.99997pt]; Perl 0 errors.
+% expect:  0 errors, 0 warnings, the pdflatex values.
+\documentclass{article}
+\begin{document}
+\count255=2147483647 [\the\count255]
+\dimen0=\maxdimen [\the\dimen0]
+\dimen0=16383.99998pt [\the\dimen0]
+\count255=\numexpr 2147483646+1\relax [\the\count255]
+\dimen0=\dimexpr 8191.99999pt*2\relax [\the\dimen0]
+\end{document}

@@ -102,16 +102,16 @@ pub const MAX_INTEGER: i64 = 0x7FFF_FFFF;
 /// A product that left the i64 range (an infinite or saturated `f64→i64`
 /// cast): TeX's arith_error ("Arithmetic overflow", tex.web §105-108) clamps
 /// to ±`ceiling` — `MAX_DIMEN` for a dimension, `MAX_INTEGER` for a count —
-/// never a wrapped value.
+/// never a wrapped value. An Error, as TeX's (OXIDIZED_DESIGN #519); no `Err`
+/// channel here, so the cap latches as [`emit_error`](crate::common::error::emit_error) does.
 pub fn clamp_arith_overflow(product: f64, ceiling: i64) -> i64 {
   if product.is_finite() && product.abs() < i64::MAX as f64 {
     product as i64
   } else {
-    crate::Warn!(
+    crate::common::error::emit_error(
       "expected",
       "<number>",
-      "Arithmetic overflow.",
-      "clamped (tex.web §105-108)"
+      &crate::generate_message!("Arithmetic overflow.", "clamped (tex.web §105-108)"),
     );
     if product < 0.0 { -ceiling } else { ceiling }
   }

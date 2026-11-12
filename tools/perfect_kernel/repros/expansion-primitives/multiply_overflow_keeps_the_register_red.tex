@@ -1,0 +1,13 @@
+% `\multiply` past TeX's bound is "Arithmetic overflow" and the register keeps its value (tex.web §1236-1240,
+% `do_register_command`); ours multiplies on, silently: the i64 headroom kept for pgf intermediates (batch 56bq,
+% `NumericOps::multiply`'s `clamp_arith_overflow` fires only past the i64 range).
+% witness: synthetic (DTL1d sibling sweep).
+% status:  RED. Ours (int162a, DTL1d): 0 errors, 0 warnings, [4294967294] [32766.0pt].
+% oracle:  pdflatex 2 `!` (Arithmetic overflow), [2147483647] [16383.0pt]; Perl 0 errors, [4294967294] [32766.0pt].
+% expect:  2 errors (Arithmetic overflow), [2147483647] [16383.0pt].
+% moves:   post-merge (the bound of `\multiply`/`\divide` is a second mechanism: the 56bq headroom).
+\documentclass{article}
+\begin{document}
+\count255=2147483647 \multiply\count255 by 2 [\the\count255]
+\dimen0=16383pt \multiply\dimen0 by 2 [\the\dimen0]
+\end{document}

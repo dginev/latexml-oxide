@@ -1,9 +1,9 @@
 % The other side of the box-dimension rows: a dimension TeX itself cannot hold (`\dimen0=20000pt`) still reports
 % "Dimension too large" and holds 16383.99998pt, now that pgfmath's box reads give real values.
 % witness: synthetic (the error side of 2010.05701's tikzscale overflow).
-% status:  GREEN (DTL1; a Warning today, the out-of-range severity batch makes it an Error).
+% status:  GREEN (DTL1 a Warning; DTL1d an Error, OD #519).
 % oracle:  pdflatex 1 `!` (Dimension too large), [16383.99998pt]; Perl 0 errors, [20000.0pt].
-% expect:  0 errors, 1 warning (Dimension too large), [16383.99998pt].
+% expect:  1 error (Dimension too large), 0 warnings, [16383.99998pt].
 \documentclass{article}
 \begin{document}
 \dimen0=20000pt [\the\dimen0]

@@ -239,13 +239,13 @@ fn an_expression_in_a_printed_title_stays_a_field() {
 
 /// Nothing is reported before an answer: a dimension the engine's reader would call too large is the raw macro's to read, so
 /// `Dimension too large` comes once (native: twice, as the first-round cap of 2000 of any unit passed 2000in), and below
-/// `\maxdimen` in each unit the native path answers.
+/// `\maxdimen` in each unit the native path answers. Errors, as pdflatex's 3 `!` (DTL1d, OD #519).
 #[test]
 fn a_dimension_too_large_is_reported_once() {
   let (log, xml, answered) = both_ways(repro!("l3fp_reported_once"));
   let xml = squeezed(&xml);
-  assert_eq!(error_count(&log), 0, "{log}");
-  assert_eq!(warning_count(&log), 3, "{log}");
+  assert_eq!(error_count(&log), 3, "{log}");
+  assert_eq!(warning_count(&log), 0, "{log}");
   assert_answered(answered, 8, "the fixture");
   for row in [
     "Below: 0; 15827.12998962402; 15588; 16189.61810302734; 16215.2255859375; 16058.99624633789; 16049.05963134766; 16037.28953552246; 16383.99998474121;",
