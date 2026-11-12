@@ -150,7 +150,8 @@ const ROWS: &[Row] = &[
     holds:    &[],
   },
   // pgf expands, then lets calc's names (revDTL1f B1): a user's `\ratio`/`\real` at every entry point, the `+` path
-  // unparsed; the pdflatex values. Letting first (DTL1f, Perl): [0.0][1][0.0pt][0][0.0] [345.0pt][345.0pt]….
+  // unparsed; the pdflatex values. Letting first: DTL1f [0.0][1][0.0pt][0][0.0] /[345.0pt][345.0pt]… (0 E); Perl
+  // [0][1][0.0pt][0][0] (4 E) /[345.0pt][345.0pt]… (4 E).
   Row {
     name:     "pgfmath_expands_before_calc_lets",
     tex:      include_str!(
@@ -173,7 +174,7 @@ const ROWS: &[Row] = &[
     ],
     holds:    &[],
   },
-  // Every parse sets both units flags globally (revDTL1f P1): the pdflatex flags; DTL1f [N][Y][N][Y] [Y][Y][Y].
+  // Every parse sets both units flags globally (revDTL1f P1): the pdflatex flags; DTL1f [N][Y][N][Y] [N][Y][N].
   Row {
     name:     "pgfmath_parse_sets_units_flags_globally",
     tex:      include_str!(

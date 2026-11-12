@@ -5,8 +5,9 @@
 %   parse, the `+` path, addtolength, setlengthmacro, `\pgfsetdash` (revDTL1f B1, pG).
 % witness: synthetic
 % oracle:  pdflatex 0 `!`: [5.0][4.0][5.0pt][5][5.0] [172.5pt][177.5pt][5.0pt][0.5pt]; Perl 8 Errors (pgfparse
-%   "Parse of '*/10' failed", "Missing argument" for `\pgfmath@calc@ratio`), [0][1][0.0pt][0][0] [345.0pt][345.0pt][0.0pt][0.0pt]
-% engines: rust DTL1f: [0.0][1][0.0pt][0][0.0] [345.0pt][345.0pt][0.0pt][0.0pt] (0 E, 0 W); DTL1e: [5.0][4.0][5.0pt][0][0.0]
+%   "Parse of '*/10' failed", "Missing argument" for `\pgfmath@calc@ratio`), 4 per paragraph:
+%   [0][1][0.0pt][0][0] /[345.0pt][345.0pt][0.0pt][0.0pt]
+% engines: rust DTL1f: [0.0][1][0.0pt][0][0.0] /[345.0pt][345.0pt][0.0pt][0.0pt] (0 E, 0 W); DTL1e: [5.0][4.0][5.0pt][0][0.0]
 %   [172.5pt][172.5pt][5.0pt][0.5pt]
 % expect:  0 errors 0 warnings; the pdflatex values
 % status:  RED (DTL1e, DTL1f) -> GREEN (DTL1g, guard perfect_kernel_batchdtl1::batchdtl1_pgfmath_rows)

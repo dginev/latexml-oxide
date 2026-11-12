@@ -3,7 +3,7 @@
 %   group leaves them set after it; ours left them to the last `\pgfmathparse`, locally (revDTL1f P1, pH).
 % witness: synthetic
 % oracle:  pdflatex 0 `!`: [Y][N][Y][N] [Y][N][Y]; Perl 0 E, the same
-% engines: rust DTL1f: [N][Y][N][Y] [Y][Y][Y]
+% engines: rust DTL1f: [N][Y][N][Y] [N][Y][N] (int161a dumps)
 % expect:  0 errors 0 warnings; the pdflatex flags
 % status:  RED (DTL1f) -> GREEN (DTL1g, guard perfect_kernel_batchdtl1::batchdtl1_pgfmath_rows)
 \documentclass{article}
