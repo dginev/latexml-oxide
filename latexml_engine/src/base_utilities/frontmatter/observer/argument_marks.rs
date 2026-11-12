@@ -3,7 +3,7 @@
 //! "no marks"; a caller falls back to its token reading, counted ([`count_unread`]).
 
 use super::{
-  events::{Event, EventKind, mark_led_pieces, opening_ink},
+  events::{Event, EventKind},
   separators::{ArgumentReading, read_argument},
   *,
 };
@@ -45,18 +45,4 @@ pub fn argument_marks(arg: &Tokens) -> Result<Option<Vec<Event>>> {
       .filter(|e| e.kind == EventKind::Mark && e.nest == 0 && !e.ordinal)
       .collect()
   }))
-}
-
-/// Whether a mark opens what `arg` prints (`events::opens_with_mark`); with `non_symbol`, a mark that is no footnote
-/// symbol (`Event::symbol`).
-pub fn argument_opens_with_mark(arg: &Tokens, non_symbol: bool) -> Result<Option<bool>> {
-  Ok(mark_events(arg)?.map(|events| {
-    let refs: Vec<&Event> = events.iter().collect();
-    opening_ink(&refs).is_some_and(|e| e.kind == EventKind::Mark && !(non_symbol && e.symbol))
-  }))
-}
-
-/// `arg`'s entries, each led by a mark (`events::mark_led_pieces`); empty when it is one entry.
-pub fn argument_mark_led_pieces(arg: &Tokens) -> Result<Option<Vec<Vec<Event>>>> {
-  Ok(mark_events(arg)?.map(|events| mark_led_pieces(&events)))
 }

@@ -2613,18 +2613,7 @@ fn optional_contact(name: &str, in_place: bool, opt: Tokens, arg: Tokens) -> Res
     }
     let mut all_requested = !keys.is_empty();
     for key in &keys {
-      let operand: Vec<Token> = key
-        .chars()
-        .map(|c| {
-          let c = c.to_string();
-          if c.chars().all(char::is_alphabetic) {
-            T_LETTER!(&c)
-          } else {
-            T_OTHER!(&c)
-          }
-        })
-        .collect();
-      if queued_authors_requesting(&operand)?.is_empty() && !digested_authors_requesting(key) {
+      if !queued_authors_requesting_key(key)? && !digested_authors_requesting(key) {
         all_requested = false;
         break;
       }

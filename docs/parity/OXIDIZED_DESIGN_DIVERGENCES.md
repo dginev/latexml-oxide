@@ -34874,21 +34874,25 @@ A `\let` copy of `\and` is no llncs input: `\institutename` and `\@maketitle` re
 kernel's `\end{tabular}` (pdflatex, 13 errors).
 
 **F0, P4a (2026-11-11): the marks query and the queue's requests on it.** `observer/argument_marks.rs`
-`argument_marks`, `argument_opens_with_mark`, `argument_mark_led_pieces` read an argument's Mark events from the same
-rehearsal (`separators::read_argument`): marks at the argument's own level (nest 0), outside its notes, no number suffix;
+`argument_marks` reads an argument's Mark events from the same rehearsal as the separator query
+(`separators::read_argument`, the queries' one allowance, `rehearsal::for_a_query`): marks at the argument's own level (nest 0), outside its notes, no number suffix;
 `None` is unread, never "no marks". The queue's reading (`queue_reading.rs`) rehearses each queued author's name once
 (`queued_name`) and keys its requests by the printed text, as `\lx@sup@request@affiliation` does (#919:
 `printed_label_keys`); the affiliation side keys as `\lx@sup@setlabel@affiliation` (`set_label`). A document macro
-printing the mark (`\newcommand\ua{\textsuperscript{1}}`) now requests its label. Deleted: the meaning tracking
+printing the mark (`\newcommand\ua{\textsuperscript{1}}`) now requests its label, and the Cut's uncut copies give way
+by the same requests (`cut.rs` `place_uncut_copies` asks `queued_requesters`; its token loop and `requesting_authors`
+deleted, review revF0 B1: amsart's `\address` list repeated under macro-printed marks kept the uncut copy and lost the
+cut's unrequested entry). Deleted: the meaning tracking
 (`meanings_hold`, the commands and symbols seen), so a name read before a later `\let` keeps its first reading
 (`queue_reading_alias_after_names`: same creators, the Cut no longer re-cuts). An unread name falls back to its spelled
 operands, one `--debug=frontmatter_marks` line each, until P6. Kept on the token reading until P4c, which shows the
-mark on the binding cut (FIDELITY_CHARTER §2): `affiliation_is_marked`, `binding_cut_list_attr` and the stores' gates
-(`queue::queued_creators_have_marks`); else a macro-held mark moved the list onto the binding cut, which drops the
+mark on the binding cut (FIDELITY_CHARTER §2): `affiliation_is_marked`, the stores' gates
+(`queue::queued_creators_have_marks`) and the names' `name_marks_of`; else a macro-held mark moved the list onto the binding cut, which drops the
 printed marks. Byte-identical against int160c on 494 papers (300 author_marks, 148 author_user_mark_macro, 50
 raw-class marked; 3 without a main file), E/F/W equal, 0 fallback lines. Guard
-`perfect_kernel_batchc1::queued_marks_read_as_digested`; RED catalog repro
-`sectioning-frontmatter/llncs_macro_held_institute_list_comma_red.tex` (P4S risk R2).
+`perfect_kernel_batchc1::queued_marks_read_as_digested` (rows `queue_marks_ams_macro_marks_{three_entry_copies,
+repeated_list}` for B1); RED catalog repros `sectioning-frontmatter/llncs_macro_held_institute_list_comma_red.tex`
+(P4S risk R2) and `revtex_accented_name_mark_lost_red.tex` (a name's accented mark lost, pre-existing).
 
 ### 996. What is appended to `\@author` after the author setter stored it is the author block's continuation: rows before its first `\and`, more authors after it, also under a binding whose `\author` stores nothing in `\@author` (FX24; RR1 gap 24)
 

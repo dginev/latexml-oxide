@@ -352,7 +352,7 @@ pub(in crate::base_utilities) fn printed_marks_as_marks(list: Tokens) -> Tokens 
 
 /// The frontmatter API's Cut decision (`cut_marked_contact`), the one predicate every reader of a store's marked
 /// entries asks: does `list` hold two or more entries, cut as [`affiliation_calls`] cuts them, led by marks of distinct
-/// labels that queued names request (`requesting_authors`), its first printed line led by a mark (`marker_leads`) —
+/// labels that queued names request (`queued_requesters`), its first printed line led by a mark (`marker_leads`) —
 /// its marks read as the Cut reads them, whatever their spelling (`printed_marks_as_marks`)?
 pub fn holds_requested_marked_entries(list: &Tokens) -> Result<bool> {
   requested_marked_entries_in(&printed_marks_as_marks(list.clone()))

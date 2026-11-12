@@ -49,8 +49,8 @@ pub(in crate::base_utilities) mod separators;
 // (the emitter's vocabulary, moved unchanged, for its callers in `frontmatter/` and `defs/`: the plan's row "Knowledge in, driver out, one pass")
 // (for the bindings, which ask what an argument's separators mean: Option C P2, OXIDIZED_DESIGN_DIVERGENCES #995)
 // (the marks query, Option C F0)
+pub use argument_marks::argument_marks;
 pub(in crate::base_utilities) use argument_marks::count_unread as count_unread_marks;
-pub use argument_marks::{argument_mark_led_pieces, argument_marks, argument_opens_with_mark};
 pub(in crate::base_utilities) use emitter::{
   EMITTING, SETTERS_RECOVERED, block_creator_written, calls::*, check_placed_content,
   emit_commands, emitted, setters_recovered, take_digested,

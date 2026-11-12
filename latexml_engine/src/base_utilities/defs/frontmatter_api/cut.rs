@@ -74,7 +74,7 @@ pub(in crate::base_utilities) fn cut_marked_contact(
   // reach every author requesting their marks by label, and the copies queued before the cut, uncut while too few names
   // were queued to request two of its marks, give way to it: review rev99a2 B1, [`place_uncut_copies`])
   let key = cut_list_key(parenttag, &role, &list);
-  place_uncut_copies(parenttag, &role, &key, &requested_entry_marks(&list)?);
+  place_uncut_copies(parenttag, &role, &key, &requested_entry_marks(&list)?)?;
   if cut_list_queued(&key) {
     DebugFeature!(
       "frontmatter",
@@ -192,12 +192,17 @@ fn cut_list_queued(key: &str) -> bool {
 /// role before it, which covers one placed on the name before it and a run's (`annotate=run`, `new`) — or every name
 /// queued before it for one annotating them all (`annotate=all`, a number); a copy reaching a name that requests none of
 /// the list's marks, or no name, stays as it is (no name loses the list it prints).
-fn place_uncut_copies(parenttag: &Tokens, role: &str, key: &str, marks: &[Vec<Token>]) {
-  let requests = |operands: &[Vec<Token>]| {
-    marks
-      .iter()
-      .any(|mark| !requesting_authors(&[operands.to_vec()], mark).is_empty())
-  };
+fn place_uncut_copies(
+  parenttag: &Tokens,
+  role: &str,
+  key: &str,
+  marks: &[Vec<Token>],
+) -> Result<()> {
+  // (the authors requesting one of the list's marks, by printed text as the Cut reads them: `queued_requesters`)
+  let mut requesters: Vec<usize> = Vec::new();
+  for mark in marks {
+    requesters.extend(queued_requesters(mark)?);
+  }
   let queue: Vec<RawFrontmatter> = with_value("frontmatter_raw", |v| match v {
     Some(Stored::FrontmatterRaw(queue)) => queue.clone(),
     _ => Vec::new(),
@@ -205,15 +210,11 @@ fn place_uncut_copies(parenttag: &Tokens, role: &str, key: &str, marks: &[Vec<To
   let mut removed: Vec<Tokens> = Vec::new();
   let mut places: Vec<(usize, Tokens)> = Vec::new();
   {
-    let mut authors: Vec<(usize, usize, Vec<Vec<Token>>)> = Vec::new();
+    let mut authors: Vec<(usize, usize)> = Vec::new();
     let mut last_of_role: Option<usize> = None;
     for (at, (tag, attr, command)) in queue.iter().enumerate() {
       if tag == "ltx:creator" && attr.get("role").map(String::as_str) == Some("author") {
-        authors.push((
-          at,
-          authors.len() + 1,
-          author_mark_operands(command.unlist_ref()),
-        ));
+        authors.push((at, authors.len() + 1));
         continue;
       }
       if tag != "ltx:contact" || attr.get("role").map(String::as_str) != Some(role) {
@@ -236,14 +237,14 @@ fn place_uncut_copies(parenttag: &Tokens, role: &str, key: &str, marks: &[Vec<To
       let all = attr
         .get("annotate")
         .is_some_and(|a| a == "all" || a.parse::<usize>().is_ok());
-      let reach: Vec<&(usize, usize, Vec<Vec<Token>>)> = authors
+      let reach: Vec<&(usize, usize)> = authors
         .iter()
-        .filter(|(position, ..)| all || since.is_none_or(|since| *position > since))
+        .filter(|(position, _)| all || since.is_none_or(|since| *position > since))
         .collect();
-      if reach.is_empty() || !reach.iter().all(|(.., operands)| requests(operands)) {
+      if reach.is_empty() || !reach.iter().all(|(_, n)| requesters.contains(n)) {
         continue;
       }
-      let names: Vec<String> = reach.iter().map(|(_, n, _)| n.to_string()).collect();
+      let names: Vec<String> = reach.iter().map(|(_, n)| n.to_string()).collect();
       DebugFeature!(
         "frontmatter",
         "FRONT cut {role}: an uncut copy of the list gives way to it, for authors {}",
@@ -261,7 +262,7 @@ fn place_uncut_copies(parenttag: &Tokens, role: &str, key: &str, marks: &[Vec<To
     }
   }
   if places.is_empty() {
-    return;
+    return Ok(());
   }
   // (each copy's queue entry, the same one: nothing was queued since it was read)
   with_value_mut("frontmatter_raw", |val_opt| {
@@ -277,6 +278,7 @@ fn place_uncut_copies(parenttag: &Tokens, role: &str, key: &str, marks: &[Vec<To
   for content in removed {
     record_cut_copy(role, &content);
   }
+  Ok(())
 }
 
 /// Does the queued `\lx@annotate@frontmatter@now{parenttag}…` call `command` annotate `parenttag`?
@@ -476,32 +478,4 @@ fn annotate_call(
   call.extend(entry.unlist());
   call.push(T_END!());
   Ok(call)
-}
-
-/// The queue positions of the authors whose marks request the affiliation label `mark` sets. An author's mark reads as
-/// its spelling (a symbol answered by its own line: OSA's `A. Able,$^{1,*}$` and `$^*$e-mail: …`, guard
-/// `perfect_kernel_batch64u::osa_email_line_mark_shapes`) and as its request reads it ([`label_pieces`]): a glued
-/// `1*`/`1\dagger` asks for label 1 too (77n r7 review probe g8: `Bob$^{2*}$` answered by `\affil{$^2$Y}`, not by
-/// authblk's run).
-pub(in crate::base_utilities) fn requesting_authors(
-  authors: &[Vec<Vec<Token>>],
-  mark: &[Token],
-) -> Vec<usize> {
-  let Some(label) = mark_label(mark) else {
-    return Vec::new();
-  };
-  authors
-    .iter()
-    .enumerate()
-    .filter(|(_, marks)| {
-      marks.iter().any(|operand| {
-        let reads = |operand: Vec<Token>| {
-          clean_frontmatter_labels(&Tokens::new(operand).to_string(), "affiliation")
-            .contains(&label)
-        };
-        reads(operand.clone()) || label_pieces(operand).is_some_and(reads)
-      })
-    })
-    .map(|(i, _)| i + 1)
-    .collect()
 }

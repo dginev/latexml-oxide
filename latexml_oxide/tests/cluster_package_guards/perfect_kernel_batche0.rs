@@ -383,8 +383,10 @@ const MOVED_CUT_KIND_EMISSIONS: &[(&str, usize)] = &[
 /// by the P4 port of these readers onto the digested reading (the brief's sites, study IV0): `email_lines.rs` `spacing_formulas_as_space` and `formula_prints_spacing_alone` (a formula of spacing alone is
 /// glue, no text of an address: 2205.14113, 2302.05182; OD #972), applied at the head of `email_line_calls`, in the Kind
 /// step's address lines and in `math_glyphs_as_printed` — how an address prints, no owner decided. F0 lowered it to
-/// 2,241: `cut.rs` `place_uncut_copies` takes the marks its caller read (`requested_entry_marks`), no second reading.
-const MOVED_CUT_KIND_CODE_LINES: usize = 2_241;
+/// 2,241: `cut.rs` `place_uncut_copies` takes the marks its caller read (`requested_entry_marks`). F0's fix round (review
+/// revF0 B1) to 2,220: it asks the queue's printed-text requests (`queued_requesters`), its token loop and
+/// `requesting_authors` deleted.
+const MOVED_CUT_KIND_CODE_LINES: usize = 2_220;
 
 /// The fence on the moved Cut and Kind: they take no new decision either (review revZ18a check 3).
 #[test]
@@ -581,7 +583,6 @@ const OLD_READER_EXPORTS: &[&str] = &[
   "queued_row_start",
   "requested_entry_marks",
   "requested_marked_entries_in",
-  "requesting_authors",
   "run_in_author_order",
   "shared_affiliation_calls",
   "space_parted_name_line",
@@ -1506,6 +1507,7 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // `formula_prints_spacing_alone` — how an address line prints, a formula of spacing alone glue, no text of an address
   // (2205.14113's `$~\quad~~$`, 2302.05182's `a@x $\quad$ b@y`; OD #972), no owner decided; the shifts and spacing it
   // reads are the line's tokens, before any digestion, as `math_glyphs_as_printed`'s)
+  // (F0, 114 -> 113: `numbered_marks_requested` reads the queue's printed marks, `queued_author_marks`, no operand's spelling)
   ("defs/frontmatter_api/", 113),
   // (CR4, 21 -> 28: `address_as_printed`'s `math_glyphs_as_printed`, the API's e-mail/URL reading — how an address prints,
   // `$\sim$` its glyph "∼" (1301.1466, math0608476; OD #972), no owner decided: a sibling of `math_braces_as_printed`, whose
@@ -1548,6 +1550,7 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // P20, 26 -> 29: `observer/separators.rs`, the one engine's separator query, reads a separator's *meaning* — its event's
   // printing token's definition, whether it is the kernel layer's `\and` constructor (`get_cs()` against `KERNEL_SEPARATOR`),
   // the trap-T8 test `frontmatter_stores::kernel_and_list` makes —, never its spelling: a decision by definition, OD #995)
+  // (F0, 29 -> 28: `queue_reading.rs`' meaning tracking, `seen`/`seen_symbols`, deleted: a name keeps its first reading)
   ("frontmatter (rest)", 28),
   // (P26, 527 -> 526: the stores' `\and` gates ask the separator query by meaning, `and_separators`, OD #995 P2-6; the
   // spelling read only where the query answers `None`: one spelled read fewer)

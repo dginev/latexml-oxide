@@ -142,13 +142,15 @@ fn a_removal_forgets_the_reading() {
   assert_eq!(log.matches("FRONT cut affiliation at its marks").count(), 1);
 }
 
-/// A REVTeX `\affiliation` row: the repro (name, source), its Warning count, and its creators (name, then contacts).
+/// A row: the repro (name, source), its Warning count, and its creators (name, then contacts).
 type Row<'a> = ((&'a str, &'a str), usize, &'a [&'a [&'a str]]);
 
 /// Option C F0/P4a: the queue's names request the labels their digested marks print (`queue_reading::author_marks`,
 /// `argument_marks`), while the binding's gate stays on the token reading until P4c (`affiliation_is_marked`). One row a
 /// shape: a marked list, a macro printing the mark (its list keeps the printed marks, as int160c), a `\let` copy, the
-/// unknown class's path, a mark inside a box. Each: no Error, its Warning count, every creator's name and contacts.
+/// unknown class's path, a mark inside a box; amsart's `\address` list repeated, its macro-printed marks requested by
+/// printed text where the Cut's uncut copies give way (`place_uncut_copies`, review revF0 B1: three entries, two). Each:
+/// no Error, its Warning count, every creator's name and contacts.
 #[test]
 fn queued_marks_read_as_digested() {
   macro_rules! repro {
@@ -183,6 +185,20 @@ fn queued_marks_read_as_digested() {
     (repro!("queue_marks_revtex_boxed_marks"), 0, &[
       &["Ann Able 1", "affiliation=Univ A, Town A"],
       &["Bob Baker 2", "affiliation=Univ B, Town B"],
+    ]),
+    (
+      repro!("queue_marks_ams_macro_marks_three_entry_copies"),
+      0,
+      &[
+        &["Ann Able 1", "address=1 Univ A, Town A"],
+        &["Bob Baker 2", "address=2 Univ B, Town B"],
+        &["Cy Cole 1", "address=1 Univ A, Town A"],
+        &["address=3 Univ C, Town C"],
+      ],
+    ),
+    (repro!("queue_marks_ams_macro_marks_repeated_list"), 0, &[
+      &["Ann Able 1", "address=1 Univ A, Town A"],
+      &["Bob Baker 2", "address=2 Univ B, Town B"],
     ]),
   ];
   for ((name, tex), warnings, expected) in rows {

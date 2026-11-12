@@ -969,10 +969,22 @@ pub fn author_creator_total() -> usize {
 }
 
 /// The queued author creators (their queue positions) whose names' marks request the label a mark's `operand` sets
-/// (`requesting_authors`): what a rerouted setter's optional argument is read against (`frontmatter_stores.rs`
+/// (`queued_requesters`): what a rerouted setter's optional argument is read against (`frontmatter_stores.rs`
 /// `optional_contact`: `\address[a]{…}` under `Ann$^a$` labels the address).
 pub fn queued_authors_requesting(operand: &[Token]) -> Result<Vec<usize>> {
   queued_requesters(operand)
+}
+
+/// Whether a queued author's mark requests the affiliation label the plain `key` sets (`queued_label_requesters`): an
+/// optional argument's key (frontmatter_stores.rs `optional_contact`), as [`digested_authors_requesting`] reads a flush.
+pub fn queued_authors_requesting_key(key: &str) -> Result<bool> {
+  match clean_frontmatter_labels(key, "affiliation")
+    .into_iter()
+    .next()
+  {
+    Some(label) => Ok(!queued_label_requesters(&label)?.is_empty()),
+    None => Ok(false),
+  }
 }
 
 /// Whether an author creator of the flush being digested printed a mark requesting the affiliation label `key`: the

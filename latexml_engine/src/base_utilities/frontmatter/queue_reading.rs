@@ -33,6 +33,7 @@ struct QueueReading {
 }
 
 impl QueueReading {
+  // (the names' marks by tokens, `name_marks_of`: token reading until P4c (F0 report))
   fn read_names(&mut self, entries: &[RawFrontmatter]) {
     self.entries_read += entries.len();
     for (tag, _, command) in entries {
@@ -87,7 +88,11 @@ fn author_marks(entry: &Tokens) -> Result<(Vec<String>, Vec<String>)> {
           .collect::<Vec<_>>()
           .join(","),
         Some(label) => label,
-        None => continue,
+        // (a mark printing no label requests none: counted, as an unread name is)
+        None => {
+          count_unread_marks("queued_author_marks, a mark without a label");
+          continue;
+        },
       };
       keys.extend(printed_label_keys(&text, "affiliation"));
       texts.push(text);
