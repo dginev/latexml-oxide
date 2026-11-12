@@ -32230,12 +32230,21 @@ token bodies, now read first), the one call every author route makes:
   as digested: a macro printing "On behalf of" (segaudit col1), a `\let` copy, `\csname`, `\MakeUppercase`, ties, a
   font group, a `\parbox`, the line's own "and" (`on behalf of the XYZ and ABC Collaborations`), each guarded
   (`perfect_kernel_batchp5b::a_framed_collaboration_call_is_the_names_contact`); brackets and dashes, a third creator
-  on the base (the dashed one losing its dashes), are its contact now. None before any name, and "the" alone frames
-  none (`\collab{The XYZ Collaboration}`, webofc's `\and The SND Collaboration`, 1912.05868): creators, as before.
+  on the base (the dashed one losing its dashes), are its contact now; so is a class command's bracketed one, revtex's
+  `\collaboration{(ATLAS Collaboration)}`, elsart's `\collab{(The CMS-HCAL Collaboration)}` (hep-ex0007045), where Perl
+  makes a creator (`\collab` is `\author{#1}`, elsart_support_core.sty.ltxml:71). A line carrying its own mark, note or
+  contact is no such call (`frames_the_names_alone`: `[ATLAS Collaboration]\thanks{…}` stays a creator with its note,
+  review revP5b; "for"/"on behalf of" with a note is the names' contact as on the base, `speaks_for`). None before any
+  name, and an unframed one — the name alone or after a bare "the" — frames none (`\collab{The XYZ Collaboration}`,
+  webofc's `\and The SND Collaboration`, 1912.05868): creators, as before.
   The raw name-block shapes (0907.0548, 1111.2718) and the remark after the notes (`speaks_for_after_notes`,
   1702.03664) are the reading's rows C2-C5 (`remark_pieces_joined`). ptephy's `\collaborator{(The X Collaboration)}`
   (2101.03480, 2404.08725) is its four names' contact. RED `elsarticle_author_framed_collaboration_with_a_note_red`
-  (post-merge): such a call's own note becomes a nameless creator.
+  (post-merge): such a call's own note becomes a nameless creator. RED (post-merge, P5BA; review revP5b): a bracketed
+  collaboration call or column with an affiliation of its own (`article_and_column_bracketed_collaboration_with_affiliation_red`,
+  `elsarticle_author_bracketed_collaboration_with_its_address_red`, `…_with_a_keyed_address_red`) is the names'
+  contact, its affiliation a nameless creator's or the last name's, where the PDF prints it as an author block of its
+  own; the "for the" form of the shape was so on the base.
 - **The observer's reading** (resolver/lines.rs, `is_membership_part`): a grade, or the pieces the line's commas cut it
   into (`\textit{Senior Member}, \textit{IEEE}`), after a name's comma is that name's `membership` item, no part of
   the name, so the writer's re-part finds each reading name in today's names (vgtc's `\author{Stephen Kasica; Charles

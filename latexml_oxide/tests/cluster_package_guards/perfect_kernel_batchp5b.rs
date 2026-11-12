@@ -29,6 +29,14 @@ fn elsarticle(pre: &str, call: &str) -> String {
   )
 }
 
+/// article's `\author{Ann Able \and Bob Baker \and <column>}`.
+fn article_and(column: &str) -> String {
+  format!(
+    "\\documentclass{{article}}\n\\begin{{document}}\n\\title{{T}}\n\\author{{Ann Able \\and Bob Baker \\and \
+     {column}}}\n\\maketitle\nText.\n\\end{{document}}\n"
+  )
+}
+
 /// Each row: the document, its whole creators and its exact (errors, warnings); pdflatex 0 `!` lines each (the repro
 /// headers; the inline rows checked the same way), the collaboration printed under or after the names.
 /// - the framing printed by a document macro (segaudit col1), a `\let` copy, `\csname`, `\MakeUppercase`, ties and a font
@@ -41,7 +49,9 @@ fn elsarticle(pre: &str, call: &str) -> String {
 /// - the kernel's `\and` column by a macro, the same under an unknown class (OmniBus; its Warning the missing class's),
 ///   revtex's `\author`;
 /// - the safe side: a framed collaboration before any name, and "The XYZ Collaboration" after them (framed by "the"
-///   alone), stay creators, as they were (1912.05868).
+///   alone), stay creators, as they were (1912.05868); so does a bracketed `\and` column carrying its own `\thanks` or
+///   mark (red on P5b, the column the names' contact: its note the document's, its mark lost — review revP5b), while "for
+///   the …" with its own `\thanks` is the names' contact, as on the base.
 #[test]
 fn a_framed_collaboration_call_is_the_names_contact() {
   // (Ann Able and Bob Baker, each with `contacts` then the collaboration `text`, written as its contact holds it)
@@ -93,6 +103,15 @@ fn a_framed_collaboration_call_is_the_names_contact() {
     out.extend(third.map(|name| {
       format!("<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>{name}</personname></creator>")
     }));
+    out
+  };
+  // (Ann Able and Bob Baker, then a third creator written whole)
+  let third_creator = |third: &str| -> Vec<String> {
+    let mut out = uncovered("Ann Able", "Bob Baker", None);
+    out.iter_mut().for_each(|c| *c = c.replace(address, ""));
+    out.push(format!(
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\">{third}</creator>"
+    ));
     out
   };
   let omnibus = repro!("article_and_column_framed_collaboration_by_macro_is_a_contact")
@@ -162,6 +181,26 @@ fn a_framed_collaboration_call_is_the_names_contact() {
     (
       elsarticle("", "The XYZ Collaboration"),
       uncovered("Ann Able", "Bob Baker", Some("The XYZ Collaboration")),
+      (0, 0),
+    ),
+    // (a bracketed column carrying its own note or mark is no framed call, `frames_the_names_alone`; review revP5b)
+    (
+      article_and("[ATLAS Collaboration]\\thanks{Funded.}"),
+      third_creator(
+        "<personname>[ATLAS Collaboration]</personname><note class=\"ltx_note_frontmatter ltx_thanks_funding\" \
+         role=\"thanks\" xml:id=\"id1\">Funded.</note>",
+      ),
+      (0, 0),
+    ),
+    (
+      article_and("(ATLAS Collaboration)$^{1}$"),
+      third_creator("<personname>(ATLAS Collaboration)<sup xml:id=\"id1\">1</sup></personname>"),
+      (0, 0),
+    ),
+    // ("for" with a note of its own: the names' contact, its note the document's, as on the base)
+    (
+      article_and("for the ATLAS Collaboration\\thanks{Funded.}"),
+      two("", "for the ATLAS Collaboration"),
       (0, 0),
     ),
   ];

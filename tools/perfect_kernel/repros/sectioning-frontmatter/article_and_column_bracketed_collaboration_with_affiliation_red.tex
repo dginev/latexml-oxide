@@ -1,0 +1,20 @@
+% mechanism: an `\and` column whose first line is a bracketed collaboration and whose next line is its own affiliation
+%   (`(Theory Group)\\ Univ B`): the reading makes the bracketed line the names' collaboration (P5b's first-line rule),
+%   so "Univ B" becomes a nameless creator. The PDF prints the column as a block of its own, under no name.
+%   Expected: a creator "(Theory Group)" holding "Univ B", as the base. The "for the" form (`for the Theory Group\\
+%   Univ B`) is pre-existing on P5bbase (the same nameless creator). Post-merge, P5BA (review revP5b; synthetic).
+% witness: synthetic
+% oracle:  pdflatex (TL 2025) 0 errors: two columns, "Ann Able / Univ A" and "(Theory Group) / Univ B"
+% engines: rust P5bbase (green): Ann Able (Univ A), (Theory Group) (Univ B); P5b and P5bb: Ann Able (Univ A, collaboration "(Theory
+%   Group)") and a nameless creator holding "Univ B"; perl: not run
+% expect:  0 errors, 0 warnings; two creators: Ann Able with "Univ A", "(Theory Group)" with "Univ B"
+% status:  RED (P5b, P5bb)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\\ Univ A \and (Theory Group)\\ Univ B}
+\maketitle
+Text.
+\end{document}
