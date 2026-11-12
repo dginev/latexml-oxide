@@ -1,0 +1,18 @@
+% mechanism: a name's mark inside a box (`\mbox{$^{1}$}`) under the queue's marks query (Option C F0/P4a, which reads
+%   marks at the name's own level); the binding's gate (`affiliation_is_marked`, token reading until P4c) sees the
+%   superscript and cuts the list, each entry to its author
+% witness: F0 probe p1 (synthetic; the int158a lesson: marks inside boxes)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2 / 1Univ A, Town A / 2Univ B, Town B"
+% engines: int160c and F0: Ann Able "Univ A, Town A", Bob Baker "Univ B, Town B" (marks dropped by the binding cut, P4c)
+% expect:  0 errors, 0 warnings; the creators above
+% status:  GREEN (guard perfect_kernel_batchc1::queued_marks_read_as_digested)
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able\mbox{$^{1}$}}
+\author{Bob Baker\mbox{$^{2}$}}
+\affiliation{$^{1}$Univ A, Town A\\ $^{2}$Univ B, Town B}
+\begin{abstract}x\end{abstract}
+\maketitle
+Text.
+\end{document}

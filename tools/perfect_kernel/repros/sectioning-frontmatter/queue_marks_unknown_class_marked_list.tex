@@ -1,0 +1,15 @@
+% mechanism: the queue's marks query (Option C F0/P4a) on the unknown-class path (OmniBus, inst_support): one `\author`
+%   list parted by `\and`, each name's mark requesting its entry of the marked `\affiliation` list
+% witness: study P4S repro c6 (synthetic; the int158a lesson: probe `nosuchclass`)
+% oracle:  pdflatex fails on the missing class (harness limit); as article: "Ann Able1 Bob Baker2 / 1Univ A, Town A / 2Univ B, Town B"
+% engines: int160c and F0: Ann Able "1Univ A, Town A", Bob Baker "2Univ B, Town B", 1 Warning (the missing class)
+% expect:  0 errors, 1 warning; the creators above
+% status:  GREEN (guard perfect_kernel_batchc1::queued_marks_read_as_digested)
+\documentclass{nosuchclass}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ \and Bob Baker$^{2}$}
+\affiliation{$^{1}$Univ A, Town A\\ $^{2}$Univ B, Town B}
+\maketitle
+Text.
+\end{document}

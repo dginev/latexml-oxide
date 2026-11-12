@@ -66,7 +66,7 @@ pub(in crate::base_utilities) fn cut_marked_contact(
     return Ok(None);
   }
   let list = printed_marks_as_marks(list);
-  if !requested_marked_entries_in(&list) {
+  if !requested_marked_entries_in(&list)? {
     return Ok(None);
   }
   // (one printed list, one Cut: a list repeated after each author's name, 2312.02779's five identical
@@ -74,7 +74,7 @@ pub(in crate::base_utilities) fn cut_marked_contact(
   // reach every author requesting their marks by label, and the copies queued before the cut, uncut while too few names
   // were queued to request two of its marks, give way to it: review rev99a2 B1, [`place_uncut_copies`])
   let key = cut_list_key(parenttag, &role, &list);
-  place_uncut_copies(parenttag, &role, &key, &list);
+  place_uncut_copies(parenttag, &role, &key, &requested_entry_marks(&list)?);
   if cut_list_queued(&key) {
     DebugFeature!(
       "frontmatter",
@@ -182,7 +182,7 @@ fn cut_list_queued(key: &str) -> bool {
 }
 
 /// The queued copies of the printed list `key` (of a contact of `role` annotating `parenttag`, its entries led by the
-/// marks of `list`) that the Cut left uncut — queued while too few names were queued to request two of its marks
+/// `marks` of its list) that the Cut left uncut — queued while too few names were queued to request two of its marks
 /// (amsart's `\author{Ann Able${}^{1}$}\address{${}^{1}$Univ A\\ ${}^{2}$Univ B}\author{Bob Baker${}^{2}$}` and the same
 /// `\address` again: review rev99a2 d2; 2312.02779's REVTeX `\affiliation` after each name) — give way to its entries:
 /// each is taken out of the queue when every name it reaches requests one of the list's marks, so each of them takes
@@ -192,8 +192,7 @@ fn cut_list_queued(key: &str) -> bool {
 /// role before it, which covers one placed on the name before it and a run's (`annotate=run`, `new`) — or every name
 /// queued before it for one annotating them all (`annotate=all`, a number); a copy reaching a name that requests none of
 /// the list's marks, or no name, stays as it is (no name loses the list it prints).
-fn place_uncut_copies(parenttag: &Tokens, role: &str, key: &str, list: &Tokens) {
-  let marks = requested_entry_marks(list);
+fn place_uncut_copies(parenttag: &Tokens, role: &str, key: &str, marks: &[Vec<Token>]) {
   let requests = |operands: &[Vec<Token>]| {
     marks
       .iter()

@@ -5,7 +5,11 @@
 //! for byte (int142a); the count is the mechanism.
 use std::process::Command;
 
-use super::perfect_kernel_batch46::{error_count, warning_count};
+use super::{
+  perfect_kernel_batch46::{error_count, warning_count},
+  perfect_kernel_batch84b::creators as text_creators,
+  perfect_kernel_batchz4::run,
+};
 
 /// Converts `tex` under the arXiv preload with `--debug=frontmatter`, checks that it errs and warns nothing, and returns
 /// its log and creators.
@@ -106,11 +110,11 @@ fn marked_block_reads_each_entry_once() {
   assert_eq!(read, queued, "each entry read once: {counts:?}");
 }
 
-/// The reading holds what the names' commands meant: `\up` means no mark when the first `\address` reads Ann's name and
-/// one after `\let\up\textsuperscript`, so the later `\address` reads her again and the Cut cuts it for both names. A
-/// reading kept across the `\let` sees one request and leaves the list uncut (the flush's readers then print the same
-/// creators, hence the log line). Witness of the `\let` shape 2209.14855. Repro
-/// sectioning-frontmatter/queue_reading_alias_after_names.
+/// A `\let` after the first names: `\up` means no mark when the first `\address` reads Ann's name and one after
+/// `\let\up\textsuperscript`. Since F0 (Option C P4a) the reading keeps each name's marks as its first rehearsal read
+/// them (the meaning tracking deleted, F0 report), so the later `\address` sees one request and the Cut leaves the list
+/// whole: the flush's readers print the same creators (was one "cut address at its marks"). Witness of the `\let`
+/// shape 2209.14855. Repro sectioning-frontmatter/queue_reading_alias_after_names.
 #[test]
 fn a_changed_meaning_reads_the_names_again() {
   let (log, creators) = converted(include_str!(
@@ -120,7 +124,7 @@ fn a_changed_meaning_reads_the_names_again() {
     creators,
     r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1">1</sup></personname> <contact name="Address: " role="address"><sup xml:id="id2"><text font="italic" xml:id="id2.1">1</text></sup>Univ Z</contact> <contact name="Address: " role="address"><sup xml:id="id3">1</sup>Univ A</contact> </creator> <creator before=" and " role="author"> <personname>Bob Baker<sup xml:id="id4">2</sup></personname> <contact name="Address: " role="address"><sup xml:id="id5">2</sup>Univ B</contact> </creator>"#
   );
-  assert_eq!(log.matches("FRONT cut address at its marks").count(), 1);
+  assert_eq!(log.matches("FRONT cut address at its marks").count(), 0);
 }
 
 /// The reading trusts the queue's length, so a removal forgets it: `\date{}` and `\keywords{}` dequeue two entries and
@@ -136,4 +140,62 @@ fn a_removal_forgets_the_reading() {
     r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2"><text font="italic" xml:id="id2.1">1</text></sup>Univ Z</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3"><text font="italic" xml:id="id3.1">1</text></sup>Univ A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id4"><text font="italic" xml:id="id4.1">2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id5"><text font="italic" xml:id="id5.1">2</text></sup>Univ B</contact> </creator>"#
   );
   assert_eq!(log.matches("FRONT cut affiliation at its marks").count(), 1);
+}
+
+/// A REVTeX `\affiliation` row: the repro (name, source), its Warning count, and its creators (name, then contacts).
+type Row<'a> = ((&'a str, &'a str), usize, &'a [&'a [&'a str]]);
+
+/// Option C F0/P4a: the queue's names request the labels their digested marks print (`queue_reading::author_marks`,
+/// `argument_marks`), while the binding's gate stays on the token reading until P4c (`affiliation_is_marked`). One row a
+/// shape: a marked list, a macro printing the mark (its list keeps the printed marks, as int160c), a `\let` copy, the
+/// unknown class's path, a mark inside a box. Each: no Error, its Warning count, every creator's name and contacts.
+#[test]
+fn queued_marks_read_as_digested() {
+  macro_rules! repro {
+    ($name:literal) => {
+      (
+        $name,
+        include_str!(concat!(
+          "../../../tools/perfect_kernel/repros/sectioning-frontmatter/",
+          $name,
+          ".tex"
+        )),
+      )
+    };
+  }
+  let rows: &[Row] = &[
+    (repro!("queue_marks_revtex_marked_list"), 0, &[
+      &["Ann Able 1", "affiliation=Univ A, Town A"],
+      &["Bob Baker 2", "affiliation=Univ B, Town B"],
+    ]),
+    (repro!("queue_marks_revtex_macro_held_marks"), 0, &[
+      &["Ann Able 1", "affiliation=1 Univ A, Town A"],
+      &["Bob Baker 2", "affiliation=2 Univ B, Town B"],
+    ]),
+    (repro!("queue_marks_revtex_let_copy_marks"), 0, &[
+      &["Ann Able 1", "affiliation=Univ A, Town A"],
+      &["Bob Baker 2", "affiliation=Univ B, Town B"],
+    ]),
+    (repro!("queue_marks_unknown_class_marked_list"), 1, &[
+      &["Ann Able 1", "affiliation=1 Univ A, Town A"],
+      &["Bob Baker 2", "affiliation=2 Univ B, Town B"],
+    ]),
+    (repro!("queue_marks_revtex_boxed_marks"), 0, &[
+      &["Ann Able 1", "affiliation=Univ A, Town A"],
+      &["Bob Baker 2", "affiliation=Univ B, Town B"],
+    ]),
+  ];
+  for ((name, tex), warnings, expected) in rows {
+    let (log, xml) = run(tex);
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, *warnings),
+      "{name}: {log}"
+    );
+    let expected: Vec<Vec<String>> = expected
+      .iter()
+      .map(|c| c.iter().map(|s| s.to_string()).collect())
+      .collect();
+    assert_eq!(text_creators(&xml), expected, "{name}: {xml}");
+  }
 }

@@ -382,8 +382,9 @@ const MOVED_CUT_KIND_EMISSIONS: &[(&str, usize)] = &[
 /// Kind step (review revZ18o N1). IV1 raised it by 54, accepted as debt by the main session (2026-11-11) and retired
 /// by the P4 port of these readers onto the digested reading (the brief's sites, study IV0): `email_lines.rs` `spacing_formulas_as_space` and `formula_prints_spacing_alone` (a formula of spacing alone is
 /// glue, no text of an address: 2205.14113, 2302.05182; OD #972), applied at the head of `email_line_calls`, in the Kind
-/// step's address lines and in `math_glyphs_as_printed` — how an address prints, no owner decided.
-const MOVED_CUT_KIND_CODE_LINES: usize = 2_242;
+/// step's address lines and in `math_glyphs_as_printed` — how an address prints, no owner decided. F0 lowered it to
+/// 2,241: `cut.rs` `place_uncut_copies` takes the marks its caller read (`requested_entry_marks`), no second reading.
+const MOVED_CUT_KIND_CODE_LINES: usize = 2_241;
 
 /// The fence on the moved Cut and Kind: they take no new decision either (review revZ18a check 3).
 #[test]
@@ -1505,7 +1506,7 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // `formula_prints_spacing_alone` — how an address line prints, a formula of spacing alone glue, no text of an address
   // (2205.14113's `$~\quad~~$`, 2302.05182's `a@x $\quad$ b@y`; OD #972), no owner decided; the shifts and spacing it
   // reads are the line's tokens, before any digestion, as `math_glyphs_as_printed`'s)
-  ("defs/frontmatter_api/", 114),
+  ("defs/frontmatter_api/", 113),
   // (CR4, 21 -> 28: `address_as_printed`'s `math_glyphs_as_printed`, the API's e-mail/URL reading — how an address prints,
   // `$\sim$` its glyph "∼" (1301.1466, math0608476; OD #972), no owner decided: a sibling of `math_braces_as_printed`, whose
   // reads `defs/frontmatter_fields/` holds; it reads the Semiverbatim argument's tokens, which no event says)
@@ -1547,7 +1548,7 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // P20, 26 -> 29: `observer/separators.rs`, the one engine's separator query, reads a separator's *meaning* — its event's
   // printing token's definition, whether it is the kernel layer's `\and` constructor (`get_cs()` against `KERNEL_SEPARATOR`),
   // the trap-T8 test `frontmatter_stores::kernel_and_list` makes —, never its spelling: a decision by definition, OD #995)
-  ("frontmatter (rest)", 29),
+  ("frontmatter (rest)", 28),
   // (P26, 527 -> 526: the stores' `\and` gates ask the separator query by meaning, `and_separators`, OD #995 P2-6; the
   // spelling read only where the query answers `None`: one spelled read fewer)
   // (FX24b, 526 -> 527: `title_page_prints_author` walks the title page a raw file or the document defined for a read of
@@ -1906,6 +1907,7 @@ const MOVED_UNDER_OBSERVER: [&str; 2] = ["resolver/owners.rs", "emitter/calls.rs
 /// the zeros stay zero: `policy`, `marks` and `mod` decide, and a decision spells no token; `field_notes` names two kernel definitions
 /// (`\begin`, `\end`), not a token's spelling (Z4a, ruled at Z4ar2).
 const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
+  ("argument_marks", 0),
   // (Z14: 84 and 109, the lexer's own constructor and the rehearsal's table rows for `\lx@add@affiliation@marked`, `\lx@add@creator` and `\alignauthor`, as in `TOKEN_READS`;
   // Z4a +2: a note's kind, `\lx@fm@obs@fnnote`, the rehearsal's own name for a footnote it heard; N2r2 +3: `raw_lines` reads the
   // `\and` family's whatsits as it reads a break's, by their definition, 2106.06418; IO3b +1: the arm for the rehearsal's

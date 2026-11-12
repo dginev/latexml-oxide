@@ -166,7 +166,7 @@ pub(in crate::base_utilities) fn entry_calls(
       // line with text before its first mark (`Univ X \\ Present address: $^2$Univ Y`'s second line)
       // stays whole, as there.
       let segs = if marker_leads(&line) {
-        split_wrapped_affiliation_marks(line)
+        split_wrapped_affiliation_marks(line)?
       } else {
         vec![line]
       };
@@ -354,32 +354,32 @@ pub(in crate::base_utilities) fn printed_marks_as_marks(list: Tokens) -> Tokens 
 /// entries asks: does `list` hold two or more entries, cut as [`affiliation_calls`] cuts them, led by marks of distinct
 /// labels that queued names request (`requesting_authors`), its first printed line led by a mark (`marker_leads`) —
 /// its marks read as the Cut reads them, whatever their spelling (`printed_marks_as_marks`)?
-pub fn holds_requested_marked_entries(list: &Tokens) -> bool {
+pub fn holds_requested_marked_entries(list: &Tokens) -> Result<bool> {
   requested_marked_entries_in(&printed_marks_as_marks(list.clone()))
 }
 
 /// [`holds_requested_marked_entries`] of a list whose marks are written as the plain marks they print.
-pub(in crate::base_utilities) fn requested_marked_entries_in(list: &Tokens) -> bool {
-  requested_entry_marks(list).len() >= 2
+pub(in crate::base_utilities) fn requested_marked_entries_in(list: &Tokens) -> Result<bool> {
+  Ok(requested_entry_marks(list)?.len() >= 2)
 }
 
 /// The marks, of distinct labels, leading the entries of `list` (its marks written as the plain marks they print) that
 /// queued names request — none when its first printed line is not led by a mark ([`requested_marked_entries_in`]).
-pub(in crate::base_utilities) fn requested_entry_marks(list: &Tokens) -> Vec<Vec<Token>> {
+pub(in crate::base_utilities) fn requested_entry_marks(list: &Tokens) -> Result<Vec<Vec<Token>>> {
   let lines: Vec<Tokens> = split_tokens_delimited(list.clone(), affil_splits())
     .into_iter()
     .map(|(_, line)| line)
     .filter(|line| !line.is_empty() && !prints_nothing(line))
     .collect();
   if !lines.first().is_some_and(marker_leads) {
-    return Vec::new();
+    return Ok(Vec::new());
   }
   let mut labels: Vec<String> = Vec::new();
   let mut marks: Vec<Vec<Token>> = Vec::new();
   for line in lines.into_iter().filter(marker_leads) {
-    for piece in split_wrapped_affiliation_marks(line) {
+    for piece in split_wrapped_affiliation_marks(line)? {
       if let Some(mark) = entry_mark(piece.unlist_ref())
-        && !queued_requesters(&mark).is_empty()
+        && !queued_requesters(&mark)?.is_empty()
         && let Some(label) = mark_label(&mark)
         && !labels.contains(&label)
       {
@@ -388,7 +388,7 @@ pub(in crate::base_utilities) fn requested_entry_marks(list: &Tokens) -> Vec<Vec
       }
     }
   }
-  marks
+  Ok(marks)
 }
 
 /// A class-numbered institute list as its title page prints it: llncs.cls:870-885 `\institutename` (copied by
@@ -404,7 +404,7 @@ pub(in crate::base_utilities) fn requested_entry_marks(list: &Tokens) -> Vec<Vec
 /// 2207.09249; batch 104b); with no such run (no store, none could be made), the class's `\institutename` read as
 /// before: a `\def\and` stepping a counter (`\stepcounter`). Was each author given every institute (2405.16615; SYNC_STATUS
 /// row 153; the sab family, SYNC_STATUS row "104b").
-pub fn class_numbered_institutes(stuff: &Tokens, store: Option<&str>) -> Option<Tokens> {
+pub fn class_numbered_institutes(stuff: &Tokens, store: Option<&str>) -> Result<Option<Tokens>> {
   let run = store.and_then(|store| match lookup_value(&s!("lx_and_numbered_{store}")) {
     Some(Stored::Bool(numbered)) => Some(numbered),
     _ => None,
@@ -416,12 +416,12 @@ pub fn class_numbered_institutes(stuff: &Tokens, store: Option<&str>) -> Option<
         if body.unlist_ref().windows(2).any(|w| w[0] == T_CS!("\\def") && w[1] == T_CS!("\\and"))
           && body.unlist_ref().contains(&T_CS!("\\stepcounter"))))
   });
-  if !numbers_its_entries || author_mark_position(stuff).is_some() || !numbered_marks_requested() {
-    return None;
+  if !numbers_its_entries || author_mark_position(stuff).is_some() || !numbered_marks_requested()? {
+    return Ok(None);
   }
   let entries = split_tokens(stuff.clone(), vec![T_CS!("\\and").into()]);
   if entries.len() < 2 {
-    return None;
+    return Ok(None);
   }
   let mut out: Vec<Token> = Vec::new();
   for (n, entry) in entries.into_iter().enumerate() {
@@ -433,35 +433,35 @@ pub fn class_numbered_institutes(stuff: &Tokens, store: Option<&str>) -> Option<
     out.push(T_END!());
     out.extend(entry.unlist());
   }
-  Some(Tokens::new(out))
+  Ok(Some(Tokens::new(out)))
 }
 
 /// Do the queued authors' marks request numbered entries: each mark a comma list of numbers (`\inst{1,2}`), at least
 /// one, beside which only symbols stand — a legend's `\textsuperscript{\dag}`, `*` (comsis2.cls's names, 2207.09249), an
 /// empty piece (edpsci's `\inst{1,2}$^{,}$`, 2501.08874) —, never a letter label (`\inst{a}`), which no number answers?
-pub fn numbered_marks_requested() -> bool {
+pub fn numbered_marks_requested() -> Result<bool> {
   let mut numbers = false;
-  for operand in queued_author_marks().iter().flatten() {
-    for piece in Tokens::new(operand.clone()).to_string().split(',') {
+  for mark in queued_author_marks()?.iter().flatten() {
+    for piece in mark.split(',') {
       let piece = piece.trim();
       if piece.is_empty() || piece.starts_with('\\') || !piece.chars().any(|c| c.is_alphanumeric())
       {
         continue;
       }
       if !piece.chars().all(|c| c.is_ascii_digit()) {
-        return false;
+        return Ok(false);
       }
       numbers = true;
     }
   }
-  numbers
+  Ok(numbers)
 }
 
 /// Whether an affiliation a class gives after its authors is a marked list ([`affiliation_calls`]): it has a mark, and the
 /// queued authors carry marks — or none is queued yet, when the marks are labels for the authors to come (an affiliation
 /// without its label had no one to go to).
 pub(in crate::base_utilities) fn affiliation_is_marked(stuff: &Tokens) -> bool {
-  (queued_creators_have_marks() || queued_creator_count() == 0)
+  (queued_creators_have_marks() || queued_creator_count() == 0) // token reading until P4c (F0 report)
     && author_mark_position(stuff).is_some()
 }
 
@@ -561,8 +561,8 @@ fn place_address_runs(
   entries: &mut [Vec<Token>],
   row_start: usize,
 ) -> Result<Vec<Token>> {
-  let authors = queued_author_marks();
-  let row_start = row_start.min(authors.len());
+  let authors = queued_author_count();
+  let row_start = row_start.min(authors);
   // (a legend line, `* Equal contribution`, is an entry with no mark; nor does a footnote-symbol mark after a run,
   // `$^\dagger$ Corresponding author`, show the run sits under an affiliation — as an iopart `\address`'s one mark it
   // still labels one)
@@ -597,7 +597,7 @@ fn place_address_runs(
       // 2609.19448's one address under one author's affiliation still that author's)
       Some((entry, at)) if under_affiliations => {
         let requesting =
-          entry_mark(&entries[entry]).map_or_else(Vec::new, |mark| queued_requesters(&mark));
+          entry_mark(&entries[entry]).map_or(Ok(Vec::new()), |m| queued_requesters(&m))?;
         // (one address under an affiliation one author requests is that author's, its line made the contact here: an
         // e-mail command a raw class's store holds, `\email{hyf@…}` under `\inst{1}`'s institute, prints nowhere if
         // left in the entry — astro-ph0701846)
@@ -617,7 +617,7 @@ fn place_address_runs(
           entries[entry].splice(at..at, continuation);
         }
       },
-      _ if total == authors.len() - row_start && run_in_author_order(&run.lines, row_start) => {
+      _ if total == authors - row_start && run_in_author_order(&run.lines, row_start) => {
         let mut positions = row_start + 1..;
         for ((_, line), count) in run.lines.into_iter().zip(counts) {
           let authors = positions.by_ref().take(count).collect();

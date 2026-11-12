@@ -37,8 +37,8 @@ pub(in crate::base_utilities) fn placed_contact_owner(
   mark: &Tokens,
   content: &Tokens,
   weak: bool,
-) -> ContactOwner {
-  let authors = queued_author_marks();
+) -> Result<ContactOwner> {
+  let authors = queued_author_count();
   let keys = queued_author_name_keys();
   let spelled: Vec<usize> = address_owners(&keys, content)
     .into_iter()
@@ -47,14 +47,14 @@ pub(in crate::base_utilities) fn placed_contact_owner(
   let requesting = if mark.is_empty() || (weak && !spelled.is_empty()) {
     Vec::new()
   } else {
-    queued_requesters(mark.unlist_ref())
+    queued_requesters(mark.unlist_ref())?
   };
   if let [author] = requesting.as_slice() {
     // (a footnote-symbol mark stays shown on the name and pairs by no label of its own: the author's position)
-    return match mark_label(mark.unlist_ref()) {
+    return Ok(match mark_label(mark.unlist_ref()) {
       Some(label) if !is_symbol_mark(mark.unlist_ref()) => ContactOwner::Mark(label),
       _ => ContactOwner::Author(*author),
-    };
+    });
   }
   if let [author] = requesting
     .iter()
@@ -63,16 +63,16 @@ pub(in crate::base_utilities) fn placed_contact_owner(
     .collect::<Vec<_>>()
     .as_slice()
   {
-    return ContactOwner::Author(*author);
+    return Ok(ContactOwner::Author(*author));
   }
   if let [author] = spelled.as_slice() {
-    return ContactOwner::Author(*author);
+    return Ok(ContactOwner::Author(*author));
   }
   let first = frontmatter_group_first();
-  if authors.len() == first {
-    return ContactOwner::Author(first);
+  if authors == first {
+    return Ok(ContactOwner::Author(first));
   }
-  ContactOwner::Block
+  Ok(ContactOwner::Block)
 }
 
 /// `text` as tokens of its characters, each as it is: an ASCII letter a letter, anything else other (no `#` parameter, no

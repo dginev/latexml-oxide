@@ -5,100 +5,107 @@
 //! `frontmatter_api::cut::cut_marked_contact`) and 56 % of 1901.01540's (1,202, AASTeX's `\affiliation` and the Cut); 2005.08745's
 //! 592 are labelled, so the Cut leaves them at once. The reading is a value of the state beside the queue, so an
 //! assignment journal rolls both back together (a rehearsal) and it goes with the state; an entry is read once, when a
-//! reader first finds it queued. Perl has no counterpart, as it reads no names at a contact: this is only a cache of what
-//! the Cut's and the marks' readers would read from the queue, so it never changes an answer.
+//! reader first finds it queued. Perl has no counterpart, as it reads no names at a contact. Since Option C F0 an author's
+//! marks are its name's digested ones (`argument_marks`), keyed by printed text (OXIDIZED_DESIGN_DIVERGENCES #995).
 
 use std::rc::Rc;
 
-use rustc_hash::{FxHashMap, FxHashSet};
+use rustc_hash::FxHashMap;
 
 use super::*;
 
 /// The state key of the queue's [`QueueReading`].
 const QUEUE_READING: &str = "frontmatter_raw_reading";
 
-/// The readings of the first `read` entries of the frontmatter queue. A name's marks are told by the meaning of its
-/// commands when they are read (`\let\up\textsuperscript` after `\author{Ann\up{1}}`), so the reading also holds what
-/// those commands meant, and is read again in full when one means otherwise ([`QueueReading::meanings_hold`]).
+/// The readings of the first `read` entries of the frontmatter queue: their name marks by tokens, and the marks of the
+/// authors among the first `marks_read`, one marks query per queued author ([`author_marks`]).
 #[derive(Clone, Default)]
 struct QueueReading {
   read:         usize,
   /// The entries read so far, a reading again counted anew (the block's count in the `--debug=frontmatter` log, which
   /// `perfect_kernel_batchc1` pins).
   entries_read: usize,
-  author_marks: Rc<Vec<Vec<Vec<Token>>>>,
   name_marks:   Rc<(Vec<String>, Vec<String>)>,
+  marks_read:   usize,
+  author_marks: Rc<Vec<Vec<String>>>,
   /// The queue positions (from 1) of the authors requesting each label, ascending.
   requests:     FxHashMap<String, Vec<usize>>,
-  /// The authors' commands, each once, and whether it means a mark (`is_mark_command`).
-  commands:     Vec<(Token, bool)>,
-  /// The commands in the authors' mark operands, each once, and whether it is a symbol mark (`is_symbol_mark`).
-  symbols:      Vec<(Token, bool)>,
-  seen:         FxHashSet<(Catcode, SymStr)>,
-  seen_symbols: FxHashSet<SymStr>,
 }
 
 impl QueueReading {
-  /// Does every command of the names still mean what it did when they were read?
-  fn meanings_hold(&self) -> bool {
-    self
-      .commands
-      .iter()
-      .all(|(t, mark)| is_mark_command(t) == *mark)
-      && self
-        .symbols
-        .iter()
-        .all(|(t, symbol)| is_symbol_mark(std::slice::from_ref(t)) == *symbol)
-  }
-
-  fn read_entries(&mut self, entries: &[RawFrontmatter]) {
+  fn read_names(&mut self, entries: &[RawFrontmatter]) {
     self.entries_read += entries.len();
-    for (tag, attr, command) in entries {
-      if tag != "ltx:creator" {
-        continue;
+    for (tag, _, command) in entries {
+      if tag == "ltx:creator" {
+        let (altaffil, sup) = name_marks_of(command);
+        let marks = Rc::make_mut(&mut self.name_marks);
+        marks.0.extend(altaffil);
+        marks.1.extend(sup);
       }
-      let (altaffil, sup) = name_marks_of(command);
-      let marks = Rc::make_mut(&mut self.name_marks);
-      marks.0.extend(altaffil);
-      marks.1.extend(sup);
-      if attr.get("role").map(String::as_str) != Some("author") {
-        continue;
-      }
-      for t in command.unlist_ref() {
-        if matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE)
-          && self.seen.insert((t.get_catcode(), t.get_sym()))
-        {
-          self.commands.push((*t, is_mark_command(t)));
-        }
-      }
-      let operands = author_mark_operands(command.unlist_ref());
-      self.read_requests(&operands);
-      Rc::make_mut(&mut self.author_marks).push(operands);
     }
   }
 
-  /// The labels the next author's mark `operands` request, as `requesting_authors` reads them.
-  fn read_requests(&mut self, operands: &[Vec<Token>]) {
-    let position = self.author_marks.len() + 1;
-    for operand in operands {
-      for t in operand {
-        if t.get_catcode() == Catcode::CS && self.seen_symbols.insert(t.get_sym()) {
-          self
-            .symbols
-            .push((*t, is_symbol_mark(std::slice::from_ref(t))));
+  fn read_marks(&mut self, entries: &[RawFrontmatter]) -> Result<()> {
+    for (tag, attr, command) in entries {
+      if tag != "ltx:creator" || attr.get("role").map(String::as_str) != Some("author") {
+        continue;
+      }
+      let (texts, keys) = author_marks(command)?;
+      let position = self.author_marks.len() + 1;
+      for label in keys {
+        let requesters = self.requests.entry(label).or_default();
+        if requesters.last() != Some(&position) {
+          requesters.push(position);
         }
       }
-      let spellings = std::iter::once(operand.clone()).chain(label_pieces(operand));
-      for spelling in spellings {
-        for label in clean_frontmatter_labels(&Tokens::new(spelling).to_string(), "affiliation") {
-          let requesters = self.requests.entry(label).or_default();
-          if requesters.last() != Some(&position) {
-            requesters.push(position);
-          }
-        }
-      }
+      Rc::make_mut(&mut self.author_marks).push(texts);
     }
+    Ok(())
   }
+}
+
+/// The marks a queued author `entry`'s name ([`queued_name`]) prints at its own level outside its notes, by their printed
+/// text (`argument_marks`: a document macro's mark too, `\newcommand\ua{\textsuperscript{1}}`), and the labels they
+/// request, as `\lx@sup@request@affiliation` keys them (`printed_label_keys`); a `\footnotemark` requests a note, none.
+/// Where the query cannot read the name, the entry's mark operands by spelling (`author_mark_operands`), counted.
+fn author_marks(entry: &Tokens) -> Result<(Vec<String>, Vec<String>)> {
+  let mut texts = Vec::new();
+  let mut keys = Vec::new();
+  if let Some(marks) = argument_marks(&queued_name(entry))? {
+    for mark in marks {
+      if mark.role.as_deref() == Some("footnotemark") {
+        continue;
+      }
+      // (a cross-reference's key as `printed_label` reads it, `\ref{key}`: `events::script_mark`'s `ref:key`)
+      let text = match mark.label {
+        Some(label) if mark.role.as_deref().is_some_and(|r| r.ends_with(" ref")) => label
+          .split(',')
+          .map(|piece| match piece.trim().strip_prefix("ref:") {
+            Some(key) => s!("\\ref{{{key}}}"),
+            None => piece.to_string(),
+          })
+          .collect::<Vec<_>>()
+          .join(","),
+        Some(label) => label,
+        None => continue,
+      };
+      keys.extend(printed_label_keys(&text, "affiliation"));
+      texts.push(text);
+    }
+    return Ok((texts, keys));
+  }
+  count_unread_marks("queued_author_marks");
+  for operand in author_mark_operands(entry.unlist_ref()) {
+    let spellings = std::iter::once(operand.clone()).chain(label_pieces(&operand));
+    for spelling in spellings {
+      keys.extend(clean_frontmatter_labels(
+        &Tokens::new(spelling).to_string(),
+        "affiliation",
+      ));
+    }
+    texts.push(Tokens::new(operand).to_string());
+  }
+  Ok((texts, keys))
 }
 
 /// The reading kept in the state, if any.
@@ -109,36 +116,18 @@ fn kept_queue_reading() -> Option<Rc<QueueReading>> {
   })
 }
 
-/// The queue's reading, its new entries read.
-fn queue_reading() -> Rc<QueueReading> {
-  let queued = with_value("frontmatter_raw", |v| match v {
-    Some(Stored::FrontmatterRaw(queue)) => queue.len(),
-    _ => 0,
-  });
-  let kept = kept_queue_reading();
-  let holds = kept.as_ref().is_some_and(|kept| kept.meanings_hold());
-  if holds && let Some(kept) = kept.as_ref().filter(|kept| kept.read == queued) {
-    return Rc::clone(kept);
-  }
-  // (given up by the state, so that it is extended in place unless a journal holds it too)
-  remove_value(QUEUE_READING);
-  let mut reading = QueueReading::default();
-  if let Some(kept) = kept {
-    if holds && kept.read <= queued {
-      reading = Rc::unwrap_or_clone(kept);
-    } else {
-      reading.entries_read = kept.entries_read;
-    }
-  }
-  let from = reading.read;
-  with_value("frontmatter_raw", |v| {
-    if let Some(Stored::FrontmatterRaw(queue)) = v {
-      reading.read_entries(&queue[from..]);
-    }
-  });
-  reading.read = queued;
+/// The queued entries from `from` on.
+fn queued_from(from: usize) -> Vec<RawFrontmatter> {
+  with_value("frontmatter_raw", |v| match v {
+    Some(Stored::FrontmatterRaw(queue)) => queue.get(from..).unwrap_or_default().to_vec(),
+    _ => Vec::new(),
+  })
+}
+
+/// Keep `reading` in the state, beside a non-empty queue.
+fn keep(reading: QueueReading) -> Rc<QueueReading> {
   let reading = Rc::new(reading);
-  if queued > 0 {
+  if reading.read > 0 {
     assign_value(
       QUEUE_READING,
       Stored::Opaque(Rc::clone(&reading) as Rc<dyn std::any::Any>),
@@ -146,6 +135,45 @@ fn queue_reading() -> Rc<QueueReading> {
     );
   }
   reading
+}
+
+/// The queue's reading, its new entries' name marks read.
+fn queue_reading() -> Rc<QueueReading> {
+  let queued = with_value("frontmatter_raw", |v| match v {
+    Some(Stored::FrontmatterRaw(queue)) => queue.len(),
+    _ => 0,
+  });
+  let kept = kept_queue_reading();
+  if let Some(kept) = kept.as_ref().filter(|kept| kept.read == queued) {
+    return Rc::clone(kept);
+  }
+  // (given up by the state, so that it is extended in place unless a journal holds it too)
+  remove_value(QUEUE_READING);
+  let mut reading = QueueReading::default();
+  if let Some(kept) = kept {
+    if kept.read <= queued {
+      reading = Rc::unwrap_or_clone(kept);
+    } else {
+      reading.entries_read = kept.entries_read;
+    }
+  }
+  reading.read_names(&queued_from(reading.read));
+  reading.read = queued;
+  keep(reading)
+}
+
+/// The queue's reading, its authors' marks read too.
+fn queue_marks_reading() -> Result<Rc<QueueReading>> {
+  let reading = queue_reading();
+  if reading.marks_read == reading.read {
+    return Ok(reading);
+  }
+  remove_value(QUEUE_READING);
+  let mut reading = Rc::unwrap_or_clone(reading);
+  // (the entries taken off the queue first: a marks query digests)
+  reading.read_marks(&queued_from(reading.marks_read)[..reading.read - reading.marks_read])?;
+  reading.marks_read = reading.read;
+  Ok(keep(reading))
 }
 
 /// The queue lost entries (a flush took it, `dequeue_front_matter` removed some): what was read of it is no more.
@@ -161,24 +189,37 @@ pub(in crate::base_utilities) fn forget_queue_reading() {
   }
 }
 
-/// The mark operands of each queued author, in queue order: the n-th digests with the label `author:n`
-/// (`num_ltx:creator{author}`), by which an address goes to it — as the count starts from no author, which holds
-/// unless authors an earlier flush digested are still kept (an appending `\author` after `\maketitle`).
-pub(in crate::base_utilities) fn queued_author_marks() -> Rc<Vec<Vec<Vec<Token>>>> {
-  Rc::clone(&queue_reading().author_marks)
+/// The marks of each queued author, by their printed text ([`author_marks`]), in queue order: the n-th digests with
+/// the label `author:n` (`num_ltx:creator{author}`), by which an address goes to it — as the count starts from no
+/// author, which holds unless authors an earlier flush digested are still kept (an appending `\author` after `\maketitle`).
+pub(in crate::base_utilities) fn queued_author_marks() -> Result<Rc<Vec<Vec<String>>>> {
+  Ok(Rc::clone(&queue_marks_reading()?.author_marks))
 }
 
-/// The queue positions of the authors whose marks request the label a mark's `operand` sets, as `requesting_authors`
-/// reads them.
-pub(in crate::base_utilities) fn queued_requesters(operand: &[Token]) -> Vec<usize> {
-  let Some(label) = mark_label(operand) else {
-    return Vec::new();
-  };
-  queue_reading()
-    .requests
-    .get(&label)
-    .cloned()
-    .unwrap_or_default()
+/// Whether a queued author's name prints a mark ([`queued_author_marks`]).
+pub(in crate::base_utilities) fn queued_authors_marked() -> Result<bool> {
+  Ok(queued_author_marks()?.iter().any(|marks| !marks.is_empty()))
+}
+
+/// The queue positions of the authors whose marks request `label` (`affiliation:<key>`).
+pub(in crate::base_utilities) fn queued_label_requesters(label: &str) -> Result<Vec<usize>> {
+  Ok(
+    queue_marks_reading()?
+      .requests
+      .get(label)
+      .cloned()
+      .unwrap_or_default(),
+  )
+}
+
+/// The queue positions of the authors whose marks request the label a mark's `operand` sets, by its printed text as
+/// `\lx@sup@setlabel@affiliation` sets it ([`set_label`]).
+pub(in crate::base_utilities) fn queued_requesters(operand: &[Token]) -> Result<Vec<usize>> {
+  let operand = Tokens::new(operand.to_vec());
+  match set_label(&operand, printed_label(&operand)?.as_ref()) {
+    Some(label) => queued_label_requesters(&label),
+    None => Ok(Vec::new()),
+  }
 }
 
 /// The marks the queued authors' names show, as label keys (`relocate::name_marks_of`): the items of AASTeX 5's

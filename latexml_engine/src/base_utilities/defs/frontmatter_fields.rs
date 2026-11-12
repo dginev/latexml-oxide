@@ -559,7 +559,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     }
     // (`label=` and `_answers=` are fixed text; a value is a mark's label and is text: tokenized, `$^{1\#}$`'s `#` was
     // a parameter token and a `%` a comment, so each of its characters is taken as it is)
-    let (value, answers) = match placed_contact_owner(&mark, &content, weak_mark) {
+    let (value, answers) = match placed_contact_owner(&mark, &content, weak_mark)? {
       ContactOwner::Mark(label) => (label, None),
       // (placed by a footnote-symbol mark its author requests: the contact answers that mark on that author,
       // `show_unanswered_marks`)
@@ -583,14 +583,14 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       // `\lx@frontmatter@group@start`), and those requesting the mark of the address it is printed under (`_marks`,
       // read where the document writes an e-mail between its addresses); rev78f2 probes i1, i2)
       if lookup_value("lx_frontmatter_group_first").is_some() {
-        let group: Vec<String> = (frontmatter_group_first()..=queued_author_marks().len())
+        let group: Vec<String> = (frontmatter_group_first()..=queued_author_count())
           .map(|at| at.to_string())
           .collect();
         keyvals.extend(mouth::tokenize_internal(",_group=").unlist());
         keyvals.extend(text_tokens(&group.join(";")));
       }
       if weak_mark {
-        let requesting: Vec<String> = queued_requesters(mark.unlist_ref())
+        let requesting: Vec<String> = queued_requesters(mark.unlist_ref())?
           .iter()
           .map(ToString::to_string)
           .collect();
@@ -602,7 +602,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       // (placed by its address's mark: where it goes without it, for a document whose addresses are all before its
       // e-mails, `sequenced_contact_labels`)
       if weak_mark {
-        let unmarked = match placed_contact_owner(&Tokens::new(Vec::new()), &content, false) {
+        let unmarked = match placed_contact_owner(&Tokens::new(Vec::new()), &content, false)? {
           ContactOwner::Author(author) => s!("author:{author}"),
           ContactOwner::Mark(label) => label,
           ContactOwner::Block => s!("addresses:block"),
@@ -663,7 +663,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // (`\author{D. L. Boiko}\address{…}\email{…}\author{N. J. Gunther}…`, 0906.4563; guard
   // `perfect_kernel_batch64u::osa_group_only_author_owns_the_email`).
   DefPrimitive!("\\lx@frontmatter@group@start", {
-    let first = queued_author_marks().len() + 1;
+    let first = queued_author_count() + 1;
     assign_value(
       "lx_frontmatter_group_first",
       Stored::Number(Number::new(first as i64)),
@@ -874,7 +874,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   DefMacro!("\\lx@add@thanks [] {}", sub[(attr, content)] {
     if starts_with_affiliation_mark(&content) {
       let mut calls: Vec<Token> = vec![T_CS!("\\lx@title@footnote@step")];
-      for seg in split_wrapped_affiliation_marks(content) {
+      for seg in split_wrapped_affiliation_marks(content)? {
         if spacing_end(seg.unlist_ref()) == 0 {
           continue;
         }
