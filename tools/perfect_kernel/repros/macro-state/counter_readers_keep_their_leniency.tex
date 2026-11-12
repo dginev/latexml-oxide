@@ -1,0 +1,15 @@
+% witness: synthetic (GA1, the sibling shapes of undefined_counter_register_is_an_error)
+% oracle:  pdflatex 2 errors ("! Missing number, treated as zero." at \c@nosuch, once from \arabic, once from \value),
+%          "Reader: 0. Value: 0."
+% engines: perl 2 warnings for \arabic (CounterValue, Package.pm:712: "Counter 'nosuch' was not defined; assuming 0",
+%          plus LookupRegister's "is not a register"), 1 error + 1 warning for \value (Error:undefined:\c@nosuch,
+%          "Missing number"); rust int160a1 2 warnings ("assuming 0" both: generate_error_stub's \c@ branch)
+% expect:  \arabic keeps Perl's counter-reader leniency (1 warning, "assuming 0"); \value in a number is the undefined
+%          control sequence (1 error) and "Missing number" (1 warning); "Reader: 0. Value: 0."
+% status:  GREEN (GA1); Perl's second \arabic warning ("is not a register") is not emitted (LookupRegister), out of GA1
+\documentclass{article}
+\newcounter{a}
+\begin{document}
+Reader: \arabic{nosuch}.
+\setcounter{a}{\value{nosuch}}Value: \arabic{a}.
+\end{document}
