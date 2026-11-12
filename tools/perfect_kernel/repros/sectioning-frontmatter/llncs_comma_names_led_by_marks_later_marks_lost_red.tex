@@ -1,0 +1,20 @@
+% mechanism: names led by their marks in one llncs `\author`, parted at commas: the first name keeps its leading mark,
+%   each later name's (`, $^2$Bob Baker`) is written on no creator and counted by no Warning
+% witness: 1804.00518 (`$^1$Dawei Du, $^2$Yuankai Qi, …`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "1Ann Able, 2Bob Baker, 1Cy Cole", "1Univ A, Town A",
+%   "2Univ B, Town B", "ann@a.edu"
+% engines: int164a, P4f, P4fb: 1 Ann Able; Bob Baker; Cy Cole (the "2" and the second "1" lost, 0 warnings)
+% expect:  0 errors; 1 Ann Able, 2 Bob Baker, 1 Cy Cole (or the loss counted by a Warning)
+% status:  RED (P4fb)
+% moves:   post-merge (a leading mark past a name separator)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{$^1$Ann Able, $^2$Bob Baker, $^1$Cy Cole}
+\institute{$^1$Univ A, Town A\\
+  $^2$Univ B, Town B\\
+  \email{ann@a.edu}}
+\maketitle
+Text.
+\end{document}

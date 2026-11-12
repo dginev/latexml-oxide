@@ -403,7 +403,8 @@ fn notes(xml: &str) -> Vec<String> {
 /// preprocessing ahead of the Cut too (P4cR2, P4cR2b): a nested affiliation block led by marks, or after a line of marks
 /// alone (its label), a block of its own, an unmarked one spliced into the outer's lines; an ordinal-led bare name line a
 /// name. And a binding's own list cutter (`affiliation_calls`, P4f): its marked entries show their marks where the names
-/// show theirs (llncs shape (c), l-aa; red on int164a), hidden with them where they hide (IJCAI, the control).
+/// show their labels (llncs shape (c), l-aa; red on int164a), hidden with them where they hide (IJCAI, the control; an
+/// icon labelling no entry, P4fb), each flush its own names'.
 #[test]
 fn marked_list_cut_as_its_binding_declares() {
   macro_rules! repro {
@@ -840,6 +841,75 @@ fn marked_list_cut_as_its_binding_declares() {
       &[
         &["Ann Able", "affiliation=Univ A, Town A", "email=ann@a.org"],
         &["Bob Baker", "affiliation=Univ B, Town B", "email=bob@b.org"],
+      ],
+      &[],
+    ),
+    // (P4fb: an entry shows its mark where the names show its label — a printed icon labels none, 2505.02655, red on
+    // P4f: "1 Univ A, Town A" beside hidden `\inst` marks; a star beside them changes nothing; a second flush reads its
+    // own names', red on P4f: the first flush's read stale, "1 Univ C, Town C")
+    (
+      repro!("llncs_inst_names_icon_mark_institute_marks_hidden"),
+      0,
+      &[
+        &[
+          "Ann Able (🖂)",
+          "affiliation=Univ A, Town A",
+          "affiliation=Univ B, Town B",
+        ],
+        &["Bob Baker", "affiliation=Univ B, Town B"],
+      ],
+      &[],
+    ),
+    (
+      repro!("llncs_marked_names_star_institute_entries_show_their_marks"),
+      0,
+      &[&["Ann Able 1", "affiliation=1 Univ A, Town A"], &[
+        "Bob Baker 2,⋆",
+        "affiliation=2 Univ B, Town B",
+      ]],
+      &[],
+    ),
+    // (the labels the names' written runs print, not the block's: 1804.00518, red on P4f — "2 Univ B" beside a name
+    // showing no 2; RED, the later names' marks lost — llncs_comma_names_led_by_marks_later_marks_lost_red)
+    (
+      repro!("llncs_comma_names_led_by_marks_entries_show_the_names_labels"),
+      0,
+      &[
+        &[
+          "1 Ann Able",
+          "affiliation=1 Univ A, Town A",
+          "email=ann@a.edu",
+        ],
+        &["Bob Baker", "affiliation=Univ B, Town B"],
+        &["Cy Cole", "affiliation=1 Univ A, Town A"],
+      ],
+      &[],
+    ),
+    // (a label spelled apart on the two sides, `$^\dagger$` and `$^\dag$`: the label the entry's mark prints, 1501.04948)
+    (
+      repro!("llncs_marked_institute_symbol_marks_spelled_apart_shown"),
+      0,
+      &[&["Ann Able †", "affiliation=† Univ A, Town A"], &[
+        "Bob Baker ‡",
+        "affiliation=‡ Univ B, Town B",
+      ]],
+      &[],
+    ),
+    // (RED, the base's placement pinned — llncs_second_maketitle_names_are_text_red)
+    (
+      repro!("llncs_second_maketitle_unmarked_names_institute_marks_hidden"),
+      0,
+      &[
+        &[
+          "Ann Able 1",
+          "affiliation=1 Univ A, Town A",
+          "affiliation=Univ C, Town C",
+        ],
+        &[
+          "Bob Baker 2",
+          "affiliation=2 Univ B, Town B",
+          "affiliation=Univ D, Town D",
+        ],
       ],
       &[],
     ),

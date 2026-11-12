@@ -55,8 +55,8 @@ pub use argument_marks::{
   prints_marks_and_labels, prints_requested_marks, requested_entry_labels,
 };
 pub(in crate::base_utilities) use emitter::{
-  EMITTING, SETTERS_RECOVERED, block_creator_written, calls::*, check_placed_content,
-  emit_commands, emitted, names_show_marks, setters_recovered, take_digested,
+  EMITTING, NAMES_SHOWN_LABELS, SETTERS_RECOVERED, block_creator_written, calls::*,
+  check_placed_content, emit_commands, emitted, names_show_label, setters_recovered, take_digested,
 };
 pub use events::{
   BreakKind as FmBreakKind, EmailMeaning as FmEmailMeaning, Event as FmEvent,

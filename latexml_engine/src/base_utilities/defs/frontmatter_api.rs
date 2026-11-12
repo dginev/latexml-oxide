@@ -35,6 +35,12 @@ pub(in crate::base_utilities) const LABEL_PRINTS: &str = "_labelprints";
 /// (`_label`, `_annotations`).
 pub(in crate::base_utilities) const PRINTED_LABEL: &str = "_printedlabel";
 
+/// The State value true while a binding list's marked entry (`_markshown=names`, `cut::mark_shown_attr`) is digested:
+/// `\lx@sup@setlabel@affiliation` shows its mark where the names this flush writes show the label it sets
+/// (`emitter::names_show_label`, OD #1009; 2505.02655, 1804.00518).
+pub(in crate::base_utilities) const MARK_SHOWN_WITH_NAMES_STATE: &str =
+  "lx_affiliation_mark_shown_with_names";
+
 /// The contact roles the frontmatter API's Cut reads ([`cut_marked_contact`]): the ones a printed list of entries is
 /// labelled by marks in (an affiliation, an alternate one, an address).
 pub(in crate::base_utilities) const CUT_ROLES: [&str; 3] =
@@ -928,12 +934,15 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // no author carries — is no answer to an author's label request, nor passes over the authors one answers)
     let legend = marker_leads(&content);
     // (an entry of the Cut shows the mark that labels it while it is digested: `\lx@sup@setlabel@affiliation`,
-    // OXIDIZED_DESIGN_DIVERGENCES #954; a binding list's entry where the names show theirs, OD #1009)
-    let mark_shown = options.remove("_markshown").is_some_and(|shown| {
-      shown != MARK_SHOWN_WITH_NAMES || names_show_marks()
-    });
+    // OXIDIZED_DESIGN_DIVERGENCES #954; a binding list's entry where the names show that label, which it reads, OD #1009)
+    let shown = options.remove("_markshown");
+    let with_names = shown.as_deref() == Some(MARK_SHOWN_WITH_NAMES);
+    let mark_shown = shown.is_some() && !with_names;
     if mark_shown {
       assign_value("lx_affiliation_mark_shown", Stored::Bool(true), Some(Scope::Global));
+    }
+    if with_names {
+      assign_value(MARK_SHOWN_WITH_NAMES_STATE, Stored::Bool(true), Some(Scope::Global));
     }
     // (the entry being digested, whose e-mails are its addresses: its key while its content is digested, OD #956)
     let enclosing_entry = lookup_string(ENTRY_DIGESTING);
@@ -948,8 +957,11 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     if entry_key.is_some() {
       assign_value(ENTRY_DIGESTING, Stored::String(pin(enclosing_entry)), Some(Scope::Global));
     }
-    if mark_shown {
+    if mark_shown || with_names {
       assign_value("lx_affiliation_mark_shown", Stored::Bool(false), Some(Scope::Global));
+    }
+    if with_names {
+      assign_value(MARK_SHOWN_WITH_NAMES_STATE, Stored::Bool(false), Some(Scope::Global));
     }
     let xcontent = xcontent?;
     // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #803, #916; user rulings 2026-10-21, 2026-10-30): a note that prints

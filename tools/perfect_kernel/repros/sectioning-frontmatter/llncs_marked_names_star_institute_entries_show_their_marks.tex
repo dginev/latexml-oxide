@@ -1,0 +1,18 @@
+% mechanism: a binding's own list cutter (`affiliation_calls`) shows a marked entry's mark where the names show its
+%   label (`emitter::NAMES_SHOWN_LABELS`, OD #1009): names printing `$^{1}$` and `$^{2,\star}$` show 1 and 2, so both
+%   entries show theirs; the star, which labels no entry, changes nothing
+% witness: synthetic (review revP4f B1's sibling; 1209.0041 the llncs shape (c))
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2,⋆", "1Univ A, Town A",
+%   "2Univ B, Town B"
+% engines: P4f: as expected; int164a: the entries' marks hidden
+% expect:  0 errors, 0 warnings; Ann Able 1 "1 Univ A, Town A"; Bob Baker 2,⋆ "2 Univ B, Town B"
+% status:  GREEN (P4f, P4fb; guard perfect_kernel_batchc1::marked_list_cut_as_its_binding_declares)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ \and Bob Baker$^{2,\star}$}
+\institute{$^{1}$Univ A, Town A \\ $^{2}$Univ B, Town B}
+\maketitle
+Text.
+\end{document}

@@ -155,8 +155,8 @@ pub(in crate::base_utilities) fn cut_list(
   Ok(Some(Tokens::new(calls)))
 }
 
-/// `_markshown`'s value for an entry that shows its mark where the names show theirs (the binding lists' cutter,
-/// `affiliation_calls`: `emitter::names_show_marks`); the Cut's show theirs (`true`). Read at `\lx@annotate@frontmatter@now`.
+/// `_markshown`'s value for an entry that shows its mark where the names show its label (the binding lists' cutter,
+/// `affiliation_calls`); the Cut's show theirs (`true`). Read at `\lx@annotate@frontmatter@now`.
 pub(super) const MARK_SHOWN_WITH_NAMES: &str = "names";
 
 /// Whether a cut `entry` is marked (`\lx@affiliation@withsup{…}` whole), and `attr` with `_markshown={shown}` where it is

@@ -66,13 +66,18 @@ const EMITTED: &str = "lx_fm_emitted";
 
 /// Whether a flush of this conversion emitted.
 pub(in crate::base_utilities) fn emitted() -> bool { lookup_value(EMITTED).is_some() }
-/// The State value saying whether a name the last flush with names wrote shows a mark it prints: a superscript its name keeps
-/// ([`per_author_marks`]), not a creator call's own label — where a binding's list cutter shows its entries' marks
-/// (`frontmatter_api::MARK_SHOWN_WITH_NAMES`, OD #1009; llncs's `\\institute{$^{1}$Univ A \\\\ $^{2}$Univ B}`, 1209.0041).
-const NAMES_SHOW_MARKS: &str = "lx_fm_names_show_marks";
+/// The State value holding the labels the names this flush writes show, `\u{1}`-separated: the superscripts they keep
+/// and print ([`per_author_marks`]), no `\\inst` and no creator call's own label (OD #1009; 1209.0041). Reset at each
+/// flush, the outer flush's restored after it (`place::digest_front_matter`).
+pub(in crate::base_utilities) const NAMES_SHOWN_LABELS: &str = "lx_fm_names_shown_labels";
 
-/// Whether the names the last flush wrote show the marks they print ([`NAMES_SHOW_MARKS`]).
-pub(in crate::base_utilities) fn names_show_marks() -> bool { lookup_bool(NAMES_SHOW_MARKS) }
+/// Whether the names this flush writes show `label` ([`NAMES_SHOWN_LABELS`]): a binding list's entry it labels shows
+/// its mark (`frontmatter_api::MARK_SHOWN_WITH_NAMES`; 2505.02655's `\\inst{1,3}\\textsuperscript{(\\Letter)}` shows none).
+pub(in crate::base_utilities) fn names_show_label(label: &str) -> bool {
+  lookup_string(NAMES_SHOWN_LABELS)
+    .split('\u{1}')
+    .any(|shown| shown == label)
+}
 /// The State value true inside `\\lx@frontmatter@itemonly`: what an item's content marks labels nothing, the reading's
 /// labels stand (`with_pending_entry_attr`).
 pub(in crate::base_utilities) const EMITTING: &str = "lx_fm_emitting";
@@ -1538,6 +1543,32 @@ fn marks_of(source: usize, role: &str) -> Vec<String> {
     events
       .iter()
       .filter(|e| e.kind == EventKind::Mark && e.role.as_deref() == Some(role))
+      .filter_map(|e| e.label.as_deref())
+      .flat_map(mark_labels)
+      .collect()
+  })
+}
+
+/// The labels of the marks the block at ledger index `source` prints in `runs` (field offsets, a written name's):
+/// superscripts, no `\\inst` or binding's request, which print nothing (ptephy's `\\name{…}{1}`, 1703.03659; 1804.00518's
+/// `$^2$Yuankai Qi`, whose mark no name's run holds).
+fn marks_in(source: usize, runs: &[(usize, usize)]) -> Vec<String> {
+  with_block(source, Vec::new(), |block, events| {
+    let at = |p: u16| usize::from(p).checked_sub(block.range.0);
+    events
+      .iter()
+      .filter(|e| {
+        e.kind == EventKind::Mark
+          && matches!(
+            e.role.as_deref(),
+            Some("sup" | "math" | "sup parted" | "math parted")
+          )
+      })
+      .filter(|e| {
+        e.span
+          .and_then(|(s, t)| Some((at(s)?, at(t)?)))
+          .is_some_and(|(s, t)| runs.iter().any(|&(from, to)| from <= s && t <= to))
+      })
       .filter_map(|e| e.label.as_deref())
       .flat_map(mark_labels)
       .collect()
@@ -5051,6 +5082,8 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     .collect();
   let keeps = |source: usize| keeps_marks.get(&source).copied().unwrap_or(false);
   let mut names: BTreeMap<usize, (Option<Vec<Token>>, Vec<Token>)> = BTreeMap::new();
+  // (the runs each name written from its tokens is taken from, its marks written past it too: what it prints, [`marks_in`])
+  let mut name_runs: BTreeMap<usize, Vec<(usize, usize)>> = BTreeMap::new();
   // (the footnote counter's steps of the notes written apart, on the creator where each prints: `note_steps`)
   let mut steps: BTreeMap<(usize, bool), usize> = BTreeMap::new();
   let mut on_names: BTreeSet<(usize, (u16, u16))> = BTreeSet::new();
@@ -5079,12 +5112,15 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       .collect();
     let mut runs: Vec<(usize, (usize, usize))> = Vec::new();
     let mut stepped: BTreeSet<usize> = BTreeSet::new();
-    for (k, (&i, (name, cites, run, _, in_name))) in members.iter().zip(tokens).enumerate() {
+    for (k, (&i, (name, cites, run, apart, in_name))) in members.iter().zip(tokens).enumerate() {
       if let Some(run) = run {
         runs.push((i, run));
       }
       stepped.extend(in_name);
       let name = name.filter(|_| !overlapping.contains(&k));
+      if name.is_some() {
+        name_runs.insert(i, run.into_iter().chain(apart).collect());
+      }
       names.insert(i, (name, cites));
     }
     if let Some(&first) = members.first() {
@@ -5217,20 +5253,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     .filter(|(_, keep)| **keep)
     .map(|(&source, _)| (source, marks_of(source, "inst")))
     .collect();
-  // (whether a name this flush writes shows a mark it prints — a superscript, no `\\inst` or binding's request, which print
-  // nothing: ptephy's `\\name{…}{1}`, 1703.03659; [`names_show_marks`])
-  let printed_marks: BTreeMap<usize, Vec<String>> = keeps_marks
-    .iter()
-    .filter(|(_, keep)| **keep)
-    .map(|(&source, _)| {
-      let printed = ["sup", "math", "sup parted", "math parted"]
-        .iter()
-        .flat_map(|role| marks_of(source, role))
-        .collect();
-      (source, printed)
-    })
-    .collect();
-  let mut shows_marks = false;
+  let mut shown_labels: BTreeSet<String> = BTreeSet::new();
   for &i in fresh
     .iter()
     .filter(|&&i| !whole.contains(&resolved.creators[i].source))
@@ -5243,13 +5266,16 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     let own = creator_call_of(c)
       .map(|call| call.labels())
       .unwrap_or_default();
-    shows_marks |= keeps
-      && c.requests.iter().any(|request| {
-        !own.contains(request)
-          && printed_marks
-            .get(&c.source)
-            .is_some_and(|p| p.contains(request))
-      });
+    // (the labels it shows: the requests its written runs print, [`NAMES_SHOWN_LABELS`])
+    if keeps && let Some(runs) = name_runs.get(&i) {
+      let printed = marks_in(c.source, runs);
+      shown_labels.extend(
+        c.requests
+          .iter()
+          .filter(|request| !own.contains(request) && printed.contains(request))
+          .flat_map(|request| clean_frontmatter_labels(request, "affiliation")),
+      );
+    }
     for request in c
       .requests
       .iter()
@@ -5261,14 +5287,15 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       }
     }
   }
-  if !fresh.is_empty() {
+  if !shown_labels.is_empty() {
     DebugFeature!(
       "frontmatter",
-      "FRONT the names show their marks: {shows_marks}"
+      "FRONT the names show the labels {shown_labels:?}"
     );
+    let shown: Vec<&str> = shown_labels.iter().map(String::as_str).collect();
     assign_value(
-      NAMES_SHOW_MARKS,
-      Stored::Bool(shows_marks),
+      NAMES_SHOWN_LABELS,
+      Stored::String(pin(shown.join("\u{1}"))),
       Some(Scope::Global),
     );
   }
