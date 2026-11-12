@@ -22622,7 +22622,7 @@ a T1 document `<d>` prints as written (pdflatex), no longer ¡d¿; 0710.2028's `
 (`\renewcommand\encodingdefault{OT2}\normalfont`) now prints its OT2 transliteration in Cyrillic ("Там даже …", as the
 PDF). The bindings that stand for a package or class setting the default do so as the original does (77u r3):
 cmbright_sty.rs runs cmbright.sty:26-28, acmart_cls.rs sigchi-a's `\@ACM@sigchiamodetrue` and `\familydefault`
-(acmart.cls:238-240, :888-890). Residuals (SYNC_STATUS "Font-Selection Chain Residuals" 5-7): `\textnormal` in maths
+(acmart.cls:238-240, :888-890). Residuals (`perfect_kernel/OPEN_ROWS.md` "FONT — Font-Selection Chain Residuals" 5-7): `\textnormal` in maths
 (`\textnormal@math`) keeps its fixed serif font; a `.bib` entry's author names and year carry no sans; a family the
 font table does not know falls back to serif only in `\normalfont` — opensans.sty's `[default]` (:160-161,
 `\opensansfamily`) stays serif. A formula's tokens are written against the text default, not the sans text (#780). Repros

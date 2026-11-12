@@ -2122,3 +2122,178 @@ On `pk/int161a` after the int160a push (`2d74850c2f`); every batch reviewed and 
 - **DTL1a, DTL1b (QA10, BM Q1.4 deferred sizing):** a foreignObject reads its box's declared size before the measured one (Perl `getSize`), a String-declared size falling through; pgfmath reads `\wd`/`\ht`/`\dp` (OD #1004) and unary minus binds below `^` (KPE #1221): the Rust-only "Dimension too large" floods gone (2010.05701 260 → 0 W, 2604.09771 37,649 → 53); REDs for a postfix before `^` and an expl3 box name (fixed next in DTL1e).
 - **Chain int161a (the one large A/B):** gates 8041/8041; A/B 28,354 → 86 changed: 46 better, 38 lateral, 2 load noise (2302.07562, 2505.20009 re-checked identical), 0 worse (CL161); E 45,813 → 45,788, F 172 → 172; stage2 1,434 ids, creators changed 0; cost ≤ +0.083 %; nets 136 worse 0; sweep #176 G1-G4 0, G5 58 (tikzpingus-doc, a 172 s manual, timed out under load — instructions −0.03 % vs int160c).
 - **SR1 parked (QA60 site 8):** DG ruled "digested evidence" then "author's group" (a store printed in the authors' group stays theirs, as int160b); after two fix rounds SR1's net effect was three papers' `\titlenote`s in `\title` → pubnotes for ~+370 lines; parked, branch kept; rows SR4/SR5 queued.
+
+## Moved from SYNC_STATUS by the 2026-11-12 compaction (SYNC3)
+
+Verbatim from `docs/SYNC_STATUS.md` (DG 2026-11-12: "We should have a single point of entry for work lists … compact / archive any old and completed tasks"): the compaction log, the old ranked index table, row R's narrative (now its conclusions there), the closed rows 0 (met), 0b (`author_block/` deleted; its work continues as Option C P4b-P6), R8 (closing), XP, R3 (R3b/R3d/R3g closed; its open tlp.cls residual is OPEN_ROWS "R3T"), R4, and the narratives' name list. The post-merge open rows moved whole to `perfect_kernel/OPEN_ROWS.md` "Post-merge rows moved from SYNC_STATUS (SYNC3)".
+
+### The compaction log before SYNC3
+
+*Last compaction: 2026-11-09 (SYNC1c) — every open row whole and live again: row G in the ranked worklist, the inventory's 84 long rows and the pre-flip leftovers row in [`perfect_kernel/SILENT_LOSS_INVENTORY.md`](../perfect_kernel/SILENT_LOSS_INVENTORY.md), split at sentences only. 2026-11-09 (SYNC1b) — the silent-loss inventory moved to [`perfect_kernel/SILENT_LOSS_INVENTORY.md`](../perfect_kernel/SILENT_LOSS_INVENTORY.md), with the open facts of its 33 long rows lifted from the archive. 2026-11-09 (SYNC1) — every table row became a `###` section of one-fact bullets; the landed rows (run 336, the bundle rows int119a-int152a, int133a, the pre-flip leftovers' history, XP, R4), the long rows' landed history and the Rust Error Fixes' bodies moved verbatim to [`archive/SYNC_SESSIONS_2026-11.md`](SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1); before: 2026-10-23 — the batch and integration narratives (63a–int73, 7,464 lines) and 51 landed rows moved to `archive/SYNC_SESSIONS_2026-10.md`, the four open-row detail sections (751 lines) to `perfect_kernel/OPEN_ROWS.md` (8,677 → 426 lines); before: 2026-10-04 — the run-329 narratives (61r-62f) moved to `archive/SYNC_SESSIONS_2026-10.md`, the parked math rows to `math/MATH_PARSE_RESIDUALS.md`, landed rows removed; before: 2026-10-02 — the K13 stage-2 findings and the rc131/rc132 + 57cn–59l rows moved verbatim to `perfect_kernel/archive/LEDGER_PHASE57_58_2026-10-02.md`, their open residuals kept here. Prior: 2026-09-27 (closed R1, R2, R5 and the 2026-08-02 status snapshot to `archive/SYNC_SESSIONS_2026-09.md`); 2026-09-03 (949 → ~320 lines; 1276 → 953); 2026-08-18 (1462 → ~890); 2026-07-25 (1979 → ~500).*
+
+### The ranked index table (as of 2026-11-12; was "Ranked worklist — start here")
+
+Ordered by importance (2026-10-04 review): closing the perfect-kernel goal, then run 329 and its residuals (they seed
+the coming arXiv success-rate task, not started), the rulings that block rows, the work safe to do while the run
+finishes (T1, T2, F1, F2), then the older parity rows. Within a tier: **does it reproduce today** → **is a real user
+affected** → **is it unblocked** → **effort**.
+
+| # | item | state | size |
+|---|---|---|---|
+| R | Road to the main merge (user 2026-11-09: "keep planning out all steps … towards completing our main goal"; … | OPEN — step (1) **done in int155a**: `author_block/` deleted (Plan A: Z18k, Z18l reroutes, Z18m/Z18m2 the rest moved); left Z18n, the e0 fence hardening; step (2) B1/B2, CR10b, CR10c, pazh `\address`, `\@nil` done; neurips_2024, 77p, the image before a URL left | L |
+| 0 | The TeX Live manuals: every regression addressed before the merge (user 2026-11-06: "This remains the primary … | met; margin batches landing | — |
+| 0a | M3: the manuals' remaining regressions | F1-F10 done, 3 deferred | S |
+| 0b | The frontmatter's old engine out of every decision before the merge, and all it leaves unused deleted (user … | **Route D (user 2026-11-06):** the experiment, then one switch for every paper with an author block; a failed … | about 12-15 batches |
+| 0c | Noticed during the performance work, no fix yet. | open | S each |
+| R8 | Perfect-kernel program | **CLOSING**: bar confirmed (user 2026-10-04); ar5iv-css PR #54 open; run 329 completes | program |
+| G | Run 336 | TRIAGED; open residuals below | program |
+| KC | Kernel capability program | **ORDERED**: K24 LANDED (`ab_audit`, p0 `1e47551e6c`); manual sweep #149 → K20 G4 → G2 → G3 → G1 → K21, K22's … | program |
+| MS | TeX's math-group recovery | **PARTLY DONE 65n**; (1) next | M |
+| XP | A detail-less XPath failure in post is a resource failure, not 100+ Errors | closed; archived | — |
+| BD | A `\DeclareBoldMathCommand` delimiter after `\left`/`\right` | **OPEN**, RED only | S-M |
+| A2 | Fidelity audit round 2 residuals | **OPEN** (12 only); re-read 2026-10-25: entics `\thanksref{ALL}` (10), `$(a)$` marks (15) and the llncs check … | small |
+| A3 | arXiv html_feedback subgoal | **OPEN**; baseline sweep + 4 classes verified (raw-latex-leak 12/15 fixed, tcolorbox 6 fixed + 5 viewer, tikz … | medium each |
+| A4 | Full arXiv fidelity audit | **QUEUED, LAST**: after the run-336 Error/Fatal subgoal and the queued payloads reach diminishing returns | large |
+| G1 | Run-329 open residuals | **NEXT** (arXiv success-rate task) | medium each |
+| D1 | Rulings | RULING | small-medium |
+| T1 | Repro suite move | **OPEN**, not started (user 2026-10-02) | large |
+| T2 | Test API stage 2 | **OPEN** (stage 1 landed 61a) | medium |
+| CI | After the merge into `main`, not before (user 2026-11-06). | **OPEN** — localhost study | medium |
+| TLY | A target TeX Live year per conversion | **OPEN**, design (needs the year source: submission date vs a CLI flag) | family |
+| AT | AutoTeX emulation | **QUEUED** (near the end) | family |
+| F1 | Per-encoding text commands | **PARTIAL** | medium |
+| F2 | Small RED repros | **OPEN**, safe now | small each |
+| R3 | Bibliography-absence campaign | **R3d next** (12 papers left, unblocks alignment macro `&` splits) | medium |
+| R8b | forest.sty full support | **OPEN**, recorded | large |
+| R4 | `--preload=<cls>` trips the LaTeX hook stack (`Extra \PopDefaultHookLabel`) | closed; archived | — |
+| R6 | `Collector::rescan` Refactor for Generated Backmatter | **OPEN**; `Scan` owns `ObjectDB` by value; generated backmatter lacks full relations/labels | medium |
+| R7 | Presentation-MathML **F5** Linebreaker | **OPEN**, full linebreaker feature gap needing a port-or-drop scope decision | family |
+
+### R — Road to the main merge (user 2026-11-09: "keep planning out all steps … towards completing our main goal"; inventory `agent_reports/2026-11-09_PREMERGE_inventory.md`, 30 …
+
+- **Road to the main merge (user 2026-11-09: "keep planning out all steps … towards completing our main goal"; inventory `agent_reports/2026-11-09_PREMERGE_inventory.md`, 30 items; supersedes the 2026-11-05 close order)**
+- Plan:
+  - **Order, each step reviewed and bundled:** (1) **single engine clean** — `author_block/` gone (row 0b);
+  - (1) done on `pk/int154a`: the deletion pass DEL1-DEL5 (tests −349, the switch, the old driver −5.8k, the S2b writer and census −12.2k; output byte-identical), Z18a the API's Cut/Kind out of `author_block/` (byte-identical), the llncs reroute Z18c-Z18i (OD #984; its first blockers in `agent_reports/2026-11-09_Z18c_report.md`), Z18j the API engine and field readers moved (Plan A batch 1, `256a8cd611`); history in `archive/SYNC_SESSIONS_2026-11.md` "Bundle int154a".
+  - (1) **Plan A for the rest of Z18 (user 2026-11-10, "Plan A: move now, reroute in C"; plan `agent_reports/2026-11-10_Z18P_report.md`):** Z18k the omnibus `\authors` + eptcs reroute (done in int155a: Z18k/Z18k2/Z18k3, OD #991); Z18l aas; Z18m move the rest (the IJCAI chain, the authblk/ieeetran gates, the shared mark readers) and delete `author_block/`; Z18n the declined path's row sharing routed through the reading's helpers ("Route via reading helpers": keep its gains, call the reading's one copy, delete `shared_row/`'s token-level copy); authblk, IEEEtran, IJCAI, `@marked`, the stores and the Cut rerouted inside Option C P2-P4.
+  - (1) State: **done in bundle int155a** — Z18j, Z18k, Z18l merged; Z18m/Z18m2 moved the rest unchanged (the IJCAI chain to `defs/author_macros/ijcai.rs`, the mark/authblk/IEEEtran readers to `frontmatter/classify/old_reader/`, ERR2's title-code reader to `classify/title_code.rs`) and deleted `author_block/`; Z18o fixed the REDs the bundle introduced. E0h hardened the e0 fence, Z18o2 the stopgap scope (int156a); Z18n (the declined path) folded into Option C P2 (authblk): the emitter writes the no-author-block flushes from the reading, then `shared_row/`'s token copy (836 lines) is deleted.
+  - (2) **every RED seen on a real paper fixed** (user 2026-11-09; **narrowed for the merge 2026-11-11**, the user: "The 'fix them all' is a long-term goal for arXiv": before the merge a real-paper loss is fixed only at arXiv reach ≥ ~500, below it counted by a Warning — no silent loss — and kept as a catalogued RED; fixing them all is the arXiv goal after the merge): the silenced Errors FIRST (row 0b's item 39: an undefined command in an author field, 18 A/B papers), then the content residual (`FRONTMATTER_CONTENT_RESIDUAL_AT_EMIT2.tsv`: every word kept or counted), ejpecp, NE5's whole blocks, the footnote-counter whole block, the ORCID logo, 77p's grouping; synthetic-only stay REDs;
+  - (2) done on `pk/int154a`: the silenced Errors (ERR2, OD #983); the content residual triaged (CR1, CR5, CR9) and its real classes fixed (CR2-CR4 OD #985/#986/#972, CR6 + CR10a OD #987, CR8 OD #989/#990); ejpecp and the ORCID logo closed (CR5); the footnote-counter block written as Perl's split (CR7-CR7d, OD #988); NE5's whole blocks split but 0809.5152, 1110.6375 (the fail-safe) and 0906.2789.
+  - (2) State: done in int155a — CR10c (IEEEtran grades), CR10b (CR9's glued breaks, the `\fcolorbox` e-mail line, jheppub's abstract in `\author`), the push's B1 (1511.09009) and B2 for aaai2026/neurips_2022 (PB/PBb); left — pazh `\address` and 1802.01191 `\@nil` (RCcut), neurips_2024, 77p's grouping (2603.07345), the image before a URL (2503.08161); every open fact in `perfect_kernel/SILENT_LOSS_INVENTORY.md` "Bundle int154a — the residual".
+  - (2) State in int157a: the image before a URL kept, or counted where no written item holds it (IMG1, OD #989); left — neurips_2024, 77p's grouping (2603.07345), aa `\mail{\email{x}}`; open facts in `perfect_kernel/SILENT_LOSS_INVENTORY.md` "Bundle int157a — the residual".
+  - (2) State in int158a: a glued e-mail label names its contact, the address the content (GL1, OD #956/#992: hep-ph9606235, astro-ph0001190, hep-ph0411269, 2206.00543, astro-ph0107243, gr-qc0212108 — a broken `mailto:` before; Rust-only, ~380 arXiv); open facts in "Bundle int158a — the residual".
+  - **Pushed:** `pk/int154a` → `perfect_kernel` `1969cb34cb` (user 2026-11-10 "Push now, fix next", REDs B1/B2); `pk/int155a` (PB, Z18k, CR10b, Z18l, PC3, Z18m, Z18o, PF10) → `perfect_kernel` `8670d33a6c` (chain: gates 8017/8017, A/B E 45,827 → 45,818 F 172 → 172, nets worse 0, sweep #169 G1-G4 0, cost +0.14 %); `pk/int156a` (E0h, RA0, Z18o2, MB1, MB2) → `perfect_kernel` `e25c1a4881` (chain: gates 8026/8026, A/B 23 changed E 45,818 → 45,818 F 172 → 172, nets worse 0, sweep #170 G1-G4 0, cost ≤ +0.21 %); `pk/int157a` (OC1, SEP1, OC1c, SEP1b, IMG1, P20) → `perfect_kernel` `fcf7747d29` (chain: gates 8047/8047, A/B 11 changed (worse 0) E 45,818 → 45,818 F 172 → 174 (two A/B timeouts, clean on a quiet core), nets worse 0, sweep #171 G1-G4 0, cost ≤ +0.37 %); `pk/int158a` (P21, GL1, P21b, P21c, P24b, P21d, P21e, EJ1) → `perfect_kernel` `117af80fcf` (chain: gates 8067/8067, A/B 25 changed (worse 0) E 45,818 → 45,818 F 172 → 172, nets worse 0, sweep #172 G1-G4 0, cost ≤ +0.06 %); `pk/int159a` (P25, P26, RR1, P22, P27, P27b, FX24, FX25, FX27) → `perfect_kernel` `140bbb3d67` (re-chain int159b after FX27: gates 8095/8095, A/B 21 changed, worse 0 — 2511.15315 better, two pasj lateral, 8 load timeouts byte-identical alone, 10 math-budget noise byte-identical on re-run; E 45,823 → 45,824, F 172 → 174 (the timeouts); stage2 creators 0; nets 136 worse 0; sweep #174 G1-G4 0 (G5 57, the same canaries as #172; recall median 96.89 = #173); cost −0.05 … +0.02 %; net `src/` −507 against int158a's push, fm_loc 53,252 → ~52,700, spelling sites 109); `pk/int160a` (FN1, RB1, IV1, P3, CT1c, ST1, CT1a rows, P23, HG1, SVC rows, TP1, RK1, RB1c; GA1 reverted) → `perfect_kernel` `2d74850c2f` (chain int160b: gates 8037/8037, A/B 28,354 → 269 changed, 242 better, 25 lateral, 1 worse (2412.14256, RB1) + 2 RB1 losses (1309.4768, 2304.09163) fixed by RB1c, cost over the bar from TP1b's per-write key → RK1, nets 136 worse 0, sweep #175 G1-G4 0 (G5 57); then the lean checks int160c (DG: one large A/B per bundle): gates 8038/8038, stage2 creators 0, cost ≤ +0.444 % (1507.02068), the 269 re-checked: 237 identical to int160b, 31 restorations, duplicate removals, counted Warnings or math noise, none worse than int159b); `pk/int161a` (ML1, PI1, BU1+BU1b, DTL1a+DTL1b, the reviews' rows) → `perfect_kernel` with this commit (chain int161a: gates 8041/8041, A/B 28,354 → 86 changed: 46 better, 38 lateral, 2 load noise, 0 worse; E 45,813 → 45,788, F 172 → 172; stage2 creators 0; cost ≤ +0.083 %; nets 136 worse 0; sweep #176 G1-G4 0, G5 58 — tikzpingus-doc, a 172 s manual, timed out under load, instructions −0.03 %); each bundle's history in `archive/SYNC_SESSIONS_2026-11.md` "Bundle <label>".
+  - (3) **Option C P1-P6** (all segmentation on the digested reading; `FRONTMATTER_SINGLE_ENGINE_PLAN.md`) after Z18, with the plan's DoD items, frontmatter code and test compaction (table-driven, one conversion per fixture);
+  - (3) **Rulings 2026-11-11** (`FRONTMATTER_SINGLE_ENGINE_PLAN.md` "Segmentation is digested"): each port deletes the spelling path it replaces (P25 +112, P26 +44, P22 +123 net `src/` lines had not; the four bundles int156a-int159a +1,863), its output changing only where the PDF agrees (a condition; the goal stays every source word kept in high-quality semantic markup), every changed paper classified, none worse, its guards updated in the same commit (tests kept passing); the separator event carries its meaning (kernel / binding / raw), retiring the per-class `\and` lists and T8's spelling fallbacks, one shared helper — the next design batch, before P2-3. Each bundle row reports the spelling-split sites left, the net `src/` lines, the frontmatter line count and a dev re-score.
+  - (3) State in int157a: **P1 done on both routes** — OC1 the block routes, OC1c the API route (the emitter writes a reading-cut creator call one call per piece, in no-block papers too), OD #993; separators bound by meaning (SEP1, SEP1b, OD #994); P2 mapped (`agent_reports/2026-11-10_P2P_report.md`: P2-0 … P2-8, trap T8); **P2-0 done** (P20, OD #995: the binding-callable separator query, the cut labelseq call).
+  - (3) State in int158a: **P2-1 done outside llncs** — OmniBus, ptephy, webofc (P21), sv_support (P21b), aa (P21c, the events walker walking a paragraph's list as no group) hand the whole author list to the reading; P21d fixed P21's OmniBus regression (a name with an affiliation command after an `\and` read as the earlier names' affiliation; `column_own_text`), P21e scoped P21c's paragraph rule to the block's own level, EJ1 made a setter in an emitted author note write once (ejpecp `\EMAIL`); **P2-4 done** — eptcs's cells cut by the separator query's own run (P24/P24b, OD #991 (8): one `ArgSeparator::span` for both callers). OD #993 "P2-1 … P2-1d". Next: P2-2 (S2 institute splits), P2-3 (llncs), P2-5 … P2-8; BT1 parked (three NO-SHIPs; redesign BT2).
+  - (3) State in int160a: **P3 done** (names written from the rehearsal's expansion tokens); **P2-3 half** (P23: llncs's `\institute` list and marked author by meaning; the one-block list awaits DG's option); **one title-page reading** (TP1: `TitlePageReading`, `maketitle_runs` declarations incl. extsizes; RK1: its key watches the state only while a reading is held); FN1 (an author's `\footnotemark[n]` note is the creator's), RB1 + RB1c (REVTeX's post-`\maketitle` switch-off reaches only a repeated block, its new words counted; OD #1003), IV1, CT1c; tests: ST1, CT1a rows, HG1, SVC both-sides rows. Next (P4 study P4S): F0 marks query + P4a, P4d, P4c, P4b.
+  - (3) State in int159a: **P2-2 done** (P22, P22b, P22c: OmniBus's and aa's `\institute` lists cut first at the kernel's `\and` runs by meaning, no token rewritten); **P2-5 and P2-6's gates** (P25, P26: the small classes' and the stores' `\and` gates read separators by meaning); **P2-7 done** (P27: authblk's gates by meaning, the run cap counting calls; P27b: the emitter writes a no-block flush holding a `_share` contact, `shared_row/` deleted, net −862); FX24 (RR1 gap 24: an appended `\@author` tail kept where the title page prints it; 2511.15315's e-mails each on its author), FX25 (the title-page check reads a kernel `\and` as a word end, inside article's tabular), FX27 (the user's ruling: an unverified printed word is an `Info:frontmatter:annotated`, by evidence; `Policy::own_author_page`); RR1's 30 RED repros. Parked: P28 (token emulation; → P2-8b), SB1 (→ TP1/TP2, one title-page reading), FX26 (→ FX27), BT1/BT2 (→ P3, the user's ruling). Rulings of 2026-11-11 in `FRONTMATTER_SINGLE_ENGINE_PLAN.md` "Segmentation is digested" (a)-(e).
+  - (4) **the bars**: truth set, then a fresh holdout v4 read once — 98/98 on dev3/devh/dev20k and v4, longtail ≥ off with no regression (user 2026-11-09);
+  - (5) **non-frontmatter**: the generalization audit re-scoped and done before the merge (user 2026-11-09), T1 the repro suite move, **a frontmatter performance evaluation at the end of the frontmatter work** (user 2026-11-11: the rehearsal, the title-page runs, the separator query, the emitter; `instructions:u` against the 2026-10-31 audit's 18 documents; levers one per batch, byte-identical), the perf + RAM pass's remaining levers, row 0a's deferred manual REDs decided, workspace cleanup (keep-list to the user);
+  - (5b) **the BM Q&A work — approved by DG 2026-11-11 ("I approve your plan, let us proceed with full speed ahead")** (DG: "the replies from Bruce are extremely valuable and we should queue any important points that require work also as part of the goal before we reach a merge to main"; the answers of BM — Bruce Miller, LaTeXML's author — of 2026-11-05, every action tracked as QA01-QA90 in `~/data/pk_agents/main/bruce_qa/ACTIONS.md`): proposed: read-only studies beside the next chains (package internals our bindings lack — 5 of 14 checked; hooks, reversion `\lx@` leaks, bindings with no semantics, every speculative run that decides content → TP2/TP3, page-furniture census, the 8-bit fontmap fallback, native pgf/l3fp vs raw TeX, untracked length parameters, schema-extension inventory, the brucemiller/LaTeXML issues run on ours); small fixes (memoir-style `\list` labels from `\@itemlabel`, which ours replaces with `•`/`1.`; text before `\maketitle` that ours moves after the title block — whether it stays in place is DG's question; bibunits without a unit, `\meaning`'s run-varying `CODE(0x…)`, the 54 preamble-only commands live after `\begin{document}` under the Error boundary, a kernel-version switch, the face-free `para`/other hooks, unknown classes' title-page stores as frontmatter items); ruled by DG: **page furniture kept as metadata** (the element designed with BM); **comment compaction across the crates** (DG: "before the merge to main if possible"; BM: "long comments are a dead giveaway that you ain't me"), the last code pass before the close; at the close an eyeball review of rendered HTML beside the PDF (BM: "there's nothing to replace eyeballs"), the Perl-side patch set prepared (equationgroup id, bibunits, `\pretocmd` on locks, `\mbox`, `\bm`, the TOC copy, `subparagraph`, the abstract-heading XSLT; submitted at DG's call), `docs/parity/ORGANIZATION.md` extended to every crate for Perl readers. After the merge: macro faces (BM Q3.8), side-by-side figures (C1), the `ELIDEOP` rename, thin bindings, XeTeX/LuaTeX modules, a Rust BibTeX, semantic SVG, in-output Error marks, LaTeXML 0.9 as reference;
+  - (5b) State in int161a: QA45 (ML1: list labels from `\@itemlabel`, OD #180), QA54 fix (b) (PI1: amsmath, lineno, microtype internals; KPE #1222), QA30 (BU1: bibunits units by bibunits.sty's global switch; KPE #1223), QA10/BM Q1.4 deferred sizing (DTL1a+b: a box's declared size first; pgfmath `\wd`/`\ht`/`\dp`, OD #1004; unary minus, KPE #1221); QA60 site 8 (SR1) parked after DG's "author's group" ruling (2026-11-12; SR4/SR5 queued).
+  - (6) **close**: goal docs current, the closing manual sweep on the final head (row 0's G1-G5), the 2605/2606 cortex reruns (G6; the fleet rebuild needs the user's OK), **the CI performance work as the last step before the merge** (user 2026-11-11: "once we merge we will start working on public issues and PRs, and start running CI instantly"; releases run the whole suite on every supported platform — Linux, macOS, Windows — within each runner's timeout: dump formats built once per run, shard balance, the long-pole tests, table-driven guards; study `agent_reports/2026-11-11_TC0_report.md`), the merge PR (the user confirms).
+  - **After the merge:** the arXiv rerun, A4, AutoTeX, forest, the ar5iv-css port, a release.
+- State: OPEN — step (1) done (int155a: `author_block/` deleted; int156a the fence hardened; Z18n folded into Option C P2-7); step (2) left: neurips_2024, 77p, aa `\mail{\email{x}}`; step (3) P1, P2-0 (int157a), P2-1 outside llncs and P2-4 (int158a), P2-2, P2-5/P2-6 gates, P2-7 (int159a), P3, P2-3 half, one title-page reading (int160a) done; next: P4 (F0 → P4a → P4d → P4c → P4b), TP2, P2-3's rest, P2-8b, the separator's print-time meaning (SM B1-B3); was: P3 (names from a macro's expansion; FN1, RB1, IV1 reviewed for int160a), P2-3 (llncs), P2-8b (IEEEtran), the RT1 merge list (CT1, ST1)
+- Size: L
+- Detail: this row; the inventory
+
+### 0 — The TeX Live manuals: every regression addressed before the merge (user 2026-11-06: "This remains the primary goal of this branch").
+
+- **The TeX Live manuals: every regression addressed before the merge (user 2026-11-06: "This remains the primary goal of this branch").** **Met at sweep #152 on `pk/int142a` and held at #154 on bundle int143b and #156 on bundle int144b: goal set 1,552 of 1,552 pass G1-G4, 100 %; no new Fatal or timeout against #149 (10 gone); manuals over 120 s 2 → 0.** Open under this row: the deferred REDs of row 0a.
+- Sweep #150 on `d6e175bacb`: goal set 1,531 of 1,552 pass G1-G4, 98.65 %, against 99.81 % at #149;
+- G1 10, G2 6, G3 5, G4 0;
+- in scope clean 1,582 of 1,602.
+- None is from Bundle int140a (21 run on int139c: equal).
+- `chain/bundle_chain.sh` now runs the sweep.
+- Batches M1, M2 fix clusters A, C1-C9 (the worklist's `Done` column; guards `perfect_kernel_batchm1`): sweep 902 on M2 gives 1,550 of 1,552, G1 0, G2 0, G3 0, G4 2
+- State: met; margin batches landing
+- Size: `pgf-interference-en/-de` pass with a thin margin until `pk/P2` (150 s to 33.6 s); clusters B, T and the `?` canaries left, row 0a
+- Detail: [`perfect_kernel/MANUAL_REGRESSIONS.md`](../perfect_kernel/MANUAL_REGRESSIONS.md)
+
+### 0b — The frontmatter's old engine out of every decision before the merge, and all it leaves unused deleted (user 2026-11-06)
+
+- **The frontmatter's old engine out of every decision before the merge, and all it leaves unused deleted (user 2026-11-06)**
+- State:
+  - **Route D (user 2026-11-06):** the experiment, then one switch for every paper with an author block;
+  - a failed experiment means both engines fenced at the merge.
+  - Z0-Z3 done.
+  - **The experiment passed its score gates** and showed what a score can't see: creator XML changed on 47 % of agreeing papers, 805 tests move, whole-dev3 98.31 per creator before repairs (`agent_reports/2026-11-07_S0_report.md`, the plan's S0 row).
+  - Z4a, the emitter with its markup, and Z14, the reading's repairs, landed (int144b);
+  - today's state, the batches in flight and the next steps are the plan's "Where it stands".
+  - **The deletion pass done (DEL1-DEL5, bundle int154a):** no `LATEXML_FM_EMIT` switch, no old driver, no S2b writer or census.
+  - **`author_block/`: DELETED in bundle int155a** (6,458 → 0 file lines: Z18a 6,458 → 4,637; Z18j → 3,364; Z18k2 → 2,552; Z18l → 2,069; Z18m/Z18m2 the rest moved unchanged — the old reader's code now in `classify/old_reader/` and `defs/author_macros/ijcai.rs`, 1,702 lines, fenced by e0's `MOVED_OLD_READER_FILES`).
+  - What still holds old-reader code (to reroute in Option C P2-P4): the IJCAI chain and its `@marked`/`@shared` gates (sv, aistats, revtex, iopart, informs reach it), authblk's gates and label readers, IEEEtran's, `frontmatter_stores`' `class_numbered_institutes`, llncs's `affiliation_calls` for `\lx@llncs@institute@sup` — all in the fenced old-reader files.
+  - Outside it, still an old leftover: the declined path's row sharing (`place.rs` `share_row_contacts` → `shared_row.rs` + `shared_row/emails.rs`, ≈730 lines, OD #901) — Z18n.
+  - **Then all token segmentation onto the digested reading before the merge (user 2026-11-07, option C; the plan's "Segmentation is digested", P1-P6)**
+- Size: about 12-15 batches
+- Detail: `parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md` "The path"
+
+### R8 — Perfect-kernel program
+
+- **Perfect-kernel program** (branch `perfect_kernel`; the TL-manual corpus; generalized capabilities K1–K18 in [`perfect_kernel/KERNEL_CAPABILITIES.md`](../perfect_kernel/KERNEL_CAPABILITIES.md)) — goal bar met at sweeps #146-148 (G1–G5);
+- close status in [`PERFECT_KERNEL.md`](../PERFECT_KERNEL.md)
+- State: **CLOSING**: bar confirmed (user 2026-10-04); ar5iv-css PR #54 open; run 329 completes
+- Size: program
+- Detail: [`PERFECT_KERNEL.md`](../PERFECT_KERNEL.md)
+
+### XP — A detail-less XPath failure in post is a resource failure, not 100+ Errors
+
+- Closed (**FIXED 80m**); the row verbatim in [`archive/SYNC_SESSIONS_2026-11.md`](SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Row XP".
+- Facts carried (closed row; the residual note):
+  - a fresh-process `ulimit -v` sweep of 2101.04438 (1.2-7.0 GB) never reproduces it (the Rust side fails first), so it needs a reused child.
+
+### R3 — Bibliography-absence campaign
+
+- **Bibliography-absence campaign** (PR #444) — **291 recovered / 20 338 entries**.
+- Remaining unblocked: **R3d tab-mark parameter scan vs cell read**
+- State: **R3d next** (12 papers left, unblocks alignment macro `&` splits)
+- Size: medium
+- Detail: Open items §R3, [`RESIDUAL.md`](../parity/bib_absence_2026-07-29/RESIDUAL.md)
+
+- Detail (from SYNC_STATUS "Open items"):
+- **R3d — RE-MEASURED + CLOSED int26 (agent_reports/2026-10-18_r3d_remeasure.md):** of the 28 papers
+  (`docs/parity/bib_absence_2026-07-29/residual_characterization.tsv.gz`, `\lx@begin@alignment` rows) 27 convert to the
+  end on head with their bibliographies; the last, 2606.03447, was physics' unguarded `[…]` read (KNOWN_PERL_ERRORS
+  #981), fixed in int26 (`phys_read_optional`). The mechanism below was wrong: TeX's `macro_call` does not disable tab
+  marks (that is `read_toks`, tex.web §482); ltcmd's `\group_align_safe_begin:` (latex.ltx:2103-2110) does, so a global
+  guard in `Parameters::read_arguments` would be unfaithful (settled dead end; the 5 regressions were correct).
+- **(historical) R3d: Alignment Parameter Scan vs Cell Read Distinction (`suppressed_tab_marks`):**
+  - *Symptom:* An unescaped `&` inside a delimiter-fenced macro argument splits the alignment row and truncates the document (and bibliography). 12 papers remain affected.
+  - *Mechanism:* `tex.web` §394 `macro_call` suppresses tab marks while scanning parameters. `SuppressedTabMarks` in [`latexml_core/src/common/local_assignments.rs:194`](../../latexml_core/src/common/local_assignments.rs#L194) fixed `physics.sty`'s `\mqty` (14 papers), but applying it globally to `Parameters::read_arguments` regressed 5 tests (`cells_test`, `numprints_test`, `xytest_test`, `consort_flowchart_test`, `unit_tests_by_silviu_test`) because that path also reads alignment cell content.
+  - *Action:* Distinguish macro parameter scanning from alignment cell reading in `Parameters::read_arguments` so tab marks inside `{...}` do not split outer cells.
+- **R3b — RE-MEASURED + CLOSED 2026-10-18 (agent_reports/2026-10-18_r3b_rootcause.md):** the six "real `\cite`, empty
+  bibliography" papers all keep their bibliographies on 67int27 — 2605.14990 53, 2606.05629 19, 2606.10056 26,
+  2606.17491 30, 2606.00231 31 bibitems, each = pdflatex+bibtex's `.bbl`, 0 E/F (count them in the post-processed
+  output: the core XML's `<bibliography files=…>` is a placeholder latexml_post fills from the `.bib`). 2605.29754
+  comments out biblatex's `\printbibliography` and types its list by hand (kept); its `\cite`s render the keys with
+  `Warning:expected:ids Missing Entry`, as Perl (SHARED, honest; biblatex labels without an `ltx:bibliography` would be
+  a 1-paper surpass, not pursued). Side finding, open: tlp.cls `\maketitle` leaves a group open — a Rust-only
+  `Warning:unexpected:\end{document} … inside a group at level 1` (2606.10056; content intact; suspect the locked
+  `\maketitle` replaying tlp.cls:519-536 `\@ifnextchar [{\m@ketitleone}…` through `\lx@deposit@maketitle`; repro
+  scratch_356a0c47/r3b/repro_tlp/a.tex).
+- **R3g: amsrefs bare `\begin{biblist}` — FIXED (71a):** a `{biblist}` outside `{bibdiv}` opens its own bibliography
+  through the backmatter route (amsrefs_sty.rs; KNOWN_PERL_ERRORS #939).
+
+### R4 — `--preload=<cls>` trips the LaTeX hook stack (`Extra \PopDefaultHookLabel`)
+
+- Closed (**RESOLVED** (re-verified on int101a 2026-10-25: `--preload=` article, report, book, amsart, revtex4-2 all 0 …); the row verbatim in [`archive/SYNC_SESSIONS_2026-11.md`](SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "Row R4".
+
+
+- RESOLVED (re-verified on int101a 2026-10-25); the detail verbatim in [`archive/SYNC_SESSIONS_2026-11.md`](SYNC_SESSIONS_2026-11.md#moved-from-sync_status-by-the-2026-11-09-compaction-sync1) "R4 detail".
+
+### Batch and integration narratives — archived 2026-10-23
+
+The landed batches 63a–79b and integrations int51–int73 (with the run-329 and run-336 residual notes they grew out of)
+moved verbatim to [`archive/SYNC_SESSIONS_2026-10.md`](SYNC_SESSIONS_2026-10.md) § "Moved 2026-10-23"; search it
+by the batch name. Their open residuals are rows of [`perfect_kernel/OPEN_ROWS.md`](../perfect_kernel/OPEN_ROWS.md)
+§ "Archived-narrative residuals (digest 2026-10-23)" (292 items as 209 rows). New batch and integration narratives go to the month's `archive/SYNC_SESSIONS_YYYY-MM.md`
+directly; this file keeps rows only. Archived names: 65c, 64zf, 65d, 65b, 65e, 65a, 65h, 65i, 65m, 65f, 65l, 65j, 65r, 65k, 65p, 65n, 65o, 65s, 65t, 65v, 65w, 65x, 65y, 65z, 66b, 66c, 66d, 66e, 66f, Runs 346/347, 67d, Fleet TeX tree, 67g, 67j, 67l, 67m, Runs 366/367, Runs 364/365, Runs 362/363, Runs 360/361, Runs 358/359, 68f, 68c, Run 357, Run 353, 67o, Run 351, 67n, Runs 354/355, 67q, 67r, 67p, 67s, 67u, Residual of 67u — our empty `\Gin@driver` sends trimclip to its PGF fall-back, 67ps, 68d, 67x, Fleet packaging (68d study, not a loader bug), 67y, Residual of 67y — a font-size change after a formula rewrites its `tex=`, Residual of 67y — a `\par` in a frontmatter note pulls the formula after it into the styled text before it, 67z, 68k, 68n, 68g, 68a, 67w, 68q, 68r, 68s, 68t, 68v, 68w, 68x, int17, 68y, 68z, 69a, 69b, 72a, int20, 70b, 69c, int19, 70a, 71a, fms1, 73a, 72b, 73b, 70c, 74a, int25, int26, 76a, 75a, 77j, 77k, 77s, 77u, 78a, 78b, 78c, 78d, 78e, 78m, 78p, 78i, 78l, 78k, 78o, 78q, 78j, 78g, 78f, 78n, 78r, 78s, 78u, 78t, 78v, 78y, 78w, 78z, 79a, 78x, 79b, split114, FM S2a.1, FM S2a.2, 77x, 77p, 77v, 77w, 77y, 77t, 68i, 68j, 68b, 68h, subfig passes a key's value unexpanded, A stored `\ProcessOptions` list drops `\protect` before a robust or optional-argument command, caption v1 keywords given by a protected or robust macro, `\ProcessKeyOptions` sees an expanded option list, A local `my<binding>.sty` loads the binding instead, Residual of 68h — trimclip's PGF fall-back under `[dvipdfmx]`/`[dvipdf]`, 67v, 68u, 67b, 67a, 66z, 66y, 66x, 66w, 66v, 66t, 66s, 66r, 66q, 66o, 66n, 66m, 66l, 66k, 66j, 66g, 66h, 63b, 63l, 63k, 63j, 63i, 63h, 63g, 63f, 63e, 63d, Fleet address-space ceiling → `Fatal:TooManyErrors`, Mouth EoF, Document Malformed, never_completed, IMS bindings.
+
+### Open-row detail — moved 2026-10-23
+
+"Corpus Triage Quick Wins", "Perfect-kernel RED repros without a row elsewhere", "Fidelity audit round 2" and "Open rows
+from the main-stream handoff register" moved verbatim to [`perfect_kernel/OPEN_ROWS.md`](../perfect_kernel/OPEN_ROWS.md) (rule 3:
+a section past ~100 lines is its own doc). Every row there is open unless it says otherwise.
+
