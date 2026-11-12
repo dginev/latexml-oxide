@@ -1,7 +1,6 @@
 //! The contact fields' own readers: the owner of a contact placed apart from the names (`\lx@add@contact@placed`), and
 //! the text of an address as its field writes it. Moved unchanged from `author_block/affiliations.rs` and
-//! `author_block/email_owners.rs` (Z18a): field logic, not author-block parsing; and `queued_author_name_keys`, which the
-//! API's address placement shares, moved unchanged from `author_block/affiliations.rs` (Z18j).
+//! `author_block/email_owners.rs` (Z18a): field logic, not author-block parsing.
 
 use super::*;
 
@@ -20,7 +19,8 @@ pub(in crate::base_utilities) enum ContactOwner {
 /// 1. the mark written on the contact itself (`$^*$x@y`), when one queued author requests it — the contact's own mark
 ///    is the strongest evidence, stronger than the spelling (`*b@x` under `A$^*$` and `B` is A's); when several
 ///    request it, the one of them the address spells (1312.7046);
-/// 2. the author whose surname the address's local part spells ([`spelled_owners`]: 0901.2914);
+/// 2. the author whose surname the address's local part spells ([`spelled_owners`]: 0901.2914), the names read as they
+///    print (`queued_author_name_keys`: a macro-held name, a `\let` copy's; P5c);
 /// 3. the only author of the current group (`\lx@frontmatter@group@start`; the whole queue when no class marks
 ///    groups);
 /// 4. else the block's.
@@ -39,7 +39,7 @@ pub(in crate::base_utilities) fn placed_contact_owner(
   weak: bool,
 ) -> Result<ContactOwner> {
   let authors = queued_author_count();
-  let keys = queued_author_name_keys();
+  let keys = queued_author_name_keys()?;
   let spelled: Vec<usize> = address_owners(&keys, content)
     .into_iter()
     .map(|at| at + 1)
@@ -151,19 +151,4 @@ pub(in crate::base_utilities) fn math_braces_as_printed(address: &Tokens) -> Tok
     at += 1;
   }
   Tokens::new(out)
-}
-
-/// The keys ([`NameKeys`]) of each queued author's name ([`queued_name`]), in queue order (the n-th digests
-/// with `author:n`).
-pub(in crate::base_utilities) fn queued_author_name_keys() -> Vec<NameKeys> {
-  with_value("frontmatter_raw", |v| match v {
-    Some(Stored::FrontmatterRaw(queue)) => queue
-      .iter()
-      .filter(|entry| {
-        entry.0 == "ltx:creator" && entry.1.get("role").map(String::as_str) == Some("author")
-      })
-      .map(|entry| NameKeys::of(&queued_name(&entry.2)))
-      .collect(),
-    _ => Vec::new(),
-  })
 }

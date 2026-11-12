@@ -165,15 +165,60 @@ fn at_own_level(events: &[Event]) -> Vec<bool> {
 /// order, each with its printed `label`; a number's suffix (`5\textsuperscript{th}`, `Event::ordinal`) is text, no mark.
 /// A mark a document macro prints is one (`\newcommand\ua{\textsuperscript{1}}`), as is a `\let` copy's.
 pub fn argument_marks(arg: &Tokens) -> Result<Option<Vec<Event>>> {
-  Ok(mark_events(arg)?.map(|events| {
+  Ok(argument_marks_and_name(arg)?.map(|(marks, _)| marks))
+}
+
+/// [`argument_marks`], and the name text of the same rehearsal ([`argument_name_text`]) where one was made.
+pub(in crate::base_utilities) fn argument_marks_and_name(
+  arg: &Tokens,
+) -> Result<Option<(Vec<Event>, Option<String>)>> {
+  if !may_mark(arg.unlist_ref()) {
+    return Ok(Some((Vec::new(), None)));
+  }
+  Ok(read_argument(arg)?.map(|ArgumentReading { events, .. }| {
+    let name = name_text(&events);
     let own = at_own_level(&events);
-    events
+    let marks = events
       .into_iter()
       .zip(own)
       .filter(|(e, own)| *own && e.kind == EventKind::Mark && !e.ordinal)
       .map(|(e, _)| e)
-      .collect()
+      .collect();
+    (marks, Some(name))
   }))
+}
+
+/// The words a name `arg` prints as the rehearsal digests it ([`read_argument`]): a macro's or a `\let` copy's
+/// expansion, an accent's letter, outside its notes, marks and contacts ([`events::events_text`]). Characters and groups
+/// are their text unrehearsed. `None` unread.
+pub(in crate::base_utilities) fn argument_name_text(arg: &Tokens) -> Result<Option<String>> {
+  if let Some(text) = typed_text(arg.unlist_ref()) {
+    return Ok(Some(text));
+  }
+  Ok(read_argument(arg)?.map(|ArgumentReading { events, .. }| name_text(&events)))
+}
+
+/// The text of a name's `events` ([`argument_name_text`]).
+fn name_text(events: &[Event]) -> String {
+  let printed: Vec<&Event> = events
+    .iter()
+    .filter(|e| e.kind != EventKind::Contact)
+    .collect();
+  events::events_text(&printed)
+}
+
+/// What `tokens` print where they are characters and groups alone; else `None` (a tie too: the rehearsal reads it).
+fn typed_text(tokens: &[Token]) -> Option<String> {
+  let mut text = String::new();
+  for t in tokens {
+    match t.get_catcode() {
+      Catcode::LETTER | Catcode::OTHER => t.with_str(|s| text.push_str(s)),
+      Catcode::SPACE => text.push(' '),
+      Catcode::BEGIN | Catcode::END => {},
+      _ => return None,
+    }
+  }
+  Some(text)
 }
 
 /// Whether `arg` prints a mark at any level (in a box beside its words too, `Ann\mbox{$^{1}$}`), and whether one is a

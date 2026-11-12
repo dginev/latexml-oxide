@@ -1,0 +1,37 @@
+% mechanism: `\lx@add@contact@placed` (OSA's `\email` after an author group, opex3.sty) ranks an address's owner by the
+%   author whose surname its local part spells before the group's only author (`placed_contact_owner`); the queued names
+%   are read as they print (`queued_author_name_keys`, the rehearsal's words): a name a macro holds, a `\let` copy's,
+%   an accent inside a macro (`M\"{u}ller` "mueller"), a name with a `\thanks` (the marks' rehearsal shared)
+% witness: synthetic (P5c); the literal shape 0901.2914, 1312.7046; ranking siblings 1710.00802, 1111.5264, 2407.14305
+% oracle:  pdflatex (opex3.sty of 0901.2914 beside it) 0 errors: "Bob Smith" "Univ Y", "Ann Able" "Univ X" "smith@x.org",
+%          "Dan Dole" … "dole@x.org", "Eve Müller" … "eve.mueller@x.org", "Gus Gray1" … "gray@x.org" — each address
+%          printed under the group after the name it spells, as the literal names' (P5c `placed_contact_owner_spelling_
+%          as_typed_and_rehearsed`) are
+% engines: rust P5cbase = each address on the next group's author (Ann Able, Cy Coe, Fay Fox, Max Moe): the token keys
+%          read no word of a macro-held name
+% expect:  0 errors, 0 warnings; smith@ Bob Smith's, dole@ Dan Dole's, eve.mueller@ Eve Müller's, gray@ Gus Gray's
+% status:  RED (P5cbase) -> GREEN (P5c: the queued names' keys are the rehearsal's printed words)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{opex3}
+\newcommand\bob{Bob Smith}
+\newcommand\dex{Dan Dole}\let\dan\dex
+\newcommand\eve{Eve M\"{u}ller}
+\newcommand\gus{Gus Gray}
+\begin{document}
+\title{T}
+\author{\bob}\address{Univ Y}
+\author{Ann Able}\address{Univ X}
+\email{smith@x.org}
+\author{\dan}\address{Univ Z}
+\author{Cy Coe}\address{Univ W}
+\email{dole@x.org}
+\author{\eve}\address{Univ V}
+\author{Fay Fox}\address{Univ U}
+\email{eve.mueller@x.org}
+\author{\gus\thanks{Funded.}}\address{Univ N}
+\author{Max Moe}\address{Univ M}
+\email{gray@x.org}
+\begin{abstract}A.\end{abstract}
+Text.
+\end{document}

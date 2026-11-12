@@ -401,8 +401,10 @@ const MOVED_CUT_KIND_EMISSIONS: &[(&str, usize)] = &[
 /// cutter reads where entries start as digested (`list_marks`), its callers carry each line's starts and each entry's
 /// opening mark, and the Cut's opening declarations end at the first start; the cut itself is in `classify/entry_starts.rs`.
 /// P4b4a3 to 2,217: the Cut's opening declarations (`cut.rs` `notes_lead_declarations`) moved to `classify/notes.rs`
-/// (`list_lead_declarations`), the cutter's pieces their reader too. P6's compaction lowers it.
-const MOVED_CUT_KIND_CODE_LINES: usize = 2_217;
+/// (`list_lead_declarations`), the cutter's pieces their reader too. P5c to 2,203: `queued_author_name_keys` (the queued
+/// names' token keys) deleted from `contacts.rs`, its successor the digested reading's in `queue_reading.rs`. P6's
+/// compaction lowers it.
+const MOVED_CUT_KIND_CODE_LINES: usize = 2_203;
 
 /// The fence on the moved Cut and Kind: they take no new decision either (review revZ18a check 3).
 #[test]
@@ -599,7 +601,6 @@ const OLD_READER_EXPORTS: &[&str] = &[
   "optioned_email_calls",
   "placed_contact_owner",
   "printed_marks_as_marks",
-  "queued_author_name_keys",
   "queued_row_start",
   "run_in_author_order",
   "shared_affiliation_calls",
@@ -1591,7 +1592,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // their rehearsal, reads a whole argument through parameterless macros' bodies as `may_open_with_mark` reads its first
   // token — catcodes, a body character a mark as the lexer reads one, an accent's inner definition by its kernel name;
   // 2103.04797's `\affiliation{\Amsterdam}`, 1901.01540's `M.~Soares-Santos` −9.7 % and −4.7 % against int165a, byte-identical)
-  ("frontmatter (rest)", 39),
+  // (P5c, 39 -> 43, pending the main session's decision: `argument_marks::typed_text`, the name-text query's cost gate
+  // before its rehearsal — a name of characters and groups alone prints its characters (`queued_author_name_keys`); the
+  // token keys it replaces, `contacts.rs` `queued_author_name_keys`, read every name's spelling)
+  ("frontmatter (rest)", 43),
   // (P26, 527 -> 526: the stores' `\and` gates ask the separator query by meaning, `and_separators`, OD #995 P2-6; the
   // spelling read only where the query answers `None`: one spelled read fewer)
   // (FX24b, 526 -> 527: `title_page_prints_author` walks the title page a raw file or the document defined for a read of

@@ -555,6 +555,8 @@ mod perfect_kernel_batchp3;
 /// P5a: an `\IEEEmembership` grade is the reading's contact event, its owner the name it follows, however spelled
 /// (OD #1016).
 mod perfect_kernel_batchp5a;
+/// P5c: `placed_contact_owner`'s surname match reads the queued names as they print, the rehearsal's words (OD #495).
+mod perfect_kernel_batchp5c;
 mod perfect_kernel_batchpb;
 /// PC3: two false undefined-command Errors of the frontmatter rehearsal — a title-code command after an e-mail
 /// keeps its argument (pazh), a class's own `\email` reads its argument unexpanded (1802.01191); OD #983.

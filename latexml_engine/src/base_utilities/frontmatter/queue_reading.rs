@@ -30,6 +30,10 @@ struct QueueReading {
   author_marks: Rc<Vec<Vec<String>>>,
   /// The queue positions (from 1) of the authors requesting each label, ascending.
   requests:     FxHashMap<String, Vec<usize>>,
+  /// each author's name text where its marks' rehearsal read it ([`argument_marks_and_name`])
+  name_texts:   Vec<Option<String>>,
+  /// the keys of the first `name_texts` authors' names as they print ([`queued_author_name_keys`])
+  name_keys:    Rc<Vec<NameKeys>>,
 }
 
 impl QueueReading {
@@ -51,7 +55,8 @@ impl QueueReading {
       if tag != "ltx:creator" || attr.get("role").map(String::as_str) != Some("author") {
         continue;
       }
-      let (texts, keys) = author_marks(command)?;
+      let (texts, keys, name) = author_marks(command)?;
+      self.name_texts.push(name);
       let position = self.author_marks.len() + 1;
       for label in keys {
         let requesters = self.requests.entry(label).or_default();
@@ -68,11 +73,12 @@ impl QueueReading {
 /// The marks a queued author `entry`'s name ([`queued_name`]) prints at its own level outside its notes, by their printed
 /// text (`argument_marks`: a document macro's mark too, `\newcommand\ua{\textsuperscript{1}}`), and the labels they
 /// request, as `\lx@sup@request@affiliation` keys them (`printed_label_keys`); a `\footnotemark` requests a note, none.
-/// Where the query cannot read the name, the entry's mark operands by spelling (`author_mark_operands`), counted.
-fn author_marks(entry: &Tokens) -> Result<(Vec<String>, Vec<String>)> {
+/// Where the query cannot read the name, the entry's mark operands by spelling (`author_mark_operands`), counted. And the
+/// name's text where the query rehearsed it.
+fn author_marks(entry: &Tokens) -> Result<(Vec<String>, Vec<String>, Option<String>)> {
   let mut texts = Vec::new();
   let mut keys = Vec::new();
-  if let Some(marks) = argument_marks(&queued_name(entry))? {
+  if let Some((marks, name)) = argument_marks_and_name(&queued_name(entry))? {
     for mark in marks {
       if mark.role.as_deref() == Some("footnotemark") {
         continue;
@@ -85,7 +91,7 @@ fn author_marks(entry: &Tokens) -> Result<(Vec<String>, Vec<String>)> {
       keys.extend(printed_label_keys(&text, "affiliation"));
       texts.push(text);
     }
-    return Ok((texts, keys));
+    return Ok((texts, keys, name));
   }
   count_unread_marks("queued_author_marks");
   for operand in author_mark_operands(entry.unlist_ref()) {
@@ -98,7 +104,7 @@ fn author_marks(entry: &Tokens) -> Result<(Vec<String>, Vec<String>)> {
     }
     texts.push(Tokens::new(operand).to_string());
   }
-  Ok((texts, keys))
+  Ok((texts, keys, None))
 }
 
 /// A mark's printed label as `printed_label` reads its operand, which keys its requests and the label it sets: a
@@ -206,6 +212,41 @@ pub(in crate::base_utilities) fn forget_queue_reading() {
 /// author, which holds unless authors an earlier flush digested are still kept (an appending `\author` after `\maketitle`).
 pub(in crate::base_utilities) fn queued_author_marks() -> Result<Rc<Vec<Vec<String>>>> {
   Ok(Rc::clone(&queue_marks_reading()?.author_marks))
+}
+
+/// The keys ([`NameKeys`]) of each queued author's name ([`queued_name`]) as it prints, in queue order (the n-th
+/// digests with `author:n`): the words the rehearsal reads ([`argument_name_text`]: a macro's or a `\let` copy's
+/// expansion, an accent's letter), the marks' own rehearsal shared; an unread name spells no one, counted.
+pub(in crate::base_utilities) fn queued_author_name_keys() -> Result<Rc<Vec<NameKeys>>> {
+  let reading = queue_marks_reading()?;
+  if reading.name_keys.len() == reading.name_texts.len() {
+    return Ok(Rc::clone(&reading.name_keys));
+  }
+  remove_value(QUEUE_READING);
+  let mut reading = Rc::unwrap_or_clone(reading);
+  let names = queued_author_names();
+  let from = reading.name_keys.len();
+  for (name, text) in names.iter().zip(&reading.name_texts).skip(from) {
+    let keys = printed_name_keys(name, text.clone())?;
+    Rc::make_mut(&mut reading.name_keys).push(keys);
+  }
+  Ok(Rc::clone(&keep(reading).name_keys))
+}
+
+/// The keys of a name as it prints: `text` where a rehearsal read it, else [`argument_name_text`]; unread, none, counted.
+pub(in crate::base_utilities) fn printed_name_keys(
+  name: &Tokens,
+  text: Option<String>,
+) -> Result<NameKeys> {
+  Ok(
+    match text.map_or_else(|| argument_name_text(name), |text| Ok(Some(text)))? {
+      Some(text) => NameKeys::of_printed(&text),
+      None => {
+        count_unread_marks("printed_name_keys");
+        NameKeys::default()
+      },
+    },
+  )
 }
 
 /// Whether a queued author's name prints a mark (`queued_author_marks`).

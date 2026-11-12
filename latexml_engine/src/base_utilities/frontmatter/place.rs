@@ -41,30 +41,31 @@ use super::*;
 /// #806, #808, #809).
 pub(in crate::base_utilities) fn sequenced_contact_labels(
   commands: &[RawFrontmatter],
-) -> Vec<String> {
-  let keys: Vec<NameKeys> = commands
-    .iter()
-    .filter(|entry| {
-      entry.0 == "ltx:creator" && entry.1.get("role").map(String::as_str) == Some("author")
-    })
-    .map(|entry| NameKeys::of(&queued_name(&entry.2)))
-    .collect();
+) -> Result<Vec<String>> {
   // (a document that writes an e-mail between its addresses places each under its address, iopart.cls:363; one whose
   // addresses all come first writes its e-mails "after the postal address(es)", as IOP's guidelines ask, under the
   // last address only by position: there an address mark places nothing, `_unmarked`)
-  let first_listed = commands
+  let Some(first_listed) = commands
     .iter()
-    .position(|entry| entry.0 == "ltx:contact" && entry.1.contains_key("_sequence"));
+    .position(|entry| entry.0 == "ltx:contact" && entry.1.contains_key("_sequence"))
+  else {
+    return Ok(Vec::new());
+  };
   // (an amsart-style class's `\address` is an address too: lmcs's `\email` under each lettered `\address`, 2306.08266)
-  let interleaved = first_listed.is_some_and(|first| {
-    commands[first..].iter().any(|entry| {
-      entry.0 == "ltx:contact"
-        && matches!(
-          entry.1.get("role").map(String::as_str),
-          Some("affiliation" | "address")
-        )
-    })
+  let interleaved = commands[first_listed..].iter().any(|entry| {
+    entry.0 == "ltx:contact"
+      && matches!(
+        entry.1.get("role").map(String::as_str),
+        Some("affiliation" | "address")
+      )
   });
+  // (the names as they print, as `queued_author_name_keys` reads the queue's)
+  let mut keys: Vec<NameKeys> = Vec::new();
+  for entry in commands.iter().filter(|entry| {
+    entry.0 == "ltx:creator" && entry.1.get("role").map(String::as_str) == Some("author")
+  }) {
+    keys.push(printed_name_keys(&queued_name(&entry.2), None)?);
+  }
   // Each address with the class command's call it came from (`\lx@sequence@call`: `\emailAdd{a, b}` is one call of two
   // addresses), the author it spells, whether it is on the block where `\lx@add@contact@placed` put it, and where it
   // goes when its address mark places nothing.
@@ -142,7 +143,7 @@ pub(in crate::base_utilities) fn sequenced_contact_labels(
       labels[*at] = s!("author:{}", author + 1);
     }
   }
-  labels
+  Ok(labels)
 }
 
 /// Step 2 of [`sequenced_contact_labels`], kept apart so a ruling can switch it off in one change: the place (from 0)
@@ -518,7 +519,7 @@ pub fn digest_front_matter() -> Result<()> {
   let outer_sequence_at = lookup_int("lx_frontmatter_sequence_at");
   assign_value(
     "lx_frontmatter_sequence_labels",
-    Stored::String(pin(sequenced_contact_labels(&commands).join("\u{1}"))),
+    Stored::String(pin(sequenced_contact_labels(&commands)?.join("\u{1}"))),
     Some(Scope::Global),
   );
   assign_value(
