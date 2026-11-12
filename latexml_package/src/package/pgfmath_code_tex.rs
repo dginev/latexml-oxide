@@ -2116,6 +2116,29 @@ fn expand_pgfmath_arg<T: Into<Tokens>>(tokens: T) -> Tokens {
   expanded
 }
 
+/// The parser's text of an expanded argument: its string, keeping the space TeX's mouth skipped after a control word
+/// where a letter follows (`\mydim r` is `\mydim` then `r`, not `\mydimr` as Perl's pgfmath.code.tex.ltxml:328 reads).
+pub(crate) fn pgfmath_input_text(tokens: Tokens) -> String {
+  let mut spaced = Vec::with_capacity(tokens.unlist_ref().len());
+  let mut after_control_word = false;
+  for t in tokens.unlist() {
+    let code = t.get_catcode();
+    if after_control_word && code == Catcode::LETTER {
+      spaced.push(T_SPACE!());
+    }
+    after_control_word = code == Catcode::CS
+      && t.with_str(|name| {
+        name
+          .chars()
+          .last()
+          .and_then(lookup_catcode)
+          .is_some_and(|cc| cc == Catcode::LETTER)
+      });
+    spaced.push(t);
+  }
+  Tokens::new(spaced).to_string()
+}
+
 /// Main pgfmathparse evaluation function
 /// Perl: sub pgfmathparse (L316-394)
 /// Returns (result_string, units_declared)
@@ -2468,8 +2491,7 @@ LoadDefinitions!({
   DefMacro!("\\lx@pgfmath@parse {}", sub[(tokens)] {
     // Expand tokens and convert to string. The seven calc-compat CSes are
     // transiently bound only for this expansion (Perl `sub pgfmathparse`).
-    let expanded = expand_pgfmath_arg(tokens);
-    let input = expanded.to_string();
+    let input = pgfmath_input_text(expand_pgfmath_arg(tokens));
     let (result, units) = pgfmathparse_eval_with_units(&input);
     let mut toks = pgfmath_result_tokens_str(&result);
     // Perl: \ifpgfmathunitsdeclared flag — used by tikz's \tikz@checkunit
@@ -2486,8 +2508,7 @@ LoadDefinitions!({
 
   // Perl L396-399: \lx@pgfmath@parseX (alternative that uses \lx@pgfmathresult)
   DefMacro!("\\lx@pgfmath@parseX {}", sub[(tokens)] {
-    let expanded = expand_pgfmath_arg(tokens);
-    let input = expanded.to_string();
+    let input = pgfmath_input_text(expand_pgfmath_arg(tokens));
     let result = pgfmathparse_eval(&input);
     let mut toks = vec![T_CS!("\\def"), T_CS!("\\lx@pgfmathresult"), T_BEGIN!()];
     toks.extend(Explode!(result));
@@ -2585,7 +2606,7 @@ LoadDefinitions!({
       // Evaluate via pgfmathparse (tokens already expanded above); its units are
       // `\pgfmath@selectfont`'s (`pgfmath_convert`), and its units flag outlives it, as pgf's parse
       // smuggles it out of its group.
-      let input = Tokens::new(toks).to_string();
+      let input = pgfmath_input_text(Tokens::new(toks));
       let (result_str, _units) = pgfmathparse_eval_with_units(&input);
       let value: f64 = result_str.parse().unwrap_or(0.0);
 

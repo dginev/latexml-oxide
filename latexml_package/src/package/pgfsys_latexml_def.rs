@@ -993,7 +993,7 @@ LoadDefinitions!({
   // evaluation. Perl doesn't override \pgfsetdash (raw TeX works there),
   // but we override it following the same pattern as \pgfmathsetlength.
   DefPrimitive!("\\pgfsetdash{}{}", sub[(pattern_toks, offset_toks)] {
-    use crate::package::pgfmath_code_tex::pgfmathparse_eval_with_units;
+    use crate::package::pgfmath_code_tex::{pgfmath_input_text, pgfmathparse_eval_with_units};
     // Step 1: Parse the dash pattern.
     // #1 is like {{3pt}{1.2pt}{0.6pt}} or {} (empty for solid). Each top-level brace group is one
     // dimension, expanded as tokens (a group may hold a macro, `{\dl}`, which a string round-trip
@@ -1013,7 +1013,7 @@ LoadDefinitions!({
           depth -= 1;
           if depth == 0 {
             if !group.is_empty() {
-              let input = do_expand(Tokens::new(std::mem::take(&mut group)))?.to_string();
+              let input = pgfmath_input_text(do_expand(Tokens::new(std::mem::take(&mut group)))?);
               let (result_str, _units) = pgfmathparse_eval_with_units(&input);
               let value: f64 = result_str.parse().unwrap_or(0.0);
               // Convert to sp then format as pt dimension (matching \the\pgf@x)
@@ -1034,7 +1034,7 @@ LoadDefinitions!({
     // round-trip turned into characters that pgfmath then read as a register name
     // ("\tikz@dashphase is not a register"; beautybook, 4,304× over the 3,003-paper A/B).
     let expanded = do_expand(offset_toks)?;
-    let offset_str = expanded.to_string();
+    let offset_str = pgfmath_input_text(expanded);
     let offset_str = offset_str.trim().to_string();
     if !offset_str.is_empty() {
       let input = offset_str;

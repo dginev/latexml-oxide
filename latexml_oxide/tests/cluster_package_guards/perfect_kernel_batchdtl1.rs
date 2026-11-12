@@ -113,6 +113,24 @@ const ROWS: &[Row] = &[
     )],
     holds:    &[],
   },
+  // The tokens-to-text hand-off (DTL1e): a control word's skipped space is kept before a letter, so `\mydim r` and
+  // `\wd\mybox r` read the register and the box, then `r` (revDTL1b P1); pdflatex 0 `!`. Welded to `\mydimr`: [0.0]
+  // three times, silently.
+  Row {
+    name:     "pgfmath_space_after_control_word",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/graphics-tikz/pgfmath_space_after_control_word.tex"
+    ),
+    files:    &[],
+    counts:   (0, 0),
+    messages: &[],
+    elements: &[(
+      "para",
+      "xml:id=\"p1\"",
+      r#"<para xml:id="p1"><p xml:id="p1.1">[114.59156][2291.83118][229.18312]</p></para>"#,
+    )],
+    holds:    &[],
+  },
   // The error side: a dimension TeX cannot hold still reports "Dimension too large" (pdflatex 1 `!`; Perl 0 and
   // 20000.0pt). A Warning today; the out-of-range severity batch makes it an Error.
   Row {
