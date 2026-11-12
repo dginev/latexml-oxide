@@ -1,0 +1,26 @@
+% mechanism: a store whose first entry opens with a mark a document macro prints (`\ma` = `\textsuperscript{a}`) under
+%   a class numbering the `\and` entries (llncs's `\institutename`, numinst.cls). Two readers of one fact disagree:
+%   `class_numbered_institutes` reads the store's marks by meaning (`prints_marks` sees `\ma`'s mark) and declines
+%   the numbering; `affiliation_calls` reads them by tokens (`author_mark_position` sees no mark), so no entry is
+%   paired with its number and every entry goes to every author (revP4d S1, the class of revF0 B1).
+% witness: synthetic (revP4d S1)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2", "1 aUniv A, Town A",
+%          "2 Univ B, Town B"
+% engines: rust int161a, F0: Ann Able "a Univ A, Town A", Bob Baker "Univ B, Town B", 0 W;
+%          P4d, int162a: Ann Able 1 and Bob Baker 2 each "a Univ A, Town A" and "Univ B, Town B", 0 W;
+%          perl: no binding for the class (its `\institute` raw)
+% expect:  0 errors, 0 warnings; Ann Able "a Univ A, Town A", Bob Baker "Univ B, Town B" (as the boxed twin,
+%          class_numbered_institutes_boxed_store_mark)
+% status:  RED (P4d, int162a)
+% moves:   P4c (it moves `affiliation_calls`' marks reading onto the digested one) makes it a row of
+%          perfect_kernel_batchc1::class_numbered_institutes_read_by_meaning.
+% preload: ar5iv.sty
+\documentclass{numinst}
+\newcommand\ma{\textsuperscript{a}}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$}
+\institute{\ma Univ A, Town A \and Univ B, Town B}
+\maketitle
+Text.
+\end{document}

@@ -399,12 +399,12 @@ pub(in crate::base_utilities) fn requested_entry_marks(list: &Tokens) -> Result<
 /// `\and` entries and no mark of its own, both read by meaning (the kernel's `\and` a macro holds, a mark a macro prints:
 /// [`split_at_kernel_separators`], [`prints_marks`]), and the queued authors' marks request numbers
 /// ([`numbered_marks_requested`]); else `None` (the entries annotate every author, `\lx@add@store@affiliations`).
-/// Whether the class numbers them is what its own title page printed in the speculative run frontmatter_stores.rs `note_and_numbering` made of the store
-/// (`lx_and_numbered_<store>`: the sentinel entries each printed after its number, in `\and` order — sab.cls:404-426's
-/// and edpsci.cls's `\refstepcounter{inst}`, 2308.05831, 2308.05830, 2501.08874, baaa.cls 2206.02830, comsis2.cls
-/// 2207.09249; batch 104b); with no such run (no store, none could be made), the class's `\institutename` read as
-/// before: a `\def\and` stepping a counter (`\stepcounter`). Was each author given every institute (2405.16615; SYNC_STATUS
-/// row 153; the sab family, SYNC_STATUS row "104b").
+/// Whether the class numbers them is what its own title page printed in the speculative run frontmatter_stores.rs
+/// `note_and_numbering` made of the store (`lx_and_numbered_<store>`: the sentinel entries each printed after its
+/// number, in `\and` order — sab.cls:404-426's and edpsci.cls's `\refstepcounter{inst}`, 2308.05831, 2308.05830,
+/// 2501.08874, baaa.cls 2206.02830, comsis2.cls 2207.09249; batch 104b); with no such run (no store, none could be
+/// made), the class's `\institutename` read as before: a `\def\and` stepping a counter (`\stepcounter`). Was each
+/// author given every institute (2405.16615; SYNC_STATUS row 153; the sab family, SYNC_STATUS row "104b").
 pub fn class_numbered_institutes(stuff: &Tokens, store: Option<&str>) -> Result<Option<Tokens>> {
   let run = store.and_then(|store| match lookup_value(&s!("lx_and_numbered_{store}")) {
     Some(Stored::Bool(numbered)) => Some(numbered),
