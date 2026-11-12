@@ -21956,8 +21956,8 @@ had left an author with no name). SHARED with Perl for S4 and S5 (SplitTokens pa
 Base_Utility.pool.ltxml:152-165: latexml 0.8.8 keeps each wrapped list one author, and every note command among names
 merges them too), except the `{footnote}` environment, which Perl, not keeping an environment whole, splits at its
 inner comma with its `\begin` and `\end` in different authors (6 Errors on the repro). Bindings: IEEEtran's grades
-become their names' membership contacts inside a wrapper too, a note's argument aside (ieeetran_cls.rs
-`name_memberships`); authblk's unlabelled `\author` holding the word "and" is a list (`\lx@add@authors@list`: `Ajay
+become their names' membership contacts inside a wrapper too, a note's argument aside (since P5a the reading's,
+`\lx@IEEE@grade`, OD #1016); authblk's unlabelled `\author` holding the word "and" is a list (`\lx@add@authors@list`: `Ajay
 Chandra$^{1}$\orcidlink{…} and Harprit Singh$^2$\orcidlink{…}`, 2405.16615, preprint.cls + authblk); ecai's `\author`
 holding a top-level `\and`, or the current class's `\author[A,D]{…}`, is read as a per-author class's
 (`\lx@add@authors@append`), so the 2020 class's `\author{A\institute{…} \and B$^1$}` gives two authors and the current
@@ -30103,9 +30103,9 @@ sectioning-frontmatter/`author_block_leading_spacer_lines_are_no_names_line` (RE
 **What** (brief 98b; census mechanism C). ieeetran_cls.rs.
 
 - **authblk** (a document's `\usepackage{authblk}`; the IEEEtaes and IEEEoj stubs load it) replaces the binding's
-  `\author`, so each grade reached `\lx@IEEE@membership@drop`. IEEEtran's binding now hooks authblk's load
+  `\author`, so each grade reached the binding's drop (`\lx@IEEE@membership@drop`, deleted by P5a). IEEEtran's binding now hooks authblk's load
   (`\AddToHook{package/authblk/after}`): authblk's `\author` is kept as `\lx@IEEE@AB@author`, and `\author` reads the
-  grades of its names as the binding's own does (`name_memberships`, `block_name_memberships`, only while
+  grades of its names as the binding's own does (since P5a the reading's: `\lx@IEEE@grade`, OD #1016; only while
   `\IEEEmembership` is the class's) before handing the names to authblk's (a body of `\IEEEauthorblockN` blocks is read as the class's: #987), the optional label exactly as written (an
   empty `\author[]{…}` is no unlabelled `\author`: dropped, 2005.04149's, 2105.12254's and 2312.15778's addresses were
   welded into the affiliation). Conference mode
@@ -30467,8 +30467,8 @@ document's text (`\begin{abstract}[Summary]` → `\lx@begin@abstract[]`, #1209, 
 binding, fallback, stub, borrowed — never the kernel's selectors) drops while the document's entry digests
 (`origin::watch_dropped_arguments`, `state::note_dropped_argument`), when the document wrote them (`writes`: a contiguous
 run of the record's arguments — xkeyval's `\@nil`-delimited plumbing under a raw `\ead[label=e1,mark]` is none; digested,
-it looped to a Timeout Fatal, 2101.10506): IEEEtran's `\lx@IEEE@membership@drop` over a grade it cannot place
-(1511.03982), jmlr's `\titletag[1]{}` over the title's `\thanks` (2211.07413). (2) and (3) are digested once each,
+it looped to a Timeout Fatal, 2101.10506): IEEEtran's `\lx@IEEE@membership@drop` over a grade it could not place
+(1511.03982; deleted by P5a, the grade the reading's, OD #1016), jmlr's `\titletag[1]{}` over the title's `\thanks` (2211.07413). (2) and (3) are digested once each,
 speculatively, when the entry is digested (sect05.rs `speculative_word_run`: `speculative_run` in a mouth of its own, read
 by `ink_word_text`, a `\thanks` set apart; its state rolled back with the journal it opens, so it leaves no trace).
 **Only a binding's drop counts** (106t r3): a kernel macro's drop is TeX's own — the format's `\@firstoftwo{T}{F}`, which
@@ -33903,7 +33903,7 @@ affiliation and e-mail, 0 frontmatter Warnings). 2602.05517 (no authblk) and 1,4
 `unnested_name_blocks` splices each inner block's argument into the outer one (its command and braces dropped), which
 is then read as any block; pdflatex prints each name (a names block only sets its style), Perl keeps them in one
 creator. The old alias `\authorblockN`'s name lines have their grades read as `\IEEEauthorblockN`'s
-(`block_name_memberships`, through CR10c's `with_block_names`). The full stop after a grade written as italic text (`{\em Member, IEEE}.`,
+(through CR10c's `with_block_names`; since P5a the grade is the reading's, OD #1016). The full stop after a grade written as italic text (`{\em Member, IEEE}.`,
 `\emph{…}.`, `\textit{…}.`; `grade_text`, the names reader's `grade_words(…, true)`) closes the names as one after
 `\IEEEmembership{…}` does: the line after a `\\` that ends so (`\IEEEauthorblockN{…, Hesham ElSawy, {\em Senior Member,
 IEEE},\\ Mohamed-Slim Alouini, {\em Fellow, IEEE}, and Tareq Y. Al-Naffouri, {\em Senior Member, IEEE}.}`, 1810.08035)
