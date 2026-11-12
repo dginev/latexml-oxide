@@ -7,6 +7,7 @@ use std::cell::{Cell, RefCell};
 use latexml_core::{
   common::{error::emit_warn, numeric_ops::round_to},
   stomach::{TEMPLATE_BRACE_OPEN, off_save_closer},
+  stored_dimension,
 };
 
 use crate::prelude::*;
@@ -449,25 +450,22 @@ fn set_halign_vattach(digested: &Digested, valign: &str) -> bool {
 /// For Lists: sums child box widths and takes max height/depth.
 fn fobj_get_size(digested: &Digested) -> (Dimension, Dimension, Dimension) {
   // Declared before cached: Perl's `\ht` setter writes `cheight` too (TeX_Box.pool.ltxml:620-628, Box.pm `setHeight`),
-  // so a size measured before it never wins (repro graphics-tikz/node_box_declared_size_over_measured).
+  // so a size measured before it never wins (repro graphics-tikz/node_box_declared_size_over_measured; 2408.03209).
+  // A declared size stored as a String (diagbox, `\rotate[f]`, "1em") is no Dimension: the measured one stands.
   fn read_dims(d: &Digested) -> (Dimension, Dimension, Dimension) {
     d.with_properties(|props| {
-      let w = match props.get("width").or_else(|| props.get("cached_width")) {
-        Some(Stored::Dimension(d)) => *d,
-        _ => Dimension::default(),
+      let dim = |declared: &str, cached: &str| {
+        stored_dimension(props.get(declared))
+          .or_else(|| stored_dimension(props.get(cached)))
+          .unwrap_or_default()
       };
-      let h = match props.get("height").or_else(|| props.get("cached_height")) {
-        Some(Stored::Dimension(d)) => *d,
-        _ => Dimension::default(),
-      };
-      let d = match props.get("depth").or_else(|| props.get("cached_depth")) {
-        Some(Stored::Dimension(d)) => *d,
-        _ => Dimension::default(),
-      };
-      (w, h, d)
+      (
+        dim("width", "cached_width"),
+        dim("height", "cached_height"),
+        dim("depth", "cached_depth"),
+      )
     })
   }
-  // First try: read cached dimensions
   let dims = read_dims(digested);
   if dims.0.value_of() != 0 || dims.1.value_of() != 0 || dims.2.value_of() != 0 {
     return dims;

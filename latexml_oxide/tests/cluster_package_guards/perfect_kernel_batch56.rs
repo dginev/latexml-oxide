@@ -10343,7 +10343,10 @@ fn a_declared_size_is_not_measured() {
 /// changed size Perl's; 2605.12644, 2605.00742, 2605.00859). Row 2 (DTL1a): a
 /// size declared after a `\wd`/`\dp` read measured the box is read before that
 /// measure (`text width` with `text height` or `text depth`, `\makebox[2cm]`);
-/// its other four nodes must not move.
+/// its other four nodes must not move (node 4, `text height=20pt` 14.61×9.61, is
+/// a known-wrong pin: RED node_inner_box_sizes_foreignobject_red). Row 3
+/// (DTL1b): a declared size stored as a String (diagbox, `\rotate[f]`) is no
+/// Dimension, so the measured size stands, not 0×0.
 #[test]
 fn a_node_takes_its_boxs_declared_size() {
   const ROWS: &[(&str, &[&str])] = &[
@@ -10370,6 +10373,15 @@ fn a_node_takes_its_boxs_declared_size() {
         r#"<svg:foreignObject height="34.59" overflow="visible" style="--ltx-fo-width:5.69em;--ltx-fo-height:2em;--ltx-fo-depth:0.5em;font-size:10pt;" transform="matrix(1 0 0 -1 0 27.67)" width="78.73">"#,
         r#"<svg:foreignObject height="10.43" overflow="visible" style="--ltx-fo-width:5.69em;--ltx-fo-height:0.65em;--ltx-fo-depth:0.11em;font-size:10pt;" transform="matrix(1 0 0 -1 0 8.94)" width="78.73">"#,
         r#"<svg:foreignObject height="12.3" overflow="visible" style="--ltx-fo-width:2.17em;--ltx-fo-height:0.69em;--ltx-fo-depth:0.19em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.61)" width="29.98">"#,
+      ],
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/graphics-tikz/node_string_declared_size_falls_to_measured.tex"
+      ),
+      &[
+        r#"<svg:foreignObject class="ltx_nopad" height="9.61" overflow="visible" style="--ltx-fo-width:2.06em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.61)" width="28.44">"#,
+        r#"<svg:foreignObject height="12.3" overflow="visible" style="--ltx-fo-width:3em;--ltx-fo-height:0.69em;--ltx-fo-depth:0.19em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.61)" width="41.51">"#,
       ],
     ),
   ];
