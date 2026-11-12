@@ -1,0 +1,14 @@
+% witness: synthetic (the safe side of group_par_mid_paragraph_keeps_its_paragraph)
+% oracle:  pdflatex 0 errors: "x" then "Hb", "x" then "Ib", "x" then "Kb": no line between; Perl the same (a paragraph
+%          of the group's open-brace box and spaces adds nothing to <p>x</p>)
+% engines: rust int162a = perl
+% expect:  0 errors, 0 warnings; no empty <p> or <para> between x and the next paragraph
+% status:  CONTROL
+\documentclass{article}
+\begin{document}
+x{\par Hb}
+
+x{ \par Ib}
+
+x{\par\par Kb}
+\end{document}

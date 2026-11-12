@@ -4906,9 +4906,17 @@ runs the pure Perl one-line-per-box algorithm (no measurement-layer change) and
 lands on 77.82pt, an exact Perl match. The guard is narrow: ordinary inline
 `{...}`, math groups, and groups entered in vertical mode never satisfy both
 conditions, so only the rare `\par`-inside-a-text-group idiom is touched. (The
-box-list divergence has NO other observable symptom — the DOM absorption already
-coalesces the loose boxes into one `<ltx:p>`, verified; measurement was the sole
-consumer that didn't.)
+DOM absorption already coalesces the loose boxes into one `<ltx:p>`.) A second
+consequence (RG1): the inner `\par` met no open-brace box, which in Perl is a
+non-space item of the paragraph, so a paragraph whose group part held only
+space items (phantoms) was discarded — `x{\phantom{Ca}\par Cb}` lost Ca, a tikz
+node `{\phantom{Cpd}\\\phantom{pt}}` its Cpd (2410.06985). The group's list now
+continues the paragraph (`ParagraphStart::in_group`,
+`stomach::digest_group_body_in_paragraph`): a repack that runs off its bottom
+keeps the paragraph, as Perl's pop reaching the `{` box does (Stomach.pm:463-465).
+Guard `perfect_kernel_batchrg1::batchrg1_group_paragraph_rows`. Residual: such a
+group's paragraphs are mismeasured (repro
+`boxes-groups/group_par_paragraphs_are_measured_red`).
 
 **Guard**: `123_tcbline_nointerlineskip::tcbline_box_not_over_measured`
 (`xxx\tcbline yyy` @ width=100pt sizes to < 90pt, i.e. Perl's 77.82 not the

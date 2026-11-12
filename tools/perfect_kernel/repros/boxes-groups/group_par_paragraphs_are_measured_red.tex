@@ -1,0 +1,15 @@
+% witness: 2410.06985 (its blank node is 19.3pt high, the text twin 28.9pt; pdflatex: the same size)
+% oracle:  pdflatex 0 errors: [18.94444pt+1.94444pt] on every line (two lines of 12pt baselineskip each)
+% engines: rust RG1 = [16.30554pt+13.94444pt], [28.30554pt+1.94444pt], [12.0pt+0.0pt] for the last three (int162a:
+%          [16.30554pt+1.94444pt] for the third); the first two right
+% expect:  0 errors; every line [18.94444pt+1.94444pt]
+% status:  RED: a text group holding a `\par` is mismeasured (cause not traced; the sizing pass, not the content).
+%          moves: post-merge
+\documentclass{article}
+\begin{document}
+\setbox0\vbox{\hsize5cm\phantom{Cpd}\par\phantom{pt}}[\the\ht0+\the\dp0]
+\setbox0\vbox{\hsize5cm Cpd\par pt}[\the\ht0+\the\dp0]
+\setbox0\vbox{\hsize5cm x{\phantom{Cpd}\par\phantom{pt}}}[\the\ht0+\the\dp0]
+\setbox0\vbox{\hsize5cm x{Cpd\par pt}}[\the\ht0+\the\dp0]
+\setbox0\vbox{\hsize5cm \leavevmode{\phantom{Cpd}\\\phantom{pt}}}[\the\ht0+\the\dp0]
+\end{document}

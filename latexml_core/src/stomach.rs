@@ -540,11 +540,14 @@ static MAXSTACK: usize = 200;
 /// enclosing list, and `index` stands in for that list's bottom. TeX puts an indent box first unless `\noindent`
 /// began the paragraph; LaTeXML lists it only for `\indent` (its whatsit), so a paragraph begun by a letter or
 /// `\leavevmode` has an `implicit_indent`. Without one, a paragraph with nothing listed is null (§1096): `\noindent\par`,
-/// or `\indent\setbox0\lastbox\par` — `\lastbox` takes the implicit one too (`take_implicit_indent`).
+/// or `\indent\setbox0\lastbox\par` — `\lastbox` takes the implicit one too (`take_implicit_indent`). In a text group
+/// opened in the paragraph (`in_group`) the paragraph began below the group's own list, at its bottom.
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct ParagraphStart {
   index:           usize,
   implicit_indent: bool,
+  /// The list is a text group's, opened in the paragraph ([`digest_group_body_in_paragraph`]).
+  in_group:        bool,
 }
 
 /// The Stomach is responsible for digesting tokens into boxes, lists, etc.
@@ -2080,6 +2083,15 @@ fn repack_paragraph(end_graf: bool) {
 
   // Items were popped in reverse order, so reverse them back
   para.reverse();
+  // Run off the bottom of a text group's list: Perl's pop goes on to the group's open-brace box, which is no space, so
+  // the paragraph is kept (`x{\phantom{Ca}\par Cb}`; 2410.06985 `\node{\phantom{Cpd}\\…}`).
+  if !keep
+    && !para.is_empty()
+    && stomach.box_list.is_empty()
+    && stomach.paragraph_start.is_some_and(|start| start.in_group)
+  {
+    keep = true;
+  }
 
   // A paragraph that kept nothing but owns the list's tail (no vertical-mode item of its own stands for its line),
   // unless it is null: begun by `\noindent` with nothing in it (§1096 `head=tail`).
@@ -2635,7 +2647,11 @@ pub fn take_implicit_indent() -> bool {
 fn mark_paragraph_start(implicit_indent: bool) {
   let mut stomach = stomach_mut!();
   let index = stomach.box_list.len();
-  stomach.paragraph_start = Some(ParagraphStart { index, implicit_indent });
+  stomach.paragraph_start = Some(ParagraphStart {
+    index,
+    implicit_indent,
+    in_group: false,
+  });
 }
 pub fn with_box_list<R, FnR>(caller: FnR) -> R
 where FnR: FnOnce(&[Digested]) -> R {
@@ -3761,6 +3777,14 @@ fn is_environment_end(token: &Token) -> bool {
 fn insert_missing_right(again: Token) { insert_missing_right_before(Tokens!(again)); }
 
 pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
+  digest_body(terminal_opt, false)
+}
+
+/// The body of a text-mode `{` opened in a paragraph. Perl digests it flat into the paragraph's list, after an open-brace
+/// box (TeX_Box.pool.ltxml:30-42); here it has a list of its own, which continues the paragraph ([`ParagraphStart`]).
+pub fn digest_group_body_in_paragraph() -> Result<Vec<Digested>> { digest_body(None, true) }
+
+fn digest_body(terminal_opt: Option<Token>, in_paragraph: bool) -> Result<Vec<Digested>> {
   let start_location = { gullet::get_locator() };
   // A box body digested for a binding in mid-scan runs outside the scan
   // (`gullet::NumberScan::suspend`).
@@ -3790,6 +3814,13 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
   let mut found_terminal = false;
   let _body_scope = ArgDigestScope::enter_body();
   new_local_box_list();
+  if in_paragraph {
+    stomach_mut!().paragraph_start = Some(ParagraphStart {
+      index:           0,
+      implicit_indent: false,
+      in_group:        true,
+    });
+  }
   let alignment_opt = lookup_alignment();
   // TODO: bookkeep for "expected" warning
   //let mut aug = Vec::new();

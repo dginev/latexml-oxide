@@ -1088,3 +1088,14 @@ group the binding opened ("Missing \right. inserted"), so the binding's own `\ri
 regression (65c and Perl 0). Fix stomach.rs `close_left_group_at_input_end`: only a `\left` read in the input that ran
 out (the reading context `\lx@math@left@group` records, `gullet::reading_context`) is closed there. Guards
 `perfect_kernel_batch66g::*`.
+
+### group_par_mid_paragraph_keeps_its_paragraph, group_par_in_tikz_node_keeps_its_paragraph — GREEN (RG1); group_par_space_only_paragraph_makes_none — CONTROL
+Perl's text-mode `{` lists an open-brace box (not a space) in the paragraph (TeX_Box.pool.ltxml:30-42), so a `\par` in the
+group keeps a paragraph whose group part holds only space items (Stomach.pm:463-465 `repackHorizontal`). Ours digests
+the group into its own list (OD #100), whose repack discarded `x{\phantom{Ca}\par Cb}`'s phantom and 2410.06985's
+`\node{\phantom{Cpd}\\…}`. RUST-ONLY. Fix stomach.rs: the group's list continues the paragraph (`ParagraphStart::in_group`),
+and a repack that runs off its bottom keeps the paragraph. Guard `perfect_kernel_batchrg1::batchrg1_group_paragraph_rows`.
+
+### group_par_paragraphs_are_measured_red, group_unskip_reaches_the_paragraph_before_it_red — RED (RG1, post-merge)
+A text group holding a `\par` is mismeasured (`\vbox{x{Cpd\par pt}}` 28.31pt high, pdflatex 18.94pt; cause not traced).
+`Ab {\unskip Cd}` keeps the space (pdflatex "AbCd"; Perl the same as ours): the group's own list is all `\unskip` sees.
