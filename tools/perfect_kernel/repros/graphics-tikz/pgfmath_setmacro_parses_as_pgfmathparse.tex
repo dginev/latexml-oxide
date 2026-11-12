@@ -3,8 +3,8 @@
 %   stringified its own expansion, so it welded `\mydim r` to `\mydimr` and skipped the calc-compat `\let`s
 %   (revDTL1e B1); `\pgfmathsetlength` skipped the `\let`s too.
 % witness: synthetic
-% oracle:  pdflatex [114.59155][114.59155] (p1); p2 errs on both twins in TL 2025 (`width("xx")` read as a function `xx`), so
-%   its oracle is the `\pgfmathparse` twin; [21.1112pt] (p3, 0 `!` alone)
+% oracle:  pdflatex [114.59155][114.59155] (p1); TL 2025's pgf errs on `\widthof` in every twin (p2, p3 alone: 4 `!`,
+%   `width("xx")` read as a function `xx`), so p2 and p3 take the `\pgfmathparse` twin's [21.11121]
 % engines: rust DTL1e: [114.59156][0.0] (p1), [21.11121][0.0] (p2), [0.0pt] (p3), 2 Warnings `\widthof` not a register
 % expect:  0 errors 0 warnings; the twin's value on each side
 % status:  RED (DTL1e) -> GREEN (DTL1f, guard perfect_kernel_batchdtl1::batchdtl1_pgfmath_rows)

@@ -132,8 +132,8 @@ const ROWS: &[Row] = &[
     holds:    &[],
   },
   // One parse for `\pgfmathparse`, `\pgfmathsetmacro` and `\pgfmathsetlength` (DTL1f, revDTL1e B1): each side of a
-  // paragraph is its `\pgfmathparse` twin; pdflatex [114.59155] and [21.1112pt]. Read apart: [0.0] twice, [0.0pt],
-  // 2 Warnings.
+  // paragraph is its `\pgfmathparse` twin (pdflatex [114.59155]; pgf errs on `\widthof`). Read apart: [0.0] twice,
+  // [0.0pt], 2 Warnings.
   Row {
     name:     "pgfmath_setmacro_parses_as_pgfmathparse",
     tex:      include_str!(
