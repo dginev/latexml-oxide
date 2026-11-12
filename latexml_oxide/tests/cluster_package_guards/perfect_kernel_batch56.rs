@@ -5522,13 +5522,14 @@ fn index_sort_key_undefined_word_is_text() {
 /// TeX's own bounds, as pdfTeX prints them — the factor is "Number too big"
 /// (§445, 2^31 − 1), the product +max_dimen (§460 negates only for the scan's
 /// own sign, not the negative unit's), and a `\dimexpr` out of range is
-/// "Arithmetic overflow" and zero (etex.ch `scan_expr`); each a Warning.
+/// "Arithmetic overflow" and zero (etex.ch `scan_expr`); each an Error, as
+/// pdflatex's 4 `!` (DTL1d, OD #519).
 #[test]
 fn dimension_overflow_clamps_to_max_dimen() {
   let tex = "\\documentclass{article}\n\\begin{document}\n\\dimen0=-16383pt\n\\dimen2=2000000000000000\\dimen0\nB=[\\the\\dimen2]\\par\n\\dimen1=\\dimexpr\\dimen0*100000000000\\relax\nA=[\\the\\dimen1]\\par\n\\end{document}\n";
   let (stderr, xml) = convert(tex, true);
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 4, "{stderr}");
+  assert_eq!(error_count(&stderr), 4, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("B=[16383.99998pt]"), "{xml}");
   assert!(xml.contains("A=[0.0pt]"), "{xml}");
 }

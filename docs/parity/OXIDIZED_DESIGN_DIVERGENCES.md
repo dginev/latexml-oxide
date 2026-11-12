@@ -16865,14 +16865,22 @@ class-implicit one), or one that is not found, an undefined macro is a Warning (
 `Error:unexpected` at `String; line 0 col 1`). Witnesses 2606.21799, 2603.22119. Guards `perfect_kernel_batch64zf::{bib_parse_errors_are_reported,
 revtex_implicit_bibstyle_defines_its_macros, bst_macros_after_a_braced_value_resolve}`. KNOWN_PERL_ERRORS #600.
 
-### 519. Numbers and dimensions out of TeX's range clamp at its bounds with a Warning (Perl: the raw value, silently)
+### 519. Numbers and dimensions out of TeX's range clamp at its bounds with an Error (Perl: the raw value, silently)
 
 An integer constant past 2^31−1 is 2^31−1 with "Number too big" (tex.web §445); a dimension past `\maxdimen` is
 `\maxdimen`, negated only for the scan's own sign, with "Dimension too large" (§460); an e-TeX expression out of range
-is 0 with "Arithmetic overflow" (etex.ch `\numexpr`/`\dimexpr`). TeX errs on each and recovers with the same value;
-the recovery is the value, so these are Warnings. Replaces batch 56bq's i64-only clamp. Guards
-`perfect_kernel_batch64zf::{number_and_dimension_overflow_clamp_and_warn, integer_constant_overflow_is_infinity}`;
-repro expansion-primitives/dimension_overflow_max_dimen.
+is 0 with "Arithmetic overflow" (etex.ch `\numexpr`/`\dimexpr`). TeX errs on each, and its recovery value (TeX's bound
+or 0) is not the author's: an Error, the
+recovery value kept (the staged severity rule (3), DG 2026-11-11; 64zf's Warnings until DTL1d). pgfmath's parser result
+past ±16383.99998 errs as Perl's `Error:pgfmath:overflow` does (pgfmath.code.tex.ltxml:342-344, :391-393). Replaces
+batch 56bq's i64-only clamp. Still silent: `\multiply` past the bound (it computes on in the i64 headroom; TeX errs and
+keeps the register) and pgfmath's function results (clamped) (REDs expansion-primitives/multiply_overflow_keeps_the_register_red, graphics-tikz/
+pgfmath_function_overflow_clamped_silently_red); a calc sum past the bound (`calc_expression_dimension_not_clamped_red`). Not
+yet TeX's: an e-TeX expression checks only its final value, so an intermediate overflow that comes back in range is silent
+and a product past the i64 range keeps the bound (`clamp_arith_overflow`, one report per multiply) where etex.ch's
+`scan_expr` latches one error and returns 0 (`etex_expression_overflow_latched_once_red`). Guards `perfect_kernel_batch64zf::{number_and_dimension_overflow_clamp_and_err,
+integer_constant_overflow_is_infinity}`, `error_boundary::perfect_kernel_error_boundary` (both sides); repro
+expansion-primitives/dimension_overflow_max_dimen.
 
 ### 520. setspace's `\onehalfspace`/`\doublespace` switches are checked no-ops (Perl: an environment frame)
 

@@ -210,24 +210,24 @@ fn latin1_inputenc_bytes_are_no_misdefined_info() {
 }
 
 /// Gullet overflow: an integer constant past 2^31 − 1 is TeX's "Number too big" (tex.web §445) and a dimension
-/// reaching 2^30 sp is "Dimension too large" (§460), clamped as TeX clamps, reported as Warnings (the severity of
-/// Perl's scan recoveries, Gullet.pm:904-1089); the clamp is +max_dimen, as §460 negates only for the scan's own sign.
+/// reaching 2^30 sp is "Dimension too large" (§460), clamped as TeX clamps, reported as Errors as TeX's (DTL1d, OD #519;
+/// 64zf's Warnings); the clamp is +max_dimen, as §460 negates only for the scan's own sign. pdflatex 2 `!`.
 /// Was: -200000000000.0pt, silently. Repro
 /// expansion-primitives/dimension_overflow_max_dimen.
 #[test]
-fn number_and_dimension_overflow_clamp_and_warn() {
+fn number_and_dimension_overflow_clamp_and_err() {
   let (log, xml) = convert_ar5iv(include_str!(
     "../../../tools/perfect_kernel/repros/expansion-primitives/dimension_overflow_max_dimen.tex"
   ));
-  assert_eq!(error_count(&log), 0, "{log}");
-  assert_eq!(warning_count(&log), 2, "{log}");
+  assert_eq!(error_count(&log), 2, "{log}");
+  assert_eq!(warning_count(&log), 0, "{log}");
   assert_eq!(
-    lines_with(&log, "Warning:expected:<number> Number too big.").len(),
+    lines_with(&log, "Error:expected:<number> Number too big.").len(),
     1,
     "{log}"
   );
   assert_eq!(
-    lines_with(&log, "Warning:expected:<dimen> Dimension too large.").len(),
+    lines_with(&log, "Error:expected:<dimen> Dimension too large.").len(),
     1,
     "{log}"
   );
@@ -239,16 +239,16 @@ fn number_and_dimension_overflow_clamp_and_warn() {
   );
 }
 
-/// A count assignment takes TeX's `infinity` for a constant past it, and a hexadecimal one too (§445).
+/// A count assignment takes TeX's `infinity` for a constant past it, and a hexadecimal one too (§445); pdflatex 2 `!`.
 #[test]
 fn integer_constant_overflow_is_infinity() {
   let (log, xml) = convert_ar5iv(
     "\\documentclass{article}\n\\begin{document}\n\\count255=99999999999 A=\\the\\count255;\n\\count255=\"FFFFFFFFF B=\\the\\count255.\n\\end{document}\n",
   );
-  assert_eq!(error_count(&log), 0, "{log}");
-  assert_eq!(warning_count(&log), 2, "{log}");
+  assert_eq!(error_count(&log), 2, "{log}");
+  assert_eq!(warning_count(&log), 0, "{log}");
   assert_eq!(
-    lines_with(&log, "Warning:expected:<number> Number too big.").len(),
+    lines_with(&log, "Error:expected:<number> Number too big.").len(),
     2,
     "{log}"
   );

@@ -1,0 +1,9 @@
+% An integer constant past 2^31 - 1 is "Number too big" (tex.web §445); TeX holds `infinity`, not the author's value.
+% witness: synthetic (SV0 numbig; the staged rule (3), DTL1d).
+% status:  GREEN (DTL1d; int162a: 0 errors, 1 warning, [2147483647]).
+% oracle:  pdflatex 1 `!` (Number too big), [2147483647]; Perl 0 errors 0 warnings, [3000000000].
+% expect:  1 error (Number too big), 0 warnings, [2147483647].
+\documentclass{article}
+\begin{document}
+\count255=3000000000 A=[\the\count255]
+\end{document}

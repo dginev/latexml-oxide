@@ -1,0 +1,9 @@
+% A `\numexpr` past 2^31 - 1 is "Arithmetic overflow" and the expression is 0 (etex.ch `scan_expr`).
+% witness: synthetic (DTL1d).
+% status:  GREEN (DTL1d; int162a: 0 errors, 1 warning, [0]).
+% oracle:  pdflatex 1 `!` (Arithmetic overflow), [0]; Perl 0 errors 0 warnings, [2147483648].
+% expect:  1 error (Arithmetic overflow), 0 warnings, [0].
+\documentclass{article}
+\begin{document}
+\count255=\numexpr 2147483647+1\relax A=[\the\count255]
+\end{document}

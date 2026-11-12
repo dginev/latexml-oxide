@@ -4472,21 +4472,19 @@ pub fn read_normal_integer() -> Result<Option<Number>> {
 }
 
 /// tex.web §445: an integer constant (decimal, octal or hexadecimal) of 2^31 or
-/// more is "Number too big", and its value is `infinity` = 2^31 − 1. TeX's
-/// error is reported as a Warning, the severity of Perl's other
-/// `scan_int`/`scan_dimen` recoveries (Gullet.pm:904, :969-972), since the
-/// recovered value is TeX's own (OXIDIZED_DESIGN #519).
-fn number_too_big(n: i64) -> i64 {
+/// more is "Number too big", and its value is `infinity` = 2^31 − 1. An Error,
+/// as TeX's: the recovered value is not the author's (OXIDIZED_DESIGN #519).
+fn number_too_big(n: i64) -> Result<i64> {
   if n > MAX_INTEGER {
-    Warn!(
+    Error!(
       "expected",
       "<number>",
       "Number too big.",
       s!("{n} clamped to {MAX_INTEGER} (tex.web §445)")
     );
-    MAX_INTEGER
+    Ok(MAX_INTEGER)
   } else {
-    n
+    Ok(n)
   }
 }
 
@@ -4496,18 +4494,18 @@ fn number_too_big(n: i64) -> i64 {
 /// the scan's own `<optional signs>` (`negative`) — a negative internal unit
 /// (`2000000000\dimen0` with `\dimen0` < 0) gives +max_dimen, as pdfTeX
 /// prints it. `scaled` is the fixed-point product, `Err(_)` when it left the
-/// i64 range. A Warning, as for [`number_too_big`].
-fn dimension_too_large(scaled: std::result::Result<i64, i64>, negative: bool) -> i64 {
+/// i64 range. An Error, as for [`number_too_big`].
+fn dimension_too_large(scaled: std::result::Result<i64, i64>, negative: bool) -> Result<i64> {
   match scaled {
-    Ok(v) if v.abs() <= MAX_DIMEN => v,
+    Ok(v) if v.abs() <= MAX_DIMEN => Ok(v),
     _ => {
-      Warn!(
+      Error!(
         "expected",
         "<dimen>",
         "Dimension too large.",
         "clamped to max_dimen (tex.web §460)"
       );
-      if negative { -MAX_DIMEN } else { MAX_DIMEN }
+      Ok(if negative { -MAX_DIMEN } else { MAX_DIMEN })
     },
   }
 }
@@ -4554,7 +4552,7 @@ fn normal_integer_from(token: Token) -> Result<Scanned<Number>> {
     {
       unread_scanned(end);
     }
-    Ok(Scanned::Value(Some(Number::new(number_too_big(n)))))
+    Ok(Scanned::Value(Some(Number::new(number_too_big(n)?))))
   } else if token == T_OTHER!("'") {
     // Read Octal literal. Perl: `Number(oct(readDigits(...)))`, and
     // Perl's `oct("")` is 0 — so a `'` with no octal digit following
@@ -4567,7 +4565,7 @@ fn normal_integer_from(token: Token) -> Result<Scanned<Number>> {
     } else {
       i64::from_str_radix(&digits, 8).unwrap_or(i64::MAX)
     };
-    Ok(Scanned::Value(Some(Number::new(number_too_big(decimal)))))
+    Ok(Scanned::Value(Some(Number::new(number_too_big(decimal)?))))
   } else if token == T_OTHER!("\"") {
     //  Read Hex literal. Perl: `Number(hex(readDigits(...)))`, and
     // Perl's `hex("")` is 0 — so a `"` with no hex digit following
@@ -4580,7 +4578,7 @@ fn normal_integer_from(token: Token) -> Result<Scanned<Number>> {
     } else {
       i64::from_str_radix(&digits, 16).unwrap_or(i64::MAX)
     };
-    Ok(Scanned::Value(Some(Number::new(number_too_big(decimal)))))
+    Ok(Scanned::Value(Some(Number::new(number_too_big(decimal)?))))
   } else if token == T_OTHER!("`") {
     //  Read Charcode: `<character token><one optional space>
     // The leading `\` is stripped only from a control-sequence token
@@ -4758,7 +4756,7 @@ pub fn read_dimension() -> Result<Dimension> {
     Ok(Dimension::new(dimension_too_large(
       fixpoint_unit_checked(d_signed, num, den),
       is_negative,
-    )))
+    )?))
   } else {
     // Perl Gullet.pm:972: the type is named in the primary message
     // ("(Dimension)") and "while processing X" is a separate detail
@@ -4888,7 +4886,7 @@ pub fn read_rubber(mu: bool) -> Result<(Option<i64>, Option<FillCode>)> {
         let val = s as f64 * f;
         // The <dimen> of a glue component is `scan_dimen`'s (§460).
         let sp = match ratio {
-          Some((num, den)) => dimension_too_large(fixpoint_unit_checked(val, num, den), s < 0),
+          Some((num, den)) => dimension_too_large(fixpoint_unit_checked(val, num, den), s < 0)?,
           None => fixpoint(val, None),
         };
         Ok((Some(sp), None))
@@ -4952,7 +4950,7 @@ pub fn read_mu_dimension() -> Result<MuDimension> {
     }
     // `scan_dimen` with `mu` (§456) ends in the same `attach_sign` (§460).
     let sp = match munit {
-      Some((num, den)) => dimension_too_large(fixpoint_unit_checked(m, num, den), is_negative),
+      Some((num, den)) => dimension_too_large(fixpoint_unit_checked(m, num, den), is_negative)?,
       None => fixpoint(m, None),
     };
     Ok(MuDimension::new(sp))
@@ -5257,7 +5255,7 @@ pub fn read_factor() -> Result<Option<f64>> {
     let value = whole
       .parse::<i64>()
       .unwrap_or(if whole.is_empty() { 0 } else { i64::MAX });
-    if number_too_big(value) != value {
+    if number_too_big(value)? != value {
       factor = s!("{MAX_INTEGER}.{fraction}");
     }
     let factor_f64: f64 = factor.parse::<f64>().unwrap_or(0.0);

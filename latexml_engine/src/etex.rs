@@ -95,14 +95,14 @@ LoadDefinitions!({
     // etex.ch `scan_expr`: a result past `infinity` (2^31 − 1, an integer) or
     // `max_dimen` (any other type) is "Arithmetic overflow", and the
     // expression's value is zero (pdfTeX: `\dimexpr-16383pt*3\relax` = 0.0pt).
-    // A Warning: the value is TeX's own (the severity of `number_too_big`; OXIDIZED_DESIGN #519).
+    // An Error, as TeX's: the zero is not the author's value (OXIDIZED_DESIGN #519).
     let ceiling = if matches!(rtype, RegisterType::Number) {
       MAX_INTEGER
     } else {
       MAX_DIMEN
     };
     if value.clone().value_of().abs() > ceiling {
-      Warn!(
+      Error!(
         "expected",
         "<number>",
         "Arithmetic overflow.",

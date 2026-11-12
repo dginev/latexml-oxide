@@ -1,0 +1,17 @@
+% acmart loads setspace only under `manuscript` (acmart.cls:289-292 `\if@ACM@manuscript`); our binding (acmart_cls.rs:108)
+% and Perl's (acmart.cls.ltxml:34) load it always, so setspace's `\spacing` refuses the author's `\newcommand\spacing{.7}`
+% and a tikz coordinate `(\radius+\spacing/2-.075, ...)` reads as a node name: 41 Errors and 2 "Dimension too large".
+% witness: 2409.07148 (text/algorithm.tex:46, :58; found by DTL1d's A/B: pdflatex 0 `!`).
+% status:  RED. Ours (DTL1d): 43 errors (2 Dimension too large, the rest `\csname` and pgf "No shape named").
+% oracle:  pdflatex 0 `!`; Perl 1 error (the same `\spacing` in `\csname`).
+% expect:  0 errors, an arrow from (0,0) to (1.975,0.415).
+% moves:   post-merge (a class binding's load list, not the out-of-range severity).
+\documentclass[acmtog]{acmart}
+\usepackage{tikz}
+\newcommand\radius{1.7}
+\newcommand\spacing{.7}
+\begin{document}
+\begin{tikzpicture}
+\draw[->] (0,0) edge[bend left = 45] (\radius+\spacing/2-.075, \radius/5+.075);
+\end{tikzpicture}
+\end{document}

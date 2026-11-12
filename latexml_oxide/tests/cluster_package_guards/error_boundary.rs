@@ -201,8 +201,8 @@ const BOUNDARY: &[Row] = &[
     &[],
     &[("p", "p1.1", SEE_PDF)],
   ),
-  // --- A dimension TeX cannot hold (DTL1; the error side of 2010.05701's tikzscale overflow): a Warning until the
-  // out-of-range severity batch ---
+  // --- Out of TeX's range (OD #519): TeX errs and holds its bound or 0, not the author's value, so an Error by rule (3);
+  // each bound itself reads silently (DTL1d; DTL1's dimension row is the error side of 2010.05701's tikzscale overflow) ---
   (
     "\\dimen0=20000pt (repro graphics-tikz/pgfmath_dimension_too_large_still_reported)",
     "pdflatex 1 `!` (Dimension too large), [16383.99998pt]; Perl 0 errors, [20000.0pt]",
@@ -210,9 +210,82 @@ const BOUNDARY: &[Row] = &[
       "../../../tools/perfect_kernel/repros/graphics-tikz/pgfmath_dimension_too_large_still_reported.tex"
     ),
     &[],
-    (0, 1),
-    &["Warning:expected:<dimen> Dimension too large."],
+    (1, 0),
+    &["Error:expected:<dimen> Dimension too large."],
     &[("p", "p1.1", r#"<p xml:id="p1.1">[16383.99998pt]</p>"#)],
+  ),
+  (
+    "\\count255=3000000000 (repro expansion-primitives/out_of_range_number_errs)",
+    "pdflatex 1 `!` (Number too big), [2147483647]; Perl 0 errors, [3000000000]",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/expansion-primitives/out_of_range_number_errs.tex"
+    ),
+    &[],
+    (1, 0),
+    &["Error:expected:<number> Number too big."],
+    &[("p", "p1.1", r#"<p xml:id="p1.1">A=[2147483647]</p>"#)],
+  ),
+  (
+    "\\numexpr past 2^31-1 (repro expansion-primitives/numexpr_overflow_errs)",
+    "pdflatex 1 `!` (Arithmetic overflow), [0]; Perl 0 errors, [2147483648]",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/expansion-primitives/numexpr_overflow_errs.tex"
+    ),
+    &[],
+    (1, 0),
+    &["Error:expected:<number> Arithmetic overflow."],
+    &[("p", "p1.1", r#"<p xml:id="p1.1">A=[0]</p>"#)],
+  ),
+  (
+    "\\dimexpr past \\maxdimen (repro expansion-primitives/dimexpr_overflow_errs)",
+    "pdflatex 1 `!` (Arithmetic overflow), [0.0pt]; Perl 0 errors, [32766.0pt]",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/expansion-primitives/dimexpr_overflow_errs.tex"
+    ),
+    &[],
+    (1, 0),
+    &["Error:expected:<number> Arithmetic overflow."],
+    &[("p", "p1.1", r#"<p xml:id="p1.1">A=[0.0pt]</p>"#)],
+  ),
+  (
+    "TeX's bounds as constants and e-TeX results (repro expansion-primitives/out_of_range_bounds_are_clean)",
+    "pdflatex 0 `!`; Perl 0 errors",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/expansion-primitives/out_of_range_bounds_are_clean.tex"
+    ),
+    &[],
+    (0, 0),
+    &[],
+    &[(
+      "p",
+      "p1.1",
+      "<p xml:id=\"p1.1\">[2147483647]\n[16383.99998pt]\n[16383.99998pt]\n[2147483647]\n[16383.99997pt]</p>",
+    )],
+  ),
+  (
+    "a pgfmath result past 16383.99998 (repro graphics-tikz/pgfmath_overflow_errs)",
+    "pdflatex 1 `!` (Dimension too large), [16383.99998pt]; Perl 1 error (pgfmath:overflow), [16383.99998pt]",
+    include_str!("../../../tools/perfect_kernel/repros/graphics-tikz/pgfmath_overflow_errs.tex"),
+    &[],
+    (1, 0),
+    &["Error:pgfmath:overflow Dimension too large: 20000. Input was: \\wd\\mb*200"],
+    &[("p", "p1.1", r#"<p xml:id="p1.1">[16383.99998pt]</p>"#)],
+  ),
+  (
+    "pgfmath at its bound (`\\maxdimen` too: tikzpingus), and past it as a plain number (pgf's own number path)",
+    "pdflatex 0 `!`, [16383.99998] [-16383.99998] [16382.0] [20000] [16383.99998] [-16383.99998]; Perl 0 errors",
+    "\\documentclass{article}\n\\usepackage{pgf}\n\\begin{document}\n\\pgfmathparse{16383.99998}[\\pgfmathresult] \
+     \\pgfmathparse{-16383.99998}[\\pgfmathresult] \\pgfmathparse{8191*2}[\\pgfmathresult] \
+     \\pgfmathparse{20000}[\\pgfmathresult] \\pgfmathparse{\\maxdimen}[\\pgfmathresult] \
+     \\pgfmathparse{-\\maxdimen}[\\pgfmathresult]\n\\end{document}\n",
+    &[],
+    (0, 0),
+    &[],
+    &[(
+      "p",
+      "p1.1",
+      r#"<p xml:id="p1.1">[16383.99998] [-16383.99998] [16382.0] [20000] [16383.99998] [-16383.99998]</p>"#,
+    )],
   ),
   // --- bibunits' `\putbib` reads `\@startbibunitorrelax`, undefined before the first unit (bibunits.sty:251-256,
   // 324-325): an Error by rule (3), the cite dangling (revBU1b PE1) ---

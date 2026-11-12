@@ -360,10 +360,15 @@ fn try_simple_number(input: &str) -> Option<String> {
       } else if decimals.is_none() {
         result = format!("{}.0", result);
       }
-      // Overflow check for negative
+      // Overflow check for negative (Perl .ltxml:342-344)
       if let Ok(numval) = result.parse::<f64>()
         && numval < -MAX_PGF_NUMBER
       {
+        report_pgfmath_error(
+          "pgfmath",
+          "overflow",
+          &format!("Dimension too large: {result}. Input was: {input}"),
+        );
         result = format!("{}", -MAX_PGF_NUMBER);
       }
     }
@@ -2158,7 +2163,15 @@ fn format_parse_result(result: f64, input: &str) -> String {
   if result.is_nan() || result.is_infinite() {
     return "0.0".to_string();
   }
-  // Overflow check
+  // pgf's `\pgfmath@x=…pt` stops on "Dimension too large" (tex.web §460); Perl errs too (.ltxml:391-393), on the
+  // five-decimal result, so `\maxdimen` (16383.99998474…) is in range.
+  if ((result * 1e5).round() / 1e5).abs() > MAX_PGF_NUMBER {
+    report_pgfmath_error(
+      "pgfmath",
+      "overflow",
+      &format!("Dimension too large: {result}. Input was: {input}"),
+    );
+  }
   let result = result.clamp(-MAX_PGF_NUMBER, MAX_PGF_NUMBER);
 
   // Integer result

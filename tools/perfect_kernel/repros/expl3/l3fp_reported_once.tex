@@ -3,8 +3,8 @@
 %   answers (the review of batch P2: its cap was one figure for every unit, 2000in passed it, was read and declined, and the raw run reported again)
 % witness: review of batch P2, no arXiv paper
 % oracle:  pdflatex: `! Dimension too large` once for each of the last three rows, the same values
-% engines: rust: 3 Warnings native and raw (Perl has no native path)
-% expect:  3 Warnings; the values below; eight of the first row's nine answered natively (16000pt, at its unit's cap, is the macro's)
+% engines: rust: 3 Errors native and raw (Warnings before DTL1d; Perl has no native path)
+% expect:  3 Errors; the values below; eight of the first row's nine answered natively (16000pt, at its unit's cap, is the macro's)
 % status:  GREEN
 \documentclass{article}
 \ExplSyntaxOn
