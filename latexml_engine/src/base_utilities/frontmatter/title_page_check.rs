@@ -122,7 +122,7 @@ thread_local! {
 }
 
 /// Forget the words spilled (`SPILLED`) and what the frontmatter commands were given (`CALLED`): a new conversion starts
-/// with none (latexml_oxide's `prepare_session` and `initialize_session`), watching the document's calls
+/// with none (latexml_oxide's `initialize_session`), watching the document's calls
 /// ([`note_frontmatter_entry`]).
 pub fn reset_title_page_check() {
   crate::latex_constructs::title_page_reading::end_title_page_epoch();
