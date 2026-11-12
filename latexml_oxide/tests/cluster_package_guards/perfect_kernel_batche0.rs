@@ -1583,9 +1583,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // CR10c, 128 -> 126: the old block names read once as the ones they mean (`with_block_names`), so the block test reads
   // one name each (-3), and an outer block's own affiliation block found before an inner names block
   // (`affiliation_before_names`, 2605.20445, +1); P4cR2, 126 -> 131: the body is still tokens when `\author` reads it, so
-  // an affiliation block nested in another is found by the class's own command and its braces (`unnested_affiliation_blocks`,
-  // a lead of marks told by its having no letter; 1710.07993, 2605.02682) and a names block led by an ordinal by the number
-  // and suffix it prints (`ordinal_names`, 1806.11431); no name a document spells)
+  // an affiliation block nested in another is found by the class's own command and its braces, an unmarked one spliced at
+  // its line breaks (`unnested_affiliation_blocks`; its lead of marks read by the binding's mark reader since P4cR2b,
+  // `prints_marks_alone`; 1710.07993, 2605.02682) and a names block led by an ordinal by the number and suffix it prints
+  // (`ordinal_names`, 1806.11431); no name a document spells)
   ("ieeetran_cls.rs", 131),
   ("insert", 14),
   // (from `frontmatter (rest)`, 24 -> 23, at Z2r2: `\alignauthor`, out of the kernel's conventions into the binding's own table; no read)
@@ -1635,7 +1636,8 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // before it — what it prints, no name spelled; 2603.18265)
   ("rehearsal", 21),
   // (P4cR2 134 -> 136: `leads_with_ordinal`, a number and its suffix past spaces, for IEEEtran's `\author`, which reads
-  // tokens before digestion; it shares `ordinal_suffix_at`, the suffix rule this file already reads; 1806.11431)
+  // tokens before digestion; it shares `ordinal_suffix_end`, the suffix rule this file already reads, as P4cR2b's
+  // `ordinal_name_line` does; 1806.11431)
   ("relocate", 136),
   // (Z2r2: not the study's lines but what `resolver_reads` counts, a shape no reason to raise it: `text_tokens` (`text_as_tokens`
   // since E0h, its name no longer the old reader's), printed text read

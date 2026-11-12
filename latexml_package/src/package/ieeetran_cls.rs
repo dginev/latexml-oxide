@@ -3,8 +3,9 @@
 use crate::{
   engine::{
     base_utilities::{
-      document_notes, grade_words, leads_with_ordinal, names_continue, notes_only_line,
-      prints_nothing,
+      document_notes, grade_words, leads_with_ordinal, leads_with_written_mark, names_continue,
+      notes_only_line, ordinal_name_line, prints_marks_alone, prints_nothing,
+      split_top_level_lines,
     },
     latex_constructs::{FontUnit, set_theorem_within_display, symbol_box_size},
   },
@@ -1155,9 +1156,10 @@ fn split_top_level(tokens: &[Token], delim: &Token) -> Vec<Vec<Token>> {
 /// `\IEEEmembership` is the class's (`ours`), each name's grade made its contact (`block_name_memberships`). The old
 /// block names are read as the ones they mean first (`with_block_names`), so every step below reads only those.
 fn author_block_body(body: Tokens, ours: bool) -> Result<Tokens> {
-  let body = unnested_affiliation_blocks(wrap_bare_author_block_text(transpose_ieee_author_grid(
-    unnested_name_blocks(with_block_names(body)),
-  )));
+  let body = unnested_affiliation_blocks(wrap_bare_author_block_text(
+    transpose_ieee_author_grid(unnested_name_blocks(with_block_names(body))),
+    true,
+  ));
   if ours {
     block_name_memberships(body)
   } else {
@@ -1279,15 +1281,28 @@ fn block_argument(tokens: &[Token], at: usize) -> Option<(usize, usize)> {
   Some((open, close))
 }
 
-/// An author-block body with each affiliation block at the top level of another's argument a block of its own, the
-/// outer's text around it bare text again (`wrap_bare_author_block_text`): conference mode prints each block on rows of
-/// its own (IEEEtran.cls:4653-4665). Marks alone before the first inner block are its label (1710.07993, 2004.11080,
-/// 2107.11588, 2605.02682, 1405.1593's `\thanks` wrapper; OXIDIZED_DESIGN_DIVERGENCES #1009).
+/// An author-block body with each affiliation block at the top level of another's argument read as conference mode
+/// prints it, on rows of its own in the outer's column (IEEEtran.cls:4653-4665): one led by a mark, or after a line of
+/// marks alone (its label), lifted out as a block of its own, the outer's text around it bare text again
+/// (`wrap_bare_author_block_text`); an unmarked one spliced into the outer's lines (1710.07993, 2004.11080, 2107.11588,
+/// 2605.02682, 1405.1593's `\thanks` wrapper; review revP4cR2 B1-B3; OXIDIZED_DESIGN_DIVERGENCES #1009).
 fn unnested_affiliation_blocks(body: Tokens) -> Tokens {
   fn is_affiliation(t: &Token) -> bool { *t == T_CS!("\\IEEEauthorblockA") }
-  // `tokens` at one level, each affiliation block's top-level inner blocks lifted out of it; whether any was
-  fn lifted(tokens: &[Token], out: &mut Vec<Token>) -> bool {
-    let mut any = false;
+  fn is_break(t: &Token) -> bool { *t == T_CS!("\\\\") || *t == T_CS!("\\newline") }
+  // `chunk` added to the outer's text, after the line break a spliced block's text owes the text after it
+  fn append(text: &mut Vec<Token>, chunk: &[Token], owed: &mut bool) {
+    let first = chunk.iter().position(|t| *t != T_SPACE!());
+    if *owed && let Some(first) = first.filter(|&k| !is_break(&chunk[k])) {
+      text.push(T_CS!("\\\\"));
+      text.extend_from_slice(&chunk[first..]);
+    } else {
+      text.extend_from_slice(chunk);
+    }
+    *owed &= first.is_none();
+  }
+  // `tokens` at one level, each affiliation block's top-level inner blocks read; whether one was lifted out
+  fn read(tokens: &[Token], out: &mut Vec<Token>) -> bool {
+    let mut lifted_any = false;
     let mut i = 0;
     while i < tokens.len() {
       let Some((open, close)) =
@@ -1298,44 +1313,86 @@ fn unnested_affiliation_blocks(body: Tokens) -> Tokens {
         continue;
       };
       let arg = &tokens[open + 1..close];
-      let mut first = None;
-      let mut j = 0;
-      while j < arg.len() && first.is_none() {
-        match block_argument(arg, j + 1).filter(|_| is_affiliation(&arg[j])) {
-          Some(_) => first = Some(j),
-          None => j = block_argument(arg, j).map_or(j + 1, |(_, close)| close + 1),
+      // the outer's text and the blocks lifted out of it, in order (`true`: a block)
+      let mut pieces: Vec<(bool, Vec<Token>)> = Vec::new();
+      let mut text: Vec<Token> = Vec::new();
+      let (mut from, mut j, mut owed, mut lifts) = (0, 0, false, false);
+      while j < arg.len() {
+        let Some((inner_open, inner_close)) =
+          block_argument(arg, j + 1).filter(|_| is_affiliation(&arg[j]))
+        else {
+          // (a group skipped whole)
+          j = block_argument(arg, j).map_or(j + 1, |(_, close)| close + 1);
+          continue;
+        };
+        let lead = &arg[from..j];
+        let inner = &arg[inner_open + 1..inner_close];
+        // (the lead's last line, past its last top-level `\\`)
+        let line = lead.len()
+          - split_top_level_lines(lead)
+            .last()
+            .map_or(0, |last| last.len());
+        let label = if prints_marks_alone(&lead[line..]) {
+          Some(line)
+        } else {
+          leads_with_written_mark(inner).then_some(lead.len())
+        };
+        if let Some(label) = label {
+          append(&mut text, &lead[..label], &mut owed);
+          pieces.push((false, std::mem::take(&mut text)));
+          let mut block = vec![arg[j], T_BEGIN!()];
+          block.extend_from_slice(&lead[label..]);
+          block.extend_from_slice(inner);
+          block.push(T_END!());
+          pieces.push((true, block));
+          (owed, lifts) = (false, true);
+        } else {
+          // (spliced, on rows of its own: Lab Z under both names, `Dept X, Univ Y\\ \IEEEauthorblockA{Lab Z}`)
+          append(&mut text, lead, &mut owed);
+          while text.last() == Some(&T_SPACE!()) {
+            text.pop();
+          }
+          if text.last().is_some_and(|t| !is_break(t)) {
+            text.push(T_CS!("\\\\"));
+          }
+          text.extend_from_slice(inner);
+          owed = true;
+        }
+        from = inner_close + 1;
+        j = from;
+      }
+      let at = i;
+      i = close + 1;
+      if from == 0 {
+        out.extend_from_slice(&tokens[at..i]);
+        continue;
+      }
+      append(&mut text, &arg[from..], &mut owed);
+      pieces.push((false, text));
+      if !lifts {
+        let mut block = vec![tokens[at], T_BEGIN!()];
+        block.extend(pieces.into_iter().flat_map(|(_, piece)| piece));
+        block.push(T_END!());
+        lifted_any |= read(&block, out);
+        continue;
+      }
+      lifted_any = true;
+      for (block, piece) in pieces {
+        if block {
+          read(&piece, out);
+        } else {
+          out.extend(piece);
         }
       }
-      match first {
-        None => out.extend_from_slice(&tokens[i..=close]),
-        Some(first) => {
-          any = true;
-          let lead = &arg[..first];
-          let (inner_open, inner_close) = block_argument(arg, first + 1).expect("an inner block");
-          if lead.iter().any(|t| t.code == Catcode::LETTER)
-            || prints_nothing(&Tokens::new(lead.to_vec()))
-          {
-            lifted(arg, out);
-          } else {
-            let mut labelled = vec![tokens[i], T_BEGIN!()];
-            labelled.extend_from_slice(lead);
-            labelled.extend_from_slice(&arg[inner_open + 1..inner_close]);
-            labelled.push(T_END!());
-            lifted(&labelled, out);
-            lifted(&arg[inner_close + 1..], out);
-          }
-        },
-      }
-      i = close + 1;
     }
-    any
+    lifted_any
   }
   let tokens = body.unlist();
   let mut out = Vec::with_capacity(tokens.len());
-  if lifted(&tokens, &mut out) {
-    wrap_bare_author_block_text(Tokens::new(out))
+  if read(&tokens, &mut out) {
+    wrap_bare_author_block_text(Tokens::new(out), false)
   } else {
-    Tokens::new(tokens)
+    Tokens::new(out)
   }
 }
 
@@ -1406,21 +1463,16 @@ fn transpose_ieee_author_grid(body: Tokens) -> Tokens {
 /// text and `\lx@IEEE@author@blocks` digests it into the document body as the first paragraph. Real Perl LaTeXML
 /// bundles the WHOLE author argument into `<personname>` (`\lx@add@authors`), so the tail never leaks —
 /// GENUINE-RUST-ONLY. Witness arXiv 1901.07768 (`\{anuja, seth.gilbert, tankl\}@comp.nus.edu.sg`).
-fn wrap_bare_author_block_text(body: Tokens) -> Tokens {
+fn wrap_bare_author_block_text(body: Tokens, name_lines: bool) -> Tokens {
   let toks = body.unlist();
   let is_block = |t: &Token| *t == T_CS!("\\IEEEauthorblockN") || *t == T_CS!("\\IEEEauthorblockA");
   // (whether a names block leads with an ordinal: the template's convention, `\IEEEauthorblockN{1\textsuperscript{st} …}`)
-  let ordinal_names = toks.iter().enumerate().any(|(i, t)| {
-    let open = i
-      + 1
-      + toks[i + 1..]
-        .iter()
-        .take_while(|u| **u == T_SPACE!())
-        .count();
-    *t == T_CS!("\\IEEEauthorblockN")
-      && toks.get(open).is_some_and(|u| u.code == Catcode::BEGIN)
-      && leads_with_ordinal(&toks[open + 1..])
-  });
+  let ordinal_names = name_lines
+    && toks.iter().enumerate().any(|(i, t)| {
+      *t == T_CS!("\\IEEEauthorblockN")
+        && block_argument(&toks, i + 1)
+          .is_some_and(|(open, _)| leads_with_ordinal(&toks[open + 1..]))
+    });
   fn wrap(
     run: &mut Vec<Token>,
     out: &mut Vec<Token>,
@@ -1498,19 +1550,30 @@ fn wrap_bare_author_block_text(body: Tokens) -> Tokens {
         }
       }
       run.truncate(end);
-      // (a run before the block's affiliation led by an ordinal, where the names are, is a name line, the template's:
-      // `\IEEEauthorblockN{1\textsuperscript{st} …} 3\textsuperscript{rd}Cy Cole \IEEEauthorblockA{…}`, 1806.11431,
-      // read as an affiliation, took the block's authors)
-      out.push(
-        if before_affiliation && ordinal_names && leads_with_ordinal(run) {
-          T_CS!("\\IEEEauthorblockN")
-        } else {
-          T_CS!("\\IEEEauthorblockA")
-        },
-      );
-      out.push(T_BEGIN!());
-      out.append(run);
-      out.push(T_END!());
+      // (a run before the block's affiliation of lines each an ordinal-led name, where the names are, is name lines,
+      // the template's: `\IEEEauthorblockN{1\textsuperscript{st} …} 3\textsuperscript{rd}Cy Cole \IEEEauthorblockA{…}`,
+      // 1806.11431, read as an affiliation, took the block's authors; "2nd Floor, Bldg 5" no name, review revP4cR2 S1, S2)
+      let names = (before_affiliation && ordinal_names)
+        .then(|| {
+          split_top_level_lines(run)
+            .into_iter()
+            .filter(|line| !prints_nothing(&Tokens::new(line.to_vec())))
+            .collect::<Vec<_>>()
+        })
+        .filter(|lines| lines.iter().all(|line| ordinal_name_line(line)));
+      if let Some(lines) = names {
+        for line in lines {
+          out.push(T_CS!("\\IEEEauthorblockN"));
+          out.push(T_BEGIN!());
+          out.extend_from_slice(line);
+          out.push(T_END!());
+        }
+      } else {
+        out.push(T_CS!("\\IEEEauthorblockA"));
+        out.push(T_BEGIN!());
+        out.append(run);
+        out.push(T_END!());
+      }
     }
     run.clear();
   }
