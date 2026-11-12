@@ -72,7 +72,7 @@ LoadDefinitions!({
   // subcaption.sty:43 loads caption itself, even after floatrow's `caption3` (whose stand-in, the caption binding, marks
   // `\lx@caption@kernel@only`, caption_sty.rs): caption replaces a class's own `\@makecaption` (jfm_cls.rs). Guard
   // `perfect_kernel_batch78a::jfm_copy_caption_yields_to_caption_loaders_after_floatrow`.
-  RawTeX!(r"\global\let\lx@caption@kernel@only\@undefined");
+  RawTeX!(r"\lx@caption@full@load");
 
   //======================================================================
   // Counters and formatting

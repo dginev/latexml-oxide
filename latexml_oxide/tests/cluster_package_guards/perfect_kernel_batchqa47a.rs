@@ -4,7 +4,8 @@
 //! with one counted Warning (an Info for a class's or package's own) instead of a false Error. A table of its own: no
 //! hooks table exists yet, nor the shared Error-boundary table on this base. Each row's
 //! oracle (pdflatex `!` count and text, Perl's) is in its repro header; the RED shapes stay catalog repros
-//! (`command_hook_on_an_optional_argument_command_red`, `command_hook_on_a_tex_primitive_red`).
+//! (`command_hook_on_an_optional_argument_command_red`, `command_hook_on_a_tex_primitive_red`,
+//! `command_hook_on_makecaption_caption_repeat_without_options_red`).
 use latexml::util::test::{assert_element, convert_with};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
@@ -128,6 +129,75 @@ const ROWS: &[Row] = &[
       "p",
       "xml:id=\"p1.1\"",
       r#"<p xml:id="p1.1">Text 0.0pt.</p>"#,
+    )],
+  },
+  // caption.sty:270 lets `\@makecaption` to caption's, so a hook on it patches under babel-spanish's active `>` (red on
+  // int163a: the kernel's body kept, 1 Error; 2401.04032's asmeconf.cls:598-604). CAP1.
+  Row {
+    name:     "command_hook_on_makecaption_under_caption",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/command_hook_on_makecaption_under_caption.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    elements: &[
+      (
+        "text",
+        "xml:id=\"p1.1.1\"",
+        r#"<text font="typewriter" xml:id="p1.1.1">\long macro:#1#2-&gt;\UseHookWithArguments {cmd/@makecaption/before}{2}{#1}{#2}\lx@caption@ORI@makecaption {#1}{#2}</text>"#,
+      ),
+      (
+        "caption",
+        "class=\"ltx_centering\"",
+        r#"<caption class="ltx_centering"><tag close=": ">Figura 1</tag>Una figura.</caption>"#,
+      ),
+    ],
+  },
+  // The other route: caption's full load after its kernel alone (floatrow's caption3, then subcaption) lets it then,
+  // `\lx@caption@full@load` (red on int163a: 1 Error). CAP1.
+  Row {
+    name:     "command_hook_on_makecaption_caption_after_caption3",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/command_hook_on_makecaption_caption_after_caption3.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[],
+    elements: &[(
+      "caption",
+      "class=\"ltx_centering\"",
+      r#"<caption class="ltx_centering"><tag close=": ">Figura 1</tag>Una figura.</caption>"#,
+    )],
+  },
+  // The Error side, as pdflatex's one `!`: the kernel's `\@makecaption` without caption, and with caption's kernel alone
+  // (caption3 lets nothing; the binding's `\lx@caption@kernel@only` branch). CAP1.
+  Row {
+    name:     "command_hook_on_makecaption_kernel_errs",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/command_hook_on_makecaption_kernel_errs.tex"
+    ),
+    counts:   (1, 0),
+    messages: &[
+      r"Error:errmessage:\errmessage LaTeX hooks Error: Generic hooks cannot be added to '\@makecaption'.",
+    ],
+    elements: &[(
+      "caption",
+      "class=\"ltx_centering\"",
+      r#"<caption class="ltx_centering"><tag close=": ">Figura 1</tag>Una figura.</caption>"#,
+    )],
+  },
+  Row {
+    name:     "command_hook_on_makecaption_caption3_alone_errs",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/command_hook_on_makecaption_caption3_alone_errs.tex"
+    ),
+    counts:   (1, 0),
+    messages: &[
+      r"Error:errmessage:\errmessage LaTeX hooks Error: Generic hooks cannot be added to '\@makecaption'.",
+    ],
+    elements: &[(
+      "caption",
+      "class=\"ltx_centering\"",
+      r#"<caption class="ltx_centering"><tag close=": ">Figura 1</tag>Una figura.</caption>"#,
     )],
   },
   // `\document`'s other kernel hooks are one-time: code added to them in the body runs at once (a stale RED repro,
