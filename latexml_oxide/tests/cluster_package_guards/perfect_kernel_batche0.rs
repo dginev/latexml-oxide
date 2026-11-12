@@ -2089,40 +2089,52 @@ fn the_observers_spellings_are_counted_however_they_read() {
   );
 }
 
+/// A read of a token's spelling, on a line: a comparison with a token or a name, a catcode, a name's text, a table of names.
+fn token_read() -> Regex {
+  Regex::new(concat!(
+  r"(?:(?:==|!=)\s*&?\*?\s*T_[A-Z]+!)|(?:T_[A-Z]+!\([^)]*\)\s*(?:==|!=))|(?:contains\(&?T_[A-Z]+!)",
+  r"|(?:matches!\([^)]*T_[A-Z]+!)|(?:position_of\()|(?:get_catcode\(\))|(?:Catcode::[A-Z]+)|(?:\.get_cs\(\))",
+  r"|(?:\.cs_name\(\))|(?:\.get_string\(\))|(?:tokens?\.to_string\(\))|(?:content\.to_string\(\))|(?:\bToString\b)",
+  r"|(?:\|\s*T_[A-Z]+!)|(?:Some\(&?T_[A-Z]+!)|(?:\bis_cs\()|(?:\.as_cs\()|(?:meaning\()",
+  r"|(?:\bwith_str\()|(?:\bcs_in\()|(?:\b(?:text|text_as|printed_text)_tokens\()|(?:to_string\(\)\s*(?:==|!=))",
+  r#"|(?:(?:==|!=)\s*&?\*?\s*"\\\\)|(?:"\\\\[^"]*"\s*(?:==|!=|\||=>))"#,
+  // (a name's prefix or suffix; a `TOKEN_…` constant compared; a table of names or of tokens, `.contains` read off it; a
+  // method on a token list's text)
+  r#"|(?:\.(?:starts_with|ends_with|strip_prefix|strip_suffix)\(\s*"\\\\)"#,
+  r"|(?:(?:==|!=)\s*&?\*?\s*TOKEN_[A-Z_]+)|(?:TOKEN_[A-Z_]+\s*(?:==|!=))",
+  r#"|(?:\[\s*\(?"\\\\)|(?:=\s*&?\[\s*&?T_[A-Z]+!)|(?:\[\s*&?T_[A-Z]+![^\]]*\]\s*\.)"#,
+  r"|(?:to_string\(\)\s*\.\s*(?:as_str|contains|ends_with|eq|find|matches|split|starts_with|strip_prefix|strip_suffix|trim))",
+))
+.expect("the regex")
+}
+
+/// Lines as reads count them: what rustfmt moves to lines of its own joined to its line, a chained call
+/// (`.to_string()⏎.contains(…)`) and a table's first row (`&[⏎"\\a",`), so that a table counts once.
+fn logical_lines(lines: Vec<String>) -> Vec<String> {
+  let mut logical: Vec<String> = Vec::new();
+  for line in lines {
+    match logical.last_mut() {
+      Some(last) if line.trim_start().starts_with('.') || last.trim_end().ends_with('[') => {
+        last.push_str(line.trim_start())
+      },
+      _ => logical.push(line),
+    }
+  }
+  logical
+}
+
 /// The token-read check: a decision reads events or digested XML, never a token's spelling.
 #[test]
 fn token_reads_only_fall_toward_the_floor() {
   const WHY: &str = "Frontmatter decisions read events or digested XML, never token or source spelling: \
                      docs/parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md \"The principle\". The count is over-approximate, as the study's script \
                      is: a line that only looks like a read counts until it is reworded or the code is gone.";
-  let read = Regex::new(concat!(
-    r"(?:(?:==|!=)\s*&?\*?\s*T_[A-Z]+!)|(?:T_[A-Z]+!\([^)]*\)\s*(?:==|!=))|(?:contains\(&?T_[A-Z]+!)",
-    r"|(?:matches!\([^)]*T_[A-Z]+!)|(?:position_of\()|(?:get_catcode\(\))|(?:Catcode::[A-Z]+)|(?:\.get_cs\(\))",
-    r"|(?:\.cs_name\(\))|(?:\.get_string\(\))|(?:tokens?\.to_string\(\))|(?:content\.to_string\(\))|(?:\bToString\b)",
-    r"|(?:\|\s*T_[A-Z]+!)|(?:Some\(&?T_[A-Z]+!)|(?:\bis_cs\()|(?:\.as_cs\()|(?:meaning\()",
-    r"|(?:\bwith_str\()|(?:\bcs_in\()|(?:\b(?:text|text_as|printed_text)_tokens\()|(?:to_string\(\)\s*(?:==|!=))",
-    r#"|(?:(?:==|!=)\s*&?\*?\s*"\\\\)|(?:"\\\\[^"]*"\s*(?:==|!=|\||=>))"#,
-    // (a name's prefix or suffix; a `TOKEN_…` constant compared; a table of names or of tokens, `.contains` read off it; a
-    // method on a token list's text)
-    r#"|(?:\.(?:starts_with|ends_with|strip_prefix|strip_suffix)\(\s*"\\\\)"#,
-    r"|(?:(?:==|!=)\s*&?\*?\s*TOKEN_[A-Z_]+)|(?:TOKEN_[A-Z_]+\s*(?:==|!=))",
-    r#"|(?:\[\s*\(?"\\\\)|(?:=\s*&?\[\s*&?T_[A-Z]+!)|(?:\[\s*&?T_[A-Z]+![^\]]*\]\s*\.)"#,
-    r"|(?:to_string\(\)\s*\.\s*(?:as_str|contains|ends_with|eq|find|matches|split|starts_with|strip_prefix|strip_suffix|trim))",
-  ))
-  .expect("the regex");
-  // (a line, what rustfmt moves to lines of its own joined to it: a chained call, `.to_string()⏎.contains(…)`, and a table's
-  // first row, `&[⏎"\\a",`, so that a table counts once)
+  let read = token_read();
   let reads = |file: &str| {
-    let mut logical: Vec<String> = Vec::new();
-    for line in code_lines(file) {
-      match logical.last_mut() {
-        Some(last) if line.trim_start().starts_with('.') || last.trim_end().ends_with('[') => {
-          last.push_str(line.trim_start())
-        },
-        _ => logical.push(line),
-      }
-    }
-    logical.iter().filter(|line| read.is_match(line)).count()
+    logical_lines(code_lines(file))
+      .iter()
+      .filter(|line| read.is_match(line))
+      .count()
   };
   let mut counts: BTreeMap<String, usize> = BTreeMap::new();
   let mut listed: Vec<String> = Vec::new();
@@ -2442,5 +2454,497 @@ fn post_keeps_no_copy_of_the_bibstyle_table() {
     &counts,
     "A style's fact is written by the engine (`lookup_bibstyle_params`) onto `ltx:bibliography` and read there by \
      post, as `sort` is (OXIDIZED_DESIGN_DIVERGENCES #116).",
+  );
+}
+
+/// The kernel's crates, where GA0's fences F1, F3 and F4 look (F14).
+const KERNEL_DIRS: [&str; 3] = ["latexml_core/src", "latexml_engine/src", "latexml_post/src"];
+
+/// The frontmatter areas GA0's audit left to batche0's own fences.
+const FRONTMATTER_HOMES: [&str; 3] = [
+  "latexml_engine/src/base_utilities/frontmatter/",
+  "latexml_engine/src/frontmatter_stores.rs",
+  "latexml_engine/src/base_utilities/defs/frontmatter_api",
+];
+
+/// The literal indices of `source` with the code's offset of each.
+fn held_literals(source: &RustSource) -> impl Iterator<Item = (usize, &str)> {
+  let held = Regex::new(r#""([0-9]+)""#).expect("the regex");
+  held
+    .captures_iter(&source.code)
+    .map(|c| {
+      (
+        c.get(0).expect("a match").start(),
+        source.literals[c[1].parse::<usize>().expect("an index")].as_str(),
+      )
+    })
+    .collect::<Vec<_>>()
+    .into_iter()
+}
+
+/// What F1 counts in `source` (`file` its path): a literal naming a package or class file (`"array.sty"`, `"x.cls_loaded"`,
+/// `"\\ver@x.sty"`) or asking for one (`package_loaded("array")`), a state key named for a package with a binding
+/// (`stems`; `"FONTSPEC_…"`, `"lx@array@…"`), a package's internal command (`"\\NAT@…"`). Not GA4's table keys
+/// (`kernel_holds_no_table_package_key`), not the OmniBus fallback (Package.pm:2724), not an `INTERPRETABLE_SOURCES` table.
+fn package_names(source: &RustSource, file: &str, stems: &[String]) -> usize {
+  let named = Regex::new(r"^(?:\\ver@)?[A-Za-z0-9-]+\.(?:sty|cls)(?:_loaded|_raw_loaded)?$")
+    .expect("the regex");
+  let internal = Regex::new(r"^\\(?:NAT|Hy|pgf|tcb)@").expect("the regex");
+  let query = Regex::new(r"\b(?:package|class)_loaded\(\s*&?\s*$").expect("the regex");
+  let table =
+    Regex::new(r#"\bfor\s+\w+\s+in\s+\[([^\]]*)\]\s*\{[^}]*AssignMapping!\(\s*"([0-9]+)""#)
+      .expect("the regex");
+  let tables: Vec<std::ops::Range<usize>> = table
+    .captures_iter(&source.code)
+    .filter(|c| {
+      source.literals[c[2].parse::<usize>().expect("an index")] == "INTERPRETABLE_SOURCES"
+    })
+    .map(|c| c.get(1).expect("the list").range())
+    .collect();
+  let key = |literal: &str| {
+    let lower = literal.to_lowercase();
+    let (keyed, rest) = match lower.strip_prefix("lx@") {
+      Some(rest) => (true, rest.to_string()),
+      None => (
+        literal.starts_with(|c: char| c.is_ascii_uppercase()),
+        lower.clone(),
+      ),
+    };
+    keyed
+      && !literal.starts_with("LONGTABLE_")
+      && !literal.starts_with("lx@tabularx@")
+      && stems.iter().any(|stem| {
+        rest
+          .strip_prefix(stem.as_str())
+          .is_some_and(|after| after.starts_with(['_', '@']))
+      })
+  };
+  let fallback = [
+    "latexml_core/src/binding/content.rs",
+    "latexml_core/src/state.rs",
+    "latexml_engine/src/latex_constructs/sect01.rs",
+  ];
+  held_literals(source)
+    .filter(|(at, _)| !tables.iter().any(|range| range.contains(at)))
+    .filter(|(at, literal)| {
+      if literal.starts_with("OmniBus.cls") && fallback.contains(&file) {
+        return false;
+      }
+      named.is_match(literal)
+        || internal.is_match(literal)
+        || key(literal)
+        || (query.is_match(&source.code[..*at]) && !literal.contains('{'))
+    })
+    .count()
+}
+
+/// The package names with a binding, lower case: a key prefixed by one is that package's, but the LaTeX kernel's own
+/// concepts that share a binding's name (`lx@float@`, `CITE_`, `THEOREM_`, `KEYVAL@`, …).
+fn binding_stems() -> Vec<String> {
+  const KERNEL_CONCEPTS: [&str; 10] = [
+    "float", "caption", "cite", "theorem", "eqnarray", "keyval", "inputenc", "amstex", "trace",
+    "bibentry",
+  ];
+  let stem = Regex::new(r"/([A-Za-z0-9_]+)_(?:sty|cls)\.rs$").expect("the regex");
+  let mut stems: Vec<String> = ["latexml_package/src/package", "latexml_contrib/src"]
+    .iter()
+    .flat_map(|dir| rust_files(dir))
+    .filter_map(|file| stem.captures(&file).map(|c| c[1].to_lowercase()))
+    .filter(|stem| stem.len() > 2 && !KERNEL_CONCEPTS.contains(&stem.as_str()))
+    .collect();
+  stems.sort();
+  stems.dedup();
+  stems
+}
+
+/// F1 `shared_code_names_no_package` (GA0 finding 5's literals, finding 7's `\NAT@ifcmd`): what the kernel decides for a
+/// package, per file, a debt each; the floor is 0. `author_files.rs` is a data table of file names, not a decision.
+const SHARED_CODE_PACKAGE_NAMES: &[(&str, usize)] = &[
+  // (`XKVVIEW_TRACKING`, xkvview's)
+  ("latexml_core/src/keyval.rs", 1),
+  // (`FONTSPEC_FONTFILE`, fontspec's font file read by `\font`'s coverage)
+  ("latexml_engine/src/etex.rs", 1),
+  // (`amsmath_nonumber`: `package_loaded("amsmath") || load_recorded("amsmath.sty")`)
+  ("latexml_engine/src/latex_constructs/sect07.rs", 2),
+  // (`\NAT@ifcmd`, GA0 finding 7: the kernel `\bibitem` keyed to natbib; witness 1003.3017)
+  ("latexml_engine/src/latex_constructs/sect11.rs", 1),
+  // (`package_loaded("biblatex")`)
+  ("latexml_engine/src/pre_bibtex.rs", 1),
+  // (`package_loaded("array")` in the `\noalign\\` rule, `lx@array@keeps@interline` ×3: GA0 finding 3)
+  ("latexml_engine/src/tex_tables.rs", 4),
+];
+
+#[test]
+fn shared_code_names_no_package() {
+  const WHY: &str =
+    "A package's decision goes to its binding, or reads what TeX reads (a meaning, `\\@ifl@aded`).";
+  let stems = binding_stems();
+  assert!(
+    stems.contains(&"natbib".to_string()) && !stems.contains(&"float".to_string()),
+    "{stems:?}"
+  );
+  let mut counts = BTreeMap::new();
+  for dir in KERNEL_DIRS {
+    for file in rust_files(dir) {
+      if FRONTMATTER_HOMES.iter().any(|home| file.starts_with(home))
+        || file.ends_with("/binding/author_files.rs")
+      {
+        continue;
+      }
+      let n = package_names(&read_rust(&file), &file, &stems);
+      if n > 0 {
+        counts.insert(file, n);
+      }
+    }
+  }
+  assert_debts(
+    "the package names in shared code",
+    SHARED_CODE_PACKAGE_NAMES,
+    &counts,
+    WHY,
+  );
+}
+
+/// Every shape F1 names counts, and the kernel's own names and the allowed tables do not.
+#[test]
+fn a_package_name_in_shared_code_counts_however_it_is_written() {
+  let stems = vec!["natbib".to_string(), "fontspec".to_string()];
+  for (rule, n) in [
+    (
+      r#"fn f() { lookup_bool("array.sty_loaded"); file_loaded("aa.cls"); }"#,
+      2,
+    ),
+    (
+      r#"fn f() { lookup_meaning(&T_CS!("\\ver@amsmath.sty")); package_loaded("array"); class_loaded(r"revtex4"); }"#,
+      3,
+    ),
+    (
+      r#"fn f() { lookup_meaning(&T_CS!("\\NAT@ifcmd")); lookup_string("FONTSPEC_FONTFILE"); lookup_bool("lx@natbib@x"); }"#,
+      3,
+    ),
+    (
+      r#"fn f(p: &str) { package_loaded(&s!("{p}")); lookup_bool("CITE_SORT"); lookup_bool("lx@float@main"); }"#,
+      0,
+    ),
+    (
+      r#"fn f() { lookup_bool("LONGTABLE_KILL_NEXT"); lookup_bool("lx@tabularx@verb"); load_recorded("OmniBus.cls"); }"#,
+      0,
+    ),
+    (
+      r#"fn f() { for name in ["phy-ab.sty", "physics2.sty"] { AssignMapping!("INTERPRETABLE_SOURCES", name => 1); } }"#,
+      0,
+    ),
+    (
+      "#[cfg(test)]\nmod tests { const A: &str = \"array.sty\"; }",
+      0,
+    ),
+  ] {
+    assert_eq!(
+      package_names(&lex_rust(rule), "latexml_core/src/state.rs", &stems),
+      n,
+      "{rule}"
+    );
+  }
+  assert_eq!(
+    package_names(
+      &lex_rust(r#"fn f() { load_recorded("OmniBus.cls"); }"#),
+      "x.rs",
+      &stems
+    ),
+    1
+  );
+}
+
+/// A read of a `\ver@<file>` meaning in `source`: `lookup_meaning`, `lookup_definition`, `has_meaning` or `is_defined_token`
+/// on a `T_CS!` of a `\ver@` literal, or on a name bound to one.
+fn ver_reads(source: &RustSource) -> usize {
+  const READERS: &str =
+    r"\b(?:lookup_meaning|lookup_definition|has_meaning|is_defined_token)\(\s*&?\s*";
+  const CS: &str = r#"(?:[\w:]+::)?T_CS!\(\s*&?\s*(?:s!\(|format!\()?\s*"([0-9]+)""#;
+  let ver = |c: &regex::Captures| {
+    source.literals[c[1].parse::<usize>().expect("an index")].starts_with("\\ver@")
+  };
+  let direct = Regex::new(&format!("{READERS}{CS}")).expect("the regex");
+  let bound = Regex::new(&format!(
+    r"\blet\s+(?:mut\s+)?(\w+)\s*=\s*{}",
+    CS.replace("([0-9]+)", "(?P<n>[0-9]+)")
+  ))
+  .expect("the regex");
+  let mut names: Vec<String> = bound
+    .captures_iter(&source.code)
+    .filter(|c| source.literals[c["n"].parse::<usize>().expect("an index")].starts_with("\\ver@"))
+    .map(|c| c[1].to_string())
+    .collect();
+  names.sort();
+  names.dedup();
+  direct
+    .captures_iter(&source.code)
+    .filter(|c| ver(c))
+    .count()
+    + names
+      .iter()
+      .map(|name| {
+        Regex::new(&format!(r"{READERS}{name}\b"))
+          .expect("the regex")
+          .find_iter(&source.code)
+          .count()
+      })
+      .sum::<usize>()
+}
+
+/// F2's extension (GA2b): a `\ver@` read outside `state.rs` asks what `state::file_loaded` answers, and may read a query's
+/// `\relax` as a load (latex.ltx `\@ifl@aded`). `binding/content.rs`: the loader's mark (`mark_loading`, `still_loading_mark`,
+/// the read's before/after compare) and the dependency scan's test (`is_defined_token`); the rest are tests.
+const VER_READS_OUTSIDE_STATE: &[(&str, usize)] = &[
+  // (a class test each, `has_meaning(\ver@<class>.cls)`: a query's `\relax` reads as loaded; `class_loaded` answers)
+  ("latexml_contrib/src/dgruyter_sty.rs", 1),
+  ("latexml_contrib/src/njdnatbib_sty.rs", 1),
+  ("latexml_contrib/src/ws_rv_har_sty.rs", 1),
+  // (the loader: `mark_loading`'s save and mark, `still_loading_mark`, `load_tex_definitions`' before/after compare (2), and
+  // `marked_loaded_unrecorded`'s `is_defined_token`, the dependency scan's test)
+  ("latexml_core/src/binding/content.rs", 6),
+  // (`\lx@record@provided`'s `lookup_definition(\ver@<file>).is_none()`: a query's `\relax` keeps the version out; F14
+  // moved `document_hook_code`'s test to `file_loaded`, 2 -> 1)
+  ("latexml_engine/src/latex_constructs_rust_only.rs", 1),
+];
+
+#[test]
+fn ver_reads_ask_file_loaded() {
+  const WHY: &str = "Ask `state::file_loaded`/`package_loaded`/`class_loaded` (latex.ltx `\\@ifl@aded`: defined and not `\\relax`).";
+  let mut counts = BTreeMap::new();
+  for dir in [
+    "latexml_core/src",
+    "latexml_engine/src",
+    "latexml_package/src",
+    "latexml_contrib/src",
+    "latexml_post/src",
+  ] {
+    for file in rust_files(dir) {
+      if file == "latexml_core/src/state.rs" {
+        continue;
+      }
+      let n = ver_reads(&read_rust(&file));
+      if n > 0 {
+        counts.insert(file, n);
+      }
+    }
+  }
+  assert_debts(
+    "the `\\ver@` reads outside state.rs",
+    VER_READS_OUTSIDE_STATE,
+    &counts,
+    WHY,
+  );
+  for (rule, n) in [
+    (
+      r#"fn f(o: &str) { lookup_meaning(&T_CS!(&s!("\\ver@{o}.sty"))).is_none(); }"#,
+      1,
+    ),
+    (r#"fn f() { has_meaning(&T_CS!("\\ver@article.cls")); }"#, 1),
+    (
+      r#"fn f(x: &str) { let ver_cs = crate::T_CS!(s!("\\ver@{x}")); lookup_definition(&ver_cs)?.is_none(); }"#,
+      1,
+    ),
+    (
+      r#"fn f(x: &str) { let ver_cs = T_CS!(s!("\\ver@{x}")); let_i(&ver_cs, &T_CS!("\\relax"), None); }"#,
+      0,
+    ),
+    (r#"fn f() { lookup_meaning(&T_CS!("\\foo")); }"#, 0),
+  ] {
+    assert_eq!(ver_reads(&lex_rust(rule)), n, "{rule}");
+  }
+}
+
+/// `source`'s code as lines with each literal back in a `"…"` of its own, backslashes doubled: F3's lines, read as
+/// `token_reads_only_fall_toward_the_floor` reads them, with no comment and no `#[cfg(test)]` code.
+fn lexed_lines(source: &RustSource) -> Vec<String> {
+  let held = Regex::new(r#""([0-9]+)""#).expect("the regex");
+  held
+    .replace_all(&source.code, |c: &regex::Captures| {
+      let literal = &source.literals[c[1].parse::<usize>().expect("an index")];
+      format!(
+        "\"{}\"",
+        literal
+          .replace('\\', "\\\\")
+          .replace('\n', "\\n")
+          .replace('"', "\\\"")
+      )
+    })
+    .lines()
+    .map(str::to_string)
+    .collect()
+}
+
+/// F3 `kernel_token_spellings_only_fall` (GA0 category 2): `token_reads_only_fall_toward_the_floor`'s reads per file of core
+/// and engine; its `TOKEN_READS` is this fence for `base_utilities/` and `frontmatter_stores.rs`, so F3 counts the rest. A definition's row
+/// (`DefRegister!`, `DefMacro!`) and an `@generated` file are no read.
+const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
+  // (F14: today's counts, over-approximate as `TOKEN_READS`'s; GA0 read ~60 sites by hand, 12 of them decisions where TeX
+  // acts on the meaning, finding 10)
+  ("latexml_core/src/alignment.rs", 15),
+  ("latexml_core/src/alignment/cell.rs", 1),
+  ("latexml_core/src/alignment/normalize.rs", 1),
+  ("latexml_core/src/binding/content.rs", 45),
+  ("latexml_core/src/binding/counter/dialect.rs", 31),
+  ("latexml_core/src/binding/def/dialect.rs", 41),
+  ("latexml_core/src/binding/def/replacement.rs", 3),
+  ("latexml_core/src/binding/virtual_files.rs", 1),
+  ("latexml_core/src/common/def_parser.rs", 1),
+  ("latexml_core/src/common/font.rs", 3),
+  ("latexml_core/src/common/font/standard_metrics.rs", 18),
+  ("latexml_core/src/common/glue.rs", 1),
+  ("latexml_core/src/common/mathchar.rs", 2),
+  ("latexml_core/src/common/model.rs", 1),
+  ("latexml_core/src/common/pair.rs", 3),
+  ("latexml_core/src/common/store.rs", 7),
+  ("latexml_core/src/definition.rs", 5),
+  ("latexml_core/src/definition/argument.rs", 4),
+  ("latexml_core/src/definition/conditional.rs", 9),
+  ("latexml_core/src/definition/constructor.rs", 2),
+  ("latexml_core/src/definition/expandable.rs", 49),
+  ("latexml_core/src/definition/math_primitive.rs", 1),
+  ("latexml_core/src/definition/primitive.rs", 1),
+  ("latexml_core/src/definition/register.rs", 2),
+  ("latexml_core/src/digested.rs", 9),
+  ("latexml_core/src/document.rs", 2),
+  ("latexml_core/src/dump_codegen.rs", 7),
+  ("latexml_core/src/dump_reader.rs", 7),
+  ("latexml_core/src/dump_writer.rs", 17),
+  ("latexml_core/src/gullet.rs", 155),
+  ("latexml_core/src/keyval.rs", 1),
+  ("latexml_core/src/keyvals.rs", 22),
+  ("latexml_core/src/mouth.rs", 47),
+  ("latexml_core/src/parameter.rs", 34),
+  ("latexml_core/src/rewrite/declare.rs", 7),
+  ("latexml_core/src/state.rs", 160),
+  ("latexml_core/src/stomach.rs", 84),
+  ("latexml_core/src/tbox.rs", 3),
+  ("latexml_core/src/telemetry.rs", 1),
+  ("latexml_core/src/token.rs", 77),
+  ("latexml_core/src/tokens.rs", 49),
+  ("latexml_core/src/util/image.rs", 2),
+  ("latexml_core/src/whatsit.rs", 4),
+  ("latexml_engine/src/amstex.rs", 30),
+  ("latexml_engine/src/base_parameter_types.rs", 56),
+  ("latexml_engine/src/base_xmath.rs", 13),
+  ("latexml_engine/src/bibtex.rs", 9),
+  ("latexml_engine/src/etex.rs", 16),
+  ("latexml_engine/src/l3fp_native/mod.rs", 17),
+  ("latexml_engine/src/l3fp_native/parse.rs", 73),
+  ("latexml_engine/src/latex.rs", 2),
+  ("latexml_engine/src/latex_base.rs", 1),
+  ("latexml_engine/src/latex_bootstrap.rs", 5),
+  ("latexml_engine/src/latex_constructs/mod.rs", 160),
+  ("latexml_engine/src/latex_constructs/sect01.rs", 8),
+  ("latexml_engine/src/latex_constructs/sect02.rs", 9),
+  ("latexml_engine/src/latex_constructs/sect04.rs", 4),
+  ("latexml_engine/src/latex_constructs/sect05.rs", 266),
+  ("latexml_engine/src/latex_constructs/sect06.rs", 9),
+  ("latexml_engine/src/latex_constructs/sect07.rs", 29),
+  ("latexml_engine/src/latex_constructs/sect08.rs", 69),
+  ("latexml_engine/src/latex_constructs/sect09.rs", 1),
+  ("latexml_engine/src/latex_constructs/sect10.rs", 3),
+  ("latexml_engine/src/latex_constructs/sect11.rs", 28),
+  ("latexml_engine/src/latex_constructs/sect12.rs", 4),
+  ("latexml_engine/src/latex_constructs/sect13.rs", 34),
+  (
+    "latexml_engine/src/latex_constructs/title_page_reading.rs",
+    5,
+  ),
+  ("latexml_engine/src/latex_constructs_rust_only.rs", 17),
+  ("latexml_engine/src/latex_kernel.rs", 3),
+  ("latexml_engine/src/math_common.rs", 11),
+  ("latexml_engine/src/pdftex.rs", 3),
+  ("latexml_engine/src/plain_base.rs", 3),
+  ("latexml_engine/src/plain_constructs.rs", 2),
+  ("latexml_engine/src/pre_bibtex.rs", 2),
+  ("latexml_engine/src/setup_binding_language.rs", 15),
+  ("latexml_engine/src/tex.rs", 8),
+  ("latexml_engine/src/tex_box.rs", 11),
+  ("latexml_engine/src/tex_character.rs", 10),
+  ("latexml_engine/src/tex_debugging.rs", 19),
+  ("latexml_engine/src/tex_file_io.rs", 4),
+  ("latexml_engine/src/tex_fonts.rs", 16),
+  ("latexml_engine/src/tex_inserts.rs", 4),
+  ("latexml_engine/src/tex_job.rs", 2),
+  ("latexml_engine/src/tex_logic.rs", 5),
+  ("latexml_engine/src/tex_macro.rs", 15),
+  ("latexml_engine/src/tex_math.rs", 80),
+  ("latexml_engine/src/tex_paragraph.rs", 2),
+  ("latexml_engine/src/tex_registers.rs", 5),
+  ("latexml_engine/src/tex_tables.rs", 38),
+];
+
+#[test]
+fn kernel_token_spellings_only_fall() {
+  const WHY: &str = "A decision reads a token's meaning (`defined_as`, `lookup_meaning`), as TeX does, not its spelling.";
+  let read = token_read();
+  let mut counts = BTreeMap::new();
+  for dir in ["latexml_core/src", "latexml_engine/src"] {
+    for file in rust_files(dir) {
+      let text = fs::read_to_string(repo_path(&file)).unwrap_or_else(|e| panic!("{file}: {e}"));
+      let counted =
+        file.starts_with(BASE) || OTHER_AREAS.iter().any(|(_, path)| file.starts_with(path));
+      if counted || text.lines().take(5).any(|l| l.contains("@generated")) {
+        continue;
+      }
+      let lines = lexed_lines(&lex_rust(&text));
+      let n = logical_lines(lines)
+        .iter()
+        .filter(|line| {
+          let row = line.trim_start();
+          !row.starts_with("DefRegister!") && !row.starts_with("DefMacro!") && read.is_match(line)
+        })
+        .count();
+      if n > 0 {
+        counts.insert(file, n);
+      }
+    }
+  }
+  assert_debts(
+    "the kernel's token spellings",
+    KERNEL_TOKEN_SPELLINGS,
+    &counts,
+    WHY,
+  );
+}
+
+/// F4 `error_stub_never_downgrades` (GA1, GA0 finding 1): `generate_error_stub` reports an undefined control sequence
+/// as Perl's `generateErrorStub` does (State.pm:532-553), an Error; a Warning or an Info there silences what TeX raises.
+/// GA1's repro is `perfect_kernel_batchga1`'s first row (2 errors, 0 warnings, `<p>Value: 0.</p>`).
+#[test]
+fn error_stub_never_downgrades() {
+  let downgrades = |source: &RustSource| {
+    let start = source
+      .code
+      .find("fn generate_error_stub")
+      .expect("generate_error_stub");
+    let body = &source.code[start..];
+    let open = body.find('{').expect("its body");
+    let mut depth = 0usize;
+    let end = body[open..]
+      .char_indices()
+      .find_map(|(n, c)| {
+        depth += usize::from(c == '{');
+        depth -= usize::from(c == '}');
+        (depth == 0).then_some(open + n + 1)
+      })
+      .expect("its end");
+    Regex::new(r"\b(?:Warn|Info)!")
+      .expect("the regex")
+      .find_iter(&body[..end])
+      .count()
+  };
+  assert_eq!(
+    downgrades(&lex_rust(
+      r#"pub fn generate_error_stub(t: &Token) { if x { Warn!("a", t, "b"); } } fn g() { Info!(); }"#
+    )),
+    1
+  );
+  assert_eq!(
+    downgrades(&read_rust("latexml_core/src/state.rs")),
+    0,
+    "an undefined control sequence is an Error (Perl generateErrorStub, State.pm:532-553); a reader's leniency lives in \
+     the reader (`counter::dialect::counter_value`, Package.pm:712)"
   );
 }
