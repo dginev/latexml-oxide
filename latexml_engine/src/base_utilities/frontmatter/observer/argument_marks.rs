@@ -169,6 +169,9 @@ pub fn prints_requested_marks(arg: &Tokens, caller: &str) -> Result<bool> {
 /// (`$^1$Univ A`, `\ua Univ A` with `\newcommand\ua{$^{1}$}`, a `\let` copy's, one in a box of its own); a `\footnotemark`
 /// or a number's suffix none. Unread, its tokens (`notes::leads_with_mark`), counted for `caller`.
 pub fn leads_with_label(arg: &Tokens, caller: &str) -> Result<bool> {
+  if !may_open_with_mark(arg) {
+    return Ok(false);
+  }
   let Some(events) = mark_events(arg)? else {
     count_unread(caller);
     return Ok(leads_with_mark(arg));
@@ -187,11 +190,14 @@ fn own_mark(event: &Event) -> bool {
   event.kind == EventKind::Mark && !event.ordinal && event.role.as_deref() != Some("footnotemark")
 }
 
-/// Whether what `tokens` print may open with a mark: their first token past spaces and braces, read through parameterless
-/// macros' bodies (`depth` of them) and on past a body that prints nothing (`\newcommand\affilfont{}`), is no letter or
-/// digit, which TeX prints first (2103.04797's 1,161 `\affiliation{\Amsterdam}`, each a macro of an institute's name, not
-/// rehearsed).
-fn may_open_with_mark(tokens: &[Token], depth: u8) -> bool {
+/// Whether what `arg` prints may open with a mark: its first token past spaces and braces, read through parameterless
+/// macros' bodies (8 deep) and on past a body that prints nothing (`\newcommand\affilfont{}`), is no letter or digit,
+/// which TeX prints first. The readers of an opening mark ask it before their rehearsal (2103.04797's 1,161
+/// `\affiliation{\Amsterdam}`, each a macro of an institute's name, not rehearsed).
+fn may_open_with_mark(arg: &Tokens) -> bool { first_may_be_mark(arg.unlist_ref(), 8) }
+
+/// [`may_open_with_mark`] on `tokens`, `depth` macros deep.
+fn first_may_be_mark(tokens: &[Token], depth: u8) -> bool {
   let Some(at) = tokens.iter().position(|t| {
     !matches!(
       t.get_catcode(),
@@ -214,11 +220,11 @@ fn may_open_with_mark(tokens: &[Token], depth: u8) -> bool {
           Some(ExpansionBody::Tokens(body)) => {
             let mut next = body.unlist_ref().to_vec();
             next.extend_from_slice(&tokens[at + 1..]);
-            may_open_with_mark(&next, depth - 1)
+            first_may_be_mark(&next, depth - 1)
           },
           // (an empty body is no expansion; a conditional has none either)
           None if defn.get_conditional_type().is_none() => {
-            may_open_with_mark(&tokens[at + 1..], depth - 1)
+            first_may_be_mark(&tokens[at + 1..], depth - 1)
           },
           _ => true,
         }
@@ -234,7 +240,7 @@ fn may_open_with_mark(tokens: &[Token], depth: u8) -> bool {
 /// requests left out: the API Cut's decision and its copy rule (`cut::cut_list`). Unread, none — the list stays whole for
 /// the observer to read —, counted for `caller`.
 pub fn requested_entry_labels(arg: &Tokens, caller: &str) -> Result<Vec<(String, Vec<usize>)>> {
-  if !may_open_with_mark(arg.unlist_ref(), 8) {
+  if !may_open_with_mark(arg) {
     return Ok(Vec::new());
   }
   let Some(events) = mark_events(arg)? else {

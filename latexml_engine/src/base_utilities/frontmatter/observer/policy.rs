@@ -256,12 +256,17 @@ fn undeclared(binding: &str) -> &'static Policy {
   }
 }
 
-/// The state key a binding's declarations are kept under.
-fn declarations_key(binding: &str) -> String { s!("frontmatter_conventions:{binding}") }
+/// The prefix of the state key a binding's declarations are kept under.
+const DECLARATIONS: &str = "frontmatter_conventions:";
 
-/// The declarations `binding` made, in declaration order, if any.
+/// The state key a binding's declarations are kept under ([`DECLARATIONS`]).
+fn declarations_key(binding: &str) -> String { s!("{DECLARATIONS}{binding}") }
+
+/// The declarations `binding` made, in declaration order, if any. The key probed, not formatted nor interned: a
+/// rehearsal's e-mail binding asks it of each class binding (`ledger::email_meaning`; 1901.01540's 2,637 rehearsals).
 fn declared(binding: &str) -> Option<Rc<Vec<&'static Policy>>> {
-  with_value(&declarations_key(binding), |v| match v {
+  let key = get_suffixed(DECLARATIONS, binding)?;
+  with_value_sym(key, |v| match v {
     Some(Stored::Opaque(payload)) => Rc::clone(payload).downcast::<Vec<&'static Policy>>().ok(),
     _ => None,
   })

@@ -875,6 +875,16 @@ fn marks_lead_as_digested() {
       &["Ann Able 1", "affiliation=1 Univ A, Town A"],
       &["Bob Baker 2", "affiliation=2 Univ B, Town B"],
     ]),
+    // (CST1: the opening-mark gate before the rehearsal — read past an empty macro to jfm's `\aff`, the list cut; a macro
+    // of an institute's name opens with no mark, 2103.04797's `\affiliation{\Amsterdam}`)
+    (repro!("jfm_aff_empty_macro_before_marked_list"), 0, &[
+      &["Ann Able 1", "affiliation=1 Univ A, Town A"],
+      &["Bob Baker 2", "affiliation=2 Univ B, Town B"],
+    ]),
+    (repro!("revtex_affiliation_macro_names_unmarked"), 0, &[
+      &["Ann Able", "affiliation=Univ A, Town A"],
+      &["Bob Baker", "affiliation=Univ B, Town B"],
+    ]),
     (repro!("ams_cut_macro_mark_lines"), 0, &[
       &["Ann Able 1", "address=1 Univ A, Town A"],
       &["Bob Baker 2", "address=2 Univ B, Town B"],
