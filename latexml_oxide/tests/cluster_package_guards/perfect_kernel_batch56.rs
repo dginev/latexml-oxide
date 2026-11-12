@@ -10912,12 +10912,8 @@ fn meaning_of_a_closure_macro_is_perls_code_form() {
   ] {
     assert!(xml.contains(p), "{p}\n{xml}");
   }
+  // No second conversion: in one process two runs' addresses can coincide, so only the absent address shows it.
   assert!(!xml.contains("0x"), "{xml}");
-  assert_eq!(
-    convert_with(stable, None).1,
-    xml,
-    "a second conversion differs"
-  );
 }
 
 /// K13 stage 0: a constructor or primitive keeps what its binding's mode

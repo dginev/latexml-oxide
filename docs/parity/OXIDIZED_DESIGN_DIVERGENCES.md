@@ -35098,18 +35098,22 @@ address, so `\meaning\@ifnextchar`, a `\show`, a `\detokenize`d meaning set in t
 string change on every run. Rust printed the same. pdflatex prints latex.ltx's body.
 **Rust behavior**: `\meaning` prints `CODE(` + the definition's name + `)` (`definition::closure_body_meaning`:
 `CODE(@ifnextchar)`, `CODE(begin)`, `CODE(today)`); a name with a character other than a letter or `@` prints
-`CODE(native)` (`CLOSURE_BODY_TEXT`, also `ExpansionBody`'s `Debug`/`Display`). The same on every run; two natives'
-meanings stay apart as their addresses kept them (`\meaning\value` vs `\meaning\arabic` compare unequal, as in
-pdflatex), letters only so a `\scantokens` rebuild reads text, no control sequence. It keeps the `CODE(` that
-etoolbox_sty's `\lx@ifnativecmd` splits on (`\robustify` leaves a native alone), and `\ifx` of two definitions never
-reads it (#183), so `\ifpatchable`/`\patchcmd` on a native `\begin` still answer no. Not latex.ltx's body: a
-`\meaning`→`\scantokens` rebuild would then replace the native `\begin` (#183, KNOWN_PERL_ERRORS #147); that is the
-post-merge macro-faces design (QA53).
+`CODE(native)` (`CLOSURE_BODY_TEXT`, also `ExpansionBody`'s `Debug`/`Display`). The same on every run. Two natives'
+meanings stay apart as their addresses kept them only when both names are letters or `@` (`\meaning\value` vs
+`\meaning\arabic` compare unequal, as in pdflatex): any other name (`\csname cite \endcsname`, expl3's
+`\__tl_set_rescan:nNN`) prints `CODE(native)`, so two such meanings of the same parameters compare equal; letters
+only, so a `\scantokens` rebuild reads text, no control sequence. The name is the definition's, which can be an
+internal one: `\meaning\multicolumn` prints `CODE(lx@alignment@multicolumn)`, its `\let` target (`tex_debugging.rs`
+`get_cs_name`), as `\meaning\label` prints `\lx@label`. It keeps the `CODE(` that etoolbox_sty's `\lx@ifnativecmd`
+splits on (`\robustify` leaves a native alone), and `\ifx` of two definitions never reads it (#183), so
+`\ifpatchable`/`\patchcmd` on a native `\begin` still answer no. Not latex.ltx's body: a `\meaning`→`\scantokens`
+rebuild would then replace the native `\begin` (#183, KNOWN_PERL_ERRORS #147); that is the post-merge macro-faces
+design (QA53).
 **Why**: determinism: no output, log or string comparison may depend on an allocation address.
 **Witnesses**: BM Q&A probe Q3.8 `meaning` (synthetic); cnltx/cnltx_en; 36 latex.ltx user commands (QA51's sizing:
 `\begin`, `\end`, `\arabic`, `\value`, `\verb`, `\today`, `\multicolumn`, `\csname`, …).
 **Guard**: `perfect_kernel_batch56::meaning_of_a_closure_macro_is_perls_code_form`
-(`expansion-primitives/meaning_of_a_closure_macro_is_stable.tex`: two conversions, exact text, etoolbox's answers).
+(`expansion-primitives/meaning_of_a_closure_macro_is_stable.tex`: exact text, no address, etoolbox's answers).
 **Upstream**: not filed (Perl stringifies the code ref; a name would serve).
 
 ### 1006. `--verbose` prints the un-featured `Debug:` traces, and every `Debug` line carries a `Debug:<target> ` prefix (DBG1, DBG2)
