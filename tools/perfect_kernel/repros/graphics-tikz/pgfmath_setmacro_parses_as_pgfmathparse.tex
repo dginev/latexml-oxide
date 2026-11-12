@@ -1,6 +1,6 @@
 % mechanism: `\pgfmathsetmacro` calls the parse `\pgfmathparse` calls (Perl's `sub pgfmathparse`,
 %   pgfmathcalc.code.tex.ltxml:24-32): it stringified its own expansion, so it welded `\mydim r` to `\mydimr`
-%   (revDTL1e B1). The `\widthof` twins err in TeX: `pgfmath_calc_names_err_in_tex_red.tex` (revDTL1f S1).
+%   (revDTL1e B1). The `\widthof` twins err in TeX: `pgfmath_calc_names_warn.tex` (revDTL1f S1, EB1).
 % witness: synthetic
 % oracle:  pdflatex 0 `!`, [114.59155][114.59155]; Perl 0 E, [0.0][0.0] (KNOWN_PERL_ERRORS #1226)
 % engines: rust DTL1e: [114.59156][0.0]

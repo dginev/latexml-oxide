@@ -4,8 +4,9 @@
 % oracle:  pdflatex 1 `!` (Undefined control sequence), [1]
 % engines: rust DTL1f, DTL1g: [1.0], 1 error, 1 warning
 % expect:  [1], 1 error
-% status:  RED (DTL1f, DTL1g)
-% moves:   EB1 makes it a row of `perfect_kernel_error_boundary` (Error side, the value pgf prints).
+% status:  RED (DTL1f, DTL1g, EB1)
+% rule:    (3), an Error as TeX: the severity is right (EB1); what is RED is the value form, pgf's number as read
+% moves:   post-merge (a value, not a severity: no row of `perfect_kernel_error_boundary` until it is [1])
 \documentclass{article}
 \usepackage{pgf}
 \begin{document}

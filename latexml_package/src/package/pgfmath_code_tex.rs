@@ -2083,11 +2083,17 @@ const CALC_COMPAT: [(&str, &str); 7] = [
 /// pgf `\let`s the calc names in `\pgfmathparse@@` (pgfmathparser.code.tex:124-130), after its edef expanded the
 /// argument (:54): a user's `\newcommand\ratio{0.5}` reads as 0.5, and only a calc name the edef left reads as pgf's.
 /// Perl lets them first (KNOWN_PERL_ERRORS #1225). Per parse, never for the document: `\real` as ℝ (1608.06741).
+/// TL 2025's pgf errs on every such name ("Unknown function", "Unknown operator"); calc's value is semantic: a Warning.
 fn calc_compat_expand(expanded: Tokens) -> Result<Tokens> {
   let names: [Token; 7] = CALC_COMPAT.map(|(cs, _)| T_CS!(cs));
-  if !expanded.unlist_ref().iter().any(|t| names.contains(t)) {
+  let Some(name) = expanded.unlist_ref().iter().find(|t| names.contains(t)) else {
     return Ok(expanded);
-  }
+  };
+  Warn!(
+    "unexpected",
+    name.to_string(),
+    s!("pgf's parser errs on calc's {name} in an expression; calc's value is used")
+  );
   let saved: Vec<(Token, Stored)> = names
     .iter()
     .map(|t| (*t, lookup_meaning(t).unwrap_or(Stored::None)))

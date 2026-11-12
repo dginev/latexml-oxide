@@ -126,9 +126,20 @@ LoadDefinitions!({
   // witnesses 2606.04416, 2605.21570, 2605.26693.
   DefMacro!(
     "\\putbib[]",
-    "\\lx@bibunits@ifusebbl{\\input{\\bu@unitname.bbl}}\
+    "\\lx@bibunits@startorrelax\\lx@bibunits@ifusebbl{\\input{\\bu@unitname.bbl}}\
      {\\lx@bibliography[\\bu@unitname]{\\if.#1.\\bu@bibdata\\else#1\\fi}}"
   );
+  // bibunits.sty `\@putbib` starts with `\@startbibunitorrelax`, undefined before the first unit opens (`\bibunit`),
+  // so TeX errs on a `\putbib` outside every unit; Perl is silent.
+  DefPrimitive!("\\lx@bibunits@startorrelax", sub[_args] {
+    if !has_meaning(&T_CS!("\\@startbibunitorrelax")) {
+      Error!(
+        "undefined",
+        "\\@startbibunitorrelax",
+        "bibunits' \\putbib outside every unit: TeX stops on the undefined \\@startbibunitorrelax"
+      );
+    }
+  });
 
   // Takes the `.bbl` clause when `<bibunitname>.bbl` is on disk, else the
   // `.bib` clause. Mirrors `\lx@ifusebbl` (`latex_constructs.rs`), which does
@@ -173,6 +184,12 @@ fn start_bibunit() -> Result<()> {
   }
   assign_value("CITE_UNIT", pin(&cite_unit), Some(Scope::Global));
   assign_value("BIBUNIT_OPEN", Stored::from(true), Some(Scope::Global));
+  // bibunits.sty `\@startbibunit`: the unit's `\putbib` and every later one read `\relax`.
+  let_i(
+    &T_CS!("\\@startbibunitorrelax"),
+    &T_CS!("\\relax"),
+    Some(Scope::Global),
+  );
   Ok(())
 }
 

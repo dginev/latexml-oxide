@@ -3491,31 +3491,6 @@ R:\ifxetex XE\else NOXE\fi; \@ifpackageloaded{{iftex}}{{IFTEX}}{{NOIFTEX}}; \@if
   }
 }
 
-/// RC1306 (1306.0471, JINST): a document's `\let\ifpdf\relax` holds when no package reloads iftex at `\begin{document}`
-/// (lineno loads kvoptions, as lineno.sty:264-265, leaving `\@curroptions` empty, so epstopdf-base skips pdftexcmds →
-/// iftex; KNOWN_PERL_ERRORS #487). Then `\iftrue\ifpdf…\else…\fi\fi` has a stray `\fi`: pdflatex 1 `! Extra \fi`, ours
-/// 1 Error, Perl 1; without lineno iftex resets `\ifpdf` (pdflatex 0 `!`, ours 0, Perl 1). Both print "See [pdf x].".
-#[test]
-fn a_disabled_ifpdf_errs_where_tex_does() {
-  for (lineno, errors) in [(r"\usepackage{lineno}", 1), ("", 0)] {
-    let tex = format!(
-      r"\documentclass{{article}}
-\usepackage[final]{{graphicx}}
-{lineno}
-\let\ifpdf\relax
-\def\lnk#1{{\iftrue\ifpdf[pdf #1]\else[dvi #1]\fi\fi}}
-\begin{{document}}
-See \lnk{{x}}.
-\end{{document}}"
-    );
-    assert_elements(&tex, "ar5iv.sty", (errors, 0), &[(
-      "p",
-      "p1.1",
-      r#"<p xml:id="p1.1">See [pdf x].</p>"#,
-    )]);
-  }
-}
-
 /// 62q: a captioned minipage in a float is the figure its caption numbers. The box is a group in LaTeX
 /// (`\@iiiminipage`), and the `\@currentlabel` its `\caption` sets is what a `\label` after it names, so two such
 /// minipages side by side are Figures 1 and 2, each `\ref` its own number (pdflatex: "See 1, 2, 3."). The float took the

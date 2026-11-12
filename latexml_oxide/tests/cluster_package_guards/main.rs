@@ -38,6 +38,8 @@ mod defplain_skips_blanks_before_brace;
 mod doc_changes_index;
 mod document_indirection;
 mod dump_gate_init;
+/// EB1: the shared Error-boundary table, both sides (TeX or Perl errs / the safe twin), each row with its oracle.
+mod error_boundary;
 mod expanded_protected_brace_hunt;
 mod expl3_nested_raw_load_catcodes;
 mod fatal_salvages_partial_document;
@@ -562,9 +564,6 @@ mod perfect_kernel_batchs5;
 mod perfect_kernel_batchsep1;
 /// ST1: RED catalog repros already matching their `expect` on int159a, green rows of two concern tables.
 mod perfect_kernel_batchst1;
-/// SVC: a `\chapter` call in a class without chapters is an Error, as TeX and Perl; the `\chapter` Error boundary's
-/// two sides in one table (OD #734, #735).
-mod perfect_kernel_batchsvc;
 mod perfect_kernel_batchta1;
 mod perfect_kernel_batchz1;
 mod perfect_kernel_batchz14;

@@ -1,14 +1,14 @@
 % mechanism: pgf `\let`s calc's seven names to its own for a parse (pgfmathparser.code.tex:124-130), yet TL 2025's
 %   pgf errs on every one, calc loaded or not (`\widthof{xx}` read as a function `xx`, `\maxof{1}{3}` as an operator
 %   `1`); a run after an earlier failed parse reads them, as its group never closed. Ours and Perl evaluate them
-%   silently (calc's meaning: 2 × the width of "xx", max, the number). For the error-boundary batch EB1: the Error
-%   side (revDTL1f S1); severity unchanged here.
+%   silently (calc's meaning: 2 × the width of "xx", max, the number; revDTL1f S1). Rule (2): only TeX errs and
+%   calc's value is the author's, so one Warning per parse (EB1).
 % witness: synthetic
 % oracle:  pdflatex 7 `!` (each paragraph alone errs too: 9, 4, 9); Perl 0 E, 0 W, [10.56][21.12] [10.56pt] [6.0][5.0]
-% engines: rust DTL1f, DTL1g: [21.11121][21.11121] [21.1112pt] [6.0][5.0], 0 errors, 0 warnings
-% expect:  the calc values and a counted Error per parse
-% status:  RED (DTL1f, DTL1g)
-% moves:   EB1 makes these rows of `perfect_kernel_error_boundary` (Error side); their values stay.
+% engines: rust DTL1f, DTL1g: [21.11121][21.11121] [21.1112pt] [6.0][5.0], 0 errors, 0 warnings; EB1: the same
+%   values, 0 errors, 5 warnings
+% expect:  the calc values and a counted Warning per parse
+% status:  RED (DTL1f, DTL1g) -> GREEN (EB1), a row of `perfect_kernel_error_boundary` (Error side)
 \documentclass{article}
 \usepackage{calc}
 \usepackage{pgf}
