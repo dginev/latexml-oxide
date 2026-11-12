@@ -550,6 +550,10 @@ mod perfect_kernel_batchp27;
 /// P27b: Option C P2-7's S8 half — a no-block flush holding a class's row contact (`_share`) is written by the emitter;
 /// `share_row_contacts` deleted (OD #901).
 mod perfect_kernel_batchp27b;
+/// P28: Option C P2-8a — IEEEtran's `\author` reads the body by meaning before its route and grid: a document macro
+/// holding names blocks, `\and` or `\\` expanded (`blocks_as_printed`), a block command's `\let` copy, the grid's
+/// columns by the separator query (OD #128, #995).
+mod perfect_kernel_batchp28;
 /// P3: Option C P3 — a name a macro call prints with its marks is written as the call whole (its expansion), never by
 /// text nor from inside the call with the marks argument as the name's text (OD #993).
 mod perfect_kernel_batchp3;

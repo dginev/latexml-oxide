@@ -1642,8 +1642,13 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // its line breaks (`unnested_affiliation_blocks`; its lead of marks read by the binding's mark reader since P4cR2b,
   // `prints_marks_alone`; 1710.07993, 2605.02682) and a names block led by an ordinal by the number and suffix it prints
   // (`ordinal_names`, 1806.11431); no name a document spells; P5a, 131 -> 103: `name_memberships` and `grade_only_line`
-  // deleted, the grade the reading's contact event, OD #1016)
-  ("ieeetran_cls.rs", 103),
+  // deleted, the grade the reading's contact event, OD #1016; P28, 103 -> 104: the body read by meaning before the
+  // route (Option C P2-8a, OD #995) — the two spelled route tests `contains("authorblockN")` deleted (-2) for one test of
+  // the command after `with_block_names` writes every `\let` copy as it (`calls_names_block`, +1; its table of the two
+  // block commands, +1), and the table of the structure a document macro's definition may hold
+  // (`holds_author_structure`: `\IEEEauthorblockN`, `\and`, `\\`, each read with `defined_as`, +1), which decides the
+  // calls `blocks_as_printed` expands; the brace reading moved into one `brace_level`, which `grid_columns` shares (0))
+  ("ieeetran_cls.rs", 104),
   ("insert", 14),
   // (from `frontmatter (rest)`, 24 -> 23, at Z2r2: `\alignauthor`, out of the kernel's conventions into the binding's own table; no read)
   ("inst_support_sty.rs", 1),

@@ -396,18 +396,31 @@ LoadDefinitions!({
   // Override `\author`: dispatch to explicit-block handling when the body uses
   // `\IEEEauthorblockN`, else to the standard name-splitter. `\author` is locked
   // in the kernel; re-lock so a user `\renewcommand` can't shadow this.
+  // (the body as its document macros print it first, a block held in one, a wrapper's `\and` or `\\`: `blocks_as_printed`,
+  // OXIDIZED_DESIGN_DIVERGENCES #128, P2-8a)
   DefMacro!("\\author[]{}", sub[(_short, body)] {
-    // (a document's own `\IEEEmembership` keeps its meaning: `\def\IEEEmembership#1{\textit{#1}}` in 2408.00647)
-    let ours = class_membership()?;
-    // (a reference mark among other marks is the symbol it prints: 2312.10807, OXIDIZED_DESIGN_DIVERGENCES #968)
-    let body = printed_refmarks(body);
-    let (target, body) = if body.to_string().contains("authorblockN") {
-      (T_CS!("\\lx@IEEE@author@blocks"), author_block_body(body, ours)?)
-    } else {
-      (T_CS!("\\lx@IEEE@author@plain"), if ours { Tokens::new(without_stop_after_grade(body.unlist())?) } else { body })
-    };
-    Ok(Invocation!(target, vec![Some(body)]))
+    // (the author structure a document macro holds, read as it means before the route: `blocks_as_printed`)
+    let printed = with_block_names(blocks_as_printed(body.clone())?);
+    // (and read again at the flush, where pdflatex's `\maketitle` expands `\@author`: `\lx@IEEE@author@reread`)
+    let reread = printed.unlist_ref().iter().any(Token::is_executable);
+    reread_author_body_at_flush(reread.then(|| Tokens!(T_CS!("\\lx@IEEE@author@reread"))));
+    if reread {
+      assign_value(AUTHOR_BODY, Stored::Tokens(body), Some(Scope::Global));
+      assign_value(AUTHOR_PRINTED, Stored::Tokens(printed.clone()), Some(Scope::Global));
+    }
+    class_author_route(printed)
   }, locked => true);
+  // The last `\author` body, its route taken again only where its document macros now print it otherwise (a
+  // `\renewcommand` or `\AtBeginDocument` after `\author`; OXIDIZED_DESIGN_DIVERGENCES #995 P2-8a).
+  DefMacro!("\\lx@IEEE@author@reread", sub[()] {
+    let (Some(Stored::Tokens(body)), Some(Stored::Tokens(printed))) =
+      (lookup_value(AUTHOR_BODY), lookup_value(AUTHOR_PRINTED))
+    else {
+      return Ok(Tokens!());
+    };
+    let now = with_block_names(blocks_as_printed(body)?);
+    if now == printed { Ok(Tokens!()) } else { class_author_route(now) }
+  });
   // authblk's `\author` (a document's `\usepackage{authblk}`; the IEEEtaes and IEEEoj stubs load it) replaces the one
   // above; its names' grades are read as this one's are (`\lx@IEEE@grade`; Perl drops them, IEEEtran.cls.ltxml:143:
   // 1803.04687, 2202.10869, 2208.04191, 2307.05035, 2505.19506, 2506.05637), the stop after them too
@@ -426,8 +439,11 @@ LoadDefinitions!({
   DefMacro!("\\lx@IEEE@authblk@blocks{}", "\\begingroup\\def\\and{}#1\\endgroup");
   DefMacro!("\\lx@IEEE@authorblockN@labelled{}{}", "\\lx@add@authors@append[annotations={#1}]{#2}");
   DefMacro!("\\lx@IEEE@authblk@author[]{}", sub[(label, body)] {
+    // (no class `\author` read again at the flush: its route would take back the authors this one appends)
+    reread_author_body_at_flush(None);
     let ours = class_membership()?;
-    if body.to_string().contains("authorblockN") {
+    let body = with_block_names(blocks_as_printed(body)?);
+    if calls_names_block(&body) {
       let label_tokens = label.clone().unwrap_or_default();
       let mut blocks = author_block_body(printed_refmarks(body.clone()), ours)?.unlist();
       if label.is_some() {
@@ -1156,23 +1172,145 @@ LoadDefinitions!({
   }
 });
 
-/// Split `tokens` at each TOP-LEVEL (brace-depth 0) occurrence of `delim`.
+/// The class `\author`'s body and its reading by meaning ([`blocks_as_printed`], [`with_block_names`]), for
+/// `\lx@IEEE@author@reread`.
+const AUTHOR_BODY: &str = "lx_IEEE_author_body";
+const AUTHOR_PRINTED: &str = "lx_IEEE_author_printed";
+
+/// The class `\author`'s route for a body read by meaning: the names blocks', or the plain names list's.
+fn class_author_route(body: Tokens) -> Result<Tokens> {
+  // (a document's own `\IEEEmembership` keeps its meaning: `\def\IEEEmembership#1{\textit{#1}}` in 2408.00647)
+  let ours = class_membership()?;
+  // (a reference mark among other marks is the symbol it prints: 2312.10807, OXIDIZED_DESIGN_DIVERGENCES #968)
+  let body = printed_refmarks(body);
+  let (target, body) = if calls_names_block(&body) {
+    (
+      T_CS!("\\lx@IEEE@author@blocks"),
+      author_block_body(body, ours)?,
+    )
+  } else {
+    (
+      T_CS!("\\lx@IEEE@author@plain"),
+      if ours {
+        Tokens::new(without_stop_after_grade(body.unlist())?)
+      } else {
+        body
+      },
+    )
+  };
+  Ok(Invocation!(target, vec![Some(body)]))
+}
+
+/// The brace level after `t`, from `level` before it: a begin-group opens one, an end-group closes one (the one reader
+/// of a body's groups for [`split_top_level`], [`blocks_as_printed`] and [`grid_columns`]).
+fn brace_level(level: i32, t: &Token) -> i32 {
+  match t.get_catcode() {
+    Catcode::BEGIN => level + 1,
+    Catcode::END => level - 1,
+    _ => level,
+  }
+}
+
+/// Split `tokens` at each TOP-LEVEL (brace-depth 0) occurrence of `delim`, or of a `\let` copy of it (`\let\nx\and`:
+/// a column in pdflatex as the command is; `Token::defined_as`).
 fn split_top_level(tokens: &[Token], delim: &Token) -> Vec<Vec<Token>> {
   let mut parts: Vec<Vec<Token>> = vec![Vec::new()];
   let mut depth: i32 = 0;
   for t in tokens {
-    match t.get_catcode() {
-      Catcode::BEGIN => depth += 1,
-      Catcode::END => depth -= 1,
-      _ => {},
-    }
-    if depth == 0 && t == delim {
+    depth = brace_level(depth, t);
+    if depth == 0 && (t == delim || (t.is_executable() && t.defined_as(delim))) {
       parts.push(Vec::new());
     } else {
       parts.last_mut().unwrap().push(*t);
     }
   }
   parts
+}
+
+/// Whether an `\author` body, read by [`blocks_as_printed`] and [`with_block_names`], calls a names block: the route
+/// (OXIDIZED_DESIGN_DIVERGENCES #995 P2-8a).
+fn calls_names_block(body: &Tokens) -> bool {
+  body.unlist_ref().contains(&T_CS!("\\IEEEauthorblockN"))
+}
+
+/// How many of the document's own macros [`holds_author_structure`] reads into from one call, and how many calls
+/// [`blocks_as_printed`] expands in one body, at most.
+const MEANING_READS: usize = 64;
+
+/// Whether `token`, a macro of the document's own (`\newcommand`, `\def` in the document or its own files), holds author
+/// structure by meaning — its definition, or a document macro it calls (recursively), spells a names block (a token
+/// meaning `\IEEEauthorblockN`: the class's, `\authorblockN`, a `\let` copy), an `\and`-family separator (`\and`,
+/// `\And`, `\AND`, or a token `\let` to one) or the grid's row break `\\` (or a `\let` copy). Read as the rehearsal reads a block's macros for `\let` copies of its
+/// separators (`rehearsal::let_copies_of_bound_commands`): the definitions' tokens, no expansion.
+fn holds_author_structure(token: &Token) -> bool {
+  // (a copy means the command: `\authorblockN`, the kernel's `\And` and `\AND`, a document's `\let`)
+  let structure = [T_CS!("\\IEEEauthorblockN"), T_CS!("\\and"), T_CS!("\\\\")];
+  let document_macro = |t: &Token| -> Option<Tokens> {
+    let defn = lookup_definition(t).ok().flatten()?;
+    if !defn.is_expandable() || defn.get_origin() != definition::origin::DefinitionOrigin::Document
+    {
+      return None;
+    }
+    match defn.get_expansion() {
+      Some(ExpansionBody::Tokens(body)) => Some(body.clone()),
+      _ => None,
+    }
+  };
+  let Some(body) = document_macro(token) else {
+    return false;
+  };
+  let mut seen = rustc_hash::FxHashSet::<Token>::default();
+  let mut pending: Vec<Token> = body.unlist();
+  let mut macros = 1;
+  while let Some(t) = pending.pop() {
+    if !t.is_executable() || !seen.insert(t) {
+      continue;
+    }
+    if structure.iter().any(|s| t == *s || t.defined_as(s)) {
+      return true;
+    }
+    if macros < MEANING_READS
+      && let Some(inner) = document_macro(&t)
+    {
+      macros += 1;
+      pending.extend(inner.unlist());
+    }
+  }
+  false
+}
+
+/// An `\author` body with each top-level call of a document macro holding author structure ([`holds_author_structure`])
+/// expanded, read again: its blocks and separators as they print (OXIDIZED_DESIGN_DIVERGENCES #128, #995 P2-8a).
+fn blocks_as_printed(body: Tokens) -> Result<Tokens> {
+  // (a quick read first: the top level's macros, without a mouth)
+  let mut depth = 0i32;
+  let reached = body.unlist_ref().iter().any(|t| {
+    depth = brace_level(depth, t);
+    depth == 0 && t.is_executable() && holds_author_structure(t)
+  });
+  if !reached {
+    return Ok(body);
+  }
+  reading_from_mouth(Mouth::new("", None)?, move || {
+    unread(body);
+    let mut out: Vec<Token> = Vec::new();
+    let mut depth = 0i32;
+    let mut expansions = 0;
+    while let Some(token) = read_token()? {
+      depth = brace_level(depth, &token);
+      if depth == 0
+        && expansions < MEANING_READS
+        && token.is_executable()
+        && holds_author_structure(&token)
+        && expand_once_partial(token)?
+      {
+        expansions += 1;
+        continue;
+      }
+      out.push(token);
+    }
+    Ok(Tokens::new(out))
+  })
 }
 
 /// An author-block body (`\IEEEauthorblockN`) as IEEEtran's `\author` runs it, the class's own and authblk's alike: a
@@ -1184,7 +1322,7 @@ fn split_top_level(tokens: &[Token], delim: &Token) -> Vec<Vec<Token>> {
 /// block names are read as the ones they mean first (`with_block_names`), so every step below reads only those.
 fn author_block_body(body: Tokens, ours: bool) -> Result<Tokens> {
   let body = unnested_affiliation_blocks(wrap_bare_author_block_text(
-    transpose_ieee_author_grid(unnested_name_blocks(with_block_names(body))),
+    transpose_ieee_author_grid(unnested_name_blocks(with_block_names(body)))?,
     true,
   ));
   if ours {
@@ -1194,27 +1332,19 @@ fn author_block_body(body: Tokens, ours: bool) -> Result<Tokens> {
   }
 }
 
-/// An author-block body with each old block name (`\authorblockN`, `\authorblockA`, IEEEtran.cls's before 1.8, the
-/// binding's `\let`s of `\IEEEauthorblockN`, `\IEEEauthorblockA`) written as the one it means, while it still means it
-/// (a document may define either name its own way, as `\authorrefmark` in `printed_refmarks`): read by name, the
-/// labelled path of authblk's `\author` left `\authorblockN` its own (`\author[1]{\authorblockN{Ann Able}}` with
-/// `\affil[1]{…}`: a nameless creator holding the affiliation, the names lost; OXIDIZED_DESIGN_DIVERGENCES #987).
+/// An author-block body with each `\let` copy of a block command (`\authorblockN`, IEEEtran.cls's before 1.8; a document's
+/// `\let\N\IEEEauthorblockN`) written as the one it means while it means it (OXIDIZED_DESIGN_DIVERGENCES #987, #995 P2-8a).
 fn with_block_names(body: Tokens) -> Tokens {
-  let old: Vec<(Token, Token)> = [
-    (T_CS!("\\authorblockN"), T_CS!("\\IEEEauthorblockN")),
-    (T_CS!("\\authorblockA"), T_CS!("\\IEEEauthorblockA")),
-  ]
-  .into_iter()
-  .filter(|(alias, name)| alias.defined_as(name))
-  .collect();
-  if old.is_empty() {
-    return body;
-  }
+  let names = [T_CS!("\\IEEEauthorblockN"), T_CS!("\\IEEEauthorblockA")];
   let means = |t: Token| {
-    old
+    if !t.is_executable() || names.contains(&t) {
+      return t;
+    }
+    names
       .iter()
-      .find(|(alias, _)| *alias == t)
-      .map_or(t, |(_, name)| *name)
+      .find(|name| t.defined_as(name))
+      .copied()
+      .unwrap_or(t)
   };
   Tokens::new(body.unlist().into_iter().map(means).collect())
 }
@@ -1423,6 +1553,41 @@ fn unnested_affiliation_blocks(body: Tokens) -> Tokens {
   }
 }
 
+/// The grid's columns by meaning: `toks` cut at each separator the separator query reads at its own level
+/// (`argument_separators`, OXIDIZED_DESIGN_DIVERGENCES #995: a written `\and`, a `\let` copy, `\And`/`\AND`, whatever it
+/// means — IEEEtran's `\and` is its column whatever a document made it, as the spelling read it) whose own tokens stand
+/// at the body's brace level (one inside a brace group, which the query counts at its level, stays in its cell, as
+/// before). `None` where the query could not rehearse the body or a separator's tokens print something else too: the
+/// caller cuts by `split_top_level`.
+fn grid_columns(toks: &[Token]) -> Result<Option<Vec<Vec<Token>>>> {
+  let Some(separators) = argument_separators(&Tokens::new(toks.to_vec()))? else {
+    return Ok(None);
+  };
+  let mut level = Vec::with_capacity(toks.len());
+  let mut depth = 0i32;
+  for t in toks {
+    level.push(depth);
+    depth = brace_level(depth, t);
+  }
+  let mut cuts: Vec<(usize, usize)> = Vec::new();
+  for separator in separators {
+    let Some((start, end)) = separator.span else {
+      return Ok(None);
+    };
+    if level.get(start) == Some(&0) {
+      cuts.push((start, end));
+    }
+  }
+  let mut columns = Vec::with_capacity(cuts.len() + 1);
+  let mut from = 0;
+  for (start, end) in cuts {
+    columns.push(toks[from..start].to_vec());
+    from = end;
+  }
+  columns.push(toks[from..].to_vec());
+  Ok(Some(columns))
+}
+
 /// Transpose a genuine IEEEtran `\and`×`\\` author grid from column-major
 /// (declaration order) to row-major (reading order).
 ///
@@ -1436,12 +1601,19 @@ fn unnested_affiliation_blocks(body: Tokens) -> Tokens {
 /// (no top-level `\\`) and `\\` used only INSIDE `\IEEEauthorblockA{…\\…}` (nested,
 /// depth>0) are left exactly as declared, and so is a grid with a cell naming no author (a column's affiliation rows
 /// under its name, 2605.15804). Surpass-Perl divergence: OXIDIZED_DESIGN
-/// #128 (shared upstream bug KNOWN_PERL_ERRORS #94).
-fn transpose_ieee_author_grid(body: Tokens) -> Tokens {
+/// #128 (shared upstream bug KNOWN_PERL_ERRORS #94). The grid's tokens are the body as its document macros print it
+/// (`blocks_as_printed`), its columns the separators the query reads (`grid_columns`) and its rows its `\\`
+/// (`split_top_level`, by meaning); the transposition stays here, on
+/// tokens, until the reading holds the grid's events (each `\IEEEauthorblockN` is a ledger block of its own, the
+/// separators between blocks unrecorded; P2-8a).
+fn transpose_ieee_author_grid(body: Tokens) -> Result<Tokens> {
   let toks = body.unlist();
-  let columns = split_top_level(&toks, &T_CS!("\\and"));
+  let columns = match grid_columns(&toks)? {
+    Some(columns) => columns,
+    None => split_top_level(&toks, &T_CS!("\\and")),
+  };
   if columns.len() < 2 {
-    return Tokens::new(toks); // not a multi-column grid
+    return Ok(Tokens::new(toks)); // not a multi-column grid
   }
   let grid: Vec<Vec<Vec<Token>>> = columns
     .iter()
@@ -1450,7 +1622,7 @@ fn transpose_ieee_author_grid(body: Tokens) -> Tokens {
   let rows = grid[0].len();
   // Only a REGULAR grid transposes: same row count in every column, and ≥2 rows.
   if rows < 2 || grid.iter().any(|c| c.len() != rows) {
-    return Tokens::new(toks);
+    return Ok(Tokens::new(toks));
   }
   // And a grid of authors: every cell that prints something (`prints_nothing`) names one. A row of a column's blocks
   // or text without a name is its author's, below the name as printed (`\IEEEauthorblockN{Ann Able} \textit{School
@@ -1461,7 +1633,7 @@ fn transpose_ieee_author_grid(body: Tokens) -> Tokens {
       || cell.iter().any(|t| *t == T_CS!("\\IEEEauthorblockN"))
   };
   if !grid.iter().flatten().all(names) {
-    return Tokens::new(toks);
+    return Ok(Tokens::new(toks));
   }
   let and = T_CS!("\\and");
   let mut out: Vec<Token> = Vec::new();
@@ -1477,7 +1649,7 @@ fn transpose_ieee_author_grid(body: Tokens) -> Tokens {
       out.extend(cell.iter().copied());
     }
   }
-  Tokens::new(out)
+  Ok(Tokens::new(out))
 }
 
 /// Wrap each top-level bare-text run in an IEEE author BLOCK body in `\IEEEauthorblockA{...}` so it attaches to the

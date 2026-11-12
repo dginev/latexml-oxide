@@ -437,6 +437,10 @@ impl Drop for FlushMeanings {
 pub fn digest_front_matter() -> Result<()> {
   // (whether no flush digests its queue around this one: the outermost places what a late block deferred to its end)
   let outermost = !lookup_bool("lx_frontmatter_flushing");
+  // (an `\author` body read again with the definitions in force here: `reread_author_body_at_flush`)
+  if outermost && let Some(call) = take_author_body_reread() {
+    digest(call)?;
+  }
   // (what the abstract's command form added before this flush is no longer in Perl's queue: [`COMMAND_FORM`])
   let flushes = lookup_int(FRONTMATTER_FLUSHES);
   assign_value(FRONTMATTER_FLUSHES, flushes + 1, Some(Scope::Global));
