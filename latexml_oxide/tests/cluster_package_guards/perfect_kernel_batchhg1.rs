@@ -595,6 +595,67 @@ fn marked_blocks_restored_read_as_printed() {
         r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup>Univ B</contact></creator>"#,
       ]),
     },
+    // (P4b4f, int166a's P4b4a regressions (CL166): a line of addresses read by its tokens, 1506.02349; a name's glued
+    // mark requests each entry it spells, 2409.11440, 2511.20671; a start at the `\quad` before its line starts it,
+    // 2601.03607; a cut piece carries `\tt` (LaTeX's whole declaration set), the llncs list and 2508.08560's title page,
+    // whose hidden marks are pinned as int165a had them, RED `raw_maketitle_names_spaced_marks_hidden_red`)
+    Row {
+      repro:    repro!("class-bindings/ieeetran_authorblocka_marked_email_list_read_whole"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann One<sup>*</sup></personname><contact name="Affiliation: " role="affiliation"><sup>*</sup>Univ A</contact><contact name="Emails: " role="email">ann_one@ntu.edu.sg</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Two<sup>†</sup></personname><contact name="Affiliation: " role="affiliation"><sup>†</sup><sup>‡</sup>Univ B</contact><contact name="Emails: " role="email">bob_two@sutd.edu.sg</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Cy Three<sup>‡</sup></personname><contact name="Affiliation: " role="affiliation"><sup>†</sup><sup>‡</sup>Univ B</contact><contact name="Emails: " role="email">cy_three@sutd.edu.sg</contact></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("class-bindings/acmart_country_glued_mark_requests_each_entry"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann One<sup><text font="italic">1</text></sup><sup>∗</sup></personname><contact name="Affiliation: " role="affiliation"><text class="ltx_affiliation_country"><sup>1</sup>A Univ</text></contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks"><text class="ltx_affiliation_country"><sup>∗</sup>Equal contributions</text></note></creator>"#,
+        r#"<creator before=", " role="author"><personname>Bob Two<sup><text font="italic">12</text></sup></personname><contact name="Affiliation: " role="affiliation"><text class="ltx_affiliation_country"><sup>1</sup>A Univ</text></contact><contact name="Affiliation: " role="affiliation"><text class="ltx_affiliation_country"><sup>2</sup>B Lab</text></contact></creator>"#,
+        r#"<creator before=" and " role="author"><personname>Cy Three<sup><text font="italic">1</text></sup></personname><contact name="Affiliation: " role="affiliation"><text class="ltx_affiliation_country"><sup>1</sup>A Univ</text></contact></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("class-bindings/ieeeconf_authorblocka_quad_parted_marked_notes"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann One<sup><text font="bold">*</text></sup></personname><contact name="Affiliation: " role="affiliation">Stanford University</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="*" role="thanks"><sup>*</sup>Equal contribution</note></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Two<sup><text font="bold">*</text></sup></personname><contact name="Affiliation: " role="affiliation">Stanford University</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="*" role="thanks"><sup>*</sup>Equal contribution</note></creator>"#,
+        r#"<creator before="  " role="author"><personname>Cy Three</personname><contact name="Affiliation: " role="affiliation">Stanford University</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Di Four<sup><text font="bold">†</text></sup></personname><contact name="Affiliation: " role="affiliation">Stanford University</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks"><sup>†</sup>Equal advising</note></creator>"#,
+        r#"<creator before="  " role="author"><personname>Ed Five<sup><text font="bold">†</text></sup></personname><contact name="Affiliation: " role="affiliation">Stanford University</contact><note class="ltx_note_frontmatter ltx_thanks_contribution" mark="†" role="thanks"><sup>†</sup>Equal advising</note></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("class-bindings/llncs_institute_marks_tt_lead_carried_to_every_entry"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able<sup><text font="italic">1</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">1</text></sup><text font="typewriter">Univ Alpha</text></contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup><text font="typewriter">Univ Beta</text></contact></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!(
+        "sectioning-frontmatter/raw_maketitle_affiliation_tt_lead_carried_to_every_email"
+      ),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>A. One</personname><contact name="Affiliation: " role="affiliation"> Some Dept, Some Univ</contact><contact name="Email: " role="email"><text font="typewriter" fontsize="90%">one@a.org</text></contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>B. Two</personname><contact name="Affiliation: " role="affiliation"> Some Dept, Some Univ</contact><contact name="Email: " role="email"><text font="typewriter" fontsize="90%">two@b.org</text></contact></creator>"#,
+      ]),
+    },
     // (revP4b4a2 B2: the box's alignment on no inline piece, the first included; its size on every one, 2608.21425)
     Row {
       repro:    repro!("class-bindings/llncs_institute_parbox_centering_marks_inline"),

@@ -6569,9 +6569,47 @@ fn abstract_setter_definitions() -> Vec<(&'static str, &'static str, Definer, Ve
   found
 }
 
+/// LaTeX's font declarations taking no argument: the sizes (latex.ltx `\tiny` … `\Huge`), the NFSS family, series and
+/// shape switches with `\normalfont`, `\em` and `\selectfont`, the LaTeX 2.09 ones (`\rm` … `\tt`) and `\normalcolor`.
+pub(crate) const FONT_DECLARATIONS: &[&str] = &[
+  "\\tiny",
+  "\\scriptsize",
+  "\\footnotesize",
+  "\\small",
+  "\\normalsize",
+  "\\large",
+  "\\Large",
+  "\\LARGE",
+  "\\huge",
+  "\\Huge",
+  "\\normalfont",
+  "\\rmfamily",
+  "\\sffamily",
+  "\\ttfamily",
+  "\\bfseries",
+  "\\mdseries",
+  "\\itshape",
+  "\\upshape",
+  "\\slshape",
+  "\\scshape",
+  "\\sscshape",
+  "\\swshape",
+  "\\ulcshape",
+  "\\em",
+  "\\selectfont",
+  "\\rm",
+  "\\sf",
+  "\\tt",
+  "\\bf",
+  "\\it",
+  "\\sl",
+  "\\sc",
+  "\\normalcolor",
+];
+
 /// Declarations and spacing that typeset nothing (font, size, paragraph shape), taking no argument (also the
 /// declarations an author line's separator takes the gap before: `base_utilities::spaced_name_separators`). The font
-/// declarations come first, up to `\selectfont`: `events::font_declaration` reads them so.
+/// declarations come first, up to `\selectfont` (LaTeX's whole set: [`FONT_DECLARATIONS`]).
 pub(crate) const LAYOUT: &[&str] = &[
   "\\tiny",
   "\\scriptsize",

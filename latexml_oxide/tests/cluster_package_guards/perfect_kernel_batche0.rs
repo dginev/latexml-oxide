@@ -465,6 +465,9 @@ fn the_moved_cut_and_kind_take_no_new_decision() {
 /// leaves out a held undefined command the class's title code defines reading arguments — the same class code, which
 /// the flush's net already spares (1108.4222, 2607.07582); paid with that reader's move (Z18m, its `reads_arguments` with it).
 const ONE_ENGINE_REACH: &[(&str, usize)] = &[
+  // (P4b4f, 0 -> 2: a line of addresses keeps its token reading in the cutter, `line_addresses`'s, as `entry_calls` read
+  // it before P4b4a — its marks label addresses, a start may stand inside one, 1506.02349; the import and the one use)
+  ("classify/entry_starts.rs line_addresses", 2),
   // (Z18m's three, `collaboration_line`'s, `notes_only_line`'s and `space_parted_names`' uses of the moved field and line
   // readers, are the old reader's uses of its own code: their files, `classify/old_reader/`, are no source of the one
   // engine's (review revZ18m B1))
@@ -1518,7 +1521,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // groups, never an alignment (`notes::font_settings`, `sets_font`, `aligns`, revP4b4a2 B1/B2); a start inside an
   // environment leaves the list to its tokens (`entry_starts::starts_inside_environment`, B3). Each test is the
   // token's meaning (`x_equals`) or a group's braces, no spelling)
-  ("classify", 471),
+  // (P4b4f, 471 -> 473: the cut line's last piece trimmed inside the groups it closes, its closing braces and spaces read
+  // by catcode, 2511.20671 — a group's braces, no spelling)
+  ("classify", 473),
   // (E0h: the rest of `author_block/` Z18m moved unchanged to `classify/old_reader/`, split off from `classify`'s row)
   ("old_reader", 131),
   ("defs/author_macros", 20),
@@ -1560,7 +1565,7 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // by one at IO3b: the lexer's arm for the rehearsal's own constructor `\lx@fm@obs@creatorcall`, as the row's others — a
   // binding's own definition, no name a document spells, 0807.4720; by one at CMPJ2: the walker's arm for an enumerate
   // item's whatsit, `\enumerate@item@`, by its definition — where an item starts, `item_led_pieces`, 1212.6367)
-  ("events", 62),
+  ("events", 61),
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with Perl's whole-block fallback and its preparation, kept as its own, 826 = 629 + 197; none added)
   // (raised by one at PF1: `tabular_close_rest` reads the `\end` its copy of the body read, before the copy — no read added)
   // (DEL2, 197 -> 151: the old driver's raw-token preparation deleted)
@@ -1599,7 +1604,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // by definition identity, sect05.rs `is_latex_maketitle`, review revTP1 N2)
   // (P4d, 527 -> 526: `displaced_entries` asks `class_numbered_institutes` with no spelled `\and` gate; the entries cut by
   // meaning, `split_at_kernel_separators`)
-  ("frontmatter_stores", 526),
+  // (P4b4f, 526 -> 527: `FONT_DECLARATIONS`, LaTeX's whole set of no-argument font declarations, one table that
+  // `fonts::font_declaration` (by name, as it read `LAYOUT`'s head) and `notes::sets_font` (by meaning) share — the
+  // head lacked `\tt`, `\LARGE`, `\huge`, `\Huge`, 2508.08560; `events` drops its `\selectfont` read, 62 -> 61)
+  ("frontmatter_stores", 527),
   ("gretsi_cls.rs", 14),
   // (CR10a, 119 -> 128: the class's author body is read as tokens before it is digested, as `author_block_body` reads it —
   // a names block nested in another's spliced in (`unnested_name_blocks`, 1511.03982), the alias `\authorblockN`'s grades,
@@ -1975,7 +1983,7 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   // (CL8b +2: the arm and the meaning of the rehearsal's own `\lx@fm@obs@emailAdd@own`, a binding's definition, no name a
   // document spells; CMPJ2 +1: the walker's arm for an enumerate item's whatsit, `\enumerate@item@`, its definition's name,
   // no name a document spells — the item's start, `item_led_pieces`, 1212.6367)
-  ("events", 93),
+  ("events", 92),
   // (Z4a, 0 -> 2, ruled at Z4ar2: names two kernel definitions (`\begin`, `\end`), not a token's spelling: an environment step by its
   // meaning, a `\let` copy too, what no frame says for a raw environment)
   ("field_notes", 2),

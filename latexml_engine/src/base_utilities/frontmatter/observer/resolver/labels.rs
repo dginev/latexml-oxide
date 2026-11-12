@@ -1533,6 +1533,22 @@ pub(super) fn surname_owners(creators: &[RCreator], letters: &str) -> Vec<usize>
   owners
 }
 
+/// A name's request `label` (bare) that no entry labels, as the entries' labels `known` written together
+/// ([`parted_label`]): `12` under entries `1` and `2` (2103.10685), never `21` under twenty numbered entries (a number
+/// parts into digits only when every entry's number is a digit, 1501.05343). Read by the Link step
+/// (`part_glued_labels`) and by the entries' cut (`events::names_requested`, 2409.11440).
+pub(in crate::base_utilities::frontmatter::observer) fn glued_request_parts(
+  label: &str,
+  known: &[String],
+) -> Option<Vec<String>> {
+  let digits = |l: &str| l.chars().all(|c| c.is_ascii_digit());
+  let digit_entries = known.iter().filter(|l| digits(l)).all(|l| l.len() == 1);
+  if known.iter().any(|k| k == label) || (!digit_entries && digits(label)) {
+    return None;
+  }
+  parted_label(label, known, true, true)
+}
+
 /// `label` as two or more labels of `known` written together (`12` → `1`, `2`); with `symbols`, a run of characters that
 /// are no letter or digit may stand alone too (`1⋆` → `1`, `⋆`), and so may one letter (`1a` → `1`, `a`: the letter a
 /// note's mark, `$^{1{\rm a}}$`, 1904.02582), and, with `note_numbers` (the emitter's switch on), so may a number when
