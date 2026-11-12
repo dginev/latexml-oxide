@@ -1,0 +1,14 @@
+% mechanism: a one-block IEEEtran marked list whose first line is unmarked (`Dept X\\ $^1$Univ A\\ $^2$Univ B`): the unmarked line
+%   goes to the last author only (the iopart sibling: `iopart_marked_list_unmarked_first_line_every_authors_red`)
+% witness: synthetic (revP4cR2b pre-existing); reach to measure in P4f's census (a common IEEEtran shape?)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "Dept X" over both names
+% engines: P4b2 = P4cR2b: Dept X to Bob only
+% expect:  0 errors; Dept X on both, 1 Univ A Ann's, 2 Univ B Bob's
+% status:  RED (P4b2, P4cR2b) — moves: P4f's census (pre-merge if its reach is high), else post-merge
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able$^1$, Bob Baker$^2$}\IEEEauthorblockA{Dept X\\ $^1$Univ A\\ $^2$Univ B}}
+\maketitle
+Body.
+\end{document}

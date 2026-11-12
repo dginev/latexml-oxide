@@ -1582,8 +1582,12 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // and a stop after an italic grade group, `{\em …}.`, `\emph{…}.` (`without_stop_after_grade`, `grade_text`, 1810.08035);
   // CR10c, 128 -> 126: the old block names read once as the ones they mean (`with_block_names`), so the block test reads
   // one name each (-3), and an outer block's own affiliation block found before an inner names block
-  // (`affiliation_before_names`, 2605.20445, +1))
-  ("ieeetran_cls.rs", 126),
+  // (`affiliation_before_names`, 2605.20445, +1); P4cR2, 126 -> 131: the body is still tokens when `\author` reads it, so
+  // an affiliation block nested in another is found by the class's own command and its braces, an unmarked one spliced at
+  // its line breaks (`unnested_affiliation_blocks`; its lead of marks read by the binding's mark reader since P4cR2b,
+  // `prints_marks_alone`; 1710.07993, 2605.02682) and a names block led by an ordinal by the number and suffix it prints
+  // (`ordinal_names`, 1806.11431); no name a document spells)
+  ("ieeetran_cls.rs", 131),
   ("insert", 14),
   // (from `frontmatter (rest)`, 24 -> 23, at Z2r2: `\alignauthor`, out of the kernel's conventions into the binding's own table; no read)
   ("inst_support_sty.rs", 1),
@@ -1631,7 +1635,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (CL8b 19 -> 21: `own_email_properties` digests a class's own `\email` on the call's address to read the label it prints
   // before it — what it prints, no name spelled; 2603.18265)
   ("rehearsal", 21),
-  ("relocate", 134),
+  // (P4cR2 134 -> 136: `leads_with_ordinal`, a number and its suffix past spaces, for IEEEtran's `\author`, which reads
+  // tokens before digestion; it shares `ordinal_suffix_end`, the suffix rule this file already reads, as P4cR2b's
+  // `ordinal_name_line` does; 1806.11431)
+  ("relocate", 136),
   // (Z2r2: not the study's lines but what `resolver_reads` counts, a shape no reason to raise it: `text_tokens` (`text_as_tokens`
   // since E0h, its name no longer the old reader's), printed text read
   // as tokens by `is_institution` and `NameKeys` (5 with their definitions), a `'\\'` read of a label (2), a call's hook (1).

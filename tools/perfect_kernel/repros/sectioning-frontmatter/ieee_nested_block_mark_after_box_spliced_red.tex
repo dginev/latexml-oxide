@@ -1,0 +1,14 @@
+% mechanism: a nested `\IEEEauthorblockA` whose mark follows a box on the same line (`\parbox{…}{$^1$Univ A}$^2$\IEEEauthorblockA{Univ B}`):
+%   the block is spliced and the marked-list cut gives the whole text to mark 1 (a `tabular` the same)
+% witness: synthetic (revP4cR2b 2)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "1 Univ A" under Ann, "2 Univ B" under Bob
+% engines: P4cR2b: Ann "1 Univ A 2 Univ B", Bob none; P4b2: Bob Univ B
+% expect:  0 errors; Ann 1 Univ A, Bob 2 Univ B
+% status:  RED (P4cR2b) — moves: post-merge (IEEO)
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able$^1$, Bob Baker$^2$}\IEEEauthorblockA{\parbox{5cm}{$^1$Univ A}$^2$\IEEEauthorblockA{Univ B}}}
+\maketitle
+Body.
+\end{document}

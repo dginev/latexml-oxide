@@ -1,0 +1,15 @@
+% mechanism: marks alone on the line before a nested block after `\\[2pt]` (or `\newline`): `split_top_level_lines` leaves `[2pt]`
+%   at the next line's start and does not split at `\newline` (though `is_break` counts it), so `prints_marks_alone` fails and
+%   the block is spliced into the one-block marked list, whose unmarked first line goes to the last author
+% witness: synthetic (revP4cR2b 3; the plain `\\` shape is lifted and right)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "Dept X" over both names
+% engines: P4cR2b = P4b2: Dept X to Bob only
+% expect:  0 errors; Dept X on both, 1 Univ A Ann's, 2 Univ B Bob's
+% status:  RED (P4cR2b, P4b2) — moves: post-merge (IEEO; skip a `\\`'s `*`/`[dim]`, split at `\newline`)
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able$^1$, Bob Baker$^2$}\IEEEauthorblockA{Dept X\\[2pt] $^1$\IEEEauthorblockA{Univ A}\\[2pt] $^2$\IEEEauthorblockA{Univ B}}}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,19 @@
+% mechanism: an `\IEEEauthorblockA` nested after a letter mark (`$^a$`, `\textsuperscript{b}`, `$^{c}$`) is lifted out
+%   with the mark its label: the lead read by the binding's mark reader (`leading_line_label` via `prints_marks_alone`,
+%   relocate.rs), not by its having no letter (ieeetran_cls.rs `unnested_affiliation_blocks`; OD #1009)
+% witness: synthetic (review revP4cR2 B2, probe q8); digit marks (`$^{1}$`, `\textsuperscript{2}`) were right before
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Ablea , Bob Bakerb , Cy Colec", "a Univ A, Town", "b Univ B, City", "c Univ C, Village"
+% engines: P4b2: each mark an affiliation alone; P4cR2 ea6a435433: the marks dropped, "Univ A, Town" every author's, 0 W
+% expect:  0 errors, 0 warnings; Ann Able "a Univ A, Town", Bob Baker "b Univ B, City", Cy Cole "c Univ C, Village"
+% status:  RED (P4cR2 ea6a435433) -> GREEN (P4cR2b)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able$^a$, Bob Baker$^b$, Cy Cole$^c$}
+\IEEEauthorblockA{$^a$\IEEEauthorblockA{Univ A, Town}}
+\IEEEauthorblockA{\textsuperscript{b}\IEEEauthorblockA{Univ B, City}}
+\IEEEauthorblockA{$^{c}$\IEEEauthorblockA{Univ C, Village}}}
+\maketitle
+Body.
+\end{document}

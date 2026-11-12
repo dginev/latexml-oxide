@@ -1831,11 +1831,60 @@ fn math_number_mark_at(tokens: &[Token], at: usize) -> Option<(Vec<Token>, usize
   .then(|| (tokens[start..start + digits].to_vec(), close + 1))
 }
 
-/// Does an ordinal suffix start at `at`, glued to the number before it ([`is_ordinal_suffix`]): a run of letters that
+/// Does `tokens` open with an ordinal, a number and its suffix (`ordinal_suffix_end`), past spaces: IEEEtran's template
+/// leads each name line with one (`3\textsuperscript{rd} Cy Cole`; 1806.11431).
+pub fn leads_with_ordinal(tokens: &[Token]) -> bool { leading_ordinal_end(tokens).is_some() }
+
+/// Is `line` a name led by an ordinal ([`leads_with_ordinal`]), the text after it a name (`resolver::reads_as_names`):
+/// `3\textsuperscript{rd} Cy Cole`, not `2nd Floor, Bldg 5` (review revP4cR2 S1).
+pub fn ordinal_name_line(line: &[Token]) -> bool {
+  leading_ordinal_end(line)
+    .is_some_and(|end| resolver::reads_as_names(visible_name_text(&line[end..]).trim()))
+}
+
+/// Where the ordinal `tokens` opens with ends ([`leads_with_ordinal`]).
+fn leading_ordinal_end(tokens: &[Token]) -> Option<usize> {
+  let start = tokens.iter().take_while(|t| **t == T_SPACE!()).count();
+  let digits = tokens[start..]
+    .iter()
+    .take_while(|t| {
+      t.get_catcode() == Catcode::OTHER && t.with_str(|s| s.chars().all(|c| c.is_ascii_digit()))
+    })
+    .count();
+  (digits > 0)
+    .then(|| ordinal_suffix_end(tokens, start + digits))
+    .flatten()
+}
+
+/// Does `tokens` print marks alone, one or more, each a written mark the binding's line labels read
+/// ([`leading_line_label`]; not a typed number, nor a "(" or a phone number): an inner `\IEEEauthorblockA`'s label.
+pub fn prints_marks_alone(tokens: &[Token]) -> bool {
+  let mut rest = Tokens::new(tokens.to_vec());
+  let mut marks = 0;
+  while !prints_nothing(&rest) {
+    match leading_line_label(&rest) {
+      Some((_, false, after)) => (marks, rest) = (marks + 1, after),
+      _ => return false,
+    }
+  }
+  marks > 0
+}
+
+/// Does `tokens` lead with a written mark ([`leading_line_label`], not a typed number)?
+pub fn leads_with_written_mark(tokens: &[Token]) -> bool {
+  leading_line_label(&Tokens::new(tokens.to_vec())).is_some_and(|(_, typed, _)| !typed)
+}
+
+/// Does an ordinal suffix start at `at` ([`ordinal_suffix_end`])?
+fn ordinal_suffix_at(tokens: &[Token], at: usize) -> bool {
+  ordinal_suffix_end(tokens, at).is_some()
+}
+
+/// Where an ordinal suffix starting at `at` ends, glued to the number before it ([`is_ordinal_suffix`]): a run of letters that
 /// is the whole word, `rd` before a space or a comma, not the `St` of `Stanford`, nor an uppercase `St` before a `.` or
 /// a space and a capital, the word "Saint" (`$1$St. Petersburg`, `$3$St Andrews`; review rev104c2 F3 — a lowercase
 /// `$1$st Floor` is the ordinal); a `\textsuperscript{th}`; a `$^{nd}$`?
-fn ordinal_suffix_at(tokens: &[Token], at: usize) -> bool {
+fn ordinal_suffix_end(tokens: &[Token], at: usize) -> Option<usize> {
   let letters = tokens[at.min(tokens.len())..]
     .iter()
     .take_while(|t| t.get_catcode() == Catcode::LETTER)
@@ -1848,21 +1897,23 @@ fn ordinal_suffix_at(tokens: &[Token], at: usize) -> bool {
           && tokens.get(at + 3).is_some_and(|t| {
             t.get_catcode() == Catcode::LETTER && t.with_str(|s| s.starts_with(char::is_uppercase))
           })));
-    return !saint && is_ordinal_suffix(&tokens[at..at + letters]);
+    return (!saint && is_ordinal_suffix(&tokens[at..at + letters])).then_some(at + letters);
   }
   match tokens.get(at) {
-    Some(t) if *t == T_CS!("\\textsuperscript") => {
-      sup_operand_at(tokens, at + 1).is_some_and(|(operand, _)| is_ordinal_suffix(&operand))
-    },
+    Some(t) if *t == T_CS!("\\textsuperscript") => sup_operand_at(tokens, at + 1)
+      .filter(|(operand, _)| is_ordinal_suffix(operand))
+      .map(|(_, next)| next),
     Some(t) if t.get_catcode() == Catcode::MATH && tokens.get(at + 1) == Some(&T_SUPER!()) => {
-      sup_operand_at(tokens, at + 2).is_some_and(|(operand, next)| {
-        is_ordinal_suffix(&operand)
-          && tokens
-            .get(next)
-            .is_some_and(|t| t.get_catcode() == Catcode::MATH)
-      })
+      sup_operand_at(tokens, at + 2)
+        .filter(|(operand, next)| {
+          is_ordinal_suffix(operand)
+            && tokens
+              .get(*next)
+              .is_some_and(|t| t.get_catcode() == Catcode::MATH)
+        })
+        .map(|(_, next)| next + 1)
     },
-    _ => false,
+    _ => None,
   }
 }
 

@@ -300,7 +300,7 @@ pub(in crate::base_utilities::frontmatter::observer) use labels::{
 // (named, as the prelude has its own of these names: the resolver's shadow them)
 pub use labels::{address_take_out, addresses_in, mark_labels, only_addresses};
 pub(in crate::base_utilities::frontmatter::observer) use labels::{contact_parts, label_matches};
-pub(in crate::base_utilities::frontmatter::observer) use lines::reads_as_names;
+pub(in crate::base_utilities) use lines::reads_as_names;
 use lines::*;
 // (the reading's word check, its block half and what the emitter's call half reads: OD #980)
 pub(in crate::base_utilities::frontmatter::observer) use net::{merged_names, uncoordinated_marks};
