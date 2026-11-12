@@ -73,9 +73,13 @@ pub(in crate::base_utilities) fn note_frozen_digest(tag: &str) {
 /// Whether a rehearsal is digesting now (the ledger records nothing of it).
 pub(in crate::base_utilities) fn rehearsing() -> bool { REHEARSING.with(Cell::get) }
 
+/// Whether the frontmatter's rehearsal is reading the author fields now: where a binding's command whose meaning is a
+/// frontmatter fact makes the reading's event (IEEEtran's `\IEEEmembership`, a Contact the resolver gives the name it follows).
+pub fn rehearsing_author_fields() -> bool { rehearsing() }
+
 /// Whether the frontmatter is reading its author fields now: a rehearsal (the reading's events) or the flush that digests
-/// what the emitter wrote from them (`lx_frontmatter_flushing`, `place.rs`). A binding's command whose meaning is a
-/// frontmatter fact only there asks it (IEEEtran's `\IEEEmembership`, its name's contact; OXIDIZED_DESIGN_DIVERGENCES #1016).
+/// what the emitter wrote from them (`lx_frontmatter_flushing`, `place.rs`). A binding's command printing a frontmatter fact
+/// only there asks it (IEEEtran's `\IEEEmembership`; OXIDIZED_DESIGN_DIVERGENCES #1016).
 pub fn reading_author_fields() -> bool { rehearsing() || lookup_bool("lx_frontmatter_flushing") }
 
 /// No rehearsal is digesting (a conversion's start: one a panic left marked on a reused thread is over), nor is a class's

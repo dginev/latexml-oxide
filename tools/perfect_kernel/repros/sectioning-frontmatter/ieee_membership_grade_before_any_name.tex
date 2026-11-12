@@ -1,0 +1,13 @@
+% witness: synthetic (a grade no name comes before: the resolver's block fallback, `owner:block`)
+% oracle:  pdflatex 0 errors: "Fellow, IEEE, Ann Able and Bob Baker"
+% engines: rust P5abase, P5a = a membership of the block's nameless creator, 0 warnings
+% expect:  0 errors, 1 warning (the emitter's net: no place for "Fellow IEEE", kept as a note of the author block); no
+%          membership contact
+% status:  RED (P5abase, P5a) -> GREEN (P5a2)
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEmembership{Fellow,~IEEE}, Ann~Able and Bob~Baker}
+\maketitle
+Body.
+\end{document}

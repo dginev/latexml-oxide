@@ -30,8 +30,17 @@ macro_rules! repro {
 ///   (`line:contact membership:name-above`);
 /// - empty grades between names parted by space alone (1805.06045): nothing printed, no contact;
 /// - conference mode (IEEEtran.cls:6270): locked out, no contact;
-/// - a grade inside an author's `\thanks` (the note's text, which it drops): the loss counted, one Warning (the content
-///   check's), where the base was silent — the RED's post-merge fix prints it.
+/// - a grade inside an author's `\thanks`: the note's text, printed (P5a2; the base lost it silently, P5a counted it).
+///
+/// P5a2 (review revP5a B1, S1): a grade no name comes before in the reading is no one's contact, never one of every
+/// holder of the line it is printed on — the rehearsal's Contact alone is the grade's membership, the flush prints its
+/// text where the emitter wrote it:
+/// - after a name the reading took for a line's text, after an `\IEEEauthorblockN` (2408.01956, 2511.20003; the second a
+///   note after it): the line's text, as printed;
+/// - ending an unmarked affiliation line, inside a block's `\IEEEauthorblockA`, a plain list's `\IEEEauthorblockA` (its
+///   two false content-check Warnings the RED's, IEGW post-merge), authblk's `\affil`: the affiliation's text;
+/// - on a line of its own under an affiliation line (S1): with a note, the affiliation it continues; alone, and before any
+///   name (the block fallback `owner:block`): the emitter's net, one Warning.
 #[test]
 fn ieee_membership_grade_is_the_readings_contact() {
   let rows: &[(&str, &[&str], (usize, usize))] = &[
@@ -78,12 +87,87 @@ fn ieee_membership_grade_is_the_readings_contact() {
       (0, 0),
     ),
     (
-      repro!("check_binding_macro_drops_inside_an_entry_red"),
+      repro!("ieee_membership_grade_after_no_name_stays_on_its_line"),
       &[
-        "<creator role=\"author\"><personname>Ann Able</personname></creator>",
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">Ann Able, , is with Lunar College.</note></creator>",
+        "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">, Cy Coe, Senior Member, IEEE</contact></creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact role=\"membership\">Fellow, IEEE</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">, Cy Coe, Senior Member, IEEE</contact></creator>",
+      ],
+      (0, 0),
+    ),
+    (
+      repro!("ieee_membership_grade_after_a_names_block_and_a_note"),
+      &[
+        "<creator role=\"author\"><personname>Ann\u{a0}Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> and Dee\u{a0}Dow,\u{a0}Fellow, IEEE</contact></creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}Baker</personname><contact role=\"membership\">Senior Member, IEEE</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> and Dee\u{a0}Dow,\u{a0}Fellow, IEEE</contact></creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cy\u{a0}Coe</personname><contact role=\"membership\">Fellow, IEEE</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> and Dee\u{a0}Dow,\u{a0}Fellow, IEEE</contact></creator>",
+      ],
+      (0, 0),
+    ),
+    (
+      repro!("ieee_membership_grade_on_an_affiliation_line"),
+      &[
+        "<creator role=\"author\"><personname>Ann\u{a0}Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Town,\u{a0}Senior Member,\u{a0}IEEE</contact></creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Town,\u{a0}Senior Member,\u{a0}IEEE</contact></creator>",
+      ],
+      (0, 0),
+    ),
+    (
+      repro!("ieee_membership_grade_in_an_author_block_affiliation"),
+      &[
+        "<creator role=\"author\"><personname>Ann Able</personname><contact role=\"membership\">Member,\u{a0}IEEE</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept of X, IEEE Region 8<break/>Univ A</contact></creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept of X, IEEE Region 8<break/>Univ A</contact></creator>",
+      ],
+      (0, 0),
+    ),
+    (
+      repro!("ieee_membership_grade_in_a_plain_affiliation_call_red"),
+      &[
+        "<creator role=\"author\"><personname>Ann\u{a0}Able</personname><contact role=\"membership\">Member,\u{a0}IEEE</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Member, ACM</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Cy Coe</contact></creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Member, ACM</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Cy Coe</contact></creator>",
+      ],
+      (0, 2),
+    ),
+    (
+      repro!("ieee_membership_grade_line_under_an_affiliation"),
+      &[
+        "<creator role=\"author\"><personname>Ann\u{a0}Able<sup xml:id=\"id1\">1</sup></personname><contact role=\"membership\">Member,\u{a0}IEEE</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Town<break/>Fellow,\u{a0}IEEE</contact></creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Town<break/>Fellow,\u{a0}IEEE</contact><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id2\">Note.</note></creator>",
+      ],
+      (0, 0),
+    ),
+    (
+      repro!("ieee_membership_grade_alone_under_an_affiliation"),
+      &[
+        "<creator role=\"author\"><personname>Ann\u{a0}Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Town</contact></creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, Town</contact></creator>",
+        "<creator role=\"author\"><note role=\"note\" xml:id=\"id1\">Fellow,\u{a0}IEEE</note></creator>",
       ],
       (0, 1),
+    ),
+    (
+      repro!("ieee_membership_grade_in_an_authblk_affil"),
+      &[
+        "<creator role=\"author\"><personname>Ann\u{a0}Able</personname><contact role=\"membership\">Member,\u{a0}IEEE</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A, IEEE Region 8</contact></creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}Baker</personname><contact role=\"membership\">Fellow,\u{a0}IEEE</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact></creator>",
+      ],
+      (0, 0),
+    ),
+    (
+      repro!("ieee_membership_grade_before_any_name"),
+      &[
+        "<creator role=\"author\"><personname>Ann\u{a0}Able</personname></creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob\u{a0}Baker</personname></creator>",
+        "<creator role=\"author\"><note role=\"note\" xml:id=\"id1\">Fellow,\u{a0}IEEE</note></creator>",
+      ],
+      (0, 1),
+    ),
+    (
+      repro!("ieee_membership_grade_inside_a_thanks_is_the_notes_text"),
+      &[
+        "<creator role=\"author\"><personname>Ann Able</personname></creator>",
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id1\">Ann Able, Senior Member,\u{a0}IEEE, is with Lunar College.</note></creator>",
+      ],
+      (0, 0),
     ),
   ];
   for (tex, expected, counts) in rows {

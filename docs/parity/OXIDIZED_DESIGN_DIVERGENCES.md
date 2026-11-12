@@ -30512,7 +30512,7 @@ a_bindings_own_plumbing_is_no_dropped_text, a_drop_pdflatex_makes_too_is_no_loss
 many_entries_of_one_call_share_its_arguments}`; repros `check_declared_drop_bookmark_text_unwanted`,
 `check_declared_drop_of_a_frontmatter_command_unwanted`, `check_kernel_selector_drop_is_texs_own`,
 `check_many_entries_of_one_call_share_its_arguments` (RED 106t r2 → GREEN), and sectioning-frontmatter/`check_binding_command_drops_its_argument`,
-`check_internal_command_reads_documents_optional`, `check_binding_macro_drops_inside_an_entry_red` (RED int135e → GREEN → RED int160a, HG1),
+`check_internal_command_reads_documents_optional`, `check_binding_macro_drops_inside_an_entry_red` (RED int135e → GREEN → RED int160a, HG1; now `ieee_membership_grade_inside_a_thanks_is_the_notes_text`, GREEN P5a2),
 `check_binding_plumbing_is_no_dropped_text` (RED on the unfiltered build), `check_bound_class_nothing_lost`,
 `check_bound_class_running_heads_unwanted`, `check_replaced_author_is_not_wanted` (negative). Guards updated for losses
 now counted: `perfect_kernel_batch86i::second_abstract_after_maketitle_is_kept` (amsart's `[R\'esum\'e]`, which pdflatex
@@ -35583,17 +35583,25 @@ self-test `a_record_lookup_counts_however_it_is_written`.
 after a name, in a note, in a biography heading; conference mode swallows it (IEEEtran.cls:6270) unless
 `\IEEEoverridecommandlockouts` (:6278-6288). **Perl.** IEEEtran.cls.ltxml:143 `DefMacro('\IEEEmembership{}', '')`:
 every grade dropped. **Rust.** Where the frontmatter reads the author field — its rehearsal and the flush that digests
-what the emitter wrote (`reading_author_fields`) — `\IEEEmembership{…}` is `\lx@IEEE@grade`, its name's `membership`
-contact (`\lx@add@contact[role=membership]`, conference-gated): the rehearsal digests it to a Contact event, and the
-resolver gives it to the name before it (`owner:adjacent`), or, on a line printing only the grade and notes, to the
-last name above (`line:contact membership:name-above`, 2202.10869). The grade's meaning is reached however it is
+what the emitter wrote (`reading_author_fields`) — `\IEEEmembership{…}` is `\lx@IEEE@grade` (conference-gated). In the
+rehearsal it is a `membership` Contact event (`\lx@add@contact[role=membership]`), and the resolver gives it to the
+name before it in its names line (`owner:adjacent`), or, on a line printing only the grade and notes right under the
+names, to the last name above (`line:contact membership:name-above`, 2202.10869). A grade no name comes before is no
+one's (P5a2, review revP5a B1/S1): one on a line the reading took for an affiliation — after a name it read as that
+line's text (2408.01956, 2511.20003), ending an affiliation line, inside `\IEEEauthorblockA` or authblk's `\affil`, a
+grade line under an affiliation line — is never a contact of the line's holders; at the flush the grade prints its
+text where the emitter wrote it (its contact, or that line's text, as the PDF prints it), and one the resolver places
+nowhere (alone under an affiliation, before any name: no `owner:block`) is the emitter's net's note, counted by its
+Warning. The grade's meaning is reached however it is
 spelled — a macro (`\newcommand\memb{\IEEEmembership}`, bindsplit ie3), a macro taking it, a `\let` copy — where the
 token cut `name_memberships` (deleted, with `names_continue`, `names_list_continues`, `notes_only_line` and
 `hoist_wrapped_separators`, which only it reached) moved each spelled `\IEEEmembership` before the comma for the
 API's split. Elsewhere (a biography heading, the body) whose author cannot be known, the grade is dropped as in Perl
 (2408.01902); an empty grade prints nothing (1805.06045); a comma opening or ending a grade is the list's (2408.00327). A grade
-inside an author's `\thanks` is the note's text, which the note still drops — now counted by the content check's
-Warning (`check_binding_macro_drops_inside_an_entry_red`, post-merge); one a document macro holds with its comma
+inside an author's `\thanks` is the note's text, printed there at the flush (P5a2; P5a dropped it, counted:
+`ieee_membership_grade_inside_a_thanks_is_the_notes_text`); one a document macro holds with its comma
 (`\newcommand{\SeMieee}{\IEEEmembership{, Senior Member,~IEEE}}`, 2503.14354) is kept, the comma the list's. **Witnesses**: 2508.00603, 1805.06045, 2202.10869,
-2306.15457, 2408.00327, 2408.01902. **Guards**: `perfect_kernel_batchp5a::ieee_membership_grade_is_the_readings_contact`,
+2306.15457, 2408.00327, 2408.01902, 2408.01956, 2511.20003. A grade inside a plain list's `\IEEEauthorblockA` keeps its
+text but raises two false content-check Warnings (the affiliation's event reads the grade's inner call as words; RED
+`ieee_membership_grade_in_a_plain_affiliation_call_red`, post-merge IEGW). **Guards**: `perfect_kernel_batchp5a::ieee_membership_grade_is_the_readings_contact`,
 batch63's `ieee_membership_*`, `perfect_kernel_batch98b::authblk_author_reads_ieee_grades`.

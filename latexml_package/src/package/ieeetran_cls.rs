@@ -4,7 +4,8 @@ use crate::{
   engine::{
     base_utilities::{
       document_notes, grade_words, leads_with_ordinal, leads_with_written_mark, ordinal_name_line,
-      prints_marks_alone, prints_nothing, reading_author_fields, split_top_level_lines,
+      prints_marks_alone, prints_nothing, reading_author_fields, rehearsing_author_fields,
+      split_top_level_lines,
     },
     latex_constructs::{FontUnit, set_theorem_within_display, symbol_box_size},
   },
@@ -315,12 +316,12 @@ LoadDefinitions!({
   // content; preserve.
   DefMacro!("\\IEEEspecialpapernotice{}",
     "\\lx@add@frontmatter{ltx:note}[role=papernotice]{#1}");
-  // \IEEEmembership{text}: the membership grade after an author's name (IEEEtran.cls:4525 prints it italic). Where the
-  // frontmatter reads the author field (`reading_author_fields`: its rehearsal and its flush) it is its name's
-  // `membership` contact, the owner the name it follows in the reading's events, however spelled (a macro, a `\let`
-  // copy; 2508.00603, 2306.15457, 2201.01230, 2408.09035); elsewhere (a biography heading, the body) whose author it
-  // names cannot be known, dropped as in Perl (IEEEtran.cls.ltxml:143; 2408.01902), and an empty grade prints nothing
-  // (1805.06045). Conference mode locks it out (IEEEtran.cls:6270) unless `\IEEEoverridecommandlockouts`. OD #1016.
+  // \IEEEmembership{text}: the membership grade after an author's name (IEEEtran.cls:4525 prints it italic). In the
+  // frontmatter's rehearsal it is a `membership` Contact, however spelled (a macro, a `\let` copy; 2508.00603, 2306.15457,
+  // 2201.01230, 2408.09035), the resolver's for the name it follows, if one; at the flush it prints its text where the
+  // emitter wrote it: that contact, or the line it is printed on (2408.01956, 2511.20003). Elsewhere (a biography heading,
+  // the body) dropped as in Perl (IEEEtran.cls.ltxml:143; 2408.01902); an empty grade prints nothing (1805.06045).
+  // Conference mode locks it out (IEEEtran.cls:6270) unless `\IEEEoverridecommandlockouts`. OD #1016.
   DefMacro!("\\IEEEmembership{}", "\\lx@IEEE@grade{#1}");
   // (a comma opening or ending the grade is the list's: `Chen,~\IEEEmembership{Member,~IEEE,} Yuan-Hao~Chang`, 2408.00327;
   // `\IEEEmembership{, Senior Member,~IEEE}`, 2503.14354. The lock-out is read here, no conditional left to expand past
@@ -341,16 +342,20 @@ LoadDefinitions!({
     if locked_out || start >= end {
       return Ok(TokenizeInternal!(r"\lx@IEEE@unprinted{}"));
     }
-    let mut call = TokenizeInternal!(r"\lx@add@contact[role=membership]").unlist();
-    call.push(T_BEGIN!());
-    call.extend_from_slice(&grade[start..end]);
+    let mut printed = grade[start..end].to_vec();
     // (what is trimmed is still read, printing nothing, so the grade's span is its whole argument: a block ending
     // `\IEEEmembership{Senior Member,~IEEE,}}` wrote it by its text, 1811.09783)
     if end < grade.len() {
-      call.extend([T_CS!("\\lx@IEEE@unprinted"), T_BEGIN!()]);
-      call.extend_from_slice(&grade[end..]);
-      call.push(T_END!());
+      printed.extend([T_CS!("\\lx@IEEE@unprinted"), T_BEGIN!()]);
+      printed.extend_from_slice(&grade[end..]);
+      printed.push(T_END!());
     }
+    if !rehearsing_author_fields() {
+      return Ok(Tokens::new(printed));
+    }
+    let mut call = TokenizeInternal!(r"\lx@add@contact[role=membership]").unlist();
+    call.push(T_BEGIN!());
+    call.extend(printed);
     call.push(T_END!());
     Ok(Tokens::new(call))
   });
