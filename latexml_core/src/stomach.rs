@@ -3919,6 +3919,7 @@ fn digest_body(terminal_opt: Option<Token>, in_paragraph: bool) -> Result<Vec<Di
     // first, check for alignment case
     // Perl #2775: only fire at the original alignment nesting level,
     // not inside deeper boxing groups (e.g. \vbox inside a tabular cell).
+    // The tokens themselves, as Perl's `Equals` (Stomach.pm:114-116).
     if alignment_opt.is_some()
       && !stomach!().box_list.is_empty()
       && (stomach!().boxing.len() <= init_depth)

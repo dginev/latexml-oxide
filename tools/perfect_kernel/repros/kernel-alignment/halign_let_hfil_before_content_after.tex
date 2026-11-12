@@ -1,0 +1,17 @@
+% witness: synthetic (GA5 sibling of halign_let_hfil_in_math_template: the after template's last fill, read by
+%          tex_tables.rs `template_after_fill_defeated`, the same fact `has_after_fill` reads)
+% oracle:  pdflatex 0 errors
+% engines: rust GA5base (int166a) = 0 Errors, both alignments' first column align="right" (dginev#742: content after
+%          the trailing fill leaves the cell right-aligned, Perl's back-scan); a GA5 stage with `has_after_fill` by
+%          meaning but the last fill still found by spelling: the `\myhfil` one align="center"
+% expect:  0 errors, 0 warnings; the `\myhfil` alignment as the `\hfil` one (align="right", then "left")
+% status:  GREEN on GA5base and GA5 (pins the two readers of the fill together; guard
+%          perfect_kernel_batchga5::batchga5_meaning_rows)
+% preload: ar5iv.sty
+\documentclass{article}
+\let\myhfil\hfil
+\begin{document}
+\halign{\myhfil#\myhfil\ $|$&\quad#\cr a&x\cr wider&y\cr}
+
+\halign{\hfil#\hfil\ $|$&\quad#\cr a&x\cr wider&y\cr}
+\end{document}

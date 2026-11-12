@@ -1747,14 +1747,8 @@ pub fn trim_column_template(mut alignment: RefMut<Alignment>, tokens: Tokens) ->
 fn template_after_fill_defeated(after: &Option<Tokens>) -> bool {
   let Some(toks) = after else { return false };
   let toks = toks.unlist_ref();
-  // Index just past the last fill in the template.
-  let mut last_fill = None;
-  for (i, tok) in toks.iter().enumerate() {
-    let s = tok.to_string();
-    if s == "\\hfil" || s == "\\hfill" {
-      last_fill = Some(i);
-    }
-  }
+  // Index of the last fill in the template, read as `has_after_fill` reads it ([`is_fill`]).
+  let last_fill = toks.iter().rposition(is_fill);
   let Some(fill_idx) = last_fill else {
     return false;
   };
@@ -1800,20 +1794,12 @@ pub fn extract_alignment_column(
     has_before_fill = colspec
       .before
       .as_ref()
-      .map(|b| {
-        b.unlist_ref()
-          .iter()
-          .any(|t| *t == T_CS!("\\hfil") || *t == T_CS!("\\hfill"))
-      })
+      .map(|b| b.unlist_ref().iter().any(is_fill))
       .unwrap_or(false);
     has_after_fill = colspec
       .after
       .as_ref()
-      .map(|a| {
-        a.unlist_ref()
-          .iter()
-          .any(|t| *t == T_CS!("\\hfil") || *t == T_CS!("\\hfill"))
-      })
+      .map(|a| a.unlist_ref().iter().any(is_fill))
       .unwrap_or(false);
     // The trailing `\hfil` is *defeated* when the column's `after` template
     // carries real content after it — the `array`-package `!{|}` appends
@@ -2370,14 +2356,18 @@ pub fn parse_halign_template(whatsit: &mut Whatsit) -> Result<Template> {
   Ok(template)
 }
 
+/// A template's fill glue by meaning (a `\let\myhfil\hfil` copy too), as Perl's `defined_as(T_hfil)`
+/// (TeX_Tables.pool.ltxml:762).
+fn is_fill(t: &Token) -> bool { t.defined_as(&T_CS!("\\hfil")) || t.defined_as(&T_CS!("\\hfill")) }
+
 // Perl TeX_Tables L735-745: beforeCellUnlist
-// Reorder `$ \hfil` → `\hfil $` in template tokens
+// Reorder `$ \hfil` → `\hfil $` in template tokens; both by meaning, as Perl's `defined_as` (:762, :774)
 fn before_cell_unlist(tokens: Vec<Token>) -> Vec<Token> {
   let mut toks: VecDeque<Token> = tokens.into();
   let mut result = Vec::new();
   while let Some(t) = toks.pop_front() {
-    if t == T_MATH!()
-      && let Some(hfil) = toks.pop_front_if(|next| *next == T_CS!("\\hfil"))
+    if t.defined_as(&T_MATH!())
+      && let Some(hfil) = toks.pop_front_if(|next| next.defined_as(&T_CS!("\\hfil")))
     {
       result.push(hfil); // push \hfil
       toks.push_front(t); // put $ back
@@ -2394,8 +2384,8 @@ fn after_cell_unlist(tokens: Vec<Token>) -> Vec<Token> {
   let mut toks: VecDeque<Token> = tokens.into();
   let mut result: VecDeque<Token> = VecDeque::new();
   while let Some(t) = toks.pop_back() {
-    if t == T_MATH!()
-      && let Some(hfil) = toks.pop_back_if(|prev| *prev == T_CS!("\\hfil"))
+    if t.defined_as(&T_MATH!())
+      && let Some(hfil) = toks.pop_back_if(|prev| prev.defined_as(&T_CS!("\\hfil")))
     {
       result.push_front(hfil); // push \hfil to front
       toks.push_back(t); // put $ back

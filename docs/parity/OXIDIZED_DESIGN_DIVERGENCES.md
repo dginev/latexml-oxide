@@ -8398,8 +8398,8 @@ titlecaps 10 → 3, then 10 → 0 with the re-defer below.
 **Upstream**: not filed.
 **Refinement (batch 56u)**: the deferred `@atgroup` twin (`tex_math.rs::end_math_at_group`)
 re-defers once more when the frame on top at the group's end is a REAL TeX group
-(`groupInitiator` = `{`, `\bgroup`, `\begingroup` — the groups off_save would
-close), and is a no-op when its math has already closed (a second `$` deferred in
+(`groupInitiator` = `{`, `\bgroup`, `\begingroup` or a `\let` copy, read by meaning (GA5) — the groups
+off_save would close), and is a no-op when its math has already closed (a second `$` deferred in
 the same group is TeX's re-opener). A constructor's bounded frame is not a TeX
 group: there the benign "Attempt to end mode" stays (nicefrac, egpeirce). Guard:
 `perfect_kernel_batch56::deferred_math_end_walks_real_groups`.
@@ -30527,7 +30527,7 @@ notes the print (`note_title_page_print`: nothing typeset, no deposit, no net) w
 own print, whose fields ours empties), at the trigger the class prints from: (1) a binding's — elsarticle's
 `\end{frontmatter}` (elsarticle.cls:1303 `\newenvironment{frontmatter}{}{\maketitle}`; the core's empty primitive, Perl
 PR #2767), let to it in elsarticle_cls.rs: 2312.03765's `\subjclass`, `\gdef\@title{\@oldtitle\footnotetext{…}}`, a
-title footnote no setter sees; (2) a raw class's — a `\g@addto@macro{\document}{…}` holding `\maketitle`, which our
+title footnote no setter sees; (2) a raw class's — a `\g@addto@macro{\document}{…}` holding `\maketitle` (or a `\let` copy, by meaning: GA5), which our
 constructor `\document` refuses as Perl does (the `Warning:unexpected:\document` kept), is recorded
 (`lx_title_page_at_begin_document`) and the print noted at the end of `\begin{document}`, after `begindocument/end`,
 where latex.ltx runs appended code (sect02.rs; cup-journal.cls:1014: 2207.13252 — the `\alsoaffiliation`, the e-mail,

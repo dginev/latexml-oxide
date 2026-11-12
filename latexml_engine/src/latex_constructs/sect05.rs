@@ -615,10 +615,10 @@ pub(crate) fn load() -> Result<()> {
     if !copy_provides_defers_hook_write(&cs) {
       // (a `\maketitle` appended to our constructor `\document`, which refuses the addition as Perl does: the class
       // prints its title page at the end of `\begin{document}`, cup-journal.cls:1014 — noted there for the title-page
-      // check, `\lx@note@title@page`; 2207.13252, 2603.00371)
+      // check, `\lx@note@title@page`; 2207.13252, 2603.00371); `\maketitle` by meaning, a `\let` copy too
       if cs == T_CS!("\\document")
         && lookup_definition(&cs)?.is_some_and(|defn| !defn.is_expandable())
-        && tokens.unlist_ref().contains(&T_CS!("\\maketitle"))
+        && tokens.unlist_ref().iter().any(|t| t.defined_as(&T_CS!("\\maketitle")))
       {
         AssignValue!("lx_title_page_at_begin_document" => true, Some(Scope::Global));
       }
