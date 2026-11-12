@@ -75,17 +75,19 @@ const ROWS: &[Row] = &[
       "<para xml:id=\"p1\">\n    <p xml:id=\"p1.1\">H1=4.30554pt, D1=0.0pt.</p>\n  </para>\n  <para xml:id=\"p2\">\n    <p xml:id=\"p2.1\">H2=4.30554pt, D2=0.0pt.</p>\n  </para>\n  <para xml:id=\"p3\">\n    <p xml:id=\"p3.1\">H3=4.30554pt, D3=0.0pt.</p>\n  </para>\n  <para xml:id=\"p4\">\n    <p xml:id=\"p4.1\">H4=4.30554pt, D4=0.0pt.</p>\n  </para>\n  <para xml:id=\"p5\">\n    <p xml:id=\"p5.1\">H5=4.30554pt, D5=0.0pt.</p>\n  </para>\n  <para xml:id=\"p6\">\n    <p xml:id=\"p6.1\">H6=16.30554pt, D6=1.94444pt.</p>\n  </para>\n  <para xml:id=\"p7\">\n    <p xml:id=\"p7.1\">H7=8.5pt, D7=3.5pt.</p>\n  </para>\n",
     ],
   ),
-  // Its safe twin: the paragraph outside the group holds only its indent (`\leavevmode`, `\noindent`), a 0pt line.
+  // Its safe twin (revRG1b S1): after `\noindent` the paragraph outside the group holds nothing and makes no line; the
+  // trailing x discriminates (rg1: 12pt more on A1, A3, an empty top line in a minipage, `\parbox`, `\vtop`).
   (
-    repro!("group_par_blank_paragraph_after_leavevmode_measures_zero"),
+    repro!("group_par_blank_paragraph_after_noindent_makes_no_line"),
     0,
     0,
     "document",
     &[
-      "<para xml:id=\"p1\">\n    <p xml:id=\"p1.1\">H1=0.0pt.</p>\n  </para>\n  <para xml:id=\"p2\">\n    <p xml:id=\"p2.1\">H2=0.0pt.</p>\n  </para>\n  <para xml:id=\"p3\">\n    <p xml:id=\"p3.1\">H3=0.0pt.</p>\n  </para>\n  <para xml:id=\"p4\">\n    <p xml:id=\"p4.1\">H4=4.30554pt.</p>\n  </para>\n",
+      "<para xml:id=\"p1\">\n    <p xml:id=\"p1.1\">A1=4.30554pt, D1=0.0pt.</p>\n  </para>\n  <para xml:id=\"p2\">\n    <p xml:id=\"p2.1\">A2=4.30554pt, D2=0.0pt.</p>\n  </para>\n  <para xml:id=\"p3\">\n    <p xml:id=\"p3.1\">A3=4.30554pt, D3=0.0pt.</p>\n  </para>\n  <para xml:id=\"p4\">\n    <p xml:id=\"p4.1\">A4=4.30554pt, D4=0.0pt.</p>\n  </para>\n  <para xml:id=\"p5\">\n    <p xml:id=\"p5.1\">A5=4.30554pt, D5=0.0pt.</p>\n  </para>\n  <para xml:id=\"p6\">\n    <p xml:id=\"p6.1\">A6=4.30554pt, D6=0.0pt.</p>\n  </para>\n  <para xml:id=\"p7\">\n    <p xml:id=\"p7.1\">A7=4.30554pt, D7=0.0pt.</p>\n  </para>\n",
     ],
   ),
-  // B1 in a tikz text-width node: one line, as pdflatex (rg1: height 32.34, depth 1.2em).
+  // B1 in a tikz text-width node: one line, as pdflatex (rg1: height 32.34, depth 1.2em); the second node a group of
+  // glue (revRG1b B1: rg1b 32.34, 1.2em). Each node's empty first <p/> is int162a's too, not this mechanism.
   (
     repro!("group_par_blank_in_tikz_node_measures_no_line"),
     0,
@@ -93,6 +95,19 @@ const ROWS: &[Row] = &[
     "picture",
     &[
       "<picture height=\"15.73\" width=\"127.89\" xml:id=\"p1.pic1\">\n      <svg:svg height=\"15.73\" overflow=\"visible\" version=\"1.1\" viewBox=\"0 0 127.89 15.73\" width=\"127.89\">\n        <svg:g fill=\"#000000\" stroke=\"#000000\" stroke-width=\"0.4pt\" transform=\"translate(0,15.73) matrix(1 0 0 -1 0 0) translate(63.94,0) translate(0,7.87)\">\n          <svg:path d=\"M -63.67 -7.59 h 127.33 v 15.18 h -127.33 Z\" style=\"fill:none\"/>\n          <svg:g fill=\"#000000\" stroke=\"#000000\" transform=\"matrix(1.0 0.0 0.0 1.0 -59.06 -2.98)\">\n            <svg:foreignObject height=\"5.96\" overflow=\"visible\" style=\"--ltx-fo-width:8.54em;--ltx-fo-height:0.43em;--ltx-fo-depth:0em;font-size:10pt;\" transform=\"matrix(1 0 0 -1 0 5.96)\" width=\"118.17\"><inline-block class=\"ltx_minipage\" vattach=\"top\" width=\"8.54em\" xml:id=\"p1.pic1.1\">\n                <p xml:id=\"p1.pic1.1.1\"/>\n                <p class=\"ltx_align_left\" xml:id=\"p1.pic1.1.2\">x</p>\n              </inline-block></svg:foreignObject>\n          </svg:g>\n        </svg:g>\n      </svg:svg>\n    </picture>",
+      "<picture height=\"15.73\" width=\"127.89\" xml:id=\"p2.pic1\">\n      <svg:svg height=\"15.73\" overflow=\"visible\" version=\"1.1\" viewBox=\"0 0 127.89 15.73\" width=\"127.89\">\n        <svg:g fill=\"#000000\" stroke=\"#000000\" stroke-width=\"0.4pt\" transform=\"translate(0,15.73) matrix(1 0 0 -1 0 0) translate(63.94,0) translate(0,7.87)\">\n          <svg:path d=\"M -63.67 -7.59 h 127.33 v 15.18 h -127.33 Z\" style=\"fill:none\"/>\n          <svg:g fill=\"#000000\" stroke=\"#000000\" transform=\"matrix(1.0 0.0 0.0 1.0 -59.06 -2.98)\">\n            <svg:foreignObject height=\"5.96\" overflow=\"visible\" style=\"--ltx-fo-width:8.54em;--ltx-fo-height:0.43em;--ltx-fo-depth:0em;font-size:10pt;\" transform=\"matrix(1 0 0 -1 0 5.96)\" width=\"118.17\"><inline-block class=\"ltx_minipage\" vattach=\"top\" width=\"8.54em\" xml:id=\"p2.pic1.1\">\n                <p xml:id=\"p2.pic1.1.1\"/>\n                <p class=\"ltx_align_left\" xml:id=\"p2.pic1.1.2\">x</p>\n              </inline-block></svg:foreignObject>\n          </svg:g>\n        </svg:g>\n      </svg:svg>\n    </picture>",
+    ],
+  ),
+  // revRG1b B1: a group of glue, kerns or penalties adds no line (rg1b 16.30554pt for `\quad`, `\hskip1cm`, `\kern1pt`
+  // and their mix; 12pt more before y; a p-cell 4.2pt more; a minipage's depth 12pt). Controls already one line on
+  // rg1b: `\hfill`, `\,`, `\hspace`, `\hspace*`, `\nobreak\hskip0pt`, `\phantom{}` (a box: kept), `\penalty`.
+  (
+    repro!("group_par_glue_kern_paragraph_measures_no_line"),
+    0,
+    0,
+    "document",
+    &[
+      "<para xml:id=\"p1\">\n    <p xml:id=\"p1.1\">H1=4.30554pt, D1=0.0pt.</p>\n  </para>\n  <para xml:id=\"p2\">\n    <p xml:id=\"p2.1\">H2=4.30554pt, D2=0.0pt.</p>\n  </para>\n  <para xml:id=\"p3\">\n    <p xml:id=\"p3.1\">H3=4.30554pt, D3=0.0pt.</p>\n  </para>\n  <para xml:id=\"p4\">\n    <p xml:id=\"p4.1\">H4=16.30554pt, D4=1.94444pt.</p>\n  </para>\n  <para xml:id=\"p5\">\n    <p xml:id=\"p5.1\">H5=8.5pt, D5=3.5pt.</p>\n  </para>\n  <para xml:id=\"p6\">\n    <p xml:id=\"p6.1\">H6=4.30554pt, D6=0.0pt.</p>\n  </para>\n  <para xml:id=\"p7\">\n    <p xml:id=\"p7.1\">H7=4.30554pt, D7=0.0pt.</p>\n  </para>\n  <para xml:id=\"p8\">\n    <p xml:id=\"p8.1\">H8=4.30554pt, D8=0.0pt.</p>\n  </para>\n  <para xml:id=\"p9\">\n    <p xml:id=\"p9.1\">H9=4.30554pt, D9=0.0pt.</p>\n  </para>\n  <para xml:id=\"p10\">\n    <p xml:id=\"p10.1\">H10=4.30554pt, D10=0.0pt.</p>\n  </para>\n  <para xml:id=\"p11\">\n    <p xml:id=\"p11.1\">H11=4.30554pt, D11=0.0pt.</p>\n  </para>\n  <para xml:id=\"p12\">\n    <p xml:id=\"p12.1\">H12=4.30554pt, D12=0.0pt.</p>\n  </para>\n  <para xml:id=\"p13\">\n    <p xml:id=\"p13.1\">H13=4.30554pt, D13=0.0pt.</p>\n  </para>\n  <para xml:id=\"p14\">\n    <p xml:id=\"p14.1\">H14=4.30554pt, D14=0.0pt.</p>\n  </para>\n",
     ],
   ),
 ];

@@ -2085,13 +2085,12 @@ fn repack_paragraph(end_graf: bool) {
   para.reverse();
   // Run off the bottom of a text group's list: Perl's pop goes on to the group's open-brace box, which is no space, so
   // the paragraph is kept (`x{\phantom{Ca}\par Cb}`; 2410.06985 `\node{\phantom{Cpd}\\…}`) — unless the group added
-  // only blank characters, the glue TeX deletes at a paragraph's end (tex.web §816; 1602.08755 `x\footnotesize{⏎`).
+  // only spaces, glue and kerns (1602.08755 `x\footnotesize{⏎`): no box, so nothing that gives x's line, the one line
+  // TeX makes, height or depth (§816 deletes a final glue; a kern stays, and `\penalty` lists nothing here).
   if !keep
     && stomach.box_list.is_empty()
     && stomach.paragraph_start.is_some_and(|start| start.in_group)
-    && para.iter().any(|item| {
-      !(matches!(item.data(), DigestedData::TBox(_)) && item.get_property_bool("isSpace"))
-    })
+    && !para.iter().all(adds_no_line_material)
   {
     keep = true;
   }
@@ -2577,6 +2576,15 @@ pub fn is_list_tail_transparent(item: &Digested) -> bool {
     }),
     _ => false,
   }
+}
+
+/// A space character, glue (`isSkip`: `\hskip`, `\quad`) or a kern (`isKern`), not an `isSpace` box like `\phantom`'s
+/// (math_common.pool.ltxml:645-648): an item with no height or depth of its own in a line.
+fn adds_no_line_material(item: &Digested) -> bool {
+  item.get_property_bool("isSpace")
+    && (matches!(item.data(), DigestedData::TBox(_))
+      || item.get_property_bool("isSkip")
+      || item.get_property_bool("isKern"))
 }
 
 /// The lowest index of the current list the list-tail primitives may reach: in a paragraph, only what it added

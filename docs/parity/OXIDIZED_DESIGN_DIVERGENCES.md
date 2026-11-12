@@ -4914,10 +4914,14 @@ node `{\phantom{Cpd}\\\phantom{pt}}` its Cpd (2410.06985). The group's list now
 continues the paragraph (`ParagraphStart::in_group`, index 0,
 `stomach::digest_group_body_in_paragraph`), and `repack_paragraph` reads that start
 three ways: a repack that runs off the list's bottom keeps the paragraph, as Perl's
-pop reaching the `{` box does (Stomach.pm:463-465), unless the group added only
-blank characters: that is the glue TeX deletes at a paragraph's end (tex.web §816),
-where Perl leaves an empty `<text>` (1602.08755
-`diagram⏎\footnotesize{⏎\begin{center}`); a paragraph that kept nothing makes no
+pop reaching the `{` box does (Stomach.pm:463-465), unless every item the group
+added is a space character, glue (`isSkip`: `\hskip`, `\quad`) or a kern (`isKern`)
+(`stomach::adds_no_line_material`; `\penalty` lists nothing): none gives the one
+line TeX makes, x's, height or depth (tex.web §816 deletes a final glue; a kern
+stays in the line), so `\vbox{x{\quad\par}}` is 4.31pt high, as pdflatex
+(revRG1b B1), and Perl's empty `<text>` is not made (1602.08755
+`diagram⏎\footnotesize{⏎\begin{center}`); an `isSpace` box (`\phantom`) still keeps
+it; a paragraph that kept nothing makes no
 empty line of its own (`empty_line`), its line being in the list outside the group
 (`\vbox{x{ \par}}` is 4.31pt high, as pdflatex; revRG1 B1); and every item of the
 group's list is the paragraph's own (`own_item`), so an `\unhbox`ed vertical item

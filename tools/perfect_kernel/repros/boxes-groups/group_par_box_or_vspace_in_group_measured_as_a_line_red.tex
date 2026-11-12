@@ -1,0 +1,17 @@
+% witness: synthetic (revRG1b P3; the measured RED's family: group_par_paragraphs_are_measured_red.tex)
+% oracle:  pdflatex 0 errors: M1=8.39996pt, D1=3.60004pt (x and the strut, one line); M2=6.30554pt, D2=0.0pt (the
+%          `\vspace` after x's line); M3=4.30554pt, D3=0.0pt (one line); M4=4.30554pt, D4=0.0pt
+% engines: rust rg1c = int162a = rg1b: M1=16.30554pt, D1=3.60004pt; M2, M3, M4 =16.30554pt, D=0.0pt (the group's
+%          piece stacked as a second line; M3, M4: after `\small` even a blank group piece)
+% expect:  0 errors; the oracle's values
+% status:  RED. moves: post-merge
+\documentclass{article}
+\begin{document}
+\setbox0\vbox{x{\strut\par}}M1=\the\ht0, D1=\the\dp0.
+
+\setbox0\vbox{x{\vspace{2pt}\par}}M2=\the\ht0, D2=\the\dp0.
+
+\setbox0\vbox{x{\small\quad\par}}M3=\the\ht0, D3=\the\dp0.
+
+\setbox0\vbox{x{\small{} \par}}M4=\the\ht0, D4=\the\dp0.
+\end{document}

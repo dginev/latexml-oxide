@@ -1,0 +1,25 @@
+% witness: synthetic (revRG1 B1's twin, revRG1b S1: the paragraph outside the group was begun by `\noindent` and holds
+%          nothing, so the group's blank paragraph makes no line and x's is the box's only one)
+% oracle:  pdflatex 0 errors: A1-A4 =4.30554pt, D=0.0pt; A5-A7 (a minipage, a `\parbox`, a `\vtop`) =4.30554pt,
+%          D=0.0pt (`\showbox`: one hbox, x's)
+% engines: rust rg1 = A1, A3 12.0pt; A5, A6, A7 0.0pt, D 12.0pt (an empty line stacked above x); int162a = rg1b =
+%          rg1c = pdflatex
+% expect:  0 errors, 0 warnings; the oracle's values
+% status:  RED (rg1) -> GREEN (RG1b). The `\leavevmode`/`\indent` shapes, where TeX makes the indent's line:
+%          group_par_blank_paragraph_after_leavevmode_makes_a_line_red.tex
+\documentclass{article}
+\begin{document}
+\setbox0\vbox{\noindent{ \par}x}A1=\the\ht0, D1=\the\dp0.
+
+\setbox0\vbox{\noindent{\par}x}A2=\the\ht0, D2=\the\dp0.
+
+\setbox0\vbox{\noindent{{ \par}}x}A3=\the\ht0, D3=\the\dp0.
+
+\setbox0\vbox{\noindent{\small\par}x}A4=\the\ht0, D4=\the\dp0.
+
+\setbox0\hbox{\begin{minipage}[t]{3cm}\noindent{ \par}x\end{minipage}}A5=\the\ht0, D5=\the\dp0.
+
+\setbox0\hbox{\parbox[t]{3cm}{\noindent{ \par}x}}A6=\the\ht0, D6=\the\dp0.
+
+\setbox0\vtop{\noindent{ \par}x}A7=\the\ht0, D7=\the\dp0.
+\end{document}
