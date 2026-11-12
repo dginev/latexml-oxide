@@ -619,7 +619,7 @@ fn marked_blocks_restored_read_as_printed() {
       lines:    &[],
       creators: Creators::Whole(&[
         r#"<creator role="author"><personname>Ann Able<sup><text font="italic">1</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">1</text></sup>Univ Alpha</contact><contact name="E-mail " role="email">ann@x.org</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup>Univ Beta</contact><contact name="E-mail " role="email">bob@y.org</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup>Univ Beta</contact><contact name="E-mail " role="email">bob@y.org</contact></creator>"#,
       ]),
     },
     Row {
@@ -629,7 +629,7 @@ fn marked_blocks_restored_read_as_printed() {
       lines:    &[],
       creators: Creators::Whole(&[
         r#"<creator role="author"><personname>Ann One<sup>*</sup></personname><contact name="Affiliation: " role="affiliation"><sup>*</sup>Univ A</contact><contact name="Emails: " role="email">ann@x.org</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Two<sup>†</sup></personname><contact name="Affiliation: " role="affiliation"><sup>†</sup>Univ B</contact><contact name="Emails: " role="email">bob@y.org</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Two<sup>†</sup></personname><contact name="Affiliation: " role="affiliation"><sup>†</sup>Univ B</contact><contact name="Emails: " role="email">bob@y.org</contact></creator>"#,
       ]),
     },
     Row {
