@@ -35141,3 +35141,19 @@ first, binds the names only where one survives (pgf's order, DTL1g), returns cal
 (`pgfmath_code_tex.rs`). Reason: the staged rule (2) — only TeX errs, and the recovery carries the meaning the author wrote.
 Guard `error_boundary::perfect_kernel_error_boundary` (the calc rows and their safe twin).
 
+### 1010. pgfmath reads a number and a control-sequence operand as pgf's parser does (PGR1)
+
+**TeX.** pgf's `\pgfmath@parse@@number` (pgfmathparser.code.tex:426-600) collects digits and points, skipping the spaces
+between them (`-4 .5` is -4.5); after them it tries a two-letter unit before an exponent and before a `0x`/`0X`/`0b`/`0B`
+prefix (`0bp` is 0bp); a number opening with `0` is octal (`010+1` is 9.0). A `\dimexpr`, `\glueexpr`, `\numexpr` or
+`\muexpr` is read by a TeX assignment; it and a count register take the place of a number before them (`2\mycount` is the
+count, `0.5\dimexpr 4pt` 4.0), and a dimension register scales it. A count declares no units.
+**Perl.** Its grammar (pgfmath.code.tex.ltxml:696-711) has no space inside a number, no `\dimexpr`, multiplies by any
+register and declares units for every one. **Rust.** pgf's rules (`pgfmath_code_tex.rs` `try_number`, `unit_at`,
+`try_cs_register`, `pgfmath_read_expr`; the expression through the core's `read_dimension`/`read_number`/`read_mu_glue`).
+Reason: real TeX decides behaviour; the grammar stopped on these and returned the partial value silently (`0bp` on 40 of
+464 EB1 A/B papers: 1106.3771, 1104.5553, 1503.00895; `\dimexpr` 1711.06128, 2206.04438; `-4 .5` 1612.03043). Not yet:
+TeX-exact unit conversion and pdfTeX's `px`/`nd`/`nc` (repro `pgfmath_units_as_tex_reads_them_red`), pgf's error on an
+octal 8 or 9 (`pgfmath_octal_bad_digit_red`). Guards `pgfmath_golden_tests::golden_pgfmath_corpus`,
+`perfect_kernel_batchdtl1::batchdtl1_pgfmath_rows` (repro `pgfmath_grammar_gaps`).
+

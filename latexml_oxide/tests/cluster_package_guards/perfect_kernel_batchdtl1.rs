@@ -189,6 +189,40 @@ const ROWS: &[Row] = &[
     ],
     holds:    &[],
   },
+  // PGR1: pgf's number and control-sequence operands (pgfmathparser.code.tex:426-600) — `0bp`, a space inside a
+  // number, `\dimexpr` and its siblings, a count in place of a number before it (1106.3771, 1711.06128, 1612.03043);
+  // the pure-parser shapes are rows of `pgfmath_golden_tests`.
+  Row {
+    name:     "pgfmath_grammar_gaps",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/graphics-tikz/pgfmath_grammar_gaps.tex"
+    ),
+    files:    &[],
+    counts:   (0, 0),
+    elements: &[
+      (
+        "para",
+        "xml:id=\"p1\"",
+        r#"<para xml:id="p1"><p xml:id="p1.1">[1.0u][2.0u][-4.5-]</p></para>"#,
+      ),
+      (
+        "para",
+        "xml:id=\"p2\"",
+        r#"<para xml:id="p2"><p xml:id="p2.1">[5-][31-][9.0-][150.0-][2.0u]</p></para>"#,
+      ),
+      (
+        "para",
+        "xml:id=\"p3\"",
+        r#"<para xml:id="p3"><p xml:id="p3.1">[8.0u][4.0u][4.0u][12-][13.0-][4.0-]</p></para>"#,
+      ),
+      (
+        "para",
+        "xml:id=\"p4\"",
+        r#"<para xml:id="p4"><p xml:id="p4.1">[4-][4-][12.0u][6.0u]</p></para>"#,
+      ),
+    ],
+    holds:    &[],
+  },
 ];
 
 /// Every row converted once, in-process: exact counts, the whole elements.

@@ -408,18 +408,61 @@ fn pgfmath_font() -> Option<Font> {
 
 // ==================== Register Lookup ====================
 
-/// Look up a TeX register value, return as points
+/// Look up a TeX register value, return as points, and whether it is a count
 /// Perl: sub pgfmath_register (L487-493)
-fn pgfmath_register_lookup(cs: &str) -> f64 {
+fn pgfmath_register_lookup(cs: &str) -> (f64, bool) {
   match lookup_register(cs, vec![]) {
     Ok(Some(reg)) => match reg {
-      RegisterValue::Number(n) => n.value_of() as f64,
-      RegisterValue::Dimension(d) => d.value_of() as f64 / 65536.0,
-      RegisterValue::Glue(g) => g.value_of() as f64 / 65536.0,
-      _ => 0.0,
+      RegisterValue::Number(n) => (n.value_of() as f64, true),
+      RegisterValue::Dimension(d) => (d.value_of() as f64 / 65536.0, false),
+      RegisterValue::Glue(g) => (g.value_of() as f64 / 65536.0, false),
+      _ => (0.0, false),
     },
-    _ => 0.0,
+    _ => (0.0, false),
   }
+}
+
+/// The e-TeX expression `text` opens (`\dimexpr`, `\glueexpr`, `\numexpr`, `\muexpr`), read as TeX reads pgf's
+/// `\pgfmath@dimen\dimexpr…` (pgfmathparser.code.tex:571-600): its value (points, the integer, or the mu) and the
+/// bytes of `text` before the text TeX left (1711.06128, 2206.04438).
+fn pgfmath_read_expr(primitive: &str, text: &str) -> Option<(f64, usize)> {
+  let tokens = mouth::tokenize_internal(TeXString::assembled(text.to_string()));
+  let integer = primitive == "\\numexpr";
+  let mu = primitive == "\\muexpr";
+  let (value, left) = Mouth::new("", None)
+    .and_then(|mouth| {
+      reading_from_mouth(mouth, move || {
+        unread(tokens);
+        let value = if integer {
+          read_number()?.value_of() as f64
+        } else if mu {
+          read_mu_glue()?.value_of() as f64 / 65536.0
+        } else {
+          read_dimension()?.value_of() as f64 / 65536.0
+        };
+        let mut left = Vec::new();
+        while let Some(token) = read_token()? {
+          left.push(token);
+        }
+        Ok((value, Tokens::new(left).to_string()))
+      })
+    })
+    .ok()?;
+  // Where the text left starts in `text`, matched from the end, spaces aside.
+  let text = text.trim_end();
+  let mut chars = text
+    .char_indices()
+    .rev()
+    .filter(|(_, c)| !c.is_whitespace());
+  let mut start = text.len();
+  for wanted in left.chars().rev().filter(|c| !c.is_whitespace()) {
+    let (at, c) = chars.next()?;
+    if c != wanted {
+      return None;
+    }
+    start = at;
+  }
+  Some((value, start))
 }
 
 /// `\wd`/`\ht`/`\dp` of box `number`, in points (Perl `pgfmath_getwidth`/`getheight`/`getdepth`,
@@ -887,6 +930,32 @@ mod pgfmath_grammar {
     pub group_open:     bool,
     /// The value is not a number: an array's text element, or an array, as pgf's `\pgfmathresult` holds it.
     pub text_result:    Option<String>,
+  }
+
+  /// The literal [`try_number`] read: digits and points, a base prefix's digits, or an exponent's.
+  enum Literal {
+    Decimal(String),
+    Based,
+    Scientific,
+  }
+
+  /// A control sequence's operand ([`try_cs_register`]): a dimension, which scales a number before it; a count, an
+  /// integer that takes its place; an expression's value, which takes its place.
+  enum CsOperand {
+    Scales(f64),
+    Count(f64),
+    Replaces(f64),
+  }
+
+  impl CsOperand {
+    /// The operand's value after `number`, the parse's integer flag set from it.
+    fn after(self, i: &mut In, number: f64) -> f64 {
+      i.state.int_result = matches!(self, CsOperand::Count(_));
+      match self {
+        CsOperand::Scales(value) => number * value,
+        CsOperand::Count(value) | CsOperand::Replaces(value) => value,
+      }
+    }
   }
 
   /// An element of a pgfmath array, `{"a",1+1,{2,3}}` (pgfmathparser.code.tex:951-954, `"` :392, :931): pgf keeps each
@@ -1502,9 +1571,7 @@ mod pgfmath_grammar {
       _ => {},
     }
 
-    let before = i.input;
-    if let Some(num) = try_number(i) {
-      let literal = &before[..before.len() - i.input.len()];
+    if let Some((num, literal)) = try_number(i) {
       sb(i);
       if let Some(unit) = try_unit(i) {
         i.state.units_declared = true;
@@ -1512,31 +1579,44 @@ mod pgfmath_grammar {
       }
       if first(i) == Some(b'\\') {
         let cp = i.checkpoint();
-        if let Some(reg) = try_cs_register(i) {
-          return Ok(num * reg);
+        if let Some(operand) = try_cs_register(i) {
+          return Ok(operand.after(i, num));
         }
         i.reset(&cp);
       }
-      // An integer literal keeps its form: decimal digits, or a hex/binary literal (`0x1F` 31).
-      i.state.int_result = (!literal.is_empty() && literal.bytes().all(|b| b.is_ascii_digit()))
-        || ["0x", "0X", "0b", "0B"]
-          .iter()
-          .any(|p| literal.starts_with(p));
-      return Ok(num);
+      // An integer literal keeps its form: decimal digits, or a hex/binary literal (`0x1F` 31); one opening with `0`
+      // is octal (`010+1` is 9.0, pgfmathparser.code.tex:355-358, 486-497).
+      return Ok(match literal {
+        Literal::Based => {
+          i.state.int_result = true;
+          num
+        },
+        Literal::Decimal(digits) if digits.bytes().all(|b| b.is_ascii_digit()) => {
+          i.state.int_result = true;
+          match digits.strip_prefix('0') {
+            Some(octal) if !octal.is_empty() => {
+              i64::from_str_radix(octal, 8).map_or(num, |v| v as f64)
+            },
+            _ => num,
+          }
+        },
+        _ => num,
+      });
     }
 
     if first(i) == Some(b'\\')
-      && let Some(reg) = try_cs_register(i)
+      && let Some(operand) = try_cs_register(i)
     {
+      let value = operand.after(i, 1.0);
       sb(i);
       if first(i) == Some(b'\\') {
         let cp = i.checkpoint();
-        if let Some(reg2) = try_cs_register(i) {
-          return Ok(reg * reg2);
+        if let Some(operand) = try_cs_register(i) {
+          return Ok(operand.after(i, value));
         }
         i.reset(&cp);
       }
-      return Ok(reg);
+      return Ok(value);
     }
 
     if first(i).map(|c| c.is_ascii_alphabetic()).unwrap_or(false) {
@@ -1806,95 +1886,110 @@ mod pgfmath_grammar {
     );
   }
 
-  /// `(\d+\.?[\d.]*|\d*\.?\d+)([eE][+-]?\d+)?` with hex/binary forms and
-  /// the embedded-dot tolerance ("1.2.3"), exactly as the recdescent had it.
-  fn try_number(i: &mut In) -> Option<f64> {
+  /// pgf's number (pgfmathparser.code.tex:426-540): digits and points, with the spaces between them skipped as pgf's
+  /// argument reading skips them (`-4 .5` is -4.5, 1612.03043); then an exponent `e`/`E` and its integer, or after a
+  /// lone `0` a base prefix `x`/`X`, `b`/`B` and its digits, unless the letter opens a unit (`0bp`, 1106.3771,
+  /// 1104.5553, 1503.00895). Returns the value and the literal as pgf collected it.
+  fn try_number(i: &mut In) -> Option<(f64, Literal)> {
     sb(i);
     let b = i.input.as_bytes();
-    if b.is_empty() {
-      return None;
-    }
-    if b.len() >= 2 && b[0] == b'0' && b[1] == b'x' {
-      let n = b[2..].iter().take_while(|c| c.is_ascii_hexdigit()).count();
-      if n == 0 {
-        return None;
+    let skip = |mut at: usize| {
+      while b.get(at) == Some(&b' ') {
+        at += 1;
       }
-      let v = i64::from_str_radix(&i.input[2..2 + n], 16).unwrap_or(0) as f64;
-      bump(i, 2 + n);
-      return Some(v);
-    }
-    if b.len() >= 2 && b[0] == b'0' && b[1] == b'b' {
-      let n = b[2..]
-        .iter()
-        .take_while(|c| matches!(c, b'0' | b'1'))
-        .count();
-      if n == 0 {
-        return None;
-      }
-      let v = i64::from_str_radix(&i.input[2..2 + n], 2).unwrap_or(0) as f64;
-      bump(i, 2 + n);
-      return Some(v);
-    }
+      at
+    };
     let mut pos = 0;
-    let mut has_digit = false;
-    while pos < b.len() && b[pos].is_ascii_digit() {
-      pos += 1;
-      has_digit = true;
-    }
-    if pos < b.len() && b[pos] == b'.' {
-      if has_digit || (pos + 1 < b.len() && b[pos + 1].is_ascii_digit()) {
-        pos += 1;
-        while pos < b.len() && (b[pos].is_ascii_digit() || b[pos] == b'.') {
-          pos += 1;
-        }
-        has_digit = true;
-      } else if has_digit {
-        pos += 1;
+    let mut number = String::new();
+    loop {
+      let at = skip(pos);
+      match b.get(at) {
+        Some(c) if c.is_ascii_digit() || *c == b'.' => {
+          number.push(*c as char);
+          pos = at + 1;
+        },
+        _ => break,
       }
     }
-    if !has_digit || pos == 0 {
+    if !number.bytes().any(|c| c.is_ascii_digit()) {
       return None;
     }
-    if pos < b.len() && (b[pos] == b'e' || b[pos] == b'E') {
-      let saved = pos;
-      pos += 1;
-      if pos < b.len() && (b[pos] == b'+' || b[pos] == b'-') {
-        pos += 1;
-      }
-      if pos < b.len() && b[pos].is_ascii_digit() {
-        while pos < b.len() && b[pos].is_ascii_digit() {
-          pos += 1;
+    let at = skip(pos);
+    let next = b.get(at).copied();
+    let radix = match next {
+      Some(b'x' | b'X') => 16,
+      Some(b'b' | b'B') => 2,
+      _ => 0,
+    };
+    if number == "0" && radix != 0 && !opens_unit(&i.input[at..]) {
+      let mut digits = String::new();
+      let mut end = at + 1;
+      loop {
+        let at = skip(end);
+        match b.get(at) {
+          Some(c) if (*c as char).is_digit(radix) => {
+            digits.push(*c as char);
+            end = at + 1;
+          },
+          _ => break,
         }
-      } else {
-        pos = saved;
+      }
+      let value = i64::from_str_radix(&digits, radix).ok()? as f64;
+      bump(i, end);
+      return Some((value, Literal::Based));
+    }
+    if matches!(next, Some(b'e' | b'E')) {
+      // `\pgfmath@count` reads the exponent as TeX reads an integer: spaces, a sign, digits.
+      let mut end = skip(at + 1);
+      let negative = b.get(end) == Some(&b'-');
+      if matches!(b.get(end), Some(b'+' | b'-')) {
+        end = skip(end + 1);
+      }
+      let digits = b[end.min(b.len())..]
+        .iter()
+        .take_while(|c| c.is_ascii_digit())
+        .count();
+      if digits > 0 {
+        let exponent = &i.input[end..end + digits];
+        let sign = if negative { "-" } else { "" };
+        let value = format!("{number}e{sign}{exponent}")
+          .parse::<f64>()
+          .unwrap_or(0.0);
+        bump(i, end + digits);
+        return Some((value, Literal::Scientific));
       }
     }
-    let v = i.input[..pos].parse::<f64>().unwrap_or(0.0);
+    let value = number.parse::<f64>().unwrap_or(0.0);
     bump(i, pos);
-    Some(v)
+    Some((value, Literal::Decimal(number)))
   }
+
+  /// Whether `text` opens with one of pgf's two-letter units, the letters read as pgf reads them, spaces between them
+  /// skipped, and no letter after them.
+  fn unit_at(text: &str) -> Option<(&'static str, usize)> {
+    let b = text.as_bytes();
+    PGF_UNITS.iter().find_map(|unit| {
+      let u = unit.as_bytes();
+      if b.first() != Some(&u[0]) {
+        return None;
+      }
+      let second = 1 + b[1..].iter().take_while(|c| **c == b' ').count();
+      let end = second + 1;
+      (b.get(second) == Some(&u[1]) && !b.get(end).is_some_and(|c| c.is_ascii_alphabetic()))
+        .then_some((*unit, end))
+    })
+  }
+
+  fn opens_unit(text: &str) -> bool { unit_at(text).is_some() }
 
   fn try_unit(i: &mut In) -> Option<String> {
     sb(i);
-    for &unit in PGF_UNITS {
-      if let Some(rest) = i.input.strip_prefix(unit) {
-        // not a unit if a letter follows ("ptx" is not "pt")
-        if rest
-          .as_bytes()
-          .first()
-          .map(|c| c.is_ascii_alphabetic())
-          .unwrap_or(false)
-        {
-          continue;
-        }
-        bump(i, unit.len());
-        return Some(unit.to_string());
-      }
-    }
-    None
+    let (unit, end) = unit_at(i.input)?;
+    bump(i, end);
+    Some(unit.to_string())
   }
 
-  /// `\\[a-zA-Z@]+` — a TeX register; reading one declares units (see the
+  /// `\\[a-zA-Z@]+` — a TeX register; reading a dimension declares units (see the
   /// pgfplots ybar witnesses on the original implementation). An expl3 name
   /// (`\l_tmpa_dim`, `\c_pgfinterference_delta_dim`) is ONE control sequence
   /// in the tokens `\pgfmathparse` received; the string round-trip
@@ -1904,7 +1999,10 @@ mod pgfmath_grammar {
   /// .ltxml:704 splits the same way, pdflatex reads the register token). When
   /// the maximal `[a-zA-Z@_:]` run names a live register, that is the name.
   /// Guard: `perfect_kernel_batch56::pgfmath_reads_expl3_register_names`.
-  fn try_cs_register(i: &mut In) -> Option<f64> {
+  ///
+  /// A dimension scales a number before it (`2\mydim`); a count or an e-TeX expression takes its place, as pgf
+  /// reads them (pgfmathparser.code.tex:430-476): `2\mycount` is the count, `0.5\dimexpr 4pt` is 4.0.
+  fn try_cs_register(i: &mut In) -> Option<CsOperand> {
     sb(i);
     let n = cs_name_len(i.input)?;
     let cs = &i.input[..1 + n];
@@ -1914,14 +2012,28 @@ mod pgfmath_grammar {
       bump(i, 1 + n);
       if let Some(number) = box_number(i) {
         i.state.units_declared = true;
-        return Some(super::pgfmath_box_dimension(dimension, number));
+        return Some(CsOperand::Scales(super::pgfmath_box_dimension(
+          dimension, number,
+        )));
       }
       i.reset(&cp);
     }
-    let value = pgfmath_register_lookup(cs);
+    if matches!(cs, "\\dimexpr" | "\\glueexpr" | "\\numexpr" | "\\muexpr") {
+      let (value, read) = super::pgfmath_read_expr(cs, i.input)?;
+      bump(i, read);
+      if matches!(cs, "\\numexpr") {
+        return Some(CsOperand::Count(value));
+      }
+      i.state.units_declared |= matches!(cs, "\\dimexpr" | "\\glueexpr");
+      return Some(CsOperand::Replaces(value));
+    }
+    let (value, count) = pgfmath_register_lookup(cs);
     bump(i, 1 + n);
+    if count {
+      return Some(CsOperand::Count(value));
+    }
     i.state.units_declared = true;
-    Some(value)
+    Some(CsOperand::Scales(value))
   }
 
   /// The name's length after the `\` of the control sequence `input` starts with: the `[a-zA-Z@]` run, or the longer
@@ -1952,7 +2064,7 @@ mod pgfmath_grammar {
     let spaces = i.input.bytes().take_while(|c| *c == b' ').count();
     let rest = &i.input[spaces..];
     if let Some(n) = cs_name_len(rest) {
-      let number = pgfmath_register_lookup(&rest[..1 + n]) as i64;
+      let number = pgfmath_register_lookup(&rest[..1 + n]).0 as i64;
       bump(i, spaces + 1 + n);
       return Some(number);
     }
@@ -2796,6 +2908,29 @@ mod pgfmath_golden_tests {
       ("2r^2!", "1375.09871@-"),  // pdflatex 1375.09863
       ("3r!", "343.77468@-"),     // pdflatex 343.77466
       ("-1r!", "-57.29578@-"),
+      // pgf's number (pgfmathparser.code.tex:426-540; pdflatex TL 2025, 2026-11-12): a unit before a base prefix
+      // (`0bp`, 1106.3771), the spaces inside a number skipped (`-4 .5`, 1612.03043), either case of prefix, octal.
+      ("0bp+1pt", "1.0@u"),
+      ("0bp", "0.0@u"),
+      ("2*0bp", "0.0@u"),
+      ("0B101", "5@-"),
+      ("0X1F", "31@-"),
+      ("0x 1F", "31@-"),
+      ("0 b101", "5@-"),
+      ("0b1 01", "5@-"),
+      ("010+1", "9.0@-"),
+      ("-010+0", "-8.0@-"),
+      ("(010)", "8@-"),
+      ("0777+0", "511.0@-"),
+      ("010e1", "100.0@-"),
+      ("010pt", "10.0@u"),
+      ("-4 .5", "-4.5@-"),
+      ("1 2", "12@-"),
+      ("1. 5", "1.5@-"),
+      ("1 .5e 2", "150.0@-"),
+      ("1 e2", "100.0@-"),
+      ("1 0pt", "10.0@u"),
+      ("2 p t", "2.0@u"),
     ];
     for (expr, expected) in golden {
       assert_eq!(&describe(expr), expected, "pgfmath diverged on {expr:?}");
