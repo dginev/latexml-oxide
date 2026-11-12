@@ -559,6 +559,7 @@ mod perfect_kernel_batchpb;
 /// PC3: two false undefined-command Errors of the frontmatter rehearsal — a title-code command after an e-mail
 /// keeps its argument (pazh), a class's own `\email` reads its argument unexpanded (1802.01191); OD #983.
 mod perfect_kernel_batchpc3;
+mod perfect_kernel_batchpsf1;
 /// QA47A: `\begin{document}` runs the kernel's begin-document lists, so `cmd/<name>/<hook>` hooks patch TeX macros;
 /// a binding's hook is a counted Warning (BM Q3.3).
 mod perfect_kernel_batchqa47a;

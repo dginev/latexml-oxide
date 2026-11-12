@@ -19588,3 +19588,26 @@ to both (latex.ltx:18397-18402). Rust reads `\ver@<file>` (OXIDIZED_DESIGN_DIVER
 foo \@ifpackageloaded{foo}{loaded}{not loaded}.
 \end{document}
 ```
+
+## 1237. psfrag's fragments are dropped silently at epsfig's `\psfig`
+
+psfrag.sty.ltxml's begin-document hooks `\let` only `\@includegraphics`, `\@includegraphicx` and `\epsfbox`; epsfig's
+`\psfig` (epsfig.sty.ltxml:35) is its own constructor, so an EPS it includes stays a plain `<graphics>` with the saved
+fragments neither replayed nor reported (0 warnings), where latex + dvips places them (psfrag.sty:55-62 `\Ginclude@eps`,
+which epsfig's `\psfig` calls). Rust counts the loss (OXIDIZED_DESIGN_DIVERGENCES #1017). Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{epsfig,psfrag}
+\begin{filecontents*}{pfy.eps}
+%!PS-Adobe-3.0 EPSF-3.0
+%%BoundingBox: 0 0 72 36
+/Times-Roman findfont 12 scalefont setfont
+10 10 moveto (A) show
+showpage
+\end{filecontents*}
+\begin{document}
+\psfrag{A}{$\alpha$}
+\psfig{file=pfy.eps}
+\end{document}
+```

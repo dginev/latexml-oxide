@@ -52,7 +52,8 @@ LoadDefinitions!({
     // (`\epsfsize=0.6\textwidth`, nucl-th0009090) is the next graphic's only; a 1991 copy resets them locally
     // (hep-ph9404329's epsf.sty:161), so a size set before `\subfigure{\epsfbox{…}}` outlives subfigure.sty:74's box
     // and serves the next sub-figure too ([`epsf_resets_globally`]). Perl's epsf.sty.ltxml keeps the size.
-    after_digest => {
+    after_digest => sub[whatsit] {
+      psfrag_sty::psfrag_graphic(whatsit);
       let global = lookup_value("epsf_reset_global").is_none_or(|global| global.to_string() == "1");
       let scope = if global { Some(Scope::Global) } else { None };
       for size in ["\\epsfxsize", "\\epsfysize"] {

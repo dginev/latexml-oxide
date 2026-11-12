@@ -35622,3 +35622,31 @@ inside an author's `\thanks` is the note's text, printed there at the flush (P5a
 text but raises two false content-check Warnings (the affiliation's event reads the grade's inner call as words; RED
 `ieee_membership_grade_in_a_plain_affiliation_call_red`, post-merge IEGW). **Guards**: `perfect_kernel_batchp5a::ieee_membership_grade_is_the_readings_contact`,
 batch63's `ieee_membership_*`, `perfect_kernel_batch98b::authblk_author_reads_ieee_grades`.
+
+### 1017. A dropped `\psfrag` fragment is counted at its graphic's constructor, one Warning per EPS graphic (PSF1, PSF1b)
+
+**TeX.** psfrag.sty:42-62 hooks `\epsfbox` and `\Ginclude@eps`: every EPS a graphic includes in a fragment's scope
+(local, psfrag's `\pfg@pcount`) places each saved fragment (`\pfg@hideend`), and under `\psfragscanon` (or `scanall`/209
+mode) each `(\\tex…)` string `\pfg@scan` reads from the file; the switch stays on until `\psfragscanoff`
+(psfrag.sty:24-25). epsfig's `\epsffile` and `\psfig` include through `\Ginclude@eps`, so they place too. **Perl.**
+psfrag.sty.ltxml:24-62 saves the fragments; at begin-document it `\let`s `\@includegraphics`, `\@includegraphicx` and
+`\epsfbox` to constructors that turn an EPS with fragments into an `ltx:picture` replaying them; epsfig's `\psfig` and
+the `\let` copies made before (`\epsffile`) keep the plain `<graphics>`, the fragment lost silently (KNOWN_PERL_ERRORS
+#1237). It resets `psfrag_scan` after each graphic, unobservably: the saved list still replays `\psfragscanon`.
+**Rust.** The fragment store is Perl's (`saved_psfragments`, `\lx@delayed@psfrag`); the fragments are not rendered yet
+(PSFR, post-merge), so every graphic constructor's after-digest (graphics' `\@includegraphics`, graphicx's
+`\@includegraphicx`, epsf's and epsfig's `\epsfbox` with their copies, epsfig's `\psfig`) calls
+`psfrag_sty::psfrag_graphic`, which at an EPS graphic emits ONE `Warning:missing_feature:psfrag` naming the graphic and
+every fragment it drops in order — each tag, and each scanned `\tex` string as TeX reads it — so the count is the
+figures affected (cond-mat0310505: 35 preamble fragments x 25 figures, 25 Warnings). A non-EPS graphic, or a fragment no
+EPS graphic reaches, prints nothing in TeX and stays silent. The empty box `\psfrag` left before stays, so `tex=`
+reverts it (XML byte-identical). A graphic is EPS as psfrag finds it (PSF1c): a candidate (or a `{filecontents}` file of
+the name, or the name with `.eps`/`.ps`) whose header is PostScript (`%!`, or the DOS EPS `C5D0D3C6`), as Perl's
+`psfrag_requirepicture` asks `image_type` (Util/Image.pm:74-84) — under dvips any file falls to `\Gin@rule@*` of type
+eps (dvips.def:211) and epsf reads any file, so the header is what decides an `.epsi` or `.epsf` (hep-ph0610439: 8
+`\psfig{figure=*.epsi}`); a PNG or PDF, a pdflatex graphic, places nothing. A file without that header (a compressed
+`.eps.gz`) is EPS by its extension's graphics rule: a declared `\Gin@rule@<ext>` of type eps (`\DeclareGraphicsRule`),
+else dvips.def:203-210's eps rules (`.eps`, `.ps`, `.eps.gz`, …); psfrag's scan of compressed bytes finds no label.
+Residual: raw epsf.sty loaded before psfrag leaves `\epsffile` unhooked in TeX (no placement), where the binding's
+`\epsffile` shares `\epsfbox`'s constructor and warns. **Guard**:
+`perfect_kernel_batchpsf1::batchpsf1_dropped_fragments_are_counted` (repros `reversion/psfrag_*`).
