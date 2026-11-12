@@ -974,9 +974,9 @@ reading its `\meaning` (`macro:<params>->...body...`), then
 re-`\def`-ing it (via `\scantokens`) wrapped in `\protected`. That round
 trip only works when the body is real tokens. Many LaTeXML commands are
 realized as native closures whose `\meaning` renders as
-`...->CODE(0x<ptr>)`; reconstructing from that produces a broken macro
+`...->CODE(<name>)` (Perl `CODE(0x<ptr>)`, #1005); reconstructing from that produces a broken macro
 whose param text (`#1#2#3#4`) is taken literally and whose body is the
-literal text `CODE(0x…)` — so e.g. a robustified natbib `\cite` grabs the
+literal text `CODE(<name>)` — so e.g. a robustified natbib `\cite` grabs the
 wrong number of arguments and can swallow a following `\begin{equation}`.
 Native bindings are *already* robust (no `\protect` fragility), so the
 faithful-to-intent behavior is to leave them alone.
@@ -35087,3 +35087,24 @@ missing, `\wd\box` read 0, and tikzscale's measuring loop (tikzscale.sty:392, 52
 `\requestedSize/0`, clamped to 16383.99998 (2010.05701, 2205.15714, 2311.08887, 2604.09771). Fit's
 `.5\dp\pgfnodeparttextbox` (tikzlibraryfit.code.tex:74) reads the node's declared size since DTL1a. Repros `graphics-tikz/pgfmath_box_dimensions.tex`, `pgfmath_tikzscale_width.tex`; guard
 `perfect_kernel_batchdtl1::batchdtl1_pgfmath_rows`.
+
+### 1005. `\meaning` of a macro coded in the host language prints `CODE(<name>)`, with no address (QA89)
+
+**Perl behavior**: a CODE-ref body stringifies as `CODE(0x55…)` (TeX_Debugging.pool.ltxml:163 `ToString`), a heap
+address, so `\meaning\@ifnextchar`, a `\show`, a `\detokenize`d meaning set in the text or a meaning compared as a
+string change on every run. Rust printed the same. pdflatex prints latex.ltx's body.
+**Rust behavior**: `\meaning` prints `CODE(` + the definition's name + `)` (`definition::closure_body_meaning`:
+`CODE(@ifnextchar)`, `CODE(begin)`, `CODE(today)`); a name with a character other than a letter or `@` prints
+`CODE(native)` (`CLOSURE_BODY_TEXT`, also `ExpansionBody`'s `Debug`/`Display`). The same on every run; two natives'
+meanings stay apart as their addresses kept them (`\meaning\value` vs `\meaning\arabic` compare unequal, as in
+pdflatex), letters only so a `\scantokens` rebuild reads text, no control sequence. It keeps the `CODE(` that
+etoolbox_sty's `\lx@ifnativecmd` splits on (`\robustify` leaves a native alone), and `\ifx` of two definitions never
+reads it (#183), so `\ifpatchable`/`\patchcmd` on a native `\begin` still answer no. Not latex.ltx's body: a
+`\meaning`→`\scantokens` rebuild would then replace the native `\begin` (#183, KNOWN_PERL_ERRORS #147); that is the
+post-merge macro-faces design (QA53).
+**Why**: determinism: no output, log or string comparison may depend on an allocation address.
+**Witnesses**: BM Q&A probe Q3.8 `meaning` (synthetic); cnltx/cnltx_en; 36 latex.ltx user commands (QA51's sizing:
+`\begin`, `\end`, `\arabic`, `\value`, `\verb`, `\today`, `\multicolumn`, `\csname`, …).
+**Guard**: `perfect_kernel_batch56::meaning_of_a_closure_macro_is_perls_code_form`
+(`expansion-primitives/meaning_of_a_closure_macro_is_stable.tex`: two conversions, exact text, etoolbox's answers).
+**Upstream**: not filed (Perl stringifies the code ref; a name would serve).

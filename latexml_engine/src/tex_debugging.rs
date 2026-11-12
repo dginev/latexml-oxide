@@ -56,6 +56,8 @@ static TRACE_COMMANDS: u8 = 0x2;
 static _TRACE_ALL: u8 = 0x3; // MACROS | COMMANDS
 static _TRACE_PROFILE: u8 = 0x4;
 
+use latexml_core::definition::closure_body_meaning;
+
 use crate::prelude::*;
 
 LoadDefinitions!({
@@ -403,11 +405,8 @@ LoadDefinitions!({
           }
           let expansion = match expandable.get_expansion() {
             None => String::new(),
-            // Perl's `CODE(0x…)` for a macro coded in the host language: the address only
-            // (a `dyn` pointer's `{:p}` would print its metadata too; cnltx_en).
-            Some(ExpansionBody::Closure(exp)) => {
-              format!("CODE({:p})", Rc::as_ptr(exp) as *const ())
-            },
+            // Perl's `CODE(0x…)`, the name for the address (QA89; cnltx_en).
+            Some(ExpansionBody::Closure(_)) => closure_body_meaning(&expandable.get_cs_name()),
             Some(ExpansionBody::Tokens(tks)) => writable_tokens(tks),
           };
           meaning = format!("{prefixes}macro:{spec}->{expansion}{p_trailer}");

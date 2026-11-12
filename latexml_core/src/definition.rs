@@ -70,13 +70,25 @@ impl ExpansionBody {
   }
 }
 
+/// What a body coded in the host language prints where Perl prints `CODE(0x…)`: no address, so the same on every run
+/// (QA89), and still `CODE(`, etoolbox_sty's `\lx@ifnativecmd` sentinel.
+pub const CLOSURE_BODY_TEXT: &str = "CODE(native)";
+
+/// `\meaning`'s text for a closure body of `cs`: its name, letters only, keeps two natives' meanings apart as Perl's
+/// addresses did (`\value` vs `\arabic`); any other name prints [`CLOSURE_BODY_TEXT`].
+pub fn closure_body_meaning(cs: &str) -> String {
+  let name = cs.strip_prefix('\\').unwrap_or(cs);
+  if !name.is_empty() && name.chars().all(|c| c.is_ascii_alphabetic() || c == '@') {
+    format!("CODE({name})")
+  } else {
+    CLOSURE_BODY_TEXT.to_string()
+  }
+}
+
 impl fmt::Debug for ExpansionBody {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
-      // Perl's `CODE(0x…)`: the address only. `{:p}` of the `dyn` pointer itself prints
-      // its metadata too (`Pointer { addr: …, metadata: DynMetadata(…) }`, into cnltx_en's
-      // text).
-      ExpansionBody::Closure(code) => write!(f, "CODE({:p})", Rc::as_ptr(code) as *const ()),
+      ExpansionBody::Closure(_) => f.write_str(CLOSURE_BODY_TEXT),
       ExpansionBody::Tokens(ts) => write!(f, "{ts:?}"),
     }
   }
@@ -470,13 +482,7 @@ impl fmt::Display for ExpansionBody {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
       ExpansionBody::Tokens(t) => write!(f, "{t}"),
-      ExpansionBody::Closure(code) => {
-        write!(
-          f,
-          "ExpansionBody::Closure({:p})",
-          Rc::as_ptr(code) as *const ()
-        )
-      }, // what is the right way to serialize this, e.g. for the \meaning macro
+      ExpansionBody::Closure(_) => f.write_str(CLOSURE_BODY_TEXT),
     }
   }
 }
