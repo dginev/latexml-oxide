@@ -2880,7 +2880,8 @@ const KERNEL_TOKEN_SPELLINGS: &[(&str, usize)] = &[
   ("latexml_engine/src/tex_math.rs", 80),
   ("latexml_engine/src/tex_paragraph.rs", 2),
   ("latexml_engine/src/tex_registers.rs", 5),
-  ("latexml_engine/src/tex_tables.rs", 38),
+  // (GA4, 38 -> 34: the longtable keys and the `\noalign\\` spelling left the kernel alignment)
+  ("latexml_engine/src/tex_tables.rs", 34),
 ];
 
 #[test]
