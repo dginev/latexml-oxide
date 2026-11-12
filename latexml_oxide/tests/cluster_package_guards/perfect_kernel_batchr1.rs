@@ -145,7 +145,7 @@ fn a_spent_budget_names_the_print_it_never_ran() {
 
 /// A run the budget ended counts no conditional against the limit: the budget ends the `\loop` after about 30,000 of them,
 /// the body's own loop makes 30,000 more, and the limit lies between either alone and the two together. Distinct path:
-/// `speculative_run`'s `set_if_count`, which the default limit (48 M under the ar5iv profile, none without) never reaches.
+/// `speculative_run_read`'s `set_if_count`, which the default limit (48 M under the ar5iv profile, none without) never reaches.
 #[test]
 fn a_run_over_budget_counts_no_conditional_against_the_limit() {
   let tex = repro!("check_store_argument_loop_is_budgeted")

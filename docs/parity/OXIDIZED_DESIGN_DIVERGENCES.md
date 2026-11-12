@@ -30859,7 +30859,9 @@ substitute values, which the one real-values run cannot (TP0), and a merged run 
 another's stores, which a page testing a value prints differently; the labels' and the displaced stores' runs
 (`\lx@store@defaults`) precede the hand-on, the whole page's (`\lx@deposit@maketitle`) follows it. A/B TP3base → TP3
 (stage2's 1,434, 400 papers shipping a `.cls` that reads `\@maketitle`, 100 controls; 1,929 converted): XML byte-identical,
-Warnings and `frontmatter:` log lines unchanged. The trade shows on a synthetic page over a budget of 100 reads
+Warnings and `frontmatter:` log lines unchanged; 397 raw-class title pages read 2.77 M at most of the conversion's 24 M
+(2407.17431, revTP3), the probes now inside `FieldLedgerScope` (`checks_run`: the field ledger put back after each, as the
+check's own runs). The trade shows on a synthetic page over a budget of 100 reads
 (`check_store_over_budget_is_named`): the walk hands on no `\@corr` from the class's `\thanks`, and the e-mail is lost,
 counted (the unbudgeted probes kept it). **QA60 site 2 is kept:** under a class no declaration names
 (`class_maketitle_runs` None) the run's tail answer stands, not the walk's, which reads both branches of a test it cannot

@@ -202,7 +202,8 @@ const CHECK_RUN_READS_DEFAULT: usize = 8_000_000;
 
 /// The most tokens all the check's runs of a conversion read, in [`CHECK_RUN_READS_DEFAULT`]s: an argument over budget, the
 /// title page that prints it over budget too, and the many small arguments of the rest (1306.4853's 587 runs read 1,826,755,
-/// the most of the 299 papers).
+/// the most of the 299 papers). Since TP3 the stores' sentinel probes spend it too (about 7-9 runs of the whole page per
+/// `\maketitle` of a raw class): 397 raw-class title pages read 2.77 M at most (2407.17431, revTP3), under the 24 M.
 const CHECK_RUNS_PER_CONVERSION: usize = 3;
 
 /// How many of the things left out over budget [`check_budget_warning`] names.
@@ -232,7 +233,8 @@ fn reset_check_budget() {
 }
 
 /// How many tokens the check's next speculative run may read (`sect05.rs` `speculative_run_read`; the stores' sentinel
-/// probes are its runs too, TP3): a check reads what a title page prints, and may not cost more than a small part of a conversion whatever the document's title page does — a
+/// probes are its runs too, TP3): a check reads what a title page prints, and may not cost more than a small part of a
+/// conversion whatever the document's title page does — a
 /// looping stored argument, or a hundred lines of it the class's language switches make dear (uantwerpenexam's
 /// `\extrainfo`, 164 million reads a run). None once a conversion's reads are spent ([`CHECK_RUNS_PER_CONVERSION`]). What is
 /// left out so is said once ([`check_budget_warning`]).
