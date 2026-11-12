@@ -66,8 +66,10 @@ LoadDefinitions!( {
   DefPrimitive!("\\invisible", None, font => {opacity => "0" });
   DefPrimitive!("\\visible",   None, font => {opacity => "1" });
 
-  // \showfont — debug helper, no-op in Rust
-  DefPrimitive!("\\showfont", None);
+  // Perl slides.cls.ltxml:82-85: a Note of the current font, no box.
+  DefPrimitive!("\\showfont", {
+    Note!(s!("FONT IS: {}", lookup_font().map(|f| f.stringify()).unwrap_or_default()));
+  });
 
   RequirePackage!("color");
   def_macro_noop("\\blackandwhite")?;

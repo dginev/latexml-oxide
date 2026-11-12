@@ -1,0 +1,26 @@
+% witness: 1301.0750 (airyReview.tex:2217-2223, `\shortintertext` in `aligned`), 1906.05085, 2107.14777
+% oracle:  pdflatex 2 errors ("Package amsmath Error: Invalid use of \shortintertext" / "\intertext": amsmath allows
+%          them only in a top-level alignment); Perl reverts the internal `\@@ams@intertext{and}` (KNOWN_PERL_ERRORS
+%          #1227), 2 errors
+% engines: rust int161a = tex="\displaystyle\@@ams@intertext{and}" (mathtools lets `\shortintertext` to
+%          `\@ams@intertext`, as Perl), 2 errors ("<ltx:p> isn't allowed in <ltx:XMArg>"); `\intertext{or}` read
+%          the standalone constructor and was already tex="\displaystyle\intertext{or}g=h,"
+% expect:  2 errors, 0 warnings; tex="\displaystyle\intertext{and}" (the user's `\shortintertext` spelling is not
+%          kept: a post-merge macro face) and tex="\displaystyle\intertext{or}g=h,"
+% status:  RED (int161a) -> GREEN (RV1)
+\documentclass{article}
+\usepackage{amsmath,mathtools}
+\begin{document}
+\begin{equation}
+  \begin{aligned}
+    a &= b, \\
+    \shortintertext{and} c &= d,
+  \end{aligned}
+\end{equation}
+\begin{equation}
+  \begin{aligned}
+    e &= f, \\
+    \intertext{or} g &= h,
+  \end{aligned}
+\end{equation}
+\end{document}

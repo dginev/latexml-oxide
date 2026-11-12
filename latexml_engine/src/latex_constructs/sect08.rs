@@ -513,10 +513,10 @@ pub(crate) fn load() -> Result<()> {
   // read as two arguments, polyglossia's `\DeclareUppercaseMapping[la-x-classic]
   // {`u}{V}` (gloss-latin.ldf:41-50; babel-latin latin.ldf:110-123) typeset
   // "a-x-classic]‘uV" eight times before the text (RUST-ONLY; Perl runs the
-  // dumped kernel definition).
-  DefPrimitive!("\\DeclareUppercaseMapping[]{}{}", None, locked => true);
-  DefPrimitive!("\\DeclareLowercaseMapping[]{}{}", None, locked => true);
-  DefPrimitive!("\\DeclareTitlecaseMapping[]{}{}", None, locked => true);
+  // dumped kernel definition). No box, as the kernel's macros leave none.
+  DefPrimitive!("\\DeclareUppercaseMapping[]{}{}", {}, locked => true);
+  DefPrimitive!("\\DeclareLowercaseMapping[]{}{}", {}, locked => true);
+  DefPrimitive!("\\DeclareTitlecaseMapping[]{}{}", {}, locked => true);
 
   // Robust as latex.ltx:10490 declares it (Perl latex_constructs.pool.ltxml:2637
   // a plain macro); see the NFSS switches in sect13.

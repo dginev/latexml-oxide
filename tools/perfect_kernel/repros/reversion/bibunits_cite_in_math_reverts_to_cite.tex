@@ -1,0 +1,13 @@
+% witness: synthetic (sibling of the QA41 audit's `DefPrimitive!(…, None)` sweep; bibunits.sty.ltxml:35-42 bodies)
+% oracle:  pdflatex 0 errors; Perl's `\lx@bibunits@setglobal`/`resetglobal` are `sub {…; return; }`, no box: the
+%          subscript reverts to `\cite[cite]{…}`
+% engines: rust int161a = tex="x_{\lx@bibunits@resetglobal\cite[cite]{[\@@bibref{}{foo}{}{}]}}" (and setglobal)
+% expect:  0 errors, 0 warnings; tex="x_{\cite[cite]{[\@@bibref{}{foo}{}{}]}}", same for y with `\cite*`
+% status:  RED (int161a) -> GREEN (RV1)
+\documentclass{article}
+\usepackage{bibunits}
+\begin{document}
+\begin{bibunit}[plain]
+Text $x_{\cite{foo}}$ and $y_{\cite*{foo}}$.
+\end{bibunit}
+\end{document}

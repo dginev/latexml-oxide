@@ -672,8 +672,8 @@ LoadDefinitions!({
   //======================================================================
   // 6. Modern LaTeX (2015+) extras
   //======================================================================
-  // `\extrafloats{N}` — request N extra float slots (no-op in LaTeXML).
-  DefPrimitive!("\\extrafloats{}", None);
+  // `\extrafloats{N}` — request N extra float slots (no-op in LaTeXML): no box, as latex.ltx's macro leaves none.
+  DefPrimitive!("\\extrafloats{}", {});
 
   // `\wlog{...}` — write to log only (no-op in LaTeXML).
   def_macro_noop("\\wlog{}")?;

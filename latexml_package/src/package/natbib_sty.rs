@@ -1734,8 +1734,7 @@ LoadDefinitions!({
   );
 
   // \reset@natbib@cites
-  DefPrimitive!("\\reset@natbib@cites", None,
-  after_digest => {
+  DefPrimitive!("\\reset@natbib@cites", {
     Let!("\\citeauthoryear", "\\natbib@citeauthoryear");
     Let!("\\astroncite", "\\natbib@astroncite");
     Let!("\\citename", "\\natbib@citename");

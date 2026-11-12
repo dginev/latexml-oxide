@@ -211,7 +211,8 @@ LoadDefinitions!({
 
   // Seems odd to need both end markers here...
   DefMacro!("\\lx@end@alignment", r"\lx@hidden@crcr\lx@close@alignment");
-  DefPrimitive!("\\lx@close@alignment", None);
+  // Perl TeX_Tables.pool.ltxml:45 `sub { }`: returns nothing, so no box reverts to the name.
+  DefPrimitive!("\\lx@close@alignment", {});
 
   // & gives an error except within the right context
   // (which should redefine it!)

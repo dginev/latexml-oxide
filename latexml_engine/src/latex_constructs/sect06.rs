@@ -221,25 +221,30 @@ pub(crate) fn load() -> Result<()> {
   DefMacro!("\\centering", "\\let\\\\\\@normalcr\\lx@do@centering");
   DefMacro!("\\raggedright", "\\let\\\\\\@normalcr\\lx@do@raggedright");
   DefMacro!("\\raggedleft", "\\let\\\\\\@normalcr\\lx@do@raggedleft");
+  // Each reverts to the user's macro, as Perl's constructors of that name (pool:1237-1240; 1312.5886, 2008.09739,
+  // 2107.14385).
   DefConstructor!("\\lx@do@centering", sub[doc,_args] {
     setup_aligning_context(doc);
   },
   before_digest => {
     unshift_value("beforeAfterGroup", vec![T_CS!("\\@add@centering")]);
-  });
+  },
+  alias => "\\centering");
   // Perl: latex_constructs.pool.ltxml lines 1299-1302
   DefConstructor!("\\lx@do@raggedright", sub[doc,_args] {
     setup_aligning_context(doc);
   },
     before_digest => {
       unshift_value("beforeAfterGroup", vec![T_CS!("\\@add@raggedright")]);
-    });
+    },
+    alias => "\\raggedright");
   DefConstructor!("\\lx@do@raggedleft", sub[doc,_args] {
     setup_aligning_context(doc);
   },
     before_digest => {
       unshift_value("beforeAfterGroup", vec![T_CS!("\\@add@raggedleft")]);
-    });
+    },
+    alias => "\\raggedleft");
 
   DefConstructor!("\\@add@centering", sub[document] {
     apply_aligning_context(document, "center", "ltx_centering")?;

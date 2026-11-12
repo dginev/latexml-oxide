@@ -19390,3 +19390,20 @@ as tex.web's print_cs §262) before a letter, in the one parse `\pgfmathparse`, 
 \pgfmathparse{\mydim r}[\pgfmathresult]
 \end{document}
 ```
+
+## 1227. amsmath: `\shortintertext` in `aligned` reverts to the internal `\@@ams@intertext`
+
+`\@@ams@intertext{}` (amsmath.sty.ltxml:102-103), the constructor `\@ams@intertext` (and mathtools' `\shortintertext`,
+mathtools.sty.ltxml:659) reaches, has no `alias`, so where its paragraph lands inside math (an `aligned`, which
+amsmath rejects: pdflatex "Invalid use of \shortintertext", 1 `!` for the trigger) the `tex=` shows
+`\displaystyle\@@ams@intertext{and}`. PERL-ORIGIN (1301.0750, 1906.05085, 2107.14777). Rust: the constructor carries
+`alias => "\intertext"` (amsmath_sty.rs), so it reverts to `\intertext{and}`; both engines keep the 1 Error. Guard
+`perfect_kernel_batchrv1::batchrv1_reversion_rows` row `intertext_in_aligned_reverts_to_intertext`. Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{amsmath,mathtools}
+\begin{document}
+\begin{equation}\begin{aligned} a &= b, \\ \shortintertext{and} c &= d, \end{aligned}\end{equation}
+\end{document}
+```
