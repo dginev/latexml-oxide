@@ -158,18 +158,36 @@ pub fn reset_thread_engine() {
   // resolves, in the renumbered arena, to a different string (phantom undefined).
   // (`reset_arena_keyed_reports` is in scope via `pub use crate::common::error::*`.)
   reset_arena_keyed_reports();
-  // A speculative scope's log muting (`SuppressLogOutputGuard`) ends with the conversion.
-  reset_suppress_log_output();
   // The is_noexpand_family and fontmap-key memos are keyed by arena symbols —
   // same stale-alias hazard as the REPORT maps; clear them with the arena.
   token::reset_noexpand_family_memo();
-  document::reset_field_provenance();
   binding::content::reset_fontmap_key_memo();
+  reset_conversion_state();
+}
+
+/// Forgets what one conversion leaves on its thread for the next, as Perl builds a fresh State per document
+/// (LaTeXML.pm:232): a persistent `cortex_worker` converts its papers on one thread. Called at each conversion's start
+/// ([`initialize_report`]) and by [`reset_thread_engine`]; the engine crate's own per-conversion state is reset by the
+/// converter's `prepare_session`.
+pub fn reset_conversion_state() {
+  // The deferred diagnostics and the unknown KeyVals keys reported (each reported once per conversion, ST3).
+  util::logger::reset_deferred_diagnostics();
+  keyvals::reset_unknown_keys_reported();
+  // A speculative scope's log muting (`SuppressLogOutputGuard`) ends with the conversion.
+  reset_suppress_log_output();
+  // Lookups memoized per conversion: a cwd-relative kpsewhich miss, an image's size, a font's metrics.
+  util::pathname::clear_kpsewhich_memo();
+  util::image::clear_image_size_memo();
   common::font::tfm::reset_tfm_cache();
-  binding::counter::dialect::reset_refstep_state();
-  binding::content::reset_subfile_package_load();
+  // The frontmatter fields' provenance (OXIDIZED_DESIGN #715), the files read raw and the stand-in copies'
+  // provides-modes (#731).
+  document::reset_field_provenance();
   binding::content::reset_raw_read_paths();
   definition::origin::reset_copy_provides();
+  // A planned `\lx@refstepcounter` step a panic unwound past (`take_pending_step` never ran) would type the next
+  // paper's first step on that counter.
+  binding::counter::dialect::reset_refstep_state();
+  binding::content::reset_subfile_package_load();
   binding::kernel_autoload::reset_undefined_fallback();
 }
 

@@ -1,0 +1,19 @@
+% A babel document whose eager digestion turns into streaming pass 1 (the RSS transition, not `--streaming=true`, which
+% gives the eager XML here) marks each spilled subtree with the language its root already has:
+% every top-level `<section>` gains `xml:lang="en"` (and the run's ids renumber in 2507.13358). The spill decision reads
+% the process's resident set (stomach.rs `spill_watermark_bytes`), so the same paper converts eager alone and streamed
+% after others in one process (ST3b: 2507.13358 on a fresh thread after 63 papers, 105 `xml:lang` vs 1).
+% witness: 2507.13358 (amsart, `english`, babel); synthetic.
+% oracle:  pdflatex (TL 2025) 0 errors: "1 One", "Text one."
+% engines: ST3 (c3528bf1d2), `LATEXML_SPILL_AT_MIB=1 LATEXML_SOFT_YIELD_MIN_BOXES=1`: `<section inlist="toc"
+%          xml:lang="en" xml:id="S1">`; eager: `<section inlist="toc" xml:id="S1">` (the root carries `xml:lang="en"`).
+% expect:  0 errors; streamed XML == eager XML (one `xml:lang`, on `<document>`)
+% status:  RED
+% moves:   post-merge (STRM): a row converting it with the transition forced in-process (`set_spill_watermark_override`,
+%          `set_soft_yield_min_boxes(1)`, as `116_adaptive_streaming` does), XML == eager.
+\documentclass{article}
+\usepackage[english]{babel}
+\begin{document}
+\section{One}
+Text one.
+\end{document}

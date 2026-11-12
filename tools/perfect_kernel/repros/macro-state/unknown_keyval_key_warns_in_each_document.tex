@@ -1,6 +1,7 @@
 % mechanism: the unknown-KeyVals-key report is once per (prefix, key, keysets) per conversion (keyvals.rs SEEN_MISSING,
-%   reset by `initialize_report`, as Perl's `$$state{status} = {}` per conversion, LaTeXML.pm:232). The set lived for the
-%   thread, so a persistent cortex_worker's later paper with the same unknown key had no Warning (ST3).
+%   cleared by `reset_conversion_state` at `initialize_report`, as Perl's `$$state{status} = {}` per conversion,
+%   LaTeXML.pm:232). The set lived for the thread, so a persistent cortex_worker's later paper with the same unknown key
+%   had no Warning (ST3).
 % witness: ST3 census, 64 papers on one thread in two orders: 16 in each lost an Info of the 'Frontmatter' keyset
 %   (1702.05670, 2511.20937, 0805.4073, 2105.06648, ...); the Warning side's key is 2605.08666's (siunitx v2)
 % oracle:  pdflatex 0 `!`, "Package siunitx Warning: Option "detect-inline-weight" has been removed"; "Speed 1 m s−1."

@@ -2050,3 +2050,16 @@ pub fn rescue_caption_counters(captype: &str, whatsit: &mut Whatsit) {
     whatsit.set_property("inlist", inlist);
   }
 }
+
+#[cfg(test)]
+mod tests {
+  /// A step planned on a counter that a panic unwound past (`take_pending_step` never ran, `ref_step_counter_planned`)
+  /// is gone when the next conversion starts: its first `\lx@refstepcounter` on that counter takes no stale type
+  /// (`reset_conversion_state` at `initialize_report`, revST3; cortex_worker catches a paper's panic and goes on).
+  #[test]
+  fn a_step_a_panic_left_pending_is_not_the_next_conversions() {
+    super::PENDING_STEPS.with(|steps| steps.borrow_mut().insert("theorem".into(), "lemma".into()));
+    crate::common::error::initialize_report();
+    assert_eq!(super::take_pending_step("theorem"), None);
+  }
+}

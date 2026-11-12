@@ -1151,21 +1151,10 @@ impl Converter {
     &'preplifetime mut self,
     _opts: &'preplifetime Config,
   ) -> Result<()> {
-    // Per-conversion cache hygiene: a persistent worker converts many papers
-    // per thread; cwd-relative kpsewhich results must not leak across them.
-    latexml_core::util::pathname::clear_kpsewhich_memo();
-    latexml_core::util::image::clear_image_size_memo();
-    latexml_core::common::font::tfm::reset_tfm_cache();
-    // The field provenance of the frontmatter's `\title`/`\author` is per conversion: a previous document's settled
-    // ledger would lift nothing here (OXIDIZED_DESIGN #715).
-    latexml_core::document::reset_field_provenance();
+    // The engine crate's per-conversion state (the core's is `latexml_core::reset_conversion_state`, at the session's
+    // `initialize_report`): a persistent worker converts many papers per thread.
     latexml_engine::base_utilities::reset_fm_reading();
     latexml_engine::base_utilities::reset_title_page_check();
-    // The files read raw and the stand-in copies' provides-modes are this conversion's: a CLI run over several files
-    // (`latexml_oxide t.tex u.tex`) or a worker reusing its thread starts each with none, so the second paper's copy
-    // is read too (OXIDIZED_DESIGN_DIVERGENCES #731).
-    latexml_core::binding::content::reset_raw_read_paths();
-    latexml_core::definition::origin::reset_copy_provides();
     if !self.ready {
       self.initialize_session()?
     }
