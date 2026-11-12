@@ -19292,10 +19292,12 @@ hides the flaw for plain arithmetic (`-2^2` → `-2**2` → -4), but an expressi
 \end{document}
 ```
 
-Fixed in Rust (DTL1b): the `-` branch of `simplefactor` negates a whole `term()`; `^` is left-associative and a
-`!` after it applies to the power (`2^2!`); a `!` or `r` written before `^` (`2!^2`, `2r^2`) is still read too tightly
-(RED `pgfmath_postfix_before_power_red`), and `r` applies to the product so far (`pgfmath_code_tex.rs`; rows in `pgfmath_golden_tests`, safe twin
-`graphics-tikz/pgfmath_neg_binds_below_power.tex`; witness 2311.02367). The `86_tikz` golden `tikz/dominoes.xml` had
+Fixed in Rust (DTL1b, DTL1e): the `-` branch of `simplefactor` negates a whole `term()`; `^` is left-associative; a
+postfix `!` (800) or `r` (600) waits, as on pgf's operator stack (pgfmathparser.code.tex:765-790), for the stronger
+operators after it: `2^2!` and `2!^2` are (2^2)! = 24, `2r^2` (2^2)r = 229.18, `3*2r^2` ((3*2)^2)r, `-1r!` −57.30
+(Perl: 2, 114.59, 343.77, each an Error:pgfparse, and −5040.0 with an overflow Error) (`pgfmath_code_tex.rs` `term`,
+`power_tail`; rows in `pgfmath_golden_tests`, repros `graphics-tikz/pgfmath_neg_binds_below_power.tex`,
+`pgfmath_postfix_before_power.tex`; witness 2311.02367). The `86_tikz` golden `tikz/dominoes.xml` had
 pinned Perl's `-((x)/75)^2` as `+`: its picture is now pdflatex's 341.85pt high (was 379.25pt).
 
 ## 1222. amsmath, lineno, microtype: Perl's bindings lack what the originals define (QA54, PI1)
@@ -19345,3 +19347,46 @@ prints its trace and then "The debugging feature(s) frontmatter were never decla
 Rust (DBG2): `check_debuggable` (`common/error.rs`) tests the name's registration. Guard
 `cluster_cli::debug_feature_scope::debug_feature_prints_only_its_feature`. Minimal trigger: `latexml --debug=frontmatter`
 on any LaTeX document. Upstream fix: `exists $LaTeXML::Debuggable{$feature}`.
+
+## 1225. pgfmath: calc's names are bound before the argument is expanded
+
+`sub pgfmathparse` (pgfmath.code.tex.ltxml:320-327) `Let`s `\real`, `\minof`, `\maxof`, `\ratio`, `\widthof`,
+`\heightof`, `\depthof` to `\pgfmath@calc@*` before it expands its argument. pgf expands first
+(pgfmathparser.code.tex:54) and lets them only in `\pgfmathparse@@` (:124-130), so a user's `\ratio` or `\real`
+reads as the user defined it. Perl gives `[0][1][0.0pt][0][0]` and 4 Errors (pgfparse "Parse of '*/10' failed");
+pdflatex `[5.0][4.0][5.0pt][5][5.0]`, 0 `!`. PERL-ORIGIN. Rust:
+`pgfmath_code_tex::calc_compat_expand` expands without them and binds them only when one of the seven survives the
+expansion, then expands again. Guard `perfect_kernel_batchdtl1::batchdtl1_pgfmath_rows` row
+`pgfmath_expands_before_calc_lets`. Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{pgf}
+\newcommand\ratio{0.5}
+\newcommand\real{3}
+\newdimen\myl
+\begin{document}
+\pgfmathsetmacro\w{\ratio*10}[\w]\pgfmathsetmacro\v{\real+1}[\v]\pgfmathsetlength\myl{\ratio*10pt}[\the\myl]%
+\pgfmathtruncatemacro\t{\ratio*10}[\t]\pgfmathparse{\ratio*10}[\pgfmathresult]
+\end{document}
+```
+
+## 1226. pgfmath: a register before a letter is read as one longer name
+
+`sub pgfmathparse` (pgfmath.code.tex.ltxml:328) reads its argument as `ToString(Expand($tokens))`, which drops the
+space TeX's mouth skipped after a control word, so `\mydim r` (the register, then `r` for radians) becomes the name
+`\mydimr`: Perl gives `[0.0]` and 4 "\mydimr is not a register" Warnings; pdflatex `[114.59155]`, 0 `!`. PERL-ORIGIN.
+Rust: `pgfmath_input_text` keeps the space after a control word (a name of two or more characters, or a single letter,
+as tex.web's print_cs §262) before a letter, in the one parse `\pgfmathparse`, `\lx@pgfmath@parseX`,
+`\pgfmathsetmacro` and `\pgfmathsetlength` share (`pgfmath_code_tex::pgfmathparse`, `pgfmathparse_expanded`). Guards
+`perfect_kernel_batchdtl1::batchdtl1_pgfmath_rows` rows `pgfmath_space_after_control_word`,
+`pgfmath_setmacro_parses_as_pgfmathparse`. Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{pgf}
+\newdimen\mydim \mydim=2pt
+\begin{document}
+\pgfmathparse{\mydim r}[\pgfmathresult]
+\end{document}
+```

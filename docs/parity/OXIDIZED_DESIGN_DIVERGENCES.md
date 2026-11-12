@@ -35085,7 +35085,10 @@ register's own getter, units declared), and also reads decimal digits after `\wd
 `\wd0`: pdflatex 50.0 for a 50pt box, Perl 0.0. Reason: content (the value pgf computes). Before the port the rule was
 missing, `\wd\box` read 0, and tikzscale's measuring loop (tikzscale.sty:392, 522-524) scaled every picture by
 `\requestedSize/0`, clamped to 16383.99998 (2010.05701, 2205.15714, 2311.08887, 2604.09771). Fit's
-`.5\dp\pgfnodeparttextbox` (tikzlibraryfit.code.tex:74) reads the node's declared size since DTL1a. Repros `graphics-tikz/pgfmath_box_dimensions.tex`, `pgfmath_tikzscale_width.tex`; guard
+`.5\dp\pgfnodeparttextbox` (tikzlibraryfit.code.tex:74) reads the node's declared size since DTL1a. A box named by
+an expl3 register (`\wd\l_my_box`) is read by `try_cs_register`'s expl3-name rule (`cs_name_len`, DTL1e): pdflatex
+80.0 for twice a 40pt box, Perl 16383.99998 with 2 Errors (repro `pgfmath_box_named_by_expl3.tex`).
+Repros `graphics-tikz/pgfmath_box_dimensions.tex`, `pgfmath_tikzscale_width.tex`; guard
 `perfect_kernel_batchdtl1::batchdtl1_pgfmath_rows`.
 
 ### 1005. `\meaning` of a macro coded in the host language prints `CODE(<name>)`, with no address (QA89)

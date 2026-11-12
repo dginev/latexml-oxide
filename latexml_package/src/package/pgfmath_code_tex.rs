@@ -837,7 +837,7 @@ fn is_user_function(name: &str) -> bool {
 //   formula     : expr ? expr : expr | expr CMP expr | expr
 //   expr        : term (ADDOP term)*
 //   term        : factor (MULOP factor)*
-//   factor      : simplefactor ^ simplefactor | simplefactor postfix*
+//   factor      : simplefactor (^ simplefactor | !)*   (postfix ! and r wait for the ^ chain after them)
 //   simplefactor: ( formula ) | PREFIX simplefactor | FUNCTION(...) |
 //                 FUNCTION0 | NUMBER UNIT | NUMBER | REGISTER
 
@@ -1383,16 +1383,19 @@ mod pgfmath_grammar {
     Ok(result)
   }
 
-  /// term := factor (('*'|'/') factor | 'r')* — postfix `r` (deg, precedence 600) is below `*` and `/` (700) and
-  /// applies to the product so far (pgfmathparser.code.tex:900-919: `4/2r` is (4/2)r, 114.59155 in pdflatex).
+  /// term := factor (('*'|'/') factor | 'r' power_tail)* — postfix `r` (deg, 600) is below `*`/`/` (700), `!` (800)
+  /// and `^` (900): pgf's operator stack holds it until the term ends, so it applies to the product so far and to the
+  /// powers and factorials after it (`4/2r` (4/2)r, `3*2r^2` ((3*2)^2)r; pgfmathparser.code.tex:765-790, 900-919).
   fn term(i: &mut In) -> ModalResult<f64> {
     let mut result = factor(i)?;
+    let mut degrees = 0;
     loop {
       sb(i);
       match first(i) {
         Some(b'r') if !second(i).map(|c| c.is_ascii_alphabetic()).unwrap_or(false) => {
           bump(i, 1);
-          result = result.to_degrees();
+          degrees += 1;
+          result = power_tail(i, result)?;
           i.state.int_result = false;
         },
         Some(b'*') => {
@@ -1415,13 +1418,22 @@ mod pgfmath_grammar {
         _ => break,
       }
     }
+    for _ in 0..degrees {
+      result = result.to_degrees();
+    }
     Ok(result)
   }
 
-  /// factor := simplefactor ('^' simplefactor | '!')* — `^` (precedence 900) left-associative (`2^3^2` 64.0), postfix
-  /// `!` (800) on the power (`2^2!` 24.0) (pgfmathparser.code.tex:902, 918; pdflatex).
+  /// factor := simplefactor power_tail
   fn factor(i: &mut In) -> ModalResult<f64> {
-    let mut result = simplefactor(i)?;
+    let base = simplefactor(i)?;
+    power_tail(i, base)
+  }
+
+  /// power_tail := ('^' simplefactor | '!')* — `^` (900) left-associative (`2^3^2` 64.0); a postfix `!` (800) waits
+  /// on the stack for the `^` chain after it, so it applies to the whole power (`2^2!` 24.0, `2!^2` (2^2)! 24.0).
+  fn power_tail(i: &mut In, mut result: f64) -> ModalResult<f64> {
+    let mut factorials = 0;
     loop {
       sb(i);
       match first(i) {
@@ -1435,11 +1447,14 @@ mod pgfmath_grammar {
         },
         Some(b'!') if second(i) != Some(b'=') => {
           bump(i, 1);
-          result = pgfmath_factorial(result as i64);
+          factorials += 1;
           i.state.int_result = false;
         },
         _ => break,
       }
+    }
+    for _ in 0..factorials {
+      result = pgfmath_factorial(result as i64);
     }
     Ok(result)
   }
@@ -1883,7 +1898,7 @@ mod pgfmath_grammar {
   /// pgfplots ybar witnesses on the original implementation). An expl3 name
   /// (`\l_tmpa_dim`, `\c_pgfinterference_delta_dim`) is ONE control sequence
   /// in the tokens `\pgfmathparse` received; the string round-trip
-  /// (`expanded.to_string()`) plus this alphabetic-only scan split it at `_`
+  /// (`pgfmath_input_text`) plus this alphabetic-only scan split it at `_`
   /// and looked up `\l`/`\c` — 200k "not a register" warnings and zero
   /// geometry per pixel on pgf-interference (412 s; Perl pgfmath.code.tex
   /// .ltxml:704 splits the same way, pdflatex reads the register token). When
@@ -1891,28 +1906,7 @@ mod pgfmath_grammar {
   /// Guard: `perfect_kernel_batch56::pgfmath_reads_expl3_register_names`.
   fn try_cs_register(i: &mut In) -> Option<f64> {
     sb(i);
-    let b = i.input.as_bytes();
-    if b.first() != Some(&b'\\') {
-      return None;
-    }
-    let n_long = b[1..]
-      .iter()
-      .take_while(|c| c.is_ascii_alphabetic() || matches!(**c, b'@' | b'_' | b':'))
-      .count();
-    let n = b[1..]
-      .iter()
-      .take_while(|c| c.is_ascii_alphabetic() || **c == b'@')
-      .count();
-    if n == 0 {
-      return None;
-    }
-    if n_long > n && ::latexml_core::state::lookup_register_quiet(&i.input[..1 + n_long]).is_some()
-    {
-      let value = pgfmath_register_lookup(&i.input[..1 + n_long]);
-      bump(i, 1 + n_long);
-      i.state.units_declared = true;
-      return Some(value);
-    }
+    let n = cs_name_len(i.input)?;
     let cs = &i.input[..1 + n];
     if matches!(cs, "\\wd" | "\\ht" | "\\dp") {
       let dimension = cs;
@@ -1930,31 +1924,46 @@ mod pgfmath_grammar {
     Some(value)
   }
 
-  /// The box after `\wd`/`\ht`/`\dp`: a register holding its number (`\wd\mybox`, Perl's `/\\wd/ CS`,
-  /// pgfmath.code.tex.ltxml:696-701, tikzscale.sty:522-524 `\pgfmathsetmacro{#1}{#2\tikzscale@measuredSize}`), or
-  /// decimal digits (`\wd0`, which TeX and pgf read; Perl's grammar reads none and returns 0).
-  fn box_number(i: &mut In) -> Option<i64> {
-    let b = i.input.as_bytes();
-    let spaces = b.iter().take_while(|c| **c == b' ').count();
-    let rest = &b[spaces..];
-    if rest.first() == Some(&b'\\') {
-      let n = rest[1..]
+  /// The name's length after the `\` of the control sequence `input` starts with: the `[a-zA-Z@]` run, or the longer
+  /// `[a-zA-Z@_:]` run when that names a live register (an expl3 name, see `try_cs_register`); `None` for no name.
+  fn cs_name_len(input: &str) -> Option<usize> {
+    let b = input.as_bytes().strip_prefix(b"\\")?;
+    let n = b
+      .iter()
+      .take_while(|c| c.is_ascii_alphabetic() || **c == b'@')
+      .count();
+    if n == 0 {
+      return None;
+    }
+    let n_long = n
+      + b[n..]
         .iter()
-        .take_while(|c| c.is_ascii_alphabetic() || **c == b'@')
+        .take_while(|c| c.is_ascii_alphabetic() || matches!(**c, b'@' | b'_' | b':'))
         .count();
-      if n == 0 {
-        return None;
-      }
-      let cs = &i.input[spaces..spaces + 1 + n];
-      let number = pgfmath_register_lookup(cs) as i64;
+    let long_register =
+      n_long > n && ::latexml_core::state::lookup_register_quiet(&input[..1 + n_long]).is_some();
+    Some(if long_register { n_long } else { n })
+  }
+
+  /// The box after `\wd`/`\ht`/`\dp`: a register holding its number (`\wd\mybox`, an expl3 `\wd\l_my_box`; Perl's
+  /// `/\\wd/ CS`, pgfmath.code.tex.ltxml:696-701; tikzscale.sty:522-524), or decimal digits (`\wd0`, which TeX and pgf
+  /// read; Perl's grammar reads none and returns 0).
+  fn box_number(i: &mut In) -> Option<i64> {
+    let spaces = i.input.bytes().take_while(|c| *c == b' ').count();
+    let rest = &i.input[spaces..];
+    if let Some(n) = cs_name_len(rest) {
+      let number = pgfmath_register_lookup(&rest[..1 + n]) as i64;
       bump(i, spaces + 1 + n);
       return Some(number);
     }
-    let digits = rest.iter().take_while(|c| c.is_ascii_digit()).count();
+    if rest.starts_with('\\') {
+      return None;
+    }
+    let digits = rest.bytes().take_while(|c| c.is_ascii_digit()).count();
     if digits == 0 {
       return None;
     }
-    let number = i.input[spaces..spaces + digits].parse().ok()?;
+    let number = rest[..digits].parse().ok()?;
     bump(i, spaces + digits);
     Some(number)
   }
@@ -2060,51 +2069,86 @@ fn format_parse_result(result: f64, input: &str) -> String {
   s
 }
 
-/// Expand the argument to a pgfmath parse with the seven calc-package
-/// compatibility CSes (`\real`, `\minof`, `\maxof`, `\ratio`, `\widthof`,
-/// `\heightof`, `\depthof`) transiently `\let` to the `\pgfmath@calc@*`
-/// internals, then restored to their prior meanings.
-///
-/// Perl `pgfmath.code.tex.ltxml` L320-327 performs these `Let`s at the *start
-/// of `sub pgfmathparse`* — i.e. only while the pgfmath argument is being
-/// expanded; being local (non-`global`) `Let`s they revert with the enclosing
-/// tikz/pgf group. The earlier Rust port hoisted them to package-load time
-/// (because the native parser "can't re-bind per call"), which globally
-/// clobbered `\real` (and the six siblings) for the *whole document*. That
-/// broke the very common use of `\real` as the blackboard-ℝ symbol: e.g.
-/// `\int_\real p_m`, where the 1-argument `\pgfmath@calc@real` ate the
-/// following `p` as its argument and yielded a spurious "Double subscript".
-/// Witness: 1608.06741 (`\newcommand\real{\mathbb{R}}`, ignored because
-/// mathtools→calc already defined `\real`, then pgfmath via todonotes→tikz
-/// clobbered it). We restore Perl's exact scope with a tight
-/// save → let → expand → restore around just this one expansion, so `\real`
-/// used as an ordinary math macro elsewhere is never touched.
-fn expand_pgfmath_arg<T: Into<Tokens>>(tokens: T) -> Tokens {
-  const PAIRS: [(&str, &str); 7] = [
-    ("\\real", "\\pgfmath@calc@real"),
-    ("\\minof", "\\pgfmath@calc@minof"),
-    ("\\maxof", "\\pgfmath@calc@maxof"),
-    ("\\ratio", "\\pgfmath@calc@ratio"),
-    ("\\widthof", "\\pgfmath@calc@widthof"),
-    ("\\heightof", "\\pgfmath@calc@heightof"),
-    ("\\depthof", "\\pgfmath@calc@depthof"),
-  ];
-  let saved: Vec<(Token, Stored)> = PAIRS
-    .iter()
-    .map(|(cs, _)| {
-      let t = T_CS!(*cs);
-      let m = lookup_meaning(&t).unwrap_or(Stored::None);
-      (t, m)
-    })
-    .collect();
-  for (cs, helper) in PAIRS.iter() {
-    let_i(&T_CS!(*cs), &T_CS!(*helper), None);
+/// The seven calc-package names pgf `\let`s to its own for a parse (pgfmathparser.code.tex:124-130).
+const CALC_COMPAT: [(&str, &str); 7] = [
+  ("\\real", "\\pgfmath@calc@real"),
+  ("\\minof", "\\pgfmath@calc@minof"),
+  ("\\maxof", "\\pgfmath@calc@maxof"),
+  ("\\ratio", "\\pgfmath@calc@ratio"),
+  ("\\widthof", "\\pgfmath@calc@widthof"),
+  ("\\heightof", "\\pgfmath@calc@heightof"),
+  ("\\depthof", "\\pgfmath@calc@depthof"),
+];
+
+/// pgf `\let`s the calc names in `\pgfmathparse@@` (pgfmathparser.code.tex:124-130), after its edef expanded the
+/// argument (:54): a user's `\newcommand\ratio{0.5}` reads as 0.5, and only a calc name the edef left reads as pgf's.
+/// Perl lets them first (KNOWN_PERL_ERRORS #1225). Per parse, never for the document: `\real` as ℝ (1608.06741).
+fn calc_compat_expand(expanded: Tokens) -> Result<Tokens> {
+  let names: [Token; 7] = CALC_COMPAT.map(|(cs, _)| T_CS!(cs));
+  if !expanded.unlist_ref().iter().any(|t| names.contains(t)) {
+    return Ok(expanded);
   }
-  let expanded = do_expand(tokens).unwrap_or_default();
+  let saved: Vec<(Token, Stored)> = names
+    .iter()
+    .map(|t| (*t, lookup_meaning(t).unwrap_or(Stored::None)))
+    .collect();
+  for (name, (_, helper)) in names.iter().zip(CALC_COMPAT) {
+    let_i(name, &T_CS!(helper), None);
+  }
+  let reexpanded = do_expand(expanded);
   for (t, m) in saved {
     assign_meaning(&t, m, None);
   }
-  expanded
+  reexpanded
+}
+
+/// Perl's `sub pgfmathparse` (pgfmath.code.tex.ltxml:316-394), which `\pgfmathparse`, `\lx@pgfmath@parseX` and
+/// `\pgfmathsetmacro` share: expand, read the text, evaluate; returns the result and whether units were declared.
+pub(crate) fn pgfmathparse(tokens: Tokens) -> Result<(String, bool)> {
+  pgfmathparse_expanded(do_expand(tokens)?)
+}
+
+/// `pgfmathparse` on an argument its caller expanded (`\pgfmathsetlength` looks for pgf's `+` first). Sets both
+/// units flags globally, as pgf's parse does (pgfmathparser.code.tex:51-52, 443-503); no `mu` is read yet.
+pub(crate) fn pgfmathparse_expanded(expanded: Tokens) -> Result<(String, bool)> {
+  let (result, units) =
+    pgfmathparse_eval_with_units(&pgfmath_input_text(calc_compat_expand(expanded)?));
+  set_condition(
+    &T_CS!("\\ifpgfmathunitsdeclared"),
+    units,
+    Some(Scope::Global),
+  );
+  set_condition(
+    &T_CS!("\\ifpgfmathmathunitsdeclared"),
+    false,
+    Some(Scope::Global),
+  );
+  Ok((result, units))
+}
+
+/// The parser's text of an expanded argument: its string, keeping the space TeX's mouth skipped after a control word
+/// where a letter follows (`\mydim r` is `\mydim` then `r`, not `\mydimr` as Perl's pgfmath.code.tex.ltxml:328 reads;
+/// KNOWN_PERL_ERRORS #1226).
+fn pgfmath_input_text(tokens: Tokens) -> String {
+  let mut spaced = Vec::with_capacity(tokens.unlist_ref().len());
+  let mut after_control_word = false;
+  for t in tokens.unlist() {
+    let code = t.get_catcode();
+    if after_control_word && code == Catcode::LETTER {
+      spaced.push(T_SPACE!());
+    }
+    // A control word as tex.web's print_cs (§262) reads one: a name of two or more characters, or a single letter.
+    after_control_word = code == Catcode::CS
+      && t.with_str(|name| {
+        let mut chars = name.strip_prefix('\\').unwrap_or(name).chars();
+        match (chars.next(), chars.next()) {
+          (Some(c), None) => lookup_catcode(c) == Some(Catcode::LETTER),
+          (first, _) => first.is_some(),
+        }
+      });
+    spaced.push(t);
+  }
+  Tokens::new(spaced).to_string()
 }
 
 /// Main pgfmathparse evaluation function
@@ -2177,8 +2221,9 @@ pub(crate) fn pgfmathparse_eval_with_units(raw_input: &str) -> (String, bool) {
   ("0.0".to_string(), false)
 }
 
-/// Convenience wrapper that returns only the result string
-pub fn pgfmathparse_eval(raw_input: &str) -> String { pgfmathparse_eval_with_units(raw_input).0 }
+/// The result string alone, for the golden rows.
+#[cfg(test)]
+fn pgfmathparse_eval(raw_input: &str) -> String { pgfmathparse_eval_with_units(raw_input).0 }
 
 /// Detect string-valued pgfmath ternaries `<test> ? "a" : "b"` or
 /// `ifthenelse(<test>, "a", "b")` and return the chosen literal.
@@ -2451,25 +2496,14 @@ LoadDefinitions!({
   // `sub pgfmathparse` — transiently, per parse, with local scope. They are
   // deliberately NOT bound at package-load time: doing so globally clobbers
   // `\real` (commonly `\mathbb{R}`) and friends for the whole document. See
-  // `expand_pgfmath_arg`, which replicates the exact transient scope around
-  // the pgfmath argument expansion.
+  // `calc_compat_expand`, which binds them for the one parse, after its
+  // expansion as pgf does.
 
   // ==================== pgfmathparse override ====================
   // Perl L401-403: DefMacro('\lx@pgfmath@parse{}', sub { ... })
   DefMacro!("\\lx@pgfmath@parse {}", sub[(tokens)] {
-    // Expand tokens and convert to string. The seven calc-compat CSes are
-    // transiently bound only for this expansion (Perl `sub pgfmathparse`).
-    let expanded = expand_pgfmath_arg(tokens);
-    let input = expanded.to_string();
-    let (result, units) = pgfmathparse_eval_with_units(&input);
-    let mut toks = pgfmath_result_tokens_str(&result);
-    // Perl: \ifpgfmathunitsdeclared flag — used by tikz's \tikz@checkunit
-    if units {
-      toks.push(T_CS!("\\pgfmathunitsdeclaredtrue"));
-    } else {
-      toks.push(T_CS!("\\pgfmathunitsdeclaredfalse"));
-    }
-    toks
+    let (result, _units) = pgfmathparse(tokens)?;
+    pgfmath_result_tokens_str(&result)
   });
 
   // Perl L442: Let('\pgfmathparse', '\lx@pgfmath@parse');
@@ -2477,9 +2511,7 @@ LoadDefinitions!({
 
   // Perl L396-399: \lx@pgfmath@parseX (alternative that uses \lx@pgfmathresult)
   DefMacro!("\\lx@pgfmath@parseX {}", sub[(tokens)] {
-    let expanded = expand_pgfmath_arg(tokens);
-    let input = expanded.to_string();
-    let result = pgfmathparse_eval(&input);
+    let (result, _units) = pgfmathparse(tokens)?;
     let mut toks = vec![T_CS!("\\def"), T_CS!("\\lx@pgfmathresult"), T_BEGIN!()];
     toks.extend(Explode!(result));
     toks.push(T_END!());
@@ -2519,8 +2551,7 @@ LoadDefinitions!({
     // `\pgfmathsetlength\d{+.5\wd0}` = 3.75pt). Witnesses: arXiv 1709.07916 /
     // 1912.13052 / 2004.14791 / 1312.6499 (STABILITY_WITNESSES Cluster E).
     let toks: Vec<Token> =
-      do_expand(Tokens::new(tokens.unlist_ref().clone()))
-        .unwrap_or_default()
+      do_expand(Tokens::new(tokens.unlist_ref().clone()))?
         .unlist_ref()
         .iter()
         .skip_while(|t| t.get_catcode() == Catcode::SPACE)
@@ -2573,11 +2604,9 @@ LoadDefinitions!({
         unread(Tokens::new(rest));
       }
     } else {
-      // Evaluate via pgfmathparse (tokens already expanded above); its units are
-      // `\pgfmath@selectfont`'s (`pgfmath_convert`), and its units flag outlives it, as pgf's parse
-      // smuggles it out of its group.
-      let input = Tokens::new(toks).to_string();
-      let (result_str, _units) = pgfmathparse_eval_with_units(&input);
+      // pgf's `\pgfmathparse{#2}` (pgfmathcalc.code.tex:40) on the tokens expanded above; its units are
+      // `\pgfmath@selectfont`'s (`pgfmath_convert`), and it sets both units flags globally.
+      let (result_str, _units) = pgfmathparse_expanded(Tokens::new(toks))?;
       let value: f64 = result_str.parse().unwrap_or(0.0);
 
       // Perl L419-422: check \ifpgfmathmathunitsdeclared for mu units
@@ -2729,7 +2758,7 @@ mod pgfmath_golden_tests {
       ("2*3pt", "6.0@u"),
       // DTL1: pgf's operator precedences (pgfmathparser.code.tex:898-919, `neg` 500 at
       // pgfmathfunctions.basic.code.tex:46-49): unary minus negates the whole term after it, `^` is
-      // left-associative under a postfix `!`, `r` applies to the product so far. pdflatex/pgf TL2025
+      // left-associative, `r` applies to the product so far. pdflatex/pgf TL2025
       // values; where pgf's own series rounds the last digit the row says so (2311.02367).
       ("-2^2", "-4.0@-"),
       ("-3!", "-6.0@-"),
@@ -2746,8 +2775,21 @@ mod pgfmath_golden_tests {
       ("2^3^2", "64.0@-"),
       ("2^2!", "24.0@-"),
       ("-2^2!", "-24.0@-"),
-      ("4/2r", "114.59156@-"),   // pdflatex 114.59155
-      ("1+2*3r", "344.77468@-"), // pdflatex 344.77466
+      // `r`'s last digit: our f64 against pgf's fixed-point TeX dimens (pdflatex 114.59155, 344.77466).
+      ("4/2r", "114.59156@-"),
+      ("1+2*3r", "344.77468@-"),
+      // DTL1e: a postfix `!` or `r` waits for the stronger operators after it (pgfmathparser.code.tex:765-790); the
+      // pdflatex values of `graphics-tikz/pgfmath_postfix_before_power.tex` and its siblings (revDTL1b S1, P3).
+      ("2!^2", "24.0@-"),
+      ("2!^2*3", "72.0@-"),
+      ("-2!^2", "-24.0@-"),
+      ("2r^2", "229.18312@-"),    // pdflatex 229.1831
+      ("-2r^2", "-229.18312@-"),  // pdflatex -229.1831
+      ("3r^2", "515.66202@-"),    // pdflatex 515.66199
+      ("3*2r^2", "2062.64806@-"), // pdflatex 2062.64795
+      ("2r^2!", "1375.09871@-"),  // pdflatex 1375.09863
+      ("3r!", "343.77468@-"),     // pdflatex 343.77466
+      ("-1r!", "-57.29578@-"),
     ];
     for (expr, expected) in golden {
       assert_eq!(&describe(expr), expected, "pgfmath diverged on {expr:?}");

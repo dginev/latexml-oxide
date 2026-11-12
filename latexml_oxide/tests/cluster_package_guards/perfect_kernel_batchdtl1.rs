@@ -96,6 +96,106 @@ const ROWS: &[Row] = &[
     )],
     holds:    &[],
   },
+  // A (value side, DTL1e): a box named by an expl3 register, `\wd\l_my_box*2`, read by `try_cs_register`'s
+  // expl3-name rule (revDTL1b S2); pdflatex 0 `!`, A[80.0]. Read as `\l` then box 0: A[30.0], 1 Warning.
+  Row {
+    name:     "pgfmath_box_named_by_expl3",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/graphics-tikz/pgfmath_box_named_by_expl3.tex"
+    ),
+    files:    &[],
+    counts:   (0, 0),
+    messages: &[],
+    elements: &[(
+      "para",
+      "xml:id=\"p1\"",
+      r#"<para xml:id="p1"><p xml:id="p1.1">A[80.0]</p></para>"#,
+    )],
+    holds:    &[],
+  },
+  // The tokens-to-text hand-off (DTL1e): a control word's skipped space is kept before a letter, so `\mydim r` and
+  // `\wd\mybox r` read the register and the box, then `r` (revDTL1b P1); pdflatex 0 `!`. Welded to `\mydimr`: [0.0]
+  // three times, silently.
+  Row {
+    name:     "pgfmath_space_after_control_word",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/graphics-tikz/pgfmath_space_after_control_word.tex"
+    ),
+    files:    &[],
+    counts:   (0, 0),
+    messages: &[],
+    elements: &[(
+      "para",
+      "xml:id=\"p1\"",
+      r#"<para xml:id="p1"><p xml:id="p1.1">[114.59156][2291.83118][229.18312]</p></para>"#,
+    )],
+    holds:    &[],
+  },
+  // One parse for `\pgfmathparse` and `\pgfmathsetmacro` (DTL1f, revDTL1e B1): pdflatex [114.59155] on both sides
+  // (our last digit is f64 arithmetic, pgf's TeX's fixed-point dimens); read apart, [0.0].
+  // The `\widthof` twins err in TeX: RED `pgfmath_calc_names_err_in_tex_red.tex` (revDTL1f S1).
+  Row {
+    name:     "pgfmath_setmacro_parses_as_pgfmathparse",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/graphics-tikz/pgfmath_setmacro_parses_as_pgfmathparse.tex"
+    ),
+    files:    &[],
+    counts:   (0, 0),
+    messages: &[],
+    elements: &[(
+      "para",
+      "xml:id=\"p1\"",
+      r#"<para xml:id="p1"><p xml:id="p1.1">[114.59156][114.59156]</p></para>"#,
+    )],
+    holds:    &[],
+  },
+  // pgf expands, then lets calc's names (revDTL1f B1): a user's `\ratio`/`\real` at every entry point, the `+` path
+  // unparsed; the pdflatex values. Letting first (DTL1f, Perl): [0.0][1][0.0pt][0][0.0] [345.0pt][345.0pt]….
+  Row {
+    name:     "pgfmath_expands_before_calc_lets",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/graphics-tikz/pgfmath_expands_before_calc_lets.tex"
+    ),
+    files:    &[],
+    counts:   (0, 0),
+    messages: &[],
+    elements: &[
+      (
+        "para",
+        "xml:id=\"p1\"",
+        r#"<para xml:id="p1"><p xml:id="p1.1">[5.0][4.0][5.0pt][5][5.0]</p></para>"#,
+      ),
+      (
+        "para",
+        "xml:id=\"p2\"",
+        r#"<para xml:id="p2"><p xml:id="p2.1">[172.5pt][177.5pt][5.0pt][0.5pt]</p></para>"#,
+      ),
+    ],
+    holds:    &[],
+  },
+  // Every parse sets both units flags globally (revDTL1f P1): the pdflatex flags; DTL1f [N][Y][N][Y] [Y][Y][Y].
+  Row {
+    name:     "pgfmath_parse_sets_units_flags_globally",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/graphics-tikz/pgfmath_parse_sets_units_flags_globally.tex"
+    ),
+    files:    &[],
+    counts:   (0, 0),
+    messages: &[],
+    elements: &[
+      (
+        "para",
+        "xml:id=\"p1\"",
+        r#"<para xml:id="p1"><p xml:id="p1.1">[Y][N][Y][N]</p></para>"#,
+      ),
+      (
+        "para",
+        "xml:id=\"p2\"",
+        r#"<para xml:id="p2"><p xml:id="p2.1">[Y][N][Y]</p></para>"#,
+      ),
+    ],
+    holds:    &[],
+  },
   // The error side: a dimension TeX cannot hold still reports "Dimension too large" (pdflatex 1 `!`; Perl 0 and
   // 20000.0pt). A Warning today; the out-of-range severity batch makes it an Error.
   Row {

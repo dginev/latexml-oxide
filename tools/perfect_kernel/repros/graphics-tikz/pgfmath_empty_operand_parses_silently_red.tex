@@ -1,0 +1,14 @@
+% mechanism: an expression with no operand before an operator (`*/10`) is no pgfmath expression: pgf stops on
+%   "Missing number" and Perl raises Error:pgfparse; ours returns 0.0 with no diagnostic (revDTL1f P2).
+% witness: synthetic
+% oracle:  pdflatex 2 `!` (Missing number, treated as zero ×2), [0.0]; Perl 1 Error (pgfparse: Parse of '*/10'
+%   failed), [0]
+% engines: rust DTL1f, DTL1g: [0.0], 0 errors, 0 warnings
+% expect:  [0.0] and a counted Error
+% status:  RED (DTL1f, DTL1g)
+% moves:   EB1 makes it a row of `perfect_kernel_error_boundary` (Error side).
+\documentclass{article}
+\usepackage{pgf}
+\begin{document}
+\pgfmathparse{*/10}[\pgfmathresult]
+\end{document}

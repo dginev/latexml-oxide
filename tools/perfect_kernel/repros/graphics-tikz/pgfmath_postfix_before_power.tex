@@ -1,0 +1,16 @@
+% mechanism: pgfmath precedence: `^` 900, postfix `!` 800, `r` 600. pgf's operator stack holds a postfix operator until
+%   the stronger operators after it are reduced (pgfmathparser.code.tex:765-790), so `2!^2` = (2^2)!, `2r^2` = (2^2)r,
+%   `3*2r^2` = ((3*2)^2)r and `-1r!` = -((1!)r); `power_tail` and `term` collect them (revDTL1b S1, P3).
+% witness: synthetic (no corpus reach found)
+% oracle:  pdflatex 0 `!`: [24.0] [229.1831] [-229.1831] [515.66199] [2062.64795] [-57.29578]; Perl 6 Errors (5 pgfparse
+%   failed, 1 overflow), [2] [114.59156] [-114.59156] [171.88734] [343.77468] [-5040.0]
+% engines: rust DTL1b, int161a: [4.0] [114.59156] [13131.2254] [171.88734] [343.77468] [0.0], 1 Error (`-57!` overflow);
+%   DTL1a/int160b: [2.0] [114.59156] [-114.59156] [171.88734]
+% expect:  0 errors 0 warnings; pdflatex's values to the last digit pgf rounds
+% status:  RED (int160b, DTL1a, DTL1b, int161a) -> GREEN (DTL1e; the values are rows of `pgfmath_golden_tests`)
+\documentclass{article}
+\usepackage{pgf}
+\begin{document}
+\def\T#1{\pgfmathparse{#1}\detokenize{#1}=[\pgfmathresult]\par}
+\T{2!^2}\T{2r^2}\T{-2r^2}\T{3r^2}\T{3*2r^2}\T{-1r!}
+\end{document}
