@@ -236,29 +236,18 @@ fn skip_script_operand(tokens: &[Token], i: usize) -> usize {
   }
 }
 
-/// The index after the brace group (or single token) at `i`.
-pub(in crate::base_utilities) fn skip_group(tokens: &[Token], mut i: usize) -> usize {
-  if tokens
-    .get(i)
-    .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
-  {
-    let mut depth = 0i32;
-    while i < tokens.len() {
-      match tokens[i].get_catcode() {
-        Catcode::BEGIN => depth += 1,
-        Catcode::END => {
-          depth -= 1;
-          if depth == 0 {
-            return i + 1;
-          }
-        },
-        _ => {},
-      }
-      i += 1;
-    }
-    i
-  } else {
-    i + 1
+/// The index after the brace group (or single token) at `i`; the end of `tokens` for a group that never closes.
+pub(in crate::base_utilities) fn skip_group(tokens: &[Token], i: usize) -> usize {
+  match tokens_group_end(tokens, i) {
+    Some(end) => end,
+    None
+      if tokens
+        .get(i)
+        .is_some_and(|t| t.get_catcode() == Catcode::BEGIN) =>
+    {
+      tokens.len()
+    },
+    None => i + 1,
   }
 }
 

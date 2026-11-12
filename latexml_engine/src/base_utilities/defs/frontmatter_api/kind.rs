@@ -74,7 +74,7 @@ pub(in crate::base_utilities) fn kind_entry_addresses(
       .then(|| line_addresses(line))
       .flatten()
       .filter(|addresses| {
-        balanced(line.unlist_ref())
+        line.is_balanced()
           && addresses
             .iter()
             .all(|a| !is_pattern_address(a) && !lists_local_parts(a))
@@ -324,20 +324,6 @@ fn note_addresses(note: &Tokens) -> Option<(Option<Tokens>, Tokens)> {
     label.push(T_OTHER!(":"));
     (Some(Tokens::new(label)), rest)
   })
-}
-
-/// Whether `tokens` closes every group it opens, none before it opens it.
-fn balanced(tokens: &[Token]) -> bool {
-  let mut depth = 0usize;
-  for t in tokens {
-    match t.get_catcode() {
-      Catcode::BEGIN => depth += 1,
-      Catcode::END if depth == 0 => return false,
-      Catcode::END => depth -= 1,
-      _ => {},
-    }
-  }
-  depth == 0
 }
 
 /// The commands a line of addresses alone prints them with, beside the font and size commands

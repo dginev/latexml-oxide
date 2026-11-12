@@ -79,6 +79,107 @@ pub(in crate::base_utilities) const API_CUT: CutParameters = CutParameters {
   shared_parts:           true,
 };
 
+/// The Cut of `content`, a contact of `role` annotating `parenttag` with the call's attributes `call_attr`, as `parameters`
+/// read its list ([`cut_marked_contact`]); `None` for a list they leave whole.
+pub(in crate::base_utilities) fn cut_list(
+  parenttag: &Tokens,
+  tag: &Tokens,
+  role: &str,
+  call_attr: Tokens,
+  content: &Tokens,
+  parameters: &CutParameters,
+) -> Result<Option<Tokens>> {
+  // (the content inside the affiliation's own wrapper, `\lx@add@affiliation`'s `\lx@affiliation@withinst{…}`, which
+  // each entry keeps)
+  let (withinst, list) = within_inst(content);
+  if list.unlist_ref().iter().find(|t| **t != T_SPACE!())
+    == Some(&T_CS!("\\lx@affiliation@withsup"))
+  {
+    return Ok(None);
+  }
+  let list = printed_marks_as_marks(list);
+  let RequestedEntries { labels: requested, first_start } =
+    requested_entry_labels(&list, "cut_list")?;
+  if !parameters.every_mark && requested.len() < 2 {
+    return Ok(None);
+  }
+  // (one printed list, one Cut: a list repeated after each author's name, 2312.02779's five identical
+  // `\affiliation{{$^1$}…Belfast…\\ {$^2$}…Trinity…}`, is cut once — a later copy adds no entries, as the cut one's
+  // reach every author requesting their marks by label, and the copies queued before the cut, uncut while too few names
+  // were queued to request two of its marks, give way to it once it is cut: review rev99a2 B1, [`place_uncut_copies`])
+  let key = cut_list_key(parenttag, role, &list);
+  if cut_list_queued(&key) {
+    place_uncut_copies(parenttag, role, &key, &requested)?;
+    DebugFeature!(
+      "frontmatter",
+      "FRONT cut {role}: a copy of a list already cut"
+    );
+    return Ok(Some(Tokens::new(Vec::new())));
+  }
+  // (the parts after a wrapper that holds the entries, `\institution{$^1$A \quad $^2$B}\country{X}`: an address part
+  // every entry shares, repeated on each as the opening declarations are; a part holding a link, `\country{Project page:
+  // \href{…}{…}}`, the block's, once — review rev99a S3, 2506.18881)
+  let (list, closing, block_parts) = if parameters.shared_parts {
+    shared_closing_parts(list)
+  } else {
+    (list, Vec::new(), Vec::new())
+  };
+  let list = if parameters.trim_closing_separator {
+    Tokens::new(trim_trailing_separator(list.unlist()))
+  } else {
+    list
+  };
+  // (the declarations the list opens with, in force on every entry as on the whole contact — `\itshape $^1$Univ A\\
+  // $^2$Univ B`, `{\bfseries $^3$Lab C\\ $^4$Lab D}`: each entry keeps them, as the observer writer's cut keeps the font
+  // open before a piece, review rev94b r3 B1)
+  let opening = list_lead_declarations(list.unlist_ref(), first_start);
+  // (the call's own attributes, without the ones its marks replace)
+  let mut attr: Vec<Token> = Vec::new();
+  for item in split_tokens(call_attr, vec![T_OTHER!(",").into()]) {
+    let key = item.to_string();
+    let key = key.split('=').next().unwrap_or_default().trim();
+    if key.is_empty() || parameters.dropped_keys.contains(&key) {
+      continue;
+    }
+    if !attr.is_empty() {
+      attr.push(T_OTHER!(","));
+    }
+    attr.extend(item.unlist());
+  }
+  // (and the list each entry came from, [`CUT_LIST`])
+  let attr = Some(with_key(Some(Tokens::new(attr)), s!("{CUT_LIST}={key}")));
+  let (cut, entries) = (std::cell::Cell::new(0), std::cell::Cell::new(0));
+  let add = |attr: Option<Tokens>, entry: Tokens| {
+    let (marked, attr) = mark_shown_attr(attr, &entry, "true");
+    cut.set(cut.get() + usize::from(marked));
+    entries.set(entries.get() + 1);
+    let entry = with_closing(with_opening(entry, &opening), &closing);
+    annotate_call(parenttag, tag, attr, entry, withinst)
+  };
+  let call = EntryCall {
+    add:                    &add,
+    labelled_address_lines: parameters.labelled_address_lines,
+  };
+  let mut calls = entry_calls(&call, attr.clone(), attr.clone(), None, list, true, true)?;
+  // (one entry no mark labels, as the cutter reads them: the list stays whole, as the call cut again would be without end
+  // — acmart's `\institution{$^1$…}`; unmarked lines are each a call, cond-mat0206329. Nor is a list cut whose requested
+  // entries the cutter's lines do not part: the observer reads it whole by its marks — a list in a `\parbox`, 2608.21425)
+  if (cut.get() == 0 && entries.get() < 2) || (!parameters.every_mark && cut.get() < 2) {
+    return Ok(None);
+  }
+  place_uncut_copies(parenttag, role, &key, &requested)?;
+  for part in block_parts {
+    let block = with_key(attr.clone(), "label=addresses:block".to_string());
+    calls.extend(annotate_call(parenttag, tag, Some(block), part, withinst)?);
+  }
+  DebugFeature!(
+    "frontmatter",
+    "FRONT cut {role} at its marks: {}",
+    Tokens::new(calls.clone())
+  );
+  Ok(Some(Tokens::new(calls)))
+}
+
 /// The attribute naming the affiliation-kind entry an e-mail was digested inside, and the entry itself (its key, a count
 /// of such entries: `\lx@annotate@frontmatter@now`), by which the Link step reads the entry's addresses and carriers
 /// (`insert::link_entry_addresses`; OXIDIZED_DESIGN_DIVERGENCES #956).
@@ -117,6 +218,10 @@ pub(in crate::base_utilities) const ENTRY_KINDED: &str = "_kinded";
 /// ([`cut_list_key`]): a copy of the list queued again adds no entries ([`cut_list_queued`]), and an entry relocated to
 /// an author keeps the place the author's own uncut copy had (`relocate::at_queue_position`, [`CUT_COPY_PLACE`]).
 pub(in crate::base_utilities) const CUT_LIST: &str = "_cutlist";
+
+/// The state key prefix of the place (queue ordinal) an author's uncut copy of a cut list held, `{CUT_COPY_PLACE}{key}:
+/// author:{n}` ([`place_uncut_copies`], `\lx@cut@copy@place`).
+pub(in crate::base_utilities) const CUT_COPY_PLACE: &str = "lx_cut_copy_place:";
 
 /// The attribute (and a declared `Frontmatter` key) of the author block's own creator, which the frontmatter emitter
 /// writes below the names: Perl's one nameless creator holding only the block's contacts (`label=addresses:block`;

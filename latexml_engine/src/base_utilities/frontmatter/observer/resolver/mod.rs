@@ -114,22 +114,6 @@ pub enum NameJoin {
 }
 
 impl NameJoin {
-  const ALL: [NameJoin; 7] = [
-    NameJoin::Macro,
-    NameJoin::Initials,
-    NameJoin::Gap,
-    NameJoin::Layout,
-    NameJoin::Reversed,
-    NameJoin::Qualifier,
-    NameJoin::Remark,
-  ];
-
-  /// The join a tag names ([`Self::tag`]): a reading read back from its dump (the deleted `ab_audit fmshadow`), which writes a creator's
-  /// joins as their tags.
-  pub fn of_tag(tag: &str) -> Option<NameJoin> {
-    Self::ALL.into_iter().find(|join| join.tag() == tag)
-  }
-
   /// Its tag in a creator's `rule`.
   pub fn tag(self) -> &'static str {
     match self {

@@ -2,7 +2,8 @@
 //! its marks, one queued contact per entry, and the places of the uncut copies a binding printed earlier. Moved unchanged
 //! from `author_block/affiliations.rs` (Z18a): the API's own step, which every binding's contact goes through. The cutter
 //! it shares with the bindings' own lists (`entry_calls`, `printed_marks_as_marks`, `cut_list_key`, …) moved beside it,
-//! to `affiliations.rs` (Z18j).
+//! to `affiliations.rs` (Z18j). The Cut's body, which a binding's marked list calls with its declaration too
+//! (`cut_list`, OXIDIZED_DESIGN_DIVERGENCES #1009), and `CUT_COPY_PLACE` are the parent's, `defs/frontmatter_api.rs` (P6a).
 
 use super::*;
 use crate::{base_utilities::defs::frontmatter_fields::text_tokens, frontmatter_stores::cs_in};
@@ -55,107 +56,6 @@ pub(in crate::base_utilities) fn cut_marked_contact(
   cut_list(parenttag, tag, &role, kv.revert()?, content, &API_CUT)
 }
 
-/// The Cut of `content`, a contact of `role` annotating `parenttag` with the call's attributes `call_attr`, as `parameters`
-/// read its list ([`cut_marked_contact`]); `None` for a list they leave whole.
-pub(in crate::base_utilities) fn cut_list(
-  parenttag: &Tokens,
-  tag: &Tokens,
-  role: &str,
-  call_attr: Tokens,
-  content: &Tokens,
-  parameters: &CutParameters,
-) -> Result<Option<Tokens>> {
-  // (the content inside the affiliation's own wrapper, `\lx@add@affiliation`'s `\lx@affiliation@withinst{…}`, which
-  // each entry keeps)
-  let (withinst, list) = within_inst(content);
-  if list.unlist_ref().iter().find(|t| **t != T_SPACE!())
-    == Some(&T_CS!("\\lx@affiliation@withsup"))
-  {
-    return Ok(None);
-  }
-  let list = printed_marks_as_marks(list);
-  let RequestedEntries { labels: requested, first_start } =
-    requested_entry_labels(&list, "cut_list")?;
-  if !parameters.every_mark && requested.len() < 2 {
-    return Ok(None);
-  }
-  // (one printed list, one Cut: a list repeated after each author's name, 2312.02779's five identical
-  // `\affiliation{{$^1$}…Belfast…\\ {$^2$}…Trinity…}`, is cut once — a later copy adds no entries, as the cut one's
-  // reach every author requesting their marks by label, and the copies queued before the cut, uncut while too few names
-  // were queued to request two of its marks, give way to it once it is cut: review rev99a2 B1, [`place_uncut_copies`])
-  let key = cut_list_key(parenttag, role, &list);
-  if cut_list_queued(&key) {
-    place_uncut_copies(parenttag, role, &key, &requested)?;
-    DebugFeature!(
-      "frontmatter",
-      "FRONT cut {role}: a copy of a list already cut"
-    );
-    return Ok(Some(Tokens::new(Vec::new())));
-  }
-  // (the parts after a wrapper that holds the entries, `\institution{$^1$A \quad $^2$B}\country{X}`: an address part
-  // every entry shares, repeated on each as the opening declarations are; a part holding a link, `\country{Project page:
-  // \href{…}{…}}`, the block's, once — review rev99a S3, 2506.18881)
-  let (list, closing, block_parts) = if parameters.shared_parts {
-    shared_closing_parts(list)
-  } else {
-    (list, Vec::new(), Vec::new())
-  };
-  let list = if parameters.trim_closing_separator {
-    Tokens::new(trim_trailing_separator(list.unlist()))
-  } else {
-    list
-  };
-  // (the declarations the list opens with, in force on every entry as on the whole contact — `\itshape $^1$Univ A\\
-  // $^2$Univ B`, `{\bfseries $^3$Lab C\\ $^4$Lab D}`: each entry keeps them, as the observer writer's cut keeps the font
-  // open before a piece, review rev94b r3 B1)
-  let opening = list_lead_declarations(list.unlist_ref(), first_start);
-  // (the call's own attributes, without the ones its marks replace)
-  let mut attr: Vec<Token> = Vec::new();
-  for item in split_tokens(call_attr, vec![T_OTHER!(",").into()]) {
-    let key = item.to_string();
-    let key = key.split('=').next().unwrap_or_default().trim();
-    if key.is_empty() || parameters.dropped_keys.contains(&key) {
-      continue;
-    }
-    if !attr.is_empty() {
-      attr.push(T_OTHER!(","));
-    }
-    attr.extend(item.unlist());
-  }
-  // (and the list each entry came from, [`CUT_LIST`])
-  let attr = Some(with_key(Some(Tokens::new(attr)), s!("{CUT_LIST}={key}")));
-  let (cut, entries) = (std::cell::Cell::new(0), std::cell::Cell::new(0));
-  let add = |attr: Option<Tokens>, entry: Tokens| {
-    let (marked, attr) = mark_shown_attr(attr, &entry, "true");
-    cut.set(cut.get() + usize::from(marked));
-    entries.set(entries.get() + 1);
-    let entry = with_closing(with_opening(entry, &opening), &closing);
-    annotate_call(parenttag, tag, attr, entry, withinst)
-  };
-  let call = EntryCall {
-    add:                    &add,
-    labelled_address_lines: parameters.labelled_address_lines,
-  };
-  let mut calls = entry_calls(&call, attr.clone(), attr.clone(), None, list, true, true)?;
-  // (one entry no mark labels, as the cutter reads them: the list stays whole, as the call cut again would be without end
-  // — acmart's `\institution{$^1$…}`; unmarked lines are each a call, cond-mat0206329. Nor is a list cut whose requested
-  // entries the cutter's lines do not part: the observer reads it whole by its marks — a list in a `\parbox`, 2608.21425)
-  if (cut.get() == 0 && entries.get() < 2) || (!parameters.every_mark && cut.get() < 2) {
-    return Ok(None);
-  }
-  place_uncut_copies(parenttag, role, &key, &requested)?;
-  for part in block_parts {
-    let block = with_key(attr.clone(), "label=addresses:block".to_string());
-    calls.extend(annotate_call(parenttag, tag, Some(block), part, withinst)?);
-  }
-  DebugFeature!(
-    "frontmatter",
-    "FRONT cut {role} at its marks: {}",
-    Tokens::new(calls.clone())
-  );
-  Ok(Some(Tokens::new(calls)))
-}
-
 /// `_markshown`'s value for an entry that shows its mark where the names show its label (the binding lists' cutter,
 /// `affiliation_calls`); the Cut's show theirs (`true`). Read at `\lx@annotate@frontmatter@now`.
 pub(super) const MARK_SHOWN_WITH_NAMES: &str = "names";
@@ -184,7 +84,7 @@ pub(super) fn mark_shown_attr(
 }
 
 /// `attr` with `key` after its own keys.
-fn with_key(attr: Option<Tokens>, key: String) -> Tokens {
+pub(super) fn with_key(attr: Option<Tokens>, key: String) -> Tokens {
   let mut keys = attr.map(Tokens::unlist).unwrap_or_default();
   if !keys.is_empty() {
     keys.push(T_OTHER!(","));
@@ -193,16 +93,12 @@ fn with_key(attr: Option<Tokens>, key: String) -> Tokens {
   Tokens::new(keys)
 }
 
-/// The state key prefix of the place (queue ordinal) an author's uncut copy of a cut list held, `{CUT_COPY_PLACE}{key}:
-/// author:{n}` ([`place_uncut_copies`], `\lx@cut@copy@place`).
-pub(in crate::base_utilities) const CUT_COPY_PLACE: &str = "lx_cut_copy_place:";
-
 /// The tag of the queue entry that stands where an uncut copy of a cut list was ([`place_uncut_copies`]): it makes no
 /// element, only records the copy's place.
 const CUT_COPY_TAG: &str = "lx:cut-copy";
 
 /// Does the queue hold the entries of the printed list `key`, cut already ([`CUT_LIST`])?
-fn cut_list_queued(key: &str) -> bool {
+pub(super) fn cut_list_queued(key: &str) -> bool {
   with_value("frontmatter_raw", |v| match v {
     Some(Stored::FrontmatterRaw(queue)) => queue
       .iter()
@@ -223,7 +119,7 @@ fn cut_list_queued(key: &str) -> bool {
 /// role before it, which covers one placed on the name before it and a run's (`annotate=run`, `new`) — or every name
 /// queued before it for one annotating them all (`annotate=all`, a number); a copy reaching a name that requests none of
 /// the list's marks, or no name, stays as it is (no name loses the list it prints).
-fn place_uncut_copies(
+pub(super) fn place_uncut_copies(
   parenttag: &Tokens,
   role: &str,
   key: &str,
@@ -326,7 +222,7 @@ fn annotates(command: &[Token], parenttag: &Tokens) -> bool {
 
 /// `entry` (an entry of the Cut, `\lx@affiliation@withsup{…}` or the line itself) with the list's opening declarations
 /// at its head, where it does not open with them already (the first entry).
-fn with_opening(entry: Tokens, opening: &[Token]) -> Tokens {
+pub(super) fn with_opening(entry: Tokens, opening: &[Token]) -> Tokens {
   if opening.is_empty() {
     return entry;
   }
@@ -357,7 +253,7 @@ fn with_opening(entry: Tokens, opening: &[Token]) -> Tokens {
 
 /// `entry` (an entry of the Cut, `\lx@affiliation@withsup{…}` or the line itself) with the parts every entry of the list
 /// shares at its end ([`shared_closing_parts`]), inside the mark's wrapper as [`with_opening`] puts the declarations.
-fn with_closing(entry: Tokens, closing: &[Token]) -> Tokens {
+pub(super) fn with_closing(entry: Tokens, closing: &[Token]) -> Tokens {
   if closing.is_empty() {
     return entry;
   }
@@ -386,7 +282,7 @@ fn with_closing(entry: Tokens, closing: &[Token]) -> Tokens {
 /// `\country{Project page: \href{…}{…}}`, 2506.18881: no author's address); a part whose argument is spacing alone (a
 /// space, a tie, `\relax`, a spacing command) is none of them.
 /// Each part is a command and its argument, none a mark; any other list is returned as it is.
-fn shared_closing_parts(list: Tokens) -> (Tokens, Vec<Token>, Vec<Tokens>) {
+pub(super) fn shared_closing_parts(list: Tokens) -> (Tokens, Vec<Token>, Vec<Tokens>) {
   let v = list.unlist_ref();
   let start = v.iter().position(|t| *t != T_SPACE!()).unwrap_or(v.len());
   let wrapper = v.get(start).is_some_and(|t| {
@@ -475,7 +371,7 @@ fn shared_closing_parts(list: Tokens) -> (Tokens, Vec<Token>, Vec<Tokens>) {
 
 /// The `\lx@annotate@frontmatter{parenttag}{tag}[attr]{entry}` call of an entry of the Cut ([`cut_marked_contact`]), in
 /// the affiliation's own wrapper when the list was (`withinst`).
-fn annotate_call(
+pub(super) fn annotate_call(
   parenttag: &Tokens,
   tag: &Tokens,
   attr: Option<Tokens>,

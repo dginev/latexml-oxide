@@ -404,8 +404,9 @@ const MOVED_CUT_KIND_EMISSIONS: &[(&str, usize)] = &[
 /// (`list_lead_declarations`), the cutter's pieces their reader too. P5c to 2,203: `queued_author_name_keys` (the queued
 /// names' token keys) deleted from `contacts.rs`, its successor the digested reading's in `queue_reading.rs`; P5b by 225 more:
 /// `defs/frontmatter_fields/names.rs`'s collaboration readers (`whole_name_collaboration`, `wrapped_collaboration_out`,
-/// `name_and_remark` and their helpers) deleted, the reading's. P6's compaction lowers it.
-const MOVED_CUT_KIND_CODE_LINES: usize = 1_978;
+/// `name_and_remark` and their helpers) deleted, the reading's. P6's compaction lowers it: P6a to 1,884, `cut_list` and
+/// `CUT_COPY_PLACE` moved unchanged to `defs/frontmatter_api.rs`, `kind.rs`' `balanced` deleted (core's `Tokens::is_balanced`).
+const MOVED_CUT_KIND_CODE_LINES: usize = 1_884;
 
 /// The fence on the moved Cut and Kind: they take no new decision either (review revZ18a check 3).
 #[test]
@@ -476,7 +477,8 @@ const ONE_ENGINE_REACH: &[(&str, usize)] = &[
   // (Z18m's three, `collaboration_line`'s, `notes_only_line`'s and `space_parted_names`' uses of the moved field and line
   // readers, are the old reader's uses of its own code: their files, `classify/old_reader/`, are no source of the one
   // engine's (review revZ18m B1))
-  ("relocate.rs CUT_COPY_PLACE", 1),
+  // (P6a, `relocate.rs CUT_COPY_PLACE` 1 -> 0: the state key moved to `defs/frontmatter_api.rs`, whose
+  // `\lx@cut@copy@place` writes it)
   // (P4b4a4, revP4b4a2 B3: llncs's shape choice and the cutter read one fact, whether a start stands inside an
   // environment the list opens; `starts_inside_environment` splits the list into its lines as `entry_calls` does)
   ("classify/entry_starts.rs affil_splits", 2),
@@ -545,10 +547,10 @@ fn old_reader_exports() -> std::collections::BTreeSet<String> {
 /// declaration (OD #1009). P5a: `names_continue`, `names_list_continues`, `notes_only_line` and `hoist_wrapped_separators` (with
 /// `names_split.rs`) deleted — IEEEtran's `name_memberships` was their last caller; the grade is the reading's (OD #1016).
 /// P5b: `whole_name_collaboration` and `wrapped_collaboration_out` deleted — a collaboration a creator call prints is the
-/// reading's (`frames_the_names`, OD #967).
+/// reading's (`frames_the_names`, OD #967). P6a: `cut_list` (the declared cut's body, OD #1009) and `CUT_COPY_PLACE`
+/// moved unchanged to `defs/frontmatter_api.rs`, beside `CutParameters` and `\lx@cut@copy@place`.
 const OLD_READER_EXPORTS: &[&str] = &[
   "AddressPlacement",
-  "CUT_COPY_PLACE",
   "ContactOwner",
   "ENTRY_DIGESTING",
   "ENTRY_KEY_COUNTER",
@@ -566,7 +568,6 @@ const OLD_READER_EXPORTS: &[&str] = &[
   "class_numbered_institutes",
   "collaboration_line",
   "collaboration_line_reading",
-  "cut_list",
   "cut_list_key",
   "cut_marked_contact",
   "document_notes",
@@ -1523,8 +1524,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // token's meaning (`x_equals`) or a group's braces, no spelling)
   // (P4b4f, 471 -> 473: the cut line's last piece trimmed inside the groups it closes, its closing braces and spaces read
   // by catcode, 2511.20671 — a group's braces, no spelling; P5b, 473 -> 471: `marked_after_name` deleted with its last
-  // caller, `\lx@add@author`'s collaboration readers)
-  ("classify", 471),
+  // caller, `\lx@add@author`'s collaboration readers; P6a, 471 -> 468: `name_text::skip_group`'s brace walk is
+  // `tokens_group_end`'s, in `rest /tokens.rs`)
+  ("classify", 468),
   // (E0h: the rest of `author_block/` Z18m moved unchanged to `classify/old_reader/`, split off from `classify`'s row;
   // P5a, 131 -> 113: `names_continue`, `names_list_continues`, `notes_only_line`, `hoist_wrapped_separators` deleted with
   // their last caller, IEEEtran's `name_memberships`)
@@ -1533,7 +1535,8 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (Z18m, a new directory: the IJCAI chain moved from `author_block` with its code, as that row says)
   ("defs/author_macros/", 64),
   // (Z4a, 7 -> 8: `\lx@frontmatter@itemnone` reads its tag argument, an element's name: an `ltx:rdf` passes through, the rest goes)
-  ("defs/frontmatter_api", 8),
+  // (P6a, 8 -> 10: `cut_list` moved unchanged from `defs/frontmatter_api/cut.rs`, its two reads with it)
+  ("defs/frontmatter_api", 10),
   // (Z18j, 63 -> 109: moved from `author_block` with its code, as that row says; MB1, 109 -> 108: one moved to `classify`, as
   // that row says)
   // (IV1, 108 -> 114, accepted as debt by the main session (2026-11-11) and retired by the P4 port of these readers
@@ -1543,7 +1546,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // reads are the line's tokens, before any digestion, as `math_glyphs_as_printed`'s)
   // (F0, 114 -> 113: `numbered_marks_requested` reads the queue's printed marks, `queued_author_marks`, no operand's spelling)
   // (P4b4a3, 113 -> 112: the Cut's opening declarations moved to `classify/notes.rs`)
-  ("defs/frontmatter_api/", 112),
+  // (P6a, 112 -> 106: `cut_list` moved to `defs/frontmatter_api.rs` (2); `kind.rs`' brace count is core's
+  // `Tokens::is_balanced` (4))
+  ("defs/frontmatter_api/", 106),
   // (CR4, 21 -> 28: `address_as_printed`'s `math_glyphs_as_printed`, the API's e-mail/URL reading — how an address prints,
   // `$\sim$` its glyph "∼" (1301.1466, math0608476; OD #972), no owner decided: a sibling of `math_braces_as_printed`, whose
   // reads `defs/frontmatter_fields/` holds; it reads the Semiverbatim argument's tokens, which no event says)
@@ -1615,7 +1620,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (P4b4f, 526 -> 527: `FONT_DECLARATIONS`, LaTeX's whole set of no-argument font declarations, one table that
   // `fonts::font_declaration` (by name, as it read `LAYOUT`'s head) and `notes::sets_font` (by meaning) share — the
   // head lacked `\tt`, `\LARGE`, `\huge`, `\Huge`, 2508.08560; `events` drops its `\selectfont` read, 62 -> 61)
-  ("frontmatter_stores", 527),
+  // (P6a, 527 -> 520: its `group_end` is `tokens_group_end` (4, in `rest /tokens.rs`), its `balanced` core's
+  // `Tokens::slice_is_balanced` (3))
+  ("frontmatter_stores", 520),
   ("gretsi_cls.rs", 14),
   // (CR10a, 119 -> 128: the class's author body is read as tokens before it is digested, as `author_block_body` reads it —
   // a names block nested in another's spliced in (`unnested_name_blocks`, 1511.03982), the alias `\authorblockN`'s grades,
@@ -1716,7 +1723,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // moved unchanged from `eptcs_cls.rs` (28 -> 18), beside `split_tokens`, whose brace and environment units they are:
   // `kernel_separator_runs` keeps the query's cuts at whole units, for eptcs's cells and the `\institute` lists of
   // inst_support and aa (Option C P2-2, OD #995); 28 + 26 = 18 + 36, none added)
-  ("rest /tokens.rs", 36),
+  // (P6a, 36 -> 40: `tokens_group_end`, `frontmatter_stores`' `group_end` moved here, which `name_text::skip_group`
+  // calls too)
+  ("rest /tokens.rs", 40),
   // (TP1, 25 -> 26: `ink_word_text` read the title-page reading's own marks by their constructors' names; TP1b, 26 -> 25:
   // by definition identity, sect05.rs `title_page_mark`, review revTP1 N2)
   ("rest /util_text.rs", 25),
