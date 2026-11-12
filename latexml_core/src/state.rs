@@ -6413,6 +6413,9 @@ pub fn current_meanings_where(keep: impl Fn(&Stored) -> bool) -> Vec<(SymStr, St
     .collect()
 }
 
+/// Whether the meaning key `key` (a [`meaning_key`]) is bound now.
+pub fn has_meaning_key(key: SymStr) -> bool { !matches!(meaning_by_key(key), Stored::None) }
+
 // keep this in sync with `lookup_meaning`, it is copied over for optimization purposes
 pub fn has_meaning(token: &Token) -> bool {
   if token.get_catcode().is_active_or_cs() && token.text != pin!("") {

@@ -8,7 +8,8 @@
 //! (review revS5CR7b): the names matched as whole words, the `\and`-started line cut at its commas, and the corresponding
 //! author's `_corresponding` on its split creator. CR7d (review revCR7c, the fail-safe): where the split would state an
 //! owner its marks don't support — an item led by a mark its piece doesn't print, an address line made a creator — the
-//! block is written whole, as before the split, one guard per path.
+//! block is written whole, as before the split, one guard per path. FNR1: a definition whose call prints takes effect in
+//! order, a table of rows.
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
 
@@ -362,4 +363,81 @@ fn a_split_making_an_address_line_a_creator_keeps_the_block_whole() {
     ],
     "{xml}"
   );
+}
+
+/// FNR1: a definition whose call prints too (no declaration replays it, `field_notes::FieldNotes::printing`) is written
+/// where the block has it only when a name's run holds the call; a note or a requested mark holds it elsewhere, so the
+/// block is written as Perl splits it, its pieces digested in order, before a later author reads the definition. Rows:
+/// the remember body's spaces print (2407.13730, 2606.19583), the unspaced control (the reads-past decline), a note
+/// macro and a mark macro defining what the next author reads, and the safe sides (a mark kept on each name; a note macro
+/// whose definition is local to its own group, 2602.15181, 0903.4816, 2311.17684: no decline).
+#[test]
+fn a_definition_its_call_prints_takes_effect_in_order() {
+  const DECLINE: &str = "The frontmatter emitter can't replay a definition of its author block apart from what the \
+                         block prints; the block is written as Perl's \\lx@add@authors splits it at its separators, \
+                         its pieces digested in order";
+  const STAR: &str = "<tags><tag>*</tag><tag role=\"refnum\">*</tag><tag role=\"typerefnum\">footnote *</tag></tags>";
+  let rows: [(&str, usize, &[String]); 6] = [
+    (repro!("footnoterecall_three_authors_spaced_remember"), 1, &[
+      "<creator role=\"author\"><personname>Ann One</personname><contact name=\"Note:\u{a0}\" role=\"note\">The \
+       University</contact></creator>"
+        .to_string(),
+      format!(
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Two</personname><note mark=\"*\" \
+         role=\"footnotemark\" xml:id=\"footnotex1\">{STAR}</note></creator>"
+      ),
+      format!(
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cy Three</personname><note mark=\"*\" \
+         role=\"footnotemark\" xml:id=\"footnotex2\">{STAR}</note></creator>"
+      ),
+    ]),
+    (repro!("footnoterecall_two_authors_control"), 1, &[
+      "<creator role=\"author\"><personname>A</personname><contact name=\"Note:\u{a0}\" \
+       role=\"note\">X</contact></creator>"
+        .to_string(),
+      format!(
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>B</personname><note mark=\"*\" \
+         role=\"footnotemark\" xml:id=\"footnotex1\">{STAR}</note></creator>"
+      ),
+    ]),
+    (repro!("author_note_macro_defines_what_a_later_author_reads"), 1, &[
+      "<creator role=\"author\"><personname>Ann One</personname><contact name=\"Note:\u{a0}\" role=\"note\">Lab \
+       Alpha.</contact></creator>"
+        .to_string(),
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Two (Alpha)</personname></creator>"
+        .to_string(),
+    ]),
+    (repro!("author_mark_macro_defines_what_a_later_author_reads"), 1, &[
+      "<creator role=\"author\"><personname>Ann One <sup xml:id=\"id1\">\u{2020}</sup></personname></creator>"
+        .to_string(),
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Two Uni</personname></creator>"
+        .to_string(),
+    ]),
+    (repro!("author_mark_macro_steps_a_counter_on_each_name"), 0, &[
+      "<creator role=\"author\"><personname>Ann One<sup xml:id=\"id1\">1</sup></personname></creator>".to_string(),
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Two<sup \
+       xml:id=\"id2\">2</sup></personname></creator>"
+        .to_string(),
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cy Three<sup \
+       xml:id=\"id3\">3</sup></personname></creator>"
+        .to_string(),
+    ]),
+    (repro!("author_note_macro_with_a_local_thefootnote"), 0, &[
+      "<creator role=\"author\"><personname>Ann One</personname><contact name=\"Note:\u{a0}\" \
+       role=\"note\">Corresponding Author.</contact></creator>"
+        .to_string(),
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Two</personname></creator>".to_string(),
+    ]),
+  ];
+  for (tex, warnings, creators) in rows {
+    let head = tex.lines().next().unwrap_or_default();
+    let (log, xml) = run(tex);
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, warnings),
+      "{head}\n{log}"
+    );
+    assert_eq!(log.contains(DECLINE), warnings == 1, "{head}\n{log}");
+    assert_eq!(creator_elements(&xml), creators, "{head}\n{xml}");
+  }
 }

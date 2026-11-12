@@ -44,7 +44,9 @@ use crate::base_utilities::{
         text_font_command,
       },
       field_notes::{EnvironmentStep, FieldCreator},
-      ledger::{ApiCall, AuthorBlock, annotated_parent, content_text, field_stamped, symbol},
+      ledger::{
+        ApiCall, AuthorBlock, Unsaid, annotated_parent, content_text, field_stamped, symbol,
+      },
       policy::TitleMarks,
       rehearsal::{Rehearsal, rehearse},
       resolver::{
@@ -3205,7 +3207,7 @@ fn written_whole(index: usize, lost: bool) -> bool {
 }
 
 /// Whether the author block at ledger index `index`'s own digestion moved the footnote counter where its names don't carry it
-/// (`Outcome::Events::counter_moves`, `field_notes::FieldNotes::counter_moves`): an assignment no event says, written only
+/// (`Outcome::Events::unsaid`, `field_notes::FieldNotes::counter_moves`): an assignment no event says, written only
 /// where a name's run or a mark written with it holds it (`\addtocounter{footnote}{-2}\footnotemark` after a name: the
 /// mark's box covers it, NE2's A, 1507.05018's Ortega, 2505.07115); elsewhere — between a name's notes, past the marks its
 /// name takes — its place among the notes' steps decides what each prints, so the block is written as Perl's
@@ -3213,40 +3215,7 @@ fn written_whole(index: usize, lost: bool) -> bool {
 /// (1507.05018's Ombao, whose `=2` creators gave Ortega † where LaTeX prints *: review revNE2 A1; 1003.2281, cs0404029,
 /// 2410.22720 had merged into one creator), with a counted Warning, once per block over the flushes.
 fn counter_moved(index: usize, resolved: &Resolved) -> bool {
-  let moves: Vec<(usize, usize)> = with_block(index, Vec::new(), |block, _| {
-    let Outcome::Events {
-      counter_moves: Some(counter_moves),
-      ..
-    } = &block.outcome
-    else {
-      return Vec::new();
-    };
-    let at = |p: u16| usize::from(p).checked_sub(block.range.0);
-    counter_moves
-      .0
-      .iter()
-      .filter_map(|&(s, t)| Some((at(s)?, at(t)?)))
-      .collect()
-  });
-  if moves.is_empty() {
-    return false;
-  }
-  let spelled: Vec<String> = resolved
-    .creators
-    .iter()
-    .filter(|c| c.source == index)
-    .map(|c| c.name.clone())
-    .collect();
-  let mut on_names = BTreeSet::new();
-  // (the emitter's own reading of the names: its `keeps(source)` is `per_author_marks(source)` for every block it writes
-  // names of, cached per flush — review revNE2r2's nit)
-  let written: Vec<(usize, usize)> =
-    block_names(index, &spelled, per_author_marks(index), &mut on_names)
-      .into_iter()
-      .flat_map(|(_, _, run, apart, _)| run.into_iter().chain(apart))
-      .collect();
-  let carried = |&(s, t): &(usize, usize)| written.iter().any(|&(from, to)| from <= s && t <= to);
-  if moves.iter().all(carried) {
+  if unwritten(index, resolved, |unsaid| &unsaid.counter_moves).is_empty() {
     return false;
   }
   let once = s!("counter|{index}");
@@ -3262,6 +3231,47 @@ fn counter_moved(index: usize, resolved: &Resolved) -> bool {
     );
   }
   true
+}
+
+/// The spans of the author block at ledger index `index` that `spans` gives of its [`Unsaid`], block offsets, that no name's
+/// run or mark written with it holds, as the emitter's own reading of the names writes them: what is written there is
+/// digested in order.
+fn unwritten(
+  index: usize,
+  resolved: &Resolved,
+  spans: impl Fn(&Unsaid) -> &Vec<(u16, u16)>,
+) -> Vec<(usize, usize)> {
+  let spans: Vec<(usize, usize)> = with_block(index, Vec::new(), |block, _| {
+    let Outcome::Events { unsaid: Some(unsaid), .. } = &block.outcome else {
+      return Vec::new();
+    };
+    let at = |p: u16| usize::from(p).checked_sub(block.range.0);
+    spans(unsaid)
+      .iter()
+      .filter_map(|&(s, t)| Some((at(s)?, at(t)?)))
+      .collect()
+  });
+  if spans.is_empty() {
+    return spans;
+  }
+  let spelled: Vec<String> = resolved
+    .creators
+    .iter()
+    .filter(|c| c.source == index)
+    .map(|c| c.name.clone())
+    .collect();
+  let mut on_names = BTreeSet::new();
+  // (the emitter's own reading of the names: its `keeps(source)` is `per_author_marks(source)` for every block it writes
+  // names of, cached per flush — review revNE2r2's nit)
+  let written: Vec<(usize, usize)> =
+    block_names(index, &spelled, per_author_marks(index), &mut on_names)
+      .into_iter()
+      .flat_map(|(_, _, run, apart, _)| run.into_iter().chain(apart))
+      .collect();
+  spans
+    .into_iter()
+    .filter(|&(s, t)| !written.iter().any(|&(from, to)| from <= s && t <= to))
+    .collect()
 }
 
 /// Whether the author block at ledger index `index` prints a `\footnotemark` that neither a name its reading writes nor an
@@ -3525,11 +3535,12 @@ fn names_overlap(index: usize, resolved: &Resolved) -> bool {
 
 /// Whether a declaration of the author block at ledger index `index` can't be replayed ([`declarations`]): its span, all its
 /// invocation read as the rehearsal heard it, holds a macro whose undelimited arguments run past it, by its meaning now
-/// ([`reads_past`]). A macro printing a note then defining, `\newcommand{\footremember}[2]{\footnote{#2}\newcounter{#1}…}`,
-/// defines past the note its arguments made, its call's reach the macro alone: replayed, it read the next declaration's
-/// tokens and on past the entry — `\footremember\footremember\footremember\footremember`, its `\newcounter{\footremember}`
-/// a counter of no name, every theorem then missing its `{` and a Fatal (2505.04436, 1511.09009). No cut of the
-/// block holds the definition apart from what it prints, so the block is written as Perl's `\lx@add@authors` writes it
+/// ([`reads_past`]); or a definition whose call prints too, which no declaration holds, is in a call no name's run writes
+/// (`Outcome::Events::unsaid`, [`unwritten`]) and prints a note, a contact or a mark there. A macro printing a note then
+/// defining, `\newcommand{\footremember}[2]{\footnote{#2}\newcounter{#1}…}`, defines past the note its arguments made, its
+/// call's reach the macro alone: replayed, it read the next declaration's tokens and on past the entry —
+/// `\footremember\footremember\footremember\footremember`, its `\newcounter{\footremember}` a counter of no name, every
+/// theorem then missing its `{` and a Fatal (2505.04436, 1511.09009). No cut of the block holds the definition apart from what it prints, so the block is written as Perl's `\lx@add@authors` writes it
 /// ([`split_decline`]; OD #988: 1404.5602, 2503.21719, 0809.5152, 1110.6375 had merged into one creator), its pieces
 /// digested in order, with a counted Warning, once per block over the flushes.
 fn declaration_reads_past(index: usize, resolved: &Resolved) -> bool {
@@ -3545,12 +3556,35 @@ fn declaration_reads_past(index: usize, resolved: &Resolved) -> bool {
       .filter_map(|(start, end)| tokens.get(at(start)?..at(end)?))
       .find_map(|span| reads_past(span).map(|call| span[call]))
   });
-  let Some(call) = past else {
-    return false;
+  // (or a call that prints too, its definitions in no declaration, held by no name's run and printing what the emit writes
+  // apart, a note, a contact, a requested mark: Ann's ` \footnote{#2} \newcounter{#1} ` before Bob's `\footnoterecall`,
+  // 2407.13730, 2606.19583)
+  let printing = past.is_none() && {
+    let calls = unwritten(index, resolved, |unsaid| &unsaid.printing);
+    !calls.is_empty()
+      && with_block(index, false, |block, _| {
+        let Outcome::Events { events, .. } = &block.outcome else {
+          return false;
+        };
+        let at = |p: u16| usize::from(p).checked_sub(block.range.0);
+        events
+          .iter()
+          .filter(|e| {
+            matches!(
+              e.kind,
+              EventKind::Note | EventKind::Contact | EventKind::Mark
+            )
+          })
+          .filter_map(|e| e.span.and_then(|(s, t)| Some((at(s)?, at(t)?))))
+          .any(|(s, t)| calls.iter().any(|&(from, to)| s < to && from < t))
+      })
   };
+  if past.is_none() && !printing {
+    return false;
+  }
   DebugFeature!(
     "frontmatter",
-    "FRONT emit: block {index}'s declaration holds {call:?}, whose arguments run past it"
+    "FRONT emit: block {index}'s declaration holds {past:?}, reading past it, or prints apart: {printing}"
   );
   let once = s!("declaration|{index}");
   if lookup_mapping(EMITTED_ITEMS, &once).is_none() {

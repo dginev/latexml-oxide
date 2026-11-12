@@ -1085,7 +1085,7 @@ mod whole_tests {
         environments: Vec::new(),
         creators: Box::new([]),
         unread: None,
-        counter_moves: None,
+        unsaid: None,
       },
       list_setter: None,
       queued: Vec::new(),

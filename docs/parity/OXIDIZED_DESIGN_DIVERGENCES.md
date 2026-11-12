@@ -33979,6 +33979,25 @@ lost, where the base (int155a0) made Gronau and Wagenmakers Waldorp's affiliatio
 
 **Known REDs of the fail-safe (review revCR7d, synthetic, Perl the same; the base wrote each whole):** (S1) a later piece that starts with a note, not a mark — `\author{Ann Able,\thanks{Permanent address: Univ Z.} Bob Baker…, Carl Cole}` — gives the note to Bob: the check catches a mark-led piece, not a note-led one; (S2) an address line whose mark comes after its text (`{\it Dept. of Physics, Univ X}$^{a}$`) still becomes an author creator. (S3, no false owner) the check reads Perl's raw split, not the routed result, so a few shapes CR7c already routed right fall back whole (`\and Bob Baker\affil{b}\\ \affil{a} Univ X…`, a mark printed only in a note). 1110.6375 is now written whole (the fail-safe), so it no longer witnesses the split's behaviour above. Probes: `/home/deyan/data/pk_wt/scratch_revCR7d/probe/p1..p6.tex`.
 
+**A definition whose call prints (FNR1).** The rehearsal drops a definition from the replayable declarations when its
+call prints too (a replay would print it twice), so a call the reading writes elsewhere — a note, a mark the names request —
+took no effect: `\footnoteremember{uni}{…}`'s ` \footnote{#2} \newcounter{#1} \setcounter{#1}{\value{footnote}} ` (spaced:
+the body's spaces print) left the later authors' `\footnoterecall{uni}` an undefined counter (2407.13730, 2606.19583: one
+mark dropped, one empty). Such a call is kept (`field_notes::FieldNotes::printing`, `ledger::Unsaid::printing`) when its
+definition outlives it (global, or in no group of the field: `\begingroup\def\thefootnote{}\footnote{…}\endgroup` does
+not, 2602.15181, 0903.4816, 2311.17684) and the block introduces it (undefined once the rehearsal is undone: a class's state
+a paper's call sets, PoS's `\global\@speakertrue` 1009.6192, manyfoot's `\@thefnmark` 2511.01971, is the class's to read);
+where no name's run holds the call (`emit::unwritten`, shared with `counter_moved`) and it prints a note, a contact or a mark
+there — what the emit writes apart from the call — `declaration_reads_past` declines the block, written as Perl splits it,
+its pieces digested in order. A call printing a name is written with it (`\blockN{Bob Baker}`'s `\gdef`,
+`emit_a_declaration_keeps_its_calls_argument`). Left: a re-assigned meaning a later author reads
+(`author_note_macro_resets_an_existing_counter_red`), and under a class with no binding the title's notes step no counter
+(`omnibus_title_footnotemark_prints_fnsymbol_red`, so 2407.13730's recalls print "0"). Repros
+`footnoterecall_three_authors_spaced_remember`, `footnoterecall_two_authors_control`,
+`author_note_macro_defines_what_a_later_author_reads`, `author_mark_macro_defines_what_a_later_author_reads`,
+`author_mark_macro_steps_a_counter_on_each_name`, `author_note_macro_with_a_local_thefootnote`; guard
+`perfect_kernel_batchcr7::a_definition_its_call_prints_takes_effect_in_order`.
+
 Repros `cr7_fncounter_and`, `cr7_ne5_footremember`, `cr7_marks_branch_footremember`, `cr7_split_lines_keep_commas`,
 `cr7_split_items_to_each_name`, `cr7b_linebreak_option_cut`, `cr7b_and_cut_starts_author`, `cr7b_split_items_by_name`,
 `cr7c_split_names_whole_words`, `cr7c_and_line_comma_cut`, `cr7c_split_corresponding_left_address`,
