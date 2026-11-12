@@ -63,7 +63,7 @@ Rules that keep this file honest and mergeable:
   | 1 | FMK1 | FMK1 — regression in int162a (F0; 2312.00656): names keep their printed marks under `flexisym`, or the loss is counted | 3 | 3 | done in int163a (revFMK1 SHIP) |
   | 1 | ST3 | ST3 — a study: state carried between conversions in one process (P4c3: 90a's elsarticle row green in-process, wrong from the CLI on the base); the cortex worker converts many documents per process | 5 | 3 | todo |
   | 2 | P4b | P4b part 1: the bindings' `leads_with_mark` sites on the digested reading (`leads_with_label`; 23 jfm `\aff` papers better) | 3 | 3 | in review (15c232025f) |
-  | 2 | P4b2 | P4b2: the API Cut's "marked" decision (`requested_marked_entries_in`, `holds_requested_marked_entries`) ported WITH `place_uncut_copies`'s copy rule (one fact, every reader); 2608.21425's llncs hand-marked block checked | 3 | 5 | todo |
+  | 2 | P4b2 | P4b2 (+ 2410.01932's lost name marks, a P4b part 1 regression, revP4b): the API Cut's "marked" decision (`requested_marked_entries_in`, `holds_requested_marked_entries`) ported WITH `place_uncut_copies`'s copy rule (one fact, every reader); 2608.21425's llncs hand-marked block checked | 3 | 5 | todo |
   | 2 | P4b3 | P4b3: REVTeX's group-rule mark readers (`requested_marks_held`, `requested_mark_lines`, `requested_marks_unprinted`, `content_marks`, `leading_macro_mark`) on the digested reading | 3 | 3 | todo |
   | 2 | P4b4 | P4b4: the remaining per-line token cutters — `marker_leads` (~13 sites), `author_mark_position` (~15), `author_mark_operands` (7), `MARK_SWITCHES`, relocate.rs 1312/1352/1529 — each with its red shape | 3 | 5 | todo |
   | 2 | P4f | P4f: the second cutter (`affiliation_calls` for `\lx@add@store@affiliations`, `\lx@add@store@authorblock`, `row_calls`, `\lx@add@affiliations` — aa, epl, ptephy, interspeech, ijcai, llncs stores) through the declared `cut_list`, so its printed marks show (Q1; revP4c S2); a reach census first | 3 | 3 | todo |
@@ -185,7 +185,6 @@ Rules that keep this file honest and mergeable:
   - PGU — pgfmath unit conversion in scaled points (`2bp` 2.0075 vs 2.00749), pdfTeX's `px`/`nd`/`nc` and `mu` units (RED `pgfmath_units_as_tex_reads_them_red`); `08+1` octal (RED `pgfmath_octal_bad_digit_red`); 3
   - PGCNT — a count register then a dimension (`2\myc\mydim`: pdflatex 15.0) (revPGR1); 1
   - EBN — EB1's nits: the calc Warning's wording when calc is not loaded; the ifpdf Error row's message; the DTL1 row's whole `<para>`; one jing process per row; 1
-  - NMARK — 2410.01932: names lose their printed "1" (pre-existing; the base does the same with `$^{1}$`; no minimal repro yet; P4b); 1
   - MENC — `<m:menclose>` still emitted for `\cancel`/`\boxed` (MathML Core removed it; no mechanical replacement: a rendering + golden change on its own branch; deferred by DG 2026-07-30); 3
   - CI — CI under 30 minutes on `main` (workflow edits, a PR tier); its localhost study feeds CIPERF; 3
   - F1 — Per-encoding text commands, the residual; 3
