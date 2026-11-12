@@ -35461,6 +35461,44 @@ printed `16,384` for 16,761), the TL manuals ddphonism (40 → 0) and tikzbrickf
 `error_boundary::perfect_kernel_error_boundary` (rows `pgfmath_maxdimen_spelling_and_fpu_in_range`, 0 errors;
 `pgfmath_past_maxdimen_errs`, 7 as pdflatex).
 
+### 1013. cmpj's `\refaddr` marks print as TeX's second run (CMPJ1)
+
+**TeX.** cmpj's `\refaddr{la,lb}` (cmpj2.sty:557-570; cmpj.sty:443-456, cmpj3.sty:653-669) prints each key's `\ref`
+once the .aux has defined `r@<key>`, a bold "?" and a Warning before; `\addresses{\addr{la} … \addr{lb} …}` is one
+`enumerate`, each `\addr` an `\item\label` (cmpj2.sty:543-555). **Perl.** No binding: the raw package's first-run
+branch, every name "?" (KNOWN_PERL_ERRORS #1233). **Rust.** `cmpj_sty.rs` (registered for cmpj, cmpj2, cmpj3) reads
+the real package — the paper's copy first, with the document's options — and redefines only `\@@refadx` as its
+second-run branch (`\hbox{\ref{key}}` per key, `,\penalty\@m` between), the converged state LaTeXML models for `\ref`.
+The `\@address` store reaches the frontmatter as it did raw (`\lx@package@loaded@raw`, so the inner read handles the
+options). **The list cut per `\item` (CMPJ2).** An API entry that is one `enumerate` whose items each step the counter and
+hold their own `\label` is cut per item (`events::item_led_pieces`: the lexer's Layout event `item` for an untagged
+`\enumerate@item@`, `item[]` for a tagged one; decided on the reading's events of the call for both the resolver's `api` and the emitter,
+`split_pieces_as` — the writer's rehearsal at a later flush reads the meanings then, `\ukrainianpart`'s bare `\addr`,
+cmpj2.sty:649, 1212.6367): each item an entry keyed by its label (`api:ref-label`), written as the list's opening
+tokens, `\setcounter{\@listctr}` to one below the value the digestion stepped the item's counter to, the item, and the
+list's close (`emit::list_item_tokens`), so it keeps its number and tag as pdflatex prints them where the list sets or
+steps its counter (revCMPJ, CMPJ3: `\setcounter{enumi}{3}` after the opening under `\Alph`, D E F where counting the
+items before it gave D B C; a `\stepcounter` in item 1, 1 3 4). The value is the `\enumerate@item@` whatsit's
+`counter_value` (not in Perl), the `item` event's label — the list the innermost environment around the items as the digestion's frames say
+it (`Field::environments`, a close inside a macro too); an item that is no balanced run is its text, counted (a group
+across two items: RED `cmpj_address_list_group_across_items_red`). In an emitted entry a
+`\label` naming a counter step made inside the entry (`refstep_in_scope` against the step in scope where
+`digest_frontmatter_item` starts) is `\lx@label`, as LaTeX's `\label` names `\@currentlabel`: the item carries
+`labels=` and the names' `\ref`s resolve; any other stays the emitter's, dropped (OD #980). A list the cut does not
+read (a tagged `\item[a]`, an unlabelled item, ink outside the list) stays one entry, each name requesting part of it
+holding it all, counted by the Warning "places an entry holding N label targets … whole"
+(`warn_whole_entry_of_keyed_parts`; RED `cmpj_address_list_tagged_item_kept_whole_red`). The renamed copies (cmpj2e.sty
+0903.4566, cmp2em.sty cond-mat0511115) stay raw: RED `cmpj_renamed_copy_refaddr_prints_question_marks_red` (their
+list, cut too, on the nameless creator). The second title page's own `\addresses` (`\ukrainianpart`, 1212.6367) is not
+its names' — RED `cmpj_ukrainianpart_addresses_of_the_second_title_red`. An item placed on several names carries the
+same `labels=` on each copy, so an HTML `\ref` links to the last copy (1212.6367: J. Ilnytskyi's "2" to A.
+Trokhymchuk's) — kept. Coverage: the cut's generality rests on synthetic probes (amsart, revtex, llncs, elsarticle, a
+nested list, unlabelled items, itemize, enumitem, an unknown class) and on the six cmpj witnesses below; CMPJ2's A/B
+papers with an `enumerate` in a frontmatter block did not reach the cut.
+**Witnesses**: 1212.6367, 1212.6137, 1603.02437, 1207.2995, 1310.0277, 1510.06562, 1601.01592 (cmpj2), 2112.09940,
+2403.16604, 1812.08542 (cmpj3). **Guard**: `perfect_kernel_batchcmpj1::cmpj_address_marks_print_the_second_run` (13 rows,
+nine for the cut).
+
 ### 1014. A varwidth box measures its widest line (VARW)
 
 **TeX.** varwidth.sty `\endvarwidth` sets the box at its widest line's natural width, at most the given one. **Perl.**

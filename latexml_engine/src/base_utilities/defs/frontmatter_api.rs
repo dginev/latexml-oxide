@@ -1282,20 +1282,31 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // \lx@request@frontmatter@annotation[affiliation] on the author; otherwise
     // relocate_annotations falls back to prefix-stripped matching and conflates
     // it with the creator's own "author:N" sequence label (double-attach).
-    let prefix = prefix.as_ref().map(ToString::to_string)
-      .filter(|p| !p.is_empty()).unwrap_or_else(|| "LABEL".to_string());
-    let label = clean_frontmatter_labels(&label.to_string(), &prefix).into_iter().next();
-    with_pending_entry_attr(move |attr| {
-      match label {
-        Some(label) => {
-          DebugFeature!("frontmatter", "FRONT set label {label}");
-          attr.insert("_annotations".to_string(), label);
-        },
-        None => {
-          attr.remove("_annotations");
-        },
-      }
-    });
+    // (in an emitted entry, a `\label` naming a counter step made inside it labels that object, as LaTeX's names
+    // `\@currentlabel`: cmpj's `\addr` = `\item\label`, its items the `\ref` marks' targets — 1212.6367, 2112.09940)
+    if lookup_bool(EMITTING)
+      && refstep_in_scope().unwrap_or(0) != lookup_int(ITEM_REFSTEP)
+    {
+      let mut tokens = vec![T_CS!("\\lx@label"), T_BEGIN!()];
+      tokens.extend(ExplodeText!(&label.to_string()));
+      tokens.push(T_END!());
+      unread(Tokens::new(tokens));
+    } else {
+      let prefix = prefix.as_ref().map(ToString::to_string)
+        .filter(|p| !p.is_empty()).unwrap_or_else(|| "LABEL".to_string());
+      let label = clean_frontmatter_labels(&label.to_string(), &prefix).into_iter().next();
+      with_pending_entry_attr(move |attr| {
+        match label {
+          Some(label) => {
+            DebugFeature!("frontmatter", "FRONT set label {label}");
+            attr.insert("_annotations".to_string(), label);
+          },
+          None => {
+            attr.remove("_annotations");
+          },
+        }
+      });
+    }
   });
   Ok(())
 }

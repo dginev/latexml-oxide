@@ -1,0 +1,33 @@
+% witness: 1212.6367 (its `\ukrainianpart` title page after the English one; cmpj2.sty:649 makes `\addr` a bare `\item`)
+% oracle:  pdflatex (TL 2025), second run, 0 errors: "A. One1 , B. Two2", "1 First Institute, Lviv, Ukraine", "2 Second
+%          Institute, Kyiv, Ukraine"; then "A. Odin1 , B. Dva2", "1 Pershyi Instytut", "2 Druhyi Instytut"
+% engines: CMPJ2 before `split_pieces_as`: 2 Warnings "writes \"First Institute, Lviv, Ukraine\" as its plain text …
+%          call: no piece holds it" — the reading cut the English list at its labels, the writer's rehearsal at the second
+%          flush read `\addr` as `\item` and cut nothing
+% expect:  0 errors, 0 warnings; the English list's items on A. One and B. Two, each keeping its number and `labels=`; A.
+%          Odin and B. Dva hold the English items too (pre-existing, RED
+%          `cmpj_ukrainianpart_addresses_of_the_second_title_red`)
+% status:  GREEN (CMPJ2: perfect_kernel_batchcmpj1::cmpj_address_marks_print_the_second_run)
+\documentclass{article}
+\usepackage[T2A,T1]{fontenc}
+\usepackage[ukrainian,english]{babel}
+\usepackage[cm]{cmpj2}
+\title{A title}
+\author{A. One\refaddr{la}, B. Two\refaddr{lb}}
+\addresses{
+\addr{la} First Institute, Lviv, Ukraine
+\addr{lb} Second Institute, Kyiv, Ukraine
+}
+\begin{document}
+\maketitle
+Text.
+\ukrainianpart
+\title{Ukrainian title}
+\author{A. Odin\refaddr{la}, B. Dva\refaddr{lb}}
+\addresses{
+\addr{la} Pershyi Instytut
+\addr{lb} Druhyi Instytut
+}
+\makeukrtitle
+Tekst.
+\end{document}

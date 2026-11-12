@@ -391,7 +391,14 @@ pub(crate) fn load() -> Result<()> {
     "<ltx:item xml:id='#id' itemsep='#itemsep'>#tags",
     properties => sub[args] {
       let undigested = args[0].as_ref().map(|d| d.raw_tokens()).unwrap_or_default();
-      ref_step_item_counter(undigested) });
+      let mut props = ref_step_item_counter(undigested)?;
+      // (not in Perl: the value an untagged item stepped its counter to, which a frontmatter entry cut per item sets
+      // again, `emit::list_item_tokens`)
+      if undigested.is_none() {
+        let ctr = counter_for_type(&lookup_string("itemcounter"));
+        props.insert("counter_value", Stored::Int(counter_value(&ctr)?.value_of()));
+      }
+      Ok(props) });
   DefConstructor!("\\inline@enumerate@item OptionalUndigested",
     "<ltx:inline-item xml:id='#id'>#tags",
     properties => sub[args] {

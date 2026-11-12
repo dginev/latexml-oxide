@@ -1,0 +1,30 @@
+% witness: 1212.6367 (the Ukrainian title page, `\ukrainianpart` … `\makeukrtitle`, with its own `\addresses`)
+% oracle:  pdflatex (TL 2025), second run, 0 errors: "A. Odin1 , B. Dva2" over "1 Pershyi Instytut", "2 Druhyi Instytut"
+% engines: CMPJ2 (and CMPJ1, the list whole): A. Odin and B. Dva hold the first title page's "First Institute …",
+%          "Second Institute …"; the second list prints in the body, from the raw `\makeukrtitle`
+% expect:  A. Odin "Pershyi Instytut", B. Dva "Druhyi Instytut"
+% status:  RED (pre-existing: the second `\addresses` store is not the second title page's)
+% moves:   post-merge
+\documentclass{article}
+\usepackage[T2A,T1]{fontenc}
+\usepackage[ukrainian,english]{babel}
+\usepackage[cm]{cmpj2}
+\title{A title}
+\author{A. One\refaddr{la}, B. Two\refaddr{lb}}
+\addresses{
+\addr{la} First Institute, Lviv, Ukraine
+\addr{lb} Second Institute, Kyiv, Ukraine
+}
+\begin{document}
+\maketitle
+Text.
+\ukrainianpart
+\title{Ukrainian title}
+\author{A. Odin\refaddr{la}, B. Dva\refaddr{lb}}
+\addresses{
+\addr{la} Pershyi Instytut
+\addr{lb} Druhyi Instytut
+}
+\makeukrtitle
+Tekst.
+\end{document}

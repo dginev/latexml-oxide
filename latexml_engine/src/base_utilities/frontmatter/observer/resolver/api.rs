@@ -5,16 +5,32 @@
 use super::*;
 use crate::base_utilities::clean_frontmatter_labels;
 
-/// An API call's marked entries as [`Resolver::api`] cuts them ([`mark_led_pieces`]), each with the text it resolves
-/// to under `role` (the e-mails and ORCIDs an affiliation's commands declare taken out, as `api` takes them): the
-/// writer's map from the entries of one call to their events, and through their spans to the tokens the document
-/// queued (FM S2b; read by the emitter, `emitter::emit`).
+/// An API call's marked entries as [`Resolver::api`] cuts them ([`item_led_pieces`], else [`mark_led_pieces`]), each
+/// with the text it resolves to under `role` (the e-mails and ORCIDs an affiliation's commands declare taken out, as
+/// `api` takes them): the writer's map from the entries of one call to their events, and through their spans to the
+/// tokens the document queued (FM S2b; read by the emitter, `emitter::emit`).
 pub(in crate::base_utilities::frontmatter::observer) fn split_pieces(
   events: &[Event],
   role: &str,
 ) -> Vec<(String, Vec<Event>)> {
+  split_pieces_as(events, events, role)
+}
+
+/// [`split_pieces`] of `events`, cut at its items where the reading's own events of the same call, `read`, are
+/// ([`item_led_pieces`]): the writer's rehearsal of the content at the flush reads the meanings then, a list's labels
+/// perhaps gone (cmpj's `\ukrainianpart` makes `\addr` a bare `\item`, cmpj2.sty:649; 1212.6367).
+pub(in crate::base_utilities::frontmatter::observer) fn split_pieces_as(
+  read: &[Event],
+  events: &[Event],
+  role: &str,
+) -> Vec<(String, Vec<Event>)> {
   let splits_contacts = matches!(role, "affiliation" | "address" | "altaffiliation");
-  mark_led_pieces(events)
+  let pieces = if item_led_pieces(read).is_empty() {
+    mark_led_pieces(events)
+  } else {
+    list_items(events)
+  };
+  pieces
     .into_iter()
     .map(|piece| {
       let refs: Vec<&Event> = piece
@@ -578,6 +594,18 @@ impl Resolver {
         return;
       }
     }
+    // (a list each of whose items holds its own `\label`: each item an entry, keyed by it, `api:ref-label`)
+    if !split && tag != "ltx:creator" {
+      let items = item_led_pieces(events);
+      if !items.is_empty() {
+        self.splitting = true;
+        for item in items {
+          self.api(index, tag, role, attrs, &item, policy);
+        }
+        self.splitting = false;
+        return;
+      }
+    }
     // an entry of several marked entries (`\affiliation{$^{*}$Univ A,\\$^{+}$Univ B}`): each entry by its own leading
     // mark, as ruling 1 reads the marks (cond-mat0510562, 1612.09425, 1809.03738, hep-ph0408045, 2509.08362,
     // 1506.00848: the whole went to the first mark's carriers) — a block a binding's fail-safe sent to the block
@@ -648,6 +676,7 @@ impl Resolver {
       }
       return;
     }
+    warn_whole_entry_of_keyed_parts(index, &keys, &self.out.creators);
     let mut labels: Vec<String> = Vec::new();
     let mut label_rule = "";
     if let Some(label) = attr_value(attrs, "label").filter(|l| !l.is_empty()) {
@@ -1279,4 +1308,42 @@ pub(super) fn note_owned_contacts(events: &[Event]) -> Vec<&Event> {
         && (born || (e.role.as_deref() == Some("email") && e.meaning != EmailMeaning::Own))
     })
     .collect()
+}
+
+/// The State mapping of the entries [`warn_whole_entry_of_keyed_parts`] counted: once each, whatever flush reads it again.
+const COUNTED_ENTRIES: &str = "lx_fm_reading_counted";
+
+/// Count an entry holding several `\label`s placed whole while a name's `\ref` marks request only some of them: no
+/// reading cuts it at its labels, so that name holds the others too — cmpj's `\addresses` list (cmpj2.sty:543-555;
+/// 1212.6367, 1212.6137, 1603.02437, 2112.09940) where [`item_led_pieces`] does not cut it: a tagged `\item[a]`.
+fn warn_whole_entry_of_keyed_parts(index: usize, keys: &[String], creators: &[RCreator]) {
+  let mut distinct: Vec<&str> = keys.iter().map(String::as_str).collect();
+  distinct.sort_unstable();
+  distinct.dedup();
+  let partial = |c: &RCreator| {
+    let asks = |key: &&str| c.requests.iter().any(|r| r == key);
+    distinct.iter().any(asks) && !distinct.iter().all(asks)
+  };
+  if distinct.len() < 2 || !creators.iter().any(partial) {
+    return;
+  }
+  let once = s!("{index}");
+  if lookup_mapping(COUNTED_ENTRIES, &once).is_some() {
+    return;
+  }
+  assign_mapping(COUNTED_ENTRIES, &once, Some(Stored::Bool(true)));
+  let labels: Vec<&str> = distinct
+    .iter()
+    .map(|k| k.trim_start_matches("ref:"))
+    .collect();
+  Warn!(
+    "unexpected",
+    "frontmatter",
+    s!(
+      "The frontmatter reading places an entry holding {} label targets ({}) whole: each name whose reference requests one \
+       of them holds them all",
+      labels.len(),
+      labels.join(", ")
+    )
+  );
 }

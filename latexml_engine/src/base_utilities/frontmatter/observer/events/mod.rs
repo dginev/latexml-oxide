@@ -250,7 +250,7 @@ pub struct Event {
   pub span:           Option<(u16, u16)>,
   /// its ink: a name's text, a mark's printed text, a contact's or a note's shown text
   pub text:           String,
-  /// a mark's label, a note's `\label`, a contact's optional label
+  /// a mark's label, a note's `\label`, a contact's optional label; an enumerate item's (`ITEM_STEP`) counter value as digested
   pub label:          Option<String>,
   /// a mark printed as a footnote symbol
   pub symbol:         bool,
@@ -1898,6 +1898,22 @@ impl Walker {
       self.event(layout, d, nest);
       return;
     }
+    // (an enumerate `\item` stepping its counter, no tag of its own, where its item starts: [`item_led_pieces`])
+    if contents.is_empty() && cs == "\\enumerate@item@" {
+      let mut item = Event::new(EventKind::Layout);
+      item.role = Some(
+        if w.get_arg(1).is_none() {
+          ITEM_STEP
+        } else {
+          ITEM_TAGGED
+        }
+        .to_string(),
+      );
+      if let Some(Stored::Int(value)) = w.get_property("counter_value").as_deref() {
+        item.label = Some(value.to_string());
+      }
+      self.event(item, d, nest);
+    }
     // (a keyed constructor showing none of its arguments prints nothing: `\lx@frontmatter@mark`)
     if contents.is_empty() && KEYED_CONSTRUCTORS.iter().any(|(name, _)| *name == cs) {
       return;
@@ -2293,6 +2309,72 @@ pub(in crate::base_utilities) fn names_requested(events: &[Event]) -> Vec<String
       None => label,
     })
     .collect()
+}
+
+/// The role of the Layout event of an enumerate `\item` stepping its counter ([`item_led_pieces`]), and of one with a tag
+/// of its own (`\item[a]`), which steps none.
+pub(in crate::base_utilities) const ITEM_STEP: &str = "item";
+pub(in crate::base_utilities) const ITEM_TAGGED: &str = "item[]";
+
+/// The items of an entry that is one enumerate list, each from its `\item`, when every item steps the counter and holds a
+/// `\label` of its own: each item an entry, keyed by its label, as a `\ref` to it reads it (cmpj2.sty:543-555's
+/// `\addresses{\addr{la} … \addr{lb} …}`, `\addr` = `\item\label`; 1212.6367, 1212.6137, 1603.02437, 2112.09940). Empty
+/// otherwise: an item without a label, or no [`list_items`].
+pub(in crate::base_utilities) fn item_led_pieces(events: &[Event]) -> Vec<Vec<Event>> {
+  let items = list_items(events);
+  let labelled = |piece: &Vec<Event>| {
+    piece.iter().any(|e| {
+      e.kind == EventKind::Layout && e.nest == piece[0].nest && e.role.as_deref() == Some("label")
+    })
+  };
+  if items.iter().all(labelled) {
+    items
+  } else {
+    Vec::new()
+  }
+}
+
+/// The items of an entry that is one enumerate list, each from its `\item` ([`ITEM_STEP`]), each printing ink: empty for
+/// ink outside the list, an item with a tag of its own (`\item[a]`), fewer than two items.
+pub(in crate::base_utilities) fn list_items(events: &[Event]) -> Vec<Vec<Event>> {
+  let item = |e: &Event| e.kind == EventKind::Layout && e.role.as_deref() == Some(ITEM_STEP);
+  let Some(first) = events.iter().position(item) else {
+    return Vec::new();
+  };
+  let level = events[first].nest;
+  let Some(list) = level.checked_sub(1) else {
+    return Vec::new();
+  };
+  // (the list: the container its first item stands in)
+  let Some(start) = events[..first]
+    .iter()
+    .rposition(|e| e.kind == EventKind::Layout && e.nest == list)
+  else {
+    return Vec::new();
+  };
+  let item = |e: &Event| item(e) && e.nest == level;
+  let outside = |e: &Event| {
+    e.nest <= list && !matches!(e.kind, EventKind::Sep(SepKind::Gap { .. }))
+      || e.kind == EventKind::Layout && e.role.as_deref() == Some(ITEM_TAGGED)
+  };
+  if events[..first].iter().any(inked) || events[start + 1..].iter().any(outside) {
+    return Vec::new();
+  }
+  let mut pieces: Vec<Vec<Event>> = Vec::new();
+  for event in &events[first..] {
+    if item(event) {
+      pieces.push(Vec::new());
+    }
+    if event.nest >= level
+      && let Some(piece) = pieces.last_mut()
+    {
+      piece.push(event.clone());
+    }
+  }
+  if pieces.len() < 2 || !pieces.iter().all(|piece| piece.iter().any(inked)) {
+    return Vec::new();
+  }
+  pieces
 }
 
 /// Whether a mark's labels are among those some name requests ([`names_requested`]).

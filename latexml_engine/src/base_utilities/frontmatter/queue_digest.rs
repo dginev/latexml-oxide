@@ -4,6 +4,9 @@ use latexml_core::token::FieldLedgerScope;
 
 use super::*;
 
+/// The counter step in scope where the frontmatter item being digested starts ([`digest_frontmatter_item`]).
+pub(in crate::base_utilities) const ITEM_REFSTEP: &str = "lx_frontmatter_item_refstep";
+
 /// Digest the content for a frontmatter item, disabling or masking certain commands.
 /// Note that we shouldn't be digesting any frontmatter until within document, so inPreamble unnec.
 /// See clean_trailing_break for cleanup of misused \\.
@@ -16,6 +19,13 @@ pub(in crate::base_utilities) fn digest_frontmatter_item(
   // the field being made, for the commands a class's own setter of it defines for its argument
   // (frontmatter_stores.rs `refused_environment_definition`: vmsta.cls's `\author` and its `\fnm`)
   assign_value("lx_frontmatter_item", tag.to_string(), Some(Scope::Local));
+  // the counter step in scope as the item starts, which a `\label` naming a step of its own does not name
+  // (`\lx@set@frontmatter@label`)
+  assign_value(
+    ITEM_REFSTEP,
+    Stored::Int(refstep_in_scope().unwrap_or(0)),
+    Some(Scope::Local),
+  );
   let_i(
     &T_CS!("\\label"),
     &T_CS!("\\lx@set@frontmatter@label"),
