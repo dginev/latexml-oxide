@@ -51,26 +51,27 @@ const ROWS: &[Row] = &[
       ),
     ],
   },
-  // The safe side of the Error boundary: pdflatex 0 `!`; a constructor, two locked macros and a macro reading
-  // LaTeXML's argument types take no patch, one Warning each, the text kept (red: a false Error on `\emph` once the
-  // kernel list ran; the lost "Before." uncounted before).
+  // The safe side of the Error boundary: pdflatex 0 `!`; a constructor, two locked macros, a macro reading
+  // LaTeXML's argument types and a Rust-bodied one take no patch, one Warning each, the text kept (red: a false
+  // Error on `\emph` once the kernel list ran; the lost "Before." uncounted before).
   Row {
     name:     "command_hook_on_a_binding_is_counted",
     tex:      include_str!(
       "../../../tools/perfect_kernel/repros/macro-state/command_hook_on_a_binding_is_counted.tex"
     ),
-    counts:   (0, 4),
+    counts:   (0, 5),
     messages: &[
       "cmd/emph/before: LaTeXML's binding of \\emph takes no generic hook",
       "cmd/section/before: LaTeXML's binding of \\section takes no generic hook",
       "cmd/footnote/before: LaTeXML's binding of \\footnote takes no generic hook",
       "cmd/item/before: LaTeXML's binding of \\item takes no generic hook",
+      "cmd/arabic/before: LaTeXML's binding of \\arabic takes no generic hook",
     ],
     elements: &[
       (
         "p",
         "xml:id=\"S1.p1.1\"",
-        r#"<p xml:id="S1.p1.1">A<note mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>N</note> <emph font="italic" xml:id="S1.p1.1.1">b</emph> c.</p>"#,
+        r#"<p xml:id="S1.p1.1">A<note mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>N</note> <emph font="italic" xml:id="S1.p1.1.1">b</emph> c 1.</p>"#,
       ),
       (
         "p",
