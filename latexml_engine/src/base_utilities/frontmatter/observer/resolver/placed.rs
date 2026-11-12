@@ -76,7 +76,8 @@ pub(in crate::base_utilities::frontmatter::observer) struct Placed {
 /// The words of a mark the writer read as the label of an entry where it is glued to the text of another entry of that label
 /// in its list ([`MarkLedEntry`], of the contacts placed by their calls' labels): that entry's text, as one list labels each
 /// entry once (`emitter::calls::split_marked_pieces`) — 2204.02412's `(CAP$^3$), Univ Z` cut into `Center for Astro (CAP`
-/// and `, Univ Z`, both labelled 3. A label leading a line, or glued to a name, is no text.
+/// and `, Univ Z`, both labelled 3 ("glued": no separator word between the text and the mark; a space qualifies). A label
+/// leading a line, or glued to a name, is no text.
 pub(in crate::base_utilities::frontmatter::observer) fn retold_words(
   entries: &[MarkLedEntry],
   placed: &BTreeSet<String>,

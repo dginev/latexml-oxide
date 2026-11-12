@@ -1,0 +1,16 @@
+% mechanism: CT1ar's count (`placed::retold_words`) calls a mark "glued" to another same-label entry's text when no separator word
+%   comes between (a space qualifies), so `$^a$Dept of Physics $^a$Univ X` — one entry's repeated label on the same line, space-
+%   separated — counts "a" as lost though both affiliations are kept (DG accepted the over-count: it errs toward flagging; `, `,
+%   `,~` or `\quad` give 0 W). A touching test would also stop counting the real isotope loss (`$^3$Lab for $^{3}$He Physics`).
+% witness: synthetic (revCT1ar sameline2; 0 author-block hits in 3,300 arXiv zips)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`
+% engines: rust CT1arbase 0 W; rust CT1ar 1 W ("missing …: a"), XML identical, Ann keeps both affiliations
+% expect:  0 W (no word lost)
+% status:  RED (revCT1ar, int169a) — moves: post-merge (CTOV)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{a}$, Bob Baker$^{b}$ \\ $^a$Dept of Physics $^a$Univ X, Town \\ $^b$Univ Y, City}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,15 @@
+% mechanism: an isotope after a comma in an affiliation (`$^3$Dept of Physics, $^{3}$He Lab, Town`) is cut as a second entry of label
+%   3 and its "3" lost; by structure it cannot be told from a legitimate repeated label after a comma (`$^1$Univ X, Town, $^1$Dept Q`,
+%   correctly 0 W), so CT1ar's narrower rule (DG-accepted) leaves it uncounted — the one real false negative of narrowing.
+% witness: synthetic (revCT1ar isocomma)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "3Dept of Physics, 3He Lab, Town"
+% engines: rust CT1arbase and CT1ar: the "3" of ³He lost, 0 W
+% expect:  "³He Lab" kept with its superscript, or the lost "3" counted (1 W)
+% status:  RED (revCT1ar, int169a) — moves: post-merge (CTIC)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{3}$, Bob Baker$^{2}$ \\ $^3$Dept of Physics, $^{3}$He Lab, Town \\ $^2$Univ Y, City}
+\maketitle
+Text.
+\end{document}
