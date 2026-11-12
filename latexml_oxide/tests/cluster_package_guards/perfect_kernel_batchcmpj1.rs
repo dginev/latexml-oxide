@@ -274,6 +274,7 @@ fn cmpj_address_marks_print_the_second_run() {
       None,
     ),
   ];
+  let tags = Regex::new("<[^>]*>").expect("regex");
   for (style, tex, names, expected, warnings, labels, refs) in rows {
     let (log, xml) = run(tex);
     assert_eq!(
@@ -309,8 +310,7 @@ fn cmpj_address_marks_print_the_second_run() {
     if let Some(refs) = refs {
       let html = post_with(&xml, "resources/XSLT/LaTeXML-html5.xsl");
       let at = html.find("Text, see").expect("the text");
-      let text = Regex::new("<[^>]*>")
-        .expect("regex")
+      let text = tags
         .replace_all(&html[at..at + html[at..].find("</p>").expect("closed")], "")
         .into_owned();
       assert_eq!(text, refs, "{style}: {html}");

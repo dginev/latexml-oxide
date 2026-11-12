@@ -250,7 +250,7 @@ pub struct Event {
   pub span:           Option<(u16, u16)>,
   /// its ink: a name's text, a mark's printed text, a contact's or a note's shown text
   pub text:           String,
-  /// a mark's label, a note's `\label`, a contact's optional label; an [`ITEM_STEP`]'s counter value as digested
+  /// a mark's label, a note's `\label`, a contact's optional label; an enumerate item's (`ITEM_STEP`) counter value as digested
   pub label:          Option<String>,
   /// a mark printed as a footnote symbol
   pub symbol:         bool,
