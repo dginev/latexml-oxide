@@ -208,6 +208,25 @@ fn queued_marks_read_as_digested() {
       &["Ann Able 1", "address=1 Univ A, Town A"],
       &["Bob Baker 2", "address=2 Univ B, Town B"],
     ]),
+    // (P4b2: the Cut's decision reads the list's marks as digested, `requested_entry_labels` — marks a document macro
+    // prints, a math-active `^` no superscript token spells, the list repeated, the unknown class; the per-line cutter
+    // parts none of these lines, so each list stays whole and the observer places its entries)
+    (repro!("api_cut_macro_marks_list"), 0, &[
+      &["Ann Able 1", "address=1 Univ A, Town A"],
+      &["Bob Baker 2", "address=2 Univ B, Town B"],
+    ]),
+    (repro!("api_cut_math_active_marks_list"), 0, &[
+      &["Ann Able 1", "address=1 Univ A, Town A"],
+      &["Bob Baker 2", "address=2 Univ B, Town B"],
+    ]),
+    (repro!("api_cut_macro_marks_repeated_list"), 0, &[
+      &["Ann Able 1", "address=1 Univ A, Town A"],
+      &["Bob Baker 2", "address=2 Univ B, Town B"],
+    ]),
+    (repro!("api_cut_unknown_class_macro_marks_list"), 1, &[
+      &["Ann Able 1", "affiliation=1 Univ A, Town A"],
+      &["Bob Baker 2", "affiliation=2 Univ B, Town B"],
+    ]),
   ];
   for ((name, tex), warnings, expected) in rows {
     let (log, xml) = run(tex);

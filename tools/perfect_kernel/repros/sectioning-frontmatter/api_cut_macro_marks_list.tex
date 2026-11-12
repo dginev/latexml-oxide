@@ -1,0 +1,21 @@
+% mechanism: the API Cut's decision reads the list's marks as digested (`requested_entry_labels`, Option C P4b2): a
+%   list whose marks document macros print (`\newcommand\ua{\textsuperscript{1}}`) holds two entries the names request,
+%   as `$^{1}$` does; the per-line cutter parts no `\ua` line (tokens, P4b4), so the list stays whole (`cut_list`'s
+%   fail-safe) and the observer gives each name its entry, the mark shown
+% witness: synthetic (P4b2; the macro-printed mark of jfm's `\aff`, 1608.04241)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2",
+%          "1 Univ A, Town A, 2 Univ B, Town B"
+% engines: P4b and P4b2: the creators below, byte-identical (the observer read the whole list by its marks on P4b)
+% expect:  0 errors, 0 warnings; Ann Able "1 Univ A, Town A", Bob Baker "2 Univ B, Town B"
+% status:  GREEN (guard perfect_kernel_batchc1::queued_marks_read_as_digested)
+\documentclass{amsart}
+\newcommand\ua{\textsuperscript{1}}
+\newcommand\ub{\textsuperscript{2}}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$}
+\author{Bob Baker$^{2}$}
+\address{\ua Univ A, Town A\\ \ub Univ B, Town B}
+\maketitle
+Body.
+\end{document}

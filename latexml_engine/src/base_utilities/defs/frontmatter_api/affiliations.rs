@@ -339,44 +339,12 @@ pub(in crate::base_utilities) fn printed_marks_as_marks(list: Tokens) -> Tokens 
 }
 
 /// The frontmatter API's Cut decision (`cut_marked_contact`), the one predicate every reader of a store's marked
-/// entries asks: does `list` hold two or more entries, cut as [`affiliation_calls`] cuts them, led by marks of distinct
-/// labels that queued names request (`queued_requesters`), its first printed line led by a mark (`marker_leads`) —
-/// its marks read as the Cut reads them, whatever their spelling (`printed_marks_as_marks`)?
+/// entries asks: does `list` hold two or more entries led by marks of distinct labels that queued names request, its
+/// first ink a mark — its marks as digested ([`requested_entry_labels`]), read as the Cut reads them
+/// (`printed_marks_as_marks`)?
 pub fn holds_requested_marked_entries(list: &Tokens) -> Result<bool> {
-  requested_marked_entries_in(&printed_marks_as_marks(list.clone()))
-}
-
-/// [`holds_requested_marked_entries`] of a list whose marks are written as the plain marks they print.
-pub(in crate::base_utilities) fn requested_marked_entries_in(list: &Tokens) -> Result<bool> {
-  Ok(requested_entry_marks(list)?.len() >= 2)
-}
-
-/// The marks, of distinct labels, leading the entries of `list` (its marks written as the plain marks they print) that
-/// queued names request — none when its first printed line is not led by a mark ([`requested_marked_entries_in`]).
-pub(in crate::base_utilities) fn requested_entry_marks(list: &Tokens) -> Result<Vec<Vec<Token>>> {
-  let lines: Vec<Tokens> = split_tokens_delimited(list.clone(), affil_splits())
-    .into_iter()
-    .map(|(_, line)| line)
-    .filter(|line| !line.is_empty() && !prints_nothing(line))
-    .collect();
-  if !lines.first().is_some_and(marker_leads) {
-    return Ok(Vec::new());
-  }
-  let mut labels: Vec<String> = Vec::new();
-  let mut marks: Vec<Vec<Token>> = Vec::new();
-  for line in lines.into_iter().filter(marker_leads) {
-    for piece in split_wrapped_affiliation_marks(line)? {
-      if let Some(mark) = entry_mark(piece.unlist_ref())
-        && !queued_requesters(&mark)?.is_empty()
-        && let Some(label) = mark_label(&mark)
-        && !labels.contains(&label)
-      {
-        labels.push(label);
-        marks.push(mark);
-      }
-    }
-  }
-  Ok(marks)
+  let list = printed_marks_as_marks(list.clone());
+  Ok(requested_entry_labels(&list, "holds_requested_marked_entries")?.len() >= 2)
 }
 
 /// A class-numbered institute list as its title page prints it: llncs.cls:870-885 `\institutename` (copied by

@@ -52,7 +52,7 @@ pub(in crate::base_utilities) mod separators;
 pub(in crate::base_utilities) use argument_marks::count_unread as count_unread_marks;
 pub use argument_marks::{
   argument_marks, is_label_mark, leads_with_label, prints_list_marks, prints_marks,
-  prints_marks_and_labels, prints_requested_marks,
+  prints_marks_and_labels, prints_requested_marks, requested_entry_labels,
 };
 pub(in crate::base_utilities) use emitter::{
   EMITTING, SETTERS_RECOVERED, block_creator_written, calls::*, check_placed_content,

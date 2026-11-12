@@ -1,0 +1,24 @@
+% mechanism: an erroneous mark spelling, `${\mathrm ^{1}}$` (`\mathrm` takes `^` as its argument: pdflatex 4 errors,
+%   its recovery prints a raised 1), opening each line of a REVTeX `\affiliation` list under names marked
+%   `${\mathrm Able^{1}}$`: the token reading saw a superscript and the API Cut cut the list into one call per line
+%   (each name every line); the digested reading (P4b2, `requested_entry_labels`) reads our recovery, which prints no
+%   superscript (`{\mathrm{}{1}}`), so no entry is requested and the list stays one contact per name, its lines merged
+% witness: cond-mat0206329 (REVTeX 3, `\address{${\mathrm ^{1}}$School …\\ ${\mathrm ^{2}}$Department …}`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 4 errors (Missing { / } inserted): "Ann Able1 and Bob Baker2",
+%          "1Univ A, Town A", "2Univ B, Town B"
+% engines: P4b: E=2, each name "1 Univ A, Town A" and "2 Univ B, Town B" (two contacts); P4b2: E=2, each name one
+%          contact "1 Univ A, Town A 2 Univ B, Town B"
+% expect:  2 errors, 0 warnings; Ann Able "1 Univ A, Town A", Bob Baker "2 Univ B, Town B" (the marks pdflatex raises)
+% status:  RED (P4b2: the entries merged; P4b: every entry on every name)
+% moves:   a ruling (accept, a token fallback for a list whose rehearsal held an Error, or the math recovery)
+\documentclass[aps]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann ${\mathrm Able^{1}}$}
+\author{Bob ${\mathrm Baker^{2}}$}
+\affiliation{${\mathrm ^{1}}$Univ A, Town A \\
+${\mathrm ^{2}}$Univ B, Town B}
+\begin{abstract}x\end{abstract}
+\maketitle
+Text.
+\end{document}

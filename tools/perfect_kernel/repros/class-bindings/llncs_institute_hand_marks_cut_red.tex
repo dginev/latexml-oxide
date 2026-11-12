@@ -1,0 +1,24 @@
+% mechanism: llncs's one `\institute{\affmark{1} Univ A \quad \affmark{2} Univ B\\ \affmark{3} Univ C}`, its marks the
+%   names request (`\affmark` prints `\textsuperscript`): the API Cut's decision reads them as digested (P4b2,
+%   `requested_entry_labels`) but its per-line cutter (`entry_calls`) reads lines by tokens, sees no mark in
+%   `\affmark`, joins the lines into one entry, and the Cut leaves the list whole (the fail-safe: fewer than two marked
+%   entries parted); the reading keeps it the block's (`resolver::hand_marked_share`)
+% witness: 2608.21425 (its list in a `\parbox`, which the cutter does not enter either)
+% oracle:  pdflatex 0 errors; "Ann Able^1 and Bob Baker^2,3" over "^1 Univ A ^2 Univ B / ^3 Univ C"
+% engines: Z18g..P4b2: the institute on the block whole
+%          (guard perfect_kernel_batchz18g::llncs_institute_hand_marks_keep_it_whole)
+% expect:  0 errors, 0 warnings; Ann Able "1 Univ A", Bob Baker "2 Univ B" and "3 Univ C", the marks shown
+% status:  RED
+% moves:   P4b4 (the per-line token cutters)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\newcommand{\affmark}[1]{\textsuperscript{#1}}
+\begin{document}
+\title{A Title}
+\author{Ann Able\affmark{1} \and Bob Baker\affmark{2,3}}
+\institute{\affmark{1} Univ A \quad \affmark{2} Univ B\\
+\affmark{3} Univ C}
+\maketitle
+\begin{abstract}Text.\end{abstract}
+Body.
+\end{document}

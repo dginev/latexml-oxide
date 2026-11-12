@@ -1,0 +1,20 @@
+% mechanism: the Cut on the digested marks (Option C P4b2) under a math-active `^` (catcode 12, mathcode "8000,
+%   breqn's): amsart's two-entry `\address` list after each name; the per-line cutter parts no line (tokens, P4b4), so
+%   neither copy is cut nor gives way, and the observer gives each name its entry
+% witness: synthetic (P4b2; breqn's math-active `^`, 2504.02633)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2", the list printed twice
+% engines: P4b and P4b2: the creators below
+% expect:  0 errors, 0 warnings; Ann Able "1 Univ A, Town A", Bob Baker "2 Univ B, Town B", each once
+% status:  GREEN (catalog, no guard: the path api_cut_macro_marks_repeated_list guards)
+\documentclass{amsart}
+\begingroup\catcode`\^=\active \global\let^=\sp \endgroup
+\AtBeginDocument{\mathcode`\^="8000 \catcode`\^=12 }
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$}
+\address{$^{1}$Univ A, Town A\\ $^{2}$Univ B, Town B}
+\author{Bob Baker$^{2}$}
+\address{$^{1}$Univ A, Town A\\ $^{2}$Univ B, Town B}
+\maketitle
+Body.
+\end{document}

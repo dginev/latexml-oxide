@@ -1,0 +1,19 @@
+% mechanism: the API Cut's digested decision (Option C P4b2) on the unknown-class path (OmniBus, inst_support): one
+%   `\author` list parted by `\and`, the `\affiliation` list's marks printed by document macros; the list stays whole
+%   (the per-line cutter parts no line, P4b4) and the observer gives each name its entry
+% witness: synthetic (P4b2; the int158a lesson: probe `nosuchclass`)
+% oracle:  pdflatex fails on the missing class (harness limit); as article: "Ann Able1 Bob Baker2 / 1Univ A, Town A /
+%          2Univ B, Town B"
+% engines: P4b and P4b2: the creators below, byte-identical, 1 Warning (the missing class)
+% expect:  0 errors, 1 warning; Ann Able "1 Univ A, Town A", Bob Baker "2 Univ B, Town B"
+% status:  GREEN (guard perfect_kernel_batchc1::queued_marks_read_as_digested)
+\documentclass{nosuchclass}
+\newcommand\ua{\textsuperscript{1}}
+\newcommand\ub{\textsuperscript{2}}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ \and Bob Baker$^{2}$}
+\affiliation{\ua Univ A, Town A\\ \ub Univ B, Town B}
+\maketitle
+Body.
+\end{document}
