@@ -83,48 +83,48 @@ affected** → **is it unblocked** → **effort**.
 ### R — Road to the main merge (user 2026-11-09: "keep planning out all steps … towards completing our main goal"; inventory `agent_reports/2026-11-09_PREMERGE_inventory.md`, 30 …
 
 - **Road to the main merge (user 2026-11-09: "keep planning out all steps … towards completing our main goal"; inventory `agent_reports/2026-11-09_PREMERGE_inventory.md`, 30 items; supersedes the 2026-11-05 close order)**
-- **The task list — the single entry for the work until the merge (DG 2026-11-12: "We should have a single point of entry for work lists").** Updated at every decision and every bundle fold; status counts are read from these two tables. Weights: easy 1, medium 3, hard 5. Done since 2026-11-11: 52 tasks (weight 142), each in its bundle's entry in `archive/SYNC_SESSIONS_2026-11.md`. **Before the merge:** 2 ongoing (8), 36 to come (110). **After the merge:** 58 (136) — DG's pragmatic bar (2026-11-12): regressions and high-frequency / high-impact gaps before the merge; newly found edge cases after it, unless one invalidates the approach. **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: their PRE work in the table (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA27's input → CSS, QA75, QA80 with QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45, QA84, QA92 with QA02's awaited rest), the POST / LATER / HZN rows and those DG moved post-merge in the list below (QA60 site 8 as SR4/SR5); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted). Detail per row: the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker (`~/data/pk_agents/main/bruce_qa/ACTIONS.md`), each deferred finding's `_red.tex` (`moves:` names its row).
+- **The task list — the single entry for the work until the merge (DG 2026-11-12: "We should have a single point of entry for work lists").** Updated at every decision and every bundle fold; status counts are read from these two tables. Weights: easy 1, medium 3, hard 5. Done since 2026-11-11: 61 tasks (weight 165), each in its bundle's entry in `archive/SYNC_SESSIONS_2026-11.md` (EB1, QA41, ISO1, DTL1e, QA89, DBG1, DBG2, F0, P4d, done 2026-11-12, in their batch reports until their bundle's entry). **Before the merge:** 3 ongoing (11), 35 to come (107), worked in Rank order — the critical path (1-12: the frontmatter's Option C, the losses, the bars), the parallel fillers (13-29), the close (30-34). **After the merge:** 58 (136) — DG's pragmatic bar (2026-11-12): regressions and high-frequency / high-impact gaps before the merge; newly found edge cases after it, unless one invalidates the approach. **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: their PRE work in the table (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA27's input → CSS, QA75, QA80 with QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45, QA84, QA92 with QA02's awaited rest), the POST / LATER / HZN rows and those DG moved post-merge in the list below (QA60 site 8 as SR4/SR5); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted). Detail per row: the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker (`~/data/pk_agents/main/bruce_qa/ACTIONS.md`), each deferred finding's `_red.tex` (`moves:` names its row).
 
-  | Id | Task | Step | Weight | Status |
-  |---|---|---|---|---|
-  | CT1a-r | CT1a count design (DG ruling pending) | 2 | 1 | todo |
-  | UNC | Uncounted losses: IEEEtran grade drops, vmsta e-mails, kernel \thanks shapes | 2 | 3 | todo |
-  | P4c | P4c: the affiliation cut incl. the API's Cut (marks shown; isotope rule R3 first) | 3 | 5 | ongoing |
-  | P2-3b | P2-3 rest: llncs one-block list (DG's option a/b pending) | 3 | 3 | todo |
-  | P2-8b | P2-8b: IEEEtran block-call fact, grid rule in the reading | 3 | 5 | todo |
-  | P4b | P4b: marker_leads/leads_with_mark at ~20 sites | 3 | 5 | todo |
-  | P5 | Option C P5: new facts (IEEEmembership grade, "on behalf of", surname match) | 3 | 5 | todo |
-  | P6 | Option C P6 + frontmatter code/test compaction | 3 | 5 | todo |
-  | TP3 | TP3: merge the walks; QA60 site 2; BM probes' losses (ams, session) | 3 | 3 | todo |
-  | AUT1 | AUT1 | 3 | 3 | todo |
-  | TRUTH | Bars: the truth set | 4 | 5 | todo |
-  | HOLD4 | Bars: fresh holdout v4 read once; 98/98 | 4 | 3 | todo |
-  | GA1 | GA1 + the \@listctr fix (thebibliography's enumiv) | 5 | 3 | todo |
-  | GA2 | GA2 | 5 | 3 | todo |
-  | GA3 | GA3 | 5 | 3 | todo |
-  | GA4 | GA4 | 5 | 3 | todo |
-  | GA5 | GA5 | 5 | 3 | todo |
-  | F1-4 | Fences F1-F4 | 5 | 1 | todo |
-  | DTL1d | DTL1: out-of-range numbers → Error (OD #519 revised) | 5 | 3 | todo |
-  | T1 | T1: the repro suite move | 5 | 3 | todo |
-  | FMPERF | Frontmatter performance evaluation (#516) | 5 | 3 | todo |
-  | PERF | Perf + RAM pass, remaining levers (#346) | 5 | 5 | todo |
-  | ROW0A | Row 0a deferred manual REDs decided | 5 | 3 | todo |
-  | CLEAN | Workspace cleanup (keep-list to DG) | 5 | 1 | todo |
-  | PSF1 | PSF1 (from QA41): \psfrag fragments silently lost (Rust None vs Perl save_psfrag) — reach first | 5 | 1 | todo |
-  | PGR1 | PGR1 (from EB1): pgfmath grammar gaps (0bp read as a binary prefix ~9% of tikz papers; \dimexpr; -4 .5) then the pgfparse Error | 5 | 3 | todo |
-  | RV1 | RV1 (QA41's fix; the audit done): reversions as Perl/user — inpgf ignorespaces (~66k), centering alias, intertext | 5b | 3 | ongoing |
-  | QA47A | Hooks fix A (QA47, from QA46's study): run the kernel's begindocument lists; a Warning for bindings | 5b | 3 | todo |
-  | QA75 | Eyeball review of rendered HTML at the close | 5b | 3 | todo |
-  | QA80 | Upstream patch set prepared: QA08 equationgroup id, QA30 bibunits, QA35 subparagraph, QA36 abstract-heading XSLT, QA39 TOC copy, QA45 \list labels, QA50 \pretocmd on locks, QA56 \mbox, QA62 \bm | 5b | 3 | todo |
-  | QA84 | Comment compaction across the crates | 5b | 5 | todo |
-  | QA92 | Reply owed to BM (Q3.9, Q4.6, Q3.13; QA02's rest awaited from BM) | 5b | 1 | todo |
-  | CSS | The sizing CSS (goal end; QA27: BM's em-of-parent lengths as input) | 6 | 3 | todo |
-  | DOCS | Goal docs current | 6 | 3 | todo |
-  | SWEEP | Closing manual sweep (G1-G5) | 6 | 1 | todo |
-  | CORTEX | 2605/2606 cortex reruns (fleet rebuild: DG's OK) | 6 | 3 | todo |
-  | CIPERF | CI performance work, last before the merge | 6 | 5 | todo |
-  | MPR | The merge PR (DG confirms) | 6 | 1 | todo |
+  | Rank | Id | Task | Step | Weight | Status |
+  |---|---|---|---|---|---|
+  | 1 | P4c | P4c: the affiliation cut incl. the API's Cut (marks shown; isotope rule R3 first) | 3 | 5 | ongoing |
+  | 2 | P4b | P4b: marker_leads/leads_with_mark at ~20 sites | 3 | 5 | todo |
+  | 3 | P5 | Option C P5: new facts (IEEEmembership grade, "on behalf of", surname match) | 3 | 5 | todo |
+  | 4 | P6 | Option C P6 + the frontmatter code/test compaction | 3 | 5 | todo |
+  | 5 | P2-8b | P2-8b: IEEEtran block-call fact, grid rule in the reading | 3 | 5 | todo |
+  | 6 | P2-3b | P2-3 rest: llncs one-block list (DG's option a/b pending) | 3 | 3 | todo |
+  | 7 | TP3 | TP3: merge the walks; QA60 site 2; BM probes' losses (ams, session) | 3 | 3 | todo |
+  | 8 | AUT1 | AUT1 | 3 | 3 | todo |
+  | 9 | UNC | Uncounted losses: IEEEtran grade drops, vmsta e-mails, kernel \thanks shapes | 2 | 3 | todo |
+  | 10 | CT1a-r | CT1a count design (DG ruling pending) | 2 | 1 | todo |
+  | 11 | TRUTH | Bars: the truth set | 4 | 5 | todo |
+  | 12 | HOLD4 | Bars: fresh holdout v4 read once; 98/98 | 4 | 3 | todo |
+  | 13 | RV1 | RV1 (QA41's fix; the audit done): reversions as Perl/user — inpgf ignorespaces (~66k), centering alias, intertext | 5b | 3 | ongoing |
+  | 14 | QA47A | Hooks fix A (QA47, from QA46's study): run the kernel's begindocument lists; a Warning for bindings | 5b | 3 | ongoing |
+  | 15 | PGR1 | PGR1 (from EB1): pgfmath grammar gaps (0bp read as a binary prefix ~9% of tikz papers; \dimexpr; -4 .5) then the pgfparse Error | 5 | 3 | todo |
+  | 16 | DTL1d | DTL1: out-of-range numbers → Error (OD #519 revised) | 5 | 3 | todo |
+  | 17 | GA1 | GA1 + the \@listctr fix (thebibliography's enumiv) | 5 | 3 | todo |
+  | 18 | GA2 | GA2 | 5 | 3 | todo |
+  | 18 | GA3 | GA3 | 5 | 3 | todo |
+  | 18 | GA4 | GA4 | 5 | 3 | todo |
+  | 18 | GA5 | GA5 | 5 | 3 | todo |
+  | 18 | F1-4 | Fences F1-F4 | 5 | 1 | todo |
+  | 19 | PSF1 | PSF1 (from QA41): \psfrag fragments silently lost (Rust None vs Perl save_psfrag) — reach first | 5 | 1 | todo |
+  | 20 | PERF | Perf + RAM pass, remaining levers (#346) | 5 | 5 | todo |
+  | 21 | FMPERF | Frontmatter performance evaluation (#516), after P6 | 5 | 3 | todo |
+  | 22 | T1 | T1: the repro suite move | 5 | 3 | todo |
+  | 23 | ROW0A | Row 0a deferred manual REDs decided | 5 | 3 | todo |
+  | 24 | QA80 | Upstream patch set prepared: QA08 equationgroup id, QA30 bibunits, QA35 subparagraph, QA36 abstract-heading XSLT, QA39 TOC copy, QA45 \list labels, QA50 \pretocmd on locks, QA56 \mbox, QA62 \bm | 5b | 3 | todo |
+  | 25 | QA92 | Reply owed to BM (Q3.9, Q4.6, Q3.13; QA02's rest awaited from BM) | 5b | 1 | todo |
+  | 26 | CSS | The sizing CSS (goal end; QA27: BM's em-of-parent lengths as input) | 6 | 3 | todo |
+  | 27 | QA84 | Comment compaction across the crates (the last code pass) | 5b | 5 | todo |
+  | 28 | QA75 | Eyeball review of rendered HTML at the close | 5b | 3 | todo |
+  | 29 | CLEAN | Workspace cleanup (keep-list to DG) | 5 | 1 | todo |
+  | 30 | DOCS | Goal docs current | 6 | 3 | todo |
+  | 31 | SWEEP | Closing manual sweep (G1-G5) | 6 | 1 | todo |
+  | 32 | CORTEX | 2605/2606 cortex reruns (fleet rebuild: DG's OK) | 6 | 3 | todo |
+  | 33 | CIPERF | CI performance work, last before the merge | 6 | 5 | todo |
+  | 34 | MPR | The merge PR (DG confirms) | 6 | 1 | todo |
 
   **After the merge** (id — task; weight):
 
