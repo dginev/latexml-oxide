@@ -1,0 +1,17 @@
+% mechanism: the owner of a `cmd/<name>` hook's code is read from its label's first part (`document_hook_code`,
+%   latex_constructs_rust_only.rs: a label naming a loaded `\ver@<owner>.sty`/`.cls` is a package's). A document may label
+%   its own code with a loaded package's name, so its lost word is reported as an Info and goes uncounted. TeX keeps no
+%   other owner fact than the label; the faithful signal is whether `\@currname` was empty when the code was stored
+%   (`\__hook_hook_gput_code_do:nnn`, latex.ltx:5355ff).
+% witness: synthetic (revQA47Ab P1); no corpus witness seen
+% oracle:  pdflatex 0 `!`; "A Xb."; Perl: `\AddToHook` a no-op (latex_base.pool.ltxml:833), 0 warnings.
+% engines: rust QA47Ab: 0 errors, 0 warnings, `Info:hook:cmd/emph/before`; the X lost uncounted.
+% expect:  0 errors, 1 warning (`Warning:hook:cmd/emph/before`).
+% status:  RED (QA47Ab)
+% moves:   post-merge (QAHK: one fix with `command_hook_a_package_adds_in_the_body_red`)
+\documentclass{article}
+\usepackage{amsmath}
+\AddToHook{cmd/emph/before}[amsmath]{X}
+\begin{document}
+A \emph{b}.
+\end{document}

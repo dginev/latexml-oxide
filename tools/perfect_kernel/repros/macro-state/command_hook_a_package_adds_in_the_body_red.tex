@@ -7,7 +7,7 @@
 % engines: rust QA47Ab: 0 errors, 1 warning (`Warning:hook:cmd/emph/before`); QA47Abase: 0 warnings.
 % expect:  0 errors, 0 warnings; `Info:hook:cmd/emph/before`.
 % status:  RED (QA47Ab)
-% moves:   QA47A r3 (main session: defer the body decision until the code is stored, or read the label)
+% moves:   post-merge (QAHK: record the owner when the code is stored, `\__hook_hook_gput_code_do:nnn` latex.ltx:5355ff — one fix with `command_hook_a_document_label_names_a_package_red`)
 \begin{filecontents*}[overwrite]{qabodypkg.sty}
 \ProvidesPackage{qabodypkg}
 \newcommand\pkgnote{\AddToHook{cmd/emph/before}[qabodypkg]{\relax}}
