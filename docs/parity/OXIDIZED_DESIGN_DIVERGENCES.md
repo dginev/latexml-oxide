@@ -35257,7 +35257,10 @@ between them (`-4 .5` is -4.5); after them it tries a two-letter unit before an 
 prefix (`0bp` is 0bp); a number opening with `0` is octal (`010+1` is 9.0). A `\dimexpr`, `\glueexpr`, `\numexpr` or
 `\muexpr` is read by a TeX assignment; it and a count register take the place of a number before them (`2\mycount` is the
 count, `0.5\dimexpr 4pt` 4.0), and a dimension register scales it. A count declares no units. A control sequence is
-the token pgf receives, whatever its name (`\csname pal@data1H\endcsname`, an expl3 `\l_x_dim`).
+the token pgf receives, whatever its name (`\csname pal@data1H\endcsname`, an expl3 `\l_x_dim`). Not yet: inside a
+`\dimexpr`/`\numexpr` operand the name is re-read as text under the current catcodes, so one holding a character TeX reads
+otherwise (`%`) breaks (RED `pgfmath_csname_name_reread_in_expr_red`); a string result's `\meaning` spells such a name
+`\csname…\endcsname` (RED `pgfmath_string_result_spells_csname_red`).
 **Perl.** Its grammar (pgfmath.code.tex.ltxml:696-711) has no space inside a number, no `\dimexpr`, multiplies by any
 register and declares units for every one. **Rust.** pgf's rules (`pgfmath_code_tex.rs` `try_number`, `unit_at`,
 `try_cs_register`, `pgfmath_read_expr`; the expression through the core's `read_dimension`/`read_number`/`read_mu_glue`).
