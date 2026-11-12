@@ -19500,3 +19500,20 @@ counter_readers_keep_their_leniency). Minimal trigger (pdflatex "Value: 3."):
 Value: \the\x.
 \end{document}
 ```
+
+## 1232. pgfmath errs on `\maxdimen`'s own spelling `16383.99999pt`
+
+pgfmath.code.tex.ltxml:342-344 and :391-393 test the five-decimal result against `$MAX_PGF_NUMBER` (16383.99998), but
+TeX rounds `16383.99999pt` to 2^30−1 sp, exactly `\maxdimen` (tex.web §452-453, §461): pdflatex prints 16383.99998 with
+no error, Perl reports `Error:pgfmath:overflow Dimension too large: 16383.99999` per use, as the Rust port did (1811.10950's
+invclip idiom: 16; the TL manuals ddphonism 40, tikzbrickfigurines-doc 352). Fixed in Rust: the test reads the sp TeX holds
+(OXIDIZED_DESIGN_DIVERGENCES #1012). Guard `error_boundary::perfect_kernel_error_boundary` (row
+`pgfmath_maxdimen_spelling_and_fpu_in_range`). Minimal trigger (pdflatex "[16383.99998] [-16383.99998]", 0 `!`):
+
+```latex
+\documentclass{article}
+\usepackage{pgfmath}
+\begin{document}
+[\pgfmathparse{16383.99999pt}\pgfmathresult] [\pgfmathparse{-16383.99999pt}\pgfmathresult]
+\end{document}
+```

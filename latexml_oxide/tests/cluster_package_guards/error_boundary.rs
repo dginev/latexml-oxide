@@ -287,6 +287,68 @@ const BOUNDARY: &[Row] = &[
       r#"<p xml:id="p1.1">[16383.99998] [-16383.99998] [16382.0] [20000] [16383.99998] [-16383.99998]</p>"#,
     )],
   ),
+  // --- pgfmath: the overflow test on the dimension TeX holds (2^30−1 sp after rounding), none on the fpu's floats
+  // (DTL1h; 1811.10950, 2109.14286, the manuals ddphonism, tikzbrickfigurines-doc) ---
+  (
+    "pgfmath's `16383.99999pt` is \\maxdimen; the fpu's sums are floats (repro \
+     graphics-tikz/pgfmath_maxdimen_spelling_and_fpu_in_range)",
+    "pdflatex 0 `!`, [16383.99998] [-16383.99998] [-16383.99998] [16383.99998], [16,761] [18,765]; Perl 14 errors",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/graphics-tikz/pgfmath_maxdimen_spelling_and_fpu_in_range.tex"
+    ),
+    &[],
+    (0, 0),
+    &[],
+    &[
+      (
+        "p",
+        "p1.1",
+        "<p xml:id=\"p1.1\">[16383.99998] [-16383.99998]\n[-16383.99998] [16383.99998]</p>",
+      ),
+      (
+        "p",
+        "p3.1",
+        r#"<p xml:id="p3.1">[<Math mode="inline" tex="16{,}761" text="16761" xml:id="p3.m1"><XMath xml:id="p3.m1.1"><XMTok meaning="16761" role="NUMBER">16,761</XMTok></XMath></Math>] [<Math mode="inline" tex="18{,}765" text="18765" xml:id="p3.m2"><XMath xml:id="p3.m2.1"><XMTok meaning="18765" role="NUMBER">18,765</XMTok></XMath></Math>]</p>"#,
+      ),
+    ],
+  ),
+  (
+    "pgfmath past \\maxdimen: a literal, a sum, each unit'd operand, the fpu's unit'd operand (repro \
+     graphics-tikz/pgfmath_past_maxdimen_errs)",
+    "pdflatex 7 `!` (Dimension too large), [16383.99998] [16383.99998] [6383.99998] [16383.99998] [16,384][16,384] \
+     [−20,000]; Perl 5 errors",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/graphics-tikz/pgfmath_past_maxdimen_errs.tex"
+    ),
+    &[],
+    (7, 0),
+    &[
+      "Error:pgfmath:overflow Dimension too large: 16383.999993. Input was: 16383.999993pt",
+      "Error:pgfmath:overflow Dimension too large: 16761. Input was: 12319.0+4442",
+      "Error:pgfmath:overflow Dimension too large: 20000. Input was: 20000pt",
+      "Error:pgfmath:overflow Dimension too large: 20000. Input was: 20000pt",
+      "Error:pgfmath:overflow Dimension too large: 20000. Input was: 20000pt",
+      "Error:pgfmath:overflow Dimension too large: 16384.99998474121. Input was: 20000pt+1",
+      "Error:expected:<dimen> Dimension too large.",
+    ],
+    &[
+      (
+        "p",
+        "p1.1",
+        r#"<p xml:id="p1.1">[16383.99998] [16383.99998]</p>"#,
+      ),
+      (
+        "p",
+        "p2.1",
+        r#"<p xml:id="p2.1">[6383.99998] [16383.99998]</p>"#,
+      ),
+      (
+        "p",
+        "p3.1",
+        r#"<p xml:id="p3.1">[<Math mode="inline" tex="16{,}384" text="16384" xml:id="p3.m1"><XMath xml:id="p3.m1.1"><XMTok meaning="16384" role="NUMBER">16,384</XMTok></XMath></Math>][<Math mode="inline" tex="16{,}384" text="16384" xml:id="p3.m2"><XMath xml:id="p3.m2.1"><XMTok meaning="16384" role="NUMBER">16,384</XMTok></XMath></Math>] [<Math mode="inline" tex="-20{,}000" text="- 20000" xml:id="p3.m3"><XMath xml:id="p3.m3.1"><XMApp xml:id="p3.m3.1.1"><XMTok meaning="minus" role="ADDOP">-</XMTok><XMTok meaning="20000" role="NUMBER">20,000</XMTok></XMApp></XMath></Math>]</p>"#,
+      ),
+    ],
+  ),
   // --- bibunits' `\putbib` reads `\@startbibunitorrelax`, undefined before the first unit (bibunits.sty:251-256,
   // 324-325): an Error by rule (3), the cite dangling (revBU1b PE1) ---
   (

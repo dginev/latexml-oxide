@@ -14,6 +14,30 @@ const LOG2: f64 = std::f64::consts::LN_2;
 const LOG10: f64 = std::f64::consts::LN_10;
 const EPSILON: f64 = 0.00001;
 const MAX_PGF_NUMBER: f64 = 16383.99998;
+/// `\maxdimen` in points, 2^30−1 sp (tex.web §421).
+const MAX_DIMEN_POINTS: f64 = 1_073_741_823.0 / 65536.0;
+
+/// Whether TeX would stop on "Dimension too large" holding `points`: past 2^30−1 sp after its rounding of the
+/// fraction (tex.web §452-453, §461), so `16383.99999pt` is `\maxdimen` (1811.10950, the invclip idiom).
+fn exceeds_max_dimen(points: f64) -> bool { (points * 65536.0).round().abs() >= 1_073_741_824.0 }
+
+/// pgf's fpu computes in floats (pgflibraryfpu.code.tex:29-46): no TeX dimension holds its result (2109.14286).
+fn fpu_active() -> bool { pgfkeys_code_tex::newif_true("\\ifpgfmathfloatparseactive") }
+
+/// `<number><unit>` as pgf's scan into `\pgfmath@x` reads it, in the fpu too: past `\maxdimen` "Dimension too large"
+/// (tex.web §460) and `\maxdimen` kept.
+fn scanned_dimension(number: f64, unit: &str) -> f64 {
+  let points = pgfmath_convert(number, unit);
+  if !exceeds_max_dimen(points) {
+    return points;
+  }
+  report_pgfmath_error(
+    "pgfmath",
+    "overflow",
+    &format!("Dimension too large: {points}. Input was: {number}{unit}"),
+  );
+  MAX_DIMEN_POINTS.copysign(points)
+}
 
 // ==================== Result Formatting ====================
 
@@ -360,15 +384,18 @@ fn try_simple_number(input: &str) -> Option<String> {
       } else if decimals.is_none() {
         result = format!("{}.0", result);
       }
-      // Overflow check for negative (Perl .ltxml:342-344)
+      // pgf negates in `\pgfmath@x` (Perl .ltxml:342-344 errs on `-16383.99999` too), not in the fpu.
       if let Ok(numval) = result.parse::<f64>()
         && numval < -MAX_PGF_NUMBER
+        && !fpu_active()
       {
-        report_pgfmath_error(
-          "pgfmath",
-          "overflow",
-          &format!("Dimension too large: {result}. Input was: {input}"),
-        );
+        if exceeds_max_dimen(numval) {
+          report_pgfmath_error(
+            "pgfmath",
+            "overflow",
+            &format!("Dimension too large: {result}. Input was: {input}"),
+          );
+        }
         result = format!("{}", -MAX_PGF_NUMBER);
       }
     }
@@ -1588,7 +1615,7 @@ mod pgfmath_grammar {
       sb(i);
       if let Some(unit) = try_unit(i) {
         i.state.units_declared = true;
-        return Ok(pgfmath_convert(num, &unit));
+        return Ok(super::scanned_dimension(num, &unit));
       }
       if first(i) == Some(b'\\') {
         let cp = i.checkpoint();
@@ -2155,16 +2182,20 @@ fn format_parse_result(result: f64, input: &str) -> String {
   if result.is_nan() || result.is_infinite() {
     return "0.0".to_string();
   }
-  // pgf's `\pgfmath@x=…pt` stops on "Dimension too large" (tex.web §460); Perl errs too (.ltxml:391-393), on the
-  // five-decimal result, so `\maxdimen` (16383.99998474…) is in range.
-  if ((result * 1e5).round() / 1e5).abs() > MAX_PGF_NUMBER {
-    report_pgfmath_error(
-      "pgfmath",
-      "overflow",
-      &format!("Dimension too large: {result}. Input was: {input}"),
-    );
-  }
-  let result = result.clamp(-MAX_PGF_NUMBER, MAX_PGF_NUMBER);
+  // pgf's `\pgfmath@x=…pt` stops on "Dimension too large" (tex.web §460) and prints `\maxdimen` as 16383.99998;
+  // Perl errs on the five-decimal result (.ltxml:391-393), `16383.99999pt` too (KNOWN_PERL_ERRORS #1232).
+  let result = if fpu_active() {
+    result
+  } else {
+    if exceeds_max_dimen(result) {
+      report_pgfmath_error(
+        "pgfmath",
+        "overflow",
+        &format!("Dimension too large: {result}. Input was: {input}"),
+      );
+    }
+    result.clamp(-MAX_PGF_NUMBER, MAX_PGF_NUMBER)
+  };
 
   // Integer result
   if result == (result as i64) as f64 {
