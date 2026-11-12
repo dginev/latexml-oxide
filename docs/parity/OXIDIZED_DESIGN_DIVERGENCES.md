@@ -35818,3 +35818,27 @@ else dvips.def:203-210's eps rules (`.eps`, `.ps`, `.eps.gz`, …); psfrag's sca
 Residual: raw epsf.sty loaded before psfrag leaves `\epsffile` unhooked in TeX (no placement), where the binding's
 `\epsffile` shares `\epsfbox`'s constructor and warns. **Guard**:
 `perfect_kernel_batchpsf1::batchpsf1_dropped_fragments_are_counted` (repros `reversion/psfrag_*`).
+
+### 1018. What a package adds to `\@trivlist` runs through the kernel's `\lx@trivlist@hook`; tabu's lets are bound (TABU2, TABU2b, TABU2c)
+
+**TeX.** latex.ltx's `\@trivlist` (:15862) opens every list but an in-paragraph one: `\list`, `\trivlist`, so
+`{itemize}`/`{enumerate}`/`{description}`, `{quote}`/`{quotation}`/`{verse}`, theorems (`\@begintheorem`), amsthm's
+`\proof` (amsthm.sty:434), mn2e.cls:864 / mnras.cls:993's `\proof`, and `{thebibliography}` (article.cls:565-571,
+natbib.sty:1068). A package adds to it: tabu.sty:2389-2391 `\tabu@trivlist`, run by `\tabu@init` (:705) in every tabu,
+lets `\\` back to `\@normalcr` at a list's start, so a list in a `>{\centering}p` cell keeps its line breaks; the same
+`\tabu@init` lets `\centering`/`\raggedright`/`\raggedleft` to `\tabu@latextwoe`'s copies ending in `\arraybackslash`
+(:2376-2381), so a `\\` after them ends the row; its private `|` reads a line style, `|[1pt]` (:907-911).
+**Perl.** No tabu binding (OmniBus reads tabu.sty raw); `\@trivlist` is `\relax`, locked
+(latex_constructs.pool.ltxml:1673), so an addition to it is lost, and its `\trivlist` and lists are constructors that
+never run it. **Rust.** `\@trivlist` stays locked; its package additions go to `\lx@trivlist@hook` (empty, sect06.rs),
+which `run_trivlist_hook` digests where TeX opens the list: `begin_itemize` (not for `inline@` lists, which TeX does
+not open with `\@trivlist`), `{quote}`/`{quotation}`/`{verse}`, `define_new_theorem`'s begin, amsthm's and
+mn2e_support's `{proof}`, `\thebibliography` after its heading and preamble. tabu_sty.rs ports `\tabu@latextwoe` and
+`\tabu@trivlist` (adding to the hook) as raw TeX, and `\tabu@init`'s lets, the private `|` included, local to each
+`{tabu}`/`{longtabu}`; `{tabu*}`/`{longtabu*}` are their unstarred twins (the body rescan not modelled); `|[style]`
+keeps the rule, its width, dash and colour not modelled. 10 witnesses 313 → 0 Errors (2210.07016 95 → 0, 1705.07086
+90 → 0); ~880 arXiv papers load tabu. Residuals (post-merge): the private `|` let is inherited by a tabular nested in
+a tabu cell, where TeX errs (TABUN, `tabu_vline_style_in_a_nested_tabular_red`); our `{center}`/`{flushleft}` let
+`\\` to `\@normalcr` themselves, so in a tabu cell they keep line breaks where TeX ends the row (TABUF,
+`tabu_center_env_backslash_red`). **Guards**: `perfect_kernel_batch54::tabu_init_lets_rule_styles_and_starred_environments`
+(repros `alignment-bindings/tabu_*`, `array_centering_backslash_errs`).
