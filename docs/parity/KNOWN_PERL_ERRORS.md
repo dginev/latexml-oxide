@@ -19292,10 +19292,12 @@ hides the flaw for plain arithmetic (`-2^2` → `-2**2` → -4), but an expressi
 \end{document}
 ```
 
-Fixed in Rust (DTL1b): the `-` branch of `simplefactor` negates a whole `term()`; `^` is left-associative and a
-`!` after it applies to the power (`2^2!`); a `!` or `r` written before `^` (`2!^2`, `2r^2`) is still read too tightly
-(RED `pgfmath_postfix_before_power_red`), and `r` applies to the product so far (`pgfmath_code_tex.rs`; rows in `pgfmath_golden_tests`, safe twin
-`graphics-tikz/pgfmath_neg_binds_below_power.tex`; witness 2311.02367). The `86_tikz` golden `tikz/dominoes.xml` had
+Fixed in Rust (DTL1b, DTL1e): the `-` branch of `simplefactor` negates a whole `term()`; `^` is left-associative; a
+postfix `!` (800) or `r` (600) waits, as on pgf's operator stack (pgfmathparser.code.tex:765-790), for the stronger
+operators after it: `2^2!` and `2!^2` are (2^2)! = 24, `2r^2` (2^2)r = 229.18, `3*2r^2` ((3*2)^2)r, `-1r!` −57.30
+(Perl: 2, 114.59, 343.77, each an Error:pgfparse, and −5040.0 with an overflow Error) (`pgfmath_code_tex.rs` `term`,
+`power_tail`; rows in `pgfmath_golden_tests`, repros `graphics-tikz/pgfmath_neg_binds_below_power.tex`,
+`pgfmath_postfix_before_power.tex`; witness 2311.02367). The `86_tikz` golden `tikz/dominoes.xml` had
 pinned Perl's `-((x)/75)^2` as `+`: its picture is now pdflatex's 341.85pt high (was 379.25pt).
 
 ## 1222. amsmath, lineno, microtype: Perl's bindings lack what the originals define (QA54, PI1)

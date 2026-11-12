@@ -837,7 +837,7 @@ fn is_user_function(name: &str) -> bool {
 //   formula     : expr ? expr : expr | expr CMP expr | expr
 //   expr        : term (ADDOP term)*
 //   term        : factor (MULOP factor)*
-//   factor      : simplefactor ^ simplefactor | simplefactor postfix*
+//   factor      : simplefactor (^ simplefactor | !)*   (postfix ! and r wait for the ^ chain after them)
 //   simplefactor: ( formula ) | PREFIX simplefactor | FUNCTION(...) |
 //                 FUNCTION0 | NUMBER UNIT | NUMBER | REGISTER
 
@@ -1383,16 +1383,19 @@ mod pgfmath_grammar {
     Ok(result)
   }
 
-  /// term := factor (('*'|'/') factor | 'r')* — postfix `r` (deg, precedence 600) is below `*` and `/` (700) and
-  /// applies to the product so far (pgfmathparser.code.tex:900-919: `4/2r` is (4/2)r, 114.59155 in pdflatex).
+  /// term := factor (('*'|'/') factor | 'r' power_tail)* — postfix `r` (deg, 600) is below `*`/`/` (700), `!` (800)
+  /// and `^` (900): pgf's operator stack holds it until the term ends, so it applies to the product so far and to the
+  /// powers and factorials after it (`4/2r` (4/2)r, `3*2r^2` ((3*2)^2)r; pgfmathparser.code.tex:765-790, 900-919).
   fn term(i: &mut In) -> ModalResult<f64> {
     let mut result = factor(i)?;
+    let mut degrees = 0;
     loop {
       sb(i);
       match first(i) {
         Some(b'r') if !second(i).map(|c| c.is_ascii_alphabetic()).unwrap_or(false) => {
           bump(i, 1);
-          result = result.to_degrees();
+          degrees += 1;
+          result = power_tail(i, result)?;
           i.state.int_result = false;
         },
         Some(b'*') => {
@@ -1415,13 +1418,22 @@ mod pgfmath_grammar {
         _ => break,
       }
     }
+    for _ in 0..degrees {
+      result = result.to_degrees();
+    }
     Ok(result)
   }
 
-  /// factor := simplefactor ('^' simplefactor | '!')* — `^` (precedence 900) left-associative (`2^3^2` 64.0), postfix
-  /// `!` (800) on the power (`2^2!` 24.0) (pgfmathparser.code.tex:902, 918; pdflatex).
+  /// factor := simplefactor power_tail
   fn factor(i: &mut In) -> ModalResult<f64> {
-    let mut result = simplefactor(i)?;
+    let base = simplefactor(i)?;
+    power_tail(i, base)
+  }
+
+  /// power_tail := ('^' simplefactor | '!')* — `^` (900) left-associative (`2^3^2` 64.0); a postfix `!` (800) waits
+  /// on the stack for the `^` chain after it, so it applies to the whole power (`2^2!` 24.0, `2!^2` (2^2)! 24.0).
+  fn power_tail(i: &mut In, mut result: f64) -> ModalResult<f64> {
+    let mut factorials = 0;
     loop {
       sb(i);
       match first(i) {
@@ -1435,11 +1447,14 @@ mod pgfmath_grammar {
         },
         Some(b'!') if second(i) != Some(b'=') => {
           bump(i, 1);
-          result = pgfmath_factorial(result as i64);
+          factorials += 1;
           i.state.int_result = false;
         },
         _ => break,
       }
+    }
+    for _ in 0..factorials {
+      result = pgfmath_factorial(result as i64);
     }
     Ok(result)
   }
@@ -2729,7 +2744,7 @@ mod pgfmath_golden_tests {
       ("2*3pt", "6.0@u"),
       // DTL1: pgf's operator precedences (pgfmathparser.code.tex:898-919, `neg` 500 at
       // pgfmathfunctions.basic.code.tex:46-49): unary minus negates the whole term after it, `^` is
-      // left-associative under a postfix `!`, `r` applies to the product so far. pdflatex/pgf TL2025
+      // left-associative, `r` applies to the product so far. pdflatex/pgf TL2025
       // values; where pgf's own series rounds the last digit the row says so (2311.02367).
       ("-2^2", "-4.0@-"),
       ("-3!", "-6.0@-"),
@@ -2748,6 +2763,18 @@ mod pgfmath_golden_tests {
       ("-2^2!", "-24.0@-"),
       ("4/2r", "114.59156@-"),   // pdflatex 114.59155
       ("1+2*3r", "344.77468@-"), // pdflatex 344.77466
+      // DTL1e: a postfix `!` or `r` waits for the stronger operators after it (pgfmathparser.code.tex:765-790); the
+      // pdflatex values of `graphics-tikz/pgfmath_postfix_before_power.tex` and its siblings (revDTL1b S1, P3).
+      ("2!^2", "24.0@-"),
+      ("2!^2*3", "72.0@-"),
+      ("-2!^2", "-24.0@-"),
+      ("2r^2", "229.18312@-"),    // pdflatex 229.1831
+      ("-2r^2", "-229.18312@-"),  // pdflatex -229.1831
+      ("3r^2", "515.66202@-"),    // pdflatex 515.66199
+      ("3*2r^2", "2062.64806@-"), // pdflatex 2062.64795
+      ("2r^2!", "1375.09871@-"),  // pdflatex 1375.09863
+      ("3r!", "343.77468@-"),     // pdflatex 343.77466
+      ("-1r!", "-57.29578@-"),
     ];
     for (expr, expected) in golden {
       assert_eq!(&describe(expr), expected, "pgfmath diverged on {expr:?}");
