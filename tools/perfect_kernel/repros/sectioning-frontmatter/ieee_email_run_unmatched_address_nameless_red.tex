@@ -1,0 +1,22 @@
+% mechanism: an IEEEtran block's e-mail line, a brace group of local parts first (`\{nna, dow, cole\}@a.edu`) in an order
+%   other than the names': the addresses are matched to names by spelling, and the one no spelling matches goes to a
+%   nameless creator although one name (Ann Able) is left without an address; pre-existing (int162a the same)
+% witness: 2409.10792 (hanq@ of Quang-Ha Ngo); kin 2410.09414 (wangsn@ beside two Wangs, and a student-number address)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able∗ , Bob Baker† , Cy Cole∗ , Di Dow∗",
+%   "∗ Univ A, † Univ B", "Email: {nna, dow, cole}@a.edu, baker@b.edu"
+% engines: int162a, P4cR1: Bob baker@, Cy cole@, Di dow@, a fifth, nameless creator nna@a.edu
+% expect:  0 errors, 0 warnings; a ruling: nna@a.edu Ann Able's (the one name the matched addresses leave) or the block's
+% status:  RED (P4cR1: a nameless creator)
+% moves:   post-merge (the e-mail run's placement; a ruling first)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{
+\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}, Bob Baker\IEEEauthorrefmark{2}, Cy Cole\IEEEauthorrefmark{1}, Di Dow\IEEEauthorrefmark{1}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}\textit{Univ A}, \IEEEauthorrefmark{2}\textit{Univ B}} \\
+Email: \{nna, dow, cole\}@a.edu, baker@b.edu
+}
+\maketitle
+Body.
+\end{document}
