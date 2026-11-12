@@ -30904,7 +30904,7 @@ integration). Since Option C P4b2 the decision and the copy rule below read one 
 with its requesters — a mark a document macro prints or a math-active `^` spells counts (`api_cut_macro_marks_list`,
 `api_cut_math_active_marks_list`). A list whose first token, read through parameterless macros' bodies (and on past a body
 printing nothing, `\newcommand\affilfont{}`), is a letter or digit is not rehearsed (`may_open_with_mark`:
-2103.04797's 1,161 `\affiliation{\Amsterdam}`, −0.3 % instructions against P4b); the bindings' per-call reader `leads_with_label` (REVTeX's and AASTeX's `\affiliation`, sv's `\institute`, jfm, ws_procl, interspeech, IEEEtran) asks the same gate (CST1: 2103.04797 −10.1 %, 1901.01540 −2.1 % against int164a, byte-identical). Unread (a rehearsal left a group open), none: the list stays whole for the observer, counted
+2103.04797's 1,161 `\affiliation{\Amsterdam}`, −0.3 % instructions against P4b); the bindings' per-call reader `leads_with_label` (REVTeX's and AASTeX's `\affiliation`, sv's `\institute`, jfm, ws_procl, interspeech, IEEEtran) asks the same gate (CST1: 2103.04797 −10.5 %, 1901.01540 −2.6 % against int164a, byte-identical). Unread (a rehearsal left a group open), none: the list stays whole for the observer, counted
 (`--debug=frontmatter_marks`). The per-line cutter (`entry_calls`) still parts lines by tokens (P4b4), so a list whose
 requested entries it parts fewer than two of stays whole too (`cut_list`'s fail-safe): 2608.21425's list in a
 `\parbox`, llncs's `\affmark` lines (RED `llncs_institute_hand_marks_cut_red`); the uncut copies give way only once
