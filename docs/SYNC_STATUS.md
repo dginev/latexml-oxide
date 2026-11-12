@@ -83,6 +83,87 @@ affected** → **is it unblocked** → **effort**.
 ### R — Road to the main merge (user 2026-11-09: "keep planning out all steps … towards completing our main goal"; inventory `agent_reports/2026-11-09_PREMERGE_inventory.md`, 30 …
 
 - **Road to the main merge (user 2026-11-09: "keep planning out all steps … towards completing our main goal"; inventory `agent_reports/2026-11-09_PREMERGE_inventory.md`, 30 items; supersedes the 2026-11-05 close order)**
+- **The task list — the single entry for the work until the merge (DG 2026-11-12: "We should have a single point of entry for work lists").** Updated at every decision and every bundle fold; status counts are read from these two tables. Weights: easy 1, medium 3, hard 5. Done since 2026-11-11: 52 tasks (weight 142), each in its bundle's entry in `archive/SYNC_SESSIONS_2026-11.md`. **Before the merge:** 2 ongoing (8), 36 to come (110). **After the merge:** 36 (74) — DG's pragmatic bar (2026-11-12): regressions and high-frequency / high-impact gaps before the merge; newly found edge cases after it, unless one invalidates the approach. Detail per row: the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker (`~/data/pk_agents/main/bruce_qa/ACTIONS.md`), each deferred finding's `_red.tex` (`moves:` names its row).
+
+  | Id | Task | Step | Weight | Status |
+  |---|---|---|---|---|
+  | CT1a-r | CT1a count design (DG ruling pending) | 2 | 1 | todo |
+  | UNC | Uncounted losses: IEEEtran grade drops, vmsta e-mails, kernel \thanks shapes | 2 | 3 | todo |
+  | P4c | P4c: the affiliation cut incl. the API's Cut (marks shown; isotope rule R3 first) | 3 | 5 | ongoing |
+  | P2-3b | P2-3 rest: llncs one-block list (DG's option a/b pending) | 3 | 3 | todo |
+  | P2-8b | P2-8b: IEEEtran block-call fact, grid rule in the reading | 3 | 5 | todo |
+  | P4b | P4b: marker_leads/leads_with_mark at ~20 sites | 3 | 5 | todo |
+  | P5 | Option C P5: new facts (IEEEmembership grade, "on behalf of", surname match) | 3 | 5 | todo |
+  | P6 | Option C P6 + frontmatter code/test compaction | 3 | 5 | todo |
+  | TP3 | TP3: merge the walks; QA60 site 2; BM probes' losses (ams, session) | 3 | 3 | todo |
+  | AUT1 | AUT1 | 3 | 3 | todo |
+  | TRUTH | Bars: the truth set | 4 | 5 | todo |
+  | HOLD4 | Bars: fresh holdout v4 read once; 98/98 | 4 | 3 | todo |
+  | GA1 | GA1 + the \@listctr fix (thebibliography's enumiv) | 5 | 3 | todo |
+  | GA2 | GA2 | 5 | 3 | todo |
+  | GA3 | GA3 | 5 | 3 | todo |
+  | GA4 | GA4 | 5 | 3 | todo |
+  | GA5 | GA5 | 5 | 3 | todo |
+  | F1-4 | Fences F1-F4 | 5 | 1 | todo |
+  | DTL1d | DTL1: out-of-range numbers → Error (OD #519 revised) | 5 | 3 | todo |
+  | T1 | T1: the repro suite move | 5 | 3 | todo |
+  | FMPERF | Frontmatter performance evaluation (#516) | 5 | 3 | todo |
+  | PERF | Perf + RAM pass, remaining levers (#346) | 5 | 5 | todo |
+  | ROW0A | Row 0a deferred manual REDs decided | 5 | 3 | todo |
+  | CLEAN | Workspace cleanup (keep-list to DG) | 5 | 1 | todo |
+  | PSF1 | PSF1: \psfrag fragments silently lost (Rust None vs Perl save_psfrag) — reach first | 5 | 1 | todo |
+  | PGR1 | PGR1: pgfmath grammar gaps (0bp read as a binary prefix ~9% of tikz papers; \dimexpr; -4 .5) then the pgfparse Error | 5 | 3 | todo |
+  | RV1 | RV1 (QA41): reversions as Perl/user — inpgf ignorespaces (~66k), centering alias, intertext | 5b | 3 | ongoing |
+  | QA47A | Hooks fix A: run the kernel's begindocument lists; a Warning for bindings | 5b | 3 | todo |
+  | QA75 | Eyeball review of rendered HTML at the close | 5b | 3 | todo |
+  | QA80 | Upstream patch set prepared (9 patches) | 5b | 3 | todo |
+  | QA84 | Comment compaction across the crates | 5b | 5 | todo |
+  | QA92 | Reply owed to BM (Q3.9, Q4.6, Q3.13) | 5b | 1 | todo |
+  | CSS | The sizing CSS (goal end; BM's em input) | 6 | 3 | todo |
+  | DOCS | Goal docs current | 6 | 3 | todo |
+  | SWEEP | Closing manual sweep (G1-G5) | 6 | 1 | todo |
+  | CORTEX | 2605/2606 cortex reruns (fleet rebuild: DG's OK) | 6 | 3 | todo |
+  | CIPERF | CI performance work, last before the merge | 6 | 5 | todo |
+  | MPR | The merge PR (DG confirms) | 6 | 1 | todo |
+
+  **After the merge** (id — task; weight):
+
+  - CT1b — CT1b; 1
+  - CT1d — CT1d; 1
+  - HG2 — HG2: 182 DEL1-kept guards + a no-content-assertion fence; 3
+  - FNT1 — 2108.12618: each author split into two creators (nowfnt); 3
+  - RB1h — RB1's hyperref condition; 1
+  - SMB1 — Separator meaning B1: engine snapshot; 3
+  - SMB2 — Separator meaning B2: contrib helper; 3
+  - SMB3 — Separator meaning B3: emitter `before` from the ink; 3
+  - SR2 — SR2: a marked net note on the author block keeps its marks/markup or routes to the authors (SR1b open a; 2405.12817; pre-existing); 3
+  - SR3 — SR3: the block note keeps _net on the creator route (floor + Warning; SR1 open c); 1
+  - SR5 — SR5: registers set only at \maketitle lose their notes uncounted (RED net_title_note_on_the_authors_set_at_maketitle_is_lost_red); 3
+  - TP2 — TP2: title_and for pasj00/interact/l_aa/jmlr; 3
+  - ARAB — \arabic etc. on an undefined counter (DG ruling); 1
+  - FOC1 — FOC1: 0-wide foreignObject (\rlap in a node) browser render check; CSS nowrap if text breaks (DTL1a Q7); 1
+  - MATHR — The math silent-diagnostic RED row; 1
+  - RAWS — On-disk raw-class dependency-scan RED; 1
+  - SVA — SV-A: \csname via \ifincsname; 3
+  - TBLR — tabularray first-token, \g__tblr_table_count_int, tblr-only \hline REDs; 1
+  - QA05 — Kernel-version switch + \@ifundefined per year (QA05/06); 1
+  - QA11 — Native pgf/l3fp vs raw TeX inventory; 3
+  - QA14 — Untracked length parameters census; 3
+  - QA15 — TeX's two kinds of unread: RED + reach; 3
+  - QA19 — Schema-extension inventory for BM; 1
+  - QA22 — Page furniture kept as metadata: element designed with BM, implemented; 5
+  - QA24 — Minipage width on a section from a minipage; 1
+  - QA29 — xml:id nesting check; 1
+  - QA43 — Bindings with no semantics census; 3
+  - QA47B — Hooks B-G: env begin/end, enddocument/*, file/after order, include/*, fonts, label; 3
+  - QA61 — Unknown classes' title-page stores as frontmatter items; 3
+  - QA64 — \pdfoutput latexml.sty option (DG decides timing); 1
+  - QA69 — 8-bit fontmap fallback census; 3
+  - QA76 — brucemiller/LaTeXML issue survey; 3
+  - QA85 — ORGANIZATION.md extended to every crate; 1
+  - QA90 — The 54 preamble-only commands after \begin{document}; 1
+  - QA91 — Text before \maketitle: order (DG + BM); 1
+  - SR4 — SR4: a title note held in \title (\titlenote) becomes a pubnote (1601.00073, 1805.02241, cs0405006) — with the page-furniture element (QA22/23); 1
 - Plan:
   - **Order, each step reviewed and bundled:** (1) **single engine clean** — `author_block/` gone (row 0b);
   - (1) done on `pk/int154a`: the deletion pass DEL1-DEL5 (tests −349, the switch, the old driver −5.8k, the S2b writer and census −12.2k; output byte-identical), Z18a the API's Cut/Kind out of `author_block/` (byte-identical), the llncs reroute Z18c-Z18i (OD #984; its first blockers in `agent_reports/2026-11-09_Z18c_report.md`), Z18j the API engine and field readers moved (Plan A batch 1, `256a8cd611`); history in `archive/SYNC_SESSIONS_2026-11.md` "Bundle int154a".
