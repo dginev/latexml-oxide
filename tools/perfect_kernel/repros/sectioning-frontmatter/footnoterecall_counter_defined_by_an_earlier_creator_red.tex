@@ -1,0 +1,32 @@
+% mechanism: an author block's `\footnoterecall{uni}` (`\footnotemark[\value{uni}]`) reads the counter an earlier
+%   creator's `\footnoteremember` made (`\newcounter{uni}`, global); pdflatex typesets the block in order, so every
+%   recall prints the remembered mark. The frontmatter emitter digests the last creator's mark "at Anonymous String"
+%   where `\c@uni` is not defined: once GA1 made that the error it is, the mark reads `<ERROR>\c@uni</ERROR>` (on int163a
+%   an empty mark and a "Missing number" Warning); the middle creator's recall is dropped on both (a counted Warning).
+% witness: 2407.13730, 2606.19583 (GA1d A/B; `\footnoteremember` in 6 of 35,942 census papers)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: Ann One ∗, Bob Two ∗, Cy Three ∗; footnote ∗ The University
+% engines: rust int163a 0 errors, 3 warnings, Cy Three's mark empty; GA1d 1 error (Error:undefined:\c@uni), 2 warnings,
+%   Cy Three's mark `<ERROR class="undefined">\c@uni</ERROR>`
+% expect:  0 errors; each creator carries the one note's mark
+% status:  RED (int163a, GA1d)
+% moves:   post-merge
+\documentclass[a4paper]{scrarticle}
+\newcommand{\footnoteremember}[2]{
+	\footnote{#2}
+	\newcounter{#1}
+	\setcounter{#1}{\value{footnote}}
+}
+\newcommand{\footnoterecall}[1]{
+	\footnotemark[\value{#1}]
+}
+\begin{document}
+\title{T}
+\author{
+ Ann One\footnoteremember{uni}{The University}
+		\and  Bob Two \footnoterecall{uni}
+  \and
+	Cy Three\footnoterecall{uni}
+}
+\maketitle
+Text.
+\end{document}

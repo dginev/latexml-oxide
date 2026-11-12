@@ -19462,3 +19462,22 @@ also names it, and the kernel list setup numbers only under `\@nmbrlisttrue` (la
 \end{thebibliography}
 \end{document}
 ```
+
+## 1231. `\value` of an undefined counter is the undefined `\c@<ctr>`, not `\csname`'s `\relax`
+
+latex.ltx:10127 `\def\value#1{\csname c@#1\endcsname}`: for a counter not yet defined, `\csname` makes `\c@<ctr>` mean
+`\relax` (tex.web §372) with no diagnostic, so an `\edef` keeps the token for a later `\newcounter`. Perl's `\value`
+(latex_constructs.pool.ltxml:3047) returns the bare `T_CS('\c@<ctr>')`, which the `\edef` expands: `Error:undefined:\c@<ctr>`
+and a "redefining" Warning at the `\newcounter` (tikz-timing.sty:2015-2019 before :2155; witnesses 2102.06643, 2409.18120).
+Rust: the same as Perl (RED `macro-state/value_expands_as_csname_red`, post-merge; the fix moves the Error boundary of
+`\value{nosuch}` read as a number, TeX's "Missing number" being a Warning here). Minimal trigger (pdflatex "Value: 3."):
+
+```latex
+\documentclass{article}
+\edef\x{\value{later}}
+\newcounter{later}
+\setcounter{later}{3}
+\begin{document}
+Value: \the\x.
+\end{document}
+```

@@ -269,6 +269,19 @@ const ROWS: &[Row] = &[
       ),
     ],
   ),
+  // varioref.sty:803's `\c@vrcnt`, which cleveref's varioref support steps (1602.00476, 2409.11413, 2505.14566; GA1
+  // alone: 3 errors on `\c@vrcnt`).
+  (
+    None,
+    include_str!(
+      "../../../tools/perfect_kernel/repros/package-bindings/varioref_defines_vrcnt.tex"
+    ),
+    0,
+    0,
+    0,
+    "",
+    &[("p", &[], "<p>Count: 1, 1.</p>")],
+  ),
   // A list is numbered only under `\@nmbrlisttrue` (latex.ltx:16024): memoir.cls:4580's raw `\list{}{}` inside that
   // bibliography keeps `\@listctr` = enumiv but numbers nothing (the `\@listctr` fix alone tagged it "0()A"); a
   // `\usecounter` list there and both shapes in an enumerate keep pdflatex's numbers. Raw loading on, as the CLI.
@@ -329,7 +342,8 @@ const ROWS: &[Row] = &[
 /// counter_readers_keep_their_leniency and captions-floats/subfig_continuedfloat_in_a_float_without_subfloats
 /// (witness 1910.02851), alignment-bindings/tabularray_rownum_colnum_counters (GA1b), the `\c@rownum` count in every
 /// load order of xcolor `[table]`, colortbl and tabularray and tabularray's `\c@rowcount` (GA1c), the bibliography's
-/// `\@listctr` and the `\@nmbrlisttrue` test it needs (GA1d): exact counts, the first Error, whole elements.
+/// `\@listctr` and the `\@nmbrlisttrue` test it needs, varioref's `\c@vrcnt` (GA1d): exact counts, the first Error, whole
+/// elements.
 #[test]
 fn an_undefined_counter_register_is_the_error_tex_raises() {
   for (preload, tex, errors, warnings, assuming, first_error, elements) in ROWS {
