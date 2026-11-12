@@ -88,7 +88,7 @@ fn an_lrbox_hidden_column_hides_its_cells() {
 }
 
 /// A `\footnote` with a `\\` in a `p` cell, and one after a longtable `\caption`: sect03.rs sets a note's `\\` as
-/// `\@normalcr` (`\@footnotetext`'s `\@parboxrestore`), and tex_tables.rs `caption_row_keeps_its_content` sets the
+/// `\@normalcr` (`\@footnotetext`'s `\@parboxrestore`), and longtable_sty.rs `caption_row_notes` sets the
 /// caption row's note after the caption's text. Red (int90a): the note's `\\` ended the row ("} Attempt to close a
 /// group that switched to mode horizontal", 17 errors, "Done." lost); the caption's note was dropped with its row at 0
 /// errors. Witness 2201.11330. Repro captions-floats/footnote_with_newline_in_table.

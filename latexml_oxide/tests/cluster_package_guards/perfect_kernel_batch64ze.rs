@@ -371,17 +371,28 @@ fn noalign_followed_by_tabularcr() {
 }
 
 /// The kernel `\@tabularcr` reached past `\relax`, as `\tabularnewline`, or in a bare `\tabular…\endtabular`: pdflatex
-/// clean, so no error (review 64ze round 2, `/tmp/rev64ze2/na/{t6,n_tnl,n_bare}`).
+/// clean, so no error (review 64ze round 2, `/tmp/rev64ze2/na/{t6,n_tnl,n_bare}`). GA4: by its meaning (`\ifx`-equal to
+/// `\@tabularcr`: a `\let` copy, before the tabular or in it) and the alignment's own `\\` (a user `longtablex` is a
+/// kernel tabular), each red on GA4base with 1 error.
 #[test]
 fn noalign_followed_by_tabularcr_forms() {
-  for table in [
+  let tables = [
     "\\begin{tabular}{|l|l|}\na & b \\\\\n\\noalign\\relax\\\\\nc & d \\\\\n\\end{tabular}",
     "\\begin{tabular}{|l|l|}\na & b \\\\\n\\noalign\\tabularnewline\nc & d \\\\\n\\end{tabular}",
     "\\tabular{ll}\na & b \\\\\n\\noalign\\\\\nc & d \\\\\n\\endtabular",
-  ] {
-    let tex = format!(
+  ]
+  .map(|table| {
+    format!(
       "\\documentclass{{article}}\n\\begin{{document}}\n{table}\nAfter TEXT.\n\\end{{document}}\n"
-    );
+    )
+  });
+  let repros = [
+    repro!("kernel-alignment", "noalign_let_tabularcr"),
+    repro!("kernel-alignment", "noalign_tabularcr_let_alias"),
+    repro!("kernel-alignment", "noalign_tabularcr_in_a_user_longtablex"),
+  ]
+  .map(str::to_string);
+  for tex in tables.into_iter().chain(repros) {
     let (log, xml) = convert_with(&tex, Some("ar5iv.sty"));
     assert_eq!(error_count(&log), 0, "{tex}\n{log}");
     assert_eq!(warning_count(&log), 0, "{tex}\n{log}");

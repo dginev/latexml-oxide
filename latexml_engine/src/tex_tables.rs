@@ -7,10 +7,7 @@ use std::{
   collections::VecDeque,
 };
 
-use latexml_core::alignment::{
-  read_alignment_template,
-  template::{Row, TemplateConfig},
-};
+use latexml_core::alignment::{read_alignment_template, template::TemplateConfig};
 
 use crate::prelude::*;
 
@@ -902,53 +899,6 @@ LoadDefinitions!({
 
 //%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 // And the general alignment processing.
-/// A note in a longtable caption's row, a `\footnote` on the caption (`\caption{…}\footnote{…}\\`), is set after the
-/// caption's text, its mark where longtable's caption cell has it (longtable.sty:476 `\LT@makecaption`): the row is
-/// dropped with the caption, and the note was lost with it (2201.11330, 0 errors). Only notes: text before the caption
-/// in its row is pdflatex's "Misplaced \noalign" (`\begin{longtable*}{lc}[t]`'s stray `[t]`, 1009.4206), dropped with
-/// the row as before.
-fn caption_row_keeps_its_content(row: &Row) {
-  // (the notes the cells hold, inside a `p` column's box too)
-  fn shown(d: &Digested, out: &mut Vec<Digested>) {
-    match d.data() {
-      DigestedData::List(list) => list.borrow().boxes.iter().for_each(|b| shown(b, out)),
-      DigestedData::Whatsit(w) => {
-        let w_ref = w.borrow();
-        let cs_name = w_ref.get_definition().get_cs_name().to_string();
-        if cs_name.starts_with("\\lx@note") {
-          out.push(d.clone());
-        } else if cs_name == "\\lx@tabular@p@"
-          && let Some(Some(body)) = w_ref.get_args().get(2)
-        {
-          shown(body, out);
-        }
-      },
-      _ => {},
-    }
-  }
-  let mut rest = Vec::new();
-  for column in row.get_columns() {
-    if let Some(boxes) = &column.boxes {
-      shown(boxes, &mut rest);
-    }
-  }
-  if rest.is_empty() {
-    return;
-  }
-  if let Some(Stored::VecDigested(mut captions)) = lookup_value("LONGTABLE_CAPTIONS")
-    && let Some(caption) = captions.pop()
-  {
-    let mut boxes = vec![caption];
-    boxes.extend(rest);
-    captions.push(List::new(boxes).into());
-    assign_value(
-      "LONGTABLE_CAPTIONS",
-      Stored::VecDigested(captions),
-      Some(Scope::Global),
-    );
-  }
-}
-
 // If the Template is appropriately constructed, either by \halign or various \begin{tabular}
 // the body of the alignment is processed the same way.
 
@@ -1254,10 +1204,7 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit, runs_everycr: bool) -> Resul
       break;
     } else if vtype.as_deref() == Some("align") {
       alignment_cell.borrow_mut().end_column()?;
-      // A longtable caption's row with an `&` after the caption holds more than the caption: kept (see below).
-      if lookup_bool("LONGTABLE_CAPTION_ROW") {
-        remove_value("LONGTABLE_CAPTION_ROW");
-      }
+      alignment_cell.borrow_mut().column_ended();
       if !hidden {
         reversion.push(next.unwrap()); // and record the &
         creversion.push(next.unwrap()); // and record the &
@@ -1266,22 +1213,9 @@ pub fn digest_alignment_body(whatsit: &mut Whatsit, runs_everycr: bool) -> Resul
       alignment_cell.borrow_mut().end_column()?;
     } else if matches!(vtype.as_deref(), Some("cr" | "crcr" | "noalign")) {
       alignment_cell.borrow_mut().end_row()?;
-      // longtable `\kill`: the row just ended was only for width measurement;
-      // `\lx@longtable@kill@flag` set LONGTABLE_KILL_NEXT before the `\crcr`,
-      // so discard the just-committed (now box-balanced) row. Ending via the
-      // normal cr path closes the column boxes cleanly first (avoiding the
-      // locked-frame FATAL of removing it mid-cell). Witness 2010.09763.
-      // A longtable `\caption`'s row, the caption's alone, goes the same way: its text is the table's `<caption>`
-      // (OXIDIZED_DESIGN_DIVERGENCES #103, longtable_sty.rs `\lx@longtable@caption@row`).
-      if lookup_bool("LONGTABLE_KILL_NEXT") {
-        remove_value("LONGTABLE_KILL_NEXT");
-        alignment_cell.borrow_mut().remove_row();
-      } else if lookup_bool("LONGTABLE_CAPTION_ROW") {
-        remove_value("LONGTABLE_CAPTION_ROW");
-        if let Some(row) = alignment_cell.borrow_mut().remove_row() {
-          caption_row_keeps_its_content(&row);
-        }
-      }
+      // A binding's request for the row just ended (`RowDisposition`: longtable's `\kill` and caption row, witness
+      // 2010.09763), taken after the row end has closed its column boxes (no locked-frame Fatal).
+      alignment_cell.borrow_mut().dispose_ended_row();
       if !hidden {
         reversion.push(next.unwrap());
         creversion.push(next.unwrap());
@@ -1502,9 +1436,10 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
         // `\svhline\noalign\\`; `\tabular…\endtabular` the same). Every other `\\` — array.sty's and the kernel's
         // `\@arraycr` (`\relax\iffalse{\fi…`) of a math array, longtable's, amsmath's `\math@cr` — opens with no
         // brace: "Missing { inserted", as TeX says. Ours expands to `\lx@hidden@cr{…}` everywhere, so the shape is told
-        // before expansion — past spaces and `\relax`, as `scan_left_brace` reads (§785) — from the token's meaning,
-        // the alignment (text, not `\halign`), array.sty and longtable; either way the noalign material is empty and
-        // the row end is put back (it was a noalign group that never closed, and the rest of the document was lost).
+        // before expansion — past spaces and `\relax`, as `scan_left_brace` reads (§785) — from the token's meaning
+        // (`\ifx`-equal to `\@tabularcr`), the `\\` the alignment's binding names (`row_end`, `tabular_bindings`) and
+        // array.sty; either way the noalign material is empty and the row end is put back (it was a noalign group that
+        // never closed, and the rest of the document was lost).
         let mut skipped = Vec::new();
         let raw = loop {
           match read_token()? {
@@ -1514,18 +1449,11 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
             other => break other,
           }
         };
-        let kernel_tabularcr = raw.as_ref().is_some_and(|t| {
-          t.defined_as(&T_CS!("\\\\"))
-            || t.defined_as(&T_CS!("\\@tabularcr"))
-            || *t == T_CS!("\\tabularnewline")
-        }) && !package_loaded("array")
-          && {
-            let alignment = alignment.borrow();
-            !alignment.is_math() && !alignment.is_halign
-          }
-          && !Expand!(Tokens!(T_CS!("\\@currenvir")))
-            .to_string()
-            .starts_with("longtable");
+        let tabularcr = T_CS!("\\@tabularcr");
+        let kernel_tabularcr = raw.as_ref().is_some_and(|t| x_equals(t, &tabularcr))
+          && !package_loaded("array")
+          && matches!(alignment.borrow().get_property("row_end").as_deref(),
+            Some(Stored::Token(t)) if *t == tabularcr);
         if let Some(t) = raw {
           unread_one(t);
         }

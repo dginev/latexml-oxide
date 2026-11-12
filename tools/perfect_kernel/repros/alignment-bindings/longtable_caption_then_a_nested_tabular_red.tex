@@ -1,0 +1,22 @@
+% witness: synthetic (GA4C); the same class on real papers: 1903.09068 (`\caption{…}\label{tab:morph}. \\`, the "."),
+%          1009.4206 (`[t]` before the caption in its cell)
+% oracle:  pdflatex 0 errors: longtable's caption is a `\noalign` and then a cell spanning the row
+%          (longtable.sty:476 `\LT@makecaption`); what follows it before the `\\` is set in that cell beside the caption:
+%          "Table 1: Cap" with the nested tabular x/y, then a
+% engines: rust GA4base = 0 errors, "x" lost (the global caption flag taken by the nested tabular's first `\\`, which
+%          dropped its row; the outer row kept with y); GA4 = 0 errors, x and y lost: the caption's row is the
+%          alignment's to drop (`RowDisposition::Route`) and goes whole, notes kept (`caption_row_notes`)
+% expect:  0 errors; the caption; the nested tabular x/y kept (a row of its own, the caption hoisted)
+% status:  RED (GA4base, GA4)
+% moves:   post-merge (GA4C: keep the content after the caption, not the column template's own text — a `r@{.}`
+%          column's "." is no content, 1111.5166 — which a typeset-content test of the row cannot tell apart)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{longtable}
+\begin{document}
+\begin{longtable}{l}
+\caption{Cap} \begin{tabular}{l} x \\ y \end{tabular}\\
+a \\
+\end{longtable}
+After TEXT.
+\end{document}

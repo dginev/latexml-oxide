@@ -1,6 +1,7 @@
 //! Red/green guards for batch GA5: decisions on a token that TeX takes by its meaning, read by meaning (GA0 finding
 //! 10). One table, a row per changed code path whose output differed, each the `\let`-copy shape that was wrong (oracle
-//! in the repro header). A module of its own: no table of meaning-for-spelling rows existed; later GA batches add rows.
+//! in the repro header). A module of its own: no table of meaning-for-spelling rows existed; later GA batches add rows
+//! (GA4: a table package's state out of the kernel).
 use latexml::util::test::{assert_element, convert_files_with};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
@@ -57,6 +58,43 @@ const ROWS: &[Row] = &[
       "xml:id=\"p1.1.1.1\"",
       r#"<td align="right" class="ltx_nopad_l ltx_nopad_r" xml:id="p1.1.1.1">a  <Math mode="inline" tex="|" text="|" xml:id="p1.m1"><XMath xml:id="p1.m1.1"><XMTok role="VERTBAR" stretchy="false">|</XMTok></XMath></Math></td>"#,
     )],
+    holds:    &[],
+  },
+  // GA4 (GA0 findings 2, 4): longtable's `\kill` and caption row through the alignment's `RowDisposition`, pinned
+  // before the move (2010.09763, 2201.11330)
+  Row {
+    name:     "longtable_kill_row_and_caption_note",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/alignment-bindings/longtable_kill_row_and_caption_note.tex"
+    ),
+    counts:   (0, 0),
+    elements: &[(
+      "table",
+      "xml:id=\"S0.T1\"",
+      r#"<table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><caption><tag close=": ">Table 1</tag>The caption<note mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>A note.</note></caption><toccaption><tag close=" ">1</tag>The caption</toccaption><tabular xml:id="S0.T1.1"><thead><tr xml:id="S0.T1.1.1"><td align="left" thead="column" xml:id="S0.T1.1.1.1">H1</td><td align="left" thead="column" xml:id="S0.T1.1.1.2">H2</td></tr></thead><tbody><tr xml:id="S0.T1.1.2"><td align="left" xml:id="S0.T1.1.2.1">a</td><td align="left" xml:id="S0.T1.1.2.2">b</td></tr><tr xml:id="S0.T1.1.3"><td align="left" xml:id="S0.T1.1.3.1">c</td><td align="left" xml:id="S0.T1.1.3.2">d</td></tr></tbody></tabular></table>"#,
+    )],
+    holds:    &["After TEXT."],
+  },
+  // tabularx's binding lets `\verb` to its `\TX@verb` in the environment, the kernel's after it (2404.06128,
+  // 2309.04295)
+  Row {
+    name:     "tabularx_verb_starred_in_a_cell",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/alignment/tabularx_verb_starred_in_a_cell.tex"
+    ),
+    counts:   (0, 0),
+    elements: &[
+      (
+        "tabular",
+        "xml:id=\"p1.1\"",
+        r#"<tabular vattach="middle" xml:id="p1.1"><tbody><tr xml:id="p1.1.1"><td align="left" xml:id="p1.1.1.1">A</td><td align="left" xml:id="p1.1.1.2"><inline-block vattach="top" xml:id="p1.1.1.2.1"><p xml:id="p1.1.1.2.1.1"><verbatim font="typewriter" xml:id="p1.1.1.2.1.1.1">x+y</verbatim><text xml:id="p1.1.1.2.1.1.2"> and <verbatim font="typewriter" xml:id="p1.1.1.2.1.1.2.1">a␣b</verbatim></text></p></inline-block></td></tr></tbody></tabular>"#,
+      ),
+      (
+        "p",
+        "xml:id=\"p1.2\"",
+        r#"<p xml:id="p1.2">After <verbatim font="typewriter" xml:id="p1.2.1">q r</verbatim> TEXT.</p>"#,
+      ),
+    ],
     holds:    &[],
   },
 ];
