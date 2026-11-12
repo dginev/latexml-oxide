@@ -639,14 +639,10 @@ pub(crate) fn load() -> Result<()> {
   // `\@listctr`), then `\@trivlist` starts the itemization (56fo; Perl
   // called `\usecounter{}` itself for the unnumbered case and let the numbered
   // case's `\usecounter` start the list from inside `#2`).
-  // The label lands in `\fnum@<\@listctr>` AFTER `\@trivlist`: an unnumbered
-  // list's `\@listctr` is the `@item` + level postfix `begin_itemize` assigns (`@itemi`,
-  // …), so defining it earlier, against the empty `\@listctr`, lost
-  // `\begin{list}{$\star$}…`'s label to the default bullet
-  // (tests/structure/itemize.tex, fonts/ding.tex).
+  // The label is kept in `\@itemlabel` (latex.ltx:15858), which `\@trivlist` makes the items' label below.
   DefMacro!(
     r"\list{}{}",
-    r"\global\advance\@listdepth\@ne\let\@listctr\@empty#2\@trivlist\expandafter\def\csname fnum@\@listctr\endcsname{#1}"
+    r"\global\advance\@listdepth\@ne\def\@itemlabel{#1}\let\@listctr\@empty#2\@trivlist"
   );
   DefMacro!("\\endlist", r"\global\advance\@listdepth\m@ne\endlx@list");
 
@@ -896,7 +892,15 @@ pub(crate) fn load() -> Result<()> {
   // acmtrans2m.cls) re-`\def`s latex.ltx's `\@trivlist` for its spacing, so `\list` never opened `\lx@list` and
   // `\endlist` erred "Attempt to end mode internal_vertical" (rc_struct3 L1, est. 252 papers; 1212.6177, 1710.00867).
   // Guard: `perfect_kernel_batch69b::class_redefining_trivlist_keeps_the_list`.
-  DefMacro!("\\@trivlist", "\\lx@trivlist@setup\\lx@list", locked => true);
+  // An item without `[…]` prints `\@itemlabel` (latex.ltx:15966), read at the `\item` as there: a class's own
+  // `\list` sets it too (memoir.cls:4580, revtex4.cls:1768; QA45). `\fnum@<\@listctr>` is defined after `\lx@list`:
+  // an unnumbered list's `\@listctr` is the `@item<level>` `begin_itemize` assigns (tests/structure/itemize.tex,
+  // fonts/ding.tex). Guard `perfect_kernel_batch56::list_labels_come_from_itemlabel`.
+  DefMacro!(
+    "\\@trivlist",
+    r"\lx@trivlist@setup\lx@list\expandafter\def\csname fnum@\@listctr\endcsname{\@itemlabel}",
+    locked => true
+  );
   DefMacro!("\\trivlist@item", "\\preitem@par\\trivlist@item@");
   DefConstructor!("\\trivlist@item@ OptionalUndigested",
     "<ltx:item xml:id='#id' itemsep='#itemsep'><ltx:tags><ltx:tag>#tag</ltx:tag></ltx:tags>",

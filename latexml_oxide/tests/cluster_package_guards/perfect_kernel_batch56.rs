@@ -1614,6 +1614,87 @@ fn list_setup_counter_value_survives_into_the_items() {
   }
 }
 
+/// Each `<item>`'s label `<tag>` (its inner XML) and its first paragraph's text, in document order.
+fn item_labels(xml: &str) -> Vec<(String, String)> {
+  // The element `name`'s first start tag (`<name>` or `<name …>`) to its `</name>`.
+  let inner = |s: &str, name: &str| -> String {
+    let close = format!("</{name}>");
+    s.match_indices(&format!("<{name}"))
+      .map(|(i, _)| &s[i + name.len() + 1..])
+      .find(|rest| rest.starts_with('>') || rest.starts_with(' '))
+      .and_then(|rest| {
+        let body = &rest[rest.find('>')? + 1..];
+        body.find(&close).map(|j| body[..j].to_string())
+      })
+      .unwrap_or_default()
+  };
+  xml
+    .split("<item ")
+    .skip(1)
+    .map(|item| (inner(item, "tag"), inner(item, "p")))
+    .collect()
+}
+
+/// latex.ltx:15858/15966: `\list` keeps its label in `\@itemlabel` and `\item` prints it, so a class's own `\list`
+/// (memoir.cls:4580, revtex4.cls:1768, aastex701.cls:1754) labels its items as ours does. Rows: the class's `\list`, and
+/// the kernel's (article) twin; each conversion's E/W exact. QA45 (revQA finding 1).
+#[test]
+fn list_labels_come_from_itemlabel() {
+  // (repro, source, warnings, each item's (label, text))
+  type Row = (
+    &'static str,
+    &'static str,
+    usize,
+    &'static [(&'static str, &'static str)],
+  );
+  const ROWS: &[Row] = &[
+    (
+      "list_label_set_by_a_class_list",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/list-structure/list_label_set_by_a_class_list.tex"
+      ),
+      1,
+      &[
+        ("–", "one"),
+        ("*", "inner"),
+        ("–", "two"),
+        // The space is memoir's `\@mklab` `\hfil` (repro class_mklab_is_a_space_in_the_tag_red); the PDF prints "x".
+        (" x", "three"),
+        ("•", "four"),
+        ("(a)", "five"),
+        ("1.", "six"),
+        ("", "seven"),
+      ],
+    ),
+    (
+      "list_label_set_by_the_kernel_list",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/list-structure/list_label_set_by_the_kernel_list.tex"
+      ),
+      0,
+      &[
+        ("–", "one"),
+        ("*", "inner"),
+        ("–", "two"),
+        ("x", "three"),
+        ("•", "four"),
+        ("(a)", "five"),
+        ("1.", "six"),
+      ],
+    ),
+  ];
+  for (name, tex, warnings, items) in ROWS {
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{name}: {stderr}");
+    assert_eq!(warning_count(&stderr), *warnings, "{name}: {stderr}");
+    let want: Vec<(String, String)> = items
+      .iter()
+      .map(|(t, p)| (t.to_string(), p.to_string()))
+      .collect();
+    assert_eq!(item_labels(&xml), want, "{name}:\n{xml}");
+  }
+}
+
 /// `\endlist` = `\endlx@list` = endMode('internal_vertical') (Perl
 /// latex_constructs.pool.ltxml:1651-1653) also closes an enumerate opened
 /// by its begin macro: nih/denselists.sty:16 `\newenvironment{Enumerate}

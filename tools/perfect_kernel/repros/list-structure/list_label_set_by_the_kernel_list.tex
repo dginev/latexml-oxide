@@ -1,0 +1,29 @@
+% mechanism: the article twin of list_label_set_by_a_class_list: our `\list` keeps the label in `\@itemlabel`
+%   (latex.ltx:15858) and the locked `\@trivlist` makes it the items' default label, as for a class's own `\list`.
+% witness: synthetic (QA45, revQA finding 1).
+% oracle:  pdflatex 0 errors: "– one", "* inner", "– two", "x three", "• four", "(a) five", "1. six".
+% engines: rust int160a: as the PDF (its `\list` defined `\fnum@<\@listctr>` itself); Perl 0.8.8 0 E, "four" bold
+%          "–" (57u, itemize_in_a_list_takes_the_first_label).
+% expect:  0 errors, 0 warnings; the tags as in the PDF.
+% Guard: perfect_kernel_batch56::list_labels_come_from_itemlabel.
+% status:  GREEN (int160a, pinned before ML1's change)
+\documentclass{article}
+\begin{document}
+\begin{list}{--}{}
+\item one
+\begin{list}{*}{}
+\item inner
+\end{list}
+\item two
+\item[x] three
+\begin{itemize}
+\item four
+\end{itemize}
+\end{list}
+\begin{list}{(\alph{enumi})}{\usecounter{enumi}}
+\item five
+\end{list}
+\begin{enumerate}
+\item six
+\end{enumerate}
+\end{document}
