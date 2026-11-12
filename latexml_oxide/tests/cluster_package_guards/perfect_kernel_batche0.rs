@@ -385,8 +385,10 @@ const MOVED_CUT_KIND_EMISSIONS: &[(&str, usize)] = &[
 /// step's address lines and in `math_glyphs_as_printed` — how an address prints, no owner decided. F0 lowered it to
 /// 2,241: `cut.rs` `place_uncut_copies` takes the marks its caller read (`requested_entry_marks`). F0's fix round (review
 /// revF0 B1) to 2,220: it asks the queue's printed-text requests (`queued_requesters`), its token loop and
-/// `requesting_authors` deleted.
-const MOVED_CUT_KIND_CODE_LINES: usize = 2_220;
+/// `requesting_authors` deleted. P4d to 2,219: `class_numbered_institutes` reads its store by meaning, the marks query
+/// in `observer/argument_marks.rs` (`prints_marks`), the lead of each numbered entry tokenized whole, and
+/// `numbered_marks_requested`'s empty-piece test (no alphanumeric covers it) deleted.
+const MOVED_CUT_KIND_CODE_LINES: usize = 2_219;
 
 /// The fence on the moved Cut and Kind: they take no new decision either (review revZ18a check 3).
 #[test]
@@ -1562,7 +1564,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (TP1, 527 -> 528: `own_title_page_prints_author`'s walk took the kernel's marker of LaTeX's own `\@maketitle`
   // (`\lx@kernel@maketitle`), reached directly or in a `\let` copy, for the class's page; TP1b, 528 -> 527: it reads it
   // by definition identity, sect05.rs `is_latex_maketitle`, review revTP1 N2)
-  ("frontmatter_stores", 527),
+  // (P4d, 527 -> 526: `displaced_entries` asks `class_numbered_institutes` with no spelled `\and` gate; the entries cut by
+  // meaning, `split_at_kernel_separators`)
+  ("frontmatter_stores", 526),
   ("gretsi_cls.rs", 14),
   // (CR10a, 119 -> 128: the class's author body is read as tokens before it is digested, as `author_block_body` reads it —
   // a names block nested in another's spliced in (`unnested_name_blocks`, 1511.03982), the alias `\authorblockN`'s grades,

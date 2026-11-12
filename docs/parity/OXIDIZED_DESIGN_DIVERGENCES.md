@@ -34894,6 +34894,18 @@ raw-class marked; 3 without a main file), E/F/W equal, 0 fallback lines. Guard
 repeated_list}` for B1); RED catalog repros `sectioning-frontmatter/llncs_macro_held_institute_list_comma_red.tex`
 (P4S risk R2) and `revtex_accented_name_mark_lost_red.tex` (a name's accented mark lost, pre-existing).
 
+**P4d (2026-11-12): a class's numbered store read by meaning.** `affiliations.rs` `class_numbered_institutes` (llncs.cls's
+`\institutename` and its copies, sab/edpsci/baaa's `\refstepcounter{inst}` run) cuts the store's entries at the
+kernel's `\and` by meaning (`split_at_kernel_separators`, the cut of the llncs/aa dispatch: a macro holding `\and`), and
+reads the store's own marks at its level (`argument_marks::prints_marks`: a mark a macro prints is one, a boxed or a
+note's mark none; unread, the spelling, counted); `numbered_marks_requested` reads F0's printed-text marks.
+`displaced_entries` asks it with no spelled `\and` gate. The `\institutename` declaration test stays (no run made).
+Guard `perfect_kernel_batchc1::class_numbered_institutes_read_by_meaning` (repros
+`sectioning-frontmatter/{class_numbered_institutes_macro_held_separator,class_numbered_institutes_boxed_store_mark,
+raw_class_refstepcounter_numbered_institutes_macro_held_separator,raw_class_refstepcounter_numbered_institutes_inst_by_macro,
+displaced_class_numbered_institutes_macro_held_separator}.tex`); a `\let` copy of `\and` is no input here either
+(pdflatex 13 errors).
+
 ### 996. What is appended to `\@author` after the author setter stored it is the author block's continuation: rows before its first `\and`, more authors after it, also under a binding whose `\author` stores nothing in `\@author` (FX24; RR1 gap 24)
 
 **Perl.** `\author` reads only its argument (`latex_constructs.pool.ltxml:1076-1079`

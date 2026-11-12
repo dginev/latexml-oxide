@@ -396,9 +396,10 @@ pub(in crate::base_utilities) fn requested_entry_marks(list: &Tokens) -> Result<
 /// next entry, the first numbered 1 — so the n-th `\and` entry of the `\@institute` store is affiliation n, which the
 /// authors' numeric marks pick (`$^{1}$`, `$^2$`). `stuff` with each entry led by its number as a superscript, when the
 /// class numbers the entries of its `store` (named by its control sequence, `\@institute`), the store holds at least two
-/// `\and` entries and no mark of its own, and the queued authors' marks request numbers ([`numbered_marks_requested`]);
-/// else `None` (the entries annotate every author, `\lx@add@store@affiliations`). Whether the class numbers them is
-/// what its own title page printed in the speculative run frontmatter_stores.rs `note_and_numbering` made of the store
+/// `\and` entries and no mark of its own, both read by meaning (the kernel's `\and` a macro holds, a mark a macro prints:
+/// [`split_at_kernel_separators`], [`prints_marks`]), and the queued authors' marks request numbers
+/// ([`numbered_marks_requested`]); else `None` (the entries annotate every author, `\lx@add@store@affiliations`).
+/// Whether the class numbers them is what its own title page printed in the speculative run frontmatter_stores.rs `note_and_numbering` made of the store
 /// (`lx_and_numbered_<store>`: the sentinel entries each printed after its number, in `\and` order — sab.cls:404-426's
 /// and edpsci.cls's `\refstepcounter{inst}`, 2308.05831, 2308.05830, 2501.08874, baaa.cls 2206.02830, comsis2.cls
 /// 2207.09249; batch 104b); with no such run (no store, none could be made), the class's `\institutename` read as
@@ -416,21 +417,21 @@ pub fn class_numbered_institutes(stuff: &Tokens, store: Option<&str>) -> Result<
         if body.unlist_ref().windows(2).any(|w| w[0] == T_CS!("\\def") && w[1] == T_CS!("\\and"))
           && body.unlist_ref().contains(&T_CS!("\\stepcounter"))))
   });
-  if !numbers_its_entries || author_mark_position(stuff).is_some() || !numbered_marks_requested()? {
+  if !numbers_its_entries
+    || prints_marks(stuff, "class_numbered_institutes")?
+    || !numbered_marks_requested()?
+  {
     return Ok(None);
   }
-  let entries = split_tokens(stuff.clone(), vec![T_CS!("\\and").into()]);
+  let (entries, _) = split_at_kernel_separators(stuff.clone(), vec![T_CS!("\\and").into()])?;
   if entries.len() < 2 {
     return Ok(None);
   }
   let mut out: Vec<Token> = Vec::new();
-  for (n, entry) in entries.into_iter().enumerate() {
-    if n > 0 {
-      out.push(T_CS!("\\and"));
-    }
-    out.extend([T_CS!("\\textsuperscript"), T_BEGIN!()]);
-    out.extend(mouth::tokenize_internal(TeXString::assembled((n + 1).to_string())).unlist());
-    out.push(T_END!());
+  for (n, (_, entry)) in entries.into_iter().enumerate() {
+    let and = if n > 0 { "\\and" } else { "" };
+    let lead = s!("{and}\\textsuperscript{{{}}}", n + 1);
+    out.extend(mouth::tokenize_internal(TeXString::assembled(lead)).unlist());
     out.extend(entry.unlist());
   }
   Ok(Some(Tokens::new(out)))
@@ -438,14 +439,14 @@ pub fn class_numbered_institutes(stuff: &Tokens, store: Option<&str>) -> Result<
 
 /// Do the queued authors' marks request numbered entries: each mark a comma list of numbers (`\inst{1,2}`), at least
 /// one, beside which only symbols stand — a legend's `\textsuperscript{\dag}`, `*` (comsis2.cls's names, 2207.09249), an
-/// empty piece (edpsci's `\inst{1,2}$^{,}$`, 2501.08874) —, never a letter label (`\inst{a}`), which no number answers?
+/// empty piece (edpsci's `\inst{1,2}$^{,}$`, 2501.08874), a command (a `\ref{…}` key, an unread name's spelling) —,
+/// never a letter label (`\inst{a}`), which no number answers? The marks by printed text (`queued_author_marks`).
 pub fn numbered_marks_requested() -> Result<bool> {
   let mut numbers = false;
   for mark in queued_author_marks()?.iter().flatten() {
     for piece in mark.split(',') {
       let piece = piece.trim();
-      if piece.is_empty() || piece.starts_with('\\') || !piece.chars().any(|c| c.is_alphanumeric())
-      {
+      if piece.starts_with('\\') || !piece.chars().any(char::is_alphanumeric) {
         continue;
       }
       if !piece.chars().all(|c| c.is_ascii_digit()) {

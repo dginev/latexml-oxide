@@ -5,6 +5,8 @@
 //! for byte (int142a); the count is the mechanism.
 use std::process::Command;
 
+use latexml::util::test::convert_files_with_setup_then;
+
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
   perfect_kernel_batch84b::creators as text_creators,
@@ -203,6 +205,93 @@ fn queued_marks_read_as_digested() {
   ];
   for ((name, tex), warnings, expected) in rows {
     let (log, xml) = run(tex);
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, *warnings),
+      "{name}: {log}"
+    );
+    let expected: Vec<Vec<String>> = expected
+      .iter()
+      .map(|c| c.iter().map(|s| s.to_string()).collect())
+      .collect();
+    assert_eq!(text_creators(&xml), expected, "{name}: {xml}");
+  }
+}
+
+/// Option C P4d: `class_numbered_institutes` reads a numbered store by meaning — its entries at the kernel's `\and` a
+/// document macro holds (`split_at_kernel_separators`), its own marks at its level (`argument_marks`, a boxed mark
+/// none) — and the authors' requests by printed text (`numbered_marks_requested`, F0). One row a path: the store route
+/// under llncs's `\institutename` (numinst.cls, preprint.cls 2405.16615) and under sab's `\refstepcounter` (2308.05831),
+/// the displaced route (`displaced_entries`, astro-ph9805069), the store's boxed mark, `\inst` given by a macro. Each:
+/// no Error, its Warning count, every creator's name and contacts.
+#[test]
+fn class_numbered_institutes_read_by_meaning() {
+  macro_rules! repro {
+    ($name:literal) => {
+      (
+        $name,
+        include_str!(concat!(
+          "../../../tools/perfect_kernel/repros/sectioning-frontmatter/",
+          $name,
+          ".tex"
+        )),
+      )
+    };
+  }
+  let numinst =
+    include_str!("../../../tools/perfect_kernel/repros/sectioning-frontmatter/numinst.cls");
+  let rows: &[Row] = &[
+    (
+      repro!("class_numbered_institutes_macro_held_separator"),
+      0,
+      &[&["Ann Able", "affiliation=Univ A, Town A"], &[
+        "Bob Baker",
+        "affiliation=Univ B, Town B",
+      ]],
+    ),
+    (
+      repro!("raw_class_refstepcounter_numbered_institutes_macro_held_separator"),
+      0,
+      &[
+        &["Ann Able", "affiliation=Univ A, Town A"],
+        &["Bob Baker", "affiliation=Univ B, Town B"],
+        &["Cy Cole", "affiliation=Univ A, Town A"],
+      ],
+    ),
+    (
+      repro!("displaced_class_numbered_institutes_macro_held_separator"),
+      0,
+      &[
+        &["Ann Able", "affiliation=1 Univ A, Town"],
+        &["Bob Baker", "affiliation=2 Univ B, City"],
+        &[
+          "Cy Cole",
+          "affiliation=1 Univ A, Town",
+          "affiliation=2 Univ B, City",
+        ],
+      ],
+    ),
+    (repro!("class_numbered_institutes_boxed_store_mark"), 0, &[
+      &["Ann Able", "affiliation=a Univ A, Town A"],
+      &["Bob Baker", "affiliation=Univ B, Town B"],
+    ]),
+    (
+      repro!("raw_class_refstepcounter_numbered_institutes_inst_by_macro"),
+      0,
+      &[&["Ann Able", "affiliation=Univ A, Town A"], &[
+        "Bob Baker",
+        "affiliation=Univ B, Town B",
+      ]],
+    ),
+  ];
+  for ((name, tex), warnings, expected) in rows {
+    let (log, xml, ()) = convert_files_with_setup_then(
+      tex,
+      &[("numinst.cls", numinst)],
+      Some("ar5iv.sty"),
+      || {},
+      |_| (),
+    );
     assert_eq!(
       (error_count(&log), warning_count(&log)),
       (0, *warnings),

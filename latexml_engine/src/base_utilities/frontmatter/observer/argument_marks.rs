@@ -46,3 +46,17 @@ pub fn argument_marks(arg: &Tokens) -> Result<Option<Vec<Event>>> {
       .collect()
   }))
 }
+
+/// Whether `arg` prints a mark of its own ([`argument_marks`]), a `\footnotemark` none; unread, its tokens' marks
+/// (`author_mark_position`), counted for `caller` (`count_unread`). A class's numbered store (Option C P4d).
+pub fn prints_marks(arg: &Tokens, caller: &str) -> Result<bool> {
+  Ok(match argument_marks(arg)? {
+    Some(marks) => marks
+      .iter()
+      .any(|mark| mark.role.as_deref() != Some("footnotemark")),
+    None => {
+      count_unread(caller);
+      author_mark_position(arg).is_some()
+    },
+  })
+}

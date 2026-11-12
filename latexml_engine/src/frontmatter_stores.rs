@@ -3139,10 +3139,8 @@ fn without_labels(tokens: &Tokens) -> Tokens {
 fn displaced_entries(arg: &Tokens, store: Option<&str>) -> Result<Vec<Tokens>> {
   use crate::base_utilities::{leading_line_label, split_top_level_lines};
   // (an `\and` list the class's title page numbers: entry n labelled n, `class_numbered_institutes` — caosp.sty:519-527's
-  // `\institutename`, astro-ph9805069; review rev99b B2)
-  if arg.unlist_ref().contains(&T_CS!("\\and"))
-    && let Some(numbered) = class_numbered_institutes(arg, store)?
-  {
+  // `\institutename`, astro-ph9805069; review rev99b B2; its `\and`s by meaning, P4d)
+  if let Some(numbered) = class_numbered_institutes(arg, store)? {
     return Ok(
       split_tokens(numbered, vec![T_CS!("\\and").into()])
         .into_iter()
