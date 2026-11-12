@@ -1157,7 +1157,7 @@ fn spelled_names(names: &[&str], address: &str) -> Vec<usize> {
 /// `text` with its letters' accents dropped (canonical decomposition, the combining marks aside), and the letters
 /// that decompose to none their base letter (`ł` l, `ø` o, `đ` d, `ı` i; `æ` a, `œ` o, `ß` s, as the author block's
 /// reading of `\ae`, `\oe`, `{\ss}` gives them, `classify::letter_command`) — as an address spells a name (the
-/// reading's and `insert::respell_emails`'), one fold of it; the transliteration another ([`transliterated`]).
+/// reading's `Resolver::respell_emails`), one fold of it; the transliteration another ([`transliterated`]).
 pub(in crate::base_utilities) fn base_letters(text: &str) -> String {
   use unicode_normalization::{UnicodeNormalization, char::is_combining_mark};
   text

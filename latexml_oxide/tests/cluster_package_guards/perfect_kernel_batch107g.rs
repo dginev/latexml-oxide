@@ -21,7 +21,7 @@ macro_rules! repro {
 
 /// An own call moves only to a strictly better full spelling, whichever part of it the holder's key is: a shared surname
 /// (0902.4311, 0907.3301, 1008.3764), the head of a longer spelling (rev107f2 finding 1, twice), a misread name's word
-/// (2107.06981); a tie keeps it (2511.18493). Distinct: `own_call_keeps`, read by both `respell_emails`.
+/// (2107.06981); a tie keeps it (2511.18493). Distinct: `own_call_keeps`, read by `Resolver::respell_emails`.
 #[test]
 fn an_own_call_moves_only_to_a_strictly_better_full_spelling() {
   assert_eq!(

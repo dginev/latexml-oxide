@@ -538,13 +538,14 @@ impl Resolver {
 
   /// FIDELITY_CHARTER §4, "ownership by evidence, never by bare position": an e-mail one address alone fills, placed by
   /// its call's position (`api:annotate:*`, the upfront grid's included), goes to the one author its address spells — an
-  /// AASTeX 5 `\email{able@x.org}` after `\author{Ann Able and Bob Baker}` (0911.3506, 1506.04035: 92 of the 688 aas
-  /// census papers); a copy that author holds already is dropped; one a label placed stays. After the grid and the
-  /// labels, as today's `insert::respell_emails` — its target picked by the names as printed, a transliterated
-  /// spelling counted as one (`NameKeys::as_printed`; user ruling 2026-11-05: Anna Smith's own
-  /// `\email{mueller-group@x.de}` moves to Jörg Müller), base letters only keeping an address on the holder it spells so
-  /// (`\email{muller-group@x.de}` stays hers, FIDELITY_CHARTER §4 #420; 2410.00275's `javier.martinez@` stays on Javier
-  /// Martínez-López; brief 95c r2 B1, OXIDIZED_DESIGN_DIVERGENCES #970).
+  /// AASTeX 5 `\email{able@x.org}` after `\author{Ann Able and Bob Baker}` (0911.3506's `bourouaine@` on Eckart Marsch,
+  /// 1506.04035, 1203.1317, 0904.0560: 92 of the 688 aas census papers); a copy that author holds already is dropped;
+  /// one a label placed stays (`\correspondingauthor{…}\email{…}`: 2003.00016, 2003.11098, 2204.06937). After the grid
+  /// and the labels, the one respell since P6e deleted the DOM pass `insert::respell_emails` — its target picked by the
+  /// names as printed, a transliterated spelling counted as one (`NameKeys::as_printed`; user ruling 2026-11-05: Anna
+  /// Smith's own `\email{mueller-group@x.de}` moves to Jörg Müller), base letters only keeping an address on the holder
+  /// it spells so (`\email{muller-group@x.de}` stays hers, FIDELITY_CHARTER §4 #420; 2410.00275's `javier.martinez@`
+  /// stays on Javier Martínez-López; brief 95c r2 B1, OXIDIZED_DESIGN_DIVERGENCES #970).
   pub(super) fn respell_emails(&mut self) {
     let live = self.live();
     if live.len() < 2 {
@@ -596,8 +597,9 @@ impl Resolver {
     }
     let mut taken: Vec<(usize, Assoc)> = Vec::new();
     for &(c, i, owner) in moves.iter().rev() {
-      // (a copy the owner already holds is dropped below, as `insert::respell_emails` drops it: a repeated author block's
-      // second `\email` calls land on the last creator, 2307.07324)
+      // (a copy the owner already holds is dropped below: a repeated author block's second `\email` calls land on the
+      // last creator, 2307.07324, 1801.07635, 1810.03867, 2510.13035, 2001.07542, 2608.31160; own calls kept: 1707.09730,
+      // 2604.02636; moved, 0902.4311; 2502.15891's real duplicate, `email_own_call_printed_under_both_stays_on_both_red`)
       taken.push((owner, self.out.creators[c].contacts.remove(i)));
     }
     for (owner, mut assoc) in taken.into_iter().rev() {

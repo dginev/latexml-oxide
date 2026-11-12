@@ -3,7 +3,7 @@
 //! block's e-mail lines, the flush's Link step, the frontmatter observer's `spelled_name`) — gains the conventional
 //! transliteration of each letter that has one (`resolver::transliteration`: ä ae, ö oe, ü ue, ß ss, å aa, ø oe, æ ae,
 //! œ oe), a letter written with an accent or letter command read as the letter it prints
-//! (`name_text::spelling_name_text`); `insert::respell_emails` moves an e-mail to the author it spells as printed, a
+//! (`name_text::spelling_name_text`); `Resolver::respell_emails` moves an e-mail to the author it spells as printed, a
 //! transliterated spelling counted as one (`NameKeys::as_printed`; user ruling 2026-11-05, FIDELITY_CHARTER §4 #420). (2) The flush's Kind step for an address line
 //! (`insert::kind_address_lines`) reads a `{…}@domain` list set over several lines as one line — a break inside a
 //! printed brace the line opened (`LineText::read`), the lines a brace opens and a later one closes joined

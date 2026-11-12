@@ -41,7 +41,7 @@ fn an_address_spells_only_a_run_of_its_words() {
 
 /// An author's own call keeps the address its own name spells, though another author spells it better: amsart's
 /// `\author{Yang Zhang}…\email{yang91@…}` beside Hengyun Yang (1707.09730, FIDELITY_CHARTER §4 #420). Distinct: the
-/// holder's own spelling in both `respell_emails` (`name_spells`).
+/// holder's own spelling in `Resolver::respell_emails` (`name_spells`).
 #[test]
 fn an_own_call_keeps_an_address_its_name_spells() {
   assert_eq!(
@@ -87,7 +87,7 @@ fn a_joined_suffix_spelling_never_breaks_a_surname_tie() {
 /// An author's own call keeps an address another name spells better only where a key of the holder's name is a whole
 /// word of the local part or opens one (FIDELITY_CHARTER §4 #420): Mark Anderson's "anderson" is the tail of
 /// `sanderson@`, Peter Andersen's "anders" a truncation of `anderson@`, so each moves to the author it spells whole
-/// (review rev107f finding 3). Distinct: `own_call_keeps` in both `respell_emails`.
+/// (review rev107f finding 3). Distinct: `own_call_keeps` in `Resolver::respell_emails`.
 #[test]
 fn an_own_call_keeps_only_an_address_its_name_opens() {
   assert_eq!(

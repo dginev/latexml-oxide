@@ -3,7 +3,7 @@
 //! the rest of its words (`Resolver::take_out_entry_addresses`; the writer's `Op::CutAddresses`/`Op::Address`, today's
 //! item cut by the reading's own address reader, `resolver::address_runs`); one `\email` call printing several
 //! addresses is decided address by address by spelling (G3, `Resolver::answer_listed_emails`); today's respell reads
-//! names by their base letters, so an address spelling its accented holder stays (G6, `insert::respell_emails`).
+//! names by their base letters, so an address spelling its accented holder stays (G6, `Resolver::respell_emails`).
 //! OXIDIZED_DESIGN_DIVERGENCES #938. Each guard converts its repro under
 //! `tools/perfect_kernel/repros/sectioning-frontmatter/` in process and with the binary, eager and
 //! `--streaming` (`perfect_kernel_batch92a::assert_reading`), asserts the XML's creators with every contact and the
@@ -203,7 +203,7 @@ fn default_mode_elements(tex: &str) -> Vec<String> {
     .collect()
 }
 
-/// B1: `insert::respell_emails` moves an e-mail call to the author its address spells by the names as printed; base
+/// B1: `Resolver::respell_emails` moves an e-mail call to the author its address spells by the names as printed; base
 /// letters only keep an address on the author it spells so. amsart's `\author{Anna Smith}…\email{muller-group@x.de}`
 /// and elsarticle's `\ead{muller@x.de}` before `\author{J\"org M\"uller}` stay on Anna Smith — they spell Müller only by
 /// base letters (FIDELITY_CHARTER §4 #420's example); 2410.00275's `javier.martinez@` stays on Martínez-López, the

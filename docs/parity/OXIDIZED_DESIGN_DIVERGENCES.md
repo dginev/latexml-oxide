@@ -28979,8 +28979,8 @@ those today's can cut (`writer::take_out_again`), an entry today's holds no item
 paper). G3: an `\email` call printing several addresses alone (`resolver::listed_addresses`; a label word beside them
 keeps it whole, as the group write-out does) is placed once every name is read (`Resolver::answer_listed_emails`), each
 address the author's it spells, else its call's own authors' (`owner:call`); the writer's group write-out reads the
-same lists. G6: today's
-`insert::respell_emails` (and the reading's `Resolver::respell_emails`, alike) picks the author an address moves to
+same lists. G6: the reading's `Resolver::respell_emails` (since P6e the only one: the DOM pass `insert::respell_emails`,
+alike, deleted) picks the author an address moves to
 by the names as printed and keeps an address on the
 holder it spells by base letters (`resolver::base_letters`, as the reading does since 92c): `javier.martinez@` stays on
 Javier Martínez-López, whom it spells by base letters (as printed it spells Carlos Javier Navarro alone), and Anna
@@ -30939,7 +30939,7 @@ from the block (`_zone=names`: elsarticle's unlabelled `\address`, printed into 
 elsarticle.cls:665, 1710.03753; `_zone=footer`: REVTeX's `\email`, a front-matter footnote, 2312.02779, and aa's
 `\mail`) — the API names no class. An annotation `relocate_annotations` appends by its label, or gives to the authors
 its orphan label names, goes before the first of its creator's annotations in a later zone or queued after it in its
-own (`relocate::at_queue_position`; `insert::respell_emails` does not call it, an address moved to its speller is
+own (`relocate::at_queue_position`; `Resolver::respell_emails` does not call it, an address moved to its speller is
 appended); a contact attached when digested keeps the queue's order (REVTeX's `\email` before an unmarked
 `\affiliation` stays first) — the Cut's entries of amsart's
 `\address{${}^{1}$…\\ ${}^{2}$…}` before the `\email` after it (2509.03485), acmart's before its `\email` (2112.12060,
@@ -32524,8 +32524,8 @@ neither's by its spelling, and the rest of the placement order decides it (user 
 rev107a finding 1's tie-break). A surname's six-letter prefix scores only the local part's letters
 outside its given name's match (`andrea.rossi@` Andrea Rossi's, not Andrea Andreassen's "andrea" counted twice — a
 pre-existing wrong owner; `soeren.hansen@` Søren Hansen's beside Søren Sørensen). Every spelling site passes the name
-unfolded: the author block's e-mail readers, the flush's Link step and `kind_address_lines`, both `respell_emails`,
-the observer's `spelled_name`, `links::link_prints_a_handle`. Whom an e-mail moves to (both `respell_emails`) is picked
+unfolded: the author block's e-mail readers, the flush's Link step and `kind_address_lines`, `Resolver::respell_emails`,
+the observer's `spelled_name`, `links::link_prints_a_handle`. Whom an e-mail moves to (`respell_emails`) is picked
 by the name as printed and its transliteration, a spelling of the name as printed (`NameKeys::as_printed`; user ruling
 2026-11-05: `joerg.mueller@` is Jörg Müller's, "also written Joerg Mueller"): an AASTeX 5
 `\author{J\"org M\"uller and Ann Able}\email{joerg.mueller@x.org}` goes to Müller, and FIDELITY_CHARTER §4 #420's
