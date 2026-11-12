@@ -27,7 +27,7 @@ macro_rules! repro {
 /// `converted` counts only the unclaimed-text net's), the two XMLs the same; the XML from its `<title>` to its end, each
 /// whitespace run one space.
 #[track_caller]
-fn converted_any(tex: &str, warnings: usize) -> String {
+pub(super) fn converted_any(tex: &str, warnings: usize) -> String {
   let mut xmls = Vec::new();
   for streaming in [false, true] {
     let (log, xml) = cli_conversion(tex, streaming);

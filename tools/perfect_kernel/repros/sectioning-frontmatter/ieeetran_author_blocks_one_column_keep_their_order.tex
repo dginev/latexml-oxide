@@ -1,0 +1,17 @@
+% mechanism: IEEEtran blocks stacked with `\\` and no `\and` (one column): no grid, the blocks keep their order
+%   (ieeetran_cls.rs `transpose_ieee_author_grid` needs two columns). A pin
+% witness: synthetic (the single-column shape OXIDIZED_DESIGN_DIVERGENCES #128 leaves as written)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able", "Univ A", "Bob Baker", "Univ B", "Cy Coe", "Univ C"
+%   stacked
+% engines: int158a and P28: Ann Able (Univ A), Bob Baker (Univ B), Cy Coe (Univ C)
+% expect:  0 errors, 0 warnings; those three creators in that order
+% status:  GREEN (int158a, int168a; pin, guard perfect_kernel_batchp28)
+\documentclass[conference]{IEEEtran}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able}\IEEEauthorblockA{Univ A}\\
+\IEEEauthorblockN{Bob Baker}\IEEEauthorblockA{Univ B}\\
+\IEEEauthorblockN{Cy Coe}\IEEEauthorblockA{Univ C}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

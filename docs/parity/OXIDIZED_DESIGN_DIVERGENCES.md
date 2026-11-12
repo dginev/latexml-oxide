@@ -6033,6 +6033,18 @@ KNOWN_PERL_ERRORS #94.
 **Guard**: `06_cluster_frontmatter::frontmatter_ieee_author_grid_transpose` (grid
 transposed + a single-row control proven un-reordered).
 
+**By meaning (P2-8a, P28).** Before the route and the grid, `\author` (and authblk's, `\lx@IEEE@authblk@author`)
+expands each top-level call of a document macro that holds author structure — a names block, an `\and`-family
+separator or the grid's `\\`, in its definition or a document macro it calls (`blocks_as_printed`,
+`holds_author_structure`) — so a grid held in a macro, a wrapper printing the separator or a cell's blocks, and a row
+break held in a macro are read as pdflatex prints them; a `\let` copy of a block command is written as the command
+(`with_block_names`) and the route is whether the body then calls `\IEEEauthorblockN` (`calls_names_block`); the grid's
+columns are the separators the separator query reads at the body's brace level (`grid_columns`,
+`argument_separators`; unread, `split_top_level`, which reads a `\let` copy of `\and` or `\\` as the command). The transposition itself
+stays on tokens in the binding: the reading has no event of the grid (each `\IEEEauthorblockN` is its own
+`\lx@add@authors@append` block in the ledger; the `\and`/`\\` between blocks are never recorded), #995's P2-8a
+paragraph. Guards `perfect_kernel_batchp28`.
+
 **Bare text between blocks (63x).** The same `\author` dispatch wraps bare text left between the blocks (a loose email
 after `\IEEEauthorblockA`, 1901.07768) in `\IEEEauthorblockA{…}` — a run that prints nothing or holds notes only
 is no block, and a wrapped run ends without its line break (#962); a run holding a conditional's own tokens
@@ -33982,8 +33994,8 @@ Repros `class-bindings/ieeetran_authblk_blockn_names`, `class-bindings/ieeetran_
 
 **CR10c (`author_block_body`).** The old block names `\authorblockN`/`\authorblockA` (the binding's `\let`s of
 `\IEEEauthorblockN`/`\IEEEauthorblockA`) are rewritten to those, once, before any step reads the body, and only while
-they still mean them (`with_block_names`, `defined_as`, as `printed_refmarks` treats `\authorrefmark`); each step
-reads the one name. Read by name in four of the steps and not in the labelled path, `\author[2]{\authorblockN{Cy Coe,
+they still mean them (`with_block_names`, `defined_as`, as `printed_refmarks` treats `\authorrefmark`; since P2-8a any
+`\let` copy of either, and before the route too, #995's P2-8a paragraph); each step reads the one name. Read by name in four of the steps and not in the labelled path, `\author[2]{\authorblockN{Cy Coe,
 Dee Dale}}` with `\affil[2]{Univ Z}` left Univ Z a nameless creator's, the names without it, 0 Warnings (review
 revCR67, CR6 S1). An outer names block holding its own `\IEEEauthorblockA` before an inner names block is one left
 unclosed, not a wrapper (`\IEEEauthorblockN{Arslan Shaukat\\ \IEEEauthorblockA{…}\\ \IEEEauthorblockN{Umer Asgher}
@@ -34557,7 +34569,8 @@ spelling stay in front of the reading, redundant for the names it now cuts, and 
 (`FRONTMATTER_SINGLE_ENGINE_PLAN.md` row P2): `\lx@splitting{\lx@add@author@split}{\and\And}` in inst_support, aa,
 sv_support, webofc and ptephy; llncs's marked split; the IEEEtran grid and wrap (`ieeetran_cls.rs` `author_block_body`,
 `wrap_bare_author_block_text`) and both of its routes by spelling (`ieeetran_cls.rs:364` `\author`, `:391`
-`\lx@IEEE@authblk@author`, `contains("authorblockN")`); eptcs's cells (cut by meaning since P2-4, #991 (8)); `note_and_numbering` (`frontmatter_stores.rs:4481`);
+`\lx@IEEE@authblk@author`, `contains("authorblockN")`; since P2-8a both read the body by meaning,
+`blocks_as_printed`, `calls_names_block`, the grid's columns by the separator query, #995's P2-8a paragraph); eptcs's cells (cut by meaning since P2-4, #991 (8)); `note_and_numbering` (`frontmatter_stores.rs:4481`);
 nowfnt's `\and` blocks (`frontmatter_stores.rs:6000`); and the 11 gates on a literal `\and` the plan's row counts.
 
 **The API route (OC1c; OC1b, revOC1 B1, revOC1b S1-S3).** A binding that hands one whole argument to the API makes one
@@ -34623,12 +34636,13 @@ the catalog RED `class-bindings/jmlr_name_and_prints_the_word_red.tex`. Residual
 so the block held no `Sep(And)` (one merged creator and `Error:frontmatter:merged_creators` under article, eptcs and
 IEEEtran journal; Perl two creators) — green since SEP1, the copy bound by its meaning (#994); and IEEEtran's `\author` routes to the grid by spelling (`body.to_string().contains("authorblockN")`,
 `ieeetran_cls.rs` `\author`), so a grid held in a macro goes the plain route (one nameless creator) and one inside a
-wrapper's arguments is read scrambled (P2). Guards `perfect_kernel_batchoc1::{a_block_parts_at_the_and_its_spelling_hides,
+wrapper's arguments is read scrambled (P2) — green since P2-8a (P28, `ieeetran_cls.rs` `blocks_as_printed`, #995's
+P2-8a paragraph). Guards `perfect_kernel_batchoc1::{a_block_parts_at_the_and_its_spelling_hides,
 ieeetran_grid_parts_at_a_macro_held_and, eptcs_cells_part_at_a_macro_held_and}`; repros
 `sectioning-frontmatter/author_call_cut_at_{a_macro_held_and_omnibus,a_wrapper_held_and_omnibus,a_macro_held_and_llncs,a_macro_held_and_llncs_marked,a_csname_and_ieeetran,a_macro_held_and_ieeetran_grid}.tex`,
 `class-bindings/eptcs/eptcs_author_cut_at_a_macro_held_and.tex`; the residuals' catalog repros
-`sectioning-frontmatter/{ieeetran_author_grid_in_a_macro,ieeetran_author_grid_through_a_wrapper}.tex` (and
-`author_let_copy_of_and_parts_the_names.tex`, guarded since SEP1, #994).
+`sectioning-frontmatter/{ieeetran_author_grid_in_a_macro,ieeetran_author_grid_through_a_wrapper}.tex` (guarded
+since P28, `perfect_kernel_batchp28`; and `author_let_copy_of_and_parts_the_names.tex`, guarded since SEP1, #994).
 
 **P2-1 (P21): three of the S1 splits removed.** The S1 routes, found by `lx@splitting` over `latexml_package/src`,
 `latexml_contrib/src` and `base_utilities/defs`: inst_support's `\author` (reached through OmniBus, which loads it, where no
@@ -35189,6 +35203,44 @@ flexisym/breqn, 199 author_marks, 100 controls): E/F equal, 3 changed, all flexi
 RED `authblk_noblocks_trailing_note_list_red`). Guard `perfect_kernel_batchc1::queued_marks_read_as_digested` (rows
 `queue_marks_flexisym_{authblk_noblocks_list,authblk_boxed_note,ieeetran_line,letter_symbol_marks}` and the twin
 `queue_marks_authblk_noblocks_list`).
+
+**P2-8a (P28): IEEEtran's routes and grid read the body by meaning.** IEEEtran's `\author` (`ieeetran_cls.rs`
+`\author`) and authblk's (`\lx@IEEE@authblk@author`) chose their route by the body's spelling
+(`contains("authorblockN")`) and read the grid's `\and`/`\\` on tokens: a body held in a macro took the plain route (one
+nameless creator, the names lost), a wrapper's call (`\pair{…}{…}` printing `#1\and#2`, `\cell{…}{…}` printing a
+block pair) was read as bare text by the block route's token steps (creators scrambled or doubled), blocks written
+through `\let` copies of the block commands lost an author (Bob Baker lost, Ann Able twice), a row break held in a
+macro or a `\let` copy of `\and` left the grid in column order, and a names list held in a macro on the plain route
+lost its grades (`name_memberships` read `\aut`; since P5a the grade is the reading's contact, #1016, kept either way).
+Both routes now read the body by meaning before the route:
+`blocks_as_printed` expands each top-level call of a document macro holding author structure (a names block,
+`\and`/`\And`/`\AND`, `\\`, or a token meaning one, in its definition or a document macro it calls, read as
+`rehearsal::let_copies_of_bound_commands` reads a block's macros), `with_block_names` writes every `\let` copy of a
+block command as the command (it read only the two old names), and the route is whether the body then calls
+`\IEEEauthorblockN` (`calls_names_block`; the spelling test is deleted). The grid's columns are the separators the
+query reads at the body's brace level (`grid_columns`, `argument_separators`, whatever they mean: IEEEtran's
+`\and` is its column whatever a document made it, as the spelling read it); where the query is unread or a
+separator's tokens print something else too (`span` `None`), `split_top_level` cuts as before, reading a `\let` copy
+of `\and` as the command; rows are the top-level `\\` (or a copy). The brief's routing through `argument_separators`
+was taken for the grid's columns, not the route: the route asks whether the body calls a names block, which the
+separator query does not answer. Rule 6, the routes changed and kept:
+- changed: both routes (`calls_names_block` after `blocks_as_printed` and `with_block_names`, replacing
+  `contains("authorblockN")`); the grid's columns (`grid_columns`, `split_top_level` its fallback); rows and the
+  fallback's columns by meaning (`split_top_level`, `Token::defined_as`); `with_block_names` (any `\let` copy);
+- kept: `transpose_ieee_author_grid`'s token transposition — the grid rule over `Sep(And)` × `Break` in the reading
+  needs the grid's events, which the reading lacks (each `\IEEEauthorblockN` is its own `\lx@add@authors@append` block
+  in the ledger, `defs/author_macros.rs` `record_author_call`; the separators and row breaks between blocks are never
+  recorded); a block-call fact (the whole `\author` argument one ledger block, its blocks the reading's) comes first;
+- kept: `unnested_name_blocks`, `wrap_bare_author_block_text` (and its `document_notes`);
+- P2-8b: `printed_refmarks` (`name_memberships` and `block_name_memberships` deleted by P5a, #1016).
+
+Byte-identity against int158a on IEEEtran's census papers, ieeeconf's, the stage2 1,434 and the raw-class 300: the
+P28 report; merged onto int168a (P28m), its A/B against int168a: the P28m report. On int168a the names blocks a
+document macro holds keep their grades: `blocks_as_printed` writes the blocks before P5a's `block_grade_stops` and
+`\lx@IEEE@grade` read them (#1016). Guards `perfect_kernel_batchp28::{ieee_grids_read_by_rows_and_lists_keep_their_order,
+ieee_plain_route_reads_names_and_grades, ieee_block_calls_by_meaning_take_the_block_route,
+ieee_wrapper_calls_are_read_as_they_print, ieee_grid_row_and_column_by_meaning}`; repros
+`sectioning-frontmatter/{ieeetran_author_grid_two_by_two_reads_by_rows,ieeetran_author_grid_three_by_two_reads_by_rows,ieeetran_author_grid_with_marks_and_a_note,ieeetran_author_blocks_one_row_keep_their_order,ieeetran_author_blocks_one_column_keep_their_order,ieeetran_author_plain_route_reads_names_and_grades,ieeetran_author_grid_in_a_macro,ieeetran_author_grid_regular_in_a_macro,ieeetran_author_grid_through_a_wrapper,ieeetran_author_grid_wrapper_cells_in_rows,ieeetran_author_grid_row_break_in_a_macro,ieeetran_author_grid_let_copy_of_and,ieeetran_author_blocks_let_copies_of_the_block_commands,ieeetran_author_blocks_in_a_macro_keep_their_grades,ieeetran_author_plain_route_names_in_a_macro}.tex`.
 
 ### 996. What is appended to `\@author` after the author setter stored it is the author block's continuation: rows before its first `\and`, more authors after it, also under a binding whose `\author` stores nothing in `\@author` (FX24; RR1 gap 24)
 
