@@ -27,16 +27,14 @@ LoadDefinitions!({
   // Perl: sets CITE_UNIT to "bibliography buN" if not global — but only inside a unit: outside one
   // `\cite` is the kernel's (bibunits.sty: only `\bibunit` lets it to `\bu@cite`), so it keeps the
   // list it had outside units (none: the main list). KNOWN_PERL_ERRORS #1223.
-  DefPrimitive!("\\lx@bibunits@setglobal", None,
-  after_digest => {
+  DefPrimitive!("\\lx@bibunits@setglobal", {
     if !lookup_bool("CITE_UNIT_GLOBAL") && in_bibunit() {
       let unit = Digest!("\\bu@unitname")?.to_string();
       assign_value("CITE_UNIT", pin(s!("bibliography {unit}")), None);
     }
   });
   // Perl: sets CITE_UNIT to "buN" if not global; inside a unit only, as above.
-  DefPrimitive!("\\lx@bibunits@resetglobal", None,
-  after_digest => {
+  DefPrimitive!("\\lx@bibunits@resetglobal", {
     if !lookup_bool("CITE_UNIT_GLOBAL") && in_bibunit() {
       let unit = Digest!("\\bu@unitname")?.to_string();
       assign_value("CITE_UNIT", pin(&unit), None);
@@ -77,7 +75,9 @@ LoadDefinitions!({
   });
   DefMacro!("\\@bibunit", "\\lx@startbibunit\\old@bibunit");
 
-  DefPrimitive!("\\lx@startbibunit", None, after_digest => { start_bibunit()?; });
+  DefPrimitive!("\\lx@startbibunit", {
+    start_bibunit()?;
+  });
 
   // Perl bibunits.sty.ltxml L72-76: {bibunit}[] env has afterDigestBegin
   // that reads the optional arg (falling back to \bu@bibstyle), applies it
@@ -149,8 +149,7 @@ LoadDefinitions!({
     assign_value("ORIG_BIBUNIT", orig, None);
   }
   DefMacro!("\\bibliography", "\\lx@reset@bibunit\\bu@orig@bibliography");
-  DefPrimitive!("\\lx@reset@bibunit", None,
-  after_digest => {
+  DefPrimitive!("\\lx@reset@bibunit", {
     if let Some(orig) = lookup_value("ORIG_BIBUNIT") {
       assign_mapping("BACKMATTER_ELEMENT", "ltx:bibliography", Some(orig));
     }

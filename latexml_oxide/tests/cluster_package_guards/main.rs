@@ -556,6 +556,7 @@ mod perfect_kernel_batchra0;
 /// `\author` on (revtex4_cls.rs `switch_off_author_block_after_maketitle`).
 mod perfect_kernel_batchrb1;
 mod perfect_kernel_batchrc1;
+mod perfect_kernel_batchrv1;
 mod perfect_kernel_batchs5;
 /// SEP1: the rehearsal binds a `\let` copy of `\and`, `\\`, `\thanks` or `\footnote` by its meaning, as the command it
 /// copies (`\let\nx\and` parts the names; OD #994).

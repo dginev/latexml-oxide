@@ -189,8 +189,8 @@ pub fn def_macro_identity(proto: &str) -> Result<()> {
   Ok(())
 }
 
-/// Empty-body `DefPrimitive!("\\cs[opt-spec]", None);` stub —
-/// digestion-time no-op primitive (no Box emitted).
+/// Empty-body `DefPrimitive!("\\cs[opt-spec]", None);` stub — Perl's undef body: an empty box
+/// reverting to the call, its arguments included (Primitive.pm:74-76).
 pub fn def_primitive_noop(proto: &str) -> Result<()> {
   let (cs_tok, params) = parse_prototype(proto, true)?;
   def_primitive(cs_tok, params, None, PrimitiveOptions::default())?;

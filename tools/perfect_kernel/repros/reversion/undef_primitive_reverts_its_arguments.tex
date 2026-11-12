@@ -1,0 +1,13 @@
+% witness: synthetic (QA41 audit sibling: Rust's undef-body primitive box reverted the name alone,
+%          primitive.rs "TODO: add revert_arguments")
+% oracle:  pdflatex 0 errors; Perl Primitive.pm:74-76 reverts an undef body as `Tokens($cs, revertArguments(@args))`:
+%          `\markright{}` (latex_constructs.pool.ltxml:999) gives tex="a\markright{x}b"; latex.ltx's `\extrafloats`
+%          is a macro and leaves no box: tex="cd"
+% engines: rust int161a = tex="a\markright b" (the argument lost; re-read, `\markright` would take `b`) and
+%          tex="c\extrafloats d" (the Rust-only stand-in an undef body); perl = tex="a\markright{x}b", tex="cd"
+% expect:  0 errors, 0 warnings; tex="a\markright{x}b" and tex="cd"
+% status:  RED (int161a) -> GREEN (RV1)
+\documentclass{article}
+\begin{document}
+$a\markright{x}b$ and $c\extrafloats{3}d$
+\end{document}
