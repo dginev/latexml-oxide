@@ -1,16 +1,19 @@
 % mechanism: an expression with no operand before an operator (`*/10`) is no pgfmath expression: pgf stops on
 %   "Missing number" and Perl raises Error:pgfparse; ours returns 0.0 with no diagnostic (revDTL1f P2).
 % rule:    (1), Perl's Error for the text the grammar leaves (pgfmath.code.tex.ltxml:378-383). Held back (EB1): on our
-%   grammar it raised 470 Errors on 45 of 464 A/B papers, 1-176 each, mostly where pgf reads cleanly (`0bp` as a binary
-%   prefix on 40, 1106.3771; `\dimexpr`, 1711.06128; `-4 .5`, 1612.03043; `real west`, 1612.06541): repro
-%   pgfmath_grammar_gaps_red.
+%   grammar it raised 470 Errors on 45 of 464 A/B papers, 1-176 each, mostly where pgf reads cleanly; PGR1 read pgf's
+%   numbers (`0bp`, 1106.3771; `\dimexpr`, 1711.06128; `-4 .5`, 1612.03043: repro pgfmath_grammar_gaps) and its A/B
+%   of 764 left 5 papers, 3 of them pdflatex-clean through other mechanisms: tikz-cd's `real east` anchor under a
+%   shipped pgf 3.0.0 (1612.06541), a foreach `\d` in `\pgfextra` read as the accent (2006.16998), a
+%   collectcell column's gradient macro run on `Avg.` and `(124,16)`, which pdflatex's xstring `\IfDecimal` skips
+%   (2208.01735).
 % witness: synthetic
 % oracle:  pdflatex 2 `!` (Missing number, treated as zero ×2), [0.0]; Perl 1 Error (pgfparse: Parse of '*/10'
 %   failed), [0]
-% engines: rust DTL1f, DTL1g, EB1: [0.0], 0 errors, 0 warnings
+% engines: rust DTL1f, DTL1g, EB1, PGR1: [0.0], 0 errors, 0 warnings
 % expect:  [0.0] and a counted Error
-% status:  RED (DTL1f, DTL1g, EB1)
-% moves:   the pgfmath grammar-gap batch, then a row of `perfect_kernel_error_boundary` (Error side).
+% status:  RED (DTL1f, DTL1g, EB1, PGR1)
+% moves:   held (PGR1 report), once the three mechanisms above read as pdflatex: a row of `perfect_kernel_error_boundary` (Error side).
 \documentclass{article}
 \usepackage{pgf}
 \begin{document}
