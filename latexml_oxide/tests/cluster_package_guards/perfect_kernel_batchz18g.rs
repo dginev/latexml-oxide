@@ -80,18 +80,20 @@ fn llncs_author_url_pieces_are_one_address_line() {
 }
 
 /// llncs's one `\institute{\affmark{1} Univ A \quad \affmark{2} Univ B\\ \affmark{3} Univ C}` holding the paper's own
-/// marks: the block's whole, as printed (2608.21425). Red (Z18e): each line on the names showing its first mark, with
-/// "markup lost" Warnings and over-placed words. The Cut's digested decision (P4b2) reads the names' requests here, but
-/// its per-line cutter parts no `\affmark` line, so the list stays whole (RED `llncs_institute_hand_marks_cut_red`).
+/// marks (2608.21425): shape (c) by the marks it prints, each entry its mark's, as the `$^{1}$` spelling's (P4b4a: the
+/// cutter reads where entries start as the Cut's decision does, `list_marks`). Red (Z18e): each line on the names
+/// showing its first mark, with "markup lost" Warnings; Z18g..int165a kept it whole on the block (the token dispatch saw
+/// no mark).
 #[test]
-fn llncs_institute_hand_marks_keep_it_whole() {
-  assert_creators(
-    repro!("llncs_institute_hand_marks_keep_it_whole.tex"),
-    (0, 0),
-    &[&["Ann Able 1"], &["Bob Baker 2,3"], &[
-      "affiliation=1 Univ A 2 Univ B 3 Univ C",
-    ]],
-  );
+fn llncs_institute_hand_marks_cut() {
+  assert_creators(repro!("llncs_institute_hand_marks_cut.tex"), (0, 0), &[
+    &["Ann Able 1", "affiliation=1 Univ A"],
+    &[
+      "Bob Baker 2,3",
+      "affiliation=2 Univ B",
+      "affiliation=3 Univ C",
+    ],
+  ]);
 }
 
 /// An ORCID link of llncs's `\author` block printing no word (`\href{https://orcid.org/\orcidauthorA}{\orcidicon}`, the

@@ -75,11 +75,41 @@ pub(in crate::base_utilities) fn entry_calls(
   let stuff = blank_line_marks_dropped(stuff);
   let stuff = glued_line_marks_as_marks(stuff, true);
   // (the list's marks as digested, as its gate reads them, `affiliation_is_marked`: a store's `\ma` printing
-  // `\textsuperscript{a}`, revP4d S1; a note's label, 1504.01072)
-  let with_sup = marks_are_labels && prints_list_marks(&stuff, "affiliation_calls")?;
+  // `\textsuperscript{a}`, revP4d S1; a note's label, 1504.01072), and where its entries start, as the Cut's decision
+  // reads them (`list_marks`: `\ua Univ A` with `\newcommand\ua{\textsuperscript{1}}`, 2608.21425's `\affmark{1}`)
+  let marks = if marks_are_labels {
+    list_marks(&stuff, "affiliation_calls")?
+  } else {
+    ListMarks { prints: false, starts: None }
+  };
+  let with_sup = marks.prints;
+  let lines = split_tokens_delimited(stuff.clone(), affil_splits());
+  // (each line's entry starts, from its own first token; unread, none — the line's tokens decide, `author_mark_position`)
+  let line_starts: Vec<Option<LineStarts>> = match &marks.starts {
+    Some(starts) if with_sup => match line_ranges(stuff.unlist_ref(), &lines) {
+      Some(ranges) => ranges
+        .into_iter()
+        .map(|range| {
+          let at: Vec<usize> = starts
+            .iter()
+            .filter(|at| range.contains(at))
+            .map(|at| at - range.start)
+            .collect();
+          Some(LineStarts { at })
+        })
+        .collect(),
+      None => {
+        count_unread_marks("affiliation_calls");
+        vec![None; lines.len()]
+      },
+    },
+    _ => vec![None; lines.len()],
+  };
   // In a marked list, the affiliations it names, each a mark-led line (or a piece of one) with the unmarked lines
   // that follow it.
   let mut marked_entries: Vec<Vec<Token>> = Vec::new();
+  // (whether each entry opens with a mark, as its first line's starts say; unread, `None`)
+  let mut entry_opens: Vec<Option<bool>> = Vec::new();
   // The runs of address lines, placed once the whole list is read (`place_address_runs`); whether a run is being
   // read, and whether the line just read was an entry or its continuation.
   let mut address_runs: Vec<AddressRun> = Vec::new();
@@ -87,7 +117,7 @@ pub(in crate::base_utilities) fn entry_calls(
   let mut follows_entry = false;
   // (the notes of the list's address lines, the document's: [`address_line_notes`])
   let mut address_notes: Vec<Token> = Vec::new();
-  for (delimiter, line) in split_tokens_delimited(stuff, affil_splits()) {
+  for ((delimiter, line), starts) in lines.into_iter().zip(line_starts) {
     // Skip empty segments (e.g. a trailing \\ or a line that was wholly
     // consumed by an \email/\url) so they don't become blank affiliations.
     // Mirrors \lx@add@authors. So is a line that prints nothing ([`prints_nothing`]: IEEEtran's
@@ -112,9 +142,14 @@ pub(in crate::base_utilities) fn entry_calls(
           line_is_email_list(line)
         }
       };
+      // (a line no entry starts in: `q2`'s `\affmark{1} Univ A\\ Street A`, the street; unread, no mark in its tokens)
+      let unmarked = match &starts {
+        Some(starts) => starts.at.is_empty(),
+        None => author_mark_position(&line).is_none(),
+      };
       // (…and one carrying notes, its notes the document's, after the list's calls: [`address_line_notes`],
       // `\institute{$^{1}$Univ X \\ $^{2}$Univ Y \\ \texttt{a@x, b@y}\thanks{…}}`, as 2605.23553's author block)
-      let line = match (authors_queued && author_mark_position(&line).is_none())
+      let line = match (authors_queued && unmarked)
         .then(|| address_line_notes(&line, |rest| Ok(is_address_line(rest))))
         .transpose()?
         .flatten()
@@ -126,7 +161,7 @@ pub(in crate::base_utilities) fn entry_calls(
         None => line,
       };
       let address_line = is_address_line(&line);
-      if authors_queued && author_mark_position(&line).is_none() && address_line {
+      if authors_queued && unmarked && address_line {
         // (`\and` separates entries, and runs: `Univ A \\ a@x \and b@y` is two)
         if !in_run || across_and {
           let under = (follows_entry && !across_and).then(|| {
@@ -150,7 +185,7 @@ pub(in crate::base_utilities) fn entry_calls(
       // separates entries there too (DIVERGENCES #52(g)), nor a footnote-symbol legend (`* Equal contribution`,
       // `$\dagger$ Corresponding author`), which belongs to the whole block (llncs `\institute`, 2609.06094).
       if authors_queued
-        && author_mark_position(&line).is_none()
+        && unmarked
         && !across_and
         && !starts_with_footnote_symbol(&line)
         && let Some(last) = marked_entries.last_mut()
@@ -164,21 +199,24 @@ pub(in crate::base_utilities) fn entry_calls(
       // caller-supplied labelseq: applying both double-labels each affiliation
       // and duplicates it onto every \inst{n} author. Mirrors \lx@add@authors,
       // which likewise passes no attr in its with-superscript branch.
-      // A line that starts with a mark and names several marked institutions (`$^1$Univ A; $^2$Univ B`)
-      // is split at each whitespace-preceded mark, as `\lx@add@authors` splits its marker-led affiliation
-      // lines: one label per affiliation, else the last mark labelled them all (2609.22690, 21347). A
-      // line with text before its first mark (`Univ X \\ Present address: $^2$Univ Y`'s second line)
-      // stays whole, as there.
-      let segs = if marker_leads(&line) {
-        split_wrapped_affiliation_marks(line)?
-      } else {
-        vec![line]
+      // A line naming several marked institutions (`$^1$Univ A; $^2$Univ B`) is cut where its entries start, as the
+      // Cut's decision reads them (`events::entry_heads`): one label per affiliation, else the last mark labelled them
+      // all (2609.22690, 21347). Unread, a line led by a mark is split at each whitespace-preceded one, as
+      // `\lx@add@authors` splits its marker-led lines.
+      let segs = match &starts {
+        Some(starts) => line_at_starts(line, starts),
+        None if marker_leads(&line) => split_wrapped_affiliation_marks(line)?
+          .into_iter()
+          .map(|seg| (seg, None))
+          .collect(),
+        None => vec![(line, None)],
       };
-      for seg in segs {
+      for (seg, opens) in segs {
         if spacing_end(seg.unlist_ref()) == 0 {
           continue;
         }
         marked_entries.push(seg.unlist());
+        entry_opens.push(opens);
         follows_entry = true;
       }
     } else {
@@ -196,14 +234,14 @@ pub(in crate::base_utilities) fn entry_calls(
   for entry in &mut marked_entries[..last] {
     *entry = trim_trailing_separator(std::mem::take(entry));
   }
-  for entry in marked_entries {
+  for (entry, opens) in marked_entries.into_iter().zip(entry_opens) {
     // (an entry no mark labels, in a list whose caller says how such an entry is placed: as that call places it, not
     // labelled by a mark — llncs's `\institute{Univ A, Town \\ \textsuperscript{*}Equal contribution}`, whose `Univ A,
     // Town` went to the last author alone, every author's in pdflatex: dev20k 2603.18089, 2608.22772, 2207.13038,
     // 2609.31726, 1905.07852)
     let entry = Tokens::new(entry);
     if let Some(unmarked) = &unmarked_attr
-      && author_mark_position(&entry).is_none()
+      && !opens.unwrap_or_else(|| author_mark_position(&entry).is_some())
       && !starts_with_footnote_symbol(&entry)
     {
       calls.extend(add(Some(unmarked.clone()), entry)?);
@@ -215,6 +253,136 @@ pub(in crate::base_utilities) fn entry_calls(
   calls.extend(email_calls);
   calls.extend(address_notes);
   Ok(calls)
+}
+
+/// A line's entry starts ([`list_marks`]), from its first token.
+#[derive(Clone)]
+struct LineStarts {
+  at: Vec<usize>,
+}
+
+/// Where each of `lines` stands in `stuff`, which [`split_tokens_delimited`] cut them from (each trimmed of its spaces);
+/// `None` where one is not found.
+fn line_ranges(stuff: &[Token], lines: &DelimitedPieces) -> Option<Vec<std::ops::Range<usize>>> {
+  let mut at = 0;
+  let mut find = |part: &[Token]| -> Option<usize> {
+    while !stuff[at..].starts_with(part) {
+      at += 1;
+      if at > stuff.len() {
+        return None;
+      }
+    }
+    let start = at;
+    at += part.len();
+    Some(start)
+  };
+  lines
+    .iter()
+    .map(|(delimiter, line)| {
+      find(delimiter)?;
+      let start = find(line.unlist_ref())?;
+      Some(start..start + line.len())
+    })
+    .collect()
+}
+
+/// `line` cut where its entries start (`starts`, [`LineStarts`]), each piece with whether a mark opens it; what it prints
+/// before its first start stays with that entry (`Univ X \\ Present address: $^2$Univ Y`'s second line, as
+/// `\lx@add@authors` keeps it). A wrapper holding several starts (`{\it $^1$A, $^2$B}`) is cut inside, repeated on each
+/// piece with its opening declarations, as [`split_wrapped_affiliation_marks`] repeats it.
+fn line_at_starts(line: Tokens, starts: &LineStarts) -> Vec<(Tokens, Option<bool>)> {
+  if starts.at.is_empty() {
+    return vec![(line, Some(false))];
+  }
+  let v = line.unlist_ref();
+  // (a mark in a formula on no base starts where the formula does: `$^{2}$`'s and `${}^{2}$`'s mark stands at its `^`)
+  let in_formula = |at: usize| {
+    let open = v[..at]
+      .iter()
+      .rposition(|t| t.get_catcode() == Catcode::MATH)?;
+    let shifts = v[..at]
+      .iter()
+      .filter(|t| t.get_catcode() == Catcode::MATH)
+      .count();
+    (shifts % 2 == 1).then_some(open)
+  };
+  let start_at = |at: usize| match in_formula(at) {
+    Some(open)
+      if v[open + 1..at].iter().all(|t| {
+        matches!(
+          t.get_catcode(),
+          Catcode::BEGIN | Catcode::END | Catcode::SPACE
+        )
+      }) =>
+    {
+      open
+    },
+    _ => at,
+  };
+  let at: Vec<usize> = starts.at[1..].iter().map(|&at| start_at(at)).collect();
+  cut_at_starts(v, &at, start_at(starts.at[0]))
+    .into_iter()
+    .map(|piece| (Tokens::new(piece), Some(true)))
+    .collect()
+}
+
+/// `v` cut before each of `at` (positions in it, ascending): a cut inside a group closes it and opens it again, with
+/// its wrapper command and the declarations it opens with (`notes::lead_declarations`) before the mark opening the first
+/// entry (`first`: a macro printing it, `\tsec` with `\newcommand\tsec{\textsuperscript{\S}}`, is none; 2410.03583),
+/// in the next piece.
+fn cut_at_starts(v: &[Token], at: &[usize], first: usize) -> Vec<Vec<Token>> {
+  let Some(&cut) = at.first() else {
+    return vec![v.to_vec()];
+  };
+  // (the groups open at the cut, outermost first)
+  let mut open: Vec<usize> = Vec::new();
+  for (i, t) in v[..cut].iter().enumerate() {
+    match t.get_catcode() {
+      Catcode::BEGIN => open.push(i),
+      Catcode::END => {
+        open.pop();
+      },
+      _ => {},
+    }
+  }
+  // (the separator before the cut is none of the entry's, inside the wrapper too: `{\it $^1$A, $^2$B}`)
+  // (a cut inside a formula, at a mark on a base, `Lab $5^{2}$Univ Y` under `Bob Baker$^{2}$`, closes the formula and
+  // opens it again: the base the entry's before it, the script the next's label — revISO1 S1)
+  let formula = v[..cut]
+    .iter()
+    .rposition(|t| t.get_catcode() == Catcode::MATH)
+    .filter(|_| {
+      v[..cut]
+        .iter()
+        .filter(|t| t.get_catcode() == Catcode::MATH)
+        .count()
+        % 2
+        == 1
+    })
+    .filter(|shift| open.iter().all(|group| group < shift));
+  let mut head = trim_trailing_separator(v[..cut].to_vec());
+  head.extend(formula.map(|shift| v[shift]));
+  head.extend(std::iter::repeat_n(T_END!(), open.len()));
+  let mut rest: Vec<Token> = Vec::new();
+  for &group in &open {
+    if let Some(cmd) = group
+      .checked_sub(1)
+      .map(|c| v[c])
+      .filter(|t| t.get_catcode() == Catcode::CS)
+    {
+      rest.push(cmd);
+    }
+    rest.push(v[group]);
+    let end = if first > group { first.min(cut) } else { cut };
+    rest.extend(lead_declarations(&v[group + 1..end]));
+  }
+  rest.extend(formula.map(|shift| v[shift]));
+  let reopened = rest.len();
+  rest.extend_from_slice(&v[cut..]);
+  let later: Vec<usize> = at[1..].iter().map(|&a| a - cut + reopened).collect();
+  let mut pieces = vec![head];
+  pieces.extend(cut_at_starts(&rest, &later, reopened));
+  pieces
 }
 
 /// `stuff` without the marks opening a line that print no label — a superscript of spacing alone (`$^{\;}$`, `$^{~}$`,
@@ -346,7 +514,12 @@ pub(in crate::base_utilities) fn printed_marks_as_marks(list: Tokens) -> Tokens 
 /// (`printed_marks_as_marks`)?
 pub fn holds_requested_marked_entries(list: &Tokens) -> Result<bool> {
   let list = printed_marks_as_marks(list.clone());
-  Ok(requested_entry_labels(&list, "holds_requested_marked_entries")?.len() >= 2)
+  Ok(
+    requested_entry_labels(&list, "holds_requested_marked_entries")?
+      .labels
+      .len()
+      >= 2,
+  )
 }
 
 /// A class-numbered institute list as its title page prints it: llncs.cls:870-885 `\institutename` (copied by

@@ -1,15 +1,14 @@
 % mechanism: a three-line amsart `\address` list whose marks document macros print, repeated after the first and third
-%   names, line 3's mark requested by no name: the binding's per-line cutter (`entry_calls`) reads the lines by tokens,
-%   sees no mark in `\uc`, joins the lines into one entry, and the observer's pieces (`events::mark_led_pieces`) glue an
-%   unrequested mark after a line break to the entry before it (the isotope rule, `$^{3}$He`), so line 3 goes to Bob
+%   names, line 3's mark requested by no name: the per-line cutter (`entry_calls`) reads where the entries start as the
+%   Cut's decision does (`list_marks`, `events::entry_heads`), a mark opening its line opening an entry even unrequested
+%   (the isotope rule, `$^{3}$He`, only past a comma), so line 3 is an entry of its own, as the `$^{3}$` spelling's
 % witness: synthetic (P4b2; the macro-printed twin of queue_marks_ams_macro_marks_three_entry_copies)
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1, Bob Baker2, and Cy Cole1", the list
 %          "1 Univ A, Town A, 2 Univ B, Town B, 3 Univ C, Town C" printed twice
-% engines: P4b and P4b2: Ann and Cy "1 Univ A, Town A", Bob "2 Univ B, Town B 3 Univ C, Town C", W=0
+% engines: P4b, P4b2, int165a: Ann and Cy "1 Univ A, Town A", Bob "2 Univ B, Town B 3 Univ C, Town C", W=0
 % expect:  0 errors, 0 warnings; Ann and Cy "1 Univ A, Town A", Bob "2 Univ B, Town B", a nameless creator
 %          "3 Univ C, Town C" (as the `$^{3}$` spelling gives)
-% status:  RED
-% moves:   P4b4 (the per-line token cutters)
+% status:  RED (P4b2) -> GREEN (P4b4a; guard perfect_kernel_batchc1::queued_marks_read_as_digested)
 \documentclass{amsart}
 \newcommand\ua{\textsuperscript{1}}
 \newcommand\ub{\textsuperscript{2}}

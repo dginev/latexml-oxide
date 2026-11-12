@@ -230,8 +230,8 @@ LoadDefinitions!({
     if numbered {
       return Ok(split_calls(&TokenizeInternal!("\\lx@llncs@affiliation"), pieces));
     }
-    // The markers \lx@add@affiliations keys its superscript-label branch on (a `\let` alias of one too).
-    if author_mark_position(&body).is_some() {
+    // The marks \lx@add@affiliations keys its superscript-label branch on, as printed (2608.21425's `\affmark{1}`).
+    if prints_list_marks(&body, "llncs_institute")? {
       // shape (c): lazy superscript-labeled block
       Ok(Invocation!(T_CS!("\\lx@llncs@institute@sup"), vec![Some(body)]))
     } else if body.unlist_ref().iter().any(|t| t.get_catcode() != Catcode::SPACE) {

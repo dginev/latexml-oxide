@@ -74,7 +74,8 @@ pub(in crate::base_utilities) fn cut_list(
     return Ok(None);
   }
   let list = printed_marks_as_marks(list);
-  let requested = requested_entry_labels(&list, "cut_list")?;
+  let RequestedEntries { labels: requested, first_start } =
+    requested_entry_labels(&list, "cut_list")?;
   if !parameters.every_mark && requested.len() < 2 {
     return Ok(None);
   }
@@ -107,7 +108,7 @@ pub(in crate::base_utilities) fn cut_list(
   // (the declarations the list opens with, in force on every entry as on the whole contact — `\itshape $^1$Univ A\\
   // $^2$Univ B`, `{\bfseries $^3$Lab C\\ $^4$Lab D}`: each entry keeps them, as the observer writer's cut keeps the font
   // open before a piece, review rev94b r3 B1)
-  let opening = notes_lead_declarations(&list);
+  let opening = notes_lead_declarations(&list, first_start);
   // (the call's own attributes, without the ones its marks replace)
   let mut attr: Vec<Token> = Vec::new();
   for item in split_tokens(call_attr, vec![T_OTHER!(",").into()]) {
@@ -324,11 +325,16 @@ fn annotates(command: &[Token], parenttag: &Tokens) -> bool {
 }
 
 /// The declarations `list` opens with before its first entry's mark (`\itshape`, `\small`, `\color{red}`:
-/// `notes::lead_declarations`), its leading spaces and groups past.
-fn notes_lead_declarations(list: &Tokens) -> Vec<Token> {
+/// `notes::lead_declarations`), its leading spaces and groups past — before where that mark stands (`first_start`,
+/// `requested_entry_labels`), so a macro printing it (`\ua` with `\newcommand\ua{\textsuperscript{1}}`) is none.
+fn notes_lead_declarations(list: &Tokens, first_start: Option<usize>) -> Vec<Token> {
   let v = list.unlist_ref();
-  let start = v.iter().position(|t| *t != T_SPACE!()).unwrap_or(v.len());
-  lead_declarations(&v[start..])
+  let end = first_start.unwrap_or(v.len()).min(v.len());
+  let start = v[..end]
+    .iter()
+    .position(|t| *t != T_SPACE!())
+    .unwrap_or(end);
+  lead_declarations(&v[start..end])
 }
 
 /// `entry` (an entry of the Cut, `\lx@affiliation@withsup{…}` or the line itself) with the list's opening declarations

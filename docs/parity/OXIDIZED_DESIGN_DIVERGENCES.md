@@ -30917,10 +30917,17 @@ with its requesters — a mark a document macro prints or a math-active `^` spel
 `api_cut_math_active_marks_list`). A list whose first token, read through parameterless macros' bodies (and on past a body
 printing nothing, `\newcommand\affilfont{}`), is a letter or digit is not rehearsed (`may_open_with_mark`:
 2103.04797's 1,161 `\affiliation{\Amsterdam}`, −0.3 % instructions against P4b). Unread (a rehearsal left a group open), none: the list stays whole for the observer, counted
-(`--debug=frontmatter_marks`). The per-line cutter (`entry_calls`) still parts lines by tokens (P4b4), so a list whose
-requested entries it parts fewer than two of stays whole too (`cut_list`'s fail-safe): 2608.21425's list in a
-`\parbox`, llncs's `\affmark` lines (RED `llncs_institute_hand_marks_cut_red`); the uncut copies give way only once
-the list is cut. Read before the queue's marks, the pieces
+(`--debug=frontmatter_marks`). The cutter (`entry_calls`, the Cut's and every binding list's) reads the same pieces
+(Option C P4b4a, `argument_marks::list_marks`, `events::entry_heads`: the same cut of a list of one entry, or of one led
+by unmarked text): a line holding no entry start continues the entry above it, a line is cut at its later starts (inside
+a wrapper too, the wrapper repeated with its declarations), the list's opening declarations end at its first start
+(`\ua` printing `\textsuperscript{1}` is none), and llncs's shape (c) is read from the marks the institute prints; a
+mark that is its line's first ink opens an entry unrequested too (the isotope rule, `$^{3}$He`, holds only inside a
+line). Unread, the
+tokens (`author_mark_position`, `marker_leads`), counted. A list whose requested entries the cutter parts fewer than two
+of still stays whole (`cut_list`'s fail-safe); the uncut copies give way only once the list is cut. Guards
+`perfect_kernel_batchc1::queued_marks_read_as_digested` (P4b4a rows), `perfect_kernel_batchz18g::llncs_institute_hand_marks_cut`
+(2608.21425). Read before the queue's marks, the pieces
 part at stale requests (`names_requested`): P4b part 1's port gave the unrequested `3 Univ C` to the mark-1 names.
 
 **jfm** (latexml_contrib jfm_cls.rs): `\affiliation{…}` led by marks the names show is `\lx@add@affiliation[annotate=all]`,

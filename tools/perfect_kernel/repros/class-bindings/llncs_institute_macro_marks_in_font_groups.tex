@@ -1,0 +1,18 @@
+% mechanism: llncs's `\institute` whose marked lines are each set in a font group (`{\it \affmark{1} Univ A, Town A}`)
+%   with an unmarked line between them: an entry starts at the mark inside the group (`list_marks`, its span inside
+%   the line), the unmarked line continuing the entry above it, as the `$^{1}$` twin's
+% witness: synthetic (P4b4C probe s3)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2" over "1 Univ A, Town A / Street A /
+%          2 Univ B, Town B", the marked lines italic
+% engines: int165a: shape (b), the whole institute on a nameless creator, its marks lost, W=1
+% expect:  0 errors, 0 warnings; Ann Able "1 Univ A, Town A Street A", Bob Baker "2 Univ B, Town B"
+% status:  RED (int165a) -> GREEN (P4b4a; guard perfect_kernel_batchc1::queued_marks_read_as_digested)
+\documentclass{llncs}
+\newcommand{\affmark}[1]{\textsuperscript{#1}}
+\begin{document}
+\title{A Title}
+\author{Ann Able\affmark{1} \and Bob Baker\affmark{2}}
+\institute{{\it \affmark{1} Univ A, Town A}\\ Street A\\ {\it \affmark{2} Univ B, Town B}}
+\maketitle
+Body.
+\end{document}

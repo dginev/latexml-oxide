@@ -5,8 +5,8 @@
 % witness: synthetic (P4b2; the marked sibling of 2103.04797's `\affiliation{\Amsterdam}`)
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2",
 %          "1 Univ A, Town A, 2 Univ B, Town B"
-% engines: P4b and P4b2: the creators below, byte-identical (the per-line cutter parts no `\InstA` line, so the Cut
-%          leaves the list whole and the observer reads it by its marks)
+% engines: P4b and P4b2: the creators below, byte-identical (the Cut left the list whole, the observer read it by its
+%          marks); P4b4a: the Cut cuts it (its cutter reads the entries' starts as digested), the creators byte-identical
 % expect:  0 errors, 0 warnings; Ann Able "1 Univ A, Town A", Bob Baker "2 Univ B, Town B"
 % status:  GREEN (catalog, no guard: the output does not tell the gate's reading apart until P4b4's cutter)
 \documentclass{amsart}
