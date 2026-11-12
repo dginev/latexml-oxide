@@ -35505,8 +35505,12 @@ beyond-original load). Two writes follow: a binding that stands in for a file it
 does (`state::mark_loaded`: thmtools's thm-patch.sty, aipproc's aipxfm.sty); revtex4_support's preload of hyperref,
 which the real class never loads, undefines `\ver@hyperref.sty` with its record (`state::unmark_loaded`); a request the records skip restores a
 mark the document took back (`\let\ver@X\relax` then `\usepackage{X}` leaves X loaded, as LaTeX's reload does; the loader's
-records-only skip is the ruling of 2026-10-14). cleveref's pretense (Perl cleveref.sty.ltxml:23-27) marks amsmath both
-ways, in the group (`state::with_pretended_load`). **Witnesses**: 2501.07980, 1712.01010, 1812.04463 (aa.cls copies
+records-only skip is the ruling of 2026-10-14) with the file's declared version, as the binding load does. A loader marks
+the file unless it is loaded by this rule: a `\relax` left by a query before the load (`\expandafter\ifx\csname ver@X.sty\endcsname\relax`,
+`\@ifpackagelater`, `\IfPackageAtLeastTF`) is not loaded, while the raw loader keeps a `\relax` the file set itself
+(fontenc.sty:123); the class-copy check, microtype's babel test and biblatex's overlay ask `file_loaded` too. cleveref's
+pretense (Perl cleveref.sty.ltxml:23-27) marks amsmath both ways, in the group (`state::with_pretended_load`), only where it
+is neither loaded nor recorded. **Witnesses**: 2501.07980, 1712.01010, 1812.04463 (aa.cls copies
 loading amsmath). **Guards**: `perfect_kernel_batchga2::one_loaded_answer_on_every_load_path`, the fence
 `perfect_kernel_batche0::one_loaded_query` (a record looked up outside `state.rs` and the loader, floor 0) with its
 self-test `a_record_lookup_counts_however_it_is_written`.

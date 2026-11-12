@@ -5154,7 +5154,7 @@ pub fn load_variant(variant: &str) -> Result<()> {
       noerror: true,
       ..InputDefinitionOptions::default()
     });
-    if overlay.stands_for_biblatex && lookup_definition(&T_CS!("\\ver@biblatex.sty"))?.is_none() {
+    if overlay.stands_for_biblatex && !package_loaded("biblatex") {
       load_definitions()?;
     }
     if !overlay.after.is_empty() {

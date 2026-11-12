@@ -45,6 +45,29 @@ fn one_loaded_answer_on_every_load_path() {
       &[][..],
       r#"<para xml:id="p1"> <p xml:id="p1.1">amsmath not loaded. foo loaded. foo not loaded. amsmath not loaded.</p> <equation xml:id="S0.Ex1"> <Math mode="display" tex="a=b" text="a = b" xml:id="S0.Ex1.m1"> <XMath xml:id="S0.Ex1.m1.1"> <XMApp xml:id="S0.Ex1.m1.1.1"> <XMTok meaning="equals" role="RELOP">=</XMTok> <XMTok font="italic" role="UNKNOWN">a</XMTok> <XMTok font="italic" role="UNKNOWN">b</XMTok> </XMApp> </XMath> </Math> </equation> </para>"#,
     ),
+    // revGA2 B1: a query before the load (`\ifx\csname ver@X.sty\endcsname\relax`, `\@ifpackagelater`,
+    // `\IfPackageAtLeastTF`, `\IfPackageLoadedTF`) leaves `\ver@X.sty` as `\relax`; the binding load (amsmath, natbib,
+    // graphicx, hyperref, booktabs) and the raw load of a file declaring no version (bar.sty) mark it all the same.
+    (
+      "early_query",
+      repro!("early_query/loaded_query_after_an_early_query.tex"),
+      &[("bar.sty", repro!("early_query/bar.sty"))][..],
+      r#"<para xml:id="p1"> <p xml:id="p1.1">hyperref loaded. amsmath loaded. natbib loaded. graphicx loaded. geometry loaded. booktabs loaded. bar loaded.</p> <equation xml:id="S0.Ex1"> <Math mode="display" tex="a=b" text="a = b" xml:id="S0.Ex1.m1"> <XMath xml:id="S0.Ex1.m1.1"> <XMApp xml:id="S0.Ex1.m1.1.1"> <XMTok meaning="equals" role="RELOP">=</XMTok> <XMTok font="italic" role="UNKNOWN">a</XMTok> <XMTok font="italic" role="UNKNOWN">b</XMTok> </XMApp> </XMath> </Math> </equation> <equation xml:id="S0.E1"> <tags> <tag>(1)</tag> <tag role="autoref">Equation 1<text xml:id="S0.E1.1"/></tag> <tag role="refnum">1</tag> </tags> <Math mode="display" tex="c=d" text="c = d" xml:id="S0.E1.m1"> <XMath xml:id="S0.E1.m1.1"> <XMApp xml:id="S0.E1.m1.1.1"> <XMTok meaning="equals" role="RELOP">=</XMTok> <XMTok font="italic" role="UNKNOWN">c</XMTok> <XMTok font="italic" role="UNKNOWN">d</XMTok> </XMApp> </XMath> </Math> </equation> </para>"#,
+    ),
+    // revGA2 N1: a repeat request after the document's unmark restores foo's own version, not `\fmtversion`.
+    (
+      "repeat_version",
+      repro!("repeat_version/loaded_query_repeat_keeps_the_version.tex"),
+      &[("foo.sty", repro!("repeat_version/foo.sty"))][..],
+      r#"<para xml:id="p1"> <p xml:id="p1.1">foo loaded, earlier than 2010.</p> </para>"#,
+    ),
+    // revGA2 S1: cleveref's amsmath pretense keeps a recorded load the document unmarked (`\nonumber` stays amsmath's).
+    (
+      "pretense",
+      repro!("loaded_query_pretense_keeps_the_record.tex"),
+      &[][..],
+      r#"<para xml:id="p1"> <p xml:id="p1.1">amsmath not loaded.</p> <equation xml:id="S0.Ex1"> <Math mode="display" tex="a=b" text="a = b" xml:id="S0.Ex1.m1"> <XMath xml:id="S0.Ex1.m1.1"> <XMApp xml:id="S0.Ex1.m1.1.1"> <XMTok meaning="equals" role="RELOP">=</XMTok> <XMTok font="italic" role="UNKNOWN">a</XMTok> <XMTok font="italic" role="UNKNOWN">b</XMTok> </XMApp> </XMath> </Math> </equation> <equation labels="LABEL:e" xml:id="S0.E1"> <tags> <tag>(1)</tag> <tag role="creflabel">(1)</tag> <tag role="creftype">eq.</tag> <tag role="creftypecap">Equation</tag> <tag role="creftypeplural">eqs.</tag> <tag role="creftypepluralcap">Equations</tag> <tag role="refnum">1</tag> </tags> <Math mode="display" tex="c=d" text="c = d" xml:id="S0.E1.m1"> <XMath xml:id="S0.E1.m1.1"> <XMApp xml:id="S0.E1.m1.1.1"> <XMTok meaning="equals" role="RELOP">=</XMTok> <XMTok font="italic" role="UNKNOWN">c</XMTok> <XMTok font="italic" role="UNKNOWN">d</XMTok> </XMApp> </XMath> </Math> </equation> <equationgroup class="ltx_eqn_align" xml:id="S0.EGx1"> <equation xml:id="S0.Ex2"> <MathFork> <Math tex="\displaystyle e=f" text="e = f" xml:id="S0.Ex2.m3"> <XMath xml:id="S0.Ex2.m3.1"> <XMApp xml:id="S0.Ex2.m3.1.1"> <XMTok meaning="equals" role="RELOP">=</XMTok> <XMTok font="italic" role="UNKNOWN">e</XMTok> <XMTok font="italic" role="UNKNOWN">f</XMTok> </XMApp> </XMath> </Math> <MathBranch> <td align="right" xml:id="S0.Ex2.1"><Math mode="inline" tex="\displaystyle e" text="e" xml:id="S0.Ex2.m1"> <XMath xml:id="S0.Ex2.m1.1"> <XMTok font="italic" role="UNKNOWN">e</XMTok> </XMath> </Math></td> <td align="left" xml:id="S0.Ex2.2"><Math mode="inline" tex="\displaystyle=f" text="absent = f" xml:id="S0.Ex2.m2"> <XMath xml:id="S0.Ex2.m2.1"> <XMApp xml:id="S0.Ex2.m2.1.1"> <XMTok meaning="equals" role="RELOP">=</XMTok> <XMTok meaning="absent"/> <XMTok font="italic" role="UNKNOWN">f</XMTok> </XMApp> </XMath> </Math></td> </MathBranch> </MathFork> </equation> <equation xml:id="S0.E2"> <tags> <tag>(2)</tag> <tag role="creflabel">(2)</tag> <tag role="creftype">eq.</tag> <tag role="creftypecap">Equation</tag> <tag role="creftypeplural">eqs.</tag> <tag role="creftypepluralcap">Equations</tag> <tag role="refnum">2</tag> </tags> <MathFork> <Math tex="\displaystyle g=h" text="g = h" xml:id="S0.E2.m3"> <XMath xml:id="S0.E2.m3.1"> <XMApp xml:id="S0.E2.m3.1.1"> <XMTok meaning="equals" role="RELOP">=</XMTok> <XMTok font="italic" role="UNKNOWN">g</XMTok> <XMTok font="italic" role="UNKNOWN">h</XMTok> </XMApp> </XMath> </Math> <MathBranch> <td align="right" xml:id="S0.E2.1"><Math mode="inline" tex="\displaystyle g" text="g" xml:id="S0.E2.m1"> <XMath xml:id="S0.E2.m1.1"> <XMTok font="italic" role="UNKNOWN">g</XMTok> </XMath> </Math></td> <td align="left" xml:id="S0.E2.2"><Math mode="inline" tex="\displaystyle=h" text="absent = h" xml:id="S0.E2.m2"> <XMath xml:id="S0.E2.m2.1"> <XMApp xml:id="S0.E2.m2.1.1"> <XMTok meaning="equals" role="RELOP">=</XMTok> <XMTok meaning="absent"/> <XMTok font="italic" role="UNKNOWN">h</XMTok> </XMApp> </XMath> </Math></td> </MathBranch> </MathFork> </equation> </equationgroup> <p xml:id="p1.2">See <ref labelref="LABEL:e" show="creftype~creflabel"/>.</p> </para>"#,
+    ),
   ] {
     let (log, xml) = convert_files_with(tex, files, Some("ar5iv.sty"));
     assert_eq!(

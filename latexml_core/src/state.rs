@@ -3977,10 +3977,11 @@ pub fn unmark_loaded(file: &str) {
   );
 }
 
-/// Run `read` with `file` marked loaded in the current group, its record and `\ver@<file>`, where it is not loaded:
-/// cleveref's binding reads cleveref.sty as if amsmath were loaded (Perl cleveref.sty.ltxml:23-27).
+/// Run `read` with `file` marked loaded in the current group, its record and `\ver@<file>`, where it is not loaded
+/// and not recorded (a recorded load the document unmarked keeps its record): cleveref's binding reads cleveref.sty as
+/// if amsmath were loaded (Perl cleveref.sty.ltxml:23-27).
 pub fn with_pretended_load<R>(file: &str, read: impl FnOnce() -> R) -> R {
-  if file_loaded(file) {
+  if file_loaded(file) || load_recorded(file) {
     return read();
   }
   let (record, ver) = (s!("{file}_loaded"), T_CS!(s!("\\ver@{file}")));

@@ -761,11 +761,7 @@ fn input_definitions_impl(
     // A request our records skip leaves the file loaded, as LaTeX's load would: a mark the document took back since
     // (`\let\ver@<file>\relax`) is restored, so `state::file_loaded` answers as the loader did (OD #1015).
     if options.handleoptions && load_recorded(&filename) && !file_loaded(&filename) {
-      let_i(
-        &T_CS!(s!("\\ver@{filename}")),
-        &T_CS!("\\fmtversion"),
-        Some(Scope::Global),
-      );
+      mark_version(&filename)?;
     }
     apply_new_options_on_reload(&filename)?;
     return Ok(());
@@ -1111,22 +1107,9 @@ fn input_definitions_impl(
     // (`provides_version_of`); `\fmtversion` stays the fallback.
     if options.handleoptions {
       let ver_cs = T_CS!(s!("\\ver@{}", filename));
-      if lookup_definition(&ver_cs).ok().flatten().is_none() {
-        match provides_version_of(&filename) {
-          Some(version) => def_macro(
-            ver_cs,
-            None,
-            crate::mouth::tokenize(TeXString::assembled(version)),
-            Some(ExpandableOptions {
-              scope: Some(Scope::Global),
-              ..ExpandableOptions::default()
-            }),
-          )?,
-          None => {
-            let fmtversion_cs = T_CS!("\\fmtversion");
-            let_i(&ver_cs, &fmtversion_cs, Some(Scope::Global));
-          },
-        }
+      // (`\relax` is not loaded: a query before the load leaves it, `\ifx\csname ver@X.sty\endcsname\relax`)
+      if !file_loaded(&filename) {
+        mark_version(&filename)?;
       }
       // fontenc.sty:tail `\global\let\ver@fontenc.sty\relax` — the file
       // reports itself NOT loaded (`\@ifpackageloaded{fontenc}` is false in
@@ -2761,7 +2744,7 @@ fn binding_base_class_stands_for(name: &str) -> Result<bool> {
     return Ok(false);
   }
   let file = class_file_name(name);
-  if lookup_definition(&T_CS!(s!("\\ver@{file}")))?.is_some() {
+  if file_loaded(&file) {
     return Ok(false);
   }
   let classes = open_class_load_classes();
@@ -3036,6 +3019,8 @@ fn load_tex_definitions(
   // (what it defines is a raw class's or an own-directory file's: the title-page check's third source, whose setters
   // these are, `Expandable::watched_call`; a raw TeX Live package is neither)
   let _own_file = OwnFileGuard::new(is_own_raw_file(pathname));
+  let ver_cs = T_CS!(s!("\\ver@{request}"));
+  let ver_before = lookup_meaning(&ver_cs);
 
   // Note that we are reading definitions (and recursive input is assumed also definitions)
   let was_interpreting = lookup_bool_sym(crate::pin!("INTERPRETING_DEFINITIONS"));
@@ -3168,8 +3153,8 @@ fn load_tex_definitions(
   // loader above already uses. Witnesses: the 12-doc toptesi cluster
   // ("the sty file you are using has a date of <empty>" abort). Guard:
   // cluster_package_guards::raw_provides_version_survives.
-  let ver_cs = T_CS!(s!("\\ver@{}", request));
-  if lookup_definition(&ver_cs).ok().flatten().is_none() {
+  // (not when the file set the macro itself, fontenc.sty:123's `\relax`: only a query's `\relax` from before the read)
+  if !file_loaded(request) && lookup_meaning(&ver_cs) == ver_before {
     let_i(&ver_cs, &T_CS!("\\fmtversion"), Some(Scope::Global));
   }
 
@@ -6059,6 +6044,27 @@ fn build_invocation_token(token: Token, args: Vec<Option<Tokens>>) -> Result<Tok
         .collect();
       invoked_tokens.extend(wrapped_args);
       Ok(Tokens::new(invoked_tokens))
+    },
+  }
+}
+
+/// Mark `filename` loaded as its load does (Perl Package.pm:2326 `\fmtversion`): `\ver@<filename>` is the version its
+/// installed file declares ([`provides_version_of`]), so a date test reads the package's date, else `\fmtversion`.
+fn mark_version(filename: &str) -> Result<()> {
+  let ver_cs = T_CS!(s!("\\ver@{filename}"));
+  match provides_version_of(filename) {
+    Some(version) => def_macro(
+      ver_cs,
+      None,
+      crate::mouth::tokenize(TeXString::assembled(version)),
+      Some(ExpandableOptions {
+        scope: Some(Scope::Global),
+        ..ExpandableOptions::default()
+      }),
+    ),
+    None => {
+      let_i(&ver_cs, &T_CS!("\\fmtversion"), Some(Scope::Global));
+      Ok(())
     },
   }
 }

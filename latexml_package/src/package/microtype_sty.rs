@@ -93,10 +93,7 @@ LoadDefinitions!({
     // `\ifMT@babel`/`\ifMT@kerning` true and babel loaded; a switch that is gone
     // (microtype loaded inside a group: fullwidth) counts as off.
     let on = |cs: &str| x_equals(&T_CS!(cs), &T_CS!("\\iftrue"));
-    if !on("\\ifMT@babel")
-      || !on("\\ifMT@kerning")
-      || lookup_meaning(&T_CS!("\\ver@babel.sty")).is_none()
-    {
+    if !on("\\ifMT@babel") || !on("\\ifMT@kerning") || !package_loaded("babel") {
       return Ok(Tokens::default());
     }
     let listed = |name: &str| -> Result<bool> {
