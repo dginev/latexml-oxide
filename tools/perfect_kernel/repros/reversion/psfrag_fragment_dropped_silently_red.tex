@@ -4,11 +4,12 @@
 % oracle:  latex + dvips, 0 `!`, prints α in place of the figure's "A" (psfrag works through dvips only; pdflatex
 %          -no-shell-escape cannot convert the EPS, 1 `!`); Perl turns an EPS figure with saved fragments into an `ltx:picture` whose `tex=` replays
 %          them (psfrag_requirepicture, only through its `\@includegraphics`/`\@includegraphicx`/`\epsfbox` hooks)
-% engines: rust RV1 = a plain `<graphics graphic="psfragfig.eps">`, the fragment dropped, 0 errors, 0 warnings;
+% engines: rust int166a = a plain `<graphics graphic="psfragfig.eps">`, the fragment dropped, 0 errors, 0 warnings;
+%          rust PSF1 = the same `<graphics>`, 1 Warning "missing_feature:psfrag" naming 'A' and psfragfig.eps;
 %          perl 0.8.8 = the same plain `<graphics>` for this graphicx shape (its hook does not fire), 0 errors
-% expect:  the replacement reaches the output, or at least one Warning counts the dropped fragment
-% status:  RED (RV1)
-% moves:   PSF1 before the merge (a counted Warning per dropped fragment); rendering the fragments after it (PSFR)
+% expect:  the replacement reaches the output (PSFR); until then one Warning counts the dropped fragment
+% status:  RED (rendering); the count GREEN since PSF1, guard perfect_kernel_batchpsf1::batchpsf1_dropped_fragments_are_counted
+% moves:   PSFR after the merge (render the fragments)
 \documentclass{article}
 \usepackage{graphicx,psfrag}
 \begin{filecontents*}{psfragfig.eps}

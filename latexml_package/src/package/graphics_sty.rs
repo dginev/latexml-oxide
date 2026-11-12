@@ -646,6 +646,9 @@ LoadDefinitions!({
       let candidates = util::image::image_candidates(&path);
       Ok(stored_map!("graphic" => path, "candidates" => candidates, "options" => ""))
     },
+    after_digest => sub[whatsit] {
+      psfrag_sty::psfrag_graphic(whatsit);
+    },
     alias => "\\includegraphics");
 
   // graphics.sty:189 `\Ginclude@graphics#1` is the driver-level include that

@@ -1,0 +1,24 @@
+% witness: synthetic (PSF1 sibling: a preamble `\psfrag` and its `\psfrag*` placement reach every later EPS graphic;
+%          psfrag.sty:96-106 `\@@@psfrag` keeps each placement, `\pfg@hideend` places every one at each `\Ginclude@eps`)
+% oracle:  latex + dvips, 0 `!`, both graphics print α (the `\psfrag*` placement too) and β
+% engines: rust int166a = two plain `<graphics>`, every fragment dropped, 0 errors, 0 warnings
+% expect:  one Warning per fragment per graphic (3 fragments x 2 graphics = 6), each naming its tag and graphic, 0 errors
+% status:  GREEN (PSF1); rendering the fragments moves to PSFR (post-merge)
+\documentclass{article}
+\usepackage{graphicx,psfrag}
+\begin{filecontents*}{psfragstar.eps}
+%!PS-Adobe-3.0 EPSF-3.0
+%%BoundingBox: 0 0 72 36
+/Times-Roman findfont 12 scalefont setfont
+10 10 moveto (A) show
+40 10 moveto (B) show
+showpage
+\end{filecontents*}
+\psfrag{A}{$\alpha$}
+\psfrag*{A}[l][l]{$\alpha$}
+\psfrag{B}[c][c][1.5][90]{$\beta$}
+\begin{document}
+\includegraphics{psfragstar.eps}
+
+\includegraphics[width=2cm]{psfragstar}
+\end{document}

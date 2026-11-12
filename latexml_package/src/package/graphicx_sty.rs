@@ -341,6 +341,7 @@ LoadDefinitions!({
     // dimensions at the same point.
     after_digest => sub[whatsit] {
       image_graphicx_sizer(whatsit);
+      psfrag_sty::psfrag_graphic(whatsit);
     },
     // Perl L57-62: afterConstruct — emit `description` attribute from
     // `alt` keyval EVEN IF the value is the empty string (the

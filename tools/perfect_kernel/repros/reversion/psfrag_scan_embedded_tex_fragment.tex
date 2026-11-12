@@ -1,0 +1,26 @@
+% witness: synthetic (PSF1 sibling: `\psfragscanon` reads the next EPS for `(\\tex` strings, psfrag.sty:152-209
+%          `\pfg@scan`, each a fragment; the switch stays on until `\psfragscanoff`, psfrag.sty:24-25, where Perl
+%          psfrag.sty.ltxml:85 resets it after each graphic)
+% oracle:  latex + dvips, 0 `!`, the first two graphics print α for the embedded `\tex` string, the third (after
+%          `\psfragscanoff`) the raw string
+% engines: rust int166a = three plain `<graphics>`, 0 errors, 0 warnings
+% expect:  two Warnings, one per scanned graphic's embedded fragment; 0 errors
+% status:  GREEN (PSF1); rendering moves to PSFR (post-merge)
+\documentclass{article}
+\usepackage{graphicx,psfrag}
+\begin{filecontents*}{psfragscan.eps}
+%!PS-Adobe-3.0 EPSF-3.0
+%%BoundingBox: 0 0 72 36
+/Times-Roman findfont 12 scalefont setfont
+10 10 moveto (\\tex[bl][bl]{$\\alpha$}) show
+showpage
+\end{filecontents*}
+\begin{document}
+\psfragscanon
+\includegraphics{psfragscan.eps}
+
+\includegraphics{psfragscan.eps}
+
+\psfragscanoff
+\includegraphics{psfragscan.eps}
+\end{document}

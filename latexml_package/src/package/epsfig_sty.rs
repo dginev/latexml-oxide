@@ -75,6 +75,7 @@ LoadDefinitions!({
     // every row (cond-mat9707225, hep-ex0703011; guard `perfect_kernel_batch78t::psfig_panels_are_as_wide_as_their_keys`).
     after_digest => sub[whatsit] {
       util::image::image_graphicx_sizer(whatsit);
+      psfrag_sty::psfrag_graphic(whatsit);
     });
   Let!("\\epsfig", "\\psfig");
   // No `\DeclareGraphicsExtensions` of its own: epsfig.sty defines none, and Perl's `DefConstructor(…, '')`
@@ -100,7 +101,8 @@ LoadDefinitions!({
       let path = args[1].as_ref().map(|a| a.to_attribute()).unwrap_or_default();
       Ok(epsf_sty::epsfbox_properties(&bb, &path, "epsfclip"))
     },
-    after_digest => {
+    after_digest => sub[whatsit] {
+      psfrag_sty::psfrag_graphic(whatsit);
       for size in ["\\epsfxsize", "\\epsfysize"] {
         assign_register(size, RegisterValue::Dimension(Dimension::new(0)), None, Vec::new())?;
       }
