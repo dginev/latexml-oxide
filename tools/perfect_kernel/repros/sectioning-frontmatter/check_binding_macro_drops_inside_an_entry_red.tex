@@ -13,7 +13,10 @@
 %          College."); perl = the grade dropped too (KNOWN_PERL_ERRORS #534)
 % expect:  0 errors, 1 warning (frontmatter:unclaimed "senior member ieee"); the frontmatter unchanged
 % engines: rust int160a (HG1) = 0 errors, 0 warnings: the grade dropped silently (the note "Ann Able, , is with Lunar College."), the drop counted by no Warning; 106t's guard was emptied by DEL1 (its =2 run was RED)
-% status:  RED (int135e) -> GREEN (106t r2) -> RED (int160a, HG1)
+% engines: rust P5a = 0 errors, 1 warning: the content check counts the note's missing grade ("3 words … missing …
+%          IEEE Member Senior"): the rehearsal reads the grade as the contact it prints (OD #1016); the note still drops it
+% status:  RED (int135e) -> GREEN (106t r2) -> RED (int160a, HG1) -> counted, RED (P5a)
+% moves:   post-merge (a grade outside the names — a note, a biography heading, the body — printed as TeX prints it)
 % preload: ar5iv.sty
 \documentclass[journal]{IEEEtran}
 \begin{document}

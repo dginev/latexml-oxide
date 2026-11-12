@@ -690,8 +690,6 @@ pub(in crate::base_utilities) const NAME_ANNOTATIONS: &[&str] = &[
   "\\IEEEmembership",
   // IEEEtran's compsoc notes after the names (`\IEEEcompsocitemizethanks{\IEEEcompsocthanksitem …}`, 2408.01902)
   "\\IEEEcompsocitemizethanks",
-  // IEEEtran's grade of a name line, made a contact (ieeetran_cls.rs `name_memberships`)
-  "\\lx@IEEE@membership",
   // a footnote-symbol mark, rewritten before the parse (`rewrite_symbol_superscripts`: `$^{*}$`)
   "\\lx@frontmatter@keepsup",
   "\\lx@frontmatter@symbolmark",

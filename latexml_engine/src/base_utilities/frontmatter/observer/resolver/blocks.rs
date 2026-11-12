@@ -453,6 +453,30 @@ impl Resolver {
             .iter()
             .filter(|e| inked(e))
             .all(|e| e.kind == EventKind::Contact);
+          // (a line printing a membership grade and notes alone is the name's the grade follows, the last above, never
+          // a row's: `and~Cy Coe,\\~\IEEEmembership{Member,~IEEE,}\thanks{…}`, 2202.10869)
+          let grade_line = |e: &&Event| {
+            e.kind == EventKind::Note
+              || (e.kind == EventKind::Contact && e.role.as_deref() == Some("membership"))
+          };
+          if let Some(&last) = above.last()
+            && line
+              .events
+              .iter()
+              .any(|e| e.role.as_deref() == Some("membership"))
+            && line.events.iter().filter(|e| inked(e)).all(grade_line)
+          {
+            for event in &line.events {
+              match event.kind {
+                EventKind::Note => self.note(index, event, Some(last), "note:adjacent"),
+                EventKind::Contact => {
+                  self.contact_event(index, event, &[last], "line:contact membership:name-above")
+                },
+                _ => {},
+              }
+            }
+            continue;
+          }
           // (a column's first line that is one link printing a name is that name: `\href{https://orcid.org/…}
           // {\includegraphics{orcid}\hspace{1mm}Amanda A. Howard}`, 2311.06483)
           if column_first && only_contacts {

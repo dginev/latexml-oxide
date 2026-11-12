@@ -481,7 +481,7 @@ pub(in crate::base_utilities) fn notes_out_of_marks(stuff: Tokens) -> Tokens {
   if changed { Tokens::new(out) } else { stuff }
 }
 
-/// An author block's line break that opens a line of notes only ([`notes_only_line`]) taken out, with its `*` and
+/// An author block's line break that opens a line of notes only (`line_notes`) taken out, with its `*` and
 /// `[len]` and any spacer `\\` after it: the notes join the line above, as written without the break. Such a line
 /// prints only its notes' marks; its notes are the names' above (`Ann Able$^{1,*}$, … and Cat Cole$^{1}$\\
 /// \thanks{$^{1}$Ann Able and Cat Cole are with Univ A, Town.}…`: 2609.17106, 2411.05212, 2312.10807's `\\[3.0ex]`).

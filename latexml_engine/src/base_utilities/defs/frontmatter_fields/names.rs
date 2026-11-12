@@ -22,7 +22,7 @@ pub(in crate::base_utilities) fn is_membership_grade(text: &str) -> bool {
 
 /// A name with the membership grade written after its comma taken out as the author's `membership` contact: `Cat
 /// Cole\textsuperscript{1}, \textit{Fellow, IEEE}` is "Cat Cole" and the contact "Fellow, IEEE" in its italics, the
-/// contact IEEEtran's `\IEEEmembership` makes of the grade it prints (ieeetran_cls.rs `\lx@IEEE@membership`;
+/// contact IEEEtran's `\IEEEmembership` makes of the grade it prints (ieeetran_cls.rs `\lx@IEEE@grade`;
 /// 2107.05093, 2302.11403, 2602.16174), and so are `Bob Baker, Member, OSA` and ascelike's `Matthew R. Kuhn, M.ASCE`
 /// (ascexmpl.tex:48). The grade is the text after the first comma of the name's own (outside its groups and math) after
 /// which only a grade is printed ([`is_membership_grade`]); the marks and notes written after it stay the name's, after

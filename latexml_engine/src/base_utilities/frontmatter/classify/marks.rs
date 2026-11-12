@@ -65,14 +65,13 @@ pub fn author_mark_position(tokens: &Tokens) -> Option<usize> {
 /// link, a membership grade, a citation mark, a superscript (a mark or text). The one classification of those commands
 /// ([`is_name_note_command`]): `author_marks_end_name` reads what follows a name's mark by it, the email split of a
 /// name line (`adds_to_frontmatter`) the markup of an address (77n r4 review, which found the two lists apart).
-pub(in crate::base_utilities) const PRINTED_IN_PLACE: [&str; 8] = [
+pub(in crate::base_utilities) const PRINTED_IN_PLACE: [&str; 7] = [
   "\\email",
   "\\textsuperscript",
   "\\orcidlink",
   "\\orcidID",
   "\\lx@aas@checkorcid",
   "\\IEEEmembership",
-  "\\lx@IEEE@membership",
   "\\cite",
 ];
 

@@ -9,7 +9,10 @@
 % engines: rust int139c = 0 errors, 0 warnings, the grade lost silently; perl = the grade dropped too
 % expect:  0 errors, 1 warning (frontmatter:unclaimed "senior member ieee"); the frontmatter unchanged
 % engines: rust int160a (HG1) = 0 errors, 0 warnings: the grade dropped silently, counted by no Warning; 108b's guard was emptied by DEL1 (its =2 run was RED)
-% status:  RED (int139c) -> GREEN (108b) -> RED (int160a, HG1)
+% engines: rust P5a = 0 errors, 0 warnings: Ann Able's `membership` contact "Senior Member, IEEE" (the grade the
+%          macro prints, read by the reading as its contact; the comma opening it the list's, OD #1016)
+% expect:  (P5a) 0 errors, 0 warnings; the grade kept as Ann Able's membership contact, no comma in it
+% status:  RED (int139c) -> GREEN (108b) -> RED (int160a, HG1) -> GREEN (P5a; was check_binding_drops_document_macro_expansion_red)
 % preload: ar5iv.sty
 \documentclass[journal]{IEEEtran}
 \newcommand{\SeMieee}{\IEEEmembership{, Senior Member,~IEEE}}

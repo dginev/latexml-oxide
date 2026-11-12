@@ -85,6 +85,7 @@ pub use policy::{
 };
 pub(in crate::base_utilities) use reading::read_at_flush;
 pub use reading::{fm_reading_json, reset_fm_reading};
+pub use rehearsal::reading_author_fields;
 // (the old reader's owner logic, moved unchanged, for its callers in `frontmatter/` and `defs/`: the plan's row "Knowledge in, driver out, one pass")
 pub(in crate::base_utilities) use resolver::owners::*;
 // (for the guards, which resolve a block's input again)
