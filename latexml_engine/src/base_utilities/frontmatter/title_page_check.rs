@@ -231,8 +231,8 @@ fn reset_check_budget() {
   LEFT_OUT.with_borrow_mut(|left_out| *left_out = LeftOut::default());
 }
 
-/// How many tokens the check's next speculative run may read (`sect05.rs` `speculative_run`): a check reads what a title
-/// page prints, and may not cost more than a small part of a conversion whatever the document's title page does — a
+/// How many tokens the check's next speculative run may read (`sect05.rs` `speculative_run_read`; the stores' sentinel
+/// probes are its runs too, TP3): a check reads what a title page prints, and may not cost more than a small part of a conversion whatever the document's title page does — a
 /// looping stored argument, or a hundred lines of it the class's language switches make dear (uantwerpenexam's
 /// `\extrainfo`, 164 million reads a run). None once a conversion's reads are spent ([`CHECK_RUNS_PER_CONVERSION`]). What is
 /// left out so is said once ([`check_budget_warning`]).

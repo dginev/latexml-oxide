@@ -5226,7 +5226,7 @@ fn replays_class_maketitle() -> bool {
   !lookup_bool("lx_depositing_class_maketitle") && title_page_replay_tokens(&[]).is_some()
 }
 
-/// What a speculative title-page run ([`speculative_title_page_run`]) gave.
+/// What a speculative title-page run ([`title_page_probe_run`], [`checks_run`]) gave.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub(crate) enum SpeculativeRun {
   /// The text the run typeset, as [`ink_text`] reads it (in its own case: a caller lower-cases it where it matches a
@@ -5256,20 +5256,25 @@ pub(crate) enum SpeculativeRun {
 /// emulation of the class lacks becomes an `<ltx:ERROR>` holding its name), as pdflatex typesets what the title page
 /// prints. A resource Fatal of the run propagates (Fatal stays Fatal), as does one whose run could not be undone; any
 /// other Fatal is the run's alone — the document never makes it, and a sentinel value may cause it —, discarded with
-/// its diagnostics (an Info says so): [`SpeculativeRun::Aborted`].
-pub(crate) fn speculative_title_page_run(tokens: Tokens) -> Result<SpeculativeRun> {
-  speculative_run(tokens, false, ink_text, None, None)
+/// its diagnostics (an Info says so): [`SpeculativeRun::Aborted`]. The sentinel probes' runs, made by the title-page
+/// reading's builder under its one read budget ([`checks_run`]; TP3, OXIDIZED_DESIGN_DIVERGENCES #953): over it, its
+/// caller falls back to the code walk and the check's Warning names it. `isolated`: in a mouth of its own, so a begin
+/// code reading ahead to its `\end` (smfart.cls:506-520) meets the end of `tokens`, never the document's text.
+pub(crate) fn title_page_probe_run(tokens: Tokens, isolated: bool) -> Result<SpeculativeRun> {
+  Ok(match checks_run(tokens, isolated, &[(ink_text, None)])? {
+    Ok(mut texts) => SpeculativeRun::Printed(texts.swap_remove(0)),
+    Err(SpeculativeRun::OverBudget(read)) => {
+      note_check_left_out(
+        s!("a sentinel run of the class's title page, after {read} tokens read"),
+        0,
+      );
+      SpeculativeRun::OverBudget(read)
+    },
+    Err(run) => run,
+  })
 }
 
-/// [`speculative_title_page_run`] reading from a mouth of its own: code that reads ahead past `tokens` — an
-/// environment's begin code collecting its body up to its `\end` (smfart.cls:506-520 `\@getgenabstext#1\end #2`) —
-/// meets the end of its input, never the document's text. The unclaimed-text net's run of the refused begin codes
-/// (frontmatter_stores.rs `net_begin_code_tokens`).
-pub(crate) fn speculative_isolated_run(tokens: Tokens) -> Result<SpeculativeRun> {
-  speculative_run(tokens, true, ink_text, None, None)
-}
-
-/// [`speculative_isolated_run`], its text read with where its words end ([`ink_word_text`], each `\insert`'s material
+/// [`title_page_probe_run`] isolated, its text read with where its words end ([`ink_word_text`], each `\insert`'s material
 /// after an [`INK_INSERT`]), the field ledger put back as [`note_title_page_print`] puts it back: what an argument a
 /// binding's frontmatter command never digests prints (`base_utilities::frontmatter::title_page_check`
 /// `end_frontmatter_entry_digestion`, OXIDIZED_DESIGN_DIVERGENCES #953 "106t").
@@ -5301,7 +5306,7 @@ fn checks_run(
   };
   let left = check_reads_left();
   let ledger = FieldLedgerScope::begin();
-  let run = speculative_run_read(tokens, isolated, readers, Some(budget));
+  let run = speculative_run_read(tokens, isolated, readers, budget);
   drop(ledger);
   DebugFeature!(
     "frontmatter",
@@ -5341,37 +5346,18 @@ pub(crate) fn note_title_page_print() -> Result<()> {
   Ok(())
 }
 
-/// [`speculative_title_page_run`], in a mouth of its own when `isolated` ([`speculative_isolated_run`]), its text read
-/// by `read` ([`ink_text`], or [`ink_word_text`] where its words are counted: [`note_title_page_print`]), each
-/// `\insert`'s material after `insert_mark` when one is given. With a `budget`, a check's run, it reads that many tokens
-/// at most (`gullet::read_budget`): past them it is abandoned and rolled back as a failed run is, its diagnostics
-/// discarded, and gives [`SpeculativeRun::OverBudget`] — never a Fatal, even when its assignments could not be undone —,
-/// counted as having read what it read, its conditionals by no limit. Which of the check's runs is said by the caller's
-/// Warning (`title_page_check::note_check_left_out`).
-fn speculative_run(
-  tokens: Tokens,
-  isolated: bool,
-  read: fn(&Digested, &mut String),
-  insert_mark: Option<char>,
-  budget: Option<usize>,
-) -> Result<SpeculativeRun> {
-  Ok(
-    match speculative_run_read(tokens, isolated, &[(read, insert_mark)], budget)? {
-      Ok(mut texts) => SpeculativeRun::Printed(texts.swap_remove(0)),
-      Err(run) => run,
-    },
-  )
-}
-
-/// A text reader of a speculative run's material, with the mark it sets before each `\insert`'s ([`speculative_run`]).
+/// A text reader of a speculative run's material, with the mark it sets before each `\insert`'s ([`checks_run`]).
 pub(crate) type RunReader = (fn(&Digested, &mut String), Option<char>);
 
-/// [`speculative_run`], its material read by each of `readers` in turn: their texts when it printed, else how it ended.
+/// The speculative run ([`title_page_probe_run`]), its material read by each of `readers` in turn: their texts when it
+/// printed, else how it ended. It reads `budget` tokens at most (`gullet::read_budget`): past them it is abandoned and
+/// rolled back as a failed run is, its diagnostics discarded, and gives [`SpeculativeRun::OverBudget`] — never a Fatal,
+/// even when its assignments could not be undone —, counted as having read what it read, its conditionals by no limit.
 fn speculative_run_read(
   tokens: Tokens,
   isolated: bool,
   readers: &[RunReader],
-  budget: Option<usize>,
+  budget: usize,
 ) -> Result<std::result::Result<Vec<String>, SpeculativeRun>> {
   let Some(journal) = begin_assignment_journal() else {
     return Ok(Err(SpeculativeRun::Unavailable));
@@ -5405,7 +5391,7 @@ fn speculative_run_read(
     Some(Scope::Global),
   );
   let conditionals = if_count();
-  let budget = budget.map(read_budget);
+  let budget = read_budget(budget);
   let result = if isolated {
     reading_from_mouth(Mouth::default(), || {
       with_origin(DefinitionOrigin::File, || digest(tokens))
@@ -5414,11 +5400,9 @@ fn speculative_run_read(
     with_origin(DefinitionOrigin::File, || digest(tokens))
   };
   // (off before anything else reads: closing what the run left open is no part of it)
-  let over_budget = budget.and_then(|budget| {
-    let end = budget.end();
-    note_check_run_reads(end.reads);
-    end.over.then_some(end.reads)
-  });
+  let end = budget.end();
+  note_check_run_reads(end.reads);
+  let over_budget = end.over.then_some(end.reads);
   if over_budget.is_some() {
     set_if_count(conditionals);
   }

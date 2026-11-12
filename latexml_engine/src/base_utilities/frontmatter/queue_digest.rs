@@ -565,7 +565,7 @@ pub(in crate::base_utilities) fn reading_label() -> bool {
 }
 
 /// The printed text of `tokens` digested in a speculative run of their own (in a group, in a reading context of their
-/// own, as sect05.rs `speculative_title_page_run` runs a title page): nothing of it stays — its assignments undone, its
+/// own, as sect05.rs `title_page_probe_run` runs a title page): nothing of it stays — its assignments undone, its
 /// diagnostics discarded, an argument read past its end (`\altaffilmark` handed `\let`) reading nothing of the
 /// document's. `None` when no journal opens, the run is not undone, or it raised an error (a resource Fatal, or one
 /// that could not be undone, propagates: Fatal stays Fatal).

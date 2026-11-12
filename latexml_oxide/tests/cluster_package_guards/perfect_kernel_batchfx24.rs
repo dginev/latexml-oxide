@@ -140,14 +140,15 @@ fn an_authblk_email_line_appended_to_author_is_kept() {
 /// `notitlepage` runs `\@maketitle` (report.cls:175-225; TP1b's undeclared report invented "Bob B", review revTP1b), and
 /// article runs it after a document's `\@titlepagetrue`, which comes after article.cls:169 read it
 /// (`MaketitleRuns::WithoutTitlepage`, keyed on the class's `\if@titlepage` after its options, TP1c). Distinct: the gate
-/// of both routes, the Info side of the check's evidence rule, the `\maketitle` that runs no `\@maketitle`, and the
-/// keyed rule's `notitlepage` side and its time of reading.
+/// of both routes, the Info side of the check's evidence rule, the `\maketitle` that runs no `\@maketitle`, the
+/// keyed rule's `notitlepage` side and its time of reading, and an undeclared class's tail answered by the run, not the
+/// walk (QA60 site 2, TP3).
 #[test]
 fn an_author_tail_the_title_page_does_not_print_is_not_read() {
   let alice_x: &[&[&str]] = &[&["Alice A", "affiliation=Inst X"]];
   let annotated = "Info:frontmatter:annotated The title page annotates 1 word(s) that its output does not hold: bob";
   let alice: &[&[&str]] = &[&["Alice A"]];
-  let rows: [Row; 19] = [
+  let rows: [Row; 20] = [
     (
       "document \\maketitle, \\and tail",
       repro!("article_author_and_tail_unprinted_by_own_maketitle_makes_no_creator.tex"),
@@ -279,6 +280,14 @@ fn an_author_tail_the_title_page_does_not_print_is_not_read() {
       "extbook[notitlepage], document title-only \\@maketitle",
       repro!("extbook_notitlepage_document_title_only_maketitle_prints_no_author_tail.tex"),
       0,
+      false,
+      alice,
+    ),
+    // QA60 site 2: under an undeclared class the run answers, not the walk, which would invent Bob B (TP3)
+    (
+      "OmniBus, a package's value-tested \\@maketitle (its one Warning the missing class's)",
+      repro!("omnibus_value_tested_maketitle_author_tail_makes_no_creator.tex"),
+      1,
       false,
       alice,
     ),

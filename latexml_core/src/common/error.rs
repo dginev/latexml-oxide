@@ -90,7 +90,7 @@ pub fn set_suppress_log_output(suppress: bool) -> bool {
 /// The log-output suppression flag set for a scope ([`set_suppress_log_output`]) and put back as it was when the
 /// guard is dropped — at the scope's end, on an early return or while a panic unwinds — so a scope that fails cannot
 /// leave the thread's later conversions silent (a speculative title-page run, sect05.rs
-/// `speculative_title_page_run`, under `cortex_worker`'s per-paper `catch_unwind`).
+/// `title_page_probe_run`, under `cortex_worker`'s per-paper `catch_unwind`).
 #[must_use = "the suppression ends when the guard is dropped"]
 pub struct SuppressLogOutputGuard {
   prev: bool,
@@ -584,7 +584,7 @@ pub fn record_last_fatal(e: &Error) {
 }
 
 /// Unlatch the latched resource fatal when it is a runaway limit of the expansion in progress — the pushback, a
-/// recursion — for a run the document never makes, discarded with it (`speculative_title_page_run`). A limit of the
+/// recursion — for a run the document never makes, discarded with it (`title_page_probe_run`). A limit of the
 /// conversion stays latched as the document's: its deadline, its memory budget, its token budget, its conditional
 /// ids. (The token count itself does not carry past the failed run: `reading_from_mouth`'s error path resets the
 /// gullet's `progress`, gullet.rs.) Whether it was one.

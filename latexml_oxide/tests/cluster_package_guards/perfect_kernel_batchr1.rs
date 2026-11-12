@@ -96,8 +96,9 @@ fn a_thanks_behind_a_macro_in_a_stored_argument_is_counted() {
   }
 }
 
-/// Over budget the heavy argument and the print are named, what fits is still read, and the XML is the same. Distinct path: a
-/// run abandoned and the conversion's other runs going on. Witness: uantwerpenexam-example2.
+/// Over budget the heavy argument, the stores' sentinel probes and the print are named, what fits is still read, and the XML
+/// is the same but for the code walk's answer in the probes' place (TP3). Distinct path: a run abandoned and the
+/// conversion's other runs going on. Witness: uantwerpenexam-example2.
 #[test]
 fn what_a_run_left_out_over_budget_is_named() {
   let tex = repro!("check_store_over_budget_is_named");
@@ -113,10 +114,14 @@ fn what_a_run_left_out_over_budget_is_named() {
   for streaming in [false, true] {
     let (over, over_xml) = converted(tex, 100, streaming);
     assert_eq!(signals(&over), [
-      "Warning:frontmatter:check_budget The title-page check gave up on what takes more than 100 reads to digest, so a word only it prints is not counted: \\extrainfo's argument of 63 token(s), the class's title page, after 100 tokens read",
-      "Warning:frontmatter:unclaimed_store 1 word(s) of the document's stored by a raw class's command, which pdflatex may not print, are not in the output: smallword",
+      // (TP3: the stores' sentinel probes spend the same budget and are named; over it the code walk answers, which
+      // hands on no `\@corr` from the class's `\thanks`: the e-mail is lost, counted; int168a kept the pubnote, its
+      // probes unbudgeted)
+      "Warning:frontmatter:check_budget The title-page check gave up on what takes more than 100 reads to digest, so a word only it prints is not counted: a sentinel run of the class's title page, after 100 tokens read, \\extrainfo's argument of 63 token(s), a sentinel run of the class's title page, after 41 tokens read, the class's title page, after 0 tokens read",
+      "Warning:frontmatter:unclaimed_store 3 word(s) of the document's stored by a raw class's command, which pdflatex may not print, are not in the output: lunar org smallword",
     ]);
-    assert_eq!(front_and_body(&over_xml), front);
+    let pubnote = " <pubnote name=\"Corresponding author:\u{a0}\">ann.able@lunar.org</pubnote>";
+    assert_eq!(front_and_body(&over_xml), front.replace(pubnote, ""));
   }
 }
 
@@ -208,7 +213,8 @@ fn a_looping_stored_argument_is_budgeted() {
 /// a read ended, at the budgets that end the print's run and the argument's in each of those (`kit/check_budget_sweep.sh`, over
 /// every third budget, found none different). Its second row: the stores' confirming check over budget, which keeps the
 /// sentinel runs' answer unconfirmed, erring toward "printed" (a store kept, no word dropped; no unbudgeted run: TP1b,
-/// OXIDIZED_DESIGN_DIVERGENCES #953, review revTP1 S2), the XML the same and one Warning at each budget.
+/// OXIDIZED_DESIGN_DIVERGENCES #953, review revTP1 S2), the XML the same and one Warning at each budget. The stores'
+/// sentinel probes spend the same budget (TP3): over it they fall back to the code walk, and the Warning names them.
 #[test]
 fn a_run_over_budget_leaves_no_trace() {
   // (repro, the Warnings with no budget, the budgets)
@@ -233,6 +239,13 @@ fn a_run_over_budget_leaves_no_trace() {
       let (over, over_xml) = converted(tex, *budget, false);
       assert_eq!((error_count(&over), warning_count(&over)), (0, 1), "{over}");
       assert!(over.contains("frontmatter:check_budget"), "{over}");
+      // (the sentinel probes run on the same budget, and the Warning names them: TP3)
+      if *budget == 1 {
+        assert!(
+          over.contains("a sentinel run of the class's title page"),
+          "{over}"
+        );
+      }
       assert_eq!(over_xml, xml, "budget {budget}");
     }
   }
