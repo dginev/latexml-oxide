@@ -16,7 +16,7 @@ LoadDefinitions!({
   // (changepage.sty:8-11): memoir's `\checkoddpage` and page macros stay. Its `{adjustwidth}`
   // (memoir.cls:11267-11297) is the same list as changepage's, so the environments below are
   // defined either way.
-  if !(lookup_bool("memoir.cls_loaded") || lookup_bool("memoir.cls_raw_loaded")) {
+  if !class_loaded("memoir") {
     // The page-check and page-layout macros are the package's own TeX: `[strict]` (:22),
     // `\ifoddpage`, the `cp@cntr` counter and `\cp@tempcnt` (:29-31; the dgruyter.sty that arXiv
     // 2605.13539 and 2605.16066 ship reads it), `\cplabel` (:32), `\checkoddpage` (:59-67; odd, on

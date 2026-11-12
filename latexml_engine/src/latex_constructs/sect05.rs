@@ -547,20 +547,9 @@ pub(crate) fn load() -> Result<()> {
   // `latex_constructs_rust_only.rs` (which loads last after this file)
   // — so we don't redefine the aliases here.
   DefMacro!("\\@ifl@aded{}{}", sub[(ext, name)] {
-  let path = s!("{}.{}", Expand!(name), Expand!(ext));
-  // Per OXIDIZED_DESIGN #23: a package is "loaded" when EITHER the
-  // binding (`_loaded`) OR the raw .sty/.cls (`_raw_loaded`) is in
-  // place. User-level `\@ifpackageloaded{X}` doesn't care which path.
-  // Mirrors Perl `\@ifpackageloaded` checking `<X.sty>_loaded` (which
-  // is set by both Perl `loadLTXML` and `loadTeXDefinitions`).
-  // A file that un-marks itself (fontenc.sty tail `\let\ver@fontenc.sty\relax`)
-  // answers "not loaded", as real `\@ifl@aded` does on the relaxed `\ver@`; so does one a class
-  // binding marked loaded and the document un-marked (`latexml_core::state::unmarked_by_document`:
-  // amsart's amsthm only, `amsthm.sty:class_marked`).
-  if (lookup_bool(&s!("{path}_loaded")) || lookup_bool(&s!("{path}_raw_loaded")))
-    && !lookup_bool(&s!("{path}_unmarks_itself"))
-    && !unmarked_by_document(&path)
-  {
+  // latex.ltx `\@ifl@aded`: `\ver@<name>.<ext>` (`state::file_loaded`); Perl reads the loader's records
+  // (latex_constructs.pool.ltxml:946-953, KNOWN_PERL_ERRORS #1236), OXIDIZED_DESIGN_DIVERGENCES #1015.
+  if file_loaded(&s!("{}.{}", Expand!(name), Expand!(ext))) {
     T_CS!("\\@firstoftwo")
   } else {
     T_CS!("\\@secondoftwo")

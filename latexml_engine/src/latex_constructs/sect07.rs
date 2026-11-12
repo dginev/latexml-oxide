@@ -31,14 +31,9 @@ pub(crate) const LATEX_EQNNUM: &str = "latex_eqnnum";
 /// Whether amsmath is loaded, as `\@ifpackageloaded{amsmath}` asks (`\ver@amsmath.sty`) — its binding or the real
 /// file; not a binding's load beyond its original (`amsmath_loaded_beyond_original`, the old aa.cls's), which counts as
 /// not loaded — so that its `\nonumber` (amsmath.sty:1268-1269) removes an `{equation}`'s number ([`LATEX_EQNNUM`]).
-/// `\ver@amsmath.sty` and not only the loaded flag: aa.cls's binding clears that flag after today's aa.cls loads amsmath
-/// (`aa_cls.rs`, Perl aa.cls.ltxml:57), so that a document's own `\usepackage{amsmath}` runs the binding again
-/// (1712.01010, 1812.04463, 2501.07980 ship that aa.cls).
-fn amsmath_nonumber() -> bool {
-  is_defined("\\ver@amsmath.sty")
-    || lookup_bool("amsmath.sty_loaded")
-    || lookup_bool("amsmath.sty_raw_loaded")
-}
+/// (`state::package_loaded`: aa.cls's binding clears amsmath's load record after today's aa.cls loads it, `aa_cls.rs`,
+/// Perl aa.cls.ltxml:57; 1712.01010, 1812.04463, 2501.07980 ship that aa.cls.)
+fn amsmath_nonumber() -> bool { package_loaded("amsmath") }
 
 /// The `EQUATION_NUMBERING` key of amsmath's `{equation}` (amsmath.sty:2913-2932, where amsmath is loaded:
 /// [`amsmath_nonumber`]), whose `\nonumber` leaves its labels the number it stepped. `\incr@eqnum` is

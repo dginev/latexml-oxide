@@ -55,9 +55,7 @@ pub fn def_autoload(cs_name: &str, package: &str) -> Result<()> {
       // expansion. Witness 2310.13684. Skip the clear+load and just
       // re-emit cs_for_closure, which by now has the real meaning the
       // already-loaded package installed.
-      let pkg_loaded_key = s!("{}.sty_loaded", pkg_name);
-      let pkg_raw_key = s!("{}.sty_raw_loaded", pkg_name);
-      if lookup_bool(&pkg_loaded_key) || lookup_bool(&pkg_raw_key) {
+      if load_recorded(&s!("{}.sty", pkg_name)) {
         // The re-emit above is only progress when the CS that FIRED this
         // closure is a *different* one that was `\let` to the trigger — the
         // `\varmathbb`/2310.13684 case the comment describes. If the firing CS
@@ -178,7 +176,7 @@ pub fn unfired_autoload_package(cs: &Token) -> Option<String> {
     return None;
   };
   let package = with(package, |p| p.to_string());
-  if lookup_bool(&s!("{package}.sty_loaded")) || lookup_bool(&s!("{package}.sty_raw_loaded")) {
+  if load_recorded(&s!("{package}.sty")) {
     return None;
   }
   let holds_trigger = match lookup_value(&s!("{name}:autoload_trigger")) {

@@ -4,7 +4,7 @@ LoadDefinitions!({
   // memoir marks chngpage loaded (memoir.cls:12218 `\EmulatedPackage{chngpage}`) without defining
   // its commands — memoir's own `\checkoddpage` stands in — so nothing is loaded under memoir; its
   // list `{adjustwidth}` is replaced below either way (changepage_sty.rs).
-  if !(lookup_bool("memoir.cls_loaded") || lookup_bool("memoir.cls_raw_loaded")) {
+  if !class_loaded("memoir") {
     // chngpage is changepage's predecessor with its own macros, not an alias: `[strict]` (:21),
     // `\ifcpoddpage` (:32), the `cp@cnt` and `cp@tempcnt` counters (:33-34), `\cplabelprefix`
     // (:35), `\checkoddpage` (:48), `\cplabel{}` (:54).

@@ -415,7 +415,7 @@ impl PreBibTeX {
       named_style
     };
     me.percent_comments =
-      bibstyle.starts_with("biblatex") || latexml_core::state::lookup_bool("biblatex.sty_loaded");
+      bibstyle.starts_with("biblatex") || latexml_core::state::package_loaded("biblatex");
     // bibtex(1) runs the style's `MACRO` commands before its `READ` of the
     // `.bib`s, so `journal = apj` resolves against the `.bst` in force
     // (btxhak.tex:174-177 "all MACRO commands … must precede the READ

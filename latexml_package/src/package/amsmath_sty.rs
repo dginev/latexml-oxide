@@ -3774,9 +3774,7 @@ fn sideset_wrap_impl(
 pub fn require_amsmath_beyond_original(original_loads: bool, options: &[&str]) -> Result<()> {
   // A file whose original does load amsmath after an earlier beyond-original load is the real load: it runs the
   // binding again (spie.cls, then a Scientific Word 5.x tcilatex.tex copy with `\RequirePackage{amsmath}`).
-  if lookup_bool("amsmath.sty_loaded")
-    || lookup_bool("amsmath.sty_raw_loaded")
-    || (!original_loads && lookup_bool("amsmath.sty:beyond_original"))
+  if load_recorded("amsmath.sty") || (!original_loads && lookup_bool("amsmath.sty:beyond_original"))
   {
     return Ok(());
   }

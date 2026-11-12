@@ -140,14 +140,8 @@ LoadDefinitions!({
     Ok(props)
   });
 
-  // Load the raw cleveref.sty (for language-dependent definitions)
-  // Pretend amsmath is loaded to avoid errors. Per OXIDIZED_DESIGN
-  // #23, "amsmath is loaded" means EITHER `amsmath.sty_loaded` OR
-  // `amsmath.sty_raw_loaded` is set.
-  // (a flag set `false`, `latexml_core::state::mark_unloaded`'s — amsmath loaded beyond a class's original,
-  // `amsmath_sty::require_amsmath_beyond_original` — is not loaded)
-  let ams_loaded = lookup_bool("amsmath.sty_loaded") || lookup_bool("amsmath.sty_raw_loaded");
-  assign_value("amsmath.sty_loaded", true, Some(Scope::Local));
+  // Load the raw cleveref.sty (for language-dependent definitions), amsmath pretended loaded to avoid errors
+  // (`state::with_pretended_load` below, Perl cleveref.sty.ltxml:23-27).
   // The pretense includes amsmath's `parentequation` counter (amsmath.sty:1127), which cleveref's amsmath branch reads
   // for every equation label (cleveref.sty:700-707): "\c@parentequation is not a register" otherwise.
   RawTeX!(r"\@ifundefined{c@parentequation}{\newcounter{parentequation}}{}");
@@ -184,10 +178,10 @@ LoadDefinitions!({
     Ok(Vec::new())
   });
   RawTeX!(r"\AtBeginDocument{\lx@cref@building{1}}");
-  InputDefinitions!("cleveref", noltxml => true, extension => Some(Cow::Borrowed("sty")));
-  if !ams_loaded {
-    assign_value("amsmath.sty_loaded", Stored::None, Some(Scope::Local));
-  }
+  with_pretended_load("amsmath.sty", || -> Result<()> {
+    InputDefinitions!("cleveref", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+    Ok(())
+  })?;
   // (the document's formats noted, `\lx@cref@noteformat`, above; cleveref's own `\begin{document}` code, which builds
   // the defaults, bracketed by `\lx@cref@building`, its first hook before the file's and its last after: cleveref's
   // builders are left as they are, which packages patch (clevethm's `\patchcmd\@crefdefineformat`, 2608.12136))

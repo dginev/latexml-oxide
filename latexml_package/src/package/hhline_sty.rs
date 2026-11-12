@@ -124,7 +124,7 @@ LoadDefinitions!({
   // `perfect_kernel_batch78c::hhline_rules_the_columns_it_names`.
   DefMacro!("\\hhline Semiverbatim", sub[(spec)] {
     let spec = spec.to_string();
-    let (ruled, doubled, ignored) = hhline_columns(&spec, lookup_bool("colortbl.sty_loaded"));
+    let (ruled, doubled, ignored) = hhline_columns(&spec, package_loaded("colortbl"));
     for meaning in ignored {
       Warn!("unexpected", "\\hhline", s!("Package hhline Warning: {meaning} ignored in \\hhline argument"));
     }

@@ -428,7 +428,9 @@ is dropped.
 - Reads check the appropriate flag(s):
   - "Was the binding loaded?" → `<filename>_loaded`
   - "Was the raw file loaded?" → `<filename>_raw_loaded`
-  - "Either?" → check both
+  - "Either?" → check both (`state::load_recorded`; `binding_loaded`, `raw_loaded`)
+  - "Is the package loaded, as `\@ifpackageloaded` asks?" → `\ver@<file>` (`state::file_loaded`), not the
+    records (#1015)
 
 **Rationale:** Perl's two-key scheme leaks the `.ltxml` filesystem suffix
 into the API. In Rust, bindings are compile-time modules with no `.ltxml`
@@ -35484,3 +35486,26 @@ a numbered display and a display opening the box measure without TeX's centring 
 Also `varwidth_colour_at_its_start_keeps_the_given_width_red` (a leading `\color` keeps the line at the given width in
 TeX), `varwidth_inline_box_beside_text_measures_the_line_red` (an inline minipage and the text after it are one line), and
 `colour_boxes_measure_their_frame_red` (`\fcolorbox` measures 0pt, `\colorbox` without `\fboxsep`; not varwidth's).
+
+### 1015. "Is this package loaded" is `\ver@<file>`, one answer on every load path (GA2)
+
+**TeX.** latex.ltx:18397-18402 `\@ifl@aded`: `\@ifpackageloaded{X}` is true when `\ver@X.sty` is defined and not `\relax`,
+whoever defined it — the file's `\ProvidesPackage`, another file's mark (floatrow.sty:34 `ver@float.sty`, xkvutils.tex:71
+`ver@keyval.sty`), a document's `\@namedef{ver@…}` — and false after a removal (fontenc.sty's tail, `\let\ver@X\relax`).
+**Perl.** `\@ifl@aded` reads the loader's records, `X.sty_loaded` or `X.sty.ltxml_loaded` (latex_constructs.pool.ltxml:946-953, KNOWN_PERL_ERRORS #1236),
+which a binding clears so that the next request runs it again (aa.cls.ltxml:57, while `\ver@amsmath.sty` stays): after
+today's aa.cls (v9.4 :201 loads amsmath) `\@ifpackageloaded{amsmath}` is false, and a document's own mark counts for
+nothing. **Rust.** `state::file_loaded` (with `package_loaded`, `class_loaded`) reads `\ver@<file>`; `\@ifl@aded` and every
+binding that asks whether a package is loaded ask it (sect07's amsmath `\nonumber`, color/xcolor, soul, booktabs, cleveref,
+hhline, subcaption, subfig, natbib's `cite`, quantumarticle, sn-jnl, changepage, OmniBus, the kernel's `array` and
+`biblatex` tests). The loader's own question — were the definitions read here — keeps the records (`load_recorded`,
+`binding_loaded`, `raw_loaded`: the autoload triggers, `\documentstyle`'s fallback, the class dispatch, amsmath's
+beyond-original load). Two writes follow: a binding that stands in for a file its original loads marks it as that load
+does (`state::mark_loaded`: thmtools's thm-patch.sty, aipproc's aipxfm.sty); revtex4_support's preload of hyperref,
+which the real class never loads, undefines `\ver@hyperref.sty` with its record; a request the records skip restores a
+mark the document took back (`\let\ver@X\relax` then `\usepackage{X}` leaves X loaded, as LaTeX's reload does; the loader's
+records-only skip is the ruling of 2026-10-14). cleveref's pretense (Perl cleveref.sty.ltxml:23-27) marks amsmath both
+ways, in the group (`state::with_pretended_load`). **Witnesses**: 2501.07980, 1712.01010, 1812.04463 (aa.cls copies
+loading amsmath). **Guards**: `perfect_kernel_batchga2::one_loaded_answer_on_every_load_path`, the fence
+`perfect_kernel_batche0::one_loaded_query` (a record looked up outside `state.rs` and the loader, floor 0) with its
+self-test `a_record_lookup_counts_however_it_is_written`.

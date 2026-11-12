@@ -69,7 +69,7 @@ LoadDefinitions!({
     // `\bibliography` with no `\bibliographystyle` only names the `.bst` BibTeX runs.
     pass_options("natbib", "sty", vec!["numbers".to_string(), "sort&compress".to_string()])?;
     DefPrimitive!("\\lx@quantumarticle@natbib", {
-      if !lookup_bool("natbib.sty_loaded") && !lookup_bool("biblatex.sty_loaded") {
+      if !package_loaded("natbib") && !package_loaded("biblatex") {
         RequirePackage!("natbib");
       }
     });
@@ -90,14 +90,14 @@ LoadDefinitions!({
   // (quantumarticle.cls:27 `\RequirePackage{etoolbox}`).
   RequirePackage!("etoolbox");
   DefPrimitive!("\\lx@quantumarticle@caption", {
-    if !lookup_bool("caption.sty_loaded") {
+    if !package_loaded("caption") {
       RequirePackage!("caption");
     }
   });
   RawTeX!(r"\AtEndPreamble{\lx@quantumarticle@caption}");
   // quantumarticle.cls:1392-1394: hyperref, loaded at `\begin{document}` (after the compatibility's natbib).
   DefPrimitive!("\\lx@quantumarticle@hyperref", {
-    if !lookup_bool("hyperref.sty_loaded") {
+    if !package_loaded("hyperref") {
       RequirePackage!("hyperref");
     }
   });

@@ -19550,3 +19550,20 @@ residual for the frontmatter's mark formulas. Minimal trigger:
 Plain word$^{2}$.
 \end{document}
 ```
+
+## 1236. `\@ifpackageloaded` reads the loader's records, not `\ver@<file>`
+
+latex_constructs.pool.ltxml:946-953 `\@ifl@aded` answers from `<file>_loaded` / `<file>.ltxml_loaded`, which a binding
+clears to be run again (aa.cls.ltxml:57 for amsmath) while the package stays loaded, and which a document's or a raw
+file's own `\ver@` mark never sets: after a paper's aa.cls loads amsmath (2501.07980, 1712.01010, 1812.04463)
+`\@ifpackageloaded{amsmath}` is false, and `\@namedef{ver@foo.sty}{}` leaves foo "not loaded"; pdflatex answers "loaded"
+to both (latex.ltx:18397-18402). Rust reads `\ver@<file>` (OXIDIZED_DESIGN_DIVERGENCES #1015). Minimal trigger:
+
+```latex
+\documentclass{article}
+\makeatletter
+\@namedef{ver@foo.sty}{2026/01/01}
+\begin{document}
+foo \@ifpackageloaded{foo}{loaded}{not loaded}.
+\end{document}
+```

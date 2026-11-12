@@ -121,7 +121,7 @@ LoadDefinitions!({
   // dependency scan does, DIVERGENCES #605) — means
   // subcaption's sub-labels: subfig's `labelformat=empty` package option dropped the
   // "(a)" of subcaption's `{subfigure}` captions (2605.20200).
-  if lookup_bool("subfig.sty_loaded") {
+  if package_loaded("subfig") {
     DefMacro!("\\fnum@subfigure", "\\lx@subcaption@fnum{subfigure}{\\thesubfigure}");
     DefMacro!("\\fnum@subtable", "\\lx@subcaption@fnum{subtable}{\\thesubtable}");
   }

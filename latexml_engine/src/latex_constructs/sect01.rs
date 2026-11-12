@@ -376,7 +376,7 @@ pub(crate) fn load() -> Result<()> {
       sect05::respell_file_argument(whatsit, 2)?;
       assign_value(CLASS_DECLARED, true, Some(Scope::Global));
       retract_chapter_before_class_load();
-      let omnibus_before = lookup_bool("OmniBus.cls_loaded");
+      let omnibus_before = load_recorded("OmniBus.cls");
       note_document_class(&class_name);
       load_class(&class_name,
                 class_opts,
@@ -384,9 +384,9 @@ pub(crate) fn load() -> Result<()> {
       // A class no binding and no file answered (the OmniBus fallback) is no declaration a later `\documentstyle`
       // meets as the second (`tex_job.rs` `\lx@documentstyle@impl`; astro-ph9812142).
       let base = class_name.rsplit('/').next().unwrap_or(&class_name);
-      if !omnibus_before && lookup_bool("OmniBus.cls_loaded") && base != "OmniBus"
+      if !omnibus_before && load_recorded("OmniBus.cls") && base != "OmniBus"
         && [class_name.as_str(), base].iter().all(|name| {
-          !lookup_bool(&s!("{name}.cls_loaded")) && !lookup_bool(&s!("{name}.cls_raw_loaded"))
+          !load_recorded(&s!("{name}.cls"))
         })
       {
         assign_value(CLASS_DECLARED, false, Some(Scope::Global));
@@ -394,7 +394,7 @@ pub(crate) fn load() -> Result<()> {
       // OXIDIZED_DESIGN #179: `\chapter` exists only where the class has chapters (`settle_chapter_after_class_load`);
       // a class answered by a binding not its own (an alternate, a versioned fallback) says so in the chapterless
       // Warning, as the real class may have chapters (0909.2812: mn_thesis.cls → mnphd.cls → report, bound as `mn`).
-      if !lookup_bool(&s!("{base}.cls.ltxml_loaded")) && !lookup_bool(&s!("{base}.cls_raw_loaded")) {
+      if !binding_loaded(&s!("{base}.cls")) && !raw_loaded(&s!("{base}.cls")) {
         assign_value("\\chapter:class@stood@in", class_name.clone(), Some(Scope::Global));
       }
       settle_chapter_after_class_load()?;
@@ -545,7 +545,7 @@ pub(crate) fn load() -> Result<()> {
     // still undefined, the frontmatter a 2.09 journal option may bring, and replaces none (user ruling
     // 2026-10-11). OmniBus as the class itself, for a class with no binding or file (`\documentstyle`'s third
     // branch, tex_job.rs), loads whole.
-    if had_missing && !lookup_bool("OmniBus.cls_loaded") {
+    if had_missing && !load_recorded("OmniBus.cls") {
       Info!(
         "note",
         "OmniBus",

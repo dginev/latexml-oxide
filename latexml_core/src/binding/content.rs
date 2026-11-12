@@ -758,6 +758,15 @@ fn input_definitions_impl(
     assign_value(&s!("{filename}:class_marked"), false, Some(Scope::Global));
   }
   if !options.reloadable && already_handled(&filename) {
+    // A request our records skip leaves the file loaded, as LaTeX's load would: a mark the document took back since
+    // (`\let\ver@<file>\relax`) is restored, so `state::file_loaded` answers as the loader did (OD #1015).
+    if options.handleoptions && load_recorded(&filename) && !file_loaded(&filename) {
+      let_i(
+        &T_CS!(s!("\\ver@{filename}")),
+        &T_CS!("\\fmtversion"),
+        Some(Scope::Global),
+      );
+    }
     apply_new_options_on_reload(&filename)?;
     return Ok(());
   }

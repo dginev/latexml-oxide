@@ -75,7 +75,7 @@ LoadDefinitions!({
   // aipxfm.sty, whose layout code (aipxfm.sty:372-377 `\DeclareParagraphLayout`, `\SetInternalRegister\hyphenpenalty`,
   // and the `.clo` it reads) ran into the undefined internals of the class (117 papers of the inventory: 1010.4521,
   // 0705.1061, 0709.0115; Perl the same, KNOWN_PERL_ERRORS #730).
-  AssignValue!("aipxfm.sty_loaded" => true, Some(Scope::Global));
+  mark_loaded("aipxfm.sty");
   // aipproc.cls:212-216, 336-364, 383-386: the designer interface the class's layout files use — register setting,
   // paragraph layouts, the space catcodes, the body-text dimensions (a paper's own layout code calls them:
   // `\MakeSpaceNormal`, `\bodytextparindent`, 1010.4521).

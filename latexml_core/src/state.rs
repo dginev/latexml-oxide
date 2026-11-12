@@ -3922,6 +3922,78 @@ pub fn unmarked_by_document(file: &str) -> bool {
   }
 }
 
+/// Is `file` (`amsmath.sty`, `memoir.cls`) loaded, as LaTeX asks it (`\@ifpackageloaded`, `\@ifclassloaded`: latex.ltx
+/// `\@ifl@aded`, `\ver@<file>` defined and not `\relax`)? One answer on every load path: a binding's load and a raw
+/// file's define the macro (Package.pm:2343, :2393), and so do a class's or a document's own marks (floatrow.sty:34,
+/// `\@namedef{ver@…}`) and their removals (fontenc.sty's tail, a document's `\let\ver@amsthm.sty\relax`). Perl's
+/// `\@ifl@aded` reads the loader's records (latex_constructs.pool.ltxml:946-953), which a binding may clear so that the
+/// next request runs it again ([`load_recorded`]; aa.cls.ltxml:57): OXIDIZED_DESIGN_DIVERGENCES #1015.
+pub fn file_loaded(file: &str) -> bool {
+  lookup_meaning(&T_CS!(s!("\\ver@{file}"))).is_some_and(|ver| {
+    !matches!(ver, Stored::None)
+      && Some(&ver) != lookup_meaning(&crate::token::TOKEN_RELAX).as_ref()
+  })
+}
+
+/// `\@ifpackageloaded{name}` ([`file_loaded`]).
+pub fn package_loaded(name: &str) -> bool { file_loaded(&s!("{name}.sty")) }
+
+/// `\@ifclassloaded{name}` ([`file_loaded`]).
+pub fn class_loaded(name: &str) -> bool { file_loaded(&s!("{name}.cls")) }
+
+/// Has the loader recorded a load of `file`: its binding's or a stand-in's (`<file>_loaded`) or its raw TeX's
+/// ([`raw_loaded`])? The loader's own question (Package.pm:2328-2330, :2363; `DefAutoload`, :1096), not LaTeX's
+/// ([`file_loaded`]): it says whether the definitions were read here, and a binding clears it to be read again.
+pub fn load_recorded(file: &str) -> bool { lookup_bool(&s!("{file}_loaded")) || raw_loaded(file) }
+
+/// Did the binding of this very name load `file` (`<file>.ltxml_loaded`, Package.pm:2332), not a stand-in's?
+pub fn binding_loaded(file: &str) -> bool { lookup_bool(&s!("{file}.ltxml_loaded")) }
+
+/// Was `file`'s raw TeX read (`<file>_raw_loaded`, OXIDIZED_DESIGN #23)?
+pub fn raw_loaded(file: &str) -> bool { lookup_bool(&s!("{file}_raw_loaded")) }
+
+/// Record `file` loaded for a binding that stands in for it (thmtools for thm-patch.sty, aipproc for aipxfm.sty), as
+/// the original's own load does: the loader's record, so a later request is a no-op, and `\ver@<file>` (`\fmtversion`,
+/// Package.pm:2343) unless the file is marked already.
+pub fn mark_loaded(file: &str) {
+  assign_value(&s!("{file}_loaded"), true, Some(Scope::Global));
+  if !file_loaded(file)
+    && let Some(fmtversion) = lookup_meaning(&T_CS!("\\fmtversion"))
+  {
+    assign_meaning(&T_CS!(s!("\\ver@{file}")), fmtversion, Some(Scope::Global));
+  }
+}
+
+/// Run `read` with `file` marked loaded in the current group, its record and `\ver@<file>`, where it is not loaded:
+/// cleveref's binding reads cleveref.sty as if amsmath were loaded (Perl cleveref.sty.ltxml:23-27).
+pub fn with_pretended_load<R>(file: &str, read: impl FnOnce() -> R) -> R {
+  if file_loaded(file) {
+    return read();
+  }
+  let (record, ver) = (s!("{file}_loaded"), T_CS!(s!("\\ver@{file}")));
+  let was = lookup_meaning(&ver);
+  assign_value(&record, true, Some(Scope::Local));
+  if let Some(fmtversion) = lookup_meaning(&T_CS!("\\fmtversion")) {
+    assign_meaning(&ver, fmtversion, Some(Scope::Local));
+  }
+  let result = read();
+  assign_value(&record, Stored::None, Some(Scope::Local));
+  assign_meaning(&ver, was.unwrap_or(Stored::None), Some(Scope::Local));
+  result
+}
+
+/// Run `read`, a read of `file` that must not use it up (colordvi's of dvipsnam.def), and put `file`'s load records
+/// back as they were.
+pub fn keeping_load_records<R>(file: &str, read: impl FnOnce() -> R) -> R {
+  let flags = ["_raw_loaded", "_loaded", "_load_attempted"].map(|flag| s!("{file}{flag}"));
+  let was = flags.clone().map(|flag| lookup_bool(&flag));
+  let result = read();
+  for (flag, was) in flags.iter().zip(was) {
+    assign_value(flag, was, Some(Scope::Global));
+  }
+  result
+}
+
 /// Is `token`'s current meaning a fallback class's guess (`DefinitionOrigin::Fallback`), a kernel stub
 /// (`DefinitionOrigin::Stub`) or a borrowed package's (`DefinitionOrigin::Borrowed`), which a document's own
 /// `\newcommand` may replace?

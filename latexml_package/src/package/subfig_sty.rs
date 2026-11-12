@@ -39,7 +39,7 @@ LoadDefinitions!({
   if use_caption {
     RequirePackage!("caption");
     RawTeX!(r"\lx@caption@full@load");
-  } else if !lookup_bool("caption.sty_loaded") {
+  } else if !package_loaded("caption") {
     RequirePackage!("caption3");
   }
   // subfig's caption-family keys (subfig.sty:163-167, 271-282).

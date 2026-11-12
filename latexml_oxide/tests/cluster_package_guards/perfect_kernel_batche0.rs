@@ -2227,3 +2227,89 @@ fn passes_after_the_emitter_are_an_allow_list() {
     "the content check reads the final placed document"
   );
 }
+
+/// The homes of the load records: the loader that writes and reads them (`binding/content.rs`) and the helpers every other
+/// reader asks (`state.rs`: `file_loaded`, `package_loaded`, `class_loaded` — LaTeX's `\@ifl@aded` — and `load_recorded`,
+/// `binding_loaded`, `raw_loaded`, the loader's own records). `author_files.rs` is a data table.
+const LOADED_QUERY_HOMES: [&str; 3] = [
+  "latexml_core/src/state.rs",
+  "latexml_core/src/binding/content.rs",
+  "latexml_core/src/binding/author_files.rs",
+];
+
+/// A load record looked up outside its homes, per file: a literal naming one (`"amsmath.sty_loaded"`,
+/// `"{pkg}.sty_raw_loaded"`, `"{base}.cls.ltxml_loaded"`) that no `assign_value`/`AssignValue!` writes.
+fn record_lookups(source: &RustSource) -> usize {
+  let held = Regex::new(r#""([0-9]+)""#).expect("the regex");
+  let record =
+    Regex::new(r"(\.(sty|cls|def|ltx|tex)|\})(\.ltxml)?_(raw_)?loaded$").expect("the regex");
+  let write =
+    Regex::new(r"(AssignValue!\(|assign_value\(\s*(&\s*(s!|format!)\(\s*)?)$").expect("the regex");
+  held
+    .captures_iter(&source.code)
+    .filter(|found| record.is_match(&source.literals[found[1].parse::<usize>().expect("an index")]))
+    .filter(|found| {
+      !write.is_match(source.code[..found.get(0).expect("the match").start()].trim_end())
+    })
+    .count()
+}
+
+/// F2 `one_loaded_query` (GA2, finding 5 of GA0): "is this package loaded" has one answer, `state::file_loaded`
+/// (`\ver@<file>`, latex.ltx `\@ifl@aded`), and the loader's records one set of readers; a record looked up anywhere
+/// else is a debt. Floor 0.
+const ONE_LOADED_QUERY: &[(&str, usize)] = &[];
+
+#[test]
+fn one_loaded_query() {
+  const WHY: &str = "Ask `state::package_loaded`/`class_loaded`/`file_loaded` (LaTeX's `\\@ifpackageloaded`), or, for the \
+                     loader's own question, `state::load_recorded`/`binding_loaded`/`raw_loaded`.";
+  let mut counts = BTreeMap::new();
+  for dir in [
+    "latexml_core/src",
+    "latexml_engine/src",
+    "latexml_package/src",
+    "latexml_contrib/src",
+    "latexml_post/src",
+  ] {
+    for file in rust_files(dir) {
+      if LOADED_QUERY_HOMES.contains(&file.as_str()) {
+        continue;
+      }
+      let n = record_lookups(&read_rust(&file));
+      if n > 0 {
+        counts.insert(file, n);
+      }
+    }
+  }
+  assert_debts("the load-record lookups", ONE_LOADED_QUERY, &counts, WHY);
+}
+
+/// Every shape of a record lookup counts, and a record's write does not.
+#[test]
+fn a_record_lookup_counts_however_it_is_written() {
+  for (rule, n) in [
+    (r#"fn f() { lookup_bool("amsmath.sty_loaded"); }"#, 1),
+    (
+      r#"fn f(p: &str) { lookup_bool(&s!("{p}.sty_raw_loaded")) || lookup_bool(&s!("{}_loaded", p)); }"#,
+      2,
+    ),
+    (
+      r#"fn f(b: &str) { let key = format!("{b}.cls.ltxml_loaded"); lookup_bool(&key); }"#,
+      1,
+    ),
+    (
+      r#"fn f() { ["dvipsnam.def_raw_loaded"].map(|f| lookup_bool(f)); }"#,
+      1,
+    ),
+    (
+      r#"fn f() { AssignValue!("float.sty_loaded" => true); assign_value("a.sty_loaded", true, None); }"#,
+      0,
+    ),
+    (
+      r#"fn f(p: &str) { assign_value(&s!("{p}_loaded"), true, None); lookup_bool("LaTeX.pool_loaded"); }"#,
+      0,
+    ),
+  ] {
+    assert_eq!(record_lookups(&lex_rust(rule)), n, "{rule}");
+  }
+}
