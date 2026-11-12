@@ -1541,8 +1541,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (raised by one at Z14: the lexer's own constructor, `\lx@fm@obs@affil@marked`, as the row's others; nothing a document spells;
   // by one at N2r2: `raw_lines`' break arm holding the `\and` family too, two lines, the whatsits' definitions, 2106.06418;
   // by one at IO3b: the lexer's arm for the rehearsal's own constructor `\lx@fm@obs@creatorcall`, as the row's others — a
-  // binding's own definition, no name a document spells, 0807.4720)
-  ("events", 61),
+  // binding's own definition, no name a document spells, 0807.4720; by one at CMPJ2: the walker's arm for an enumerate
+  // item's whatsit, `\enumerate@item@`, by its definition — where an item starts, `item_led_pieces`, 1212.6367)
+  ("events", 62),
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with Perl's whole-block fallback and its preparation, kept as its own, 826 = 629 + 197; none added)
   // (raised by one at PF1: `tabular_close_rest` reads the `\end` its copy of the body read, before the copy — no read added)
   // (DEL2, 197 -> 151: the old driver's raw-token preparation deleted)
@@ -1948,8 +1949,9 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   // `\and` family's whatsits as it reads a break's, by their definition, 2106.06418; IO3b +1: the arm for the rehearsal's
   // own `\lx@fm@obs@creatorcall`, a binding's definition, no name spelled, 0807.4720)
   // (CL8b +2: the arm and the meaning of the rehearsal's own `\lx@fm@obs@emailAdd@own`, a binding's definition, no name a
-  // document spells)
-  ("events", 92),
+  // document spells; CMPJ2 +1: the walker's arm for an enumerate item's whatsit, `\enumerate@item@`, its definition's name,
+  // no name a document spells — the item's start, `item_led_pieces`, 1212.6367)
+  ("events", 93),
   // (Z4a, 0 -> 2, ruled at Z4ar2: names two kernel definitions (`\begin`, `\end`), not a token's spelling: an environment step by its
   // meaning, a `\let` copy too, what no frame says for a raw environment)
   ("field_notes", 2),
@@ -1998,8 +2000,11 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   // `"\\lx@frontmatter@setters@of"`, the command it writes before an item of a block whose setters' entries the recovery
   // writes as queued, beside `\lx@frontmatter@queued` — it writes it, no decision reads it; 1406.5876; FNR1b 67 -> 68:
   // `"\\c@"`, the prefix of a counter's register among a printing call's definees, whose name a later
-  // `\footnoterecall{uni}` reads, `reads_definition`; 2407.13730)
-  ("emitter", 68),
+  // `\footnoterecall{uni}` reads, `reads_definition`; 2407.13730; CMPJ2 68 -> 70: `\lx@frontmatter@item`, the wrapper it
+  // writes a list's item in as the whole call is written, and `\expandafter\addtocounter\expandafter{\@listctr}`, which
+  // it writes before an item to step the counter past the items before it — it writes them, no decision reads them;
+  // the list's opening and close are the digestion's frames, `Field::environments`; 1212.6367)
+  ("emitter", 70),
   // (the "Knowledge in, driver out, one pass" move: the emitter's vocabulary, moved unchanged from `author_block/`, its literals with it: the API's calls it writes, the
   // mark and note commands it reads; none added)
   ("emitter/calls", 44),

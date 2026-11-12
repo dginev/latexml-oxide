@@ -81,7 +81,9 @@ pub(super) fn lines_of<'a>(events: &'a [Event], and_inline: bool) -> Vec<Line<'a
 }
 
 // (the observer's, shared with the in-block contact reading: `events::mark_led_pieces`)
-pub(super) use crate::base_utilities::frontmatter::observer::events::{inked, mark_led_pieces};
+pub(super) use crate::base_utilities::frontmatter::observer::events::{
+  inked, item_led_pieces, list_items, mark_led_pieces,
+};
 
 /// The block's events with the ink one command draws inside a word read as the word's letters (row A2): a box a command
 /// draws right against the letters before or after it (no space between them in the source), whose cover holds a comma

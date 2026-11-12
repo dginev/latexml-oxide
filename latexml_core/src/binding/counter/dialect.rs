@@ -990,6 +990,15 @@ pub fn label_follows_an_undone_step() -> bool {
   }
 }
 
+/// The serial of the counter step in scope, which a `\label` made now names (`\@currentlabel`, latex.ltx:14963): what
+/// tells a step made inside a frontmatter item from one made before it (`\lx@set@frontmatter@label`).
+pub fn refstep_in_scope() -> Option<i64> {
+  match lookup_value(CURRENT_REFSTEP_SERIAL) {
+    Some(Stored::Int(serial)) => Some(serial),
+    _ => None,
+  }
+}
+
 /// The latest counter step stays the one in scope although the group it was made in has closed: a wrapper group of
 /// LaTeXML's own (caption's `\captionof` set in a float, caption_sty.rs `\@captionof@`) around a step LaTeX makes in
 /// the current group (caption.sty:390-391 `\setcaptiontype*` then `\caption`), so a `\label` after it names the step's

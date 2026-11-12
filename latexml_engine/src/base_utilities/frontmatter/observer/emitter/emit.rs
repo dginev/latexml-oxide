@@ -53,7 +53,7 @@ use crate::base_utilities::{
         BlockCheck, LostInk, RCreator, RuleDrop, Written, check_blocks, contact_parts,
         creator_call, creator_call_level, creator_call_pieces, is_creator_call, labelseq_pieces,
         merged_names, own_email_label, printed_email_label, read_events, shares_the_row,
-        split_pieces, uncoordinated_marks,
+        split_pieces, split_pieces_as, uncoordinated_marks,
       },
     },
     place::DEFERRED_TO_FLUSH_END,
@@ -2451,7 +2451,14 @@ fn item_call(
       };
       // (the one piece by the reading's count, not the runs cut: one no run holds gives no other its place, review revZ4a)
       let piece = found.iter().find(|(text, _)| *text == key.1);
+      // (a list's item, `events::item_led_pieces`: written as the whole call is, its tag kept — no mark of it a label)
+      let listed = !note && !events::item_led_pieces(&call.events).is_empty();
       match piece.or(found.first().filter(|_| found.len() == 1)) {
+        Some((_, Some(tokens))) if listed => Ok(annotate_now(
+          "ltx:contact",
+          &keys,
+          &cs_group("\\lx@frontmatter@item", &[tokens]),
+        )),
         Some((_, Some(tokens))) => Ok(wrap(tokens)),
         Some(_) => Ok(wrap(&by_text(Some("call: no run holds it"), &assoc.text))),
         None => Ok(wrap(&by_text(Some("call: no piece holds it"), &assoc.text))),
@@ -2729,11 +2736,36 @@ fn call_pieces(call: &ApiCall) -> Result<Vec<Piece>> {
     aligned:      aligned(&events),
     groups:       Default::default(),
   };
-  let pieces = split_pieces(&events, &call.role);
+  let pieces = split_pieces_as(&call.events, &events, &call.role);
   // (a list cut into entries shows the mark each opens with, as the Cut's `_markshown`: 1305.6194, hep-lat0501016)
   let shown = pieces.len() > 1;
+  // (a list cut at its items, `events::item_led_pieces`: where each item starts)
+  let listed = !pieces.is_empty()
+    && pieces.iter().all(|(_, piece)| {
+      piece.first().is_some_and(|e| {
+        e.kind == EventKind::Layout && e.role.as_deref() == Some(events::ITEM_STEP)
+      })
+    });
+  let item_starts: Option<Vec<usize>> = pieces
+    .iter()
+    .map(|(_, piece)| piece.first()?.span.map(|(start, _)| usize::from(start)))
+    .collect();
   let mut out = Vec::new();
-  for (text, piece) in pieces {
+  for (at, (text, piece)) in pieces.into_iter().enumerate() {
+    // (written as the whole call is, its fonts its own tokens')
+    if listed {
+      let tokens = item_starts
+        .as_ref()
+        .and_then(|starts| list_item_tokens(&field, starts, at))
+        .unwrap_or_else(|| {
+          by_text(
+            Some("a list item cut without its list, its number and label lost"),
+            &text,
+          )
+        });
+      out.push((norm(&text), Some(tokens)));
+      continue;
+    }
     let inks: Vec<&Event> = piece
       .iter()
       .filter(|e| e.kind == EventKind::Name || (shown && e.kind == EventKind::Mark))
@@ -2791,6 +2823,59 @@ fn call_pieces(call: &ApiCall) -> Result<Vec<Piece>> {
     ));
   }
   Ok(out)
+}
+
+/// The tokens writing the `at`-th item of the one enumerate list of `field` alone, its items starting at `starts`
+/// ([`call_pieces`]): what opens the list, the counter stepped past the items before it, the item, what closes the list —
+/// its number and its `\label` kept, as the list prints them. The list is the innermost environment around the items, as
+/// the digestion's frames say it (`Field::environments`, whatever spells it). `None` when none is or an item's tokens are
+/// no balanced run.
+fn list_item_tokens(field: &Field, starts: &[usize], at: usize) -> Option<Vec<Token>> {
+  let content = field.tokens;
+  let pos = |p: u16| usize::from(p).checked_sub(field.base);
+  let (first, last) = (*starts.first()?, *starts.last()?);
+  let mut open = Vec::new();
+  let mut list: Option<(usize, usize)> = None;
+  for step in field.environments {
+    let (Some(from), Some(to)) = (pos(step.start), pos(step.end)) else {
+      continue;
+    };
+    if step.opens {
+      open.push((from, to));
+    } else if let Some((opened, opened_end)) = open.pop()
+      && opened <= first
+      && from >= last
+      && list.is_none_or(|(inner, _)| opened > inner)
+    {
+      list = Some((opened_end, from));
+    }
+  }
+  // (no item starts before the list's opening ends: the first item's box carries the opening's position where `\item`
+  // follows it, `\begin{enumerate}\item\label{xa} …`)
+  let (opened, end) = list?;
+  let start = |k: usize| starts.get(k).map(|&s| s.max(opened));
+  let (from, to) = (start(at)?, start(at + 1).unwrap_or(end));
+  let item = content.get(from..to)?;
+  let mut depth = 0i32;
+  for t in item {
+    depth += t.group_step();
+    if depth < 0 {
+      return None;
+    }
+  }
+  if depth != 0 {
+    return None;
+  }
+  let mut out = content.get(..start(0)?)?.to_vec();
+  if at > 0 {
+    out.extend(TokenizeInternal!(r"\expandafter\addtocounter\expandafter{\@listctr}").unlist());
+    out.push(T_BEGIN!());
+    out.extend(ExplodeText!(&at.to_string()));
+    out.push(T_END!());
+  }
+  out.extend_from_slice(item);
+  out.extend_from_slice(content.get(end..)?);
+  Some(out)
 }
 
 /// The line breaks of a piece ([`call_pieces`]) it keeps: a `\\` (no paragraph, section or column break) outside any

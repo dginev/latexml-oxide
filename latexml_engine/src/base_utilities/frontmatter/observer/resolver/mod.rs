@@ -288,6 +288,7 @@ mod words;
 
 pub(in crate::base_utilities::frontmatter::observer) use api::{
   creator_call_level, creator_call_pieces, hand_marked_share, labelseq_pieces, split_pieces,
+  split_pieces_as,
 };
 use blocks::Chain;
 use labels::*;

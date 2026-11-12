@@ -35467,10 +35467,24 @@ branch, every name "?" (KNOWN_PERL_ERRORS #1233). **Rust.** `cmpj_sty.rs` (regis
 the real package — the paper's copy first, with the document's options — and redefines only `\@@refadx` as its
 second-run branch (`\hbox{\ref{key}}` per key, `,\penalty\@m` between), the converged state LaTeXML models for `\ref`.
 The `\@address` store reaches the frontmatter as it did raw (`\lx@package@loaded@raw`, so the inner read handles the
-options). **Left:** the list is one contact entry; each name whose `\ref` requests one item holds the whole list, and
-the items carry no `labels=` (a frontmatter item's `\label` is `\lx@set@frontmatter@label`), so the refs have no
-target — counted by the resolver's Warning "places an entry holding N label targets … whole"
-(`warn_whole_entry_of_keyed_parts`); RED `cmpj_address_list_each_item_on_its_names_red`. The renamed copies (cmpj2e.sty
-0903.4566, cmp2em.sty cond-mat0511115) stay raw: RED `cmpj_renamed_copy_refaddr_prints_question_marks_red`.
+options). **The list cut per `\item` (CMPJ2).** An API entry that is one `enumerate` whose items each step the counter and
+hold their own `\label` is cut per item (`events::item_led_pieces`: the lexer's Layout event `item` for an untagged
+`\enumerate@item@`, `item[]` for a tagged one; decided on the reading's events of the call for both the resolver's `api` and the emitter,
+`split_pieces_as` — the writer's rehearsal at a later flush reads the meanings then, `\ukrainianpart`'s bare `\addr`,
+cmpj2.sty:649, 1212.6367): each item an entry keyed by its label (`api:ref-label`), written as the list's opening
+tokens, `\addtocounter{\@listctr}` past the items before it, the item, and the list's close (`emit::list_item_tokens`),
+so it keeps its number and tag — the list the innermost environment around the items as the digestion's frames say
+it (`Field::environments`, a close inside a macro too); an item that is no balanced run is its text, counted (a group
+across two items: RED `cmpj_address_list_group_across_items_red`). In an emitted entry a
+`\label` naming a counter step made inside the entry (`refstep_in_scope` against the step in scope where
+`digest_frontmatter_item` starts) is `\lx@label`, as LaTeX's `\label` names `\@currentlabel`: the item carries
+`labels=` and the names' `\ref`s resolve; any other stays the emitter's, dropped (OD #980). A list the cut does not
+read (a tagged `\item[a]`, an unlabelled item, ink outside the list) stays one entry, each name requesting part of it
+holding it all, counted by the Warning "places an entry holding N label targets … whole"
+(`warn_whole_entry_of_keyed_parts`; RED `cmpj_address_list_tagged_item_kept_whole_red`). The renamed copies (cmpj2e.sty
+0903.4566, cmp2em.sty cond-mat0511115) stay raw: RED `cmpj_renamed_copy_refaddr_prints_question_marks_red` (their
+list, cut too, on the nameless creator). The second title page's own `\addresses` (`\ukrainianpart`, 1212.6367) is not
+its names' — RED `cmpj_ukrainianpart_addresses_of_the_second_title_red`.
 **Witnesses**: 1212.6367, 1212.6137, 1603.02437, 1207.2995, 1310.0277, 1510.06562, 1601.01592 (cmpj2), 2112.09940,
-2403.16604, 1812.08542 (cmpj3). **Guard**: `perfect_kernel_batchcmpj1::cmpj_address_marks_print_the_second_run`.
+2403.16604, 1812.08542 (cmpj3). **Guard**: `perfect_kernel_batchcmpj1::cmpj_address_marks_print_the_second_run` (11 rows,
+seven for the cut).
