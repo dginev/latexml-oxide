@@ -409,24 +409,6 @@ pub(in crate::base_utilities) const NON_NAME_WORDS: &[&str] = &[
   "sci",
 ];
 
-/// The [`NON_NAME_WORDS`] that name a collaboration as the last word of its name (`the ATLAS Collaboration`, `the GAPS
-/// Consortium`): read so in a names line or on a line of its own ([`reads_as_collaboration`]).
-pub(in crate::base_utilities) const COLLABORATION_WORDS: &[&str] =
-  &["collaboration", "collaborations", "consortium", "consortia"];
-
-/// The [`NON_NAME_WORDS`] that name a team, a group or an experiment as the last word of its name, which may as well be
-/// an institution's (`Speech Group`, `Google Brain Team`): a collaboration only where the line frames it so — after
-/// "the", "for", "on behalf of", in brackets — or a names line lists it with "and" (`… and LHD experimental group`,
-/// 1711.07097; [`reads_as_collaboration`]).
-pub(in crate::base_utilities) const TEAM_WORDS: &[&str] = &[
-  "team",
-  "teams",
-  "group",
-  "groups",
-  "experiment",
-  "experiments",
-];
-
 /// `\footnotemark` or a mark manyfoot declares beside it (`\DeclareNewFootnote{AAffil}` makes `\footnotemarkAAffil`,
 /// manyfoot.sty:253-257; 2309.13063): a mark with an optional `[n]` and no argument.
 pub(in crate::base_utilities) fn is_footnote_mark(t: &Token) -> bool {

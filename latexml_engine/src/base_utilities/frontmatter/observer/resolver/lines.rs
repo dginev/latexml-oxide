@@ -1056,16 +1056,7 @@ pub(super) fn name_continues_at_gap(name: &str) -> bool {
 pub(super) fn is_collaboration(text: &str) -> bool {
   let t = text.trim().to_lowercase();
   let t = t.strip_prefix("and ").unwrap_or(&t).trim();
-  t.starts_with("the ")
-    && [
-      "team",
-      "collaboration",
-      "consortium",
-      "group",
-      "collaborations",
-    ]
-    .iter()
-    .any(|w| t.ends_with(w))
+  t.starts_with("the ") && SPOKEN_FOR_WORDS.iter().any(|w| t.ends_with(w))
 }
 
 /// Where a remark on a name opens in a piece's text: at a bracket (`(on behalf of the H1 and ZEUS collaborations)`,
@@ -1178,9 +1169,14 @@ pub(in crate::base_utilities::frontmatter::observer) fn name_before_remark(
   // (ASCII lowercase keeps every byte where it was)
   let lower = t.to_ascii_lowercase();
   let bracket = t.find(['(', '[']);
-  let said = [" for ", " on behalf of "]
+  let said = SPEAKS_FOR[..2]
     .iter()
-    .flat_map(|p| lower.match_indices(p).map(|(at, _)| at))
+    .flat_map(|p| {
+      lower
+        .match_indices(&s!(" {p}"))
+        .map(|(at, _)| at)
+        .collect::<Vec<_>>()
+    })
     .filter(|&at| speaks_for(&t[at..]))
     .min();
   let at = [bracket, said].into_iter().flatten().min()?;

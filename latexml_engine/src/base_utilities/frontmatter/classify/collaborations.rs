@@ -41,10 +41,10 @@ pub(in crate::base_utilities) fn collaboration_core(text: &str) -> (String, Fram
       t = t.trim_matches(dash).trim().to_string();
       framing = Framing::Framed;
     }
-    for p in ["for ", "on behalf of ", "representing ", "the "] {
+    for p in SPEAKS_FOR.iter().chain(&["the "]) {
       if t.get(..p.len()).is_some_and(|q| q.eq_ignore_ascii_case(p)) {
         t = t[p.len()..].trim_start().to_string();
-        framing = framing.max(if p == "the " {
+        framing = framing.max(if *p == "the " {
           Framing::The
         } else {
           Framing::Framed
@@ -104,11 +104,7 @@ pub(in crate::base_utilities) fn collaboration_framing(
   }
   let (core, framing, the_in_brackets) = collaboration_core(text);
   let lower = core.to_lowercase();
-  if [" for ", " on behalf of "]
-    .iter()
-    .any(|p| lower.contains(p))
-    || core.contains(['(', '['])
-  {
+  if SPEAKS_FOR[..2].iter().any(|p| lower.contains(&s!(" {p}"))) || core.contains(['(', '[']) {
     return None;
   }
   let words: Vec<&str> = core.split_whitespace().collect();
@@ -169,6 +165,33 @@ pub fn collaboration_heads(text: &str) -> bool { text.trim_end().ends_with(':') 
 pub(in crate::base_utilities) const SPEAKS_FOR: [&str; 3] =
   ["for ", "on behalf of ", "representing "];
 
+/// The [`NON_NAME_WORDS`] that name a collaboration as the last word of its name (`the ATLAS Collaboration`, `the GAPS
+/// Consortium`): read so in a names line or on a line of its own ([`reads_as_collaboration`]).
+pub(in crate::base_utilities) const COLLABORATION_WORDS: &[&str] =
+  &["collaboration", "collaborations", "consortium", "consortia"];
+
+/// The [`NON_NAME_WORDS`] that name a team, a group or an experiment as the last word of its name, which may as well be
+/// an institution's (`Speech Group`, `Google Brain Team`): a collaboration only where the line frames it so — after
+/// "the", "for", "on behalf of", in brackets — or a names line lists it with "and" (`… and LHD experimental group`,
+/// 1711.07097; [`reads_as_collaboration`]).
+pub(in crate::base_utilities) const TEAM_WORDS: &[&str] = &[
+  "team",
+  "teams",
+  "group",
+  "groups",
+  "experiment",
+  "experiments",
+];
+
+/// The [`COLLABORATION_WORDS`] and [`TEAM_WORDS`] a remark speaking for a group ([`SPEAKS_FOR`]) ends with today.
+pub(in crate::base_utilities) const SPOKEN_FOR_WORDS: [&str; 5] = [
+  "collaboration",
+  "collaborations",
+  "consortium",
+  "team",
+  "group",
+];
+
 /// Whether the text after a name's notes is a remark naming the group the author speaks for: "for" or "on behalf of",
 /// then a few words that name a group (`Eleni Petrakou\inst{1}\fnsep\thanks{…} for CAPP/IBS`, webofc, 1702.03664) —
 /// the name ended at its notes, so the remark is no part of it, a collaboration contact as a collaboration's remark is
@@ -187,16 +210,7 @@ pub(in crate::base_utilities) fn speaks_for_after_notes(text: &str) -> bool {
   };
   let words: Vec<&str> = rest.split_whitespace().collect();
   let joining = |w: &str| ["the", "and", "of", "&"].contains(&w.to_lowercase().as_str());
-  let team = |w: &str| {
-    [
-      "collaboration",
-      "collaborations",
-      "consortium",
-      "team",
-      "group",
-    ]
-    .contains(&w.to_lowercase().as_str())
-  };
+  let team = |w: &str| SPOKEN_FOR_WORDS.contains(&w.to_lowercase().as_str());
   // (an acronym, `CMS`, or names a slash joins, `CAPP/IBS`: two capitals or a slash between letters, no lowercase
   // letter nor digit)
   let acronym = |w: &str| {
