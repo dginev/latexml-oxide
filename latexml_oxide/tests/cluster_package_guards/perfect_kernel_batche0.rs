@@ -393,8 +393,10 @@ const MOVED_CUT_KIND_EMISSIONS: &[(&str, usize)] = &[
 /// `binding_cut_list_attr` deleted. P4b2 lowered it to 2,210: the Cut's "marked" decision and its copy rule read the
 /// marks query (`argument_marks::requested_entry_labels`); `requested_marked_entries_in` and `requested_entry_marks`
 /// deleted. Then 2,211 (+1, pending the main session's decision): the uncut copies give way only once the list is cut,
-/// `place_uncut_copies` called after `cut_list`'s stops and in the already-cut branch.
-const MOVED_CUT_KIND_CODE_LINES: usize = 2_211;
+/// `place_uncut_copies` called after `cut_list`'s stops and in the already-cut branch. P4f to 2,209: the Cut's `_markshown`
+/// test one helper the binding lists' cutter calls too (`cut.rs` `mark_shown_attr`), each key append in `cut.rs` one
+/// private `with_key` (its three copies deleted).
+const MOVED_CUT_KIND_CODE_LINES: usize = 2_209;
 
 /// The fence on the moved Cut and Kind: they take no new decision either (review revZ18a check 3).
 #[test]

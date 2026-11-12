@@ -16,7 +16,8 @@ use crate::base_utilities::defs::frontmatter_fields::queued_author_name_keys;
 /// (c), `\lx@llncs@institute@sup`). `authors_queued` says every author is queued, so an unmarked line may be placed by
 /// the marks: an address run by its authors' positions, another line with the affiliation before it. An `\author`
 /// call's tail (`author_tail_calls`) may come before later authors, and then its unmarked lines are its own creators'
-/// rows, as each was before.
+/// rows, as each was before. A marked entry shows its mark where the list's names show theirs, as the Cut's entries do
+/// (`mark_shown_attr`; llncs's `\institute{$^{1}$Univ A \\ $^{2}$Univ B}`, 1209.0041).
 pub fn affiliation_calls(
   attr: Option<Tokens>,
   marked_attr: Option<Tokens>,
@@ -26,6 +27,7 @@ pub fn affiliation_calls(
   authors_queued: bool,
 ) -> Result<Vec<Token>> {
   let add = |attr: Option<Tokens>, entry: Tokens| {
+    let (_, attr) = mark_shown_attr(attr, &entry, MARK_SHOWN_WITH_NAMES);
     Ok(Invocation!(T_CS!("\\lx@add@affiliation"), vec![attr, Some(entry)]).unlist())
   };
   entry_calls(

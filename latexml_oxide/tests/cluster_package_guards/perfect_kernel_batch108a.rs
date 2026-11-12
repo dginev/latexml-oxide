@@ -287,9 +287,12 @@ fn a_macro_printing_a_link_keeps_the_error() {
 fn a_class_store_makes_no_printed_note() {
   let (log, xml) = cli_conversion(repro!("authblk_class_store_makes_no_printed_note"), false);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  // (P4b2b: the names' printed marks, as pdflatex prints them)
+  // (P4b2b: the names' printed marks, as pdflatex prints them; P4f: the store's entries theirs, "1 Univ A", "2 Univ B")
   assert_eq!(creators(&xml), vec![
-    vec!["Ann Able 1".to_string(), "affiliation=Univ A".to_string()],
-    vec!["Bob Baker 2".to_string(), "affiliation=Univ B".to_string()],
+    vec!["Ann Able 1".to_string(), "affiliation=1 Univ A".to_string()],
+    vec![
+      "Bob Baker 2".to_string(),
+      "affiliation=2 Univ B".to_string()
+    ],
   ]);
 }

@@ -1,0 +1,17 @@
+% mechanism: P4fb's shown-labels set compares the names' requests — split into single labels, `$^{1-2}$` → 1, 2 — with the labels
+%   `marks_in` reads from the written names (`mark_labels(e.label)`, which keeps a range whole: `1-2`), so a label requested only
+%   through a range never enters `NAMES_SHOWN_LABELS` and its entry hides its mark while the name shows "1-2" (emit.rs:5269-5277,
+%   `marks_in` ~:1552). Fix: one reader for both sides (`clean_frontmatter_labels`, which expands ranges); siblings `1–3`, `1--3`
+% witness: synthetic (revP4fb 1; no case among P4f's 696)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "Ann Able1-2 and Bob Baker1,3", "1 Univ A", "2 Univ B", "3 Univ C"
+% engines: rust int164a: every entry's mark hidden; P4f: all shown; P4fb: "1 Univ A", "Univ B" (hidden), "3 Univ C"
+% expect:  0 errors; every entry's mark shown (the names show 1-2 and 1,3)
+% status:  RED (P4fb) — moves: post-merge (P4FR)
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1-2}$ \and Bob Baker$^{1,3}$}
+\institute{$^{1}$Univ A, Town A \\ $^{2}$Univ B, Town B \\ $^{3}$Univ C, Town C}
+\maketitle
+Text.
+\end{document}

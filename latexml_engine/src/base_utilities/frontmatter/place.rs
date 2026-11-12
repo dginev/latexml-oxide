@@ -479,6 +479,13 @@ pub fn digest_front_matter() -> Result<()> {
     .flat_map(|operand| clean_frontmatter_labels(&Tokens::new(operand).to_string(), "affiliation"))
     .collect();
   set_flush_requested_marks(&requested);
+  // (the labels this flush's names show, which its binding lists' entries read — the outer flush's restored after it)
+  let outer_shown_labels = lookup_string(NAMES_SHOWN_LABELS);
+  assign_value(
+    NAMES_SHOWN_LABELS,
+    Stored::String(pin("")),
+    Some(Scope::Global),
+  );
   // (the one added step, under its switch: the queue's creators and annotations written from the reading, OD #980)
   // (a contact the class prints under the whole row of names, every author's, OXIDIZED_DESIGN_DIVERGENCES #901, is the
   // reading's: the emitter writes a flush holding one with or without an author block, `stays_out`; under a block no
@@ -657,6 +664,11 @@ pub fn digest_front_matter() -> Result<()> {
   assign_value(
     "lx_frontmatter_sequence_at",
     Stored::Int(outer_sequence_at),
+    Some(Scope::Global),
+  );
+  assign_value(
+    NAMES_SHOWN_LABELS,
+    Stored::String(pin(&outer_shown_labels)),
     Some(Scope::Global),
   );
   egroup()?;

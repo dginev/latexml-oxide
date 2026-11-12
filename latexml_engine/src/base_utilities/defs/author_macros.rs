@@ -3,8 +3,9 @@
 
 use super::{
   frontmatter_api::{
-    CutParameters, PRINTED_LABEL, affiliation_calls, affiliation_is_marked,
-    blank_line_marks_dropped, cut_list, shared_affiliation_calls, unalias_mark_commands,
+    CutParameters, MARK_SHOWN_WITH_NAMES_STATE, PRINTED_LABEL, affiliation_calls,
+    affiliation_is_marked, blank_line_marks_dropped, cut_list, shared_affiliation_calls,
+    unalias_mark_commands,
   },
   *,
 };
@@ -440,6 +441,14 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // #919 — `$^{\dag}$Univ A` answers `Ann$^{\dagger}$`)
     let printed = printed_label(&operand)?;
     let label = set_label(&operand, printed.as_ref());
+    // (a binding list's entry shows its mark where the names show this label: OD #1009, 2505.02655)
+    if lookup_bool(MARK_SHOWN_WITH_NAMES_STATE) && label.as_deref().is_some_and(names_show_label) {
+      assign_value(
+        "lx_affiliation_mark_shown",
+        Stored::Bool(true),
+        Some(Scope::Global),
+      );
+    }
     // the marks it is (`\mathrm{a}`: a), as the authors' are read (relocate_annotations): from its printed text, else
     // its TeX spelling, which keeps the boundary after a control word (`{\rm a}`'s tokens join to `\rma`: 2008.00493)
     let keys = match &printed {

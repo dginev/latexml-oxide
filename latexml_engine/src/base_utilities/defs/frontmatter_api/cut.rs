@@ -122,36 +122,12 @@ pub(in crate::base_utilities) fn cut_list(
     attr.extend(item.unlist());
   }
   // (and the list each entry came from, [`CUT_LIST`])
-  if !attr.is_empty() {
-    attr.push(T_OTHER!(","));
-  }
-  attr.extend(mouth::tokenize_internal(TeXString::assembled(s!("{CUT_LIST}={key}"))).unlist());
-  let attr = Some(Tokens::new(attr));
+  let attr = Some(with_key(Some(Tokens::new(attr)), s!("{CUT_LIST}={key}")));
   let (cut, entries) = (std::cell::Cell::new(0), std::cell::Cell::new(0));
   let add = |attr: Option<Tokens>, entry: Tokens| {
-    // (each marked entry shows the mark that labels it, `_markshown`: `\lx@annotate@frontmatter@now` — but an address
-    // line, whose address becomes the e-mail contact of the authors showing its mark, which leaves the mark no entry:
-    // aa's `\inst{*}\email{…}`, 2410.00577)
-    let v = entry.unlist_ref();
-    let marked = v.len() >= 3
-      && v[0] == T_CS!("\\lx@affiliation@withsup")
-      && v[1].get_catcode() == Catcode::BEGIN
-      && skip_group(v, 1) == v.len();
+    let (marked, attr) = mark_shown_attr(attr, &entry, "true");
     cut.set(cut.get() + usize::from(marked));
     entries.set(entries.get() + 1);
-    let attr = if marked
-      && leading_line_label(&Tokens::new(v[2..v.len() - 1].to_vec()))
-        .is_none_or(|(_, _, rest)| !line_is_email_list(&rest))
-    {
-      let mut shown = attr.map(Tokens::unlist).unwrap_or_default();
-      if !shown.is_empty() {
-        shown.push(T_OTHER!(","));
-      }
-      shown.extend(mouth::tokenize_internal("_markshown=true").unlist());
-      Some(Tokens::new(shown))
-    } else {
-      attr
-    };
     let entry = with_closing(with_opening(entry, &opening), &closing);
     annotate_call(parenttag, tag, attr, entry, withinst)
   };
@@ -168,18 +144,8 @@ pub(in crate::base_utilities) fn cut_list(
   }
   place_uncut_copies(parenttag, role, &key, &requested)?;
   for part in block_parts {
-    let mut block = attr.clone().map(Tokens::unlist).unwrap_or_default();
-    if !block.is_empty() {
-      block.push(T_OTHER!(","));
-    }
-    block.extend(mouth::tokenize_internal("label=addresses:block").unlist());
-    calls.extend(annotate_call(
-      parenttag,
-      tag,
-      Some(Tokens::new(block)),
-      part,
-      withinst,
-    )?);
+    let block = with_key(attr.clone(), "label=addresses:block".to_string());
+    calls.extend(annotate_call(parenttag, tag, Some(block), part, withinst)?);
   }
   DebugFeature!(
     "frontmatter",
@@ -187,6 +153,43 @@ pub(in crate::base_utilities) fn cut_list(
     Tokens::new(calls.clone())
   );
   Ok(Some(Tokens::new(calls)))
+}
+
+/// `_markshown`'s value for an entry that shows its mark where the names show its label (the binding lists' cutter,
+/// `affiliation_calls`); the Cut's show theirs (`true`). Read at `\lx@annotate@frontmatter@now`.
+pub(super) const MARK_SHOWN_WITH_NAMES: &str = "names";
+
+/// Whether a cut `entry` is marked (`\lx@affiliation@withsup{…}` whole), and `attr` with `_markshown={shown}` where it is
+/// — but not on an address line, whose address becomes the e-mail contact of the authors showing its mark, which leaves the
+/// mark no entry (aa's `\inst{*}\email{…}`, 2410.00577).
+pub(super) fn mark_shown_attr(
+  attr: Option<Tokens>,
+  entry: &Tokens,
+  shown: &str,
+) -> (bool, Option<Tokens>) {
+  let v = entry.unlist_ref();
+  let marked = v.len() >= 3
+    && v[0] == T_CS!("\\lx@affiliation@withsup")
+    && v[1].get_catcode() == Catcode::BEGIN
+    && skip_group(v, 1) == v.len();
+  let address = || {
+    leading_line_label(&Tokens::new(v[2..v.len() - 1].to_vec()))
+      .is_some_and(|(_, _, rest)| line_is_email_list(&rest))
+  };
+  if !marked || address() {
+    return (marked, attr);
+  }
+  (marked, Some(with_key(attr, s!("_markshown={shown}"))))
+}
+
+/// `attr` with `key` after its own keys.
+fn with_key(attr: Option<Tokens>, key: String) -> Tokens {
+  let mut keys = attr.map(Tokens::unlist).unwrap_or_default();
+  if !keys.is_empty() {
+    keys.push(T_OTHER!(","));
+  }
+  keys.extend(mouth::tokenize_internal(TeXString::assembled(key)).unlist());
+  Tokens::new(keys)
 }
 
 /// The state key prefix of the place (queue ordinal) an author's uncut copy of a cut list held, `{CUT_COPY_PLACE}{key}:

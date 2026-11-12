@@ -94,7 +94,8 @@ fn llncs_institute_labelled_unread_line_is_block_email() {
 fn llncs_author_hand_marks_read_whole() {
   let (log, xml) = run(repro!("llncs_author_hand_marks_read_whole.tex"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  let (x, y) = ("affiliation=Univ X, Town", "affiliation=Univ Y, City");
+  // (P4f: each entry shows its mark as the names show theirs, pdflatex "1Univ X, Town", "2Univ Y, City")
+  let (x, y) = ("affiliation=1 Univ X, Town", "affiliation=2 Univ Y, City");
   assert_eq!(
     creators(&xml),
     [vec!["Ann Able 1", x], vec!["Bob Baker 2", y], vec![

@@ -35340,6 +35340,20 @@ list at its top level only, so a list printed entirely inside one box is one ent
 `ieee_marked_list_inside_one_parbox_is_one_entry_red`). A cut that labels no entry of a one-entry list leaves it whole
 (the call cut again would not end). The binding's own cutter (`binding_cut_list_attr`) and the token gate
 (`queued_creators_have_marks`) are deleted.
+The binding lists' own cutter (`affiliation_calls`: `\lx@add@affiliations` for l-aa, epl, ijcai, interspeech, ptephy and
+beamer, llncs's `\lx@llncs@institute@sup`, the class stores `\lx@add@store@affiliations`/`@authorblock`, the `\author`
+tail's `row_calls`) keys a marked entry `_markshown=names` (`cut::mark_shown_attr`, the Cut's own test, which both call):
+it shows its mark where the names the flush writes show its label (the one `\lx@sup@setlabel@affiliation` sets from
+what the mark prints, where it compares it) — the requests each name's written runs print where
+`per_author_marks` keeps its marks, a superscript, no `\inst` or binding request, no creator call's own label
+(`emitter::NAMES_SHOWN_LABELS`, `marks_in`; reset at each flush, the outer flush's restored after it; a range mark,
+`$^{1-2}$`, is read whole on the names' side, so its entries hide their marks: RED
+`llncs_range_mark_names_entries_hidden_red`) — so the names and
+the list show or hide each mark together (P4f, P4fb: a printed icon, `\inst{1,3}\textsuperscript{(\Letter)}`, labels
+no entry, 2505.02655, 2607.21595, 2609.19654; of 1804.00518's names led by `$^n$` only the first keeps its mark, so
+only entry 1 shows its). llncs shape (c) and l-aa show both, as pdflatex and
+Perl (whose `\\`-separated institute is the first author's whole); IJCAI, epl and ptephy's `\name`, whose names hide theirs, hide
+both, as Perl.
 IEEEtran's `\author` reads an `\IEEEauthorblockA` at the top level of another's argument as conference mode prints it,
 on rows of its own in the outer's column (IEEEtran.cls:4653-4665): one led by a mark, or after a line of marks alone
 (its label, read by the binding's mark reader `leading_line_label`: `\IEEEauthorrefmark{1}`, `$^a$`,
@@ -35355,13 +35369,20 @@ authors).
 **Witnesses**: IEEEtran 1705.01774, 1801.04010, 1504.01072, 1811.06030, 2310.18257, 2511.18221, 2512.10732,
 2609.16600 (each the base's entries with their marks shown); 2508.17623 (names in a `\parbox`, the link line kept);
 1801.00540 ("Red Hat Inc.," keeps its comma); 2605.05837 (the funding `\thanks` once); iopart 1205.6912; 2307.12121, 2311.01786 (a
-`\raisebox` refmark: the e-mail line the names' run), apa6 2508.05776 (each entry its name, the `$^{*}$` note once).
-**Guard**: `perfect_kernel_batchc1::marked_list_cut_as_its_binding_declares` (24 rows).
+`\raisebox` refmark: the e-mail line the names' run), apa6 2508.05776 (each entry its name, the `$^{*}$` note once);
+llncs 1209.0041 and l-aa astro-ph0002407 (each entry its mark, P4f); ptephy_v1 1703.03659 (`\affil{1}$^{1}${…}`: one
+mark, the names' `\name` marks requests).
+**Guard**: `perfect_kernel_batchc1::marked_list_cut_as_its_binding_declares` (32 rows).
 **Open (post-merge REDs)**: `ieee_marked_list_email_block_last_address_nameless_red`,
 `ieee_marked_list_star_led_names_entries_nameless_red`, `iopart_marked_list_unmarked_first_line_every_authors_red` (the
 base's placements, pinned as today with each mark shown); `ieee_nested_affiliation_block_in_group_red` (an inner block
 inside a group of the outer's argument stays nested); `ieee_sibling_affiliation_blocks_last_author_only_red` (a second
-sibling block after a names block of two goes to the last author, `annotate=new`).
+sibling block after a names block of two goes to the last author, `annotate=new`); the binding lists' cutter under names
+hiding their marks hides the entries' too (`llncs_inst_names_marked_institute_marks_hidden_red`,
+`beamer_marked_institute_marks_hidden_red`: AUMK) and under names printing none loses them uncounted
+(`llncs_unmarked_names_marked_institute_marks_lost_red`); a second llncs `\maketitle` writes its names as text, its
+entries on the first block's authors (`llncs_second_maketitle_names_are_text_red`); names led by marks parted at commas
+lose every mark past the first uncounted (`llncs_comma_names_led_by_marks_later_marks_lost_red`).
 
 ### 1010. pgfmath reads a number and a control-sequence operand as pgf's parser does (PGR1)
 

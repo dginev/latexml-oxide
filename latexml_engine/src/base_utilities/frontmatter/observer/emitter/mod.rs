@@ -31,8 +31,8 @@ mod repart;
 // (the writer's cut of a block's entry, which the reading checks an in-block contact's entries by: `events::labelled_entries`)
 pub(super) use content::{Field, aligned};
 pub(in crate::base_utilities) use emit::{
-  Analysis, EMITTING, SETTERS_RECOVERED, block_creator_written, emit_commands, emitted,
-  setters_recovered, take_digested,
+  Analysis, EMITTING, NAMES_SHOWN_LABELS, SETTERS_RECOVERED, block_creator_written, emit_commands,
+  emitted, names_show_label, setters_recovered, take_digested,
 };
 pub(super) use plan::{entry_forms, labelled_start, span_tokens};
 
