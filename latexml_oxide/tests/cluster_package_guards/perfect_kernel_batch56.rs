@@ -10720,9 +10720,9 @@ fn a_natural_figure_box_follows_its_crop_and_turn() {
   assert_eq!(padded, whole, "a negative trim pads nothing");
 }
 
-/// `\meaning` of a macro coded in Rust prints Perl's `CODE(0x…)`, not the
-/// debug form of a `dyn` pointer (`CODE(Pointer { addr: …, metadata:
-/// DynMetadata(…) })`, into cnltx_en's text; review of batch 57a).
+/// `\meaning` of a macro coded in Rust prints Perl's `CODE(…)` with its name for the address, the same on every run
+/// (QA89; before: an address, `CODE(Pointer { addr: …, metadata: … })` before batch 57a, into cnltx_en's text); etoolbox
+/// still refuses to patch the native `\begin` (pdflatex "yes/yes": its `\begin` is a macro; OD #183).
 #[test]
 fn meaning_of_a_closure_macro_is_perls_code_form() {
   let (stderr, xml) = convert_with(
@@ -10731,15 +10731,35 @@ fn meaning_of_a_closure_macro_is_perls_code_form() {
     ),
     None,
   );
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 0, "{stderr}");
-  let prefix = ">macro:-&gt;CODE(0x";
-  let at = xml.find(prefix).unwrap_or_else(|| panic!("{xml}"));
-  let rest = &xml[at + prefix.len()..];
-  let hex = rest.find(')').unwrap();
-  assert!(hex > 0, "an address: {xml}");
-  assert!(rest[..hex].chars().all(|c| c.is_ascii_hexdigit()), "{xml}");
-  assert!(rest[hex..].starts_with(")</text>"), "{xml}");
+  assert_eq!(
+    (error_count(&stderr), warning_count(&stderr)),
+    (0, 0),
+    "{stderr}"
+  );
+  assert!(xml.contains(">macro:-&gt;CODE(today)</text>"), "{xml}");
+  let stable = include_str!(
+    "../../../tools/perfect_kernel/repros/expansion-primitives/meaning_of_a_closure_macro_is_stable.tex"
+  );
+  let (stderr, xml) = convert_with(stable, None);
+  assert_eq!(
+    (error_count(&stderr), warning_count(&stderr)),
+    (0, 0),
+    "{stderr}"
+  );
+  for p in [
+    r#"<p><text font="typewriter">macro:#1#2#3-&gt;CODE(@ifnextchar)</text></p>"#,
+    r#"<p><text font="typewriter">\protected macro:#1-&gt;CODE(begin)</text></p>"#,
+    "<p>no/no</p>",
+    "<p>differ</p>",
+  ] {
+    assert!(xml.contains(p), "{p}\n{xml}");
+  }
+  assert!(!xml.contains("0x"), "{xml}");
+  assert_eq!(
+    convert_with(stable, None).1,
+    xml,
+    "a second conversion differs"
+  );
 }
 
 /// K13 stage 0: a constructor or primitive keeps what its binding's mode

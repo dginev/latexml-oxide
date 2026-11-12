@@ -2179,9 +2179,9 @@ LoadDefinitions!({
 
   // LaTeXML-only: \robustify must NO-OP on a NATIVE (closure-bodied) binding.
   // Many LaTeXML commands (e.g. natbib's \cite) are realized as Rust closures,
-  // whose \meaning renders as "...->CODE(0x...)". etoolbox's \robustify
+  // whose \meaning renders as "...->CODE(<name>)" (Perl's "CODE(0x...)", QA89). etoolbox's \robustify
   // reconstructs a macro from its \meaning via \scantokens; for a native binding
-  // that yields a broken text-bodied "CODE(0x...)" macro that grabs the wrong
+  // that yields a broken text-bodied "CODE(<name>)" macro that grabs the wrong
   // number of args (Perl has the SAME bug — it silently emits the pointer text;
   // we surfaced it as errors when the mangled \cite swallowed a following
   // \begin{equation}, witness 2110.11931, mnras templates ship \robustify{\cite}).
@@ -2196,7 +2196,7 @@ LoadDefinitions!({
   // is a macro whose body is not native: \robustify then works on its inner
   // `\cite ` (`\ifdefltxprotect`, etoolbox.sty:1271-1273), which is — the
   // kernel's `\cite` binding — so the test is made on that inner command too;
-  // without it the rebuilt `\cite` set the literal text "CODE(0x…)" in place of
+  // without it the rebuilt `\cite` set the literal text "CODE(…)" in place of
   // the citation and swallowed its key and the next token (arXiv 2210.15126,
   // wiley-article.cls:774 `\robustify{\cite}`; Perl the same, KNOWN_PERL_ERRORS
   // #902). Guard: `perfect_kernel_batch69b::robustify_ltx_protected_native_cite`.
