@@ -299,13 +299,9 @@ fn tokenize_balanced(text: &str) -> Vec<Token> {
   let open = usize::try_from(-opened).unwrap_or(0);
   let close = usize::try_from(level - opened).unwrap_or(0);
   let balanced = s!("{}{text}{}", "{".repeat(open), "}".repeat(close));
-  thread_local! {
-    static ESCAPE_SEQ: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
-  }
-  let id = ESCAPE_SEQ.with(|seq| {
-    seq.set(seq.get().wrapping_add(1));
-    seq.get()
-  });
+  // The conversion's count (a State value, as the escapes it names).
+  let id = lookup_int("lx@lst@escapes") + 1;
+  assign_value("lx@lst@escapes", Stored::Int(id), Some(Scope::Global));
   assign_value(&s!("lx@lst@escape@{id}"), balanced, Some(Scope::Global));
   let mut toks = vec![T_CS!("\\lx@lst@escape"), T_BEGIN!()];
   toks.extend(Explode!(id));
@@ -2399,14 +2395,10 @@ pub fn lst_process_block_with(
 /// Eagerly `Tokenize!`-ing the body froze the outer regime (csvsimple-l3:
 /// `\tl_new:N` split at a subscript `_`). Returns the `\input{…}` tokens.
 pub fn lst_run_body_via_input(env: &str, text: &str) -> Result<Tokens> {
-  thread_local! {
-    static BODY_SEQ: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
-  }
-  let n = BODY_SEQ.with(|c| {
-    let v = c.get() + 1;
-    c.set(v);
-    v
-  });
+  // The conversion's count (a State value): the name reaches the log ("Processing content lx-LTXexample-1.tmp"), and a
+  // worker's next paper counted on from the last's (revST3b).
+  let n = lookup_int("lx@lst@bodies") + 1;
+  assign_value("lx@lst@bodies", Stored::Int(n), Some(Scope::Global));
   let name = format!("lx-{env}-{n}.tmp");
   ::latexml_core::binding::virtual_files::vfs_store(&name, text);
   // Built by hand: `Invocation!` consults `\input`'s parameter list, which

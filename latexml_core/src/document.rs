@@ -323,7 +323,7 @@ pub fn restore_field_prov_stamped(stamped: bool) { FIELD_PROV_STAMPED.set(stampe
 pub fn reset_field_prov_stamped() { FIELD_PROV_STAMPED.set(false); }
 /// Reset every piece of a conversion's field-provenance thread state (OXIDIZED_DESIGN #715): the stamped gate, the
 /// field ledger and its settled flag, the pending cover. Run at the start of every conversion (the converter's
-/// `prepare_session`), whatever the thread converted before: a persistent `cortex_worker` thread, a streaming restart
+/// `reset_conversion_state`, at `initialize_report`), whatever the thread converted before: a persistent `cortex_worker` thread, a streaming restart
 /// and the CLI's supplements convert on one thread without an engine reset, and a ledger settled by the previous
 /// document recorded nothing for the next one, which then lifted no print at all (review r4 finding 1).
 pub fn reset_field_provenance() {

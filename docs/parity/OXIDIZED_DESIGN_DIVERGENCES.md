@@ -20161,7 +20161,7 @@ The work is gated: none in a conversion that stamped no field (`note_field_prov_
 placement settled the ink — the builder marks no run and the stomach records no ledger entry
 (`token::field_ledger_live`, `field_ledger_settle`; guard `field_ledger_take_cover_and_settle`). That thread state is
 per conversion: `document::reset_field_provenance` (the stamped gate, the ledger, its settled flag, the pending
-cover) runs at every conversion's start, in `Converter::prepare_session`, not only in `reset_thread_engine` — a
+cover) runs at every conversion's start, in `reset_conversion_state` (the session's `initialize_report`), not only in `reset_thread_engine` — a
 persistent `cortex_worker` thread, a streaming restart and the CLI's supplements convert on one thread without an
 engine reset, and round 4's settled ledger made every document after the first lift nothing (round-4 review finding
 1, probe two/; guard `field_prov_second_conversion_lifted`, two conversions on one thread).
@@ -20942,7 +20942,8 @@ A base class's `\let<name>\relax` before a copy's `\newcommand` leaves the name 
 (`base_class_name_made_relax`), and so does the copy's own earlier assignment of it in the same frame
 (`\let\refname\relax` then `\newcommand\refname`; pdflatex 0 errors, "Works Cited"). Guards
 `perfect_kernel_batch72a::copy_newcommand_through_a_chained_base_class`,
-`class_load_record_does_not_reach_the_next_document`, `copy_newcommand_of_a_base_class_name_errs`; repro
+`copy_newcommand_of_a_base_class_name_errs`, `perfect_kernel_batchst3::a_document_after_another_on_one_thread_is_the_document_alone`
+(its class-load row); repro
 `stand-in-copies/text_defaults/chain/`.
 
 ### 733. A raw file's own repeat load of natbib after a binding's early load is the load TeX sees

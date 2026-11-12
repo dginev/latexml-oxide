@@ -33,6 +33,16 @@ struct KVData {
   digested_value: Option<Digested>,
 }
 
+thread_local! {
+  /// The (prefix, key, keysets) of each unknown key reported in this conversion, each reported once.
+  static SEEN_MISSING: std::cell::RefCell<rustc_hash::FxHashSet<(String, String, String)>> =
+    std::cell::RefCell::default();
+}
+
+/// Forget the unknown keys reported: a conversion reports its own (`initialize_report`, as Perl's `$$state{status} = {}`
+/// per conversion, LaTeXML.pm:232), not only those a persistent worker's earlier paper did not (ST3).
+pub fn reset_unknown_keys_reported() { SEEN_MISSING.with_borrow_mut(|seen| seen.clear()); }
+
 #[allow(dead_code)] // TODO: remove when KeyVals is fully implemented
 #[derive(Debug, Clone)]
 pub struct KeyVals {
@@ -271,11 +281,6 @@ impl KeyVals {
         // maxWarnings limits; our rate-limit is per (prefix,key,keysets)
         // and unbounded in count, so the first occurrence is always
         // visible but repeats are silently dropped.
-        type SeenSet = rustc_hash::FxHashSet<(String, String, String)>;
-        thread_local! {
-          static SEEN_MISSING: std::cell::RefCell<SeenSet> =
-            std::cell::RefCell::new(SeenSet::default());
-        }
         let all_joined = allkeysets.join(",");
         // (a speculative digestion's diagnostics go with it: what it sees is not seen, or the document's own Warning goes unsaid)
         let is_new = SEEN_MISSING.with(|cell| {

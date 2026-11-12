@@ -5372,6 +5372,15 @@ fn mouth_depth() -> usize {
   g.mouthstack.len() + usize::from(g.runtime.is_some())
 }
 
+thread_local! {
+  /// The conversion's "Mouth is unexpectedly already closed" errors ([`reading_from_mouth`]'s budget).
+  static MOUTH_CLOSED_ERRORS: Cell<usize> = const { Cell::new(0) };
+}
+
+/// Forgets the mouth-closed errors counted: a predecessor that spent the budget (0906.1883) silenced the next paper's
+/// first ten and made its first a Fatal.
+pub fn reset_mouth_closed_errors() { MOUTH_CLOSED_ERRORS.with(|c| c.set(0)); }
+
 /// Do something, while reading tokens from a specific Mouth.
 ///
 /// This reads ONLY from that mouth (or any mouth openned by code in that source),
@@ -5434,9 +5443,6 @@ where FnR: FnOnce() -> Result<R> {
   // (birkmult + local .cls) can trigger 10K+ such firings, one per stack frame.
   // Fatal out after 50 repeat firings so the process surfaces a clear "we lost
   // the mouth stack" signal instead of filling the log with identical messages.
-  thread_local! {
-    static MOUTH_CLOSED_ERRORS: Cell<usize> = const { Cell::new(0) };
-  }
   fn record_mouth_closed_error() { MOUTH_CLOSED_ERRORS.with(|c| c.set(c.get().saturating_add(1))); }
   fn should_emit_mouth_closed() -> bool { MOUTH_CLOSED_ERRORS.with(|c| c.get() < 10) }
   fn mouth_closed_budget_exhausted() -> bool { MOUTH_CLOSED_ERRORS.with(|c| c.get() >= 50) }
@@ -5807,6 +5813,26 @@ mod token_limit_tests {
 
   /// An error that is no Fatal, for an inner context to fail with.
   fn fatal_free_failure() -> Result<()> { read_budget_error().map(|_| ()) }
+
+  /// The "Mouth is unexpectedly already closed" budget is the conversion's: after a predecessor on the thread spent it
+  /// (0906.1883: 10K+), the next conversion's first such error is logged, not a Fatal (`reset_conversion_state`, revST3b).
+  #[test]
+  fn the_mouth_closed_budget_is_each_conversions() {
+    let closing_its_own_mouth = || reading_from_mouth(Mouth::default(), || close_mouth(true));
+    let counts = || {
+      let c = snapshot_report_counts();
+      (c.error, get_status_code())
+    };
+    initialize_report();
+    let failed: Vec<usize> = (0..50)
+      .filter(|_| closing_its_own_mouth().is_err())
+      .collect();
+    assert_eq!(failed, [49], "the 50th is the Fatal");
+    assert_eq!(counts(), (10, 3));
+    initialize_report();
+    assert!(closing_its_own_mouth().is_ok());
+    assert_eq!(counts(), (1, 2));
+  }
 
   /// A failed reading context closes its own mouth and those above it, by depth: another of the same name above it (two
   /// `Mouth::default()`, a `\scantokens`'s in a discarded run) is not its own, and the mouth under it stays open. A run

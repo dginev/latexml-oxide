@@ -1267,45 +1267,6 @@ fn copy_newcommand_through_a_chained_base_class() {
 
 fn s_add(base: &str, extra: &str) -> String { format!("{base}{extra}") }
 
-/// The class loads' record is the conversion's own: a long-lived worker converting two papers on one thread
-/// (cortex_worker: a `Converter` per paper, no engine reset between them) does not carry the first paper's base class
-/// into the second, whose `mybase.cls` of the same name defines no `\bibname` (the r6 class-text cache, keyed by class
-/// name, did): 1 error, then 0.
-#[test]
-fn class_load_record_does_not_reach_the_next_document() {
-  let tex = repro!("text_defaults/chain/copy_newcommand_through_a_chained_base_class_errs.tex");
-  let cimart = repro!("text_defaults/chain/cimart.cls").replace(
-    "\\newcommand\\refname{Works Cited}\n\\newcommand\\figurename{Fig}\n",
-    "\\newcommand\\bibname{Works}\n",
-  );
-  let mybase = repro!("text_defaults/chain/mybase.cls");
-  let papers: Vec<tempfile::TempDir> = ["\\def\\bibname{Literature}\n", ""]
-    .iter()
-    .map(|extra| {
-      let dir = tempfile::tempdir().expect("a paper directory");
-      std::fs::write(dir.path().join("paper.tex"), tex).expect("the paper");
-      std::fs::write(dir.path().join("cimart.cls"), &cimart).expect("the copy");
-      std::fs::write(dir.path().join("mybase.cls"), format!("{mybase}{extra}"))
-        .expect("the base class");
-      dir
-    })
-    .collect();
-  let sources: Vec<String> = papers
-    .iter()
-    .map(|dir| dir.path().join("paper.tex").to_string_lossy().into_owned())
-    .collect();
-  let logs = convert_on_one_thread(sources);
-  for (log, errors) in logs.iter().zip([1, 0]) {
-    assert_eq!((error_count(log), warning_count(log)), (errors, 0), "{log}");
-    assert_eq!(
-      log.matches("Command \\bibname already defined").count(),
-      errors,
-      "{log}"
-    );
-  }
-  drop(papers);
-}
-
 /// Does the log carry either Warning KOMA writes when the kernel's sectioning workers are not latex.ltx's
 /// (scrartcl.cls:3397 `\@startsection`, :3555 `\@sect`)? LaTeXML's are its own, and KOMA's copies of them are set to
 /// them before the raw load (koma_script.rs `koma_pre_load`, OXIDIZED_DESIGN_DIVERGENCES #737), so no KOMA document
@@ -1483,68 +1444,6 @@ fn natbib_repeat_options_in_declaration_order() {
     "<p xml:id=\"p1.1\">Text <cite class=\"ltx_citemacro_citep\">[<bibref bibrefs=\"a,b\" separator=\";\" \
      show=\"AuthorsPhrase1Year\" yyseparator=\",\"><bibrefphrase>, </bibrefphrase></bibref>]</cite>.</p>",
   );
-}
-
-/// Convert each of `sources` with one `Converter` each on one thread, no engine reset between them, as the CLI's
-/// `latexml_oxide t.tex u.tex` and a long-lived worker do; the logs.
-fn convert_on_one_thread(sources: Vec<String>) -> Vec<String> {
-  use std::rc::Rc;
-
-  use latexml::converter::Converter;
-  use latexml_core::common::{Config, OutputFormat};
-  std::thread::Builder::new()
-    .stack_size(256 * 1024 * 1024)
-    .spawn(move || {
-      let _ = latexml_core::util::logger::init(log::LevelFilter::Info);
-      let opts = Config {
-        format: OutputFormat::XML,
-        include_comments: Some(false),
-        preload: Some(vec![String::from("ar5iv.sty")]),
-        bindings_dispatch: Some(Rc::new(latexml_package::dispatch)),
-        extra_bindings_dispatch: Some(Rc::new(latexml_contrib::dispatch)),
-        ..Config::default()
-      };
-      let logs: Vec<String> = sources
-        .into_iter()
-        .map(|source| {
-          let mut converter = Converter::from_config(opts.clone());
-          converter.note_main_source(&source);
-          converter.prepare_session(&opts).expect("a session");
-          converter.convert(source).log
-        })
-        .collect();
-      latexml_core::reset_thread_engine();
-      logs
-    })
-    .expect("a conversion thread")
-    .join()
-    .expect("the conversions")
-}
-
-/// The files read raw are the conversion's own (`reset_raw_read_paths` at every `prepare_session`): two documents of
-/// one directory on one thread (the reviewer's probe two, `latexml_oxide t.tex u.tex`, both cimart) each read the
-/// copy, 2 errors each as pdflatex; the second read nothing before.
-#[test]
-fn raw_read_record_does_not_reach_the_next_document() {
-  let tex = repro!("text_defaults/loadclass/copy_newcommand_of_a_base_class_name_errs.tex");
-  let dir = tempfile::tempdir().expect("a paper directory");
-  for name in ["t.tex", "u.tex"] {
-    std::fs::write(dir.path().join(name), tex).expect("the paper");
-  }
-  std::fs::write(
-    dir.path().join("cimart.cls"),
-    repro!("text_defaults/loadclass/cimart.cls"),
-  )
-  .expect("the copy");
-  let sources: Vec<String> = ["t.tex", "u.tex"]
-    .iter()
-    .map(|name| dir.path().join(name).to_string_lossy().into_owned())
-    .collect();
-  for log in convert_on_one_thread(sources) {
-    assert_eq!((error_count(&log), warning_count(&log)), (2, 0), "{log}");
-    assert!(log.contains("Command \\refname already defined"), "{log}");
-  }
-  drop(dir);
 }
 
 /// The KOMA classes check that the kernel's `\@startsection` and `\@sect` are still latex.ltx's (scrartcl.cls:3326,

@@ -572,6 +572,8 @@ mod perfect_kernel_batchs5;
 mod perfect_kernel_batchsep1;
 /// ST1: RED catalog repros already matching their `expect` on int159a, green rows of two concern tables.
 mod perfect_kernel_batchst1;
+/// ST3: a document converted after others on one thread (a persistent cortex_worker's papers) is the document alone.
+mod perfect_kernel_batchst3;
 mod perfect_kernel_batchta1;
 mod perfect_kernel_batchz1;
 mod perfect_kernel_batchz14;

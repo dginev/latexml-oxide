@@ -121,8 +121,9 @@ fn a_script_before_printed_ink_or_on_a_base_is_text() {
       files:    &[],
       counts:   (0, 0),
       lines:    &[],
-      // (pinned as today, RED: Bob Baker's "ᵇLab of Chemistry, Univ Y" is Ann Able's, uncounted — the CLI on P4cbase
-      // gives the same, where this in-process row was green. moves: post-merge)
+      // (pinned as today, RED: Bob Baker's "ᵇLab of Chemistry, Univ Y" is Ann Able's, uncounted — in-process and CLI
+      // alike since ISO1's merge 9d38af1d10, right on pk/ISO1 a161bbf507: the merge, not carried state (ST3). moves:
+      // post-merge)
       creators: Creators::Whole(&[
         r#"<creator role="author"><personname>Ann Able<sup><text font="italic">a</text></sup></personname><contact name="Address: " role="address"><Math mode="inline" tex="{\rm{}^{a}Dept}" text="^ a Dept"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok role="UNKNOWN">Dept</XMTok><XMTok fontsize="70%" role="UNKNOWN">a</XMTok></XMApp></XMath></Math> of Physics, Univ X, <Math mode="inline" tex="{\rm{}^{b}Lab}" text="^ b Lab"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok role="UNKNOWN">Lab</XMTok><XMTok fontsize="70%" role="UNKNOWN">b</XMTok></XMApp></XMath></Math> of Chemistry, Univ Y</contact></creator>"#,
         r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">b</text></sup></personname></creator>"#,

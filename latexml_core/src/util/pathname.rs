@@ -1015,7 +1015,7 @@ std::thread_local! {
 }
 
 /// Clear the per-thread kpsewhich memo. Called at the start of every
-/// conversion (prepare_session): the persistent (non-harness) cortex_worker
+/// conversion (`reset_conversion_state`, at `initialize_report`): the persistent (non-harness) cortex_worker
 /// runs many papers per thread, and a cached cwd-relative MISS from paper A
 /// (kpathsea's path spec includes `.`) would wrongly persist into paper B
 /// (PR_READINESS should-fix 12).
