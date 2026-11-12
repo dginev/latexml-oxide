@@ -2302,9 +2302,13 @@ fn mark_led_pieces_keeping(events: &[Event], punctuation: bool) -> Vec<Vec<Event
     match &event.kind {
       // (a number's suffix is the entry's text, `Event::ordinal`)
       EventKind::Mark if event.ordinal => ink = true,
+      // (an exponent on a base its formula prints, `OR $97403^{3}$ Paris` — 2203.01892 —, is glued to no ink before it)
       EventKind::Mark
         if ink
           && !after_sep
+          && event
+            .formula
+            .is_none_or(|f| f.base != Some(MarkBase::Posted))
           && lead_kind.is_some()
           && kind(event) == lead_kind
           && name_follows(at) =>

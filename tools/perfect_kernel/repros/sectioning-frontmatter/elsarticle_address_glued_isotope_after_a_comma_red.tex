@@ -1,0 +1,18 @@
+% mechanism: the reading's cut of a contact at its marks (`events::mark_led_pieces`) opens an entry at a mark after a comma,
+%   `$^{3}$He` too — glued to letters, no author requesting 3: "³He Lab" an address of its own, given to both authors
+% witness: synthetic (ISO1)
+% oracle:  pdflatex (TL 2025) 0 errors: "1 Univ X / 2 Univ Y, 3He Lab"
+% engines: rust int160c = ISO1 = 0 errors, 0 warnings: Able "1 Univ X" + "3 He Lab", Baker "3 He Lab" + "2 Univ Y"
+% expect:  0 errors, 0 warnings; Able "1 Univ X"; Baker "2 Univ Y, ³He Lab" (decided by the requested marks)
+% status:  RED (int160c, ISO1) — open: a glued mark no author requests, ISO1 report
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author{Ann Able$^{1}$}
+\author{Bob Baker$^{2}$}
+\address{$^{1}$Univ X\\ $^{2}$Univ Y, $^{3}$He Lab}
+\end{frontmatter}
+Text.
+\end{document}

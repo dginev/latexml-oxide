@@ -1,0 +1,15 @@
+% mechanism: an in-block address line of the kernel `\author`: `${\rm ^{3}He}$` after a comma is no mark (a letter prints after its
+%   script in its formula: the lexer's `glue_in_word_marks`), so the line's entries part at `$^{1}$`, `$^{2}$` only
+% witness: synthetic (the in-block sibling of revtex_affiliation_isotope_prescript_keeps_its_line; 2105.07958)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1 and Bob Baker2 / 1Univ X, 2Univ Y, 3He Lab"
+% engines: rust int160c = 0 errors, 0 warnings: Bob "Univ Y", "He 3 Lab" a nameless creator's
+% expect:  0 errors, 0 warnings; Ann "Univ X", Bob "Univ Y, ³He Lab"
+% status:  RED (int160c) -> GREEN (ISO1) — perfect_kernel_batch90a::a_script_before_printed_ink_or_on_a_base_is_text
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$\\ $^{1}$Univ X, $^{2}$Univ Y, ${\rm ^{3}He}$ Lab}
+\maketitle
+Text.
+\end{document}

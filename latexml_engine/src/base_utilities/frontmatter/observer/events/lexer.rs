@@ -551,6 +551,21 @@ fn glue_in_word_marks(events: Vec<Event>) -> Vec<Event> {
       && next.is_some_and(|e| {
         e.kind == EventKind::Name && e.text.chars().next().is_some_and(char::is_alphabetic)
       });
+    // (a script a letter or digit prints after in its own formula is a prescript or an exponent, the formula's text, not
+    // a mark: `${\rm ^{3}He}$`, `${}^{87}{\rm Rb}$` — `marks::read_formula`'s rule, OD #911; 2105.07958's sibling —, but
+    // not one opening its line, its label: `$ {\rm ^2Solid}$ State …`, 1006.5052)
+    if event.kind == EventKind::Mark
+      && !event.line_first
+      && event.formula.is_some_and(|f| f.base.is_some() && !f.ends)
+      && let Some(next) = events.next_if(|e| e.kind == EventKind::Name)
+    {
+      out.push(Event {
+        text: format!("{}{}", event.text, next.text),
+        span: join_span(event.span, next.span),
+        ..next
+      });
+      continue;
+    }
     if in_word {
       let next = events.next().expect("peeked");
       let name = out.last_mut().expect("checked");

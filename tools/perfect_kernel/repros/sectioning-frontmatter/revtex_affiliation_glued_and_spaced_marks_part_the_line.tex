@@ -1,0 +1,16 @@
+% mechanism: control: a mark whose formula ends is a mark, glued to the word after it (`$^{a}$Univ X`) or spaced
+%   (`$^{b}$ Univ Y`): the line parts at each
+% witness: synthetic (the safe side of revtex_affiliation_isotope_prescript_keeps_its_line)
+% oracle:  pdflatex (TL 2025 revtex4-1) 0 errors: "aUniv X, b Univ Y"
+% engines: rust int160c = ISO1: Able "Univ X", Baker "Univ Y"
+% expect:  0 errors, 0 warnings; Able "Univ X"; Baker "Univ Y"
+% status:  GREEN (int160c, ISO1) — perfect_kernel_batch90a::a_script_before_printed_ink_or_on_a_base_is_text
+% preload: ar5iv.sty
+\documentclass{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able$^{a}$ and Bob Baker$^{b}$}
+\affiliation{$^{a}$Univ X, $^{b}$ Univ Y}
+\maketitle
+Text.
+\end{document}

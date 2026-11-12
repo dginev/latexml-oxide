@@ -1,0 +1,17 @@
+% mechanism: elsarticle's `\address` of hand-marked lines: `${\rm ^{3}He}$` is no mark, the line "Univ Y, ³He Lab" Baker's
+% witness: synthetic (2105.07958's prescript class)
+% oracle:  pdflatex (TL 2025) 0 errors: "1 Univ X / 2 Univ Y, 3He Lab"
+% engines: rust int160c = 0 errors, 0 warnings: "He 3 Lab" an address of both authors, Baker "2 Univ Y"
+% expect:  0 errors, 0 warnings; Able "1 Univ X"; Baker "2 Univ Y, ³He Lab"
+% status:  RED (int160c) -> GREEN (ISO1) — perfect_kernel_batch90a::a_script_before_printed_ink_or_on_a_base_is_text
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author{Ann Able$^{1}$}
+\author{Bob Baker$^{2}$}
+\address{$^{1}$Univ X\\ $^{2}$Univ Y, ${\rm ^{3}He}$ Lab}
+\end{frontmatter}
+Text.
+\end{document}
