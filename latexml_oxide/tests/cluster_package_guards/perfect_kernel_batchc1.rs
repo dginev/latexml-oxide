@@ -216,8 +216,8 @@ fn queued_marks_read_as_digested() {
       &["Ann One 1"],
       &[
         "Bob Two 1",
-        "affiliation=Second Univ",
-        "affiliation=Third Univ",
+        "affiliation=2 Second Univ",
+        "affiliation=3 Third Univ",
       ],
       &["Cy Three 1"],
       &["affiliation=First Univ"],
@@ -226,8 +226,8 @@ fn queued_marks_read_as_digested() {
       &["Ann One 1"],
       &[
         "Bob Two 1",
-        "affiliation=Second Univ",
-        "affiliation=Third Univ",
+        "affiliation=2 Second Univ",
+        "affiliation=3 Third Univ",
       ],
       &["Cy Three 1"],
       &["affiliation=First Univ"],
