@@ -73,11 +73,11 @@ Rules that keep this file honest and mergeable:
   | 10 | CT1a-r | CT1a count design (DG ruling pending) | 2 | 1 | todo |
   | 11 | TRUTH | Bars: the truth set | 4 | 5 | todo |
   | 12 | HOLD4 | Bars: fresh holdout v4 read once; 98/98 | 4 | 3 | todo |
-  | 18 | GA2 | GA2 | 5 | 3 | in review (revGA2: `c21ad0900e`, one `state::file_loaded` = `\ver@<file>`, fence F2 at 0; A/B 507: 0 changed) |
+  | 18 | GA2 | GA2 | 5 | 3 | done in int166a (GA2 + GA2b `e25abd68d6`: `state::file_loaded` = `\ver@<file>`; the loaders mark `\ver@` unless `file_loaded`; fence F2 at 0; A/B 507 + 597: 0 changed; revGA2 B1 fixed, s8/s9 = base) — folds at the push |
   | 18 | GA3 | GA3 | 5 | 3 | ongoing (the engine writes `sort` from CITE_SORT as Perl; post's style list deleted) |
   | 18 | GA4 | GA4 | 5 | 3 | todo |
   | 18 | GA5 | GA5 | 5 | 3 | todo |
-  | 18 | F1-4 | Fences F1-F4 | 5 | 1 | todo |
+  | 18 | F1-4 | Fences F1-F4 (GA0) — F2 done with GA2; extend it (GA2b's proposal): a `\ver@` test outside `state.rs` (`lookup_definition`/`lookup_meaning(…\ver@…)`) is a debt — first one `latex_constructs_rust_only.rs` `document_hook_code` (a hook label naming a queried, never-loaded package counts as loaded) → `file_loaded` | 5 | 1 | todo |
   | 19 | PSF1 | PSF1: `\psfrag` fragments dropped silently (98 of 30k ≈ 9,100 arXiv papers; Perl too for graphicx; latex+dvips prints them): a counted Warning per dropped fragment before the merge (RED `reversion/psfrag_fragment_dropped_silently_red`); rendering them after it | 5 | 3 | todo |
   | 20 | PERF | Perf + RAM pass, remaining levers (#346) | 5 | 5 | todo |
   | 21 | FMPERF | Frontmatter performance evaluation (#516), after P6 | 5 | 3 | todo |
