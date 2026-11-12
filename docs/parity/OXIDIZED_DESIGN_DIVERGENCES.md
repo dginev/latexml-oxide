@@ -35311,7 +35311,9 @@ tail's `row_calls`) keys a marked entry `_markshown=names` (`cut::mark_shown_att
 it shows its mark where the names the flush writes show its label (the one `\lx@sup@setlabel@affiliation` sets from
 what the mark prints, where it compares it) — the requests each name's written runs print where
 `per_author_marks` keeps its marks, a superscript, no `\inst` or binding request, no creator call's own label
-(`emitter::NAMES_SHOWN_LABELS`, `marks_in`; reset at each flush, the outer flush's restored after it) — so the names and
+(`emitter::NAMES_SHOWN_LABELS`, `marks_in`; reset at each flush, the outer flush's restored after it; a range mark,
+`$^{1-2}$`, is read whole on the names' side, so its entries hide their marks: RED
+`llncs_range_mark_names_entries_hidden_red`) — so the names and
 the list show or hide each mark together (P4f, P4fb: a printed icon, `\inst{1,3}\textsuperscript{(\Letter)}`, labels
 no entry, 2505.02655, 2607.21595, 2609.19654; of 1804.00518's names led by `$^n$` only the first keeps its mark, so
 only entry 1 shows its). llncs shape (c) and l-aa show both, as pdflatex and
