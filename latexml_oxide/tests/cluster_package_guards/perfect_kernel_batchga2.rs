@@ -68,6 +68,29 @@ fn one_loaded_answer_on_every_load_path() {
       &[][..],
       r#"<para xml:id="p1"> <p xml:id="p1.1">amsmath not loaded.</p> <equation xml:id="S0.Ex1"> <Math mode="display" tex="a=b" text="a = b" xml:id="S0.Ex1.m1"> <XMath xml:id="S0.Ex1.m1.1"> <XMApp xml:id="S0.Ex1.m1.1.1"> <XMTok meaning="equals" role="RELOP">=</XMTok> <XMTok font="italic" role="UNKNOWN">a</XMTok> <XMTok font="italic" role="UNKNOWN">b</XMTok> </XMApp> </XMath> </Math> </equation> <equation labels="LABEL:e" xml:id="S0.E1"> <tags> <tag>(1)</tag> <tag role="creflabel">(1)</tag> <tag role="creftype">eq.</tag> <tag role="creftypecap">Equation</tag> <tag role="creftypeplural">eqs.</tag> <tag role="creftypepluralcap">Equations</tag> <tag role="refnum">1</tag> </tags> <Math mode="display" tex="c=d" text="c = d" xml:id="S0.E1.m1"> <XMath xml:id="S0.E1.m1.1"> <XMApp xml:id="S0.E1.m1.1.1"> <XMTok meaning="equals" role="RELOP">=</XMTok> <XMTok font="italic" role="UNKNOWN">c</XMTok> <XMTok font="italic" role="UNKNOWN">d</XMTok> </XMApp> </XMath> </Math> </equation> <equationgroup class="ltx_eqn_align" xml:id="S0.EGx1"> <equation xml:id="S0.Ex2"> <MathFork> <Math tex="\displaystyle e=f" text="e = f" xml:id="S0.Ex2.m3"> <XMath xml:id="S0.Ex2.m3.1"> <XMApp xml:id="S0.Ex2.m3.1.1"> <XMTok meaning="equals" role="RELOP">=</XMTok> <XMTok font="italic" role="UNKNOWN">e</XMTok> <XMTok font="italic" role="UNKNOWN">f</XMTok> </XMApp> </XMath> </Math> <MathBranch> <td align="right" xml:id="S0.Ex2.1"><Math mode="inline" tex="\displaystyle e" text="e" xml:id="S0.Ex2.m1"> <XMath xml:id="S0.Ex2.m1.1"> <XMTok font="italic" role="UNKNOWN">e</XMTok> </XMath> </Math></td> <td align="left" xml:id="S0.Ex2.2"><Math mode="inline" tex="\displaystyle=f" text="absent = f" xml:id="S0.Ex2.m2"> <XMath xml:id="S0.Ex2.m2.1"> <XMApp xml:id="S0.Ex2.m2.1.1"> <XMTok meaning="equals" role="RELOP">=</XMTok> <XMTok meaning="absent"/> <XMTok font="italic" role="UNKNOWN">f</XMTok> </XMApp> </XMath> </Math></td> </MathBranch> </MathFork> </equation> <equation xml:id="S0.E2"> <tags> <tag>(2)</tag> <tag role="creflabel">(2)</tag> <tag role="creftype">eq.</tag> <tag role="creftypecap">Equation</tag> <tag role="creftypeplural">eqs.</tag> <tag role="creftypepluralcap">Equations</tag> <tag role="refnum">2</tag> </tags> <MathFork> <Math tex="\displaystyle g=h" text="g = h" xml:id="S0.E2.m3"> <XMath xml:id="S0.E2.m3.1"> <XMApp xml:id="S0.E2.m3.1.1"> <XMTok meaning="equals" role="RELOP">=</XMTok> <XMTok font="italic" role="UNKNOWN">g</XMTok> <XMTok font="italic" role="UNKNOWN">h</XMTok> </XMApp> </XMath> </Math> <MathBranch> <td align="right" xml:id="S0.E2.1"><Math mode="inline" tex="\displaystyle g" text="g" xml:id="S0.E2.m1"> <XMath xml:id="S0.E2.m1.1"> <XMTok font="italic" role="UNKNOWN">g</XMTok> </XMath> </Math></td> <td align="left" xml:id="S0.E2.2"><Math mode="inline" tex="\displaystyle=h" text="absent = h" xml:id="S0.E2.m2"> <XMath xml:id="S0.E2.m2.1"> <XMApp xml:id="S0.E2.m2.1.1"> <XMTok meaning="equals" role="RELOP">=</XMTok> <XMTok meaning="absent"/> <XMTok font="italic" role="UNKNOWN">h</XMTok> </XMApp> </XMath> </Math></td> </MathBranch> </MathFork> </equation> </equationgroup> <p xml:id="p1.2">See <ref labelref="LABEL:e" show="creftype~creflabel"/>.</p> </para>"#,
     ),
+    // GA2c: latex.ltx:18840 marks `\ver@<file>` `\@empty` before the read, so a file asks for its loader while it loads
+    // (1411.7188's l3names.sty for expl3): a raw package (int166a erred) and a binding reading the paper's .cfg.
+    (
+      "while_loading",
+      repro!("while_loading/loaded_query_while_the_file_loads.tex"),
+      &[
+        ("outerpk.sty", repro!("while_loading/outerpk.sty")),
+        ("innerpk.sty", repro!("while_loading/innerpk.sty")),
+        ("subfigure.cfg", repro!("while_loading/subfigure.cfg")),
+      ][..],
+      r#"<para xml:id="p1"> <p xml:id="p1.1">outerpk loaded. subfigure loaded.</p> </para>"#,
+    ),
+    // GA2c: the class sibling, `\documentclass` and `\LoadClass` (outercl.cls loads basecl.cls, which requires innercl.sty).
+    (
+      "class_while_loading",
+      repro!("while_loading/loaded_query_while_the_class_loads.tex"),
+      &[
+        ("outercl.cls", repro!("while_loading/outercl.cls")),
+        ("basecl.cls", repro!("while_loading/basecl.cls")),
+        ("innercl.sty", repro!("while_loading/innercl.sty")),
+      ][..],
+      r#"<para xml:id="p1"> <p xml:id="p1.1">outercl loaded. basecl loaded.</p> </para>"#,
+    ),
   ] {
     let (log, xml) = convert_files_with(tex, files, Some("ar5iv.sty"));
     assert_eq!(

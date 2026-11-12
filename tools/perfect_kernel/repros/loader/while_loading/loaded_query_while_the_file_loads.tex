@@ -1,0 +1,14 @@
+% witness: 1411.7188 (its own l3bootstrap.sty's \ProvidesExplPackage asks \@ifpackageloaded{expl3} from l3names.sty,
+%          which expl3.sty requires before its own \Provides...); probe CL166 p2/ifl_nested.tex
+% oracle:  pdflatex 0 errors: "outerpk loaded. subfigure loaded." (latex.ltx:18840 \@onefilewithoptions sets
+%          \ver@<file> to \@empty before \InputIfFileExists); Perl: _loaded is set before the read (Package.pm:2328, :2363)
+% engines: rust int165a = 0 errors, both loaded; int166a (GA2) = 1 error (innerpk's PackageError), "subfigure not loaded."
+% expect:  0 errors, 0 warnings; both "loaded." (a raw package; a binding reading the paper's subfigure.cfg)
+% status:  RED (int166a) -> GREEN (GA2c)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{outerpk}
+\usepackage{subfigure}
+\begin{document}
+\outerans. \sfans.
+\end{document}
