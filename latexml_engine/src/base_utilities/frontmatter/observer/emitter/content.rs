@@ -7,6 +7,8 @@
 //! is left of the tokens is brace balance, a property of the content itself, as the declarations' spans clamp at it
 //! (`field_notes::settle_declarations`).
 
+use latexml_core::definition::origin::DefinitionOrigin;
+
 use super::{
   super::{
     events::{EventKind, HeldError},
@@ -101,6 +103,43 @@ pub(super) fn reads_past(tokens: &[Token], tail: bool) -> Option<usize> {
     depth += t.group_step();
     depth == 0 && arguments_end(tokens, i, tail) == Some(None)
   })
+}
+
+/// Whether `tokens` read a meaning of `definees`: its control sequence, or a counter's name as an argument (`\c@uni`'s
+/// `{uni}`: `\footnoterecall{uni}`, `\value{uni}`), in them or one level into a document's macro they call.
+pub(super) fn reads_definition(tokens: &[Token], definees: &[SymStr]) -> bool {
+  let counters: Vec<String> = definees
+    .iter()
+    .filter_map(|&key| with(key, |cs| cs.strip_prefix("\\c@").map(str::to_string)))
+    .collect();
+  let reads = |tokens: &[Token]| {
+    tokens.iter().enumerate().any(|(i, t)| {
+      if t.get_catcode().is_active_or_cs() {
+        return definees.contains(&meaning_key(t));
+      }
+      if t.get_catcode() != Catcode::BEGIN || counters.is_empty() {
+        return false;
+      }
+      let name: Option<String> = tokens[i + 1..]
+        .iter()
+        .take_while(|u| u.get_catcode() != Catcode::END)
+        .map(|u| {
+          matches!(u.get_catcode(), Catcode::LETTER | Catcode::OTHER)
+            .then(|| u.with_str(str::to_string))
+        })
+        .collect();
+      name.is_some_and(|name| counters.contains(&name))
+    })
+  };
+  reads(tokens)
+    || tokens.iter().any(|t| match lookup_meaning(t) {
+      Some(Stored::Expandable(d))
+        if d.made_in_own_file || d.get_origin() == DefinitionOrigin::Document =>
+      {
+        matches!(d.get_expansion(), Some(ExpansionBody::Tokens(body)) if reads(body.unlist_ref()))
+      },
+      _ => false,
+    })
 }
 
 /// Where the call at `tokens[at]` ends, past the arguments its meaning now reads ([`reads_past`]'s parameters):

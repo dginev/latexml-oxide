@@ -54,6 +54,12 @@ pub struct FieldDeclaration {
   run_at:       Option<(u16, u16)>,
 }
 
+impl FieldDeclaration {
+  /// Whether what it defined outlives the call that made it: global, or in no group of the field. A group of the call's own
+  /// ends with it (`\begingroup\def\thefootnote{…}\footnote[0]{…}\endgroup`: 0903.4816, 2311.17684, 2602.15181).
+  fn outlives_its_call(&self) -> bool { self.global || self.depth == 0 }
+}
+
 /// An environment a field's tokens open or close, as the digestion's frames say it, whatever spells it (`\\begin`, a `\\let` copy,
 /// a macro pair; no `\\begin` under `\\detokenize`): the positions of what did it, `start..end`.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -167,6 +173,21 @@ pub struct FieldNotes {
   pub counter_moves: Vec<(u16, u16)>,
   /// each of those moves' position and the value it moved the counter from
   moved_from:        Vec<(u16, Option<i64>)>,
+  /// the calls whose definitions left [`Self::declarations`] since the call prints too, so no replay holds them apart from
+  /// what it prints (` \footnote{#2} \newcounter{#1} `: 2407.13730, 2606.19583); only those a later token can read
+  /// ([`FieldDeclaration::outlives_its_call`])
+  pub printing:      Vec<PrintingCall>,
+}
+
+/// A call whose definitions print too ([`FieldNotes::printing`]).
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PrintingCall {
+  /// its positions `start..end`
+  pub span:     (u16, u16),
+  /// the meanings it assigned
+  pub definees: Vec<SymStr>,
+  /// whether every one of them was assigned globally: a local one ends with the group around it, the author's cell
+  pub global:   bool,
 }
 
 /// How many environments are open: the frames binding `current_environment` (an environment a binding defines).
@@ -806,6 +827,7 @@ fn field_invocation(token: &Token, cover: FieldCover, result: &[Digested]) {
     notes.errors_seen = errors;
     if notes.any_open {
       let in_a_body = in_a_definition(&notes.declarations, pos);
+      let printing = &mut notes.printing;
       notes.declarations.retain_mut(|declaration| {
         if declaration.open
           && let Some((call, reach)) = declaration.run_at
@@ -815,6 +837,13 @@ fn field_invocation(token: &Token, cover: FieldCover, result: &[Digested]) {
           if pos >= reach {
             declaration.open = false;
           } else if !result.is_empty() && (pos >= call || in_a_body) {
+            if declaration.outlives_its_call() {
+              printing.push(PrintingCall {
+                span:     (call, reach),
+                definees: declaration.definees.clone(),
+                global:   declaration.global,
+              });
+            }
             return false;
           }
         } else if declaration.open {
@@ -823,6 +852,13 @@ fn field_invocation(token: &Token, cover: FieldCover, result: &[Digested]) {
           {
             declaration.open = false;
           } else if !result.is_empty() && declaration.start <= pos {
+            if declaration.outlives_its_call() {
+              printing.push(PrintingCall {
+                span:     (declaration.start, declaration.end),
+                definees: declaration.definees.clone(),
+                global:   declaration.global,
+              });
+            }
             return false;
           }
         }

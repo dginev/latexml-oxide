@@ -1693,7 +1693,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // Z18m 15 -> 14: `reads_arguments` moved with the title-code reader to `classify/title_code.rs`, its read with it;
   // PMK1 14 -> 16: `tail_call` reads a parameterless macro's expansion — its definition, no document token — for its last
   // command, whose parameters the call reads (a robust `\protect \cs␣`, IEEEtran's `\authorrefmark`), 0912.0896, 2609.25589)
-  ("emitter/content", 16),
+  // FNR1c 16 -> 22: `reads_definition` reads whether a later token of the block reads what a printing call defined — its
+  // control sequence, a counter's name as an argument, one level into a document's macro — the read no rehearsal event
+  // says (2407.13730, 2606.19583; the rehearsal's own read is post-merge, FNRR))
+  ("emitter/content", 22),
   // (Z4a, a new file: the emitter builds Perl's calls from the reading, its reads a call's own keys and pieces, `text_tokens` (`printed_text_tokens` since E0h) and the
   // catcodes of a cut: where a slice's edge falls past an option, a group or an accent's letter, OD #980; Z4ar2, 30 -> 28: an address
   // list's `@` no longer read, its inks are; NE3 28 -> 36: `key_tokens`' table of the specials a key value holds as characters,
@@ -1986,8 +1989,10 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   // `"\\begin"`, `"\\end"` twice, pairing an environment the picture's span opens with the `\end{…}` its call read after
   // its last box, `\end{tikzpicture}` — no box holds it — never a reading decision, review revCR8 finding 1; EJ1 66 -> 67:
   // `"\\lx@frontmatter@setters@of"`, the command it writes before an item of a block whose setters' entries the recovery
-  // writes as queued, beside `\lx@frontmatter@queued` — it writes it, no decision reads it; 1406.5876)
-  ("emitter", 67),
+  // writes as queued, beside `\lx@frontmatter@queued` — it writes it, no decision reads it; 1406.5876; FNR1b 67 -> 68:
+  // `"\\c@"`, the prefix of a counter's register among a printing call's definees, whose name a later
+  // `\footnoterecall{uni}` reads, `reads_definition`; 2407.13730)
+  ("emitter", 68),
   // (the "Knowledge in, driver out, one pass" move: the emitter's vocabulary, moved unchanged from `author_block/`, its literals with it: the API's calls it writes, the
   // mark and note commands it reads; none added)
   ("emitter/calls", 44),

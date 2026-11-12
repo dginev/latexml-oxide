@@ -1,0 +1,19 @@
+% mechanism: a note a printing call makes from an argument it wraps (`\footremember{ann}{Univ X; \href{…}{…}}`'s
+%   `\footnote{#2}`) is written from the reading's plain text (`emit.rs` `by_text(Some("note no argument"))`): the link
+%   and the ";" are lost, counted by the Warning
+% witness: 2604.20516
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "Ann One ∗", "Bob Two"; ∗ Univ X; ann@x.org (a link)
+% engines: rust e6a6c93a18, FNR1b 0 errors, 1 warning, the note "Univ X, ann@x.org" (FNR1's decline kept the markup)
+% expect:  0 errors; Ann One's note "Univ X; " and the link
+% status:  RED (e6a6c93a18, FNR1b)
+% moves:   post-merge (the replay writes a note from the printing call's expansion with its markup)
+\documentclass{article}
+\usepackage{hyperref}
+\newcommand{\footremember}[2]{
+    \footnote{#2}
+    \newcounter{#1}
+    \setcounter{#1}{\value{footnote}}
+}
+\title{T}
+\author{Ann One\footremember{ann}{Univ X; \href{mailto:ann@x.org}{ann@x.org}} \and Bob Two}
+\begin{document}\maketitle Body.\end{document}

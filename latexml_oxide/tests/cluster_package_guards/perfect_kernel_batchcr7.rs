@@ -8,7 +8,8 @@
 //! (review revS5CR7b): the names matched as whole words, the `\and`-started line cut at its commas, and the corresponding
 //! author's `_corresponding` on its split creator. CR7d (review revCR7c, the fail-safe): where the split would state an
 //! owner its marks don't support — an item led by a mark its piece doesn't print, an address line made a creator — the
-//! block is written whole, as before the split, one guard per path.
+//! block is written whole, as before the split, one guard per path. FNR1: a definition whose call prints takes effect in
+//! order, a table of rows.
 
 use latexml::util::test::{convert_files_with_setup_then, error_count, warning_count};
 
@@ -362,4 +363,164 @@ fn a_split_making_an_address_line_a_creator_keeps_the_block_whole() {
     ],
     "{xml}"
   );
+}
+
+/// FNR1: a definition whose call prints too (no declaration replays it, `field_notes::FieldNotes::printing`), in a call
+/// no name's run holds and read by a later token of the block, declines it: written as Perl splits it, in order. Rows: the
+/// remember body's spaces print (2407.13730, 2606.19583), the unspaced control (the reads-past decline), a note macro and
+/// a mark macro defining what the next author reads; the safe sides, no decline: a mark kept on each name, a definition
+/// local to its own group (2602.15181, 0903.4816, 2311.17684), a definition nobody reads (the `\footremember` template:
+/// review revFNR1 u01-u03), a local one past its cell's `\and`, one read where the split would be whole (CR7d).
+#[test]
+fn a_definition_its_call_prints_takes_effect_in_order() {
+  const DECLINE: &str = "The frontmatter emitter can't replay a definition of its author block apart from what the \
+                         block prints; the block is written as Perl's \\lx@add@authors splits it at its separators, \
+                         its pieces digested in order";
+  const STAR: &str = "<tags><tag>*</tag><tag role=\"refnum\">*</tag><tag role=\"typerefnum\">footnote *</tag></tags>";
+  // (the repro, its Warnings, whether it declines, its creators)
+  let rows: [(&str, usize, bool, &[String]); 12] = [
+    (repro!("footnoterecall_three_authors_spaced_remember"), 1, true, &[
+      "<creator role=\"author\"><personname>Ann One</personname><contact name=\"Note:\u{a0}\" role=\"note\">The \
+       University</contact></creator>"
+        .to_string(),
+      format!(
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Two</personname><note mark=\"*\" \
+         role=\"footnotemark\" xml:id=\"footnotex1\">{STAR}</note></creator>"
+      ),
+      format!(
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cy Three</personname><note mark=\"*\" \
+         role=\"footnotemark\" xml:id=\"footnotex2\">{STAR}</note></creator>"
+      ),
+    ]),
+    (repro!("footnoterecall_two_authors_control"), 1, true, &[
+      "<creator role=\"author\"><personname>A</personname><contact name=\"Note:\u{a0}\" \
+       role=\"note\">X</contact></creator>"
+        .to_string(),
+      format!(
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>B</personname><note mark=\"*\" \
+         role=\"footnotemark\" xml:id=\"footnotex1\">{STAR}</note></creator>"
+      ),
+    ]),
+    (repro!("author_note_macro_defines_what_a_later_author_reads"), 1, true, &[
+      "<creator role=\"author\"><personname>Ann One</personname><contact name=\"Note:\u{a0}\" role=\"note\">Lab \
+       Alpha.</contact></creator>"
+        .to_string(),
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Two (Alpha)</personname></creator>"
+        .to_string(),
+    ]),
+    (repro!("author_mark_macro_defines_what_a_later_author_reads"), 1, true, &[
+      "<creator role=\"author\"><personname>Ann One <sup xml:id=\"id1\">\u{2020}</sup></personname></creator>"
+        .to_string(),
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Two Uni</personname></creator>"
+        .to_string(),
+    ]),
+    (repro!("author_mark_macro_steps_a_counter_on_each_name"), 0, false, &[
+      "<creator role=\"author\"><personname>Ann One<sup xml:id=\"id1\">1</sup></personname></creator>".to_string(),
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Two<sup \
+       xml:id=\"id2\">2</sup></personname></creator>"
+        .to_string(),
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cy Three<sup \
+       xml:id=\"id3\">3</sup></personname></creator>"
+        .to_string(),
+    ]),
+    (repro!("author_note_macro_with_a_local_thefootnote"), 0, false, &[
+      "<creator role=\"author\"><personname>Ann One</personname><contact name=\"Note:\u{a0}\" \
+       role=\"note\">Corresponding Author.</contact></creator>"
+        .to_string(),
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Two</personname></creator>".to_string(),
+    ]),
+    // (the recall one level into a document's macro, `\recalluni`)
+    (repro!("footnoterecall_held_in_a_document_macro"), 1, true, &[
+      "<creator role=\"author\"><personname>Ann One</personname><contact name=\"Note:\u{a0}\" role=\"note\">The \
+       University</contact></creator>"
+        .to_string(),
+      format!(
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Two</personname><note mark=\"*\" \
+         role=\"footnotemark\" xml:id=\"footnotex1\">{STAR}</note></creator>"
+      ),
+    ]),
+    (repro!("footremember_unread_keeps_the_replay"), 2, false, &row(&[
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Note:\u{a0}\" role=\"note\">Univ \
+       X.</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept of Physics</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact \
+       name=\"Note:\u{a0}\" role=\"note\">Univ Y.</contact><contact name=\"Affiliation:\u{a0}\" \
+       role=\"affiliation\">Dept of Physics</contact></creator>",
+    ])),
+    // (the base's reading kept: the marks on the names as affiliations and the content check's "1 2" are its own)
+    (repro!("footremember_unread_on_a_marked_names_line"), 2, false, &row(&[
+      "<creator role=\"author\"><personname>Ann Able</personname>\
+       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" \
+       xml:id=\"id1.1\">1</text></sup></contact>\
+       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" \
+       xml:id=\"id2.1\">1</text></sup> Univ X</contact>\
+       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" \
+       xml:id=\"id3.1\">2</text></sup> Univ Y</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>\
+       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" \
+       xml:id=\"id4.1\">2</text></sup></contact>\
+       <contact name=\"Note:\u{a0}\" role=\"note\">Corresponding author.</contact>\
+       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id5\"><text font=\"italic\" \
+       xml:id=\"id5.1\">1</text></sup> Univ X</contact>\
+       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\"><text font=\"italic\" \
+       xml:id=\"id6.1\">2</text></sup> Univ Y</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Carl Cole</personname>\
+       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id7\"><text font=\"italic\" \
+       xml:id=\"id7.1\">1</text></sup></contact>\
+       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id8\"><text font=\"italic\" \
+       xml:id=\"id8.1\">1</text></sup> Univ X</contact>\
+       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id9\"><text font=\"italic\" \
+       xml:id=\"id9.1\">2</text></sup> Univ Y</contact></creator>",
+    ])),
+    (repro!("footremember_unread_after_a_comma"), 1, false, &row(&[
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\">\u{2217}</sup></personname><contact \
+       name=\"Note:\u{a0}\" role=\"note\">Corresponding author.</contact><contact name=\"Affiliation:\u{a0}\" \
+       role=\"affiliation\">Univ X</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact \
+       name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ X</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Carl Cole<sup \
+       xml:id=\"id2\">\u{2020}</sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ \
+       X</contact></creator>",
+    ])),
+    (repro!("author_note_macro_local_def_ends_with_its_cell"), 1, false, &row(&[
+      "<creator role=\"author\"><personname>Ann One</personname><contact name=\"Note:\u{a0}\" role=\"note\">Lab \
+       Alpha.</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Two</personname></creator>",
+    ])),
+    // (as the unread line, Carl Cole's recalled mark counted by the given-marks Warning)
+    (repro!("footrecall_read_where_the_split_would_be_whole"), 3, false, &row(&[
+      "<creator role=\"author\"><personname>Ann Able</personname>\
+       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" \
+       xml:id=\"id1.1\">1</text></sup></contact>\
+       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> <sup xml:id=\"id2\"><text font=\"italic\" \
+       xml:id=\"id2.1\">1</text></sup> Univ X</contact>\
+       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" \
+       xml:id=\"id3.1\">2</text></sup> Univ Y</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>\
+       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" \
+       xml:id=\"id4.1\">2</text></sup></contact>\
+       <contact name=\"Note:\u{a0}\" role=\"note\">Corresponding author.</contact>\
+       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> <sup xml:id=\"id5\"><text font=\"italic\" \
+       xml:id=\"id5.1\">1</text></sup> Univ X</contact>\
+       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\"><text font=\"italic\" \
+       xml:id=\"id6.1\">2</text></sup> Univ Y</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Carl Cole</personname>\
+       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id7\"><text font=\"italic\" \
+       xml:id=\"id7.1\">1</text></sup></contact>\
+       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> <sup xml:id=\"id8\"><text font=\"italic\" \
+       xml:id=\"id8.1\">1</text></sup> Univ X</contact>\
+       <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id9\"><text font=\"italic\" \
+       xml:id=\"id9.1\">2</text></sup> Univ Y</contact></creator>",
+    ])),
+  ];
+  for (tex, warnings, declines, creators) in rows {
+    let head = tex.lines().next().unwrap_or_default();
+    let (log, xml) = run(tex);
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, warnings),
+      "{head}\n{log}"
+    );
+    assert_eq!(log.contains(DECLINE), declines, "{head}\n{log}");
+    assert_eq!(creator_elements(&xml), creators, "{head}\n{xml}");
+  }
 }

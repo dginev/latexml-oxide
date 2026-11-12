@@ -33985,6 +33985,41 @@ lost, where the base (int155a0) made Gronau and Wagenmakers Waldorp's affiliatio
 
 **Known REDs of the fail-safe (review revCR7d, synthetic, Perl the same; the base wrote each whole):** (S1) a later piece that starts with a note, not a mark — `\author{Ann Able,\thanks{Permanent address: Univ Z.} Bob Baker…, Carl Cole}` — gives the note to Bob: the check catches a mark-led piece, not a note-led one; (S2) an address line whose mark comes after its text (`{\it Dept. of Physics, Univ X}$^{a}$`) still becomes an author creator. (S3, no false owner) the check reads Perl's raw split, not the routed result, so a few shapes CR7c already routed right fall back whole (`\and Bob Baker\affil{b}\\ \affil{a} Univ X…`, a mark printed only in a note). 1110.6375 is now written whole (the fail-safe), so it no longer witnesses the split's behaviour above. Probes: `/home/deyan/data/pk_wt/scratch_revCR7d/probe/p1..p6.tex`.
 
+**A definition the block can't replay (FNR1).** `emit::declaration_reads_past` declines a block in two cases. (1) A
+declaration holds a macro whose undelimited arguments run past it (`content::reads_past`): a macro printing a note then
+defining, `\newcommand{\footremember}[2]{\footnote{#2}\newcounter{#1}…}`, defines past the note its arguments made, so
+replayed it read the next declaration's tokens and on past the entry — `\footremember\footremember…`, its
+`\newcounter{\footremember}` a counter of no name, every theorem then missing its `{` and a Fatal (2505.04436,
+1511.09009). (2) A definition whose call prints too: the rehearsal drops it from the replayable declarations (a replay
+would print it twice), so where the reading writes the call apart — a note, a contact, a mark the names request — it took
+no effect, and a spaced `\footnoteremember{uni}{…}` (` \footnote{#2} \newcounter{#1} \setcounter{#1}{\value{footnote}} `)
+left the later authors' `\footnoterecall{uni}` an undefined counter (2407.13730, 2606.19583: one mark dropped, one empty).
+Such a call is kept (`field_notes::PrintingCall`, `ledger::Unsaid::printing`) with the definees the block introduces
+(undefined once the rehearsal is undone: a class's state a paper's call sets, PoS's `\global\@speakertrue` 1009.6192,
+manyfoot's `\@thefnmark` 2511.01971, is the class's to read) and whether they are global; one local to a group of its call
+is not (`\begingroup\def\thefootnote{}\footnote{…}\endgroup`: 2602.15181, 0903.4816, 2311.17684). The block declines only
+where no name's run holds the call (`emit::unwritten`, shared with `counter_moved`), it prints a note, a contact or a mark
+there, and a later token of the block reads a definee (`emit::printing_read_later`, `content::reads_definition`): its
+control sequence, or a counter's name as an argument (`\footnoterecall{uni}`, `\value{uni}`), in the tokens or one level
+into a document's macro they call. A local definition is read only up to the next top-level `\and`, which ends the
+author's tabular cell (latex.ltx `\and`). A definition nobody reads keeps the replay: the common `\footremember` template
+with no recall (2209.10798, 2604.20516; review revFNR1 u01-u03). Where the decline would write the block whole (the CR7d
+fail-safe, `split_owns_falsely`) and only a printing call drives it, the replay is kept too. Written as Perl splits it, a
+declined block's notes are digested from their tokens, so no plain-text Warning is due there; its decline Warning counts
+it. A call printing a name is written with it (`\blockN{Bob Baker}`'s `\gdef`, `emit_a_declaration_keeps_its_calls_argument`).
+Left (REDs): a re-assigned meaning a later author reads (`author_note_macro_resets_an_existing_counter_red`); under a
+class with no binding the title's notes step no counter (`omnibus_title_footnotemark_prints_fnsymbol_red`, so 2407.13730's
+recalls print "0"); the rehearsal reads the block in no cell group, so a local definition read past its `\and` moves the
+call's argument into the next name (`author_note_macro_local_def_read_past_its_cell_red`); the replay writes such a note
+as plain text, its markup lost and counted (`footremember_note_markup_written_as_plain_text_red`, 2604.20516). Repros
+`footnoterecall_three_authors_spaced_remember`, `footnoterecall_two_authors_control`,
+`author_note_macro_defines_what_a_later_author_reads`, `author_mark_macro_defines_what_a_later_author_reads`,
+`author_mark_macro_steps_a_counter_on_each_name`, `author_note_macro_with_a_local_thefootnote`,
+`footremember_unread_keeps_the_replay`, `footremember_unread_on_a_marked_names_line`, `footremember_unread_after_a_comma`,
+`author_note_macro_local_def_ends_with_its_cell`, `footrecall_read_where_the_split_would_be_whole`,
+`footnoterecall_held_in_a_document_macro`; guard
+`perfect_kernel_batchcr7::a_definition_its_call_prints_takes_effect_in_order`.
+
 Repros `cr7_fncounter_and`, `cr7_ne5_footremember`, `cr7_marks_branch_footremember`, `cr7_split_lines_keep_commas`,
 `cr7_split_items_to_each_name`, `cr7b_linebreak_option_cut`, `cr7b_and_cut_starts_author`, `cr7b_split_items_by_name`,
 `cr7c_split_names_whole_words`, `cr7c_and_line_comma_cut`, `cr7c_split_corresponding_left_address`,

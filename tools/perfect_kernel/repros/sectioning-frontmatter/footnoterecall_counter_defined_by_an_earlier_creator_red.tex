@@ -1,20 +1,19 @@
 % mechanism: an author block's `\footnoterecall{uni}` (`\footnotemark[\value{uni}]`) reads the counter an earlier
 %   creator's `\footnoteremember` made (`\newcounter{uni}`, global); pdflatex typesets the block in order, so every
-%   recall prints the remembered mark. The frontmatter emitter writes Ann One's call as its note and a footnote step,
-%   and never replays its `\newcounter{uni}\setcounter{uni}{…}` before the later creators: the recalls read a counter not
-%   yet defined. Only a remember macro whose body holds spaces (` \footnote{#2} \newcounter{#1} …`) takes this path; the
-%   unspaced body (footnoterecall_two_authors_control) is caught as a definition the block can't replay and written in
-%   order (`declaration_reads_past`, emit.rs). Bob Two's recall (a space before it) is dropped with a counted Warning.
+%   recall prints the remembered mark. The remember macro's body holds spaces (` \footnote{#2} \newcounter{#1} …`), so
+%   its definitions are in no replayable declaration; FNR1 writes the block as Perl's `\lx@add@authors` splits it, in
+%   order (`declaration_reads_past`, emit.rs; the article form footnoterecall_three_authors_spaced_remember is GREEN).
+%   Left: under scrarticle (OmniBus) the title's notes step no footnote counter and print arabic marks, so the recall
+%   reads 0 (omnibus_title_footnotemark_prints_fnsymbol_red)
 % witness: 2407.13730, 2606.19583 (GA1d A/B; `\footnoteremember` in 6 of 35,942 census papers)
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: Ann One ∗, Bob Two ∗, Cy Three ∗; footnote ∗ The University
-% engines: rust int163a 0 errors, 3 warnings, Cy Three's mark empty; GA1d 1 error (Error:undefined:\c@uni), 2 warnings,
-%   Cy Three's mark `<ERROR class="undefined">\c@uni</ERROR>`; GA1e (`\value` as `\csname`) 0 errors, 2 warnings, the
-%   XML as int163a, Cy Three's empty mark now uncounted; GA1f 0 errors, 3 warnings, Cy Three's mark "0" with its
-%   "Missing number" (footnotemark_missing_number_reads_as_tex): the replayed mark misses the title's `\fnsymbol`, where
-%   TeX's 0 prints nothing (an explicit `\footnotemark[1]` there is "1", not ∗, on int163a too)
-% expect:  0 errors; each creator carries the one note's mark
-% status:  RED (int163a, GA1d, GA1e)
-% moves:   post-merge (the emitter's replay of a block's declarations: P4b2's code)
+% engines: rust int163a 0 errors, 3 warnings, Bob Two's mark dropped, Cy Three's mark empty; GA1d 1 error
+%   (Error:undefined:\c@uni), 2 warnings, Cy Three's mark `<ERROR class="undefined">\c@uni</ERROR>`; GA1e 0 errors,
+%   2 warnings, the XML as int163a; GA1f 0 errors, 3 warnings, Cy Three's mark "0" with its "Missing number"; FNR1
+%   0 errors, 1 warning (the decline), Bob Two's and Cy Three's marks "0"
+% expect:  0 errors; each creator carries the one note's mark ∗
+% status:  RED (int163a, GA1d, GA1e, FNR1)
+% moves:   the proposed batch of omnibus_title_footnotemark_prints_fnsymbol_red
 \documentclass[a4paper]{scrarticle}
 \newcommand{\footnoteremember}[2]{
 	\footnote{#2}

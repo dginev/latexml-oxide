@@ -27,10 +27,10 @@ use super::{
     BreakKind, EmailMeaning, Event, HeldError, break_events, declaration_events, in_block_content,
   },
   field_notes::{
-    EnvironmentStep, FieldCreator, FieldNotesHookGuard, field_notes_begin, field_notes_end,
-    note_creator_call,
+    EnvironmentStep, FieldCreator, FieldNotesHookGuard, PrintingCall, field_notes_begin,
+    field_notes_end, note_creator_call,
   },
-  ledger::{SkipReason, annotated_parent, email_meaning},
+  ledger::{SkipReason, Unsaid, annotated_parent, email_meaning},
   policy::TitleMarks,
   *,
 };
@@ -1143,28 +1143,28 @@ pub(in crate::base_utilities) enum Rehearsal<R> {
   /// The callback's value on the digested list, the errors and warnings the rehearsal raised (held, then discarded with
   /// it), and what its boxes do not say.
   Done {
-    value:         R,
-    errors:        usize,
-    warnings:      usize,
+    value:        R,
+    errors:       usize,
+    warnings:     usize,
     /// the definitions made in the tokens' positions ([`declaration_events`]; none for tokens without positions)
-    declarations:  Vec<Event>,
+    declarations: Vec<Event>,
     /// the block breaks its binding declares, by the positions they were called at ([`break_events`]; `Policy::block_breaks`)
-    breaks:        Vec<Event>,
+    breaks:       Vec<Event>,
     /// the errors held, by the positions they were raised at, in order (none positioned for tokens without positions)
-    held:          Vec<HeldError>,
+    held:         Vec<HeldError>,
     /// the environments its tokens open and close ([`EnvironmentStep`])
-    environments:  Vec<EnvironmentStep>,
+    environments: Vec<EnvironmentStep>,
     /// the creator calls its own expansion made, which no box says the keyvals of ([`FieldCreator`])
-    creators:      Vec<FieldCreator>,
+    creators:     Vec<FieldCreator>,
     /// whether the run left a group open — its frames not back where they started, the mode it switched to not ended (an
     /// `\end{tabular}\begin{tabular}{c}` juggle in the line, 1401.6981): what it digested past that point is in no box of
     /// the list, so no event says it, and the content check reads the block's content too (`resolver::placed::content_check`)
-    left_open:     bool,
-    /// where the block's own digestion moved the footnote counter (`field_notes::FieldNotes::counter_moves`)
-    counter_moves: Vec<(u16, u16)>,
+    left_open:    bool,
+    /// what the block's own digestion did that no event says (`field_notes::FieldNotes::counter_moves`, `printing`)
+    unsaid:       Option<Box<Unsaid>>,
     /// the entries the run queued besides its creators ([`note_frozen_entry`]): a frontmatter setter run inside the block,
     /// a `\date` in `\author` (2503.02741), undone with the run
-    queued:        Vec<RawFrontmatter>,
+    queued:       Vec<RawFrontmatter>,
   },
   /// No rehearsal was made or kept, and why: no journal could open (one is already open), its assignments could not be
   /// undone, or it ended in a Fatal error of its own (discarded with it).
@@ -1305,6 +1305,17 @@ pub(in crate::base_utilities) fn rehearse<R>(
   };
   let queued = FROZEN_ENTRIES.with(|entries| std::mem::take(&mut *entries.borrow_mut()));
   let undone = journal.rollback();
+  // (a printing call's definitions that the block introduces, undefined again once undone: the class's own state such a call
+  // sets — PoS's `\global\@speakertrue` in a paper's `\speaker`, 1009.6192; manyfoot's `\@thefnmark`, 2511.01971 — is the
+  // class's to read, as `\maketitle` does)
+  let printing: Vec<PrintingCall> = notes
+    .printing
+    .into_iter()
+    .filter_map(|mut call| {
+      call.definees.retain(|&key| !has_meaning_key(key));
+      (!call.definees.is_empty()).then_some(call)
+    })
+    .collect();
   for (flag, value) in FLAGS.iter().zip(saved) {
     assign_value(flag, value, Some(Scope::Global));
   }
@@ -1373,7 +1384,11 @@ pub(in crate::base_utilities) fn rehearse<R>(
       environments: notes.environments,
       creators: notes.creators,
       left_open,
-      counter_moves: notes.counter_moves,
+      unsaid: Unsaid {
+        counter_moves: notes.counter_moves,
+        printing,
+      }
+      .boxed(),
       queued,
     },
     _ => Rehearsal::Skipped(SkipReason::NotUndone),
