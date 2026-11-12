@@ -1,0 +1,22 @@
+% mechanism: a command LaTeXML binds is no macro the kernel can patch: a constructor (`\emph`), a locked macro
+%   (`\section`, `\footnote`), one reading LaTeXML's argument types (`\item`). `\__hook_patch_command:Nnn`
+%   (latex.ltx:6888) said "Generic hooks cannot be added to '\emph'" (a false Error, pdflatex is clean) or dropped
+%   the patch with `Info:ignore`; now one Warning per hook, and the hook code does not run: the printed "Before."
+%   is the one word lost, counted (the others print nothing). Text kept.
+% witness: synthetic (QA47A); 2602.09577, 2510.06714, 2411.13565, 2511.21986, 2603.08400 (QA46: no authored text lost)
+% oracle:  pdflatex 0 `!`; "Before. 1 One" "A1 b c" "Text." (the item hook's `\relax` prints nothing)
+% engines: rust int161a: hooks never applied, 0 errors 0 warnings, "Before." lost silently; the kernel list run
+%   without the override (QA46): a false Error on `\emph`; QA47A: 0 errors, 4 warnings; Perl: `\AddToHook` a no-op
+%   (latex_base.pool.ltxml:833).
+% expect:  0 errors, 4 warnings (`cmd/emph/before`, `cmd/section/before`, `cmd/footnote/before`, `cmd/item/before`)
+% status:  GREEN (QA47A; the lost word a counted loss until the macro faces, BM Q3.8)
+\documentclass{article}
+\AddToHook{cmd/emph/before}{\relax}
+\AddToHook{cmd/section/before}{Before.}
+\AddToHook{cmd/footnote/before}{\relax}
+\AddToHook{cmd/item/before}{\relax}
+\begin{document}
+\section{One}
+A\footnote{N} \emph{b} c.
+\begin{itemize}\item Text.\end{itemize}
+\end{document}

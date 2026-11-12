@@ -390,15 +390,19 @@ LoadDefinitions!({
           spec = spec.replace("{}", "");
           spec = spec.replace("Token", "");
 
+          // The prefixes print through `print_esc`, so in `\escapechar` (tex.web §1295; `print_meaning` §296): ltcmdhooks
+          // reads them with `\escapechar` set to `/` (latex.ltx:7011-7016, `\__hook_make_prefixes:w`).
+          let esc = escapechar();
           let mut prefixes = String::new();
-          if expandable.is_protected {
-            prefixes.push_str("\\protected");
-          }
-          if expandable.is_long {
-            prefixes.push_str("\\long");
-          }
-          if expandable.is_outer {
-            prefixes.push_str("\\outer");
+          for (set, name) in [
+            (expandable.is_protected, "protected"),
+            (expandable.is_long, "long"),
+            (expandable.is_outer, "outer"),
+          ] {
+            if set {
+              prefixes.push_str(&esc);
+              prefixes.push_str(name);
+            }
           }
           if !prefixes.is_empty() {
             prefixes.push(' ');

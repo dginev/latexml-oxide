@@ -1663,7 +1663,8 @@ fn list_labels_come_from_itemlabel() {
       include_str!(
         "../../../tools/perfect_kernel/repros/list-structure/list_label_set_by_a_class_list.tex"
       ),
-      1,
+      // memoir's `\@iffirstamp`, and its two hooks on bound commands (memoir.cls:5832-5833; QA47A)
+      3,
       &[
         (Some("–"), "one"),
         (Some("*"), "inner"),
@@ -6991,8 +6992,9 @@ Body text.
 ";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  // memoir's own `\@iffirstamp` (a conditional not spelled `\if…`).
-  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  // memoir's own `\@iffirstamp` (a conditional not spelled `\if…`), and its two hooks on bound commands
+  // (memoir.cls:5832-5833 `cmd/end@float/before`, `cmd/end@dblfloat/before`; QA47A).
+  assert_eq!(warning_count(&stderr), 3, "{stderr}");
   assert!(
     stderr.contains("Warning:misdefined:\\@iffirstamp"),
     "{stderr}"
@@ -11898,7 +11900,8 @@ fn changepage_page_checks_are_the_packages() {
 
 /// 57l: under memoir, changepage's page macros are memoir's (memoir.cls:12216 `\EmulatedPackage`;
 /// changepage.sty:8-11 stops) — its `\checkoddpage` survives — while its list `{adjustwidth}`
-/// (memoir.cls:11267-11297) gives way to the transparent one. memoir's `\@iffirstamp` warning stays.
+/// (memoir.cls:11267-11297) gives way to the transparent one. memoir's `\@iffirstamp` warning stays, with the two of
+/// its hooks on bound commands (memoir.cls:5832-5833 `cmd/end@float/before`, `cmd/end@dblfloat/before`; QA47A).
 #[test]
 fn changepage_under_memoir_keeps_memoirs() {
   let (stderr, xml) = convert_with(
@@ -11908,7 +11911,7 @@ fn changepage_under_memoir_keeps_memoirs() {
     None,
   );
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  assert_eq!(warning_count(&stderr), 3, "{stderr}");
   assert!(
     stderr.contains(r"Warning:misdefined:\@iffirstamp"),
     "{stderr}"
@@ -12130,7 +12133,8 @@ fn subfloat_reads_a_lone_optional_as_its_caption() {
 
 /// 57l: memoir's own `\changetext` keeps LaTeXML's one column: memoir's `\ch@ngetext`
 /// (memoir.cls:11237-11245) halved `\columnwidth` under `[twocolumn]`; the memoir binding installs the
-/// shared one-column override after the raw class.
+/// shared one-column override after the raw class. (Three Warnings: memoir's `\@iffirstamp` and its two hooks on
+/// bound commands, memoir.cls:5832-5833; QA47A.)
 #[test]
 fn changetext_under_memoir_keeps_one_column() {
   let (stderr, xml) = convert_with(
@@ -12140,7 +12144,7 @@ fn changetext_under_memoir_keeps_one_column() {
     None,
   );
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  assert_eq!(warning_count(&stderr), 3, "{stderr}");
   assert!(
     stderr.contains(r"Warning:misdefined:\@iffirstamp"),
     "{stderr}"

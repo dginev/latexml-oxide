@@ -624,6 +624,40 @@ LoadDefinitions!({
 \protected\def\sscshape{\not@math@alphabet\sscshape\relax\fontshape\sscdefault\selectfont}"
   );
 
+  // `\__hook_patch_command:Nnn` (latex.ltx:6888), which applies a `cmd/<name>/<hook>` hook from `\begin{document}`
+  // on: the kernel patches a macro; a binding (a constructor or primitive of ours; a locked macro, a Rust-bodied one, one
+  // reading LaTeXML's argument types) takes no patch until the macro faces, so its hook does not run, counted.
+  Let!("\\lx@hook@patch@command", "\\__hook_patch_command:Nnn");
+  DefMacro!("\\__hook_patch_command:Nnn Token {} {}", sub[(cs, name, hook)] {
+    let binding = cs.with_str(is_name_locked)
+      || match lookup_meaning(&cs) {
+        Some(Stored::Expandable(m)) => {
+          !matches!(m.get_expansion(), Some(ExpansionBody::Tokens(_)))
+            || m.get_parameters().is_some_and(|ps| {
+              ps.get_parameters().iter().any(|p| {
+                !with(p.name, |n| matches!(n, "Plain" | "Until" | "UntilBrace" | "Match" | "RequireBrace"))
+              })
+            })
+        },
+        Some(Stored::Constructor(_) | Stored::Primitive(_) | Stored::MathPrimitive(_)) => {
+          lookup_definition(&cs)?.is_some_and(|d| d.get_origin().is_latexml_owned())
+        },
+        _ => false,
+      };
+    if binding {
+      let hook = s!("cmd/{}/{}", name.to_string(), hook.to_string());
+      Warn!("hook", hook,
+        s!("{hook}: LaTeXML's binding of {} takes no generic hook; its code does not run", cs.to_string()));
+      return Ok(Tokens!());
+    }
+    let mut call = vec![T_CS!("\\lx@hook@patch@command"), cs, T_BEGIN!()];
+    call.extend(name.unlist());
+    call.extend([T_END!(), T_BEGIN!()]);
+    call.extend(hook.unlist());
+    call.push(T_END!());
+    Ok(Tokens::new(call))
+  }, protected => true);
+
   // `\@latexbug` — kernel macro used to mark would-be bug reports.
   // No-op stub.
   def_macro_noop("\\@latexbug")?;

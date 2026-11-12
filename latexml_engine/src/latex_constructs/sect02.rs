@@ -194,10 +194,7 @@ pub(crate) fn load() -> Result<()> {
     let first_begin = lookup_bool("inPreamble");
     if first_begin
       && let Some(ops) = lookup_tokens("@document@preamble@atend") {
-      local_state_unlocked(false);
-      let r = digest(ops);
-      expire_state_unlocked();
-      boxes.push(r?);
+      boxes.push(digest_relocked(ops)?);
     }
     // Fire the L3 hook system for begindocument/before, then begindocument.
     // Modern LaTeX (with expl3) fires these in order at \begin{document}:
@@ -230,19 +227,13 @@ pub(crate) fn load() -> Result<()> {
     // `begindocument` hook overrode our locked `\@caption` and its `[`-scan
     // overshot every figure (beamerdarkthemes guide, 101 caption errors).
     if first_begin && lookup_definition(&T_CS!("\\hook_use_once:n"))?.is_some() {
-      local_state_unlocked(false);
-      let r = digest(hook_use_once_tokens("begindocument/before"));
-      expire_state_unlocked();
-      boxes.push(r?);
+      boxes.push(digest_relocked(hook_use_once_tokens("begindocument/before"))?);
     }
     // latex.ltx `\document` L9471: `\@kernel@after@begindocument@before`, whose
     // `\reinstall@nfss@defs` (:12513-12514) makes the shape switches
     // `\protected` for the body (latex_constructs_rust_only.rs).
     if first_begin && lookup_definition(&T_CS!("\\reinstall@nfss@defs"))?.is_some() {
-      local_state_unlocked(false); // see the begindocument/before block
-      let r = digest(Tokens!(T_CS!("\\reinstall@nfss@defs")));
-      expire_state_unlocked();
-      boxes.push(r?);
+      boxes.push(digest_relocked(Tokens!(T_CS!("\\reinstall@nfss@defs")))?);
     }
     // The hook's other half (latex.ltx:12513-12514), `\init@series@setup` (:13902-13920): `\reset@font`, then
     // `\mdseries` and `\let\seriesdefault\f@series` while `\seriesdefault` is the kernel's. A font switch of the
@@ -253,10 +244,7 @@ pub(crate) fn load() -> Result<()> {
     // `perfect_kernel_batch77u::{preamble_font_switch_does_not_reach_the_body,
     // class_body_font_does_not_reach_the_body, family_default_survives_a_preamble_switch}`.
     if first_begin && lookup_definition(&T_CS!("\\init@series@setup"))?.is_some() {
-      local_state_unlocked(false);
-      let r = digest(Tokens!(T_CS!("\\init@series@setup")));
-      expire_state_unlocked();
-      boxes.push(r?);
+      boxes.push(digest_relocked(Tokens!(T_CS!("\\init@series@setup")))?);
     }
     // latex.ltx `\document` L9472: right after begindocument/before, the
     // kernel loads the expl3 BACKEND — `\@expl@sys@load@backend@@` →
@@ -287,6 +275,10 @@ pub(crate) fn load() -> Result<()> {
     } else if first_begin && lookup_definition(&T_CS!("\\@expl@sys@load@backend@@"))?.is_some() {
       boxes.push(digest(Tokens!(T_CS!("\\@expl@sys@load@backend@@")))?);
     }
+    // latex.ltx:9511 `\@kernel@before@begindocument`, before the `begindocument` hook; its sibling after it, below.
+    if first_begin {
+      boxes.push(digest_relocked(Tokens!(T_CS!("\\@kernel@before@begindocument")))?);
+    }
     // @at@begin@document (\AtBeginDocument) + the begindocument hook. `inPreamble`
     // is STILL 1 here (we leave the preamble only after this block), so a deferred
     // `\RequirePackage`/`\usepackage` remains legal (corpus witnesses
@@ -304,10 +296,7 @@ pub(crate) fn load() -> Result<()> {
       crate::frontmatter_stores::note_document_hooks(true);
     }
     if first_begin && let Some(ops) = lookup_tokens("@at@begin@document@rawparam") {
-      local_state_unlocked(false);
-      let r = digest(ops);
-      expire_state_unlocked();
-      boxes.push(r?);
+      boxes.push(digest_relocked(ops)?);
     }
     // Order: the L3 `begindocument` hook (raw packages' `\AtBeginDocument`,
     // routed there since batch 56i) fires FIRST, then the bindings' private
@@ -318,16 +307,16 @@ pub(crate) fn load() -> Result<()> {
     // crossreftools_driver, test-autonum fatal; RUST-ONLY, Perl has no raw
     // cleveref). Guard: `perfect_kernel_batch56::binding_begin_document_code_outranks_raw_hook`.
     if first_begin && lookup_definition(&T_CS!("\\hook_use_once:n"))?.is_some() {
-      local_state_unlocked(false); // see the begindocument/before block
-      let r = digest(hook_use_once_tokens("begindocument"));
-      expire_state_unlocked();
-      boxes.push(r?);
+      boxes.push(digest_relocked(hook_use_once_tokens("begindocument"))?);
     }
     if first_begin && let Some(ops) = lookup_tokens("@at@begin@document") {
-      local_state_unlocked(false);
-      let r = digest(ops);
-      expire_state_unlocked();
-      boxes.push(r?);
+      boxes.push(digest_relocked(ops)?);
+    }
+    // latex.ltx:9513 `\@kernel@after@begindocument`: its `\__hook_cmd_begindocument_code:` (:6865-6873) applies the
+    // preamble's `cmd/<name>/<hook>` hooks (a binding's are counted, `\__hook_patch_command:Nnn`) and patches later
+    // ones at once. Witnesses 2602.09577, 2510.06714, 2411.13565, 2511.21986, 2603.08400.
+    if first_begin {
+      boxes.push(digest_relocked(Tokens!(T_CS!("\\@kernel@after@begindocument")))?);
     }
     // The begin-document hooks have run (their tests of `\chapter` got TeX's answer): a `\chapter` the class left
     // undefined reads LaTeXML's chapter from here, with one Warning (OXIDIZED_DESIGN #734).
@@ -708,6 +697,15 @@ pub(crate) fn load() -> Result<()> {
   Let!("\\lx@orig@enddocument", "\\end{document}", Scope::Global);
 
   Ok(())
+}
+
+/// Digest begin-document code with the state RE-LOCKED (see `\begin{document}`): a binding-locked macro is never
+/// redefined from it.
+fn digest_relocked(tokens: Tokens) -> Result<Digested> {
+  local_state_unlocked(false);
+  let r = digest(tokens);
+  expire_state_unlocked();
+  r
 }
 
 /// `\AtBeginDocument[label]{code}` / `\AtEndDocument`: `\AddToHook{hook}
