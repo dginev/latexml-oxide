@@ -25,11 +25,14 @@
 //!   by Perl's calls built from the reading, its vocabulary and cuts, and the content check on the placed output. (The S2b
 //!   writer that rewrote placed frontmatter after `insert_frontmatter`, and the census switch `LATEXML_FM_SHADOW`, were
 //!   deleted in DEL4.)
+//! - [`argument_marks`]: the query on an argument's marks as digested (Option C F0), on the one rehearsal of
+//!   [`separators`].
 //! - [`separators`]: a binding's query on an argument's `\and`-family separators by meaning (`argument_separators`,
 //!   `\lx@fm@separators`; OD #995).
 
 use super::*;
 
+pub(in crate::base_utilities) mod argument_marks;
 pub(in crate::base_utilities) mod emitter;
 pub(in crate::base_utilities) mod events;
 pub(in crate::base_utilities) mod field_notes;
@@ -44,6 +47,10 @@ pub(in crate::base_utilities) mod separators;
 // (for the guards, which read a dump's events and the resolver's tuples, and the types of a public event's fields;
 // prefixed, as the prelude re-exports these)
 // (the emitter's vocabulary, moved unchanged, for its callers in `frontmatter/` and `defs/`: the plan's row "Knowledge in, driver out, one pass")
+// (for the bindings, which ask what an argument's separators mean: Option C P2, OXIDIZED_DESIGN_DIVERGENCES #995)
+// (the marks query, Option C F0)
+pub(in crate::base_utilities) use argument_marks::count_unread as count_unread_marks;
+pub use argument_marks::{argument_marks, prints_marks};
 pub(in crate::base_utilities) use emitter::{
   EMITTING, SETTERS_RECOVERED, block_creator_written, calls::*, check_placed_content,
   emit_commands, emitted, setters_recovered, take_digested,
@@ -78,7 +85,6 @@ pub use reading::{fm_reading_json, reset_fm_reading};
 pub(in crate::base_utilities) use resolver::owners::*;
 // (for the guards, which resolve a block's input again)
 pub use resolver::{Input as FmInput, Resolved as FmResolved, resolve as fm_resolve};
-// (for the bindings, which ask what an argument's separators mean: Option C P2, OXIDIZED_DESIGN_DIVERGENCES #995)
 pub use separators::{
   ArgSeparator as FmArgSeparator, SepMeaning as FmSepMeaning, argument_separators,
   argument_separators_at_every_level, kernel_separator_runs, split_at_kernel_separators,

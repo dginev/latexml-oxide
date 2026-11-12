@@ -1,0 +1,18 @@
+% mechanism: llncs's `\institute{\insts}` with `\newcommand\insts{Univ A, Town A \and Univ B, Town B}`: the list held in
+%   a macro is cut by the reading and each entry written as plain text, counted by a Warning — whose text keeps the
+%   comma ("Univ A, Town A") while the written contact loses it ("Univ A Town A"): a printed character lost against
+%   its count (study P4S risk R2; P3's by-text write); to fix before P4d
+% witness: study P4S repro n1 (synthetic)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2 / 1 Univ A, Town A / 2 Univ B, Town B"
+% engines: int160c and F0: Ann Able "Univ A Town A", Bob Baker "Univ B Town B", 2 Warnings; perl: not compared
+% expect:  0 errors; Ann Able "Univ A, Town A", Bob Baker "Univ B, Town B"
+% status:  RED (int160c, F0)
+\documentclass{llncs}
+\newcommand\insts{Univ A, Town A \and Univ B, Town B}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2}}
+\institute{\insts}
+\maketitle
+Text.
+\end{document}

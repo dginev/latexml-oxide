@@ -2326,7 +2326,7 @@ fn by_its_label(api: Tokens, line: &[Token]) -> Result<Tokens> {
   // under its run, review rev94b r3 B1: the frontmatter API's Cut cuts it at the marks the names request
   // (`cut_marked_contact`, OD #954), each entry its requesters' and one no name requests the block's; a call the Cut
   // declines is the frontmatter observer's, the font open before each entry kept (`\lx@fm@entry@font`), or whole)
-  if displaced_entries(&Tokens::new(line.to_vec()), None).len() > 1 {
+  if displaced_entries(&Tokens::new(line.to_vec()), None)?.len() > 1 {
     return Ok(api);
   }
   contact_line_call(&head.to_string(), &Tokens::new(line.to_vec()))
@@ -2454,8 +2454,8 @@ fn leads_with_unrequested_mark(line: &[Token]) -> Result<bool> {
     return Ok(false);
   };
   Ok(
-    authors_show_marks()
-      && queued_authors_requesting(&operand).is_empty()
+    authors_show_marks()?
+      && queued_authors_requesting(&operand)?.is_empty()
       && !digested_authors_requesting(&Tokens::new(operand.clone()).to_string())
       && is_a_mark(&operand)?
       && !requested_as_printed(&operand)?,
@@ -2611,22 +2611,14 @@ fn optional_contact(name: &str, in_place: bool, opt: Tokens, arg: Tokens) -> Res
       }
       return decide(Tokens::new(tokens));
     }
-    if !keys.is_empty()
-      && keys.iter().all(|key| {
-        let operand: Vec<Token> = key
-          .chars()
-          .map(|c| {
-            let c = c.to_string();
-            if c.chars().all(char::is_alphabetic) {
-              T_LETTER!(&c)
-            } else {
-              T_OTHER!(&c)
-            }
-          })
-          .collect();
-        !queued_authors_requesting(&operand).is_empty() || digested_authors_requesting(key)
-      })
-    {
+    let mut all_requested = !keys.is_empty();
+    for key in &keys {
+      if !queued_authors_requesting_key(key)? && !digested_authors_requesting(key) {
+        all_requested = false;
+        break;
+      }
+    }
+    if all_requested {
       return decide(call(&s!("label={{{}}}", keys.join(",")), arg));
     }
     // (a list of single words, `c, d`, is a key list no creator requests — in doubt, no caption: review rev94b r3 B2b,
@@ -2898,7 +2890,7 @@ fn displaced_api(name: &str) -> Option<&'static str> {
 /// its marks (`_unsplit`, the REVTeX binding's fail-safe). The line keeps its printed mark, as the class prints it.
 fn contact_line_call(head: &str, line: &Tokens) -> Result<Tokens> {
   let mut call = mouth::tokenize_internal(TeXString::assembled(s!("{head}"))).unlist();
-  if holds_requested_marked_entries(line) {
+  if holds_requested_marked_entries(line)? {
     call.push(T_BEGIN!());
     call.extend(line.unlist_ref().iter().copied());
     call.push(T_END!());
@@ -3144,17 +3136,17 @@ fn without_labels(tokens: &Tokens) -> Tokens {
 /// lines before the first label one entry — rstransa's `\address{$^{1}$… \\ $^{2}$…}`, each line an author's;
 /// 2607.25849's `\affiliation{email: \email{…}\\ $^1$Argelander-Institut …}` —; the whole argument one entry when no
 /// line leads with a label (one address over two lines). Marks inside one line are the API's to cut.
-fn displaced_entries(arg: &Tokens, store: Option<&str>) -> Vec<Tokens> {
+fn displaced_entries(arg: &Tokens, store: Option<&str>) -> Result<Vec<Tokens>> {
   use crate::base_utilities::{leading_line_label, split_top_level_lines};
   // (an `\and` list the class's title page numbers: entry n labelled n, `class_numbered_institutes` — caosp.sty:519-527's
-  // `\institutename`, astro-ph9805069; review rev99b B2)
-  if arg.unlist_ref().contains(&T_CS!("\\and"))
-    && let Some(numbered) = class_numbered_institutes(arg, store)
-  {
-    return split_tokens(numbered, vec![T_CS!("\\and").into()])
-      .into_iter()
-      .filter(|entry| entry.unlist_ref().iter().any(|t| *t != T_SPACE!()))
-      .collect();
+  // `\institutename`, astro-ph9805069; review rev99b B2; its `\and`s by meaning, P4d)
+  if let Some(numbered) = class_numbered_institutes(arg, store)? {
+    return Ok(
+      split_tokens(numbered, vec![T_CS!("\\and").into()])
+        .into_iter()
+        .filter(|entry| entry.unlist_ref().iter().any(|t| *t != T_SPACE!()))
+        .collect(),
+    );
   }
   let toks = arg.unlist_ref();
   let lines: Vec<&[Token]> = split_top_level_lines(toks)
@@ -3163,7 +3155,7 @@ fn displaced_entries(arg: &Tokens, store: Option<&str>) -> Vec<Tokens> {
     .collect();
   let labelled = |line: &[Token]| leading_line_label(&Tokens::new(line.to_vec())).is_some();
   if lines.len() < 2 || !lines.iter().any(|line| labelled(line)) {
-    return vec![arg.clone()];
+    return Ok(vec![arg.clone()]);
   }
   let mut entries: Vec<Vec<Token>> = Vec::new();
   for line in lines {
@@ -3176,20 +3168,22 @@ fn displaced_entries(arg: &Tokens, store: Option<&str>) -> Vec<Tokens> {
     }
   }
   // (each without the spaces around it: the space after a `\\` is no part of the next entry)
-  entries
-    .into_iter()
-    .map(|entry| {
-      let start = entry
-        .iter()
-        .position(|t| *t != T_SPACE!())
-        .unwrap_or(entry.len());
-      let end = entry
-        .iter()
-        .rposition(|t| *t != T_SPACE!())
-        .map_or(start, |e| e + 1);
-      Tokens::new(entry[start..end.max(start)].to_vec())
-    })
-    .collect()
+  Ok(
+    entries
+      .into_iter()
+      .map(|entry| {
+        let start = entry
+          .iter()
+          .position(|t| *t != T_SPACE!())
+          .unwrap_or(entry.len());
+        let end = entry
+          .iter()
+          .rposition(|t| *t != T_SPACE!())
+          .map_or(start, |e| e + 1);
+        Tokens::new(entry[start..end.max(start)].to_vec())
+      })
+      .collect(),
+  )
 }
 
 /// Are the entries of a displaced setter's call in doubt: one leads with a mark ([`is_a_mark`], a control-sequence symbol
@@ -3199,8 +3193,8 @@ fn displaced_entries(arg: &Tokens, store: Option<&str>) -> Vec<Tokens> {
 fn displaced_in_doubt(entries: &[Tokens]) -> Result<bool> {
   for entry in entries {
     if let Some(operand) = leading_mark_operand(entry.unlist_ref())
-      && authors_show_marks()
-      && queued_authors_requesting(&operand).is_empty()
+      && authors_show_marks()?
+      && queued_authors_requesting(&operand)?.is_empty()
       && !placed_authors_requesting(&Tokens::new(operand.clone()).to_string())
       && is_a_mark(&operand)?
       && !requested_as_printed(&operand)?
@@ -3239,7 +3233,7 @@ fn holds_and_separators(line: &[Token]) -> Result<bool> {
 fn unnumbered_and_list(line: &[Token], store: Option<&str>) -> Result<bool> {
   Ok(
     holds_and_separators(line)?
-      && class_numbered_institutes(&Tokens::new(line.to_vec()), store).is_none(),
+      && class_numbered_institutes(&Tokens::new(line.to_vec()), store)?.is_none(),
   )
 }
 
@@ -3262,7 +3256,7 @@ fn kernel_and_list(line: &[Token]) -> Result<bool> {
           if matches!(defn.origin, DefinitionOrigin::Pool | DefinitionOrigin::Unknown))
     },
   };
-  Ok(kernel && class_numbered_institutes(&Tokens::new(line.to_vec()), None).is_none())
+  Ok(kernel && class_numbered_institutes(&Tokens::new(line.to_vec()), None)?.is_none())
 }
 
 /// Does a displaced setter's argument hold the class's own structure, which the API cannot read as an entry's text: a
@@ -3422,7 +3416,7 @@ fn route_displaced(records: Vec<DisplacedRecord>, printed: &str) -> Result<()> {
     if holds_and_separators(record.arg.unlist_ref())? {
       note_and_numbering(&record.store)?;
     }
-    let entries = displaced_entries(&record.arg, Some(&store));
+    let entries = displaced_entries(&record.arg, Some(&store))?;
     let redefined = readers.separators_redefined(&record.store, &[T_CS!("\\\\"), T_CS!("\\par")]);
     if displaced_in_doubt(&entries)?
       || displaced_argument_in_doubt(&record.arg, Some(&store), &redefined)?
@@ -3489,7 +3483,7 @@ fn hand_displaced_stores() -> Result<Vec<Digested>> {
       Some(Stored::String(store)) => Some(with(*store, ToString::to_string)),
       _ => None,
     };
-    for entry in displaced_entries(&without_labels(arg), store.as_deref()) {
+    for entry in displaced_entries(&without_labels(arg), store.as_deref())? {
       calls.extend(contact_line_call(api, &entry)?.unlist());
     }
     Info!(
@@ -4530,7 +4524,7 @@ pub(crate) fn note_and_numbering(store: &Token) -> Result<()> {
     SpeculativeRun, speculative_title_page_run, title_page_print_tokens,
   };
   let key = s!("lx_and_numbered_{}", store.with_str(ToString::to_string));
-  if lookup_value(&key).is_some() || !numbered_marks_requested() {
+  if lookup_value(&key).is_some() || !numbered_marks_requested()? {
     return Ok(());
   }
   let mut defs = vec![T_CS!("\\def"), *store, T_BEGIN!()];
@@ -7728,6 +7722,7 @@ fn row_calls(tail: Tokens, made: i64, at_maketitle: bool, under_block: bool) -> 
     Some(marked),
     None,
     tail,
+    // (token reading until P4c, F0 report)
     queued_creators_have_marks(),
     authors_queued,
   )
@@ -7969,7 +7964,7 @@ LoadDefinitions!({
     let name = name.to_string();
     // (an llncs-style `\institute{A \and B}` the class numbers 1, 2 on its title page: the entries labelled by their
     // numbers, which the authors' numeric marks — `$^{1}$`, `\inst{1}` — request, `class_numbered_institutes`)
-    let (stuff, numbered) = match class_numbered_institutes(&stuff, Some(&s!("\\{}", store_of(&name)))) {
+    let (stuff, numbered) = match class_numbered_institutes(&stuff, Some(&s!("\\{}", store_of(&name))))? {
       Some(numbered) => (numbered, true),
       None => (stuff, false),
     };
@@ -7982,6 +7977,7 @@ LoadDefinitions!({
       Some(marked),
       None,
       stuff,
+      // (token reading until P4c, F0 report)
       numbered || queued_creators_have_marks(),
       true,
     )?))
@@ -8000,6 +7996,7 @@ LoadDefinitions!({
       Some(marked),
       None,
       stuff,
+      // (token reading until P4c, F0 report)
       queued_creators_have_marks(),
       true,
     )?))

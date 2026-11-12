@@ -305,6 +305,7 @@ LoadDefinitions!({
   // showing its mark (the frontmatter API's Cut: OXIDIZED_DESIGN_DIVERGENCES #954; census127 witnesses physics0607157,
   // 1302.1594), a sole entry every author's; an unmarked one stays the note it was.
   DefMacro!("\\affiliation{}", sub[(affiliation)] {
+    // (token reading until P4c, F0 report)
     let marked = leads_with_mark(&affiliation) && queued_creators_have_marks();
     Ok(if marked {
       Invocation!(T_CS!("\\lx@add@affiliation"), vec![

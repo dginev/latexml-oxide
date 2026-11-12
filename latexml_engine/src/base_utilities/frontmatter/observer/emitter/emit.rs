@@ -2145,7 +2145,7 @@ fn item_call(
         let segments = if piece {
           vec![Tokens::new(argument)]
         } else {
-          split_wrapped_affiliation_marks(Tokens::new(argument))
+          split_wrapped_affiliation_marks(Tokens::new(argument))?
         };
         let its_mark = assoc
           .label

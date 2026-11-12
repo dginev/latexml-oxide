@@ -294,7 +294,7 @@ pub(in crate::base_utilities) fn note_body(content: Tokens) -> Tokens {
 /// `\lx@affiliation@withsup`, which turns its leading mark into the
 /// `affiliation:N` label that the authors' own marks already request
 /// (`relocate_annotations` links them).
-fn split_before_affiliation_marks(tokens: Tokens) -> Vec<Tokens> {
+fn split_before_affiliation_marks(tokens: Tokens) -> Result<Vec<Tokens>> {
   split_marked_pieces(tokens, true)
 }
 
@@ -402,15 +402,22 @@ fn separator_glyph_len(toks: &[Token]) -> usize {
 
 /// [`split_before_affiliation_marks`] of a line (`line_start`) or of what follows a wrapper in one (`{…} \vspace{1mm}
 /// $^3$Univ C`), where a lead that prints nothing is a separator, not the start of the first institution.
-fn split_marked_pieces(tokens: Tokens, line_start: bool) -> Vec<Tokens> {
+fn split_marked_pieces(tokens: Tokens, line_start: bool) -> Result<Vec<Tokens>> {
   let toks = tokens.unlist();
   // (the marks the queued names request, when they carry any: a number or letter mark none of them requests, after a
   // word and a plain space, is the entry's own text — `$^1$Laboratory for $^3$He Studies`, the isotope — not the next
   // entry's label; after a separator or wider spacing it still parts the entries)
-  let names_marked = queued_author_marks().iter().any(|marks| !marks.is_empty());
+  let names_marked = queued_authors_marked()?;
   // (each mark outside every group: where it starts, the label it sets, whether it is glued to the word before it —
   // a plain space between, no separator: no spacing command, line break, comma or semicolon — and where it ends)
   let marks = top_level_marks(&toks);
+  let mut requested_marks = Vec::with_capacity(marks.len());
+  for mark in &marks {
+    requested_marks.push(match &mark.operand {
+      Some(operand) if names_marked => !queued_requesters(operand)?.is_empty(),
+      _ => false,
+    });
+  }
   let text_mark = |at: usize, last_head: Option<&str>| {
     if !names_marked {
       return false;
@@ -419,10 +426,7 @@ fn split_marked_pieces(tokens: Tokens, line_start: bool) -> Vec<Tokens> {
       return false;
     };
     let mark = &marks[k];
-    let requested = mark
-      .operand
-      .as_ref()
-      .is_some_and(|operand| !queued_requesters(operand).is_empty());
+    let requested = requested_marks[k];
     // (a mark no name requests that heads nothing — only spacing or a separator follows it before the next mark or the
     // end: `$^1$Univ A $^\dagger$ \quad $^2$Univ B` — is its entry's text, a symbol too; review rev99a S5)
     let next = marks.get(k + 1).map_or(toks.len(), |m| m.at);
@@ -529,7 +533,7 @@ fn split_marked_pieces(tokens: Tokens, line_start: bool) -> Vec<Tokens> {
   if !current.is_empty() {
     segments.push(Tokens::new(current));
   }
-  segments
+  Ok(segments)
 }
 
 /// A mark [`split_marked_pieces`] reads outside every group: where it starts and ends, its operand and the label it
@@ -709,7 +713,9 @@ fn successor(label: &str) -> Option<String> {
 /// boundary, or every piece after the first left the font (62zk review; 2609.00995; repro
 /// sectioning-frontmatter/affiliation_marks_inside_a_font_group_keep_the_font). A `\thanks{…}` wrapper is not
 /// repeated: its mark-led content is the affiliation list (the `\thanks` idiom of `\lx@add@thanks`; 2609.24896).
-pub(in crate::base_utilities) fn split_wrapped_affiliation_marks(line: Tokens) -> Vec<Tokens> {
+pub(in crate::base_utilities) fn split_wrapped_affiliation_marks(
+  line: Tokens,
+) -> Result<Vec<Tokens>> {
   if let Some((cmd, inner, trailing)) = leading_wrapper(&line) {
     // A bare group's opening declarations (`\small`, `\it`, `\color{blue}` with its argument, among the spacing that
     // prints nothing: `{\small\vspace{1mm}\noindent\it $^{1}$…}`, 2407.15815), repeated in each later piece.
@@ -718,7 +724,7 @@ pub(in crate::base_utilities) fn split_wrapped_affiliation_marks(line: Tokens) -
     } else {
       Vec::new()
     };
-    let mut pieces = split_wrapped_affiliation_marks(inner);
+    let mut pieces = split_wrapped_affiliation_marks(inner)?;
     if pieces.len() > 1 {
       // (a comma closing the wrapped list separates it from what follows the wrapper: `\textit{$^1$A, $^2$B,} $^3$C`)
       if let Some(last) = pieces.last_mut() {
@@ -745,14 +751,14 @@ pub(in crate::base_utilities) fn split_wrapped_affiliation_marks(line: Tokens) -
         .collect();
       // What follows the wrapper is split at its own marks too (`\textit{$^1$A, $^2$B} $^3$C`): its first piece stays
       // with the last wrapped one, the rest are pieces of their own.
-      let mut after = split_marked_pieces(Tokens::new(trailing), false).into_iter();
+      let mut after = split_marked_pieces(Tokens::new(trailing), false)?.into_iter();
       if let (Some(first), Some(last_piece)) = (after.next(), out.last_mut()) {
         let mut joined = last_piece.clone().unlist();
         joined.extend(first.unlist());
         *last_piece = Tokens::new(joined);
       }
       out.extend(after);
-      return out;
+      return Ok(out);
     }
   }
   split_before_affiliation_marks(line)

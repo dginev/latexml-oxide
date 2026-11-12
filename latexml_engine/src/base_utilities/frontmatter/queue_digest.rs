@@ -323,12 +323,7 @@ pub(in crate::base_utilities) fn frontmatter_label_request(
   operand: &Tokens,
   prefix: &str,
 ) -> Result<(Vec<String>, Vec<String>)> {
-  let keys = |printed: &str| -> Vec<String> {
-    clean_frontmatter_labels(printed, prefix)
-      .into_iter()
-      .flat_map(parted_printed_label)
-      .collect()
-  };
+  let keys = |printed: &str| printed_label_keys(printed, prefix);
   Ok(match printed_label(operand)? {
     Some(printed) => {
       let all = keys(&printed.text);
@@ -345,6 +340,29 @@ pub(in crate::base_utilities) fn frontmatter_label_request(
       Vec::new(),
     ),
   })
+}
+
+/// The label keys a mark's printed text requests ([`frontmatter_label_request`]): its labels, each parted as the page
+/// shows it ([`parted_printed_label`]).
+pub(in crate::base_utilities) fn printed_label_keys(printed: &str, prefix: &str) -> Vec<String> {
+  clean_frontmatter_labels(printed, prefix)
+    .into_iter()
+    .flat_map(parted_printed_label)
+    .collect()
+}
+
+/// The label `\lx@sup@setlabel@affiliation` sets for a mark's `operand` (#919): the first of its `printed` text's labels,
+/// else of its spelling's.
+pub(in crate::base_utilities) fn set_label(
+  operand: &Tokens,
+  printed: Option<&PrintedLabel>,
+) -> Option<String> {
+  match printed {
+    Some(printed) => clean_frontmatter_labels(&printed.text, "affiliation"),
+    None => clean_frontmatter_labels(&operand.to_string(), "affiliation"),
+  }
+  .into_iter()
+  .next()
 }
 
 /// A mark operand's printed text ([`printed_label`]), and the same with each pgf picture's text left out ([`label_ink`]:
@@ -951,9 +969,23 @@ pub fn author_creator_total() -> usize {
 }
 
 /// The queued author creators (their queue positions) whose names' marks request the label a mark's `operand` sets
-/// (`requesting_authors`): what a rerouted setter's optional argument is read against (`frontmatter_stores.rs`
+/// (`queued_requesters`): what a rerouted setter's optional argument is read against (`frontmatter_stores.rs`
 /// `optional_contact`: `\address[a]{…}` under `Ann$^a$` labels the address).
-pub fn queued_authors_requesting(operand: &[Token]) -> Vec<usize> { queued_requesters(operand) }
+pub fn queued_authors_requesting(operand: &[Token]) -> Result<Vec<usize>> {
+  queued_requesters(operand)
+}
+
+/// Whether a queued author's mark requests the affiliation label the plain `key` sets (`queued_label_requesters`): an
+/// optional argument's key (frontmatter_stores.rs `optional_contact`), as [`digested_authors_requesting`] reads a flush.
+pub fn queued_authors_requesting_key(key: &str) -> Result<bool> {
+  match clean_frontmatter_labels(key, "affiliation")
+    .into_iter()
+    .next()
+  {
+    Some(label) => Ok(!queued_label_requesters(&label)?.is_empty()),
+    None => Ok(false),
+  }
+}
 
 /// Whether an author creator of the flush being digested printed a mark requesting the affiliation label `key`: the
 /// labels the marks of the authors the flush took from the queue request (`lx_frontmatter_requested_marks`, `place.rs`
@@ -997,27 +1029,29 @@ pub fn placed_authors_requesting(key: &str) -> bool {
 /// Whether an author's name shows a mark — a queued author's, or one of the flush being digested
 /// ([`digested_authors_requesting`]'s): what a contact's leading mark is read against (`frontmatter_stores.rs`
 /// `leads_with_unrequested_mark`) — with none, the marks the names print are not read.
-pub fn authors_show_marks() -> bool {
-  queued_author_marks().iter().any(|marks| !marks.is_empty())
-    || with_value("frontmatter", |v| match v {
-      Some(Stored::HashTagData(frontmatter)) => {
-        frontmatter.get("ltx:creator").is_some_and(|creators| {
-          creators
-            .iter()
-            .filter(|c| c.attr.get("role").map(String::as_str) == Some("author"))
-            .any(|c| {
-              ["_plainmarks", "_textmarks", "_picturemarks"]
-                .iter()
-                .any(|attr| {
-                  c.attr
-                    .get(*attr)
-                    .is_some_and(|marks| !marks.trim().is_empty())
-                })
-            })
-        })
-      },
-      _ => false,
-    })
+pub fn authors_show_marks() -> Result<bool> {
+  Ok(
+    queued_authors_marked()?
+      || with_value("frontmatter", |v| match v {
+        Some(Stored::HashTagData(frontmatter)) => {
+          frontmatter.get("ltx:creator").is_some_and(|creators| {
+            creators
+              .iter()
+              .filter(|c| c.attr.get("role").map(String::as_str) == Some("author"))
+              .any(|c| {
+                ["_plainmarks", "_textmarks", "_picturemarks"]
+                  .iter()
+                  .any(|attr| {
+                    c.attr
+                      .get(*attr)
+                      .is_some_and(|marks| !marks.trim().is_empty())
+                  })
+              })
+          })
+        },
+        _ => false,
+      }),
+  )
 }
 
 /// The affiliation label a contact line's leading mark `operand` sets, keyed by its printed text as
@@ -1060,15 +1094,11 @@ pub fn names_request_label(label: &str) -> Result<bool> {
   let Some(key) = label.strip_prefix("affiliation:") else {
     return Ok(false);
   };
-  for operand in queued_author_marks().iter().flatten() {
-    if frontmatter_label_keys(&Tokens::new(operand.clone()), "affiliation")?
-      .iter()
-      .any(|requested| requested == label)
-    {
-      return Ok(true);
-    }
-  }
-  Ok(digested_authors_requesting(key) || placed_authors_requesting(key))
+  Ok(
+    !queued_label_requesters(label)?.is_empty()
+      || digested_authors_requesting(key)
+      || placed_authors_requesting(key),
+  )
 }
 
 /// The note kind of a contact line led by a footnote-symbol mark (`operand`, `is_symbol_mark`: `$^*$`, `$^\dagger$`; or

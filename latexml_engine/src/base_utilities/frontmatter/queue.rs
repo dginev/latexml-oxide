@@ -288,16 +288,20 @@ pub fn queued_creator_count() -> usize {
 /// which the frontmatter places on an author of its own without a name. Nor a combined mark
 /// (`\author{Ann$^{1}$}\author{Bob$^{2}$}\affil{$^{1,2}$Univ X}`, 77n r3 review probe w1): the affiliation is labelled
 /// by its first label only (`mark_label`), so Bob lost it; it is the run's.
-pub fn queued_authors_carry_entry_mark(affiliation: &Tokens) -> bool {
-  entry_mark(affiliation.unlist_ref()).is_some_and(|mark| {
-    !is_symbol_mark(&mark)
-      && clean_frontmatter_labels(&Tokens::new(mark.clone()).to_string(), "affiliation").len() == 1
-      && !queued_requesters(&mark).is_empty()
+pub fn queued_authors_carry_entry_mark(affiliation: &Tokens) -> Result<bool> {
+  Ok(match entry_mark(affiliation.unlist_ref()) {
+    Some(mark) => {
+      !is_symbol_mark(&mark)
+        && clean_frontmatter_labels(&Tokens::new(mark.clone()).to_string(), "affiliation").len()
+          == 1
+        && !queued_requesters(&mark)?.is_empty()
+    },
+    None => false,
   })
 }
 
-/// Does a queued creator carry superscript marks (`\author{A\textsuperscript{1}}`) for affiliations
-/// to be matched against?
+/// Does a queued creator carry superscript marks (`\author{A\textsuperscript{1}}`) for affiliations to be matched
+/// against? Token reading until P4c (F0 report).
 pub fn queued_creators_have_marks() -> bool {
   with_value("frontmatter_raw", |v| match v {
     Some(Stored::FrontmatterRaw(queue)) => queue

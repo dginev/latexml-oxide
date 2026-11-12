@@ -393,9 +393,9 @@ pub fn define_author_and_affil() -> Result<()> {
         Some(label.clone()),
         Some(affil)
       ])
-    } else if opens_with_a_mark(&affil) && queued_authors_carry_entry_mark(&affil) {
+    } else if opens_with_a_mark(&affil) && queued_authors_carry_entry_mark(&affil)? {
       Invocation!(T_CS!("\\lx@add@affiliation@marked"), vec![None, Some(affil)])
-    } else if let Some((unmarked, marked)) = unmarked_before_carried_marks(&affil) {
+    } else if let Some((unmarked, marked)) = unmarked_before_carried_marks(&affil)? {
       let mut calls = Vec::new();
       for piece in unmarked {
         calls.extend(
@@ -463,22 +463,28 @@ fn affil_run() -> usize {
 /// University \quad …` (2505.14999): an empty mark is no mark (`drop_empty_marks`, user 2026-10-20), so the first piece is
 /// no one's by a mark, and it is every author's by nothing: the block's, as an unmarked line among marked ones is (user
 /// ruling R12), not `Luo$^2$`'s, who shows the mark of his own.
-fn unmarked_before_carried_marks(affil: &Tokens) -> Option<(Vec<Tokens>, Tokens)> {
+fn unmarked_before_carried_marks(affil: &Tokens) -> Result<Option<(Vec<Tokens>, Tokens)>> {
   let pieces = split_tokens_delimited(affil.clone(), vec![
     T_CS!("\\quad").into(),
     T_CS!("\\qquad").into(),
   ]);
-  let first = pieces
-    .iter()
-    .position(|(_, piece)| opens_with_a_mark(piece) && queued_authors_carry_entry_mark(piece))
-    .filter(|first| *first > 0)?;
+  let mut first = None;
+  for (at, (_, piece)) in pieces.iter().enumerate() {
+    if opens_with_a_mark(piece) && queued_authors_carry_entry_mark(piece)? {
+      first = Some(at);
+      break;
+    }
+  }
+  let Some(first) = first.filter(|first| *first > 0) else {
+    return Ok(None);
+  };
   // (no mark on them, an empty one aside: a legend or an entry a mark leads is the list's, `$^{*}$Corresponding author \\
   // $^{1}$Univ X \quad $^{3}$Univ Z`, 2505.00989)
   if pieces[..first]
     .iter()
     .any(|(_, piece)| author_mark_position(&drop_empty_marks(piece.clone())).is_some())
   {
-    return None;
+    return Ok(None);
   }
   let mut marked: Vec<Token> = Vec::new();
   for (at, (delimiter, piece)) in pieces.iter().enumerate().skip(first) {
@@ -497,7 +503,7 @@ fn unmarked_before_carried_marks(affil: &Tokens) -> Option<(Vec<Tokens>, Tokens)
     })
     .filter(|piece| !piece.is_empty() && !prints_nothing(piece))
     .collect();
-  Some((unmarked, Tokens::new(marked)))
+  Ok(Some((unmarked, Tokens::new(marked))))
 }
 
 /// Whether an affiliation opens with a superscript mark, `$^{1}$` or `\textsuperscript{1}`, after what prints nothing

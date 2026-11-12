@@ -2222,15 +2222,17 @@ pub(in crate::base_utilities) fn unprinted_piece(e: &Event) -> bool {
 /// Whether a mark opens what `events` print (the first that prints: the Kind step's `LineText::opens_with_mark`, read on the
 /// events — what parts a line's marks, a space, a break, a layout, prints nothing).
 pub(in crate::base_utilities) fn opens_with_mark(events: &[&Event]) -> bool {
-  events
-    .iter()
-    .find(|e| {
-      !(matches!(
-        e.kind,
-        EventKind::Sep(SepKind::Gap { .. }) | EventKind::Break | EventKind::Layout
-      ) || unprinted_piece(e))
-    })
-    .is_some_and(|e| e.kind == EventKind::Mark)
+  opening_ink(events).is_some_and(|e| e.kind == EventKind::Mark)
+}
+
+/// The first event of `events` that prints ([`opens_with_mark`]'s).
+pub(in crate::base_utilities) fn opening_ink<'a>(events: &[&'a Event]) -> Option<&'a Event> {
+  events.iter().copied().find(|e| {
+    !(matches!(
+      e.kind,
+      EventKind::Sep(SepKind::Gap { .. }) | EventKind::Break | EventKind::Layout
+    ) || unprinted_piece(e))
+  })
 }
 
 /// What parts two marks of an entry's leading run and is no text of it ([`leading_marks`]).

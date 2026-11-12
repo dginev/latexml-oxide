@@ -5,7 +5,13 @@
 //! for byte (int142a); the count is the mechanism.
 use std::process::Command;
 
-use super::perfect_kernel_batch46::{error_count, warning_count};
+use latexml::util::test::convert_files_with_setup_then;
+
+use super::{
+  perfect_kernel_batch46::{error_count, warning_count},
+  perfect_kernel_batch84b::creators as text_creators,
+  perfect_kernel_batchz4::run,
+};
 
 /// Converts `tex` under the arXiv preload with `--debug=frontmatter`, checks that it errs and warns nothing, and returns
 /// its log and creators.
@@ -106,11 +112,11 @@ fn marked_block_reads_each_entry_once() {
   assert_eq!(read, queued, "each entry read once: {counts:?}");
 }
 
-/// The reading holds what the names' commands meant: `\up` means no mark when the first `\address` reads Ann's name and
-/// one after `\let\up\textsuperscript`, so the later `\address` reads her again and the Cut cuts it for both names. A
-/// reading kept across the `\let` sees one request and leaves the list uncut (the flush's readers then print the same
-/// creators, hence the log line). Witness of the `\let` shape 2209.14855. Repro
-/// sectioning-frontmatter/queue_reading_alias_after_names.
+/// A `\let` after the first names: `\up` means no mark when the first `\address` reads Ann's name and one after
+/// `\let\up\textsuperscript`. Since F0 (Option C P4a) the reading keeps each name's marks as its first rehearsal read
+/// them (the meaning tracking deleted, F0 report), so the later `\address` sees one request and the Cut leaves the list
+/// whole: the flush's readers print the same creators (was one "cut address at its marks"). Witness of the `\let`
+/// shape 2209.14855. Repro sectioning-frontmatter/queue_reading_alias_after_names.
 #[test]
 fn a_changed_meaning_reads_the_names_again() {
   let (log, creators) = converted(include_str!(
@@ -120,7 +126,7 @@ fn a_changed_meaning_reads_the_names_again() {
     creators,
     r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1">1</sup></personname> <contact name="Address: " role="address"><sup xml:id="id2"><text font="italic" xml:id="id2.1">1</text></sup>Univ Z</contact> <contact name="Address: " role="address"><sup xml:id="id3">1</sup>Univ A</contact> </creator> <creator before=" and " role="author"> <personname>Bob Baker<sup xml:id="id4">2</sup></personname> <contact name="Address: " role="address"><sup xml:id="id5">2</sup>Univ B</contact> </creator>"#
   );
-  assert_eq!(log.matches("FRONT cut address at its marks").count(), 1);
+  assert_eq!(log.matches("FRONT cut address at its marks").count(), 0);
 }
 
 /// The reading trusts the queue's length, so a removal forgets it: `\date{}` and `\keywords{}` dequeue two entries and
@@ -136,4 +142,165 @@ fn a_removal_forgets_the_reading() {
     r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2"><text font="italic" xml:id="id2.1">1</text></sup>Univ Z</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3"><text font="italic" xml:id="id3.1">1</text></sup>Univ A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id4"><text font="italic" xml:id="id4.1">2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id5"><text font="italic" xml:id="id5.1">2</text></sup>Univ B</contact> </creator>"#
   );
   assert_eq!(log.matches("FRONT cut affiliation at its marks").count(), 1);
+}
+
+/// A row: the repro (name, source), its Warning count, and its creators (name, then contacts).
+type Row<'a> = ((&'a str, &'a str), usize, &'a [&'a [&'a str]]);
+
+/// Option C F0/P4a: the queue's names request the labels their digested marks print (`queue_reading::author_marks`,
+/// `argument_marks`), while the binding's gate stays on the token reading until P4c (`affiliation_is_marked`). One row a
+/// shape: a marked list, a macro printing the mark (its list keeps the printed marks, as int160c), a `\let` copy, the
+/// unknown class's path, a mark inside a box; amsart's `\address` list repeated, its macro-printed marks requested by
+/// printed text where the Cut's uncut copies give way (`place_uncut_copies`, review revF0 B1: three entries, two). Each:
+/// no Error, its Warning count, every creator's name and contacts.
+#[test]
+fn queued_marks_read_as_digested() {
+  macro_rules! repro {
+    ($name:literal) => {
+      (
+        $name,
+        include_str!(concat!(
+          "../../../tools/perfect_kernel/repros/sectioning-frontmatter/",
+          $name,
+          ".tex"
+        )),
+      )
+    };
+  }
+  let rows: &[Row] = &[
+    (repro!("queue_marks_revtex_marked_list"), 0, &[
+      &["Ann Able 1", "affiliation=Univ A, Town A"],
+      &["Bob Baker 2", "affiliation=Univ B, Town B"],
+    ]),
+    (repro!("queue_marks_revtex_macro_held_marks"), 0, &[
+      &["Ann Able 1", "affiliation=1 Univ A, Town A"],
+      &["Bob Baker 2", "affiliation=2 Univ B, Town B"],
+    ]),
+    (repro!("queue_marks_revtex_let_copy_marks"), 0, &[
+      &["Ann Able 1", "affiliation=Univ A, Town A"],
+      &["Bob Baker 2", "affiliation=Univ B, Town B"],
+    ]),
+    (repro!("queue_marks_unknown_class_marked_list"), 1, &[
+      &["Ann Able 1", "affiliation=1 Univ A, Town A"],
+      &["Bob Baker 2", "affiliation=2 Univ B, Town B"],
+    ]),
+    (repro!("queue_marks_revtex_boxed_marks"), 0, &[
+      &["Ann Able 1", "affiliation=Univ A, Town A"],
+      &["Bob Baker 2", "affiliation=Univ B, Town B"],
+    ]),
+    (
+      repro!("queue_marks_ams_macro_marks_three_entry_copies"),
+      0,
+      &[
+        &["Ann Able 1", "address=1 Univ A, Town A"],
+        &["Bob Baker 2", "address=2 Univ B, Town B"],
+        &["Cy Cole 1", "address=1 Univ A, Town A"],
+        &["address=3 Univ C, Town C"],
+      ],
+    ),
+    (repro!("queue_marks_ams_macro_marks_repeated_list"), 0, &[
+      &["Ann Able 1", "address=1 Univ A, Town A"],
+      &["Bob Baker 2", "address=2 Univ B, Town B"],
+    ]),
+  ];
+  for ((name, tex), warnings, expected) in rows {
+    let (log, xml) = run(tex);
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, *warnings),
+      "{name}: {log}"
+    );
+    let expected: Vec<Vec<String>> = expected
+      .iter()
+      .map(|c| c.iter().map(|s| s.to_string()).collect())
+      .collect();
+    assert_eq!(text_creators(&xml), expected, "{name}: {xml}");
+  }
+}
+
+/// Option C P4d: `class_numbered_institutes` reads a numbered store by meaning — its entries at the kernel's `\and` a
+/// document macro holds (`split_at_kernel_separators`), its own marks at its level (`argument_marks`, a boxed mark
+/// none) — and the authors' requests by printed text (`numbered_marks_requested`, F0). One row a path: the store route
+/// under llncs's `\institutename` (numinst.cls, preprint.cls 2405.16615) and under sab's `\refstepcounter` (2308.05831),
+/// the displaced route (`displaced_entries`, astro-ph9805069), the store's boxed mark, `\inst` given by a macro. Each:
+/// no Error, its Warning count, every creator's name and contacts.
+#[test]
+fn class_numbered_institutes_read_by_meaning() {
+  macro_rules! repro {
+    ($name:literal) => {
+      (
+        $name,
+        include_str!(concat!(
+          "../../../tools/perfect_kernel/repros/sectioning-frontmatter/",
+          $name,
+          ".tex"
+        )),
+      )
+    };
+  }
+  let numinst =
+    include_str!("../../../tools/perfect_kernel/repros/sectioning-frontmatter/numinst.cls");
+  let rows: &[Row] = &[
+    (
+      repro!("class_numbered_institutes_macro_held_separator"),
+      0,
+      &[&["Ann Able", "affiliation=Univ A, Town A"], &[
+        "Bob Baker",
+        "affiliation=Univ B, Town B",
+      ]],
+    ),
+    (
+      repro!("raw_class_refstepcounter_numbered_institutes_macro_held_separator"),
+      0,
+      &[
+        &["Ann Able", "affiliation=Univ A, Town A"],
+        &["Bob Baker", "affiliation=Univ B, Town B"],
+        &["Cy Cole", "affiliation=Univ A, Town A"],
+      ],
+    ),
+    (
+      repro!("displaced_class_numbered_institutes_macro_held_separator"),
+      0,
+      &[
+        &["Ann Able", "affiliation=1 Univ A, Town"],
+        &["Bob Baker", "affiliation=2 Univ B, City"],
+        &[
+          "Cy Cole",
+          "affiliation=1 Univ A, Town",
+          "affiliation=2 Univ B, City",
+        ],
+      ],
+    ),
+    (repro!("class_numbered_institutes_boxed_store_mark"), 0, &[
+      &["Ann Able", "affiliation=a Univ A, Town A"],
+      &["Bob Baker", "affiliation=Univ B, Town B"],
+    ]),
+    (
+      repro!("raw_class_refstepcounter_numbered_institutes_inst_by_macro"),
+      0,
+      &[&["Ann Able", "affiliation=Univ A, Town A"], &[
+        "Bob Baker",
+        "affiliation=Univ B, Town B",
+      ]],
+    ),
+  ];
+  for ((name, tex), warnings, expected) in rows {
+    let (log, xml, ()) = convert_files_with_setup_then(
+      tex,
+      &[("numinst.cls", numinst)],
+      Some("ar5iv.sty"),
+      || {},
+      |_| (),
+    );
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, *warnings),
+      "{name}: {log}"
+    );
+    let expected: Vec<Vec<String>> = expected
+      .iter()
+      .map(|c| c.iter().map(|s| s.to_string()).collect())
+      .collect();
+    assert_eq!(text_creators(&xml), expected, "{name}: {xml}");
+  }
 }

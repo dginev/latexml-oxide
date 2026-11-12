@@ -435,12 +435,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // (keyed by the operand's printed text, as the authors' requests are: refactor stage 4, OXIDIZED_DESIGN_DIVERGENCES
     // #919 — `$^{\dag}$Univ A` answers `Ann$^{\dagger}$`)
     let printed = printed_label(&operand)?;
-    let label = match &printed {
-      Some(printed) => clean_frontmatter_labels(&printed.text, "affiliation"),
-      None => clean_frontmatter_labels(&operand.to_string(), "affiliation"),
-    }
-    .into_iter()
-    .next();
+    let label = set_label(&operand, printed.as_ref());
     // the marks it is (`\mathrm{a}`: a), as the authors' are read (relocate_annotations): from its printed text, else
     // its TeX spelling, which keeps the boundary after a control word (`{\rm a}`'s tokens join to `\rma`: 2008.00493)
     let keys = match &printed {

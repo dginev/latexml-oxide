@@ -104,8 +104,8 @@ thread_local! {
   /// The reads the content check's own rehearsals may still make ([`for_the_check`]): one rehearsal's, apart from the
   /// conversion's.
   static CHECK_READS_LEFT: Cell<usize> = const { Cell::new(REHEARSAL_READS_DEFAULT) };
-  /// The reads a binding's separator queries may still make ([`for_a_query`]): one rehearsal's, apart from the
-  /// conversion's and the check's.
+  /// The reads the argument queries (separators, marks) may still make, one shared allowance ([`for_a_query`]): one
+  /// rehearsal's, apart from the conversion's and the check's.
   static QUERY_READS_LEFT: Cell<usize> = const { Cell::new(REHEARSAL_READS_DEFAULT) };
 }
 
@@ -133,11 +133,12 @@ pub(in crate::base_utilities) fn for_the_check<R>(rehearsals: impl FnOnce() -> R
   apart_from_the_reading(&CHECK_READS_LEFT, rehearsals)
 }
 
-/// Run a binding's separator query (`separators::argument_separators`) from the queries' own allowance, one rehearsal's
-/// reads ([`RUN_READS`]) for the conversion, never from the reads the output's rehearsals may make nor in their count of
-/// calls left out: a query moves no reading (four costly queries before `\maketitle` once spent a small budget, and
-/// the block they preceded was written whole, its two authors one creator). One it gives up on answers `None` and is in
-/// no budget Warning: nothing written depends on it.
+/// Run an argument query (`separators::read_argument`, which the separators and the marks queries share) from the
+/// queries' own allowance, one rehearsal's reads ([`RUN_READS`]) for the conversion, never from the reads the output's
+/// rehearsals may make nor in their count of calls left out: a query moves no reading (four costly queries before
+/// `\maketitle` once spent a small budget, and the block they preceded was written whole, its two authors one creator).
+/// One it gives up on answers `None`, which its caller reads by spelling as before the query (the marks query's
+/// fallback counted), in no budget Warning.
 pub(in crate::base_utilities) fn for_a_query<R>(rehearsals: impl FnOnce() -> R) -> R {
   apart_from_the_reading(&QUERY_READS_LEFT, rehearsals)
 }

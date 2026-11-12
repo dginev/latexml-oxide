@@ -184,8 +184,15 @@ pub fn argument_separators_at_every_level(arg: &Tokens) -> Result<Option<Vec<Arg
   separators_of(arg, true)
 }
 
-/// [`argument_separators`], at `arg`'s own level or (`every_level`) at all of them.
-fn separators_of(arg: &Tokens, every_level: bool) -> Result<Option<Vec<ArgSeparator>>> {
+/// An argument as a query's rehearsal reads it ([`read_argument`]): its events and the environments it opens and closes.
+pub(in crate::base_utilities) struct ArgumentReading {
+  pub events:       Vec<Event>,
+  pub environments: Vec<EnvironmentStep>,
+}
+
+/// The one rehearsal of an argument the queries read (separators, marks; OXIDIZED_DESIGN_DIVERGENCES #995, Option C
+/// F0): `None` where no rehearsal could be made or the run left a group open ([`argument_separators`]).
+pub(in crate::base_utilities) fn read_argument(arg: &Tokens) -> Result<Option<ArgumentReading>> {
   let content = arg.unlist_ref();
   if content.len() > usize::from(AUTHOR_PROV_POS_MASK) {
     return Ok(None);
@@ -217,6 +224,15 @@ fn separators_of(arg: &Tokens, every_level: bool) -> Result<Option<Vec<ArgSepara
   else {
     return Ok(None);
   };
+  Ok(Some(ArgumentReading { events, environments }))
+}
+
+/// [`argument_separators`], at `arg`'s own level or (`every_level`) at all of them.
+fn separators_of(arg: &Tokens, every_level: bool) -> Result<Option<Vec<ArgSeparator>>> {
+  let Some(ArgumentReading { events, environments }) = read_argument(arg)? else {
+    return Ok(None);
+  };
+  let content = arg.unlist_ref();
   let separators = events.iter().filter_map(|e| match e.kind {
     EventKind::Sep(SepKind::And(command)) if every_level || e.nest == 0 => {
       let run = own_run(&environments, e.span);
