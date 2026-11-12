@@ -27220,8 +27220,8 @@ affiliation sources hold a superscript glued to letters) convert byte-identical;
 ISO1b's requested script on REVTeX's, elsarticle's, the kernel's, authblk's, IEEEtran's and an unknown class's path,
 ISO1c's spaced names requesting their marks in three orders, an in-word mark requesting none and the unrequested line
 kept one contact).
-RED (pinned, its Warning counting it): a requested exponent's cut writes `$5^{2}$` on both sides
-(`revtex_affiliation_requested_exponent_on_a_number_parts_the_line_red`). Left: a mark whose formula ends and that letters follow
+A requested exponent's cut closes the formula at the mark and opens it again, its base the entry's before it
+(`revtex_affiliation_requested_exponent_on_a_number_parts_the_line`, P4b4a; it had written `$5^{2}$` on both sides). Left: a mark whose formula ends and that letters follow
 glued after a comma — `$^{3}$He`, `\textsuperscript{3}He`, and `$^{3}\mathrm{He}$` too, which REVTeX's queue-time
 `\affiliation` cut parts by its tokens — RED repros `revtex_affiliation_{glued,textsuperscript,mathrm}_isotope_after_a_comma_red`,
 `elsarticle_address_glued_isotope_after_a_comma_red`; an isotope's digit some author requests read as that author's
@@ -30917,13 +30917,14 @@ with its requesters — a mark a document macro prints or a math-active `^` spel
 `api_cut_math_active_marks_list`). A list whose first token, read through parameterless macros' bodies (and on past a body
 printing nothing, `\newcommand\affilfont{}`), is a letter or digit is not rehearsed (`may_open_with_mark`:
 2103.04797's 1,161 `\affiliation{\Amsterdam}`, −0.3 % instructions against P4b). Unread (a rehearsal left a group open), none: the list stays whole for the observer, counted
-(`--debug=frontmatter_marks`). The cutter (`entry_calls`, the Cut's and every binding list's) reads the same pieces
-(Option C P4b4a, `argument_marks::list_marks`, `events::entry_heads`: the same cut of a list of one entry, or of one led
-by unmarked text): a line holding no entry start continues the entry above it, a line is cut at its later starts (inside
-a wrapper too, the wrapper repeated with its declarations), the list's opening declarations end at its first start
-(`\ua` printing `\textsuperscript{1}` is none), and llncs's shape (c) is read from the marks the institute prints; a
-mark that is its line's first ink opens an entry unrequested too (the isotope rule, `$^{3}$He`, holds only inside a
-line). Unread, the
+(`--debug=frontmatter_marks`). The cutter (`entry_calls`, the Cut's and every binding list's) reads the same reading
+(Option C P4b4a, `argument_marks::list_marks`: the starts `events::entry_heads` gives, the same cut of a list of one
+entry or one led by unmarked text, and where each mark the list prints at its level stands): a line printing no mark
+(nor a note opening with one) continues the entry above it; a line is cut at its later starts, inside a wrapper too (the
+wrapper repeated with its declarations) and inside a formula at a mark on a base (closed and opened again); a mark on no
+base starts where its formula does (`classify::entry_starts`); the list's opening declarations end at its first start
+(`\ua` printing `\textsuperscript{1}` is none); a line whose marks lead its notes is cut inside the note by its tokens (the
+`\thanks` idiom); and llncs's shape (c) is read from the marks the institute prints (`prints_list_marks`). Unread, the
 tokens (`author_mark_position`, `marker_leads`), counted. A list whose requested entries the cutter parts fewer than two
 of still stays whole (`cut_list`'s fail-safe); the uncut copies give way only once the list is cut. Guards
 `perfect_kernel_batchc1::queued_marks_read_as_digested` (P4b4a rows), `perfect_kernel_batchz18g::llncs_institute_hand_marks_cut`

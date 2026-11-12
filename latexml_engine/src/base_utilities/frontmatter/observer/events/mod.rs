@@ -2405,19 +2405,14 @@ fn pieces_at_marks(events: &[Event], punctuation: bool) -> Vec<Vec<Event>> {
         continue;
       },
       // (a number or letter mark no name requests glued to the word after it is that word's prescript, after a comma too:
-      // `$^{2}$Univ Y, $^{3}$He Lab`, ISO1's elsarticle RED; one that is its line's first ink opens an entry, `\\ \uc Univ C`,
-      // P4b4a)
+      // `$^{2}$Univ Y, $^{3}$He Lab`, ISO1's elsarticle RED)
       EventKind::Mark
         if after_sep
           && ink
-          && !(!event.line_first
-            && !event.symbol
-            && !event.space_after
-            && name_follows(at)
-            && {
-              let requested = requested.get_or_init(|| names_requested(events));
-              !requested.is_empty() && !is_requested(event, requested)
-            }) =>
+          && !(!event.symbol && !event.space_after && name_follows(at) && {
+            let requested = requested.get_or_init(|| names_requested(events));
+            !requested.is_empty() && !is_requested(event, requested)
+          }) =>
       {
         pieces.push(vec![event.clone()]);
         ink = false;
