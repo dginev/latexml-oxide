@@ -555,6 +555,9 @@ mod perfect_kernel_batchp3;
 /// P5a: an `\IEEEmembership` grade is the reading's contact event, its owner the name it follows, however spelled
 /// (OD #1016).
 mod perfect_kernel_batchp5a;
+/// P5b: a call or column printing only a collaboration framed for the names before it is their contact, its framing
+/// read from the digested line (OD #967).
+mod perfect_kernel_batchp5b;
 /// P5c: `placed_contact_owner`'s surname match reads the queued names as they print, the rehearsal's words (OD #495).
 mod perfect_kernel_batchp5c;
 mod perfect_kernel_batchpb;

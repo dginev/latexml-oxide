@@ -691,22 +691,6 @@ pub(in crate::base_utilities) fn name_count(text: &str) -> usize {
   }
 }
 
-/// Whether a name carries a mark after it, outside its notes: a superscript or mark command
-/// ([`is_affiliation_mark`]: IEEEtran's `\IEEEauthorrefmark`) or aastex's `\altaffilmark` after its first letter
-/// (`Bob Baker$^{2}$`; not `$^{2}$Univ B`).
-pub(in crate::base_utilities) fn marked_after_name(name: &Tokens) -> bool {
-  let outside = outside_notes(name.unlist_ref());
-  let Some(first_letter) = outside
-    .iter()
-    .position(|t| t.get_catcode() == Catcode::LETTER)
-  else {
-    return false;
-  };
-  outside[first_letter..]
-    .iter()
-    .any(|t| is_affiliation_mark(t) || *t == T_CS!("\\altaffilmark"))
-}
-
 /// Whether a word is an initial: capitals, each with at most one small letter and its period, hyphens between (`B.`,
 /// `V.I.`, `J.-P.`, `Yu.`), not a place's abbreviation (`St.`, `Mt.`, `Ft.`).
 fn is_initial(word: &str) -> bool {

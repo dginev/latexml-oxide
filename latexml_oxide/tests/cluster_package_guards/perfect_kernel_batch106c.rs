@@ -2,10 +2,10 @@
 //! OXIDIZED_DESIGN_DIVERGENCES #967). Code path: the kernel's `\lx@add@author` (frontmatter_fields.rs `creator_call`),
 //! where every author route meets — a membership grade written after the name's comma is the author's `membership`
 //! contact (`membership_read_out`, 2107.05093, 2302.11403, 2602.16174); a whole author naming a framed collaboration
-//! is the collaboration contact of the authors before it (`whole_name_collaboration`, 1201.5050); a collaboration
-//! inside a raw class's name-block command is the names' contact (`wrapped_collaboration_out`, 0907.0548, 1111.2718) —
-//! and the name list's own collaboration reading (`name_and_remark`): a remark after the name's notes naming whom the
-//! author speaks for (`speaks_for_after_notes`, 1702.03664); and the frontmatter observer's reading of a names line
+//! is the collaboration contact of the authors before it (1201.5050); a collaboration inside a raw class's name-block
+//! command is the names' contact (0907.0548, 1111.2718); a remark after the name's notes naming whom the author speaks
+//! for (`speaks_for_after_notes`, 1702.03664) — the three the reading's since P5b (`frames_the_names`, rows C2-C5;
+//! `\lx@add@author`'s token readers deleted); and the frontmatter observer's reading of a names line
 //! leaves a written grade out of the name (`is_membership_part`, 2009.02373). Round r2 (the bundle A/B's merges): the
 //! reading gives a grade back to its name where today's holds no contact of it (writer/mod.rs `give_back_grades`:
 //! 1510.03162, 2507.19818), `\lx@add@author` takes a grade out only when the line before it prints none

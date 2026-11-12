@@ -165,14 +165,14 @@ pub fn collaboration_heads(text: &str) -> bool { text.trim_end().ends_with(':') 
 /// The words a remark on a name opens with when it names whom the author speaks for (`for the ATLAS Collaboration`, `on
 /// behalf of the CMS Team`, `representing the ATLAS Pixel Collaboration` — a call of its own under the names,
 /// hep-ex9903035, as [`collaboration_core`]'s framing reads it), lowercased with the space after them:
-/// `name_and_remark`'s and the reading's one list.
+/// the reading's list.
 pub(in crate::base_utilities) const SPEAKS_FOR: [&str; 3] =
   ["for ", "on behalf of ", "representing "];
 
 /// Whether the text after a name's notes is a remark naming the group the author speaks for: "for" or "on behalf of",
 /// then a few words that name a group (`Eleni Petrakou\inst{1}\fnsep\thanks{…} for CAPP/IBS`, webofc, 1702.03664) —
 /// the name ended at its notes, so the remark is no part of it, a collaboration contact as a collaboration's remark is
-/// (`author_block`'s `name_and_remark`; the reading's remark, row C2; moved from `author_block/collaborations.rs`). A
+/// (the reading's remark, row C2; moved from `author_block/collaborations.rs`). A
 /// group's words are acronyms or slashed names (`CAPP/IBS`, `CMS`) or a team's word, with "the", "and", "of" between
 /// them; a remark naming anything else stays the name's, as before — a funding line or a
 /// number (`for NSF Grant 123`, `for Section Three`), a company (`for ACME Corp`), a person (`on behalf of Ed Eve`), a

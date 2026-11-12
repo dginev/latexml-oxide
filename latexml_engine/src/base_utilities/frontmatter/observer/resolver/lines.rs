@@ -1124,6 +1124,37 @@ pub(super) fn bracket_spans_whole(text: &str) -> bool {
   true
 }
 
+/// Whether a text names a collaboration framed as a remark on names printed before it ([`Framing::Framed`]: "for", "on
+/// behalf of", "representing", brackets, dashes), as the class prints it (`On behalf of the KM3NeT Consortium`, 1201.5050).
+pub(super) fn frames_the_names(text: &str) -> bool {
+  !collaboration_heads(text) && collaboration_line_framing(text) == Some(Framing::Framed)
+}
+
+/// Whether `text`, on a line of `events`, is a collaboration framed for the names before it ([`frames_the_names`]) and the
+/// line carries no mark, note or contact of its own (`[ATLAS Collaboration]\thanks{…}` stays a creator, review revP5b).
+fn frames_the_names_alone(events: &[&Event], text: &str) -> bool {
+  !events.iter().any(|e| {
+    matches!(
+      e.kind,
+      EventKind::Mark | EventKind::Note | EventKind::Contact
+    )
+  }) && frames_the_names(text)
+}
+
+/// The text of a line printing a collaboration framed for the names before it and nothing else
+/// ([`frames_the_names_alone`]): its names and separators as printed.
+fn framed_collaboration(events: &[&Event]) -> Option<String> {
+  let text = events_text(events);
+  frames_the_names_alone(events, &text).then_some(text)
+}
+
+/// The source span from a line's first event to its last.
+fn events_span(events: &[&Event]) -> Option<(u16, u16)> {
+  let mut spans = events.iter().filter_map(|e| e.span);
+  let first = spans.next()?;
+  Some(spans.fold(first, |(a, b), (c, d)| (a.min(c), b.max(d))))
+}
+
 /// Whether a text is the collaboration a name speaks for: "for" or "on behalf of" ([`SPEAKS_FOR`]) before a
 /// collaboration ([`is_collaboration`]: `for the Hall A DVCS collaboration`, 1502.03246; the article left out, `on
 /// behalf of ATLAS Collaboration`).
@@ -1424,6 +1455,15 @@ impl Resolver {
       _ => "line:names",
     };
     let events = &line.events;
+    // (a line printing only a collaboration framed for the names before it is theirs, its words as digested: a macro, a
+    // `\let` copy, a font group or its own "and" — `\author{\obo{} the KM3NeT Consortium}`, 1201.5050, segaudit col1)
+    if let Some(text) = framed_collaboration(events)
+      && !self.uncovered_creators().is_empty()
+    {
+      let covered = self.uncovered_creators();
+      self.collaboration(index, events_span(events), &covered, &text);
+      return NamesLine { creators: made };
+    }
     for (i, event) in events.iter().enumerate() {
       match &event.kind {
         EventKind::Name if !event.text.chars().any(char::is_alphanumeric) => {},
@@ -1534,11 +1574,12 @@ impl Resolver {
         // MAGIC Collaboration)`, as today's reader reads it: `collaboration_split`, OXIDIZED_DESIGN_DIVERGENCES #946)
         // (a call or a column of its own speaking for one, under the names before it, too: `\author{on behalf of the KM3NeT
         // consortium}`, 1201.5726; `\author{for the IceCube collaboration}`, 1301.6619 — elsarticle, printed under them; the
-        // names since the last collaboration, no name. revtex's `\collaboration{The HERMES Collaboration}`, its `\author{#1}`,
-        // speaks for no one, and stays today's creator: 0704.3133, gr-qc0505029)
+        // names since the last collaboration, no name. An unframed one stays a creator, revtex's `\collaboration{The HERMES
+        // Collaboration}` (its `\author{#1}`): 0704.3133, gr-qc0505029)
         EventKind::Name
           if (!made.is_empty()
-            || (speaks_for(&event.text) && !self.uncovered_creators().is_empty()))
+            || ((speaks_for(&event.text) || frames_the_names_alone(events, &event.text))
+              && !self.uncovered_creators().is_empty()))
             && reads_as_listed_collaboration(&event.text, listed(last_sep)) =>
         {
           let text = event

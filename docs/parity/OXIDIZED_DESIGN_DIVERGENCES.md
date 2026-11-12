@@ -32250,24 +32250,30 @@ token bodies, now read first), the one call every author route makes:
   IEEE}; Bob Baker}, \textit{Fellow, IEEE}`: taking the last out alone left the names before it one creator). A degree
   or suffix (`Ph.D., P.E.`, `Jr.`) still qualifies the name; a document's own `\IEEEmembership` definition keeps its
   meaning (63l).
-- **A framed collaboration as the whole author** (`whole_name_collaboration`, defs/frontmatter_fields/names.rs): content
-  naming a collaboration framed as a remark (`Framing::Framed`: "on behalf of", "for", "representing", brackets), with no
-  note or mark of its own and authors queued before it, is the collaboration contact of every author before it that
-  carries none (`annotate=new`, as aastex's `\collaboration`, aas_support.sty.ltxml:126), no creator (FIDELITY_CHARTER
-  §4). ptephy's `\collaborator{(The X Collaboration)}` (2101.03480, 2404.08725) is now its four names' contact. An
-  unframed one alone stays a creator (`\collab{The XYZ Collaboration}`, webofc's `\and The SND Collaboration`,
-  1912.05868).
-- **A collaboration inside a name-block command** (`wrapped_collaboration_out`): a line of its own after the name's last
-  `\\` that reads as a framed collaboration line (`collaboration_line_reading`), or a remark after the name
-  (`name_and_remark`), leaves the command; its contact (`annotate=new`) follows the creator, so it covers the names of
-  the line. With the collaboration out of the last name, the observer's writer re-parts 0907.0548's names as before.
-- **A remark after the notes** (`name_and_remark`, `speaks_for_after_notes`): after a name carrying a note or mark
-  (`annotated`), "for" / "on behalf of" and at most six words naming a group — acronyms or slashed names (`CAPP/IBS`,
-  `CMS`) or a team's word, "the"/"and"/"of" between them; no digit, no address — is the author's collaboration
-  contact, as a collaboration's remark there is. A funding line, a company named in words or a person (`for NSF Grant 123`,
-  `for ACME Corp`, `on behalf of Ed Eve`) stays the name's (review rev106c); a lone acronym is read as a group — `for
-  IBM`, `for ESA` cannot be told from `for CMS` by their words (RED `collab_for_lone_acronym_is_no_group_red.tex`,
-  review rev106c2 S2: a contact of the wrong role, no text lost).
+- **A framed collaboration as the whole author, a collaboration inside a name-block command, a remark after the
+  notes** — the reading's since P5b (2026-11-12, Option C P5 fact 2): `\lx@add@author` no longer reads them from the
+  spelling (`whole_name_collaboration`, `wrapped_collaboration_out`, `name_and_remark` deleted; the reading had
+  rewritten every queued call they made). A call or `\and` column printing only a collaboration framed as a remark
+  (`Framing::Framed`: "on behalf of", "for", "representing", brackets, dashes) after names is the collaboration contact
+  of every name no collaboration covers yet (resolver/lines.rs `frames_the_names`, `framed_collaboration`), its words
+  as digested: a macro printing "On behalf of" (segaudit col1), a `\let` copy, `\csname`, `\MakeUppercase`, ties, a
+  font group, a `\parbox`, the line's own "and" (`on behalf of the XYZ and ABC Collaborations`), each guarded
+  (`perfect_kernel_batchp5b::a_framed_collaboration_call_is_the_names_contact`); brackets and dashes, a third creator
+  on the base (the dashed one losing its dashes), are its contact now; so is a class command's bracketed one, revtex's
+  `\collaboration{(ATLAS Collaboration)}`, elsart's `\collab{(The CMS-HCAL Collaboration)}` (hep-ex0007045), where Perl
+  makes a creator (`\collab` is `\author{#1}`, elsart_support_core.sty.ltxml:71). A line carrying its own mark, note or
+  contact is no such call (`frames_the_names_alone`: `[ATLAS Collaboration]\thanks{…}` stays a creator with its note,
+  review revP5b; "for"/"on behalf of" with a note is the names' contact as on the base, `speaks_for`). None before any
+  name, and an unframed one — the name alone or after a bare "the" — frames none (`\collab{The XYZ Collaboration}`,
+  webofc's `\and The SND Collaboration`, 1912.05868): creators, as before.
+  The raw name-block shapes (0907.0548, 1111.2718) and the remark after the notes (`speaks_for_after_notes`,
+  1702.03664) are the reading's rows C2-C5 (`remark_pieces_joined`). ptephy's `\collaborator{(The X Collaboration)}`
+  (2101.03480, 2404.08725) is its four names' contact. RED `elsarticle_author_framed_collaboration_with_a_note_red`
+  (post-merge): such a call's own note becomes a nameless creator. RED (post-merge, P5BA; review revP5b): a bracketed
+  collaboration call or column with an affiliation of its own (`article_and_column_bracketed_collaboration_with_affiliation_red`,
+  `elsarticle_author_bracketed_collaboration_with_its_address_red`, `…_with_a_keyed_address_red`) is the names'
+  contact, its affiliation a nameless creator's or the last name's, where the PDF prints it as an author block of its
+  own; the "for the" form of the shape was so on the base.
 - **The observer's reading** (resolver/lines.rs, `is_membership_part`): a grade, or the pieces the line's commas cut it
   into (`\textit{Senior Member}, \textit{IEEE}`), after a name's comma is that name's `membership` item, no part of
   the name, so the writer's re-part finds each reading name in today's names (vgtc's `\author{Stephen Kasica; Charles
