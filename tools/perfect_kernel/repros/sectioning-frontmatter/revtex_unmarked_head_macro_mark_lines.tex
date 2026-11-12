@@ -1,0 +1,25 @@
+% mechanism: REVTeX's group rule reads the marks an affiliation block prints as digested (`relocate::requested_marks`,
+%   `marks_as_printed`, Option C P4b3): marks a document macro prints (`\newcommand\ub{$^{2}$}`) are the names'
+%   requested labels, so the unmarked first entry over macro-marked lines is cut as the `$^{2}$` spelling is
+%   (2109.01501's rule)
+% witness: synthetic (P4b census: the revtex group-rule readers left on tokens)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1,2 , Bob Baker2,3 , and Cy Cole / Univ A, Town A /
+%          2Univ B, Town B / 3Univ C, Town C"
+% engines: P4bbase, P4b, P4b3base: every author "Univ A, Town A 2 Univ B, Town B 3 Univ C, Town C" (the whole block);
+%          P4b3: as expected
+% expect:  0 errors, 0 warnings; Ann Able "Univ A, Town A", "2 Univ B, Town B"; Bob Baker "2 Univ B, Town B",
+%          "3 Univ C, Town C"; Cy Cole none (as the `$^{2}$` spelling reads)
+% status:  RED (P4b3base) -> GREEN (P4b3; guard perfect_kernel_batchc1::group_rule_reads_marks_as_digested)
+\documentclass[aps,prl]{revtex4-2}
+\newcommand\ub{$^{2}$}
+\newcommand\uc{$^{3}$}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1,2}$}
+\author{Bob Baker$^{2,3}$}
+\author{Cy Cole}
+\affiliation{Univ A, Town A\\ \ub Univ B, Town B\\ \uc Univ C, Town C}
+\begin{abstract}x\end{abstract}
+\maketitle
+Text.
+\end{document}

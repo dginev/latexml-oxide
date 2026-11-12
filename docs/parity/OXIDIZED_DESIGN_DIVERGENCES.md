@@ -29862,6 +29862,19 @@ by the binding); repros class-bindings/
 `revtex_tabular_affiliation_rows_go_by_their_marks`, OD #964); the writer's `the_writer_never_writes_a_nameless_creator` asserts
 the exception.
 
+**Option C P4b3 (amended):** the group rule's readers read the marks as digested, the fact the Cut, its copy rule and the
+names' requests read since P4b/P4b2: what a block holds of the requested labels, the lines a requested mark opens and the
+labels it prints nowhere (`relocate::requested_marks`, over `marks_as_printed`: a document macro's mark, one in a box of
+its own, one in `\textbf`), the names' requests by their digested marks (`queued_author_marks`: `run_names_show_a_mark`,
+the group's shared mark in `group_shares_the_mark`, an `altaffil:` request none), the block's distinct marks
+(`content_mark_labels`, a number's suffix none), and the tail's lines in `marks_lead_every_line` (no mark in a box beside
+words). One reading for every reader: REVTeX's and AASTeX's `\affiliation`, ws_procl's `\address` and the stores'
+`class_contact_run_in`/`contact_line_call`. An argument the rehearsal cannot read falls back to the token readers, counted
+(`frontmatter_marks`); for `marks_lead_every_line` it is the fail-safe. Guard
+`perfect_kernel_batchc1::group_rule_reads_marks_as_digested`. Open (post-merge REDs): names' marks under a math-active `^`
+(`revtex_math_active_name_marks_unread_red`), the content check's reading of an ordinal suffix
+(`revtex_ordinal_affiliation_content_check_counts_red`); `leading_macro_mark`/`run_names_macro_marks` stay on tokens.
+
 ### 948. Every remaining observer-writer family is written in one batch (ijcai, inst_support, iopart, jheppub, jinstpub, jcappub, jpconf, sv_support and every binding owning `\author` with no declaration); a block line's letters are read as printed, a re-parted entry keeps today's role, a letter-spaced name's word space is no gap, an e-mail's corresponding owner is one of the authors it is printed for, a name read as an entry is never written onto an author; an elsarticle key is answered by its keys alone, and a name the re-part makes that names no person declines (Perl: the old reader's output, no observer)
 
 Beyond Perl (FM S2b, OD #837; user decision 2026-11-01: every remaining family through its gate in one batch). The

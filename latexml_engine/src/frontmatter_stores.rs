@@ -2231,7 +2231,7 @@ fn run_in_contact_setter(name: &str) -> bool {
 /// A rerouted run-in setter's call ([`run_in_contact_setter`]): `api` — its line placed by its leading label,
 /// [`by_its_label`] — where it stands as a line of its own in the title block — between paragraphs at the body's own
 /// level, the authors set and not yet placed ([`title_block_line`]), its line led by no mark no author requests and
-/// holding at most one the names request (`relocate::requested_marks_held`) —, else `class`; never inside a creator's
+/// holding at most one the names request (`relocate::requested_marks`) —, else `class`; never inside a creator's
 /// own content, where a call printing no line of its own is part of the name's text, nor in the title page's deposit
 /// ([`in_the_title_page_deposit`]).
 fn class_contact_run_in(api: Tokens, class: Tokens) -> Result<Tokens> {
@@ -2244,7 +2244,7 @@ fn class_contact_run_in(api: Tokens, class: Tokens) -> Result<Tokens> {
   // run-in line holding several marks is a change of its own, measured on its own population; SYNC row "99b" (e))
   if !(title_block_line(true)
     && !leads_with_unrequested_mark(line)?
-    && requested_marks_held(&Tokens::new(line.to_vec())) <= 1)
+    && requested_marks(&Tokens::new(line.to_vec()), "class_contact_run_in")?.held <= 1)
   {
     return Ok(class);
   }
@@ -2897,7 +2897,7 @@ fn contact_line_call(head: &str, line: &Tokens) -> Result<Tokens> {
     return Ok(Tokens::new(call));
   }
   call.push(T_OTHER!("["));
-  if requested_marks_held(line) > 1 {
+  if requested_marks(line, "contact_line_call")?.held > 1 {
     call.extend(mouth::tokenize_internal("label={addresses:block},_unsplit=true").unlist());
   } else {
     let (mut legend, mut glyph) = (None, None);

@@ -27,7 +27,9 @@ fn ws_procl_style() -> Result<()> {
   // `\author{C. Alexandrou$^a$, A. Bori\c{c}i$^b$, …}\address{$^a$Department of Natural Sciences, …}`) goes to the
   // authors showing that mark, any other to the authors given since the previous one.
   DefMacro!("\\address{}", sub[(content)] {
-    if leads_with_label(&content, "ws_procl address")? && !queued_group_shares_the_mark(&content) {
+    if leads_with_label(&content, "ws_procl address")?
+      && !queued_group_shares_the_mark(&content_mark_labels(&content, "ws_procl address")?)?
+    {
       Ok(Invocation!(T_CS!("\\lx@add@affiliation@marked"), vec![None, Some(content)]))
     } else {
       Ok(Invocation!(

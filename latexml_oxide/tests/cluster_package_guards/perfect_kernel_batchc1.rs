@@ -1028,3 +1028,80 @@ fn api_cut_gate_reads_past_empty_bodies() {
     );
   }
 }
+
+/// Option C P4b3: REVTeX's group rule reads the marks a block prints as digested (`relocate::requested_marks`,
+/// `marks_as_printed`) and the names' requests by their digested marks (`run_names_show_a_mark`,
+/// `queued_author_marks`). One row a reader: a document macro's marks over the unmarked head (held, lines, the
+/// head's unprinted label), a mark in a box of its own (lines), a mark in `\textbf` (`marks_lead_every_line`), and
+/// AASTeX's `annotate=new` under macro-marked names. Red on P4b3base: the whole block on every author (macro, box), a
+/// nameless creator (bold), both lines on every author (aastex). Each: no Error, its Warning count, every creator.
+#[test]
+fn group_rule_reads_marks_as_digested() {
+  macro_rules! repro {
+    ($name:literal) => {
+      (
+        $name,
+        include_str!(concat!(
+          "../../../tools/perfect_kernel/repros/sectioning-frontmatter/",
+          $name,
+          ".tex"
+        )),
+      )
+    };
+  }
+  const HEAD_OVER_LINES: &[&[&str]] = &[
+    &[
+      "Ann Able 1,2",
+      "affiliation=Univ A, Town A",
+      "affiliation=2 Univ B, Town B",
+    ],
+    &[
+      "Bob Baker 2,3",
+      "affiliation=2 Univ B, Town B",
+      "affiliation=3 Univ C, Town C",
+    ],
+    &["Cy Cole"],
+  ];
+  let rows: &[Row] = &[
+    (
+      repro!("revtex_unmarked_head_macro_mark_lines"),
+      0,
+      HEAD_OVER_LINES,
+    ),
+    (
+      repro!("revtex_unmarked_head_raisebox_mark_lines"),
+      0,
+      HEAD_OVER_LINES,
+    ),
+    (
+      repro!("revtex_unmarked_head_bold_mark_lines"),
+      0,
+      HEAD_OVER_LINES,
+    ),
+    (
+      repro!("aastex_macro_names_over_unlabelled_lines_are_no_group"),
+      0,
+      &[
+        &["Ann Able 1", "affiliation=Uni One"],
+        &["Bob Baker 1", "affiliation=Uni One"],
+        &["Cat Cole 1,2", "affiliation=Uni One", "affiliation=Uni Two"],
+      ],
+    ),
+  ];
+  let mut failures = Vec::new();
+  for ((name, tex), warnings, expected) in rows {
+    let (log, xml) = run(tex);
+    let expected: Vec<Vec<String>> = expected
+      .iter()
+      .map(|c| c.iter().map(|s| s.to_string()).collect())
+      .collect();
+    let got = (
+      (error_count(&log), warning_count(&log)),
+      text_creators(&xml),
+    );
+    if got != ((0, *warnings), expected) {
+      failures.push(format!("{name}: {got:?}"));
+    }
+  }
+  assert!(failures.is_empty(), "{}", failures.join("\n"));
+}

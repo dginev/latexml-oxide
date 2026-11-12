@@ -931,43 +931,82 @@ pub fn content_marks(content: &Tokens) -> Vec<String> {
   marks
 }
 
-/// Is the affiliation `content` the group's, as revtex's group rule gives it? So it is when an author was queued since
+/// Is an affiliation printing `marks` (`content_mark_labels`) the group's, as revtex's group rule gives it? So it is when an author was queued since
 /// a previous affiliation (interleaved `\author`/`\affiliation` groups, whatever their marks say: a mark no author shows
 /// is still its group's, as the PDF pairs it), and when the first affiliation carries one mark that every author
-/// queued shows (`\author{A$^{1}$ and B$^{1,2}$}\affiliation{$^{1}$…}`, 0808.2763). Authors listed first and their marked
+/// queued shows, as digested (`queued_author_marks`; `\author{A$^{1}$ and B$^{1,2}$}\affiliation{$^{1}$…}`, 0808.2763). Authors listed first and their marked
 /// affiliations after them are no such group, and an affiliation holding several marked lines (`$^1$… \\ $^2$…`,
 /// 1205.4587) is a marked list (63i review).
-pub fn queued_group_shares_the_mark(content: &Tokens) -> bool {
-  group_shares_the_mark(content, false)
+pub fn queued_group_shares_the_mark(marks: &[String]) -> Result<bool> {
+  group_shares_the_mark(marks, false)
 }
 
 /// [`queued_group_shares_the_mark`], an interleaved group only where the affiliation before the authors itself followed
 /// an author (`\author{A}\affiliation{X}\author{B}…`), not names after an affiliation given before the first
 /// `\author` (2510.16137, 2209.05548: those names' marked lines are a marked list's): the group a binding declares to
 /// the frontmatter observer (revtex's `_grouped=true`, FM S2b).
-pub fn interleaved_group_shares_the_mark(content: &Tokens) -> bool {
-  group_shares_the_mark(content, true)
+pub fn interleaved_group_shares_the_mark(marks: &[String]) -> Result<bool> {
+  group_shares_the_mark(marks, true)
 }
 
-/// Do the names of the run an affiliation continues request affiliations by their marks — a superscript or mark
-/// command after the name (`Ann Able$^{1}$`, `\textsuperscript{1}`; `marked_after_name`) that is no footnote symbol
-/// (`Ann Able$^{*}$`, the corresponding author's, requests none)? The run is the authors queued before the
+/// Do the names of the run an affiliation continues request affiliations by their marks — a mark a name prints, as
+/// digested (`queued_author_marks`: `Ann Able$^{1}$`, `\textsuperscript{1}`, a document macro's), that is no footnote
+/// symbol (`Ann Able$^{*}$`, the corresponding author's, requests none)? The run is the authors queued before the
 /// affiliations that end the queue, back to the affiliation before them. AASTeX 5's `\altaffilmark{1}` requests an
 /// `\altaffiltext` (label `altaffil:1`), no affiliation: a line its number labels goes by it (aas_support_sty.rs
 /// `\affiliation`, [`leading_line_label`]), and an unlabelled line stays with the row (user ruling R1, 2026-11-01:
 /// 1210.4079's `Pavel\altaffilmark{1} and D. P. Clemens` over two `\affil` lines of one address). A binding whose group
 /// rule is `annotate=run` declares `annotate=new` for a run whose names do request affiliations, as a convention may not
 /// give them an unlabelled line as a group (1202.0629's `$^{n}$` names over unnumbered lines; aas_support_sty.rs).
-pub fn run_names_show_a_mark() -> bool {
-  let numbered = |name: &Tokens| {
-    marked_after_name(name)
-      && author_mark_operands(name.unlist_ref())
+pub fn run_names_show_a_mark() -> Result<bool> {
+  let run = with_value("frontmatter_raw", |v| match v {
+    Some(Stored::FrontmatterRaw(queue)) => {
+      let is_author = |entry: &RawFrontmatter| {
+        entry.0 == "ltx:creator" && entry.1.get("role").map(String::as_str) == Some("author")
+      };
+      // (the run: back past the contacts ending the queue, then its creators back to the affiliation before them)
+      let end = queue
         .iter()
-        .any(|operand| !is_symbol_mark(operand))
-  };
-  let mut any = false;
-  for_run_names(|name| any |= numbered(name));
-  any
+        .rposition(|entry| entry.0 == "ltx:creator")
+        .map_or(0, |at| at + 1);
+      let start = queue[..end]
+        .iter()
+        .rposition(|entry| {
+          entry.0 == "ltx:contact" && entry.1.get("role").map(String::as_str) == Some("affiliation")
+        })
+        .map_or(0, |at| at + 1);
+      let first = queue[..start].iter().filter(|e| is_author(e)).count();
+      first..first + queue[start..end].iter().filter(|e| is_author(e)).count()
+    },
+    _ => 0..0,
+  });
+  if run.is_empty() {
+    return Ok(false);
+  }
+  // (each name's marks as digested, `queued_author_marks`; a footnote symbol requests none)
+  Ok(
+    queued_author_marks()?
+      .get(run)
+      .unwrap_or_default()
+      .iter()
+      .flatten()
+      .any(|text| {
+        let label = text.strip_prefix("affiliation:").unwrap_or(text);
+        requests_an_affiliation(text)
+          && (label.starts_with('\\') || label.chars().next().is_some_and(char::is_alphanumeric))
+      }),
+  )
+}
+
+/// Whether a name's mark, by its printed text (`queued_author_marks`), requests an affiliation: a request of another kind
+/// is none (`altaffil:1`, AASTeX 5's `\altaffilmark{1}`, which requests an `\altaffiltext`).
+fn requests_an_affiliation(text: &str) -> bool {
+  match text.split_once(':') {
+    Some((kind, _)) if !kind.is_empty() && kind.chars().all(char::is_alphabetic) => {
+      kind == "affiliation"
+    },
+    _ => true,
+  }
 }
 
 /// The key of the mark a macro stands for: a macro without parameters whose body leads with a superscript mark
@@ -1196,10 +1235,61 @@ pub(super) fn name_marks_of(command: &Tokens) -> (Vec<String>, Vec<String>) {
   (altaffil, sup)
 }
 
-/// How many of the marks the queued authors' names show as superscripts (`queued_name_marks`) `content` prints, each
-/// once: the labelled lines an affiliation block holds for the names (`\address{\parbox{\linewidth}{$^{1}$Univ A\\
-/// $^{2}$Univ B}}`: 2).
-pub fn requested_marks_held(content: &Tokens) -> usize {
+/// What an affiliation block prints of the labels the queued authors' marks request (`queued_author_marks`), read as
+/// digested (`marks_as_printed`: a document macro's mark, a math-active `^`'s, one in a box of its own): how many it holds,
+/// each once (`\address{\parbox{\linewidth}{$^{1}$Univ A\\ $^{2}$Univ B}}`: 2); how many of its lines, a box's and an
+/// environment's too, a requested mark opens, as against marks inside one line's text (`Joint Institute,
+/// \textsuperscript{1}Univ A and \textsuperscript{2}Univ B`: 0, review rev98e S2); and the requested labels it prints
+/// nowhere, bare and in the names' order (`Univ A \\ $^2$Univ B \\ $^3$Inst C` under `Ann$^{1,2}$`, `Bob$^{2,3}$`: 1 —
+/// 2109.01501, 1903.07834). Unread, by its tokens, counted for `caller`.
+pub fn requested_marks(content: &Tokens, caller: &str) -> Result<RequestedMarks> {
+  requested_marks_of(content, marks_as_printed(content, caller)?.as_deref())
+}
+
+/// [`requested_marks`] of the marks `content` prints as read (`None`, unread).
+pub fn requested_marks_of(
+  content: &Tokens,
+  marks: Option<&[PrintedMark]>,
+) -> Result<RequestedMarks> {
+  let Some(marks) = marks else {
+    return Ok(RequestedMarks {
+      held:      requested_marks_held(content),
+      lines:     requested_mark_lines(content),
+      unprinted: requested_marks_unprinted(content),
+    });
+  };
+  let mut requested: Vec<String> = Vec::new();
+  for text in queued_author_marks()?.iter().flatten() {
+    for key in printed_label_keys(text, "affiliation") {
+      if !requested.contains(&key) {
+        requested.push(key);
+      }
+    }
+  }
+  let printed = |key: &String| marks.iter().any(|mark| mark.labels.contains(key));
+  Ok(RequestedMarks {
+    held:      requested.iter().filter(|key| printed(key)).count(),
+    lines:     marks
+      .iter()
+      .filter(|mark| mark.line_first && mark.labels.iter().any(|l| requested.contains(l)))
+      .count(),
+    unprinted: requested
+      .iter()
+      .filter(|key| !printed(key))
+      .map(|key| key.strip_prefix("affiliation:").unwrap_or(key).to_string())
+      .collect(),
+  })
+}
+
+/// [`requested_marks`]' answer.
+pub struct RequestedMarks {
+  pub held:      usize,
+  pub lines:     usize,
+  pub unprinted: Vec<String>,
+}
+
+// (the token reading of an argument the marks query cannot read, [`requested_marks`]')
+fn requested_marks_held(content: &Tokens) -> usize {
   let marks = queued_name_marks();
   let requested = &marks.1;
   let mut held: Vec<String> = Vec::new();
@@ -1212,11 +1302,7 @@ pub fn requested_marks_held(content: &Tokens) -> usize {
   held.len()
 }
 
-/// The marks the queued authors' names show as superscripts (`queued_name_marks`) that `content` prints nowhere, each
-/// once, in the names' order: the label an affiliation block's unmarked entry carries where the names request one its
-/// marked lines do not print (REVTeX's `\affiliation{Univ A \\ $^2$Univ B \\ $^3$Inst C}` under `Ann$^{1,2}$`,
-/// `Bob$^{2,3}$`: 1 — 2109.01501, 1903.07834).
-pub fn requested_marks_unprinted(content: &Tokens) -> Vec<String> {
+fn requested_marks_unprinted(content: &Tokens) -> Vec<String> {
   let marks = queued_name_marks();
   let printed: Vec<String> = content_marks(content).iter().map(|m| mark_key(m)).collect();
   let mut out: Vec<String> = Vec::new();
@@ -1936,14 +2022,7 @@ fn at_line_start(tokens: &[Token], i: usize) -> bool {
   j > 0 && tokens[j - 1].defined_as(&T_CS!("\\\\"))
 }
 
-/// How many lines of an affiliation block lead with a superscript mark of a label the names request — its own lines and
-/// those of the boxes, groups and environments it sets them in, split at every `\\` (`\parbox{\linewidth}{$^{1}$Univ
-/// A\\ $^{2}$Univ B}`: 2; `\begin{tabular}{c} $^{1}$…\\ $^{2}$…\end{tabular}`, 0911.3234), past the spaces, font
-/// switches, `\noindent`/`\nonumber`, box openers and an environment's opener with its own arguments before the mark; a mark the
-/// binding's readers do not read leads a line too (`\( ^{1} \)Univ A`). The labelled lines of a multi-line block, as
-/// against marks inside one line's text (`Joint Institute, \textsuperscript{1}Univ A and \textsuperscript{2}Univ B`:
-/// 0), which is one entry its group shares (review rev98e S2).
-pub fn requested_mark_lines(content: &Tokens) -> usize {
+fn requested_mark_lines(content: &Tokens) -> usize {
   let tokens = content.unlist_ref();
   let marks = queued_name_marks();
   let requested = &marks.1;
@@ -2067,37 +2146,75 @@ pub fn requested_mark_lines(content: &Tokens) -> usize {
     .count()
 }
 
-fn group_shares_the_mark(content: &Tokens, alternating: bool) -> bool {
-  let mut marks: Vec<String> = superscript_scripts(&content.to_string()).concat();
-  marks.dedup();
-  with_value("frontmatter_raw", |v| match v {
+fn group_shares_the_mark(marks: &[String], alternating: bool) -> Result<bool> {
+  let is_author = |entry: &RawFrontmatter| {
+    entry.0 == "ltx:creator" && entry.1.get("role").map(String::as_str) == Some("author")
+  };
+  // (the authors queued since the last affiliation, as `queued_author_marks` counts them, from 0)
+  let (interleaved, since) = with_value("frontmatter_raw", |v| match v {
     Some(Stored::FrontmatterRaw(queue)) => {
       let is_affiliation = |entry: &RawFrontmatter| {
         entry.0 == "ltx:contact" && entry.1.get("role").map(String::as_str) == Some("affiliation")
       };
-      let since: Vec<&RawFrontmatter> = queue
-        .iter()
-        .rev()
-        .take_while(|entry| !is_affiliation(entry))
-        .filter(|entry| entry.0 == "ltx:creator")
-        .collect();
       let previous = queue.iter().rposition(is_affiliation);
+      let run = &queue[previous.map_or(0, |at| at + 1)..];
       let follows_an_author = |at: usize| queue[..at].iter().any(|entry| entry.0 == "ltx:creator");
-      if !since.is_empty() && previous.is_some_and(|at| !alternating || follows_an_author(at)) {
-        return true;
-      }
-      let [mark] = marks.as_slice() else {
-        return false;
-      };
-      let scripts: Vec<Vec<String>> = since
-        .iter()
-        .flat_map(|entry| superscript_scripts(&entry.2.to_string()))
-        .filter(|script| !script.is_empty())
-        .collect();
-      !scripts.is_empty() && scripts.iter().all(|script| script.contains(mark))
+      let interleaved = run.iter().any(|entry| entry.0 == "ltx:creator")
+        && previous.is_some_and(|at| !alternating || follows_an_author(at));
+      let before = queue.len() - run.len();
+      let first = queue[..before].iter().filter(|e| is_author(e)).count();
+      let authors = run.iter().filter(|e| is_author(e)).count();
+      (interleaved, first..first + authors)
     },
-    _ => false,
-  })
+    _ => (false, 0..0),
+  });
+  if interleaved {
+    return Ok(true);
+  }
+  let [mark] = marks else {
+    return Ok(false);
+  };
+  if since.is_empty() {
+    return Ok(false);
+  }
+  let names = queued_author_marks()?;
+  let scripts: Vec<Vec<String>> = names
+    .get(since)
+    .unwrap_or_default()
+    .iter()
+    .flatten()
+    .filter(|text| requests_an_affiliation(text))
+    .map(|text| printed_label_keys(text, "affiliation"))
+    .filter(|keys| !keys.is_empty())
+    .collect();
+  Ok(!scripts.is_empty() && scripts.iter().all(|keys| keys.contains(mark)))
+}
+
+/// The labels of the marks `content` prints, distinct, at any level outside its notes (`marks_as_printed`); unread, of its
+/// superscripts' spelling (`content_marks`), counted for `caller`. What REVTeX's group rule asks of an affiliation's marks.
+pub fn content_mark_labels(content: &Tokens, caller: &str) -> Result<Vec<String>> {
+  Ok(content_mark_labels_of(
+    content,
+    marks_as_printed(content, caller)?.as_deref(),
+  ))
+}
+
+/// [`content_mark_labels`] of the marks `content` prints as read (`None`, unread).
+pub fn content_mark_labels_of(content: &Tokens, marks: Option<&[PrintedMark]>) -> Vec<String> {
+  let labels: Vec<String> = match marks {
+    Some(marks) => marks.iter().flat_map(|mark| mark.labels.clone()).collect(),
+    None => content_marks(content)
+      .iter()
+      .flat_map(|mark| printed_label_keys(mark, "affiliation"))
+      .collect(),
+  };
+  let mut distinct: Vec<String> = Vec::new();
+  for label in labels {
+    if !distinct.contains(&label) {
+      distinct.push(label);
+    }
+  }
+  distinct
 }
 
 /// The surname a name ends with, to match an institute's `\at` name with its author: the last run of letters,
