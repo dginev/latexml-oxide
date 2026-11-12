@@ -1,0 +1,14 @@
+% witness: synthetic (found in TABU2c beside tabu_thebibliography_keeps_its_line_breaks.tex)
+% oracle:  pdflatex 0 errors: References [1] a | x
+% engines: rust TABU2c (and TABU2base) = 1 Error "Error:malformed:ltx:bibliography <ltx:bibliography> isn't allowed in
+%          <ltx:block>" (a p-column cell's block; the content kept)
+% expect:  0 Errors, the bibliography kept in the cell (or moved out of the block with its content)
+% status:  RED (TABU2c)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\begin{tabular}{p{4cm}l}
+\begin{thebibliography}{9}\bibitem{k} a\end{thebibliography} & x \\
+\end{tabular}
+\end{document}

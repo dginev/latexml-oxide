@@ -5,7 +5,9 @@
 %          Perl 0.8.8 has no tabu binding (`{tabu}` undefined)
 % expect:  tabu.sty:2389-2391 `\tabu@trivlist` (`\tabu@init` :705) lets `\\` back to `\@normalcr` in every list, so a
 %          `\\` in a list in a centred cell breaks the line; a `\parbox` restores it itself (latex.ltx `\@parboxrestore`).
-%          Every list runs it, as every LaTeX list runs `\@trivlist` (the m row: TABU2's per-environment hooks missed it)
+%          Every list runs it, as every LaTeX list runs `\@trivlist` (the m row: TABU2's per-environment hooks missed it;
+%          the bibliography and a class's proof: tabu_thebibliography_keeps_its_line_breaks.tex,
+%          tabu_class_proof_keeps_its_line_breaks.tex; {center}/{flushleft} not yet: tabu_center_env_backslash_red.tex)
 % status:  RED (TABU2base; TABU2 too, from the m row: 9 Errors) -> GREEN (TABU2b)
 % preload: ar5iv.sty
 \documentclass{article}

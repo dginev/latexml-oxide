@@ -251,7 +251,9 @@ LoadDefinitions!({
     properties => sub[_args] {
       let title = Expand!(Tokens!(T_CS!("\\proofname"))).to_string();
       Ok(stored_map!("title" => title))
-    }
+    },
+    // mn2e.cls:864 and mnras.cls:993 `\proof` is a `\trivlist`: it runs `\@trivlist`'s additions.
+    before_digest => { run_trivlist_hook()?; }
   );
   DefEnvironment!("{lquote}", "<ltx:quote>#body</ltx:quote>");
 

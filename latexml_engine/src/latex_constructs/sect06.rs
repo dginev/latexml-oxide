@@ -913,7 +913,8 @@ pub(crate) fn load() -> Result<()> {
   // Guard: `perfect_kernel_batch69b::class_redefining_trivlist_keeps_the_list`.
   // An item without `[…]` prints `\@itemlabel`, read at each `\item` (latex.ltx:15966; memoir.cls:4580; OD #180;
   // tests/structure/itemize.tex, fonts/ding.tex). Guard `perfect_kernel_batch56::list_labels_come_from_itemlabel`.
-  // What a package adds to `\@trivlist` it adds here (tabu.sty:2390 `\tabu@trivlist`); `begin_itemize` runs it.
+  // What a package adds to `\@trivlist` it adds here (tabu.sty:2390 `\tabu@trivlist`); `begin_itemize` runs it, as do
+  // the constructors of environments that are lists in TeX (quote, theorem, proof, thebibliography).
   DefMacro!("\\lx@trivlist@hook", "");
   DefMacro!(
     "\\@trivlist",

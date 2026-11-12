@@ -1,10 +1,11 @@
 % witness: synthetic (reviewer sibling of tabu_centering_ends_the_row.tex)
-% oracle:  pdflatex 104 `!` lines and no PDF (100-error stop): in a tabu, `{center}`'s `\centering` is tabu's and ends
-%          with `\arraybackslash` (tabu.sty:2376-2381), so its `\\` ends the row inside the environment
-% engines: rust TABU2 = 0 Errors, a and b two centred lines (our `{center}` lets `\\` to `\@normalcr` itself,
-%          sect06.rs `{center}`); Perl 0.8.8 has no tabu binding
+% oracle:  pdflatex 104 `!` lines and no PDF (100-error stop): in a tabu, `{center}`'s `\centering` (and `{flushleft}`'s
+%          `\raggedright`) is tabu's and ends with `\arraybackslash` (tabu.sty:2376-2381), so its `\\` ends the row
+%          inside the environment (each alone: 104 `!` lines)
+% engines: rust TABU2, TABU2c = 0 Errors, a and b two centred lines, c and d two left-aligned ones (our `{center}` and
+%          `{flushleft}` let `\\` to `\@normalcr` themselves, sect06.rs); Perl 0.8.8 has no tabu binding
 % expect:  an Error where TeX errs (the content kept)
-% status:  RED (TABU2)
+% status:  RED (TABU2, TABU2c)
 % moves:   post-merge
 % preload: ar5iv.sty
 \documentclass{article}
@@ -12,6 +13,7 @@
 \begin{document}
 \begin{tabu}{lp{3cm}}
 x & \begin{center}a\\b\end{center} \\
+w & \begin{flushleft}c\\d\end{flushleft} \\
 y & z \\
 \end{tabu}
 \end{document}
