@@ -1,0 +1,19 @@
+% mechanism: the queue's marks query under flexisym (`\mathchar` glyphs read, `util_text::printed_glyph`) with a mark
+%   inside a box, a `\thanks` holding a formula and a name in a font command (the int158a lesson: marks in boxes and notes)
+% witness: synthetic (FMK1 sibling s4; 2312.00656's mechanism)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann One1∗ Bob Two21 / 11First Univ 2Second Univ" (authblk's
+%   own "1" after the last name and before the first piece: RED `authblk_noblocks_trailing_note_list_red`)
+% engines: int162a: both creators holding "1 First Univ 2 Second Univ"; FMK1 and the build without flexisym: below
+% expect:  0 errors, 1 warning (Bob Two's bold lost to plain text, as without flexisym); Ann One (note "Note 3 here.",
+%   affiliation "1 First Univ") / Bob Two (affiliation "2 Second Univ")
+% status:  GREEN (guard perfect_kernel_batchc1::queued_marks_read_as_digested)
+\documentclass{article}
+\usepackage[noblocks]{authblk}
+\usepackage{flexisym}
+\title{T}
+\author{\mbox{Ann One$^{1}$}\thanks{Note $^{3}$ here.} \qquad \textbf{Bob Two$^{2}$}}
+\affil{$^1$First Univ \qquad $^2$Second Univ}
+\begin{document}
+\maketitle
+Text.
+\end{document}

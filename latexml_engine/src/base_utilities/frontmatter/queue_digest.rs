@@ -654,6 +654,7 @@ fn label_ink(d: &Digested, out: &mut PrintedLabel, in_picture: bool) {
         out.push(',', in_picture);
         return;
       }
+      let start = out.text.len();
       for a in &printed_properties(&w) {
         label_ink(a, out, in_picture);
       }
@@ -664,6 +665,15 @@ fn label_ink(d: &Digested, out: &mut PrintedLabel, in_picture: bool) {
       }
       if let Ok(Some(body)) = w.get_body() {
         label_ink(&body, out, in_picture);
+      }
+      if out.text.len() == start
+        && let Some(glyph) = printed_glyph(&w)
+      {
+        for c in glyph.chars() {
+          if keeps_label_char(c, out.text.chars().next_back()) {
+            out.push(c, in_picture);
+          }
+        }
       }
       // (a math accent prints its glyph on its base: `$^{\bar{\dag}}$` is `†̄`, no `\dag` — review rev92b_r4 S2)
       for c in accent_combining_form(&w).unwrap_or_default().chars() {

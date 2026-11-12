@@ -1,0 +1,15 @@
+% mechanism: the marks under flexisym (`\mathchar` glyphs read, `util_text::printed_glyph`): letter marks and a symbol
+%   (flexisym's `a`, `,`, `*` are `\mathchar`s too) on the kernel's `\author` with its lines
+% witness: synthetic (FMK1 sibling s7; 2312.00656's mechanism)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Onea,* , Bob Twob / aFirst Univ / bSecond Univ / *Corresponding author"
+% engines: int162a: both creators holding all three lines as affiliations; FMK1 and the build without flexisym: below
+% expect:  0 errors, 0 warnings; Ann One (First Univ, note "∗ Corresponding author") / Bob Two (Second Univ)
+% status:  GREEN (guard perfect_kernel_batchc1::queued_marks_read_as_digested)
+\documentclass{article}
+\usepackage{flexisym}
+\title{T}
+\author{Ann One$^{a,*}$, Bob Two$^{b}$\\ $^a$First Univ\\ $^b$Second Univ\\ $^*$Corresponding author}
+\begin{document}
+\maketitle
+Text.
+\end{document}

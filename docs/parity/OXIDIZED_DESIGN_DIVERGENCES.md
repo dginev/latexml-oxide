@@ -34917,6 +34917,22 @@ raw_class_refstepcounter_numbered_institutes_macro_held_separator,raw_class_refs
 displaced_class_numbered_institutes_macro_held_separator}.tex`); a `\let` copy of `\and` is no input here either
 (pdflatex 13 errors).
 
+**FMK1 (2026-11-12): a math character's glyph is ink.** Our `\mathchar`, `\delimiter`, `\Udelimiter` and `\mathaccent`
+are whatsits carrying the character in their `glyph` property (`tex_math.rs`, `latex_constructs_rust_only.rs`), where
+Perl's `\mathchar` is a Box of it (`TeX_Math.pool.ltxml:575-580`); the text walkers read no property but `alignment` and
+`text`, so a script of `\mathchar`s printed nothing. flexisym makes digits, letters and punctuation math-active
+`\mathchar`s (`\DeclareFlexSymbol`, flexisym.sty:244-258; cmbase.sym:68, 77, 128), so under it the marks query read `$^{2,3}$` as no mark
+(2312.00656: uai2023 + authblk[noblocks] + flexisym; F0's reading gave 7 creators without their marks and every
+affiliation on each, no Warning). `util_text::printed_glyph` gives the glyph a whatsit prints where it shows nothing else,
+and each reader of a whatsit's print reads it: `ink_text` (the observer's event text), `ink_word_text` (the title page
+check), `typesets_content`, the observer's `script_ink` (a mark's label) and `queue_digest::label_ink` (a printed
+label). Under flexisym a name's marks now read as without it (the twin rows). A/B against int162a on 476 papers (177
+flexisym/breqn, 199 author_marks, 100 controls): E/F equal, 3 changed, all flexisym — 1809.04032 and 1903.10294 better
+(each author's own affiliation and e-mail by the marks), 2312.00656 back to int161a's shape (authblk's trailing note:
+RED `authblk_noblocks_trailing_note_list_red`). Guard `perfect_kernel_batchc1::queued_marks_read_as_digested` (rows
+`queue_marks_flexisym_{authblk_noblocks_list,authblk_boxed_note,ieeetran_line,letter_symbol_marks}` and the twin
+`queue_marks_authblk_noblocks_list`).
+
 ### 996. What is appended to `\@author` after the author setter stored it is the author block's continuation: rows before its first `\and`, more authors after it, also under a binding whose `\author` stores nothing in `\@author` (FX24; RR1 gap 24)
 
 **Perl.** `\author` reads only its argument (`latex_constructs.pool.ltxml:1076-1079`
