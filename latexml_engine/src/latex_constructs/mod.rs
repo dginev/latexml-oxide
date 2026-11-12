@@ -7520,8 +7520,11 @@ pub fn begin_bibliography_clean(whatsit: &mut Whatsit) -> Result<()> {
   // byte-identical to Perl. MakeBibliography derives citation-order numbering
   // from the `bibstyle` name (html_feedback #6294), so no `sort` attribute is
   // needed on the core node.
-  // And prepare for the likely nonsense that appears within bibliographies
+  // And prepare for the likely nonsense that appears within bibliographies: the classes' `thebibliography`
+  // (article.cls:573) runs `\usecounter{enumiv}` (latex.ltx:16048), which also names the list's counter; asl.cls's
+  // entries read `\value{\@listctr}` (1005.4193, 0705.0395). Perl's never names it (KNOWN_PERL_ERRORS #1230).
   ResetCounter!("enumiv");
+  Digest!(TokenizeInternal!(r"\@nmbrlisttrue\def\@listctr{enumiv}"))?;
   Ok(())
 }
 

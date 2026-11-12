@@ -241,13 +241,95 @@ const ROWS: &[Row] = &[
       ),
     ],
   ),
+  // `thebibliography` names its list's counter as `\usecounter{enumiv}` does (article.cls:573, latex.ltx:16048): an
+  // asl.cls entry composing its number from `\value{\@listctr}` reads enumiv, 1 then 2, with nothing reported (GA1
+  // alone: 3 errors on `\c@`; witnesses 1005.4193, 0705.0395). The `[…]` left in the text is
+  // item_label_in_thebibliography_is_the_entry_tag_red.
+  (
+    None,
+    include_str!(
+      "../../../tools/perfect_kernel/repros/index-bib/listctr_after_thebibliography.tex"
+    ),
+    0,
+    0,
+    0,
+    "",
+    &[
+      (
+        "bibitem",
+        &[r#"xml:id="bib.bib1""#],
+        "<bibitem xml:id=\"bib.bib1\"><tags><tag>[1]</tag><tag role=\"refnum\">1</tag></tags>
+          <bibblock>[[1]]First entry.\n</bibblock></bibitem>",
+      ),
+      (
+        "bibitem",
+        &[r#"xml:id="bib.bib2""#],
+        "<bibitem xml:id=\"bib.bib2\"><tags><tag>[2]</tag><tag role=\"refnum\">2</tag></tags>
+          <bibblock>[[2]]Second entry.\n</bibblock></bibitem>",
+      ),
+    ],
+  ),
+  // A list is numbered only under `\@nmbrlisttrue` (latex.ltx:16024): memoir.cls:4580's raw `\list{}{}` inside that
+  // bibliography keeps `\@listctr` = enumiv but numbers nothing (the `\@listctr` fix alone tagged it "0()A"); a
+  // `\usecounter` list there and both shapes in an enumerate keep pdflatex's numbers. Raw loading on, as the CLI.
+  (
+    Some(RAW),
+    include_str!(
+      "../../../tools/perfect_kernel/repros/list-structure/raw_list_numbers_only_under_nmbrlist.tex"
+    ),
+    0,
+    1,
+    0,
+    "",
+    &[
+      (
+        "bibitem",
+        &[r#"xml:id="bib.bib1""#],
+        r#"<bibitem key="a" xml:id="bib.bib1"><tags><tag>[1] </tag><tag role="refnum">1</tag></tags>
+          <bibblock> First.
+<itemize>
+            <item xml:id="chapter0.section0.I1.i1"><tags><tag role="typerefnum">1st item</tag></tags>
+              <para xml:id="chapter0.section0.I1.i1.p1"><p>Inner one.</p></para></item>
+            <item xml:id="chapter0.section0.I1.i2"><tags><tag role="typerefnum">2nd item</tag></tags>
+              <para xml:id="chapter0.section0.I1.i2.p1"><p>Inner two.</p></para></item>
+          </itemize></bibblock></bibitem>"#,
+      ),
+      (
+        "bibitem",
+        &[r#"xml:id="bib.bib2""#],
+        r#"<bibitem key="b" xml:id="bib.bib2"><tags><tag>[2] </tag><tag role="refnum">2</tag></tags>
+          <bibblock> Second.
+<itemize>
+            <item xml:id="chapter0.section0.I2.i1"><tags><tag>(1)</tag><tag role="refnum">1</tag></tags>
+              <para xml:id="chapter0.section0.I2.i1.p1"><p>Counted one.</p></para></item>
+            <item xml:id="chapter0.section0.I2.i2"><tags><tag>(2)</tag><tag role="refnum">2</tag></tags>
+              <para xml:id="chapter0.section0.I2.i2.p1"><p>Counted two.</p></para></item>
+          </itemize></bibblock></bibitem>"#,
+      ),
+      (
+        "item",
+        &[r#"xml:id="chapter0.section0.I3.i1""#],
+        r#"<item xml:id="chapter0.section0.I3.i1">
+          <tags><tag>1.</tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags>
+          <para xml:id="chapter0.section0.I3.i1.p1"><p>Outer.</p>
+            <itemize>
+              <item xml:id="chapter0.section0.I3.i1.I1.i1"><tags><tag role="typerefnum">1st item</tag></tags>
+                <para xml:id="chapter0.section0.I3.i1.I1.i1.p1"><p>Nested.</p></para>
+              </item></itemize>
+            <itemize>
+              <item xml:id="chapter0.section0.I3.i1.I2.i1"><tags><tag>[1]</tag><tag role="refnum">1</tag></tags>
+                <para xml:id="chapter0.section0.I3.i1.I2.i1.p1"><p>Counted.</p></para>
+              </item></itemize></para></item>"#,
+      ),
+    ],
+  ),
 ];
 
 /// Repros macro-state/undefined_counter_register_is_an_error (GA0 finding 1), macro-state/
 /// counter_readers_keep_their_leniency and captions-floats/subfig_continuedfloat_in_a_float_without_subfloats
 /// (witness 1910.02851), alignment-bindings/tabularray_rownum_colnum_counters (GA1b), the `\c@rownum` count in every
-/// load order of xcolor `[table]`, colortbl and tabularray and tabularray's `\c@rowcount` (GA1c): exact counts, the first
-/// Error, whole elements.
+/// load order of xcolor `[table]`, colortbl and tabularray and tabularray's `\c@rowcount` (GA1c), the bibliography's
+/// `\@listctr` and the `\@nmbrlisttrue` test it needs (GA1d): exact counts, the first Error, whole elements.
 #[test]
 fn an_undefined_counter_register_is_the_error_tex_raises() {
   for (preload, tex, errors, warnings, assuming, first_error, elements) in ROWS {

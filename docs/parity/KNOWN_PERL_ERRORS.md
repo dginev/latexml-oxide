@@ -19439,3 +19439,26 @@ under `\escapechar` `/` (latex.ltx:7011-7016), so every `cmd/<name>` hook on one
 \protected\long\def\x{}
 {\escapechar=`\/ \message{\meaning\x}}
 ```
+
+## 1230. `thebibliography` never names its list's counter in `\@listctr`
+
+The classes' `thebibliography` (article.cls:573) runs `\usecounter{enumiv}`, which is `\@nmbrlisttrue\def\@listctr{enumiv}
+\setcounter{enumiv}\z@` (latex.ltx:16048). Perl's `beginBibliography_clean` (latex_constructs.pool.ltxml:3892) does only
+`ResetCounter('enumiv')`, so `\@listctr` stays empty (`DefMacro('\@listctr', '')`, pool:1635) and a class's entry reading `\value{\@listctr}`
+(asl.cls:5926-5927 `\composelist`, :5665 the aux line; witnesses 1005.4193, 0705.0395) reads `\c@`: on the trigger below
+Perl raises 2 Errors (`Error:undefined:\c@`, `Error:unexpected:\the\c@`) and prints 0 where pdflatex prints 1, cleanly. Rust: `begin_bibliography_clean`
+also names it, and the kernel list setup numbers only under `\@nmbrlisttrue` (latex.ltx:16024), so memoir.cls:4580's raw
+`\list` inside the bibliography stays unnumbered. Guard `perfect_kernel_batchga1::an_undefined_counter_register_is_the_error_tex_raises`
+(rows listctr_after_thebibliography, raw_list_numbers_only_under_nmbrlist). Minimal trigger:
+
+```latex
+\documentclass{article}
+\makeatletter
+\def\composelist{\addtocounter{\@listctr}{1}\the\value{\@listctr}}
+\makeatother
+\begin{document}
+\begin{thebibliography}{9}
+\item[\composelist] First entry.
+\end{thebibliography}
+\end{document}
+```
