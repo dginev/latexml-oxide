@@ -3204,7 +3204,8 @@ fn assert_bibliography_attributes(tex: &str, xml: &str, attributes: &[&str]) {
 /// tag's style attributes, the citations, the list's keys in order (pdflatex+bibtex, each fixture's header).
 #[test]
 fn cluster_bib_order_is_the_styles_sort_fact() {
-  let rows: [(&str, [&str; 3], [&str; 2], [&str; 3]); 4] = [
+  type Row<'a> = (&'a str, [&'a str; 3], [&'a str; 2], [&'a str; 3]);
+  let rows: [Row; 4] = [
     (
       "cite_order_plain_preamble",
       [
