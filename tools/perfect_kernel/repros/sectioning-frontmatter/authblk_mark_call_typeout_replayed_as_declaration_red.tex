@@ -1,0 +1,22 @@
+% mechanism: a mark macro whose expansion runs `\typeout` (IEEEtran's legacy `\authorrefmark`, `\@IEEElegacywarn`) is
+%   noted as a declaration (`field_notes`: the group-local `\let\protect\string` of `\typeout`), and the declarations'
+%   replay digests the call alone, reading past it: the `\ifcase` reads the next call as its number, a Warning each
+%   (the output's names are right; the replay prints nothing). Moves: a recorder batch (no local assignment of a closed
+%   group is a declaration); `declaration_reads_past` then may read the tail call too
+% witness: 2609.25589 (ieee-ojvt.cls); this synthetic shape: PMK1
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Lee∗ , Bob Ray∗ and Cy Dee†", "∗Univ of X", "†Univ of Y"
+% engines: int164a: 3 warnings (Missing number), Cy Dee "∗ ⁣ †"; PMK1: 2 warnings (Missing number), the names right
+% expect:  0 errors, 0 warnings; Ann Lee ∗ and Bob Ray ∗ "∗ Univ of X", Cy Dee † "† Univ of Y"
+% status:  RED (PMK1)
+% moves:   post-merge
+\documentclass{article}
+\usepackage{authblk}
+\DeclareRobustCommand*{\mk}[1]{\raisebox{0pt}[0pt][0pt]{\textsuperscript{\footnotesize\ensuremath{\ifcase#1\or *\or \dagger\else c\fi}}}}
+\def\mkl{\typeout{legacy}\mk}
+\begin{document}
+\title{T}
+\author{Ann Lee\mkl{1}, Bob Ray\mkl{1} and Cy Dee\mkl{2}}
+\affil{\mk{1}Univ of X}
+\affil{\mk{2}Univ of Y}
+\maketitle
+\end{document}

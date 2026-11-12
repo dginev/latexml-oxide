@@ -1,0 +1,18 @@
+% mechanism: a name's kept mark whose call is a parameterless macro ending in the command that reads the argument
+%   (`content::tail_call`) is written with that argument: IEEEtran's legacy `\def\authorrefmark{…\IEEEauthorrefmark}`
+% witness: 2609.25589 (ieee-ojvt.cls's `\authorrefmark`); this synthetic shape: PMK1
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Lee∗ , Bob Ray∗ and Cy Dee†", "∗Univ of X", "†Univ of Y"
+% engines: int164a: 0 errors, 1 warning (Missing number); Cy Dee "∗ ⁣ †" (a ∗ invented); PMK1: Cy Dee †
+% expect:  0 errors, 0 warnings; Ann Lee ∗ and Bob Ray ∗ "∗ Univ of X", Cy Dee † "† Univ of Y"
+% status:  RED (int164a) -> GREEN (guard perfect_kernel_batchc1::authblk_names_show_their_printed_marks)
+\documentclass{article}
+\usepackage{authblk}
+\DeclareRobustCommand*{\mk}[1]{\raisebox{0pt}[0pt][0pt]{\textsuperscript{\footnotesize\ensuremath{\ifcase#1\or *\or \dagger\else c\fi}}}}
+\def\mkl{\relax\mk}
+\begin{document}
+\title{T}
+\author{Ann Lee\mkl{1}, Bob Ray\mkl{1} and Cy Dee\mkl{2}}
+\affil{\mk{1}Univ of X}
+\affil{\mk{2}Univ of Y}
+\maketitle
+\end{document}

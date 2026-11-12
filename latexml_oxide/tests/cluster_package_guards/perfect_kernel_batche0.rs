@@ -1690,8 +1690,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // catcode, as `balanced` reads closing braces — the `\fi` itself by its meaning, no name spelled; PC3 14 -> 15:
   // `reads_arguments` reads a title-code statement's parameter text — the class's own `\def`, never a document token —
   // for whether its definee takes arguments, so a held undefined title-code command is not cut from them, 1108.4222;
-  // Z18m 15 -> 14: `reads_arguments` moved with the title-code reader to `classify/title_code.rs`, its read with it)
-  ("emitter/content", 14),
+  // Z18m 15 -> 14: `reads_arguments` moved with the title-code reader to `classify/title_code.rs`, its read with it;
+  // PMK1 14 -> 16: `tail_call` reads a parameterless macro's expansion — its definition, no document token — for its last
+  // command, whose parameters the call reads (a robust `\protect \cs␣`, IEEEtran's `\authorrefmark`), 0912.0896, 2609.25589)
+  ("emitter/content", 16),
   // (Z4a, a new file: the emitter builds Perl's calls from the reading, its reads a call's own keys and pieces, `text_tokens` (`printed_text_tokens` since E0h) and the
   // catcodes of a cut: where a slice's edge falls past an option, a group or an accent's letter, OD #980; Z4ar2, 30 -> 28: an address
   // list's `@` no longer read, its inks are; NE3 28 -> 36: `key_tokens`' table of the specials a key value holds as characters,
