@@ -7,7 +7,10 @@
 % engines: rust int160c, BU1: 0 errors, the main References list Smith and Zimmer; perl: not run (its Scan.pm:379-380
 %   registers both lists)
 % expect:  0 errors; the main References hold Smith only
-% status:  RED (int160c, BU1)
+% status:  RED (int160c, BU1, BU1b)
+% moves:   the fix moves the `bibunits_unit_twin.tex` row of 06_cluster_bibliography::
+%   bibunits_cite_resolves_against_the_main_bibliography: its main list loses Zimmer (`biba.bib2`), so the
+%   later links `biba.bib3`/`biba.bib4` renumber
 \documentclass{article}
 \usepackage{bibunits}
 \begin{document}

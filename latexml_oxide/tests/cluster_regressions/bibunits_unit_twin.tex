@@ -1,7 +1,7 @@
 % mechanism: bibunits — a `\cite` outside every `{bibunit}` is the kernel's (bibunits.sty: only `\bibunit` lets
 %   `\cite` to `\bu@cite`), so it goes to the main bibliography; inside a unit it keeps the unit's list, `\cite*`
 %   both. Perl's binding stamps `bu<N>` on every `\cite` (bibunits.sty.ltxml:32-41), here `bu1` on the cite after
-%   the unit (KNOWN_PERL_ERRORS #NEW1; BM Q2.7).
+%   the unit (KNOWN_PERL_ERRORS #1223; BM Q2.7).
 % witness: synthetic (BM Q2.7 probe's twin); 2510.13035 (11 cites after its unit), 2306.06173, 2303.06077
 % oracle:  pdflatex + bibtex (main, bu1): 0 errors; `Main [3]. Unit [2] and [1]. After [2]`;
 %          main References [1] Abel [2] Miller [3] Smith, the unit's [1] Abel [2] Zimmer

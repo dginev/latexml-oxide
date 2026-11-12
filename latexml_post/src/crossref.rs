@@ -2170,7 +2170,7 @@ impl CrossRef {
     // bibref, while the bibitems register under the default `bibliography`
     // list, so the unit-only lookup never matches (witness 2303.06077: 93
     // bibitems, 93 dangling keys, 0 links). Ours stamps only inside a unit
-    // (KNOWN_PERL_ERRORS #NEW1); a unit's cite with no unit bibliography
+    // (KNOWN_PERL_ERRORS #1223); a unit's cite with no unit bibliography
     // still needs this fallback.
     //
     // Perl's own Scan.pm L379-380 spells the intended chain — unit lists

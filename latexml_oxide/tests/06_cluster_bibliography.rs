@@ -1205,15 +1205,17 @@ fn sn_jnl_apa_option_loads_apacite_bibliography_macros() {
 /// searched the unit list only (OD #59, KNOWN_PERL_ERRORS #50; witness
 /// 2303.06077: 93 bibitems, 93 keys dangling, 0 links). Outside every unit
 /// `\cite` is the kernel's (bibunits.sty: only `\bibunit` lets it to
-/// `\bu@cite`), so its bibref carries no `inlist` (KNOWN_PERL_ERRORS #NEW1,
-/// BM Q2.7); inside a unit it keeps `bu1`, `\cite*` adds the main list. Rows:
-/// no unit; a `{bibunit}` with cites before and after it; `\bibliographyunit
-/// [\section]` ended by an argless call (the `\lx@startbibunit` path). Each row:
-/// the core's bibrefs in order, then each cite's link after post.
+/// `\bu@cite`, globally), so its bibref carries no `inlist` (KNOWN_PERL_ERRORS
+/// #1223, BM Q2.7); inside a unit it keeps `bu1`, `\cite*` adds the main list.
+/// Rows: no unit; a `{bibunit}` with cites before and after it;
+/// `\bibliographyunit[\section]` ended by an argless call (the
+/// `\lx@startbibunit` path); a section unit opened inside a group; a
+/// `{bibunit}` in a chapterbib chapter. Each row: the core's bibrefs in order,
+/// then each cite's link after post.
 #[test]
 fn bibunits_cite_resolves_against_the_main_bibliography() {
   const FREE: &str = r#"separator="," yyseparator=",""#;
-  let rows: [(&str, Vec<String>, &[&str]); 3] = [
+  let rows: [(&str, Vec<String>, &[&str]); 5] = [
     (
       "tests/cluster_regressions/bibunits_cite.tex",
       vec![format!(r#"<bibref bibrefs="Smith2020" {FREE}/>"#)],
@@ -1241,6 +1243,28 @@ fn bibunits_cite_resolves_against_the_main_bibliography() {
         format!(r#"<bibref bibrefs="mid" {FREE}/>"#),
       ],
       &["biba.bib1", "bib.bib1", "biba.bib3"],
+    ),
+    (
+      // The unit opened inside `{multicols}` still holds the cite after it: a unit is open globally.
+      "tests/cluster_regressions/bibunits_sectionunit_group.tex",
+      vec![
+        format!(r#"<bibref bibrefs="alpha" inlist="bu1" {FREE}/>"#),
+        format!(r#"<bibref bibrefs="zeta" inlist="bu1" {FREE}/>"#),
+      ],
+      // The ids follow the `.bib`'s order (zeta first); the References print Abel [1], as plain does.
+      &["bib.bib2", "bib.bib1"],
+    ),
+    (
+      // `\end{bibunit}` gives the cite back to the list it had before the unit: chapterbib's.
+      "tests/cluster_regressions/bibunits_chapterbib/bibunits_chapterbib.tex",
+      vec![
+        format!(r#"<bibref bibrefs="alpha" {FREE}/>"#),
+        format!(r#"<bibref bibrefs="zeta" inlist="bibunits_chapterbib_chapter" {FREE}/>"#),
+        format!(r#"<bibref bibrefs="mid" class="ltx_cite_sort" inlist="bu1" {FREE}/>"#),
+        format!(r#"<bibref bibrefs="Smith2020" inlist="bibunits_chapterbib_chapter" {FREE}/>"#),
+      ],
+      // The unit's (`bib`), the chapter's (`biba`: Smith, Zimmer), the main one (`bibb`).
+      &["bibb.bib3", "biba.bib2", "bib.bib1", "biba.bib1"],
     ),
   ];
   let attr = |el: &str, name: &str| -> Option<String> {
