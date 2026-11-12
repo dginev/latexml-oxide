@@ -1094,7 +1094,9 @@ Perl's text-mode `{` lists an open-brace box (not a space) in the paragraph (TeX
 group keeps a paragraph whose group part holds only space items (Stomach.pm:463-465 `repackHorizontal`). Ours digests
 the group into its own list (OD #100), whose repack discarded `x{\phantom{Ca}\par Cb}`'s phantom and 2410.06985's
 `\node{\phantom{Cpd}\\…}`. RUST-ONLY. Fix stomach.rs: the group's list continues the paragraph (`ParagraphStart::in_group`),
-and a repack that runs off its bottom keeps the paragraph. Guard `perfect_kernel_batchrg1::batchrg1_group_paragraph_rows`.
+and a repack that runs off its bottom keeps the paragraph, unless the group added only blank characters (the glue TeX
+deletes at a paragraph's end, tex.web §816; Perl leaves an empty `<text>` there, 1602.08755). Guard
+`perfect_kernel_batchrg1::batchrg1_group_paragraph_rows`.
 
 ### group_par_paragraphs_are_measured_red, group_unskip_reaches_the_paragraph_before_it_red — RED (RG1, post-merge)
 A text group holding a `\par` is mismeasured (`\vbox{x{Cpd\par pt}}` 28.31pt high, pdflatex 18.94pt; cause not traced).

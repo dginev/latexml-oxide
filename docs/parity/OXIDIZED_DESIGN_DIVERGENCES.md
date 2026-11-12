@@ -4913,7 +4913,10 @@ space items (phantoms) was discarded — `x{\phantom{Ca}\par Cb}` lost Ca, a tik
 node `{\phantom{Cpd}\\\phantom{pt}}` its Cpd (2410.06985). The group's list now
 continues the paragraph (`ParagraphStart::in_group`,
 `stomach::digest_group_body_in_paragraph`): a repack that runs off its bottom
-keeps the paragraph, as Perl's pop reaching the `{` box does (Stomach.pm:463-465).
+keeps the paragraph, as Perl's pop reaching the `{` box does (Stomach.pm:463-465),
+unless the group added only blank characters: that is the glue TeX deletes at a
+paragraph's end (tex.web §816), where Perl leaves an empty `<text>` (1602.08755
+`diagram⏎\footnotesize{⏎\begin{center}`).
 Guard `perfect_kernel_batchrg1::batchrg1_group_paragraph_rows`. Residual: such a
 group's paragraphs are mismeasured (repro
 `boxes-groups/group_par_paragraphs_are_measured_red`).

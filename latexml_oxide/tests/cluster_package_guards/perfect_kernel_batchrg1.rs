@@ -53,14 +53,15 @@ const ROWS: &[Row] = &[
       "<inline-block class=\"ltx_minipage\" vattach=\"top\" width=\"18.49em\" xml:id=\"p1.pic1.2\">\n                <p xml:id=\"p1.pic1.2.1\"/>\n                <p xml:id=\"p1.pic1.2.2\">Cpd</p>\n                <p xml:id=\"p1.pic1.2.3\">pt</p>\n              </inline-block>",
     ],
   ),
-  // The safe side: a group's paragraph of nothing or a space adds no empty <p> (pdflatex and Perl the same).
+  // The safe side: a group's paragraph of nothing or a space adds no empty <p> (pdflatex and Perl the same), nor a
+  // `<text/>` for a font-switched blank (1602.08755; tex.web §816, where Perl leaves an empty `<text>`).
   (
     repro!("group_par_space_only_paragraph_makes_none"),
     0,
     0,
     "document",
     &[
-      "<para xml:id=\"p1\">\n    <p xml:id=\"p1.1\">x</p>\n  </para>\n  <para xml:id=\"p2\">\n    <p xml:id=\"p2.1\">Hb</p>\n  </para>\n  <para xml:id=\"p3\">\n    <p xml:id=\"p3.1\">x</p>\n  </para>\n  <para xml:id=\"p4\">\n    <p xml:id=\"p4.1\">Ib</p>\n  </para>\n  <para xml:id=\"p5\">\n    <p xml:id=\"p5.1\">x</p>\n  </para>\n  <para xml:id=\"p6\">\n    <p xml:id=\"p6.1\">Kb</p>\n  </para>\n",
+      "<para xml:id=\"p1\">\n    <p xml:id=\"p1.1\">x</p>\n  </para>\n  <para xml:id=\"p2\">\n    <p xml:id=\"p2.1\">Hb</p>\n  </para>\n  <para xml:id=\"p3\">\n    <p xml:id=\"p3.1\">x</p>\n  </para>\n  <para xml:id=\"p4\">\n    <p xml:id=\"p4.1\">Ib</p>\n  </para>\n  <para xml:id=\"p5\">\n    <p xml:id=\"p5.1\">x</p>\n  </para>\n  <para xml:id=\"p6\">\n    <p xml:id=\"p6.1\">Kb</p>\n  </para>\n  <para xml:id=\"p7\">\n    <p xml:id=\"p7.1\">Ma</p>\n    <p align=\"center\" xml:id=\"p7.2\"><text fontsize=\"80%\" xml:id=\"p7.2.1\">Mb</text></p>\n  </para>\n",
     ],
   ),
 ];

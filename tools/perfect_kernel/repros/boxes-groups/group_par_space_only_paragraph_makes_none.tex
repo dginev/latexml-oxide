@@ -1,8 +1,10 @@
-% witness: synthetic (the safe side of group_par_mid_paragraph_keeps_its_paragraph)
+% witness: synthetic (the safe side of group_par_mid_paragraph_keeps_its_paragraph); the last 1602.08755, 2306.13987,
+%          2404.03194, 2501.08435
 % oracle:  pdflatex 0 errors: "x" then "Hb", "x" then "Ib", "x" then "Kb": no line between; Perl the same (a paragraph
-%          of the group's open-brace box and spaces adds nothing to <p>x</p>)
-% engines: rust int162a = perl
-% expect:  0 errors, 0 warnings; no empty <p> or <para> between x and the next paragraph
+%          of the group's open-brace box and spaces adds nothing to <p>x</p>). Last: the group's blank is the glue TeX
+%          deletes at the paragraph's end (tex.web §816); Perl <p>Ma\n<text fontsize="80%"></text></p> (1602.08755)
+% engines: rust int162a = perl, but <p>Ma</p> for the last; RG1's first commit f54756b664 <p>Ma\n<text/></p>
+% expect:  0 errors, 0 warnings; no empty <p> or <para> between x and the next paragraph; <p>Ma</p>, no <text/>
 % status:  CONTROL
 \documentclass{article}
 \begin{document}
@@ -11,4 +13,7 @@ x{\par Hb}
 x{ \par Ib}
 
 x{\par\par Kb}
+
+Ma\footnotesize{
+\begin{center}Mb\end{center}}
 \end{document}

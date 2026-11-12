@@ -2084,11 +2084,14 @@ fn repack_paragraph(end_graf: bool) {
   // Items were popped in reverse order, so reverse them back
   para.reverse();
   // Run off the bottom of a text group's list: Perl's pop goes on to the group's open-brace box, which is no space, so
-  // the paragraph is kept (`x{\phantom{Ca}\par Cb}`; 2410.06985 `\node{\phantom{Cpd}\\…}`).
+  // the paragraph is kept (`x{\phantom{Ca}\par Cb}`; 2410.06985 `\node{\phantom{Cpd}\\…}`) — unless the group added
+  // only blank characters, the glue TeX deletes at a paragraph's end (tex.web §816; 1602.08755 `x\footnotesize{⏎`).
   if !keep
-    && !para.is_empty()
     && stomach.box_list.is_empty()
     && stomach.paragraph_start.is_some_and(|start| start.in_group)
+    && para.iter().any(|item| {
+      !(matches!(item.data(), DigestedData::TBox(_)) && item.get_property_bool("isSpace"))
+    })
   {
     keep = true;
   }
@@ -3781,7 +3784,7 @@ pub fn digest_next_body(terminal_opt: Option<Token>) -> Result<Vec<Digested>> {
 }
 
 /// The body of a text-mode `{` opened in a paragraph. Perl digests it flat into the paragraph's list, after an open-brace
-/// box (TeX_Box.pool.ltxml:30-42); here it has a list of its own, which continues the paragraph ([`ParagraphStart`]).
+/// box (TeX_Box.pool.ltxml:30-42); here it has a list of its own, continuing the paragraph (`ParagraphStart::in_group`).
 pub fn digest_group_body_in_paragraph() -> Result<Vec<Digested>> { digest_body(None, true) }
 
 fn digest_body(terminal_opt: Option<Token>, in_paragraph: bool) -> Result<Vec<Digested>> {
