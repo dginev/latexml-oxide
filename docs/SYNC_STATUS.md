@@ -70,7 +70,7 @@ Rules that keep this file honest and mergeable:
   | 10 | CT1a-r | CT1a count design (DG ruling pending) | 2 | 1 | todo |
   | 11 | TRUTH | Bars: the truth set | 4 | 5 | todo |
   | 12 | HOLD4 | Bars: fresh holdout v4 read once; 98/98 | 4 | 3 | todo |
-  | 13 | RV1 | RV1 (QA41's fix; the audit done): reversions as Perl/user — inpgf ignorespaces (~66k), centering alias, intertext | 5b | 3 | ongoing |
+  | 13 | RV1 | RV1 (QA41's fix; the audit done): reversions as Perl/user — inpgf ignorespaces (~66k), centering alias, intertext | 5b | 3 | in review (5c168ceac3: 86,701 internal names gone from tex=, 0 other change) |
   | 14 | QA47A | Hooks fix A (QA47, from QA46's study): run the kernel's begindocument lists; a Warning for bindings | 5b | 3 | ongoing |
   | 15 | PGR1 | PGR1 (from EB1): pgfmath grammar gaps (0bp read as a binary prefix ~9% of tikz papers; \dimexpr; -4 .5) then the pgfparse Error | 5 | 3 | todo |
   | 16 | DTL1d | DTL1: out-of-range numbers → Error (OD #519 revised) | 5 | 3 | todo |
@@ -80,7 +80,7 @@ Rules that keep this file honest and mergeable:
   | 18 | GA4 | GA4 | 5 | 3 | todo |
   | 18 | GA5 | GA5 | 5 | 3 | todo |
   | 18 | F1-4 | Fences F1-F4 | 5 | 1 | todo |
-  | 19 | PSF1 | PSF1 (from QA41): \psfrag fragments silently lost (Rust None vs Perl save_psfrag) — reach first | 5 | 1 | todo |
+  | 19 | PSF1 | PSF1: `\psfrag` fragments dropped silently (98 of 30k ≈ 9,100 arXiv papers; Perl too for graphicx; latex+dvips prints them): a counted Warning per dropped fragment before the merge (RED `reversion/psfrag_fragment_dropped_silently_red`); rendering them after it | 5 | 3 | todo |
   | 20 | PERF | Perf + RAM pass, remaining levers (#346) | 5 | 5 | todo |
   | 21 | FMPERF | Frontmatter performance evaluation (#516), after P6 | 5 | 3 | todo |
   | 22 | T1 | T1: the repro suite move | 5 | 3 | todo |
@@ -172,6 +172,9 @@ Rules that keep this file honest and mergeable:
   - BD — A `\DeclareBoldMathCommand` delimiter after `\left` (1205.4484, RED); 3
   - D1 — Rulings pending: `\obeylines` `^^M`, `{framed}` items, biblatex anchors, R7 port-or-drop; 1
   - T2 — Test API stage 2: 37 test files still spawn binaries; 3
+  - GTXT — GeneralText/XGeneralText arguments revert without braces (`\mark{x}` → `\mark xb`; Perl `\mark{x}`; RED `reversion/mark_general_text_reverts_without_braces_red`); 1
+  - SHIT — `\shortintertext` reverts as `\intertext` (mathtools `\let`; the macro-face design); 1
+  - PSFR — psfrag replacements rendered into the figure (after PSF1's Warning); 5
   - MENC — `<m:menclose>` still emitted for `\cancel`/`\boxed` (MathML Core removed it; no mechanical replacement: a rendering + golden change on its own branch; deferred by DG 2026-07-30); 3
   - CI — CI under 30 minutes on `main` (workflow edits, a PR tier); its localhost study feeds CIPERF; 3
   - F1 — Per-encoding text commands, the residual; 3
