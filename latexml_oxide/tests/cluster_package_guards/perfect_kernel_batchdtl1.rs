@@ -131,6 +131,36 @@ const ROWS: &[Row] = &[
     )],
     holds:    &[],
   },
+  // One parse for `\pgfmathparse`, `\pgfmathsetmacro` and `\pgfmathsetlength` (DTL1f, revDTL1e B1): each side of a
+  // paragraph is its `\pgfmathparse` twin; pdflatex [114.59155] and [21.1112pt]. Read apart: [0.0] twice, [0.0pt],
+  // 2 Warnings.
+  Row {
+    name:     "pgfmath_setmacro_parses_as_pgfmathparse",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/graphics-tikz/pgfmath_setmacro_parses_as_pgfmathparse.tex"
+    ),
+    files:    &[],
+    counts:   (0, 0),
+    messages: &[],
+    elements: &[
+      (
+        "para",
+        "xml:id=\"p1\"",
+        r#"<para xml:id="p1"><p xml:id="p1.1">[114.59156][114.59156]</p></para>"#,
+      ),
+      (
+        "para",
+        "xml:id=\"p2\"",
+        r#"<para xml:id="p2"><p xml:id="p2.1">[21.11121][21.11121]</p></para>"#,
+      ),
+      (
+        "para",
+        "xml:id=\"p3\"",
+        r#"<para xml:id="p3"><p xml:id="p3.1">[21.1112pt]</p></para>"#,
+      ),
+    ],
+    holds:    &[],
+  },
   // The error side: a dimension TeX cannot hold still reports "Dimension too large" (pdflatex 1 `!`; Perl 0 and
   // 20000.0pt). A Warning today; the out-of-range severity batch makes it an Error.
   Row {

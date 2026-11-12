@@ -1898,7 +1898,7 @@ mod pgfmath_grammar {
   /// pgfplots ybar witnesses on the original implementation). An expl3 name
   /// (`\l_tmpa_dim`, `\c_pgfinterference_delta_dim`) is ONE control sequence
   /// in the tokens `\pgfmathparse` received; the string round-trip
-  /// (`expanded.to_string()`) plus this alphabetic-only scan split it at `_`
+  /// (`pgfmath_input_text`) plus this alphabetic-only scan split it at `_`
   /// and looked up `\l`/`\c` — 200k "not a register" warnings and zero
   /// geometry per pixel on pgf-interference (412 s; Perl pgfmath.code.tex
   /// .ltxml:704 splits the same way, pdflatex reads the register token). When
@@ -2069,26 +2069,11 @@ fn format_parse_result(result: f64, input: &str) -> String {
   s
 }
 
-/// Expand the argument to a pgfmath parse with the seven calc-package
-/// compatibility CSes (`\real`, `\minof`, `\maxof`, `\ratio`, `\widthof`,
-/// `\heightof`, `\depthof`) transiently `\let` to the `\pgfmath@calc@*`
-/// internals, then restored to their prior meanings.
-///
-/// Perl `pgfmath.code.tex.ltxml` L320-327 performs these `Let`s at the *start
-/// of `sub pgfmathparse`* — i.e. only while the pgfmath argument is being
-/// expanded; being local (non-`global`) `Let`s they revert with the enclosing
-/// tikz/pgf group. The earlier Rust port hoisted them to package-load time
-/// (because the native parser "can't re-bind per call"), which globally
-/// clobbered `\real` (and the six siblings) for the *whole document*. That
-/// broke the very common use of `\real` as the blackboard-ℝ symbol: e.g.
-/// `\int_\real p_m`, where the 1-argument `\pgfmath@calc@real` ate the
-/// following `p` as its argument and yielded a spurious "Double subscript".
-/// Witness: 1608.06741 (`\newcommand\real{\mathbb{R}}`, ignored because
-/// mathtools→calc already defined `\real`, then pgfmath via todonotes→tikz
-/// clobbered it). We restore Perl's exact scope with a tight
-/// save → let → expand → restore around just this one expansion, so `\real`
-/// used as an ordinary math macro elsewhere is never touched.
-fn expand_pgfmath_arg<T: Into<Tokens>>(tokens: T) -> Tokens {
+/// Expand the argument to a pgfmath parse with the seven calc-package compatibility CSes (`\real`, `\minof`,
+/// `\maxof`, `\ratio`, `\widthof`, `\heightof`, `\depthof`) `\let` to the `\pgfmath@calc@*` internals for this
+/// expansion only, as Perl's `sub pgfmathparse` does (pgfmath.code.tex.ltxml:320-327). Bound for the whole document
+/// they clobbered `\real` as ℝ (`\int_\real p_m`, a spurious "Double subscript"; 1608.06741).
+pub(crate) fn expand_pgfmath_arg<T: Into<Tokens>>(tokens: T) -> Result<Tokens> {
   const PAIRS: [(&str, &str); 7] = [
     ("\\real", "\\pgfmath@calc@real"),
     ("\\minof", "\\pgfmath@calc@minof"),
@@ -2109,16 +2094,28 @@ fn expand_pgfmath_arg<T: Into<Tokens>>(tokens: T) -> Tokens {
   for (cs, helper) in PAIRS.iter() {
     let_i(&T_CS!(*cs), &T_CS!(*helper), None);
   }
-  let expanded = do_expand(tokens).unwrap_or_default();
+  let expanded = do_expand(tokens);
   for (t, m) in saved {
     assign_meaning(&t, m, None);
   }
   expanded
 }
 
+/// Perl's `sub pgfmathparse` (pgfmath.code.tex.ltxml:316-394), which `\pgfmathparse`, `\lx@pgfmath@parseX` and
+/// `\pgfmathsetmacro` share: expand, read the text, evaluate; returns the result and whether units were declared.
+pub(crate) fn pgfmathparse(tokens: Tokens) -> Result<(String, bool)> {
+  Ok(pgfmathparse_expanded(expand_pgfmath_arg(tokens)?))
+}
+
+/// `pgfmathparse` on an argument `expand_pgfmath_arg` has expanded (`\pgfmathsetlength` looks at it first).
+pub(crate) fn pgfmathparse_expanded(expanded: Tokens) -> (String, bool) {
+  pgfmathparse_eval_with_units(&pgfmath_input_text(expanded))
+}
+
 /// The parser's text of an expanded argument: its string, keeping the space TeX's mouth skipped after a control word
-/// where a letter follows (`\mydim r` is `\mydim` then `r`, not `\mydimr` as Perl's pgfmath.code.tex.ltxml:328 reads).
-pub(crate) fn pgfmath_input_text(tokens: Tokens) -> String {
+/// where a letter follows (`\mydim r` is `\mydim` then `r`, not `\mydimr` as Perl's pgfmath.code.tex.ltxml:328 reads;
+/// KNOWN_PERL_ERRORS #1224).
+fn pgfmath_input_text(tokens: Tokens) -> String {
   let mut spaced = Vec::with_capacity(tokens.unlist_ref().len());
   let mut after_control_word = false;
   for t in tokens.unlist() {
@@ -2126,13 +2123,14 @@ pub(crate) fn pgfmath_input_text(tokens: Tokens) -> String {
     if after_control_word && code == Catcode::LETTER {
       spaced.push(T_SPACE!());
     }
+    // A control word as tex.web's print_cs (§262) reads one: a name of two or more characters, or a single letter.
     after_control_word = code == Catcode::CS
       && t.with_str(|name| {
-        name
-          .chars()
-          .last()
-          .and_then(lookup_catcode)
-          .is_some_and(|cc| cc == Catcode::LETTER)
+        let mut chars = name.strip_prefix('\\').unwrap_or(name).chars();
+        match (chars.next(), chars.next()) {
+          (Some(c), None) => lookup_catcode(c) == Some(Catcode::LETTER),
+          (first, _) => first.is_some(),
+        }
       });
     spaced.push(t);
   }
@@ -2489,10 +2487,7 @@ LoadDefinitions!({
   // ==================== pgfmathparse override ====================
   // Perl L401-403: DefMacro('\lx@pgfmath@parse{}', sub { ... })
   DefMacro!("\\lx@pgfmath@parse {}", sub[(tokens)] {
-    // Expand tokens and convert to string. The seven calc-compat CSes are
-    // transiently bound only for this expansion (Perl `sub pgfmathparse`).
-    let input = pgfmath_input_text(expand_pgfmath_arg(tokens));
-    let (result, units) = pgfmathparse_eval_with_units(&input);
+    let (result, units) = pgfmathparse(tokens)?;
     let mut toks = pgfmath_result_tokens_str(&result);
     // Perl: \ifpgfmathunitsdeclared flag — used by tikz's \tikz@checkunit
     if units {
@@ -2508,8 +2503,7 @@ LoadDefinitions!({
 
   // Perl L396-399: \lx@pgfmath@parseX (alternative that uses \lx@pgfmathresult)
   DefMacro!("\\lx@pgfmath@parseX {}", sub[(tokens)] {
-    let input = pgfmath_input_text(expand_pgfmath_arg(tokens));
-    let result = pgfmathparse_eval(&input);
+    let (result, _units) = pgfmathparse(tokens)?;
     let mut toks = vec![T_CS!("\\def"), T_CS!("\\lx@pgfmathresult"), T_BEGIN!()];
     toks.extend(Explode!(result));
     toks.push(T_END!());
@@ -2549,8 +2543,7 @@ LoadDefinitions!({
     // `\pgfmathsetlength\d{+.5\wd0}` = 3.75pt). Witnesses: arXiv 1709.07916 /
     // 1912.13052 / 2004.14791 / 1312.6499 (STABILITY_WITNESSES Cluster E).
     let toks: Vec<Token> =
-      do_expand(Tokens::new(tokens.unlist_ref().clone()))
-        .unwrap_or_default()
+      expand_pgfmath_arg(Tokens::new(tokens.unlist_ref().clone()))?
         .unlist_ref()
         .iter()
         .skip_while(|t| t.get_catcode() == Catcode::SPACE)
@@ -2606,8 +2599,7 @@ LoadDefinitions!({
       // Evaluate via pgfmathparse (tokens already expanded above); its units are
       // `\pgfmath@selectfont`'s (`pgfmath_convert`), and its units flag outlives it, as pgf's parse
       // smuggles it out of its group.
-      let input = pgfmath_input_text(Tokens::new(toks));
-      let (result_str, _units) = pgfmathparse_eval_with_units(&input);
+      let (result_str, _units) = pgfmathparse_expanded(Tokens::new(toks));
       let value: f64 = result_str.parse().unwrap_or(0.0);
 
       // Perl L419-422: check \ifpgfmathmathunitsdeclared for mu units

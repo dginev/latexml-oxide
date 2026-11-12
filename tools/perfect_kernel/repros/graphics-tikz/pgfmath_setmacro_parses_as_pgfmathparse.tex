@@ -1,0 +1,21 @@
+% mechanism: `\pgfmathsetmacro` and `\pgfmathsetlength` call the parse `\pgfmathparse` calls (Perl's
+%   `sub pgfmathparse`, pgfmathcalc.code.tex.ltxml:24-32, pgfmath.code.tex.ltxml:405-423): `\pgfmathsetmacro`
+%   stringified its own expansion, so it welded `\mydim r` to `\mydimr` and skipped the calc-compat `\let`s
+%   (revDTL1e B1); `\pgfmathsetlength` skipped the `\let`s too.
+% witness: synthetic
+% oracle:  pdflatex [114.59155][114.59155] (p1); p2 errs on both twins in TL 2025 (`width("xx")` read as a function `xx`), so
+%   its oracle is the `\pgfmathparse` twin; [21.1112pt] (p3, 0 `!` alone)
+% engines: rust DTL1e: [114.59156][0.0] (p1), [21.11121][0.0] (p2), [0.0pt] (p3), 2 Warnings `\widthof` not a register
+% expect:  0 errors 0 warnings; the twin's value on each side
+% status:  RED (DTL1e) -> GREEN (DTL1f, guard perfect_kernel_batchdtl1::batchdtl1_pgfmath_rows)
+\documentclass{article}
+\usepackage{calc}
+\usepackage{pgf}
+\newdimen\mydim \mydim=2pt
+\begin{document}
+\pgfmathparse{\mydim r}[\pgfmathresult]\pgfmathsetmacro\m{\mydim r}[\m]
+
+\pgfmathparse{2*\widthof{xx}}[\pgfmathresult]\pgfmathsetmacro\m{2*\widthof{xx}}[\m]
+
+\pgfmathsetlength\mydim{2*\widthof{xx}}[\the\mydim]
+\end{document}

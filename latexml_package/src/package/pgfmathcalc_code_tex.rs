@@ -16,10 +16,11 @@ LoadDefinitions!({
   // Rust port had dropped the scope, leaking redefinitions upward past
   // the begingroup/endgroup wrapper. Restore Scope::Local to match Perl.
   DefPrimitive!("\\pgfmathsetmacro{}{}", sub[(cs, expression)] {
-    let expr_str = do_expand(expression)?.to_string();
+    // Perl L26-28: the parse runs in the group (pgfmath.code.tex.ltxml's `sub pgfmathparse`, as `\pgfmathparse`'s).
     bgroup();
-    let result = pgfmath_code_tex::pgfmathparse_eval(&expr_str);
+    let parsed = pgfmath_code_tex::pgfmathparse(expression);
     egroup()?;
+    let (result, _units) = parsed?;
     let result_tokens = mouth::tokenize_internal(TeXString::assembled(result));
     def_macro(
       cs.unlist().into_iter().next().unwrap_or_else(|| T_CS!("\\pgfmathresult")),
