@@ -1,16 +1,15 @@
 % mechanism: jfm's `\affiliation{\aff{1}…}` read as marked (P4b part 1, `leads_with_label`: `\aff` prints
 %   `\textsuperscript{1}`) answers the names' `\aff{1}`; under authblk the names are `\lx@add@authors@list`'s, whose
-%   writer keeps no answered mark on a name (Perl's `\lx@add@authors`; emitter `per_author_marks`), so each name loses
-%   its printed "1" (the affiliation shows it). Unanswered on the base (the list a document note), the mark stayed.
-%   The same names hide `$^{1}$` under authblk on the base too (article + authblk, `\affil{$^{1}$…}`)
+%   writer now keeps the marks a name prints when no line of its own call answers them (`per_author_marks`, P4b2b): each
+%   name shows its printed "1", as the affiliation shows its own (Perl's `\lx@add@authors` makes the mark a request,
+%   answered and hidden)
 % witness: 2410.01932 (jfm, authblk, four names `\aff{1}`; reviewer revP4b S1)
 % oracle:  pdflatex with 2410.01932's jfm.cls and natbib.sty (TL 2025 has no jfm.cls; -no-shell-escape) 0 errors:
 %          "Ann Able1 and Bob Baker1", "1 Univ A, Town A"
 % engines: P4bbase: Ann Able 1, Bob Baker 1, the affiliation a document note; P4b, P4b2: Ann Able, Bob Baker (no mark),
-%          each "1 Univ A, Town A"
+%          each "1 Univ A, Town A"; P4b2b: Ann Able 1, Bob Baker 1, each "1 Univ A, Town A"
 % expect:  0 errors, 0 warnings; Ann Able 1 and Bob Baker 1, each "1 Univ A, Town A"
-% status:  RED (P4b part 1)
-% moves:   a ruling (answered marks on an authblk name: Perl hides them, Q1 shows every printed mark)
+% status:  GREEN (guard perfect_kernel_batchc1::authblk_names_show_their_printed_marks; RED on P4b, P4b2)
 \documentclass{jfm}
 \usepackage{authblk}
 \begin{document}

@@ -1,0 +1,23 @@
+% mechanism: the list's names print their marks as digested (`per_author_marks`, P4b2b); the keep path's symbol rewriter
+%   (`rewrite_symbol_superscripts`, by tokens) reads `$^{*}$`, `${}^{\dagger}$`, `\textsuperscript{\ddagger}` and glued
+%   `$^{1*}$` as a text superscript, but not a symbol behind a tie or math inside `\textsuperscript`: `${}^{a~\ddagger}$`
+%   is written as a formula (an unparsed-math Warning), `\textsuperscript{$\dagger$}` as a formula in a superscript,
+%   where P4b2 showed the requests' `<sup>` text (the answered letter hidden)
+% witness: 2509.08362 (`Ankur Srivastav${}^{b~\ddagger}$`, 2 unparsed-math Warnings), 2601.06499
+%   (`\textsuperscript{*,\,$\dagger$}`), 2502.17397 (`$^{\text{\textdagger},1,2}$`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Ablea ‡ and Bob Bakerb†", "aUniv A, Town A", "bUniv B, Town B"
+% engines: P4b2: Ann Able ‡, Bob Baker † (sup text); P4b2b: each mark a formula in the name
+% expect:  0 errors, 0 warnings; Ann Able a‡, Bob Baker b†, each mark a text superscript
+% status:  RED (P4b2b)
+% moves:   post-merge (the keep path's marks read as digested, not by spelling: with P4b4's per-line cutter)
+\documentclass{article}
+\usepackage{authblk}
+\title{T}
+\author{Ann Able${}^{a~\ddagger}$ and Bob Baker\textsuperscript{b$\dagger$}}
+\affil{${}^{a}$Univ A, Town A}
+\affil{${}^{b}$Univ B, Town B}
+\date{}
+\begin{document}
+\maketitle
+Body.
+\end{document}

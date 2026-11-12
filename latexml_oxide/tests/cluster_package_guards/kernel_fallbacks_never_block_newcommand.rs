@@ -36,19 +36,20 @@ fn ptptex_inst_store_keeps_the_frontmatter_first() {
     "the frontmatter is complete before any deposited paragraph:\n{xml}"
   );
   // The affiliations are frontmatter contacts linked from the authors'
-  // `$^{n,}$` superscripts, and the abstract, received date and
-  // publication note carry their kinds.
+  // `$^{n,}$` superscripts, which the names print (P4b2b; pdflatex
+  // "Tomonaga1,∗)"), and the abstract, received date and publication note
+  // carry their kinds.
   latexml::util::test::assert_element(
     &xml,
     "creator",
     &[],
-    r##"<creator role="author"><personname>Shin-Ichiro <text font="smallcaps">Tomonaga</text></personname><contact name="Note: " role="note">Note A.</contact><contact name="Affiliation: " role="affiliation">Physics Dept, Tokyo</contact></creator>"##,
+    r##"<creator role="author"><personname>Shin-Ichiro <text font="smallcaps">Tomonaga<sup><text font="italic">1,</text></sup></text></personname><contact name="Note: " role="note">Note A.</contact><contact name="Affiliation: " role="affiliation">Physics Dept, Tokyo</contact></creator>"##,
   );
   latexml::util::test::assert_element(
     &xml,
     "creator",
     &["before="],
-    r##"<creator before="  " role="author"><personname>Hideki <text font="smallcaps">Yukawa</text></personname><contact name="Note: " role="note">Note B.</contact><contact name="Affiliation: " role="affiliation">Yukawa Institute, Kyoto</contact></creator>"##,
+    r##"<creator before="  " role="author"><personname>Hideki <text font="smallcaps">Yukawa<sup><text font="italic">2,</text></sup></text></personname><contact name="Note: " role="note">Note B.</contact><contact name="Affiliation: " role="affiliation">Yukawa Institute, Kyoto</contact></creator>"##,
   );
   latexml::util::test::assert_element(
     &xml,

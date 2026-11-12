@@ -1,0 +1,21 @@
+% mechanism: the kernel's `\author` block whose own `\\` lines answer its names' marks (`\lx@add@authors`; Perl's
+%   `\lx@author@withsup`/`\lx@affiliation@withsup`): the names' marks become requests and the lines' marks labels, both
+%   hidden, while pdflatex prints both (`per_author_marks` keeps a block's marks printed only for a call adding to the
+%   names before it whose own lines answer none; the kernel's replaces them). The same holds for a per-author class's
+%   call with its lines (authblk `\author[*]{… \\ $^{1}$Univ A …}`, 2401.14196's deepseek shape), and l-aa's
+%   `\institute` read by `\lx@add@affiliations` beside marked names hides the institutes' marks the names now show
+% witness: synthetic (P4b2b, the sibling sweep of 2410.01932's fix)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1", "Bob Baker2", "Univ A, Town A" under its "1",
+%          "Univ B, Town B" under its "2"
+% engines: P4b2 and P4b2b: Ann Able "Univ A, Town A", Bob Baker "Univ B, Town B" (no mark on either side)
+% expect:  0 errors, 0 warnings; Ann Able 1 "1 Univ A, Town A", Bob Baker 2 "2 Univ B, Town B"
+% status:  RED (Perl's output)
+% moves:   post-merge (a line's printed label mark kept with the names' marks: a second mechanism, the line writer's)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{1}$ \and Bob Baker$^{2}$\\ $^{1}$Univ A, Town A\\ $^{2}$Univ B, Town B}
+\date{}
+\begin{document}
+\maketitle
+Body.
+\end{document}

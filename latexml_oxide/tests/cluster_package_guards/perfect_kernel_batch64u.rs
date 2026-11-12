@@ -422,9 +422,9 @@ fn osa_style_address_blank_lines() {
     "\\documentclass{article}\n\\usepackage{opex3}\n\\begin{document}\n\\title{T}\n\\author{A. Able$^{1}$, B. Baker$^{2}$ and C. Cole$^{3}$}\n\\address{$^1$Univ X, City X\n\n$^2$Univ Y, City Y\n\n$^3$Univ Z, City Z}\n\\begin{abstract}A.\\end{abstract}\nText.\n\\end{document}\n",
   );
   assert_eq!(creators(&xml), vec![
-    "<creator role=\"author\">\n    <personname>A. Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\">1</sup>Univ X, City X</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B. Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">2</sup>Univ Y, City Y</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>C. Cole</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\">3</sup>Univ Z, City Z</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>A. Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">1</sup>Univ X, City X</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B. Baker<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2</text></sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\">2</sup>Univ Y, City Y</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>C. Cole<sup xml:id=\"id5\"><text font=\"italic\" xml:id=\"id5.1\">3</text></sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\">3</sup>Univ Z, City Z</contact>\n  </creator>",
   ]);
 }
 
@@ -490,8 +490,8 @@ fn osa_email_line_mark_shapes() {
       "\\documentclass{article}\n\\usepackage{opex3}\n\\begin{document}\n\\title{T}\n\\author{A. Able$^{1,3}$ and B. Baker$^{2}$}\n\\address{\\textit{$^1$}Univ X\\\\\n\\textit{$^2$}Univ Y\\\\}\n\\email{\\textit{$^3$}able@x.edu}\n\\begin{abstract}A.\\end{abstract}\nText.\n\\end{document}\n"
     )),
     vec![
-      "<creator role=\"author\">\n    <personname>A. Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\">1</sup>Univ X</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">able@x.edu</contact>\n  </creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B. Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">2</sup>Univ Y</contact>\n  </creator>",
+      "<creator role=\"author\">\n    <personname>A. Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1,3</text></sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">1</sup>Univ X</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">able@x.edu</contact>\n  </creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B. Baker<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2</text></sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\">2</sup>Univ Y</contact>\n  </creator>",
     ]
   );
 }
@@ -509,9 +509,9 @@ fn osa_several_labels_one_line_each() {
       "\\documentclass{article}\n\\usepackage{opex3}\n\\begin{document}\n\\title{T}\n\\author{A. Able$^1$, B. Baker$^2$, and C. Cole$^3$}\n\\address{$^1$able@x.edu, $^2$baker@x.edu, and $^3$cole@y.edu}\n\\address{$^{1,2}$Dept of EE, Univ X, $^3$Dept of CS, Univ X}\n\\begin{abstract}A.\\end{abstract}\nText.\n\\end{document}\n"
     )),
     vec![
-      "<creator role=\"author\">\n    <personname>A. Able</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\">able@x.edu</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup>Dept of EE, Univ X</contact>\n  </creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B. Baker</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\">baker@x.edu</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">2</text></sup>Dept of EE, Univ X</contact>\n  </creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>C. Cole</personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\">cole@y.edu</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\">3</sup>Dept of CS, Univ X</contact>\n  </creator>",
+      "<creator role=\"author\">\n    <personname>A. Able<sup xml:id=\"id1\">1</sup></personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\">able@x.edu</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Dept of EE, Univ X</contact>\n  </creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B. Baker<sup xml:id=\"id3\">2</sup></personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\">baker@x.edu</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">2</text></sup>Dept of EE, Univ X</contact>\n  </creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>C. Cole<sup xml:id=\"id5\">3</sup></personname>\n    <contact name=\"Email:\u{a0}\" role=\"email\">cole@y.edu</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\">3</sup>Dept of CS, Univ X</contact>\n  </creator>",
     ]
   );
   // p9
@@ -520,8 +520,8 @@ fn osa_several_labels_one_line_each() {
       "\\documentclass{article}\n\\usepackage{opex3}\n\\begin{document}\n\\title{T}\n\\author{A. Able$^{1,2}$ and B. Baker$^{2}$}\n\\address{$^{1,2}$Univ X\\\\\n$^2$Univ Y}\n\\begin{abstract}A.\\end{abstract}\nText.\n\\end{document}\n"
     )),
     vec![
-      "<creator role=\"author\">\n    <personname>A. Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup>Univ X</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">2</sup>Univ Y</contact>\n  </creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B. Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2</text></sup>Univ X</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\">2</sup>Univ Y</contact>\n  </creator>",
+      "<creator role=\"author\">\n    <personname>A. Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1,2</text></sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Univ X</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\">2</sup>Univ Y</contact>\n  </creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B. Baker<sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">2</text></sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id5\"><text font=\"italic\" xml:id=\"id5.1\">2</text></sup>Univ X</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\">2</sup>Univ Y</contact>\n  </creator>",
     ]
   );
   // a label no author carries: its copy is no orphan for the block (1101.5841 `$^{1,5}$`), in either order
@@ -530,8 +530,8 @@ fn osa_several_labels_one_line_each() {
       "\\documentclass{article}\n\\usepackage{opex3}\n\\begin{document}\n\\title{T}\n\\author{A. Able$^1$ and B. Baker$^2$}\n\\address{$^{1,3}$Univ X\\\\\n$^2$Univ Y}\n\\begin{abstract}A.\\end{abstract}\nText.\n\\end{document}\n"
     )),
     vec![
-      "<creator role=\"author\">\n    <personname>A. Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup>Univ X</contact>\n  </creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B. Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">2</sup>Univ Y</contact>\n  </creator>",
+      "<creator role=\"author\">\n    <personname>A. Able<sup xml:id=\"id1\">1</sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Univ X</contact>\n  </creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B. Baker<sup xml:id=\"id3\">2</sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\">2</sup>Univ Y</contact>\n  </creator>",
     ]
   );
   assert_eq!(
@@ -539,8 +539,8 @@ fn osa_several_labels_one_line_each() {
       "\\documentclass{article}\n\\usepackage{opex3}\n\\begin{document}\n\\title{T}\n\\author{A. Able$^1$ and B. Baker$^2$}\n\\address{$^{3,1}$Univ X\\\\\n$^2$Univ Y}\n\\begin{abstract}A.\\end{abstract}\nText.\n\\end{document}\n"
     )),
     vec![
-      "<creator role=\"author\">\n    <personname>A. Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup>Univ X</contact>\n  </creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B. Baker</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">2</sup>Univ Y</contact>\n  </creator>",
+      "<creator role=\"author\">\n    <personname>A. Able<sup xml:id=\"id1\">1</sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">1</text></sup>Univ X</contact>\n  </creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>B. Baker<sup xml:id=\"id3\">2</sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\">2</sup>Univ Y</contact>\n  </creator>",
     ]
   );
 }

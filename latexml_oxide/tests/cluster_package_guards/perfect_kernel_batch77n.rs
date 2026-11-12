@@ -278,8 +278,8 @@ fn ecai_space_parted_names_stay_one_author() {
 }
 
 /// authblk's unlabelled `\author{A$^{1}$\orcidlink{…} and B$^2$\orcidlink{…}}` (2405.16615): two authors, each with
-/// its own ORCID link and mark. The mark is shown after the link, where pdflatex prints it before (RED
-/// sectioning-frontmatter/author_mark_before_orcid_link).
+/// its own ORCID link and mark, the mark before the link, as pdflatex prints it (P4b2b: the list's names print their
+/// marks); the article `\author`'s still follows the link (RED sectioning-frontmatter/author_mark_before_orcid_link).
 #[test]
 fn authblk_and_between_names_splits() {
   let xml = convert_repro!("author_authblk_and_between_names.tex");
@@ -289,14 +289,14 @@ fn authblk_and_between_names_splits() {
     creator(
       true,
       &format!(
-        r#"Ann Able<ref class="ltx_orcid" href="https://orcid.org/0000-0003-3690-1890" title="ORCID 0000-0003-3690-1890">{logo}</ref><sup xml:id="id1">1</sup>"#
+        r#"Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup><ref class="ltx_orcid" href="https://orcid.org/0000-0003-3690-1890" title="ORCID 0000-0003-3690-1890">{logo}</ref>"#
       ),
       ""
     ),
     creator(
       false,
       &format!(
-        r#"Bob Baker<ref class="ltx_orcid" href="https://orcid.org/0000-0002-9991-8393" title="ORCID 0000-0002-9991-8393">{logo}</ref><sup xml:id="id2">2</sup>"#
+        r#"Bob Baker<sup xml:id="id2">2</sup><ref class="ltx_orcid" href="https://orcid.org/0000-0002-9991-8393" title="ORCID 0000-0002-9991-8393">{logo}</ref>"#
       ),
       ""
     ),
@@ -483,8 +483,8 @@ fn authblk_marked_affils_pick_their_authors() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("author_authblk_marked_affils_pick_their_authors.tex");
   assert_eq!(creators(&xml), [
-    r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Univ X</contact> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">2</sup>Univ Y</contact> </creator>"#,
+    r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ X</contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3">2</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">2</sup>Univ Y</contact> </creator>"#,
   ]);
 }
 
@@ -498,8 +498,8 @@ fn authblk_symbol_mark_affil_runs() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("author_authblk_symbol_mark_affil_runs.tex");
   assert_eq!(creators(&xml), [
-    "<creator role=\"author\"> <personname>Ann</personname> <contact name=\"Affiliation: \" role=\"affiliation\"><sup xml:id=\"id1\">1</sup>Univ X</contact> <note class=\"ltx_note_frontmatter ltx_thanks_contribution\" mark=\"∗\" role=\"thanks\" xml:id=\"id2\"><sup xml:id=\"id2.1\">∗</sup>Equal contribution</note> </creator>",
-    "<creator before=\" \" role=\"author\"> <personname>Bob</personname> <contact name=\"Affiliation: \" role=\"affiliation\"><sup xml:id=\"id3\">1</sup>Univ X</contact> <note class=\"ltx_note_frontmatter ltx_thanks_contribution\" mark=\"∗\" role=\"thanks\" xml:id=\"id4\"><sup xml:id=\"id4.1\">∗</sup>Equal contribution</note> </creator>",
+    "<creator role=\"author\"> <personname>Ann<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup><sup xml:id=\"id2\">∗</sup></personname> <contact name=\"Affiliation: \" role=\"affiliation\"><sup xml:id=\"id3\">1</sup>Univ X</contact> <note class=\"ltx_note_frontmatter ltx_thanks_contribution\" mark=\"∗\" role=\"thanks\" xml:id=\"id4\"><sup xml:id=\"id4.1\">∗</sup>Equal contribution</note> </creator>",
+    "<creator before=\" \" role=\"author\"> <personname>Bob<sup xml:id=\"id5\"><text font=\"italic\" xml:id=\"id5.1\">1</text></sup><sup xml:id=\"id6\">∗</sup></personname> <contact name=\"Affiliation: \" role=\"affiliation\"><sup xml:id=\"id7\">1</sup>Univ X</contact> <note class=\"ltx_note_frontmatter ltx_thanks_contribution\" mark=\"∗\" role=\"thanks\" xml:id=\"id8\"><sup xml:id=\"id8.1\">∗</sup>Equal contribution</note> </creator>",
   ]);
 }
 
@@ -511,8 +511,8 @@ fn authblk_affil_after_unmarked_author() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("author_authblk_affil_after_unmarked_author.tex");
   assert_eq!(creators(&xml), [
-    r#"<creator role="author"> <personname>Ann</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>X</contact> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>Bob</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">2</sup>Y</contact> </creator>"#,
+    r#"<creator role="author"> <personname>Ann<sup xml:id="id1">1</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>X</contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Bob</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">2</sup>Y</contact> </creator>"#,
   ]);
 }
 
@@ -524,8 +524,8 @@ fn authblk_typo_mark_affil_runs() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("author_authblk_typo_mark_affil_runs.tex");
   assert_eq!(creators(&xml), [
-    r#"<creator role="author"> <personname>Ann</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>X</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">3</sup>Z</contact> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>Bob<sup xml:id="id3">2</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">3</sup>Z</contact> </creator>"#,
+    r#"<creator role="author"> <personname>Ann<sup xml:id="id1">1</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>X</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">3</sup>Z</contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Bob<sup xml:id="id4">2</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id5">3</sup>Z</contact> </creator>"#,
   ]);
 }
 
@@ -536,8 +536,8 @@ fn authblk_mark_list_then_single_mark() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("author_authblk_mark_list_then_single_mark.tex");
   assert_eq!(creators(&xml), [
-    r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Univ X</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">2</sup>Univ Y</contact> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">2</sup>Univ Y</contact> </creator>"#,
+    r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1,2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ X</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">2</sup>Univ Y</contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id4"><text font="italic" xml:id="id4.1">2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id5">2</sup>Univ Y</contact> </creator>"#,
   ]);
 }
 
@@ -547,8 +547,8 @@ fn authblk_single_mark_then_mark_list() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("author_authblk_single_mark_then_mark_list.tex");
   assert_eq!(creators(&xml), [
-    r#"<creator role="author"> <personname>Ann</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Univ X</contact> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>Bob</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ X</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">2</sup>Univ Y</contact> </creator>"#,
+    r#"<creator role="author"> <personname>Ann<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ X</contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Bob<sup xml:id="id3"><text font="italic" xml:id="id3.1">1,2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">1</sup>Univ X</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id5">2</sup>Univ Y</contact> </creator>"#,
   ]);
 }
 
@@ -559,9 +559,9 @@ fn authblk_comma_names_then_marked_name() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("author_authblk_comma_names_then_marked_name.tex");
   assert_eq!(creators(&xml), [
-    r#"<creator role="author"> <personname>Ann</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Univ X</contact> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>Bob</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">2</sup>Univ Y</contact> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>Cat</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">2</sup>Univ Y</contact> </creator>"#,
+    r#"<creator role="author"> <personname>Ann<sup xml:id="id1">1</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ X</contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Bob<sup xml:id="id3">2</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">2</sup>Univ Y</contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Cat<sup xml:id="id5">2</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id6">2</sup>Univ Y</contact> </creator>"#,
   ]);
 }
 
@@ -572,9 +572,9 @@ fn authblk_note_comma_then_marked_name() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("author_authblk_note_comma_then_marked_name.tex");
   assert_eq!(creators(&xml), [
-    r#"<creator role="author"> <personname>Ann</personname> <note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks" xml:id="id1">Corresponding, ann@x.org</note> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ X</contact> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>Bob</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">2</sup>Univ Y</contact> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>Cat</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">1</sup>Univ X</contact> </creator>"#,
+    r#"<creator role="author"> <personname>Ann<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup></personname> <note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks" xml:id="id2">Corresponding, ann@x.org</note> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">1</sup>Univ X</contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Bob<sup xml:id="id4"><text font="italic" xml:id="id4.1">2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id5">2</sup>Univ Y</contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Cat<sup xml:id="id6"><text font="italic" xml:id="id6.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id7">1</sup>Univ X</contact> </creator>"#,
   ]);
 }
 
@@ -587,8 +587,8 @@ fn authblk_marked_affil_keeps_its_comma() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("author_authblk_marked_affil_keeps_its_comma.tex");
   assert_eq!(creators(&xml), [
-    r#"<creator role="author"> <personname>Ann</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Univ X,<break/>Dept Y</contact> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>Bob</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">2</sup>Univ Z,</contact> </creator>"#,
+    r#"<creator role="author"> <personname>Ann<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ X,<break/>Dept Y</contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Bob<sup xml:id="id3"><text font="italic" xml:id="id3.1">2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">2</sup>Univ Z,</contact> </creator>"#,
   ]);
 }
 
@@ -604,7 +604,7 @@ fn authblk_superscript_inside_a_name_stays() {
   let xml = convert_repro!("author_authblk_superscript_inside_a_name.tex");
   assert_eq!(creators(&xml), [
     r#"<creator role="author"> <personname>Craig M<sup xml:id="id1"><text font="italic" xml:id="id1.1">c</text></sup>Rae</personname> <note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id2">Electronic address: craig@x.org</note> <contact name="Affiliation: " role="affiliation">Univ Y</contact> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">1</sup>Univ X</contact> <contact name="Affiliation: " role="affiliation">Univ Y</contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Ann Able<sup xml:id="id3"><text font="italic" xml:id="id3.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">1</sup>Univ X</contact> <contact name="Affiliation: " role="affiliation">Univ Y</contact> </creator>"#,
   ]);
 }
 
@@ -715,8 +715,8 @@ fn authblk_superscript_marks_stay_marks() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("author_authblk_superscript_marks_control.tex");
   assert_eq!(creators(&xml), [
-    r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Univ X</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">2</sup>Univ Y</contact> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">2</sup>Univ Y</contact> </creator>"#,
+    r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup><sup xml:id="id2">2</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">1</sup>Univ X</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">2</sup>Univ Y</contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id5"><text font="italic" xml:id="id5.1">2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id6">2</sup>Univ Y</contact> </creator>"#,
   ]);
 }
 
@@ -744,8 +744,8 @@ fn authblk_symbol_legend_reaches_marked_authors() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("author_authblk_symbol_legend_reaches_marked.tex");
   assert_eq!(creators(&xml), [
-    "<creator role=\"author\"> <personname>Ann</personname> <contact name=\"Affiliation: \" role=\"affiliation\"><sup xml:id=\"id1\">1</sup>Univ X</contact> <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"†\" role=\"thanks\" xml:id=\"id2\"><sup xml:id=\"id2.1\">†</sup>Corresponding author</note> </creator>",
-    "<creator before=\" \" role=\"author\"> <personname>Bob</personname> <contact name=\"Affiliation: \" role=\"affiliation\"><sup xml:id=\"id3\">2</sup>Univ Y</contact> </creator>",
+    "<creator role=\"author\"> <personname>Ann<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup><sup xml:id=\"id2\">†</sup></personname> <contact name=\"Affiliation: \" role=\"affiliation\"><sup xml:id=\"id3\">1</sup>Univ X</contact> <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"†\" role=\"thanks\" xml:id=\"id4\"><sup xml:id=\"id4.1\">†</sup>Corresponding author</note> </creator>",
+    "<creator before=\" \" role=\"author\"> <personname>Bob<sup xml:id=\"id5\"><text font=\"italic\" xml:id=\"id5.1\">2</text></sup></personname> <contact name=\"Affiliation: \" role=\"affiliation\"><sup xml:id=\"id6\">2</sup>Univ Y</contact> </creator>",
   ]);
 }
 
@@ -756,7 +756,7 @@ fn authblk_plain_affil_after_marked_goes_to_new_author() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("author_authblk_marked_then_plain_affil.tex");
   assert_eq!(creators(&xml), [
-    r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Univ X</contact> </creator>"#,
+    r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ X</contact> </creator>"#,
     r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ Y</contact> </creator>"#,
   ]);
 }
@@ -770,7 +770,7 @@ fn authblk_unmarked_affils_after_marked_author() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("author_authblk_unmarked_affils_after_marked_author.tex");
   assert_eq!(creators(&xml), [
-    r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Univ X</contact> </creator>"#,
+    r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ X</contact> </creator>"#,
     r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ Y</contact> <contact name="Affiliation: " role="affiliation">Univ W</contact> </creator>"#,
   ]);
 }
@@ -782,7 +782,7 @@ fn authblk_unmarked_affils_after_marked_group() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("author_authblk_unmarked_affils_after_marked_group.tex");
   assert_eq!(creators(&xml), [
-    r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Univ X</contact> </creator>"#,
+    r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ X</contact> </creator>"#,
     r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ Y</contact> <contact name="Affiliation: " role="affiliation">Univ W</contact> </creator>"#,
   ]);
 }
@@ -794,8 +794,8 @@ fn authblk_marked_pair_then_unmarked_author() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("author_authblk_marked_pair_then_unmarked_author.tex");
   assert_eq!(creators(&xml), [
-    r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Univ X</contact> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ X</contact> </creator>"#,
+    r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ X</contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3"><text font="italic" xml:id="id3.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">1</sup>Univ X</contact> </creator>"#,
     r#"<creator before=" " role="author"> <personname>Cat Cole</personname> <contact name="Affiliation: " role="affiliation">Univ Y</contact> <contact name="Affiliation: " role="affiliation">Univ W</contact> <contact name="Affiliation: " role="affiliation">Univ V</contact> </creator>"#,
   ]);
 }
@@ -809,7 +809,7 @@ fn authblk_legend_after_passed_over_run() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("author_authblk_legend_after_passed_over_run.tex");
   assert_eq!(creators(&xml), [
-    "<creator role=\"author\"> <personname>Ann Able</personname> <contact name=\"Affiliation: \" role=\"affiliation\"><sup xml:id=\"id1\">1</sup>Univ X</contact> <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"†\" role=\"thanks\" xml:id=\"id2\"><sup xml:id=\"id2.1\">†</sup>Corresponding author</note> </creator>",
+    "<creator role=\"author\"> <personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1,†</text></sup></personname> <contact name=\"Affiliation: \" role=\"affiliation\"><sup xml:id=\"id2\">1</sup>Univ X</contact> <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"†\" role=\"thanks\" xml:id=\"id3\"><sup xml:id=\"id3.1\">†</sup>Corresponding author</note> </creator>",
     "<creator before=\" \" role=\"author\"> <personname>Bob Baker</personname> <contact name=\"Affiliation: \" role=\"affiliation\">Univ Y</contact> </creator>",
   ]);
 }
@@ -821,8 +821,8 @@ fn opex3_unmarked_address_after_marked_reaches_all() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("author_opex3_unmarked_address_after_marked.tex");
   assert_eq!(creators(&xml), [
-    r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Univ X</contact> <contact name="Affiliation: " role="affiliation">Univ Z</contact> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">2</sup>Univ Y</contact> <contact name="Affiliation: " role="affiliation">Univ Z</contact> </creator>"#,
+    r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1">1</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ X</contact> <contact name="Affiliation: " role="affiliation">Univ Z</contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3">2</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">2</sup>Univ Y</contact> <contact name="Affiliation: " role="affiliation">Univ Z</contact> </creator>"#,
   ]);
 }
 
@@ -834,8 +834,8 @@ fn authblk_unmarked_affil_after_all_marked_reaches_all() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("author_authblk_unmarked_affil_after_all_marked.tex");
   assert_eq!(creators(&xml), [
-    r#"<creator role="author"> <personname>Ann</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Univ X</contact> <contact name="Affiliation: " role="affiliation">Univ Z</contact> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>Bob</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">2</sup>Univ Y</contact> <contact name="Affiliation: " role="affiliation">Univ Z</contact> </creator>"#,
+    r#"<creator role="author"> <personname>Ann<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ X</contact> <contact name="Affiliation: " role="affiliation">Univ Z</contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Bob<sup xml:id="id3"><text font="italic" xml:id="id3.1">2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">2</sup>Univ Y</contact> <contact name="Affiliation: " role="affiliation">Univ Z</contact> </creator>"#,
   ]);
 }
 
@@ -847,9 +847,9 @@ fn authblk_marked_affil_after_vspace() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("author_authblk_marked_affil_after_vspace.tex");
   assert_eq!(creators(&xml), [
-    r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Univ X</contact> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">2</sup>Univ Y</contact> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>Cat Cole</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">3</sup>Univ W</contact> </creator>"#,
+    r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ X</contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3"><text font="italic" xml:id="id3.1">2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">2</sup>Univ Y</contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Cat Cole<sup xml:id="id5"><text font="italic" xml:id="id5.1">3</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id6">3</sup>Univ W</contact> </creator>"#,
   ]);
 }
 
@@ -870,9 +870,9 @@ fn authblk_glued_braced_symbol_mark() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("author_authblk_glued_braced_symbol_mark.tex");
   assert_eq!(creators(&xml), [
-    r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1"><text font="italic" fontsize="90%" xml:id="id1.1">1</text></sup><text fontsize="90%" xml:id="id2">Univ X</text></contact> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3"><text font="italic" fontsize="90%" xml:id="id3.1">1</text></sup><text fontsize="90%" xml:id="id4">Univ X</text></contact> </creator>"#,
-    r#"<creator before=" " role="author"> <personname>Cat Cole<sup xml:id="id5">†</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id6"><text font="italic" fontsize="90%" xml:id="id6.1">1</text></sup><text fontsize="90%" xml:id="id7">Univ X</text></contact> </creator>"#,
+    r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2"><text font="italic" fontsize="90%" xml:id="id2.1">1</text></sup><text fontsize="90%" xml:id="id3">Univ X</text></contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id4"><text font="italic" xml:id="id4.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id5"><text font="italic" fontsize="90%" xml:id="id5.1">1</text></sup><text fontsize="90%" xml:id="id6">Univ X</text></contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Cat Cole<sup xml:id="id7"><text font="italic" xml:id="id7.1">1</text></sup><sup xml:id="id8">†</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id9"><text font="italic" fontsize="90%" xml:id="id9.1">1</text></sup><text fontsize="90%" xml:id="id10">Univ X</text></contact> </creator>"#,
   ]);
 }
 
@@ -919,8 +919,8 @@ fn authblk_labelled_author_and_marked_affil() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("author_authblk_labelled_author_and_marked_affil.tex");
   assert_eq!(creators(&xml), [
-    "<creator role=\"author\"> <personname>Ann Able</personname> <contact name=\"Affiliation: \" role=\"affiliation\"><sup xml:id=\"id1\">1</sup>Univ X</contact> <contact name=\"Affiliation: \" role=\"affiliation\">Univ Y</contact> </creator>",
-    "<creator before=\" \" role=\"author\"> <personname>Bob Baker</personname> <contact name=\"Affiliation: \" role=\"affiliation\"><sup xml:id=\"id2\">1</sup>Univ X</contact> <contact name=\"Affiliation: \" role=\"affiliation\">Univ Y</contact> </creator>",
+    "<creator role=\"author\"> <personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname> <contact name=\"Affiliation: \" role=\"affiliation\"><sup xml:id=\"id2\">1</sup>Univ X</contact> <contact name=\"Affiliation: \" role=\"affiliation\">Univ Y</contact> </creator>",
+    "<creator before=\" \" role=\"author\"> <personname>Bob Baker</personname> <contact name=\"Affiliation: \" role=\"affiliation\"><sup xml:id=\"id3\">1</sup>Univ X</contact> <contact name=\"Affiliation: \" role=\"affiliation\">Univ Y</contact> </creator>",
   ]);
 }
 
@@ -934,7 +934,11 @@ fn authblk_marked_author_and_labelled_affil() {
   let both = [affiliation("Univ X"), affiliation("Univ Y")].join(" ");
   assert_eq!(creators(&xml), [
     creator(true, "Ann Able", &both),
-    creator(false, "Bob Baker", &both),
+    creator(
+      false,
+      r#"Bob Baker<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup>"#,
+      &both
+    ),
   ]);
 }
 
@@ -947,7 +951,7 @@ fn authblk_legend_after_two_unmarked_affils() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("author_authblk_legend_after_two_unmarked_affils.tex");
   assert_eq!(creators(&xml), [
-    "<creator role=\"author\"> <personname>Ann Able</personname> <contact name=\"Affiliation: \" role=\"affiliation\"><sup xml:id=\"id1\">1</sup>Univ X</contact> <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"†\" role=\"thanks\" xml:id=\"id2\"><sup xml:id=\"id2.1\">†</sup>Corresponding author</note> </creator>",
+    "<creator role=\"author\"> <personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1,†</text></sup></personname> <contact name=\"Affiliation: \" role=\"affiliation\"><sup xml:id=\"id2\">1</sup>Univ X</contact> <note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"†\" role=\"thanks\" xml:id=\"id3\"><sup xml:id=\"id3.1\">†</sup>Corresponding author</note> </creator>",
     "<creator before=\" \" role=\"author\"> <personname>Bob Baker</personname> <contact name=\"Affiliation: \" role=\"affiliation\">Univ Y</contact> <contact name=\"Affiliation: \" role=\"affiliation\">Univ W</contact> </creator>",
   ]);
 }

@@ -156,10 +156,11 @@ fn own_mark(event: &Event) -> bool {
 }
 
 /// Whether what `tokens` print may open with a mark: their first token past spaces and braces, read through parameterless
-/// macros' bodies (`depth` of them), is no letter or digit, which TeX prints first (2103.04797's 1,161
-/// `\affiliation{\Amsterdam}`, each a macro of an institute's name, not rehearsed).
+/// macros' bodies (`depth` of them) and on past a body that prints nothing (`\newcommand\affilfont{}`), is no letter or
+/// digit, which TeX prints first (2103.04797's 1,161 `\affiliation{\Amsterdam}`, each a macro of an institute's name, not
+/// rehearsed).
 fn may_open_with_mark(tokens: &[Token], depth: u8) -> bool {
-  let Some(first) = tokens.iter().find(|t| {
+  let Some(at) = tokens.iter().position(|t| {
     !matches!(
       t.get_catcode(),
       Catcode::SPACE | Catcode::BEGIN | Catcode::END
@@ -167,6 +168,7 @@ fn may_open_with_mark(tokens: &[Token], depth: u8) -> bool {
   }) else {
     return false;
   };
+  let first = &tokens[at];
   match first.get_catcode() {
     Catcode::LETTER | Catcode::OTHER => !first.with_str(|s| s.chars().all(char::is_alphanumeric)),
     Catcode::CS | Catcode::ACTIVE if depth > 0 => match lookup_definition(first) {
@@ -177,7 +179,15 @@ fn may_open_with_mark(tokens: &[Token], depth: u8) -> bool {
             .is_none_or(|p| p.get_parameters().is_empty()) =>
       {
         match defn.get_expansion() {
-          Some(ExpansionBody::Tokens(body)) => may_open_with_mark(body.unlist_ref(), depth - 1),
+          Some(ExpansionBody::Tokens(body)) => {
+            let mut next = body.unlist_ref().to_vec();
+            next.extend_from_slice(&tokens[at + 1..]);
+            may_open_with_mark(&next, depth - 1)
+          },
+          // (an empty body is no expansion; a conditional has none either)
+          None if defn.get_conditional_type().is_none() => {
+            may_open_with_mark(&tokens[at + 1..], depth - 1)
+          },
           _ => true,
         }
       },

@@ -558,7 +558,7 @@ fn marked_list_cut_as_its_binding_declares() {
       0,
       &[
         &["Ann Able", "email=ann@a.edu"],
-        &["Bob Baker", "affiliation=1 Univ B, Town B"],
+        &["Bob Baker 1", "affiliation=1 Univ B, Town B"],
         &["Cy Cole", "affiliation=Univ A, Town A"],
       ],
       &[],
@@ -644,4 +644,123 @@ fn marks_lead_as_digested() {
     }
   }
   assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+/// P4b2b (2410.01932, Q1 a): a binding's list of names (`\lx@add@authors@list`: authblk, iopart, the unknown class) whose
+/// affiliations are their own calls, each printing its mark, shows the marks each name prints, answered or not
+/// (`per_author_marks`); authblk's labelled `\author[1]` keeps its own as before. Red on P4b2: every listed name bare.
+#[test]
+fn authblk_names_show_their_printed_marks() {
+  macro_rules! repro {
+    ($name:literal) => {
+      (
+        $name,
+        include_str!(concat!(
+          "../../../tools/perfect_kernel/repros/sectioning-frontmatter/",
+          $name,
+          ".tex"
+        )),
+      )
+    };
+  }
+  let affiliations: &[&[&str]] = &[&["Ann Able 1", "affiliation=1 Univ A, Town A"], &[
+    "Bob Baker 2",
+    "affiliation=2 Univ B, Town B",
+  ]];
+  let rows: &[Row] = &[
+    (repro!("authblk_hand_marks_answered_shown"), 0, affiliations),
+    (
+      repro!("authblk_hand_marks_one_call_answered_shown"),
+      0,
+      affiliations,
+    ),
+    (repro!("authblk_hand_marks_shared_answered_shown"), 0, &[
+      &["Ann Able 1", "affiliation=1 Univ A, Town A"],
+      &["Bob Baker 1", "affiliation=1 Univ A, Town A"],
+    ]),
+    (repro!("authblk_hand_marks_unknown_class"), 1, affiliations),
+    (repro!("iopart_hand_marks_answered_shown"), 0, affiliations),
+    (repro!("jfm_authblk_aff_answered_name_marks"), 0, &[
+      &["Ann Able 1", "affiliation=1 Univ A, Town A"],
+      &["Bob Baker 1", "affiliation=1 Univ A, Town A"],
+    ]),
+    (repro!("authblk_labelled_author_hand_mark_kept"), 0, &[
+      &["Ann Able *", "affiliation=Univ A, Town A"],
+      &["Bob Baker", "affiliation=Univ B, Town B"],
+    ]),
+    // (a mark no entry answers and no request could show, printed: rev108a B2's shape, 1 Warning on P4b2)
+    (repro!("authblk_unanswered_unshowable_mark_printed"), 0, &[
+      &["Ann Able a-b"],
+      &["Bob Baker"],
+    ]),
+  ];
+  for ((name, tex), warnings, expected) in rows {
+    let (log, xml) = run(tex);
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, *warnings),
+      "{name}: {log}"
+    );
+    let expected: Vec<Vec<String>> = expected
+      .iter()
+      .map(|c| c.iter().map(|s| s.to_string()).collect())
+      .collect();
+    assert_eq!(text_creators(&xml), expected, "{name}: {xml}");
+    // (the mark the name prints, digested in its own superscript, as the affiliation's)
+    if *name == "authblk_hand_marks_answered_shown" {
+      assert_eq!(
+        creators(&xml),
+        r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2"><text font="italic" xml:id="id2.1">1</text></sup>Univ A, Town A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3"><text font="italic" xml:id="id3.1">2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4"><text font="italic" xml:id="id4.1">2</text></sup>Univ B, Town B</contact> </creator>"#,
+        "{name}"
+      );
+    }
+  }
+}
+
+/// revP4b2 S1: the API Cut's cost gate (`may_open_with_mark`) reads on past a macro printing nothing — an empty body
+/// (`\newcommand\affilfont{}`), one of only braces, `\empty` two deep — to the list's first mark, so the list is cut once
+/// (`--debug=frontmatter`'s cut line). Red on P4b2 for the braces' body: no cut, the observer reading the list.
+#[test]
+fn api_cut_gate_reads_past_empty_bodies() {
+  let rows: [(&str, &str); 2] = [
+    (
+      "api_cut_gate_empty_macro_before_marks",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/api_cut_gate_empty_macro_before_marks.tex"
+      ),
+    ),
+    (
+      "api_cut_gate_nested_empty_macro_before_marks",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/api_cut_gate_nested_empty_macro_before_marks.tex"
+      ),
+    ),
+  ];
+  for (name, tex) in rows {
+    let (log, xml, ()) = convert_files_with_setup_then(
+      tex,
+      &[],
+      Some("ar5iv.sty"),
+      || latexml_core::common::error::enable_debug_feature("frontmatter"),
+      |_| (),
+    );
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{name}: {log}"
+    );
+    assert_eq!(
+      text_creators(&xml),
+      [["Ann Able 1", "address=1 Univ A, Town A"], [
+        "Bob Baker 2",
+        "address=2 Univ B, Town B"
+      ],],
+      "{name}: {xml}"
+    );
+    assert_eq!(
+      log.matches("FRONT cut address at its marks").count(),
+      1,
+      "{name}: {log}"
+    );
+  }
 }

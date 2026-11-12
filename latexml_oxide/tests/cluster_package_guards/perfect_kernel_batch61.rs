@@ -5954,11 +5954,11 @@ Text.
   assert_eq!(
     creators_of(&xml),
     [
-      "<creator role=\"author\"><personname>Sunkanghong Wang</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">a</text></sup>Univ A</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">e</text></sup>Univ E</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Zhengzhong You</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">b</text></sup>Univ B</contact></creator>",
+      "<creator role=\"author\"><personname>Sunkanghong Wang<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">a,e</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">a</text></sup>Univ A</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">e</text></sup>Univ E</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Zhengzhong You<sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">b</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id5\"><text font=\"italic\" xml:id=\"id5.1\">b</text></sup>Univ B</contact></creator>",
       // (97e: informs4's family written — the `*` line the legend of Lijun Wei's mark, a correspondence note)
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Lijun Wei</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">e</text></sup>Univ E</contact><note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"∗\" role=\"thanks\" xml:id=\"id5\"><sup xml:id=\"id5.1\">∗</sup>Corresponding author</note></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Zhou Xu</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\"><text font=\"italic\" xml:id=\"id6.1\">a</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Lijun Wei<sup xml:id=\"id6\"><text font=\"italic\" xml:id=\"id6.1\">e,∗</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id7\"><text font=\"italic\" xml:id=\"id7.1\">e</text></sup>Univ E</contact><note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"∗\" role=\"thanks\" xml:id=\"id8\"><sup xml:id=\"id8.1\">∗</sup>Corresponding author</note></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Zhou Xu<sup xml:id=\"id9\"><text font=\"italic\" xml:id=\"id9.1\">a</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id10\"><text font=\"italic\" xml:id=\"id10.1\">a</text></sup>Univ A</contact></creator>",
     ],
     "{xml}"
   );
@@ -5979,8 +5979,8 @@ Text.
   assert_eq!(
     creators_of(&xml),
     [
-      "<creator role=\"author\"><personname>Huikang Liu</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\">1</sup>Shanghai Jiao Tong University</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Zhengchao Wang</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">2</sup>The University of Sydney</contact></creator>",
+      "<creator role=\"author\"><personname>Huikang Liu<sup xml:id=\"id1\">1</sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">1</sup>Shanghai Jiao Tong University</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Zhengchao Wang<sup xml:id=\"id3\">2</sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\">2</sup>The University of Sydney</contact></creator>",
     ],
     "{xml}"
   );
@@ -6043,14 +6043,15 @@ Text.
     creators_of(&xml),
     vec![
       format!(
-        "<creator role=\"author\"><personname>Ann Able</personname>{}</creator>",
-        affiliation("<sup xml:id=\"id1\">1</sup>Univ A")
+        "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\">1</sup></personname>{}</creator>",
+        affiliation("<sup xml:id=\"id2\">1</sup>Univ A")
       ),
-      // (P4c: each printed mark shown, the "2" inside "Present address: ²Univ C" too, as pdflatex prints it — P4S Q1)
+      // (P4c: each printed mark shown, the "2" inside "Present address: ²Univ C" too, as pdflatex prints it — P4S Q1;
+      // P4b2b: the names' printed marks too)
       format!(
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>{}{}</creator>",
-        affiliation("<sup xml:id=\"id2\">2</sup>Univ B"),
-        affiliation("Present address: <sup xml:id=\"id3\">2</sup>Univ C")
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\">2</sup></personname>{}{}</creator>",
+        affiliation("<sup xml:id=\"id4\">2</sup>Univ B"),
+        affiliation("Present address: <sup xml:id=\"id5\">2</sup>Univ C")
       ),
     ],
     "{xml}"
@@ -6086,8 +6087,8 @@ fn iopart_each_address_adds_an_affiliation() {
   assert_eq!(
     creators_of(&xml),
     vec![
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\">1</sup> Univ A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">2</sup> Univ B</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">1</sup> Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\">2</sup> Univ B</contact></creator>",
     ],
     "{xml}"
   );
@@ -6117,8 +6118,8 @@ fn marked_affiliations_inside_a_font_group_keep_the_font() {
   assert_eq!(
     affiliated(&xml),
     vec![
-      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\">1</sup><text font=\"italic\" xml:id=\"id2\">Univ A</text></contact>",
-      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\">2</sup><text font=\"italic\" xml:id=\"id4\">Univ B</text></contact>",
+      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">1</sup><text font=\"italic\" xml:id=\"id3\">Univ A</text></contact>",
+      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id5\">2</sup><text font=\"italic\" xml:id=\"id6\">Univ B</text></contact>",
     ],
     "{xml}"
   );
@@ -6137,8 +6138,8 @@ Text.
   assert_eq!(
     affiliated(&xml),
     vec![
-      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text fontsize=\"90%\" xml:id=\"id1.1\">1</text></sup><text fontsize=\"90%\" xml:id=\"id2\">Univ A</text></contact>",
-      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text fontsize=\"90%\" xml:id=\"id3.1\">2</text></sup><text fontsize=\"90%\" xml:id=\"id4\">Univ B</text></contact>",
+      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text fontsize=\"90%\" xml:id=\"id2.1\">1</text></sup><text fontsize=\"90%\" xml:id=\"id3\">Univ A</text></contact>",
+      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id5\"><text fontsize=\"90%\" xml:id=\"id5.1\">2</text></sup><text fontsize=\"90%\" xml:id=\"id6\">Univ B</text></contact>",
     ],
     "{xml}"
   );
@@ -6161,8 +6162,8 @@ fn marked_affiliation_continuation_lines_stay_with_it() {
   assert_eq!(
     creators_of(&xml),
     vec![
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\">1</sup>Dept A<break/>Univ A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">2</sup>Dept B<break/>Univ B</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\">1</sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">1</sup>Dept A<break/>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\">2</sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\">2</sup>Dept B<break/>Univ B</contact></creator>",
     ],
     "{xml}"
   );
@@ -6372,13 +6373,13 @@ Text.
     found[0],
     creator(
       false,
-      "Ann Able",
-      &affiliation("<sup xml:id=\"id1\">1</sup> Univ A")
+      r#"Ann Able<sup xml:id="id1">1</sup>"#,
+      &affiliation("<sup xml:id=\"id2\">1</sup> Univ A")
     )
   );
   assert!(
     found[1].contains(&affiliation(
-      "<sup xml:id=\"id2\">2</sup> Univ B\u{2003}Univ D"
+      "<sup xml:id=\"id4\">2</sup> Univ B\u{2003}Univ D"
     )),
     "{found:?}"
   );
@@ -6781,8 +6782,8 @@ fn author_marks_link_their_affiliations() {
     // (97e: informs4's family, `UNDECLARED`, written — the `*` line is the legend of Bob Baker's symbol mark, a
     // correspondence note of his, as pdflatex prints it under the names: FIDELITY_CHARTER §4 ruling 2)
     [
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup><text font=\"italic\">a</text></sup>Univ A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"∗\" role=\"thanks\"><sup>∗</sup>Corresponding author</note></creator>",
+      "<creator role=\"author\"><personname>Ann Able<sup><text font=\"italic\">a</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup><text font=\"italic\">a</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup>*</sup></personname><note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"∗\" role=\"thanks\"><sup>∗</sup>Corresponding author</note></creator>",
     ]
   );
 }
