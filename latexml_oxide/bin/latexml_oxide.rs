@@ -1983,6 +1983,7 @@ fn fatal_before_conversion(
   failure: &InputFailure,
   archive_tempdir: &mut Option<tempfile::TempDir>,
 ) -> ! {
+  // No `check_debuggable` here: Base never loaded, so every `--debug` feature would read undeclared.
   latexml_core::common::error::emit_fatal(&failure.category, &failure.object, &failure.message);
   let code = latexml_core::common::error::get_status_code().max(3);
   let verdict = latexml_core::common::error::conversion_verdict(code);

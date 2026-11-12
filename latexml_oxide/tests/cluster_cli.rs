@@ -3023,19 +3023,20 @@ mod debug_feature_scope {
       "\\documentclass{article}\\title{T}\\author{A}\\begin{document}\\maketitle Hi\\end{document}\n",
     )
     .expect("write tex");
-    // (flags, `FRONT …` feature lines expected, un-featured `primitive invoke` lines expected, undeclared reported)
-    let rows: [(&[&str], bool, bool, bool); 5] = [
-      (&[], false, false, false),
-      (&["--debug=frontmatter"], true, false, false),
-      (&["--debug=nosuchfeature"], false, false, true),
-      (&["--verbose"], false, true, false),
-      (&["--verbose", "--debug=frontmatter"], true, true, false),
+    // (flags, destination, `FRONT …` feature lines expected, un-featured `primitive invoke` lines expected,
+    // undeclared reported); the undeclared row runs the post-processor, whose verdict ends the run (revDBG2 N1)
+    let rows: [(&[&str], &str, bool, bool, bool); 5] = [
+      (&[], "dbg.xml", false, false, false),
+      (&["--debug=frontmatter"], "dbg.xml", true, false, false),
+      (&["--debug=nosuchfeature"], "dbg.html", false, false, true),
+      (&["--verbose"], "dbg.xml", false, true, false),
+      (&["--verbose", "--debug=frontmatter"], "dbg.xml", true, true, false),
     ];
     let mut front_counts = Vec::new();
-    for (flags, feature, unfeatured, undeclared) in rows {
+    for (flags, dest, feature, unfeatured, undeclared) in rows {
       let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
         .args(flags)
-        .args(["dbg.tex", "--dest", "dbg.xml"])
+        .args(["dbg.tex", "--dest", dest])
         .current_dir(workdir.path())
         .output()
         .expect("spawn latexml_oxide");
@@ -3067,8 +3068,10 @@ mod debug_feature_scope {
       );
       if undeclared {
         assert!(
-          stderr.ends_with(&format!("{UNDECLARED}{KNOWN}")),
-          "{flags:?}: the two lines end the run:\n{stderr}"
+          stderr.ends_with(&format!(
+            "{UNDECLARED}{KNOWN}Conversion complete: No obvious problems\n"
+          )),
+          "{flags:?}: the two lines, then the verdict last:\n{stderr}"
         );
       }
     }
@@ -3100,8 +3103,8 @@ mod debug_feature_scope {
       "--quiet: no feature line on STDERR:\n{stderr}"
     );
     assert!(
-      stderr.contains(&format!("{UNDECLARED}{KNOWN}")),
-      "--quiet: the undeclared-feature report on STDERR:\n{stderr}"
+      stderr.ends_with(&format!("Log written to q.log\n{UNDECLARED}{KNOWN}")),
+      "--quiet: the log line, then the undeclared-feature report end STDERR:\n{stderr}"
     );
     assert!(
       log.contains("Debug:frontmatter FRONT "),
