@@ -390,16 +390,16 @@ fn bindings_whose_class_has_chapters_define_them() {
 /// second one keeps the first class's chapters — memoir's two chapters (72b r2: one chapter and
 /// `Error:undefined:\chapter`). In the preamble latex.ltx:18618 makes a second one `\@twoclasseserror`; this one is in
 /// the body, where :18621 `\@onlypreamble\documentclass` stops it — pdflatex's one error "Can be used only in
-/// preamble.", which we do not raise yet (SYNC_STATUS row; r3 finding 3), so 0 Errors. The three Warnings are memoir's own
-/// misnamed conditional (memoir.cls:5454 `\newif \@iffirstamp`, the first load), as on 72b r3, and its two hooks on
-/// bound commands (memoir.cls:5832-5833 `cmd/end@float/before`, `cmd/end@dblfloat/before`; QA47A).
+/// preamble.", which we do not raise yet (SYNC_STATUS row; r3 finding 3), so 0 Errors. The one Warning is memoir's own
+/// misnamed conditional (memoir.cls:5454 `\newif \@iffirstamp`, the first load), as on 72b r3; its two hooks on bound
+/// commands are Infos (memoir.cls:5832-5833 `cmd/end@float/before`, `cmd/end@dblfloat/before`; QA47A).
 #[test]
 fn a_second_documentclass_keeps_the_first_class_chapters() {
   let tex = "\\documentclass{memoir}\n\\begin{document}\n\\chapter{One}\nText.\n\\documentclass{memoir}\n\\chapter{Two}\n\
              More.\n\\end{document}\n";
   let (stderr, xml) = convert_files_with(tex, &[], Some(AR5IV));
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 3, "{stderr}");
+  assert_eq!(warning_count(&stderr), 1, "{stderr}");
   assert!(
     stderr.lines().any(|line| line
       == "Warning:misdefined:\\@iffirstamp The conditional \\@iffirstamp is being defined but doesn't start with \\if"),

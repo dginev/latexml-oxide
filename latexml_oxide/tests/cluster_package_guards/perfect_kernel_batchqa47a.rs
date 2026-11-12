@@ -1,14 +1,15 @@
 //! Red/green guards for batch QA47A (BM Q3.3, "fire the kernel's hooks wherever LaTeX fires them"): `\begin{document}`
 //! runs the kernel's `\@kernel@before@begindocument` / `\@kernel@after@begindocument` (latex.ltx:9511, :9513), so the
 //! generic `cmd/<name>/<hook>` hooks patch TeX macros as pdflatex does, and a command LaTeXML binds takes the hook
-//! with one counted Warning instead of a false Error. A table of its own: no hooks table exists yet. Each row's
+//! with one counted Warning (an Info for a class's or package's own) instead of a false Error. A table of its own: no
+//! hooks table exists yet, nor the shared Error-boundary table on this base. Each row's
 //! oracle (pdflatex `!` count and text, Perl's) is in its repro header; the RED shapes stay catalog repros
 //! (`command_hook_on_an_optional_argument_command_red`, `command_hook_on_a_tex_primitive_red`).
 use latexml::util::test::{assert_element, convert_with};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
-/// One repro: its source, its exact (errors, warnings), the Warnings it names, and whole elements
+/// One repro: its source, its exact (errors, warnings), whole diagnostic lines it prints, and whole elements
 /// `(tag, attributes, element)`.
 struct Row {
   name:     &'static str,
@@ -61,11 +62,11 @@ const ROWS: &[Row] = &[
     ),
     counts:   (0, 5),
     messages: &[
-      "cmd/emph/before: LaTeXML's binding of \\emph takes no generic hook",
-      "cmd/section/before: LaTeXML's binding of \\section takes no generic hook",
-      "cmd/footnote/before: LaTeXML's binding of \\footnote takes no generic hook",
-      "cmd/item/before: LaTeXML's binding of \\item takes no generic hook",
-      "cmd/arabic/before: LaTeXML's binding of \\arabic takes no generic hook",
+      r"Warning:hook:cmd/emph/before LaTeXML's binding of \emph takes no generic hook; its code does not run",
+      r"Warning:hook:cmd/section/before LaTeXML's binding of \section takes no generic hook; its code does not run",
+      r"Warning:hook:cmd/footnote/before LaTeXML's binding of \footnote takes no generic hook; its code does not run",
+      r"Warning:hook:cmd/item/before LaTeXML's binding of \item takes no generic hook; its code does not run",
+      r"Warning:hook:cmd/arabic/before LaTeXML's binding of \arabic takes no generic hook; its code does not run",
     ],
     elements: &[
       (
@@ -79,6 +80,55 @@ const ROWS: &[Row] = &[
         r#"<p xml:id="S1.I1.i1.p1.1">Text.</p>"#,
       ),
     ],
+  },
+  // Who owns the code on a bound command's hook sets the severity: the document's (top level, its own label,
+  // `\AddToHookNext`, the body, a `\newtheorem` command's hook, named without "LaTeXML's binding of") a Warning; a
+  // package's alone an Info, as its redefinition of a locked command (red on QA47A r1: the package's a Warning, each
+  // message repeating its hook name; on r2's first build `\AddToHookNext`'s an Info).
+  Row {
+    name:     "command_hook_owner_sets_its_severity",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/command_hook_owner_sets_its_severity.tex"
+    ),
+    counts:   (0, 5),
+    messages: &[
+      r"Info:hook:cmd/section/before LaTeXML's binding of \section takes no generic hook; its code does not run",
+      r"Warning:hook:cmd/emph/before LaTeXML's binding of \emph takes no generic hook; its code does not run",
+      r"Warning:hook:cmd/arabic/before LaTeXML's binding of \arabic takes no generic hook; its code does not run",
+      r"Warning:hook:cmd/item/before LaTeXML's binding of \item takes no generic hook; its code does not run",
+      r"Warning:hook:cmd/thm/before \thm takes no generic hook; its code does not run",
+      r"Warning:hook:cmd/footnote/before LaTeXML's binding of \footnote takes no generic hook; its code does not run",
+    ],
+    elements: &[
+      (
+        "p",
+        "xml:id=\"S1.p1.1\"",
+        r#"<p xml:id="S1.p1.1">A<note mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>N</note> <emph font="italic" xml:id="S1.p1.1.1">b</emph> c 1.</p>"#,
+      ),
+      (
+        "p",
+        "xml:id=\"Thmthm1.p1.1\"",
+        r#"<p xml:id="Thmthm1.p1.1"><text font="italic" xml:id="Thmthm1.p1.1.1">T.</text></p>"#,
+      ),
+    ],
+  },
+  // The Error side: a hook on a register (no command to patch) is the kernel's Error, as pdflatex's two `!` (Perl 0);
+  // the text kept (red on QA47Abase: 0 errors, the hooks never applied; revQA47A S1).
+  Row {
+    name:     "command_hook_on_a_register_errs",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/command_hook_on_a_register_errs.tex"
+    ),
+    counts:   (2, 0),
+    messages: &[
+      r"Error:errmessage:\errmessage LaTeX hooks Error: Generic hooks cannot be added to '\mylen'.",
+      r"Error:errmessage:\errmessage LaTeX hooks Error: Generic hooks cannot be added to '\mycnt'.",
+    ],
+    elements: &[(
+      "p",
+      "xml:id=\"p1.1\"",
+      r#"<p xml:id="p1.1">Text 0.0pt.</p>"#,
+    )],
   },
   // `\document`'s other kernel hooks are one-time: code added to them in the body runs at once (a stale RED repro,
   // GREEN since int160a; QA46).
@@ -111,7 +161,7 @@ const ROWS: &[Row] = &[
   },
 ];
 
-/// Every row converted once, in-process: exact counts, the Warnings named, the whole elements.
+/// Every row converted once, in-process: exact counts, the whole diagnostic lines, the whole elements.
 #[test]
 fn batchqa47a_command_hook_rows() {
   for row in ROWS {
@@ -121,10 +171,8 @@ fn batchqa47a_command_hook_rows() {
     assert_eq!(warning_count(&log), row.counts.1, "{name}: warnings\n{log}");
     for message in row.messages {
       assert!(
-        log
-          .lines()
-          .any(|l| l.starts_with("Warning:hook:") && l.contains(message)),
-        "{name}: no Warning {message:?}\n{log}"
+        log.lines().any(|l| l == *message),
+        "{name}: no line {message:?}\n{log}"
       );
     }
     for (tag, attrs, element) in row.elements {

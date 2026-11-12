@@ -275,8 +275,9 @@ pub(crate) fn load() -> Result<()> {
     } else if first_begin && lookup_definition(&T_CS!("\\@expl@sys@load@backend@@"))?.is_some() {
       boxes.push(digest(Tokens!(T_CS!("\\@expl@sys@load@backend@@")))?);
     }
-    // latex.ltx:9511 `\@kernel@before@begindocument`, before the `begindocument` hook; its sibling after it, below.
-    if first_begin {
+    // latex.ltx:9511 `\@kernel@before@begindocument` (since 2020-10, :1076-1081), before the `begindocument` hook; its
+    // sibling after it, below.
+    if first_begin && lookup_definition(&T_CS!("\\@kernel@before@begindocument"))?.is_some() {
       boxes.push(digest_relocked(Tokens!(T_CS!("\\@kernel@before@begindocument")))?);
     }
     // @at@begin@document (\AtBeginDocument) + the begindocument hook. `inPreamble`
@@ -315,7 +316,7 @@ pub(crate) fn load() -> Result<()> {
     // latex.ltx:9513 `\@kernel@after@begindocument`: its `\__hook_cmd_begindocument_code:` (:6865-6873) applies the
     // preamble's `cmd/<name>/<hook>` hooks (a binding's are counted, `\__hook_patch_command:Nnn`) and patches later
     // ones at once. Witnesses 2602.09577, 2510.06714, 2411.13565, 2511.21986, 2603.08400.
-    if first_begin {
+    if first_begin && lookup_definition(&T_CS!("\\@kernel@after@begindocument"))?.is_some() {
       boxes.push(digest_relocked(Tokens!(T_CS!("\\@kernel@after@begindocument")))?);
     }
     // The begin-document hooks have run (their tests of `\chapter` got TeX's answer): a `\chapter` the class left

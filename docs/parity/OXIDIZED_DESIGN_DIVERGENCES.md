@@ -35123,3 +35123,31 @@ guarded `if $LaTeXML::DEBUG{feature}` (L467), so `--verbose` alone prints no tra
 `Debug:<target> <message>` (`Debug:frontmatter FRONT Add …`), as the other severities name their category. Reason:
 the un-featured traces are Rust's own instrumentation with no Perl feature to enable them, and the prefix keeps them
 apart from `Info:` lines in a log. Guard `cluster_cli::debug_feature_scope::debug_feature_prints_only_its_feature`.
+
+### 1008. A `cmd/<name>/<hook>` hook on a command LaTeXML binds does not run: a Warning for the document's code, an Info for a class's or package's (QA47A)
+
+**Perl.** `\AddToHook` is a no-op (latex_base.pool.ltxml:833): no generic command hook runs, none is reported.
+**pdflatex.** `\begin{document}` runs `\@kernel@after@begindocument` (latex.ltx:9513), whose
+`\__hook_cmd_begindocument_code:` (:6865-6873) patches every delayed `cmd/<name>/<hook>` into the macro and later ones at
+once (`\__hook_patch_command:Nnn`, :6888); a non-macro errs "Generic hooks cannot be added to '\mylen'".
+**Rust.** `\document` runs both kernel begin-document lists, so hooks on TeX macros run as in pdflatex, and a register
+errs as pdflatex. A command LaTeXML binds (a constructor or primitive, a locked or Rust-bodied macro, one reading
+LaTeXML's argument types) has no macro to patch until the macro faces (BM Q3.8): the override of
+`\__hook_patch_command:Nnn` (`latex_constructs_rust_only.rs`) skips the patch with `Warning:hook` when the document's
+code is on the hook (`\__hook_toplevel~<hook>`, `\AddToHookNext`'s `\__hook_next~<hook>`, a label naming no loaded class or package, or a hook added in the body,
+where the kernel patches before storing the code), else `Info:hook`, as a class's redefinition of a locked command is
+dropped with an Info (`state.rs`). The message names the command without "LaTeXML's binding of" when its definition is
+the document's (`\newtheorem`'s `\thm`). `\meaning` prints a macro's prefixes in `\escapechar` (tex.web §1295), which
+ltcmdhooks reads (latex.ltx:7011-7016; KNOWN_PERL_ERRORS #1229).
+**Why**: pdflatex runs the hook code; we cannot without the macro faces, so a lost word of the document's is counted
+(Warning); a class's or package's hook (memoir.cls:5832-5833 `cmd/end@float/before`; projlib-author.sty's
+`cmd/@author/…`, whose lines the binding carries as contacts) is the binding's business, as its locked-command
+redefinitions are.
+**Witnesses**: 2602.09577 (`cmd/appendix` runs), 2510.06714, 2411.13565 (changes' `\added`/`\deleted`/`\replaced`: 3
+Warnings), 2511.21986, 2603.08400, 2607.15091 (memoir: 2 Infos).
+**Guard**: `perfect_kernel_batchqa47a::batchqa47a_command_hook_rows` (rows `command_hook_on_a_binding_is_counted`,
+`command_hook_owner_sets_its_severity`, `command_hook_on_a_register_errs`); the memoir pins in `perfect_kernel_batch56`,
+`perfect_kernel_batch68x`, `perfect_kernel_batch72b` count no Warning for the class's hooks.
+**Open**: a package's hook added in the body (projlib-author.sty's `cmd/@author/…` from `\author`) is a Warning: the
+kernel patches before storing the code, so its label is not yet readable (RED
+`macro-state/command_hook_a_package_adds_in_the_body_red`).

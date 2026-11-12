@@ -1,0 +1,19 @@
+% mechanism: a package's macro run in the body adds a `cmd/<name>` hook with its own label (projlib-author.sty:79,
+%   :102, :149, :153 `\hook_gput_code:nnn {cmd/@author/after} {projlib-author}`). In the body the kernel patches before
+%   it stores the code, so at `\__hook_patch_command:Nnn` (latex.ltx:6888) the label is only an argument still in the
+%   input; ours counts every body hook as the document's, a Warning, where the package's should be an Info.
+% witness: synthetic (QA47Ab); projlib-author.sty (`perfect_kernel_batch68x::projlib_author_lines_are_the_authors_contacts`)
+% oracle:  pdflatex 0 `!`; "A b." (the hook's `\relax` prints nothing); Perl: `\AddToHook` a no-op, 0 warnings.
+% engines: rust QA47Ab: 0 errors, 1 warning (`Warning:hook:cmd/emph/before`); QA47Abase: 0 warnings.
+% expect:  0 errors, 0 warnings; `Info:hook:cmd/emph/before`.
+% status:  RED (QA47Ab)
+% moves:   QA47A r3 (main session: defer the body decision until the code is stored, or read the label)
+\begin{filecontents*}[overwrite]{qabodypkg.sty}
+\ProvidesPackage{qabodypkg}
+\newcommand\pkgnote{\AddToHook{cmd/emph/before}[qabodypkg]{\relax}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{qabodypkg}
+\begin{document}
+\pkgnote A \emph{b}.
+\end{document}

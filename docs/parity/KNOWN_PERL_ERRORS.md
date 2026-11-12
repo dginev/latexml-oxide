@@ -19390,3 +19390,17 @@ as tex.web's print_cs §262) before a letter, in the one parse `\pgfmathparse`, 
 \pgfmathparse{\mydim r}[\pgfmathresult]
 \end{document}
 ```
+
+## 1229. `\meaning` hard-codes `\protected`/`\long`/`\outer`, whatever `\escapechar`
+
+`TeX_Debugging.pool.ltxml:154-157` joins the literal strings `'\protected'`, `'\long'`, `'\outer'`; tex.web §1295
+prints them with `print_esc`, so in the current `\escapechar`. ltcmdhooks reads an `\NewDocumentCommand`'s prefixes
+under `\escapechar` `/` (latex.ltx:7011-7016), so every `cmd/<name>` hook on one misreads. PERL-ORIGIN. Rust:
+`tex_debugging.rs` prints them with the escape character, as the body's names. Guard
+`perfect_kernel_batchqa47a::batchqa47a_command_hook_rows` row `meaning_prefixes_follow_escapechar`. Minimal trigger
+(Perl `\protected\long macro:->`, pdflatex `/protected/long macro:->`):
+
+```latex
+\protected\long\def\x{}
+{\escapechar=`\/ \message{\meaning\x}}
+```

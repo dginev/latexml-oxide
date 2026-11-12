@@ -202,7 +202,7 @@ here is open unless its status says otherwise; when a row closes, delete it here
     gost `back:` (770) dangling links — the surpass option needs a ruling
     (`~/data/pk_agents/main/agent_reports/2026-10-02_biblatex_idref_rootcause.md`).
   - *kernel*: RED `singletons/register_value_absorbs_as_its_text` (`digested.rs:378`; KPE #403); `macro-state/generic_command_hooks_run`
-    GREEN (QA47A: the kernel's begin-document lists run; a binding's `cmd/` hook is a counted Warning), RED
+    GREEN (QA47A: the kernel's begin-document lists run; a binding's `cmd/` hook a counted Warning for the document's code, an Info for a class's or package's; OD #1008), RED
     `macro-state/{command_hook_on_an_optional_argument_command_red, command_hook_on_a_tex_primitive_red}` (post-merge,
     the macro faces); the loader ignores `\ver@<pkg>.sty` (memoir `\EmulatedPackage{setspace}`
     loads the setspace binding; see the K13 row); Perl's open-conditional report at end of input
