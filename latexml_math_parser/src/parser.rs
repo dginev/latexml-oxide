@@ -307,6 +307,26 @@ fn asf_second_chance_alternatives() -> usize {
 }
 const ASF_SECOND_CHANCE_TIME: std::time::Duration = std::time::Duration::from_secs(5);
 
+thread_local! {
+  /// In-process override of every wall-clock limit of a formula's parse (the tree sample's 30 s and
+  /// 2 s pruned-only budget, the second chance's 5 s), for a test whose outcome must follow the
+  /// count budgets alone, whatever the machine's load (set in the conversion's thread).
+  static PARSE_DEADLINES_OVERRIDE: std::cell::Cell<Option<std::time::Duration>> =
+    const { std::cell::Cell::new(None) };
+}
+
+/// See `PARSE_DEADLINES_OVERRIDE`; `None` restores the defaults.
+pub fn set_parse_deadlines_override(limit: Option<std::time::Duration>) {
+  PARSE_DEADLINES_OVERRIDE.with(|c| c.set(limit));
+}
+
+/// A wall-clock limit of the parse: `default`, unless a test overrides them all.
+fn parse_deadline(default: std::time::Duration) -> std::time::Duration {
+  PARSE_DEADLINES_OVERRIDE
+    .with(|c| c.get())
+    .unwrap_or(default)
+}
+
 // Maximum number of grammar lexemes in a single formula before we skip the
 // full Marpa grammar parse and fall through to the kludge parser (the same
 // path a genuine parse failure takes). Marpa's Earley recognizer allocates
@@ -2483,8 +2503,8 @@ impl MathParser {
             );
           }
           let max_trees = 5000;
-          let max_time = std::time::Duration::from_secs(30);
-          let pruned_only_time_budget = std::time::Duration::from_secs(2);
+          let max_time = parse_deadline(std::time::Duration::from_secs(30));
+          let pruned_only_time_budget = parse_deadline(std::time::Duration::from_secs(2));
           let pruned_only_count_threshold: usize = 200;
           let max_unique = 10;
           let max_since_unique = 256;
@@ -2583,7 +2603,7 @@ impl MathParser {
       } else if second_chance_due {
         // The counts carry over from an earlier attempt; the deadline, a safety net, is the
         // attempt's own, so the tree samples between attempts do not spend it (review round 8).
-        let deadline = std::time::Instant::now() + ASF_SECOND_CHANCE_TIME;
+        let deadline = std::time::Instant::now() + parse_deadline(ASF_SECOND_CHANCE_TIME);
         let budget = match self.second_chance_budget.take() {
           Some(budget) => crate::asf_traverser::AsfBudget { deadline, ..budget },
           None => crate::asf_traverser::AsfBudget {
@@ -2818,7 +2838,7 @@ impl MathParser {
       // sidesteps these caps via per-glade memoization. See
       // docs/math/MATH_PARSER_AND_ASF.md.
       let max_trees = 5000; // Hard limit on parse tree enumeration
-      let max_time = std::time::Duration::from_secs(30); // 30 second timeout
+      let max_time = parse_deadline(std::time::Duration::from_secs(30)); // 30 second timeout
       // A short run of repeats is no convergence: the iterator varies the root
       // choice last, so a new top-level reading can follow many repeats (#146,
       // see HYBRID_AND_NODE_LIMIT); `max_since_unique` trees without a new
@@ -2832,7 +2852,7 @@ impl MathParser {
       // exhausting `max_time` (30s). Empirical: 0804.1730 case had 4536
       // pruned trees over 28s before timeout. After 2s with >200 prunes
       // the marginal probability of finding a unique drops sharply.
-      let pruned_only_time_budget = std::time::Duration::from_secs(2);
+      let pruned_only_time_budget = parse_deadline(std::time::Duration::from_secs(2));
       let pruned_only_count_threshold: usize = 200;
       // Unique-tree cap: the pragmatics/selection step only needs a handful
       // of distinct parses. Beyond this, additional unique trees are almost

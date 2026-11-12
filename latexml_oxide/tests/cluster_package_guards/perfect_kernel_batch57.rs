@@ -616,7 +616,13 @@ fn opfunction_chain_parses_past_the_tree_sampler() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/math-parse/opfunction_chain_parses_past_the_tree_sampler.tex"
   );
-  let (stderr, xml) = convert_with(tex, None);
+  // The parse's wall-clock limits (2 s with no parse yet, the second chance's 5 s) cut the sixteen
+  // logs' sample under load (FLK1: 21.9 s beside 24 busy loops); lifted, the count budgets decide.
+  let no_deadlines = || {
+    latexml_math_parser::set_parse_deadlines_override(Some(std::time::Duration::from_secs(3600)))
+  };
+  let (stderr, xml, ()) =
+    super::perfect_kernel_batch46::convert_with_setup_then(tex, None, no_deadlines, |_| ());
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(warning_count(&stderr), 2, "{stderr}");
   assert_eq!(
@@ -651,7 +657,10 @@ fn opfunction_chain_parses_past_the_tree_sampler() {
   let (stderr, xml, ()) = super::perfect_kernel_batch46::convert_with_setup_then(
     tex,
     None,
-    || latexml_math_parser::set_asf_second_chance_alternatives_override(Some(500)),
+    move || {
+      no_deadlines();
+      latexml_math_parser::set_asf_second_chance_alternatives_override(Some(500));
+    },
     |_| (),
   );
   assert_eq!(error_count(&stderr), 0, "{stderr}");
