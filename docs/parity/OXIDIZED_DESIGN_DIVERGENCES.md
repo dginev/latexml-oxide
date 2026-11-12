@@ -35570,7 +35570,10 @@ mark the document took back (`\let\ver@X\relax` then `\usepackage{X}` leaves X l
 records-only skip is the ruling of 2026-10-14) with the file's declared version, as the binding load does. A loader marks
 the file unless it is loaded by this rule: a `\relax` left by a query before the load (`\expandafter\ifx\csname ver@X.sty\endcsname\relax`,
 `\@ifpackagelater`, `\IfPackageAtLeastTF`) is not loaded, while the raw loader keeps a `\relax` the file set itself
-(fontenc.sty:123); the class-copy check, microtype's babel test and biblatex's overlay ask `file_loaded` too. cleveref's
+(fontenc.sty:123). A package or class load (binding or raw, `\documentclass`, `\LoadClass`) marks `\ver@<file>` `\@empty`
+before the read, as latex.ltx:18840 `\@onefilewithoptions` does (Perl's records are set before the read too,
+Package.pm:2328, :2363), so a file asks for its loader while it loads (1411.7188's l3names.sty for expl3; a binding's
+`subfigure.cfg`); the version replaces the mark after the read, and a load that reads nothing takes it back. The class-copy check, microtype's babel test and biblatex's overlay ask `file_loaded` too. cleveref's
 pretense (Perl cleveref.sty.ltxml:23-27) marks amsmath both ways, in the group (`state::with_pretended_load`), only where it
 is neither loaded nor recorded. **Witnesses**: 2501.07980, 1712.01010, 1812.04463 (aa.cls copies
 loading amsmath). **Guards**: `perfect_kernel_batchga2::one_loaded_answer_on_every_load_path`, the fence

@@ -997,6 +997,9 @@ fn input_definitions_impl(
   };
   // (the classes a binding loaded now reads raw itself, for K11 at this load's end)
   let raw_class_reads_before = UNCLAIMED_RAW_CLASS_READS.get();
+  let loading_mark = (options.handleoptions && !options.noltxml)
+    .then(|| mark_loading(&filename))
+    .flatten();
   let loaded = if options.noltxml {
     None
   } else {
@@ -1042,6 +1045,15 @@ fn input_definitions_impl(
   };
   if let Some(before) = setters_before {
     crate::binding::store_setters::mark_bound(&before)?;
+  }
+  // (no binding: the raw read below marks its own)
+  if loaded.is_none() && still_loading_mark(&filename, &loading_mark) {
+    let was = loading_mark.as_ref().and_then(|(_, was)| was.clone());
+    assign_meaning(
+      &T_CS!(s!("\\ver@{filename}")),
+      was.unwrap_or(Stored::None),
+      Some(Scope::Global),
+    );
   }
   let mut is_found_raw = false;
   // Retain the "a binding loaded" fact for the later hook-firing check (`loaded`
@@ -1108,7 +1120,7 @@ fn input_definitions_impl(
     if options.handleoptions {
       let ver_cs = T_CS!(s!("\\ver@{}", filename));
       // (`\relax` is not loaded: a query before the load leaves it, `\ifx\csname ver@X.sty\endcsname\relax`)
-      if !file_loaded(&filename) {
+      if !file_loaded(&filename) || still_loading_mark(&filename, &loading_mark) {
         mark_version(&filename)?;
       }
       // fontenc.sty:tail `\global\let\ver@fontenc.sty\relax` — the file
@@ -3020,6 +3032,7 @@ fn load_tex_definitions(
   // these are, `Expandable::watched_call`; a raw TeX Live package is neither)
   let _own_file = OwnFileGuard::new(is_own_raw_file(pathname));
   let ver_cs = T_CS!(s!("\\ver@{request}"));
+  let loading_mark = handleoptions.then(|| mark_loading(request)).flatten();
   let ver_before = lookup_meaning(&ver_cs);
 
   // Note that we are reading definitions (and recursive input is assumed also definitions)
@@ -3154,7 +3167,9 @@ fn load_tex_definitions(
   // ("the sty file you are using has a date of <empty>" abort). Guard:
   // cluster_package_guards::raw_provides_version_survives.
   // (not when the file set the macro itself, fontenc.sty:123's `\relax`: only a query's `\relax` from before the read)
-  if !file_loaded(request) && lookup_meaning(&ver_cs) == ver_before {
+  if still_loading_mark(request, &loading_mark)
+    || (!file_loaded(request) && lookup_meaning(&ver_cs) == ver_before)
+  {
     let_i(&ver_cs, &T_CS!("\\fmtversion"), Some(Scope::Global));
   }
 
@@ -6045,6 +6060,27 @@ fn build_invocation_token(token: Token, args: Vec<Option<Tokens>>) -> Result<Tok
       invoked_tokens.extend(wrapped_args);
       Ok(Tokens::new(invoked_tokens))
     },
+  }
+}
+
+/// latex.ltx:18840 `\@onefilewithoptions`: `\global\let\ver@<file>\@empty` before the read, so the file and what it loads
+/// hear `\@ifpackageloaded` true while it loads (1411.7188's l3names.sty asks for expl3; Perl marks `<file>_loaded`
+/// before the read, Package.pm:2328, :2363). Returns the mark and what it replaced, unless `filename` is loaded already.
+fn mark_loading(filename: &str) -> Option<(Stored, Option<Stored>)> {
+  if file_loaded(filename) {
+    return None;
+  }
+  let ver_cs = T_CS!(s!("\\ver@{filename}"));
+  let was = lookup_meaning(&ver_cs);
+  let_i(&ver_cs, &T_CS!("\\@empty"), Some(Scope::Global));
+  lookup_meaning(&ver_cs).map(|mark| (mark, was))
+}
+
+/// Is `\ver@<filename>` still the very `\@empty` [`mark_loading`] set (the read declared no version)?
+fn still_loading_mark(filename: &str, mark: &Option<(Stored, Option<Stored>)>) -> bool {
+  match (mark, lookup_meaning(&T_CS!(s!("\\ver@{filename}")))) {
+    (Some((Stored::Expandable(mark), _)), Some(Stored::Expandable(ver))) => Rc::ptr_eq(mark, &ver),
+    _ => false,
   }
 }
 
