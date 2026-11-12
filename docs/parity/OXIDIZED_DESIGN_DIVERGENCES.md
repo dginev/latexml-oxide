@@ -27161,17 +27161,24 @@ a_parsed_prescript_on_a_word_is_text_a_script_on_a_base_the_base, the_writer_and
 
 **ISO1 (restored after DEL1's flip lost it with the old writer).** The rule now stands in the observer's lexer, one place
 for every reader of the events: a script a letter or digit prints after in its own formula is no Mark but the
-formula's text, folded into the Name after it (`events::lexer::glue_in_word_marks`; "3He") — unless it opens its line,
-where it is the line's label (`$ {\rm ^2Solid}$ State …`, 1006.5052, which a first cut without that clause gave to the
-wrong author) —, and an
-exponent on a base its formula prints opens no entry by the glued-label rule (`events::mark_led_pieces`, 2203.01892's
-`OR $97403^{3}$`). The content check reads a formula the frontmatter takes as text with its scripts, a superscript
-REVTeX's `\lx@frontmatter@keepsup` kept inside it too (`emitter::dom::segments`). The isotope line stays whole, its
+formula's text, folded into the Name after it (`events::lexer::glue_in_word_marks`; "3He") — unless a name requests
+it, where it is a label (`Univ X, ${\rm ^2Lab}$ of …` under `Bob Baker$^{2}$`, revISO1 B1), or, no name requesting
+marks, it opens its line (`$ {\rm ^2Solid}$ State …`, 1006.5052, which a first cut without that clause gave to the
+wrong author) —, and an exponent on a base its formula prints opens no entry by the glued-label rule unless a name
+requests it (`events::mark_led_pieces`; 2203.01892's unrequested `OR $97403^{3}$`; `Lab $5^{2}$Univ Y` under
+`Bob Baker$^{2}$`, revISO1 S1). The requested labels (`events::names_requested`) are the marks set on the events' own
+names (an in-block line), else the queued authors' (`queue_reading::requested_labels`; once the flush took the queue,
+`lx_frontmatter_requested_marks`, now assigned before the emitter runs). The content check reads a formula the
+frontmatter takes as text with its scripts, a superscript REVTeX's `\lx@frontmatter@keepsup` kept inside it too, and a
+base's scripts as a mark parting it from the ink after it ("5", "Univ"; `emitter::dom::segments`). The isotope line stays whole, its
 author's, under REVTeX's `\affiliation`, the kernel's in-block line, elsarticle's `\address` and aa's `\institute`
 (2105.07958's prescript class). A/B against int160c: 18 papers (2105.07958, 2203.01892, 1006.5052 and 15 whose
 affiliation sources hold a superscript glued to letters) convert byte-identical; the in-formula prescript is rare
 (one hit in a 40,000-zip scan). Guard `perfect_kernel_batch90a::a_script_before_printed_ink_or_on_a_base_is_text`
-(eight rows: one per reading path, the line-opening script, and a control whose glued and spaced marks part the line). Left: a mark whose formula ends and that letters follow
+(15 rows: one per reading path, the line-opening script, a control whose glued and spaced marks part the line, and
+ISO1b's requested script on REVTeX's, elsarticle's, the kernel's, authblk's, IEEEtran's and an unknown class's path).
+RED (pinned, its Warning counting it): a requested exponent's cut writes `$5^{2}$` on both sides
+(`revtex_affiliation_requested_exponent_on_a_number_parts_the_line_red`). Left: a mark whose formula ends and that letters follow
 glued after a comma — `$^{3}$He`, `\textsuperscript{3}He`, and `$^{3}\mathrm{He}$` too, which REVTeX's queue-time
 `\affiliation` cut parts by its tokens — RED repros `revtex_affiliation_{glued,textsuperscript,mathrm}_isotope_after_a_comma_red`,
 `elsarticle_address_glued_isotope_after_a_comma_red`.

@@ -467,6 +467,22 @@ pub fn digest_front_matter() -> Result<()> {
   };
   // (the labels the queue defers, read for the readers of its keyvals here: `\lx@label@ref`, cas's `\author[a]`)
   resolve_queued_label_refs(&mut commands);
+  // The labels the authors' marks request, for the notes digested here (`note_body`) and the
+  // emitter's readings of its calls (`queue_reading::requested_labels`) — this call's authors only: a
+  // note queued for a later call (an appending `\author` after `\maketitle`) sees that call's.
+  let requested: Vec<String> = commands
+    .iter()
+    .filter(|entry| {
+      entry.0 == "ltx:creator" && entry.1.get("role").map(String::as_str) == Some("author")
+    })
+    .flat_map(|entry| author_mark_operands(entry.2.unlist_ref()))
+    .flat_map(|operand| clean_frontmatter_labels(&Tokens::new(operand).to_string(), "affiliation"))
+    .collect();
+  assign_value(
+    "lx_frontmatter_requested_marks",
+    Stored::String(pin(requested.join("\u{1}"))),
+    Some(Scope::Local),
+  );
   // (the one added step, under its switch: the queue's creators and annotations written from the reading, OD #980)
   // (a contact the class prints under the whole row of names, every author's, OXIDIZED_DESIGN_DIVERGENCES #901, is the
   // reading's: the emitter writes a flush holding one with or without an author block, `stays_out`; under a block no
@@ -510,21 +526,6 @@ pub fn digest_front_matter() -> Result<()> {
   assign_value(
     "lx_frontmatter_flushing",
     Stored::Bool(true),
-    Some(Scope::Local),
-  );
-  // The labels the authors' marks request, for the notes digested here (`note_body`) — this call's authors only: a
-  // note queued for a later call (an appending `\author` after `\maketitle`) sees that call's.
-  let requested: Vec<String> = commands
-    .iter()
-    .filter(|entry| {
-      entry.0 == "ltx:creator" && entry.1.get("role").map(String::as_str) == Some("author")
-    })
-    .flat_map(|entry| author_mark_operands(entry.2.unlist_ref()))
-    .flat_map(|operand| clean_frontmatter_labels(&Tokens::new(operand).to_string(), "affiliation"))
-    .collect();
-  assign_value(
-    "lx_frontmatter_requested_marks",
-    Stored::String(pin(requested.join("\u{1}"))),
     Some(Scope::Local),
   );
   // The labels the mark-picked contacts digested here answer, `role` and label (a marked line's first mark,

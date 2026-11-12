@@ -181,6 +181,20 @@ pub(in crate::base_utilities) fn queued_requesters(operand: &[Token]) -> Vec<usi
     .unwrap_or_default()
 }
 
+/// The affiliation labels the queued authors' marks request (`affiliation:<key>`), or, once a flush took the queue, those of
+/// the authors it took (`lx_frontmatter_requested_marks`): what tells a script glued to a word a label (`events::names_requested`).
+pub(in crate::base_utilities) fn requested_labels() -> Vec<String> {
+  let queued: Vec<String> = queue_reading().requests.keys().cloned().collect();
+  if !queued.is_empty() {
+    return queued;
+  }
+  lookup_string("lx_frontmatter_requested_marks")
+    .split('\u{1}')
+    .filter(|label| !label.is_empty())
+    .map(String::from)
+    .collect()
+}
+
 /// The marks the queued authors' names show, as label keys (`relocate::name_marks_of`): the items of AASTeX 5's
 /// `\altaffilmark{…}` (which request `altaffil:` labels), and those of their superscripts (`affiliation:` labels).
 pub fn queued_name_marks() -> Rc<(Vec<String>, Vec<String>)> {

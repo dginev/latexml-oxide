@@ -224,7 +224,12 @@ fn segments_of(node: &Node, parted: bool, icons: bool) -> Vec<Seg> {
                 let text = s!("{base}{}", scripts[0]);
                 out.push(Seg::Atom(text));
               },
-              marks::FormulaMarks::OnBase { base, .. } => out.push(Seg::Atom(base)),
+              // (its scripts a mark parting the base from the ink after it, as the reading's events: `Lab $5^{2}$Univ Y`
+              // reads "5" and "Univ", not "5Univ", revISO1 S1)
+              marks::FormulaMarks::OnBase { base, .. } => {
+                out.push(Seg::Atom(base));
+                out.push(Seg::Space);
+              },
               // (its scripts its text too, one the binding kept as a superscript: REVTeX's `${\rm ^{3}He}$`)
               marks::FormulaMarks::Other => {
                 let mut inner = Vec::new();
