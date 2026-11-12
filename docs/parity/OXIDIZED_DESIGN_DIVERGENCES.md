@@ -24858,7 +24858,12 @@ latex_constructs/mod.rs): `numbered_footnote_mark` prints `[<n>]` through `\thef
 `\lx@notemark`, `\lx@notetext` and the VerbatimFootnotes `@live` forms, which read `[<n>]` undigested,
 `OptionalUndigested`, as TeX reads `\c@footnote #1\relax`; a minipage's notes stay `footnote_tag`'s); `<n>` is a number
 when it expands to digits (`2`, `\arabic{footnote}`) or is a count register (`\value{footnote}` — digested on its own
-it was a register assignment, "Missing number, treated as zero", and the mark printed nothing), and any other mark
+it was a register assignment, "Missing number, treated as zero", and the mark printed nothing); a `[<n>]` that TeX's
+scan leaves nothing printable of (`\relax`, `\value` of a counter not yet defined, `2\relax`; not a blank `[]`, a text
+mark's "no mark", arxstspdf's `\freefootnotetext[]`: RED `footnotemark_blank_is_tex_zero_red`) is read by the
+`\setcounter` siblings' reader, `read_braced_value` (GA1f `tex_footnote_number`: the mark TeX's, 0 with its one "Missing
+number"; 2407.13730, 2606.19583; guard rows `footnotemark_missing_number_reads_as_tex`,
+`footnotetext_missing_number_pairs_with_its_mark`), and any other mark
 (`\footnotemark[$\dagger$]`, "Missing number" in LaTeX) is printed as given, as before and as Perl does, with no
 diagnostic (main-session decision 2026-10-22: no diagnostic for now, the Warning false-alarmed on classes that read the
 mark as text; the faithful counter-definition rule is SYNC row 596's open part); an e-TeX expression

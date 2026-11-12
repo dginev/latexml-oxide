@@ -9,7 +9,7 @@ use latexml_core::{
   digested::DigestedData,
   parameter::{
     KEEP_STATED_LENGTHS, STATED_LENGTHS, STATED_LENGTHS_WITHHELD, WITHHOLD_STATED_LENGTHS,
-    read_braced,
+    read_braced, read_braced_value,
   },
 };
 
@@ -608,12 +608,12 @@ pub(crate) fn enter_title_footnotes() -> Result<()> {
 /// A footnote's mark given as `[<n>]`: latex.ltx:17652-17657 `\@xfootnote`, :17678-17682 `\@xfootnotemark` and
 /// :17694-17699 `\@xfootnotenext` set the counter to `<n>` in a group and mark the note `\thefootnote` there, so under
 /// `\renewcommand\thefootnote{\fnsymbol{footnote}}` (or footmisc's `symbol`) `\footnotetext[1]` is "∗", as the
-/// `\footnotemark` it answers. A mark that is not a number (`\footnotemark[$\dagger$]`, an error in LaTeX: "Missing
-/// number, treated as zero", the note marked 0) is printed as given, as before and as in Perl (KNOWN_PERL_ERRORS #1060,
-/// OXIDIZED_DESIGN_DIVERGENCES #851), with no diagnostic: a class may read the mark as text (pasj00.cls:2237-2239 and
-/// emulateapj.cls:558-563 `\@xfootnotemark` set `\@thefnmark{#1}`, ecai.cls:480 its author `\footnotemark[\dagger]`),
-/// which our locked `\footnotemark` does not see (78u, SYNC). `number` is the one `given_footnote_number` read for the
-/// note; a minipage's notes are `footnote_tag`'s.
+/// `\footnotemark` it answers. A mark that is not a number but prints something (`\footnotemark[$\dagger$]`, an error
+/// in LaTeX: "Missing number, treated as zero", the note marked 0) is printed as given, as before and as in Perl
+/// (KNOWN_PERL_ERRORS #1060, OXIDIZED_DESIGN_DIVERGENCES #851), with no diagnostic: a class may read the mark as text
+/// (pasj00.cls:2237-2239 and emulateapj.cls:558-563 `\@xfootnotemark` set `\@thefnmark{#1}`, ecai.cls:480 its author
+/// `\footnotemark[\dagger]`), which our locked `\footnotemark` does not see (78u, SYNC). `number` is the one
+/// `given_footnote_number` read for the note; a minipage's notes are `footnote_tag`'s.
 pub(crate) fn numbered_footnote_mark(
   given: &Digested,
   number: &FootnoteNumber,
@@ -642,10 +642,10 @@ pub(crate) struct FootnoteNumber {
 /// The number a footnote's `[<n>]` gives (`numbered_footnote_mark`, `footnote_pairing`), read once per note (none for
 /// any other type). The notes read `[<n>]` undigested (`OptionalUndigested`, sect03.rs `\lx@note`, `\lx@notemark`,
 /// `\lx@notetext`), as TeX reads `\c@footnote #1\relax` — digested on its own, `\value{footnote}` was a register
-/// assignment missing its number ("Missing number, treated as zero", the mark printed as nothing). The look is a check,
-/// its diagnostics held: a `[<n>]` whose expansion errs (`\footnotemark[\the\relax]`) is no number, and the mark's
-/// digestion as given reports the error, once, as pdflatex does (review probes rev78o2 valerr, val). Whether the number
-/// is the counter's is read the same way, the counter one ahead for the look.
+/// assignment missing its number. The look is a check, its diagnostics held: a `[<n>]` whose expansion errs
+/// (`\footnotemark[\the\relax]`) is no number, and the mark's digestion as given reports that error, once, as pdflatex
+/// does (review probes rev78o2 valerr, val). Whether the number is the counter's is read the same way, the counter one
+/// ahead for the look. Any other `[<n>]` that is no number is `tex_footnote_number`'s.
 pub(crate) fn given_footnote_number(
   note_type: &str,
   given: Option<&Digested>,
@@ -681,7 +681,39 @@ pub(crate) fn given_footnote_number(
     return Ok(FootnoteNumber::default());
   }
   hold.commit();
+  let digits = match digits {
+    Some(digits) => Some(digits),
+    None => tex_footnote_number(given)?,
+  };
   Ok(FootnoteNumber { digits, from_counter })
+}
+
+/// A `[<n>]` read as `\c@footnote #1\relax` reads it (latex.ltx:17678-17682), by the `\setcounter` siblings' reader,
+/// when what the scan leaves prints nothing: `\relax`, `\value` of a counter not yet defined (latex.ltx:10127). Then the
+/// mark is TeX's, its "Missing number, treated as zero" reported once (2407.13730, 2606.19583). A blank `[]` stays as
+/// given, as text marks do: arxstspdf.cls:1912's `\freefootnotetext[]` is a note with no mark (1011.1160).
+fn tex_footnote_number(given: &Digested) -> Result<Option<Tokens>> {
+  let given = given.revert()?;
+  if given
+    .unlist_ref()
+    .iter()
+    .all(|t| t.get_catcode() == Catcode::SPACE)
+  {
+    return Ok(None);
+  }
+  let hold = util::logger::DiagnosticsHold::begin();
+  let (value, tail) = read_braced_value(given, RegisterType::Number)?;
+  let relax = lookup_meaning(&T_RELAX!());
+  let prints_nothing = tail
+    .iter()
+    .all(|t| t.get_catcode() == Catcode::SPACE || (relax.is_some() && lookup_meaning(t) == relax));
+  if !prints_nothing {
+    hold.discard();
+    return Ok(None);
+  }
+  hold.commit();
+  let value = Number::from(value).value_of().to_string();
+  Ok(Some(Tokens::new(ExplodeText!(&value))))
 }
 
 /// `given_footnote_number`'s digits of a `[<n>]`.

@@ -1,0 +1,15 @@
+% mechanism: a blank `[<n>]` (`\footnotemark[]`, `\footnotetext[]`) is, in a class that reads it as a number
+%   (latex.ltx:17678-17682, :17694-17699 `\c@mpfn #1\relax`), TeX's "Missing number, treated as zero" and the mark 0.
+%   Ours keeps it as given, with no diagnostic (`tex_footnote_number`, OXIDIZED_DESIGN_DIVERGENCES #851): a class that
+%   reads the mark as text means no mark by it (arxstspdf.cls:1912 `\freefootnotetext[]`, 1011.1160), which our
+%   locked `\footnotemark`/`\footnotetext` does not see (78u, SYNC row 596's counter-definition rule).
+% witness: synthetic (GA1f; `[]` in 5 of 1,500 `\footnotemark` papers' .tex, e.g. 2012.06611, 2101.04763)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 3 `!` ("Missing number, treated as zero."): "A0 B0 C", footnote "0 Free."
+% engines: rust int163a, GA1e, GA1f 0 errors, 0 warnings: the marks empty (B's " "), the text unmarked
+% expect:  3 "Missing number" Warnings, marks 0 — once a class reading the mark as text is told apart
+% status:  RED (int163a, GA1e, GA1f)
+% moves:   post-merge (with #851's open part)
+\documentclass{article}
+\begin{document}
+A\footnotemark[] B\footnotemark[ ] C\footnotetext[]{Free.}
+\end{document}

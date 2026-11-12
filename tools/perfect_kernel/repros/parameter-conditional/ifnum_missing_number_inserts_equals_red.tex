@@ -1,0 +1,14 @@
+% mechanism: `\ifnum` whose first operand is no number (`\relax`, `\value` of a counter not yet defined): TeX says
+%   "Missing number, treated as zero", then, the `\relax` met where the relation goes, "Missing = inserted for \ifnum"
+%   (tex.web §503) and reads the second operand at the `\relax` again ("Missing number"): 0 = 0, true, and the `>0` left
+%   over is typeset ("¿0" in OT1). Ours errs "Expected a relational token" and takes the false branch.
+% witness: synthetic (revGA1e probe u1, `\ifnum\value{nosuchc}>0`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 3 `!` (2 "Missing number", "Missing = inserted for \ifnum"): "¿0 Pos."
+% engines: rust int163a, GA1e 1 error (Expected a relational token), 2 warnings, "Neg."
+% expect:  the two "Missing number" and one "Missing =" diagnostics; ">0 Pos."
+% status:  RED (int163a, GA1e)
+% moves:   post-merge
+\documentclass{article}
+\begin{document}
+\ifnum\relax>0 Pos.\else Neg.\fi
+\end{document}

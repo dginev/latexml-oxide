@@ -9,7 +9,9 @@
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: Ann One ∗, Bob Two ∗, Cy Three ∗; footnote ∗ The University
 % engines: rust int163a 0 errors, 3 warnings, Cy Three's mark empty; GA1d 1 error (Error:undefined:\c@uni), 2 warnings,
 %   Cy Three's mark `<ERROR class="undefined">\c@uni</ERROR>`; GA1e (`\value` as `\csname`) 0 errors, 2 warnings, the
-%   XML as int163a, Cy Three's empty mark now uncounted (footnotemark_missing_number_is_silent_red)
+%   XML as int163a, Cy Three's empty mark now uncounted; GA1f 0 errors, 3 warnings, Cy Three's mark "0" with its
+%   "Missing number" (footnotemark_missing_number_reads_as_tex): the replayed mark misses the title's `\fnsymbol`, where
+%   TeX's 0 prints nothing (an explicit `\footnotemark[1]` there is "1", not ∗, on int163a too)
 % expect:  0 errors; each creator carries the one note's mark
 % status:  RED (int163a, GA1d, GA1e)
 % moves:   post-merge (the emitter's replay of a block's declarations: P4b2's code)

@@ -404,6 +404,83 @@ const ROWS: &[Row] = &[
       ),
     ],
   ),
+  // A footnote's `[<n>]` read as `\c@mpfn #1\relax` (latex.ltx:17652-17657, :17678-17682) when the scan leaves nothing
+  // to print: `\value{nosuch}`, `\relax` are TeX's 0 with its "Missing number" (the core's Warning; pdflatex 7 `!`, E's
+  // `$\dagger$` stays as given and silent, OD #851), `2\relax` is 2, `\fnsymbol` at 0 nothing (revGA1e B1; int163a,
+  // GA1e: the marks empty and silent; 2407.13730, 2606.19583).
+  (
+    None,
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/footnotemark_missing_number_reads_as_tex.tex"
+    ),
+    0,
+    6,
+    0,
+    "",
+    &[
+      (
+        "note",
+        &[r#"xml:id="footnotex1""#],
+        r#"<note mark="0" role="footnotemark" xml:id="footnotex1"><tags><tag>0</tag><tag role="refnum">0</tag>
+          <tag role="typerefnum">footnote 0</tag></tags></note>"#,
+      ),
+      (
+        "note",
+        &[r#"xml:id="footnotex2""#],
+        r#"<note mark="0" role="footnotemark" xml:id="footnotex2"><tags><tag>0</tag><tag role="refnum">0</tag>
+          <tag role="typerefnum">footnote 0</tag></tags></note>"#,
+      ),
+      (
+        "note",
+        &[r#"xml:id="footnotex3""#],
+        r#"<note mark="2" role="footnotemark" xml:id="footnotex3"><tags><tag>2</tag><tag role="refnum">2</tag>
+          <tag role="typerefnum">footnote 2</tag></tags></note>"#,
+      ),
+      (
+        "note",
+        &[r#"xml:id="footnotex5""#],
+        r#"<note mark="0" role="footnote" xml:id="footnotex5"><tags><tag>0</tag><tag role="refnum">0</tag>
+          <tag role="typerefnum">footnote 0</tag></tags>Body.</note>"#,
+      ),
+      (
+        "note",
+        &[r#"xml:id="footnotex6""#],
+        r#"<note role="footnotemark" xml:id="footnotex6"><tags><tag role="typerefnum">footnote </tag></tags></note>"#,
+      ),
+      (
+        "note",
+        &[r#"xml:id="footnotex7""#],
+        r#"<note mark="†" role="footnotemark" xml:id="footnotex7"><tags><tag>†</tag><tag role="refnum">†</tag>
+          <tag role="typerefnum">footnote †</tag></tags></note>"#,
+      ),
+    ],
+  ),
+  // `\footnotetext[\value{nosuch}]` is marked 0 as the `\footnotemark[\value{nosuch}]` it answers, and pairs with it
+  // (`_fnvalue` 0), as pdflatex's "0 Paired." (2 `!`); int163a, GA1e: an empty mark and an unpaired text, silent.
+  (
+    None,
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/footnotetext_missing_number_pairs_with_its_mark.tex"
+    ),
+    0,
+    2,
+    0,
+    "",
+    &[
+      (
+        "note",
+        &[r#"xml:id="footnotex1""#],
+        r#"<note mark="0" role="footnote" xml:id="footnotex1"><tags><tag>0</tag><tag role="refnum">0</tag>
+          <tag role="typerefnum">footnote 0</tag></tags>Paired.</note>"#,
+      ),
+      (
+        "note",
+        &[r#"xml:id="footnote1""#],
+        r#"<note mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag>
+          <tag role="typerefnum">footnote 1</tag></tags>Real.</note>"#,
+      ),
+    ],
+  ),
 ];
 
 /// Repros macro-state/undefined_counter_register_is_an_error (GA0 finding 1), macro-state/
@@ -411,8 +488,8 @@ const ROWS: &[Row] = &[
 /// (witness 1910.02851), alignment-bindings/tabularray_rownum_colnum_counters (GA1b), the `\c@rownum` count in every
 /// load order of xcolor `[table]`, colortbl and tabularray and tabularray's `\c@rowcount` (GA1c), the bibliography's
 /// `\@listctr` and the `\@nmbrlisttrue` test it needs, varioref's `\c@vrcnt` (GA1d), `\value` as `\csname`, a raw
-/// `\@trivlist` in a bibliography, the two-author `\footnoterecall` control (GA1e): exact counts, the first Error, whole
-/// elements.
+/// `\@trivlist` in a bibliography, the two-author `\footnoterecall` control (GA1e), a footnote's `[<n>]` that is no
+/// number (GA1f): exact counts, the first Error, whole elements.
 #[test]
 fn an_undefined_counter_register_is_the_error_tex_raises() {
   for (preload, tex, errors, warnings, assuming, first_error, elements) in ROWS {

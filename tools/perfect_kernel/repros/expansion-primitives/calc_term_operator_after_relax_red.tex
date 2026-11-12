@@ -1,0 +1,17 @@
+% mechanism: calc's `\setcounter{a}{<term>*2+1}` reads `*`/`/` after a term (calc.sty `\calc@post@scan`), skipping the
+%   `\relax` the scan leaves, as `calc_post_scan` does for `+`/`-`; calc_sty.rs `read_term`'s `read_keyword(["*","/"])`
+%   does not, so `\value{b}\relax*2+1` ends at the `\relax` and "2+1" is typeset. Erroneous sibling (revGA1e u1):
+%   `\setcounter{a}{\value{nosuch}*2+1}` (`\value` is `\relax`, latex.ltx:10127) prints a stray "2+1" too, pdflatex
+%   "B: 1." with its "Missing number"s.
+% witness: synthetic (revGA1e S2, probes u1, c2)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "B: 7."
+% engines: rust int163a, GA1e 1 error (`*' invalid at this point), "2+1B: 3."
+% expect:  0 errors, 0 warnings; "B: 7."
+% status:  RED (int163a, GA1e)
+% moves:   post-merge
+\documentclass{article}
+\usepackage{calc}
+\newcounter{a}\newcounter{b}\setcounter{b}{3}
+\begin{document}
+\setcounter{a}{\value{b}\relax*2+1}B: \arabic{a}.
+\end{document}
