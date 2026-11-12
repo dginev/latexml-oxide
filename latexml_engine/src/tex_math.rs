@@ -589,7 +589,8 @@ fn end_math_at_group(mode: &str, twin: &str) -> Result<()> {
   if !is_value_bound("BOUND_MODE", Some(0))
     && lookup_string("MODE") == mode
     && let Some(t) = ::latexml_core::state::lookup_token_sym(::latexml_core::pin!("groupInitiator"))
-    && (t.get_catcode() == Catcode::BEGIN || t == T_CS!("\\bgroup") || t == T_CS!("\\begingroup"))
+    // by meaning: `\bgroup`, `\begingroup` or a `\let` copy (`\let\lb\bgroup`) opens the same group
+    && (t.get_catcode() == Catcode::BEGIN || t.defined_as(&T_BEGIN!()) || t.defined_as(&T_CS!("\\begingroup")))
   {
     push_value("afterGroup", T_CS!(twin))?;
     return Ok(());
@@ -1909,13 +1910,14 @@ LoadDefinitions!({
   // `perfect_kernel_batch56::eqno_digests_its_tag_material`.
   DefMacro!("\\eqno", "\\lx@eqno");
   Let!("\\leqno", "\\eqno");
+  // by meaning, as Perl's `defined_as` (TeX_Math.pool.ltxml:1245-1253): `\let\dollar=$` ends the tag too
   fn eqno_stops_at(t: &Token) -> bool {
-    *t == T_MATH!()
-      || *t == T_CS!("\\]")
-      || *t == T_CS!("\\cr")
-      || *t == T_CS!("\\lx@hidden@cr")
-      || *t == T_CS!("\\lx@end@display@math")
-      || *t == T_CS!("\\begingroup")
+    t.defined_as(&T_MATH!())
+      || t.defined_as(&T_CS!("\\]"))
+      || t.defined_as(&T_CS!("\\cr"))
+      || t.defined_as(&T_CS!("\\lx@hidden@cr"))
+      || t.defined_as(&T_CS!("\\lx@end@display@math"))
+      || t.defined_as(&T_CS!("\\begingroup"))
       || t.with_str(|s| s.starts_with("\\begin{") || s.starts_with("\\end{"))
   }
   DefParameterType!(EqnoTag, sub[_inner, _extra] {
