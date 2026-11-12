@@ -9,7 +9,10 @@
 %          `\mbox{\colorbox{yellow}{\strut}}` construct an empty `ltx:text` with no `backgroundcolor`: the colour of a
 %          box with no text is lost in the XML, as in the base — a rendering gap, not this test's)
 % engines: rust int160a (HG1) = 0 errors, 0 warnings: the notes of Ann to Eve (colour boxes) dropped, none counted; 92e's guard kept only the counts after DEL1
-% status:  RED (92e r2) -> GREEN (92e r3) -> RED (int160a, HG1)
+% engines: rust UNC = 0 errors, 1 warning: the notes still dropped (no item is keyed by a text of no letter or
+%          digit, emitter/plan.rs `creator_items`), now counted: the content check's "5 notes … \thanks{\colorbox{red}{}} … \thanks{\mbox{\colorbox{yellow}{\strut}}}"
+% status:  RED (92e r2) -> GREEN (92e r3) -> RED (int160a, HG1) -> counted (UNC)
+% moves:   post-merge (the notes written: key a wordless note by its place, as a picture's)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{xcolor}

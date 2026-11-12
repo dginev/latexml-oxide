@@ -8,7 +8,10 @@
 %          ink — a blank note kept); no note for Cat (`$\mathbb{}$`, a font switch over nothing: a template printing only
 %          its argument, no hook)
 % engines: rust int160a (HG1) = 0 errors, 0 warnings: Ann's note (its 𝟙) and Bob's (an empty \emph) dropped, none counted; 92e's guard kept only the counts after DEL1
-% status:  RED (92e r2) -> GREEN (92e r3) -> RED (int160a, HG1)
+% engines: rust UNC = 0 errors, 1 warning: the notes still dropped (no item is keyed by a text of no letter or
+%          digit, emitter/plan.rs `creator_items`), now counted: the content check's "2 notes … \thanks{$\openone$} \thanks{\emph{}}"
+% status:  RED (92e r2) -> GREEN (92e r3) -> RED (int160a, HG1) -> counted (UNC)
+% moves:   post-merge (the notes written: key a wordless note by its place, as a picture's)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{amssymb,revsymb}

@@ -268,8 +268,17 @@ fn observer_reads_a_note_by_the_ink_test() {
     "  n Univ A | note:adjacent",
     "D note  | note:adjacent ruling4:inkless",
   ]);
+  // (its four notes that print no word are dropped by the emit and counted, one Warning: UNC; the reading keeps them)
+  let (log, _, json) = latexml::util::test::convert_with_setup_then(
+    repro!("kernel_thanks_rule_and_frame_are_ink_red"),
+    Some("ar5iv.sty"),
+    || {},
+    |_| latexml_engine::base_utilities::fm_reading_json(),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
+  let json = super::perfect_kernel_batchfms2a1::parsed(&json);
   assert_eq!(
-    tuples(repro!("kernel_thanks_rule_and_frame_are_ink_red")),
+    super::perfect_kernel_batchfms2a2::tuples(&json["resolved"]),
     [
       "C Ann Able [] | line:names",
       "  n  | note:adjacent",

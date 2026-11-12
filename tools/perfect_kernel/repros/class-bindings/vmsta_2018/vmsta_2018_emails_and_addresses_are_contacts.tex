@@ -7,7 +7,9 @@
 %          Voronov" with ivan@univ.kiev.ua and Univ B; the class's check finds its e-mails (no "At least one email
 %          address is required!")
 % engines: rust int160a (HG1) = 0 errors, 0 warnings: each author's affiliation, but no e-mail (myus@univ.kiev.ua, ivan@univ.kiev.ua lost silently); 78e's guard kept only the counts after DEL1
-% status:  RED (int45b) -> GREEN (78e) -> RED (int160a, HG1)
+% engines: rust UNC = 0 errors, 0 warnings: each author's e-mail and affiliation (the binding's `\ead` reads the
+%          rehearsal as the author's content, not the class's code, whose flags it sets too: vmsta_cls.rs)
+% status:  RED (int45b) -> GREEN (78e) -> RED (int160a, HG1) -> GREEN (UNC)
 % preload: ar5iv.sty
 \documentclass{vmsta}
 \begin{document}

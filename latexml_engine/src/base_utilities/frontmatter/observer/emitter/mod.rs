@@ -130,6 +130,19 @@ pub(in crate::base_utilities) fn check_placed_content(document: &mut Document) {
       );
     }
   }
+  // (a note printing no word, which the word check can't see: written nowhere, `emit::unwritten_notes`)
+  let notes = emit::unwritten_notes();
+  if !notes.is_empty() {
+    Warn!(
+      "unexpected",
+      "frontmatter",
+      s!(
+        "Frontmatter content check: {} notes the author blocks print with no word are missing from the placed frontmatter: {}.",
+        notes.len(),
+        notes.join(" ")
+      )
+    );
+  }
 }
 
 /// The entry `taken` given back in the reading `out`: its addresses, taken out, no contacts of its holders.

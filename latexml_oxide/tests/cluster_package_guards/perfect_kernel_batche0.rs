@@ -1785,7 +1785,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // reads of where a word of those names ends unprinted, after a formula and before a command's argument — the same
   // tokens' words, matched whole now ("li" no word of "Blinn", review revS5CR7b S1; 1404.5602's "robicheauxcurrent"), no
   // owner decided by a spelling)
-  ("emitter/emit", 72),
+  // (UNC, 72 -> 73: `unwritten_notes` names a note it counts lost (`\thanks{\dots}`) by its source tokens in the content
+  // check's Warning — a diagnostic, no decision)
+  ("emitter/emit", 73),
   // (P1b, 0 -> 1: `emitter/address_cut.rs`'s e-mail of an address taken out of an entry, its text in the font of the ink printing
   // it, `text_tokens` (`printed_text_tokens` since E0h) — RP1's `EntryCut::mail`, row 56's wrapper; the cut itself reads positions, no token)
   ("emitter/dom+mod", 1),

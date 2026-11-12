@@ -60,9 +60,11 @@ LoadDefinitions!({
     // 1810.09681's): the e-mail is the frontmatter's once, not again in the title page's e-mail line, whose block the
     // title page still opens, `\footnotesize` for the history line after it, :385-397, which it set bold without)
     DefMacro!("\\ead[]{}", sub[(_opt, address)] {
-      let class_code = ["lx_replaying_class_setter", "lx_depositing_class_maketitle", "lx_depositing_frontmatter_fields"]
-        .iter()
-        .any(|flag| lookup_bool(flag));
+      // (a rehearsal of the author content sets the class-code flags too, but reads the author's own e-mail: 1805.02511)
+      let class_code = !rehearsing_author_fields()
+        && ["lx_replaying_class_setter", "lx_depositing_class_maketitle", "lx_depositing_frontmatter_fields"]
+          .iter()
+          .any(|flag| lookup_bool(flag));
       Ok(if class_code {
         TokenizeInternal!(
           r"\ifdefined\c@countead\stepcounter{countead}\fi\ifdefined\email@author@toks\global\email@author@toks{\relax}\fi"
