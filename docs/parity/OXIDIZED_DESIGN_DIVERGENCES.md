@@ -34791,9 +34791,11 @@ with parameters, whose cover past its arguments is unknown where the call ends t
 return, `cut_at_separators`' by-text arm, the contacts' "a macro's span") are that fallback now. With it, a block that
 keeps its marks on the names (`per_author_marks`: OmniBus, a raw class's, revtex's) shows a request whose superscript
 it prints after the name's runs and before the next name's, in no written run, as an unkept one
-(`emit::unwritten_marks_after`): a mark past a gap or a comma (`Ann Able\, $^{1}$ ,`, `Dee Dunn,$^{4}$`, revtex's `Ann
+(`emit::NameMarks::unwritten_after`; the block's superscripts and written runs read once per block, each name's a range query): a mark past a gap or a comma (`Ann Able\, $^{1}$ ,`, `Dee Dunn,$^{4}$`, revtex's `Ann
 Able,$^{1,*}$`'s `∗`), held or inline, was lost silently (2209.05831, 2201.04171, 2609.18180, 2403.18314; hep-ph0301204,
-hep-ph0411288 inline). A leading mark (`$^2$Bob Baker`) is no such mark and stays as it was. Perl
+hep-ph0411288 inline). Cost (instructions:u vs int167a, median of 5 interleaved runs): 2103.04797 and 1901.01540
+±0.01 %; hep-ph0301204 (210 names) +0.60 % and a 1,000-name `revtex4-1` `\author{AnnA AbAA,$^{1}$ …}` +4.6 %, the
+emission of the marks each gains (the probe's inline twin `AnnA AbAA$^{1}$,`, output unchanged: −1.2 %). A leading mark (`$^2$Bob Baker`) is no such mark and stays as it was. Perl
 splits at the `\author` call by spelling and gives such a block one creator (Base_Utility.pool.ltxml:679-720). Guards
 `perfect_kernel_batchaut1::a_macro_of_names_is_read_as_its_inline_twin`, the macro-held rows of `perfect_kernel_batchoc1`,
 `oc1c`, `p21`, `p24`, `p27`, `sep1`, `lo4`, `hg1`; repros `class-bindings/author_one_block/article_author_*` (AUT1's),

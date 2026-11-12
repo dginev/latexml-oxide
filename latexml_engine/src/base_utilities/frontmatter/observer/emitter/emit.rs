@@ -1553,72 +1553,118 @@ fn marks_of(source: usize, role: &str) -> Vec<String> {
   })
 }
 
-/// The labels of the marks the block at ledger index `source` prints in `runs` (field offsets, a written name's):
-/// superscripts, no `\\inst` or binding's request, which print nothing (ptephy's `\\name{…}{1}`, 1703.03659; 1804.00518's
-/// `$^2$Yuankai Qi`, whose mark no name's run holds).
-fn marks_in(source: usize, runs: &[(usize, usize)]) -> Vec<String> {
-  superscripts_where(source, |(s, t)| {
-    runs.iter().any(|&(from, to)| from <= s && t <= to)
-  })
+/// The superscripts (`sup`, `math`, parted) a block prints, `(start, end, labels)` at field offsets, by start (a span runs
+/// forward), and where each of its written names starts: read once per block, each name's marks a range query
+/// (hep-ph0301204, 210 names).
+struct NameMarks {
+  marks:   Vec<(usize, usize, Vec<String>)>,
+  /// whether each of `marks` lies in some written name's run
+  written: Vec<bool>,
+  /// each creator of the block with written runs, by index, and its runs' first start
+  starts:  Vec<(usize, Option<usize>)>,
 }
 
-/// The labels of the superscripts (`sup`, `math`, parted) the block at ledger index `source` prints at the field offsets
-/// `at` accepts.
-fn superscripts_where(source: usize, at: impl Fn((usize, usize)) -> bool) -> Vec<String> {
-  with_block(source, Vec::new(), |block, events| {
-    let offset = |p: u16| usize::from(p).checked_sub(block.range.0);
-    events
+impl NameMarks {
+  /// The block at ledger index `source`, its creators `members` and their written runs `name_runs`.
+  fn of(
+    source: usize,
+    members: &[usize],
+    name_runs: &BTreeMap<usize, Vec<(usize, usize)>>,
+  ) -> Self {
+    let mut marks = with_block(source, Vec::new(), |block, events| {
+      let offset = |p: u16| usize::from(p).checked_sub(block.range.0);
+      events
+        .iter()
+        .filter(|e| {
+          e.kind == EventKind::Mark
+            && matches!(
+              e.role.as_deref(),
+              Some("sup" | "math" | "sup parted" | "math parted")
+            )
+        })
+        .filter_map(|e| {
+          let (s, t) = e.span.and_then(|(s, t)| Some((offset(s)?, offset(t)?)))?;
+          Some((s, t, mark_labels(e.label.as_deref()?)))
+        })
+        .collect::<Vec<_>>()
+    });
+    marks.sort_by_key(|mark| mark.0);
+    let mut of_block: Vec<(usize, &Vec<(usize, usize)>)> = members
       .iter()
-      .filter(|e| {
-        e.kind == EventKind::Mark
-          && matches!(
-            e.role.as_deref(),
-            Some("sup" | "math" | "sup parted" | "math parted")
-          )
+      .filter_map(|&j| Some((j, name_runs.get(&j)?)))
+      .collect();
+    of_block.sort_unstable_by_key(|(j, _)| *j);
+    let starts = of_block
+      .iter()
+      .map(|(j, runs)| (*j, runs.iter().map(|run| run.0).min()))
+      .collect();
+    // (the written runs by start, with the furthest end of each prefix: a span lies in some run iff the furthest end of
+    // the runs starting at or before it reaches its end)
+    let mut runs: Vec<(usize, usize)> = of_block
+      .iter()
+      .flat_map(|(_, runs)| runs.iter().copied())
+      .collect();
+    runs.sort_unstable();
+    let reach: Vec<usize> = runs
+      .iter()
+      .scan(0, |end, run| {
+        *end = run.1.max(*end);
+        Some(*end)
       })
-      .filter(|e| {
-        e.span
-          .and_then(|(s, t)| Some((offset(s)?, offset(t)?)))
-          .is_some_and(&at)
+      .collect();
+    let written = marks
+      .iter()
+      .map(|&(s, t, _)| {
+        let k = runs.partition_point(|run| run.0 <= s);
+        k > 0 && reach[k - 1] >= t
       })
-      .filter_map(|e| e.label.as_deref())
-      .flat_map(mark_labels)
-      .collect()
-  })
-}
+      .collect();
+    NameMarks { marks, written, starts }
+  }
 
-/// The labels of the superscripts creator `i`'s block prints after its name's runs (`name_runs`) and before the next written
-/// name's, in no name's run ([`marks_in`]'s marks): the marks the reading gave it that its written name does not print.
-fn unwritten_marks_after(
-  resolved: &Resolved,
-  name_runs: &BTreeMap<usize, Vec<(usize, usize)>>,
-  i: usize,
-) -> Vec<String> {
-  let source = resolved.creators[i].source;
-  let runs_of = |j: &usize| {
-    (resolved.creators[*j].source == source)
-      .then(|| name_runs.get(j))
-      .flatten()
-  };
-  let Some(from) = name_runs
-    .get(&i)
-    .and_then(|runs| runs.iter().map(|run| run.1).max())
-  else {
-    return Vec::new();
-  };
-  let to = (i + 1..resolved.creators.len())
-    .find_map(|j| runs_of(&j))
-    .and_then(|runs| runs.iter().map(|run| run.0).min())
-    .unwrap_or(usize::MAX);
-  let written: Vec<(usize, usize)> = name_runs
-    .keys()
-    .filter_map(runs_of)
-    .flatten()
-    .copied()
-    .collect();
-  superscripts_where(source, |(s, t)| {
-    from <= s && t <= to && !written.iter().any(|&(a, b)| a <= s && t <= b)
-  })
+  /// The indices of the marks within `from..=to`.
+  fn within(&self, (from, to): (usize, usize)) -> impl Iterator<Item = usize> + '_ {
+    let first = self.marks.partition_point(|mark| mark.0 < from);
+    (first..self.marks.len())
+      .take_while(move |&k| self.marks[k].0 <= to)
+      .filter(move |&k| self.marks[k].1 <= to)
+  }
+
+  /// The labels of the marks the block prints in `runs` (a written name's): superscripts, no `\\inst` or binding's request,
+  /// which print nothing (ptephy's `\\name{…}{1}`, 1703.03659; 1804.00518's `$^2$Yuankai Qi`, whose mark no name's run holds).
+  fn marks_in(&self, runs: &[(usize, usize)]) -> Vec<String> {
+    runs
+      .iter()
+      .flat_map(|&run| self.within(run))
+      .flat_map(|k| self.marks[k].2.iter().cloned())
+      .collect()
+  }
+
+  /// The labels of the superscripts creator `i`'s block prints after its name's runs (`name_runs`) and before the next
+  /// written name's, in no name's run: the marks the reading gave it that its written name does not print.
+  fn unwritten_after(
+    &self,
+    name_runs: &BTreeMap<usize, Vec<(usize, usize)>>,
+    i: usize,
+  ) -> Vec<String> {
+    let Some(from) = name_runs
+      .get(&i)
+      .and_then(|runs| runs.iter().map(|run| run.1).max())
+    else {
+      return Vec::new();
+    };
+    let next = self.starts.partition_point(|(j, _)| *j <= i);
+    let to = self
+      .starts
+      .get(next)
+      .and_then(|(_, start)| *start)
+      .unwrap_or(usize::MAX);
+    self
+      .within((from, to))
+      .filter(|&k| !self.written[k])
+      .flat_map(|k| self.marks[k].2.iter().cloned())
+      .collect()
+  }
 }
 
 /// Whether the item is one a label places in Perl's `relocateAnnotations`, or what the reading gives the block with it.
@@ -5324,7 +5370,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     .collect();
   let keeps = |source: usize| keeps_marks.get(&source).copied().unwrap_or(false);
   let mut names: BTreeMap<usize, (Option<Vec<Token>>, Vec<Token>)> = BTreeMap::new();
-  // (the runs each name written from its tokens is taken from, its marks written past it too: what it prints, [`marks_in`])
+  // (the runs each name written from its tokens is taken from, its marks written past it too: what it prints, [`NameMarks::marks_in`])
   let mut name_runs: BTreeMap<usize, Vec<(usize, usize)>> = BTreeMap::new();
   // (the footnote counter's steps of the notes written apart, on the creator where each prints: `note_steps`)
   let mut steps: BTreeMap<(usize, bool), usize> = BTreeMap::new();
@@ -5496,6 +5542,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     .map(|(&source, _)| (source, marks_of(source, "inst")))
     .collect();
   let mut shown_labels: BTreeSet<String> = BTreeSet::new();
+  let mut name_marks: BTreeMap<usize, NameMarks> = BTreeMap::new();
   for &i in fresh
     .iter()
     .filter(|&&i| !whole.contains(&resolved.creators[i].source))
@@ -5509,10 +5556,16 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       .map(|call| call.labels())
       .unwrap_or_default();
     // (the labels it shows: the requests its written runs print, [`NAMES_SHOWN_LABELS`])
+    let marks = keeps.then(|| {
+      &*name_marks.entry(c.source).or_insert_with(|| {
+        let members = by_block.get(&c.source).map_or(&[][..], Vec::as_slice);
+        NameMarks::of(c.source, members, &name_runs)
+      })
+    });
     let printed = name_runs
       .get(&i)
-      .filter(|_| keeps)
-      .map(|runs| marks_in(c.source, runs))
+      .zip(marks)
+      .map(|(runs, marks)| marks.marks_in(runs))
       .unwrap_or_default();
     shown_labels.extend(
       c.requests
@@ -5527,7 +5580,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       keeps
         && !printed.contains(request)
         && unwritten
-          .get_or_init(|| unwritten_marks_after(resolved, &name_runs, i))
+          .get_or_init(|| marks.map_or_else(Vec::new, |marks| marks.unwritten_after(&name_runs, i)))
           .contains(request)
     };
     for request in c.requests.iter().filter(|request| {
