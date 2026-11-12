@@ -507,6 +507,7 @@ pub fn debug_fatal_enabled() -> bool {
 pub fn initialize_report() {
   // A conversion's deferred diagnostics die with it (a persistent worker's next paper starts clean).
   crate::util::logger::reset_deferred_diagnostics();
+  crate::keyvals::reset_unknown_keys_reported();
   let mut report = REPORT.borrow_mut();
   *report = LogState::default();
   reset_consecutive_error_tracker();

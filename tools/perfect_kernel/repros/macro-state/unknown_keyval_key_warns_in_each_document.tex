@@ -1,0 +1,16 @@
+% mechanism: the unknown-KeyVals-key report is once per (prefix, key, keysets) per conversion (keyvals.rs SEEN_MISSING,
+%   reset by `initialize_report`, as Perl's `$$state{status} = {}` per conversion, LaTeXML.pm:232). The set lived for the
+%   thread, so a persistent cortex_worker's later paper with the same unknown key had no Warning (ST3).
+% witness: ST3 census, 64 papers on one thread in two orders: 16 in each lost an Info of the 'Frontmatter' keyset
+%   (1702.05670, 2511.20937, 0805.4073, 2105.06648, ...); the Warning side's key is 2605.08666's (siunitx v2)
+% oracle:  pdflatex 0 `!`, "Package siunitx Warning: Option "detect-inline-weight" has been removed"; "Speed 1 m s−1."
+% engines: rust ST3 base 91b217855c: alone 0 errors, 1 warning; converted after itself on one thread 0 warnings
+% expect:  0 errors, 1 warning (`Warning:undefined:Encountered unknown KeyVals key 'detect-inline-weight'`) in each
+%   conversion, the XML the same alone or after another document
+% status:  GREEN (ST3; guard perfect_kernel_batchst3::a_document_after_another_on_one_thread_is_the_document_alone)
+\documentclass{article}
+\usepackage{siunitx}
+\sisetup{detect-inline-weight=math}
+\begin{document}
+Speed \SI{1}{\metre\per\second}.
+\end{document}

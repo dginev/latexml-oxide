@@ -1211,6 +1211,43 @@ fn convert_in_process<R: Send + 'static>(
     .unwrap_or_else(|panic| std::panic::resume_unwind(panic))
 }
 
+/// Each of `sources` (paths of `.tex` files) converted in turn on ONE thread, as `cortex_worker` converts its papers: a
+/// `Converter` and `prepare_session` per document, no engine reset between them (the [`convert_with`] options). Returns
+/// (log, XML) per source; a guard compares a document's pair with the one it gets converted alone.
+pub fn convert_on_one_thread(sources: Vec<String>, preload: Option<&str>) -> Vec<(String, String)> {
+  let preload = preload.map(String::from);
+  std::thread::Builder::new()
+    .stack_size(256 * 1024 * 1024)
+    .spawn(move || {
+      let _ = latexml_core::util::logger::init(log::LevelFilter::Info);
+      let opts = latexml_core::common::Config {
+        format: latexml_core::common::OutputFormat::XML,
+        include_comments: Some(false),
+        preload: preload.map(|p| vec![p]),
+        bindings_dispatch: Some(std::rc::Rc::new(latexml_package::dispatch)),
+        extra_bindings_dispatch: Some(std::rc::Rc::new(latexml_contrib::dispatch)),
+        ..latexml_core::common::Config::default()
+      };
+      let runs = sources
+        .into_iter()
+        .map(|source| {
+          let mut converter = crate::converter::Converter::from_config(opts.clone());
+          converter.note_main_source(&source);
+          converter.prepare_session(&opts).expect("a session");
+          latexml_core::stomach::set_timeout(GUARD_TIMEOUT_SECS);
+          let resp = converter.convert(source);
+          latexml_core::stomach::set_timeout(0);
+          (resp.log, resp.result.unwrap_or_default())
+        })
+        .collect();
+      latexml_core::reset_thread_engine();
+      runs
+    })
+    .expect("spawn test worker")
+    .join()
+    .unwrap_or_else(|panic| std::panic::resume_unwind(panic))
+}
+
 /// Fails the guard when the conversion took a binding in place of one of its fixture packages or classes and never
 /// read the fixture: Perl's FindFile_fallback (Package.pm:2186-2189 and the suffix lists after it;
 /// `binding::content::find_file_fallback`) reads `myproof.sty`, `foo_v2.sty` or `bar-arxiv.cls` as a version of

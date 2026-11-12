@@ -3,7 +3,7 @@
 //! of a name LaTeXML's semantic layer owns holding only inside the copy's own code, every other one standing as TeX
 //! makes it; the document-time code the copy defers is not registered; a file the copy loads is a real load.
 //! Repros `tools/perfect_kernel/repros/stand-in-copies/`.
-use latexml::util::test::{assert_element, convert_files_with};
+use latexml::util::test::{assert_element, convert_files_with, convert_on_one_thread};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -1294,8 +1294,8 @@ fn class_load_record_does_not_reach_the_next_document() {
     .iter()
     .map(|dir| dir.path().join("paper.tex").to_string_lossy().into_owned())
     .collect();
-  let logs = convert_on_one_thread(sources);
-  for (log, errors) in logs.iter().zip([1, 0]) {
+  let runs = convert_on_one_thread(sources, Some("ar5iv.sty"));
+  for ((log, _), errors) in runs.iter().zip([1, 0]) {
     assert_eq!((error_count(log), warning_count(log)), (errors, 0), "{log}");
     assert_eq!(
       log.matches("Command \\bibname already defined").count(),
@@ -1485,42 +1485,6 @@ fn natbib_repeat_options_in_declaration_order() {
   );
 }
 
-/// Convert each of `sources` with one `Converter` each on one thread, no engine reset between them, as the CLI's
-/// `latexml_oxide t.tex u.tex` and a long-lived worker do; the logs.
-fn convert_on_one_thread(sources: Vec<String>) -> Vec<String> {
-  use std::rc::Rc;
-
-  use latexml::converter::Converter;
-  use latexml_core::common::{Config, OutputFormat};
-  std::thread::Builder::new()
-    .stack_size(256 * 1024 * 1024)
-    .spawn(move || {
-      let _ = latexml_core::util::logger::init(log::LevelFilter::Info);
-      let opts = Config {
-        format: OutputFormat::XML,
-        include_comments: Some(false),
-        preload: Some(vec![String::from("ar5iv.sty")]),
-        bindings_dispatch: Some(Rc::new(latexml_package::dispatch)),
-        extra_bindings_dispatch: Some(Rc::new(latexml_contrib::dispatch)),
-        ..Config::default()
-      };
-      let logs: Vec<String> = sources
-        .into_iter()
-        .map(|source| {
-          let mut converter = Converter::from_config(opts.clone());
-          converter.note_main_source(&source);
-          converter.prepare_session(&opts).expect("a session");
-          converter.convert(source).log
-        })
-        .collect();
-      latexml_core::reset_thread_engine();
-      logs
-    })
-    .expect("a conversion thread")
-    .join()
-    .expect("the conversions")
-}
-
 /// The files read raw are the conversion's own (`reset_raw_read_paths` at every `prepare_session`): two documents of
 /// one directory on one thread (the reviewer's probe two, `latexml_oxide t.tex u.tex`, both cimart) each read the
 /// copy, 2 errors each as pdflatex; the second read nothing before.
@@ -1540,7 +1504,7 @@ fn raw_read_record_does_not_reach_the_next_document() {
     .iter()
     .map(|name| dir.path().join(name).to_string_lossy().into_owned())
     .collect();
-  for log in convert_on_one_thread(sources) {
+  for (log, _) in convert_on_one_thread(sources, Some("ar5iv.sty")) {
     assert_eq!((error_count(&log), warning_count(&log)), (2, 0), "{log}");
     assert!(log.contains("Command \\refname already defined"), "{log}");
   }
