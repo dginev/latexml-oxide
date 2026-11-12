@@ -227,32 +227,12 @@ pub struct CoreOptions {
   pub preload:          Option<Vec<String>>,
 }
 
-/// A size property as a Dimension: a Dimension itself, a Glue's natural
-/// size, and a MuGlue/MuDimension (scaled mu, 1mu = font size/18) in scaled
-/// points at the current font size; `None` for anything else.
+/// A size property as a Dimension: a Dimension itself, a Glue's natural size, and a MuGlue/MuDimension in scaled
+/// points at the current font size (TeX's `math_kern`, tex.web §717); `None` for anything else.
 pub fn stored_dimension(s: Option<&Stored>) -> Option<Dimension> {
-  match s {
-    Some(Stored::Dimension(d)) => Some(*d),
-    Some(Stored::Glue(g)) => Some(Dimension::new(g.value_of())),
-    Some(Stored::MuGlue(g)) => {
-      // Convert mu to pt: 1mu = font_size / 18
-      let fs = state::lookup_font()
-        .and_then(|f| f.get_size())
-        .unwrap_or(10.0);
-      let muwidth = (fs * common::numeric_ops::UNITY_F64 / 18.0) as i64;
-      let pt_scaled =
-        (g.value_of() as f64 * muwidth as f64 / common::numeric_ops::UNITY_F64).trunc();
-      Some(Dimension::new(pt_scaled as i64))
-    },
-    Some(Stored::MuDimension(d)) => {
-      let fs = state::lookup_font()
-        .and_then(|f| f.get_size())
-        .unwrap_or(10.0);
-      let mu_val = d.value_of() as f64;
-      let pt_scaled = mu_val * fs / 18.0;
-      Some(Dimension::new(pt_scaled as i64))
-    },
-    _ => None,
+  match s? {
+    Stored::Number(_) => None,
+    value => value.into(),
   }
 }
 
@@ -415,35 +395,10 @@ pub trait BoxOps: Object {
       return Ok(Some(RegisterValue::Dimension(w)));
     }
 
-    // Convert MuGlue/MuDimension widths to pt (1mu = font_size/18). `\the\wd`
-    // is a dimension query — the result must be Dimension-typed. Without
-    // this conversion `\hbox{\,}` width came back as `MuGlue(3mu)` and
-    // formatted as `3.0pt` (raw mu treated as pt) instead of `1.66663pt`.
-    // Order of ops (div by 18 then mul by fs) matches Perl integer
-    // truncation: see `mu_to_pt_value` in store.rs.
-    fn coerce_mu(val: &Stored) -> Option<RegisterValue> {
-      match val {
-        Stored::MuGlue(g) => {
-          let fs = state::lookup_font()
-            .and_then(|f| f.get_size())
-            .unwrap_or(10.0);
-          let muwidth = (fs * common::numeric_ops::UNITY_F64 / 18.0) as i64;
-          let pt_scaled =
-            (g.value_of() as f64 * muwidth as f64 / common::numeric_ops::UNITY_F64).trunc();
-          Some(RegisterValue::Dimension(Dimension::new(pt_scaled as i64)))
-        },
-        Stored::MuDimension(d) => {
-          let fs = state::lookup_font()
-            .and_then(|f| f.get_size())
-            .unwrap_or(10.0);
-          let pt_scaled = (d.value_of() / 18) as f64 * fs;
-          Some(RegisterValue::Dimension(Dimension::new(pt_scaled as i64)))
-        },
-        _ => val.into(),
-      }
-    }
-    // A declared width that is no dimension (a String attribute: diagbox, `\rotate[f]`) falls through.
-    let declared = |key: &str| self.get_property(key).and_then(|val| coerce_mu(&val));
+    // A declared width that is no dimension (a String attribute: diagbox, `\rotate[f]`) falls through; a mu width is
+    // read in pt (`\hbox{\,}` 1.66663pt).
+    let declared =
+      |key: &str| stored_dimension(self.get_property(key).as_deref()).map(RegisterValue::Dimension);
     Ok(
       match declared("width").or_else(|| declared("cached_width")) {
         Some(width) => Some(width),
@@ -458,7 +413,8 @@ pub trait BoxOps: Object {
   /// gets the "height" property value, if any.
   /// Checks "height", then "cached_height", then computes from font if needed.
   fn get_height(&self) -> Option<RegisterValue> {
-    let declared = |key: &str| self.get_property(key).and_then(|val| (&*val).into());
+    let declared =
+      |key: &str| stored_dimension(self.get_property(key).as_deref()).map(RegisterValue::Dimension);
     declared("height")
       .or_else(|| declared("cached_height"))
       .or_else(|| match self.compute_size(HashMap::default()) {
@@ -471,7 +427,8 @@ pub trait BoxOps: Object {
   /// gets the "depth" property value, if any.
   /// Checks "depth", then "cached_depth", then computes from font if needed.
   fn get_depth(&self) -> Option<RegisterValue> {
-    let declared = |key: &str| self.get_property(key).and_then(|val| (&*val).into());
+    let declared =
+      |key: &str| stored_dimension(self.get_property(key).as_deref()).map(RegisterValue::Dimension);
     declared("depth")
       .or_else(|| declared("cached_depth"))
       .or_else(|| match self.compute_size(HashMap::default()) {
