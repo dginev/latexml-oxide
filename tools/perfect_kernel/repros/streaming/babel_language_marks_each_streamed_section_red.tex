@@ -8,9 +8,7 @@
 % engines: ST3 (c3528bf1d2), `LATEXML_SPILL_AT_MIB=1 LATEXML_SOFT_YIELD_MIN_BOXES=1`: `<section inlist="toc"
 %          xml:lang="en" xml:id="S1">`; eager: `<section inlist="toc" xml:id="S1">` (the root carries `xml:lang="en"`).
 % expect:  0 errors; streamed XML == eager XML (one `xml:lang`, on `<document>`)
-% status:  RED
-% moves:   post-merge (STRM): a row converting it with the transition forced in-process (`set_spill_watermark_override`,
-%          `set_soft_yield_min_boxes(1)`, as `116_adaptive_streaming` does), XML == eager.
+% status:  GREEN (STRM: a row of `116_adaptive_streaming::switched_conversion_writes_the_eager_xml`)
 \documentclass{article}
 \usepackage[english]{babel}
 \begin{document}

@@ -108,6 +108,13 @@ pub struct Document {
   /// 131 MB book restarts chapter numbering per part, and the second `Ch1`
   /// collided only with a SPILLED chapter).
   pub spilled_ids:               rustc_hash::FxHashSet<String>,
+  /// Streaming pass 1: the ids spilled runs mint their top nodes' ids under (`SegmentMeta::anchor`) while those
+  /// elements stay resident; once one spills too, its `_ID_counter_*` attributes move to `spilled_anchor_counters`.
+  spill_anchors:                 rustc_hash::FxHashSet<String>,
+  spilled_anchor_counters:       rustc_hash::FxHashMap<String, Vec<(String, String)>>,
+  /// Streaming pass 2: the segment's `SegmentMeta::anchor`. `generate_id` mints under it what eager mints under that
+  /// element, the parse wrapper holding its counters.
+  pub fragment_anchor_id:        Option<String>,
   /// Every SVG `id` (the svg schema's ID attribute, not `xml:id`) handed out
   /// (`record_svg_ids`). Ids only, no nodes or addresses: whether an element was already walked
   /// travels on the element itself (its `_svgid` mark), so a removed picture leaves nothing
@@ -642,6 +649,9 @@ impl Document {
       node_fonts:                  HashMap::default(),
       idstore:                     HashMap::default(),
       spilled_ids:                 rustc_hash::FxHashSet::default(),
+      spill_anchors:               rustc_hash::FxHashSet::default(),
+      spilled_anchor_counters:     rustc_hash::FxHashMap::default(),
+      fragment_anchor_id:          None,
       svg_ids:                     rustc_hash::FxHashSet::default(),
       svg_id_suffixes:             rustc_hash::FxHashMap::default(),
       spilled_ns_prefixes:         rustc_hash::FxHashSet::default(),
@@ -852,7 +862,13 @@ impl Document {
   /// (`wrapper_children 1 -> 0`, `parent = None`), so it serializes to nothing.
   /// Starting the recursion AT the wrapper keeps it addressable.
   pub fn finalize_subtree(&mut self, node: &mut Node) -> Result<()> {
-    self.set_local_font(Rc::new(Font::text_default()));
+    self.finalize_subtree_in(node, Font::text_default())
+  }
+
+  /// [`finalize_subtree`](Self::finalize_subtree) under `context`, the font declared around the subtree (a streamed
+  /// segment's [`SegmentMeta::font`](crate::sxml::SegmentMeta)).
+  pub fn finalize_subtree_in(&mut self, node: &mut Node, context: Font) -> Result<()> {
+    self.set_local_font(Rc::new(context));
     let result = self.finalize_rec(node);
     self.expire_local_font();
     result
@@ -5437,6 +5453,19 @@ impl Document {
       }
     }
 
+    // What eager finalize reads above the run, for pass 2: the font it declares there, and the element it mints the
+    // run's id-less top nodes under (2507.13358).
+    let spill_parent = run.first().and_then(|n| n.get_parent());
+    let context_font = spill_parent.as_ref().map(|parent| {
+      let font = self.finalize_context_font(parent);
+      let key = font.to_hashable();
+      self.node_fonts.entry(key).or_insert(font);
+      key.to_string()
+    });
+    let anchor = spill_parent.as_ref().and_then(Self::spill_anchor);
+    if let Some(anchor) = &anchor {
+      self.spill_anchors.insert(anchor.clone());
+    }
     // Chunk the run so each segment stays under `segment_chunk_bytes()` of
     // serialized text; every chunk gets its own segment + placeholder, so
     // document order is preserved chunk-by-chunk.
@@ -5465,7 +5494,8 @@ impl Document {
         let meta = SegmentMeta {
           depth,
           noindent,
-          font: None,
+          font: context_font.clone(),
+          anchor: anchor.clone(),
           namespaces: namespaces.to_vec(),
           parent: chunk
             .first()
@@ -5542,6 +5572,77 @@ impl Document {
     Ok(runs_spilled)
   }
 
+  /// The nearest `xml:id` on `node` or an ancestor below the root ([`SegmentMeta::anchor`](crate::sxml::SegmentMeta)).
+  fn spill_anchor(node: &Node) -> Option<String> {
+    let mut cur = Some(node.clone());
+    while let Some(n) = cur {
+      let parent = n
+        .get_parent()
+        .filter(|p| p.get_type() == Some(NodeType::ElementNode));
+      parent.as_ref()?;
+      if let Some(id) = Self::node_xml_id_any_form(&n) {
+        return Some(id);
+      }
+      cur = parent;
+    }
+    None
+  }
+
+  /// The font `finalize_rec` declares for `parent`'s children: from the text default, each ancestor's font
+  /// attributes its element can carry, root first ([`SegmentMeta::font`](crate::sxml::SegmentMeta)).
+  fn finalize_context_font(&self, parent: &Node) -> Font {
+    let mut chain = Vec::new();
+    let mut cur = Some(parent.clone());
+    while let Some(n) = cur.filter(|n| n.get_type() == Some(NodeType::ElementNode)) {
+      cur = n.get_parent();
+      chain.push(n);
+    }
+    let mut declared = Font::text_default();
+    for node in chain.iter().rev() {
+      if node.has_attribute("_standalone_font") {
+        declared = Font::text_default();
+      }
+      if self.has_node_font(node) {
+        let qname = get_node_qname(node);
+        for (key, (_, properties)) in self.get_node_font(node).relative_to(&declared) {
+          if model::can_have_attribute(qname, arena::pin(&key)) {
+            declared = declared.merge_ref(&properties);
+          }
+        }
+      }
+      if let Some(anchor) = node.get_attribute("_font_anchor") {
+        declared = declared.merge_ref(&Font {
+          size: Some(anchor.parse::<f64>().unwrap_or(10.0)),
+          ..Font::default()
+        });
+      }
+    }
+    declared
+  }
+
+  /// Streaming, after pass 1: every spill anchor's `_ID_counter_*` attributes as construction left them — recorded
+  /// when it spilled, else read from the spine. Pass 2 continues them; [`Self::set_id_counters`] hands them back.
+  pub fn take_spill_anchor_counters(
+    &mut self,
+  ) -> rustc_hash::FxHashMap<String, Vec<(String, String)>> {
+    let mut counters = std::mem::take(&mut self.spilled_anchor_counters);
+    for id in std::mem::take(&mut self.spill_anchors) {
+      if let Some(node) = self.lookup_id(&id) {
+        counters.insert(id, id_counters(node));
+      }
+    }
+    counters
+  }
+
+  /// Set the `_ID_counter_*` attributes of the element `id` names, if it is in this document.
+  pub fn set_id_counters(&mut self, id: &str, counters: &[(String, String)]) {
+    if let Some(node) = self.idstore.get_mut(id) {
+      for (key, value) in counters {
+        let _ = node.set_attribute(key, value);
+      }
+    }
+  }
+
   /// A node's `xml:id`, namespace-aware with a defensive plain-name fallback.
   ///
   /// MECHANISM CORRECTION (2026-08-04, empirically probed against libxml
@@ -5609,6 +5710,11 @@ impl Document {
       index.record_id(id, seg);
       self.unrecord_id(id);
       self.spilled_ids.insert(id.clone());
+      if self.spill_anchors.remove(id) {
+        self
+          .spilled_anchor_counters
+          .insert(id.clone(), id_counters(node));
+      }
       if let Some(labels) = node.get_attribute("labels") {
         for label in labels.split_whitespace() {
           index.record_label(label, id);
@@ -8056,20 +8162,23 @@ impl Document {
       // walk, equivalent to the previous `ancestor::*[@xml:id][1]` findnode
       // but without a per-call XPath parse+eval (generate_id runs once per
       // id-lacking node during finalize; 2026-08-23 audit R5).
-      let mut ancestor = {
-        let mut cur = node.get_parent();
-        let mut found = None;
-        while let Some(p) = cur {
-          if p.get_type() == Some(NodeType::ElementNode) && p.has_attribute_ns("id", XML_NS) {
-            found = Some(p);
-            break;
-          }
-          cur = p.get_parent();
+      let mut found = None;
+      let mut cur = node.get_parent();
+      while let Some(p) = cur {
+        if p.get_type() == Some(NodeType::ElementNode) && p.has_attribute_ns("id", XML_NS) {
+          found = Some(p);
+          break;
         }
-        found.unwrap_or_else(|| self.get_document().get_root_element().unwrap())
-      };
+        cur = p.get_parent();
+      }
+      // A streamed segment's top nodes are minted under the spine element it splices back under (pass 2).
+      let anchor = found
+        .is_none()
+        .then(|| self.fragment_anchor_id.clone())
+        .flatten();
+      let mut ancestor = found.unwrap_or_else(|| self.get_document().get_root_element().unwrap());
       //// Old versions don't like ancestor.getAttribute('xml:id');
-      let ancestor_id = ancestor.get_attribute_ns("id", XML_NS);
+      let ancestor_id = ancestor.get_attribute_ns("id", XML_NS).or(anchor);
       // If we've got no ancestor_id, then we've got no ancestor (no document yet!),
       // or ancestor IS the root element (but without an id);
       // If we also have no prefix, we'll end up with an illegal id (just digits)!!!
@@ -8831,6 +8940,15 @@ fn pi_data(attributes: &HashMap<String, String>) -> String {
     .filter_map(|key| attributes.get(key).map(|value| s!("{}=\"{}\"", key, value)))
     .collect::<Vec<_>>()
     .join(" ")
+}
+
+/// An element's `_ID_counter_*` attributes, the counters `generate_id` keeps for the ids minted under it.
+pub fn id_counters(node: &Node) -> Vec<(String, String)> {
+  node
+    .get_attributes()
+    .into_iter()
+    .filter(|(key, _)| key.starts_with("_ID_counter"))
+    .collect()
 }
 
 #[cfg(test)]

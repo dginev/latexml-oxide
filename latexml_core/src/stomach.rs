@@ -169,7 +169,11 @@ pub fn set_soft_yield_min_boxes(boxes: usize) { SOFT_YIELD_MIN_BOXES.set(Some(bo
 /// response the soft-RSS branch was introduced to provide, instead of Fatal-ing
 /// inside a 1024-box window.
 fn soft_yield_is_urgent(rss_kb: u64) -> bool {
-  soft_yield_urgency(rss_kb, spill_watermark_bytes(), resolve_rss_cap())
+  soft_yield_urgency(
+    rss_kb,
+    spill_mark_kb().map(|kb| kb * 1024),
+    resolve_rss_cap(),
+  )
 }
 
 /// The pure predicate behind [`soft_yield_is_urgent`], split out so the
@@ -268,8 +272,8 @@ pub fn set_spill_watermark_override(bytes: Option<u64>) {
   SPILL_WATERMARK_OVERRIDE.with(|c| c.set(bytes));
 }
 
-/// The RAM watermark, in bytes, at which streaming pass 1 begins spilling
-/// closed subtrees to disk — the second derived quantity of the single
+/// The RAM watermark, in bytes above the conversion's starting RSS ([`spill_mark_kb`]), at which streaming pass 1
+/// begins spilling closed subtrees to disk — the second derived quantity of the single
 /// `--max-memory` knob, and deliberately NOT a flag of its own (a watermark a
 /// user could raise above the fuse would Fatal before it ever spilled).
 ///
@@ -295,13 +299,56 @@ pub fn spill_watermark_bytes() -> Option<u64> {
   if let Some(mib) = std::env::var("LATEXML_SPILL_AT_MIB")
     .ok()
     .and_then(|v| v.parse::<u64>().ok())
-    .filter(|mib| *mib > 0)
   {
     return Some(mib.saturating_mul(1024 * 1024));
   }
   match resolve_rss_cap() {
     Some(fuse) => Some(fuse / 3),
     None => crate::watchdog::total_memory_bytes().map(|ram| ram / 8),
+  }
+}
+
+thread_local! {
+  /// The process's resident set (KB) when this conversion's digestion was set up ([`mark_conversion_rss_baseline`]).
+  static CONVERSION_RSS_BASELINE_KB: Cell<u64> = const { Cell::new(0) };
+}
+
+/// Record the resident set the spill watermark is measured from: the conversion's own start, so a persistent worker
+/// switches a paper to streaming where that paper alone would (ST3b: 2507.13358 after 63 others).
+pub fn mark_conversion_rss_baseline() {
+  CONVERSION_RSS_BASELINE_KB.set(crate::watchdog::process_rss_kb().unwrap_or(0));
+}
+
+/// The resident set (KB) at which this conversion spills: [`spill_watermark_bytes`] above its starting RSS, never
+/// closer to the fuse (process RSS, it guards the machine) than two watermarks — the headroom the fuse fraction was
+/// calibrated for (a half-of-fuse mark crept into the fuse, [`spill_watermark_bytes`]). With the default third-of-fuse
+/// watermark that cap is the watermark itself, so under a fuse the mark is absolute, as before the conversion's
+/// baseline (revSTRM: a worker near its recycle threshold must not spill later than the calibration allows); the
+/// baseline moves the mark only without a fuse or under a smaller calibration watermark. Order independence rests on a
+/// switched conversion writing the eager XML, not on the mark. A zero watermark (a test's or a calibration's
+/// `LATEXML_SPILL_AT_MIB=0`) puts every seam over it.
+pub fn spill_mark_kb() -> Option<u64> {
+  let watermark_kb = spill_watermark_bytes()? / 1024;
+  Some(spill_mark(
+    CONVERSION_RSS_BASELINE_KB.get(),
+    watermark_kb,
+    resolve_rss_cap(),
+  ))
+}
+
+/// The arithmetic of [`spill_mark_kb`] (KB; `fuse` in bytes).
+fn spill_mark(baseline_kb: u64, watermark_kb: u64, fuse: Option<u64>) -> u64 {
+  if watermark_kb == 0 {
+    return 0;
+  }
+  let mark = baseline_kb.saturating_add(watermark_kb);
+  match fuse {
+    Some(fuse) => mark.min(
+      (fuse / 1024)
+        .saturating_sub(2 * watermark_kb)
+        .max(watermark_kb),
+    ),
+    None => mark,
   }
 }
 
@@ -4771,7 +4818,7 @@ mod resource_fatal_teardown_tests {
 mod memory_cap_tests {
   use super::{
     apply_memory_ceiling, box_bytes_budget, box_count_cap, resolve_rss_cap, set_memory_cap,
-    soft_cap_from_ceiling, soft_yield_urgency,
+    soft_cap_from_ceiling, soft_yield_urgency, spill_mark,
   };
 
   // The box-list ceilings are memory ceilings, so they must ride the SAME
@@ -4908,5 +4955,40 @@ mod memory_cap_tests {
     );
     // saturating_mul: an absurd rss_kb must not overflow into false.
     assert!(soft_yield_urgency(u64::MAX, wm, fuse));
+  }
+
+  /// STRM: the spill mark is the watermark above the conversion's starting RSS, so a paper switches where it would
+  /// alone; a grown process keeps a watermark below the fuse; a zero watermark marks every seam.
+  #[test]
+  fn spill_mark_is_the_watermark_above_the_conversions_start() {
+    const GB: u64 = 1024 * 1024; // in KB
+    let fuse = Some(36 * GB * 1024); // bytes; watermark a third, 12 GB
+    assert_eq!(
+      spill_mark(200 * 1024, 12 * GB, fuse),
+      12 * GB,
+      "under a fuse, the default watermark is the cap: two watermarks of headroom"
+    );
+    assert_eq!(spill_mark(0, 12 * GB, fuse), 12 * GB);
+    assert_eq!(
+      spill_mark(20 * GB, 12 * GB, fuse),
+      12 * GB,
+      "two watermarks below the fuse"
+    );
+    assert_eq!(
+      spill_mark(200 * 1024, 4 * GB, fuse),
+      4 * GB + 200 * 1024,
+      "a smaller watermark moves with the conversion's start"
+    );
+    assert_eq!(
+      spill_mark(20 * GB, 12 * GB, None),
+      32 * GB,
+      "no fuse, no cap"
+    );
+    assert_eq!(
+      spill_mark(1024, 30 * GB, fuse),
+      30 * GB,
+      "a watermark past half the fuse stays itself"
+    );
+    assert_eq!(spill_mark(5 * GB, 0, fuse), 0);
   }
 }

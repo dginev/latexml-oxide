@@ -22,6 +22,15 @@ static SERIAL: Mutex<()> = Mutex::new(());
 
 /// (xml, yields, digest_setups, spilled_segments, warnings)
 fn convert(source: &str, force_rss_yield: bool) -> (String, usize, usize, usize, usize) {
+  convert_preloaded(source, force_rss_yield, None)
+}
+
+/// [`convert`] with the CLI's `--preload` (ar5iv.sty: `latexml.sty`'s `ids`, every element's id minted at finalize).
+fn convert_preloaded(
+  source: &str,
+  force_rss_yield: bool,
+  preload: Option<Vec<String>>,
+) -> (String, usize, usize, usize, usize) {
   let source = source.to_string();
   std::thread::Builder::new()
     .stack_size(64 * 1024 * 1024)
@@ -31,18 +40,19 @@ fn convert(source: &str, force_rss_yield: bool) -> (String, usize, usize, usize,
       let cfg = Config {
         format: OutputFormat::XML,
         extra_bindings_dispatch: Some(std::rc::Rc::new(latexml_contrib::dispatch)),
+        preload,
         ..Config::default()
       };
       let mut c = Converter::from_config(cfg);
       c.initialize_session().expect("initialize");
       if force_rss_yield {
-        // A 1 MiB spill watermark (any real process is above it) with a
+        // A zero spill watermark (every seam is over it) with a
         // one-box floor: the first legal seam after `\begin{document}` is an
         // RSS-driven yield and transitions. The yield knobs are NOT pre-armed —
         // the adaptive path arms them itself, exactly as a production run does.
         // The watermark is an in-process override, never the process env
         // (read-only for us).
-        latexml_core::stomach::set_spill_watermark_override(Some(1 << 20));
+        latexml_core::stomach::set_spill_watermark_override(Some(0));
         latexml_core::stomach::set_soft_yield_min_boxes(1);
       }
       let r = c.convert(source.clone());
@@ -136,4 +146,39 @@ fn figure_box_rows_settle_alike_when_streamed() {
     streamed_xml, eager_xml,
     "eager and streamed output are identical"
   );
+}
+
+/// STRM: a conversion switched to streaming writes the eager XML. Each row is a state the spilled segments must
+/// continue from the spine: the font context finalize declares above them (babel's `xml:lang` on the root, not on
+/// every streamed section: 2507.13358), and the id counters of the element their ids are minted under (`S1.p1.1`
+/// under `<para xml:id="S1.p1">`, not `id1`).
+#[test]
+fn switched_conversion_writes_the_eager_xml() {
+  let _serial = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
+  for name in [
+    "babel_language_marks_each_streamed_section_red",
+    "streamed_paragraph_ids_renumber_red",
+    // a language switched mid-document, a sans document font, a `quote` minted under an open paragraph
+    "streamed_context_siblings",
+  ] {
+    let source = format!("../tools/perfect_kernel/repros/streaming/{name}.tex");
+    let ar5iv = || Some(vec!["ar5iv.sty".to_string()]);
+    let (eager_xml, _, _, eager_segments, eager_warnings) =
+      convert_preloaded(&source, false, ar5iv());
+    assert_eq!(eager_segments, 0, "{name}: control, nothing spilled");
+    assert_eq!(eager_warnings, 0, "{name}: the fixture converts clean");
+    let (streamed_xml, _, _, segments, warnings) = convert_preloaded(&source, true, ar5iv());
+    assert!(
+      segments > 0,
+      "{name}: streaming pass 1 engaged (segments staged)"
+    );
+    assert_eq!(
+      warnings, 0,
+      "{name}: the fixture converts clean when switched"
+    );
+    assert_eq!(
+      streamed_xml, eager_xml,
+      "{name}: switched and eager output are identical"
+    );
+  }
 }

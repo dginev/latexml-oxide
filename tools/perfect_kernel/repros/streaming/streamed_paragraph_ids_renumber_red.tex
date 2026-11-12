@@ -10,9 +10,7 @@
 %          a paragraph</p>`, `<p xml:id="S1.p1.1">and its last words.`, `<p xml:id="id2">Text two</p>`; eager and
 %          `--streaming=true`: `<p xml:id="S1.p1.1">`, `<p xml:id="S1.p1.2">`, `<p xml:id="S2.p1.1">`
 % expect:  0 errors; streamed XML == eager XML
-% status:  RED
-% moves:   STRM (post-merge): a row converting it with the transition forced in-process (`set_spill_watermark_override`,
-%          `set_soft_yield_min_boxes(1)`, as `116_adaptive_streaming` does), XML == eager.
+% status:  GREEN (STRM: a row of `116_adaptive_streaming::switched_conversion_writes_the_eager_xml`)
 \documentclass{article}
 \begin{document}
 \section{One}
