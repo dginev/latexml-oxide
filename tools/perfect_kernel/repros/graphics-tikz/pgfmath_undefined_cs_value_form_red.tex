@@ -1,0 +1,13 @@
+% mechanism: an undefined control sequence in an expression: TeX's edef errs and drops it, so pgf parses `+1` and
+%   prints the number as read, [1]; ours errs too (1 Error) but evaluates to [1.0] (revDTL1f P4).
+% witness: synthetic
+% oracle:  pdflatex 1 `!` (Undefined control sequence), [1]
+% engines: rust DTL1f, DTL1g: [1.0], 1 error, 1 warning
+% expect:  [1], 1 error
+% status:  RED (DTL1f, DTL1g)
+% moves:   EB1 makes it a row of `perfect_kernel_error_boundary` (Error side, the value pgf prints).
+\documentclass{article}
+\usepackage{pgf}
+\begin{document}
+\pgfmathparse{\undefinedfoo+1}[\pgfmathresult]
+\end{document}

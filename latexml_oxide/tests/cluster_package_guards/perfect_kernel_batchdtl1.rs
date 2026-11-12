@@ -131,9 +131,9 @@ const ROWS: &[Row] = &[
     )],
     holds:    &[],
   },
-  // One parse for `\pgfmathparse`, `\pgfmathsetmacro` and `\pgfmathsetlength` (DTL1f, revDTL1e B1): each side of a
-  // paragraph is its `\pgfmathparse` twin (pdflatex [114.59155]; pgf errs on `\widthof`). Read apart: [0.0] twice,
-  // [0.0pt], 2 Warnings.
+  // One parse for `\pgfmathparse` and `\pgfmathsetmacro` (DTL1f, revDTL1e B1): pdflatex [114.59155] on both sides
+  // (our last digit is f64 arithmetic, pgf's TeX's fixed-point dimens); read apart, [0.0].
+  // The `\widthof` twins err in TeX: RED `pgfmath_calc_names_err_in_tex_red.tex` (revDTL1f S1).
   Row {
     name:     "pgfmath_setmacro_parses_as_pgfmathparse",
     tex:      include_str!(
@@ -142,21 +142,56 @@ const ROWS: &[Row] = &[
     files:    &[],
     counts:   (0, 0),
     messages: &[],
+    elements: &[(
+      "para",
+      "xml:id=\"p1\"",
+      r#"<para xml:id="p1"><p xml:id="p1.1">[114.59156][114.59156]</p></para>"#,
+    )],
+    holds:    &[],
+  },
+  // pgf expands, then lets calc's names (revDTL1f B1): a user's `\ratio`/`\real` at every entry point, the `+` path
+  // unparsed; the pdflatex values. Letting first (DTL1f, Perl): [0.0][1][0.0pt][0][0.0] [345.0pt][345.0pt]….
+  Row {
+    name:     "pgfmath_expands_before_calc_lets",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/graphics-tikz/pgfmath_expands_before_calc_lets.tex"
+    ),
+    files:    &[],
+    counts:   (0, 0),
+    messages: &[],
     elements: &[
       (
         "para",
         "xml:id=\"p1\"",
-        r#"<para xml:id="p1"><p xml:id="p1.1">[114.59156][114.59156]</p></para>"#,
+        r#"<para xml:id="p1"><p xml:id="p1.1">[5.0][4.0][5.0pt][5][5.0]</p></para>"#,
       ),
       (
         "para",
         "xml:id=\"p2\"",
-        r#"<para xml:id="p2"><p xml:id="p2.1">[21.11121][21.11121]</p></para>"#,
+        r#"<para xml:id="p2"><p xml:id="p2.1">[172.5pt][177.5pt][5.0pt][0.5pt]</p></para>"#,
+      ),
+    ],
+    holds:    &[],
+  },
+  // Every parse sets both units flags globally (revDTL1f P1): the pdflatex flags; DTL1f [N][Y][N][Y] [Y][Y][Y].
+  Row {
+    name:     "pgfmath_parse_sets_units_flags_globally",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/graphics-tikz/pgfmath_parse_sets_units_flags_globally.tex"
+    ),
+    files:    &[],
+    counts:   (0, 0),
+    messages: &[],
+    elements: &[
+      (
+        "para",
+        "xml:id=\"p1\"",
+        r#"<para xml:id="p1"><p xml:id="p1.1">[Y][N][Y][N]</p></para>"#,
       ),
       (
         "para",
-        "xml:id=\"p3\"",
-        r#"<para xml:id="p3"><p xml:id="p3.1">[21.1112pt]</p></para>"#,
+        "xml:id=\"p2\"",
+        r#"<para xml:id="p2"><p xml:id="p2.1">[Y][N][Y]</p></para>"#,
       ),
     ],
     holds:    &[],

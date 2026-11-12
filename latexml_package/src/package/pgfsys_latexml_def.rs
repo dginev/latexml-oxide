@@ -993,7 +993,7 @@ LoadDefinitions!({
   // evaluation. Perl doesn't override \pgfsetdash (raw TeX works there),
   // but we override it following the same pattern as \pgfmathsetlength.
   DefPrimitive!("\\pgfsetdash{}{}", sub[(pattern_toks, offset_toks)] {
-    use crate::package::pgfmath_code_tex::{expand_pgfmath_arg, pgfmathparse, pgfmathparse_expanded};
+    use crate::package::pgfmath_code_tex::{pgfmathparse, pgfmathparse_expanded};
     // Step 1: Parse the dash pattern.
     // #1 is like {{3pt}{1.2pt}{0.6pt}} or {} (empty for solid). Each top-level brace group is one
     // dimension, expanded as tokens (a group may hold a macro, `{\dl}`, which a string round-trip
@@ -1032,9 +1032,9 @@ LoadDefinitions!({
     // tokens: tikz passes the macro `\tikz@dashphase` (tikz.code.tex:119-137), which a string
     // round-trip turned into characters that pgfmath then read as a register name
     // ("\tikz@dashphase is not a register"; beautybook, 4,304× over the 3,003-paper A/B).
-    let expanded = expand_pgfmath_arg(offset_toks)?;
+    let expanded = do_expand(offset_toks)?;
     if expanded.unlist_ref().iter().any(|t| t.get_catcode() != Catcode::SPACE) {
-      let (result_str, _units) = pgfmathparse_expanded(expanded);
+      let (result_str, _units) = pgfmathparse_expanded(expanded)?;
       let value: f64 = result_str.parse().unwrap_or(0.0);
       let dim = Dimension((value * 65536.0).round() as i64);
       assign_register("\\pgf@x", dim.into(), None, vec![])?;

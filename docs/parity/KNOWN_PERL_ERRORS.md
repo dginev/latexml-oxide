@@ -19338,13 +19338,36 @@ First \cite{zeta}, then \cite{alpha}.
 \end{document}
 ```
 
-## 1224. pgfmath: a register before a letter is read as one longer name
+## 1225. pgfmath: calc's names are bound before the argument is expanded
+
+`sub pgfmathparse` (pgfmath.code.tex.ltxml:320-327) `Let`s `\real`, `\minof`, `\maxof`, `\ratio`, `\widthof`,
+`\heightof`, `\depthof` to `\pgfmath@calc@*` before it expands its argument. pgf expands first
+(pgfmathparser.code.tex:54) and lets them only in `\pgfmathparse@@` (:124-130), so a user's `\ratio` or `\real`
+reads as the user defined it. Perl gives `[0][1][0.0pt][0][0]` and 4 Errors (pgfparse "Parse of '*/10' failed");
+pdflatex `[5.0][4.0][5.0pt][5][5.0]`, 0 `!`. PERL-ORIGIN. Rust:
+`pgfmath_code_tex::calc_compat_expand` expands without them and binds them only when one of the seven survives the
+expansion, then expands again. Guard `perfect_kernel_batchdtl1::batchdtl1_pgfmath_rows` row
+`pgfmath_expands_before_calc_lets`. Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{pgf}
+\newcommand\ratio{0.5}
+\newcommand\real{3}
+\newdimen\myl
+\begin{document}
+\pgfmathsetmacro\w{\ratio*10}[\w]\pgfmathsetmacro\v{\real+1}[\v]\pgfmathsetlength\myl{\ratio*10pt}[\the\myl]%
+\pgfmathtruncatemacro\t{\ratio*10}[\t]\pgfmathparse{\ratio*10}[\pgfmathresult]
+\end{document}
+```
+
+## 1226. pgfmath: a register before a letter is read as one longer name
 
 `sub pgfmathparse` (pgfmath.code.tex.ltxml:328) reads its argument as `ToString(Expand($tokens))`, which drops the
 space TeX's mouth skipped after a control word, so `\mydim r` (the register, then `r` for radians) becomes the name
 `\mydimr`: Perl gives `[0.0]` and 4 "\mydimr is not a register" Warnings; pdflatex `[114.59155]`, 0 `!`. PERL-ORIGIN.
-Rust (DTL1e, DTL1f): `pgfmath_input_text` keeps the space after a control word (a name of two or more characters, or a
-single letter, as tex.web's print_cs §262) before a letter, in the one parse `\pgfmathparse`, `\lx@pgfmath@parseX`,
+Rust: `pgfmath_input_text` keeps the space after a control word (a name of two or more characters, or a single letter,
+as tex.web's print_cs §262) before a letter, in the one parse `\pgfmathparse`, `\lx@pgfmath@parseX`,
 `\pgfmathsetmacro` and `\pgfmathsetlength` share (`pgfmath_code_tex::pgfmathparse`, `pgfmathparse_expanded`). Guards
 `perfect_kernel_batchdtl1::batchdtl1_pgfmath_rows` rows `pgfmath_space_after_control_word`,
 `pgfmath_setmacro_parses_as_pgfmathparse`. Minimal trigger:

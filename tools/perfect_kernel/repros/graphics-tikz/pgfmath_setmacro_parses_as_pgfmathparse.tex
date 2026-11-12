@@ -1,21 +1,14 @@
-% mechanism: `\pgfmathsetmacro` and `\pgfmathsetlength` call the parse `\pgfmathparse` calls (Perl's
-%   `sub pgfmathparse`, pgfmathcalc.code.tex.ltxml:24-32, pgfmath.code.tex.ltxml:405-423): `\pgfmathsetmacro`
-%   stringified its own expansion, so it welded `\mydim r` to `\mydimr` and skipped the calc-compat `\let`s
-%   (revDTL1e B1); `\pgfmathsetlength` skipped the `\let`s too.
+% mechanism: `\pgfmathsetmacro` calls the parse `\pgfmathparse` calls (Perl's `sub pgfmathparse`,
+%   pgfmathcalc.code.tex.ltxml:24-32): it stringified its own expansion, so it welded `\mydim r` to `\mydimr`
+%   (revDTL1e B1). The `\widthof` twins err in TeX: `pgfmath_calc_names_err_in_tex_red.tex` (revDTL1f S1).
 % witness: synthetic
-% oracle:  pdflatex [114.59155][114.59155] (p1); TL 2025's pgf errs on `\widthof` in every twin (p2, p3 alone: 4 `!`,
-%   `width("xx")` read as a function `xx`), so p2 and p3 take the `\pgfmathparse` twin's [21.11121]
-% engines: rust DTL1e: [114.59156][0.0] (p1), [21.11121][0.0] (p2), [0.0pt] (p3), 2 Warnings `\widthof` not a register
+% oracle:  pdflatex 0 `!`, [114.59155][114.59155]; Perl 0 E, [0.0][0.0] (KNOWN_PERL_ERRORS #1226)
+% engines: rust DTL1e: [114.59156][0.0]
 % expect:  0 errors 0 warnings; the twin's value on each side
 % status:  RED (DTL1e) -> GREEN (DTL1f, guard perfect_kernel_batchdtl1::batchdtl1_pgfmath_rows)
 \documentclass{article}
-\usepackage{calc}
 \usepackage{pgf}
 \newdimen\mydim \mydim=2pt
 \begin{document}
 \pgfmathparse{\mydim r}[\pgfmathresult]\pgfmathsetmacro\m{\mydim r}[\m]
-
-\pgfmathparse{2*\widthof{xx}}[\pgfmathresult]\pgfmathsetmacro\m{2*\widthof{xx}}[\m]
-
-\pgfmathsetlength\mydim{2*\widthof{xx}}[\the\mydim]
 \end{document}

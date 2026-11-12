@@ -1,7 +1,7 @@
 % mechanism: TeX's mouth skips the space after a control word, so `\mydim r` reaches `\pgfmathparse` as the tokens
 %   `\mydim`, `r`; their string welded them to `\mydimr` (no register: 0, silently), as Perl's ToString does
 %   (pgfmath.code.tex.ltxml:328). `pgfmath_input_text` keeps the space before a letter (revDTL1b P1;
-%   KNOWN_PERL_ERRORS #1224).
+%   KNOWN_PERL_ERRORS #1226).
 % witness: synthetic
 % oracle:  pdflatex 0 `!`: [114.59155] [2291.83105] [229.1831]; Perl 1 Error (overflow), 10 Warnings (`\mydimr`,
 %   `\myboxr` not a register), [0.0] [16383.99998] [0.0]

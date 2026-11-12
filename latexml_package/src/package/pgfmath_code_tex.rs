@@ -2069,52 +2069,66 @@ fn format_parse_result(result: f64, input: &str) -> String {
   s
 }
 
-/// Expand the argument to a pgfmath parse with the seven calc-package compatibility CSes (`\real`, `\minof`,
-/// `\maxof`, `\ratio`, `\widthof`, `\heightof`, `\depthof`) `\let` to the `\pgfmath@calc@*` internals for this
-/// expansion only, as Perl's `sub pgfmathparse` does (pgfmath.code.tex.ltxml:320-327). Bound for the whole document
-/// they clobbered `\real` as ℝ (`\int_\real p_m`, a spurious "Double subscript"; 1608.06741).
-pub(crate) fn expand_pgfmath_arg<T: Into<Tokens>>(tokens: T) -> Result<Tokens> {
-  const PAIRS: [(&str, &str); 7] = [
-    ("\\real", "\\pgfmath@calc@real"),
-    ("\\minof", "\\pgfmath@calc@minof"),
-    ("\\maxof", "\\pgfmath@calc@maxof"),
-    ("\\ratio", "\\pgfmath@calc@ratio"),
-    ("\\widthof", "\\pgfmath@calc@widthof"),
-    ("\\heightof", "\\pgfmath@calc@heightof"),
-    ("\\depthof", "\\pgfmath@calc@depthof"),
-  ];
-  let saved: Vec<(Token, Stored)> = PAIRS
-    .iter()
-    .map(|(cs, _)| {
-      let t = T_CS!(*cs);
-      let m = lookup_meaning(&t).unwrap_or(Stored::None);
-      (t, m)
-    })
-    .collect();
-  for (cs, helper) in PAIRS.iter() {
-    let_i(&T_CS!(*cs), &T_CS!(*helper), None);
+/// The seven calc-package names pgf `\let`s to its own for a parse (pgfmathparser.code.tex:124-130).
+const CALC_COMPAT: [(&str, &str); 7] = [
+  ("\\real", "\\pgfmath@calc@real"),
+  ("\\minof", "\\pgfmath@calc@minof"),
+  ("\\maxof", "\\pgfmath@calc@maxof"),
+  ("\\ratio", "\\pgfmath@calc@ratio"),
+  ("\\widthof", "\\pgfmath@calc@widthof"),
+  ("\\heightof", "\\pgfmath@calc@heightof"),
+  ("\\depthof", "\\pgfmath@calc@depthof"),
+];
+
+/// pgf `\let`s the calc names in `\pgfmathparse@@` (pgfmathparser.code.tex:124-130), after its edef expanded the
+/// argument (:54): a user's `\newcommand\ratio{0.5}` reads as 0.5, and only a calc name the edef left reads as pgf's.
+/// Perl lets them first (KNOWN_PERL_ERRORS #1225). Per parse, never for the document: `\real` as ℝ (1608.06741).
+fn calc_compat_expand(expanded: Tokens) -> Result<Tokens> {
+  let names: [Token; 7] = CALC_COMPAT.map(|(cs, _)| T_CS!(cs));
+  if !expanded.unlist_ref().iter().any(|t| names.contains(t)) {
+    return Ok(expanded);
   }
-  let expanded = do_expand(tokens);
+  let saved: Vec<(Token, Stored)> = names
+    .iter()
+    .map(|t| (*t, lookup_meaning(t).unwrap_or(Stored::None)))
+    .collect();
+  for (name, (_, helper)) in names.iter().zip(CALC_COMPAT) {
+    let_i(name, &T_CS!(helper), None);
+  }
+  let reexpanded = do_expand(expanded);
   for (t, m) in saved {
     assign_meaning(&t, m, None);
   }
-  expanded
+  reexpanded
 }
 
 /// Perl's `sub pgfmathparse` (pgfmath.code.tex.ltxml:316-394), which `\pgfmathparse`, `\lx@pgfmath@parseX` and
 /// `\pgfmathsetmacro` share: expand, read the text, evaluate; returns the result and whether units were declared.
 pub(crate) fn pgfmathparse(tokens: Tokens) -> Result<(String, bool)> {
-  Ok(pgfmathparse_expanded(expand_pgfmath_arg(tokens)?))
+  pgfmathparse_expanded(do_expand(tokens)?)
 }
 
-/// `pgfmathparse` on an argument `expand_pgfmath_arg` has expanded (`\pgfmathsetlength` looks at it first).
-pub(crate) fn pgfmathparse_expanded(expanded: Tokens) -> (String, bool) {
-  pgfmathparse_eval_with_units(&pgfmath_input_text(expanded))
+/// `pgfmathparse` on an argument its caller expanded (`\pgfmathsetlength` looks for pgf's `+` first). Sets both
+/// units flags globally, as pgf's parse does (pgfmathparser.code.tex:51-52, 443-503); no `mu` is read yet.
+pub(crate) fn pgfmathparse_expanded(expanded: Tokens) -> Result<(String, bool)> {
+  let (result, units) =
+    pgfmathparse_eval_with_units(&pgfmath_input_text(calc_compat_expand(expanded)?));
+  set_condition(
+    &T_CS!("\\ifpgfmathunitsdeclared"),
+    units,
+    Some(Scope::Global),
+  );
+  set_condition(
+    &T_CS!("\\ifpgfmathmathunitsdeclared"),
+    false,
+    Some(Scope::Global),
+  );
+  Ok((result, units))
 }
 
 /// The parser's text of an expanded argument: its string, keeping the space TeX's mouth skipped after a control word
 /// where a letter follows (`\mydim r` is `\mydim` then `r`, not `\mydimr` as Perl's pgfmath.code.tex.ltxml:328 reads;
-/// KNOWN_PERL_ERRORS #1224).
+/// KNOWN_PERL_ERRORS #1226).
 fn pgfmath_input_text(tokens: Tokens) -> String {
   let mut spaced = Vec::with_capacity(tokens.unlist_ref().len());
   let mut after_control_word = false;
@@ -2207,8 +2221,9 @@ pub(crate) fn pgfmathparse_eval_with_units(raw_input: &str) -> (String, bool) {
   ("0.0".to_string(), false)
 }
 
-/// Convenience wrapper that returns only the result string
-pub fn pgfmathparse_eval(raw_input: &str) -> String { pgfmathparse_eval_with_units(raw_input).0 }
+/// The result string alone, for the golden rows.
+#[cfg(test)]
+fn pgfmathparse_eval(raw_input: &str) -> String { pgfmathparse_eval_with_units(raw_input).0 }
 
 /// Detect string-valued pgfmath ternaries `<test> ? "a" : "b"` or
 /// `ifthenelse(<test>, "a", "b")` and return the chosen literal.
@@ -2481,21 +2496,14 @@ LoadDefinitions!({
   // `sub pgfmathparse` — transiently, per parse, with local scope. They are
   // deliberately NOT bound at package-load time: doing so globally clobbers
   // `\real` (commonly `\mathbb{R}`) and friends for the whole document. See
-  // `expand_pgfmath_arg`, which replicates the exact transient scope around
-  // the pgfmath argument expansion.
+  // `calc_compat_expand`, which binds them for the one parse, after its
+  // expansion as pgf does.
 
   // ==================== pgfmathparse override ====================
   // Perl L401-403: DefMacro('\lx@pgfmath@parse{}', sub { ... })
   DefMacro!("\\lx@pgfmath@parse {}", sub[(tokens)] {
-    let (result, units) = pgfmathparse(tokens)?;
-    let mut toks = pgfmath_result_tokens_str(&result);
-    // Perl: \ifpgfmathunitsdeclared flag — used by tikz's \tikz@checkunit
-    if units {
-      toks.push(T_CS!("\\pgfmathunitsdeclaredtrue"));
-    } else {
-      toks.push(T_CS!("\\pgfmathunitsdeclaredfalse"));
-    }
-    toks
+    let (result, _units) = pgfmathparse(tokens)?;
+    pgfmath_result_tokens_str(&result)
   });
 
   // Perl L442: Let('\pgfmathparse', '\lx@pgfmath@parse');
@@ -2543,7 +2551,7 @@ LoadDefinitions!({
     // `\pgfmathsetlength\d{+.5\wd0}` = 3.75pt). Witnesses: arXiv 1709.07916 /
     // 1912.13052 / 2004.14791 / 1312.6499 (STABILITY_WITNESSES Cluster E).
     let toks: Vec<Token> =
-      expand_pgfmath_arg(Tokens::new(tokens.unlist_ref().clone()))?
+      do_expand(Tokens::new(tokens.unlist_ref().clone()))?
         .unlist_ref()
         .iter()
         .skip_while(|t| t.get_catcode() == Catcode::SPACE)
@@ -2596,10 +2604,9 @@ LoadDefinitions!({
         unread(Tokens::new(rest));
       }
     } else {
-      // Evaluate via pgfmathparse (tokens already expanded above); its units are
-      // `\pgfmath@selectfont`'s (`pgfmath_convert`), and its units flag outlives it, as pgf's parse
-      // smuggles it out of its group.
-      let (result_str, _units) = pgfmathparse_expanded(Tokens::new(toks));
+      // pgf's `\pgfmathparse{#2}` (pgfmathcalc.code.tex:40) on the tokens expanded above; its units are
+      // `\pgfmath@selectfont`'s (`pgfmath_convert`), and it sets both units flags globally.
+      let (result_str, _units) = pgfmathparse_expanded(Tokens::new(toks))?;
       let value: f64 = result_str.parse().unwrap_or(0.0);
 
       // Perl L419-422: check \ifpgfmathmathunitsdeclared for mu units
@@ -2768,8 +2775,9 @@ mod pgfmath_golden_tests {
       ("2^3^2", "64.0@-"),
       ("2^2!", "24.0@-"),
       ("-2^2!", "-24.0@-"),
-      ("4/2r", "114.59156@-"),   // pdflatex 114.59155
-      ("1+2*3r", "344.77468@-"), // pdflatex 344.77466
+      // `r`'s last digit: our f64 against pgf's fixed-point TeX dimens (pdflatex 114.59155, 344.77466).
+      ("4/2r", "114.59156@-"),
+      ("1+2*3r", "344.77468@-"),
       // DTL1e: a postfix `!` or `r` waits for the stronger operators after it (pgfmathparser.code.tex:765-790); the
       // pdflatex values of `graphics-tikz/pgfmath_postfix_before_power.tex` and its siblings (revDTL1b S1, P3).
       ("2!^2", "24.0@-"),

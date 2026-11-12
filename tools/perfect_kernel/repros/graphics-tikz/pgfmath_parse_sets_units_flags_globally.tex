@@ -1,0 +1,16 @@
+% mechanism: every pgf parse sets `\ifpgfmathunitsdeclared` and `\ifpgfmathmathunitsdeclared` globally
+%   (pgfmathparser.code.tex:51-52, 443-503), `\pgfmathsetmacro` and `\pgfmathsetlength` included, and a parse in a
+%   group leaves them set after it; ours left them to the last `\pgfmathparse`, locally (revDTL1f P1, pH).
+% witness: synthetic
+% oracle:  pdflatex 0 `!`: [Y][N][Y][N] [Y][N][Y]; Perl 0 E, the same
+% engines: rust DTL1f: [N][Y][N][Y] [Y][Y][Y]
+% expect:  0 errors 0 warnings; the pdflatex flags
+% status:  RED (DTL1f) -> GREEN (DTL1g, guard perfect_kernel_batchdtl1::batchdtl1_pgfmath_rows)
+\documentclass{article}
+\usepackage{pgf}
+\newdimen\myl
+\begin{document}
+\pgfmathparse{3}\pgfmathsetmacro\u{2pt}[\ifpgfmathunitsdeclared Y\else N\fi]\pgfmathparse{2pt}\pgfmathsetmacro\v{3}[\ifpgfmathunitsdeclared Y\else N\fi]\pgfmathparse{3}\pgfmathsetlength\myl{2pt}[\ifpgfmathunitsdeclared Y\else N\fi]\pgfmathparse{2pt}\pgfmathsetlength\myl{3}[\ifpgfmathunitsdeclared Y\else N\fi]
+
+\pgfmathparse{3}{\pgfmathparse{2pt}}[\ifpgfmathunitsdeclared Y\else N\fi]\pgfmathparse{2pt}{\pgfmathsetmacro\u{3}}[\ifpgfmathunitsdeclared Y\else N\fi]\pgfmathparse{3}{\pgfmathsetmacro\u{3pt}}[\ifpgfmathunitsdeclared Y\else N\fi]
+\end{document}
