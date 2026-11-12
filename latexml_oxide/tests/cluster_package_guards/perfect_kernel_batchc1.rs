@@ -1275,6 +1275,44 @@ fn group_rule_reads_marks_as_digested() {
         &["C. Colé 1,2", "affiliation=Uni One", "affiliation=Uni Two"],
       ],
     ),
+    // (CST2, revCST2 finding 1: a `*` typed after a tie or an accent is the name's text, as the untied `A. Smith*`; the PDF
+    // prints "A. Smith* and José Jones* / 1Uni One, Town / 2Uni Two, Town"; int165a: a nameless creator holding both)
+    (
+      repro!("revtex_typed_star_after_tie_or_accent_is_name_text"),
+      0,
+      &[
+        &[
+          "A. Smith*",
+          "affiliation=1 Uni One, Town",
+          "affiliation=2 Uni Two, Town",
+        ],
+        &[
+          "José Jones*",
+          "affiliation=1 Uni One, Town",
+          "affiliation=2 Uni Two, Town",
+        ],
+      ],
+    ),
+    // (CST2's keep-paths, revCST2 finding 2: a `*` a macro body or a `\chardef` prints is rehearsed, its label printed by
+    // no line, the block nameless as on int165a; a gate skipping it gives the typed twin's reading above)
+    (
+      repro!("revtex_macro_and_chardef_printed_stars_are_marks"),
+      0,
+      &[&["A. Smith*"], &["B. Jones*"], &[
+        "affiliation=1 Uni One, Town",
+        "affiliation=2 Uni Two, Town",
+      ]],
+    ),
+    // (a body led by `\relax` or `\protect`, a macro chain past `MACRO_DEPTH`: each mark requests its line)
+    (
+      repro!("revtex_relax_protect_led_and_deep_mark_macros_are_marks"),
+      0,
+      &[
+        &["A. Smith 1", "affiliation=1 Uni One, Town"],
+        &["B. Jones 2", "affiliation=2 Uni Two, Town"],
+        &["C. Cole 3", "affiliation=3 Uni Three, Town"],
+      ],
+    ),
     // (P4b3c, review revP4b3 B1: each label piece of a name's mark is read apart, `requested_labels`: `$^{*,1,2}$` requests
     // 1 and 2, `$^{\dagger 1,2}$` too, so the unmarked head is the requested 1 no line prints, as 2109.01501's; red on
     // P4b3b: a nameless creator holding the block (star first, glued dagger), the block copied onto both (every name

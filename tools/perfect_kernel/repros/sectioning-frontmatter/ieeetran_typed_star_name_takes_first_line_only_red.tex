@@ -1,0 +1,17 @@
+% mechanism: IEEEtran's `\IEEEauthorblockN{A. Smith*, B. Jones}` over a block of numbered lines no name's mark requests
+%   (a typed `*` is the name's text): the first name holds only the first line, the second both; the PDF prints one
+%   block under both names
+% witness: synthetic (review revCST2 finding 1, probe ieeem_tiestar: CST2 reads the tied names as this untied twin)
+% oracle:  pdflatex (TL 2025, IEEEtran conference, -no-shell-escape) 0 errors: "A. Smith*, B. Jones / 1 Uni One /
+%          2 Uni Two"
+% engines: int165a and CST2 (byte-identical): A. Smith* "1 Uni One"; B. Jones "1 Uni One", "2 Uni Two"
+% expect:  0 errors, 0 warnings; A. Smith* and B. Jones, each "1 Uni One" and "2 Uni Two"
+% moves:   post-merge
+% status:  RED
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{A. Smith*, B. Jones}\IEEEauthorblockA{$^1$Uni One\\ $^2$Uni Two}}
+\maketitle
+Text.
+\end{document}
