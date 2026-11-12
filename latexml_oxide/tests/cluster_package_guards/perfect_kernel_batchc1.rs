@@ -210,31 +210,33 @@ fn queued_marks_read_as_digested() {
       &["Ann Able 1", "address=1 Univ A, Town A"],
       &["Bob Baker 2", "address=2 Univ B, Town B"],
     ]),
-    // (the twins: authblk's trailing note on every name and the nameless "First Univ" are RED
-    // `authblk_noblocks_trailing_note_list_red`)
+    // (the twins: each name shows the marks it prints (P4b2b; Bob Two 2,3); Cy Three's authblk-generated 1 is RED
+    // `authblk_labelled_marks_dropped_red`; the nameless "First Univ" RED `authblk_noblocks_trailing_note_list_red`)
     (repro!("queue_marks_flexisym_authblk_noblocks_list"), 0, &[
       &["Ann One 1"],
       &[
-        "Bob Two 1",
+        "Bob Two 2,3",
         "affiliation=2 Second Univ",
         "affiliation=3 Third Univ",
       ],
-      &["Cy Three 1"],
+      &["Cy Three"],
       &["affiliation=First Univ"],
     ]),
     (repro!("queue_marks_authblk_noblocks_list"), 0, &[
       &["Ann One 1"],
       &[
-        "Bob Two 1",
+        "Bob Two 2,3",
         "affiliation=2 Second Univ",
         "affiliation=3 Third Univ",
       ],
-      &["Cy Three 1"],
+      &["Cy Three"],
       &["affiliation=First Univ"],
     ]),
-    (repro!("queue_marks_flexisym_authblk_boxed_note"), 1, &[
-      &["Ann One", "affiliation=1 First Univ"],
-      &["Bob Two", "affiliation=2 Second Univ"],
+    // (each name shows its printed mark (P4b2b); Bob Two's bold is lost UNCOUNTED since — RED
+    // `authblk_bold_name_markup_lost_uncounted_red`, P4b4)
+    (repro!("queue_marks_flexisym_authblk_boxed_note"), 0, &[
+      &["Ann One 1", "affiliation=1 First Univ"],
+      &["Bob Two 2", "affiliation=2 Second Univ"],
     ]),
     (repro!("queue_marks_flexisym_ieeetran_line"), 0, &[
       &["Ann One", "affiliation=First Univ"],
