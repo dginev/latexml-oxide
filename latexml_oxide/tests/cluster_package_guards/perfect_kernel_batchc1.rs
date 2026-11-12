@@ -931,6 +931,11 @@ fn authblk_names_show_their_printed_marks() {
     "Bob Baker 2",
     "affiliation=2 Univ B, Town B",
   ]];
+  let robust_marks: &[&[&str]] = &[
+    &["Ann Lee ∗", "affiliation=∗ Univ of X"],
+    &["Bob Ray ∗", "affiliation=∗ Univ of X"],
+    &["Cy Dee †", "affiliation=† Univ of Y"],
+  ];
   let rows: &[Row] = &[
     (repro!("authblk_hand_marks_answered_shown"), 0, affiliations),
     (
@@ -957,6 +962,23 @@ fn authblk_names_show_their_printed_marks() {
       &["Ann Able a-b"],
       &["Bob Baker"],
     ]),
+    // (PMK1: a mark's call written with its argument — a robust command's, a parameterless macro's tail call's; red on
+    // int164a, 1 Warning and Cy Dee "∗ ⁣ †"; 0912.0896, 2609.25589. The `\protected\def` row is their control, green on both)
+    (
+      repro!("authblk_robust_mark_written_with_its_argument"),
+      0,
+      robust_marks,
+    ),
+    (
+      repro!("authblk_tail_called_mark_written_with_its_argument"),
+      0,
+      robust_marks,
+    ),
+    (
+      repro!("authblk_protected_mark_written_with_its_argument"),
+      0,
+      robust_marks,
+    ),
   ];
   for ((name, tex), warnings, expected) in rows {
     let (log, xml) = run(tex);
@@ -971,6 +993,21 @@ fn authblk_names_show_their_printed_marks() {
       .collect();
     assert_eq!(text_creators(&xml), expected, "{name}: {xml}");
     // (the mark the name prints, digested in its own superscript, as the affiliation's)
+    // (the robust mark's whole personname: the one `\dagger` its `{2}` selects, PMK1)
+    if *name == "authblk_robust_mark_written_with_its_argument" {
+      let all = creators(&xml);
+      let third = all
+        .split("<personname>")
+        .nth(3)
+        .and_then(|p| p.split("</personname>").next());
+      assert_eq!(
+        third,
+        Some(
+          r#"Cy Dee<text depth="0.0pt" height="0.0pt" yoffset="0.0pt" xml:id="id5"><sup xml:id="id5.1"><Math mode="inline" tex="\dagger" text="dagger" xml:id="m3"> <XMath xml:id="m3.1"> <XMTok fontsize="80%" name="dagger" role="MULOP">†</XMTok> </XMath> </Math></sup></text>"#
+        ),
+        "{name}"
+      );
+    }
     if *name == "authblk_hand_marks_answered_shown" {
       assert_eq!(
         creators(&xml),

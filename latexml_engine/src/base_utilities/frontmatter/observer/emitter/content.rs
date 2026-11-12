@@ -93,27 +93,33 @@ pub(in crate::base_utilities::frontmatter::observer) fn aligned(events: &[Event]
 /// the tokens end at it, none of its arguments theirs (a mark's span covering the call alone: aiaa-tc's
 /// `\thanksibid{2}`, 1505.07844, 1411.3642, 1602.00849; a preamble's `\footrecall{uva}`, 2503.21719, 2407.13730,
 /// 2606.19583; a URL cut out of `\href{…}{…}`, 2603.11001). A parameter of any other kind (a delimited one) is not
-/// judged, nor a command inside a group of theirs (an argument a primitive may never expand: `\detokenize{\begin}`).
-pub(super) fn reads_past(tokens: &[Token]) -> Option<usize> {
+/// judged, nor a command inside a group of theirs (an argument a primitive may never expand: `\detokenize{\begin}`). A
+/// call's arguments are its [`tail_call`]'s where `tail` (a printed call's); a declaration's are its own macro's.
+pub(super) fn reads_past(tokens: &[Token], tail: bool) -> Option<usize> {
   let mut depth = 0i32;
   tokens.iter().enumerate().position(|(i, t)| {
     depth += t.group_step();
-    depth == 0 && arguments_end(tokens, i) == Some(None)
+    depth == 0 && arguments_end(tokens, i, tail) == Some(None)
   })
 }
 
 /// Where the call at `tokens[at]` ends, past the arguments its meaning now reads ([`reads_past`]'s parameters):
 /// `Some(None)` where an undelimited one is not in the tokens, `None` for no such call (a primitive, an unexpandable
 /// command, no parameters, a parameter of another kind).
-pub(super) fn arguments_end(tokens: &[Token], at: usize) -> Option<Option<usize>> {
+pub(super) fn arguments_end(tokens: &[Token], at: usize, tail: bool) -> Option<Option<usize>> {
   let (plain, verbatim, hyper, optional) = (
     pin!("Plain"),
     pin!("Semiverbatim"),
     pin!("HyperVerbatim"),
     pin!("Optional"),
   );
-  let Some(Stored::Expandable(meaning)) = lookup_meaning(&tokens[at]) else {
-    return None;
+  let meaning = if tail {
+    tail_call(&tokens[at])?
+  } else {
+    let Some(Stored::Expandable(meaning)) = lookup_meaning(&tokens[at]) else {
+      return None;
+    };
+    meaning
   };
   let parameters = meaning.get_parameters()?.get_parameters();
   if parameters.is_empty()
@@ -170,6 +176,32 @@ pub(super) fn arguments_end(tokens: &[Token], at: usize) -> Option<Option<usize>
     }
   }
   Some(Some(j))
+}
+
+/// The macro whose parameters a call of `cs` reads, by its meaning now: `cs`'s own, or, for a parameterless macro whose
+/// expansion ends in a command, that command's — a robust command's `\protect \cs␣` (icrc2009.cls's
+/// `\DeclareRobustCommand*{\IEEEauthorrefmark}[1]`, 0912.0896), IEEEtran's `\def\authorrefmark{…\IEEEauthorrefmark}`
+/// (2609.25589): cut from its `{1}`, the mark read the wrapper's `\let` as its `\ifcase` number.
+fn tail_call(cs: &Token) -> Option<Rc<Expandable>> {
+  let mut called = *cs;
+  for _ in 0..8 {
+    let Some(Stored::Expandable(meaning)) = lookup_meaning(&called) else {
+      return None;
+    };
+    let parameterless = meaning
+      .get_parameters()
+      .is_none_or(|parameters| parameters.get_parameters().is_empty());
+    match meaning.get_expansion() {
+      Some(ExpansionBody::Tokens(body)) if parameterless => {
+        called = *body.unlist_ref().last()?;
+        if called.get_catcode() != Catcode::CS {
+          return None;
+        }
+      },
+      _ => return Some(meaning),
+    }
+  }
+  None
 }
 
 /// A conditional's part `t` is, by its meaning now.
@@ -409,7 +441,7 @@ impl Field<'_> {
       );
       return None;
     }
-    if let Some(call) = reads_past(&tokens) {
+    if let Some(call) = reads_past(&tokens, true) {
       DebugFeature!(
         "frontmatter",
         "FRONT writer: the run {start}..{end} holds {:?}, whose arguments run past it",

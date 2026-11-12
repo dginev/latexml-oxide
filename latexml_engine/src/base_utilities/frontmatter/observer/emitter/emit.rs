@@ -1031,7 +1031,7 @@ fn block_names(
         // (a mark a macro prints, its span the call alone, is the call with its arguments: aiaa-tc's `\thanksibid{2}`
         // (1505.07844, 1411.3642, 1602.00849), a preamble's `\footrecall{uva}` (2503.21719, 2407.13730, 2606.19583) —
         // the call written without them read the author wrapper's `\let` (`content::arguments_end`))
-        let t = content::arguments_end(field.tokens, s)
+        let t = content::arguments_end(field.tokens, s, true)
           .flatten()
           .map_or(t, |end| end.max(t));
         // (a mark past the close of a group of names the name's run opens no part of is the last name's, its own run
@@ -3524,8 +3524,9 @@ fn names_overlap(index: usize, resolved: &Resolved) -> bool {
 }
 
 /// Whether a declaration of the author block at ledger index `index` can't be replayed ([`declarations`]): its span, all its
-/// invocation read as the rehearsal heard it, holds a macro whose undelimited arguments run past it, by its meaning now
-/// ([`reads_past`]). A macro printing a note then defining, `\newcommand{\footremember}[2]{\footnote{#2}\newcounter{#1}…}`,
+/// invocation read as the rehearsal heard it, holds a macro whose undelimited arguments run past it, by its own meaning now
+/// ([`reads_past`]; not its tail call's: the group-local `\let` of `\typeout` in IEEEtran's `\authorrefmark` is noted as
+/// one, 2609.25589). A macro printing a note then defining, `\newcommand{\footremember}[2]{\footnote{#2}\newcounter{#1}…}`,
 /// defines past the note its arguments made, its call's reach the macro alone: replayed, it read the next declaration's
 /// tokens and on past the entry — `\footremember\footremember\footremember\footremember`, its `\newcounter{\footremember}`
 /// a counter of no name, every theorem then missing its `{` and a Fatal (2505.04436, 1511.09009). No cut of the
@@ -3543,7 +3544,7 @@ fn declaration_reads_past(index: usize, resolved: &Resolved) -> bool {
       .iter()
       .filter_map(|event| event.span)
       .filter_map(|(start, end)| tokens.get(at(start)?..at(end)?))
-      .find_map(|span| reads_past(span).map(|call| span[call]))
+      .find_map(|span| reads_past(span, false).map(|call| span[call]))
   });
   let Some(call) = past else {
     return false;
