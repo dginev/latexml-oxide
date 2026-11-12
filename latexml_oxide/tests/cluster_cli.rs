@@ -3030,7 +3030,13 @@ mod debug_feature_scope {
       (&["--debug=frontmatter"], "dbg.xml", true, false, false),
       (&["--debug=nosuchfeature"], "dbg.html", false, false, true),
       (&["--verbose"], "dbg.xml", false, true, false),
-      (&["--verbose", "--debug=frontmatter"], "dbg.xml", true, true, false),
+      (
+        &["--verbose", "--debug=frontmatter"],
+        "dbg.xml",
+        true,
+        true,
+        false,
+      ),
     ];
     let mut front_counts = Vec::new();
     for (flags, dest, feature, unfeatured, undeclared) in rows {
