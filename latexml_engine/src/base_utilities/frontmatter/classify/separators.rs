@@ -213,7 +213,8 @@ pub(in crate::base_utilities) fn author_and_splits() -> Vec<SplitDelim> {
   ]
 }
 
-// Things to split author & affiliation mix; NO comma in affiliations!!!
+// Things to split author & affiliation mix; NO comma in affiliations!!! An affiliation list's lines too (the frontmatter
+// API's entry cutter and Kind step, `entry_starts`).
 pub(in crate::base_utilities) fn author_affil_splits() -> Vec<SplitDelim> {
   vec![
     T_CS!("\\and").into(),

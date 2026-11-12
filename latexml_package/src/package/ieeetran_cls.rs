@@ -1835,7 +1835,7 @@ fn printed_refmarks(body: Tokens) -> Tokens {
     while j > 0 && matches!(v[j - 1].get_catcode(), Catcode::SPACE | Catcode::MATH) {
       j -= 1;
     }
-    // (a line break, or the spacing and `\and` an affiliation list parts its entries by: `affil_splits`)
+    // (a line break, or the spacing and `\and` an affiliation list parts its entries by: `author_affil_splits`)
     if j == 0
       || [
         T_CS!("\\\\"),

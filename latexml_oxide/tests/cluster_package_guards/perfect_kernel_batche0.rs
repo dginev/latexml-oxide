@@ -407,8 +407,9 @@ const MOVED_CUT_KIND_EMISSIONS: &[(&str, usize)] = &[
 /// `defs/frontmatter_fields/names.rs`'s collaboration readers (`whole_name_collaboration`, `wrapped_collaboration_out`,
 /// `name_and_remark` and their helpers) deleted, the reading's. P6's compaction lowers it: P6a to 1,884, `cut_list` and
 /// `CUT_COPY_PLACE` moved unchanged to `defs/frontmatter_api.rs`, `kind.rs`' `balanced` deleted (core's `Tokens::is_balanced`);
-/// P6c to 1,878, `email_lines.rs`' and `kind.rs`' font reads the one reader's (`rows::name_text_command`, `mark_switch`).
-const MOVED_CUT_KIND_CODE_LINES: usize = 1_878;
+/// P6c to 1,878, `email_lines.rs`' and `kind.rs`' font reads the one reader's (`rows::name_text_command`, `mark_switch`);
+/// P6d to 1,867, `line_marks.rs`' `affil_splits` deleted (`classify::author_affil_splits` spelled again).
+const MOVED_CUT_KIND_CODE_LINES: usize = 1_867;
 
 /// The fence on the moved Cut and Kind: they take no new decision either (review revZ18a check 3).
 #[test]
@@ -474,16 +475,16 @@ fn the_moved_cut_and_kind_take_no_new_decision() {
 /// the flush's net already spares (1108.4222, 2607.07582); paid with that reader's move (Z18m, its `reads_arguments` with it).
 const ONE_ENGINE_REACH: &[(&str, usize)] = &[
   // (P4b4f, 0 -> 2: a line of addresses keeps its token reading in the cutter, `line_addresses`'s, as `entry_calls` read
-  // it before P4b4a — its marks label addresses, a start may stand inside one, 1506.02349; the import and the one use)
-  ("classify/entry_starts.rs line_addresses", 2),
+  // it before P4b4a — its marks label addresses, a start may stand inside one, 1506.02349; P6d 2 -> 0: the line's
+  // reading decides, `resolver::prints_only_addresses` on its events' text, the blocks' one reader)
   // (Z18m's three, `collaboration_line`'s, `notes_only_line`'s and `space_parted_names`' uses of the moved field and line
   // readers, are the old reader's uses of its own code: their files, `classify/old_reader/`, are no source of the one
   // engine's (review revZ18m B1))
   // (P6a, `relocate.rs CUT_COPY_PLACE` 1 -> 0: the state key moved to `defs/frontmatter_api.rs`, whose
   // `\lx@cut@copy@place` writes it)
   // (P4b4a4, revP4b4a2 B3: llncs's shape choice and the cutter read one fact, whether a start stands inside an
-  // environment the list opens; `starts_inside_environment` splits the list into its lines as `entry_calls` does)
-  ("classify/entry_starts.rs affil_splits", 2),
+  // environment the list opens; `starts_inside_environment` splits the list into its lines as `entry_calls` does; P6d
+  // 2 -> 0: `affil_splits` was `classify::author_affil_splits` spelled twice, folded into it, every caller its)
 ];
 
 /// Every file that holds the old reader's code moved out of `author_block/` unchanged, whose exports
@@ -550,7 +551,8 @@ fn old_reader_exports() -> std::collections::BTreeSet<String> {
 /// `names_split.rs`) deleted — IEEEtran's `name_memberships` was their last caller; the grade is the reading's (OD #1016).
 /// P5b: `whole_name_collaboration` and `wrapped_collaboration_out` deleted — a collaboration a creator call prints is the
 /// reading's (`frames_the_names`, OD #967). P6a: `cut_list` (the declared cut's body, OD #1009) and `CUT_COPY_PLACE`
-/// moved unchanged to `defs/frontmatter_api.rs`, beside `CutParameters` and `\lx@cut@copy@place`.
+/// moved unchanged to `defs/frontmatter_api.rs`, beside `CutParameters` and `\lx@cut@copy@place`. P6d: `affil_splits`
+/// deleted, the same list as `classify::author_affil_splits`, which its callers read.
 const OLD_READER_EXPORTS: &[&str] = &[
   "AddressPlacement",
   "ContactOwner",
@@ -559,7 +561,6 @@ const OLD_READER_EXPORTS: &[&str] = &[
   "EntryCall",
   "address_line_notes",
   "addresses_in_order",
-  "affil_splits",
   "affiliation_calls",
   "affiliation_is_marked",
   "answered_symbol_key",

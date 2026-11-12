@@ -283,7 +283,9 @@ pub(in crate::base_utilities::frontmatter::observer) use labels::{
   address_cuts, listed_addresses, strip_address_runs,
 };
 // (named, as the prelude has its own of these names: the resolver's shadow them)
-pub use labels::{address_take_out, addresses_in, mark_labels, only_addresses};
+pub use labels::{
+  address_take_out, addresses_in, mark_labels, only_addresses, prints_only_addresses,
+};
 pub(in crate::base_utilities::frontmatter::observer) use labels::{
   contact_parts, glued_request_parts, label_matches,
 };

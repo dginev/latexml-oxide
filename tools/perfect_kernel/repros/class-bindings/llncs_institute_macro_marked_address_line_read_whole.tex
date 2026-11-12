@@ -1,0 +1,20 @@
+% mechanism: a marked `\institute` list's line of addresses whose marks a document macro prints (`\ma ann@x.org`,
+%   `\newcommand\ma{$^{1}$}`): the cutter reads "the line prints only addresses" on the line's digested reading
+%   (`resolver::prints_only_addresses` on its events' text, P6d), so the line is read by its tokens, not cut at its starts,
+%   and each address goes to the author its mark names
+% witness: synthetic (P6d's sibling sweep; the literal-mark twin is 1506.02349, `ieeetran_authorblocka_marked_email_list_read_whole`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2 / 1 Univ Alpha / 2 Univ Beta /
+%          1 ann@x.org, 2 bob@y.org"
+% engines: P6dbase (int168a) and P6d alike: as expected
+% expect:  0 errors, 0 warnings; Ann Able "1 Univ Alpha" + ann@x.org, Bob Baker "2 Univ Beta" + bob@y.org
+% status:  GREEN (guard perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed)
+\documentclass{llncs}
+\newcommand\ma{$^{1}$}
+\newcommand\mb{$^{2}$}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1}$ \and Bob Baker$^{2}$}
+\institute{$^{1}$Univ Alpha\\ $^{2}$Univ Beta\\ \ma ann@x.org, \mb bob@y.org}
+\maketitle
+Body.
+\end{document}

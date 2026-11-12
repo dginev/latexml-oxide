@@ -1406,6 +1406,12 @@ pub(super) fn is_one_address(text: &str) -> bool {
   matches!(plain_addresses(text).as_slice(), [one] if one == text)
 }
 
+/// Whether `text` prints e-mail addresses and nothing else ([`addresses_in`] one at least, [`only_addresses`]): the one
+/// reading of "a line prints only addresses", the blocks' and the cutter's (`classify::entry_starts`).
+pub fn prints_only_addresses(text: &str) -> bool {
+  !addresses_in(text).is_empty() && only_addresses(text)
+}
+
 /// Whether `text` holds nothing but e-mail addresses (`{ann,bob}@x.org` one of them; an "E-mail:" before them,
 /// separators between).
 pub fn only_addresses(text: &str) -> bool {

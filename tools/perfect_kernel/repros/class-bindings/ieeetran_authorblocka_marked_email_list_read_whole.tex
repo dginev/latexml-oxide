@@ -1,7 +1,8 @@
 % mechanism: a binding's marked list (`\lx@add@affiliation@marked`, the cutter `affiliations::entry_calls`) whose e-mail
 %   line carries a mark per address, some inside a brace group of addresses (`$\{${\it\IEEEauthorrefmark{2}bob\_two,
-%   \IEEEauthorrefmark{3}cy\_three}$\}$@x`): a line of addresses (`line_addresses`) is read by its tokens, not cut at its
-%   digested starts, its addresses placed by their marks
+%   \IEEEauthorrefmark{3}cy\_three}$\}$@x`): a line printing only addresses (P6d: `resolver::prints_only_addresses` on
+%   its reading, formerly `line_addresses` on its tokens) is read by its tokens, not cut at its digested starts, its
+%   addresses placed by their marks
 % witness: 1506.02349 (int166a: the four e-mails cut into fragments `{`, `bob_two`, `} @sutd.edu.sg` on the wrong owners)
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann One*, Bob Two†, Cy Three‡" over "*Univ A / †‡Univ B /
 %          Emails: *ann_one@ntu.edu.sg, {†bob_two, ‡cy_three}@sutd.edu.sg"

@@ -512,9 +512,8 @@ impl Resolver {
           // (nor one whose address an undefined command glued a word's ink onto, before its `@`, which no word of the
           // source spells: `\and Bob\email{b@x.org}` reads "Bobb@x.org" — a name, as Perl's creator holds it, never the author
           // before's e-mail; an undefined command never changes the segmentation, `Event::glued_undef`)
-          let address_line = !addresses_in(&text).is_empty()
-            && only_addresses(&text)
-            && !line.events.iter().any(|e| e.glued_undef);
+          let address_line =
+            prints_only_addresses(&text) && !line.events.iter().any(|e| e.glued_undef);
           let names_line = !only_contacts
             && !address_line
             && ((column_first && !shared_column)
@@ -611,8 +610,7 @@ impl Resolver {
               // 17 `\and`-columns, 2603.28168, no affiliation of the last column's)
               if contact.label.is_none()
                 && contact.role.as_deref() == Some("affiliation")
-                && !addresses_in(&contact.text).is_empty()
-                && only_addresses(&contact.text)
+                && prints_only_addresses(&contact.text)
               {
                 let candidates: Vec<usize> =
                   (block_creators_start..self.out.creators.len()).collect();
@@ -736,7 +734,7 @@ impl Resolver {
           // line of addresses alone)
           if line.group_break
             && let Some(places) = unmarked_above
-            && (addresses_in(&text).is_empty() || !only_addresses(&text))
+            && !prints_only_addresses(&text)
           {
             self.continue_entry(&Continued::Joined(places.clone()), &text);
             for note in notes {
@@ -787,7 +785,7 @@ impl Resolver {
           // (a line of addresses alone, placed below, leaves the entry open: the unmarked line after it is the entry's, as
           // today's one `\\`-joined contact, no affiliation of every name — `$^2$CNRS, LAB \\ email \tt{…} \\ To appear in …`,
           // 1209.0869; 2606.23976, 0910.1386, 1411.2744)
-          let carried = if addresses_in(&text).is_empty() || !only_addresses(&text) {
+          let carried = if !prints_only_addresses(&text) {
             if let Some(carried) = carried {
               self.continue_line(index, &carried, &text, notes, above.last().copied());
               continues = Some(carried);
@@ -873,7 +871,7 @@ impl Resolver {
               && next.column == line.column
             {
               let next_text = events_text(&next.events);
-              if addresses_in(&next_text).is_empty() || !only_addresses(&next_text) {
+              if !prints_only_addresses(&next_text) {
                 break;
               }
               text = s!("{text} {next_text}");
@@ -1124,8 +1122,7 @@ impl Resolver {
       // (an entry of addresses alone is e-mails; one with other text beside its address is that text's affiliation, the
       // address in it, as a continued line's is — `1. Chester F. Carlson Center …, NY 14623; JHK's email:
       // jhk@cis.rit.edu`, astro-ph0202139, whose institutions were lost)
-      let role = if !addresses_in(&text).is_empty()
-        && only_addresses(&text)
+      let role = if prints_only_addresses(&text)
         && contacts
           .iter()
           .all(|c| c.role.as_deref() != Some("affiliation"))
