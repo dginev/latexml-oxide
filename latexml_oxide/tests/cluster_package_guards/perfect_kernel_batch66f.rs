@@ -74,6 +74,7 @@ fn authblk_affil_in_author_under_titling() {
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/authblk_affil_in_author_under_titling.tex"
   ));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  // (P4b2b: the names' printed marks, as pdflatex prints them)
   assert_eq!(
     element(&xml, "<creator", "</creator>"),
     "<creator role=\"author\">\n<personname>Ann Author<sup xml:id=\"id1\">1</sup></personname>\n<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Some University</contact>\n</creator>",

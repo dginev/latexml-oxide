@@ -34965,7 +34965,7 @@ kernel's `\end{tabular}` (pdflatex, 13 errors).
 
 **F0, P4a (2026-11-11): the marks query and the queue's requests on it.** `observer/argument_marks.rs`
 `argument_marks` reads an argument's Mark events from the same rehearsal as the separator query
-(`separators::read_argument`, the queries' one allowance, `rehearsal::for_a_query`): marks at the argument's own level (nest 0), outside its notes, no number suffix;
+(`separators::read_argument`, the queries' one allowance, `rehearsal::for_a_query`): marks at the argument's own level (#1009), outside its notes, no number suffix;
 `None` is unread, never "no marks". The queue's reading (`queue_reading.rs`) rehearses each queued author's name once
 (`queued_name`) and keys its requests by the printed text, as `\lx@sup@request@affiliation` does (#919:
 `printed_label_keys`); the affiliation side keys as `\lx@sup@setlabel@affiliation` (`set_label`). A document macro
@@ -34987,8 +34987,8 @@ repeated_list}` for B1); RED catalog repros `sectioning-frontmatter/llncs_macro_
 **P4d (2026-11-12): a class's numbered store read by meaning.** `affiliations.rs` `class_numbered_institutes` (llncs.cls's
 `\institutename` and its copies, sab/edpsci/baaa's `\refstepcounter{inst}` run) cuts the store's entries at the
 kernel's `\and` by meaning (`split_at_kernel_separators`, the cut of the llncs/aa dispatch: a macro holding `\and`), and
-reads the store's own marks at its level (`argument_marks::prints_marks`: a mark a macro prints is one, a boxed or a
-note's mark none; unread, the spelling, counted); `numbered_marks_requested` reads F0's printed-text marks.
+reads the store's own marks at its level (`argument_marks::prints_marks`: a mark a macro prints is one, one boxed with
+words or a note's none; unread, the spelling, counted); `numbered_marks_requested` reads F0's printed-text marks.
 `displaced_entries` asks it with no spelled `\and` gate. The `\institutename` declaration test stays (no run made).
 Guard `perfect_kernel_batchc1::class_numbered_institutes_read_by_meaning` (repros
 `sectioning-frontmatter/{class_numbered_institutes_macro_held_separator,class_numbered_institutes_boxed_store_mark,
@@ -35299,9 +35299,11 @@ parts every entry's). Each entry shows its mark (FIDELITY_CHARTER §2, P4S Q1). 
 flush digests a block's affiliation with `\lx@annotate@frontmatter` let to its `@now`, which no Cut reads. The marks
 gate reads the marks an argument prints at its own level (`argument_marks`, `prints_list_marks`): the level its words
 print at, inside the box when one box holds them all (names in a `\parbox` or a tabular, acmart's `\institution{…}`), a
-note's leading label counted for a list. The cutter splits the list at its top level only, so a list printed entirely
-inside one box is one entry (post-merge RED `ieee_marked_list_inside_one_parbox_is_one_entry_red`). A cut that labels no
-entry of a one-entry list leaves it whole (the call cut again would not end). The binding's own cutter (`binding_cut_list_attr`) and the token gate
+mark at or above it or in a box of its own, one holding no word (`at_own_level`: P4cR1, a `\raisebox` refmark,
+2307.12121; apa6's `$^{1}$\mbox{Univ A}`, 2508.05776), a note's leading label counted for a list. The cutter splits the
+list at its top level only, so a list printed entirely inside one box is one entry (post-merge RED
+`ieee_marked_list_inside_one_parbox_is_one_entry_red`). A cut that labels no entry of a one-entry list leaves it whole
+(the call cut again would not end). The binding's own cutter (`binding_cut_list_attr`) and the token gate
 (`queued_creators_have_marks`) are deleted.
 IEEEtran's `\author` reads an `\IEEEauthorblockA` at the top level of another's argument as conference mode prints it,
 on rows of its own in the outer's column (IEEEtran.cls:4653-4665): one led by a mark, or after a line of marks alone
@@ -35317,8 +35319,9 @@ authors).
 **Why**: one cut for every printed list; the binding's former cut dropped the marks it cut at (2601.01850, 1204.4183).
 **Witnesses**: IEEEtran 1705.01774, 1801.04010, 1504.01072, 1811.06030, 2310.18257, 2511.18221, 2512.10732,
 2609.16600 (each the base's entries with their marks shown); 2508.17623 (names in a `\parbox`, the link line kept);
-1801.00540 ("Red Hat Inc.," keeps its comma); 2605.05837 (the funding `\thanks` once); iopart 1205.6912.
-**Guard**: `perfect_kernel_batchc1::marked_list_cut_as_its_binding_declares` (21 rows).
+1801.00540 ("Red Hat Inc.," keeps its comma); 2605.05837 (the funding `\thanks` once); iopart 1205.6912; 2307.12121, 2311.01786 (a
+`\raisebox` refmark: the e-mail line the names' run), apa6 2508.05776 (each entry its name, the `$^{*}$` note once).
+**Guard**: `perfect_kernel_batchc1::marked_list_cut_as_its_binding_declares` (24 rows).
 **Open (post-merge REDs)**: `ieee_marked_list_email_block_last_address_nameless_red`,
 `ieee_marked_list_star_led_names_entries_nameless_red`, `iopart_marked_list_unmarked_first_line_every_authors_red` (the
 base's placements, pinned as today with each mark shown); `ieee_nested_affiliation_block_in_group_red` (an inner block

@@ -71,6 +71,7 @@ fn dotless_ieee_grades_between_names_are_their_memberships() {
 #[test]
 fn authblk_and_inside_a_whole_list_group_parts_the_names() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
+  // (P4b2b: the names' printed marks, as pdflatex prints them)
   assert_eq!(
     counted_creators(repro!("authblk_group_wrapped_tie_and_parts_names"), &[], 0,),
     r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1">a</sup></personname> <note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks" xml:id="id2">Corresponding author. Email: ann@alpha.edu</note> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">a</sup>University of Alpha, Alphaville</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id4">a</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id5">a</sup>University of Alpha, Alphaville</contact> </creator>"#

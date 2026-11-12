@@ -110,6 +110,7 @@ fn jheppub_emailadd_out_of_order_by_spelling() {
 fn iopart_ead_goes_to_the_author_it_spells() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("iopart_ead_goes_to_the_author_it_spells.tex");
+  // (P4b2b: the names' printed marks, as pdflatex prints them)
   assert_eq!(creators(&xml), [
     r#"<creator role="author"> <personname>A. Bal<sup xml:id="id1">1</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup> KIT, Karlsruhe</contact> </creator>"#,
     r#"<creator before=" " role="author"> <personname>B. Maier<sup xml:id="id3"><text font="italic" xml:id="id3.1">1,2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">1</sup> KIT, Karlsruhe</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id5">2</sup> ICL, London</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id6">benedikt.maier@cern.ch</text></contact> </creator>"#,
@@ -153,6 +154,7 @@ fn llncs_comma_before_inst_is_the_name_before() {
 fn iopart_ead_lists_are_an_address_each() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("iopart_ead_lists_are_an_address_each.tex");
+  // (P4b2b: the names' printed marks, as pdflatex prints them)
   assert_eq!(creators(&xml), [
     r#"<creator role="author"> <personname>E. Mortsell<sup xml:id="id1">1</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup> Univ S</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id3">mortsell@s.se</text></contact> </creator>"#,
     r#"<creator before=" " role="author"> <personname>C. Clarkson<sup xml:id="id4">2</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id5">2</sup> Univ C</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id6">chris.clarkson@c.za</text></contact> </creator>"#,
@@ -174,6 +176,7 @@ fn iopart_ead_lists_are_an_address_each() {
 fn iopart_ead_after_all_addresses_takes_no_mark() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("iopart_ead_after_all_addresses_takes_no_mark.tex");
+  // (P4b2b: the names' printed marks, as pdflatex prints them)
   assert_eq!(creators(&xml), [
     r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1">1</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup> Univ A</contact> </creator>"#,
     r#"<creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3">2</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">2</sup> Univ B</contact> </creator>"#,
@@ -234,6 +237,7 @@ fn iopart_ead_corresponding_author_legend() {
   let xml = convert_repro!("iopart_ead_corresponding_author_legend.tex");
   // (97e, iopart written: the `$^*$` line the legend of Bob Baker's mark, a correspondence note — FIDELITY_CHARTER §4
   // ruling 2, as pdflatex prints it under the addresses)
+  // (P4b2b: the names' printed marks, as pdflatex prints them)
   assert_eq!(creators(&xml), [
     r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup> Univ A, Town</contact> </creator>"#,
     r#"<creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3"><text font="italic" xml:id="id3.1">1,∗</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">1</sup> Univ A, Town</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id5">zq77@x.org</text></contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="∗" role="thanks" xml:id="id6"><sup xml:id="id6.1">∗</sup> Author to whom any correspondence should be addressed.</note> </creator>"#,
@@ -375,6 +379,7 @@ fn jheppub_emailadd_star_without_legend_stays_the_blocks() {
 fn iopart_ead_star_without_legend_stays_the_blocks() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("iopart_ead_star_without_legend_stays_the_blocks.tex");
+  // (P4b2b: the names' printed marks, as pdflatex prints them)
   assert_eq!(creators(&xml), [
     r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup> Univ A, Town</contact> </creator>"#,
     r#"<creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3"><text font="italic" xml:id="id3.1">1,∗</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">1</sup> Univ A, Town</contact> </creator>"#,
@@ -505,6 +510,7 @@ fn jheppub_note_number_carried_by_two_stays_the_blocks() {
 #[test]
 fn iopart_ead_corresponding_author_of_another_group() {
   let xml = convert_repro!("iopart_ead_corresponding_author_of_another_group.tex");
+  // (P4b2b: the names' printed marks, as pdflatex prints them)
   assert_eq!(creators(&xml), [
     creator(true, "A. Bal", ""),
     creator(false, "C. Cole", &contact("affiliation", "KIT, Karlsruhe")),
@@ -534,6 +540,7 @@ fn iopart_ead_corresponding_author_not_under_its_mark() {
   // (97e, iopart written: the `$^*$` line the legend of Cat Cole's mark, a correspondence note; zq77@ the block's
   // still, the corresponding step looking among the requesters of the entry it prints under,
   // `resolver::post::answer_sequence`)
+  // (P4b2b: the names' printed marks, as pdflatex prints them)
   assert_eq!(creators(&xml), [
     r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">2</sup> Univ B, City</contact> </creator>"#,
     r#"<creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3"><text font="italic" xml:id="id3.1">2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">2</sup> Univ B, City</contact> </creator>"#,

@@ -109,6 +109,7 @@ fn a_run_in_institute_store_holding_several_marks_is_cut_at_the_block() {
 /// each line its marked author's. Witnesses 2608.28486, 2512.15449, 2602.03759, 2606.14342, 2609.32125.
 #[test]
 fn a_run_in_affiliation_setter_line_is_its_marked_authors() {
+  // (P4b2b: the names' printed marks, as pdflatex prints them)
   assert_eq!(
     converted(repro!("run_in_affiliation_setter_without_a_line_break"), 0),
     r#"<title>A Title</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ A, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3"><text font="italic" xml:id="id3.1">2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">2</sup>Univ B, City</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#

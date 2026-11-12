@@ -146,8 +146,8 @@ fn a_collaboration_remark_is_the_names_contact() {
   let babar = "<contact role=\"collaboration\">(for the <text font=\"slanted\">B<text fontsize=\"90%\">A</text>B<text \
                fontsize=\"90%\">AR</text></text> collaboration)</contact>";
   assert_eq!(collaborations(&run(tex).1), [babar]);
-  // (3: the name written as its text since P4b2b shows its requests, and `\fnref{c1}`'s mark, which none can show, is
-  // counted — `unanswered_mark_lost`; lost silently before)
+  // (3: the name written as its text since P4b2b shows its requests, and `\fnref{c1}`'s printed "1", which none can
+  // show, is counted — `unanswered_mark_lost`, its `\fntext[c1]` kept; lost silently before)
   let two = both(
     repro!("elsarticle_collaboration_remark_note_reference_is_the_names"),
     3,

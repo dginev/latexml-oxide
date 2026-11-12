@@ -9,8 +9,9 @@
 %   members is at the end."
 % engines: rust 97b: the name "Ann Able (for the XYZ Collaboration)"; rust 97d r1: 2 Warnings, address before the
 %   collaboration; perl: not run
-% expect:  0 errors, 0 warnings; one creator Ann Able: collaboration "(for the XYZ Collaboration)", address Univ X, the
-%   note
+% expect:  0 errors, 3 warnings (P4b2b: the name and the remark written as their text, and the printed "1" of
+%   `\fnref{c1}` lost from the name, `unanswered_mark_lost`); one creator Ann Able: collaboration "(for the XYZ
+%   Collaboration)", address Univ X, the note
 % status:  RED (97d r1) -> GREEN (97d r2)
 % preload: ar5iv.sty
 \documentclass{elsarticle}

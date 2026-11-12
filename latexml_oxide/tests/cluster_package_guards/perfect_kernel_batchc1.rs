@@ -778,6 +778,55 @@ fn marked_list_cut_as_its_binding_declares() {
       ],
       &[],
     ),
+    // (P4cR1, `at_own_level`: a mark in a box of its own counts — names and lists, IEEEtran, 2307.12121, red on P4b2b:
+    // lj1994@ on a nameless creator; REVTeX's per-call cut, red: the marks lost, 2 Warnings — and a mark above words
+    // each in a box, apa6, 2508.05776, red: the whole list in every note)
+    (
+      repro!("ieee_marked_list_marks_in_boxes_of_their_own"),
+      0,
+      &[
+        &[
+          "Ann Able 1",
+          "affiliation=1 Univ A, Town",
+          "email=ann@x.org",
+        ],
+        &[
+          "Bob Baker 2,1",
+          "affiliation=1 Univ A, Town",
+          "affiliation=2 Univ B, City",
+          "email=lj1994@y.org",
+        ],
+        &[
+          "Cy Cole 1",
+          "affiliation=1 Univ A, Town",
+          "email=cole@z.org",
+        ],
+      ],
+      &[],
+    ),
+    (
+      repro!("revtex_marked_list_marks_in_boxes_of_their_own"),
+      0,
+      &[&["Ann Able 1", "affiliation=1 Univ A, Town A"], &[
+        "Bob Baker 2",
+        "affiliation=2 Univ B, Town B",
+      ]],
+      &[],
+    ),
+    (
+      repro!("apa6_marked_list_entries_in_boxes"),
+      0,
+      &[
+        &["Ann Able 1 ∗", "affiliation=Univ A, Town"],
+        &["Bob Baker 2 ∗", "affiliation=Univ B, City"],
+        &["Cy Cole 3 ∗", "affiliation=Univ C, Ville"],
+      ],
+      &[
+        "note:thanks=∗ Equal contribution",
+        "note:thanks=∗ Equal contribution",
+        "note:thanks=∗ Equal contribution",
+      ],
+    ),
   ];
   let mut failures = Vec::new();
   for ((name, tex), warnings, expected, expected_notes) in rows {
