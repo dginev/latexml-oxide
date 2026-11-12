@@ -1,0 +1,21 @@
+% mechanism: bibunits — a unit is open GLOBALLY (bibunits.sty `\bibunit`: `\global\let\cite\bu@cite`), so a
+%   `\section` unit started inside a group (here `{multicols}`) still holds the `\cite` after that group ends.
+% witness: synthetic (revBU1 B1)
+% oracle:  pdflatex + bibtex (bu1): 0 errors; bu1.aux holds alpha and zeta; the unit References [1] Abel [2] Zimmer
+%   (both cites print [?]: the unit's `\bibcite`s are never read back here, as in bibunits_sectionunit.tex)
+% engines: rust int160c: both cites inlist="bu1", both linked; BU1: `zeta` unstamped, the References Abel only,
+%   `zeta` dangles; perl: both bu1 (its \cite stamps the counter's unit everywhere)
+% expect:  0 errors; both cites inlist="bu1" and linked to the unit's References
+% status:  RED (BU1) -> GREEN (BU1b)
+\documentclass{article}
+\usepackage{bibunits}
+\usepackage{multicol}
+\begin{document}
+\bibliographyunit[\section]
+\begin{multicols}{2}
+\section{One}
+One \cite{alpha}.
+\end{multicols}
+After \cite{zeta}.
+\putbib[bibunits_refs]
+\end{document}

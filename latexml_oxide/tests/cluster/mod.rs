@@ -273,7 +273,7 @@ pub fn convert_and_post_opts(source: &str, navigationtoc: Option<&str>) -> Strin
 }
 
 /// Run post-processing over already-converted core XML.
-fn post_with(xml: &str, navigationtoc: Option<&str>) -> String {
+pub fn post_with(xml: &str, navigationtoc: Option<&str>) -> String {
   // No `stylesheet`: the assertions are about MakeBibliography, so stop at the
   // post-processed ltx XML rather than running XSLT into HTML.
   let opts = latexml::post::PostOptions {

@@ -1,0 +1,16 @@
+% mechanism: bibunits beside chapterbib — `\end{bibunit}` lets `\cite` back to `\std@cite` (bibunits.sty
+%   `\endbibunit`), which writes where it did before the unit: the included chapter's own `.aux` (chapterbib).
+% witness: synthetic (revBU1's chapterbib sibling)
+% oracle:  pdflatex + bibtex (main, chapter, bu1): 0 errors; chap.aux alpha; chapter aux zeta, Smith2020; bu1.aux mid
+% engines: rust int160c: alpha, zeta inlist="bu0", Smith2020 "bu1"; BU1: zeta "bu0", Smith2020 "bu1"; perl: not run
+% expect:  0 errors; alpha no inlist, zeta and Smith2020 the chapter's list, mid "bu1"
+% status:  RED (int160c, BU1) -> GREEN (BU1b)
+\documentclass{report}
+\usepackage{chapterbib}
+\usepackage{bibunits}
+\begin{document}
+Main \cite{alpha}.
+\include{bibunits_chapterbib_chapter}
+\bibliographystyle{plain}
+\bibliography{bibunits_refs}
+\end{document}

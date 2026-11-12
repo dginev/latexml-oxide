@@ -19285,3 +19285,28 @@ More.
 Rust (PI1): the bindings define and load what the originals do; guard
 `perfect_kernel_batch65k::internals_the_originals_define`. Upstream: on the patch list (BM Q&A QA80).
 
+## 1223. bibunits: every `\cite` carries a unit list, even outside every unit
+
+`bibunits.sty.ltxml` L32-41 redefines `\cite` to stamp `CITE_UNIT` = `bu\the\@bibunitauxcnt` on every citation, so a
+cite before any `{bibunit}` gets `inlist="bu0"` (a list no bibliography has) and a cite after `\end{bibunit}` gets the
+last unit's `bu<N>`, which lists it in that unit's References. In bibunits.sty only `\bibunit` lets `\cite` to
+`\bu@cite`, and `\endbibunit` lets it back, so such a cite goes to the main `.aux` alone (BM, Q&A Q2.7: "the cite element
+should not have an inlist attribute"). PERL-ORIGIN, 0 errors; Perl's CrossRef then leaves `bu0` cites dangling (#50).
+Fixed in Rust (BU1, BU1b): `\lx@bibunits@setglobal`/`resetglobal` stamp only while a unit is open. As in TeX the unit
+opens and closes globally: `start_bibunit` (`\lx@startbibunit`, `{bibunit}`) opens it in whatever group it starts, and
+`\end{bibunit}` or an argless `\bibliographyunit` closes it and gives `CITE_UNIT` back the value it had before the unit
+(none, or chapterbib's chapter). Census A/B: 18 of 32 bibunits
+papers drop `inlist="buN"` from cites outside a unit (2510.13035: 11 cites after its unit), links and E/F/W unchanged.
+Guard `06_cluster_bibliography::bibunits_cite_resolves_against_the_main_bibliography` (fixtures `bibunits_cite.tex`,
+`bibunits_unit_twin.tex`, `bibunits_sectionunit.tex`, `bibunits_sectionunit_group.tex`,
+`bibunits_chapterbib/bibunits_chapterbib.tex`). Upstream patch list QA80. Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{bibunits}
+\begin{document}
+First \cite{zeta}, then \cite{alpha}.
+\bibliographystyle{plain}
+\bibliography{refs}
+\end{document}
+```

@@ -9,6 +9,7 @@ use cluster::{
   convert_and_post, convert_and_post_clean, convert_and_post_contrib_clean,
   convert_and_post_contrib_expecting, convert_and_post_contrib_logging, convert_and_post_logging,
   convert_to_xml, convert_to_xml_ar5iv, convert_to_xml_contrib, convert_to_xml_contrib_clean,
+  convert_to_xml_contrib_clean_logging, post_with,
 };
 
 /// bbl/bib precedence matrix for `\lx@ifusebbl` (latex_constructs.rs) — the
@@ -1200,29 +1201,119 @@ fn sn_jnl_apa_option_loads_apacite_bibliography_macros() {
   );
 }
 /// Loading `bibunits` — even without ever opening a `bibunit` environment —
-/// made EVERY citation dangle. `\cite` runs bibunits' `\lx@bibunits@resetglobal`,
-/// stamping `CITE_UNIT=bu0`, so the bibref asks for `BIBLABEL:bu0:<key>`; the
-/// document's one `\bibliography` registers its bibitems under the default
-/// `bibliography` list, and CrossRef searched the unit list ONLY. Witness
-/// 2303.06077 (revtex4-2 + bibunits): 93 bibitems rendered, 93 keys dangling,
-/// 0 links. Deleting the single `\usepackage{bibunits}` line resolves the cite,
-/// which is the whole defect in one bisect.
+/// made EVERY citation dangle: `\cite` stamped `CITE_UNIT=bu0` and CrossRef
+/// searched the unit list only (OD #59, KNOWN_PERL_ERRORS #50; witness
+/// 2303.06077: 93 bibitems, 93 keys dangling, 0 links). Outside every unit
+/// `\cite` is the kernel's (bibunits.sty: only `\bibunit` lets it to
+/// `\bu@cite`, globally), so its bibref carries no `inlist` (KNOWN_PERL_ERRORS
+/// #1223, BM Q2.7); inside a unit it keeps `bu1`, `\cite*` adds the main list.
+/// Rows: no unit; a `{bibunit}` with cites before and after it;
+/// `\bibliographyunit[\section]` ended by an argless call (the
+/// `\lx@startbibunit` path); a section unit opened inside a group; a
+/// `{bibunit}` in a chapterbib chapter. Each row: the core's bibrefs in order,
+/// then each cite's link after post.
 #[test]
 fn bibunits_cite_resolves_against_the_main_bibliography() {
-  let x = convert_and_post("tests/cluster_regressions/bibunits_cite.tex");
-  // The entry reaches the References either way — the defect is the LINK.
-  // bibunits: the bibliography itself is missing: the WHOLE first <bibitem> element is pinned.
-  latexml::util::test::assert_element(
-    &x,
-    "bibitem",
-    &[],
-    r##"<bibitem class="ltx_bib_article" key="Smith2020" type="article" xml:id="bib.bib1" fragid="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Smith</tag><tag class="ltx_bib_year" role="year">2020</tag><tag class="ltx_bib_title" role="title">On examples</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">J. Smith</text><text class="ltx_bib_year"> (2020)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">On examples</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">J. Repro</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
-  );
-  assert!(
-    !x.contains("ltx_missing_citation"),
-    "bibunits: \\cite{{Smith2020}} dangles — CrossRef only searched the `bu0` \
-     unit list and never fell back to the main `bibliography` list:\n{x}"
-  );
+  const FREE: &str = r#"separator="," yyseparator=",""#;
+  let rows: [(&str, Vec<String>, &[&str]); 5] = [
+    (
+      "tests/cluster_regressions/bibunits_cite.tex",
+      vec![format!(r#"<bibref bibrefs="Smith2020" {FREE}/>"#)],
+      &["bib.bib1"],
+    ),
+    (
+      "tests/cluster_regressions/bibunits_unit_twin.tex",
+      vec![
+        format!(r#"<bibref bibrefs="Smith2020" {FREE}/>"#),
+        format!(r#"<bibref bibrefs="zeta" class="ltx_cite_sort" inlist="bu1" {FREE}/>"#),
+        format!(
+          r#"<bibref bibrefs="alpha" class="ltx_cite_sort" inlist="bibliography bu1" {FREE}/>"#
+        ),
+        format!(r#"<bibref bibrefs="mid" {FREE}/>"#),
+      ],
+      // `bib` is the unit's (Abel, Zimmer), `biba` the main one; its Zimmer (biba.bib2) is
+      // `bibunits_main_list_holds_unit_cites_red.tex`.
+      &["biba.bib1", "bib.bib1", "biba.bib3", "biba.bib4"],
+    ),
+    (
+      "tests/cluster_regressions/bibunits_sectionunit.tex",
+      vec![
+        format!(r#"<bibref bibrefs="Smith2020" {FREE}/>"#),
+        format!(r#"<bibref bibrefs="zeta" inlist="bu1" {FREE}/>"#),
+        format!(r#"<bibref bibrefs="mid" {FREE}/>"#),
+      ],
+      &["biba.bib1", "bib.bib1", "biba.bib3"],
+    ),
+    (
+      // The unit opened inside `{multicols}` still holds the cite after it: a unit is open globally.
+      "tests/cluster_regressions/bibunits_sectionunit_group.tex",
+      vec![
+        format!(r#"<bibref bibrefs="alpha" inlist="bu1" {FREE}/>"#),
+        format!(r#"<bibref bibrefs="zeta" inlist="bu1" {FREE}/>"#),
+      ],
+      // The ids follow the `.bib`'s order (zeta first); the References print Abel [1], as plain does.
+      &["bib.bib2", "bib.bib1"],
+    ),
+    (
+      // `\end{bibunit}` gives the cite back to the list it had before the unit: chapterbib's.
+      "tests/cluster_regressions/bibunits_chapterbib/bibunits_chapterbib.tex",
+      vec![
+        format!(r#"<bibref bibrefs="alpha" {FREE}/>"#),
+        format!(r#"<bibref bibrefs="zeta" inlist="bibunits_chapterbib_chapter" {FREE}/>"#),
+        format!(r#"<bibref bibrefs="mid" class="ltx_cite_sort" inlist="bu1" {FREE}/>"#),
+        format!(r#"<bibref bibrefs="Smith2020" inlist="bibunits_chapterbib_chapter" {FREE}/>"#),
+      ],
+      // The unit's (`bib`), the chapter's (`biba`: Smith, Zimmer), the main one (`bibb`).
+      &["bibb.bib3", "biba.bib2", "bib.bib1", "biba.bib1"],
+    ),
+  ];
+  let attr = |el: &str, name: &str| -> Option<String> {
+    let at = el.find(&format!(" {name}=\""))? + name.len() + 3;
+    Some(el[at..at + el[at..].find('"')?].to_string())
+  };
+  for (src, bibrefs, links) in rows {
+    let (core, log) = convert_to_xml_contrib_clean_logging(src);
+    assert_eq!(
+      latexml::util::test::warning_count(&log),
+      0,
+      "{src}: warnings\n{log}"
+    );
+    let got: Vec<&str> = core
+      .match_indices("<bibref ")
+      .map(|(i, _)| &core[i..i + core[i..].find("/>").unwrap() + 2])
+      .collect();
+    assert_eq!(got, bibrefs, "{src}: the bibrefs' unit lists");
+    latexml_core::util::logger::bind_log();
+    let x = post_with(&core, None);
+    let post_log = latexml_core::util::logger::flush_log();
+    assert_eq!(
+      (
+        latexml::util::test::error_count(&post_log),
+        latexml::util::test::warning_count(&post_log)
+      ),
+      (0, 0),
+      "{src}: post E/W\n{post_log}"
+    );
+    let cites: Vec<String> = x
+      .split("<cite ")
+      .skip(1)
+      .filter_map(|c| attr(&c[..c.find("</cite>").unwrap()], "idref"))
+      .collect();
+    assert_eq!(cites, links, "{src}: each cite's bibitem\n{x}");
+    assert!(
+      !x.contains("ltx_missing_citation"),
+      "{src}: a cite dangles:\n{x}"
+    );
+    if src.ends_with("bibunits_cite.tex") {
+      // The entry reaches the References either way — the defect was the LINK.
+      latexml::util::test::assert_element(
+        &x,
+        "bibitem",
+        &[],
+        r##"<bibitem class="ltx_bib_article" key="Smith2020" type="article" xml:id="bib.bib1" fragid="bib.bib1"><tags><tag class="ltx_bib_number" role="number">1</tag><tag class="ltx_bib_author" role="authors">Smith</tag><tag class="ltx_bib_year" role="year">2020</tag><tag class="ltx_bib_title" role="title">On examples</tag><tag class="ltx_bib_key" close="]" open="[" role="refnum">1</tag></tags><bibblock xml:space="preserve"><text class="ltx_bib_author">J. Smith</text><text class="ltx_bib_year"> (2020)</text></bibblock><bibblock xml:space="preserve"><text class="ltx_bib_title">On examples</text>.</bibblock><bibblock xml:space="preserve"><text class="ltx_bib_journal">J. Repro</text>.</bibblock><bibblock class="ltx_bib_cited">Cited by: <ref idref="p1" show="typerefnum">p1</ref>.</bibblock></bibitem>"##,
+      );
+    }
+  }
 }
 /// Witness 2605.00490: a JabRef `.bib` self-declaring `% Encoding: Cp1252`.
 /// MakeBibliography read it with `read_to_string`, which hard-errors on the
