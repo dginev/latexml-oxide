@@ -7722,8 +7722,7 @@ fn row_calls(tail: Tokens, made: i64, at_maketitle: bool, under_block: bool) -> 
     Some(marked),
     None,
     tail,
-    // (token reading until P4c, F0 report)
-    queued_creators_have_marks(),
+    queued_authors_marked()?,
     authors_queued,
   )
 }
@@ -7977,8 +7976,7 @@ LoadDefinitions!({
       Some(marked),
       None,
       stuff,
-      // (token reading until P4c, F0 report)
-      numbered || queued_creators_have_marks(),
+      numbered || queued_authors_marked()?,
       true,
     )?))
   });
@@ -7996,8 +7994,7 @@ LoadDefinitions!({
       Some(marked),
       None,
       stuff,
-      // (token reading until P4c, F0 report)
-      queued_creators_have_marks(),
+      queued_authors_marked()?,
       true,
     )?))
   });

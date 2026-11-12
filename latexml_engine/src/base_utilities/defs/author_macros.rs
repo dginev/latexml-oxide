@@ -3,8 +3,8 @@
 
 use super::{
   frontmatter_api::{
-    PRINTED_LABEL, affiliation_calls, affiliation_is_marked, binding_cut_list_attr,
-    blank_line_marks_dropped, shared_affiliation_calls, unalias_mark_commands,
+    PRINTED_LABEL, affiliation_calls, affiliation_is_marked, blank_line_marks_dropped,
+    shared_affiliation_calls, unalias_mark_commands,
   },
   *,
 };
@@ -189,18 +189,12 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     let late = record_author_call("\\lx@add@author@split", &names, false, false, keyvals.as_ref(), false);
     whole_block_call(names, false, keyvals, late)
   });
-  // That class's affiliation command, under its authors (informs4.cls:1199 `\AFF{$^a$Univ A}`): when the queued authors
-  // carry marks, its marked lines are affiliations labelled by their marks, which go to the authors requesting them
-  // (`affiliation_calls`; 2609.17368, 22690, 28084); otherwise it is one affiliation, of the last author or as the
-  // optional attributes place it (apa7's unnumbered list, `annotate=all`).
+  // That class's affiliation command, under its authors (informs4.cls:1199 `\AFF{$^a$Univ A}`): one affiliation call,
+  // placed as the optional attributes say (apa7's unnumbered list, `annotate=all`); its marked lines, where the names
+  // request their marks, are cut by the one cut the API makes of every contact (the Cut, else the reading's), each mark
+  // shown and its entry the requesters' (2609.17368, 22690, 28084).
   DefMacro!("\\lx@add@affiliation@marked[]{}", sub[(attr, stuff)] {
-    if affiliation_is_marked(&stuff) {
-      // (its marked entries name the list, which the frontmatter API's Cut then cuts no second time: `CUT_LIST`)
-      let named = Some(binding_cut_list_attr(&stuff));
-      Ok(Tokens::new(affiliation_calls(None, named, None, stuff, true, true)?))
-    } else {
-      Ok(Invocation!(T_CS!("\\lx@add@affiliation"), vec![attr, Some(stuff)]))
-    }
+    Ok(Invocation!(T_CS!("\\lx@add@affiliation"), vec![attr, Some(stuff)]))
   });
   // Rust-only: an address a class prints under a row of names it shares (aistats's `\aistatsaddress` under
   // `\aistatsauthor{A \And B \And C}` when its columns are not the names', 1806.02924, 2510.09534): marked,
@@ -208,8 +202,8 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // (`annotate=run`), without its e-mail lines, whose addresses are the authors' e-mails as a marked list's are
   // (`shared_affiliation_calls`).
   DefMacro!("\\lx@add@affiliation@shared[]{}", sub[(attr, stuff)] {
-    if affiliation_is_marked(&stuff) {
-      Ok(Tokens::new(affiliation_calls(None, None, None, stuff, true, true)?))
+    if affiliation_is_marked(&stuff)? {
+      Ok(Invocation!(T_CS!("\\lx@add@affiliation"), vec![attr, Some(stuff)]))
     } else {
       Ok(Tokens::new(shared_affiliation_calls(attr, stuff)?))
     }

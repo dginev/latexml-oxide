@@ -2355,13 +2355,20 @@ fn mark_led_pieces_keeping(events: &[Event], punctuation: bool) -> Vec<Vec<Event
       EventKind::Mark if event.ordinal => ink = true,
       // (an exponent on a base its formula prints, `OR $97403^{3}$ Paris` — 2203.01892 —, is glued to no ink before it,
       // unless a name requests it: `Lab $5^{2}$Univ Y` under `Bob Baker$^{2}$`, revISO1 S1)
+      // (and, where names request marks, one they request: `$^{1}$Laboratory for $^{3}$He Studies` keeps its isotope, P4S c3)
       EventKind::Mark
         if ink
           && !after_sep
-          && (event
-            .formula
-            .is_none_or(|f| f.base != Some(MarkBase::Posted))
-            || is_requested(event, requested.get_or_init(|| names_requested(events))))
+          && {
+            let requested = requested.get_or_init(|| names_requested(events));
+            if requested.is_empty() {
+              event
+                .formula
+                .is_none_or(|f| f.base != Some(MarkBase::Posted))
+            } else {
+              is_requested(event, requested)
+            }
+          }
           && lead_kind.is_some()
           && kind(event) == lead_kind
           && name_follows(at) =>
@@ -2370,7 +2377,16 @@ fn mark_led_pieces_keeping(events: &[Event], punctuation: bool) -> Vec<Vec<Event
         ink = false;
         continue;
       },
-      EventKind::Mark if after_sep && ink => {
+      // (a number or letter mark no name requests glued to the word after it is that word's prescript, after a comma too:
+      // `$^{2}$Univ Y, $^{3}$He Lab`, ISO1's elsarticle RED)
+      EventKind::Mark
+        if after_sep
+          && ink
+          && !(!event.symbol && !event.space_after && name_follows(at) && {
+            let requested = requested.get_or_init(|| names_requested(events));
+            !requested.is_empty() && !is_requested(event, requested)
+          }) =>
+      {
         pieces.push(vec![event.clone()]);
         ink = false;
         after_sep = false;

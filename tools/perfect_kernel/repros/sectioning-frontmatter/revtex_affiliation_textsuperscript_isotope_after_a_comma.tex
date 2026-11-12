@@ -3,8 +3,9 @@
 % witness: synthetic (ISO1)
 % oracle:  pdflatex (TL 2025 revtex4-1) 0 errors: "1 Univ X / 2 Univ Y, 3He Lab"
 % engines: rust int160c = ISO1 = 0 errors, 0 warnings: Baker "Univ Y", "He Lab" a nameless creator's, the "3" dropped silently
+%          P4c: Able "1 Univ X"; Baker "2 Univ Y, 3He Lab"
 % expect:  0 errors, 0 warnings; Able "Univ X"; Baker "Univ Y, ³He Lab"
-% status:  RED (int160c, ISO1) — open: the queue-time pre-splitter, ISO1 report
+% status:  RED (int160c, ISO1) -> GREEN (P4c; the glued path of revtex_affiliation_glued_isotope_after_a_comma, no guard row of its own)
 % preload: ar5iv.sty
 \documentclass{revtex4-1}
 \begin{document}

@@ -3,7 +3,7 @@
 //! "no marks"; a caller falls back to its token reading, counted ([`count_unread`]).
 
 use super::{
-  events::{Event, EventKind},
+  events::{self, Event, EventKind},
   separators::{ArgumentReading, read_argument},
   *,
 };
@@ -59,4 +59,18 @@ pub fn prints_marks(arg: &Tokens, caller: &str) -> Result<bool> {
       author_mark_position(arg).is_some()
     },
   })
+}
+
+/// Whether `arg` prints a mark of its own ([`argument_marks`]) whose label a queued name requests (`requested_labels`);
+/// unread, its tokens' marks, counted for `caller`. A class's numbered store declines its numbers for its own marks only
+/// when the names ask for them (revP4d S1: `\ma` printing `\textsuperscript{a}` under `\inst{1}`, numbered 1 and 2).
+pub fn prints_requested_marks(arg: &Tokens, caller: &str) -> Result<bool> {
+  let Some(marks) = argument_marks(arg)? else {
+    count_unread(caller);
+    return Ok(author_mark_position(arg).is_some());
+  };
+  let requested = events::names_requested(&[]);
+  Ok(marks.iter().any(|mark| {
+    mark.role.as_deref() != Some("footnotemark") && events::is_requested(mark, &requested)
+  }))
 }

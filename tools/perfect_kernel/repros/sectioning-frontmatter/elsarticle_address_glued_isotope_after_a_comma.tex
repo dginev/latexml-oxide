@@ -3,8 +3,9 @@
 % witness: synthetic (ISO1)
 % oracle:  pdflatex (TL 2025) 0 errors: "1 Univ X / 2 Univ Y, 3He Lab"
 % engines: rust int160c = ISO1 = 0 errors, 0 warnings: Able "1 Univ X" + "3 He Lab", Baker "3 He Lab" + "2 Univ Y"
+%          P4c: Able "1 Univ X"; Baker "2 Univ Y, 3He Lab"
 % expect:  0 errors, 0 warnings; Able "1 Univ X"; Baker "2 Univ Y, ³He Lab" (decided by the requested marks)
-% status:  RED (int160c, ISO1) — open: a glued mark no author requests, ISO1 report
+% status:  RED (int160c, ISO1) -> GREEN (P4c: a number or letter mark no name requests glued to the word after it is that word's prescript; the reading's `mark_led_pieces` after a separator; probe on P4c-rel 54e6f917; guard row not yet written: P4c stopped at its bound)
 % preload: ar5iv.sty
 \documentclass{elsarticle}
 \begin{document}

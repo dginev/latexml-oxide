@@ -4,8 +4,9 @@
 % witness: synthetic (ISO1 sibling of revtex_affiliation_isotope_prescript_keeps_its_line; 2105.07958)
 % oracle:  pdflatex (TL 2025 revtex4-1) 0 errors: "1 Univ X / 2 Univ Y, 3He Lab"
 % engines: rust int160c = ISO1 = 0 errors, 0 warnings: Baker "Univ Y", "He Lab" a nameless creator's, the "3" dropped silently
+%          P4c: Able "1 Univ X"; Baker "2 Univ Y, ³He Lab" (the list's marks shown)
 % expect:  0 errors, 0 warnings; Able "Univ X"; Baker "Univ Y, ³He Lab"
-% status:  RED (int160c, ISO1) — open: the queue-time pre-splitter, ISO1 report
+% status:  RED (int160c, ISO1) -> GREEN (P4c: a number or letter mark no name requests glued to the word after it is that word's prescript; probe on P4c-rel 54e6f917; guard row not yet written: P4c stopped at its bound)
 % preload: ar5iv.sty
 \documentclass{revtex4-1}
 \begin{document}

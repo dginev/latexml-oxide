@@ -1,0 +1,15 @@
+% mechanism: h2's request rule on a third, unmarked contact line after two marked ones: the unmarked line joins Univ Y and the names lose their marks
+% witness: synthetic (revISO1c S1 probe h5)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2 / 1Univ X / 2Univ Y / Lab of 10 m3 Tanks, 3He Center"
+% engines: rust 9d38af1d10 = P4c: 0 E, 1 W; Ann "Univ X", Bob "Univ Y Lab of 10 m Tanks, He Center" (the 3s lost)
+% expect:  0 errors; Ann "1 Univ X", Bob "2 Univ Y", the third line the block's with its 3s
+% status:  RED (9d38af1d10, P4c)
+% moves:   as kernel_author_line_exponent_on_a_contact_line_counted_as_a_request
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$\\ $^{1}$Univ X\\ $^{2}$Univ Y\\ Lab of 10 m$^{3}$ Tanks, ${\rm ^{3}He}$ Center}
+\maketitle
+Text.
+\end{document}

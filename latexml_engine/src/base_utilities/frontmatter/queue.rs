@@ -300,17 +300,6 @@ pub fn queued_authors_carry_entry_mark(affiliation: &Tokens) -> Result<bool> {
   })
 }
 
-/// Does a queued creator carry superscript marks (`\author{A\textsuperscript{1}}`) for affiliations to be matched
-/// against? Token reading until P4c (F0 report).
-pub fn queued_creators_have_marks() -> bool {
-  with_value("frontmatter_raw", |v| match v {
-    Some(Stored::FrontmatterRaw(queue)) => queue
-      .iter()
-      .any(|entry| entry.0 == "ltx:creator" && author_mark_position(&entry.2).is_some()),
-    _ => false,
-  })
-}
-
 /// Is a frontmatter item with this tag queued (`frontmatter_raw`) or already digested into the
 /// frontmatter (`frontmatter`, which `digest_front_matter` fills at `\maketitle`; a pending
 /// annotation stub is not an item)?
