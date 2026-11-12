@@ -19448,8 +19448,10 @@ The classes' `thebibliography` (article.cls:573) runs `\usecounter{enumiv}`, whi
 (asl.cls:5926-5927 `\composelist`, :5665 the aux line; witnesses 1005.4193, 0705.0395) reads `\c@`: on the trigger below
 Perl raises 2 Errors (`Error:undefined:\c@`, `Error:unexpected:\the\c@`) and prints 0 where pdflatex prints 1, cleanly. Rust: `begin_bibliography_clean`
 also names it, and the kernel list setup numbers only under `\@nmbrlisttrue` (latex.ltx:16024), so memoir.cls:4580's raw
-`\list` inside the bibliography stays unnumbered. Guard `perfect_kernel_batchga1::an_undefined_counter_register_is_the_error_tex_raises`
-(rows listctr_after_thebibliography, raw_list_numbers_only_under_nmbrlist). Minimal trigger:
+`\list` inside the bibliography stays unnumbered. The bibliography does not set `\@nmbrlisttrue`: our `\bibitem` steps no
+enumiv, so a raw `\@trivlist` there would be numbered from 0 (RED `index-bib/bibitem_steps_the_list_counter_red`, post-merge).
+Guard `perfect_kernel_batchga1::an_undefined_counter_register_is_the_error_tex_raises` (rows listctr_after_thebibliography,
+raw_list_numbers_only_under_nmbrlist, raw_trivlist_in_thebibliography_invents_no_number). Minimal trigger:
 
 ```latex
 \documentclass{article}
@@ -19469,8 +19471,10 @@ latex.ltx:10127 `\def\value#1{\csname c@#1\endcsname}`: for a counter not yet de
 `\relax` (tex.web §372) with no diagnostic, so an `\edef` keeps the token for a later `\newcounter`. Perl's `\value`
 (latex_constructs.pool.ltxml:3047) returns the bare `T_CS('\c@<ctr>')`, which the `\edef` expands: `Error:undefined:\c@<ctr>`
 and a "redefining" Warning at the `\newcounter` (tikz-timing.sty:2015-2019 before :2155; witnesses 2102.06643, 2409.18120).
-Rust: the same as Perl (RED `macro-state/value_expands_as_csname_red`, post-merge; the fix moves the Error boundary of
-`\value{nosuch}` read as a number, TeX's "Missing number" being a Warning here). Minimal trigger (pdflatex "Value: 3."):
+Fixed in Rust: an undefined `\c@<ctr>` is let to `\relax`, as `\csname` does; `\value{nosuch}` read as a number is then
+TeX's "Missing number" (a Warning, the core's severity). Guard
+`perfect_kernel_batchga1::an_undefined_counter_register_is_the_error_tex_raises` (rows value_expands_as_csname,
+counter_readers_keep_their_leniency). Minimal trigger (pdflatex "Value: 3."):
 
 ```latex
 \documentclass{article}

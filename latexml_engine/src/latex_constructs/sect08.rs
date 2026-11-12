@@ -1846,7 +1846,15 @@ pub(crate) fn load() -> Result<()> {
       Some(Stored::String(s)) => with(s, |s| s.to_string()),
       _ => name,
     };
-    T_CS!(s!("\\c@{resolved}"))
+    // latex.ltx:10127 `\def\value#1{\csname c@#1\endcsname}`: an undefined counter is `\relax`, with no error
+    // (tex.web §372; KNOWN_PERL_ERRORS #1231: tikz-timing's `\edef` before its `\newcounter`, 2102.06643, 2409.18120)
+    let counter = T_CS!(s!("\\c@{resolved}"));
+    if !has_meaning(&counter)
+      && let Some(relax) = lookup_meaning(&T_RELAX!())
+    {
+      assign_meaning(&counter, relax, None);
+    }
+    counter
   });
 
   // latex.ltx:10206-10224: `\@arabic`, `\@roman`, `\@Roman`, `\@alph`,

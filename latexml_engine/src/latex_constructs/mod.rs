@@ -7523,8 +7523,9 @@ pub fn begin_bibliography_clean(whatsit: &mut Whatsit) -> Result<()> {
   // And prepare for the likely nonsense that appears within bibliographies: the classes' `thebibliography`
   // (article.cls:573) runs `\usecounter{enumiv}` (latex.ltx:16048), which also names the list's counter; asl.cls's
   // entries read `\value{\@listctr}` (1005.4193, 0705.0395). Perl's never names it (KNOWN_PERL_ERRORS #1230).
+  // Not `\@nmbrlisttrue`: our `\bibitem` steps no enumiv, so a raw `\@trivlist` numbered from it would invent "0A".
   ResetCounter!("enumiv");
-  Digest!(TokenizeInternal!(r"\@nmbrlisttrue\def\@listctr{enumiv}"))?;
+  Digest!(TokenizeInternal!(r"\def\@listctr{enumiv}"))?;
   Ok(())
 }
 

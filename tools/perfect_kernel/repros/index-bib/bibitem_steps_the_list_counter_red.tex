@@ -8,7 +8,8 @@
 %   1 warning (Counter '' was not defined), "First 0."; GA1d 0 errors, 0 warnings, "First 0." / "Second 0."
 % expect:  0 errors, 0 warnings; First 1. Second 2.
 % status:  RED (int163a, GA1d)
-% moves:   post-merge
+% moves:   post-merge, with the bibliography's `\@nmbrlisttrue` (GA1e left it out: a raw `\@trivlist` would number from
+%   the unstepped enumiv, raw_trivlist_in_thebibliography_invents_no_number)
 \documentclass{article}
 \makeatletter
 \def\cur{\the\value{\@listctr}}

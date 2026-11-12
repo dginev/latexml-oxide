@@ -37,18 +37,33 @@ const ROWS: &[Row] = &[
     "Error:undefined:\\c@nosuch",
     &[("p", &[], r#"<p>Value: 0.</p>"#)],
   ),
-  // `\arabic{nosuch}` keeps `CounterValue`'s Warning; `\value{nosuch}` read as a number is the undefined control
-  // sequence (an Error, as Perl) and "Missing number" (a Warning, as Perl).
+  // `\arabic{nosuch}` keeps `CounterValue`'s Warning; `\value{nosuch}` is TeX's `\csname` → `\relax` (latex.ltx:10127),
+  // read as a number "Missing number": a Warning, today's core severity, not GA1e's to set (GA1: an Error on `\c@nosuch`).
   (
     None,
     include_str!(
       "../../../tools/perfect_kernel/repros/macro-state/counter_readers_keep_their_leniency.tex"
     ),
-    1,
+    0,
     2,
     1,
-    "Error:undefined:\\c@nosuch",
+    "",
     &[("p", &[], "<p>Reader: 0.\nValue: 0.</p>")],
+  ),
+  // `\edef\x{\value{later}}` before `\newcounter{later}`: `\x` is `macro:->\c@later`, 3 once set, nothing reported
+  // (KNOWN_PERL_ERRORS #1231; tikz-timing.sty:2015-2019, 2102.06643, 2409.18120; GA1d: 1 error, 1 warning).
+  (
+    None,
+    include_str!("../../../tools/perfect_kernel/repros/macro-state/value_expands_as_csname.tex"),
+    0,
+    0,
+    0,
+    "",
+    &[(
+      "p",
+      &[],
+      r#"<p>Meaning: <text font="typewriter">macro:-&gt;\c@later </text>. Value: 3.</p>"#,
+    )],
   ),
   // subfig's `\ContinuedFloat` in a float type without a sub-float counter (subfig.sty:587's `\@ifundefined` guard):
   // the number steps back, no sub-counter is touched, nothing is reported. Witness 1910.02851.
@@ -336,13 +351,67 @@ const ROWS: &[Row] = &[
       ),
     ],
   ),
+  // A raw `\@trivlist` in `thebibliography` invents no number (GA1d's hidden refnums "0A", "0B"; revGA1d): unnumbered,
+  // as int163a, the trivlist before it untouched; pdflatex's [2], [3] wait for bibitem_steps_the_list_counter_red.
+  (
+    None,
+    include_str!(
+      "../../../tools/perfect_kernel/repros/index-bib/raw_trivlist_in_thebibliography_invents_no_number.tex"
+    ),
+    0,
+    0,
+    0,
+    "",
+    &[(
+      "bibitem",
+      &[r#"xml:id="bib.bib1""#],
+      r#"<bibitem key="a" xml:id="bib.bib1"><tags><tag>[1]</tag><tag role="refnum">1</tag></tags>
+        <bibblock> First.
+<itemize class="ltx_trivlist" xml:id="S0.I1">
+          <item xml:id="S0.I1.ix1"><tags><tag/></tags><para xml:id="S0.I1.ix1.p1"><p>tr1</p></para></item>
+          <item xml:id="S0.I1.ix2"><tags><tag/></tags><para xml:id="S0.I1.ix2.p1"><p>tr2</p></para></item>
+        </itemize><itemize>
+          <item xml:id="S0.I2.i1"><tags><tag role="typerefnum">1st item</tag></tags>
+            <para xml:id="S0.I2.i1.p1"><p>raw1</p></para></item>
+          <item xml:id="S0.I2.i2"><tags><tag role="typerefnum">2nd item</tag></tags>
+            <para xml:id="S0.I2.i2.p1"><p>raw2</p></para></item></itemize></bibblock></bibitem>"#,
+    )],
+  ),
+  // The control of footnoterecall_counter_defined_by_an_earlier_creator_red: B's `\footnoterecall` reads A's counter
+  // (the block written in order, 1 counted Warning); no Error since `\value` is `\csname` (2407.13730, 2606.19583).
+  (
+    None,
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/footnoterecall_two_authors_control.tex"
+    ),
+    0,
+    1,
+    0,
+    "",
+    &[
+      (
+        "creator",
+        &[r#"role="author""#],
+        "<creator role=\"author\"><personname>A</personname>\
+         <contact name=\"Note:\u{a0}\" role=\"note\">X</contact></creator>",
+      ),
+      (
+        "creator",
+        &["before=\"\u{2003}\u{2003}\""],
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>B</personname>\
+         <note mark=\"*\" role=\"footnotemark\" xml:id=\"footnotex1\"><tags><tag>*</tag><tag role=\"refnum\">*</tag>\
+         <tag role=\"typerefnum\">footnote *</tag></tags></note></creator>",
+      ),
+    ],
+  ),
 ];
 
 /// Repros macro-state/undefined_counter_register_is_an_error (GA0 finding 1), macro-state/
 /// counter_readers_keep_their_leniency and captions-floats/subfig_continuedfloat_in_a_float_without_subfloats
 /// (witness 1910.02851), alignment-bindings/tabularray_rownum_colnum_counters (GA1b), the `\c@rownum` count in every
 /// load order of xcolor `[table]`, colortbl and tabularray and tabularray's `\c@rowcount` (GA1c), the bibliography's
-/// `\@listctr` and the `\@nmbrlisttrue` test it needs, varioref's `\c@vrcnt` (GA1d): exact counts, the first Error, whole
+/// `\@listctr` and the `\@nmbrlisttrue` test it needs, varioref's `\c@vrcnt` (GA1d), `\value` as `\csname`, a raw
+/// `\@trivlist` in a bibliography, the two-author `\footnoterecall` control (GA1e): exact counts, the first Error, whole
 /// elements.
 #[test]
 fn an_undefined_counter_register_is_the_error_tex_raises() {

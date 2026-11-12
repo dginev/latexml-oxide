@@ -3,10 +3,12 @@
 %          "Reader: 0. Value: 0."
 % engines: perl 2 warnings for \arabic (CounterValue, Package.pm:712: "Counter 'nosuch' was not defined; assuming 0",
 %          plus LookupRegister's "is not a register"), 1 error + 1 warning for \value (Error:undefined:\c@nosuch,
-%          "Missing number"); rust int160a1 2 warnings ("assuming 0" both: generate_error_stub's \c@ branch)
-% expect:  \arabic keeps Perl's counter-reader leniency (1 warning, "assuming 0"); \value in a number is the undefined
-%          control sequence (1 error) and "Missing number" (1 warning); "Reader: 0. Value: 0."
-% status:  GREEN (GA1); Perl's second \arabic warning ("is not a register") is not emitted (LookupRegister), out of GA1
+%          "Missing number"); rust int160a1 2 warnings ("assuming 0" both: generate_error_stub's \c@ branch);
+%          GA1 1 error + 2 warnings (\value's undefined \c@nosuch)
+% expect:  \arabic keeps Perl's counter-reader leniency (1 warning, "assuming 0"); \value in a number is TeX's
+%          `\csname` → `\relax` (latex.ltx:10127, GA1e), read as "Missing number" — today's core severity, a Warning (that
+%          severity is not GA1e's); 0 errors, 2 warnings; "Reader: 0. Value: 0."
+% status:  GREEN (GA1, GA1e); Perl's second \arabic warning ("is not a register") is not emitted (LookupRegister), out of GA1
 \documentclass{article}
 \newcounter{a}
 \begin{document}
