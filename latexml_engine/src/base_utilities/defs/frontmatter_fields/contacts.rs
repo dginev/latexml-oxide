@@ -32,7 +32,8 @@ pub(in crate::base_utilities) enum ContactOwner {
 /// A `weak` mark is not written on the contact but on the address block the class prints it under (iopart's `\ead`
 /// after an `\address`, `\lx@address@mark@set`): it places only an address that spells no one (1111.5264's `johnwc@`
 /// under `$^6$`, which two authors request, is J W Conklin's `$^1$`; 2407.14305's `rockfish3141@` under `$^1$ Waseda`,
-/// Hidetomo Hoshino's alone).
+/// Hidetomo Hoshino's alone — as the PDF prints them; today both sit on the block's creator, RED
+/// `iopart_ead_under_its_address_mark_red`).
 pub(in crate::base_utilities) fn placed_contact_owner(
   mark: &Tokens,
   content: &Tokens,

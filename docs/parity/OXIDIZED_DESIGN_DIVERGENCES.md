@@ -23285,7 +23285,8 @@ llncs_inst_leading_marks_keep_their_names, inst_without_unskip_keeps_the_next_na
 iopart.cls:363 `\def\ead#1{\vspace*{5pt}\address{E-mail: \mailto{#1}}}`: an `\ead` prints as an address block of its own
 right after the `\address` before it (iopart.cls:246-248, "Use once for each address"), so in the PDF the address stands
 inside that address's block, under its mark: 2407.14305's `rockfish3141@` under "¹ Graduate School … Waseda University",
-Hidetomo Hoshino's alone. #806 placed it by the spelling or the author order only, so an address no name spells went to
+Hidetomo Hoshino's alone (the PDF's reading; today ours sits on the block's nameless creator, as 1111.5264's `johnwc@` —
+RED `iopart_ead_under_its_address_mark_red`, since int160a; revP5c). #806 placed it by the spelling or the author order only, so an address no name spells went to
 the author block (78f r1) or, in Perl, to the last author (KNOWN_PERL_ERRORS #1031). Ours: the binding's `\address`
 records its block's mark (`\lx@address@mark@set`, base_utilities/defs/frontmatter_fields.rs: the operand of the block's one leading mark, none for
 an unmarked block or one of several marked lines; the binding's `\author` clears it), and `\lx@iop@ead` passes it as the

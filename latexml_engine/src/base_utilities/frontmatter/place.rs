@@ -27,7 +27,8 @@ use super::*;
 /// 5. a flush with no authors, its list given after `\maketitle` digested them (1903.05554), keeps Perl's rule.
 ///
 /// Step 3, for iopart's `\ead`, places after the spelling with the one author requesting the mark of the address block
-/// it is printed under (`mark=address`, `\lx@address@mark@set`: 2407.14305's `rockfish3141@` Hidetomo Hoshino's,
+/// it is printed under (`mark=address`, `\lx@address@mark@set`: 2407.14305's `rockfish3141@` Hidetomo Hoshino's as printed —
+/// today the block's, RED `iopart_ead_under_its_address_mark_red` —
 /// 2311.07087's `sgess@` Spencer Gessner's) — weaker than a list in author order, which the PDF's address blocks do not
 /// contradict (1902.07874's `\ead{…, b97202056@gmail.com, …}` of five authors after `\address{$^9$ …}`, Che-Yu Chen's
 /// at place 3; 1710.02251's three `\mailto`s in an `\eads` after `$^{(2)}$`), and only in a document that writes an
