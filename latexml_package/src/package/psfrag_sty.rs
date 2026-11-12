@@ -2,7 +2,7 @@
 //! Perl: psfrag.sty.ltxml — 166 lines
 //! Saves the `\psfrag` fragments for the EPS graphics in their scope; they are not rendered yet (PSFR), so each
 //! graphic counts its fragments by a Warning (`psfrag_graphic`).
-use latexml_core::binding::virtual_files::vfs_read;
+use latexml_core::{binding::virtual_files::vfs_read, definition::ExpansionBody};
 
 use crate::prelude::*;
 
@@ -97,15 +97,20 @@ fn save_psfrag(stuff: Vec<Token>) {
 }
 
 /// The hooks' `afterDigest` (Perl L82-87, L105-110, L127-132) for a graphic `whatsit` of any including command
-/// (`\includegraphics`, `\epsfbox` and its `\let` copies, `\psfig`). An EPS graphic (`psfrag_requirepicture`) is
-/// where psfrag places the saved fragments (psfrag.sty:46-62 `\Ginclude@eps`/`\epsfbox`) and, under a scan, the
-/// `(\\tex` strings of the file (psfrag.sty:152-209 `\pfg@scan`); they are not rendered (PSFR), so the graphic is one
-/// Warning naming each of them. The scan stays on until `\psfragscanoff` (psfrag.sty:24), where Perl resets it per
-/// graphic (OXIDIZED_DESIGN_DIVERGENCES #1017).
+/// (`\includegraphics`, `\epsfbox` and its `\let` copies, `\psfig`). An EPS graphic ([`eps_file`]) is where psfrag
+/// places the saved fragments (psfrag.sty:46-62 `\Ginclude@eps`/`\epsfbox`) and, under a scan, the `(\\tex` strings
+/// of the file (psfrag.sty:152-209 `\pfg@scan`); they are not rendered (PSFR), so the graphic is one Warning naming
+/// each of them. The scan stays on until `\psfragscanoff` (psfrag.sty:24), where Perl resets it per graphic
+/// (OXIDIZED_DESIGN_DIVERGENCES #1017).
 pub fn psfrag_graphic(whatsit: &Whatsit) {
   let Some(saved) = lookup_tokens("saved_psfragments") else {
     return;
   };
+  let tags = fragment_tags(&saved);
+  let scan = lookup_bool("psfrag_scan") || lookup_bool("psfrag_scan_all");
+  if tags.is_empty() && !scan {
+    return;
+  }
   let mut graphic = whatsit.get_property_string("graphic");
   if graphic.is_empty() {
     graphic = whatsit.get_property_string("path");
@@ -114,16 +119,15 @@ pub fn psfrag_graphic(whatsit: &Whatsit) {
     return;
   };
   let quote = |text: &String| s!("'{text}'");
-  let tags = fragment_tags(&saved);
   let mut dropped: Vec<String> = tags.iter().map(quote).collect();
   let mut count = tags.len();
-  if lookup_bool("psfrag_scan") || lookup_bool("psfrag_scan_all") {
+  if scan {
     let content = eps.unwrap_or_else(|file| std::fs::read(file).unwrap_or_default());
     let embedded = embedded_fragments(&content);
     if !embedded.is_empty() {
       count += embedded.len();
       let embedded: Vec<String> = embedded.iter().map(quote).collect();
-      dropped.push(s!("the embedded (\\psfragscanon) {}", embedded.join(", ")));
+      dropped.push(s!("the file's own \\tex labels {}", embedded.join(", ")));
     }
   }
   let (noun, verb) = match count {
@@ -169,29 +173,72 @@ fn embedded_fragments(content: &[u8]) -> Vec<String> {
   found
 }
 
-/// The EPS file the graphic includes: a `.eps`/`.ps` candidate (`Err`, its path), else a `{filecontents}` file of the
-/// graphic's name or that name with dvips.def's extensions `.eps`, `.ps` (`Ok`, its content); `None` for any other.
+/// The EPS file the graphic includes: the first candidate that is PostScript ([`is_postscript`]) (`Err`, its path),
+/// else a `{filecontents}` file of the graphic's name or that name with dvips.def's `.eps`, `.ps` (`Ok`, its content).
 fn eps_file(
   candidates: &str,
   graphic: &str,
 ) -> Option<std::result::Result<Vec<u8>, std::path::PathBuf>> {
-  let is_eps = |name: &str| {
-    let ext = std::path::Path::new(name)
-      .extension()
-      .map(|e| e.to_string_lossy().to_lowercase());
-    matches!(ext.as_deref(), Some("eps" | "ps"))
-  };
-  if let Some(found) = candidates.split(',').map(str::trim).find(|c| is_eps(c)) {
-    return Some(Err(
-      std::path::Path::new(&lookup_string("SOURCEDIRECTORY")).join(found),
-    ));
+  let source = std::path::PathBuf::from(lookup_string("SOURCEDIRECTORY"));
+  let found = candidates
+    .split(',')
+    .map(str::trim)
+    .filter(|c| !c.is_empty())
+    .map(|c| source.join(c))
+    .find(|path| {
+      let mut header = [0u8; 4];
+      let read =
+        std::fs::File::open(path).and_then(|mut f| std::io::Read::read(&mut f, &mut header));
+      is_postscript(
+        path.to_string_lossy().as_ref(),
+        &header[..read.unwrap_or(0)],
+      )
+    });
+  if let Some(path) = found {
+    return Some(Err(path));
   }
-  let names = [graphic.to_string(), s!("{graphic}.eps"), s!("{graphic}.ps")];
-  names
+  [graphic.to_string(), s!("{graphic}.eps"), s!("{graphic}.ps")]
     .iter()
-    .filter(|name| is_eps(name))
-    .find_map(|name| vfs_read(name))
+    .find_map(|name| vfs_read(name).filter(|text| is_postscript(name, text.as_bytes())))
     .map(|text| Ok(text.into_bytes()))
+}
+
+/// Whether psfrag places fragments in the file `name` with this `header`: a PostScript header (`%!`, or the DOS EPS
+/// `C5D0D3C6`), as Perl's `psfrag_requirepicture` asks `image_type` (Util/Image.pm:74-84) — dvips's catch-all
+/// `\Gin@rule@*` makes any file EPS, and the header is what it can place them in (`.epsi`, `.epsf`: hep-ph0610439) —
+/// or a graphics rule of type `eps` for its extension, which a compressed file needs (`\DeclareGraphicsRule{.eps.gz}`,
+/// dvips.def:203-210; psfrag scans its compressed bytes, finding no `\tex` label).
+fn is_postscript(name: &str, header: &[u8]) -> bool {
+  const DVIPS_EPS_RULES: [&str; 8] = [
+    ".ps", ".eps", ".mps", ".pz", ".eps.Z", ".ps.Z", ".ps.gz", ".eps.gz",
+  ];
+  if header.starts_with(b"%!") || header.starts_with(b"\xc5\xd0\xd3\xc6") {
+    return true;
+  }
+  let base = name.rsplit('/').next().unwrap_or(name);
+  base.match_indices('.').any(|(at, _)| {
+    let ext = &base[at..];
+    match lookup_definition(&T_CS!(s!("\\Gin@rule@{ext}"))) {
+      Ok(Some(rule)) => matches!(rule.get_expansion(), Some(ExpansionBody::Tokens(body)) if rule_type(body) == "eps"),
+      _ => DVIPS_EPS_RULES.contains(&ext),
+    }
+  })
+}
+
+/// The `<type>` of a graphics rule's body `{<type>}{<read-file>}{<command>}` (graphics.sty:150-154).
+fn rule_type(body: &Tokens) -> String {
+  let tokens = body.unlist_ref();
+  match tokens.first() {
+    Some(t) if t.get_catcode() == Catcode::BEGIN => {
+      let inner: Vec<Token> = tokens[1..]
+        .iter()
+        .take_while(|t| t.get_catcode() != Catcode::END)
+        .cloned()
+        .collect();
+      Tokens::new(inner).untex().trim().to_string()
+    },
+    _ => String::new(),
+  }
 }
 
 /// The tag of each saved `\lx@delayed@psfrag` invocation: its first braced argument, after an optional `*`.

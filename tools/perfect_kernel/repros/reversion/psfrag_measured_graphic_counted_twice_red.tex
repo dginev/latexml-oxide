@@ -1,0 +1,21 @@
+% witness: synthetic (revPSF1 nit, p1/measure)
+% oracle:  latex + dvips, 0 `!`, one figure printed (α for "A"); the `\settowidth` box is measured, never shipped
+% engines: rust PSF1c = 2 Warnings for one printed graphic (the measuring `\includegraphics` is digested too)
+% expect:  one Warning, at the printed graphic (an over-count, the safe side)
+% status:  RED
+% moves:   post-merge (PSFM)
+\documentclass{article}
+\usepackage{graphicx,psfrag}
+\newlength\gw
+\begin{filecontents*}{psfragm.eps}
+%!PS-Adobe-3.0 EPSF-3.0
+%%BoundingBox: 0 0 72 36
+/Times-Roman findfont 12 scalefont setfont
+10 10 moveto (A) show
+showpage
+\end{filecontents*}
+\begin{document}
+\psfrag{A}{$\alpha$}
+\settowidth{\gw}{\includegraphics{psfragm.eps}}
+\includegraphics[width=\gw]{psfragm.eps}
+\end{document}
