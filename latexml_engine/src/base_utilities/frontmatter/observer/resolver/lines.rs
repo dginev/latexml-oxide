@@ -1054,9 +1054,7 @@ pub(super) fn name_continues_at_gap(name: &str) -> bool {
 /// name before it; the names line reads it as their collaboration (`reads_as_collaboration`, OXIDIZED_DESIGN_DIVERGENCES
 /// #946; an author before batch 97d).
 pub(super) fn is_collaboration(text: &str) -> bool {
-  let t = text.trim().to_lowercase();
-  let t = t.strip_prefix("and ").unwrap_or(&t).trim();
-  t.starts_with("the ") && SPOKEN_FOR_WORDS.iter().any(|w| t.ends_with(w))
+  collaboration_remark(text) == Some(Framing::The)
 }
 
 /// Where a remark on a name opens in a piece's text: at a bracket (`(on behalf of the H1 and ZEUS collaborations)`,
@@ -1146,16 +1144,9 @@ fn events_span(events: &[&Event]) -> Option<(u16, u16)> {
   Some(spans.fold(first, |(a, b), (c, d)| (a.min(c), b.max(d))))
 }
 
-/// Whether a text is the collaboration a name speaks for: "for" or "on behalf of" ([`SPEAKS_FOR`]) before a
-/// collaboration ([`is_collaboration`]: `for the Hall A DVCS collaboration`, 1502.03246; the article left out, `on
-/// behalf of ATLAS Collaboration`).
-pub(super) fn speaks_for(text: &str) -> bool {
-  let lower = text.trim().to_lowercase();
-  SPEAKS_FOR
-    .iter()
-    .find_map(|p| lower.strip_prefix(p))
-    .is_some_and(|rest| is_collaboration(rest) || is_collaboration(&s!("the {rest}")))
-}
+/// Whether a text is the collaboration a name speaks for ([`collaboration_remark`] framed by [`SPEAKS_FOR`]): `for the
+/// Hall A DVCS collaboration`, 1502.03246; the article left out, `on behalf of ATLAS Collaboration`.
+pub(super) fn speaks_for(text: &str) -> bool { collaboration_remark(text) == Some(Framing::Framed) }
 
 /// The name a piece holds before a remark on it, where one follows it: a bracket (`Bob Baker (MIT)`) or the
 /// collaboration it speaks for ([`speaks_for`]: `Bob Baker for the ATLAS Collaboration`, `… on behalf of the CMS
@@ -1169,7 +1160,7 @@ pub(in crate::base_utilities::frontmatter::observer) fn name_before_remark(
   // (ASCII lowercase keeps every byte where it was)
   let lower = t.to_ascii_lowercase();
   let bracket = t.find(['(', '[']);
-  let said = SPEAKS_FOR[..2]
+  let said = SPEAKS_FOR
     .iter()
     .flat_map(|p| {
       lower

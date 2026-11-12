@@ -1,0 +1,18 @@
+% mechanism: the emitter's markup of a names line whose last name carries the remark it speaks for, parted by a word
+%   ("and") only: the reading cuts "Bob Baker" and "for the XYZ Collaboration" out of one Name event, which the emitter
+%   cannot spell from its events, so it writes both as plain text and counts each (two Warnings unexpected:frontmatter,
+%   "a name its events don't spell", "span letters differ"); the content is right
+% witness: synthetic (P6b, found beside the vocabulary union; the same on P6bbase)
+% oracle:  pdflatex 0 errors: "Ann Able and Bob Baker for the XYZ Collaboration"
+% engines: rust P6bbase and P6b: two creators, each with the collaboration contact; 0 errors, 2 warnings; perl: not run
+% expect:  0 errors, 0 warnings; the same two creators, their markup kept
+% status:  RED
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able and Bob Baker for the XYZ Collaboration}
+\maketitle
+Text.
+\end{document}
