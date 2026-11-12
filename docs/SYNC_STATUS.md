@@ -51,18 +51,22 @@ Rules that keep this file honest and mergeable:
 
 - **The task list — the single entry for the work until the merge (DG 2026-11-12: "We should have a single point of entry for work lists").** Updated at every decision and every bundle fold; status counts are read from these two tables. Weights: easy 1, medium 3, hard 5.
 - **Done since 2026-11-11:** 62 tasks (weight 168), each in its bundle's entry in `archive/SYNC_SESSIONS_2026-11.md` (EB1, QA41, ISO1, DTL1e, QA89, DBG1, DBG2, F0, P4d, RV1 in bundle int162a).
-- **Before the merge:** 5 ongoing (17), 35 to come (109), worked in Rank order — the critical path (1-12: the frontmatter's Option C, the losses, the bars), the parallel fillers (13-29), the close (30-34).
+- **Before the merge:** 3 ongoing (9), 38 to come (120), worked in Rank order — the critical path (1-12: the frontmatter's Option C, the losses, the bars), the parallel fillers (13-29), the close (30-34).
 - **After the merge:** 86 (224; 28 of them the old SYNC rows moved here by SYNC3) — DG's pragmatic bar (2026-11-12): regressions and high-frequency / high-impact gaps before the merge; newly found edge cases after it, unless one invalidates the approach.
 - **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: their PRE work in the table (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA27's input → CSS, QA75, QA80 with QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45, QA84, QA92 with QA02's awaited rest), the POST / LATER / HZN rows and those DG moved post-merge in the list below (QA60 site 8 as SR4/SR5); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted).
 - **Detail per row:** the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker (`~/data/pk_agents/main/bruce_qa/ACTIONS.md`), each deferred finding's `_red.tex` (`moves:` names its row).
 
   | Rank | Id | Task | Step | Weight | Status |
   |---|---|---|---|---|---|
-  | 1 | P4c | P4c: the one affiliation cut incl. the API's Cut, declared per binding (DG 2026-11-12 "Declared cut"; round 2, P4c2) — marks shown; ISO1's isotope rule merged | 3 | 5 | ongoing (P4c3 653088eeb2: gates 8047/8047, A/B 550 0 worse; in review) |
-  | 1 | RG1 | RG1 — regression in int162a (RV1 exposed it; 2410.06985): a paragraph inside a group opened mid-paragraph is kept, as Perl's open-brace box keeps it (a `\phantom` line in a tikz node) | 2 | 3 | ongoing |
-  | 1 | FMK1 | FMK1 — regression in int162a (F0; 2312.00656): names keep their printed marks under `flexisym`, or the loss is counted | 3 | 3 | ongoing |
+  | 1 | P4c | P4c: the one affiliation cut incl. the API's Cut, declared per binding (DG 2026-11-12 "Declared cut"; round 2, P4c2) — marks shown; ISO1's isotope rule merged | 3 | 5 | done in int163a (revP4c SHIP) |
+  | 1 | RG1 | RG1 — regression in int162a (RV1 exposed it; 2410.06985): a paragraph inside a group opened mid-paragraph is kept, as Perl's open-brace box keeps it (a `\phantom` line in a tikz node) | 2 | 3 | ongoing (fix round RG1b: revRG1 B1, a measured empty line) |
+  | 1 | FMK1 | FMK1 — regression in int162a (F0; 2312.00656): names keep their printed marks under `flexisym`, or the loss is counted | 3 | 3 | done in int163a (revFMK1 SHIP) |
   | 1 | ST3 | ST3 — a study: state carried between conversions in one process (P4c3: 90a's elsarticle row green in-process, wrong from the CLI on the base); the cortex worker converts many documents per process | 5 | 3 | todo |
-  | 2 | P4b | P4b: marker_leads/leads_with_mark at ~20 sites, and the API Cut's "marked" decision (`requested_marked_entries_in`, still tokens — a second reader of the fact the cutter reads digested; P4c3) | 3 | 5 | todo |
+  | 2 | P4b | P4b part 1: the bindings' `leads_with_mark` sites on the digested reading (`leads_with_label`; 23 jfm `\aff` papers better) | 3 | 3 | in review (15c232025f) |
+  | 2 | P4b2 | P4b2 (+ 2410.01932's lost name marks, a P4b part 1 regression, revP4b): the API Cut's "marked" decision (`requested_marked_entries_in`, `holds_requested_marked_entries`) ported WITH `place_uncut_copies`'s copy rule (one fact, every reader); 2608.21425's llncs hand-marked block checked | 3 | 5 | todo |
+  | 2 | P4b3 | P4b3: REVTeX's group-rule mark readers (`requested_marks_held`, `requested_mark_lines`, `requested_marks_unprinted`, `content_marks`, `leading_macro_mark`) on the digested reading | 3 | 3 | todo |
+  | 2 | P4b4 | P4b4: the remaining per-line token cutters — `marker_leads` (~13 sites), `author_mark_position` (~15), `author_mark_operands` (7), `MARK_SWITCHES`, relocate.rs 1312/1352/1529 — each with its red shape | 3 | 5 | todo |
+  | 2 | P4f | P4f: the second cutter (`affiliation_calls` for `\lx@add@store@affiliations`, `\lx@add@store@authorblock`, `row_calls`, `\lx@add@affiliations` — aa, epl, ptephy, interspeech, ijcai, llncs stores) through the declared `cut_list`, so its printed marks show (Q1; revP4c S2); a reach census first | 3 | 3 | todo |
   | 3 | P5 | Option C P5: new facts (IEEEmembership grade, "on behalf of", surname match) | 3 | 5 | todo |
   | 4 | P6 | (incl. moving the declared cut `cut_list` out of the moved directories — the fences P4c3 raised: MOVED_CUT_KIND_CODE_LINES 2219 → 2236, OLD_READER_EXPORTS) Option C P6 + the frontmatter code/test compaction | 3 | 5 | todo |
   | 5 | P2-8b | P2-8b: IEEEtran block-call fact, grid rule in the reading | 3 | 5 | todo |
@@ -74,7 +78,7 @@ Rules that keep this file honest and mergeable:
   | 11 | TRUTH | Bars: the truth set | 4 | 5 | todo |
   | 12 | HOLD4 | Bars: fresh holdout v4 read once; 98/98 | 4 | 3 | todo |
   | 14 | QA47A | Hooks fix A (QA47, from QA46's study): run the kernel's begindocument lists; a Warning for bindings | 5b | 3 | ongoing (fix round QA47Ab) |
-  | 15 | PGR1 | PGR1 (from EB1): pgfmath grammar gaps (0bp read as a binary prefix ~9% of tikz papers; \dimexpr; -4 .5) then the pgfparse Error | 5 | 3 | ongoing (reviewed SHIP; next bundle) |
+  | 15 | PGR1 | PGR1 (from EB1): pgfmath grammar gaps (0bp read as a binary prefix ~9% of tikz papers; \dimexpr; -4 .5) then the pgfparse Error | 5 | 3 | done in int163a (revPGR1 SHIP) |
   | 16 | DTL1d | DTL1: out-of-range numbers → Error (OD #519 revised) | 5 | 3 | todo |
   | 17 | GA1 | GA1 + the \@listctr fix (thebibliography's enumiv) | 5 | 3 | todo |
   | 18 | GA2 | GA2 | 5 | 3 | todo |
