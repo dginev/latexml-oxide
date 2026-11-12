@@ -49,7 +49,7 @@ static STDERR_LEVEL: AtomicUsize = AtomicUsize::new(LevelFilter::Info as usize);
 /// is a `--debug` feature: Perl's every `Debug()` is guarded `if $LaTeXML::DEBUG{feature}` (`Common/Error.pm` L467).
 static DEBUG_ALL: AtomicBool = AtomicBool::new(false);
 
-/// Whether un-featured `Debug` records are logged (`--verbose`; see [`DEBUG_ALL`]).
+/// Whether un-featured `Debug` records are logged (`--verbose`; see `DEBUG_ALL`).
 #[inline]
 pub fn debug_all() -> bool { DEBUG_ALL.load(Ordering::Relaxed) }
 
