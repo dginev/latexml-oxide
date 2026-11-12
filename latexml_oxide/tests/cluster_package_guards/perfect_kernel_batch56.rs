@@ -10340,31 +10340,49 @@ fn a_declared_size_is_not_measured() {
 /// `computeSizeStore` keeps a complete size, Box.pm:275-281): a `\rule` node
 /// was 0×0, a `fit` node's minipage 0 high, a `\scalebox{0.3}` its unscaled
 /// 13.84 high, a `\quad` unmeasured (arXiv A/B 56ko2 → 56kq, 73 papers, every
-/// changed size Perl's; 2605.12644, 2605.00742, 2605.00859).
+/// changed size Perl's; 2605.12644, 2605.00742, 2605.00859). Row 2 (DTL1a): a
+/// size declared after a `\wd`/`\dp` read measured the box is read before that
+/// measure (`text width` with `text height` or `text depth`, `\makebox[2cm]`);
+/// its other four nodes must not move.
 #[test]
 fn a_node_takes_its_boxs_declared_size() {
-  let (stderr, xml) = convert_with(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/graphics-tikz/node_size_is_the_declared_size.tex"
+  const ROWS: &[(&str, &[&str])] = &[
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/graphics-tikz/node_size_is_the_declared_size.tex"
+      ),
+      &[
+        r#"<svg:foreignObject height="0.42" overflow="visible" style="--ltx-fo-width:10.81em;--ltx-fo-height:0.03em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 0.42)" width="149.58">"#,
+        r#"<svg:foreignObject height="10.19" overflow="visible" style="--ltx-fo-width:11.52em;--ltx-fo-height:0.37em;--ltx-fo-depth:0.37em;font-size:10pt;" transform="matrix(1 0 0 -1 0 5.1)" width="159.4">"#,
+        r#"<svg:foreignObject height="4.15" overflow="visible" style="--ltx-fo-width:0.39em;--ltx-fo-height:0.23em;--ltx-fo-depth:0.08em;font-size:10pt;" transform="matrix(1 0 0 -1 0 3.11)" width="5.4">"#,
+        r#"<svg:foreignObject height="14.76" overflow="visible" style="--ltx-fo-width:2.58em;--ltx-fo-height:0.83em;--ltx-fo-depth:0.23em;font-size:10pt;" transform="matrix(1 0 0 -1 0 11.53)" width="35.65">"#,
+      ],
     ),
-    Some("ar5iv.sty"),
-  );
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 0, "{stderr}");
-  let objects: Vec<&str> = xml
-    .match_indices("<svg:foreignObject ")
-    .map(|(at, _)| &xml[at..at + xml[at..].find('>').unwrap() + 1])
-    .collect();
-  assert_eq!(
-    objects,
-    [
-      r#"<svg:foreignObject height="0.42" overflow="visible" style="--ltx-fo-width:10.81em;--ltx-fo-height:0.03em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 0.42)" width="149.58">"#,
-      r#"<svg:foreignObject height="10.19" overflow="visible" style="--ltx-fo-width:11.52em;--ltx-fo-height:0.37em;--ltx-fo-depth:0.37em;font-size:10pt;" transform="matrix(1 0 0 -1 0 5.1)" width="159.4">"#,
-      r#"<svg:foreignObject height="4.15" overflow="visible" style="--ltx-fo-width:0.39em;--ltx-fo-height:0.23em;--ltx-fo-depth:0.08em;font-size:10pt;" transform="matrix(1 0 0 -1 0 3.11)" width="5.4">"#,
-      r#"<svg:foreignObject height="14.76" overflow="visible" style="--ltx-fo-width:2.58em;--ltx-fo-height:0.83em;--ltx-fo-depth:0.23em;font-size:10pt;" transform="matrix(1 0 0 -1 0 11.53)" width="35.65">"#,
-    ],
-    "{xml}"
-  );
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/graphics-tikz/node_box_declared_size_over_measured.tex"
+      ),
+      &[
+        r#"<svg:foreignObject height="27.67" overflow="visible" style="--ltx-fo-width:5.69em;--ltx-fo-height:2em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 27.67)" width="78.73">"#,
+        r#"<svg:foreignObject height="16.53" overflow="visible" style="--ltx-fo-width:5.69em;--ltx-fo-height:0.69em;--ltx-fo-depth:0.5em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.61)" width="78.73">"#,
+        r#"<svg:foreignObject height="9.61" overflow="visible" style="--ltx-fo-width:5.69em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.61)" width="78.74">"#,
+        r#"<svg:foreignObject height="9.61" overflow="visible" style="--ltx-fo-width:1.06em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.61)" width="14.61">"#,
+        r#"<svg:foreignObject height="34.59" overflow="visible" style="--ltx-fo-width:5.69em;--ltx-fo-height:2em;--ltx-fo-depth:0.5em;font-size:10pt;" transform="matrix(1 0 0 -1 0 27.67)" width="78.73">"#,
+        r#"<svg:foreignObject height="10.43" overflow="visible" style="--ltx-fo-width:5.69em;--ltx-fo-height:0.65em;--ltx-fo-depth:0.11em;font-size:10pt;" transform="matrix(1 0 0 -1 0 8.94)" width="78.73">"#,
+        r#"<svg:foreignObject height="12.3" overflow="visible" style="--ltx-fo-width:2.17em;--ltx-fo-height:0.69em;--ltx-fo-depth:0.19em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.61)" width="29.98">"#,
+      ],
+    ),
+  ];
+  for (tex, expected) in ROWS {
+    let (stderr, xml) = convert_with(tex, Some("ar5iv.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    let objects: Vec<&str> = xml
+      .match_indices("<svg:foreignObject ")
+      .map(|(at, _)| &xml[at..at + xml[at..].find('>').unwrap() + 1])
+      .collect();
+    assert_eq!(objects, *expected, "{xml}");
+  }
 }
 
 /// A font's parameters are its TFM's, scaled to its size, from its `\font`

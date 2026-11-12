@@ -445,20 +445,22 @@ fn set_halign_vattach(digested: &Digested, valign: &str) -> bool {
 
 /// Helper to get (width, height, depth) from a Digested node_box without mutable borrows.
 /// This avoids RefCell conflicts when called during the absorption pipeline.
-/// For simple TBox/Whatsit: reads cached_width/height/depth properties.
+/// For simple TBox/Whatsit: reads the declared width/height/depth, else the cached ones.
 /// For Lists: sums child box widths and takes max height/depth.
 fn fobj_get_size(digested: &Digested) -> (Dimension, Dimension, Dimension) {
+  // Declared before cached: Perl's `\ht` setter writes `cheight` too (TeX_Box.pool.ltxml:620-628, Box.pm `setHeight`),
+  // so a size measured before it never wins (repro graphics-tikz/node_box_declared_size_over_measured).
   fn read_dims(d: &Digested) -> (Dimension, Dimension, Dimension) {
     d.with_properties(|props| {
-      let w = match props.get("cached_width").or_else(|| props.get("width")) {
+      let w = match props.get("width").or_else(|| props.get("cached_width")) {
         Some(Stored::Dimension(d)) => *d,
         _ => Dimension::default(),
       };
-      let h = match props.get("cached_height").or_else(|| props.get("height")) {
+      let h = match props.get("height").or_else(|| props.get("cached_height")) {
         Some(Stored::Dimension(d)) => *d,
         _ => Dimension::default(),
       };
-      let d = match props.get("cached_depth").or_else(|| props.get("depth")) {
+      let d = match props.get("depth").or_else(|| props.get("cached_depth")) {
         Some(Stored::Dimension(d)) => *d,
         _ => Dimension::default(),
       };
