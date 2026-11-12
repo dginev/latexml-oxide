@@ -1,19 +1,19 @@
 //! Red/green guards for batch DTL1: the two pgfmath parser bugs behind pgfplots' "Dimension too large" (52,200
 //! Warnings on 2010.05701, 2205.15714, 2311.08887, 2604.09771, 2311.02367, which pdflatex compiles cleanly). One
-//! table, both sides of the error boundary: each row names its oracle (pdflatex `!` count and value, Perl's count) in
-//! its repro header. Mechanism B's pure-parser values are rows of `pgfmath_golden_tests` (latexml_package).
+//! table of the values pdflatex prints, each row's oracle (pdflatex `!` count and value, Perl's count) in its repro
+//! header; the error side ("Dimension too large") is a row of `error_boundary`. Mechanism B's pure-parser values are
+//! rows of `pgfmath_golden_tests` (latexml_package).
 use latexml::util::test::{assert_element, convert_files_with};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
-/// One repro: its source, the files beside it, its exact (errors, warnings), the diagnostics counted, whole elements
-/// `(tag, attributes, element)` and start tags the output holds.
+/// One repro: its source, the files beside it, its exact (errors, warnings), whole elements `(tag, attributes,
+/// element)` and start tags the output holds.
 struct Row {
   name:     &'static str,
   tex:      &'static str,
   files:    &'static [(&'static str, &'static str)],
   counts:   (usize, usize),
-  messages: &'static [&'static str],
   elements: &'static [(&'static str, &'static str, &'static str)],
   holds:    &'static [&'static str],
 }
@@ -28,7 +28,6 @@ const ROWS: &[Row] = &[
     ),
     files:    &[],
     counts:   (0, 0),
-    messages: &[],
     elements: &[
       (
         "para",
@@ -67,7 +66,6 @@ const ROWS: &[Row] = &[
       ),
     )],
     counts:   (0, 0),
-    messages: &[],
     elements: &[(
       "para",
       "xml:id=\"p1\"",
@@ -88,7 +86,6 @@ const ROWS: &[Row] = &[
     ),
     files:    &[],
     counts:   (0, 0),
-    messages: &[],
     elements: &[(
       "para",
       "xml:id=\"p1\"",
@@ -105,7 +102,6 @@ const ROWS: &[Row] = &[
     ),
     files:    &[],
     counts:   (0, 0),
-    messages: &[],
     elements: &[(
       "para",
       "xml:id=\"p1\"",
@@ -123,7 +119,6 @@ const ROWS: &[Row] = &[
     ),
     files:    &[],
     counts:   (0, 0),
-    messages: &[],
     elements: &[(
       "para",
       "xml:id=\"p1\"",
@@ -133,7 +128,7 @@ const ROWS: &[Row] = &[
   },
   // One parse for `\pgfmathparse` and `\pgfmathsetmacro` (DTL1f, revDTL1e B1): pdflatex [114.59155] on both sides
   // (our last digit is f64 arithmetic, pgf's TeX's fixed-point dimens); read apart, [0.0].
-  // The `\widthof` twins err in TeX: RED `pgfmath_calc_names_err_in_tex_red.tex` (revDTL1f S1).
+  // The `\widthof` twins err in TeX: `pgfmath_calc_names_warn.tex`, a Warning each (revDTL1f S1, EB1).
   Row {
     name:     "pgfmath_setmacro_parses_as_pgfmathparse",
     tex:      include_str!(
@@ -141,7 +136,6 @@ const ROWS: &[Row] = &[
     ),
     files:    &[],
     counts:   (0, 0),
-    messages: &[],
     elements: &[(
       "para",
       "xml:id=\"p1\"",
@@ -159,7 +153,6 @@ const ROWS: &[Row] = &[
     ),
     files:    &[],
     counts:   (0, 0),
-    messages: &[],
     elements: &[
       (
         "para",
@@ -182,7 +175,6 @@ const ROWS: &[Row] = &[
     ),
     files:    &[],
     counts:   (0, 0),
-    messages: &[],
     elements: &[
       (
         "para",
@@ -197,26 +189,9 @@ const ROWS: &[Row] = &[
     ],
     holds:    &[],
   },
-  // The error side: a dimension TeX cannot hold still reports "Dimension too large" (pdflatex 1 `!`; Perl 0 and
-  // 20000.0pt). A Warning today; the out-of-range severity batch makes it an Error.
-  Row {
-    name:     "pgfmath_dimension_too_large_still_reported",
-    tex:      include_str!(
-      "../../../tools/perfect_kernel/repros/graphics-tikz/pgfmath_dimension_too_large_still_reported.tex"
-    ),
-    files:    &[],
-    counts:   (0, 1),
-    messages: &["Dimension too large"],
-    elements: &[(
-      "para",
-      "xml:id=\"p1\"",
-      r#"<para xml:id="p1"><p xml:id="p1.1">[16383.99998pt]</p></para>"#,
-    )],
-    holds:    &[],
-  },
 ];
 
-/// Every row converted once, in-process: exact counts, the diagnostics named, the whole elements.
+/// Every row converted once, in-process: exact counts, the whole elements.
 #[test]
 fn batchdtl1_pgfmath_rows() {
   for row in ROWS {
@@ -224,14 +199,6 @@ fn batchdtl1_pgfmath_rows() {
     let name = row.name;
     assert_eq!(error_count(&log), row.counts.0, "{name}: errors\n{log}");
     assert_eq!(warning_count(&log), row.counts.1, "{name}: warnings\n{log}");
-    for message in row.messages {
-      assert!(
-        log
-          .lines()
-          .any(|l| l.starts_with("Warning:") && l.contains(message)),
-        "{name}: no Warning {message:?}\n{log}"
-      );
-    }
     for (tag, attrs, element) in row.elements {
       assert_element(&xml, tag, &[attrs], element);
     }

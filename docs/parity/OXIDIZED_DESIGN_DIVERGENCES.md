@@ -20983,7 +20983,7 @@ report's chapters); 0907.3938's pre.cls `\let\chapter\part` after `\LoadClass{ar
 `\UInewAction`), before the stand-in exists.
 **Guard**: `perfect_kernel_batch72b::{chapter_in_a_chapterless_class_is_the_kernel_chapter_with_a_warning,
 a_preamble_chapter_errs_and_the_body_chapter_reads_the_stand_in, a_raw_class_meets_chapter_undefined_while_it_loads,
-appendices_follow_the_class_chapters}`; `perfect_kernel_batchsvc::chapter_error_boundary` (both sides, each row with
+appendices_follow_the_class_chapters}`; `error_boundary::perfect_kernel_error_boundary` (both sides, each row with
 its pdflatex and Perl oracle: article `\chapter`, `\chapter*` and jmlr at 0 errors 1 Warning where pdflatex errs;
 report, book, report `\chapter*`, amsbook, scrbook and a document's own `\chapter` at 0/0; 0909.2812's shape, a shipped
 raw class over report answered by the prefix alternate `mn`, at 0 errors 2 Warnings); repros
@@ -21010,7 +21010,7 @@ semantic, reach tiny).
 **Witnesses**: the 72b review's jmlr probes (jmlr.cls TL 2025; rev72b/r2/jma for the appendix); no arXiv paper calls it (3 jmlr papers of the 72b A/B,
 unchanged).
 **Guard**: `perfect_kernel_batch72b::bindings_whose_class_has_chapters_define_them`,
-`perfect_kernel_batchsvc::chapter_error_boundary`.
+`error_boundary::perfect_kernel_error_boundary`.
 **Upstream**: not filed.
 
 ### 736. A stand-in class binding loads the base class its real file loads; the copy's one class slot is the net
