@@ -314,7 +314,7 @@ impl Lexer {
         self.symbol_span = join_span(self.symbol_span, span);
         continue;
       }
-      if is_fnsymbol(c) || is_mark_glyph(c) {
+      if is_mark_char(c) {
         self.flush_run();
         if self.symbol.is_empty() {
           self.symbol_space = self.gap_items > 0;
@@ -637,12 +637,17 @@ pub(in crate::base_utilities) fn is_fnsymbol(c: char) -> bool {
   )
 }
 
+/// Whether the lexer reads a printed `c` as a mark: a footnote symbol or a mark glyph.
+pub(in crate::base_utilities) fn is_mark_char(c: char) -> bool {
+  is_fnsymbol(c) || is_mark_glyph(c)
+}
+
 /// A glyph a document prints as an author's mark that is no `\@fnsymbol` character: the symbols set beside a name to
 /// point at its affiliation or note, read as the marks they are, never as the name's ink (`A. \v Siber $\diamond$` under
 /// `$\diamond$ Institute of Physics …`, 0907.1243; `A.~A.~Moiseev$\sharp$`, 0806.2911; `R. Podgornik $\dagger$$\star$`
 /// — FM S2a.2 r7, main-session decision 2 of int66: the marks the lexer did not read as such once a name became its
 /// printed text). Not a dot, a bullet or a bar (separators, [`is_separator_word`]), nor a degree sign or a ring.
-pub(super) fn is_mark_glyph(c: char) -> bool {
+fn is_mark_glyph(c: char) -> bool {
   matches!(
     c,
     '♯'

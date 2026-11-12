@@ -1081,6 +1081,9 @@ pub fn declared_text_composite(
   (!chars.is_empty()).then_some(chars)
 }
 
+/// Whether `cs` names an accent's inner command ([`accent_inner_name`]).
+pub fn is_accent_inner(cs: &str) -> bool { cs.starts_with("\\lxaccent") }
+
 pub fn accent_inner_name(accent: &str) -> String {
   let word = match &accent[1..] {
     "'" => "acute",

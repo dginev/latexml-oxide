@@ -47,8 +47,8 @@ pub(in crate::base_utilities) use fonts::{
   FontScope, InkFonts, Wrap, changes_font, entry_font, font_changes, font_declaration, switch_free,
   text_font_command,
 };
-use lexer::{Lexer, is_mark_glyph};
-pub(in crate::base_utilities) use lexer::{is_fnsymbol, is_separator_word};
+use lexer::Lexer;
+pub(in crate::base_utilities) use lexer::{is_fnsymbol, is_mark_char, is_separator_word};
 
 /// The kind of a separator event.
 #[derive(Debug, Clone, PartialEq)]
@@ -1262,7 +1262,7 @@ impl Walker {
   /// Say what encloses the marks among the atoms from `at` that nothing inside encloses: `d`, a formula (`extent`, or
   /// `formula` where it has none) or a group ([`MarkFormula`]). Only where it holds one: a formula of no mark costs nothing.
   fn enclose(&mut self, at: usize, d: &Digested, formula: bool, extent: Option<(u16, u16)>) {
-    fn holds_glyph(text: &str) -> bool { text.chars().any(|c| is_fnsymbol(c) || is_mark_glyph(c)) }
+    fn holds_glyph(text: &str) -> bool { text.chars().any(is_mark_char) }
     let open = |atom: &Atom| match atom {
       Atom::Event(e) => e.kind == EventKind::Mark && e.formula.is_none(),
       Atom::Ink { text, formula, .. } => formula.is_none() && holds_glyph(text),

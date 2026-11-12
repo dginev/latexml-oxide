@@ -1,0 +1,23 @@
+% mechanism: CST2: the marks queries' gate (`argument_marks::may_mark`) reads a name past the tie (`~`, `\lx@NBSP`) and
+%   accents (`\"`, `\c`, `\'`: `accent_inner_name`) to the document macro printing its mark (`\ua`, `$^{1}$`): the name is
+%   rehearsed, its mark requests an affiliation, AASTeX's `\affil` declares `annotate=new` (`run_names_show_a_mark`)
+% witness: 1901.01540 (1,204 `\author{M.~Soares-Santos}`, tied and accented names the gate leaves unrehearsed); the
+%   untied twin aastex_macro_names_over_unlabelled_lines_are_no_group
+% oracle:  pdflatex (TL 2025, emulateapj, -no-shell-escape) 0 errors: "A. Müller1, B. Baça1 and C. Colé1,2 / Uni One
+%          and / Uni Two"
+% engines: int165a and CST2: as expected (byte-identical); a gate stopping at the tie would read no mark, every author
+%          both lines (P4b3base's output of the twin)
+% expect:  0 errors, 0 warnings; A. Müller and B. Baça Uni One, C. Colé Uni One and Uni Two
+% status:  GREEN (guard perfect_kernel_batchc1::group_rule_reads_marks_as_digested)
+\documentclass{emulateapj}
+\newcommand\ua{$^{1}$}
+\newcommand\uab{$^{1,2}$}
+\begin{document}
+\title{T}
+\author{A.~M\"uller\ua, B.~Ba\c{c}a\ua{} and C.~Col\'e\uab}
+\affil{Uni One}
+\affil{Uni Two}
+\begin{abstract}A.\end{abstract}
+\section{Intro}
+Text.
+\end{document}

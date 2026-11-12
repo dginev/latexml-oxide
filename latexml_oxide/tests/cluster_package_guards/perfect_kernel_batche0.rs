@@ -1564,7 +1564,11 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (P4b2, 28 -> 33, pending the main session's decision: `argument_marks::may_open_with_mark`, the API Cut's cost gate
   // before its rehearsal — a list whose first token, through parameterless macros' bodies, is a letter or digit prints
   // that first and opens with no mark, as TeX reads it; 2103.04797's 1,161 `\affiliation{\Amsterdam}` +13.6 % without it)
-  ("frontmatter (rest)", 33),
+  // (CST2, 33 -> 39, the cost gate of int165a's rehearsals: `argument_marks::may_mark`, the marks queries' gate before
+  // their rehearsal, reads a whole argument through parameterless macros' bodies as `may_open_with_mark` reads its first
+  // token — catcodes, a body character a mark as the lexer reads one, an accent's inner definition by its kernel name;
+  // 2103.04797's `\affiliation{\Amsterdam}`, 1901.01540's `M.~Soares-Santos` −9.7 % and −4.7 % against int165a, byte-identical)
+  ("frontmatter (rest)", 39),
   // (P26, 527 -> 526: the stores' `\and` gates ask the separator query by meaning, `and_separators`, OD #995 P2-6; the
   // spelling read only where the query answers `None`: one spelled read fewer)
   // (FX24b, 526 -> 527: `title_page_prints_author` walks the title page a raw file or the document defined for a read of
@@ -1942,7 +1946,10 @@ const MOVED_UNDER_OBSERVER: [&str; 2] = ["resolver/owners.rs", "emitter/calls.rs
 /// the zeros stay zero: `policy`, `marks` and `mod` decide, and a decision spells no token; `field_notes` names two kernel definitions
 /// (`\begin`, `\end`), not a token's spelling (Z4a, ruled at Z4ar2).
 const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
-  ("argument_marks", 0),
+  // (CST2, 0 -> 3: `may_mark`'s kernel primitives that print no mark, by their definition's own name (`\relax`, a robust
+  // command's `\protect`; the tie `\lx@NBSP`, `\lx@nobreakspace`), which a `\let` copy keeps — kernel definitions, as
+  // `field_notes`' two, no token a document spells)
+  ("argument_marks", 3),
   // (Z14: 84 and 109, the lexer's own constructor and the rehearsal's table rows for `\lx@add@affiliation@marked`, `\lx@add@creator` and `\alignauthor`, as in `TOKEN_READS`;
   // Z4a +2: a note's kind, `\lx@fm@obs@fnnote`, the rehearsal's own name for a footnote it heard; N2r2 +3: `raw_lines` reads the
   // `\and` family's whatsits as it reads a break's, by their definition, 2106.06418; IO3b +1: the arm for the rehearsal's
@@ -1976,7 +1983,8 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   // (CL8b +8: `OWN_EMAIL`, the two e-mail commands the rehearsal binds, their bindings and where each keeps the class's
   // meaning to print it (6); the `\emailAdd` binding's constructor (1); `calls_the_api`, a digested whatsit by its definition,
   // the rehearsal's own `\lx@fm@obs@annotate` (1) — no decision on a name a document spells)
-  ("rehearsal", 136),
+  // (CST2, 136 -> 133: `\thefootnote`, named five times, is one constant, `THEFOOTNOTE`, which `rebinds` reads too)
+  ("rehearsal", 133),
   // (also among `resolver`'s 18 in `TOKEN_READS`: a `'\\'` read of a label, a call's hook; OC1c 3 -> 4: the API's own
   // `\lx@personname` wrapper's Layout role, `api::creator_call_level`, as `TOKEN_READS` says)
   ("resolver", 4),
