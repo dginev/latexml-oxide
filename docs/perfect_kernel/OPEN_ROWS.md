@@ -936,7 +936,7 @@ improvements in scope, high-difficulty recovery deferred with witnesses (`../par
 | # | Row | Status |
 |---|---|---|
 | — | RED `babel-lang/shorthandoff_quote_in_english_is_no_shorthand` (under-report) | open (from 64zf; digest CLS-1) |
-| — | 65k first errors that are not stub gaps: lmcs's `\titlecomment` under `\documentclass{LMCS}` (upper-case name, no binding: 1103.0510); tabu's `|[width]` rule spec (1907.07986) | open (from 65k; digest CLS-2) |
+| — | 65k first errors that are not stub gaps: lmcs's `\titlecomment` under `\documentclass{LMCS}` (upper-case name, no binding: 1103.0510) (tabu's `|[width]` rule spec, 1907.07986: done in TABU2) | open (from 65k; digest CLS-2) |
 | — | jfm `\oneappendix` keeps the appendix letter / its title (78q) | open (from 65v, 78q; digest CLS-3) |
 | — | a `\Cr` before its `\Cl` prints LaTeX's first-run "C^st ??" with a warning (no `.aux` round trip; 1307.4858) | open, low (from 65y; digest CLS-4) |
 | — | `\usepackage{arabtex}` sets the whole body italic (its `\all@wcmd` font wrappers; pdflatex cmr10) — RED follow-up not filed yet. Witnesses 2105.08579, 2201.05363 | open (from 66c; digest CLS-5) |

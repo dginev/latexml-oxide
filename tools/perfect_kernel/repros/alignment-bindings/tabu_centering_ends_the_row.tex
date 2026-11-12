@@ -1,0 +1,26 @@
+% witness: 2210.07016 (94 Errors), 2403.07615 (6), 2112.12027 (3)
+% oracle:  pdflatex 0 errors: rows a/b/c/g, d/e/f/h; i/j, k/l; the nested tabular's a and b on two rows
+% engines: rust TABU2base = 4 Error:unexpected:& (`\\` after `\centering` broke the line: one row a/b/c/g+d/e/f/h, j+k
+%          in one cell); Perl 0.8.8 has no tabu binding (`{tabu}` undefined, the tables lost)
+% expect:  tabu.sty:2376-2381 `\tabu@latextwoe` makes `\centering`/`\raggedright`/`\raggedleft` end with `\arraybackslash`
+%          (lets of `\tabu@init` :707-708), so `\\` after them ends the row, in a nested tabular too
+% status:  RED (TABU2base) -> GREEN (TABU2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{tabu}
+\begin{document}
+\begin{tabu}{l|>{\centering}m{2cm}>{\raggedright}p{2cm}>{\raggedleft}p{2cm}}
+a & b & c & g \\
+d & e & f & h \\
+\end{tabu}
+
+\begin{tabu} to 0.8\linewidth{lX}
+i & \centering j \\
+k & \raggedleft l \\
+\end{tabu}
+
+\begin{tabu}{lc}
+x & \begin{tabular}{>{\centering}p{2cm}}a\\b\end{tabular} \\
+y & z \\
+\end{tabu}
+\end{document}

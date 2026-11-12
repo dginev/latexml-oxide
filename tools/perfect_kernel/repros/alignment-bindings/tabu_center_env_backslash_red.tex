@@ -1,0 +1,17 @@
+% witness: synthetic (reviewer sibling of tabu_centering_ends_the_row.tex)
+% oracle:  pdflatex 104 `!` lines and no PDF (100-error stop): in a tabu, `{center}`'s `\centering` is tabu's and ends
+%          with `\arraybackslash` (tabu.sty:2376-2381), so its `\\` ends the row inside the environment
+% engines: rust TABU2 = 0 Errors, a and b two centred lines (our `{center}` lets `\\` to `\@normalcr` itself,
+%          sect06.rs `{center}`); Perl 0.8.8 has no tabu binding
+% expect:  an Error where TeX errs (the content kept)
+% status:  RED (TABU2)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{tabu}
+\begin{document}
+\begin{tabu}{lp{3cm}}
+x & \begin{center}a\\b\end{center} \\
+y & z \\
+\end{tabu}
+\end{document}
