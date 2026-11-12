@@ -5850,7 +5850,10 @@ class bold" alternative).
 `\textbf{Zhou Zhao} \footnotemark[2]` bold name kept its footnotemark marker sibling —
 now unwrapped too. Shared upstream bug recorded as KNOWN_PERL_ERRORS #88.
 
-**Guard**: `06_cluster_frontmatter::frontmatter_neurips_author_bold_coherent`.
+**Guard**: `06_cluster_frontmatter::frontmatter_neurips_author_bold_coherent`; a bold holding the name's printed mark
+(authblk's `\textbf{Bob Two$^{2}$}`, the mark nested in the font group) is unwrapped alike, a partial bold kept:
+`cluster_package_guards::perfect_kernel_batchc1::authblk_names_show_their_printed_marks` (repro
+`authblk_font_names_printed_marks`, P4b4r).
 
 ### 125. A wrapper box merges its `class` onto a single block child, not overwrites it
 

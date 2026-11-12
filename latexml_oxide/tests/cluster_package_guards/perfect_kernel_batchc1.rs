@@ -232,8 +232,8 @@ fn queued_marks_read_as_digested() {
       &["Cy Three"],
       &["affiliation=First Univ"],
     ]),
-    // (each name shows its printed mark (P4b2b); Bob Two's bold is lost UNCOUNTED since — RED
-    // `authblk_bold_name_markup_lost_uncounted_red`, P4b4)
+    // (each name shows its printed mark (P4b2b); Bob Two's whole-name bold is unwrapped by OD #122, no loss: P4b4r's
+    // `authblk_font_names_printed_marks`)
     (repro!("queue_marks_flexisym_authblk_boxed_note"), 0, &[
       &["Ann One 1", "affiliation=1 First Univ"],
       &["Bob Two 2", "affiliation=2 Second Univ"],
@@ -1049,7 +1049,8 @@ fn marks_lead_as_digested() {
 
 /// P4b2b (2410.01932, Q1 a): a binding's list of names (`\lx@add@authors@list`: authblk, iopart, the unknown class) whose
 /// affiliations are their own calls, each printing its mark, shows the marks each name prints, answered or not
-/// (`per_author_marks`); authblk's labelled `\author[1]` keeps its own as before. Red on P4b2: every listed name bare.
+/// (`per_author_marks`); authblk's labelled `\author[1]` keeps its own as before. Red on P4b2: every listed name bare. A name
+/// in a font command keeps its markup there, a whole-name bold unwrapped by OD #122 (P4b4r).
 #[test]
 fn authblk_names_show_their_printed_marks() {
   macro_rules! repro {
@@ -1116,6 +1117,14 @@ fn authblk_names_show_their_printed_marks() {
       0,
       robust_marks,
     ),
+    // (P4b4r: names in font commands keep their markup with their printed marks; Bob Two's whole-name bold is OD #122's)
+    (repro!("authblk_font_names_printed_marks"), 0, &[
+      &["Ann One 1", "affiliation=1 First Univ"],
+      &["Bob Two 2", "affiliation=2 Second Univ"],
+      &["Cy Three 3", "affiliation=3 Third Univ"],
+      &["Dan Four 4", "affiliation=4 Fourth Univ"],
+      &["Eve Five 5", "affiliation=5 Fifth Univ"],
+    ]),
   ];
   for ((name, tex), warnings, expected) in rows {
     let (log, xml) = run(tex);
@@ -1142,6 +1151,25 @@ fn authblk_names_show_their_printed_marks() {
         Some(
           r#"Cy Dee<text depth="0.0pt" height="0.0pt" yoffset="0.0pt" xml:id="id5"><sup xml:id="id5.1"><Math mode="inline" tex="\dagger" text="dagger" xml:id="m3"> <XMath xml:id="m3.1"> <XMTok fontsize="80%" name="dagger" role="MULOP">†</XMTok> </XMath> </Math></sup></text>"#
         ),
+        "{name}"
+      );
+    }
+    if *name == "authblk_font_names_printed_marks" {
+      let all = creators(&xml);
+      let names: Vec<&str> = all
+        .split("<personname>")
+        .skip(1)
+        .filter_map(|p| p.split("</personname>").next())
+        .collect();
+      assert_eq!(
+        names,
+        [
+          r#"<text font="italic" xml:id="id1">Ann One<sup xml:id="id1.1"><text font="italic" xml:id="id1.1.1">1</text></sup></text>"#,
+          r#"Bob Two<sup xml:id="id3"><text font="italic" xml:id="id3.1">2</text></sup>"#,
+          r#"<text font="smallcaps" xml:id="id5">Cy Three<sup xml:id="id5.1"><text font="italic" xml:id="id5.1.1">3</text></sup></text>"#,
+          r#"Dan <text font="bold" xml:id="id7">Four<sup xml:id="id7.1"><text font="italic" xml:id="id7.1.1">4</text></sup></text>"#,
+          r#"Eve Five<sup xml:id="id9"><text font="italic" xml:id="id9.1">5</text></sup>"#,
+        ],
         "{name}"
       );
     }
