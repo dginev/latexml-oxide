@@ -19273,3 +19273,26 @@ More.
 \end{document}
 ```
 
+
+## 1221. pgfmath: unary minus binds tighter than `^`, `!` and `*`/`/` in Perl's grammar
+
+pgf's unary minus is `neg` at precedence 500 (pgfmathfunctions.basic.code.tex:46-49), below `r` (600), `*`/`/`
+(700), `!` (800) and `^` (900): it negates the whole term after it. Perl's Parse::RecDescent grammar reads it as
+`PREFIX simplefactor` (pgfmath.code.tex.ltxml:680), so `-a^b` is (-a)^b. Perl's Perl-`eval` fast path (:355-372)
+hides the flaw for plain arithmetic (`-2^2` → `-2**2` → -4), but an expression the blacklist sends to the grammar
+(a trig function) gets the flaw, and the fast path's own precedence differs from pgf's for `/` after a negation
+(`8/-2*2`: Perl -8.0, pgf -2.0). Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{pgf}
+\begin{document}
+\pgfmathparse{-sin(30)^2}[\pgfmathresult] % pdflatex [-0.25], Perl [0.25]
+\pgfmathparse{8/-2*2}[\pgfmathresult]     % pdflatex [-2.0], Perl [-8.0]
+\end{document}
+```
+
+Fixed in Rust (DTL1b): the `-` branch of `simplefactor` negates a whole `term()`; `^` is left-associative under a
+postfix `!`, and `r` applies to the product so far (`pgfmath_code_tex.rs`; rows in `pgfmath_golden_tests`, safe twin
+`graphics-tikz/pgfmath_neg_binds_below_power.tex`; witness 2311.02367). The `86_tikz` golden `tikz/dominoes.xml` had
+pinned Perl's `-((x)/75)^2` as `+`: its picture is now pdflatex's 341.85pt high (was 379.25pt).

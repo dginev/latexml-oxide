@@ -78,6 +78,24 @@ const ROWS: &[Row] = &[
       "matrix(0.77832 0.0 0.0 0.77832 -12.78 -14.33)",
     ],
   },
+  // B (safe twin): unary minus binds below `^` (pgf's `neg` 500, pgfmathfunctions.basic.code.tex:46-49), so the
+  // Gaussian `exp(-(\y)^2)` stays below 1 and the plot is 1.6cm wide (2311.02367); pdflatex 0 `!`, [-4.0]; Perl 0.
+  // Read as (-2)^2: [4.0], 2 "Dimension too large", a 22606.82 px picture.
+  Row {
+    name:     "pgfmath_neg_binds_below_power",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/graphics-tikz/pgfmath_neg_binds_below_power.tex"
+    ),
+    files:    &[],
+    counts:   (0, 0),
+    messages: &[],
+    elements: &[(
+      "para",
+      "xml:id=\"p1\"",
+      r##"<para xml:id="p1"><p xml:id="p1.1">[-4.0]<picture height="213.15" width="62.24" xml:id="p1.pic1"><svg:svg height="213.15" overflow="visible" version="1.1" viewBox="0 0 62.24 213.15" width="62.24"><svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,213.15) matrix(1 0 0 -1 0 0) translate(0.23,0) translate(0,106.58)"><svg:path d="M 0.04 -106.3 L 0.18 -95.11 L 0.67 -83.92 L 2.08 -72.73 L 5.47 -61.54 L 12.27 -50.35 L 23.42 -39.16 L 38.02 -27.97 L 52.52 -16.78 L 61.73 -5.59 L 61.73 5.59 L 52.52 16.78 L 38.02 27.97 L 23.42 39.16 L 12.27 50.35 L 5.47 61.54 L 2.08 72.73 L 0.67 83.92 L 0.18 95.11 L 0.04 106.3" style="fill:none"/></svg:g></svg:svg></picture></p></para>"##,
+    )],
+    holds:    &[],
+  },
   // The error side: a dimension TeX cannot hold still reports "Dimension too large" (pdflatex 1 `!`; Perl 0 and
   // 20000.0pt). A Warning today; the out-of-range severity batch makes it an Error.
   Row {
