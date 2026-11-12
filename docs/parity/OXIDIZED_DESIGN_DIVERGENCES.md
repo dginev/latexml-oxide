@@ -35155,3 +35155,23 @@ guarded `if $LaTeXML::DEBUG{feature}` (L467), so `--verbose` alone prints no tra
 `Debug:<target> <message>` (`Debug:frontmatter FRONT Add …`), as the other severities name their category. Reason:
 the un-featured traces are Rust's own instrumentation with no Perl feature to enable them, and the prefix keeps them
 apart from `Info:` lines in a log. Guard `cluster_cli::debug_feature_scope::debug_feature_prints_only_its_feature`.
+
+### 1008. A binding's marked affiliation list is cut by the API's Cut, as the binding declares it, each mark shown (Option C P4c)
+
+**Perl.** `\IEEEauthorblockA{…}` and iopart's `\address{…}` are one `\lx@add@affiliation` each
+(IEEEtran.cls.ltxml:145); no list is cut at its marks, so every author gets the whole block.
+
+**Rust.** A binding hands its marked list to the one Cut (`frontmatter_api::cut::cut_list`) through
+`\lx@add@affiliation@marked`/`@shared` (`marked_list_calls`) with its declaration, `MARKED_LIST_CUT`: every printed mark
+cuts it once the names print theirs (`affiliation_is_marked`, read as digested, a note's leading label counted:
+`prints_list_marks`); an address line behind an e-mail label is entry text; legends and notes stay the notes the reading
+makes of them; the call's placement (`annotate=new`) is dropped, the marks place the entries. The API's own Cut keeps
+its parameters (`API_CUT`: two requested marks, labelled address lines). Each entry shows its mark (FIDELITY_CHARTER §2,
+P4S Q1). The binding calls the Cut itself: a flush digests a block's affiliation with `\lx@annotate@frontmatter` let to
+its `@now`, which no Cut reads. The binding's own cutter (`binding_cut_list_attr`) is deleted.
+**Why**: one cut for every printed list; the binding's former cut dropped the marks it cut at (2601.01850, 1204.4183).
+**Witnesses**: IEEEtran 1705.01774, 1801.04010, 1504.01072, 1811.06030, 2310.18257, 2511.18221, 2512.10732,
+2609.16600; iopart 1205.6912 (each the base's entries with their marks shown).
+**Guard**: `perfect_kernel_batchc1::marked_list_cut_as_its_binding_declares` (9 rows).
+**Open**: 2508.17623's link line after the entries is lost, counted
+(`ieee_marked_list_url_line_after_entries_red.tex`).

@@ -50,7 +50,7 @@ pub(in crate::base_utilities) mod separators;
 // (for the bindings, which ask what an argument's separators mean: Option C P2, OXIDIZED_DESIGN_DIVERGENCES #995)
 // (the marks query, Option C F0)
 pub(in crate::base_utilities) use argument_marks::count_unread as count_unread_marks;
-pub use argument_marks::{argument_marks, prints_marks, prints_requested_marks};
+pub use argument_marks::{argument_marks, prints_list_marks, prints_marks, prints_requested_marks};
 pub(in crate::base_utilities) use emitter::{
   EMITTING, SETTERS_RECOVERED, block_creator_written, calls::*, check_placed_content,
   emit_commands, emitted, setters_recovered, take_digested,

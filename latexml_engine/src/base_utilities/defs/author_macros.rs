@@ -4,7 +4,7 @@
 use super::{
   frontmatter_api::{
     PRINTED_LABEL, affiliation_calls, affiliation_is_marked, blank_line_marks_dropped,
-    shared_affiliation_calls, unalias_mark_commands,
+    marked_list_calls, shared_affiliation_calls, unalias_mark_commands,
   },
   *,
 };
@@ -190,11 +190,10 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     whole_block_call(names, false, keyvals, late)
   });
   // That class's affiliation command, under its authors (informs4.cls:1199 `\AFF{$^a$Univ A}`): one affiliation call,
-  // placed as the optional attributes say (apa7's unnumbered list, `annotate=all`); its marked lines, where the names
-  // request their marks, are cut by the one cut the API makes of every contact (the Cut, else the reading's), each mark
-  // shown and its entry the requesters' (2609.17368, 22690, 28084).
+  // placed as the optional attributes say (apa7's unnumbered list, `annotate=all`); a marked list, the API's Cut cuts as
+  // the binding declares it (`marked_list_calls`), each mark shown and its entry the requesters' (2609.17368, 22690, 28084).
   DefMacro!("\\lx@add@affiliation@marked[]{}", sub[(attr, stuff)] {
-    Ok(Invocation!(T_CS!("\\lx@add@affiliation"), vec![attr, Some(stuff)]))
+    marked_list_calls(attr, stuff)
   });
   // Rust-only: an address a class prints under a row of names it shares (aistats's `\aistatsaddress` under
   // `\aistatsauthor{A \And B \And C}` when its columns are not the names', 1806.02924, 2510.09534): marked,
@@ -203,7 +202,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // (`shared_affiliation_calls`).
   DefMacro!("\\lx@add@affiliation@shared[]{}", sub[(attr, stuff)] {
     if affiliation_is_marked(&stuff)? {
-      Ok(Invocation!(T_CS!("\\lx@add@affiliation"), vec![attr, Some(stuff)]))
+      marked_list_calls(attr, stuff)
     } else {
       Ok(Tokens::new(shared_affiliation_calls(attr, stuff)?))
     }

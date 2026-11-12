@@ -1,0 +1,22 @@
+% mechanism: a binding's marked list cut by the Cut as the binding declares it (`MARKED_LIST_CUT`, OD #1008): every
+%   mark cuts it, address lines are entry text, legends and notes stay notes, no placement attribute; each mark shown
+%   (IEEEtran single-entry blocks in a non-sequential order, then an unmarked block (a corresponding-author line) and an e-mail block)
+% witness: 2310.18257
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able∗ , Bob Baker∗† , and Cy Cole‡", "∗ Univ A, Town A.", "‡ Univ C, Town C.", "† Centre B, Town B.", "Bob Baker is the corresponding author.", "Email: …"
+% engines: P4cbase: the corresponding-author line every author's; P4c WIP: Cy Cole's alone; perl: no cut of the list
+% expect:  0 errors, 0 warnings; the base's placement with each mark shown (known gap, the base's: cy@c.edu on a nameless creator)
+% status:  RED (P4c WIP 0f8a176508) -> GREEN (P4c2)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}, Bob Baker\IEEEauthorrefmark{1}\IEEEauthorrefmark{2}, and Cy Cole\IEEEauthorrefmark{3}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ A, Town A.}
+\IEEEauthorblockA{\IEEEauthorrefmark{3}Univ C, Town C.}
+\IEEEauthorblockA{\IEEEauthorrefmark{2}Centre B, Town B.}
+\IEEEauthorblockA{Bob Baker is the corresponding author.}
+\IEEEauthorblockA{Email: ann@a.edu; bob@b.edu; cy@c.edu.}
+}
+\maketitle
+Text.
+\end{document}

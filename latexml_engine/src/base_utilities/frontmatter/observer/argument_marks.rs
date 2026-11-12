@@ -61,6 +61,22 @@ pub fn prints_marks(arg: &Tokens, caller: &str) -> Result<bool> {
   })
 }
 
+/// Whether a list `arg` prints a mark: one of its own ([`prints_marks`]) or the label a note of it opens with, which
+/// TeX prints at the note's head (IEEEtran's `\thanks{\IEEEauthorrefmark{1} …}` in a block, 1504.01072); a
+/// `\footnotemark` none. Unread, its tokens' marks, counted for `caller`.
+pub fn prints_list_marks(arg: &Tokens, caller: &str) -> Result<bool> {
+  let Some(events) = mark_events(arg)? else {
+    count_unread(caller);
+    return Ok(author_mark_position(arg).is_some());
+  };
+  let label = |e: &Event| {
+    e.kind == EventKind::Mark && !e.ordinal && e.role.as_deref() != Some("footnotemark")
+  };
+  Ok(events.iter().filter(|e| e.nest == 0).any(|e| {
+    (label(e)) || (e.kind == EventKind::Note && e.inner.iter().any(|m| m.line_first && label(m)))
+  }))
+}
+
 /// Whether `arg` prints a mark of its own ([`argument_marks`]) whose label a queued name requests (`requested_labels`);
 /// unread, its tokens' marks, counted for `caller`. A class's numbered store declines its numbers for its own marks only
 /// when the names ask for them (revP4d S1: `\ma` printing `\textsuperscript{a}` under `\inst{1}`, numbered 1 and 2).

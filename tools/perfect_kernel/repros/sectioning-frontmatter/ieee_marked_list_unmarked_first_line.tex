@@ -1,0 +1,20 @@
+% mechanism: a binding's marked list cut by the Cut as the binding declares it (`MARKED_LIST_CUT`, OD #1008): every
+%   mark cuts it, address lines are entry text, legends and notes stay notes, no placement attribute; each mark shown
+%   (IEEEtran names in a brace group, one `\IEEEauthorblockA` whose first line is unmarked and second marked, digested at the flush (the API's annotate is its `@now` there))
+% witness: 1801.04010
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able, Bob Baker, and Cy Cole †", "Univ A, Town A", "† Centre B, Town B", "Email: {ann, bob}@a.edu, cy@b.ca"
+% engines: P4cbase: every author "Univ A, Town A", Cy Cole "Centre B, Town B"; P4c WIP: "Univ A, Town A † Centre B, Town B" one affiliation of everyone; perl: no cut of the list
+% expect:  0 errors, 2 warnings (the base's, as many); every author "Univ A, Town A" and an e-mail, Cy Cole also "† Centre B, Town B"
+% status:  RED (P4c WIP 0f8a176508) -> GREEN (P4c2)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{{Ann Able, Bob Baker, and Cy Cole \IEEEauthorrefmark{2}}\\
+\IEEEauthorblockA{Univ A, Town A\\
+\IEEEauthorrefmark{2} Centre B, Town B\\
+Email: \{ann, bob\}@a.edu, cy@b.ca}
+}
+\maketitle
+Text.
+\end{document}

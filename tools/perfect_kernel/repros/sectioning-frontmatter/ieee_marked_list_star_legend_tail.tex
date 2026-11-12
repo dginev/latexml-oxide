@@ -1,0 +1,24 @@
+% mechanism: a binding's marked list cut by the Cut as the binding declares it (`MARKED_LIST_CUT`, OD #1008): every
+%   mark cuts it, address lines are entry text, legends and notes stay notes, no placement attribute; each mark shown
+%   (IEEEtran names led by a literal `*`, two single-entry blocks and a `*equally contributed` legend after them)
+% witness: 2609.16600
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "*Ann Able† , *Bob Baker‡ , Cy Cole†", "† Univ A (A*STAR), Town A", "‡ Univ B, Town B", "*equally contributed"
+% engines: P4cbase: the legend every author's note, both entries on a nameless creator; P4c WIP: the entries on the authors, the creators 4 → 3; perl: no cut of the list
+% expect:  0 errors, 0 warnings; the base's placement with each mark shown (known gap, the base's: the entries on a nameless fourth creator)
+% status:  RED (P4c WIP 0f8a176508) -> GREEN (P4c2)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{
+*Ann Able\IEEEauthorrefmark{2},
+*Bob Baker\IEEEauthorrefmark{3},
+Cy Cole\IEEEauthorrefmark{2}
+}
+\IEEEauthorblockA{\IEEEauthorrefmark{2}Univ A (A*STAR), Town A}
+\IEEEauthorblockA{\IEEEauthorrefmark{3}Univ B, Town B}
+*equally contributed
+}
+\maketitle
+Text.
+\end{document}

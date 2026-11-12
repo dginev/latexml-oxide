@@ -72,8 +72,9 @@ pub(in crate::base_utilities) fn entry_calls(
   let stuff = rewrite_ordinal_superscripts(strip_linebreak_options(unalias_mark_commands(stuff)));
   let stuff = blank_line_marks_dropped(stuff);
   let stuff = glued_line_marks_as_marks(stuff, true);
-  // (the list's marks as digested, as its gates read them: a store's `\ma` printing `\textsuperscript{a}`, revP4d S1)
-  let with_sup = marks_are_labels && prints_marks(&stuff, "affiliation_calls")?;
+  // (the list's marks as digested, as its gate reads them, `affiliation_is_marked`: a store's `\ma` printing
+  // `\textsuperscript{a}`, revP4d S1; a note's label, 1504.01072)
+  let with_sup = marks_are_labels && prints_list_marks(&stuff, "affiliation_calls")?;
   // In a marked list, the affiliations it names, each a mark-led line (or a piece of one) with the unmarked lines
   // that follow it.
   let mut marked_entries: Vec<Vec<Token>> = Vec::new();
@@ -446,11 +447,12 @@ pub fn numbered_marks_requested() -> Result<bool> {
 }
 
 /// Whether an affiliation a class gives after its authors is a marked list: it prints a mark, read as digested
-/// ([`prints_marks`]), and the queued authors' names print marks — or none is queued yet, the marks labels for the names to come.
+/// ([`prints_list_marks`]: its own or a note's label), and the queued authors' names print marks — or none is queued
+/// yet, the marks labels for the names to come.
 pub(in crate::base_utilities) fn affiliation_is_marked(stuff: &Tokens) -> Result<bool> {
   Ok(
     (queued_authors_marked()? || queued_creator_count() == 0)
-      && prints_marks(stuff, "affiliation_is_marked")?,
+      && prints_list_marks(stuff, "affiliation_is_marked")?,
   )
 }
 

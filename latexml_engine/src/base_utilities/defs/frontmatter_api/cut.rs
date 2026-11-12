@@ -12,6 +12,68 @@ use crate::{base_utilities::defs::frontmatter_fields::text_tokens, frontmatter_s
 /// before step 3: no convention outranks a mark, rulings R1, R3).
 const CUT_DROPPED_KEYS: [&str; 2] = ["labelseq", "_share"];
 
+/// What the Cut reads of a list's shape ([`cut_list`]): its own parameters for any contact ([`API_CUT`]), or those a
+/// binding declares for the marked list it hands over ([`MARKED_LIST_CUT`]).
+pub(in crate::base_utilities) struct CutParameters {
+  /// Cut at every printed mark once the names print theirs ([`affiliation_is_marked`]), not only at two or more marks
+  /// the names request ([`requested_marked_entries_in`]).
+  every_mark:             bool,
+  /// An address line behind an e-mail label is one of the list's (its addresses the run's), not text of the entry
+  /// above ([`EntryCall`]).
+  labelled_address_lines: bool,
+  /// The call's keys its entries do not keep: the marks place them.
+  dropped_keys:           &'static [&'static str],
+}
+
+/// The Cut of a contact queued through the API ([`cut_marked_contact`]).
+const API_CUT: CutParameters = CutParameters {
+  every_mark:             false,
+  labelled_address_lines: true,
+  dropped_keys:           &CUT_DROPPED_KEYS,
+};
+
+/// The Cut of a binding's marked list (`\lx@add@affiliation@marked`, `@shared`: IEEEtran's `\IEEEauthorblockA`,
+/// iopart's `\address`, informs, sv, authblk, …): every mark cuts it, an address line is entry text, legends and notes
+/// stay the notes the reading makes of them, the call's placement (`annotate=new`) dropped — the entries as the binding's
+/// own cut gave them, each mark shown (IEEEtran 1705.01774, 1801.04010, 1811.06030, 2310.18257, 2511.18221, 2512.10732,
+/// 2609.16600, 1504.01072; iopart 1205.6912). OD #1008.
+pub(in crate::base_utilities) const MARKED_LIST_CUT: CutParameters = CutParameters {
+  every_mark:             true,
+  labelled_address_lines: false,
+  dropped_keys:           &["labelseq", "_share", "annotate"],
+};
+
+/// The calls of a binding's marked list (`\lx@add@affiliation@marked[attr]{stuff}`, `@shared`): its entries as the Cut
+/// cuts it under the binding's declaration ([`MARKED_LIST_CUT`]), else the one affiliation call. Called by the binding,
+/// as a flush digests a block's affiliation with the API's annotate let to its `@now`, which no Cut reads.
+pub(in crate::base_utilities) fn marked_list_calls(
+  attr: Option<Tokens>,
+  stuff: Tokens,
+) -> Result<Tokens> {
+  let mut call_attr = mouth::tokenize_internal("role=affiliation").unlist();
+  if let Some(attr) = &attr {
+    call_attr.push(T_OTHER!(","));
+    call_attr.extend(attr.unlist_ref().iter().copied());
+  }
+  let content = Invocation!(T_CS!("\\lx@affiliation@withinst"), vec![Some(
+    stuff.clone()
+  )]);
+  if let Some(calls) = cut_list(
+    &mouth::tokenize_internal("ltx:creator"),
+    &mouth::tokenize_internal("ltx:contact"),
+    "affiliation",
+    Tokens::new(call_attr),
+    &content,
+    &MARKED_LIST_CUT,
+  )? {
+    return Ok(calls);
+  }
+  Ok(Invocation!(T_CS!("\\lx@add@affiliation"), vec![
+    attr,
+    Some(stuff)
+  ]))
+}
+
 /// The frontmatter API's Cut (FRONTMATTER_SINGLE_ENGINE_PLAN "The target model", placement step 0: "one item per
 /// printed entry; marked lists cut at their marks"), for every binding: an affiliation, alternate affiliation or address
 /// contact (`\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=…]{…}`, which `\lx@add@affiliation`,
@@ -57,6 +119,19 @@ pub(in crate::base_utilities) fn cut_marked_contact(
   {
     return Ok(None);
   }
+  cut_list(parenttag, tag, &role, kv.revert()?, content, &API_CUT)
+}
+
+/// The Cut of `content`, a contact of `role` annotating `parenttag` with the call's attributes `attr`, as `parameters`
+/// read its list ([`cut_marked_contact`]); `None` for a list they leave whole.
+pub(in crate::base_utilities) fn cut_list(
+  parenttag: &Tokens,
+  tag: &Tokens,
+  role: &str,
+  attr: Tokens,
+  content: &Tokens,
+  parameters: &CutParameters,
+) -> Result<Option<Tokens>> {
   // (the content inside the affiliation's own wrapper, `\lx@add@affiliation`'s `\lx@affiliation@withinst{…}`, which
   // each entry keeps)
   let (withinst, list) = within_inst(content);
@@ -65,16 +140,19 @@ pub(in crate::base_utilities) fn cut_marked_contact(
   {
     return Ok(None);
   }
+  if parameters.every_mark && !affiliation_is_marked(&list)? {
+    return Ok(None);
+  }
   let list = printed_marks_as_marks(list);
-  if !requested_marked_entries_in(&list)? {
+  if !parameters.every_mark && !requested_marked_entries_in(&list)? {
     return Ok(None);
   }
   // (one printed list, one Cut: a list repeated after each author's name, 2312.02779's five identical
   // `\affiliation{{$^1$}…Belfast…\\ {$^2$}…Trinity…}`, is cut once — a later copy adds no entries, as the cut one's
   // reach every author requesting their marks by label, and the copies queued before the cut, uncut while too few names
   // were queued to request two of its marks, give way to it: review rev99a2 B1, [`place_uncut_copies`])
-  let key = cut_list_key(parenttag, &role, &list);
-  place_uncut_copies(parenttag, &role, &key, &requested_entry_marks(&list)?)?;
+  let key = cut_list_key(parenttag, role, &list);
+  place_uncut_copies(parenttag, role, &key, &requested_entry_marks(&list)?)?;
   if cut_list_queued(&key) {
     DebugFeature!(
       "frontmatter",
@@ -93,11 +171,12 @@ pub(in crate::base_utilities) fn cut_marked_contact(
   // open before a piece, review rev94b r3 B1)
   let opening = notes_lead_declarations(&list);
   // (the call's own attributes, without the ones its marks replace)
+  let call_attr = attr;
   let mut attr: Vec<Token> = Vec::new();
-  for item in split_tokens(kv.revert()?, vec![T_OTHER!(",").into()]) {
+  for item in split_tokens(call_attr, vec![T_OTHER!(",").into()]) {
     let key = item.to_string();
     let key = key.split('=').next().unwrap_or_default().trim();
-    if key.is_empty() || CUT_DROPPED_KEYS.contains(&key) {
+    if key.is_empty() || parameters.dropped_keys.contains(&key) {
       continue;
     }
     if !attr.is_empty() {
@@ -138,7 +217,7 @@ pub(in crate::base_utilities) fn cut_marked_contact(
   };
   let call = EntryCall {
     add:                    &add,
-    labelled_address_lines: true,
+    labelled_address_lines: parameters.labelled_address_lines,
   };
   let mut calls = entry_calls(&call, attr.clone(), attr.clone(), None, list, true, true)?;
   for part in block_parts {

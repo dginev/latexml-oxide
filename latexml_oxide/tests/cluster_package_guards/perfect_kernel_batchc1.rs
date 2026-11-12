@@ -47,7 +47,8 @@ fn creators(xml: &str) -> String {
 
 /// A marked block under `\documentclass{revtex4-2}`: `names` names each with its own mark, half the marks answered by an
 /// `\affiliation` of its own and half by one list. Returns the source and the creators the base (int142a) makes of it,
-/// which are the document's: each name holds the entry its mark requests.
+/// which are the document's: each name holds the entry its mark requests, the mark shown (P4c, P4S Q1: pdflatex prints
+/// "1University 1, Town").
 fn marked_block(names: usize) -> (String, String) {
   let name = |n: usize| format!("Ann{} Able{}", letters(n), letters(n + 1));
   let mut tex = String::from("\\documentclass{revtex4-2}\n\\begin{document}\n\\title{T}\n");
@@ -56,8 +57,12 @@ fn marked_block(names: usize) -> (String, String) {
     tex.push_str(&format!("\\author{{{}$^{{{n}}}$}}\n", name(n)));
     let before = if n == 1 { "" } else { r#" before=" ""# };
     expected.push(format!(
-      r#"<creator{before} role="author"> <personname>{}<sup xml:id="id{n}"><text font="italic" xml:id="id{n}.1">{n}</text></sup></personname> <contact name="Affiliation: " role="affiliation">University {n}, Town</contact> </creator>"#,
-      name(n)
+      r#"<creator{before} role="author"> <personname>{}<sup xml:id="id{}"><text font="italic" xml:id="id{}.1">{n}</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id{}"><text font="italic" xml:id="id{}.1">{n}</text></sup>University {n}, Town</contact> </creator>"#,
+      name(n),
+      2 * n - 1,
+      2 * n - 1,
+      2 * n,
+      2 * n,
     ));
   }
   let half = names / 2;
@@ -148,7 +153,8 @@ fn a_removal_forgets_the_reading() {
 type Row<'a> = ((&'a str, &'a str), usize, &'a [&'a [&'a str]]);
 
 /// Option C F0/P4a: the queue's names request the labels their digested marks print (`queue_reading::author_marks`,
-/// `argument_marks`), while the binding's gate stays on the token reading until P4c (`affiliation_is_marked`). One row a
+/// `argument_marks`), and the binding's gate reads the list as digested (`affiliation_is_marked`, P4c: each mark shown,
+/// P4S Q1, where the binding's own cut dropped them). One row a
 /// shape: a marked list, a macro printing the mark (its list keeps the printed marks, as int160c), a `\let` copy, the
 /// unknown class's path, a mark inside a box; amsart's `\address` list repeated, its macro-printed marks requested by
 /// printed text where the Cut's uncut copies give way (`place_uncut_copies`, review revF0 B1: three entries, two). Each:
@@ -169,24 +175,24 @@ fn queued_marks_read_as_digested() {
   }
   let rows: &[Row] = &[
     (repro!("queue_marks_revtex_marked_list"), 0, &[
-      &["Ann Able 1", "affiliation=Univ A, Town A"],
-      &["Bob Baker 2", "affiliation=Univ B, Town B"],
+      &["Ann Able 1", "affiliation=1 Univ A, Town A"],
+      &["Bob Baker 2", "affiliation=2 Univ B, Town B"],
     ]),
     (repro!("queue_marks_revtex_macro_held_marks"), 0, &[
       &["Ann Able 1", "affiliation=1 Univ A, Town A"],
       &["Bob Baker 2", "affiliation=2 Univ B, Town B"],
     ]),
     (repro!("queue_marks_revtex_let_copy_marks"), 0, &[
-      &["Ann Able 1", "affiliation=Univ A, Town A"],
-      &["Bob Baker 2", "affiliation=Univ B, Town B"],
+      &["Ann Able 1", "affiliation=1 Univ A, Town A"],
+      &["Bob Baker 2", "affiliation=2 Univ B, Town B"],
     ]),
     (repro!("queue_marks_unknown_class_marked_list"), 1, &[
       &["Ann Able 1", "affiliation=1 Univ A, Town A"],
       &["Bob Baker 2", "affiliation=2 Univ B, Town B"],
     ]),
     (repro!("queue_marks_revtex_boxed_marks"), 0, &[
-      &["Ann Able 1", "affiliation=Univ A, Town A"],
-      &["Bob Baker 2", "affiliation=Univ B, Town B"],
+      &["Ann Able 1", "affiliation=1 Univ A, Town A"],
+      &["Bob Baker 2", "affiliation=2 Univ B, Town B"],
     ]),
     (
       repro!("queue_marks_ams_macro_marks_three_entry_copies"),
@@ -303,4 +309,218 @@ fn class_numbered_institutes_read_by_meaning() {
       .collect();
     assert_eq!(text_creators(&xml), expected, "{name}: {xml}");
   }
+}
+
+/// Every note and pubnote of `xml` in document order, as `tag:role=text`.
+fn notes(xml: &str) -> Vec<String> {
+  let note =
+    regex::Regex::new(r#"(?s)<(note|pubnote)\b[^>]*role="([^"]*)"[^>]*>(.*?)</(?:note|pubnote)>"#)
+      .expect("regex");
+  note
+    .captures_iter(xml)
+    .map(|c| {
+      format!(
+        "{}:{}={}",
+        &c[1],
+        &c[2],
+        super::perfect_kernel_batch84b::text(&c[3])
+      )
+    })
+    .collect()
+}
+
+/// Option C P4c: a binding's marked list (`\lx@add@affiliation@marked`, IEEEtran's `\IEEEauthorblockA`, iopart's
+/// `\address`) is cut by the API's Cut as the binding declares it (`MARKED_LIST_CUT`, OD #1008): at every mark, an
+/// address line entry text, legends and notes notes, no placement attribute; each mark shown (Q1). One row a witness's
+/// shape (red on the P4c WIP): its Warning count, every creator's name and contacts, every note.
+#[test]
+fn marked_list_cut_as_its_binding_declares() {
+  macro_rules! repro {
+    ($name:literal) => {
+      (
+        $name,
+        include_str!(concat!(
+          "../../../tools/perfect_kernel/repros/sectioning-frontmatter/",
+          $name,
+          ".tex"
+        )),
+      )
+    };
+  }
+  type NotedRow<'a> = (
+    (&'a str, &'a str),
+    usize,
+    &'a [&'a [&'a str]],
+    &'a [&'a str],
+  );
+  let rows: &[NotedRow] = &[
+    (
+      repro!("ieee_marked_list_blocks_tail_email_line"),
+      0,
+      &[
+        &[
+          "Ann Able *",
+          "affiliation=* Univ A, Town A",
+          "affiliation=Email: * first.last@a.edu, † bob@b.edu",
+        ],
+        &["Bob Baker †", "affiliation=† Univ B, Town B"],
+        &[
+          "Cy Cole *",
+          "affiliation=* Univ A, Town A",
+          "affiliation=Email: * first.last@a.edu, † bob@b.edu",
+        ],
+      ],
+      &[],
+    ),
+    (
+      repro!("ieee_marked_list_unmarked_first_line"),
+      2,
+      &[
+        &["Ann Able", "affiliation=Univ A, Town A", "email=ann@a.edu"],
+        &["Bob Baker", "affiliation=Univ A, Town A", "email=bob@a.edu"],
+        &[
+          "Cy Cole 2",
+          "affiliation=Univ A, Town A",
+          "affiliation=† Centre B, Town B",
+          "email=cy@b.ca",
+        ],
+      ],
+      &[],
+    ),
+    (
+      repro!("ieee_marked_list_notes_led_by_marks"),
+      0,
+      &[
+        &[
+          "Ann Able *",
+          "affiliation=Univ A",
+          "email=ann@a.edu",
+          "affiliation=* A. Able is now with Lab C.",
+        ],
+        &["Bob Baker", "affiliation=Univ A", "email=bob@a.edu"],
+      ],
+      &["pubnote:thanks=† This version corrects typos."],
+    ),
+    (
+      repro!("ieee_marked_list_single_entry_blocks_email_tail"),
+      0,
+      &[
+        &[
+          "Ann Able *",
+          "affiliation=* Univ A, Town A",
+          "email=ann@a.edu",
+        ],
+        &[
+          "Bob Baker †",
+          "affiliation=† Univ B, Town B",
+          "email=bob@b.edu",
+        ],
+        &[
+          "Cy Cole *",
+          "affiliation=* Univ A, Town A",
+          "email=cy@a.edu",
+        ],
+      ],
+      &[],
+    ),
+    (
+      repro!("ieee_marked_list_unmarked_note_block"),
+      0,
+      &[
+        &[
+          "Ann Able *",
+          "affiliation=* Univ A, Town A.",
+          "affiliation=Bob Baker is the corresponding author.",
+          "email=ann@a.edu",
+        ],
+        &[
+          "Bob Baker * †",
+          "affiliation=* Univ A, Town A.",
+          "affiliation=† Centre B, Town B.",
+          "affiliation=Bob Baker is the corresponding author.",
+          "email=bob@b.edu",
+        ],
+        &[
+          "Cy Cole ‡",
+          "affiliation=‡ Univ C, Town C.",
+          "affiliation=Bob Baker is the corresponding author.",
+        ],
+        &["email=cy@c.edu"],
+      ],
+      &[],
+    ),
+    (
+      repro!("ieee_marked_list_star_legend_tail"),
+      0,
+      &[&["Ann Able"], &["Bob Baker"], &["Cy Cole"], &[
+        "affiliation=† Univ A (A*STAR), Town A",
+        "affiliation=‡ Univ B, Town B",
+      ]],
+      &[
+        "note:thanks=*equally contributed",
+        "note:thanks=*equally contributed",
+        "note:thanks=*equally contributed",
+      ],
+    ),
+    (
+      repro!("ieee_marked_list_legend_line"),
+      0,
+      &[&["Ann Able"], &["Bob Baker"], &[
+        "Cy Cole †",
+        "affiliation=School A , Univ A , Town A",
+      ]],
+      &["note:thanks=† Corresponding Author. E-mail: cy@a.edu"],
+    ),
+    (
+      repro!("ieee_marked_list_textsuperscript_note_tail"),
+      0,
+      &[
+        &[
+          "Ann Able * §",
+          "affiliation=* Univ A, Town A",
+          "affiliation=Accepted at a conference (DOI pending)",
+        ],
+        &[
+          "Bob Baker *",
+          "affiliation=* Univ A, Town A",
+          "affiliation=Accepted at a conference (DOI pending)",
+        ],
+        &[
+          "Cy Cole †",
+          "affiliation=† Univ C, Town C",
+          "affiliation=Accepted at a conference (DOI pending)",
+          "email=cy@c.edu",
+        ],
+      ],
+      &["note:thanks=ann@a.edu § Corresponding author"],
+    ),
+    (
+      repro!("iopart_marked_list_unmarked_first_line"),
+      0,
+      &[
+        &["Ann Able", "email=ann@a.edu"],
+        &["Bob Baker", "affiliation=1 Univ B, Town B"],
+        &["Cy Cole", "affiliation=Univ A, Town A"],
+      ],
+      &[],
+    ),
+  ];
+  let mut failures = Vec::new();
+  for ((name, tex), warnings, expected, expected_notes) in rows {
+    let (log, xml) = run(tex);
+    let got = (
+      (error_count(&log), warning_count(&log)),
+      text_creators(&xml),
+      notes(&xml),
+    );
+    let expected: Vec<Vec<String>> = expected
+      .iter()
+      .map(|c| c.iter().map(|s| s.to_string()).collect())
+      .collect();
+    let expected_notes: Vec<String> = expected_notes.iter().map(|s| s.to_string()).collect();
+    if got != ((0, *warnings), expected, expected_notes) {
+      failures.push(format!("{name}: {got:?}"));
+    }
+  }
+  assert!(failures.is_empty(), "{}", failures.join("\n"));
 }

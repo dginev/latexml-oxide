@@ -1,0 +1,19 @@
+% mechanism: a binding's marked list cut by the Cut as the binding declares it (`MARKED_LIST_CUT`, OD #1008): every
+%   mark cuts it, address lines are entry text, legends and notes stay notes, no placement attribute; each mark shown
+%   (IEEEtran unmarked first line and a `$^{\dagger}$Corresponding Author. E-mail: …` legend line in one block)
+% witness: 2511.18221
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able, Bob Baker, Cy Cole†", "School A, Univ A, Town A", "† Corresponding Author. E-mail: cy@a.edu"
+% engines: P4cbase: Cy Cole "School A , Univ A , Town A" and the note; P4c WIP: the legend merged into everyone's affiliation; perl: no cut of the list
+% expect:  0 errors, 0 warnings; Cy Cole "School A , Univ A , Town A" and note "† Corresponding Author. E-mail: cy@a.edu"; Ann Able, Bob Baker none (known gap, the base's)
+% status:  RED (P4c WIP 0f8a176508) -> GREEN (P4c2)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{
+\IEEEauthorblockN{Ann Able, Bob Baker, Cy Cole$^{\dagger}$}
+\IEEEauthorblockA{\textit{School A}, \textit{Univ A}, Town A \\
+$^{\dagger}$Corresponding Author. E-mail: \texttt{cy@a.edu}}}
+\maketitle
+Text.
+\end{document}

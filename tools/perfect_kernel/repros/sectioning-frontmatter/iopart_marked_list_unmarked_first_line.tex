@@ -1,0 +1,19 @@
+% mechanism: a binding's marked list cut by the Cut as the binding declares it (`MARKED_LIST_CUT`, OD #1008): every
+%   mark cuts it, address lines are entry text, legends and notes stay notes, no placement attribute; each mark shown
+%   (iopart `\address` whose first line is unmarked and later line marked, a blank line between)
+% witness: 1205.6912
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able, Bob Baker1 and Cy Cole", "Univ A, Town A", "1 Univ B, Town B", "E-mail: ann@a.edu" (with the witness's iopart.cls, not in TeX Live)
+% engines: P4cbase: Bob Baker "Univ B, Town B", Cy Cole "Univ A, Town A"; P4c WIP: Bob's name "Bob Baker 1", his entry lost, Cy "Univ A, Town A 1 Univ B, Town B"; perl: no cut of the list
+% expect:  0 errors, 0 warnings; Bob Baker "1 Univ B, Town B", Cy Cole "Univ A, Town A" (known gap, the base's: Univ A not every author's)
+% status:  RED (P4c WIP 0f8a176508) -> GREEN (P4c2)
+% preload: ar5iv.sty
+\documentclass{iopart}
+\begin{document}
+\title{T}
+\author{Ann Able, Bob Baker$^1$ and Cy Cole}
+\address{Univ A, Town A \\
+
+$^1$Univ B, Town B}
+\ead{ann@a.edu}
+Text.
+\end{document}
