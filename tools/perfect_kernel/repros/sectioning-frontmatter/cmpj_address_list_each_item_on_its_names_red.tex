@@ -1,0 +1,23 @@
+% witness: 1212.6367, 1212.6137, 1603.02437, 2112.09940 (cmpj2.sty:543-555 `\addresses` = one enumerate, `\addr` =
+%          `\item\label`)
+% oracle:  pdflatex (TL 2025), second run, 0 errors: "A. One1 , B. Two2 , C. Three1,2"; "1 First Institute, Lviv,
+%          Ukraine" and "2 Second Institute, Kyiv, Ukraine" under the names
+% engines: CMPJ1: the whole list (one `\@address` entry, its items with no `labels=`: `\label` is
+%          `\lx@set@frontmatter@label` in a frontmatter item) on each of the three names, each `\ref` without a target;
+%          the Warning "places an entry holding 2 label targets (la, lb) whole" counts it; int164a: on a nameless creator
+% expect:  0 errors; First Institute A. One's and C. Three's, Second Institute B. Two's and C. Three's; each item
+%          `labels="LABEL:la"`/`"LABEL:lb"`, the names' refs resolving to 1 and 2
+% status:  RED
+% moves:   a batch of its own (the emitter's cut of a list entry per `\item`, keyed by the item's `\label`)
+\documentclass{article}
+\usepackage[cm]{cmpj2}
+\title{A title}
+\author{A. One\refaddr{la}, B. Two\refaddr{lb}, C. Three\refaddr{la,lb}}
+\addresses{
+\addr{la} First Institute, Lviv, Ukraine
+\addr{lb} Second Institute, Kyiv, Ukraine
+}
+\begin{document}
+\maketitle
+Text.
+\end{document}

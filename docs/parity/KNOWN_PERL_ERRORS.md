@@ -19517,3 +19517,24 @@ invclip idiom: 16; the TL manuals ddphonism 40, tikzbrickfigurines-doc 352). Fix
 [\pgfmathparse{16383.99999pt}\pgfmathresult] [\pgfmathparse{-16383.99999pt}\pgfmathresult]
 \end{document}
 ```
+
+## 1233. cmpj's `\refaddr` prints "?" and its address list is lost
+
+Perl has no binding for cmpj.sty, cmpj2.sty or cmpj3.sty (Condensed Matter Physics, TL `tex/latex/cmpj`). Without
+`--includestyles` `\refaddr` is undefined (an Error per name); with it, the raw `\@@refadx` (cmpj2.sty:560-570, cmpj.sty:446-456,
+cmpj3.sty:659-669) tests `\@ifundefined{r@<key>}`, which LaTeXML never defines (`\newlabel` is a no-op,
+latex_constructs.pool.ltxml:5748), so every name prints pdflatex's first-run bold "?" with a Warning per key, and the
+`\addresses` list (`\@address`, printed only by the package's own `\@maketitle`) is dropped. pdflatex's second run prints
+each name's address numbers. Fixed in Rust: `cmpj_sty.rs` (OXIDIZED_DESIGN_DIVERGENCES #1013). Guard
+`perfect_kernel_batchcmpj1::cmpj_address_marks_print_the_second_run`. Minimal trigger (pdflatex, second run: "A. One1 ,
+B. Two2", 0 `!`):
+
+```latex
+\documentclass{article}
+\usepackage{cmpj}
+\author{A. One\refaddr{la}, B. Two\refaddr{lb}}
+\addresses{\addr{la} First Institute \addr{lb} Second Institute}
+\begin{document}
+\maketitle
+\end{document}
+```

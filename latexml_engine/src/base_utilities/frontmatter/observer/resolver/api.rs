@@ -648,6 +648,7 @@ impl Resolver {
       }
       return;
     }
+    warn_whole_entry_of_keyed_parts(index, &keys, &self.out.creators);
     let mut labels: Vec<String> = Vec::new();
     let mut label_rule = "";
     if let Some(label) = attr_value(attrs, "label").filter(|l| !l.is_empty()) {
@@ -1279,4 +1280,42 @@ pub(super) fn note_owned_contacts(events: &[Event]) -> Vec<&Event> {
         && (born || (e.role.as_deref() == Some("email") && e.meaning != EmailMeaning::Own))
     })
     .collect()
+}
+
+/// The State mapping of the entries [`warn_whole_entry_of_keyed_parts`] counted: once each, whatever flush reads it again.
+const COUNTED_ENTRIES: &str = "lx_fm_reading_counted";
+
+/// Count an entry holding several `\label`s placed whole while a name's `\ref` marks request only some of them: no
+/// reading cuts it at its labels, so that name holds the others too — cmpj's `\addresses{\addr{la} … \addr{lb} …}` list
+/// (cmpj2.sty:543-555; 1212.6367, 1212.6137, 1603.02437, 2112.09940).
+fn warn_whole_entry_of_keyed_parts(index: usize, keys: &[String], creators: &[RCreator]) {
+  let mut distinct: Vec<&str> = keys.iter().map(String::as_str).collect();
+  distinct.sort_unstable();
+  distinct.dedup();
+  let partial = |c: &RCreator| {
+    let asks = |key: &&str| c.requests.iter().any(|r| r == key);
+    distinct.iter().any(asks) && !distinct.iter().all(asks)
+  };
+  if distinct.len() < 2 || !creators.iter().any(partial) {
+    return;
+  }
+  let once = s!("{index}");
+  if lookup_mapping(COUNTED_ENTRIES, &once).is_some() {
+    return;
+  }
+  assign_mapping(COUNTED_ENTRIES, &once, Some(Stored::Bool(true)));
+  let labels: Vec<&str> = distinct
+    .iter()
+    .map(|k| k.trim_start_matches("ref:"))
+    .collect();
+  Warn!(
+    "unexpected",
+    "frontmatter",
+    s!(
+      "The frontmatter reading places an entry holding {} label targets ({}) whole: each name whose reference requests one \
+       of them holds them all",
+      labels.len(),
+      labels.join(", ")
+    )
+  );
 }

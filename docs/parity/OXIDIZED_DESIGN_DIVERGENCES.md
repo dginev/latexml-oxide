@@ -35457,3 +35457,20 @@ pgflibrarybbox.code.tex:28-35: 1 → 0), 2109.14286 (`\pgfmathsetmacro` under `/
 printed `16,384` for 16,761), the TL manuals ddphonism (40 → 0) and tikzbrickfigurines-doc (352 → 0). **Guards**:
 `error_boundary::perfect_kernel_error_boundary` (rows `pgfmath_maxdimen_spelling_and_fpu_in_range`, 0 errors;
 `pgfmath_past_maxdimen_errs`, 7 as pdflatex).
+
+### 1013. cmpj's `\refaddr` marks print as TeX's second run (CMPJ1)
+
+**TeX.** cmpj's `\refaddr{la,lb}` (cmpj2.sty:557-570; cmpj.sty:443-456, cmpj3.sty:653-669) prints each key's `\ref`
+once the .aux has defined `r@<key>`, a bold "?" and a Warning before; `\addresses{\addr{la} … \addr{lb} …}` is one
+`enumerate`, each `\addr` an `\item\label` (cmpj2.sty:543-555). **Perl.** No binding: the raw package's first-run
+branch, every name "?" (KNOWN_PERL_ERRORS #1233). **Rust.** `cmpj_sty.rs` (registered for cmpj, cmpj2, cmpj3) reads
+the real package — the paper's copy first, with the document's options — and redefines only `\@@refadx` as its
+second-run branch (`\hbox{\ref{key}}` per key, `,\penalty\@m` between), the converged state LaTeXML models for `\ref`.
+The `\@address` store reaches the frontmatter as it did raw (`\lx@package@loaded@raw`, so the inner read handles the
+options). **Left:** the list is one contact entry; each name whose `\ref` requests one item holds the whole list, and
+the items carry no `labels=` (a frontmatter item's `\label` is `\lx@set@frontmatter@label`), so the refs have no
+target — counted by the resolver's Warning "places an entry holding N label targets … whole"
+(`warn_whole_entry_of_keyed_parts`); RED `cmpj_address_list_each_item_on_its_names_red`. The renamed copies (cmpj2e.sty
+0903.4566, cmp2em.sty cond-mat0511115) stay raw: RED `cmpj_renamed_copy_refaddr_prints_question_marks_red`.
+**Witnesses**: 1212.6367, 1212.6137, 1603.02437, 1207.2995, 1310.0277, 1510.06562, 1601.01592 (cmpj2), 2112.09940,
+2403.16604, 1812.08542 (cmpj3). **Guard**: `perfect_kernel_batchcmpj1::cmpj_address_marks_print_the_second_run`.

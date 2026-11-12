@@ -1,0 +1,23 @@
+% witness: 0903.4566 (cmpj2e.sty, `\ProvidesPackage{cmpj2e}`), cond-mat0511115 (cmp2em.sty): cmpj's style renamed
+% oracle:  pdflatex (TL 2025), second run, 0 errors: "A. One1 , B. Two2"
+% engines: CMPJ1 and int164a: each name a bold "?" (the copy's `\@ifundefined{r@la}`, the first run's branch; no binding
+%          answers the renamed copy), 2 Warnings "Address reference `la' undefined"
+% expect:  0 errors; each name `labelref="LABEL:la"` / `"LABEL:lb"`, no "?"
+% status:  RED
+% moves:   post-merge (a `\@ifundefined{r@…}` second-run reading for any raw file, or a route of the renamed copies)
+\begin{filecontents*}[overwrite]{cmpjx.sty}
+\ProvidesPackage{cmpjx}
+\def\addresses#1{\gdef\@address{\begin{enumerate}#1\end{enumerate}}}
+\newcommand{\addr}[1]{\item\label{#1}}
+\newcommand{\refaddr}[1]{$^{\@refad{#1}}$}
+\DeclareRobustCommand\@refad{\@@refadx}
+\def\@@refadx#1{\@for\@@refadb:=#1\do{\@ifundefined{r@\@@refadb}{\mbox{\bfseries ?}%
+  \@latex@warning{Address reference `\@@refadb' undefined}}{\hbox{\ref{\@@refadb}}}}}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{cmpjx}
+\begin{document}
+A. One\refaddr{la}, B. Two\refaddr{lb}
+\addresses{\addr{la} First \addr{lb} Second}
+\makeatletter\@address\makeatother
+\end{document}
