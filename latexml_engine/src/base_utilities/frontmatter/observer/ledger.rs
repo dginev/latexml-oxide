@@ -316,6 +316,21 @@ pub(in crate::base_utilities) enum Entry {
   NoteText(NoteText),
 }
 
+/// An entry of an author block the emitter wrote labelled by the mark that leads it (`emitter::emit::labelled_entry`), which
+/// the content check reads the writer's cut by (`resolver::placed::retold_words`): its call's label, its list (the block's
+/// ledger index and `\and` column), its label, its span and text, that mark's span, the span of the ink the mark is glued
+/// to, and the words the mark prints with a separator's word just before it.
+#[derive(Debug, Clone)]
+pub(in crate::base_utilities) struct MarkLedEntry {
+  pub item:  String,
+  pub list:  (usize, usize),
+  pub label: String,
+  pub entry: (u16, u16, String),
+  pub mark:  Option<(u16, u16)>,
+  pub glued: Option<(u16, u16)>,
+  pub words: Vec<String>,
+}
+
 /// The ledger of one conversion.
 #[derive(Debug, Default)]
 pub(in crate::base_utilities) struct Ledger {
@@ -343,6 +358,8 @@ pub(in crate::base_utilities) struct Ledger {
   /// span) and an earlier setter call of a block (the block's index and the call's span) — what the content check counts
   /// no word of (`emitter::emit::replaced_by_setter`, `resolver::placed::content_check`; review revDEL3 S1)
   pub replaced:   BTreeSet<(usize, Option<(u16, u16)>)>,
+  /// the entries the emitter wrote labelled by the mark leading them ([`MarkLedEntry`]), over its flushes
+  pub labelled:   Vec<MarkLedEntry>,
   /// the entries the last binding's `\author` body made, a later `\author` clears them ([`record_author_body_clear`])
   author_body:    (usize, usize),
   /// the words and addresses the entries before `.0` hold and the switched-off calls fed ([`record_switched_off_call`])

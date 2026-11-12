@@ -6,7 +6,8 @@
 % engines: rust int160c = ISO1b = ISO1c = 0 errors, 0 warnings: Baker "²Univ Y", Cat "³He Lab" and "Univ Z" (wrong owner,
 %   uncounted)
 % expect:  0 errors, 0 warnings; Able "Univ X"; Baker "²Univ Y, ³He Lab" (its own mark as REVTeX keeps it); Cat "Univ Z"
-% status:  RED (int160c, ISO1b, ISO1c)
+% status:  RED (int160c, ISO1b, ISO1c). No word is lost (CT1ar): the isotope's "3" is placed in Cat's formula ("3He
+%   Lab"), so the content check rightly counts nothing; the defect is the owner
 % moves:   P4c (the REVTeX pre-splitter onto the reading) makes it a row of
 %   perfect_kernel_batch90a::a_script_before_printed_ink_or_on_a_base_is_text
 % preload: ar5iv.sty

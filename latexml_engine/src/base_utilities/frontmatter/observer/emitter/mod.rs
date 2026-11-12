@@ -14,7 +14,7 @@ use super::{
   ledger::{Entry, Ledger, Outcome, SkipReason, with_ledger},
   resolver::{
     Assoc, Placed, PlacedItem, PlacedKind, RCreator, Resolved, content_check, ledger_inputs,
-    mark_labels, resolve,
+    mark_labels, resolve, retold_words,
   },
   *,
 };
@@ -107,6 +107,21 @@ pub(in crate::base_utilities) fn check_placed_content(document: &mut Document) {
     .map(dom::text_without_marks)
     .collect();
   placed.dropped = emit::reading_drops();
+  // (the call labels of the placed items: the entries the writer cut that are placed, `retold_words`)
+  let placed_calls: BTreeSet<String> = front
+    .creators
+    .iter()
+    .chain(&front.nameless)
+    .flat_map(|creator| &creator.items)
+    .filter_map(|item| item.node.get_attribute("_label"))
+    .flat_map(|labels| {
+      labels
+        .split([',', ' '])
+        .map(str::to_string)
+        .collect::<Vec<_>>()
+    })
+    .collect();
+  placed.retold = with_ledger(|ledger| retold_words(&ledger.labelled, &placed_calls));
   let check = with_ledger(|ledger| content_check(ledger, &placed, &emit::kept_whole));
   for (words, what) in [
     (

@@ -31,7 +31,7 @@
 use std::collections::{BTreeMap, BTreeSet};
 
 use super::{
-  super::ledger::{ApiCall, ContentText, Entry, Ledger, Outcome, SkipReason},
+  super::ledger::{ApiCall, ContentText, Entry, Ledger, MarkLedEntry, Outcome, SkipReason},
   api::note_owned_contacts,
   words::{ink_words, live_blocks, words_of},
   *,
@@ -68,6 +68,41 @@ pub(in crate::base_utilities::frontmatter::observer) struct Placed {
   /// the document's publication notes' texts, each as written (in `beside` too): a note written more often than it
   /// printed is in excess ([`note_excess`])
   pub notes:   Vec<String>,
+  /// the words of the marks that led a second entry of their label in one list, as the writer cut it ([`retold_words`]):
+  /// printed, and no mark's or name's copy holds them
+  pub retold:  Vec<String>,
+}
+
+/// The words of a mark the writer read as the label of an entry where it is glued to the text of another entry of that label
+/// in its list ([`MarkLedEntry`], of the contacts placed by their calls' labels): that entry's text, as one list labels each
+/// entry once (`emitter::calls::split_marked_pieces`) — 2204.02412's `(CAP$^3$), Univ Z` cut into `Center for Astro (CAP`
+/// and `, Univ Z`, both labelled 3. A label leading a line, or glued to a name, is no text.
+pub(in crate::base_utilities::frontmatter::observer) fn retold_words(
+  entries: &[MarkLedEntry],
+  placed: &BTreeSet<String>,
+) -> Vec<String> {
+  let placed: Vec<&MarkLedEntry> = entries
+    .iter()
+    .filter(|e| placed.contains(&e.item))
+    .collect();
+  let mut retold = Vec::new();
+  let mut told = BTreeSet::new();
+  for entry in &placed {
+    let Some((from, to)) = entry.glued else {
+      continue;
+    };
+    let text_of_another = placed.iter().any(|other| {
+      other.list == entry.list
+        && other.label == entry.label
+        && other.mark != entry.mark
+        && other.entry.0 <= from
+        && to <= other.entry.1
+    });
+    if text_of_another && told.insert((entry.list, entry.mark)) {
+      retold.extend(entry.words.iter().cloned());
+    }
+  }
+  retold
 }
 
 /// The check's findings: the words (as first printed) and addresses lost, and those placed in excess.
@@ -532,6 +567,13 @@ pub(in crate::base_utilities::frontmatter::observer) fn content_check(
       printed.add(text, 1);
     }
   }
+  // (a mark the writer cut at as a label where it is another entry's text, `retold_words`: printed as text, so neither the
+  // marks nor a name's copy holds it)
+  let mut retold = Tally::default();
+  for word in &placed.retold {
+    printed.add(word, 1);
+    retold.add(word, 1);
+  }
   // (what the placed frontmatter holds, both ways alike: a name every copy, and an e-mail's addresses; a shared item once,
   // as often as one creator holds it — its label with it)
   let (mut names, mut emails): (BTreeMap<&str, usize>, BTreeMap<&str, usize>) = Default::default();
@@ -559,9 +601,10 @@ pub(in crate::base_utilities::frontmatter::observer) fn content_check(
       .or_insert((0, item))
       .0 += 1;
   }
-  let mut shared = Tally::default();
+  let (mut shared, mut named_words) = (Tally::default(), Tally::default());
   for (text, n) in names {
     shared.add(text, n);
+    named_words.add(text, n);
   }
   for (text, n) in emails {
     shared.add_parts(text, 0, n);
@@ -713,8 +756,14 @@ pub(in crate::base_utilities::frontmatter::observer) fn content_check(
   // label in its contact's text, IEEEtran's nested `\IEEEauthorblockA{\IEEEauthorrefmark{2}Univ B, City}`, 1812.05961)
   let mut check = ContentCheck::default();
   for (word, (n, spelled)) in &printed.words {
-    let mark = marks.get(word).copied().unwrap_or(0);
-    if *n > held.word(word) + mark {
+    let (mark, have) = match retold.word(word) {
+      0 => (marks.get(word).copied().unwrap_or(0), held.word(word)),
+      told => (
+        marks.get(word).map_or(0, |m| (*m).min(n - told)),
+        held.word(word).saturating_sub(named_words.word(word)),
+      ),
+    };
+    if *n > have + mark {
       check.lost.push(spelled.clone());
     }
   }
