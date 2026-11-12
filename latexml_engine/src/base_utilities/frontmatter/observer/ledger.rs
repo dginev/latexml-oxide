@@ -15,7 +15,7 @@ use latexml_core::{
 use super::{
   emitter::Analysis,
   events::{EmailMeaning, Event, EventKind, HeldError, lex_body_with_inks},
-  field_notes::{EnvironmentStep, FieldCreator},
+  field_notes::{EnvironmentStep, FieldCreator, PrintingCall},
   rehearsal::{past_line_break, past_tabular_call},
   resolver::{ink_words, printed_words, reads_as},
   *,
@@ -97,9 +97,9 @@ pub(in crate::base_utilities) struct Unsaid {
   /// where it moved the footnote counter its marks print from (`field_notes::FieldNotes::counter_moves`;
   /// `emitter::emit::counter_moved`)
   pub counter_moves: Vec<(u16, u16)>,
-  /// the calls whose definitions print too, which no declaration replays (`field_notes::FieldNotes::printing`), those the
-  /// block introduces (`rehearsal::rehearse`; `emitter::emit::declaration_reads_past`)
-  pub printing:      Vec<(u16, u16)>,
+  /// the calls whose definitions print too, which no declaration replays (`field_notes::FieldNotes::printing`), with
+  /// those of their definees the block introduces (`rehearsal::rehearse`; `emitter::emit::declaration_reads_past`)
+  pub printing:      Vec<PrintingCall>,
 }
 
 impl Unsaid {

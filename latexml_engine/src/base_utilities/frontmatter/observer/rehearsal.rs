@@ -27,8 +27,8 @@ use super::{
     BreakKind, EmailMeaning, Event, HeldError, break_events, declaration_events, in_block_content,
   },
   field_notes::{
-    EnvironmentStep, FieldCreator, FieldNotesHookGuard, field_notes_begin, field_notes_end,
-    note_creator_call,
+    EnvironmentStep, FieldCreator, FieldNotesHookGuard, PrintingCall, field_notes_begin,
+    field_notes_end, note_creator_call,
   },
   ledger::{SkipReason, Unsaid, annotated_parent, email_meaning},
   policy::TitleMarks,
@@ -1308,11 +1308,13 @@ pub(in crate::base_utilities) fn rehearse<R>(
   // (a printing call's definitions that the block introduces, undefined again once undone: the class's own state such a call
   // sets — PoS's `\global\@speakertrue` in a paper's `\speaker`, 1009.6192; manyfoot's `\@thefnmark`, 2511.01971 — is the
   // class's to read, as `\maketitle` does)
-  let printing: Vec<(u16, u16)> = notes
+  let printing: Vec<PrintingCall> = notes
     .printing
-    .iter()
-    .filter(|(.., definees)| definees.iter().any(|&key| !has_meaning_key(key)))
-    .map(|&(start, end, _)| (start, end))
+    .into_iter()
+    .filter_map(|mut call| {
+      call.definees.retain(|&key| !has_meaning_key(key));
+      (!call.definees.is_empty()).then_some(call)
+    })
     .collect();
   for (flag, value) in FLAGS.iter().zip(saved) {
     assign_value(flag, value, Some(Scope::Global));

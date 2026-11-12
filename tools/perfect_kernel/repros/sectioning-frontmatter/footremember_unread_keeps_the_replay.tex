@@ -1,0 +1,18 @@
+% mechanism: a printing call's definitions nobody reads (`\footremember{a}{…}`'s `\newcounter{a}`, no `\footrecall{a}`)
+%   leave the block read: the emitter declines only where a later token of the block reads them
+%   (`emit::printing_read_later`), so the address line under the names stays every author's
+% witness: synthetic (review revFNR1 u03; the common `\footremember` template, 2209.10798's shape)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "Ann Able∗ , Bob Baker†", "Dept of Physics"; ∗ Univ X. † Univ Y.
+% engines: rust e6a6c93a18 as expected (2 warnings: each note written as plain text); FNR1 declined: 1 warning, Ann
+%   Able lost "Dept of Physics"
+% expect:  0 errors, 2 warnings (each note's plain text); Ann Able and Bob Baker each a note and "Dept of Physics"
+% status:  RED (FNR1) -> GREEN (perfect_kernel_batchcr7::a_definition_its_call_prints_takes_effect_in_order)
+\documentclass{article}
+\newcommand{\footremember}[2]{%
+    \footnote{#2}
+    \newcounter{#1}
+    \setcounter{#1}{\value{footnote}}
+}
+\title{T}
+\author{Ann Able\footremember{a}{Univ X.}, Bob Baker\footremember{b}{Univ Y.}\\ Dept of Physics}
+\begin{document}\maketitle Body.\end{document}
