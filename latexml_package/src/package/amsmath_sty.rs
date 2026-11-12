@@ -1154,8 +1154,8 @@ LoadDefinitions!({
     "\\@ams@intertext{}",
     "\\lx@hidden@crcr\\noalign{\\@@ams@intertext{#1}}"
   );
-  // Reverts as the user wrote it; Perl shows `\@@ams@intertext` (KNOWN_PERL_ERRORS #1227; 1301.0750, 1906.05085,
-  // 2107.14777).
+  // Reverts to `\intertext` (a `\shortintertext` too: open, post-merge); Perl shows `\@@ams@intertext` (KNOWN_PERL_ERRORS
+  // #1227; 1301.0750, 1906.05085, 2107.14777).
   DefConstructor!(
     "\\@@ams@intertext{}",
     "<ltx:p class='ltx_intertext'>#1</ltx:p>",

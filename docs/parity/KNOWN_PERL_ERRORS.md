@@ -19407,3 +19407,22 @@ amsmath rejects: pdflatex "Invalid use of \shortintertext", 1 `!` for the trigge
 \begin{equation}\begin{aligned} a &= b, \\ \shortintertext{and} c &= d, \end{aligned}\end{equation}
 \end{document}
 ```
+
+## 1228. bibunits: `\putbib` outside every unit is silent where TeX errs
+
+bibunits.sty defines `\@startbibunitorrelax` only at `\bibunit` (bibunits.sty:251-256; set to `\relax` globally at :269-270, read
+at :324-325), so a `\putbib` before any unit expands an undefined control sequence: pdflatex reports `! Undefined control
+sequence` once and prints "Main [?]" with no entry. Perl's `bibunits.sty.ltxml` treats it as a unit's bibliography, 0 Errors.
+Rust (EB1): the binding reads bibunits' own `\@startbibunitorrelax` and raises 1 Error, as TeX (the staged rule (3): only TeX
+errs and the cite is left dangling). Guard `error_boundary::perfect_kernel_error_boundary` (the `\putbib` rows and their safe
+twin). Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{bibunits}
+\begin{document}
+Main \cite{alpha}.
+\putbib[refs]
+\end{document}
+```
+

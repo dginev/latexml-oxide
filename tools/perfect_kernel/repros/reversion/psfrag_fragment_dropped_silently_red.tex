@@ -8,7 +8,7 @@
 %          perl 0.8.8 = the same plain `<graphics>` for this graphicx shape (its hook does not fire), 0 errors
 % expect:  the replacement reaches the output, or at least one Warning counts the dropped fragment
 % status:  RED (RV1)
-% moves:   post-merge (psfrag's `\includegraphics` hook is its own batch; reach above 500, see the RV1 report)
+% moves:   PSF1 before the merge (a counted Warning per dropped fragment); rendering the fragments after it (PSFR)
 \documentclass{article}
 \usepackage{graphicx,psfrag}
 \begin{filecontents*}{psfragfig.eps}

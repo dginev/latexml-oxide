@@ -35131,3 +35131,13 @@ as Perl's `CheckDebuggable` (`check_debuggable`, `common/error.rs`); its known l
 declares (`frontmatter`; Perl's `DebuggableFeature` calls declare 15: `alignment`, `modes`, `size`, `svg`, …), so a
 `DebugFeature!` site ported from Perl registers its feature through `debuggable_feature`. Guard
 `cluster_cli::debug_feature_scope::debug_feature_prints_only_its_feature`.
+
+### 1007. calc's names inside a pgfmath expression: calc's value and a Warning per parse (EB1)
+
+**TeX.** TL 2025 pgf does not know calc's `\widthof`, `\heightof`, `\depthof`, `\maxof`, `\minof`, `\real`, `\ratio` inside a
+pgfmath expression: pdflatex reports "Unknown function" / "Undefined control sequence" (4 to 19 `!` per probe) and computes 0.
+**Perl.** Binds the seven names before expanding and returns calc's value silently (KNOWN_PERL_ERRORS #1225). **Rust.** Expands
+first, binds the names only where one survives (pgf's order, DTL1g), returns calc's value, and raises one Warning per parse
+(`pgfmath_code_tex.rs`). Reason: the staged rule (2) — only TeX errs, and the recovery carries the meaning the author wrote.
+Guard `error_boundary::perfect_kernel_error_boundary` (the calc rows and their safe twin).
+
