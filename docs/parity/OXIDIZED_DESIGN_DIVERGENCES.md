@@ -35266,6 +35266,10 @@ the class's route would take its authors back) and still reads its body at the c
 RED, post-merge (P28C): an anonymous-review conditional (`\ifblind Anonymous Authors\else <blocks>\fi`), literal or in
 the macro, reads its printed words as a nameless creator's affiliation
 (`ieeetran_author_blind_conditional{,_in_a_macro}_red.tex`).
+The take-back is generic: the resolver's `cleared_blocks` drops every item of a block a later `\author` clears, in every class that
+clears (the kernel `\author`, llncs, aa, sv as well as IEEEtran) — svjour3's `\author{\thanks{Grant Q.} \\ Univ Q}` replaced by a second
+`\author` no longer keeps a nameless "Univ Q" creator and its note, as LaTeX's replaced `\@author` prints neither (revP28m2; no non-IEEE
+guard row yet: post-merge P28G).
 
 ### 996. What is appended to `\@author` after the author setter stored it is the author block's continuation: rows before its first `\and`, more authors after it, also under a binding whose `\author` stores nothing in `\@author` (FX24; RR1 gap 24)
 
