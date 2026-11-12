@@ -1,0 +1,14 @@
+% mechanism: the llncs binding's font sizes: llncs.cls (v2.26, line 391) says `\let\footnotesize\small`, so the class's
+%   `\footnotesize` prints at 9pt; neither our binding nor Perl's llncs.cls.ltxml carries the `\let`, and `\footnotesize`
+%   keeps the size file's 8pt
+% witness: synthetic (P4b4aR, found checking llncs_institute_setlength_lead_stops_carried_declarations_red.tex's PDF)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "A Foot Small B.", "Foot" and "Small" both in CMR9
+% engines: rust P4b4abase and P4b4a4: 0 errors, 0 warnings, "Foot" `fontsize="80%"`, "Small" `fontsize="90%"`
+% expect:  0 errors, 0 warnings; "Foot" and "Small" each `fontsize="90%"`
+% status:  RED (P4b4abase, P4b4a4: "Foot" at 80 %; no word lost)
+% moves:   post-merge (P4FNS: llncs's `\let\footnotesize\small` in the binding)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+A {\footnotesize Foot} {\small Small} B.
+\end{document}
