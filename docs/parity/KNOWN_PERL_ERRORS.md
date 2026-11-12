@@ -19335,3 +19335,13 @@ First \cite{zeta}, then \cite{alpha}.
 \bibliography{refs}
 \end{document}
 ```
+
+## 1224. `CheckDebuggable` reports a declared feature with no description as undeclared
+
+`CheckDebuggable` (`Common/Error.pm` L483-492) skips a `--debug` feature only when `$LaTeXML::Debuggable{$feature}` is
+true, but `DebuggableFeature($name)` stores the description there, and `frontmatter` (Base_Utility.pool.ltxml L217),
+`modes` (Stomach.pm L33) and `document` (Document.pm L34) are declared without one. So `latexml --debug=frontmatter`
+prints its trace and then "The debugging feature(s) frontmatter were never declared". PERL-ORIGIN, no Error. Fixed in
+Rust (DBG2): `check_debuggable` (`common/error.rs`) tests the name's registration. Guard
+`cluster_cli::debug_feature_scope::debug_feature_prints_only_its_feature`. Minimal trigger: `latexml --debug=frontmatter`
+on any LaTeX document. Upstream fix: `exists $LaTeXML::Debuggable{$feature}`.

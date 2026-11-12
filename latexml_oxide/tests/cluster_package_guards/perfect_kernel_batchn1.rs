@@ -236,7 +236,7 @@ fn in_turn(docs: Vec<&'static str>) -> Vec<(Vec<String>, String)> {
   std::thread::Builder::new()
     .stack_size(256 * 1024 * 1024)
     .spawn(move || {
-      let _ = latexml_core::util::logger::init(log::LevelFilter::Debug);
+      let _ = latexml_core::util::logger::init(log::LevelFilter::Info);
       latexml_core::common::error::enable_debug_feature("frontmatter");
       let runs = docs
         .into_iter()

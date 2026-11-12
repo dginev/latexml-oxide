@@ -404,7 +404,7 @@ struct Cli {
   quiet: bool,
 
   /// Enable a named debug feature, e.g. --debug frontmatter (repeatable).
-  /// Implies debug-level logging.
+  /// Prints that feature's debugging output only (--verbose prints the rest).
   #[arg(long = "debug", value_name = "FEATURE")]
   debug: Vec<String>,
 
@@ -821,19 +821,13 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   } else {
     0
   };
-  let log_level = if !cli.debug.is_empty() {
-    // --debug NAME implies debug-level logging (Perl: Debug() output is
-    // emitted whenever the feature flag is set).
-    log::LevelFilter::Debug
-  } else {
-    match verbosity {
-      v if v < 0 => log::LevelFilter::Warn,
-      0 => log::LevelFilter::Info,
-      _ => log::LevelFilter::Debug,
-    }
+  let log_level = match verbosity {
+    v if v < 0 => log::LevelFilter::Warn,
+    0 => log::LevelFilter::Info,
+    _ => log::LevelFilter::Debug,
   };
   latexml_core::util::logger::init(log_level).ok();
-  // Perl: --debug=NAME sets $LaTeXML::DEBUG{NAME}; gates DebugFeature! sites.
+  // Perl: --debug=NAME sets $LaTeXML::DEBUG{NAME}; gates DebugFeature! sites only.
   for feature in &cli.debug {
     latexml_core::common::error::enable_debug_feature(feature);
   }
@@ -1693,6 +1687,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   if let Some(body) = latexml_core::watchdog::peak_memory_report() {
     emit_info("memory", "peak", &body);
   }
+  // Perl bin/latexml L148, bin/latexmlpost L216: name an undeclared `--debug` feature; the verdict below stays the last line.
+  latexml_core::common::error::check_debuggable();
   // The end-of-run verdict: the LAST line of a conversion names the COMBINED
   // core+post outcome. The core prints its own verdict when it finishes, but
   // on a post-processing run thousands of per-page lines follow it — a

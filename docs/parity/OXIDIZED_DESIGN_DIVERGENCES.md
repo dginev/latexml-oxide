@@ -35108,3 +35108,15 @@ post-merge macro-faces design (QA53).
 **Guard**: `perfect_kernel_batch56::meaning_of_a_closure_macro_is_perls_code_form`
 (`expansion-primitives/meaning_of_a_closure_macro_is_stable.tex`: two conversions, exact text, etoolbox's answers).
 **Upstream**: not filed (Perl stringifies the code ref; a name would serve).
+
+### 1006. `--verbose` prints the un-featured `Debug:` traces, and every `Debug` line carries a `Debug:<target> ` prefix (DBG1, DBG2)
+
+**Perl.** `Debug($message)` prints the bare message (`_printlines`, `Common/Error.pm` L171-183); its trace calls are
+guarded `if $LaTeXML::DEBUG{feature}` (L467), so `--verbose` alone prints no trace and `--debug=frontmatter` prints
+`FRONT Add …`.
+
+**Rust.** A `Debug!` record without a feature (`primitive invoke for …`) prints under `--verbose` (`util/logger.rs`
+`DEBUG_ALL`), and a feature's record only under its `--debug` (`DebugFeature!`). Each `Debug` line reads
+`Debug:<target> <message>` (`Debug:frontmatter FRONT Add …`), as the other severities name their category. Reason:
+the un-featured traces are Rust's own instrumentation with no Perl feature to enable them, and the prefix keeps them
+apart from `Info:` lines in a log. Guard `cluster_cli::debug_feature_scope::debug_feature_prints_only_its_feature`.

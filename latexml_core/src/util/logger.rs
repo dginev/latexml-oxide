@@ -39,11 +39,19 @@ fn stderr_use_color() -> bool {
 /// (`Common/Error.pm` `_printline`). `--quiet` lowers THIS (to `Warn`) without
 /// lowering what the log keeps — so `(Loading …)` progress notes and `Info:`
 /// records still reach `.latexml.log`, which is what BookML's makefile dependency
-/// tracking reads (issue #763). `--verbose`/`--debug` raise it (to `Debug`).
+/// tracking reads (issue #763). `--verbose` raises it (to `Debug`).
 ///
 /// Stored as the `LevelFilter` discriminant (`Off`=0 … `Trace`=5). Process-global
 /// like `max_level`: one shared stderr descriptor across `cortex_worker`'s pool.
 static STDERR_LEVEL: AtomicUsize = AtomicUsize::new(LevelFilter::Info as usize);
+
+/// Un-featured `Debug` records are admitted (`--verbose`). Without it a `Debug` record passes only when its target
+/// is a `--debug` feature: Perl guards its trace `Debug()` calls `if $LaTeXML::DEBUG{feature}` (`Common/Error.pm` L467).
+static DEBUG_ALL: AtomicBool = AtomicBool::new(false);
+
+/// Whether un-featured `Debug` records are logged (`--verbose`; see `DEBUG_ALL`).
+#[inline]
+pub fn debug_all() -> bool { DEBUG_ALL.load(Ordering::Relaxed) }
 
 /// The current STDERR verbosity (see [`STDERR_LEVEL`]).
 fn stderr_level() -> LevelFilter {
@@ -183,6 +191,19 @@ static STDERR_AT_LINE_START: AtomicBool = AtomicBool::new(true);
 /// rather than through `log::Log` — without this the next diagnostic record
 /// could emit a spurious leading newline.
 pub fn mark_stderr_at_line_start() { STDERR_AT_LINE_START.store(true, Ordering::Release); }
+
+/// Perl `print STDERR _freshline(\*STDERR), $text`: a direct STDERR write at any verbosity, on a fresh line. One write
+/// under the (reentrant) stderr lock, so a capture buffer shared by a test's threads never splits a line.
+pub fn stderr_fresh_line(text: &str) {
+  let _stderr = std::io::stderr().lock();
+  let lead = if STDERR_AT_LINE_START.load(Ordering::Acquire) {
+    ""
+  } else {
+    "\n"
+  };
+  stderr_echo(&format!("{lead}{text}"));
+  STDERR_AT_LINE_START.store(text.ends_with('\n'), Ordering::Release);
+}
 
 /// Start capturing log output into the buffer (Perl: bind_log).
 pub fn bind_log() { *LOG_BUFFER.borrow_mut() = Some(String::new()); }
@@ -355,7 +376,12 @@ fn stderr_echo(text: &str) {
 }
 
 impl log::Log for LatexmlLogger {
-  fn enabled(&self, metadata: &Metadata) -> bool { metadata.level() <= max_level() }
+  fn enabled(&self, metadata: &Metadata) -> bool {
+    metadata.level() <= max_level()
+      && (metadata.level() <= Level::Info
+        || debug_all()
+        || crate::common::error::debug_enabled(metadata.target()))
+  }
 
   fn log(&self, record: &Record) {
     if self.enabled(record.metadata()) {
@@ -520,23 +546,15 @@ fn write_record(level: Level, painted_message: String) {
   // success rates from `Error:`/`Fatal:` lines). `Error` is the lowest `Level`
   // value and Fatal records are emitted at `Level::Error`, so `<= Error`
   // captures both.
-  let to_stderr = level <= Level::Error || stderr_admits(level);
+  // A `Debug` record that got here is wanted (`--verbose` or its feature); it prints at Perl's `$VERBOSITY >= 0`.
+  let to_stderr = level <= Level::Error || stderr_admits(level.min(Level::Info));
   if to_stderr {
     let text = if stderr_use_color() {
       painted_message
     } else {
       strip_ansi(&painted_message)
     };
-    // The lock is reentrant: `stderr_echo`'s own locking nests inside this critical section. One
-    // write per record, so a capture buffer shared by a test's threads never splits a line.
-    let _stderr = std::io::stderr().lock();
-    let lead = if STDERR_AT_LINE_START.load(Ordering::Acquire) {
-      ""
-    } else {
-      "\n"
-    };
-    stderr_echo(&format!("{lead}{text}\n"));
-    STDERR_AT_LINE_START.store(true, Ordering::Release);
+    stderr_fresh_line(&format!("{text}\n"));
   }
 }
 
@@ -963,7 +981,8 @@ pub fn settled_empty_held_tags() { EMPTY_HELD_TAGS.set(0); }
 /// initialize the logger at a given STDERR verbosity `level`
 ///
 /// `level` is the **console** verbosity (`--quiet` ⇒ `Warn`, default ⇒ `Info`,
-/// `--verbose`/`--debug` ⇒ `Debug`). Perl decouples this from the log-file floor:
+/// `--verbose` ⇒ `Debug`, which also admits un-featured `Debug` records; a `--debug`
+/// feature raises only the `max_level` floor, [`crate::common::error::enable_debug_feature`]). Perl decouples this from the log-file floor:
 /// the `.latexml.log` keeps a minimum of `Info` regardless of `--quiet`, while
 /// STDERR follows `level` (`Common/Error.pm` `_printline`; issue #763). So the
 /// global `log` `max_level` is set to the MORE verbose of `level` and `Info` (the
@@ -980,7 +999,13 @@ pub fn init(level: LevelFilter) -> Result<(), SetLoggerError> {
   // reflect the requested verbosity even if the logger was already installed (a
   // second `init` in-process returns `Err` from `set_logger`, which callers `.ok()`).
   STDERR_LEVEL.store(level as usize, Ordering::Relaxed);
-  log::set_max_level(level.max(LevelFilter::Info));
+  DEBUG_ALL.store(level >= LevelFilter::Debug, Ordering::Relaxed);
+  let floor = if crate::common::error::any_debug_feature_enabled() {
+    LevelFilter::Debug
+  } else {
+    LevelFilter::Info
+  };
+  log::set_max_level(level.max(floor));
   log::set_logger(&LOGGER)
 }
 
