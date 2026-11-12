@@ -16898,7 +16898,8 @@ past `\maxdimen` errs with Perl's `Error:pgfmath:overflow` (pgfmath.code.tex.ltx
 TeX holds and never on the fpu's floats (#1012). Replaces
 batch 56bq's i64-only clamp. Still silent: `\multiply` past the bound (it computes on in the i64 headroom; TeX errs and
 keeps the register) and pgfmath's function results (clamped) (REDs expansion-primitives/multiply_overflow_keeps_the_register_red, graphics-tikz/
-pgfmath_function_overflow_clamped_silently_red); a calc sum past the bound (`calc_expression_dimension_not_clamped_red`). Not
+pgfmath_function_overflow_clamped_silently_red); a calc sum past the bound (`calc_expression_dimension_not_clamped_red`); outside
+the fpu, pgfmath's unitless operands and its operations' results past the bound (`pgfmath_unitless_and_intermediate_overflow_red`). Not
 yet TeX's: an e-TeX expression checks only its final value, so an intermediate overflow that comes back in range is silent
 and a product past the i64 range keeps the bound (`clamp_arith_overflow`, one report per multiply) where etex.ch's
 `scan_expr` latches one error and returns 0 (`etex_expression_overflow_latched_once_red`). Guards `perfect_kernel_batch64zf::{number_and_dimension_overflow_clamp_and_err,
