@@ -201,8 +201,8 @@ pub(in crate::base_utilities) fn queued_author_marks() -> Result<Rc<Vec<Vec<Stri
   Ok(Rc::clone(&queue_marks_reading()?.author_marks))
 }
 
-/// Whether a queued author's name prints a mark ([`queued_author_marks`]).
-pub(in crate::base_utilities) fn queued_authors_marked() -> Result<bool> {
+/// Whether a queued author's name prints a mark (`queued_author_marks`).
+pub fn queued_authors_marked() -> Result<bool> {
   Ok(queued_author_marks()?.iter().any(|marks| !marks.is_empty()))
 }
 
@@ -225,6 +225,16 @@ pub(in crate::base_utilities) fn queued_requesters(operand: &[Token]) -> Result<
     Some(label) => queued_label_requesters(&label),
     None => Ok(Vec::new()),
   }
+}
+
+/// The affiliation labels the queued authors' marks request (`affiliation:<key>`), or, once a flush took the queue, those of
+/// the authors it took ([`flush_requested_marks`]): what tells a script glued to a word a label (`events::names_requested`).
+pub(in crate::base_utilities) fn requested_labels() -> Vec<String> {
+  let queued: Vec<String> = queue_reading().requests.keys().cloned().collect();
+  if !queued.is_empty() {
+    return queued;
+  }
+  flush_requested_marks()
 }
 
 /// The marks the queued authors' names show, as label keys (`relocate::name_marks_of`): the items of AASTeX 5's

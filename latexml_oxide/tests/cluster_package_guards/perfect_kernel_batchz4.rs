@@ -58,7 +58,8 @@ fn the_emit_is_the_old_markup() {
     repro!("emit_marks_a_per_author_class_keeps_on_its_names"),
     &[
       r#"<personname>Ann Able<sup><text font="italic">1</text></sup></personname>"#,
-      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ B</contact>",
+      // (P4c: the list's printed mark shown, as pdflatex prints it — P4S Q1)
+      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup><text font=\"italic\">2</text></sup>Univ B</contact>",
     ],
   );
   same_markup(repro!("emit_marks_a_block_answers_or_shows"), &[

@@ -29,6 +29,7 @@ macro_rules! repro {
 /// name it spells at the flush (2010.07442; `gkt@`, initials a whole entry spells for no one, 2405.01963), and Z4's shapes of marks, notes and order.
 #[test]
 fn the_whole_block_queue_reaches_one() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   for tex in [
     repro!("emit_whole_queue_an_address_by_its_names_at_the_flush"),
     repro!("emit_marks_a_block_answers_or_shows"),
@@ -49,17 +50,17 @@ fn the_whole_block_queue_reaches_one() {
   assert_eq!(creators(&two), [
     vec![
       "Ann Able 1",
-      "affiliation=Univ A, Town",
+      "affiliation=1 Univ A, Town",
       "email=ann.able@a.edu"
     ],
     vec![
       "Bob Baker 2",
-      "affiliation=Univ B, City",
+      "affiliation=2 Univ B, City",
       "email=bob.baker@b.edu"
     ],
     vec![
       "George K. Tan 2",
-      "affiliation=Univ B, City",
+      "affiliation=2 Univ B, City",
       "email=gkt@b.edu"
     ],
   ]);

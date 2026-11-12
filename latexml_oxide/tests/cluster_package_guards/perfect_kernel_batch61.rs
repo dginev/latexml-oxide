@@ -5935,9 +5935,7 @@ Text.
 /// written.
 #[test]
 fn informs_author_marks_link_affiliations() {
-  let affiliation = |name: &str| {
-    format!("<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">{name}</contact>")
-  };
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let (log, xml) = convert_with(
     r"\documentclass[opre,nonblindrev]{informs4}
 \begin{document}
@@ -5953,30 +5951,14 @@ Text.
     Some("ar5iv.sty"),
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  let sep = "before=\"\u{2003}\u{2003}\" ";
   assert_eq!(
     creators_of(&xml),
-    vec![
-      format!(
-        "<creator role=\"author\"><personname>Sunkanghong Wang</personname>{}{}</creator>",
-        affiliation("Univ A"),
-        affiliation("Univ E")
-      ),
-      format!(
-        "<creator {sep}role=\"author\"><personname>Zhengzhong You</personname>{}</creator>",
-        affiliation("Univ B")
-      ),
+    [
+      "<creator role=\"author\"><personname>Sunkanghong Wang</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">a</text></sup>Univ A</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">e</text></sup>Univ E</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Zhengzhong You</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">b</text></sup>Univ B</contact></creator>",
       // (97e: informs4's family written — the `*` line the legend of Lijun Wei's mark, a correspondence note)
-      format!(
-        "<creator {sep}role=\"author\"><personname>Lijun Wei</personname>{}<note \
-         class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"∗\" role=\"thanks\" \
-         xml:id=\"id1\"><sup xml:id=\"id1.1\">∗</sup>Corresponding author</note></creator>",
-        affiliation("Univ E"),
-      ),
-      format!(
-        "<creator {sep}role=\"author\"><personname>Zhou Xu</personname>{}</creator>",
-        affiliation("Univ A")
-      ),
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Lijun Wei</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">e</text></sup>Univ E</contact><note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"∗\" role=\"thanks\" xml:id=\"id5\"><sup xml:id=\"id5.1\">∗</sup>Corresponding author</note></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Zhou Xu</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\"><text font=\"italic\" xml:id=\"id6.1\">a</text></sup>Univ A</contact></creator>",
     ],
     "{xml}"
   );
@@ -5996,15 +5978,9 @@ Text.
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(
     creators_of(&xml),
-    vec![
-      format!(
-        "<creator role=\"author\"><personname>Huikang Liu</personname>{}</creator>",
-        affiliation("Shanghai Jiao Tong University")
-      ),
-      format!(
-        "<creator {sep}role=\"author\"><personname>Zhengchao Wang</personname>{}</creator>",
-        affiliation("The University of Sydney")
-      ),
+    [
+      "<creator role=\"author\"><personname>Huikang Liu</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\">1</sup>Shanghai Jiao Tong University</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Zhengchao Wang</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">2</sup>The University of Sydney</contact></creator>",
     ],
     "{xml}"
   );
@@ -6068,12 +6044,13 @@ Text.
     vec![
       format!(
         "<creator role=\"author\"><personname>Ann Able</personname>{}</creator>",
-        affiliation("Univ A")
+        affiliation("<sup xml:id=\"id1\">1</sup>Univ A")
       ),
+      // (P4c: each printed mark shown, the "2" inside "Present address: ²Univ C" too, as pdflatex prints it — P4S Q1)
       format!(
         "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>{}{}</creator>",
-        affiliation("Univ B"),
-        affiliation("Present address: Univ C")
+        affiliation("<sup xml:id=\"id2\">2</sup>Univ B"),
+        affiliation("Present address: <sup xml:id=\"id3\">2</sup>Univ C")
       ),
     ],
     "{xml}"
@@ -6098,6 +6075,7 @@ pub(super) fn creators_of(xml: &str) -> Vec<String> {
 /// "2 Univ B".
 #[test]
 fn iopart_each_address_adds_an_affiliation() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let (log, xml) = convert_with(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/iopart_each_address_adds_an_affiliation.tex"
@@ -6108,8 +6086,8 @@ fn iopart_each_address_adds_an_affiliation() {
   assert_eq!(
     creators_of(&xml),
     vec![
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ B</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\">1</sup> Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">2</sup> Univ B</contact></creator>",
     ],
     "{xml}"
   );
@@ -6122,6 +6100,7 @@ fn iopart_each_address_adds_an_affiliation() {
 /// "1 Univ A, 2 Univ B" all italic; "1 Univ A; 2 Univ B" all small.
 #[test]
 fn marked_affiliations_inside_a_font_group_keep_the_font() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let affiliated = |xml: &str| -> Vec<String> {
     creators_of(xml)
       .iter()
@@ -6138,8 +6117,8 @@ fn marked_affiliations_inside_a_font_group_keep_the_font() {
   assert_eq!(
     affiliated(&xml),
     vec![
-      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"italic\" xml:id=\"id1\">Univ A</text></contact>",
-      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"italic\" xml:id=\"id2\">Univ B</text></contact>",
+      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\">1</sup><text font=\"italic\" xml:id=\"id2\">Univ A</text></contact>",
+      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\">2</sup><text font=\"italic\" xml:id=\"id4\">Univ B</text></contact>",
     ],
     "{xml}"
   );
@@ -6158,8 +6137,8 @@ Text.
   assert_eq!(
     affiliated(&xml),
     vec![
-      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id1\">Univ A</text></contact>",
-      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id2\">Univ B</text></contact>",
+      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\"><text fontsize=\"90%\" xml:id=\"id1.1\">1</text></sup><text fontsize=\"90%\" xml:id=\"id2\">Univ A</text></contact>",
+      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text fontsize=\"90%\" xml:id=\"id3.1\">2</text></sup><text fontsize=\"90%\" xml:id=\"id4\">Univ B</text></contact>",
     ],
     "{xml}"
   );
@@ -6171,6 +6150,7 @@ Text.
 /// pdflatex (iopart.cls of 2609.01831): "1 Dept A", "Univ A", "2 Dept B", "Univ B".
 #[test]
 fn marked_affiliation_continuation_lines_stay_with_it() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let (log, xml) = convert_with(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/marked_affiliation_continuation_lines_stay_with_it.tex"
@@ -6181,8 +6161,8 @@ fn marked_affiliation_continuation_lines_stay_with_it() {
   assert_eq!(
     creators_of(&xml),
     vec![
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept A<break/>Univ A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept B<break/>Univ B</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\">1</sup>Dept A<break/>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">2</sup>Dept B<break/>Univ B</contact></creator>",
     ],
     "{xml}"
   );
@@ -6220,21 +6200,11 @@ More.
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(log.contains(pgf_warning), "{log}");
-  let affiliation = |name: &str| {
-    format!("<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">{name}</contact>")
-  };
   assert_eq!(
     creators_of(&xml),
-    vec![
-      format!(
-        "<creator role=\"author\"><personname>Ann Able</personname>{}{}</creator>",
-        affiliation("Univ A"),
-        affiliation("Univ B")
-      ),
-      format!(
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>{}</creator>",
-        affiliation("Univ B")
-      ),
+    [
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\">1</sup>Univ A</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">2</sup>Univ B</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\">2</sup>Univ B</contact></creator>",
     ],
     "{xml}"
   );
@@ -6261,7 +6231,8 @@ More.
     &xml,
     "note",
     &["role=\"authornote\""],
-    "<note role=\"authornote\" xml:id=\"id1\">Correspondence to Ann.</note>",
+    // (P4c: id4, the list's shown marks numbered before it — P4S Q1)
+    "<note role=\"authornote\" xml:id=\"id4\">Correspondence to Ann.</note>",
   );
   assert_element(
     &xml,
@@ -6351,6 +6322,7 @@ Body.
 /// argument on each piece.
 #[test]
 fn marked_affiliation_review_shapes() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let contacts = |tex: &str| -> Vec<String> {
     let (log, xml) = convert_with(tex, Some("ar5iv.sty"));
     assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
@@ -6398,10 +6370,16 @@ Text.
   );
   assert_eq!(
     found[0],
-    creator(false, "Ann Able", &affiliation(" Univ A"))
+    creator(
+      false,
+      "Ann Able",
+      &affiliation("<sup xml:id=\"id1\">1</sup> Univ A")
+    )
   );
   assert!(
-    found[1].contains(&affiliation(" Univ B\u{2003}Univ D")),
+    found[1].contains(&affiliation(
+      "<sup xml:id=\"id2\">2</sup> Univ B\u{2003}Univ D"
+    )),
     "{found:?}"
   );
   assert_eq!(
@@ -6767,6 +6745,7 @@ Body text. Indents \the\IEEEilabelindent, \the\IEEEilabelindentB{} and \the\IEEE
 /// author_symbol_mark_links_its_affiliation, affiliation_line_superscript_ordinal_is_not_a_mark}.
 #[test]
 fn author_marks_link_their_affiliations() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let creators = |tex: &str| -> Vec<String> {
     let (log, xml) = convert_with(tex, None);
     assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
@@ -6801,14 +6780,9 @@ fn author_marks_link_their_affiliations() {
     )),
     // (97e: informs4's family, `UNDECLARED`, written — the `*` line is the legend of Bob Baker's symbol mark, a
     // correspondence note of his, as pdflatex prints it under the names: FIDELITY_CHARTER §4 ruling 2)
-    vec![
-      creator("", "Ann Able", &affiliation("Univ A")),
-      creator(
-        "before=\"\u{2003}\u{2003}\" ",
-        "Bob Baker",
-        "<note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"∗\" \
-         role=\"thanks\"><sup>∗</sup>Corresponding author</note>"
-      ),
+    [
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup><text font=\"italic\">a</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"∗\" role=\"thanks\"><sup>∗</sup>Corresponding author</note></creator>",
     ]
   );
 }

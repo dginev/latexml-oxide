@@ -1458,30 +1458,17 @@ fn email_given_name_and_initials_spell() {
 /// address).
 #[test]
 fn ieee_halign_markers_print_nothing() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("author_ieee_halign_markers_print_nothing.tex");
   assert_no_merged_names(&xml);
   assert!(
     !xml.contains("role=\"affiliation\"/>") && !xml.contains("role=\"email\"/>"),
     "{xml}"
   );
-  let univ_a = affiliation("Univ A");
   // (IEEEtran written since 95b, OD #942: each typewriter address line its speller's e-mail, brief 95c's take-out)
-  let tt = |address: &str, id: &str| {
-    format!(
-      r#"<contact name="Email: " role="email"><text font="typewriter" xml:id="{id}">{address}</text></contact>"#
-    )
-  };
   assert_eq!(creators(&xml), [
-    creator(
-      true,
-      r#"Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup>"#,
-      &format!("{} {univ_a}", tt("aable@x.edu", "id2"))
-    ),
-    creator(
-      false,
-      r#"Bob Baker<sup xml:id="id3"><text font="italic" xml:id="id3.1">1</text></sup>"#,
-      &format!("{} {univ_a}", tt("bbaker@x.edu", "id4"))
-    ),
+    r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup></personname> <contact name="Email: " role="email"><text font="typewriter" xml:id="id2">aable@x.edu</text></contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">1</sup>Univ A</contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id4"><text font="italic" xml:id="id4.1">1</text></sup></personname> <contact name="Email: " role="email"><text font="typewriter" xml:id="id5">bbaker@x.edu</text></contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id6">1</sup>Univ A</contact> </creator>"#,
   ]);
 }
 

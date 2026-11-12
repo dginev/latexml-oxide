@@ -74,9 +74,10 @@ fn authblk_without_affil_prints_no_note() {
 /// printed as its text. Witness 2411.03010. Repro sectioning-frontmatter/cut_run_ieee_refmarks_after_a_comma.
 #[test]
 fn a_mark_after_a_comma_parts_the_run() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   assert_eq!(
     clean_creators(repro!("cut_run_ieee_refmarks_after_a_comma")),
-    r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1">*</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">‡</sup>Univ A, Lisbon</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">†</sup><sup xml:id="id4">‡</sup>Inst C</contact> <contact name="Email: " role="email">ann@a.pt</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id5">†</sup></personname> <contact name="Affiliation: " role="affiliation">Univ B</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id6">†</sup><sup xml:id="id7">‡</sup>Inst C</contact> <contact name="Email: " role="email">bob@b.pt</contact> </creator> <creator before=" " role="author"> <personname>Cy Cole<sup xml:id="id8">‡</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id9">‡</sup>Univ A, Lisbon</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id10">†</sup><sup xml:id="id11">‡</sup>Inst C</contact> <contact name="Email: " role="email">cy@a.pt</contact> </creator>"#
+    r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1">*</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">*</sup><sup xml:id="id3">‡</sup>Univ A, Lisbon</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">*</sup><sup xml:id="id5">†</sup><sup xml:id="id6">‡</sup>Inst C</contact> <contact name="Email: " role="email">ann@a.pt</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id7">†</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id8">†</sup>Univ B</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id9">*</sup><sup xml:id="id10">†</sup><sup xml:id="id11">‡</sup>Inst C</contact> <contact name="Email: " role="email">bob@b.pt</contact> </creator> <creator before=" " role="author"> <personname>Cy Cole<sup xml:id="id12">‡</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id13">*</sup><sup xml:id="id14">‡</sup>Univ A, Lisbon</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id15">*</sup><sup xml:id="id16">†</sup><sup xml:id="id17">‡</sup>Inst C</contact> <contact name="Email: " role="email">cy@a.pt</contact> </creator>"#
   );
 }
 
@@ -86,9 +87,10 @@ fn a_mark_after_a_comma_parts_the_run() {
 /// sectioning-frontmatter/cut_revtex_spaced_math_marks_after_semicolons, cut_revtex_semicolon_one_entry_control.
 #[test]
 fn a_revtex_call_is_cut_at_its_spaced_marks() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   assert_eq!(
     clean_creators(repro!("cut_revtex_spaced_math_marks_after_semicolons")),
-    r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1">1</sup></personname> <contact name="Affiliation: " role="affiliation">Univ A, Lisbon, Portugal</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id2">2</sup></personname> <contact name="Affiliation: " role="affiliation">Dept B, Ghent University, Belgium</contact> </creator> <creator before=" " role="author"> <personname>Cy Cole<sup xml:id="id3">3</sup></personname> <contact name="Affiliation: " role="affiliation">Dept C, Univ D, Madrid, Spain</contact> </creator>"#
+    r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1">1</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2"><text font="italic" xml:id="id2.1">1</text></sup>Univ A, Lisbon, Portugal</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3">2</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4"><text font="italic" xml:id="id4.1">2</text></sup>Dept B, Ghent University, Belgium</contact> </creator> <creator before=" " role="author"> <personname>Cy Cole<sup xml:id="id5">3</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id6"><text font="italic" xml:id="id6.1">3</text></sup>Dept C, Univ D, Madrid, Spain</contact> </creator>"#
   );
   assert_eq!(
     clean_creators(repro!("cut_revtex_semicolon_one_entry_control")),
@@ -103,9 +105,10 @@ fn a_revtex_call_is_cut_at_its_spaced_marks() {
 /// Repro sectioning-frontmatter/cut_revtex_unmarked_first_entry_over_marked_lines.
 #[test]
 fn an_unmarked_first_entry_is_its_unprinted_marks() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   assert_eq!(
     clean_creators(repro!("cut_revtex_unmarked_first_entry_over_marked_lines")),
-    r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1,2</text></sup></personname> <contact name="Affiliation: " role="affiliation">Univ A, Nagoya, Japan</contact> <contact name="Affiliation: " role="affiliation">Univ B, Tokyo, Japan</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id2"><text font="italic" xml:id="id2.1">2,3</text></sup></personname> <contact name="Affiliation: " role="affiliation">Univ B, Tokyo, Japan</contact> <contact name="Affiliation: " role="affiliation">Inst C, Nagakute, Japan</contact> </creator> <creator before=" " role="author"> <personname>Cy Cole</personname> </creator>"#
+    r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1,2</text></sup></personname> <contact name="Affiliation: " role="affiliation">Univ A, Nagoya, Japan</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">2</sup>Univ B, Tokyo, Japan</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3"><text font="italic" xml:id="id3.1">2,3</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">2</sup>Univ B, Tokyo, Japan</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id5">3</sup>Inst C, Nagakute, Japan</contact> </creator> <creator before=" " role="author"> <personname>Cy Cole</personname> </creator>"#
   );
 }
 

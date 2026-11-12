@@ -109,13 +109,14 @@ fn printed_text_before_a_block_is_wrapped_without_its_line_break() {
 #[test]
 fn a_refmark_led_address_line_is_its_marks_addresses() {
   let xml = convert_clean(repro!("refmark_led_address_line.tex"));
-  let x = "affiliation=Univ X, City";
+  // (P4c: the list's printed marks shown, as pdflatex prints them — P4S Q1)
+  let x = "affiliation=* Univ X, City";
   let found = creators(&xml);
   assert_eq!(found, vec![
     creator(&["Ann Able *", x]),
     creator(&["Bob Baker *", x, "email=bob@x.edu"]),
     creator(&["Dan Dove *", x]),
-    creator(&["Cy Cole †", "affiliation=Univ Y, Town", "email=cy@y.edu"]),
+    creator(&["Cy Cole †", "affiliation=† Univ Y, Town", "email=cy@y.edu"]),
     creator(&["email=ms1801@x.edu"]),
   ]);
   assert!(

@@ -72,7 +72,9 @@ pub(in crate::base_utilities) fn entry_calls(
   let stuff = rewrite_ordinal_superscripts(strip_linebreak_options(unalias_mark_commands(stuff)));
   let stuff = blank_line_marks_dropped(stuff);
   let stuff = glued_line_marks_as_marks(stuff, true);
-  let with_sup = marks_are_labels && author_mark_position(&stuff).is_some();
+  // (the list's marks as digested, as its gate reads them, `affiliation_is_marked`: a store's `\ma` printing
+  // `\textsuperscript{a}`, revP4d S1; a note's label, 1504.01072)
+  let with_sup = marks_are_labels && prints_list_marks(&stuff, "affiliation_calls")?;
   // In a marked list, the affiliations it names, each a mark-led line (or a piece of one) with the unmarked lines
   // that follow it.
   let mut marked_entries: Vec<Vec<Token>> = Vec::new();
@@ -294,20 +296,6 @@ pub(in crate::base_utilities) fn cut_list_key(
   s!("{:016x}", hasher.finish())
 }
 
-/// The attribute naming an affiliation list a binding's own cutter cuts into its marked entries
-/// (`\lx@add@affiliation@marked`, [`affiliation_calls`]), as the frontmatter API's Cut names its entries ([`CUT_LIST`]):
-/// one printed list is cut once, by whichever cutter comes first — revtex's `\affiliation{{$^1$}Univ A\\ {$^2$}Univ B}`
-/// after the first name, cut by the binding, and the same `\affiliation` after the later names, which the Cut would cut
-/// again (review rev99a2 d1).
-pub(in crate::base_utilities) fn binding_cut_list_attr(list: &Tokens) -> Tokens {
-  let key = cut_list_key(
-    &mouth::tokenize_internal("ltx:creator"),
-    "affiliation",
-    &printed_marks_as_marks(list.clone()),
-  );
-  mouth::tokenize_internal(TeXString::assembled(s!("{CUT_LIST}={key}")))
-}
-
 /// `list` with the marks spelled otherwise written as the plain marks they print, for the Cut's readers
 /// ([`cut_marked_contact`]): lines in one-argument line wrappers as lines (`relocate::wrapped_lines_as_lines`), a
 /// superscript spelled otherwise as `$^{…}$` (`relocate::spaced_marks_as_marks`), a class's `\inst{n}` as
@@ -397,7 +385,7 @@ pub(in crate::base_utilities) fn requested_entry_marks(list: &Tokens) -> Result<
 /// authors' numeric marks pick (`$^{1}$`, `$^2$`). `stuff` with each entry led by its number as a superscript, when the
 /// class numbers the entries of its `store` (named by its control sequence, `\@institute`), the store holds at least two
 /// `\and` entries and no mark of its own, both read by meaning (the kernel's `\and` a macro holds, a mark a macro prints:
-/// [`split_at_kernel_separators`], [`prints_marks`]), and the queued authors' marks request numbers
+/// [`split_at_kernel_separators`]; a mark a name requests, [`prints_requested_marks`]), and the queued authors' marks request numbers
 /// ([`numbered_marks_requested`]); else `None` (the entries annotate every author, `\lx@add@store@affiliations`).
 /// Whether the class numbers them is what its own title page printed in the speculative run frontmatter_stores.rs
 /// `note_and_numbering` made of the store (`lx_and_numbered_<store>`: the sentinel entries each printed after its
@@ -418,7 +406,7 @@ pub fn class_numbered_institutes(stuff: &Tokens, store: Option<&str>) -> Result<
           && body.unlist_ref().contains(&T_CS!("\\stepcounter"))))
   });
   if !numbers_its_entries
-    || prints_marks(stuff, "class_numbered_institutes")?
+    || prints_requested_marks(stuff, "class_numbered_institutes")?
     || !numbered_marks_requested()?
   {
     return Ok(None);
@@ -458,12 +446,14 @@ pub fn numbered_marks_requested() -> Result<bool> {
   Ok(numbers)
 }
 
-/// Whether an affiliation a class gives after its authors is a marked list ([`affiliation_calls`]): it has a mark, and the
-/// queued authors carry marks — or none is queued yet, when the marks are labels for the authors to come (an affiliation
-/// without its label had no one to go to).
-pub(in crate::base_utilities) fn affiliation_is_marked(stuff: &Tokens) -> bool {
-  (queued_creators_have_marks() || queued_creator_count() == 0) // token reading until P4c (F0 report)
-    && author_mark_position(stuff).is_some()
+/// Whether an affiliation a class gives after its authors is a marked list: it prints a mark, read as digested
+/// ([`prints_list_marks`]: its own or a note's label), and the queued authors' names print marks — or none is queued
+/// yet, the marks labels for the names to come.
+pub(in crate::base_utilities) fn affiliation_is_marked(stuff: &Tokens) -> Result<bool> {
+  Ok(
+    (queued_authors_marked()? || queued_creator_count() == 0)
+      && prints_list_marks(stuff, "affiliation_is_marked")?,
+  )
 }
 
 /// The calls for an unmarked address shared by the authors before it (`\lx@add@affiliation@shared`): each of its

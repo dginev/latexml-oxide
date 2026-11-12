@@ -7,11 +7,6 @@
 use super::*;
 use crate::{base_utilities::defs::frontmatter_fields::text_tokens, frontmatter_stores::cs_in};
 
-/// The keys a Cut entry does not keep from the call that held its list: the marks are its labels, so a declared
-/// sequence (`labelseq`) or sharing (`_share=authors`) no longer places it (FRONTMATTER_SINGLE_ENGINE_PLAN step 1
-/// before step 3: no convention outranks a mark, rulings R1, R3).
-const CUT_DROPPED_KEYS: [&str; 2] = ["labelseq", "_share"];
-
 /// The frontmatter API's Cut (FRONTMATTER_SINGLE_ENGINE_PLAN "The target model", placement step 0: "one item per
 /// printed entry; marked lists cut at their marks"), for every binding: an affiliation, alternate affiliation or address
 /// contact (`\lx@annotate@frontmatter{ltx:creator}{ltx:contact}[role=…]{…}`, which `\lx@add@affiliation`,
@@ -57,6 +52,19 @@ pub(in crate::base_utilities) fn cut_marked_contact(
   {
     return Ok(None);
   }
+  cut_list(parenttag, tag, &role, kv.revert()?, content, &API_CUT)
+}
+
+/// The Cut of `content`, a contact of `role` annotating `parenttag` with the call's attributes `call_attr`, as `parameters`
+/// read its list ([`cut_marked_contact`]); `None` for a list they leave whole.
+pub(in crate::base_utilities) fn cut_list(
+  parenttag: &Tokens,
+  tag: &Tokens,
+  role: &str,
+  call_attr: Tokens,
+  content: &Tokens,
+  parameters: &CutParameters,
+) -> Result<Option<Tokens>> {
   // (the content inside the affiliation's own wrapper, `\lx@add@affiliation`'s `\lx@affiliation@withinst{…}`, which
   // each entry keeps)
   let (withinst, list) = within_inst(content);
@@ -66,15 +74,15 @@ pub(in crate::base_utilities) fn cut_marked_contact(
     return Ok(None);
   }
   let list = printed_marks_as_marks(list);
-  if !requested_marked_entries_in(&list)? {
+  if !parameters.every_mark && !requested_marked_entries_in(&list)? {
     return Ok(None);
   }
   // (one printed list, one Cut: a list repeated after each author's name, 2312.02779's five identical
   // `\affiliation{{$^1$}…Belfast…\\ {$^2$}…Trinity…}`, is cut once — a later copy adds no entries, as the cut one's
   // reach every author requesting their marks by label, and the copies queued before the cut, uncut while too few names
   // were queued to request two of its marks, give way to it: review rev99a2 B1, [`place_uncut_copies`])
-  let key = cut_list_key(parenttag, &role, &list);
-  place_uncut_copies(parenttag, &role, &key, &requested_entry_marks(&list)?)?;
+  let key = cut_list_key(parenttag, role, &list);
+  place_uncut_copies(parenttag, role, &key, &requested_entry_marks(&list)?)?;
   if cut_list_queued(&key) {
     DebugFeature!(
       "frontmatter",
@@ -85,19 +93,26 @@ pub(in crate::base_utilities) fn cut_marked_contact(
   // (the parts after a wrapper that holds the entries, `\institution{$^1$A \quad $^2$B}\country{X}`: an address part
   // every entry shares, repeated on each as the opening declarations are; a part holding a link, `\country{Project page:
   // \href{…}{…}}`, the block's, once — review rev99a S3, 2506.18881)
-  let (list, closing, block_parts) = shared_closing_parts(list);
-  // (nothing follows the list's last entry: a separator closing it is none of its text, `…Paris,⏎}`, 2009.04283)
-  let list = Tokens::new(trim_trailing_separator(list.unlist()));
+  let (list, closing, block_parts) = if parameters.shared_parts {
+    shared_closing_parts(list)
+  } else {
+    (list, Vec::new(), Vec::new())
+  };
+  let list = if parameters.trim_closing_separator {
+    Tokens::new(trim_trailing_separator(list.unlist()))
+  } else {
+    list
+  };
   // (the declarations the list opens with, in force on every entry as on the whole contact — `\itshape $^1$Univ A\\
   // $^2$Univ B`, `{\bfseries $^3$Lab C\\ $^4$Lab D}`: each entry keeps them, as the observer writer's cut keeps the font
   // open before a piece, review rev94b r3 B1)
   let opening = notes_lead_declarations(&list);
   // (the call's own attributes, without the ones its marks replace)
   let mut attr: Vec<Token> = Vec::new();
-  for item in split_tokens(kv.revert()?, vec![T_OTHER!(",").into()]) {
+  for item in split_tokens(call_attr, vec![T_OTHER!(",").into()]) {
     let key = item.to_string();
     let key = key.split('=').next().unwrap_or_default().trim();
-    if key.is_empty() || CUT_DROPPED_KEYS.contains(&key) {
+    if key.is_empty() || parameters.dropped_keys.contains(&key) {
       continue;
     }
     if !attr.is_empty() {
@@ -111,6 +126,7 @@ pub(in crate::base_utilities) fn cut_marked_contact(
   }
   attr.extend(mouth::tokenize_internal(TeXString::assembled(s!("{CUT_LIST}={key}"))).unlist());
   let attr = Some(Tokens::new(attr));
+  let (cut, entries) = (std::cell::Cell::new(false), std::cell::Cell::new(0));
   let add = |attr: Option<Tokens>, entry: Tokens| {
     // (each marked entry shows the mark that labels it, `_markshown`: `\lx@annotate@frontmatter@now` — but an address
     // line, whose address becomes the e-mail contact of the authors showing its mark, which leaves the mark no entry:
@@ -120,6 +136,8 @@ pub(in crate::base_utilities) fn cut_marked_contact(
       && v[0] == T_CS!("\\lx@affiliation@withsup")
       && v[1].get_catcode() == Catcode::BEGIN
       && skip_group(v, 1) == v.len();
+    cut.set(cut.get() || marked);
+    entries.set(entries.get() + 1);
     let attr = if marked
       && leading_line_label(&Tokens::new(v[2..v.len() - 1].to_vec()))
         .is_none_or(|(_, _, rest)| !line_is_email_list(&rest))
@@ -138,9 +156,14 @@ pub(in crate::base_utilities) fn cut_marked_contact(
   };
   let call = EntryCall {
     add:                    &add,
-    labelled_address_lines: true,
+    labelled_address_lines: parameters.labelled_address_lines,
   };
   let mut calls = entry_calls(&call, attr.clone(), attr.clone(), None, list, true, true)?;
+  // (one entry no mark labels, as the cutter reads them: the list stays whole, as the call cut again would be without end
+  // — acmart's `\institution{$^1$…}`; unmarked lines are each a call, cond-mat0206329)
+  if !cut.get() && entries.get() < 2 {
+    return Ok(None);
+  }
   for part in block_parts {
     let mut block = attr.clone().map(Tokens::unlist).unwrap_or_default();
     if !block.is_empty() {

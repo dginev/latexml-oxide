@@ -681,9 +681,10 @@ fn an_affil_after_a_run_of_names_is_the_runs() {
 /// (`Resolver::ends_a_run`) and today's API's (`frontmatter_api.rs` `marked_at`). Perl reads no mark here.
 #[test]
 fn an_ieee_affiliation_block_after_a_marked_block_is_the_next_names() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let tex = repro!("ieee_affil_block_after_a_marked_block.tex");
   let xml: &[&[&str]] = &[
-    &["Ann Able *", "affiliation=Univ X"],
+    &["Ann Able *", "affiliation=* Univ X"],
     &["Bob Baker", "affiliation=Univ Y"],
     &["Cid Cole", "affiliation=Univ Y"],
   ];
@@ -699,7 +700,7 @@ fn an_ieee_affiliation_block_after_a_marked_block_is_the_next_names() {
   let tex = repro!("ieee_affil_block_after_a_marked_block_of_two.tex");
   // (the writer's re-part shows a reference mark's number, "1", where IEEEtran prints `∗`: a residual of 106b, SYNC row
   // 106b — no real paper of its A/B shows one)
-  let xml: &[&[&str]] = &[&["Ann Able 1", "affiliation=Univ X"], &["Bob Baker"], &[
+  let xml: &[&[&str]] = &[&["Ann Able 1", "affiliation=1 Univ X"], &["Bob Baker"], &[
     "Cid Cole",
     "affiliation=Univ Y",
   ]];

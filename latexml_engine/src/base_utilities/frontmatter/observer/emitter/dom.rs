@@ -195,7 +195,7 @@ pub(super) fn segments(node: &Node, parted: bool) -> Vec<Seg> { segments_of(node
 /// [`segments`], `icons`: an element of no content (an `\includegraphics`, a `\rule`) an [`ICON`] atom — a piece
 /// printing no text that no cut takes, for the address reader (brief 95c r3 F6).
 fn segments_of(node: &Node, parted: bool, icons: bool) -> Vec<Seg> {
-  fn walk(node: &Node, out: &mut Vec<Seg>, parted: bool, icons: bool) {
+  fn walk(node: &Node, out: &mut Vec<Seg>, parted: bool, icons: bool, scripts: bool) {
     for child in marks::printed_children(node) {
       match child.get_type() {
         Some(NodeType::TextNode) => out.push(Seg::Text(child)),
@@ -224,17 +224,24 @@ fn segments_of(node: &Node, parted: bool, icons: bool) -> Vec<Seg> {
                 let text = s!("{base}{}", scripts[0]);
                 out.push(Seg::Atom(text));
               },
-              marks::FormulaMarks::OnBase { base, .. } => out.push(Seg::Atom(base)),
+              // (its scripts a mark parting the base from the ink after it, as the reading's events: `Lab $5^{2}$Univ Y`
+              // reads "5" and "Univ", not "5Univ", revISO1 S1)
+              marks::FormulaMarks::OnBase { base, .. } => {
+                out.push(Seg::Atom(base));
+                out.push(Seg::Space);
+              },
+              // (its scripts its text too, one the binding kept as a superscript: REVTeX's `${\rm ^{3}He}$`)
               marks::FormulaMarks::Other => {
-                let text = raw_text(&child, parted);
-                out.push(Seg::Atom(text));
+                let mut inner = Vec::new();
+                walk(&child, &mut inner, parted, false, true);
+                out.push(Seg::Atom(inner.iter().map(Seg::text).collect()));
               },
             }
           } else if is(&child, "ltx:sup") {
             // (a lowercase superscript inside a word is the word's letters, no mark: `M\textsuperscript{c}Kernan`; a
             // number's suffix is the text it is in, as the reading's `Event::ordinal` is, but a name's prefix `1st`)
             let content = child.get_content();
-            if inside_a_word(&child, &content) || ordinal_suffix(&child, &content) {
+            if scripts || inside_a_word(&child, &content) || ordinal_suffix(&child, &content) {
               out.push(Seg::Atom(content));
             } else {
               out.push(Seg::Hidden);
@@ -252,7 +259,7 @@ fn segments_of(node: &Node, parted: bool, icons: bool) -> Vec<Seg> {
             if part {
               out.push(Seg::Space);
             }
-            walk(&child, out, parted, icons);
+            walk(&child, out, parted, icons, scripts);
             if part {
               out.push(Seg::Space);
             }
@@ -263,7 +270,7 @@ fn segments_of(node: &Node, parted: bool, icons: bool) -> Vec<Seg> {
     }
   }
   let mut out = Vec::new();
-  walk(node, &mut out, parted, icons);
+  walk(node, &mut out, parted, icons, false);
   out
 }
 

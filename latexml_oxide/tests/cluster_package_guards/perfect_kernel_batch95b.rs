@@ -40,15 +40,16 @@ pub(super) fn assert_written(tex: &str, xml: &[&[&str]], tuples: &[&str]) {
 /// holding the whole line as an affiliation.
 #[test]
 fn ieeetran_is_written() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   // (since 100b, OD #956, today's kinds the e-mail line itself at the API and places it by the chain the reading runs:
   // the reading reads the entry's e-mails, `api:inner-contact owner:inner-email`, and the writer has nothing to write)
   let tex = repro!("ieeetran_entry_addresses_written.tex");
   let (..) = assert_reading(
     tex,
     Some(&[
-      &["Ann Able 1", "affiliation=Univ X", "email=ann.able@x.org"],
-      &["Bob Baker 1", "affiliation=Univ X", "email=bbaker@x.org"],
-      &["Cid Cole 2", "affiliation=Univ Y", "email=cid@y.org"],
+      &["Ann Able 1", "affiliation=1 Univ X", "email=ann.able@x.org"],
+      &["Bob Baker 1", "affiliation=1 Univ X", "email=bbaker@x.org"],
+      &["Cid Cole 2", "affiliation=2 Univ Y", "email=cid@y.org"],
     ]),
     &[
       "C Ann Able [1] | line:names",

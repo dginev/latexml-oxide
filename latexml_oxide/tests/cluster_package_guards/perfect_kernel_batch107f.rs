@@ -55,9 +55,10 @@ fn an_own_call_keeps_an_address_its_name_spells() {
 /// mark; the e-mail's text the address alone. Distinct: `role_tag` in the Kind step for an address line.
 #[test]
 fn a_role_tag_after_an_address_is_its_owners_note() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   assert_eq!(
     converted(repro!("email_role_tag_after_address_ieee"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">*</sup></personname> <contact name="Affiliation: " role="affiliation">Univ X, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id2">*</sup></personname> <contact name="Affiliation: " role="affiliation">Univ X, Town</contact> </creator> <creator before=" " role="author"> <personname>Dan Kumar Dee<sup xml:id="id3">†</sup></personname> <contact name="Affiliation: " role="affiliation">Univ Y, City</contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks" xml:id="id4">Corresponding Author</note> <contact name="Email: " role="email">dkdee@y.org</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">*</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">*</sup>Univ X, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3">*</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">*</sup>Univ X, Town</contact> </creator> <creator before=" " role="author"> <personname>Dan Kumar Dee<sup xml:id="id5">†</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id6">†</sup>Univ Y, City</contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks" xml:id="id7">Corresponding Author</note> <contact name="Email: " role="email">dkdee@y.org</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }
 

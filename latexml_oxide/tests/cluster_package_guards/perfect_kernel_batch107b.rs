@@ -54,31 +54,14 @@ fn counted_creators(tex: &str, files: &[(&str, &str)], errors: usize) -> String 
 /// `merged_creators`. Witness 1906.01719. Repro sectioning-frontmatter/ieee_dotless_membership_abbreviations_between_names.
 #[test]
 fn dotless_ieee_grades_between_names_are_their_memberships() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   assert_eq!(
     counted_creators(
       repro!("ieee_dotless_membership_abbreviations_between_names"),
       &[],
       0,
     ),
-    concat!(
-      r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1">1</sup></personname> "#,
-      r#"<contact role="membership"><text font="italic" xml:id="id2">SMIEEE</text></contact> "#,
-      r#"<contact name="Affiliation: " role="affiliation">University of Alpha, Alphaville</contact> "#,
-      r#"</creator> "#,
-      r#"<creator before=" " role="author"> "#,
-      r#"<personname>Bob Baker<sup xml:id="id3"><text font="italic" xml:id="id3.1">1,2</text></sup></personname> "#,
-      r#"<contact name="Affiliation: " role="affiliation">University of Alpha, Alphaville</contact> "#,
-      r#"<contact name="Affiliation: " role="affiliation">University of Beta, Betatown</contact> "#,
-      r#"</creator> "#,
-      r#"<creator before=" " role="author"> <personname>Cat Cole<sup xml:id="id4">2</sup></personname> "#,
-      r#"<contact role="membership"><text font="italic" xml:id="id5">FIEEE</text></contact> "#,
-      r#"<contact name="Affiliation: " role="affiliation">University of Beta, Betatown</contact> "#,
-      r#"</creator> "#,
-      r#"<creator before=" " role="author"> "#,
-      r#"<personname>Dan Dee<sup xml:id="id6"><text font="italic" xml:id="id6.1">1</text></sup></personname> "#,
-      r#"<contact name="Affiliation: " role="affiliation">University of Alpha, Alphaville</contact> "#,
-      r#"</creator>"#,
-    )
+    r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1">1</sup></personname> <contact role="membership"><text font="italic" xml:id="id2">SMIEEE</text></contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">1</sup>University of Alpha, Alphaville</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id4"><text font="italic" xml:id="id4.1">1,2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id5">1</sup>University of Alpha, Alphaville</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id6">2</sup>University of Beta, Betatown</contact> </creator> <creator before=" " role="author"> <personname>Cat Cole<sup xml:id="id7">2</sup></personname> <contact role="membership"><text font="italic" xml:id="id8">FIEEE</text></contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id9">2</sup>University of Beta, Betatown</contact> </creator> <creator before=" " role="author"> <personname>Dan Dee<sup xml:id="id10"><text font="italic" xml:id="id10.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id11">1</sup>University of Alpha, Alphaville</contact> </creator>"#
   );
 }
 
@@ -87,17 +70,10 @@ fn dotless_ieee_grades_between_names_are_their_memberships() {
 /// 2506.23337. Repro sectioning-frontmatter/authblk_group_wrapped_tie_and_parts_names.
 #[test]
 fn authblk_and_inside_a_whole_list_group_parts_the_names() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   assert_eq!(
     counted_creators(repro!("authblk_group_wrapped_tie_and_parts_names"), &[], 0,),
-    concat!(
-      r#"<creator role="author"> <personname>Ann Able</personname> "#,
-      r#"<note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks" xml:id="id1">Corresponding author. Email: ann@alpha.edu</note> "#,
-      r#"<contact name="Affiliation: " role="affiliation">University of Alpha, Alphaville</contact> "#,
-      r#"</creator> "#,
-      r#"<creator before=" " role="author"> <personname>Bob Baker</personname> "#,
-      r#"<contact name="Affiliation: " role="affiliation">University of Alpha, Alphaville</contact> "#,
-      r#"</creator>"#,
-    )
+    r#"<creator role="author"> <personname>Ann Able</personname> <note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks" xml:id="id1">Corresponding author. Email: ann@alpha.edu</note> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">a</sup>University of Alpha, Alphaville</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">a</sup>University of Alpha, Alphaville</contact> </creator>"#
   );
 }
 

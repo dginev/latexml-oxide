@@ -1,0 +1,23 @@
+% mechanism: an IEEEtran marked list cut by the Cut as the binding declares it (`MARKED_LIST_CUT`, OD #1009), then an
+%   `\IEEEauthorblockA{Email: a@x; b@y; c@z.}` block after the marked ones: the last address no name spells goes to a
+%   nameless creator, though "cy@c.edu" spells Cy Cole
+% witness: 2310.18257
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able∗ , Bob Baker∗† , and Cy Cole‡", "Email: ann@a.edu; bob@b.edu; cy@c.edu."
+% engines: P4cbase, and P4c3 with each mark shown: ann@a.edu Ann's, bob@b.edu Bob's, cy@c.edu a nameless creator's (0 W)
+% expect:  0 errors, 0 warnings; cy@c.edu Cy Cole's
+% status:  RED (P4cbase 9d38af1d10, P4c3; pinned as today in perfect_kernel_batchc1::marked_list_cut_as_its_binding_declares) —
+%          moves: post-merge
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}, Bob Baker\IEEEauthorrefmark{1}\IEEEauthorrefmark{2}, and Cy Cole\IEEEauthorrefmark{3}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ A, Town A.}
+\IEEEauthorblockA{\IEEEauthorrefmark{3}Univ C, Town C.}
+\IEEEauthorblockA{\IEEEauthorrefmark{2}Centre B, Town B.}
+\IEEEauthorblockA{Bob Baker is the corresponding author.}
+\IEEEauthorblockA{Email: ann@a.edu; bob@b.edu; cy@c.edu.}
+}
+\maketitle
+Text.
+\end{document}

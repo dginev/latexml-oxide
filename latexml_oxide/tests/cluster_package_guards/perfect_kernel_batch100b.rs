@@ -90,20 +90,21 @@ fn mark_led_address_lines_are_their_marks_emails() {
 /// welded into entry 2 on all four authors; the symbol line's addresses parted by order.
 #[test]
 fn the_link_chain_over_an_entrys_addresses() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = assert_creators(repro!("address_family_email_line_unplaced"), &[
     &[
       "Ann Able 1,2",
-      "affiliation=Univ A, Town",
+      "affiliation=1 Univ A, Town",
       "email=aable@a.edu",
-      "affiliation=Univ B, City",
+      "affiliation=2 Univ B, City",
     ],
-    &["Bob Baker 2", "affiliation=Univ B, City"],
+    &["Bob Baker 2", "affiliation=2 Univ B, City"],
     &[
       "Cat Cole 2",
-      "affiliation=Univ B, City",
+      "affiliation=2 Univ B, City",
       "email=ccole@b.edu",
     ],
-    &["Dan Dee 2", "affiliation=Univ B, City"],
+    &["Dan Dee 2", "affiliation=2 Univ B, City"],
     &["email=zbb@b.edu", "email=ddq@b.edu"],
   ]);
   // (the Kind step's e-mails named by their line's label; Ann's, out of her entry's text, the observer writer's)
@@ -117,15 +118,15 @@ fn the_link_chain_over_an_entrys_addresses() {
   assert_creators(repro!("address_family_email_line_in_order"), &[
     &[
       "Ann Able 1",
-      "affiliation=Univ A, Town",
+      "affiliation=1 Univ A, Town",
       "email=aable@a.edu",
     ],
     &[
       "Bob Baker 1",
-      "affiliation=Univ A, Town",
+      "affiliation=1 Univ A, Town",
       "email=office@a.edu",
     ],
-    &["Cat Cole 2", "affiliation=Univ B, City"],
+    &["Cat Cole 2", "affiliation=2 Univ B, City"],
   ]);
   // (an address no one spells goes to the symbol carriers no other address of the entry spells: 1907.01388's `zhutou@`
   // to Tao Zhou alone, review rev100b S1. Red (100b r1): `qz77@` on Ann too)

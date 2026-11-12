@@ -157,6 +157,7 @@ fn aistats_under_review_is_anonymous() {
 /// address under four; `\lx@add@affiliation@shared`).
 #[test]
 fn aistats_marked_address_goes_to_its_authors() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let marked = AISTATS
     .replace(
       r"\aistatsauthor{Ann Able \And Bob Baker}",
@@ -169,7 +170,7 @@ fn aistats_marked_address_goes_to_its_authors() {
   let xml = clean(&marked);
   assert_eq!(
     frontmatter(&xml),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ B</contact> </creator>"#,
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Univ A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">2</sup>Univ B</contact> </creator>"#,
     "{xml}"
   );
   let shared = AISTATS.replace(
@@ -480,6 +481,7 @@ fn aistats_shared_address_stays_with_its_row() {
 /// so each marked line goes to the authors whose marks name it (1910.09056's `$^1$University of British Columbia, …`).
 #[test]
 fn aistats_marked_address_over_columns_goes_by_mark() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = clean(
     &AISTATS
       .replace(
@@ -491,13 +493,9 @@ fn aistats_marked_address_over_columns_goes_by_mark() {
         r"\aistatsaddress{$^1$Univ X \\ $^2$Univ Y}",
       ),
   );
-  let x = r#"<contact name="Affiliation: " role="affiliation">Univ X</contact>"#;
-  let y = r#"<contact name="Affiliation: " role="affiliation">Univ Y</contact>"#;
   assert_eq!(
     frontmatter(&xml),
-    format!(
-      r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> {x} </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> {y} </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> {x} </creator>"#
-    ),
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Univ X</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">2</sup>Univ Y</contact> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">1</sup>Univ X</contact> </creator>"#,
     "{xml}"
   );
 }

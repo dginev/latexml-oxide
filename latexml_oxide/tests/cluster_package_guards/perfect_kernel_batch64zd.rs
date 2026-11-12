@@ -606,20 +606,15 @@ fn omnibus_provide_only_package_loads_whole_later() {
 /// A sprocl address led by an author's mark goes to the authors showing it (review 64zd round 2, ws1.tex).
 #[test]
 fn ws_sprocl_marked_addresses() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let (_, xml) = convert_clean(include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ws_sprocl_marked_addresses.tex"
   ));
   assert_eq!(
     creators(&xml),
-    vec![
-      author_with(
-        r#"A. ABLE<sup xml:id="id1"><text font="italic" xml:id="id1.1">a</text></sup>"#,
-        &affiliation("Univ X, City")
-      ),
-      later(author_with(
-        r#"B. BAKER<sup xml:id="id2"><text font="italic" xml:id="id2.1">b</text></sup>"#,
-        &affiliation("Univ Y, Town")
-      )),
+    [
+      "<creator role=\"author\"><personname>A. ABLE<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">a</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">a</text></sup>Univ X, City</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>B. BAKER<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">b</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">b</text></sup>Univ Y, Town</contact></creator>",
     ],
     "{xml}"
   );

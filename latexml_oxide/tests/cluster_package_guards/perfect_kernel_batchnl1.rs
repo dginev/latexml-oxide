@@ -81,8 +81,9 @@ fn a_marked_name_with_an_institution_word_is_a_name() {
     repro!("revtex_marked_list_surname_after_initial_is_a_name"),
     0,
   );
-  let alpha = "affiliation=University of Alpha";
-  let beta = "affiliation=University of Beta";
+  // (P4c: the list's printed marks shown, as pdflatex prints them — P4S Q1)
+  let alpha = "affiliation=1 University of Alpha";
+  let beta = "affiliation=2 University of Beta";
   assert_eq!(two, [
     vec!["Ann Able", alpha],
     vec!["Bob Baker", alpha],

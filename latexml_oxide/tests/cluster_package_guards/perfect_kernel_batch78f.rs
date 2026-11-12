@@ -108,17 +108,12 @@ fn jheppub_emailadd_out_of_order_by_spelling() {
 /// (benedikt.maier@cern.ch on T. K. Årrestad). Repro sectioning-frontmatter/iopart_ead_goes_to_the_author_it_spells.
 #[test]
 fn iopart_ead_goes_to_the_author_it_spells() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("iopart_ead_goes_to_the_author_it_spells.tex");
-  let kit = contact("affiliation", " KIT, Karlsruhe");
-  let icl = contact("affiliation", " ICL, London");
   assert_eq!(creators(&xml), [
-    creator(true, "A. Bal", &kit),
-    creator(
-      false,
-      "B. Maier",
-      &format!("{kit} {icl} {}", email("id1", "benedikt.maier@cern.ch"))
-    ),
-    creator(false, "C. Cole", &icl),
+    r#"<creator role="author"> <personname>A. Bal</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup> KIT, Karlsruhe</contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>B. Maier</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup> KIT, Karlsruhe</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">2</sup> ICL, London</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id4">benedikt.maier@cern.ch</text></contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>C. Cole</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id5">2</sup> ICL, London</contact> </creator>"#,
   ]);
 }
 
@@ -156,29 +151,13 @@ fn llncs_comma_before_inst_is_the_name_before() {
 /// sectioning-frontmatter/iopart_ead_lists_are_an_address_each.
 #[test]
 fn iopart_ead_lists_are_an_address_each() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("iopart_ead_lists_are_an_address_each.tex");
-  let univ_c = contact("affiliation", " Univ C");
   assert_eq!(creators(&xml), [
-    creator(
-      true,
-      "E. Mortsell",
-      &format!(
-        "{} {}",
-        contact("affiliation", " Univ S"),
-        email("id1", "mortsell@s.se")
-      )
-    ),
-    creator(
-      false,
-      "C. Clarkson",
-      &format!("{univ_c} {}", email("id2", "chris.clarkson@c.za"))
-    ),
-    creator(
-      false,
-      "A. Able",
-      &format!("{univ_c} {}", email("id3", "aable@c.za"))
-    ),
-    block(&email("id4", "xq9@c.za")),
+    r#"<creator role="author"> <personname>E. Mortsell</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup> Univ S</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id2">mortsell@s.se</text></contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>C. Clarkson</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">2</sup> Univ C</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id4">chris.clarkson@c.za</text></contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>A. Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id5">2</sup> Univ C</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id6">aable@c.za</text></contact> </creator>"#,
+    r#"<creator role="author"> <contact name="Email: " role="email"><text font="typewriter" xml:id="id7">xq9@c.za</text></contact> </creator>"#,
   ]);
 }
 
@@ -193,11 +172,12 @@ fn iopart_ead_lists_are_an_address_each() {
 /// 1209.0173. Repro sectioning-frontmatter/iopart_ead_after_all_addresses_takes_no_mark.
 #[test]
 fn iopart_ead_after_all_addresses_takes_no_mark() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("iopart_ead_after_all_addresses_takes_no_mark.tex");
   assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &contact("affiliation", " Univ A")),
-    creator(false, "Bob Baker", &contact("affiliation", " Univ B")),
-    block(&email("id1", "zq77@x.org")),
+    r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup> Univ A</contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">2</sup> Univ B</contact> </creator>"#,
+    r#"<creator role="author"> <contact name="Email: " role="email"><text font="typewriter" xml:id="id3">zq77@x.org</text></contact> </creator>"#,
   ]);
 }
 
@@ -250,22 +230,14 @@ fn iopart_ead_and_list_is_an_address_each() {
 /// correspondence). Repro sectioning-frontmatter/iopart_ead_corresponding_author_legend.
 #[test]
 fn iopart_ead_corresponding_author_legend() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("iopart_ead_corresponding_author_legend.tex");
-  let univ_a = contact("affiliation", " Univ A, Town");
+  // (97e, iopart written: the `$^*$` line the legend of Bob Baker's mark, a correspondence note — FIDELITY_CHARTER §4
+  // ruling 2, as pdflatex prints it under the addresses)
   assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &univ_a),
-    creator(
-      false,
-      "Bob Baker",
-      // (97e, iopart written: the `$^*$` line the legend of Bob Baker's mark, a correspondence note — FIDELITY_CHARTER §4
-      // ruling 2, as pdflatex prints it under the addresses)
-      &format!(
-        "{univ_a} {} {}",
-        email("id1", "zq77@x.org"),
-        r#"<note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="∗" role="thanks" xml:id="id2"><sup xml:id="id2.1">∗</sup> Author to whom any correspondence should be addressed.</note>"#
-      )
-    ),
-    creator(false, "Cat Cole", &univ_a),
+    r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup> Univ A, Town</contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup> Univ A, Town</contact> <contact name="Email: " role="email"><text font="typewriter" xml:id="id3">zq77@x.org</text></contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="∗" role="thanks" xml:id="id4"><sup xml:id="id4.1">∗</sup> Author to whom any correspondence should be addressed.</note> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Cat Cole</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id5">1</sup> Univ A, Town</contact> </creator>"#,
   ]);
 }
 
@@ -401,13 +373,13 @@ fn jheppub_emailadd_star_without_legend_stays_the_blocks() {
 /// sectioning-frontmatter/iopart_ead_star_without_legend_stays_the_blocks (rev78f2 probe i3).
 #[test]
 fn iopart_ead_star_without_legend_stays_the_blocks() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("iopart_ead_star_without_legend_stays_the_blocks.tex");
-  let univ_a = contact("affiliation", " Univ A, Town");
   assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &univ_a),
-    creator(false, r#"Bob Baker<sup xml:id="id1">∗</sup>"#, &univ_a),
-    creator(false, "Cat Cole", &univ_a),
-    block(&email("id2", "zq77@x.org")),
+    r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup> Univ A, Town</contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id2">∗</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">1</sup> Univ A, Town</contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Cat Cole</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">1</sup> Univ A, Town</contact> </creator>"#,
+    r#"<creator role="author"> <contact name="Email: " role="email"><text font="typewriter" xml:id="id5">zq77@x.org</text></contact> </creator>"#,
   ]);
 }
 
@@ -557,24 +529,16 @@ fn iopart_ead_corresponding_author_of_another_group() {
 /// probe i2).
 #[test]
 fn iopart_ead_corresponding_author_not_under_its_mark() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = convert_repro!("iopart_ead_corresponding_author_not_under_its_mark.tex");
-  let univ_b = contact("affiliation", " Univ B, City");
+  // (97e, iopart written: the `$^*$` line the legend of Cat Cole's mark, a correspondence note; zq77@ the block's
+  // still, the corresponding step looking among the requesters of the entry it prints under,
+  // `resolver::post::answer_sequence`)
   assert_eq!(creators(&xml), [
-    creator(true, "Ann Able", &univ_b),
-    creator(false, "Bob Baker", &univ_b),
-    // (97e, iopart written: the `$^*$` line the legend of Cat Cole's mark, a correspondence note; zq77@ the block's
-    // still, the corresponding step looking among the requesters of the entry it prints under,
-    // `resolver::post::answer_sequence`)
-    creator(
-      false,
-      "Cat Cole",
-      &format!(
-        "{} {}",
-        contact("affiliation", " Univ A, Town"),
-        r#"<note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="∗" role="thanks" xml:id="id1"><sup xml:id="id1.1">∗</sup> Author to whom any correspondence should be addressed.</note>"#
-      )
-    ),
-    block(&email("id2", "zq77@x.org")),
+    r#"<creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">2</sup> Univ B, City</contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">2</sup> Univ B, City</contact> </creator>"#,
+    r#"<creator before=" " role="author"> <personname>Cat Cole</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">1</sup> Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="∗" role="thanks" xml:id="id4"><sup xml:id="id4.1">∗</sup> Author to whom any correspondence should be addressed.</note> </creator>"#,
+    r#"<creator role="author"> <contact name="Email: " role="email"><text font="typewriter" xml:id="id5">zq77@x.org</text></contact> </creator>"#,
   ]);
 }
 

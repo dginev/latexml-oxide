@@ -387,8 +387,11 @@ const MOVED_CUT_KIND_EMISSIONS: &[(&str, usize)] = &[
 /// revF0 B1) to 2,220: it asks the queue's printed-text requests (`queued_requesters`), its token loop and
 /// `requesting_authors` deleted. P4d to 2,219: `class_numbered_institutes` reads its store by meaning, the marks query
 /// in `observer/argument_marks.rs` (`prints_marks`), the lead of each numbered entry tokenized whole, and
-/// `numbered_marks_requested`'s empty-piece test (no alphanumeric covers it) deleted.
-const MOVED_CUT_KIND_CODE_LINES: usize = 2_219;
+/// `numbered_marks_requested`'s empty-piece test (no alphanumeric covers it) deleted. P4c raised it to 2,236 (+17,
+/// pending the main session's decision): the Cut a binding's marked list calls with its declaration (`cut_list`, split
+/// from `cut_marked_contact`; DG's "declared cut", OD #1009), its parameter reads and the one-entry stop, net of
+/// `binding_cut_list_attr` deleted.
+const MOVED_CUT_KIND_CODE_LINES: usize = 2_236;
 
 /// The fence on the moved Cut and Kind: they take no new decision either (review revZ18a check 3).
 #[test]
@@ -518,7 +521,9 @@ fn old_reader_exports() -> std::collections::BTreeSet<String> {
 /// IV1 added one, accepted as debt by the main session (2026-11-11) and retired by the P4 port of these readers onto
 /// the digested reading (the brief's site, study IV0): `email_lines.rs` `spacing_formulas_as_space`, how an address line
 /// prints (a formula of spacing alone is glue, no text of an address: 2205.14113, 2302.05182; OD #972), no owner decided;
-/// its predicate `formula_prints_spacing_alone` is private (revIV1 NIT 1).
+/// its predicate `formula_prints_spacing_alone` is private (revIV1 NIT 1). P4c (pending the main session's decision):
+/// `binding_cut_list_attr` deleted, `cut_list` added — the Cut's body, which a binding's marked list calls with its
+/// declaration (OD #1009).
 const OLD_READER_EXPORTS: &[&str] = &[
   "AddressPlacement",
   "CUT_COPY_PLACE",
@@ -535,11 +540,11 @@ const OLD_READER_EXPORTS: &[&str] = &[
   "author_group_splits",
   "author_label_marks",
   "author_marks_end_name",
-  "binding_cut_list_attr",
   "blank_line_marks_dropped",
   "class_numbered_institutes",
   "collaboration_line",
   "collaboration_line_reading",
+  "cut_list",
   "cut_list_key",
   "cut_marked_contact",
   "document_notes",

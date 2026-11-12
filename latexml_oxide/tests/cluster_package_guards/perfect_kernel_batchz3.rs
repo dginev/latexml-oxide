@@ -39,6 +39,7 @@ fn creators_are(xml: &str, expected: &[&[&str]]) {
 /// `${^6}$` (1410.8534, astro-ph9807043), and a formula of no mark among a piece's words.
 #[test]
 fn a_cut_takes_each_formula_whole() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let (xml, _) = dump(repro!("revtex_affiliation_requested_switched_mark_cuts"));
   creators_are(&xml, &[
     &[
@@ -46,16 +47,16 @@ fn a_cut_takes_each_formula_whole() {
       "affiliation=1 Univ X",
       "affiliation=3 He Lab",
     ],
-    &["Bob Baker 2", "affiliation=Univ Y"],
+    &["Bob Baker 2", "affiliation=2 Univ Y"],
   ]);
   let (xml, _) = dump(repro!("affiliation_cut_formula_whole_whatever_opens_it"));
   creators_are(&xml, &[
     &["Ann Able 1", "affiliation=1 Univ X"],
     &["Bob Baker 2", "affiliation=2 Univ Y"],
-    &["Cat Cole 3", "affiliation=Univ Z"],
+    &["Cat Cole 3", "affiliation=3 Univ Z"],
     &["Dan Dow 4", "affiliation=4 Univ W"],
     &["Eve Ely 5", "affiliation=5 Univ V"],
-    &["Fay Fox 6", "affiliation=Univ U, α Lab"],
+    &["Fay Fox 6", "affiliation=6 Univ U, α Lab"],
   ]);
 }
 

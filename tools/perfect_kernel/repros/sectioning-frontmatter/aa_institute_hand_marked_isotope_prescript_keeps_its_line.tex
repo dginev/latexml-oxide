@@ -1,0 +1,15 @@
+% mechanism: aa's `\institute` of hand-marked lines: `${\rm ^{3}He}$` is no mark, the line "Univ Y, ³He Lab" Baker's
+% witness: synthetic (2105.07958's prescript class)
+% oracle:  aa.cls is not in TL 2025 (no pdflatex run); aa.cls prints `\institute` as given: "1 Univ X / 2 Univ Y, 3He Lab"
+% engines: rust int160c = 0 errors, 0 warnings: Baker "2 Univ Y", "He 3 Lab" a nameless creator's
+% expect:  0 errors, 0 warnings; Able "1 Univ X"; Baker "2 Univ Y, ³He Lab"
+% status:  RED (int160c) -> GREEN (ISO1) — perfect_kernel_batch90a::a_script_before_printed_ink_or_on_a_base_is_text
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ \and Bob Baker$^{2}$}
+\institute{$^{1}$Univ X\\ $^{2}$Univ Y, ${\rm ^{3}He}$ Lab}
+\maketitle
+Text.
+\end{document}
