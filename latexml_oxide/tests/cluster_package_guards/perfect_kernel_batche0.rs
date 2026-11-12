@@ -395,8 +395,11 @@ const MOVED_CUT_KIND_EMISSIONS: &[(&str, usize)] = &[
 /// deleted. Then 2,211 (+1, pending the main session's decision): the uncut copies give way only once the list is cut,
 /// `place_uncut_copies` called after `cut_list`'s stops and in the already-cut branch. P4f to 2,209: the Cut's `_markshown`
 /// test one helper the binding lists' cutter calls too (`cut.rs` `mark_shown_attr`), each key append in `cut.rs` one
-/// private `with_key` (its three copies deleted).
-const MOVED_CUT_KIND_CODE_LINES: usize = 2_209;
+/// private `with_key` (its three copies deleted). P4b4a raised it to 2,223 (+14, the main session's decision): the list
+/// cutter reads where entries start as digested (`list_marks`), its callers carry each line's starts and each entry's
+/// opening mark, and the Cut's opening declarations end at the first start; the cut itself is in `classify/entry_starts.rs`.
+/// P6's compaction lowers it.
+const MOVED_CUT_KIND_CODE_LINES: usize = 2_223;
 
 /// The fence on the moved Cut and Kind: they take no new decision either (review revZ18a check 3).
 #[test]
@@ -1502,7 +1505,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // e-mail cut (`entry_email_cut`, `shared_call_item`) and the reader, unit cut and reassembly it shares since Z18d
   // (`read_call`, `unit_cut`, `kept_without`, review revZ18c S1); the rows `shared_row` (13) and `shared_row/emails` (65)
   // gone, 78 = 56 + 22 deleted with `share_row_contacts` and `row_email_calls`; none added)
-  ("classify", 443),
+  // (P4b4a, 443 -> 458: the list cutter's token surgery, `classify/entry_starts.rs` — where each line stands in the list,
+  // the braces, `\protect` and formula a cut closes and reopens, the box a cut line is set in — and the unread fallback
+  // moved from `defs/frontmatter_api/affiliations.rs`; where entries start is read as digested, `list_marks`)
+  ("classify", 458),
   // (E0h: the rest of `author_block/` Z18m moved unchanged to `classify/old_reader/`, split off from `classify`'s row)
   ("old_reader", 131),
   ("defs/author_macros", 20),

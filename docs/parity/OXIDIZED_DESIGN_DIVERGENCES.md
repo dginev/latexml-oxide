@@ -30921,7 +30921,10 @@ printing nothing, `\newcommand\affilfont{}`), is a letter or digit is not rehear
 (Option C P4b4a, `argument_marks::list_marks`: the starts `events::entry_heads` gives, the same cut of a list of one
 entry or one led by unmarked text, and where each mark the list prints at its level stands): a line printing no mark
 (nor a note opening with one) continues the entry above it; a line is cut at its later starts, inside a wrapper too (the
-wrapper repeated with its declarations) and inside a formula at a mark on a base (closed and opened again); a mark on no
+wrapper repeated with its declarations; a box the whole line is set in, `\parbox{\linewidth}{$^1$Univ A\\ $^2$Univ B}`,
+`\mbox`, `\hbox`, dropped: what pdflatex prints are its lines, each piece cut alike — REVTeX's `\parbox` lists,
+`perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed`) and inside a formula at a mark on a base (closed and
+opened again); a mark on no
 base starts where its formula does (`classify::entry_starts`); the list's opening declarations end at its first start
 (`\ua` printing `\textsuperscript{1}` is none); a line whose marks lead its notes is cut inside the note by its tokens (the
 `\thanks` idiom); and llncs's shape (c) is read from the marks the institute prints (`prints_list_marks`). Unread, the

@@ -77,39 +77,12 @@ pub(in crate::base_utilities) fn entry_calls(
   // (the list's marks as digested, as its gate reads them, `affiliation_is_marked`: a store's `\ma` printing
   // `\textsuperscript{a}`, revP4d S1; a note's label, 1504.01072), and where its entries start, as the Cut's decision
   // reads them (`list_marks`: `\ua Univ A` with `\newcommand\ua{\textsuperscript{1}}`, 2608.21425's `\affmark{1}`)
-  let marks = if marks_are_labels {
-    list_marks(&stuff, "affiliation_calls")?
-  } else {
-    ListMarks {
-      prints: false,
-      starts: None,
-      marked: None,
-    }
-  };
-  let with_sup = marks.prints;
+  let marks = marks_are_labels
+    .then(|| list_marks(&stuff, "affiliation_calls"))
+    .transpose()?;
+  let with_sup = marks.as_ref().is_some_and(|marks| marks.prints);
   let lines = split_tokens_delimited(stuff.clone(), affil_splits());
-  // (each line's entry starts, from its own first token; unread, none — the line's tokens decide, `author_mark_position`)
-  let line_starts: Vec<Option<LineStarts>> = match (&marks.starts, &marks.marked) {
-    (Some(starts), Some(marked)) if with_sup => match line_ranges(stuff.unlist_ref(), &lines) {
-      Some(ranges) => ranges
-        .into_iter()
-        .map(|range| {
-          let at: Vec<usize> = starts
-            .iter()
-            .filter(|at| range.contains(at))
-            .map(|at| at - range.start)
-            .collect();
-          let marked = marked.iter().any(|at| range.contains(at));
-          Some(LineStarts { at, marked })
-        })
-        .collect(),
-      None => {
-        count_unread_marks("affiliation_calls");
-        vec![None; lines.len()]
-      },
-    },
-    _ => vec![None; lines.len()],
-  };
+  let line_starts = lines_starts(&stuff, &lines, marks.as_ref().filter(|_| with_sup));
   // In a marked list, the affiliations it names, each a mark-led line (or a piece of one) with the unmarked lines
   // that follow it.
   let mut marked_entries: Vec<Vec<Token>> = Vec::new();
@@ -148,10 +121,7 @@ pub(in crate::base_utilities) fn entry_calls(
         }
       };
       // (a line no entry starts in: `q2`'s `\affmark{1} Univ A\\ Street A`, the street; unread, no mark in its tokens)
-      let unmarked = match &starts {
-        Some(starts) => !starts.marked,
-        None => author_mark_position(&line).is_none(),
-      };
+      let unmarked = line_unmarked(&line, starts.as_ref());
       // (…and one carrying notes, its notes the document's, after the list's calls: [`address_line_notes`],
       // `\institute{$^{1}$Univ X \\ $^{2}$Univ Y \\ \texttt{a@x, b@y}\thanks{…}}`, as 2605.23553's author block)
       let line = match (authors_queued && unmarked)
@@ -204,26 +174,7 @@ pub(in crate::base_utilities) fn entry_calls(
       // caller-supplied labelseq: applying both double-labels each affiliation
       // and duplicates it onto every \inst{n} author. Mirrors \lx@add@authors,
       // which likewise passes no attr in its with-superscript branch.
-      // A line naming several marked institutions (`$^1$Univ A; $^2$Univ B`) is cut where its entries start, as the
-      // Cut's decision reads them (`events::entry_heads`): one label per affiliation, else the last mark labelled them
-      // all (2609.22690, 21347). Unread, a line led by a mark is split at each whitespace-preceded one, as
-      // `\lx@add@authors` splits its marker-led lines.
-      let segs = match &starts {
-        // (a line whose marks lead its notes, `\thanks{\IEEEauthorrefmark{1} Univ A; \IEEEauthorrefmark{2} Univ B}`, is cut
-        // inside the note by its tokens: the `\thanks` idiom of `\lx@add@thanks`, 1504.01072, 2609.24896)
-        Some(starts) if starts.at.len() < 2 && starts.marked && marker_leads(&line) => {
-          split_wrapped_affiliation_marks(line)?
-            .into_iter()
-            .map(|seg| (seg, Some(true)))
-            .collect()
-        },
-        Some(starts) => line_at_starts(line, starts),
-        None if marker_leads(&line) => split_wrapped_affiliation_marks(line)?
-          .into_iter()
-          .map(|seg| (seg, None))
-          .collect(),
-        None => vec![(line, None)],
-      };
+      let segs = entry_pieces(line, starts.as_ref())?;
       for (seg, opens) in segs {
         if spacing_end(seg.unlist_ref()) == 0 {
           continue;

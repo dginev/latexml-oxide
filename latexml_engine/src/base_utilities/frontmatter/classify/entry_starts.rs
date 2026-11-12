@@ -39,21 +39,123 @@ pub(in crate::base_utilities) fn line_ranges(
     .collect()
 }
 
+/// Each of `lines` (`split_tokens_delimited` of `stuff`) with its entry starts, as `marks` reads them; `None` for each
+/// when `marks` is none or unread (counted) — the line's tokens decide then, `author_mark_position`.
+pub(in crate::base_utilities) fn lines_starts(
+  stuff: &Tokens,
+  lines: &DelimitedPieces,
+  marks: Option<&ListMarks>,
+) -> Vec<Option<LineStarts>> {
+  let Some((Some(starts), Some(marked))) = marks.map(|marks| (&marks.starts, &marks.marked)) else {
+    return vec![None; lines.len()];
+  };
+  let Some(ranges) = line_ranges(stuff.unlist_ref(), lines) else {
+    count_unread_marks("affiliation_calls");
+    return vec![None; lines.len()];
+  };
+  ranges
+    .into_iter()
+    .map(|range| {
+      let at = starts
+        .iter()
+        .filter(|at| range.contains(at))
+        .map(|at| at - range.start)
+        .collect();
+      let marked = marked.iter().any(|at| range.contains(at));
+      Some(LineStarts { at, marked })
+    })
+    .collect()
+}
+
+/// Whether `line` starts no entry: it prints no mark at its level (`q2`'s `\affmark{1} Univ A\\ Street A`, the street);
+/// unread, no mark in its tokens.
+pub(in crate::base_utilities) fn line_unmarked(line: &Tokens, starts: Option<&LineStarts>) -> bool {
+  starts.map_or_else(
+    || author_mark_position(line).is_none(),
+    |starts| !starts.marked,
+  )
+}
+
+/// `line`'s entries (`$^1$Univ A; $^2$Univ B`: one label per affiliation, else the last mark labelled them all,
+/// 2609.22690, 21347), each with whether a mark opens it, cut where they start (`events::entry_heads`); unread, a line
+/// led by a mark is split at each whitespace-preceded one, as `\lx@add@authors` splits its marker-led lines.
+pub(in crate::base_utilities) fn entry_pieces(
+  line: Tokens,
+  starts: Option<&LineStarts>,
+) -> Result<Vec<(Tokens, Option<bool>)>> {
+  let split = |line: Tokens, opens: Option<bool>| -> Result<Vec<(Tokens, Option<bool>)>> {
+    Ok(
+      split_wrapped_affiliation_marks(line)?
+        .into_iter()
+        .map(|seg| (seg, opens))
+        .collect(),
+    )
+  };
+  match starts {
+    // (a line whose marks lead its notes, `\thanks{\IEEEauthorrefmark{1} Univ A; \IEEEauthorrefmark{2} Univ B}`, is cut
+    // inside the note by its tokens: the `\thanks` idiom of `\lx@add@thanks`, 1504.01072, 2609.24896)
+    Some(starts) if starts.at.len() < 2 && starts.marked && marker_leads(&line) => {
+      split(line, Some(true))
+    },
+    Some(starts) => Ok(line_at_starts(line, starts)),
+    None if marker_leads(&line) => split(line, None),
+    None => Ok(vec![(line, None)]),
+  }
+}
+
 /// `line` cut where its entries start (`starts`, [`LineStarts`]), each piece with whether a mark opens it; what it prints
 /// before its first start stays with that entry (`Univ X \\ Present address: $^2$Univ Y`'s second line, as
 /// `\lx@add@authors` keeps it). A wrapper holding several starts (`{\it $^1$A, $^2$B}`) is cut inside, repeated on each
-/// piece with its opening declarations, as [`split_wrapped_affiliation_marks`] repeats it.
-pub(in crate::base_utilities) fn line_at_starts(
-  line: Tokens,
-  starts: &LineStarts,
-) -> Vec<(Tokens, Option<bool>)> {
+/// piece with its opening declarations, as [`split_wrapped_affiliation_marks`] repeats it; a box the line is set in
+/// (`\parbox{\linewidth}{$^1$Univ A\\ $^2$Univ B}`) is not: what it prints are its lines (revtex hg1 rows).
+fn line_at_starts(line: Tokens, starts: &LineStarts) -> Vec<(Tokens, Option<bool>)> {
   if starts.at.is_empty() {
     return vec![(line, Some(starts.marked))];
   }
-  cut_at_starts(line.unlist_ref(), &starts.at[1..], starts.at[0])
+  let v: &[Token] = line.unlist_ref();
+  let (v, at) = match box_body(v) {
+    Some(body) if starts.at.len() >= 2 && starts.at.iter().all(|at| body.contains(at)) => (
+      &v[body.clone()],
+      starts
+        .at
+        .iter()
+        .map(|at| at - body.start)
+        .collect::<Vec<_>>(),
+    ),
+    _ => (v, starts.at.clone()),
+  };
+  cut_at_starts(v, &at[1..], at[0])
     .into_iter()
     .map(|piece| (Tokens::new(piece), Some(true)))
     .collect()
+}
+
+/// The body of the box `v` is wholly set in, `\parbox[t]{\linewidth}{…}`, `\mbox{…}`, `\hbox{…}` ([`LINE_BOXES`]).
+fn box_body(v: &[Token]) -> Option<std::ops::Range<usize>> {
+  let start = v.iter().position(|t| *t != T_SPACE!())?;
+  let end = v.iter().rposition(|t| *t != T_SPACE!())? + 1;
+  let past_spaces = |mut i: usize| {
+    while v.get(i) == Some(&T_SPACE!()) {
+      i += 1;
+    }
+    i
+  };
+  let mut i = start + 1;
+  if v[start] == T_CS!("\\parbox") {
+    // (its `[pos][height][inner-pos]` and its width)
+    loop {
+      i = past_spaces(i);
+      if v.get(i) != Some(&T_OTHER!("[")) {
+        break;
+      }
+      i += v[i..].iter().position(|t| *t == T_OTHER!("]"))? + 1;
+    }
+    i = skip_group(v, i);
+  } else if !LINE_BOXES.iter().any(|cs| v[start] == T_CS!(*cs)) {
+    return None;
+  }
+  i = past_spaces(i);
+  (v.get(i)?.get_catcode() == Catcode::BEGIN && skip_group(v, i) == end).then(|| i + 1..end - 1)
 }
 
 /// `v` cut before each of `at` (positions in it, ascending): a cut inside a group closes it and opens it again, with
