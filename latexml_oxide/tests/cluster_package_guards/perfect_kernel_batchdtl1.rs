@@ -93,8 +93,8 @@ const ROWS: &[Row] = &[
     )],
     holds:    &[],
   },
-  // A (value side, DTL1e): a box named by an expl3 register, `\wd\l_my_box*2`, read by `try_cs_register`'s
-  // expl3-name rule (revDTL1b S2); pdflatex 0 `!`, A[80.0]. Read as `\l` then box 0: A[30.0], 1 Warning.
+  // A (value side, DTL1e): a box named by an expl3 register, `\wd\l_my_box*2`, read by its token's name (revDTL1b
+  // S2; `cs_at`, PGR1b); pdflatex 0 `!`, A[80.0]. Read as `\l` then box 0: A[30.0], 1 Warning.
   Row {
     name:     "pgfmath_box_named_by_expl3",
     tex:      include_str!(
@@ -219,6 +219,45 @@ const ROWS: &[Row] = &[
         "para",
         "xml:id=\"p4\"",
         r#"<para xml:id="p4"><p xml:id="p4.1">[4-][4-][12.0u][6.0u]</p></para>"#,
+      ),
+    ],
+    holds:    &[],
+  },
+  // PGR1b: a register whose name is no letters run (`\pal@data1H` from `\csname`, `\l_x_dim`) is one token, bare and
+  // in an e-TeX operand TeX re-reads (pagelayout's manuals: 165 + 9 Errors on int163a); the pdflatex values.
+  // int163a: [0.0u]×6 … 2 E, 15 W; Perl 24 E, 82 W (KNOWN_PERL_ERRORS #1226).
+  Row {
+    name:     "pgfmath_csname_register_operands",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/graphics-tikz/pgfmath_csname_register_operands.tex"
+    ),
+    files:    &[],
+    counts:   (0, 0),
+    elements: &[
+      (
+        "para",
+        "xml:id=\"p1\"",
+        r#"<para xml:id="p1"><p xml:id="p1.1">[6-][6-][1-][3.0u][6.0u][7.0u]</p></para>"#,
+      ),
+      (
+        "para",
+        "xml:id=\"p2\"",
+        r#"<para xml:id="p2"><p xml:id="p2.1">[1.0u][19.0u][12-][-2.0u]</p></para>"#,
+      ),
+      (
+        "para",
+        "xml:id=\"p3\"",
+        r#"<para xml:id="p3"><p xml:id="p3.1">[6.0pt][2.0pt][9.0pt]</p></para>"#,
+      ),
+      (
+        "para",
+        "xml:id=\"p4\"",
+        r#"<para xml:id="p4"><p xml:id="p4.1">[4.0u][3.0u]</p></para>"#,
+      ),
+      (
+        "para",
+        "xml:id=\"p5\"",
+        r#"<para xml:id="p5"><p xml:id="p5.1">[6.0u][6.0-][a-][1.5]</p></para>"#,
       ),
     ],
     holds:    &[],
