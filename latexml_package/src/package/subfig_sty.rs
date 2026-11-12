@@ -38,7 +38,7 @@ LoadDefinitions!({
   });
   if use_caption {
     RequirePackage!("caption");
-    RawTeX!(r"\global\let\lx@caption@kernel@only\@undefined");
+    RawTeX!(r"\lx@caption@full@load");
   } else if !lookup_bool("caption.sty_loaded") {
     RequirePackage!("caption3");
   }

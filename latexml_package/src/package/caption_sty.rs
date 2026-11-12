@@ -361,6 +361,17 @@ LoadDefinitions!({
     AssignValue!(CAPTION_DEFAULT_LABELSEP => "colon", Scope::Global);
   }
   RawTeX!(r"\AtBeginDocument{\@ifundefined{lx@caption@kernel@only}{\let\lx@makecaption\lx@caption@makecaption}{}}");
+  // caption.sty:243,270 `\let\@makecaption\caption@makecaption`, the TeX-level `\@makecaption` a `cmd/@makecaption` hook
+  // patches; its body has no shorthand character (latex.ltx's `>\hsize` under babel-spanish erred: asmeconf.cls:598-604,
+  // 2401.04032). Direct callers (sidecap, supertabular) keep the class's format, `\caption@@make` being a stub here.
+  RawTeX!(r"\long\def\caption@makecaption#1#2{\lx@caption@ORI@makecaption{#1}{#2}}
+\def\lx@caption@let@makecaption{\global\let\lx@caption@ORI@makecaption\@makecaption\global\let\@makecaption\caption@makecaption}
+\def\lx@caption@full@load{\@ifundefined{lx@caption@kernel@only}{}%
+  {\global\let\lx@caption@kernel@only\@undefined\lx@caption@let@makecaption}}");
+  // (caption's first full load lets it here; one after caption's kernel alone, `\lx@caption@full@load`)
+  if !is_defined("\\lx@caption@kernel@only") {
+    RawTeX!(r"\lx@caption@let@makecaption");
+  }
   // caption3.sty:830-836 `\DeclareCaptionFont[<package>]{name}{code}`: `\caption@font@<name>`, a one-argument macro
   // (the value of `name=value`, as `color=blue`) a font option (`font=`, `labelfont=`, `textfont=`) runs
   // (`caption_font_tokens`). The predefined ones, caption3.sty:860-950 and :1365-1375; the spacing ones are layout.
@@ -1133,7 +1144,7 @@ LoadDefinitions!({
   // `perfect_kernel_batch78c::caption_v1_options_after_caption3_apply`.
   AssignValue!("caption.sty_keyval_setter" => "\\lx@caption@repeat@options", Scope::Global);
   RawTeX!(r"\def\lx@caption@repeat@options#1{\@ifundefined{lx@caption@kernel@only}{\captionsetup{#1}}%
-    {\@for\CurrentOption:=#1\do{\lx@caption@option}\global\let\lx@caption@kernel@only\@undefined}}");
+    {\@for\CurrentOption:=#1\do{\lx@caption@option}\lx@caption@full@load}}");
   DefPrimitive!("\\lx@caption@option", sub[_args] { caption_option() });
   DeclareOption!(None, { caption_option()?; });
   ProcessKeyOptions!();

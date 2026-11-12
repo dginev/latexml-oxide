@@ -35315,3 +35315,20 @@ TeX-exact unit conversion and pdfTeX's `px`/`nd`/`nc` (repro `pgfmath_units_as_t
 octal 8 or 9 (`pgfmath_octal_bad_digit_red`). Guards `pgfmath_golden_tests::golden_pgfmath_corpus`,
 `perfect_kernel_batchdtl1::batchdtl1_pgfmath_rows` (repro `pgfmath_grammar_gaps`).
 
+
+### 1011. After caption loads, `\@makecaption` is a shorthand-free wrapper calling the format it replaced (CAP1)
+
+**TeX.** caption.sty:243-250, :270 `\let\@makecaption\caption@makecaption`, whose body ends in caption's own `\caption@@make`; a
+class's or the kernel's format is gone, and a `cmd/@makecaption` hook patches a body with no shorthand character (under
+babel-spanish the kernel's `>\hsize` cannot be retokenized, latex.ltx:7108-7140). **Perl.** Caption's binding never touches
+`\@makecaption` (its `\AddToHook` is a no-op). **Rust.** `caption_sty.rs` copies the replaced macro by value
+(`\lx@caption@ORI@makecaption`, once, at caption's first full load — also a full load after caption3 alone, `\lx@caption@full@load`)
+and lets `\@makecaption` to a `\caption@makecaption` that calls it, so the hook patch succeeds as in TeX and direct callers (xtab,
+sidecap, a document's `\@makecaption{…}{…}`) keep the class's format as before. `\meaning\@makecaption` prints
+`…\lx@caption@ORI@makecaption {#1}{#2}` where pdflatex prints caption's `…\caption@nobreak …`. **Why**: caption's `\caption@@make`
+is a stub in the binding (it prints only the text), so its body would cost a direct caller the label. **Witnesses**: 2401.04032,
+2505.14646, 2507.23020, 2403.14646, 2509.09422, 2508.16476, 2406.02775, 2406.11934, 2304.01093, 2408.05897, 2408.03946 (asmeconf +
+spanish: 2 false Errors each gone). **Guard**: `perfect_kernel_batchqa47a::batchqa47a_command_hook_rows` (rows
+`command_hook_on_makecaption_*`). **Open**: a plain repeat `\usepackage{caption}` after floatrow's caption3
+(`command_hook_on_makecaption_caption_repeat_without_options_red`); code on a `cmd/@makecaption` hook never runs, since LaTeXML's
+`\caption` does not go through `\@makecaption` (`command_hook_on_makecaption_code_never_runs_red`, post-merge QAHK).
