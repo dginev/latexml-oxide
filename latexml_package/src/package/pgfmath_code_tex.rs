@@ -422,6 +422,15 @@ fn pgfmath_register_lookup(cs: &str) -> f64 {
   }
 }
 
+/// `\wd`/`\ht`/`\dp` of box `number`, in points (Perl `pgfmath_getwidth`/`getheight`/`getdepth`,
+/// pgfmath.code.tex.ltxml:499-521): the box register's own getter, a void box 0.
+fn pgfmath_box_dimension(dimension: &str, number: i64) -> f64 {
+  match lookup_register(dimension, vec![ArgWrap::Number(Number::new(number))]) {
+    Ok(Some(RegisterValue::Dimension(d))) => d.value_of() as f64 / 65536.0,
+    _ => 0.0,
+  }
+}
+
 // ==================== Built-in Function Application ====================
 
 /// TeX units recognized by the parser (Perl L714-715)
@@ -1901,10 +1910,49 @@ mod pgfmath_grammar {
       return Some(value);
     }
     let cs = &i.input[..1 + n];
+    if matches!(cs, "\\wd" | "\\ht" | "\\dp") {
+      let dimension = cs;
+      let cp = i.checkpoint();
+      bump(i, 1 + n);
+      if let Some(number) = box_number(i) {
+        i.state.units_declared = true;
+        return Some(super::pgfmath_box_dimension(dimension, number));
+      }
+      i.reset(&cp);
+    }
     let value = pgfmath_register_lookup(cs);
     bump(i, 1 + n);
     i.state.units_declared = true;
     Some(value)
+  }
+
+  /// The box after `\wd`/`\ht`/`\dp`: a register holding its number (`\wd\mybox`, Perl's `/\\wd/ CS`,
+  /// pgfmath.code.tex.ltxml:696-701, tikzscale.sty:522-524 `\pgfmathsetmacro{#1}{#2\tikzscale@measuredSize}`), or
+  /// decimal digits (`\wd0`, which TeX and pgf read; Perl's grammar reads none and returns 0).
+  fn box_number(i: &mut In) -> Option<i64> {
+    let b = i.input.as_bytes();
+    let spaces = b.iter().take_while(|c| **c == b' ').count();
+    let rest = &b[spaces..];
+    if rest.first() == Some(&b'\\') {
+      let n = rest[1..]
+        .iter()
+        .take_while(|c| c.is_ascii_alphabetic() || **c == b'@')
+        .count();
+      if n == 0 {
+        return None;
+      }
+      let cs = &i.input[spaces..spaces + 1 + n];
+      let number = pgfmath_register_lookup(cs) as i64;
+      bump(i, spaces + 1 + n);
+      return Some(number);
+    }
+    let digits = rest.iter().take_while(|c| c.is_ascii_digit()).count();
+    if digits == 0 {
+      return None;
+    }
+    let number = i.input[spaces..spaces + digits].parse().ok()?;
+    bump(i, spaces + digits);
+    Some(number)
   }
 
   fn read_identifier(i: &mut In) -> String {

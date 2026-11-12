@@ -35029,3 +35029,18 @@ switches off only to the group's end, so a following `\email` lands on the last 
 
 Guard `perfect_kernel_batchrb1::revtex_maketitle_switches_the_author_block_off` (one row per shape, exact Error and
 Warning counts, whole creators, the body text).
+
+### 1004. pgfmath reads `\wd`/`\ht`/`\dp` of a box numbered by digits too (`\wd0`) (DTL1, DTL1b)
+
+**Perl.** The pgfmath grammar's `REGISTER` reads `\wd`, `\ht` or `\dp` followed by a control sequence
+(pgfmath.code.tex.ltxml:696-701) and looks the box up by that register's number (`pgfmath_getwidth`/`getheight`/
+`getdepth`, :499-521). A box given by digits (`\pgfmathparse{\wd0}`) matches no rule: 0.
+
+**Rust.** `try_cs_register` (`pgfmath_code_tex.rs`) ports the rule (`box_number`, `pgfmath_box_dimension`: the box
+register's own getter, units declared), and also reads decimal digits after `\wd`/`\ht`/`\dp`, as TeX and pgf read
+`\wd0`: pdflatex 50.0 for a 50pt box, Perl 0.0. Reason: content (the value pgf computes). Before the port the rule was
+missing, `\wd\box` read 0, and tikzscale's measuring loop (tikzscale.sty:392, 522-524) scaled every picture by
+`\requestedSize/0`, clamped to 16383.99998 (2010.05701, 2205.15714, 2311.08887, 2604.09771). The read memoizes the
+box's measured size; fit's `.5\dp\pgfnodeparttextbox` (tikzlibraryfit.code.tex:74) keeps the declared size since
+DTL1a. Repros `graphics-tikz/pgfmath_box_dimensions.tex`, `pgfmath_tikzscale_width.tex`; guard
+`perfect_kernel_batchdtl1::batchdtl1_pgfmath_rows`.
