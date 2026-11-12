@@ -531,6 +531,17 @@ fn marked_blocks_restored_read_as_printed() {
         r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup>Univ B, City</contact></creator>"#,
       ]),
     },
+    // (P4b4a2: the box's `[t]` sibling — a line set wholly in a box is cut in its body, the box dropped, each piece alike)
+    Row {
+      repro:    repro!("class-bindings/revtex_parbox_t_affiliation_lines_cut_alike"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able<sup><text font="italic">1</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">1</text></sup>Univ A, Town</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup>Univ B, City</contact></creator>"#,
+      ]),
+    },
     Row {
       repro:    repro!("sectioning-frontmatter/author_names_line_team_piece_is_a_collaboration"),
       files:    &[],
