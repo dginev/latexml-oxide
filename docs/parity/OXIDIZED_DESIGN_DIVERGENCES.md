@@ -16869,13 +16869,16 @@ revtex_implicit_bibstyle_defines_its_macros, bst_macros_after_a_braced_value_res
 
 An integer constant past 2^31−1 is 2^31−1 with "Number too big" (tex.web §445); a dimension past `\maxdimen` is
 `\maxdimen`, negated only for the scan's own sign, with "Dimension too large" (§460); an e-TeX expression out of range
-is 0 with "Arithmetic overflow" (etex.ch `\numexpr`/`\dimexpr`), as is a product past the i64 range
-(`clamp_arith_overflow`). TeX errs on each, and its recovery value (TeX's bound or 0) is not the author's: an Error, the
+is 0 with "Arithmetic overflow" (etex.ch `\numexpr`/`\dimexpr`). TeX errs on each, and its recovery value (TeX's bound
+or 0) is not the author's: an Error, the
 recovery value kept (the staged severity rule (3), DG 2026-11-11; 64zf's Warnings until DTL1d). pgfmath's parser result
 past ±16383.99998 errs as Perl's `Error:pgfmath:overflow` does (pgfmath.code.tex.ltxml:342-344, :391-393). Replaces
 batch 56bq's i64-only clamp. Still silent: `\multiply` past the bound (it computes on in the i64 headroom; TeX errs and
 keeps the register) and pgfmath's function results (clamped) (REDs expansion-primitives/multiply_overflow_keeps_the_register_red, graphics-tikz/
-pgfmath_function_overflow_clamped_silently_red). Guards `perfect_kernel_batch64zf::{number_and_dimension_overflow_clamp_and_err,
+pgfmath_function_overflow_clamped_silently_red); a calc sum past the bound (`calc_expression_dimension_not_clamped_red`). Not
+yet TeX's: an e-TeX expression checks only its final value, so an intermediate overflow that comes back in range is silent
+and a product past the i64 range keeps the bound (`clamp_arith_overflow`, one report per multiply) where etex.ch's
+`scan_expr` latches one error and returns 0 (`etex_expression_overflow_latched_once_red`). Guards `perfect_kernel_batch64zf::{number_and_dimension_overflow_clamp_and_err,
 integer_constant_overflow_is_infinity}`, `error_boundary::perfect_kernel_error_boundary` (both sides); repro
 expansion-primitives/dimension_overflow_max_dimen.
 

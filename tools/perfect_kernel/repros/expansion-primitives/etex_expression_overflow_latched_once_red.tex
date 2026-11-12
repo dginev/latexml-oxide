@@ -1,0 +1,20 @@
+% mechanism: etex.ch `scan_expr` latches `arith_error` on any intermediate past `infinity`/`max_dimen` (`add_or_sub`,
+%   `mult_and_add`, `x_over_n`) and reports ONCE at the end with the value 0. Ours checks only the final value
+%   (`etex_readexpr`'s `abs() > ceiling`) and `numeric_ops::clamp_arith_overflow` reports per i64 multiply returning the
+%   ceiling, so: an intermediate overflow that comes back in range is silent (rows 3, 4); a product past i64 reports per
+%   multiply and keeps the ceiling, not 0 (rows 1, 2, 5). Fix: an overflow flag on the expression scan, every
+%   intermediate checked, `clamp_arith_overflow` silent inside it, one Error and 0 at the end (revDTL1d 1, 2, P2)
+% witness: synthetic (revDTL1d)
+% oracle:  pdflatex (TL 2025, -no-shell-escape): 5 `!` (one per expression): [0] [0] [0] [0] [0.0pt]
+% engines: rust DTL1d: [2147483647] 1 E; [2147483647] 2 E; [2147483647] 0 E; [2147483647] 0 E; [16383.99998pt] 1 E
+%          (int162a: the same values, Warnings)
+% expect:  5 errors, one per expression; [0] [0] [0] [0] [0.0pt]
+% status:  RED (DTL1d, int162a) — moves: post-merge (DTLR)
+\documentclass{article}
+\begin{document}
+[\the\numexpr 2147483647*2147483647*2147483647\relax]
+[\the\numexpr 2147483647*2147483647*2147483647*2147483647*2147483647\relax]
+[\the\numexpr 2147483647*2-2147483647\relax]
+[\the\numexpr (2147483647+1)-1\relax]
+[\the\dimexpr \maxdimen*2147483647*2147483647\relax]
+\end{document}
