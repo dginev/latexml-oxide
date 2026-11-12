@@ -24,7 +24,7 @@ LoadDefinitions!({
   // late abstract's cover passes it over (OXIDIZED_DESIGN_DIVERGENCES #903). Material opened by an implicit `\bgroup`
   // (§403 `scan_left_brace` takes it too: revtex4*, aastex701, memoir) is read live to its group's end, as `\vadjust`'s
   // (`predigest_insert_group_contents`), and set after the title page the same way. A speculative run of the title page
-  // reads it as printed (sect05.rs `speculative_title_page_run`), so a store it prints and the label before it are
+  // reads it as printed (sect05.rs `title_page_probe_run`), so a store it prints and the label before it are
   // the title page's, the label taken out with the store (no orphan "Keywords:" line). Elsewhere, as Perl, the
   // material is set where it stands.
   DefPrimitive!("\\insert Number", sub[_args] {

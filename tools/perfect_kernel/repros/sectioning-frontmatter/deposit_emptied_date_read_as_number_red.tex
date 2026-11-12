@@ -1,0 +1,35 @@
+% mechanism: the title-page deposit replays a raw class's refused `\maketitle` with the title fields emptied
+%   (sect05.rs `\lx@deposit@maketitle`: the fields are the frontmatter's), so a class that reads `\@date` as a number
+%   (`\@tempcnta=\@date\relax`) meets an empty one: TeX's recovery reads 0 and "Missing number" is raised, where
+%   pdflatex, with the document's date, prints "Exam session 2024"
+% witness: synthetic (BM's Q3.13 probe `session`, QA60)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "Lecture Notes on Topology", "Course: MATH 410",
+%   "Exam session 2024", "Text."
+% engines: int168a (TP3base): 0 errors, 1 warning (expected:<number> "Missing number, treated as zero"), the body holds
+%   "Exam session 0"; perl not run
+% expect:  "Exam session 2024", 0 errors, 0 warnings
+% status:  RED (wrong word, counted)
+% moves:   post-merge (DEPN: the deposit's emptied fields read as a number; not the title-page reading)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{sessionnotesred.cls}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{sessionnotesred}
+\LoadClass{article}
+\newcommand\course[1]{\gdef\@course{#1}}
+\renewcommand\maketitle{%
+  \begin{center}
+    {\LARGE \@title \par}
+    {\large Course: \@course \par}
+    \@tempcnta=\@date\relax
+    {\large Exam session \the\@tempcnta \par}
+  \end{center}\par}
+\end{filecontents*}
+\documentclass{sessionnotesred}
+\title{Lecture Notes on Topology}
+\author{A. Author}
+\date{2024}
+\course{MATH 410}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,6 +1,6 @@
 //! The observer's rehearsal: a block's stamped tokens digested as the article `\author` line prints them, with
 //! Layer-B event bindings (Perl's `@authorsplits`, Base_Utility.pool.ltxml:676-683: `\and` a column, `\\` a row; the
-//! notes and contacts as events), through the speculative-run engine (sect05.rs `speculative_title_page_run`):
+//! notes and contacts as events), through the speculative-run engine (sect05.rs `title_page_probe_run`):
 //! assignments rolled back (`AssignmentJournalGuard`, a meaning's fallback standing with it: FM S2a.2 r9, 2409.10200),
 //! diagnostics held (`DiagnosticsHold`), terminal output muted, the frontmatter frozen (`lx_replaying_class_setter`:
 //! nothing is queued), the field ledger put back and the boxes it stamped unstamped (`FieldLedgerScope`: a register's
@@ -1355,7 +1355,7 @@ pub(in crate::base_utilities) fn rehearse<R>(
     );
   }
   // (a block's own, never a Fatal, even when its assignments could not be undone: its diagnostics and those stay, as a failed
-  // run's: `sect05.rs` `speculative_run`)
+  // run's: `sect05.rs` `speculative_run_read`)
   if budget.over {
     if undone {
       hold.discard();

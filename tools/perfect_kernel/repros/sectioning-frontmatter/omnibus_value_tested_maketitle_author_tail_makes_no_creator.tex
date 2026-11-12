@@ -1,0 +1,27 @@
+% mechanism: QA60 site 2 — under a class no declaration names (an unknown class, OmniBus: `ledger::class_maketitle_runs`
+%   None), a raw package's `\@maketitle` prints `\@author` only past page 5 (`\ifnum\c@page>5`). The
+%   title-page reading's run (`TitlePageReading::tail_printed`) takes the empty branch, as TeX does, so no creator is
+%   made of the appended tail. The code walk (`own_title_page_prints_author`) reads both branches of a test it cannot
+%   evaluate (`evaluated_switch`: `\if`, `\ifx`): QA60's proposed "the walk answers under an undeclared class" would
+%   invent Bob B here, so TP3 keeps the run's answer
+% witness: synthetic (TP3, QA60 site 2)
+% oracle:  pdflatex cannot load the unknown class; with `article` in its place (TL 2025, -no-shell-escape) 0 errors:
+%   "A Title / Body." (no name)
+% engines: int168a (TP3base) and TP3: 0 errors, 1 warning (missing_file: the class); one creator Alice A (from `\author`,
+%   as Perl); TP3's trial build with QA60's walk first: Alice A and Bob B (invented); perl not run
+% expect:  0 errors, 1 warning (the missing class); one creator Alice A
+% status:  GREEN (TP3; guard perfect_kernel_batchfx24::an_author_tail_the_title_page_does_not_print_is_not_read)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{lxvaluetested.sty}
+\ProvidesPackage{lxvaluetested}
+\def\@maketitle{\begin{center}{\Large\@title\par}\ifnum\c@page>5 \@author\par\fi\end{center}}
+\end{filecontents*}
+\documentclass{lxnosuchclassvt}
+\usepackage{lxvaluetested}
+\title{A Title}
+\author{Alice A}
+\makeatletter\g@addto@macro\@author{\and Bob B}\makeatother
+\begin{document}
+\maketitle
+Body.
+\end{document}

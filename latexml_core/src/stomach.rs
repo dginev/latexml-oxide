@@ -2223,7 +2223,7 @@ pub fn box_lists_mark() -> (usize, usize) {
 
 /// Back to the box lists and boxing depth of `mark` ([`box_lists_mark`]), what was digested since discarded: the
 /// lists a failed digestion left suspended (an `Err` leaves each `new_local_box_list` it was in unexpired) for a run
-/// that is undone (sect05.rs `speculative_title_page_run`).
+/// that is undone (sect05.rs `title_page_probe_run`).
 pub fn unwind_box_lists_to(mark: (usize, usize)) {
   let mut stomach = stomach_mut!();
   while stomach.localized_box_list.len() > mark.0

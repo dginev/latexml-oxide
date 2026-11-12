@@ -722,7 +722,7 @@ fn fills_generated_text(w: &Whatsit) -> bool {
 /// (`printed_glyph`), through lists, whatsit arguments and bodies, alignment rows and cells; never a whatsit's reversion
 /// (its source), and only the arguments it shows (`shown_arguments`): an image's file name and options are not text on
 /// the page (`\includegraphics{\@logo}`), nor is a link's target (`\href{\@url}{Home}` prints "Home"). What a speculative
-/// title-page run printed (sect05.rs `speculative_title_page_run`; review probe `logo`).
+/// title-page run printed (sect05.rs `title_page_probe_run`; review probe `logo`).
 pub fn ink_text(d: &Digested, out: &mut String) { ink_text_with(d, false, out) }
 
 /// [`ink_text`], a pgf/TikZ picture read as it prints: only its text nodes ([`picture_text`]), apart, never its
@@ -796,7 +796,7 @@ const WORDLESS: &[&str] = &[
 ];
 
 /// The mark a speculative run read by [`ink_word_text`] sets before each `\insert`'s material (sect05.rs
-/// `speculative_run`): what follows it is the page foot's, not the title page's text running on.
+/// `speculative_run_read`): what follows it is the page foot's, not the title page's text running on.
 pub const INK_INSERT: char = '\u{3}';
 
 /// The characters [`ink_word_text`] reads for the marks the title-page reading's run prints, each a constructor printing

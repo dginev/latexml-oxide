@@ -601,7 +601,7 @@ pub fn token_progress() -> usize { gullet!().progress }
 /// A run of digestion's limit on the tokens it reads, until [`ReadBudget::end`]: the read past it fails, and so does
 /// each one after, with an [`ErrorCategory::ReadBudget`](crate::common::error::ErrorCategory) error that is logged
 /// nowhere and latches nothing, so whoever made the run ends it and the document goes on. The title-page check's runs
-/// (latexml_engine sect05.rs `speculative_run`): a run's cost is bounded whatever the document's text does. The count is
+/// (latexml_engine sect05.rs `speculative_run_read`): a run's cost is bounded whatever the document's text does. The count is
 /// the one [`progress`](Gullet::progress) keeps; the token limit, the deadline and the cycle guard read theirs as before.
 #[must_use]
 pub fn read_budget(reads: usize) -> ReadBudget {
@@ -5608,7 +5608,7 @@ impl Drop for SpeculativeDigestion {
   fn drop(&mut self) { SPECULATIVE_DIGESTIONS.with(|runs| runs.set(runs.get() - 1)); }
 }
 
-/// A run of digestion whose output and assignments are all discarded starts (latexml_engine sect05.rs `speculative_run`,
+/// A run of digestion whose output and assignments are all discarded starts (latexml_engine sect05.rs `speculative_run_read`,
 /// the observer's rehearsal, `queue_digest::speculative_label_ink`), until the guard drops: the document does not end
 /// in it. A `\end{document}`, `\enddocument`, `\@@end` or `\bye` it reads does nothing ([`flush`], the kernel's document
 /// end), whatever text brought it there: a stored argument, `\closing{\end{document}}`, ended the real document with the

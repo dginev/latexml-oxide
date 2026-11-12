@@ -22157,7 +22157,7 @@ printing them (`ClassReaders::read_only_by_the_title_page_or_fields`) — is rec
 
 **TeX decides what the title page prints** (`before_title_page_runs`, called at the head of `\lx@deposit@maketitle`,
 sect05.rs, in the state the deposit and the replay meet). Each candidate store is given a unique sentinel value and
-title-page code is digested speculatively (sect05.rs `speculative_title_page_run`: output discarded, every assignment
+title-page code is digested speculatively (sect05.rs `title_page_probe_run`: output discarded, every assignment
 undone by the assignment journal, diagnostics discarded, terminal output muted under a guard that also ends on a panic
 (`SuppressLogOutputGuard`, reset in `reset_thread_engine`), groups left open closed in a reading context of their own;
 frontmatter frozen and no setter replayed while it runs). Each run is made twice, the stores given letters sentinels
@@ -26668,7 +26668,7 @@ line does not run into it (nor does what the body sets right after `\maketitle`:
 `\bgroup` (§403 `scan_left_brace` takes it: revtex4*, aastex701, memoir, bxjs*) is read live to its group's end as
 `\vadjust`'s is (`predigest_insert_group_contents`) and set after the title page the same way, after the braced ones
 before it; outside a deposit `\insert` stays Perl's no-op, its material set in place. The speculative runs of the
-title page (`speculative_title_page_run`, #767) read the material an `\insert` stashes as printed, after the run's own
+title page (`title_page_probe_run`, #767) read the material an `\insert` stashes as printed, after the run's own
 text, and a deposit or replay whose only ink is that material counts as kept (`lx_title_page_deposit_kept`), so a
 store printed in an `\insert` is the title page's and its label is the entry's name, taken out of the deposit with it
 (as when the material was set inline; the label reader `line_label_before` reads `\bgroup`/`\egroup` as braces, so
@@ -27740,7 +27740,7 @@ ruling 2026-10-29; `archive/FRONTMATTER_DIGESTED_REFACTOR_2026-11-07.md` "Stages
 - **Now** (`queue_digest::frontmatter_label_keys`, `printed_label`): an operand that prints through a command — a
   macro, a symbol, a font switch, math — is digested in a speculative run of its own (`speculative_label_ink`: in a
   group, in a reading context of its own, assignments undone, diagnostics discarded, as sect05.rs
-  `speculative_title_page_run`; the field ledger put back, `FieldLedgerScope`, as the observer's rehearsal does) and
+  `title_page_probe_run`; the field ledger put back, `FieldLedgerScope`, as the observer's rehearsal does) and
   keyed by what it prints (`label_ink`: its characters, a cross-reference as its key
   `\ref{key}`), then parted and prefixed as before; a printed run of distinct symbols (`♣♡`) is each symbol too, as
   the spelled run of symbol commands was, and so is a number or letters a symbol is glued to (`parted_printed_label`:
@@ -27800,7 +27800,7 @@ ruling 2026-10-29; `archive/FRONTMATTER_DIGESTED_REFACTOR_2026-11-07.md` "Stages
   whether an answered symbol mark stays shown in the name (`$^{\dag}$` under a `$^{\dagger}$` line is answered and no
   longer shown; its `\dagger` sibling stays shown). Inside an open assignment journal (a refused setter's replay, a
   sealed storing run, a title page's speculative run, the observer's rehearsal: sect05.rs `replay_class_setter`,
-  `speculative_title_page_run`; journals do not nest, `begin_assignment_journal`) no speculative run opens and the key
+  `title_page_probe_run`; journals do not nest, `begin_assignment_journal`) no speculative run opens and the key
   is the operand's spelling (`\inst{\ESO}` in a replayed setter keys `\ESO`, as before stage 4). An operand whose
   digestion errs is keyed by its spelling and its error discarded with the run's diagnostics (aa's
   `\inst{\undefinedmark}`: 0 errors, pdflatex's `! Undefined control sequence`) — Perl, which only stringifies the
@@ -30261,7 +30261,7 @@ store, not `\jobname` (the engine's), not an internal `\lx@…`. What the title 
 existing sentinel runs (`before_title_page_runs`, joined to K11's runs, which a run the net's sentinels end is made
 again without them), a register given its sentinel as `\reg={…}` (`sentinel_definitions`), the refused begin codes run
 after the title page in a run of their own (`net_begin_code_tokens`: in the environment, `\@currenvir` set, its `\end`
-given and gobbled, read from a mouth of its own, `speculative_isolated_run`) — what only they print is handed on when the
+given and gobbled, read from a mouth of its own, `title_page_probe_run`, isolated) — what only they print is handed on when the
 document opens the environment after that `\maketitle` (`hand_net_begin_code_stores`, from `\lx@abstract@class@setters`
 after the class's begin code is replayed there), with the values it then has; never opened, or opened before
 `\maketitle`, nothing printed it (review rev98c S1: pdflatex prints the title note's mark alone, or an empty footnote) —;
@@ -30490,7 +30490,7 @@ binding, fallback, stub, borrowed — never the kernel's selectors) drops while 
 run of the record's arguments — xkeyval's `\@nil`-delimited plumbing under a raw `\ead[label=e1,mark]` is none; digested,
 it looped to a Timeout Fatal, 2101.10506): IEEEtran's `\lx@IEEE@membership@drop` over a grade it could not place
 (1511.03982; deleted by P5a, the grade the reading's, OD #1016), jmlr's `\titletag[1]{}` over the title's `\thanks` (2211.07413). (2) and (3) are digested once each,
-speculatively, when the entry is digested (sect05.rs `speculative_word_run`: `speculative_run` in a mouth of its own, read
+speculatively, when the entry is digested (sect05.rs `speculative_word_run`: `speculative_run_read` in a mouth of its own, read
 by `ink_word_text`, a `\thanks` set apart; its state rolled back with the journal it opens, so it leaves no trace).
 **Only a binding's drop counts** (106t r3): a kernel macro's drop is TeX's own — the format's `\@firstoftwo{T}{F}`, which
 ifthen's `\ifthenelse` ends in, reads both branches from the document's text around its `\title` and abstract and drops
@@ -30628,7 +30628,7 @@ another's. Not read: a shorthand maker's `\gdef#1{#2}`, a replay's or a deposit'
 an Info:** past the first 512 calls, `frontmatter:store_calls_dropped` (their number and first setters); an argument no run
 could read, `frontmatter:unread_argument` (its setter, size and first tokens; a 16,384-word one aborts).
 **A document end in an argument:** `\closing{\end{document}}`, digested by the source's run, ended the real document, the
-body lost with no diagnostic. A speculative digestion (`gullet::speculative_digestion`: `speculative_run`, the observer's
+body lost with no diagnostic. A speculative digestion (`gullet::speculative_digestion`: `speculative_run_read`, the observer's
 rehearsal, `speculative_label_ink`) leaves `\end{document}`, `\enddocument`, `\@@end`, `\bye` inert: `gullet::flush` does
 nothing, and `\end` and the kernel's end half (`\lx@end@open@frontmatter`, `\lx@enddocument@hooks`,
 `\lx@finalize@document`) stop at once. 106t's dropped-argument run shares the path, and base lost the body there too
@@ -30846,6 +30846,27 @@ title-only `\@maketitle`, report's and book's default; extarticle, extreport and
 default),
 `perfect_kernel_batchr1::a_run_over_budget_leaves_no_trace`, `00_unit_state::a_state_watch_ends_with_every_change_of_the_state`,
 `title_page_reading::tests::a_kept_reading_goes_with_what_it_read`.
+
+**TP3: one builder and one budget for every title-page run.** The stores' sentinel probes — the whole page's letters and
+digits runs, the deposit's and the replay's (`sentinel_runs`), the refused begin codes' (isolated), the labels'
+(`verify_title_page_labels`), the `\and` numbering's (`note_and_numbering`) and the unset nulls' (`decide_unset_nulls`)
+— are made by the reading's builder (`checks_run`, sect05.rs `title_page_probe_run`) under the check's read budget,
+which they share with the reading and the per-argument runs; before, they ran unbudgeted (`speculative_title_page_run`,
+`speculative_isolated_run`, deleted). Over budget a probe falls back as a run that cannot be made does (the code walk,
+`walked_title_page_reads`; no label kept from an argument, no numbering recorded, `\relax` kept for an unset store), and
+the `check_budget` Warning names it ("a sentinel run of the class's title page"). The probes keep their own runs: they
+substitute values, which the one real-values run cannot (TP0), and a merged run would give one probe's sentinels to
+another's stores, which a page testing a value prints differently; the labels' and the displaced stores' runs
+(`\lx@store@defaults`) precede the hand-on, the whole page's (`\lx@deposit@maketitle`) follows it. A/B TP3base → TP3
+(stage2's 1,434, 400 papers shipping a `.cls` that reads `\@maketitle`, 100 controls; 1,929 converted): XML byte-identical,
+Warnings and `frontmatter:` log lines unchanged. The trade shows on a synthetic page over a budget of 100 reads
+(`check_store_over_budget_is_named`): the walk hands on no `\@corr` from the class's `\thanks`, and the e-mail is lost,
+counted (the unbudgeted probes kept it). **QA60 site 2 is kept:** under a class no declaration names
+(`class_maketitle_runs` None) the run's tail answer stands, not the walk's, which reads both branches of a test it cannot
+evaluate (`evaluated_switch` reads `\if` and `\ifx`) and would invent a creator the PDF does not print (repro
+`omnibus_value_tested_maketitle_author_tail_makes_no_creator`: a trial build with the walk first made Bob B). Guards
+`perfect_kernel_batchr1::a_run_over_budget_leaves_no_trace` (the Warning names the probes),
+`perfect_kernel_batchfx24::an_author_tail_the_title_page_does_not_print_is_not_read` (the OmniBus row).
 
 ### 954. A contact holding two or more marked entries is cut at its marks in the frontmatter API, for every binding (Perl: one contact, the marks printed in it)
 

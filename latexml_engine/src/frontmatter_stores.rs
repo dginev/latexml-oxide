@@ -3330,7 +3330,8 @@ fn route_and_hand_displaced() -> Result<Vec<Digested>> {
     }
   }
   use crate::latex_constructs::title_page_print_tokens;
-  let Some((printed, letters)) = sentinel_runs(&stores, &title_page_print_tokens, true)? else {
+  let Some((printed, letters)) = sentinel_runs(&stores, &title_page_print_tokens, true, false)?
+  else {
     return Ok(Vec::new());
   };
   let printed = if printed.split(',').any(|name| {
@@ -4458,47 +4459,37 @@ fn sentinel_runs(
   stores: &[Token],
   build: &dyn Fn(&[Token]) -> Tokens,
   aborted_printed_nothing: bool,
+  isolated: bool,
 ) -> Result<Option<(String, String)>> {
-  sentinel_runs_with(
-    stores,
-    build,
-    aborted_printed_nothing,
-    &crate::latex_constructs::speculative_title_page_run,
-  )
-}
-
-/// [`sentinel_runs`] made by `run` (`speculative_title_page_run`, or `speculative_isolated_run`).
-fn sentinel_runs_with(
-  stores: &[Token],
-  build: &dyn Fn(&[Token]) -> Tokens,
-  aborted_printed_nothing: bool,
-  speculative_title_page_run: &dyn Fn(Tokens) -> Result<crate::latex_constructs::SpeculativeRun>,
-) -> Result<Option<(String, String)>> {
-  use crate::latex_constructs::SpeculativeRun;
-  let letters =
-    match speculative_title_page_run(build(&sentinel_definitions(stores, Sentinel::Letters)))? {
-      SpeculativeRun::Printed(text) => text,
-      SpeculativeRun::Aborted if aborted_printed_nothing => {
-        return Ok(Some((String::new(), String::new())));
-      },
-      SpeculativeRun::Aborted | SpeculativeRun::Unavailable | SpeculativeRun::OverBudget(_) => {
-        return Ok(None);
-      },
-    };
+  use crate::latex_constructs::{SpeculativeRun, title_page_probe_run};
+  let letters = match title_page_probe_run(
+    build(&sentinel_definitions(stores, Sentinel::Letters)),
+    isolated,
+  )? {
+    SpeculativeRun::Printed(text) => text,
+    SpeculativeRun::Aborted if aborted_printed_nothing => {
+      return Ok(Some((String::new(), String::new())));
+    },
+    SpeculativeRun::Aborted | SpeculativeRun::Unavailable | SpeculativeRun::OverBudget(_) => {
+      return Ok(None);
+    },
+  };
   let lowered = letters.to_lowercase();
   if !lowered.contains("lxsentinel") {
     return Ok(Some((String::new(), letters)));
   }
-  let digits =
-    match speculative_title_page_run(build(&sentinel_definitions(stores, Sentinel::Digits)))? {
-      SpeculativeRun::Printed(text) => text,
-      SpeculativeRun::Aborted if aborted_printed_nothing => {
-        return Ok(Some((String::new(), letters)));
-      },
-      SpeculativeRun::Aborted | SpeculativeRun::Unavailable | SpeculativeRun::OverBudget(_) => {
-        return Ok(None);
-      },
-    };
+  let digits = match title_page_probe_run(
+    build(&sentinel_definitions(stores, Sentinel::Digits)),
+    isolated,
+  )? {
+    SpeculativeRun::Printed(text) => text,
+    SpeculativeRun::Aborted if aborted_printed_nothing => {
+      return Ok(Some((String::new(), letters)));
+    },
+    SpeculativeRun::Aborted | SpeculativeRun::Unavailable | SpeculativeRun::OverBudget(_) => {
+      return Ok(None);
+    },
+  };
   Ok(Some((
     sentinels_printed(stores, &lowered, &digits),
     letters,
@@ -4520,9 +4511,7 @@ const AND_NUMBERING_ENTRIES: usize = 3;
 /// (`affiliations::numbered_marks_requested`); nothing is recorded when no run could be made or its text does not hold the entries (the class's
 /// `\institutename` is then read as before).
 pub(crate) fn note_and_numbering(store: &Token) -> Result<()> {
-  use crate::latex_constructs::{
-    SpeculativeRun, speculative_title_page_run, title_page_print_tokens,
-  };
+  use crate::latex_constructs::{SpeculativeRun, title_page_print_tokens, title_page_probe_run};
   let key = s!("lx_and_numbered_{}", store.with_str(ToString::to_string));
   if lookup_value(&key).is_some() || !numbered_marks_requested()? {
     return Ok(());
@@ -4537,7 +4526,7 @@ pub(crate) fn note_and_numbering(store: &Token) -> Result<()> {
     );
   }
   defs.push(T_END!());
-  let SpeculativeRun::Printed(text) = speculative_title_page_run(title_page_print_tokens(&defs))?
+  let SpeculativeRun::Printed(text) = title_page_probe_run(title_page_print_tokens(&defs), false)?
   else {
     return Ok(());
   };
@@ -4677,9 +4666,7 @@ fn printed_right_before(text: &str, sentinel: &str, label: &str) -> bool {
 /// (`in_argument`) is none either. A rejected label stays in the title page, and the entry is unnamed
 /// (`lx_store_api_unnamed_<name>`). Once per document.
 fn verify_title_page_labels() -> Result<()> {
-  use crate::latex_constructs::{
-    SpeculativeRun, speculative_title_page_run, title_page_print_tokens,
-  };
+  use crate::latex_constructs::{SpeculativeRun, title_page_print_tokens, title_page_probe_run};
   if lookup_bool("lx_depositing_class_maketitle")
     || lookup_bool("lx_replaying_class_setter")
     || lookup_bool("lx_title_page_labels_verified")
@@ -4722,10 +4709,10 @@ fn verify_title_page_labels() -> Result<()> {
       stores.push(*store);
     }
   }
-  let run = speculative_title_page_run(title_page_print_tokens(&sentinel_definitions(
-    &stores,
-    Sentinel::Letters,
-  )))?;
+  let run = title_page_probe_run(
+    title_page_print_tokens(&sentinel_definitions(&stores, Sentinel::Letters)),
+    false,
+  )?;
   let text = match run {
     SpeculativeRun::Printed(text) => Some(text.to_lowercase()),
     SpeculativeRun::Aborted | SpeculativeRun::Unavailable | SpeculativeRun::OverBudget(_) => None,
@@ -4830,7 +4817,7 @@ fn rerouted_names() -> Vec<String> {
 
 /// Before the title-page deposit and replay of a raw class's title page (`\lx@deposit@maketitle`, sect05.rs), in the
 /// state they meet: what the title page prints is decided by TeX, not read off its code. Each candidate store is given
-/// a sentinel value and the title page is digested speculatively (`speculative_title_page_run`: output discarded,
+/// a sentinel value and the title page is digested speculatively (`title_page_probe_run`: output discarded,
 /// assignments undone, diagnostics discarded), once with letters sentinels and once with digits ones
 /// (`sentinel_runs`); a store both of whose sentinels reach the digested text is printed there (a numeric context —
 /// `\setcounter{page}{\@fp}` — consumes the digits, TeX's recovery typesets the letters). A class's own booleans (sigplanconf.cls:87-90 `\def\@true{TT}`, :1118 `\if \@copyrightwanted
@@ -4846,10 +4833,10 @@ fn rerouted_names() -> Vec<String> {
 ///   when it is kept, is not handed on a second time.
 ///
 /// Before them, the value of each rerouted store the document never set that is still undefined
-/// (`decide_unset_nulls`). When no run can be made (a journal is open), or the deposit's or the replay's ended in a Fatal
-/// of its own (`sentinel_runs`), `lx_sentinel_ran` stays false and the stores' readers are walked instead
-/// (`live_read_order`, `evaluated_switch`). The unclaimed-text net's candidates (`net_candidates`) join the same
-/// runs, after K11's stores (`lx_sentinel_net_printed`, `_deposit`, `_replay`; with the refused begin codes' run,
+/// (`decide_unset_nulls`). When no run can be made (a journal is open, or it is over the read budget, TP3), or the
+/// deposit's or the replay's ended in a Fatal of its own (`sentinel_runs`), `lx_sentinel_ran` stays false and the
+/// stores' readers are walked instead (`live_read_order`, `evaluated_switch`). The unclaimed-text net's candidates
+/// (`net_candidates`) join the same runs, after K11's stores (`lx_sentinel_net_printed`, `_deposit`, `_replay`; with the refused begin codes' run,
 /// `net_begin_code_tokens`); a run their sentinels make fail is made again without them, and the net then decides
 /// nothing.
 pub fn before_title_page_runs() -> Result<()> {
@@ -4907,10 +4894,11 @@ pub fn before_title_page_runs() -> Result<()> {
     Info!(
       "frontmatter",
       "\\maketitle",
-      "No speculative run of the class's title page could be made or kept (an assignment journal is open, or the run could not be undone): what it prints is read off its code"
+      "No speculative run of the class's title page could be made or kept (an assignment journal is open, the run could not be undone, or it was over the read budget): what it prints is read off its code"
     );
   };
-  let Some((mut printed, mut letters)) = sentinel_runs(&all, &title_page_print_tokens, true)?
+  let Some((mut printed, mut letters)) =
+    sentinel_runs(&all, &title_page_print_tokens, true, false)?
   else {
     no_run();
     return Ok(());
@@ -4920,7 +4908,7 @@ pub fn before_title_page_runs() -> Result<()> {
     net.clear();
     all.clone_from(&stores);
     off_and_net.clone_from(&off_stores);
-    let Some(run) = sentinel_runs(&all, &title_page_print_tokens, true)? else {
+    let Some(run) = sentinel_runs(&all, &title_page_print_tokens, true, false)? else {
       no_run();
       return Ok(());
     };
@@ -4959,14 +4947,14 @@ pub fn before_title_page_runs() -> Result<()> {
     if stores.is_empty() {
       return Ok(Some((deposit, replay)));
     }
-    match sentinel_runs(stores, &title_page_deposit_tokens, false)? {
+    match sentinel_runs(stores, &title_page_deposit_tokens, false, false)? {
       Some((list, _)) => deposit = list,
       None => return Ok(None),
     }
     if title_page_replay_tokens(&[]).is_some() {
       let replay_tokens =
         |defs: &[Token]| title_page_replay_tokens(defs).unwrap_or_else(|| Tokens::new(Vec::new()));
-      match sentinel_runs(stores, &replay_tokens, false)? {
+      match sentinel_runs(stores, &replay_tokens, false, false)? {
         Some((list, _)) => replay = list,
         None => return Ok(None),
       }
@@ -5020,11 +5008,11 @@ pub fn before_title_page_runs() -> Result<()> {
     // before, nothing printed it there (review rev98c S1))
     let mut net_begin = String::new();
     if net_begin_code_tokens(&[]).is_some()
-      && let Some((list, _)) = sentinel_runs_with(
+      && let Some((list, _)) = sentinel_runs(
         &net,
         &|defs: &[Token]| net_begin_code_tokens(defs).unwrap_or_default(),
         false,
-        &crate::latex_constructs::speculative_isolated_run,
+        true,
       )?
     {
       for name in list.split(',').filter(|n| !n.is_empty()) {
@@ -5174,8 +5162,8 @@ fn collects_its_body(cs: &Token) -> bool {
 /// notes, labels and index entries as the title page's run has them (`title_page_print_tokens`); `None` when there are
 /// none. Their `\insert`s reach the run's text as the title page's do. The run's group is not closed here: a begin code
 /// leaves its own groups open for its end code (frontiersFPHY.cls:520 `\begingroup`), and the run closes what is left
-/// open (`speculative_title_page_run`), as the replay of one does (sect05.rs `replay_dropped_class_code`); it reads from
-/// a mouth of its own (`speculative_isolated_run`), so a begin code that collects its body up to its `\end` meets the
+/// open (`title_page_probe_run`), as the replay of one does (sect05.rs `replay_dropped_class_code`); it reads from
+/// a mouth of its own (`title_page_probe_run`, isolated), so a begin code that collects its body up to its `\end` meets the
 /// end of the run's input, not the document (smfart.cls:506-520; 2206.03779).
 fn net_begin_code_tokens(inject: &[Token]) -> Option<Tokens> {
   let codes = net_begin_codes();
@@ -5626,7 +5614,7 @@ fn net_note_calls(handed: Vec<SymStr>) -> Result<Vec<Digested>> {
 /// Silent-loss 77h/23b: the value a rerouted store the document never set, still undefined, takes in the title-page
 /// deposit and replay (`\lx@captured@stores`): the one under which the title page prints fewer characters — a rule over
 /// the text TeX typesets for each candidate in speculative runs of the deposit and replay as they will run
-/// (`speculative_title_page_run`). Undefined, it
+/// (`title_page_probe_run`). Undefined, it
 /// raised an error that dropped the whole deposit — an.cls:532 `\ch@ckobl{institute}{…}`, which runs in the class's own
 /// `\maketitle` the kernel's replaces, took the paper's "Key words" line with it (row 23b). `\relax` keeps a class's
 /// "is it undefined?" test true: ptptex.cls:88-104 prints its journal line and "(Received …)" unless
@@ -5638,7 +5626,7 @@ fn net_note_calls(handed: Vec<SymStr>) -> Result<Vec<Digested>> {
 /// `lx_store_unset_empty_<name>`.
 fn decide_unset_nulls(rerouted: &[String]) -> Result<()> {
   use crate::latex_constructs::{
-    SpeculativeRun, speculative_title_page_run, title_page_deposit_tokens, title_page_replay_tokens,
+    SpeculativeRun, title_page_deposit_tokens, title_page_probe_run, title_page_replay_tokens,
   };
   let unset: Vec<&String> = rerouted
     .iter()
@@ -5668,7 +5656,7 @@ fn decide_unset_nulls(rerouted: &[String]) -> Result<()> {
     if let Some(replay) = title_page_replay_tokens(&[]) {
       tokens.extend(replay.unlist());
     }
-    Ok(match speculative_title_page_run(Tokens::new(tokens))? {
+    Ok(match title_page_probe_run(Tokens::new(tokens), false)? {
       SpeculativeRun::Printed(text) => Some(text.chars().filter(|c| !c.is_whitespace()).count()),
       SpeculativeRun::Aborted | SpeculativeRun::Unavailable | SpeculativeRun::OverBudget(_) => None,
     })
