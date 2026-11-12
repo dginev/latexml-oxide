@@ -74,7 +74,7 @@ Rules that keep this file honest and mergeable:
   | 21 | FMPERF | Frontmatter performance evaluation (#516), after P6 | 5 | 3 | todo |
   | 22 | T1 | T1: the repro suite move | 5 | 3 | todo |
   | 23 | ROW0A | Row 0a deferred manual REDs decided | 5 | 3 | todo |
-  | 24 | QA80 | Upstream patch set prepared: QA08 equationgroup id, QA30 bibunits, QA35 subparagraph, QA36 abstract-heading XSLT, QA39 TOC copy, QA45 \list labels, QA50 \pretocmd on locks, QA56 \mbox, QA62 \bm | 5b | 3 | todo |
+  | 24 | QA80 | Upstream patch set prepared: QA08 equationgroup id, QA30 bibunits, QA35 subparagraph, QA36 abstract-heading XSLT, QA39 TOC copy, QA45 \list labels, QA50 \pretocmd on locks, QA56 \mbox, QA62 \bm | 5b | 3 | prepared — 8 of 9 patches as local branches of a LaTeXML clone (`/home/deyan/data/pk_wt/latexml_upstream`, `make test` 35/35 before, all eight together 481 tests pass; `.patch` files in `~/data/pk_agents/main/upstream_patches/`): QA08, QA30, QA35, QA36 (latexmlpost 101.8G → 18.6G instructions on a 1,500-section article), QA39, QA50, QA56, QA62; QA45 skipped (needs OD #180's `\@trivlist` opener ported — a larger patch: DG); submission each at DG's OK |
   | 25 | QA92 | Reply owed to BM (Q3.9, Q4.6, Q3.13; QA02's rest awaited from BM) | 5b | 1 | todo |
   | 26 | CSS | The sizing CSS (goal end; QA27: BM's em-of-parent lengths as input) | 6 | 3 | todo |
   | 27 | QA84 | Comment compaction across the crates (the last code pass) | 5b | 5 | todo |
