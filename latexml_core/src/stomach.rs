@@ -320,8 +320,13 @@ pub fn mark_conversion_rss_baseline() {
 }
 
 /// The resident set (KB) at which this conversion spills: [`spill_watermark_bytes`] above its starting RSS, never
-/// closer to the fuse (process RSS, it guards the machine) than one watermark. A zero watermark (a test's or a
-/// calibration's `LATEXML_SPILL_AT_MIB=0`) puts every seam over it.
+/// closer to the fuse (process RSS, it guards the machine) than two watermarks — the headroom the fuse fraction was
+/// calibrated for (a half-of-fuse mark crept into the fuse, [`spill_watermark_bytes`]). With the default third-of-fuse
+/// watermark that cap is the watermark itself, so under a fuse the mark is absolute, as before the conversion's
+/// baseline (revSTRM: a worker near its recycle threshold must not spill later than the calibration allows); the
+/// baseline moves the mark only without a fuse or under a smaller calibration watermark. Order independence rests on a
+/// switched conversion writing the eager XML, not on the mark. A zero watermark (a test's or a calibration's
+/// `LATEXML_SPILL_AT_MIB=0`) puts every seam over it.
 pub fn spill_mark_kb() -> Option<u64> {
   let watermark_kb = spill_watermark_bytes()? / 1024;
   Some(spill_mark(
@@ -338,7 +343,11 @@ fn spill_mark(baseline_kb: u64, watermark_kb: u64, fuse: Option<u64>) -> u64 {
   }
   let mark = baseline_kb.saturating_add(watermark_kb);
   match fuse {
-    Some(fuse) => mark.min((fuse / 1024).saturating_sub(watermark_kb).max(watermark_kb)),
+    Some(fuse) => mark.min(
+      (fuse / 1024)
+        .saturating_sub(2 * watermark_kb)
+        .max(watermark_kb),
+    ),
     None => mark,
   }
 }
@@ -4954,12 +4963,21 @@ mod memory_cap_tests {
   fn spill_mark_is_the_watermark_above_the_conversions_start() {
     const GB: u64 = 1024 * 1024; // in KB
     let fuse = Some(36 * GB * 1024); // bytes; watermark a third, 12 GB
-    assert_eq!(spill_mark(200 * 1024, 12 * GB, fuse), 12 * GB + 200 * 1024);
+    assert_eq!(
+      spill_mark(200 * 1024, 12 * GB, fuse),
+      12 * GB,
+      "under a fuse, the default watermark is the cap: two watermarks of headroom"
+    );
     assert_eq!(spill_mark(0, 12 * GB, fuse), 12 * GB);
     assert_eq!(
       spill_mark(20 * GB, 12 * GB, fuse),
-      24 * GB,
-      "one watermark below the fuse"
+      12 * GB,
+      "two watermarks below the fuse"
+    );
+    assert_eq!(
+      spill_mark(200 * 1024, 4 * GB, fuse),
+      4 * GB + 200 * 1024,
+      "a smaller watermark moves with the conversion's start"
     );
     assert_eq!(
       spill_mark(20 * GB, 12 * GB, None),
