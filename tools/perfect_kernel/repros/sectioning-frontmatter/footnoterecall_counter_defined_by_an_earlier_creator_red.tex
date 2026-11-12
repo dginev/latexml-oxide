@@ -1,0 +1,37 @@
+% mechanism: an author block's `\footnoterecall{uni}` (`\footnotemark[\value{uni}]`) reads the counter an earlier
+%   creator's `\footnoteremember` made (`\newcounter{uni}`, global); pdflatex typesets the block in order, so every
+%   recall prints the remembered mark. The frontmatter emitter writes Ann One's call as its note and a footnote step,
+%   and never replays its `\newcounter{uni}\setcounter{uni}{…}` before the later creators: the recalls read a counter not
+%   yet defined. Only a remember macro whose body holds spaces (` \footnote{#2} \newcounter{#1} …`) takes this path; the
+%   unspaced body (footnoterecall_two_authors_control) is caught as a definition the block can't replay and written in
+%   order (`declaration_reads_past`, emit.rs). Bob Two's recall (a space before it) is dropped with a counted Warning.
+% witness: 2407.13730, 2606.19583 (GA1d A/B; `\footnoteremember` in 6 of 35,942 census papers)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: Ann One ∗, Bob Two ∗, Cy Three ∗; footnote ∗ The University
+% engines: rust int163a 0 errors, 3 warnings, Cy Three's mark empty; GA1d 1 error (Error:undefined:\c@uni), 2 warnings,
+%   Cy Three's mark `<ERROR class="undefined">\c@uni</ERROR>`; GA1e (`\value` as `\csname`) 0 errors, 2 warnings, the
+%   XML as int163a, Cy Three's empty mark now uncounted; GA1f 0 errors, 3 warnings, Cy Three's mark "0" with its
+%   "Missing number" (footnotemark_missing_number_reads_as_tex): the replayed mark misses the title's `\fnsymbol`, where
+%   TeX's 0 prints nothing (an explicit `\footnotemark[1]` there is "1", not ∗, on int163a too)
+% expect:  0 errors; each creator carries the one note's mark
+% status:  RED (int163a, GA1d, GA1e)
+% moves:   post-merge (the emitter's replay of a block's declarations: P4b2's code)
+\documentclass[a4paper]{scrarticle}
+\newcommand{\footnoteremember}[2]{
+	\footnote{#2}
+	\newcounter{#1}
+	\setcounter{#1}{\value{footnote}}
+}
+\newcommand{\footnoterecall}[1]{
+	\footnotemark[\value{#1}]
+}
+\begin{document}
+\title{T}
+\author{
+ Ann One\footnoteremember{uni}{The University}
+		\and  Bob Two \footnoterecall{uni}
+  \and
+	Cy Three\footnoterecall{uni}
+}
+\maketitle
+Text.
+\end{document}

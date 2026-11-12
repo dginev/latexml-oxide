@@ -647,7 +647,7 @@ pub(crate) fn load() -> Result<()> {
   // The label is kept in `\@itemlabel` (latex.ltx:15858), which `\@trivlist` makes the items' label below.
   DefMacro!(
     r"\list{}{}",
-    r"\global\advance\@listdepth\@ne\def\@itemlabel{#1}\let\@listctr\@empty#2\@trivlist"
+    r"\global\advance\@listdepth\@ne\def\@itemlabel{#1}\let\@listctr\@empty\@nmbrlistfalse#2\@trivlist"
   );
   DefMacro!("\\endlist", r"\global\advance\@listdepth\m@ne\endlx@list");
 
@@ -881,7 +881,13 @@ pub(crate) fn load() -> Result<()> {
       // reach `enumi` through the middle, unnumbered level:
       // pmlr-sample.tex:619) — the pair would be self-referential.
       let outer = lookup_string("itemcounter");
-      if counter.is_empty() || (!outer.is_empty() && list_id_chain_reaches(&outer, &counter)?) {
+      // Numbered only under `\@nmbrlisttrue`, which latex.ltx's `\item` tests (:16024): a raw `\list{}{}` inside
+      // `thebibliography` (memoir.cls:4580) keeps `\@listctr` = enumiv, but its items are not numbered.
+      let numbered = x_equals(&T_CS!("\\if@nmbrlist"), &T_CS!("\\iftrue"));
+      if counter.is_empty()
+        || !numbered
+        || (!outer.is_empty() && list_id_chain_reaches(&outer, &counter)?)
+      {
         begin_itemize("list", None, BeginItemizeOptions::default())?;
       } else {
         let current = counter_value(&counter)?;

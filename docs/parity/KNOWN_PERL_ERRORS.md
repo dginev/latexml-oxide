@@ -19454,3 +19454,49 @@ under `\escapechar` `/` (latex.ltx:7011-7016), so every `cmd/<name>` hook on one
 \protected\long\def\x{}
 {\escapechar=`\/ \message{\meaning\x}}
 ```
+
+## 1230. `thebibliography` never names its list's counter in `\@listctr`
+
+The classes' `thebibliography` (article.cls:573) runs `\usecounter{enumiv}`, which is `\@nmbrlisttrue\def\@listctr{enumiv}
+\setcounter{enumiv}\z@` (latex.ltx:16048). Perl's `beginBibliography_clean` (latex_constructs.pool.ltxml:3892) does only
+`ResetCounter('enumiv')`, so `\@listctr` stays empty (`DefMacro('\@listctr', '')`, pool:1635) and a class's entry reading `\value{\@listctr}`
+(asl.cls:5926-5927 `\composelist`, :5665 the aux line; witnesses 1005.4193, 0705.0395) reads `\c@`: on the trigger below
+Perl raises 2 Errors (`Error:undefined:\c@`, `Error:unexpected:\the\c@`) and prints 0 where pdflatex prints 1, cleanly. Rust: `begin_bibliography_clean`
+also names it, and the kernel list setup numbers only under `\@nmbrlisttrue` (latex.ltx:16024), so memoir.cls:4580's raw
+`\list` inside the bibliography stays unnumbered. The bibliography does not set `\@nmbrlisttrue`: our `\bibitem` steps no
+enumiv, so a raw `\@trivlist` there would be numbered from 0 (RED `index-bib/bibitem_steps_the_list_counter_red`, post-merge).
+Guard `perfect_kernel_batchga1::an_undefined_counter_register_is_the_error_tex_raises` (rows listctr_after_thebibliography,
+raw_list_numbers_only_under_nmbrlist, raw_trivlist_in_thebibliography_invents_no_number). Minimal trigger:
+
+```latex
+\documentclass{article}
+\makeatletter
+\def\composelist{\addtocounter{\@listctr}{1}\the\value{\@listctr}}
+\makeatother
+\begin{document}
+\begin{thebibliography}{9}
+\item[\composelist] First entry.
+\end{thebibliography}
+\end{document}
+```
+
+## 1231. `\value` of an undefined counter is the undefined `\c@<ctr>`, not `\csname`'s `\relax`
+
+latex.ltx:10127 `\def\value#1{\csname c@#1\endcsname}`: for a counter not yet defined, `\csname` makes `\c@<ctr>` mean
+`\relax` (tex.web §372) with no diagnostic, so an `\edef` keeps the token for a later `\newcounter`. Perl's `\value`
+(latex_constructs.pool.ltxml:3047) returns the bare `T_CS('\c@<ctr>')`, which the `\edef` expands: `Error:undefined:\c@<ctr>`
+and a "redefining" Warning at the `\newcounter` (tikz-timing.sty:2015-2019 before :2155; witnesses 2102.06643, 2409.18120).
+Fixed in Rust: an undefined `\c@<ctr>` is let to `\relax`, as `\csname` does; `\value{nosuch}` read as a number is then
+TeX's "Missing number" (a Warning, the core's severity). Guard
+`perfect_kernel_batchga1::an_undefined_counter_register_is_the_error_tex_raises` (rows value_expands_as_csname,
+counter_readers_keep_their_leniency). Minimal trigger (pdflatex "Value: 3."):
+
+```latex
+\documentclass{article}
+\edef\x{\value{later}}
+\newcounter{later}
+\setcounter{later}{3}
+\begin{document}
+Value: \the\x.
+\end{document}
+```

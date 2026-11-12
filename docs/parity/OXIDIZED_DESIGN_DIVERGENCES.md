@@ -24888,7 +24888,12 @@ latex_constructs/mod.rs): `numbered_footnote_mark` prints `[<n>]` through `\thef
 `\lx@notemark`, `\lx@notetext` and the VerbatimFootnotes `@live` forms, which read `[<n>]` undigested,
 `OptionalUndigested`, as TeX reads `\c@footnote #1\relax`; a minipage's notes stay `footnote_tag`'s); `<n>` is a number
 when it expands to digits (`2`, `\arabic{footnote}`) or is a count register (`\value{footnote}` — digested on its own
-it was a register assignment, "Missing number, treated as zero", and the mark printed nothing), and any other mark
+it was a register assignment, "Missing number, treated as zero", and the mark printed nothing); a `[<n>]` that TeX's
+scan leaves nothing printable of (`\relax`, `\value` of a counter not yet defined, `2\relax`; not a blank `[]`, a text
+mark's "no mark", arxstspdf's `\freefootnotetext[]`: RED `footnotemark_blank_is_tex_zero_red`) is read by the
+`\setcounter` siblings' reader, `read_braced_value` (GA1f `tex_footnote_number`: the mark TeX's, 0 with its one "Missing
+number"; 2407.13730, 2606.19583; guard rows `footnotemark_missing_number_reads_as_tex`,
+`footnotetext_missing_number_pairs_with_its_mark`), and any other mark
 (`\footnotemark[$\dagger$]`, "Missing number" in LaTeX) is printed as given, as before and as Perl does, with no
 diagnostic (main-session decision 2026-10-22: no diagnostic for now, the Warning false-alarmed on classes that read the
 mark as text; the faithful counter-definition rule is SYNC row 596's open part); an e-TeX expression
@@ -35122,6 +35127,21 @@ footnotemark_in_an_affiliation_is_the_creators_note_beside_it, footnotemark_in_a
 footnote_in_the_author_is_the_creators_note_contact, spaced_marks_leave_the_name_end_trimmed}`, and
 `perfect_kernel_batchfms2a2r7::a_notes_mark_is_answered_by_its_footnotemark` (the pending holder: 0 Warnings); repros
 `sectioning-frontmatter/{author_footnotemark_note_is_the_creators_beside_the_name,author_footnotemark_note_beside_the_name_omnibus,author_footnotemark_text_before_maketitle_beside_the_name,author_bare_footnotemark_beside_the_name,affiliation_footnotemark_note_beside_the_contact,author_footnotemark_in_a_wrapper_beside_the_name,author_footnote_in_the_name_is_the_creators_note,author_two_footnotemarks_name_end_trimmed}.tex`.
+
+### 1002. `\rownum` is colortbl's count, as TeX has it, not Perl's row-number macro (GA1c)
+
+Perl's xcolor binding defines `\rownum` as a macro returning the current alignment row (`xcolor.sty.ltxml:744-748`), so
+`\number\rownum` in a tabular without `\rowcolors` prints the row (`a1 c2`). In TeX `\rownum` is colortbl's count
+(colortbl.sty:269-275, `\c@rownum` the same register; xcolor.sty's `[table]` loads colortbl and defines no `\rownum`),
+stepped only by `\rowcolors`' row hook (colortbl.sty:261), so outside `\rowcolors` it reads 0 (`a0 c0`, pdflatex). Since
+GA1c the colortbl binding ports colortbl.sty:269-275 as written and Perl's macro is kept as `\lx@xcolor@rownum`, which
+`\rownum` is let to only where no `\rownum` exists (`latexml_package/src/package/xcolor_sty.rs:1604-1631`): one count in
+every load order of xcolor `[table]`, colortbl and tabularray (whose `\c@rownum`, tabularray.sty:185, is the same name),
+so tabularray's per-cell `\c@rownum` is a register and its cells print as pdflatex (2601.01074, 2409.12172: 55 and 154
+`expected:register` Warnings under GA1b). A divergence from Perl, faithful to TeX (review revGA1c). Residual (RED): after
+a `\rowcolors` table `\rownum` holds the row count where TeX holds one more. Guards
+`perfect_kernel_batchga1::an_undefined_counter_register_is_the_error_tex_raises` (both xcolor `[table]` load orders,
+colortbl after tabularray, `colortbl_therownum`).
 
 ### 1003. REVTeX's post-`\maketitle` switch-off reaches only a repeated author block, whose new words are counted, not kept (RB1, RB1c, RB1d)
 
