@@ -40,8 +40,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       let flagged = match lookup_value(&s!("{cs_name}:autoload")) {
         Some(Stored::String(pkg_sym)) => {
           let pkg = with(pkg_sym, |s| s.to_string());
-          !lookup_bool(&s!("{pkg}.sty_loaded"))
-            && !lookup_bool(&s!("{pkg}.sty_raw_loaded"))
+          !load_recorded(&s!("{pkg}.sty"))
         },
         Some(Stored::Bool(b)) => b,
         _ => false,

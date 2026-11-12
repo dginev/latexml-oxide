@@ -36,7 +36,7 @@ pub fn parse_color(model: Option<&str>, spec: &str) -> Color {
   // `\cellcolor[HTML]{…}` in a `\CodeBefore`: the nicematrix manual, 64zf review probe col/nm.tex).
   if let Some(model) = model
     && !model.trim().is_empty()
-    && (lookup_bool("xcolor.sty_loaded") || lookup_bool("xcolor.sty_raw_loaded"))
+    && package_loaded("xcolor")
   {
     return xcolor_sty::parse_xcolor(Some(model), spec, None);
   }
@@ -92,7 +92,7 @@ fn driver_color_model(model: &str) -> bool {
   !model_lc.is_empty()
     && model_lc != "named"
     && !is_core_model(&model_lc)
-    && !(lookup_bool("xcolor.sty_loaded") || lookup_bool("xcolor.sty_raw_loaded"))
+    && !package_loaded("xcolor")
     && has_meaning(&T_CS!(s!("\\color@{}", model.trim())))
 }
 

@@ -92,8 +92,7 @@ LoadDefinitions!({
           ..RequireOptions::default()
         })?;
         let filename = s!("{}.sty", style);
-        lookup_bool(&s!("{}_loaded", filename))
-          || lookup_bool(&s!("{}_raw_loaded", filename))
+        load_recorded(&filename)
       };
       if !primary_ok {
         require_package("amsppt", RequireOptions::default())?;

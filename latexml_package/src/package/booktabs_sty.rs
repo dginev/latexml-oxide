@@ -20,7 +20,7 @@ LoadDefinitions!({
   // tabularray (its `booktabs` library, `\toprule[2pt,red]`) the brackets hold
   // tabularray's keys, not a width.
   DefMacro!("\\lx@booktabs@width{}", sub[(width)] {
-    if !width.is_empty() && !(lookup_bool("tabularray.sty_loaded") || lookup_bool("tabularray.sty_raw_loaded")) {
+    if !width.is_empty() && !package_loaded("tabularray") {
       match width_shape(&width.to_string()) {
         WidthShape::Dimension => {},
         WidthShape::NoUnit => Warn!(

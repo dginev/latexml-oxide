@@ -114,10 +114,8 @@ LoadDefinitions!({
   // Perl's colordvi.sty.ltxml:66 uses the file up (a divergence, OD #492).
   // Guards: `perfect_kernel_batch64w::{colordvi_then_color_named_model,
   // color_then_colordvi_named_model, color_dvips_then_colordvi_text_commands}`.
-  let read_flags = ["dvipsnam.def_raw_loaded", "dvipsnam.def_loaded", "dvipsnam.def_load_attempted"]
-    .map(|flag| (flag, lookup_bool(flag)));
-  InputDefinitions!("dvipsnam", extension => Some(Cow::Borrowed("def")), reloadable => true);
-  for (flag, was) in read_flags {
-    assign_value(flag, was, Some(Scope::Global));
-  }
+  keeping_load_records("dvipsnam.def", || -> Result<()> {
+    InputDefinitions!("dvipsnam", extension => Some(Cow::Borrowed("def")), reloadable => true);
+    Ok(())
+  })?;
 });

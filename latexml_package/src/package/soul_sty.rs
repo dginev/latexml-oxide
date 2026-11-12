@@ -128,7 +128,7 @@ LoadDefinitions!({
   properties => sub[_args] {
     let mut soul_color: Option<String> = None;
     // Perl getSOULcolor: only when color.sty is loaded.
-    if (lookup_bool("color.sty_loaded") || lookup_bool("color.sty_raw_loaded"))
+    if package_loaded("color")
       && let Some(Stored::String(color_sym)) = lookup_value("soul_ul_color") {
         let color_name = to_string(color_sym);
         soul_color = Some(lookup_color(&color_name));
@@ -172,7 +172,7 @@ LoadDefinitions!({
     let mut css = String::from("text-decoration:line-through;");
     // Perl L63: `if (LookupValue('color.sty_loaded')) { ... }`
     // Perl L64: `if (my $color = ToString(LookupValue($name)))` — stringify at read time.
-    if lookup_bool("color.sty_loaded") || lookup_bool("color.sty_raw_loaded") {
+    if package_loaded("color") {
       let color_name = match lookup_value("soul_strike_color") {
         Some(Stored::String(sym)) => to_string(sym),
         Some(Stored::Tokens(ts)) => do_expand(ts)?.to_string(),
@@ -211,7 +211,7 @@ LoadDefinitions!({
     // Perl L64: `ToString(LookupValue($name))` — stringify at read time,
     // supporting either a raw-Tokens entry (from `\sethlcolor`) or the
     // initial string 'yellow' assignment (L103).
-    if lookup_bool("color.sty_loaded") || lookup_bool("color.sty_raw_loaded") {
+    if package_loaded("color") {
       let color_name = match lookup_value("soul_hl_color") {
         Some(Stored::String(sym)) => to_string(sym),
         Some(Stored::Tokens(ts)) => do_expand(ts)?.to_string(),

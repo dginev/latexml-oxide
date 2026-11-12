@@ -547,7 +547,7 @@ LoadDefinitions!({
   // here, it is a correct link, so the report is a Warning
   // (omnibus_doi_reads_as_a_url).
   DefMacro!("\\lx@doi@check{}", sub[(doi)] {
-    if !(lookup_bool("apacite.sty_loaded") || lookup_bool("apacite.sty_raw_loaded")) || (lookup_bool("doi.sty_loaded") || lookup_bool("doi.sty_raw_loaded")) {
+    if !package_loaded("apacite") || package_loaded("doi") {
       return Ok(Tokens!());
     }
     let doi = doi.to_string();

@@ -57,7 +57,7 @@ LoadDefinitions!({
   // inline-block holding a one-item list (1331 in 2112.05038). They stay the
   // kernel's inline maths (OXIDIZED_DESIGN_DIVERGENCES #597, approved 2026-10-15;
   // program loaded under another class keeps the programbox).
-  if lookup_bool("program.sty_loaded") {
+  if package_loaded("program") {
     DefMacro!("\\(", "\\lx@begin@inline@math");
     DefMacro!("\\)", "\\lx@end@inline@math");
   }
@@ -441,7 +441,7 @@ LoadDefinitions!({
   // `{declarations}`: no sn-jnl.cls defines one — 0 of 206 shipped copies, 2021-25 — and no paper of ~23,000 sampled,
   // 2019-25, uses it; the Springer template writes `\section*{Declarations}`/`\bmhead`, so a binding environment was
   // speculative, rev78c.)
-  if !lookup_bool("appendix.sty_loaded")
+  if !package_loaded("appendix")
     && class_text
       .as_deref()
       .is_none_or(|text| crate::shipped_class::class_text_loads(text, "appendix"))

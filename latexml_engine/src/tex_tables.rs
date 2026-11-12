@@ -1518,7 +1518,7 @@ pub fn digest_alignment_column(alignment: &RefCell<Alignment>, lastwascr: bool) 
           t.defined_as(&T_CS!("\\\\"))
             || t.defined_as(&T_CS!("\\@tabularcr"))
             || *t == T_CS!("\\tabularnewline")
-        }) && !lookup_bool("array.sty_loaded")
+        }) && !package_loaded("array")
           && {
             let alignment = alignment.borrow();
             !alignment.is_math() && !alignment.is_halign

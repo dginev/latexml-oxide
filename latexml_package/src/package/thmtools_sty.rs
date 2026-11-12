@@ -64,7 +64,7 @@ LoadDefinitions!({
   // This binding is thm-patch: a later `\usepackage{thm-patch}` (or thm-listof's, thm-autoref's) must not read the raw
   // file over it, whose `\newcommand\addtotheorem…hook` collide with the ones above and whose parseargs wrappers
   // replace the native theorems.
-  AssignValue!("thm-patch.sty_loaded" => true, Some(Scope::Global));
+  mark_loaded("thm-patch.sty");
 
   // Internal registers and macros needed by thm-restate.sty and thm-kv.sty
   // which load as raw TeX and expect these from thmtools internals.
