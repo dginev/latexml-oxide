@@ -35082,6 +35082,21 @@ footnote_in_the_author_is_the_creators_note_contact, spaced_marks_leave_the_name
 `perfect_kernel_batchfms2a2r7::a_notes_mark_is_answered_by_its_footnotemark` (the pending holder: 0 Warnings); repros
 `sectioning-frontmatter/{author_footnotemark_note_is_the_creators_beside_the_name,author_footnotemark_note_beside_the_name_omnibus,author_footnotemark_text_before_maketitle_beside_the_name,author_bare_footnotemark_beside_the_name,affiliation_footnotemark_note_beside_the_contact,author_footnotemark_in_a_wrapper_beside_the_name,author_footnote_in_the_name_is_the_creators_note,author_two_footnotemarks_name_end_trimmed}.tex`.
 
+### 1002. `\rownum` is colortbl's count, as TeX has it, not Perl's row-number macro (GA1c)
+
+Perl's xcolor binding defines `\rownum` as a macro returning the current alignment row (`xcolor.sty.ltxml:744-748`), so
+`\number\rownum` in a tabular without `\rowcolors` prints the row (`a1 c2`). In TeX `\rownum` is colortbl's count
+(colortbl.sty:269-275, `\c@rownum` the same register; xcolor.sty's `[table]` loads colortbl and defines no `\rownum`),
+stepped only by `\rowcolors`' row hook (colortbl.sty:261), so outside `\rowcolors` it reads 0 (`a0 c0`, pdflatex). Since
+GA1c the colortbl binding ports colortbl.sty:269-275 as written and Perl's macro is kept as `\lx@xcolor@rownum`, which
+`\rownum` is let to only where no `\rownum` exists (`latexml_package/src/package/xcolor_sty.rs:1604-1631`): one count in
+every load order of xcolor `[table]`, colortbl and tabularray (whose `\c@rownum`, tabularray.sty:185, is the same name),
+so tabularray's per-cell `\c@rownum` is a register and its cells print as pdflatex (2601.01074, 2409.12172: 55 and 154
+`expected:register` Warnings under GA1b). A divergence from Perl, faithful to TeX (review revGA1c). Residual (RED): after
+a `\rowcolors` table `\rownum` holds the row count where TeX holds one more. Guards
+`perfect_kernel_batchga1::an_undefined_counter_register_is_the_error_tex_raises` (both xcolor `[table]` load orders,
+colortbl after tabularray, `colortbl_therownum`).
+
 ### 1003. REVTeX's post-`\maketitle` switch-off reaches only a repeated author block, whose new words are counted, not kept (RB1, RB1c, RB1d)
 
 **TeX.** `\frontmatter@maketitle` (revtex4-2.cls:2670-2684, revtex4-1.cls:2649-2662, revtex4.cls:4709-4717) lets
@@ -35189,8 +35204,6 @@ pgfmath expression: pdflatex reports "Unknown function" / "Undefined control seq
 first, binds the names only where one survives (pgf's order, DTL1g), returns calc's value, and raises one Warning per parse
 (`pgfmath_code_tex.rs`). Reason: the staged rule (2) — only TeX errs, and the recovery carries the meaning the author wrote.
 Guard `error_boundary::perfect_kernel_error_boundary` (the calc rows and their safe twin).
-
-apart from `Info:` lines in a log. Guard `cluster_cli::debug_feature_scope::debug_feature_prints_only_its_feature`.
 
 ### 1008. A `cmd/<name>/<hook>` hook on a command LaTeXML binds does not run: a Warning for the document's code, an Info for a class's or package's (QA47A)
 
