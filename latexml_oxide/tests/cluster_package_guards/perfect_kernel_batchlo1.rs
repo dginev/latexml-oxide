@@ -82,6 +82,7 @@ fn a_link_filling_a_name_slot_is_the_name() {
 /// entry's line, so a nested entry's first mark stays its label (1812.05961; a class's `\inst{2}` opening a later entry, 0807.0752).
 #[test]
 fn a_symbol_inside_an_entrys_brackets_is_its_text() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let tex = repro!("emit_a_symbol_inside_an_entrys_brackets_is_its_text");
   let class = include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/emit_institute_store.cls"
@@ -109,8 +110,8 @@ fn a_symbol_inside_an_entrys_brackets_is_its_text() {
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(creators(&xml)[0], [
     "Ann Able * †",
-    "affiliation=Univ A, Town",
-    "affiliation=Univ B, City"
+    "affiliation=* Univ A, Town",
+    "affiliation=† Univ B, City"
   ]);
 }
 

@@ -1,0 +1,36 @@
+% mechanism: a binding's marked list the names' marks do not gate, left to the reading's cut: the names' box sits beside
+%   a word at the names' own level (`\parbox{…}{Ann\IEEEauthorrefmark{4}, …}\\ The Team`), so `argument_marks` reads
+%   no mark of theirs and `\lx@add@affiliation@marked` queues the list whole; the reading's cut then loses the unmarked
+%   link line after the entries (the observer's writer writes each mark-led piece without it)
+% witness: synthetic (P4c3 sibling of 2508.17623's `ieee_marked_list_url_line_after_entries`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able§∗ , Bob Baker†∗ , Cy Cole¶ , Di Dow‡", "The Team",
+%          "§ Univ A † Univ B ‡ Univ C ¶ Univ D", "https://example.org/project/"
+% engines: P4cbase (9d38af1d10, the token gate): 0 W, the url Cy Cole's; P4c3: 1 Warning (the url's 4 words missing),
+%          the url in no creator
+% expect:  0 errors, 0 warnings; the url kept (Cy Cole's, as the base)
+% status:  RED (P4c3) — moves: post-merge (the reading's cut keeps a link line after its last entry)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\usepackage{url}
+\begin{document}
+\title{T}
+\author{%
+  \IEEEauthorblockN{%
+    \parbox{\linewidth}{\centering
+      Ann Able\IEEEauthorrefmark{4}$^*$, %
+      Bob Baker\IEEEauthorrefmark{2}$^*$, %
+      Cy Cole\IEEEauthorrefmark{5}, Di Dow\IEEEauthorrefmark{3}%
+    }\\ The Team
+  }
+  \vspace{2mm}
+  \IEEEauthorblockA{\normalsize
+    \IEEEauthorrefmark{4}Univ A \quad
+    \IEEEauthorrefmark{2}Univ B \quad
+    \IEEEauthorrefmark{3}Univ C
+    \IEEEauthorrefmark{5}Univ D \\[0.1em]%
+    \small{\tt \url{https://example.org/project/}}
+  }
+}
+\maketitle
+Text.
+\end{document}

@@ -62,6 +62,7 @@ fn a_note_in_an_authors_annotations_is_kept() {
 /// writes it — the e-mail contact of the newest creator as off's queue digests it —, with its one counted Warning.
 #[test]
 fn a_call_the_reading_writes_nothing_of_is_written_as_queued() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let (log, xml) = run(repro!("cl7_iopart_ead_without_address"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(
@@ -72,12 +73,12 @@ fn a_call_the_reading_writes_nothing_of_is_written_as_queued() {
   assert_eq!(creators(&xml), [
     row(&[
       "Justyna Borkowska",
-      "affiliation=Institute of Astronomy, Torun, Poland",
+      "affiliation=1 Institute of Astronomy, Torun, Poland",
       "email=jborkowska astro.uni.torun.pl"
     ]),
     row(&[
       "Boudewijn F. Roukema",
-      "affiliation=Institute of Astronomy, Torun, Poland"
+      "affiliation=1 Institute of Astronomy, Torun, Poland"
     ])
   ]);
 }

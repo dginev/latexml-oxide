@@ -1,12 +1,14 @@
-% mechanism: a binding's marked list cut by the Cut as the binding declares it (`MARKED_LIST_CUT`, OD #1008): an unmarked
-%   link line after a line with two marked entries (`\\[0.1em]%` then `\small{\tt \url{…}}`) is lost, counted by the
-%   content check's Warning; the binding's own cut (P4cbase) kept it as the last entry's url
+% mechanism: a binding's marked list cut by the Cut as the binding declares it (`MARKED_LIST_CUT`, OD #1009), the names
+%   in a `\parbox`: their marks are the names' own (`argument_marks` at the level their words print at), so the
+%   binding cuts the list and the link line after the entries stays the last entry's
 % witness: 2508.17623
 % oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able§∗ , Bob Baker†∗ , Cy Cole¶ , Di Dow‡", "§ Univ A † Univ B
 %          ‡ Univ C ¶ Univ D", "https://example.org/project/"
-% engines: P4cbase (9d38af1d10): Cy Cole "Univ D" + url; P4c2: the url in no creator, 1 Warning (8 words missing in the witness)
+% engines: P4cbase (9d38af1d10): Cy Cole "Univ D" + url; P4c2: the names read unmarked (marks inside the box), the list
+%          left to the reading, the url in no creator, 1 Warning (8 words missing in the witness); P4c3: the base's
+%          entries with their marks shown, the url Cy Cole's
 % expect:  0 errors, 0 warnings; the url kept (Cy Cole's, as the base, or the block's)
-% status:  RED (P4c2) — moves: P4c3 (found by P4c2's A/B at the bound, root cause not reached)
+% status:  RED (P4c2 237a9e11af) -> GREEN (P4c3)
 % preload: ar5iv.sty
 \documentclass[conference]{IEEEtran}
 \usepackage{url}

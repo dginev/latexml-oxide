@@ -131,11 +131,16 @@ fn aastex6_consecutive_authors_share_every_affiliation_after_them() {
 /// shape, 97d giving every author "1Uni One"): each line the names showing its mark, the mark off the line.
 #[test]
 fn aastex6_marked_affiliations_go_to_the_names_showing_the_mark() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = both_ways(repro!("aastex6_marked_affiliations_go_by_marks"));
   assert_eq!(creators(&xml), [
-    vec!["Ann Able 1,2", "affiliation=Uni One", "affiliation=Uni Two"],
-    vec!["Bob Baker 1", "affiliation=Uni One"],
-    vec!["Cat Cole 2", "affiliation=Uni Two"],
+    vec![
+      "Ann Able 1,2",
+      "affiliation=1 Uni One",
+      "affiliation=2 Uni Two"
+    ],
+    vec!["Bob Baker 1", "affiliation=1 Uni One"],
+    vec!["Cat Cole 2", "affiliation=2 Uni Two"],
   ]);
 }
 
@@ -147,6 +152,7 @@ fn aastex6_marked_affiliations_go_to_the_names_showing_the_mark() {
 /// `queued_name_marks`, aas_support_sty.rs `\affiliation`.
 #[test]
 fn aastex_affil_line_labels_go_to_the_names_requesting_them() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = both_ways(repro!("aastex_typed_affil_numbers_are_labels"));
   assert_eq!(creators(&xml), [
     vec!["Ann Able", "affiliation=Uni One"],
@@ -178,7 +184,7 @@ fn aastex_affil_line_labels_go_to_the_names_requesting_them() {
     vec![
       "Cat Cole 1,2",
       "affiliation=1 Uni One",
-      "affiliation=Uni Two"
+      "affiliation=2 Uni Two"
     ],
   ]);
 }
@@ -225,11 +231,12 @@ fn aastex_unlabelled_lines_under_marked_names() {
 /// label and a tie: Z18l's reroute, OD #992, the binding's own `name={label }` gone).
 #[test]
 fn aastex_affil_holding_only_an_email_is_an_authors_email() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = both_ways(repro!("aastex_affil_email_line_is_its_authors_email"));
   assert_eq!(creators(&xml), [
-    vec!["Xu Kang 1", "affiliation=Uni One", "email=kangx@uni.edu"],
-    vec!["Yi Jing 1", "affiliation=Uni One"],
-    vec!["Hu Mo 2", "affiliation=Uni Two"],
+    vec!["Xu Kang 1", "affiliation=1 Uni One", "email=kangx@uni.edu"],
+    vec!["Yi Jing 1", "affiliation=1 Uni One"],
+    vec!["Hu Mo 2", "affiliation=2 Uni Two"],
   ]);
   assert_eq!(
     xml

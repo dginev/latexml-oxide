@@ -344,6 +344,7 @@ fn hollow_guards_restored_read_as_printed() {
 /// is not is pinned as today, its comment naming the RED.
 #[test]
 fn marked_blocks_restored_read_as_printed() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   assert_rows(&[
     Row {
       repro:    repro!("sectioning-frontmatter/ieee_shared_block/starred_names_one_line"),
@@ -536,8 +537,8 @@ fn marked_blocks_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able<sup><text font="italic">1</text></sup></personname><contact role="collaboration">the GAPS Team</contact><contact name="Affiliation: " role="affiliation">Univ A</contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact role="collaboration">the GAPS Team</contact><contact name="Affiliation: " role="affiliation">Univ B</contact></creator>"#,
+        r#"<creator role="author"><personname>Ann Able<sup><text font="italic">1</text></sup></personname><contact role="collaboration">the GAPS Team</contact><contact name="Affiliation: " role="affiliation"><sup>1</sup>Univ A</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact role="collaboration">the GAPS Team</contact><contact name="Affiliation: " role="affiliation"><sup>2</sup>Univ B</contact></creator>"#,
       ]),
     },
     // The names whole, no "[ETHZ]" text; the addresses on a nameless creator and the printed "and" lost are pinned,
@@ -760,9 +761,10 @@ fn reds_keep_their_counts_and_right_parts() {
         r#"<personname>J. P. B. C. de Melo<sup><text font="italic">a</text></sup></personname>"#,
         r#"<personname>H. W. L. Naus<sup><text font="italic">b</text></sup></personname>"#,
         r#"<personname>T. Frederico<sup><text font="italic">c</text></sup></personname>"#,
-        r#"role="affiliation">Univ A</contact>"#,
-        r#"role="affiliation">Univ B</contact>"#,
-        r#"role="affiliation">Univ C</contact>"#,
+        // (P4c: the list's printed marks shown, as pdflatex prints them — P4S Q1)
+        r#"role="affiliation"><sup><text font="italic">a</text></sup>Univ A</contact>"#,
+        r#"role="affiliation"><sup><text font="italic">b</text></sup>Univ B</contact>"#,
+        r#"role="affiliation"><sup><text font="italic">c</text></sup>Univ C</contact>"#,
       ]),
     },
     Row {
@@ -771,7 +773,8 @@ fn reds_keep_their_counts_and_right_parts() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Hold(&[
-        r#"role="affiliation">Institute of One</contact>"#,
+        // (P4c: the list's printed mark shown, as pdflatex prints it — P4S Q1)
+        r#"role="affiliation"><sup><text font="italic">1</text></sup>Institute of One</contact>"#,
         r#"b.baker@two.edu"#,
       ]),
     },

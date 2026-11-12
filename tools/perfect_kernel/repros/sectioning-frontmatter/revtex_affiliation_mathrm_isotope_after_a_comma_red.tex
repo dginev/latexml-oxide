@@ -4,9 +4,10 @@
 % witness: synthetic (ISO1 sibling of revtex_affiliation_isotope_prescript_keeps_its_line; 2105.07958)
 % oracle:  pdflatex (TL 2025 revtex4-1) 0 errors: "1 Univ X / 2 Univ Y, 3He Lab"
 % engines: rust int160c = ISO1 = 0 errors, 0 warnings: Baker "Univ Y", "He Lab" a nameless creator's, the "3" dropped silently
-%          P4c: Able "1 Univ X"; Baker "2 Univ Y, ³He Lab" (the list's marks shown)
+%          P4c3: Able "1 Univ X"; Baker "2 Univ Y"; "He 3 Lab" a nameless creator's (the "3" kept and shown), 0 W
 % expect:  0 errors, 0 warnings; Able "Univ X"; Baker "Univ Y, ³He Lab"
-% status:  RED (int160c, ISO1) -> GREEN (P4c: a number or letter mark no name requests glued to the word after it is that word's prescript; probe on P4c-rel 54e6f917; guard row not yet written: P4c stopped at its bound)
+% status:  RED (int160c, ISO1; P4c3 reverted 0f8a176508's token rule in `emitter/calls.rs` `split_marked_pieces`: the
+%          token reads rose 98 -> 101, the TOKEN_READS fence) — moves: post-merge
 % preload: ar5iv.sty
 \documentclass{revtex4-1}
 \begin{document}

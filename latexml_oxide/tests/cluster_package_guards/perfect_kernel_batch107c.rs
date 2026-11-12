@@ -61,12 +61,13 @@ fn a_list_in_its_other_printed_forms_leaves_its_affiliation() {
 /// its glued-mark reading (`link_entry_addresses`, `glued_name_marks`).
 #[test]
 fn a_sole_or_glued_marked_authors_address_is_never_the_blocks() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   assert_eq!(
     converted(
       repro!("addr_line_one_named_author_beside_unparted_names"),
       0
     ),
-    r##"<title>T</title> <creator role="author"> <personname>Cat Cole<sup xml:id="id1">‡</sup></personname> <contact name="Affiliation: " role="affiliation">Univ C, Village</contact> <contact name="Email: " role="email">ccole@c.edu</contact> </creator> <creator role="author"> <contact name="Affiliation: " role="affiliation">Ann Able, Bob Baker<sup xml:id="id2">†</sup> and</contact> <contact name="Affiliation: " role="affiliation">Univ A, Town</contact> <contact name="Affiliation: " role="affiliation">Univ B, City</contact> <contact name="Email: " role="email">aable@a.edu</contact> <contact name="Email: " role="email">bbaker@b.edu</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Cat Cole<sup xml:id="id1">‡</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">‡</sup>Univ C, Village</contact> <contact name="Email: " role="email">ccole@c.edu</contact> </creator> <creator role="author"> <contact name="Affiliation: " role="affiliation">Ann Able<sup xml:id="id3">*</sup>, Bob Baker<sup xml:id="id4">†</sup> and</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id5">*</sup>Univ A, Town</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id6">†</sup>Univ B, City</contact> <contact name="Email: " role="email">aable@a.edu</contact> <contact name="Email: " role="email">bbaker@b.edu</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }
 
@@ -77,9 +78,10 @@ fn a_sole_or_glued_marked_authors_address_is_never_the_blocks() {
 /// readings (`link_label`, `split_link_lines`).
 #[test]
 fn link_lines_are_link_contacts() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   assert_eq!(
     converted(repro!("legend_kind_labelled_link_line"), 0),
-    r##"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">1</sup></personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id2">2</sup></personname> <contact name="Affiliation: " role="affiliation">Univ B</contact> <contact name="Project website: " role="url"><ref class="ltx_href" fontsize="90%" href="https://x.org/p">https://x.org/p</ref></contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">1</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3">2</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">2</sup>Univ B</contact> <contact name="Project website: " role="url"><ref class="ltx_href" fontsize="90%" href="https://x.org/p">https://x.org/p</ref></contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }
 

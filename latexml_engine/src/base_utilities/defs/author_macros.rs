@@ -3,8 +3,8 @@
 
 use super::{
   frontmatter_api::{
-    PRINTED_LABEL, affiliation_calls, affiliation_is_marked, blank_line_marks_dropped,
-    marked_list_calls, shared_affiliation_calls, unalias_mark_commands,
+    CutParameters, PRINTED_LABEL, affiliation_calls, affiliation_is_marked,
+    blank_line_marks_dropped, cut_list, shared_affiliation_calls, unalias_mark_commands,
   },
   *,
 };
@@ -193,7 +193,15 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // placed as the optional attributes say (apa7's unnumbered list, `annotate=all`); a marked list, the API's Cut cuts as
   // the binding declares it (`marked_list_calls`), each mark shown and its entry the requesters' (2609.17368, 22690, 28084).
   DefMacro!("\\lx@add@affiliation@marked[]{}", sub[(attr, stuff)] {
-    marked_list_calls(attr, stuff)
+    let calls = if affiliation_is_marked(&stuff)? {
+      marked_list_calls(attr.as_ref(), &stuff)?
+    } else {
+      None
+    };
+    match calls {
+      Some(calls) => Ok(calls),
+      None => Ok(Invocation!(T_CS!("\\lx@add@affiliation"), vec![attr, Some(stuff)])),
+    }
   });
   // Rust-only: an address a class prints under a row of names it shares (aistats's `\aistatsaddress` under
   // `\aistatsauthor{A \And B \And C}` when its columns are not the names', 1806.02924, 2510.09534): marked,
@@ -202,7 +210,10 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // (`shared_affiliation_calls`).
   DefMacro!("\\lx@add@affiliation@shared[]{}", sub[(attr, stuff)] {
     if affiliation_is_marked(&stuff)? {
-      marked_list_calls(attr, stuff)
+      match marked_list_calls(attr.as_ref(), &stuff)? {
+        Some(calls) => Ok(calls),
+        None => Ok(Invocation!(T_CS!("\\lx@add@affiliation"), vec![attr, Some(stuff)])),
+      }
     } else {
       Ok(Tokens::new(shared_affiliation_calls(attr, stuff)?))
     }
@@ -900,4 +911,39 @@ fn ijcai_email_lines(list: &Tokens) -> Vec<Vec<Token>> {
     })
     .filter(|line| !prints_nothing(&Tokens::new(line.clone())))
     .collect()
+}
+
+/// The Cut of a binding's marked list (`\lx@add@affiliation@marked`, `@shared`: IEEEtran's `\IEEEauthorblockA`,
+/// iopart's `\address`, informs, sv, authblk, …): every mark cuts it, an address line is entry text, a printed closing
+/// comma and the notes after it kept as printed (1801.00540, 2605.05837), the call's placement (`annotate=new`) dropped —
+/// the entries as the binding's own cut gave them, each mark shown (IEEEtran 1705.01774, 1801.04010, 1811.06030,
+/// 2310.18257, 2511.18221, 2512.10732, 2609.16600, 1504.01072, 2508.17623; iopart 1205.6912). OD #1009.
+const MARKED_LIST_CUT: CutParameters = CutParameters {
+  every_mark:             true,
+  labelled_address_lines: false,
+  dropped_keys:           &["labelseq", "_share", "annotate"],
+  trim_closing_separator: false,
+  shared_parts:           false,
+};
+
+/// The calls of a binding's marked list (`\lx@add@affiliation@marked[attr]{stuff}`, `@shared`): its entries as the Cut
+/// cuts it under the binding's declaration ([`MARKED_LIST_CUT`]); `None` for a list it leaves whole. Called by the
+/// binding, as a flush digests a block's affiliation with the API's annotate let to its `@now`, which no Cut reads.
+fn marked_list_calls(attr: Option<&Tokens>, stuff: &Tokens) -> Result<Option<Tokens>> {
+  let mut call_attr = mouth::tokenize_internal("role=affiliation").unlist();
+  if let Some(attr) = attr {
+    call_attr.push(T_OTHER!(","));
+    call_attr.extend(attr.unlist_ref().iter().copied());
+  }
+  let content = Invocation!(T_CS!("\\lx@affiliation@withinst"), vec![Some(
+    stuff.clone()
+  )]);
+  cut_list(
+    &mouth::tokenize_internal("ltx:creator"),
+    &mouth::tokenize_internal("ltx:contact"),
+    "affiliation",
+    Tokens::new(call_attr),
+    &content,
+    &MARKED_LIST_CUT,
+  )
 }

@@ -57,6 +57,7 @@ fn assert_all(xml: &str, parts: &[&str]) {
 /// 0706.1914, 1311.3768, 1512.06999, 2206.05928, 2304.10248, 2310.15635).
 #[test]
 fn gretsi_frontmatter_follows_the_release() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = clean_with_copy!(
     "gretsi_v12/gretsi_v12_frontmatter.tex",
     "gretsi.cls",
@@ -64,16 +65,16 @@ fn gretsi_frontmatter_follows_the_release() {
   );
   assert_all(&xml, &[
     "<title>Méthode du point proximal</title>",
-    r#"<personname>Ziad <text font="smallcaps" xml:id="id1">Naja<sup xml:id="id1.1"><text font="upright" xml:id="id1.1.1">1</text></sup></text></personname> <contact name="Affiliation: " role="affiliation">Univ Paris-Sud 11</contact> <contact name="Email: " role="email">ziad.naja@lss.fr</contact> </creator>"#,
-    r#"<personname>Pierre <text font="smallcaps" xml:id="id2">Duhamel<sup xml:id="id2.1"><text font="upright" xml:id="id2.1.1">2</text></sup></text></personname> <contact name="Affiliation: " role="affiliation">CNRS<break/>Gif-sur-Yvette</contact> </creator>"#,
+    r#"<personname>Ziad <text font="smallcaps" xml:id="id1">Naja<sup xml:id="id1.1"><text font="upright" xml:id="id1.1.1">1</text></sup></text></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ Paris-Sud 11</contact> <contact name="Email: " role="email">ziad.naja@lss.fr</contact> </creator>"#,
+    r#"<personname>Pierre <text font="smallcaps" xml:id="id3">Duhamel<sup xml:id="id3.1"><text font="upright" xml:id="id3.1.1">2</text></sup></text></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">2</sup>CNRS<break/>Gif-sur-Yvette</contact> </creator>"#,
     r#"<abstract inlist="toc" name="Résumé" xml:id="abstract1"> <p xml:id="abstract1.1">Cet article est basé sur la méthode.</p> </abstract> <abstract inlist="toc" name="Abstract" xml:id="abstract2"> <p xml:id="abstract2.1"><text xml:lang="en" xml:id="abstract2.1.1">This paper recalls the proximal point method.</text></p> </abstract>"#,
     r#"<caption class="ltx_centering"><tag close=": ">Figure 1</tag>Une figure.</caption>"#,
   ]);
   let xml = clean!("gretsi_v13_frontmatter.tex");
   assert_all(&xml, &[
     "<title>Hotelling Deflation</title>",
-    r#"<personname>Mohamed <text font="smallcaps" xml:id="id1">Seddik<sup xml:id="id1.1"><text font="upright" xml:id="id1.1.1">1</text></sup></text></personname> <contact name="Email: " role="email">mohamed.seddik@tii.ae</contact> <contact name="Affiliation: " role="affiliation">Technology Innovation Institute, Abu Dhabi</contact> </creator>"#,
-    r#"<personname>Maxime <text font="smallcaps" xml:id="id2">Guillaud<sup xml:id="id2.1"><text font="upright" xml:id="id2.1.1">2</text></sup></text></personname> <contact name="Email: " role="email">maxime.guillaud@inria.fr</contact> <contact name="Affiliation: " role="affiliation">Inria, Villeurbanne</contact> </creator>"#,
+    r#"<personname>Mohamed <text font="smallcaps" xml:id="id1">Seddik<sup xml:id="id1.1"><text font="upright" xml:id="id1.1.1">1</text></sup></text></personname> <contact name="Email: " role="email">mohamed.seddik@tii.ae</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Technology Innovation Institute, Abu Dhabi</contact> </creator>"#,
+    r#"<personname>Maxime <text font="smallcaps" xml:id="id3">Guillaud<sup xml:id="id3.1"><text font="upright" xml:id="id3.1.1">2</text></sup></text></personname> <contact name="Email: " role="email">maxime.guillaud@inria.fr</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">2</sup>Inria, Villeurbanne</contact> </creator>"#,
     r#"<abstract inlist="toc" name="Résumé" xml:id="abstract1"> <p xml:id="abstract1.1"><text xml:lang="fr" xml:id="abstract1.1.1">Cet article étudie la déflation.</text></p> </abstract> <abstract inlist="toc" name="Abstract" xml:id="abstract2"> <p xml:id="abstract2.1">This paper studies deflation.</p> </abstract>"#,
   ]);
 }
@@ -377,16 +378,16 @@ fn svmult_options_micro_and_chapter_subfigures() {
 }
 
 /// gretsi v1.3 `\auteurs`: the text between the `\auteur` calls past the separators is the name before it ("(chair)"),
-/// the comma between two calls the list's (2508.03934). (Known residual, reported in round 2: David Picard's "Lab B"
-/// goes to Simon Lepage alone — the comma of Simon's shown marks "1,2" splits a stray label `2` off his fuzzy name label,
-/// the pattern of `svjour3_marked_pieces_after_a_break`'s witness.)
+/// the comma between two calls the list's (2508.03934). Round 2's residual, David Picard's "Lab B" given to Simon Lepage
+/// alone, is gone since P4c3, the list cut at its shown marks; each affiliation shows its mark (P4S Q1).
 #[test]
 fn gretsi_v13_auteurs_keep_the_text_between_calls() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = clean!("gretsi_v13_abstract_order.tex");
   assert_all(&xml, &[
-    r#"<creator role="author"> <personname>Simon <text font="smallcaps" xml:id="id1">Lepage<sup xml:id="id1.1"><text font="upright" xml:id="id1.1.1">1,2</text></sup></text></personname> <contact name="Email: " role="email">s.lepage@x.com</contact> <contact name="Affiliation: " role="affiliation">Lab A, Paris</contact> <contact name="Affiliation: " role="affiliation">Lab B, Marne</contact> </creator>"#,
-    r#"<personname>Jeremie <text font="smallcaps" xml:id="id2">Mary<sup xml:id="id2.1"><text font="upright" xml:id="id2.1.1">1</text></sup></text></personname> <contact name="Email: " role="email">j.mary@x.com</contact> <contact name="Affiliation: " role="affiliation">Lab A, Paris</contact> </creator>"#,
-    r#"<personname>David <text font="smallcaps" xml:id="id3">Picard<sup xml:id="id3.1"><text font="upright" xml:id="id3.1.1">2</text></sup></text> (chair)</personname> <contact name="Email: " role="email">d.picard@x.fr</contact>"#,
+    r#"<creator role="author"> <personname>Simon <text font="smallcaps" xml:id="id1">Lepage<sup xml:id="id1.1"><text font="upright" xml:id="id1.1.1">1,2</text></sup></text></personname> <contact name="Email: " role="email">s.lepage@x.com</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Lab A, Paris</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">2</sup>Lab B, Marne</contact> </creator>"#,
+    r#"<personname>Jeremie <text font="smallcaps" xml:id="id4">Mary<sup xml:id="id4.1"><text font="upright" xml:id="id4.1.1">1</text></sup></text></personname> <contact name="Email: " role="email">j.mary@x.com</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id5">1</sup>Lab A, Paris</contact> </creator>"#,
+    r#"<personname>David <text font="smallcaps" xml:id="id6">Picard<sup xml:id="id6.1"><text font="upright" xml:id="id6.1.1">2</text></sup></text> (chair)</personname> <contact name="Email: " role="email">d.picard@x.fr</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id7">2</sup>Lab B, Marne</contact> </creator>"#,
   ]);
 }
 
@@ -404,10 +405,11 @@ fn interact_bold_var_greek() {
 /// their marks: each author gets the institutes its shown marks name (1810.10167).
 #[test]
 fn svjour3_marked_pieces_after_a_break() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let xml = clean!("svjour3_marked_pieces_after_a_break.tex");
   assert_all(&xml, &[
-    r#"<personname>Fan Zhang<sup xml:id="id2">1,3</sup></personname> <contact name="Affiliation: " role="affiliation"> Univ A, Shanghai</contact> <contact name="Affiliation: " role="affiliation"> Univ C, Beijing</contact> </creator>"#,
-    r#"<personname>Yaohua Hu<sup xml:id="id3">2</sup></personname> <contact name="Affiliation: " role="affiliation"> Univ B, Shenzhen</contact> </creator>"#,
+    r#"<personname>Fan Zhang<sup xml:id="id3">1,3</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">1</sup> Univ A, Shanghai</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id5">3</sup> Univ C, Beijing</contact> </creator>"#,
+    r#"<personname>Yaohua Hu<sup xml:id="id6">2</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id7">2</sup> Univ B, Shenzhen</contact> </creator>"#,
   ]);
   assert!(!xml.contains("<creator role=\"author\"> <contact"), "{xml}");
 }

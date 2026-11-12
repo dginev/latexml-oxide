@@ -80,9 +80,10 @@ fn a_control_return_parts_marked_entries() {
 /// fail-safe had put the block once at the block): repro class-bindings/revtex_tabular_affiliation_rows_go_by_their_marks.
 #[test]
 fn tabular_rows_are_marked_entries() {
-  let rows = [vec!["Ann Able 1", "affiliation=Univ A, Town"], vec![
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
+  let rows = [vec!["Ann Able 1", "affiliation=1 Univ A, Town"], vec![
     "Bob Baker 2",
-    "affiliation=Univ B, City",
+    "affiliation=2 Univ B, City",
   ]];
   assert_eq!(
     clean_creators(repro!("ieee_blocka_tabular_rules_print_no_line")),
@@ -103,17 +104,17 @@ fn tabular_rows_are_marked_entries() {
     [
       vec![
         "Ann Able 1",
-        "affiliation=Univ A, Town",
+        "affiliation=1 Univ A, Town",
         "email=aable@a.edu"
       ],
       vec![
         "Bob Baker 2",
-        "affiliation=Univ B, City",
+        "affiliation=2 Univ B, City",
         "email=bbaker@b.edu"
       ],
       vec![
         "Cat Cole 1",
-        "affiliation=Univ A, Town",
+        "affiliation=1 Univ A, Town",
         "email=ccole@a.edu"
       ],
     ]
@@ -125,23 +126,24 @@ fn tabular_rows_are_marked_entries() {
 /// Dan "Univ A, Town, 2Univ B, City, 3Univ C", Bob and Cat none. Repro ieee_blocka_spaced_marks_after_a_plain_lead.
 #[test]
 fn a_spaced_mark_after_a_plain_lead_parts_entries() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   assert_eq!(
     clean_creators(repro!("ieee_blocka_spaced_marks_after_a_plain_lead")),
     [
       vec![
         "Ann Able 1",
-        "affiliation=Univ A, Town",
+        "affiliation=1 Univ A, Town",
         "email=aable@a.edu"
       ],
       vec![
         "Bob Baker 2",
-        "affiliation=Univ B, City",
+        "affiliation=2 Univ B, City",
         "email=bbaker@b.edu"
       ],
-      vec!["Cat Cole 3", "affiliation=Univ C", "email=ccole@c.edu"],
+      vec!["Cat Cole 3", "affiliation=3 Univ C", "email=ccole@c.edu"],
       vec![
         "Dan Dorn 1",
-        "affiliation=Univ A, Town",
+        "affiliation=1 Univ A, Town",
         "email=ddorn@a.edu"
       ],
     ]
@@ -154,18 +156,27 @@ fn a_spaced_mark_after_a_plain_lead_parts_entries() {
 /// the three lines. Repros revtex_math_number_marks_label_lines, revtex_math_number_first_mark_over_superscripts.
 #[test]
 fn math_number_marks_label_lines() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   assert_eq!(
     clean_creators(repro!("revtex_math_number_marks_label_lines")),
     [
-      vec!["Ann Able 1", "email=ann@a.edu", "affiliation=Univ A, Town"],
-      vec!["Bob Baker 2", "affiliation=Univ B, City"],
+      vec![
+        "Ann Able 1",
+        "email=ann@a.edu",
+        "affiliation=1 Univ A, Town"
+      ],
+      vec!["Bob Baker 2", "affiliation=2 Univ B, City"],
     ]
   );
   assert_eq!(
     clean_creators(repro!("revtex_math_number_first_mark_over_superscripts")),
     [
-      vec!["Ann Able 1,2", "affiliation=Univ A", "affiliation=Univ B"],
-      vec!["Bob Baker 3", "affiliation=Univ C"],
+      vec![
+        "Ann Able 1,2",
+        "affiliation=1 Univ A",
+        "affiliation=2 Univ B"
+      ],
+      vec!["Bob Baker 3", "affiliation=3 Univ C"],
     ]
   );
 }
@@ -176,22 +187,26 @@ fn math_number_marks_label_lines() {
 /// revtex_ordinal_number_line_is_entry_text, revtex_ordinal_number_line_under_number_marks.
 #[test]
 fn an_ordinal_number_is_no_mark() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   assert_eq!(
     clean_creators(repro!("revtex_ordinal_number_line_is_entry_text")),
     [
       vec![
         "Ann Able 1",
-        "affiliation=Univ A, Town 3 rd floor, Physics Bldg"
+        "affiliation=1 Univ A, Town 3 rd floor, Physics Bldg"
       ],
-      vec!["Bob Baker 2", "affiliation=Univ B, City"],
-      vec!["Cat Cole 3", "affiliation=Univ C"],
+      vec!["Bob Baker 2", "affiliation=2 Univ B, City"],
+      vec!["Cat Cole 3", "affiliation=3 Univ C"],
     ]
   );
   assert_eq!(
     clean_creators(repro!("revtex_ordinal_number_line_under_number_marks")),
     [
-      vec!["Ann Able 1", "affiliation=Univ A, Town 2 nd Floor, Bldg C"],
-      vec!["Bob Baker 2", "affiliation=Univ B, City"],
+      vec![
+        "Ann Able 1",
+        "affiliation=1 Univ A, Town 2 nd Floor, Bldg C"
+      ],
+      vec!["Bob Baker 2", "affiliation=2 Univ B, City"],
     ]
   );
 }
@@ -203,15 +218,16 @@ fn an_ordinal_number_is_no_mark() {
 /// open in SYNC_STATUS row 104c. Repro revtex_nucleus_isotope_after_a_plain_lead_is_text.
 #[test]
 fn an_isotope_nucleus_mark_is_text() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   assert_eq!(
     clean_creators(repro!("revtex_nucleus_isotope_after_a_plain_lead_is_text")),
     [
       vec!["Ann Able 1", "affiliation=1 Univ A, Lab for"],
-      vec!["Bob Baker 2", "affiliation=Univ B, City"],
+      vec!["Bob Baker 2", "affiliation=2 Univ B, City"],
       vec![
         "Cat Cole 3",
         "affiliation=3 He Physics, Town",
-        "affiliation=Univ C"
+        "affiliation=3 Univ C"
       ],
     ]
   );
@@ -225,13 +241,14 @@ fn an_isotope_nucleus_mark_is_text() {
 /// glue rule's exception, not its rule.
 #[test]
 fn a_conjunction_before_a_nucleus_mark_parts_entries() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   assert_eq!(
     clean_creators(repro!(
       "revtex_nucleus_mark_after_a_conjunction_parts_entries"
     )),
-    [vec!["Ann Able 1", "affiliation=Univ X"], vec![
+    [vec!["Ann Able 1", "affiliation=1 Univ X"], vec![
       "Bob Baker 2",
-      "affiliation=Lab Y"
+      "affiliation=2 Lab Y"
     ],]
   );
   assert_eq!(
@@ -239,9 +256,9 @@ fn a_conjunction_before_a_nucleus_mark_parts_entries() {
       "revtex_nucleus_mark_after_bare_and_or_ampersand_parts_entries"
     )),
     [
-      vec!["Ann Able 1", "affiliation=Univ X"],
-      vec!["Bob Baker 2", "affiliation=Lab Y"],
-      vec!["Cat Cole 3", "affiliation=Inst Z"],
+      vec!["Ann Able 1", "affiliation=1 Univ X"],
+      vec!["Bob Baker 2", "affiliation=2 Lab Y"],
+      vec!["Cat Cole 3", "affiliation=3 Inst Z"],
     ]
   );
 }
@@ -253,15 +270,16 @@ fn a_conjunction_before_a_nucleus_mark_parts_entries() {
 /// `an_ordinal_number_is_no_mark`: the suffix test's exception, the mark read.
 #[test]
 fn a_saint_after_a_math_number_is_a_word() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   assert_eq!(
     clean_creators(repro!("revtex_math_number_mark_before_saint_is_a_mark")),
     [
       vec![
         "Ann Able 1",
-        "affiliation=St. Petersburg State University 1 st Floor, Bldg C"
+        "affiliation=1 St. Petersburg State University 1 st Floor, Bldg C"
       ],
-      vec!["Bob Baker 2", "affiliation=Univ B"],
-      vec!["Cat Cole 3", "affiliation=St Andrews University"],
+      vec!["Bob Baker 2", "affiliation=2 Univ B"],
+      vec!["Cat Cole 3", "affiliation=3 St Andrews University"],
     ]
   );
 }

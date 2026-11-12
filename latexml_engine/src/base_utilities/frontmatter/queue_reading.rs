@@ -201,7 +201,7 @@ pub(in crate::base_utilities) fn queued_author_marks() -> Result<Rc<Vec<Vec<Stri
   Ok(Rc::clone(&queue_marks_reading()?.author_marks))
 }
 
-/// Whether a queued author's name prints a mark ([`queued_author_marks`]).
+/// Whether a queued author's name prints a mark (`queued_author_marks`).
 pub fn queued_authors_marked() -> Result<bool> {
   Ok(queued_author_marks()?.iter().any(|marks| !marks.is_empty()))
 }

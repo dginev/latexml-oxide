@@ -132,6 +132,7 @@ fn an_address_placed_more_often_than_printed_is_counted() {
 /// cut list), each column's own line 1, a footnote mark on three names, aas's `\altaffilmark` on two authors.
 #[test]
 fn a_clean_block_counts_nothing() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let revtex = "\\documentclass{revtex4-1}\n\\begin{document}\n\\title{T}\n\\author{Ann Able}\n\\email{ann@a.org}\n\\affiliation{Univ \
                 A, Town}\n\\author{Bob Baker}\n\\affiliation{Univ A, Town}\n\\author{Cat Cole}\n\\affiliation{Univ C, \
                 City}\n\\maketitle\nBody.\n\\end{document}\n";
@@ -166,9 +167,9 @@ fn a_clean_block_counts_nothing() {
     (
       repro!("emit_content_revtex_label_shared_in_a_cut_list"),
       vec![
-        row(&["Ann Able 1", "affiliation=Dept of Physics, Univ X"]),
-        row(&["Bob Baker 1", "affiliation=Dept of Physics, Univ X"]),
-        row(&["Cat Cole 2", "affiliation=Lab Y"]),
+        row(&["Ann Able 1", "affiliation=1 Dept of Physics, Univ X"]),
+        row(&["Bob Baker 1", "affiliation=1 Dept of Physics, Univ X"]),
+        row(&["Cat Cole 2", "affiliation=2 Lab Y"]),
       ],
     ),
     (repro!("emit_content_a_label_repeated_per_column"), vec![

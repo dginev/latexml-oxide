@@ -349,15 +349,16 @@ fn ieeetrantools_under_ieeetran_keeps_class_author_marks() {
     &xml,
     "creator",
     &[r#"role="author""#],
+    // (P4c: each mark of the list shown, as pdflatex prints it — P4S Q1)
     "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\">*</sup></personname><contact \
-     name=\"Affiliation:\u{a0}\" role=\"affiliation\">Uni One, City</contact></creator>",
+     name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">*</sup>Uni One, City</contact></creator>",
   );
   assert_element(
     &xml,
     "creator",
     &["before=\"\u{2003}\u{2003}\""],
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id2\">†</sup></personname><contact \
-     name=\"Affiliation:\u{a0}\" role=\"affiliation\">Uni Two, Town</contact></creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\">†</sup></personname><contact \
+     name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\">†</sup>Uni Two, Town</contact></creator>",
   );
   let tex = "\\documentclass{IEEEtran}\n\\usepackage{amsthm}\n\\usepackage{IEEEtrantools}\n\\begin{document}\n\
              \\title{T}\n\\author{A\\IEEEauthorrefmark{2}}\n\\maketitle\nBody.\n\\end{document}\n";

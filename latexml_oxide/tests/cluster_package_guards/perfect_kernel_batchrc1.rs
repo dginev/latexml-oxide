@@ -42,14 +42,15 @@ fn run_default(tex: &str) -> (String, String) {
 /// shorter than it since): `=2` writes what off writes, `Univ Alpha` Ann Able's.
 #[test]
 fn an_affiliation_after_a_refilled_mark_is_read() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let tex = repro!("emit_ieee_affiliation_after_a_refilled_mark");
   let expected = [
-    row(&["Ann Able *", "affiliation=Univ Alpha"]),
+    row(&["Ann Able *", "affiliation=* Univ Alpha"]),
     row(&[
       "Bob Baker †",
-      "affiliation=a b c d e f g h i j k l m n o p q r s t u v w x y z",
+      "affiliation=† a b c d e f g h i j k l m n o p q r s t u v w x y z",
     ]),
-    row(&["affiliation=Univ Line3"]),
+    row(&["affiliation=‡ Univ Line3"]),
   ];
   let (log, xml) = run_default(tex);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
@@ -61,6 +62,7 @@ fn an_affiliation_after_a_refilled_mark_is_read() {
 /// the budget's, which says what `=2` does with it. Distinct from the mark's guard: the check's side, a call with no events.
 #[test]
 fn an_unread_calls_words_are_counted() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let (log, xml) = in_a_directory(repro!("emit_content_check_counts_an_unread_call"), &[], &[
     ("LATEXML_REHEARSAL_READ_BUDGET", "20000"),
   ]);
@@ -88,7 +90,7 @@ fn an_unread_calls_words_are_counted() {
   );
   assert_eq!(creators(&xml), [
     row(&["Ann Able *"]),
-    row(&["Bob Baker †", "affiliation=Univ Beta"]),
+    row(&["Bob Baker †", "affiliation=† Univ Beta"]),
   ]);
 }
 
@@ -140,6 +142,7 @@ fn a_macro_held_author_list_costs_no_copy_per_mark() {
 /// call (`Ledger::unrecorded`) shares.
 #[test]
 fn an_unread_calls_accented_words_count_whole() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let (log, xml) = in_a_directory(
     repro!("emit_content_check_counts_accented_words_whole"),
     &[],
@@ -166,7 +169,7 @@ fn an_unread_calls_accented_words_count_whole() {
   );
   assert_eq!(creators(&xml), [
     row(&["Ann Able *"]),
-    row(&["Bob Baker †", "affiliation=Univ Beta"]),
+    row(&["Bob Baker †", "affiliation=† Univ Beta"]),
   ]);
 }
 

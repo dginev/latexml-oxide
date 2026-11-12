@@ -436,21 +436,6 @@ fn split_marked_pieces(tokens: Tokens, line_start: bool) -> Result<Vec<Tokens>> 
     if !requested && heads_nothing {
       return true;
     }
-    let symbol = mark
-      .operand
-      .as_ref()
-      .is_none_or(|operand| is_symbol_mark(operand));
-    // (a number or letter mark no name requests glued to the word after it is that word's prescript, after a comma too:
-    // `$^{2}$Univ Y, $^{3}$He Lab`, `\textsuperscript{3}He`, `$^{3}\mathrm{He}$` — ISO1's after-a-comma REDs)
-    // (a formula going on after its script prints the script's base there)
-    let in_formula = toks[mark.at] == T_MATH!();
-    let glued_after = toks.get(mark.end).is_some_and(|t| {
-      t.get_catcode() == Catcode::LETTER
-        || (in_formula && !matches!(t.get_catcode(), Catcode::MATH | Catcode::SPACE))
-    });
-    if !symbol && !requested && glued_after {
-      return true;
-    }
     if !mark.glued {
       return false;
     }
@@ -458,6 +443,10 @@ fn split_marked_pieces(tokens: Tokens, line_start: bool) -> Result<Vec<Tokens>> 
     // each entry once, so a label that also heads an entry after a separator is text where it is glued, `$^1$Inst.\ for
     // $^{2}$H Research \quad $^2$Univ B`, and so is one that breaks the list's running sequence before the sequence
     // goes on, `$^1$Lab for $^3$He Studies \quad $^2$Univ B`; review rev99a S1)
+    let symbol = mark
+      .operand
+      .as_ref()
+      .is_none_or(|operand| is_symbol_mark(operand));
     if !symbol && !requested {
       return true;
     }

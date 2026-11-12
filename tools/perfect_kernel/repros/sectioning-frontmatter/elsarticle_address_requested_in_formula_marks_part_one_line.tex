@@ -5,7 +5,9 @@
 % engines: rust int160c = 0 errors, 0 warnings, the line parted at the requested mark; ISO1 = 0 W, Able the whole line,
 %   Baker none (silent: revISO1 B1)
 % expect:  0 errors, 0 warnings; Able "ᵃDept of Physics, Univ X"; Baker "ᵇLab of Chemistry, Univ Y"
-% status:  GREEN (ISO1b) — perfect_kernel_batch90a::a_script_before_printed_ink_or_on_a_base_is_text
+% status:  RED (CLI on P4cbase 9d38af1d10 and on P4c3: Able the whole line, Baker none, 0 W; the in-process 90a row was
+%          green on the base) — moves: post-merge; pinned as today in
+%          perfect_kernel_batch90a::a_script_before_printed_ink_or_on_a_base_is_text
 % preload: ar5iv.sty
 \documentclass{elsarticle}
 \begin{document}

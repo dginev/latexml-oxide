@@ -321,7 +321,7 @@ pub(in crate::base_utilities) fn relocate_annotations(document: &mut Document) -
   for pending in &pending_nodes {
     for note in element_nodes(pending) {
       let label = note.get_attribute("_label").unwrap_or_default();
-      let content = annotation_value(&note).trim().to_string();
+      let content = copy_text(&note);
       if !label.is_empty()
         && !content.is_empty()
         && (find_targets(&label).is_some() || owned_by(&label, &note).is_some())
@@ -396,13 +396,13 @@ pub(in crate::base_utilities) fn relocate_annotations(document: &mut Document) -
           held.touched(&target);
         }
       } else {
-        let content = annotation_value(&note);
+        let content = copy_text(&note);
         if !unlabelled
           && owned_by(&label, &note).is_none()
           && taken.iter().any(|(name, role, text, other)| {
             *name == note.get_name()
               && *role == note.get_attribute("role")
-              && *text == content.trim()
+              && *text == content
               && *other != label
           })
         {
@@ -2080,6 +2080,21 @@ fn is_shared_contact_role(role: &str) -> bool {
       | "email"
       | "url"
   )
+}
+
+/// An annotation's text as its copies under other labels share it: without the label it shows first, each copy its
+/// own (`$^{1,5}$Lab …` cut into "¹Lab …" and "⁵Lab …", 1101.5841): the key of its printed label ([`PRINTED_LABEL`]).
+fn copy_text(note: &Node) -> String {
+  let text = annotation_value(note);
+  let key = note
+    .get_attribute(defs::frontmatter_api::PRINTED_LABEL)
+    .and_then(|label| label.split_once(':').map(|(_, key)| key.to_string()));
+  let text = text.trim();
+  key
+    .and_then(|key| text.strip_prefix(key.as_str()))
+    .unwrap_or(text)
+    .trim()
+    .to_string()
 }
 
 #[cfg(test)]

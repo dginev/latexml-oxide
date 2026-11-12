@@ -35156,22 +35156,29 @@ guarded `if $LaTeXML::DEBUG{feature}` (L467), so `--verbose` alone prints no tra
 the un-featured traces are Rust's own instrumentation with no Perl feature to enable them, and the prefix keeps them
 apart from `Info:` lines in a log. Guard `cluster_cli::debug_feature_scope::debug_feature_prints_only_its_feature`.
 
-### 1008. A binding's marked affiliation list is cut by the API's Cut, as the binding declares it, each mark shown (Option C P4c)
+### 1009. A binding's marked affiliation list is cut by the API's Cut, as the binding declares it, each mark shown (Option C P4c)
 
 **Perl.** `\IEEEauthorblockA{…}` and iopart's `\address{…}` are one `\lx@add@affiliation` each
 (IEEEtran.cls.ltxml:145); no list is cut at its marks, so every author gets the whole block.
 
 **Rust.** A binding hands its marked list to the one Cut (`frontmatter_api::cut::cut_list`) through
-`\lx@add@affiliation@marked`/`@shared` (`marked_list_calls`) with its declaration, `MARKED_LIST_CUT`: every printed mark
-cuts it once the names print theirs (`affiliation_is_marked`, read as digested, a note's leading label counted:
-`prints_list_marks`); an address line behind an e-mail label is entry text; legends and notes stay the notes the reading
-makes of them; the call's placement (`annotate=new`) is dropped, the marks place the entries. The API's own Cut keeps
-its parameters (`API_CUT`: two requested marks, labelled address lines). Each entry shows its mark (FIDELITY_CHARTER §2,
-P4S Q1). The binding calls the Cut itself: a flush digests a block's affiliation with `\lx@annotate@frontmatter` let to
-its `@now`, which no Cut reads. The binding's own cutter (`binding_cut_list_attr`) is deleted.
+`\lx@add@affiliation@marked`/`@shared` (`author_macros.rs` `marked_list_calls`) with its declaration, `MARKED_LIST_CUT`
+(a `CutParameters`): every printed mark cuts it once the names print theirs (`affiliation_is_marked`); an address line
+behind an e-mail label is entry text; a printed comma closing the list and the notes after it stay as printed (no part
+repeated on every entry); the call's placement (`annotate=new`) is dropped, the marks place the entries. The API's own
+Cut keeps `API_CUT` (two requested marks, labelled address lines, the closing separator trimmed, a wrapper's trailing
+parts every entry's). Each entry shows its mark (FIDELITY_CHARTER §2, P4S Q1). The binding calls the Cut itself: a
+flush digests a block's affiliation with `\lx@annotate@frontmatter` let to its `@now`, which no Cut reads. The marks
+gate and the cutter read one fact, the marks an argument prints at its own level (`argument_marks`, `prints_list_marks`):
+the level its words print at, inside the box when one box holds them all (names in a `\parbox` or a tabular, acmart's
+`\institution{…}`), a note's leading label counted for a list. A cut that labels no entry of a one-entry list leaves it
+whole (the call cut again would not end). The binding's own cutter (`binding_cut_list_attr`) and the token gate
+(`queued_creators_have_marks`) are deleted.
 **Why**: one cut for every printed list; the binding's former cut dropped the marks it cut at (2601.01850, 1204.4183).
 **Witnesses**: IEEEtran 1705.01774, 1801.04010, 1504.01072, 1811.06030, 2310.18257, 2511.18221, 2512.10732,
-2609.16600; iopart 1205.6912 (each the base's entries with their marks shown).
-**Guard**: `perfect_kernel_batchc1::marked_list_cut_as_its_binding_declares` (9 rows).
-**Open**: 2508.17623's link line after the entries is lost, counted
-(`ieee_marked_list_url_line_after_entries_red.tex`).
+2609.16600 (each the base's entries with their marks shown); 2508.17623 (names in a `\parbox`, the link line kept);
+1801.00540 ("Red Hat Inc.," keeps its comma); 2605.05837 (the funding `\thanks` once); iopart 1205.6912.
+**Guard**: `perfect_kernel_batchc1::marked_list_cut_as_its_binding_declares` (11 rows).
+**Open (post-merge REDs)**: `ieee_marked_list_email_block_last_address_nameless_red`,
+`ieee_marked_list_star_led_names_entries_nameless_red`, `iopart_marked_list_unmarked_first_line_every_authors_red` (the
+base's placements, pinned as today with each mark shown).

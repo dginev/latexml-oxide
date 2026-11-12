@@ -33,13 +33,14 @@ fn creators(xml: &str) -> Vec<String> {
 /// the names showing its mark. Repro sectioning-frontmatter/ieee_refmark_sized_marks_link.
 #[test]
 fn ieee_refmark_sized_marks_link() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieee_refmark_sized_marks_link.tex"
   );
   assert_eq!(creators(&convert_clean(tex)), vec![
-    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\"><Math mode=\"inline\" tex=\"1\" text=\"1\" xml:id=\"m1\">\n          <XMath xml:id=\"m1.1\">\n            <XMTok fontsize=\"80%\" meaning=\"1\" role=\"NUMBER\">1</XMTok>\n          </XMath>\n        </Math></sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ A, Country</contact>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Bob Baker<sup xml:id=\"id2\"><Math mode=\"inline\" tex=\"2\" text=\"2\" xml:id=\"m2\">\n          <XMath xml:id=\"m2.1\">\n            <XMTok fontsize=\"80%\" meaning=\"2\" role=\"NUMBER\">2</XMTok>\n          </XMath>\n        </Math></sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B, Country</contact>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Cy Coe<sup xml:id=\"id3\"><Math mode=\"inline\" tex=\"2\" text=\"2\" xml:id=\"m3\">\n          <XMath xml:id=\"m3.1\">\n            <XMTok fontsize=\"80%\" meaning=\"2\" role=\"NUMBER\">2</XMTok>\n          </XMath>\n        </Math></sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Univ B, Country</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ann Able<sup xml:id=\"id1\"><Math mode=\"inline\" tex=\"1\" text=\"1\" xml:id=\"m1\">\n          <XMath xml:id=\"m1.1\">\n            <XMTok fontsize=\"80%\" meaning=\"1\" role=\"NUMBER\">1</XMTok>\n          </XMath>\n        </Math></sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><Math mode=\"inline\" tex=\"1\" text=\"1\" xml:id=\"m4a\">\n          <XMath xml:id=\"m4a.1\">\n            <XMTok fontsize=\"80%\" meaning=\"1\" role=\"NUMBER\">1</XMTok>\n          </XMath>\n        </Math></sup>Univ A, Country</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Bob Baker<sup xml:id=\"id3\"><Math mode=\"inline\" tex=\"2\" text=\"2\" xml:id=\"m2\">\n          <XMath xml:id=\"m2.1\">\n            <XMTok fontsize=\"80%\" meaning=\"2\" role=\"NUMBER\">2</XMTok>\n          </XMath>\n        </Math></sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><Math mode=\"inline\" tex=\"2\" text=\"2\" xml:id=\"m5a\">\n          <XMath xml:id=\"m5a.1\">\n            <XMTok fontsize=\"80%\" meaning=\"2\" role=\"NUMBER\">2</XMTok>\n          </XMath>\n        </Math></sup>Univ B, Country</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Cy Coe<sup xml:id=\"id5\"><Math mode=\"inline\" tex=\"2\" text=\"2\" xml:id=\"m3\">\n          <XMath xml:id=\"m3.1\">\n            <XMTok fontsize=\"80%\" meaning=\"2\" role=\"NUMBER\">2</XMTok>\n          </XMath>\n        </Math></sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\"><Math mode=\"inline\" tex=\"2\" text=\"2\" xml:id=\"m5b\">\n          <XMath xml:id=\"m5b.1\">\n            <XMTok fontsize=\"80%\" meaning=\"2\" role=\"NUMBER\">2</XMTok>\n          </XMath>\n        </Math></sup>Univ B, Country</contact>\n  </creator>",
   ]);
 }
 
@@ -53,14 +54,15 @@ fn ieee_refmark_sized_marks_link() {
 /// Repro sectioning-frontmatter/ieee_refmark_address_and_marks_in_a_line.
 #[test]
 fn ieee_refmark_address_and_marks_in_a_line() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieee_refmark_address_and_marks_in_a_line.tex"
   );
   assert_eq!(creators(&convert_clean(tex)), vec![
-    "<creator role=\"author\">\n    <personname>Ben Steen<sup xml:id=\"id1\">*</sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Microsoft Data &amp; AI</contact>\n    <contact name=\"Email: \" role=\"email\">steen@microsoft.com</contact>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Mic Tufo<sup xml:id=\"id2\">†</sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Google</contact>\n    <contact name=\"Email: \" role=\"email\">tufo@google.com</contact>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Alex Svy<sup xml:id=\"id3\">‡</sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\">Google DeepMind</contact>\n    <contact name=\"Email: \" role=\"email\">svy@google.com</contact>\n  </creator>",
-    "<creator before=\"  \" role=\"author\">\n    <personname>Dem Hespe<sup xml:id=\"id4\">§</sup></personname>\n    <contact name=\"Affiliation: \" role=\"affiliation\"><text font=\"italic\" xml:id=\"id5\">Independent</text></contact>\n    <contact name=\"Email: \" role=\"email\">dem.hespe@outlook.com</contact>\n  </creator>",
+    "<creator role=\"author\">\n    <personname>Ben Steen<sup xml:id=\"id1\">*</sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">*</sup>Microsoft Data &amp; AI</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">steen@microsoft.com</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Mic Tufo<sup xml:id=\"id3\">†</sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\">†</sup>Google</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">tufo@google.com</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Alex Svy<sup xml:id=\"id5\">‡</sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id6\">‡</sup>Google DeepMind</contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">svy@google.com</contact>\n  </creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Dem Hespe<sup xml:id=\"id7\">§</sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id8\">§</sup><text font=\"italic\" xml:id=\"id9\">Independent</text></contact>\n    <contact name=\"Email:\u{a0}\" role=\"email\">dem.hespe@outlook.com</contact>\n  </creator>",
     "<creator role=\"author\">\n    <contact name=\"Email: \" role=\"email\">sund@microsoft.com</contact>\n  </creator>",
   ]);
 }

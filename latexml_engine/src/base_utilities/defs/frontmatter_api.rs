@@ -40,6 +40,39 @@ pub(in crate::base_utilities) const PRINTED_LABEL: &str = "_printedlabel";
 pub(in crate::base_utilities) const CUT_ROLES: [&str; 3] =
   ["affiliation", "altaffiliation", "address"];
 
+/// What the Cut reads of a list's shape ([`cut_list`]): its own parameters for any contact ([`API_CUT`]), or those a
+/// binding declares for the marked list it hands over (`author_macros::MARKED_LIST_CUT`).
+pub(in crate::base_utilities) struct CutParameters {
+  /// Cut at every printed mark, the binding having read its list marked ([`affiliation_is_marked`]), not only at two or
+  /// more marks the names request ([`requested_marked_entries_in`]).
+  pub(in crate::base_utilities) every_mark:             bool,
+  /// An address line behind an e-mail label is one of the list's (its addresses the run's), not text of the entry
+  /// above ([`EntryCall`]).
+  pub(in crate::base_utilities) labelled_address_lines: bool,
+  /// The call's keys its entries do not keep: the marks place them.
+  pub(in crate::base_utilities) dropped_keys:           &'static [&'static str],
+  /// A separator closing the list is no text of its last entry (`…Paris,⏎}`, 2009.04283); a binding's list keeps the
+  /// comma it prints (IEEEtran 1801.00540's "Red Hat Inc.,").
+  pub(in crate::base_utilities) trim_closing_separator: bool,
+  /// The parts after the wrapper holding the entries are each entry's (`\institution{$^1$A \quad $^2$B}\country{X}`,
+  /// 2506.18881); a binding's list repeats none, its notes after the list once (IEEEtran 2605.05837's `\thanks`).
+  pub(in crate::base_utilities) shared_parts:           bool,
+}
+
+/// The keys a Cut entry does not keep from the call that held its list: the marks are its labels, so a declared
+/// sequence (`labelseq`) or sharing (`_share=authors`) no longer places it (FRONTMATTER_SINGLE_ENGINE_PLAN step 1
+/// before step 3: no convention outranks a mark, rulings R1, R3).
+const CUT_DROPPED_KEYS: [&str; 2] = ["labelseq", "_share"];
+
+/// The Cut of a contact queued through the API ([`cut_marked_contact`]).
+pub(in crate::base_utilities) const API_CUT: CutParameters = CutParameters {
+  every_mark:             false,
+  labelled_address_lines: true,
+  dropped_keys:           &CUT_DROPPED_KEYS,
+  trim_closing_separator: true,
+  shared_parts:           true,
+};
+
 /// The attribute naming the affiliation-kind entry an e-mail was digested inside, and the entry itself (its key, a count
 /// of such entries: `\lx@annotate@frontmatter@now`), by which the Link step reads the entry's addresses and carriers
 /// (`insert::link_entry_addresses`; OXIDIZED_DESIGN_DIVERGENCES #956).

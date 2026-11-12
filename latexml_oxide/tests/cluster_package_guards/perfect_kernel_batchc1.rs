@@ -255,6 +255,16 @@ fn class_numbered_institutes_read_by_meaning() {
         "affiliation=Univ B, Town B",
       ]],
     ),
+    // (a store mark a document macro prints, no name requesting it, is the entry's text: the numbers stand — revP4d S1,
+    // red on P4d: both authors both entries)
+    (
+      repro!("class_numbered_institutes_macro_store_mark_gives_every_entry"),
+      0,
+      &[&["Ann Able", "affiliation=a Univ A, Town A"], &[
+        "Bob Baker",
+        "affiliation=Univ B, Town B",
+      ]],
+    ),
     (
       repro!("raw_class_refstepcounter_numbered_institutes_macro_held_separator"),
       0,
@@ -330,7 +340,7 @@ fn notes(xml: &str) -> Vec<String> {
 }
 
 /// Option C P4c: a binding's marked list (`\lx@add@affiliation@marked`, IEEEtran's `\IEEEauthorblockA`, iopart's
-/// `\address`) is cut by the API's Cut as the binding declares it (`MARKED_LIST_CUT`, OD #1008): at every mark, an
+/// `\address`) is cut by the API's Cut as the binding declares it (`MARKED_LIST_CUT`, OD #1009): at every mark, an
 /// address line entry text, legends and notes notes, no placement attribute; each mark shown (Q1). One row a witness's
 /// shape (red on the P4c WIP): its Warning count, every creator's name and contacts, every note.
 #[test]
@@ -423,6 +433,7 @@ fn marked_list_cut_as_its_binding_declares() {
       ],
       &[],
     ),
+    // (RED, the base's placement pinned with each mark shown — ieee_marked_list_email_block_last_address_nameless_red)
     (
       repro!("ieee_marked_list_unmarked_note_block"),
       0,
@@ -449,6 +460,7 @@ fn marked_list_cut_as_its_binding_declares() {
       ],
       &[],
     ),
+    // (RED, the base's placement pinned with each mark shown — ieee_marked_list_star_led_names_entries_nameless_red)
     (
       repro!("ieee_marked_list_star_legend_tail"),
       0,
@@ -494,6 +506,34 @@ fn marked_list_cut_as_its_binding_declares() {
       ],
       &["note:thanks=ann@a.edu § Corresponding author"],
     ),
+    // (names in a `\parbox`: their marks are the names' own, so the binding cuts the list, the link line after the
+    // entries the last entry's — 2508.17623, red on P4c2: the url in no creator, 1 Warning)
+    (
+      repro!("ieee_marked_list_url_line_after_entries"),
+      0,
+      &[
+        &["Ann Able § *", "affiliation=§ Univ A"],
+        &["Bob Baker † *", "affiliation=† Univ B"],
+        &[
+          "Cy Cole ¶",
+          "affiliation=¶ Univ D",
+          "url=https://example.org/project/",
+        ],
+        &["Di Dow ‡", "affiliation=‡ Univ C"],
+      ],
+      &[],
+    ),
+    // (a note after the list printed once, no part of every entry — 2605.05837, red on P4c2: once per entry)
+    (
+      repro!("ieee_marked_list_note_after_the_list_once"),
+      0,
+      &[&["Ann Able *", "affiliation=* Univ A, Town A"], &[
+        "Bob Baker †",
+        "affiliation=† Univ B, Town B.",
+      ]],
+      &["pubnote:thanks=Supported by Grant 1."],
+    ),
+    // (RED, the base's: "Univ A, Town A" Cy Cole's alone — iopart_marked_list_unmarked_first_line_every_authors_red)
     (
       repro!("iopart_marked_list_unmarked_first_line"),
       0,
