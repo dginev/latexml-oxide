@@ -1906,28 +1906,7 @@ mod pgfmath_grammar {
   /// Guard: `perfect_kernel_batch56::pgfmath_reads_expl3_register_names`.
   fn try_cs_register(i: &mut In) -> Option<f64> {
     sb(i);
-    let b = i.input.as_bytes();
-    if b.first() != Some(&b'\\') {
-      return None;
-    }
-    let n_long = b[1..]
-      .iter()
-      .take_while(|c| c.is_ascii_alphabetic() || matches!(**c, b'@' | b'_' | b':'))
-      .count();
-    let n = b[1..]
-      .iter()
-      .take_while(|c| c.is_ascii_alphabetic() || **c == b'@')
-      .count();
-    if n == 0 {
-      return None;
-    }
-    if n_long > n && ::latexml_core::state::lookup_register_quiet(&i.input[..1 + n_long]).is_some()
-    {
-      let value = pgfmath_register_lookup(&i.input[..1 + n_long]);
-      bump(i, 1 + n_long);
-      i.state.units_declared = true;
-      return Some(value);
-    }
+    let n = cs_name_len(i.input)?;
     let cs = &i.input[..1 + n];
     if matches!(cs, "\\wd" | "\\ht" | "\\dp") {
       let dimension = cs;
@@ -1945,31 +1924,46 @@ mod pgfmath_grammar {
     Some(value)
   }
 
-  /// The box after `\wd`/`\ht`/`\dp`: a register holding its number (`\wd\mybox`, Perl's `/\\wd/ CS`,
-  /// pgfmath.code.tex.ltxml:696-701, tikzscale.sty:522-524 `\pgfmathsetmacro{#1}{#2\tikzscale@measuredSize}`), or
-  /// decimal digits (`\wd0`, which TeX and pgf read; Perl's grammar reads none and returns 0).
-  fn box_number(i: &mut In) -> Option<i64> {
-    let b = i.input.as_bytes();
-    let spaces = b.iter().take_while(|c| **c == b' ').count();
-    let rest = &b[spaces..];
-    if rest.first() == Some(&b'\\') {
-      let n = rest[1..]
+  /// The name's length after the `\` of the control sequence `input` starts with: the `[a-zA-Z@]` run, or the longer
+  /// `[a-zA-Z@_:]` run when that names a live register (an expl3 name, see `try_cs_register`); `None` for no name.
+  fn cs_name_len(input: &str) -> Option<usize> {
+    let b = input.as_bytes().strip_prefix(b"\\")?;
+    let n = b
+      .iter()
+      .take_while(|c| c.is_ascii_alphabetic() || **c == b'@')
+      .count();
+    if n == 0 {
+      return None;
+    }
+    let n_long = n
+      + b[n..]
         .iter()
-        .take_while(|c| c.is_ascii_alphabetic() || **c == b'@')
+        .take_while(|c| c.is_ascii_alphabetic() || matches!(**c, b'@' | b'_' | b':'))
         .count();
-      if n == 0 {
-        return None;
-      }
-      let cs = &i.input[spaces..spaces + 1 + n];
-      let number = pgfmath_register_lookup(cs) as i64;
+    let long_register =
+      n_long > n && ::latexml_core::state::lookup_register_quiet(&input[..1 + n_long]).is_some();
+    Some(if long_register { n_long } else { n })
+  }
+
+  /// The box after `\wd`/`\ht`/`\dp`: a register holding its number (`\wd\mybox`, an expl3 `\wd\l_my_box`; Perl's
+  /// `/\\wd/ CS`, pgfmath.code.tex.ltxml:696-701; tikzscale.sty:522-524), or decimal digits (`\wd0`, which TeX and pgf
+  /// read; Perl's grammar reads none and returns 0).
+  fn box_number(i: &mut In) -> Option<i64> {
+    let spaces = i.input.bytes().take_while(|c| *c == b' ').count();
+    let rest = &i.input[spaces..];
+    if let Some(n) = cs_name_len(rest) {
+      let number = pgfmath_register_lookup(&rest[..1 + n]) as i64;
       bump(i, spaces + 1 + n);
       return Some(number);
     }
-    let digits = rest.iter().take_while(|c| c.is_ascii_digit()).count();
+    if rest.starts_with('\\') {
+      return None;
+    }
+    let digits = rest.bytes().take_while(|c| c.is_ascii_digit()).count();
     if digits == 0 {
       return None;
     }
-    let number = i.input[spaces..spaces + digits].parse().ok()?;
+    let number = rest[..digits].parse().ok()?;
     bump(i, spaces + digits);
     Some(number)
   }

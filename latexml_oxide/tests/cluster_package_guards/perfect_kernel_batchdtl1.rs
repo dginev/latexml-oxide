@@ -96,6 +96,23 @@ const ROWS: &[Row] = &[
     )],
     holds:    &[],
   },
+  // A (value side, DTL1e): a box named by an expl3 register, `\wd\l_my_box*2`, read by `try_cs_register`'s
+  // expl3-name rule (revDTL1b S2); pdflatex 0 `!`, A[80.0]. Read as `\l` then box 0: A[30.0], 1 Warning.
+  Row {
+    name:     "pgfmath_box_named_by_expl3",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/graphics-tikz/pgfmath_box_named_by_expl3.tex"
+    ),
+    files:    &[],
+    counts:   (0, 0),
+    messages: &[],
+    elements: &[(
+      "para",
+      "xml:id=\"p1\"",
+      r#"<para xml:id="p1"><p xml:id="p1.1">A[80.0]</p></para>"#,
+    )],
+    holds:    &[],
+  },
   // The error side: a dimension TeX cannot hold still reports "Dimension too large" (pdflatex 1 `!`; Perl 0 and
   // 20000.0pt). A Warning today; the out-of-range severity batch makes it an Error.
   Row {

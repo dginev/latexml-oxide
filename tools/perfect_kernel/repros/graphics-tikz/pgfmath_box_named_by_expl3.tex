@@ -1,0 +1,20 @@
+% mechanism: pgfmath's `\wd`/`\ht`/`\dp` read (DTL1b fix A, `box_number`) scanned a box name of letters and `@` only, so
+%   an expl3 box `\l_my_box` read `\l` (Warning: not a register) and then box 0; it now names the box by
+%   `try_cs_register`'s expl3-name rule (`cs_name_len`, guard pgfmath_reads_expl3_register_names) (revDTL1b S2).
+% witness: synthetic
+% oracle:  pdflatex: 0 errors: A[80.0] (2 × the 40pt box); Perl 2 Errors (pgfparse, overflow), 4 Warnings,
+%   A[16383.99998]
+% engines: rust DTL1b, int161a: A[30.0] (box 0's width), 1 Warning; int160b: a 0 read
+% expect:  0 errors 0 warnings; A[80.0]
+% status:  RED (int160b, DTL1b, int161a) -> GREEN (DTL1e, guard perfect_kernel_batchdtl1::batchdtl1_pgfmath_rows)
+\documentclass{article}
+\usepackage{tikz}
+\ExplSyntaxOn
+\box_new:N \l_my_box
+\hbox_set:Nn \l_my_box {\rule{40pt}{4pt}}
+\cs_new:Npn \mywd {\pgfmathparse{\wd\l_my_box*2}[\pgfmathresult]}
+\ExplSyntaxOff
+\begin{document}
+\setbox0=\hbox{\rule{30pt}{7pt}}
+A\mywd
+\end{document}
