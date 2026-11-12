@@ -1,0 +1,22 @@
+% mechanism: a mark character typed into a name the marks gate rehearses for another command (`\,`, `\ `: robust or
+%   primitive, a possible mark): the rehearsal reads the typed `*` as a mark, so REVTeX's names stand bare beside a
+%   nameless creator holding the block, where the tied twin revtex_typed_star_after_tie_or_accent_is_name_text (not
+%   rehearsed since CST2) gives both lines to both authors; the gate and the rehearsal disagree on a typed character
+% witness: synthetic (review revCST2 finding 1's siblings, probes revm_thinstar, revm_ctlspstar)
+% oracle:  pdflatex (TL 2025, revtex4-2, -no-shell-escape) 0 errors: "A. Smith * and B. Jones* / 1Uni One, Town /
+%          2Uni Two, Town"
+% engines: int165a and CST2 (byte-identical): "A. Smith *" and "B. Jones*" bare, a nameless creator "1 Uni One, Town",
+%          "2 Uni Two, Town"
+% expect:  0 errors, 0 warnings; as the tied twin: A. Smith * and B. Jones*, each "1 Uni One, Town" and "2 Uni Two, Town"
+% moves:   post-merge
+% status:  RED
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{A. Smith\,*}
+\author{B.\ Jones*}
+\affiliation{$^1$Uni One, Town\\ $^2$Uni Two, Town}
+\begin{abstract}x\end{abstract}
+\maketitle
+Text.
+\end{document}
