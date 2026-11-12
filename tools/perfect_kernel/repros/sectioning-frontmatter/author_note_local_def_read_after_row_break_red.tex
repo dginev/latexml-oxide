@@ -1,0 +1,9 @@
+% mechanism: a LOCAL definition's read scan (`emit.rs:3610-3618`) stops only at a top-level `\and`, but `\\` also ends the author's
+%   tabular cell in article's `\@author`: a read after `\\` within the same author counts, the block declines, and the decline prints
+%   what TeX does not ("Dept (a)"). Fix: stop the local scan at a top-level row break too; the doc comment and OD #988's sentence name
+%   both (revFNR1c S2; sibling of `author_note_macro_local_def_read_past_its_cell_red`)
+% witness: synthetic (revFNR1c r5)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "Ann One ∗ / Dept / Bob Two"
+% engines: rust FNR1base: Ann's affiliation "Dept"; FNR1c: "Dept (a)" (invented "(a)")
+% expect:  0 errors; Ann's affiliation "Dept"
+% status:  RED (FNR1c) — moves: post-merge (FNRR)
