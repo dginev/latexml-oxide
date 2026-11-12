@@ -28,6 +28,7 @@
 use latexml_core::{
   definition::origin::DefinitionOrigin,
   document::{can_auto_close, can_contain},
+  state::file_loaded,
 };
 
 use crate::{
@@ -1691,10 +1692,11 @@ fn document_hook_code(hook: &str) -> bool {
     let end = rest.iter().position(|t| *t == mark).unwrap_or(rest.len());
     let label: String = rest[..end].iter().map(ToString::to_string).collect();
     let owner = label.split('/').next().unwrap_or_default();
+    // (`state::file_loaded`: a `\@ifpackagelater` query's `\relax` `\ver@` is no load, F14)
     if owner == "top-level"
       || [".sty", ".cls"]
         .iter()
-        .all(|ext| lookup_meaning(&T_CS!(&s!("\\ver@{owner}{ext}"))).is_none())
+        .all(|ext| !file_loaded(&s!("{owner}{ext}")))
     {
       return true;
     }

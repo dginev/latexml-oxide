@@ -229,6 +229,25 @@ const ROWS: &[Row] = &[
       r#"<text font="typewriter" xml:id="p1.1.1">/protected/long macro:#1-&gt;/relax #1|macro:-&gt;/relax </text>"#,
     )],
   },
+  // A label naming a package the document only queried is the document's code: `\@ifpackagelater` leaves its `\ver@`
+  // `\relax`, no load (`state::file_loaded`; red on int167a: `Info:hook:cmd/emph/before`, 2 warnings). F14.
+  Row {
+    name:     "command_hook_a_queried_package_label_is_the_documents",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/command_hook_a_queried_package_label_is_the_documents.tex"
+    ),
+    counts:   (0, 3),
+    messages: &[
+      r"Warning:hook:cmd/emph/before LaTeXML's binding of \emph takes no generic hook; its code does not run",
+      r"Warning:hook:cmd/arabic/before LaTeXML's binding of \arabic takes no generic hook; its code does not run",
+      r"Warning:hook:cmd/footnote/before LaTeXML's binding of \footnote takes no generic hook; its code does not run",
+    ],
+    elements: &[(
+      "p",
+      "xml:id=\"p1.1\"",
+      r#"<p xml:id="p1.1">A <emph font="italic" xml:id="p1.1.1">b</emph> 0<note mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>N</note>.</p>"#,
+    )],
+  },
 ];
 
 /// Every row converted once, in-process: exact counts, the whole diagnostic lines, the whole elements.
