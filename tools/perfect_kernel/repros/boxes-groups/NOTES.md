@@ -1098,6 +1098,17 @@ and a repack that runs off its bottom keeps the paragraph, unless the group adde
 deletes at a paragraph's end, tex.web §816; Perl leaves an empty `<text>` there, 1602.08755). Guard
 `perfect_kernel_batchrg1::batchrg1_group_paragraph_rows`.
 
+### group_par_blank_paragraph_measures_no_line, group_par_blank_in_tikz_node_measures_no_line — GREEN (RG1b); group_par_blank_paragraph_after_leavevmode_measures_zero — CONTROL
+RG1's in-group start let `repack_paragraph`'s `empty_line` fire for a group paragraph that kept nothing, stacking an
+empty line under the line outside the group: `\vbox{x{ \par}}` 16.31pt (pdflatex 4.31pt), a tikz text-width node
+`{x{ \par}}` twice its height (revRG1 B1). RUST-ONLY. Fix stomach.rs: `empty_line` never fires for an in-group start.
+The `\leavevmode{ \par}` / `\noindent{ \par}` lines stay 0pt. Guard `perfect_kernel_batchrg1::batchrg1_group_paragraph_rows`.
+
 ### group_par_paragraphs_are_measured_red, group_unskip_reaches_the_paragraph_before_it_red — RED (RG1, post-merge)
-A text group holding a `\par` is mismeasured (`\vbox{x{Cpd\par pt}}` 28.31pt high, pdflatex 18.94pt; cause not traced).
+A text group holding a `\par` is mismeasured (`\vbox{x{Cpd\par pt}}` 28.31pt high, pdflatex 18.94pt; cause not traced;
+an `\unhcopy`ed minipage in `x{…\par}` 16.31pt, pdflatex 5.92pt, int162a the same as ours).
 `Ab {\unskip Cd}` keeps the space (pdflatex "AbCd"; Perl the same as ours): the group's own list is all `\unskip` sees.
+
+### lastbox_implicit_indent_is_void_red — RED (RG1b, post-merge)
+`\leavevmode\global\setbox1\lastbox` leaves box 1 void (pdflatex: the indent box), in a group or not: the implicit indent
+is no box (`take_implicit_indent` only makes the paragraph null).

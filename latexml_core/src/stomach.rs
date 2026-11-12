@@ -2097,11 +2097,13 @@ fn repack_paragraph(end_graf: bool) {
   }
 
   // A paragraph that kept nothing but owns the list's tail (no vertical-mode item of its own stands for its line),
-  // unless it is null: begun by `\noindent` with nothing in it (§1096 `head=tail`).
+  // unless it is null: begun by `\noindent` with nothing in it (§1096 `head=tail`). A text group's list owns no line:
+  // its paragraph's line is in the list outside the group (`\vbox{x{ \par}}` is 4.31pt high).
   let empty_line = !keep
     && end_graf
     && stomach.paragraph_start.is_some_and(|start| {
-      stomach.box_list.len() <= start.index
+      !start.in_group
+        && stomach.box_list.len() <= start.index
         && (start.implicit_indent || !para.iter().all(is_list_tail_transparent))
     });
   if keep || empty_line {

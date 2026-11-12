@@ -64,6 +64,37 @@ const ROWS: &[Row] = &[
       "<para xml:id=\"p1\">\n    <p xml:id=\"p1.1\">x</p>\n  </para>\n  <para xml:id=\"p2\">\n    <p xml:id=\"p2.1\">Hb</p>\n  </para>\n  <para xml:id=\"p3\">\n    <p xml:id=\"p3.1\">x</p>\n  </para>\n  <para xml:id=\"p4\">\n    <p xml:id=\"p4.1\">Ib</p>\n  </para>\n  <para xml:id=\"p5\">\n    <p xml:id=\"p5.1\">x</p>\n  </para>\n  <para xml:id=\"p6\">\n    <p xml:id=\"p6.1\">Kb</p>\n  </para>\n  <para xml:id=\"p7\">\n    <p xml:id=\"p7.1\">Ma</p>\n    <p align=\"center\" xml:id=\"p7.2\"><text fontsize=\"80%\" xml:id=\"p7.2.1\">Mb</text></p>\n  </para>\n",
     ],
   ),
+  // revRG1 B1: a group's blank paragraph measures no line of its own; x's line is outside the group (pdflatex 4.30554pt;
+  // rg1 16.30554pt for `x{ \par}`, `x{ \par\par}`, `x{{ \par}}`; 12pt more after it, 4.2pt more in a p-cell).
+  (
+    repro!("group_par_blank_paragraph_measures_no_line"),
+    0,
+    0,
+    "document",
+    &[
+      "<para xml:id=\"p1\">\n    <p xml:id=\"p1.1\">H1=4.30554pt, D1=0.0pt.</p>\n  </para>\n  <para xml:id=\"p2\">\n    <p xml:id=\"p2.1\">H2=4.30554pt, D2=0.0pt.</p>\n  </para>\n  <para xml:id=\"p3\">\n    <p xml:id=\"p3.1\">H3=4.30554pt, D3=0.0pt.</p>\n  </para>\n  <para xml:id=\"p4\">\n    <p xml:id=\"p4.1\">H4=4.30554pt, D4=0.0pt.</p>\n  </para>\n  <para xml:id=\"p5\">\n    <p xml:id=\"p5.1\">H5=4.30554pt, D5=0.0pt.</p>\n  </para>\n  <para xml:id=\"p6\">\n    <p xml:id=\"p6.1\">H6=16.30554pt, D6=1.94444pt.</p>\n  </para>\n  <para xml:id=\"p7\">\n    <p xml:id=\"p7.1\">H7=8.5pt, D7=3.5pt.</p>\n  </para>\n",
+    ],
+  ),
+  // Its safe twin: the paragraph outside the group holds only its indent (`\leavevmode`, `\noindent`), a 0pt line.
+  (
+    repro!("group_par_blank_paragraph_after_leavevmode_measures_zero"),
+    0,
+    0,
+    "document",
+    &[
+      "<para xml:id=\"p1\">\n    <p xml:id=\"p1.1\">H1=0.0pt.</p>\n  </para>\n  <para xml:id=\"p2\">\n    <p xml:id=\"p2.1\">H2=0.0pt.</p>\n  </para>\n  <para xml:id=\"p3\">\n    <p xml:id=\"p3.1\">H3=0.0pt.</p>\n  </para>\n  <para xml:id=\"p4\">\n    <p xml:id=\"p4.1\">H4=4.30554pt.</p>\n  </para>\n",
+    ],
+  ),
+  // B1 in a tikz text-width node: one line, as pdflatex (rg1: height 32.34, depth 1.2em).
+  (
+    repro!("group_par_blank_in_tikz_node_measures_no_line"),
+    0,
+    0,
+    "picture",
+    &[
+      "<picture height=\"15.73\" width=\"127.89\" xml:id=\"p1.pic1\">\n      <svg:svg height=\"15.73\" overflow=\"visible\" version=\"1.1\" viewBox=\"0 0 127.89 15.73\" width=\"127.89\">\n        <svg:g fill=\"#000000\" stroke=\"#000000\" stroke-width=\"0.4pt\" transform=\"translate(0,15.73) matrix(1 0 0 -1 0 0) translate(63.94,0) translate(0,7.87)\">\n          <svg:path d=\"M -63.67 -7.59 h 127.33 v 15.18 h -127.33 Z\" style=\"fill:none\"/>\n          <svg:g fill=\"#000000\" stroke=\"#000000\" transform=\"matrix(1.0 0.0 0.0 1.0 -59.06 -2.98)\">\n            <svg:foreignObject height=\"5.96\" overflow=\"visible\" style=\"--ltx-fo-width:8.54em;--ltx-fo-height:0.43em;--ltx-fo-depth:0em;font-size:10pt;\" transform=\"matrix(1 0 0 -1 0 5.96)\" width=\"118.17\"><inline-block class=\"ltx_minipage\" vattach=\"top\" width=\"8.54em\" xml:id=\"p1.pic1.1\">\n                <p xml:id=\"p1.pic1.1.1\"/>\n                <p class=\"ltx_align_left\" xml:id=\"p1.pic1.1.2\">x</p>\n              </inline-block></svg:foreignObject>\n          </svg:g>\n        </svg:g>\n      </svg:svg>\n    </picture>",
+    ],
+  ),
 ];
 
 /// The selected elements of `xml`: `document` is the body from its first `<para` to `</document>`.

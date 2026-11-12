@@ -4911,12 +4911,19 @@ consequence (RG1): the inner `\par` met no open-brace box, which in Perl is a
 non-space item of the paragraph, so a paragraph whose group part held only
 space items (phantoms) was discarded — `x{\phantom{Ca}\par Cb}` lost Ca, a tikz
 node `{\phantom{Cpd}\\\phantom{pt}}` its Cpd (2410.06985). The group's list now
-continues the paragraph (`ParagraphStart::in_group`,
-`stomach::digest_group_body_in_paragraph`): a repack that runs off its bottom
-keeps the paragraph, as Perl's pop reaching the `{` box does (Stomach.pm:463-465),
-unless the group added only blank characters: that is the glue TeX deletes at a
-paragraph's end (tex.web §816), where Perl leaves an empty `<text>` (1602.08755
-`diagram⏎\footnotesize{⏎\begin{center}`).
+continues the paragraph (`ParagraphStart::in_group`, index 0,
+`stomach::digest_group_body_in_paragraph`), and `repack_paragraph` reads that start
+three ways: a repack that runs off the list's bottom keeps the paragraph, as Perl's
+pop reaching the `{` box does (Stomach.pm:463-465), unless the group added only
+blank characters: that is the glue TeX deletes at a paragraph's end (tex.web §816),
+where Perl leaves an empty `<text>` (1602.08755
+`diagram⏎\footnotesize{⏎\begin{center}`); a paragraph that kept nothing makes no
+empty line of its own (`empty_line`), its line being in the list outside the group
+(`\vbox{x{ \par}}` is 4.31pt high, as pdflatex; revRG1 B1); and every item of the
+group's list is the paragraph's own (`own_item`), so an `\unhbox`ed vertical item
+(`in_hlist`, tcolorbox's `sidebyside`) there joins the paragraph (§1076; the XML is
+the same as before, probed in `x{…\par}`). `own_list_floor` and
+`take_implicit_indent` read the start as before (floor 0, no implicit indent).
 Guard `perfect_kernel_batchrg1::batchrg1_group_paragraph_rows`. Residual: such a
 group's paragraphs are mismeasured (repro
 `boxes-groups/group_par_paragraphs_are_measured_red`).
