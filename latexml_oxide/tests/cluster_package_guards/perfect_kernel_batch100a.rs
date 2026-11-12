@@ -32,7 +32,7 @@ macro_rules! repro {
 fn a_deceased_legend_is_a_note_of_its_carriers() {
   assert_eq!(
     converted(repro!("run_in_deceased_legend_is_a_note_of_its_carrier"), 0),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_deceased" mark="†" role="thanks" xml:id="id2"><sup xml:id="id2.1">†</sup>Deceased</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">2</sup>Univ B, City</contact> <note class="ltx_note_frontmatter ltx_thanks_address" mark="*" role="thanks" xml:id="id4"><sup xml:id="id4.1">∗</sup>Present address: Univ X, Village</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1,†</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_deceased" mark="†" role="thanks" xml:id="id3"><sup xml:id="id3.1">†</sup>Deceased</note> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id4"><text font="italic" xml:id="id4.1">2,∗</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id5">2</sup>Univ B, City</contact> <note class="ltx_note_frontmatter ltx_thanks_address" mark="*" role="thanks" xml:id="id6"><sup xml:id="id6.1">∗</sup>Present address: Univ X, Village</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
   );
   assert_eq!(
     converted(
@@ -54,21 +54,21 @@ fn a_run_in_or_in_place_line_led_by_an_unrequested_symbol_stays_the_classs() {
       repro!("run_in_line_led_by_an_unrequested_symbol_stays_the_classs"),
       0
     ),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Univ A, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">2</sup>Univ B, City</contact> </creator> <para class="ltx_align_left" xml:id="p1"> <p xml:id="p1.1"><sup xml:id="p1.1.1"><text fontsize="90%" xml:id="p1.1.1.1">†</text></sup><text fontsize="90%" xml:id="p1.1.2">Deceased</text></p> </para> <para xml:id="p2"> <p xml:id="p2.1">Text.</p> </para>"#
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ A, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3"><text font="italic" xml:id="id3.1">2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">2</sup>Univ B, City</contact> </creator> <para class="ltx_align_left" xml:id="p1"> <p xml:id="p1.1"><sup xml:id="p1.1.1"><text fontsize="90%" xml:id="p1.1.1.1">†</text></sup><text fontsize="90%" xml:id="p1.1.2">Deceased</text></p> </para> <para xml:id="p2"> <p xml:id="p2.1">Text.</p> </para>"#
   );
   assert_eq!(
     converted(
       repro!("in_place_line_led_by_an_unrequested_symbol_stays_the_classs"),
       0
     ),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Univ A, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">2</sup>Univ B, City</contact> </creator> <para class="ltx_align_left" xml:id="p1"> <p xml:id="p1.1"><sup xml:id="p1.1.1"><text fontsize="90%" xml:id="p1.1.1.1">†</text></sup><text fontsize="90%" xml:id="p1.1.2">Deceased</text></p> </para> <para xml:id="p2"> <p xml:id="p2.1">Text.</p> </para>"#
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ A, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3"><text font="italic" xml:id="id3.1">2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">2</sup>Univ B, City</contact> </creator> <para class="ltx_align_left" xml:id="p1"> <p xml:id="p1.1"><sup xml:id="p1.1.1"><text fontsize="90%" xml:id="p1.1.1.1">†</text></sup><text fontsize="90%" xml:id="p1.1.2">Deceased</text></p> </para> <para xml:id="p2"> <p xml:id="p2.1">Text.</p> </para>"#
   );
   assert_eq!(
     converted(
       repro!("run_in_symbol_line_spelled_otherwise_is_its_carriers_note"),
       0
     ),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_deceased" mark="†" role="thanks" xml:id="id2"><sup xml:id="id2.1">†</sup>Deceased</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">2</sup>Univ B, City</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1,†</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_deceased" mark="†" role="thanks" xml:id="id3"><sup xml:id="id3.1">†</sup>Deceased</note> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id4"><text font="italic" xml:id="id4.1">2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id5">2</sup>Univ B, City</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
   );
 }
 
@@ -93,7 +93,7 @@ fn a_displaced_line_led_by_an_unrequested_symbol_stays_the_classs() {
 fn run_in_lines_keep_their_print_order() {
   assert_eq!(
     converted(repro!("run_in_lines_a_run_places_keep_their_order"), 0),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Univ A, Town</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">2</sup>Univ B, City</contact> <contact name="Email: " role="email">ann@univ-a.edu</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1,2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ A, Town</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">2</sup>Univ B, City</contact> <contact name="Email: " role="email">ann@univ-a.edu</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
   );
 }
 
@@ -114,14 +114,14 @@ fn an_asterisk_keys_alike_written_or_printed() {
       repro!("run_in_asterisk_legend_under_a_math_asterisk_mark_is_its_carriers_note"),
       0
     ),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_deceased" mark="*" role="thanks" xml:id="id2"><sup xml:id="id2.1">∗</sup>Deceased</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">2</sup>Univ B, City</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1,∗</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_deceased" mark="*" role="thanks" xml:id="id3"><sup xml:id="id3.1">∗</sup>Deceased</note> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id4"><text font="italic" xml:id="id4.1">2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id5">2</sup>Univ B, City</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
   );
   assert_eq!(
     converted(
       repro!("run_in_math_asterisk_legend_under_an_asterisk_mark_is_its_carriers_note"),
       0
     ),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_deceased" mark="∗" role="thanks" xml:id="id2"><sup xml:id="id2.1">∗</sup>Deceased</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">2</sup>Univ B, City</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1,∗</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_deceased" mark="∗" role="thanks" xml:id="id3"><sup xml:id="id3.1">∗</sup>Deceased</note> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id4"><text font="italic" xml:id="id4.1">2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id5">2</sup>Univ B, City</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
   );
   assert_eq!(
     converted(
@@ -135,14 +135,14 @@ fn an_asterisk_keys_alike_written_or_printed() {
       repro!("in_place_math_asterisk_legend_under_an_asterisk_mark_is_its_carriers_note"),
       0
     ),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="∗" role="thanks" xml:id="id2"><sup xml:id="id2.1">∗</sup>Corresponding author</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">2</sup>Univ B, City</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1,∗</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_correspondence" mark="∗" role="thanks" xml:id="id3"><sup xml:id="id3.1">∗</sup>Corresponding author</note> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id4"><text font="italic" xml:id="id4.1">2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id5">2</sup>Univ B, City</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
   );
   assert_eq!(
     converted(
       repro!("run_in_text_asterisk_legend_under_an_asterisk_mark_is_its_carriers_note"),
       0
     ),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_deceased" mark="*" role="thanks" xml:id="id2"><sup xml:id="id2.1">*</sup>Deceased</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">2</sup>Univ B, City</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1,∗</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ A, Town</contact> <note class="ltx_note_frontmatter ltx_thanks_deceased" mark="*" role="thanks" xml:id="id3"><sup xml:id="id3.1">*</sup>Deceased</note> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id4"><text font="italic" xml:id="id4.1">2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id5">2</sup>Univ B, City</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
   );
 }
 
@@ -158,7 +158,7 @@ fn a_line_led_by_a_printed_symbol_no_name_requests_stays_the_classs() {
       repro!("run_in_lines_led_by_unrequested_printed_symbols_stay_the_classs"),
       0
     ),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">♣</sup>Univ A, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">♡</sup>Univ B, City</contact> </creator> <para class="ltx_align_left" xml:id="p1"> <p xml:id="p1.1"><sup xml:id="p1.1.1"><text fontsize="90%" xml:id="p1.1.1.1">♠</text></sup><text fontsize="90%" xml:id="p1.1.2">Univ C, Village</text></p> </para> <para class="ltx_align_left" xml:id="p2"> <p xml:id="p2.1"><sup xml:id="p2.1.1"><text fontsize="90%" xml:id="p2.1.1.1">†</text></sup><text fontsize="90%" xml:id="p2.1.2">Deceased</text></p> </para> <para xml:id="p3"> <p xml:id="p3.1">Text.</p> </para>"#
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">♣</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">♣</sup>Univ A, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3"><text font="italic" xml:id="id3.1">♡</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">♡</sup>Univ B, City</contact> </creator> <para class="ltx_align_left" xml:id="p1"> <p xml:id="p1.1"><sup xml:id="p1.1.1"><text fontsize="90%" xml:id="p1.1.1.1">♠</text></sup><text fontsize="90%" xml:id="p1.1.2">Univ C, Village</text></p> </para> <para class="ltx_align_left" xml:id="p2"> <p xml:id="p2.1"><sup xml:id="p2.1.1"><text fontsize="90%" xml:id="p2.1.1.1">†</text></sup><text fontsize="90%" xml:id="p2.1.2">Deceased</text></p> </para> <para xml:id="p3"> <p xml:id="p3.1">Text.</p> </para>"#
   );
 }
 
@@ -174,13 +174,13 @@ fn deceased_naming_an_institution_is_an_affiliation() {
       repro!("run_in_deceased_named_institution_is_an_affiliation"),
       0
     ),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Univ A, Town</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">†</sup>Department of Deceased Estates, Univ C, Village</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">2</sup>Univ B, City</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1,†</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ A, Town</contact> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">†</sup>Department of Deceased Estates, Univ C, Village</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id4"><text font="italic" xml:id="id4.1">2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id5">2</sup>Univ B, City</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
   );
   assert_eq!(
     converted(
       repro!("run_in_deceased_legend_naming_an_institution_is_a_note"),
       0
     ),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Univ A, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">2</sup>Univ B, City</contact> <note class="ltx_note_frontmatter ltx_thanks_deceased" mark="†" role="thanks" xml:id="id3"><sup xml:id="id3.1">†</sup>Deceased 3 March 2021; formerly at Univ C</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ A, Town</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3"><text font="italic" xml:id="id3.1">2,†</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">2</sup>Univ B, City</contact> <note class="ltx_note_frontmatter ltx_thanks_deceased" mark="†" role="thanks" xml:id="id5"><sup xml:id="id5.1">†</sup>Deceased 3 March 2021; formerly at Univ C</note> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"#
   );
 }

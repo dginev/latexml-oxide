@@ -72,12 +72,12 @@ fn a_call_the_reading_writes_nothing_of_is_written_as_queued() {
 
   assert_eq!(creators(&xml), [
     row(&[
-      "Justyna Borkowska",
+      "Justyna Borkowska 1",
       "affiliation=1 Institute of Astronomy, Torun, Poland",
       "email=jborkowska astro.uni.torun.pl"
     ]),
     row(&[
-      "Boudewijn F. Roukema",
+      "Boudewijn F. Roukema 1",
       "affiliation=1 Institute of Astronomy, Torun, Poland"
     ])
   ]);

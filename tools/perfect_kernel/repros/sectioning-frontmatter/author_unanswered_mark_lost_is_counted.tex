@@ -1,15 +1,15 @@
-% mechanism: a printed mark that no entry answers and that cannot be shown is counted (`show_unanswered_marks`)
-% witness: rev108a B2
-% oracle:  pdflatex: 0 errors; Ann Able a-b
-% engines: rust int139a: the mark lost, silently
+% mechanism: a printed mark that no entry answers and that cannot be shown is counted (`show_unanswered_marks`): the
+%   kernel `\author`'s block, whose names' marks are requests (Perl's `\lx@author@withsup`)
+% witness: rev108a B2 (moved from authblk to the kernel `\author` by P4b2b, where authblk's names now print their marks)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Ablea−b", "Bob Baker"
+% engines: rust int139a: the mark lost, silently; 108a r2 on: counted
 % expect:  0 errors, 1 Warning (unanswered_mark_lost); Ann Able
 % status:  RED (int139a) -> GREEN (108a r2)
 % preload: ar5iv.sty
 \documentclass{article}
-\usepackage{authblk}
 \begin{document}
 \title{T}
-\author{Ann Able$^{a-b}$ and Bob Baker}
+\author{Ann Able$^{a-b}$ \and Bob Baker}
 \maketitle
 Text.
 \end{document}

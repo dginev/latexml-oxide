@@ -3,7 +3,7 @@
 //! "no marks"; a caller falls back to its token reading, counted ([`count_unread`]).
 
 use super::{
-  events::{self, Event, EventKind},
+  events::{self, Event, EventKind, opening_ink},
   separators::{ArgumentReading, read_argument},
   *,
 };
@@ -62,13 +62,38 @@ pub fn argument_marks(arg: &Tokens) -> Result<Option<Vec<Event>>> {
   }))
 }
 
+/// Whether `arg` prints a mark at any level (in a box beside its words too, `Ann\mbox{$^{1}$}`), and whether one is a
+/// label ([`is_label_mark`]), a `\footnotemark` and a number's suffix none; unread, by its tokens
+/// (`author_mark_position`, `leads_with_mark` from each mark), counted for `caller`.
+pub fn prints_marks_and_labels(arg: &Tokens, caller: &str) -> Result<(bool, bool)> {
+  if let Some(events) = mark_events(arg)? {
+    let marks: Vec<&Event> = events.iter().filter(|e| own_mark(e)).collect();
+    return Ok((!marks.is_empty(), marks.into_iter().any(is_label_mark)));
+  }
+  count_unread(caller);
+  let v = arg.unlist_ref();
+  let any = author_mark_position(arg).is_some();
+  let mut from = 0;
+  while let Some(at) = author_mark_position(&Tokens::new(v[from..].to_vec())) {
+    let at = from + at - 1;
+    if leads_with_mark(&Tokens::new(v[at..].to_vec())) {
+      return Ok((any, true));
+    }
+    from = at + 1;
+  }
+  Ok((any, false))
+}
+
+/// Whether a printed mark is a label: a letter or a number first, no footnote symbol (`$^{1,*}$`; not `$^{*}$`).
+pub fn is_label_mark(mark: &Event) -> bool {
+  !mark.symbol && mark.text.chars().next().is_some_and(char::is_alphanumeric)
+}
+
 /// Whether `arg` prints a mark of its own ([`argument_marks`]), a `\footnotemark` none; unread, its tokens' marks
 /// (`author_mark_position`), counted for `caller` (`count_unread`). A class's numbered store (Option C P4d).
 pub fn prints_marks(arg: &Tokens, caller: &str) -> Result<bool> {
   Ok(match argument_marks(arg)? {
-    Some(marks) => marks
-      .iter()
-      .any(|mark| mark.role.as_deref() != Some("footnotemark")),
+    Some(marks) => marks.iter().any(own_mark),
     None => {
       count_unread(caller);
       author_mark_position(arg).is_some()
@@ -84,12 +109,10 @@ pub fn prints_list_marks(arg: &Tokens, caller: &str) -> Result<bool> {
     count_unread(caller);
     return Ok(author_mark_position(arg).is_some());
   };
-  let label = |e: &Event| {
-    e.kind == EventKind::Mark && !e.ordinal && e.role.as_deref() != Some("footnotemark")
-  };
   let level = own_level(&events);
   Ok(events.iter().filter(|e| e.nest == level).any(|e| {
-    label(e) || (e.kind == EventKind::Note && e.inner.iter().any(|m| m.line_first && label(m)))
+    own_mark(e)
+      || (e.kind == EventKind::Note && e.inner.iter().any(|m| m.line_first && own_mark(m)))
   }))
 }
 
@@ -102,8 +125,117 @@ pub fn prints_requested_marks(arg: &Tokens, caller: &str) -> Result<bool> {
     count_unread(caller);
     return Ok(author_mark_position(arg).is_some());
   };
+  // (the queued names' marks read first, so their requests are current: [`requested_entry_labels`])
+  queued_author_marks()?;
   let requested = events::names_requested(&[]);
-  Ok(marks.iter().any(|mark| {
-    mark.role.as_deref() != Some("footnotemark") && events::is_requested(mark, &requested)
-  }))
+  Ok(
+    marks
+      .iter()
+      .any(|mark| own_mark(mark) && events::is_requested(mark, &requested)),
+  )
+}
+
+/// Whether a label — a mark printing a letter or a number first, not a footnote symbol — opens what `arg` prints
+/// (`$^1$Univ A`, `\ua Univ A` with `\newcommand\ua{$^{1}$}`, a `\let` copy's, one in a box of its own); a `\footnotemark`
+/// or a number's suffix none. Unread, its tokens (`notes::leads_with_mark`), counted for `caller`.
+pub fn leads_with_label(arg: &Tokens, caller: &str) -> Result<bool> {
+  let Some(events) = mark_events(arg)? else {
+    count_unread(caller);
+    return Ok(leads_with_mark(arg));
+  };
+  Ok(opening_mark(&events).is_some_and(is_label_mark))
+}
+
+/// The mark the first ink of `events` is, a `\footnotemark` or a number's suffix none.
+fn opening_mark(events: &[Event]) -> Option<&Event> {
+  let all: Vec<&Event> = events.iter().collect();
+  opening_ink(&all).filter(|e| own_mark(e))
+}
+
+/// Whether `event` is a mark of its own: not a number's suffix (`Event::ordinal`), not a `\footnotemark`.
+fn own_mark(event: &Event) -> bool {
+  event.kind == EventKind::Mark && !event.ordinal && event.role.as_deref() != Some("footnotemark")
+}
+
+/// Whether what `tokens` print may open with a mark: their first token past spaces and braces, read through parameterless
+/// macros' bodies (`depth` of them) and on past a body that prints nothing (`\newcommand\affilfont{}`), is no letter or
+/// digit, which TeX prints first (2103.04797's 1,161 `\affiliation{\Amsterdam}`, each a macro of an institute's name, not
+/// rehearsed).
+fn may_open_with_mark(tokens: &[Token], depth: u8) -> bool {
+  let Some(at) = tokens.iter().position(|t| {
+    !matches!(
+      t.get_catcode(),
+      Catcode::SPACE | Catcode::BEGIN | Catcode::END
+    )
+  }) else {
+    return false;
+  };
+  let first = &tokens[at];
+  match first.get_catcode() {
+    Catcode::LETTER | Catcode::OTHER => !first.with_str(|s| s.chars().all(char::is_alphanumeric)),
+    Catcode::CS | Catcode::ACTIVE if depth > 0 => match lookup_definition(first) {
+      Ok(Some(defn))
+        if defn.is_expandable()
+          && defn
+            .get_parameters()
+            .is_none_or(|p| p.get_parameters().is_empty()) =>
+      {
+        match defn.get_expansion() {
+          Some(ExpansionBody::Tokens(body)) => {
+            let mut next = body.unlist_ref().to_vec();
+            next.extend_from_slice(&tokens[at + 1..]);
+            may_open_with_mark(&next, depth - 1)
+          },
+          // (an empty body is no expansion; a conditional has none either)
+          None if defn.get_conditional_type().is_none() => {
+            may_open_with_mark(&tokens[at + 1..], depth - 1)
+          },
+          _ => true,
+        }
+      },
+      _ => true,
+    },
+    _ => true,
+  }
+}
+
+/// The labels, distinct, set by the marks that open the entries of a list `arg`, its entries as the observer cuts an API
+/// call (`events::mark_led_pieces`), each with the queue positions of the names requesting it, a label no name
+/// requests left out: the API Cut's decision and its copy rule (`cut::cut_list`). Unread, none — the list stays whole for
+/// the observer to read —, counted for `caller`.
+pub fn requested_entry_labels(arg: &Tokens, caller: &str) -> Result<Vec<(String, Vec<usize>)>> {
+  if !may_open_with_mark(arg.unlist_ref(), 8) {
+    return Ok(Vec::new());
+  }
+  let Some(events) = mark_events(arg)? else {
+    count_unread(caller);
+    return Ok(Vec::new());
+  };
+  if !events.iter().any(own_mark) {
+    return Ok(Vec::new());
+  }
+  // (the queued names' marks read first: the pieces part at the marks they request, `events::names_requested`)
+  queued_author_marks()?;
+  let mut labels: Vec<(String, Vec<usize>)> = Vec::new();
+  for piece in events::mark_led_pieces(&events) {
+    // (the label `\lx@sup@setlabel@affiliation` sets: the first of the mark's printed labels, `set_label`)
+    let Some(label) = piece
+      .iter()
+      .find(|e| e.kind == EventKind::Mark)
+      .filter(|mark| own_mark(mark))
+      .and_then(mark_request_text)
+      .and_then(|text| {
+        clean_frontmatter_labels(&text, "affiliation")
+          .into_iter()
+          .next()
+      })
+    else {
+      continue;
+    };
+    let requesters = queued_label_requesters(&label)?;
+    if !requesters.is_empty() && labels.iter().all(|(seen, _)| *seen != label) {
+      labels.push((label, requesters));
+    }
+  }
+  Ok(labels)
 }

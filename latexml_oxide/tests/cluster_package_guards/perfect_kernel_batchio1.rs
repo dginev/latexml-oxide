@@ -20,7 +20,7 @@ fn a_creator_calls_nested_thanks_is_its_creators() {
   let creators = creators_xml(&emitted);
   assert_eq!(creators, vec![
     "<creator role=\"author\">\n    <personname>Craig M<sup><text font=\"italic\">c</text></sup>Rae</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\">Electronic address: craig@x.org</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ Y</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Ann Able</personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup>1</sup>Univ X</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ Y</contact>\n  </creator>"
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Ann Able<sup><text font=\"italic\">1</text></sup></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup>1</sup>Univ X</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ Y</contact>\n  </creator>"
   ]);
   assert_eq!(creators.len(), 2, "{emitted}");
   assert!(
@@ -68,7 +68,7 @@ fn a_creator_calls_email_stays_in_its_name() {
   let creators = creators_xml(&emitted);
   assert_eq!(creators, vec![
     "<creator role=\"author\">\n    <personname>Craig Rae <text font=\"typewriter\">craig@x.org</text></personname>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ Y</contact>\n  </creator>",
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Ann Able</personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\">Note y.</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup>1</sup>Univ X</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ Y</contact>\n  </creator>"
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\">\n    <personname>Ann Able<sup><text font=\"italic\">1</text></sup></personname>\n    <note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\">Note y.</note>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup>1</sup>Univ X</contact>\n    <contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ Y</contact>\n  </creator>"
   ]);
   assert_eq!(creators.len(), 2, "{emitted}");
   assert!(

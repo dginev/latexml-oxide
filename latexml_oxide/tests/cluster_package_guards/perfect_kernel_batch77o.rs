@@ -170,7 +170,7 @@ fn aistats_marked_address_goes_to_its_authors() {
   let xml = clean(&marked);
   assert_eq!(
     frontmatter(&xml),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Univ A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">2</sup>Univ B</contact> </creator>"#,
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3"><text font="italic" xml:id="id3.1">2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">2</sup>Univ B</contact> </creator>"#,
     "{xml}"
   );
   let shared = AISTATS.replace(
@@ -332,7 +332,7 @@ fn aistats_note_marked_address_still_pairs_by_column() {
     // (the `$^*$` legend line the starred names' note, ruling 2 — the writer's block-line cut, 94a: it was Bob Baker's
     // affiliation, the cut declining a mark whose formula's closing `$` stands before its line; the note's `mark` the
     // star, which the names then show no more: one mark on the page, 94a r6)
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id1"><sup xml:id="id1.1">∗</sup>equal contribution</note> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ B</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id2"><sup xml:id="id2.1">∗</sup>equal contribution</note> </creator> <creator before=" " role="author"> <personname>Cy Cole</personname> <contact name="Affiliation: " role="affiliation">Univ C</contact> </creator>"#,
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">*</sup></personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id2"><sup xml:id="id2.1">∗</sup>equal contribution</note> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3">*</sup></personname> <contact name="Affiliation: " role="affiliation">Univ B</contact> <note class="ltx_note_frontmatter ltx_thanks_contribution" mark="∗" role="thanks" xml:id="id4"><sup xml:id="id4.1">∗</sup>equal contribution</note> </creator> <creator before=" " role="author"> <personname>Cy Cole</personname> <contact name="Affiliation: " role="affiliation">Univ C</contact> </creator>"#,
   );
   let xml = clean(&format!(
     "\\documentclass[twoside]{{article}}\n\\usepackage[accepted]{{aistats2027}}\n\\begin{{document}}\n\\twocolumn[\\aistatstitle{{A Title}}\n\\aistatsauthor{{{names}}}\n\\aistatsaddress{{{address}}}]\n\\section{{Intro}} Body.\n\\end{{document}}\n"
@@ -495,7 +495,7 @@ fn aistats_marked_address_over_columns_goes_by_mark() {
   );
   assert_eq!(
     frontmatter(&xml),
-    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id1">1</sup>Univ X</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">2</sup>Univ Y</contact> </creator> <creator before=" " role="author"> <personname>Cat Cole</personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id3">1</sup>Univ X</contact> </creator>"#,
+    r#"<title>A Title</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">1</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ X</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3">2</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">2</sup>Univ Y</contact> </creator> <creator before=" " role="author"> <personname>Cat Cole<sup xml:id="id5">1</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id6">1</sup>Univ X</contact> </creator>"#,
     "{xml}"
   );
 }

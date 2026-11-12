@@ -44,7 +44,7 @@ pub(in crate::base_utilities) const CUT_ROLES: [&str; 3] =
 /// binding declares for the marked list it hands over (`author_macros::MARKED_LIST_CUT`).
 pub(in crate::base_utilities) struct CutParameters {
   /// Cut at every printed mark, the binding having read its list marked ([`affiliation_is_marked`]), not only at two or
-  /// more marks the names request ([`requested_marked_entries_in`]).
+  /// more marks the names request ([`requested_entry_labels`]).
   pub(in crate::base_utilities) every_mark:             bool,
   /// An address line behind an e-mail label is one of the list's (its addresses the run's), not text of the entry
   /// above ([`EntryCall`]).

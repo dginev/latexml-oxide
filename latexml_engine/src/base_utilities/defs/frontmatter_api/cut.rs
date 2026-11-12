@@ -74,16 +74,17 @@ pub(in crate::base_utilities) fn cut_list(
     return Ok(None);
   }
   let list = printed_marks_as_marks(list);
-  if !parameters.every_mark && !requested_marked_entries_in(&list)? {
+  let requested = requested_entry_labels(&list, "cut_list")?;
+  if !parameters.every_mark && requested.len() < 2 {
     return Ok(None);
   }
   // (one printed list, one Cut: a list repeated after each author's name, 2312.02779's five identical
   // `\affiliation{{$^1$}…Belfast…\\ {$^2$}…Trinity…}`, is cut once — a later copy adds no entries, as the cut one's
   // reach every author requesting their marks by label, and the copies queued before the cut, uncut while too few names
-  // were queued to request two of its marks, give way to it: review rev99a2 B1, [`place_uncut_copies`])
+  // were queued to request two of its marks, give way to it once it is cut: review rev99a2 B1, [`place_uncut_copies`])
   let key = cut_list_key(parenttag, role, &list);
-  place_uncut_copies(parenttag, role, &key, &requested_entry_marks(&list)?)?;
   if cut_list_queued(&key) {
+    place_uncut_copies(parenttag, role, &key, &requested)?;
     DebugFeature!(
       "frontmatter",
       "FRONT cut {role}: a copy of a list already cut"
@@ -126,7 +127,7 @@ pub(in crate::base_utilities) fn cut_list(
   }
   attr.extend(mouth::tokenize_internal(TeXString::assembled(s!("{CUT_LIST}={key}"))).unlist());
   let attr = Some(Tokens::new(attr));
-  let (cut, entries) = (std::cell::Cell::new(false), std::cell::Cell::new(0));
+  let (cut, entries) = (std::cell::Cell::new(0), std::cell::Cell::new(0));
   let add = |attr: Option<Tokens>, entry: Tokens| {
     // (each marked entry shows the mark that labels it, `_markshown`: `\lx@annotate@frontmatter@now` — but an address
     // line, whose address becomes the e-mail contact of the authors showing its mark, which leaves the mark no entry:
@@ -136,7 +137,7 @@ pub(in crate::base_utilities) fn cut_list(
       && v[0] == T_CS!("\\lx@affiliation@withsup")
       && v[1].get_catcode() == Catcode::BEGIN
       && skip_group(v, 1) == v.len();
-    cut.set(cut.get() || marked);
+    cut.set(cut.get() + usize::from(marked));
     entries.set(entries.get() + 1);
     let attr = if marked
       && leading_line_label(&Tokens::new(v[2..v.len() - 1].to_vec()))
@@ -160,10 +161,12 @@ pub(in crate::base_utilities) fn cut_list(
   };
   let mut calls = entry_calls(&call, attr.clone(), attr.clone(), None, list, true, true)?;
   // (one entry no mark labels, as the cutter reads them: the list stays whole, as the call cut again would be without end
-  // — acmart's `\institution{$^1$…}`; unmarked lines are each a call, cond-mat0206329)
-  if !cut.get() && entries.get() < 2 {
+  // — acmart's `\institution{$^1$…}`; unmarked lines are each a call, cond-mat0206329. Nor is a list cut whose requested
+  // entries the cutter's lines do not part: the observer reads it whole by its marks — a list in a `\parbox`, 2608.21425)
+  if (cut.get() == 0 && entries.get() < 2) || (!parameters.every_mark && cut.get() < 2) {
     return Ok(None);
   }
+  place_uncut_copies(parenttag, role, &key, &requested)?;
   for part in block_parts {
     let mut block = attr.clone().map(Tokens::unlist).unwrap_or_default();
     if !block.is_empty() {
@@ -204,8 +207,9 @@ fn cut_list_queued(key: &str) -> bool {
   })
 }
 
-/// The queued copies of the printed list `key` (of a contact of `role` annotating `parenttag`, its entries led by the
-/// `marks` of its list) that the Cut left uncut — queued while too few names were queued to request two of its marks
+/// The queued copies of the printed list `key` (of a contact of `role` annotating `parenttag`, its entries' labels the
+/// names request `requested`, [`requested_entry_labels`]) that the Cut left uncut — queued while too few names were
+/// queued to request two of its marks
 /// (amsart's `\author{Ann Able${}^{1}$}\address{${}^{1}$Univ A\\ ${}^{2}$Univ B}\author{Bob Baker${}^{2}$}` and the same
 /// `\address` again: review rev99a2 d2; 2312.02779's REVTeX `\affiliation` after each name) — give way to its entries:
 /// each is taken out of the queue when every name it reaches requests one of the list's marks, so each of them takes
@@ -219,13 +223,13 @@ fn place_uncut_copies(
   parenttag: &Tokens,
   role: &str,
   key: &str,
-  marks: &[Vec<Token>],
+  requested: &[(String, Vec<usize>)],
 ) -> Result<()> {
-  // (the authors requesting one of the list's marks, by printed text as the Cut reads them: `queued_requesters`)
-  let mut requesters: Vec<usize> = Vec::new();
-  for mark in marks {
-    requesters.extend(queued_requesters(mark)?);
-  }
+  // (the authors requesting one of the list's marks, as the Cut's decision reads them)
+  let requesters: Vec<usize> = requested
+    .iter()
+    .flat_map(|(_, at)| at.iter().copied())
+    .collect();
   let queue: Vec<RawFrontmatter> = with_value("frontmatter_raw", |v| match v {
     Some(Stored::FrontmatterRaw(queue)) => queue.clone(),
     _ => Vec::new(),

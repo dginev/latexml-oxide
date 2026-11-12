@@ -5215,7 +5215,8 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     .filter(|&&i| !whole.contains(&resolved.creators[i].source))
   {
     let c = &resolved.creators[i];
-    let keeps = keeps(c.source);
+    // (a name written as its text keeps no mark of its own: its requests show them, as they would unkept — 2509.08362)
+    let keeps = keeps(c.source) && names.get(&i).is_some_and(|(name, _)| name.is_some());
     let inst_marks = inst_marks.get(&c.source).map_or(&[][..], Vec::as_slice);
     // (a creator call's own labels, which its keys write, print nothing: `creator_keys`)
     let own = creator_call_of(c)
@@ -5930,7 +5931,8 @@ fn block_creator(of_the_block: bool) -> Option<Tokens> {
 
 /// Whether the block at ledger index `source` keeps its marks printed on its names, as Perl's `\\lx@add@author` leaves them (a
 /// name's marks are its content where no `\\lx@author@withsup` reads them): a name list a binding split, or a per-author class's
-/// call whose lines answer none of them (`\\author[*]{… \\\\ $^1$DeepSeek-AI …}`, 2401.14196, is one that does).
+/// call whose lines answer none of them (`\\author[*]{… \\\\ $^1$DeepSeek-AI …}`, 2401.14196, is one that does) — any call adding to
+/// the names before it: a binding's name list too, whose affiliations are calls of their own printing their marks (2410.01932).
 fn per_author_marks(source: usize) -> bool {
   with_block(source, false, |block, events| {
     let marks = |first: bool| {
@@ -5943,7 +5945,7 @@ fn per_author_marks(source: usize) -> bool {
         .filter_map(|e| e.label.as_deref())
         .any(|names| mark_labels(names).iter().any(|name| name == label))
     });
-    block.hook == "\\lx@add@author@split" || (block.cautious && !answers)
+    block.hook == "\\lx@add@author@split" || (!block.replace && !answers)
   })
 }
 

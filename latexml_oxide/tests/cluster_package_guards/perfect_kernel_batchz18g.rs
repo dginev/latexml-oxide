@@ -81,7 +81,8 @@ fn llncs_author_url_pieces_are_one_address_line() {
 
 /// llncs's one `\institute{\affmark{1} Univ A \quad \affmark{2} Univ B\\ \affmark{3} Univ C}` holding the paper's own
 /// marks: the block's whole, as printed (2608.21425). Red (Z18e): each line on the names showing its first mark, with
-/// "markup lost" Warnings and over-placed words.
+/// "markup lost" Warnings and over-placed words. The Cut's digested decision (P4b2) reads the names' requests here, but
+/// its per-line cutter parts no `\affmark` line, so the list stays whole (RED `llncs_institute_hand_marks_cut_red`).
 #[test]
 fn llncs_institute_hand_marks_keep_it_whole() {
   assert_creators(

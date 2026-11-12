@@ -244,6 +244,25 @@ fn queued_marks_read_as_digested() {
       &["Ann One", "affiliation=First Univ"],
       &["Bob Two", "affiliation=Second Univ"],
     ]),
+    // (P4b2: the Cut's decision reads the list's marks as digested, `requested_entry_labels` — marks a document macro
+    // prints, a math-active `^` no superscript token spells, the list repeated, the unknown class; the per-line cutter
+    // parts none of these lines, so each list stays whole and the observer places its entries)
+    (repro!("api_cut_macro_marks_list"), 0, &[
+      &["Ann Able 1", "address=1 Univ A, Town A"],
+      &["Bob Baker 2", "address=2 Univ B, Town B"],
+    ]),
+    (repro!("api_cut_math_active_marks_list"), 0, &[
+      &["Ann Able 1", "address=1 Univ A, Town A"],
+      &["Bob Baker 2", "address=2 Univ B, Town B"],
+    ]),
+    (repro!("api_cut_macro_marks_repeated_list"), 0, &[
+      &["Ann Able 1", "address=1 Univ A, Town A"],
+      &["Bob Baker 2", "address=2 Univ B, Town B"],
+    ]),
+    (repro!("api_cut_unknown_class_macro_marks_list"), 1, &[
+      &["Ann Able 1", "affiliation=1 Univ A, Town A"],
+      &["Bob Baker 2", "affiliation=2 Univ B, Town B"],
+    ]),
   ];
   for ((name, tex), warnings, expected) in rows {
     let (log, xml) = run(tex);
@@ -575,7 +594,7 @@ fn marked_list_cut_as_its_binding_declares() {
       0,
       &[
         &["Ann Able", "email=ann@a.edu"],
-        &["Bob Baker", "affiliation=1 Univ B, Town B"],
+        &["Bob Baker 1", "affiliation=1 Univ B, Town B"],
         &["Cy Cole", "affiliation=Univ A, Town A"],
       ],
       &[],
@@ -599,4 +618,185 @@ fn marked_list_cut_as_its_binding_declares() {
     }
   }
   assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+/// Option C P4b: the bindings' "a label leads this argument" read as digested (`leads_with_label`), a document macro's
+/// or a class macro's mark leading as `$^{1}$` does. One row a site: jfm's `\affiliation` (red on P4bbase: the list a
+/// note), REVTeX's per-call `\affiliation`, IEEEtran's stop after a grade, the ws_procl `\address`; and the API's Cut
+/// over macro marks, pinned as today (its "marked" stays on tokens). Each: no Error, its Warning count, every creator.
+#[test]
+fn marks_lead_as_digested() {
+  macro_rules! repro {
+    ($name:literal) => {
+      (
+        $name,
+        include_str!(concat!(
+          "../../../tools/perfect_kernel/repros/sectioning-frontmatter/",
+          $name,
+          ".tex"
+        )),
+      )
+    };
+  }
+  let rows: &[Row] = &[
+    (repro!("jfm_aff_macro_marked_list"), 0, &[
+      &["Ann Able 1", "affiliation=1 Univ A, Town A"],
+      &["Bob Baker 2", "affiliation=2 Univ B, Town B"],
+    ]),
+    (repro!("revtex_macro_mark_affiliation_calls"), 0, &[
+      &["Ann Able 1", "affiliation=1 Univ A, Town A"],
+      &["Bob Baker 2", "affiliation=2 Univ B, Town B"],
+    ]),
+    (repro!("ams_cut_macro_mark_lines"), 0, &[
+      &["Ann Able 1", "address=1 Univ A, Town A"],
+      &["Bob Baker 2", "address=2 Univ B, Town B"],
+    ]),
+    (repro!("ieee_names_macro_mark_note_label"), 0, &[
+      &["Ann Able", "affiliation=Univ A, Town A."],
+      &[
+        "Bob Baker",
+        "membership=Member, IEEE",
+        "affiliation=Univ A, Town A.",
+      ],
+    ]),
+    (repro!("ws_procl_macro_mark_address"), 0, &[
+      &["A. ABLE a", "affiliation=a Univ A, Town A"],
+      &["B. BAKER b", "affiliation=b Univ B, Town B"],
+    ]),
+  ];
+  let mut failures = Vec::new();
+  for ((name, tex), warnings, expected) in rows {
+    let (log, xml) = run(tex);
+    let expected: Vec<Vec<String>> = expected
+      .iter()
+      .map(|c| c.iter().map(|s| s.to_string()).collect())
+      .collect();
+    let got = (
+      (error_count(&log), warning_count(&log)),
+      text_creators(&xml),
+    );
+    if got != ((0, *warnings), expected) {
+      failures.push(format!("{name}: {got:?}"));
+    }
+  }
+  assert!(failures.is_empty(), "{}", failures.join("\n"));
+}
+
+/// P4b2b (2410.01932, Q1 a): a binding's list of names (`\lx@add@authors@list`: authblk, iopart, the unknown class) whose
+/// affiliations are their own calls, each printing its mark, shows the marks each name prints, answered or not
+/// (`per_author_marks`); authblk's labelled `\author[1]` keeps its own as before. Red on P4b2: every listed name bare.
+#[test]
+fn authblk_names_show_their_printed_marks() {
+  macro_rules! repro {
+    ($name:literal) => {
+      (
+        $name,
+        include_str!(concat!(
+          "../../../tools/perfect_kernel/repros/sectioning-frontmatter/",
+          $name,
+          ".tex"
+        )),
+      )
+    };
+  }
+  let affiliations: &[&[&str]] = &[&["Ann Able 1", "affiliation=1 Univ A, Town A"], &[
+    "Bob Baker 2",
+    "affiliation=2 Univ B, Town B",
+  ]];
+  let rows: &[Row] = &[
+    (repro!("authblk_hand_marks_answered_shown"), 0, affiliations),
+    (
+      repro!("authblk_hand_marks_one_call_answered_shown"),
+      0,
+      affiliations,
+    ),
+    (repro!("authblk_hand_marks_shared_answered_shown"), 0, &[
+      &["Ann Able 1", "affiliation=1 Univ A, Town A"],
+      &["Bob Baker 1", "affiliation=1 Univ A, Town A"],
+    ]),
+    (repro!("authblk_hand_marks_unknown_class"), 1, affiliations),
+    (repro!("iopart_hand_marks_answered_shown"), 0, affiliations),
+    (repro!("jfm_authblk_aff_answered_name_marks"), 0, &[
+      &["Ann Able 1", "affiliation=1 Univ A, Town A"],
+      &["Bob Baker 1", "affiliation=1 Univ A, Town A"],
+    ]),
+    (repro!("authblk_labelled_author_hand_mark_kept"), 0, &[
+      &["Ann Able *", "affiliation=Univ A, Town A"],
+      &["Bob Baker", "affiliation=Univ B, Town B"],
+    ]),
+    // (a mark no entry answers and no request could show, printed: rev108a B2's shape, 1 Warning on P4b2)
+    (repro!("authblk_unanswered_unshowable_mark_printed"), 0, &[
+      &["Ann Able a-b"],
+      &["Bob Baker"],
+    ]),
+  ];
+  for ((name, tex), warnings, expected) in rows {
+    let (log, xml) = run(tex);
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, *warnings),
+      "{name}: {log}"
+    );
+    let expected: Vec<Vec<String>> = expected
+      .iter()
+      .map(|c| c.iter().map(|s| s.to_string()).collect())
+      .collect();
+    assert_eq!(text_creators(&xml), expected, "{name}: {xml}");
+    // (the mark the name prints, digested in its own superscript, as the affiliation's)
+    if *name == "authblk_hand_marks_answered_shown" {
+      assert_eq!(
+        creators(&xml),
+        r#"<creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2"><text font="italic" xml:id="id2.1">1</text></sup>Univ A, Town A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3"><text font="italic" xml:id="id3.1">2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4"><text font="italic" xml:id="id4.1">2</text></sup>Univ B, Town B</contact> </creator>"#,
+        "{name}"
+      );
+    }
+  }
+}
+
+/// revP4b2 S1: the API Cut's cost gate (`may_open_with_mark`) reads on past a macro printing nothing — an empty body
+/// (`\newcommand\affilfont{}`), one of only braces, `\empty` two deep — to the list's first mark, so the list is cut once
+/// (`--debug=frontmatter`'s cut line). Red on P4b2 for the braces' body: no cut, the observer reading the list.
+#[test]
+fn api_cut_gate_reads_past_empty_bodies() {
+  let rows: [(&str, &str); 2] = [
+    (
+      "api_cut_gate_empty_macro_before_marks",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/api_cut_gate_empty_macro_before_marks.tex"
+      ),
+    ),
+    (
+      "api_cut_gate_nested_empty_macro_before_marks",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/sectioning-frontmatter/api_cut_gate_nested_empty_macro_before_marks.tex"
+      ),
+    ),
+  ];
+  for (name, tex) in rows {
+    let (log, xml, ()) = convert_files_with_setup_then(
+      tex,
+      &[],
+      Some("ar5iv.sty"),
+      || latexml_core::common::error::enable_debug_feature("frontmatter"),
+      |_| (),
+    );
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{name}: {log}"
+    );
+    assert_eq!(
+      text_creators(&xml),
+      [["Ann Able 1", "address=1 Univ A, Town A"], [
+        "Bob Baker 2",
+        "address=2 Univ B, Town B"
+      ],],
+      "{name}: {xml}"
+    );
+    assert_eq!(
+      log.matches("FRONT cut address at its marks").count(),
+      1,
+      "{name}: {log}"
+    );
+  }
 }

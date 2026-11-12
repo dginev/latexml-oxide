@@ -30892,7 +30892,18 @@ name that requests none of the marks stays as it is.
 
 **The decision, one predicate**: `affiliations::holds_requested_marked_entries` (public), the list's marks read as the
 Cut reads them, is the one test a reader of a store's marked entries asks (batch 99b's `requested_marks_held` at
-integration).
+integration). Since Option C P4b2 the decision and the copy rule below read one digested fact,
+`argument_marks::requested_entry_labels`: the list's entries as the observer cuts an API call
+(`events::mark_led_pieces`, after the queued names' marks are read), each leading mark's label (`set_label`'s first)
+with its requesters — a mark a document macro prints or a math-active `^` spells counts (`api_cut_macro_marks_list`,
+`api_cut_math_active_marks_list`). A list whose first token, read through parameterless macros' bodies (and on past a body
+printing nothing, `\newcommand\affilfont{}`), is a letter or digit is not rehearsed (`may_open_with_mark`:
+2103.04797's 1,161 `\affiliation{\Amsterdam}`, −0.3 % instructions against P4b). Unread (a rehearsal left a group open), none: the list stays whole for the observer, counted
+(`--debug=frontmatter_marks`). The per-line cutter (`entry_calls`) still parts lines by tokens (P4b4), so a list whose
+requested entries it parts fewer than two of stays whole too (`cut_list`'s fail-safe): 2608.21425's list in a
+`\parbox`, llncs's `\affmark` lines (RED `llncs_institute_hand_marks_cut_red`); the uncut copies give way only once
+the list is cut. Read before the queue's marks, the pieces
+part at stale requests (`names_requested`): P4b part 1's port gave the unrequested `3 Univ C` to the mark-1 names.
 
 **jfm** (latexml_contrib jfm_cls.rs): `\affiliation{…}` led by marks the names show is `\lx@add@affiliation[annotate=all]`,
 so the Cut gives each name its entries (physics0607157, 1302.1594); unmarked it stays the `<note role="affiliation">`
@@ -32842,7 +32853,7 @@ fixture W 1): the author block's side (`words.rs::ink_words` → `labels.rs` ~66
 one e-mail list. An `\fcolorbox` around a name in `\author` keeps the background colour and loses the frame (synthetic,
 markup only; the base dropped the whole creator).
 
-**Marks.** Perl's own split: a per-author class's call whose lines answer none of its marks, or a name list a binding split, keeps them printed on the name (`\lx@add@author`; a line's Mark answering a name's is the digested test, `per_author_marks`; 0705.3952); else they are requests (`\lx@author@withsup`): answered ones leave the name, the rest stay requests `show_unanswered_marks` shows.
+**Marks.** Perl's own split: a per-author class's call whose lines answer none of its marks, or a name list a binding split, keeps them printed on the name (`\lx@add@author`; a line's Mark answering a name's is the digested test, `per_author_marks`; 0705.3952); else they are requests (`\lx@author@withsup`): answered ones leave the name, the rest stay requests `show_unanswered_marks` shows. Beyond Perl (P4b2b, FIDELITY_CHARTER §2, every printed mark shown): every call adding to the names before it (the block's `replace` false: a binding's name list, `\lx@add@authors@list` — authblk, iopart, informs, ptephy, l-aa, JHEP, aistats (`aistats_sty.rs`), osa_journal (opex3, ol2, osajnl2) and apa6 —, a raw class's appended `\author`) whose own lines answer none of its marks keeps them printed — its affiliations are calls of their own, which print theirs (2410.01932; Perl's `\lx@add@authors` hides a name's answered mark). The kernel `\author`'s block, which replaces, still hides both sides where its own lines answer its marks, as Perl (RED `kernel_author_lines_answered_marks_hidden_red`). Guard `perfect_kernel_batchc1::authblk_names_show_their_printed_marks`.
 
 **Order.** Perl's two phases: what no label places attaches as it digests, `relocateAnnotations` appends what a label places, an entry the block prints returning to its queue place (`\lx@frontmatter@queued`, `relocate::at_queue_position`, its zone kept only there). Each source call is its own item, so a shared line keeps the place its call has on each author (0704.3133, 1202.0103).
 
@@ -34953,8 +34964,8 @@ kernel's `\end{tabular}` (pdflatex, 13 errors).
 (`queued_name`) and keys its requests by the printed text, as `\lx@sup@request@affiliation` does (#919:
 `printed_label_keys`); the affiliation side keys as `\lx@sup@setlabel@affiliation` (`set_label`). A document macro
 printing the mark (`\newcommand\ua{\textsuperscript{1}}`) now requests its label, and the Cut's uncut copies give way
-by the same requests (`cut.rs` `place_uncut_copies` asks `queued_requesters`; its token loop and `requesting_authors`
-deleted, review revF0 B1: amsart's `\address` list repeated under macro-printed marks kept the uncut copy and lost the
+by the same requests (`cut.rs` `place_uncut_copies` asked `queued_requesters`, since P4b2 the decision's
+`requested_entry_labels`; its token loop and `requesting_authors` deleted, review revF0 B1: amsart's `\address` list repeated under macro-printed marks kept the uncut copy and lost the
 cut's unrequested entry). Deleted: the meaning tracking
 (`meanings_hold`, the commands and symbols seen), so a name read before a later `\let` keeps its first reading
 (`queue_reading_alias_after_names`: same creators, the Cut no longer re-cuts). An unread name falls back to its spelled

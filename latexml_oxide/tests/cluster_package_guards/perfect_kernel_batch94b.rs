@@ -162,12 +162,12 @@ fn a_raw_class_in_place_address_is_the_api() {
   // `contact_line_call`, review rev99b B1)
   let xml: &[&[&str]] = &[
     &[
-      "Ann Able",
+      "Ann Able 1",
       "address=1 Univ A, Town, Country",
       "email=ann@a.edu",
     ],
-    &["Bob Baker", "address=1 Univ A, Town, Country"],
-    &["Cy Cole", "address=2 Univ B, City, Country"],
+    &["Bob Baker 1", "address=1 Univ A, Town, Country"],
+    &["Cy Cole 2", "address=2 Univ B, City, Country"],
   ];
   assert_reading(tex, Some(xml), &[
     "C Ann Able [1] | line:names",
@@ -191,11 +191,11 @@ fn a_raw_style_buffered_address_is_the_api() {
   // `api:label`, review rev99b B1)
   let xml: &[&[&str]] = &[
     &[
-      "Ann Able",
+      "Ann Able 1,2",
       "address=1 Univ A, Town",
       "address=2 Univ B, City",
     ],
-    &["Bob Baker", "address=3 Lab C, Place"],
+    &["Bob Baker 3", "address=3 Lab C, Place"],
   ];
   assert_reading(tex, Some(xml), &[
     "C Ann Able [1,2] | line:names",
@@ -500,8 +500,8 @@ fn an_optional_caption_names_the_line() {
       "email=ann@a.edu",
     ],
     &["Bob Baker", "address=Univ B, City"],
-    &["Cy Cole", "address=Lab D, Place"],
-    &["Dan Doe", "address=Lab E, Place"],
+    &["Cy Cole b", "address=Lab D, Place"],
+    &["Dan Doe a", "address=Lab E, Place"],
   ];
   assert_eq!(default_mode_creators(tex), owned(xml));
   for streaming in [false, true] {

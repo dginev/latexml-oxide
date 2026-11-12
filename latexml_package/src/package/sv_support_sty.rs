@@ -235,7 +235,7 @@ LoadDefinitions!({
         .skip_while(|t| *t == T_SPACE!() || *t == T_CS!("\\\\"))
         .collect(),
     );
-    if leads_with_mark(&unbroken) {
+    if leads_with_label(&unbroken, "sv institute")? {
       let piece = unbroken;
       // its own `\thanksref`, which would add its key to the line's label, a no-op as in any piece (63i review)
       let piece = Tokens::new(

@@ -77,22 +77,10 @@ fn author_marks(entry: &Tokens) -> Result<(Vec<String>, Vec<String>)> {
       if mark.role.as_deref() == Some("footnotemark") {
         continue;
       }
-      // (a cross-reference's key as `printed_label` reads it, `\ref{key}`: `events::script_mark`'s `ref:key`)
-      let text = match mark.label {
-        Some(label) if mark.role.as_deref().is_some_and(|r| r.ends_with(" ref")) => label
-          .split(',')
-          .map(|piece| match piece.trim().strip_prefix("ref:") {
-            Some(key) => s!("\\ref{{{key}}}"),
-            None => piece.to_string(),
-          })
-          .collect::<Vec<_>>()
-          .join(","),
-        Some(label) => label,
-        // (a mark printing no label requests none: counted, as an unread name is)
-        None => {
-          count_unread_marks("queued_author_marks, a mark without a label");
-          continue;
-        },
+      // (a mark printing no label requests none: counted, as an unread name is)
+      let Some(text) = mark_request_text(&mark) else {
+        count_unread_marks("queued_author_marks, a mark without a label");
+        continue;
       };
       keys.extend(printed_label_keys(&text, "affiliation"));
       texts.push(text);
@@ -111,6 +99,25 @@ fn author_marks(entry: &Tokens) -> Result<(Vec<String>, Vec<String>)> {
     texts.push(Tokens::new(operand).to_string());
   }
   Ok((texts, keys))
+}
+
+/// A mark's printed label as `printed_label` reads its operand, which keys its requests and the label it sets: a
+/// cross-reference's key as `\ref{key}` (`events::script_mark`'s `ref:key`); `None` for a mark printing no label.
+pub(in crate::base_utilities) fn mark_request_text(mark: &FmEvent) -> Option<String> {
+  let label = mark.label.as_deref()?;
+  if !mark.role.as_deref().is_some_and(|r| r.ends_with(" ref")) {
+    return Some(label.to_string());
+  }
+  Some(
+    label
+      .split(',')
+      .map(|piece| match piece.trim().strip_prefix("ref:") {
+        Some(key) => s!("\\ref{{{key}}}"),
+        None => piece.to_string(),
+      })
+      .collect::<Vec<_>>()
+      .join(","),
+  )
 }
 
 /// The reading kept in the state, if any.

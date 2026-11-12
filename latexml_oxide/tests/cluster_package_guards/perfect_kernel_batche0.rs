@@ -390,8 +390,11 @@ const MOVED_CUT_KIND_EMISSIONS: &[(&str, usize)] = &[
 /// `numbered_marks_requested`'s empty-piece test (no alphanumeric covers it) deleted. P4c raised it to 2,236 (+17,
 /// pending the main session's decision): the Cut a binding's marked list calls with its declaration (`cut_list`, split
 /// from `cut_marked_contact`; DG's "declared cut", OD #1009), its parameter reads and the one-entry stop, net of
-/// `binding_cut_list_attr` deleted.
-const MOVED_CUT_KIND_CODE_LINES: usize = 2_236;
+/// `binding_cut_list_attr` deleted. P4b2 lowered it to 2,210: the Cut's "marked" decision and its copy rule read the
+/// marks query (`argument_marks::requested_entry_labels`); `requested_marked_entries_in` and `requested_entry_marks`
+/// deleted. Then 2,211 (+1, pending the main session's decision): the uncut copies give way only once the list is cut,
+/// `place_uncut_copies` called after `cut_list`'s stops and in the already-cut branch.
+const MOVED_CUT_KIND_CODE_LINES: usize = 2_211;
 
 /// The fence on the moved Cut and Kind: they take no new decision either (review revZ18a check 3).
 #[test]
@@ -588,8 +591,6 @@ const OLD_READER_EXPORTS: &[&str] = &[
   "printed_marks_as_marks",
   "queued_author_name_keys",
   "queued_row_start",
-  "requested_entry_marks",
-  "requested_marked_entries_in",
   "run_in_author_order",
   "shared_affiliation_calls",
   "space_parted_name_line",
@@ -1558,7 +1559,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // printing token's definition, whether it is the kernel layer's `\and` constructor (`get_cs()` against `KERNEL_SEPARATOR`),
   // the trap-T8 test `frontmatter_stores::kernel_and_list` makes —, never its spelling: a decision by definition, OD #995)
   // (F0, 29 -> 28: `queue_reading.rs`' meaning tracking, `seen`/`seen_symbols`, deleted: a name keeps its first reading)
-  ("frontmatter (rest)", 28),
+  // (P4b2, 28 -> 33, pending the main session's decision: `argument_marks::may_open_with_mark`, the API Cut's cost gate
+  // before its rehearsal — a list whose first token, through parameterless macros' bodies, is a letter or digit prints
+  // that first and opens with no mark, as TeX reads it; 2103.04797's 1,161 `\affiliation{\Amsterdam}` +13.6 % without it)
+  ("frontmatter (rest)", 33),
   // (P26, 527 -> 526: the stores' `\and` gates ask the separator query by meaning, `and_separators`, OD #995 P2-6; the
   // spelling read only where the query answers `None`: one spelled read fewer)
   // (FX24b, 526 -> 527: `title_page_prints_author` walks the title page a raw file or the document defined for a read of

@@ -1,0 +1,19 @@
+% mechanism: Option C P4b: a binding's "a label leads this argument" read as digested (`leads_with_label`,
+%   argument_marks.rs); jfm's `\affiliation` takes a list its marks label to the API's Cut. The class's own `\aff{n}`
+%   (jfm.cls: `\textsuperscript{#1}`, the template's spelling) is a macro the token reading (`leads_with_mark`) saw no
+%   mark in, so the list stayed one document note
+% witness: synthetic (the jfm template's `\aff{1}`; census127 physics0607157, 1302.1594 for the `$^1$` spelling)
+% oracle:  pdflatex: jfm.cls not in TL 2025 (class-absent: judged against jfm.cls:680/733, which prints the list once
+%          under the names: "Ann Able1 and Bob Baker2 / 1Univ A, Town A / 2Univ B, Town B")
+% engines: P4bbase (bd137a31b6): the list a document note, no creator holds an affiliation; P4b: each author the entry
+%          its mark requests, the mark shown
+% expect:  0 errors, 0 warnings; Ann Able "1 Univ A, Town A", Bob Baker "2 Univ B, Town B"
+% status:  RED (P4bbase) -> GREEN (guard perfect_kernel_batchc1::marks_lead_as_digested)
+\documentclass{jfm}
+\begin{document}
+\title{T}
+\author{Ann Able\aff{1} \and Bob Baker\aff{2}}
+\affiliation{\aff{1}Univ A, Town A\\ \aff{2}Univ B, Town B}
+\maketitle
+Text.
+\end{document}
