@@ -29873,7 +29873,13 @@ words). One reading for every reader: REVTeX's and AASTeX's `\affiliation`, ws_p
 (`frontmatter_marks`); for `marks_lead_every_line` it is the fail-safe. Guard
 `perfect_kernel_batchc1::group_rule_reads_marks_as_digested`. Open (post-merge REDs): names' marks under a math-active `^`
 (`revtex_math_active_name_marks_unread_red`), the content check's reading of an ordinal suffix
-(`revtex_ordinal_affiliation_content_check_counts_red`); `leading_macro_mark`/`run_names_macro_marks` stay on tokens.
+(`revtex_ordinal_affiliation_content_check_counts_red`). A name requests a label by a mark that prints a letter or a number
+first (`relocate::requests_a_label`, `is_label_mark`'s rule): a symbol mark requests none, so lines led by `$^{\nabla}$` and
+`$^{\hbar}$` hold one requested label and are no fail-safe block (2402.10256; repro
+`revtex_symbol_marks_lead_lines_go_by_their_marks`). The run's names are the queue's last authors, counted from the queue's
+end (1901.01540's 1,427 `\affiliation` calls under 1,204 authors each scanned the whole queue). `leading_macro_mark`/`run_names_macro_marks` stay on tokens: read as digested (P4b3b's trial), a mark a macro prints
+through another macro after the names' commas takes the after-commas block rule where the marked rule reads the owners as
+the PDF prints them (`revtex_argument_macro_marks_after_commas_go_by_their_marks`, a main-session question).
 
 ### 948. Every remaining observer-writer family is written in one batch (ijcai, inst_support, iopart, jheppub, jinstpub, jcappub, jpconf, sv_support and every binding owning `\author` with no declaration); a block line's letters are read as printed, a re-parted entry keeps today's role, a letter-spaced name's word space is no gap, an e-mail's corresponding owner is one of the authors it is printed for, a name read as an entry is never written onto an author; an elsarticle key is answered by its keys alone, and a name the re-part makes that names no person declines (Perl: the old reader's output, no observer)
 

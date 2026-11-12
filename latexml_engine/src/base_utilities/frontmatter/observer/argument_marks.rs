@@ -152,7 +152,7 @@ pub struct PrintedMark {
   pub labels:     Vec<String>,
   /// its line's first ink (`Event::line_first`)
   pub line_first: bool,
-  /// at the argument's own level ([`at_own_level`]), not in a box beside its words
+  /// at the argument's own level (`at_own_level`), not in a box beside its words
   pub own_level:  bool,
   /// a label ([`is_label_mark`]) that opens what the argument prints ([`leads_with_label`])
   pub leads:      bool,

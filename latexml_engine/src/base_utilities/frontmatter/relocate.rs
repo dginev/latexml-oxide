@@ -961,9 +961,6 @@ pub fn interleaved_group_shares_the_mark(marks: &[String]) -> Result<bool> {
 pub fn run_names_show_a_mark() -> Result<bool> {
   let run = with_value("frontmatter_raw", |v| match v {
     Some(Stored::FrontmatterRaw(queue)) => {
-      let is_author = |entry: &RawFrontmatter| {
-        entry.0 == "ltx:creator" && entry.1.get("role").map(String::as_str) == Some("author")
-      };
       // (the run: back past the contacts ending the queue, then its creators back to the affiliation before them)
       let end = queue
         .iter()
@@ -971,31 +968,35 @@ pub fn run_names_show_a_mark() -> Result<bool> {
         .map_or(0, |at| at + 1);
       let start = queue[..end]
         .iter()
-        .rposition(|entry| {
-          entry.0 == "ltx:contact" && entry.1.get("role").map(String::as_str) == Some("affiliation")
-        })
+        .rposition(is_affiliation_entry)
         .map_or(0, |at| at + 1);
-      let first = queue[..start].iter().filter(|e| is_author(e)).count();
-      first..first + queue[start..end].iter().filter(|e| is_author(e)).count()
+      queue[start..end]
+        .iter()
+        .filter(|e| is_author_entry(e))
+        .count()
     },
-    _ => 0..0,
+    _ => 0,
   });
-  if run.is_empty() {
+  if run == 0 {
     return Ok(false);
   }
-  // (each name's marks as digested, `queued_author_marks`; a footnote symbol requests none)
+  // (each name's marks as digested, `queued_author_marks`: the run's are the last ones; a footnote symbol requests none)
+  let names = queued_author_marks()?;
   Ok(
-    queued_author_marks()?
-      .get(run)
-      .unwrap_or_default()
+    names[names.len().saturating_sub(run)..]
       .iter()
       .flatten()
-      .any(|text| {
-        let label = text.strip_prefix("affiliation:").unwrap_or(text);
-        requests_an_affiliation(text)
-          && (label.starts_with('\\') || label.chars().next().is_some_and(char::is_alphanumeric))
-      }),
+      .any(|text| requests_a_label(text)),
   )
+}
+
+/// Whether a name's mark, by its printed text (`queued_author_marks`), requests an affiliation by a label: a letter or a
+/// number first, as `argument_marks::is_label_mark` reads a printed mark (`$^{\nabla}$` none, 2402.10256), or a
+/// cross-reference.
+fn requests_a_label(text: &str) -> bool {
+  let label = text.strip_prefix("affiliation:").unwrap_or(text);
+  requests_an_affiliation(text)
+    && (label.starts_with('\\') || label.chars().next().is_some_and(char::is_alphanumeric))
 }
 
 /// Whether a name's mark, by its printed text (`queued_author_marks`), requests an affiliation: a request of another kind
@@ -1007,6 +1008,16 @@ fn requests_an_affiliation(text: &str) -> bool {
     },
     _ => true,
   }
+}
+
+/// A queued author ([`queued_author_marks`] reads one per such entry).
+fn is_author_entry(entry: &RawFrontmatter) -> bool {
+  entry.0 == "ltx:creator" && entry.1.get("role").map(String::as_str) == Some("author")
+}
+
+/// A queued affiliation, which ends a run of names.
+fn is_affiliation_entry(entry: &RawFrontmatter) -> bool {
+  entry.0 == "ltx:contact" && entry.1.get("role").map(String::as_str) == Some("affiliation")
 }
 
 /// The key of the mark a macro stands for: a macro without parameters whose body leads with a superscript mark
@@ -1235,7 +1246,8 @@ pub(super) fn name_marks_of(command: &Tokens) -> (Vec<String>, Vec<String>) {
   (altaffil, sup)
 }
 
-/// What an affiliation block prints of the labels the queued authors' marks request (`queued_author_marks`), read as
+/// What an affiliation block prints of the labels the queued authors' marks request (`queued_author_marks`,
+/// `requests_a_label`), read as
 /// digested (`marks_as_printed`: a document macro's mark, a math-active `^`'s, one in a box of its own): how many it holds,
 /// each once (`\address{\parbox{\linewidth}{$^{1}$Univ A\\ $^{2}$Univ B}}`: 2); how many of its lines, a box's and an
 /// environment's too, a requested mark opens, as against marks inside one line's text (`Joint Institute,
@@ -1259,7 +1271,11 @@ pub fn requested_marks_of(
     });
   };
   let mut requested: Vec<String> = Vec::new();
-  for text in queued_author_marks()?.iter().flatten() {
+  for text in queued_author_marks()?
+    .iter()
+    .flatten()
+    .filter(|text| requests_a_label(text))
+  {
     for key in printed_label_keys(text, "affiliation") {
       if !requested.contains(&key) {
         requested.push(key);
@@ -2147,26 +2163,20 @@ fn requested_mark_lines(content: &Tokens) -> usize {
 }
 
 fn group_shares_the_mark(marks: &[String], alternating: bool) -> Result<bool> {
-  let is_author = |entry: &RawFrontmatter| {
-    entry.0 == "ltx:creator" && entry.1.get("role").map(String::as_str) == Some("author")
-  };
-  // (the authors queued since the last affiliation, as `queued_author_marks` counts them, from 0)
+  // (how many authors were queued since the last affiliation: the last ones `queued_author_marks` holds)
   let (interleaved, since) = with_value("frontmatter_raw", |v| match v {
     Some(Stored::FrontmatterRaw(queue)) => {
-      let is_affiliation = |entry: &RawFrontmatter| {
-        entry.0 == "ltx:contact" && entry.1.get("role").map(String::as_str) == Some("affiliation")
-      };
-      let previous = queue.iter().rposition(is_affiliation);
+      let previous = queue.iter().rposition(is_affiliation_entry);
       let run = &queue[previous.map_or(0, |at| at + 1)..];
       let follows_an_author = |at: usize| queue[..at].iter().any(|entry| entry.0 == "ltx:creator");
       let interleaved = run.iter().any(|entry| entry.0 == "ltx:creator")
         && previous.is_some_and(|at| !alternating || follows_an_author(at));
-      let before = queue.len() - run.len();
-      let first = queue[..before].iter().filter(|e| is_author(e)).count();
-      let authors = run.iter().filter(|e| is_author(e)).count();
-      (interleaved, first..first + authors)
+      (
+        interleaved,
+        run.iter().filter(|e| is_author_entry(e)).count(),
+      )
     },
-    _ => (false, 0..0),
+    _ => (false, 0),
   });
   if interleaved {
     return Ok(true);
@@ -2174,13 +2184,11 @@ fn group_shares_the_mark(marks: &[String], alternating: bool) -> Result<bool> {
   let [mark] = marks else {
     return Ok(false);
   };
-  if since.is_empty() {
+  if since == 0 {
     return Ok(false);
   }
   let names = queued_author_marks()?;
-  let scripts: Vec<Vec<String>> = names
-    .get(since)
-    .unwrap_or_default()
+  let scripts: Vec<Vec<String>> = names[names.len().saturating_sub(since)..]
     .iter()
     .flatten()
     .filter(|text| requests_an_affiliation(text))

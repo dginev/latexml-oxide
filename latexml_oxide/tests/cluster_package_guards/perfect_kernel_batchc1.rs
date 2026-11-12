@@ -1033,8 +1033,10 @@ fn api_cut_gate_reads_past_empty_bodies() {
 /// `marks_as_printed`) and the names' requests by their digested marks (`run_names_show_a_mark`,
 /// `queued_author_marks`). One row a reader: a document macro's marks over the unmarked head (held, lines, the
 /// head's unprinted label), a mark in a box of its own (lines), a mark in `\textbf` (`marks_lead_every_line`), and
-/// AASTeX's `annotate=new` under macro-marked names. Red on P4b3base: the whole block on every author (macro, box), a
-/// nameless creator (bold), both lines on every author (aastex). Each: no Error, its Warning count, every creator.
+/// AASTeX's `annotate=new` under macro-marked names; symbol marks leading the lines (no label, no fail-safe: red on P4b3,
+/// 2402.10256); marks printed through a macro with an argument after the names' commas, which go by the marked rule
+/// (P4b3b, green on P4b3base). Red on P4b3base: the whole block on every author (macro, box), a nameless creator (bold),
+/// both lines on every author (aastex). Each: no Error, its Warning count, every creator.
 #[test]
 fn group_rule_reads_marks_as_digested() {
   macro_rules! repro {
@@ -1085,6 +1087,33 @@ fn group_rule_reads_marks_as_digested() {
         &["Ann Able 1", "affiliation=Uni One"],
         &["Bob Baker 1", "affiliation=Uni One"],
         &["Cat Cole 1,2", "affiliation=Uni One", "affiliation=Uni Two"],
+      ],
+    ),
+    // (P4b3b: a symbol mark, `$^{\nabla}$`, requests no label, `requests_a_label`, so the lines hold one requested label and
+    // are no fail-safe block; 2402.10256)
+    (
+      repro!("revtex_symbol_marks_lead_lines_go_by_their_marks"),
+      0,
+      &[
+        &[
+          // (`\!\!\!` prints three zero-width spaces between the marks)
+          "Ann Able ∇ \u{200b}\u{200b}\u{200b} ℏ",
+          "affiliation=∇ Univ A, Town A",
+          "affiliation=ℏ Univ B, Town B",
+        ],
+        &["Bob Baker ℏ", "affiliation=ℏ Univ B, Town B"],
+      ],
+    ),
+    // (P4b3b: marks a macro prints through another macro after the names' commas, which `run_names_macro_marks` does not
+    // read by tokens: the marked rule gives each line to the names showing its mark, as the PDF does; read as digested, the
+    // macro-mark rule would send both lines to the block, the `\edef` sibling's outcome)
+    (
+      repro!("revtex_argument_macro_marks_after_commas_go_by_their_marks"),
+      0,
+      &[
+        &["Ann Able", "affiliation=1 Uni One", "affiliation=2 Uni Two"],
+        &["Bob Baker", "affiliation=2 Uni Two"],
+        &["Cat Cole", "affiliation=1 Uni One"],
       ],
     ),
   ];
