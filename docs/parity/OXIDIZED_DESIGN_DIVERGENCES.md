@@ -29681,6 +29681,8 @@ name-part argument (2406.15355 `\lastname{Schmier for the ALICE collaboration}`;
 `perfect_kernel_batch103b::webofc_collaboration_after_the_notes_is_a_contact`; repro
 class-bindings/webofc/`webofc_collaboration_after_the_notes_is_a_contact` (RED → GREEN).
 
+
+**P6b (2026-11-12): one vocabulary.** The spellings that frame a collaboration (`SPEAKS_FOR`: "for", "on behalf of", "representing", …), the collaboration words and the team words live once, in `classify/collaborations.rs`, read by one predicate, `collaboration_remark(text) -> Option<Framing>` (the resolver's `speaks_for` and `is_collaboration` its two framings); every reader now takes the union of the four lists that had drifted apart (1301.6504's `Juan A. Aguilar for the IceCube Collaboration.` a contact past its trailing period; "representing", "Consortia", "teams": `perfect_kernel_batchp6b`). `speaks_for` stays a test of its own beside `frames_the_names_alone` by design: a speaking-for line carrying its own note goes through the per-event branch so the note stays the document's (P5b's last row).
 ### 947. The declarations around an author block's alignment environment go with it, and spacing after its close is no part of the block; AASTeX's `\affiliation` is REVTeX's (Perl: one creator per `\author`, the block kept whole; aastex's affiliation the last author's)
 
 **What** (brief 97f; dev giant-list census M1, M3). Two author-block readings.
