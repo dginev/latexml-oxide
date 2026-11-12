@@ -2097,3 +2097,17 @@ On `pk/int159a` after the int158a push (`117af80fcf`); every batch reviewed and 
 - **Parked:** P28 (a binding-level expander and token rewriter; → P2-8b), SB1 (a second title-page run; → TP1/TP2 per study TP0), BT1 (→ P3).
 - **Chain:** first run (b5e85731d2) one gate failed (FX24 × FX25: a false "bob" on amsart) → FX27; re-chain int159b on `02ad78a3f6`: gates 8095/8095; A/B 21 changed, worse 0 (2511.15315 better; 1408.6230 and astro-ph0107369 lateral, a junk "and" contact gone; 8 load timeouts at the doubled width byte-identical alone; 10 math-budget noise byte-identical on re-run); stage2 creators 0; nets 136 worse 0; sweep #174 G1-G4 0 (G5 57, the same canaries as #172; recall median 96.89 = #173); cost −0.05 … +0.02 %. The widened chain (A/B `PAR=80`) timed out heavy papers under load: `run_ab2.sh` now re-runs timeouts at 4 before the tally. A side finding for the math stream: under load the parser drops an ambiguous_math Warning, and a budget-spent formula can come out unparsed without an unparsed_math Warning (2305.18054).
 
+## Bundle int160a — P3, P2-3 half, one title-page reading, FN1, RB1/RB1c, RK1; the BM Q&A training session
+
+On `pk/int160a` after the int159a push (`140bbb3d67`); every batch reviewed and merged; GA1 merged then reverted (it exposed asl.cls's empty `\@listctr`; queued with that fix).
+
+- **FN1, FN1b:** an author's `\footnotemark[n]` note becomes the creator's, beside the name (222 A/B papers better).
+- **P3:** the emitter writes names from the rehearsal's expansion tokens (ptephy `\name{\fname{…} \surname{…}}`).
+- **P23 (Option C P2-3, half):** llncs's `\institute` list and marked author by meaning.
+- **TP1, TP1b, TP1c:** one `TitlePageReading` per state; `TitlePageDecl::maketitle_runs` declares which classes' `\maketitle` runs `\@maketitle` (incl. extarticle/extreport/extbook); revTP1 B1 (an invented creator under elsarticle) fixed.
+- **RK1 (study PF160):** TP1b's per-write state generation cost +0.10 … +0.60 % per document; the reading's key now watches the state only while a reading is held (byte-identical; 1507.02068 +0.444 % vs int159b).
+- **RB1, RB1c, RB1d (OD #1003):** REVTeX's post-`\maketitle` switch-off reaches only a repeated author block, from its first `\author` on; a lone `\affiliation`/`\email`/`\thanks`/`\title`/`\date` keeps its text (FIDELITY_CHARTER §2; 1309.4768, 1106.2389, 2304.09163); a document's later `\renewcommand{\author}` takes effect (2412.14256); the repeat's new words are counted by the content check (1206.0114, 1903.12442, 2305.19055). Three synthetic REDs from revRB1d.
+- **IV1, CT1c, ST1, CT1a rows, HG1, SVC rows** (tests and small fixes).
+- **Chain:** int160b (one large A/B): gates 8037/8037; A/B 269 changed (242 better, 25 lateral, 1 worse → RB1c), E 45,813 → 45,823 (2505.20009 OOM noise), F 172 → 172; stage2 1 creator change (→ RB1c); cost over the bar (→ RK1); nets 136 worse 0; sweep #175 G1-G4 0. Lean checks int160c after RK1 + RB1c: gates 8038/8038, stage2 creators 0, cost ≤ +0.444 %, the 269 re-checked none worse than int159b.
+- **The BM Q&A training session** (DG, 2026-11-11): Bruce Miller's 64 answers → 93 actions (QA01-QA93, tracker out of tree); DG's six rulings; the independent review revQA (14 findings fixed); working rules applied; SYNC step (5b) approved; studies QA60, QA46, QA23, QA54.
+
