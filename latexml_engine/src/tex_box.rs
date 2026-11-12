@@ -6,7 +6,7 @@ use std::cell::{Cell, RefCell};
 
 use latexml_core::{
   common::{error::emit_warn, numeric_ops::round_to},
-  stomach::{TEMPLATE_BRACE_OPEN, off_save_closer},
+  stomach::{TEMPLATE_BRACE_OPEN, digest_group_body_in_paragraph, off_save_closer},
   stored_dimension,
 };
 
@@ -737,7 +737,8 @@ LoadDefinitions!({
     // R2: were we mid-paragraph when this group opened? If so, the characters
     // typeset so far belong to the OUTER paragraph. Perl's text-mode `{...}`
     // flows FLAT (`digestUntil`), so a grouped `\par` repacks them; Rust
-    // localizes the group (below), hiding them from the inner `\par`. Captured
+    // localizes the group (below), hiding them from the inner `\par`, and its list
+    // continues their paragraph (`digest_group_body_in_paragraph`). Captured
     // BEFORE `bgroup` (the matching `}` restores mode via `egroup`).
     let mid_para = {
       let mode = lookup_string_from_sym(pin!("MODE"));
@@ -757,7 +758,11 @@ LoadDefinitions!({
     } else {
       TexMode::Text
     });
-    let body = digest_next_body(None)?;
+    let body = if mid_para {
+      digest_group_body_in_paragraph()?
+    } else {
+      digest_next_body(None)?
+    };
     // R2: if this text-mode group actually broke a paragraph (its digested body
     // resumed vertical mode — i.e. contains a `\par` whatsit), repack the outer
     // paragraph's now-restored loose run NOW, so the box-list matches Perl's flat

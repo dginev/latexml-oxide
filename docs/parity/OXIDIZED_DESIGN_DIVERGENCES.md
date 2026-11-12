@@ -4906,9 +4906,31 @@ runs the pure Perl one-line-per-box algorithm (no measurement-layer change) and
 lands on 77.82pt, an exact Perl match. The guard is narrow: ordinary inline
 `{...}`, math groups, and groups entered in vertical mode never satisfy both
 conditions, so only the rare `\par`-inside-a-text-group idiom is touched. (The
-box-list divergence has NO other observable symptom — the DOM absorption already
-coalesces the loose boxes into one `<ltx:p>`, verified; measurement was the sole
-consumer that didn't.)
+DOM absorption already coalesces the loose boxes into one `<ltx:p>`.) A second
+consequence (RG1): the inner `\par` met no open-brace box, which in Perl is a
+non-space item of the paragraph, so a paragraph whose group part held only
+space items (phantoms) was discarded — `x{\phantom{Ca}\par Cb}` lost Ca, a tikz
+node `{\phantom{Cpd}\\\phantom{pt}}` its Cpd (2410.06985). The group's list now
+continues the paragraph (`ParagraphStart::in_group`, index 0,
+`stomach::digest_group_body_in_paragraph`), and `repack_paragraph` reads that start
+three ways: a repack that runs off the list's bottom keeps the paragraph, as Perl's
+pop reaching the `{` box does (Stomach.pm:463-465), unless every item the group
+added is a space character, glue (`isSkip`: `\hskip`, `\quad`) or a kern (`isKern`)
+(`stomach::adds_no_line_material`; `\penalty` lists nothing): none gives the one
+line TeX makes, x's, height or depth (tex.web §816 deletes a final glue; a kern
+stays in the line), so `\vbox{x{\quad\par}}` is 4.31pt high, as pdflatex
+(revRG1b B1), and Perl's empty `<text>` is not made (1602.08755
+`diagram⏎\footnotesize{⏎\begin{center}`); an `isSpace` box (`\phantom`) still keeps
+it; a paragraph that kept nothing makes no
+empty line of its own (`empty_line`), its line being in the list outside the group
+(`\vbox{x{ \par}}` is 4.31pt high, as pdflatex; revRG1 B1); and every item of the
+group's list is the paragraph's own (`own_item`), so an `\unhbox`ed vertical item
+(`in_hlist`, tcolorbox's `sidebyside`) there joins the paragraph (§1076; the XML is
+the same as before, probed in `x{…\par}`). `own_list_floor` and
+`take_implicit_indent` read the start as before (floor 0, no implicit indent).
+Guard `perfect_kernel_batchrg1::batchrg1_group_paragraph_rows`. Residual: such a
+group's paragraphs are mismeasured (repro
+`boxes-groups/group_par_paragraphs_are_measured_red`).
 
 **Guard**: `123_tcbline_nointerlineskip::tcbline_box_not_over_measured`
 (`xxx\tcbline yyy` @ width=100pt sizes to < 90pt, i.e. Perl's 77.82 not the

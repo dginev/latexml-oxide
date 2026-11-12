@@ -1,0 +1,11 @@
+% witness: synthetic (found by RG1's sibling sweep: the list-tail primitives in a text group opened mid-paragraph)
+% oracle:  pdflatex 0 errors: "AbCd", "EfGh" (a group is no list in TeX: `\unskip` removes the space before the `{`)
+% engines: rust RG1 = <p>Ab Cd</p>, <p>Ef <text font="italic">Gh</text></p>; perl = the same
+% expect:  0 errors; <p>AbCd</p> and <p>Ef<text font="italic">Gh</text></p>
+% status:  RED: the group digests into a list of its own, which `\unskip` does not reach past. moves: post-merge
+\documentclass{article}
+\begin{document}
+Ab {\unskip Cd}
+
+Ef {\em\unskip Gh}
+\end{document}

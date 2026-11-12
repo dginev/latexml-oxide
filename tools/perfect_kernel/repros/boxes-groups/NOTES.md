@@ -1088,3 +1088,41 @@ group the binding opened ("Missing \right. inserted"), so the binding's own `\ri
 regression (65c and Perl 0). Fix stomach.rs `close_left_group_at_input_end`: only a `\left` read in the input that ran
 out (the reading context `\lx@math@left@group` records, `gullet::reading_context`) is closed there. Guards
 `perfect_kernel_batch66g::*`.
+
+### group_par_mid_paragraph_keeps_its_paragraph, group_par_in_tikz_node_keeps_its_paragraph — GREEN (RG1); group_par_space_only_paragraph_makes_none — CONTROL
+Perl's text-mode `{` lists an open-brace box (not a space) in the paragraph (TeX_Box.pool.ltxml:30-42), so a `\par` in the
+group keeps a paragraph whose group part holds only space items (Stomach.pm:463-465 `repackHorizontal`). Ours digests
+the group into its own list (OD #100), whose repack discarded `x{\phantom{Ca}\par Cb}`'s phantom and 2410.06985's
+`\node{\phantom{Cpd}\\…}`. RUST-ONLY. Fix stomach.rs: the group's list continues the paragraph (`ParagraphStart::in_group`),
+and a repack that runs off its bottom keeps the paragraph, unless the group added only blank characters (the glue TeX
+deletes at a paragraph's end, tex.web §816; Perl leaves an empty `<text>` there, 1602.08755). Guard
+`perfect_kernel_batchrg1::batchrg1_group_paragraph_rows`.
+
+### group_par_blank_paragraph_measures_no_line, group_par_blank_in_tikz_node_measures_no_line, group_par_blank_paragraph_after_noindent_makes_no_line — GREEN (RG1b)
+RG1's in-group start let `repack_paragraph`'s `empty_line` fire for a group paragraph that kept nothing, stacking an
+empty line under the line outside the group: `\vbox{x{ \par}}` 16.31pt (pdflatex 4.31pt), a tikz text-width node
+`{x{ \par}}` twice its height (revRG1 B1); `\vbox{\noindent{ \par}x}` 12pt (pdflatex 4.31pt). RUST-ONLY. Fix
+stomach.rs: `empty_line` never fires for an in-group start. Guard `perfect_kernel_batchrg1::batchrg1_group_paragraph_rows`.
+
+### group_par_glue_kern_paragraph_measures_no_line — GREEN (RG1c)
+RG1b's run-off keep counted only space characters as blank, so a group that added only glue or a kern
+(`x{\quad\par}`, `x{\hskip1cm\par}`, `x{\kern1pt\par}`, in a p-cell, a minipage, a tikz node) kept a paragraph of its
+own, measured as a second line (16.31pt, pdflatex and int162a 4.31pt; revRG1b B1). RUST-ONLY. Fix stomach.rs
+`adds_no_line_material`: space characters, glue (`isSkip`) and kerns (`isKern`) are blank; an `isSpace` box (`\phantom`)
+is not. Guard `perfect_kernel_batchrg1::batchrg1_group_paragraph_rows`.
+
+### group_par_blank_paragraph_after_leavevmode_makes_a_line_red, group_par_noindent_space_group_makes_a_line_red, group_par_box_or_vspace_in_group_measured_as_a_line_red — RED (RG1c, post-merge)
+Pre-existing (int162a the same). `\vbox{\leavevmode{ \par}x}`, `\indent{ \par}x`, `\leavevmode{}\par x` make no line
+for the indent box (4.31pt, pdflatex 12pt). `\vbox{\noindent{ }\par x}` makes one (12pt; LaTeX's `\par` `\unskip`s the
+space, so pdflatex makes none, 4.31pt). A group's box or `\vspace` before its `\par` is stacked as a second line
+(`x{\strut\par}` 16.31pt, pdflatex 8.4pt; `x{\vspace{2pt}\par}` 16.31pt, 6.31pt), and after `\small` even a blank
+group piece (`x{\small\quad\par}` 16.31pt, 4.31pt).
+
+### group_par_paragraphs_are_measured_red, group_unskip_reaches_the_paragraph_before_it_red — RED (RG1, post-merge)
+A text group holding a `\par` is mismeasured (`\vbox{x{Cpd\par pt}}` 28.31pt high, pdflatex 18.94pt; cause not traced;
+an `\unhcopy`ed minipage in `x{…\par}` 16.31pt, pdflatex 5.92pt, int162a the same as ours).
+`Ab {\unskip Cd}` keeps the space (pdflatex "AbCd"; Perl the same as ours): the group's own list is all `\unskip` sees.
+
+### lastbox_implicit_indent_is_void_red — RED (RG1b, post-merge)
+`\leavevmode\global\setbox1\lastbox` leaves box 1 void (pdflatex: the indent box), in a group or not: the implicit indent
+is no box (`take_implicit_indent` only makes the paragraph null).

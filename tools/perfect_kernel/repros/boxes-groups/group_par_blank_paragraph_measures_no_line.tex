@@ -1,0 +1,22 @@
+% witness: synthetic (revRG1 B1: the in-group start of RG1 made a blank group paragraph measure an empty line)
+% oracle:  pdflatex 0 errors: H1=4.30554pt, D1=0.0pt; H2-H5 the same (one line "x"; tex.web §816 deletes the blank);
+%          H6=16.30554pt, D6=1.94444pt (x, then y); H7=8.5pt, D7=3.5pt (a p-cell)
+% engines: rust rg1 = 12pt more on H1, H2, H5, H6 and 4.2pt on H7, D7 (an empty line stacked under x); int162a = pdflatex
+% expect:  0 errors, 0 warnings; the oracle's values
+% status:  RED (rg1) -> GREEN (RG1b)
+\documentclass{article}
+\begin{document}
+\setbox0\vbox{x{ \par}}H1=\the\ht0, D1=\the\dp0.
+
+\setbox0\vbox{x{ \par\par}}H2=\the\ht0, D2=\the\dp0.
+
+\setbox0\vbox{x{\par}}H3=\the\ht0, D3=\the\dp0.
+
+\setbox0\vbox{x{\small\par}}H4=\the\ht0, D4=\the\dp0.
+
+\setbox0\vbox{x{{ \par}}}H5=\the\ht0, D5=\the\dp0.
+
+\setbox0\vbox{x{ \par} y}H6=\the\ht0, D6=\the\dp0.
+
+\setbox0\hbox{\begin{tabular}{p{3cm}}x{ \par}\end{tabular}}H7=\the\ht0, D7=\the\dp0.
+\end{document}
