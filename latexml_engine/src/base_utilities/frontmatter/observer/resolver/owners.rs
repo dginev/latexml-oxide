@@ -178,9 +178,13 @@ impl NameKeys {
   /// "weissenborn", `Hj\o rth` "hjoerth", [`resolver::transliterated`]; html_feedback #7233, OXIDIZED_DESIGN_DIVERGENCES
   /// #970) — a letter written with an accent or letter command read as the letter it prints ([`spelling_name_text`]).
   pub(in crate::base_utilities) fn of(name: &Tokens) -> NameKeys {
-    let text = spelling_name_text(name.unlist_ref());
-    let base = resolver::base_letters(&text);
-    let transliterated = resolver::base_letters(&resolver::transliterated(&text));
+    NameKeys::of_printed(&spelling_name_text(name.unlist_ref()))
+  }
+
+  /// [`NameKeys::of`] a name's printed `text` (`queue_reading::queued_author_name_keys`, the digested reading's words).
+  pub(in crate::base_utilities) fn of_printed(text: &str) -> NameKeys {
+    let base = resolver::base_letters(text);
+    let transliterated = resolver::base_letters(&resolver::transliterated(text));
     let base_words = name_words(&base);
     let classes: Vec<usize> = base_words.iter().map(|word| word.chars().count()).collect();
     let mut keys = NameKeys::of_words(&base_words, &classes);

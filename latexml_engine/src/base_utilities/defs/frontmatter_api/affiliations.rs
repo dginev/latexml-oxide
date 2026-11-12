@@ -5,7 +5,6 @@
 //! P2-P4 (FRONTMATTER_SINGLE_ENGINE_PLAN, row "`author_block/`'s survivors").
 
 use super::*;
-use crate::base_utilities::defs::frontmatter_fields::queued_author_name_keys;
 
 /// The `\lx@add@affiliation` calls for an affiliation list: one per line or `\and`-separated
 /// entry, each with its superscript marker as its label when the list has markers (Perl
@@ -588,7 +587,7 @@ fn place_address_runs(
           entries[entry].splice(at..at, continuation);
         }
       },
-      _ if total == authors - row_start && run_in_author_order(&run.lines, row_start) => {
+      _ if total == authors - row_start && run_in_author_order(&run.lines, row_start)? => {
         let mut positions = row_start + 1..;
         for ((_, line), count) in run.lines.into_iter().zip(counts) {
           let authors = positions.by_ref().take(count).collect();
@@ -599,7 +598,7 @@ fn place_address_runs(
         // (an address the run's place leaves to no author still goes to the one it spells, before the block: the
         // placement order's step 2 before step 4 — aa's `\institute{$^{1}$Univ X\\ $^{2}$Univ Y\\ \email{ann.able@y.org}}`
         // under three names, 1507.05963, cut at its marks by the frontmatter API, OXIDIZED_DESIGN_DIVERGENCES #954)
-        let keys = queued_author_name_keys();
+        let keys = queued_author_name_keys()?;
         for (_, line) in run.lines {
           let owners: Vec<Option<usize>> = line_addresses(&line)
             .unwrap_or_default()

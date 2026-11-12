@@ -16464,7 +16464,11 @@ contact links to: each address is an email contact named by the label, placed by
 mark (of several, the one it spells; a numeric mark by its label, so it is answered and leaves the name, a symbol by
 the author's position) — the address's own mark outranks the spelling, where an author block's email lines rank the
 spelling above a correspondence note's mark (1710.00802), a mark on the address being the stronger evidence; (2) the
-author whose surname its local part spells; (3) the current group's only author; (4) the block's shared creator
+author whose surname its local part spells, each queued name read as it prints — the rehearsal's words
+(`queue_reading::queued_author_name_keys`, the marks' rehearsal shared; a name of characters as typed): a name a macro
+or a `\let` copy holds spells as its literal does (P5c; repro `placed_contact_owner_spells_the_printed_name`), and the
+API's run readers (`run_in_author_order`, the Cut's spelled e-mail lines) and the flush's `sequenced_contact_labels`
+read the same keys; (3) the current group's only author; (4) the block's shared creator
 (1306.2982, 1004.2645, 0901.2914, 2001.05892, 1312.7046). Anything else (`… Italy (stefano.longhi@polimi.it)`,
 1411.7144) stays an affiliation. `\homepage` is placed the same way, a `\url` (1004.2645's institute page was the last
 author's). `\ocis`/`\pacs` a classification `scheme=ocis`; `{abstract*}`; `{References}`, `{OEReflinks}`,

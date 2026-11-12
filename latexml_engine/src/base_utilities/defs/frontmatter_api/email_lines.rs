@@ -4,7 +4,6 @@
 //! (Z18j).
 
 use super::*;
-use crate::base_utilities::defs::frontmatter_fields::queued_author_name_keys;
 
 /// The `\lx@add@email` calls for a line of addresses in an author block (`a@x, b@y`, `{a,b}@dom`), placed as
 /// `placement` says: one call per address, a whole-line wrapper repeated on each, or the line itself when it holds one
@@ -430,13 +429,13 @@ pub(in crate::base_utilities) fn queued_row_start() -> usize {
 pub(in crate::base_utilities) fn run_in_author_order(
   lines: &[(Vec<Token>, Tokens)],
   offset: usize,
-) -> bool {
-  let keys = queued_author_name_keys();
+) -> Result<bool> {
+  let keys = queued_author_name_keys()?;
   let addresses: Vec<String> = lines
     .iter()
     .flat_map(|(_, line)| line_addresses(line).unwrap_or_default())
     .collect();
-  addresses_in_order(&keys, &addresses, offset)
+  Ok(addresses_in_order(&keys, &addresses, offset))
 }
 
 /// Whether `addresses` may be the authors' in order from the one at `offset` (names keyed by `keys`, [`NameKeys`]):
