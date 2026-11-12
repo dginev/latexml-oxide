@@ -5021,17 +5021,22 @@ clean head-grabbed case, unchanged by this fix).
 
 **Divergence** (surpass-Perl): because the whole row was only ever the caption,
 drop it entire. `\lx@longtable@caption` ends with `\lx@longtable@caption@row`, which
-sets `LONGTABLE_CAPTION_ROW` (beside `\kill`'s `LONGTABLE_KILL_NEXT`); the
-caption's terminating `\\` (vtype `cr`) consumes it in `tex_tables.rs` and pops
-the just-ended empty row via `remove_row`. An `&` after the caption in its row clears
-the flag and the row is kept (65h): the caption spans every column, so the row holds
+routes the row to `caption_row_notes` (the alignment's `RowDisposition::Route`, beside
+`\kill`'s `Drop`; GA4); the caption's terminating `\\` ends the row and the alignment
+removes it. An `&` after the caption in its row withdraws the request and the row is
+kept (65h): the caption spans every column, so the row holds
 more than the caption — a `\caption{…}\label{…}` with no `\\` before `\hline` and the
 head row, which pdflatex typesets with "Extra alignment tab" (guard
 `perfect_kernel_batch65h::longtable_caption_row_without_its_cr_keeps_the_next_row`). Uniform across caption position
 (start/middle/end) and body-vs-grabbed-head; the caption text is still hoisted
 (and, in a grabbed head/foot, still moves `LONGTABLE_CAPTIONS→…_HEAD_CAPTIONS`
-before the grab). `longtable_bindings` resets the flag per table so a malformed
-caption-without-`\\` cannot leak the drop into the next table's first row. A
+before the grab). The request lives on the table's own alignment, so a malformed
+caption-without-`\\` cannot leak the drop into the next table's first row, nor a nested
+alignment's `\\` take it. Content in the row besides the caption and its notes (a stray `[t]`
+before it, 1009.4206; 1903.09068's "." or a nested tabular after it) goes with the row, counted by a
+Warning (RED alignment-bindings/longtable_caption_then_a_nested_tabular_red, GA4C post-merge); the column
+template's own text (`r@{.}`'s ".", 1111.5166) is not counted, the caption's cell being a `\multicolumn`
+(`\LT@mcol`) that omits it. A
 mid-table caption flanked by two `\hline`s correctly coalesces to a double rule
 (`border="…tt"`) once its row is gone — the two rules were really there.
 
@@ -16857,12 +16862,23 @@ Witnesses 0901.1150, 0901.4335 (author's `mn2e_journal_style.sty`), 1403.4079. G
 
 ### 514. `\noalign\\` is an empty noalign and the row end; "Missing { inserted" unless the kernel's text tabular newline (Perl: Missing `{` and a cascade)
 
-`\noalign` followed by `\\` (or `\tabularnewline`, past spaces and `\relax`) is read as an empty noalign and the row
-end. It is silent only for a text alignment whose `\\` is the kernel `\@tabularcr` (no array.sty, not longtable), where
-pdflatex is clean (latex.ltx:16590); math `array`, amsmath `align`, array.sty `tabular`, longtable and tabularx raise
-`Error:expected:{` "Missing { inserted" once, as TeX does (pdflatex: 5-114 cascaded errors). Witness 2309.15248 (its
-44 bibitems restored). Residuals: `\let\mytcr\@tabularcr` + `\noalign\mytcr` (RED
-kernel-alignment/noalign_let_tabularcr), `\noalign\cr` still cascades.
+`\noalign` followed by `\\` (or `\tabularnewline`, past spaces and `\relax`, as §785 `scan_left_brace` reads) is read
+as an empty noalign and the row end (it was a noalign group that never closed, and the rest of the document was lost).
+In TeX the kernel text `tabular`'s `\\` (and `\tabularnewline`, latex.ltx:16576 `\let`) is `\@tabularcr`
+(latex.ltx:16590), `{\ifnum0=`}\fi…`: the brace `\noalign` scans is the one `\\` opens and its `\ifnum0=`{\fi}` closes,
+before the `\cr` that ends an empty row, so pdflatex is clean (2309.15248, svmult's `\svhline\noalign\\`;
+`\tabular…\endtabular` the same). Every other `\\` (array.sty's and the kernel's `\@arraycr`, `\relax\iffalse{\fi…`,
+longtable's `\LT@tabularcr`, amsmath's `\math@cr`) opens with no brace: "Missing { inserted" and a cascade. Ours expands
+every `\\` to `\lx@hidden@cr{…}`, so the shape is told before expansion: the token is `\ifx`-equal to `\@tabularcr` (a
+`\let` copy too), the alignment's binding names `\@tabularcr` as its `\\` (`row_end`: the kernel's `tabular_bindings`;
+longtable names `\LT@tabularcr`, longtable.sty:133) and array.sty is not loaded. Then it is silent; otherwise it raises
+`Error:expected:{` "Missing { inserted" once (math `array`, amsmath `align`, array.sty `tabular`, longtable, tabularx;
+pdflatex: 5-114 cascaded errors). Witness 2309.15248 (its 44 bibitems restored). Residuals (GA4N, post-merge): every
+`\\` here is one `\lx@alignment@newline` (latex_constructs/sect10.rs `\let`s `\@tabularcr` and `\@arraycr` to it), so
+`\ifx` cannot tell them apart — a kernel text tabular's `\noalign\@arraycr` is silent where pdflatex errs (RED
+kernel-alignment/noalign_arraycr_in_a_kernel_tabular_red) — and a macro that expands to the row end
+(`\def\tnl{\tabularnewline}`, RED kernel-alignment/noalign_tabularcr_through_a_macro_red) errs where pdflatex is clean,
+TeX's brace not being readable; `\noalign\cr` still cascades.
 
 ### 515. Kernel `\lx@startsection@afterhook{<type>}{<inlist>}` after a heading (Perl: none; svmult `\motto`/`\chapauthor` undefined)
 

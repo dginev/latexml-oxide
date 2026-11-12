@@ -104,6 +104,17 @@ pub struct AlignmentConfig {
   pub is_math:         bool,
 }
 
+/// What becomes of the row being built at its end, asked by a binding from inside the row (longtable's `\kill`, its
+/// `\caption`'s row); the alignment carries it so a nested one cannot take it.
+#[derive(Clone, Copy, Debug)]
+pub enum RowDisposition {
+  /// Removed at its end.
+  Drop,
+  /// Removed at its end and handed to the function; a column ended after the request (`&`) withdraws it, the row
+  /// being more than the requesting cell.
+  Route(fn(&Row)),
+}
+
 #[derive(Clone)]
 pub struct Alignment {
   in_column:         bool,
@@ -136,6 +147,7 @@ pub struct Alignment {
   // Longtable: stored head/foot rows for reinsertion
   pub head_rows:     Vec<Row>,
   pub foot_rows:     Vec<Row>,
+  row_disposition:   Option<RowDisposition>,
 }
 impl Alignment {
   /// Create a new Alignment.
@@ -186,6 +198,7 @@ impl Alignment {
       row_depths: Vec::new(),
       head_rows: Vec::new(),
       foot_rows: Vec::new(),
+      row_disposition: None,
     }
   }
 
@@ -214,6 +227,33 @@ impl Alignment {
   }
 
   pub fn remove_row(&mut self) -> Option<Row> { self.rows.pop_back() }
+
+  /// Ask for the current row's disposition at its end ([`RowDisposition`]).
+  pub fn set_row_disposition(&mut self, disposition: RowDisposition) {
+    self.row_disposition = Some(disposition);
+  }
+
+  /// A column ended (`&`): a [`RowDisposition::Route`] is withdrawn.
+  pub fn column_ended(&mut self) {
+    if matches!(self.row_disposition, Some(RowDisposition::Route(_))) {
+      self.row_disposition = None;
+    }
+  }
+
+  /// The row just ended, removed if its disposition says so.
+  pub fn dispose_ended_row(&mut self) {
+    match self.row_disposition.take() {
+      Some(RowDisposition::Drop) => {
+        self.remove_row();
+      },
+      Some(RowDisposition::Route(to)) => {
+        if let Some(row) = self.remove_row() {
+          to(&row);
+        }
+      },
+      None => {},
+    }
+  }
 
   pub fn prepend_rows(&mut self, new_rows: Vec<Row>) {
     for new_row in new_rows.into_iter().rev() {

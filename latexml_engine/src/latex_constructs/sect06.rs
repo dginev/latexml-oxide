@@ -1074,17 +1074,7 @@ pub(crate) fn load() -> Result<()> {
   // through `\verb@egroup`; a MACRO, as packages append to it
   // (`\g@addto@macro`, newverbs.sty:58).
   DefMacro!("\\verb@egroup", "\\global\\let\\verb@balance@group\\@empty\\lx@hidden@egroup");
-  DefMacro!("\\verb", {
-    match read_verb_invocation()? {
-      Some(inner) => {
-        let mut result = vec![T_CS!("\\lx@hidden@bgroup")];
-        result.extend(inner);
-        result.push(T_CS!("\\verb@egroup"));
-        Ok(Tokens::new(result))
-      },
-      None => Ok(Tokens!()),
-    }
-  });
+  DefMacro!("\\verb", { verb_group(false)? });
 
   DefPrimitive!("\\lx@use@visiblespace", {
     // Do NOT (necessarily) skip spaces after \verb!!!

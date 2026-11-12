@@ -1,0 +1,16 @@
+% witness: synthetic (GA0 finding 3: `\tabularnewline` was told by its spelling)
+% oracle:  pdflatex 0 errors: `\tnl` is `\let` to `\tabularnewline`, which in a tabular is `\\` = `\@tabularcr`
+%          (latex.ltx:16576), so `\noalign\tnl` is an empty noalign and an empty row; rows a/b and c/d printed
+% engines: rust GA4base = 1 Error:expected:{ "Missing { inserted"
+% expect:  0 errors; rows a/b and c/d, the \hline above c/d
+% status:  RED (GA4base) -> GREEN (GA4)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\begin{tabular}{ll}
+a & b\global\let\tnl\tabularnewline \\
+\hline\noalign\tnl
+c & d \\
+\end{tabular}
+After TEXT.
+\end{document}

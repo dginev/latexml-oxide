@@ -1,0 +1,21 @@
+% witness: synthetic (GA4N: the TeX rule of GA0 finding 3)
+% oracle:  pdflatex 0 errors: `\noalign` expands as it scans for its brace (tex.web §785 `scan_left_brace`), so
+%          `\tnl` -> `\tabularnewline` -> `\@tabularcr` opens with `{`; rows a/b and c/d printed
+% engines: rust GA4 = 1 Error:expected:{ "Missing { inserted": the rule reads the unexpanded token's meaning, as
+%          every `\\` here is `\let` to the one `\lx@alignment@newline` (latex_constructs/sect10.rs `\@tabularcr`,
+%          `\@arraycr`) and no expansion shows TeX's brace; the rows are kept
+% expect:  0 errors; rows a/b and c/d
+% status:  RED (GA4)
+% moves:   post-merge (GA4N: `\\`'s brace from its expansion needs distinct `\@tabularcr`/`\@arraycr`/`\LT@tabularcr`
+%          meanings, which collcell's `\lx@alignment@newline` test and the dumps read)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand\tnl{\tabularnewline}
+\begin{document}
+\begin{tabular}{ll}
+a & b \\
+\hline\noalign\tnl
+c & d \\
+\end{tabular}
+After TEXT.
+\end{document}

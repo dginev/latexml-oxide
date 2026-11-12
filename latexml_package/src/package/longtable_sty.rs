@@ -1,3 +1,5 @@
+use latexml_core::alignment::{RowDisposition, template::Row};
+
 use crate::prelude::*;
 
 #[rustfmt::skip]
@@ -117,9 +119,9 @@ LoadDefinitions!({
   // normal cr path, exactly like `\\`), with a flag that tells the alignment
   // driver to drop the just-ended row. The older `\crcr\noalign{marker}` form
   // (still defined below for compatibility) leaked the cell box / popped the
-  // wrong row; routing through this flag avoids both. Witness 2010.09763.
+  // wrong row; the row's `RowDisposition::Drop` avoids both. Witness 2010.09763.
   DefPrimitive!("\\lx@longtable@kill@flag", sub[_args] {
-    assign_value("LONGTABLE_KILL_NEXT", true, Some(Scope::Global));
+    dispose_current_row(RowDisposition::Drop);
     Ok(())
   });
   DefMacro!("\\lx@longtable@kill",         r"\lx@longtable@kill@flag\crcr");
@@ -181,9 +183,9 @@ LoadDefinitions!({
   // per-column cells rather than vanishing. Perl keeps that stray empty
   // <ltx:tr> (byte-for-byte parity confirmed on 0.8.8); pdflatex shows the
   // caption as spanning text with no blank body row. Since the whole row was
-  // only ever the caption, drop it entire: `\lx@longtable@caption@row` sets
-  // LONGTABLE_CAPTION_ROW and the caption's terminating `\\` (vtype "cr") consumes it at
-  // tex_tables.rs and pops the just-ended row, as `\kill`'s LONGTABLE_KILL_NEXT does. Uniform
+  // only ever the caption, drop it entire: `\lx@longtable@caption@row` routes the row to
+  // `caption_row_notes` (the alignment's `RowDisposition::Route`) and the caption's terminating `\\` removes
+  // it, as `\kill`'s `Drop` does. Uniform
   // across positions (start/middle/end) and whether the caption sits in the body (no
   // `\endhead`) or a grabbed head/foot — there the row is dropped before `\lx@longtable@grab`,
   // the text still moves CAPTIONS→HEAD_CAPTIONS. A row with an `&` after the caption is not
@@ -260,7 +262,7 @@ LoadDefinitions!({
         "Misplaced \\noalign: a longtable \\caption begins its row; the cells before it are kept"
       );
     } else {
-      assign_value("LONGTABLE_CAPTION_ROW", true, Some(Scope::Global));
+      dispose_current_row(RowDisposition::Route(caption_row_notes));
     }
     Ok(())
   });
@@ -332,6 +334,8 @@ LoadDefinitions!({
 fn longtable_bindings(template: Template) -> Result<()> {
   let mut props = SymHashMap::default();
   props.insert("guess_headers", Stored::Bool(false));
+  // longtable.sty:133 `\let\\\LT@tabularcr`, which opens with no brace (`\noalign\\` is "Missing { inserted")
+  props.insert("row_end", Stored::Token(T_CS!("\\LT@tabularcr")));
   tabular_bindings(template, props, HashMap::default())?;
   let_i(
     &T_CS!("\\endfirsthead"),
@@ -366,12 +370,6 @@ fn longtable_bindings(template: Template) -> Result<()> {
   assign_value("LONGTABLE_LABEL", Stored::None, Some(Scope::Global));
   assign_value("LONGTABLE_LABEL_TYPE", Stored::None, Some(Scope::Global));
   assign_value("LONGTABLE_CAPTIONS", Stored::None, Some(Scope::Global));
-  // Clear any leaked caption/kill row-drop flag from a prior table (#534): the
-  // flag is normally consumed by the caption/kill row's `\\`, but a malformed
-  // `\caption` with no terminator would otherwise carry it into this table's
-  // first row. Fresh table ⇒ fresh flag.
-  assign_value("LONGTABLE_KILL_NEXT", false, Some(Scope::Global));
-  assign_value("LONGTABLE_CAPTION_ROW", false, Some(Scope::Global));
   assign_value("LONGTABLE_HEAD_CAPTIONS", Stored::None, Some(Scope::Global));
   assign_value("LONGTABLE_FOOT_CAPTIONS", Stored::None, Some(Scope::Global));
   assign_value("LONGTABLE_HEAD", Stored::None, Some(Scope::Global));
@@ -388,4 +386,80 @@ fn longtable_bindings(template: Template) -> Result<()> {
   );
 
   Ok(())
+}
+
+/// Ask the current alignment for its row's disposition at the row's end.
+fn dispose_current_row(disposition: RowDisposition) {
+  if let Some(alignment) = lookup_alignment()
+    && let Some(cell) = alignment.alignment_cell()
+  {
+    cell.borrow_mut().set_row_disposition(disposition);
+  }
+}
+
+/// A caption's row goes with the caption (#534). A note in it, a `\footnote` on the caption (`\caption{…}\footnote{…}\\`),
+/// is set after the caption's text, its mark where longtable's caption cell has it (longtable.sty:476 `\LT@makecaption`;
+/// 2201.11330, lost with the row). Any other content goes with the row, counted by a Warning: text before the caption
+/// (`\begin{longtable*}{lc}[t]`'s stray `[t]`, 1009.4206) or after it (1903.09068's "."; a nested tabular, RED
+/// longtable_caption_then_a_nested_tabular_red, GA4C). The caption's cell is a `\multicolumn` (`\LT@mcol`), so the
+/// column template's own text (`r@{.}`'s ".", 1111.5166) is not printed and not counted.
+fn caption_row_notes(row: &Row) {
+  // (the notes the cells hold, inside a `p` column's box too; the text of what else shows)
+  fn shown(d: &Digested, out: &mut Vec<Digested>, text: &mut String) {
+    match d.data() {
+      DigestedData::List(list) => list.borrow().boxes.iter().for_each(|b| shown(b, out, text)),
+      DigestedData::Whatsit(w) => {
+        let w_ref = w.borrow();
+        let cs_name = w_ref.get_definition().get_cs_name().to_string();
+        if cs_name.starts_with("\\lx@note") {
+          out.push(d.clone());
+        } else if cs_name == "\\lx@tabular@p@"
+          && let Some(Some(body)) = w_ref.get_args().get(2)
+        {
+          shown(body, out, text);
+        } else if typesets_content(d) {
+          text.push_str(&d.to_string());
+        }
+      },
+      _ if typesets_content(d) => text.push_str(&d.to_string()),
+      _ => {},
+    }
+  }
+  let mut notes = Vec::new();
+  let mut lost = false;
+  for column in row.get_columns() {
+    if let Some(boxes) = &column.boxes {
+      let mut text = String::new();
+      shown(boxes, &mut notes, &mut text);
+      let template: String = [&column.before, &column.after]
+        .into_iter()
+        .flatten()
+        .flat_map(|tokens| tokens.unlist_ref())
+        .filter(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER))
+        .map(|t| t.with_str(str::to_owned))
+        .collect();
+      let text: String = text.split_whitespace().collect();
+      lost |= !text.is_empty() && text != template;
+    }
+  }
+  if lost {
+    Warn!(
+      "unexpected",
+      "\\caption",
+      "a longtable \\caption's row holds content besides the caption; it is dropped with the row"
+    );
+  }
+  if !notes.is_empty()
+    && let Some(Stored::VecDigested(mut captions)) = lookup_value("LONGTABLE_CAPTIONS")
+    && let Some(caption) = captions.pop()
+  {
+    let mut boxes = vec![caption];
+    boxes.extend(notes);
+    captions.push(List::new(boxes).into());
+    assign_value(
+      "LONGTABLE_CAPTIONS",
+      Stored::VecDigested(captions),
+      Some(Scope::Global),
+    );
+  }
 }

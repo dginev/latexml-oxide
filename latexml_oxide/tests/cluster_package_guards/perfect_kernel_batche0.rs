@@ -2353,6 +2353,42 @@ fn a_record_lookup_counts_however_it_is_written() {
   }
 }
 
+/// F1 (GA4, findings 2 and 4 of GA0): the kernel's alignment and `\verb` keep no package's state; longtable drives the
+/// alignment's `RowDisposition`, tabularx lets `\verb` to its own `\TX@verb`. A literal naming a package's key
+/// (`"LONGTABLE_…"`, `"lx@tabularx@…"`) in core, engine or post is a debt (the frontmatter's environment lists name no
+/// key). Floor 0.
+const KERNEL_HOLDS_NO_TABLE_PACKAGE_KEY: &[(&str, usize)] = &[];
+
+/// The literals naming a table package's key in `source`.
+fn table_package_keys(source: &RustSource) -> usize {
+  let key = Regex::new(r"^(LONGTABLE_|lx@tabularx@)").expect("a pattern");
+  source
+    .literals
+    .iter()
+    .filter(|literal| key.is_match(literal))
+    .count()
+}
+
+#[test]
+fn kernel_holds_no_table_package_key() {
+  const WHY: &str = "Keep a package's state in its binding and give the kernel a neutral facility the binding drives.";
+  let mut counts = BTreeMap::new();
+  for dir in ["latexml_core/src", "latexml_engine/src", "latexml_post/src"] {
+    for file in rust_files(dir) {
+      let n = table_package_keys(&read_rust(&file));
+      if n > 0 {
+        counts.insert(file, n);
+      }
+    }
+  }
+  assert_debts(
+    "the table package keys in the kernel",
+    KERNEL_HOLDS_NO_TABLE_PACKAGE_KEY,
+    &counts,
+    WHY,
+  );
+}
+
 /// The style names post may spell, per file: the engine's bibstyle table (`lookup_bibstyle_params`) is the one home of a
 /// style's facts. The sort fact left post (GA3: it reads the node's `sort`); what is left is a debt, the url fact
 /// (`make_bibliography.rs` `style_prints_urls`, 5 names).

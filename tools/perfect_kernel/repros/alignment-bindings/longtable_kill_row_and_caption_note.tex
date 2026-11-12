@@ -1,0 +1,21 @@
+% witness: 2010.09763 (`\kill`), 2201.11330 (`\caption{…}\footnote{…}\\`)
+% oracle:  pdflatex 0 errors: "Table 1: The caption" with the note mark, the head H1/H2, rows a/b and c/d; the `\kill`
+%          row only sets the widths
+% engines: rust GA4base = the same (the global LONGTABLE_KILL_NEXT / LONGTABLE_CAPTION_ROW flags); GA4 the same through
+%          the alignment's RowDisposition
+% expect:  0 errors; the caption holds its note; no row for the caption or the `\kill`
+% status:  GREEN (pinned before GA4's move)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{longtable}
+\begin{document}
+\begin{longtable}{ll}
+\caption{The caption}\footnote{A note.}\\
+Wide head & cell \kill
+H1 & H2 \\
+\endhead
+a & b \\
+c & d \\
+\end{longtable}
+After TEXT.
+\end{document}

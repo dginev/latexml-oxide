@@ -18049,10 +18049,10 @@ cannot be used here", the table lost (pdflatex 0 errors, the column hidden). Fix
 the note's `\\` is the alignment's and ends the row inside the note: "} Attempt to close a group that switched to mode
 horizontal", the table lost (pdflatex 0 errors). Separately, a `\footnote` after a longtable `\caption`
 (`\caption{…}\footnote{…}\\`) was dropped with the caption's row at 0 errors (Rust's #103 row removal). Fixed in Rust
-(79u): sect03.rs lets `\\` be `\@normalcr` in every note's text; tex_tables.rs `caption_row_keeps_its_content` sets the
+(79u): sect03.rs lets `\\` be `\@normalcr` in every note's text; longtable_sty.rs `caption_row_notes` sets the
 notes the caption's row holds after the caption's text, as longtable sets the mark in the caption's spanning cell
 (longtable.sty:476); text before the caption in its row (pdflatex's "Misplaced \noalign", 1009.4206's stray `[t]`) is
-dropped with the row as before. Witness 2201.11330 (3 dangling references). Repro captions-floats/footnote_with_newline_in_table;
+dropped with the row as before, counted by a Warning (GA4b). Witness 2201.11330 (3 dangling references). Repro captions-floats/footnote_with_newline_in_table;
 guard `perfect_kernel_batch79u::a_note_in_a_table_keeps_its_line_break_and_the_caption_its_note`.
 
 ## 1164. `\input{…}` runs no file hooks, so currfile's names are the main file's

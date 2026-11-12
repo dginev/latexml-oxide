@@ -1045,6 +1045,11 @@ pub fn tabular_bindings(
   for col in template.get_repeated_mut() {
     col.mark_intercol_after();
   }
+  // The macro its `\\` is in TeX: the kernel's `\@tabularcr` (latex.ltx:16562), unless the binding names its own
+  // (longtable.sty:133 `\LT@tabularcr`); `\noalign\\` reads it (tex_tables.rs).
+  if !properties.contains_key("row_end") {
+    properties.insert("row_end", Stored::Token(T_CS!("\\@tabularcr")));
+  }
   if !properties.contains_key("guess_headers")
     && let Some(v) = lookup_value("GUESS_TABULAR_HEADERS")
   {
@@ -8889,6 +8894,20 @@ LoadDefinitions!({
   sect13::load()?;
 });
 
+/// `\verb`'s expansion: the verbatim argument read ([`read_verb_invocation`]) in the hidden group `\verb@egroup`
+/// closes. Shared by the kernel `\verb` and tabularx's `\TX@verb` (`token_delimited`).
+pub fn verb_group(token_delimited: bool) -> Result<Tokens> {
+  Ok(match read_verb_invocation(token_delimited)? {
+    Some(inner) => {
+      let mut result = vec![T_CS!("\\lx@hidden@bgroup")];
+      result.extend(inner);
+      result.push(T_CS!("\\verb@egroup"));
+      Tokens::new(result)
+    },
+    None => Tokens!(),
+  })
+}
+
 /// Read a `\verb`-style verbatim argument from the current input — the
 /// optional `*`, the delimiter, and the body up to the next delimiter — and
 /// return the tokens that typeset it: `[\lx@use@visiblespace]
@@ -8896,7 +8915,7 @@ LoadDefinitions!({
 /// so a wrapper (newverbs' `\newverbcommand{\cmd}{before}{after}`) can put
 /// its own tokens inside the same group. `None` when no delimiter was found
 /// (an `expected:delimiter` error has been reported).
-pub fn read_verb_invocation() -> Result<Option<Vec<Token>>> {
+pub fn read_verb_invocation(token_delimited: bool) -> Result<Option<Vec<Token>>> {
   begin_semiverbatim(Some(&SEMIVERBATIM_CHARS));
   apply_dospecials();
   // Do NOT (necessarily) skip spaces after \verb!!!
@@ -8941,10 +8960,8 @@ pub fn read_verb_invocation() -> Result<Option<Vec<Token>>> {
     assign_catcode('\r', Catcode::ACTIVE, None);
     let eol = T_ACTIVE!('\r');
     let par = T_CS!("\\par");
-    // tabularx's `\TX@verb` (tabularx.sty:91, :205-209) reads up to the delimiter token as it stands, so within a
-    // tabularx a `\verb|…|` in an argument read before it (`\makecell{\verb|x|}`, the `|` frozen "other") still ends
-    // there (2404.06128, 2309.04295); the kernel `\verb` needs it active.
-    let token_delimited = lookup_bool("lx@tabularx@verb");
+    // `token_delimited`: tabularx's `\TX@verb` (tabularx.sty:205-209) ends at the delimiter as it stands, so a
+    // `\verb|…|` in an argument read before it (the `|` frozen "other") ends there; the kernel's needs it active.
     let mut body = Vec::new();
     let mut terminated = false;
     while let Some(token) = read_token()? {
