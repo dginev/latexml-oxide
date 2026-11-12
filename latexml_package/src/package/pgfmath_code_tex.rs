@@ -904,6 +904,8 @@ fn pgfmath_units_declared_global() -> bool {
 // State (`units_declared`) rides the winnow `Stateful` input and is NOT
 // rolled back on backtrack, matching the original's flag semantics.
 mod pgfmath_grammar {
+  use std::borrow::Cow;
+
   use latexml_core::{T_CS, stomach::digest, tokens::Tokens};
   use winnow::{
     error::{ContextError, ErrMode},
@@ -1062,8 +1064,14 @@ mod pgfmath_grammar {
     }
   }
 
-  /// The bytes of the token `text` opens with: a character, or a control sequence.
+  /// The bytes of the token `text` opens with: a character, or a control sequence (one spelled `\csname…\endcsname`
+  /// by `pgfmath_input_text` whole).
   fn token_width(text: &str) -> usize {
+    if text.starts_with("\\csname ")
+      && let Some((_, len)) = cs_at(text)
+    {
+      return len;
+    }
     match text.strip_prefix('\\') {
       Some(name) => {
         let letters = name.bytes().take_while(u8::is_ascii_alphabetic).count();
@@ -1989,46 +1997,34 @@ mod pgfmath_grammar {
     Some(unit.to_string())
   }
 
-  /// `\\[a-zA-Z@]+` — a TeX register; reading a dimension declares units (see the
-  /// pgfplots ybar witnesses on the original implementation). An expl3 name
-  /// (`\l_tmpa_dim`, `\c_pgfinterference_delta_dim`) is ONE control sequence
-  /// in the tokens `\pgfmathparse` received; the string round-trip
-  /// (`pgfmath_input_text`) plus this alphabetic-only scan split it at `_`
-  /// and looked up `\l`/`\c` — 200k "not a register" warnings and zero
-  /// geometry per pixel on pgf-interference (412 s; Perl pgfmath.code.tex
-  /// .ltxml:704 splits the same way, pdflatex reads the register token). When
-  /// the maximal `[a-zA-Z@_:]` run names a live register, that is the name.
-  /// Guard: `perfect_kernel_batch56::pgfmath_reads_expl3_register_names`.
-  ///
-  /// A dimension scales a number before it (`2\mydim`); a count or an e-TeX expression takes its place, as pgf
-  /// reads them (pgfmathparser.code.tex:430-476): `2\mycount` is the count, `0.5\dimexpr 4pt` is 4.0.
+  /// A register or an e-TeX expression. A dimension scales a number before it (`2\mydim`); a count or an expression
+  /// takes its place, as pgf reads them (pgfmathparser.code.tex:430-476): `2\mycount` is the count, `0.5\dimexpr 4pt`
+  /// is 4.0. Perl's `/\\[a-zA-Z@]*/` (pgfmath.code.tex.ltxml:704) splits `\l_x_dim` (pgf-interference) and
+  /// `\pal@data1H` (pagelayout's manuals); pdflatex reads the register token, as [`cs_at`] does. Guards
+  /// `perfect_kernel_batch56::pgfmath_reads_expl3_register_names`, row `pgfmath_csname_register_operands`.
   fn try_cs_register(i: &mut In) -> Option<CsOperand> {
     sb(i);
-    let n = cs_name_len(i.input)?;
-    let cs = &i.input[..1 + n];
-    if matches!(cs, "\\wd" | "\\ht" | "\\dp") {
-      let dimension = cs;
+    let (cs, len) = cs_at(i.input)?;
+    if matches!(&*cs, "\\wd" | "\\ht" | "\\dp") {
       let cp = i.checkpoint();
-      bump(i, 1 + n);
+      bump(i, len);
       if let Some(number) = box_number(i) {
         i.state.units_declared = true;
-        return Some(CsOperand::Scales(super::pgfmath_box_dimension(
-          dimension, number,
-        )));
+        return Some(CsOperand::Scales(super::pgfmath_box_dimension(&cs, number)));
       }
       i.reset(&cp);
     }
-    if matches!(cs, "\\dimexpr" | "\\glueexpr" | "\\numexpr" | "\\muexpr") {
-      let (value, read) = super::pgfmath_read_expr(cs, i.input)?;
+    if matches!(&*cs, "\\dimexpr" | "\\glueexpr" | "\\numexpr" | "\\muexpr") {
+      let (value, read) = super::pgfmath_read_expr(&cs, i.input)?;
       bump(i, read);
-      if matches!(cs, "\\numexpr") {
+      if matches!(&*cs, "\\numexpr") {
         return Some(CsOperand::Count(value));
       }
-      i.state.units_declared |= matches!(cs, "\\dimexpr" | "\\glueexpr");
+      i.state.units_declared |= matches!(&*cs, "\\dimexpr" | "\\glueexpr");
       return Some(CsOperand::Replaces(value));
     }
-    let (value, count) = pgfmath_register_lookup(cs);
-    bump(i, 1 + n);
+    let (value, count) = pgfmath_register_lookup(&cs);
+    bump(i, len);
     if count {
       return Some(CsOperand::Count(value));
     }
@@ -2036,25 +2032,21 @@ mod pgfmath_grammar {
     Some(CsOperand::Scales(value))
   }
 
-  /// The name's length after the `\` of the control sequence `input` starts with: the `[a-zA-Z@]` run, or the longer
-  /// `[a-zA-Z@_:]` run when that names a live register (an expl3 name, see `try_cs_register`); `None` for no name.
-  fn cs_name_len(input: &str) -> Option<usize> {
+  /// The control word `input` opens with and its bytes: `\` and a `[a-zA-Z@]` run, or a name that is no such run in
+  /// the `\csname…\endcsname` that `pgfmath_input_text` spelled it in; `None` for neither.
+  fn cs_at(input: &str) -> Option<(Cow<'_, str>, usize)> {
+    if let Some(rest) = input.strip_prefix("\\csname ")
+      && let Some(end) = rest.find("\\endcsname")
+    {
+      let len = "\\csname ".len() + end + "\\endcsname".len();
+      return Some((Cow::Owned(format!("\\{}", &rest[..end])), len));
+    }
     let b = input.as_bytes().strip_prefix(b"\\")?;
     let n = b
       .iter()
       .take_while(|c| c.is_ascii_alphabetic() || **c == b'@')
       .count();
-    if n == 0 {
-      return None;
-    }
-    let n_long = n
-      + b[n..]
-        .iter()
-        .take_while(|c| c.is_ascii_alphabetic() || matches!(**c, b'@' | b'_' | b':'))
-        .count();
-    let long_register =
-      n_long > n && ::latexml_core::state::lookup_register_quiet(&input[..1 + n_long]).is_some();
-    Some(if long_register { n_long } else { n })
+    (n > 0).then(|| (Cow::Borrowed(&input[..1 + n]), 1 + n))
   }
 
   /// The box after `\wd`/`\ht`/`\dp`: a register holding its number (`\wd\mybox`, an expl3 `\wd\l_my_box`; Perl's
@@ -2063,9 +2055,9 @@ mod pgfmath_grammar {
   fn box_number(i: &mut In) -> Option<i64> {
     let spaces = i.input.bytes().take_while(|c| *c == b' ').count();
     let rest = &i.input[spaces..];
-    if let Some(n) = cs_name_len(rest) {
-      let number = pgfmath_register_lookup(&rest[..1 + n]).0 as i64;
-      bump(i, spaces + 1 + n);
+    if let Some((cs, len)) = cs_at(rest) {
+      let number = pgfmath_register_lookup(&cs).0 as i64;
+      bump(i, spaces + len);
       return Some(number);
     }
     if rest.starts_with('\\') {
@@ -2246,7 +2238,8 @@ pub(crate) fn pgfmathparse_expanded(expanded: Tokens) -> Result<(String, bool)> 
 
 /// The parser's text of an expanded argument: its string, keeping the space TeX's mouth skipped after a control word
 /// where a letter follows (`\mydim r` is `\mydim` then `r`, not `\mydimr` as Perl's pgfmath.code.tex.ltxml:328 reads;
-/// KNOWN_PERL_ERRORS #1226).
+/// KNOWN_PERL_ERRORS #1226). A name its text would not read back as one token (`\pal@data1H`, `\l_x_dim`) is spelled
+/// `\csname…\endcsname`, so every reader of the text gets the token TeX holds (`pgfmath_grammar::cs_at`).
 fn pgfmath_input_text(tokens: Tokens) -> String {
   let mut spaced = Vec::with_capacity(tokens.unlist_ref().len());
   let mut after_control_word = false;
@@ -2254,6 +2247,23 @@ fn pgfmath_input_text(tokens: Tokens) -> String {
     let code = t.get_catcode();
     if after_control_word && code == Catcode::LETTER {
       spaced.push(T_SPACE!());
+    }
+    if code == Catcode::CS
+      && let Some(name) = t.with_str(|cs| {
+        let name = cs.strip_prefix('\\').unwrap_or(cs);
+        (name.chars().nth(1).is_some()
+          && !name.bytes().all(|c| c.is_ascii_alphabetic() || c == b'@'))
+        .then(|| name.to_string())
+      })
+    {
+      spaced.extend([
+        T_CS!("\\csname"),
+        T_SPACE!(),
+        T_OTHER!(&name),
+        T_CS!("\\endcsname"),
+      ]);
+      after_control_word = true;
+      continue;
     }
     // A control word as tex.web's print_cs (§262) reads one: a name of two or more characters, or a single letter.
     after_control_word = code == Catcode::CS

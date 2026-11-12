@@ -1,6 +1,6 @@
 % mechanism: pgfmath's `\wd`/`\ht`/`\dp` read (DTL1b fix A, `box_number`) scanned a box name of letters and `@` only, so
-%   an expl3 box `\l_my_box` read `\l` (Warning: not a register) and then box 0; it now names the box by
-%   `try_cs_register`'s expl3-name rule (`cs_name_len`, guard pgfmath_reads_expl3_register_names) (revDTL1b S2).
+%   an expl3 box `\l_my_box` read `\l` (Warning: not a register) and then box 0; it now names the box by its
+%   token's name (`cs_at`, PGR1b; guard pgfmath_reads_expl3_register_names) (revDTL1b S2).
 % witness: synthetic
 % oracle:  pdflatex: 0 errors: A[80.0] (2 × the 40pt box); Perl 2 Errors (pgfparse, overflow), 4 Warnings,
 %   A[16383.99998]

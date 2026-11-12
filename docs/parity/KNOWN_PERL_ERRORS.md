@@ -19391,6 +19391,21 @@ as tex.web's print_cs §262) before a letter, in the one parse `\pgfmathparse`, 
 \end{document}
 ```
 
+The converse: a name that is no letters run is read as its letters, so `\csname d1\endcsname` is `\d` then `1`, and an
+expl3 `\l_x_dim` is `\l` (pgfmath.code.tex.ltxml:704 `/\\[a-zA-Z@]*/`): Perl `[0]`, 1 Error, 4 "\d is not a register"
+Warnings; pdflatex `[3.0]`, 0 `!` (pagelayout.cls:237-252 `\pal@data1H`). Rust: `pgfmath_input_text` spells such a
+name `\csname…\endcsname`, read whole by `pgfmath_grammar::cs_at` (OXIDIZED_DESIGN_DIVERGENCES #1010); row
+`pgfmath_csname_register_operands`. Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{pgf}
+\expandafter\newdimen\csname d1\endcsname \csname d1\endcsname=3pt
+\begin{document}
+\pgfmathparse{\csname d1\endcsname}[\pgfmathresult]
+\end{document}
+```
+
 ## 1227. amsmath: `\shortintertext` in `aligned` reverts to the internal `\@@ams@intertext`
 
 `\@@ams@intertext{}` (amsmath.sty.ltxml:102-103), the constructor `\@ams@intertext` (and mathtools' `\shortintertext`,

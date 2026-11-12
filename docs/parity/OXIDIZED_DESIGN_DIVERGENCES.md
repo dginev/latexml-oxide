@@ -35135,7 +35135,7 @@ register's own getter, units declared), and also reads decimal digits after `\wd
 missing, `\wd\box` read 0, and tikzscale's measuring loop (tikzscale.sty:392, 522-524) scaled every picture by
 `\requestedSize/0`, clamped to 16383.99998 (2010.05701, 2205.15714, 2311.08887, 2604.09771). Fit's
 `.5\dp\pgfnodeparttextbox` (tikzlibraryfit.code.tex:74) reads the node's declared size since DTL1a. A box named by
-an expl3 register (`\wd\l_my_box`) is read by `try_cs_register`'s expl3-name rule (`cs_name_len`, DTL1e): pdflatex
+an expl3 register (`\wd\l_my_box`) is read by its token's name (`cs_at`, DTL1e, PGR1b #1010): pdflatex
 80.0 for twice a 40pt box, Perl 16383.99998 with 2 Errors (repro `pgfmath_box_named_by_expl3.tex`).
 Repros `graphics-tikz/pgfmath_box_dimensions.tex`, `pgfmath_tikzscale_width.tex`; guard
 `perfect_kernel_batchdtl1::batchdtl1_pgfmath_rows`.
@@ -35256,12 +35256,17 @@ base's placements, pinned as today with each mark shown).
 between them (`-4 .5` is -4.5); after them it tries a two-letter unit before an exponent and before a `0x`/`0X`/`0b`/`0B`
 prefix (`0bp` is 0bp); a number opening with `0` is octal (`010+1` is 9.0). A `\dimexpr`, `\glueexpr`, `\numexpr` or
 `\muexpr` is read by a TeX assignment; it and a count register take the place of a number before them (`2\mycount` is the
-count, `0.5\dimexpr 4pt` 4.0), and a dimension register scales it. A count declares no units.
+count, `0.5\dimexpr 4pt` 4.0), and a dimension register scales it. A count declares no units. A control sequence is
+the token pgf receives, whatever its name (`\csname pal@data1H\endcsname`, an expl3 `\l_x_dim`).
 **Perl.** Its grammar (pgfmath.code.tex.ltxml:696-711) has no space inside a number, no `\dimexpr`, multiplies by any
 register and declares units for every one. **Rust.** pgf's rules (`pgfmath_code_tex.rs` `try_number`, `unit_at`,
 `try_cs_register`, `pgfmath_read_expr`; the expression through the core's `read_dimension`/`read_number`/`read_mu_glue`).
 Reason: real TeX decides behaviour; the grammar stopped on these and returned the partial value silently (`0bp` on 40 of
-464 EB1 A/B papers: 1106.3771, 1104.5553, 1503.00895; `\dimexpr` 1711.06128, 2206.04438; `-4 .5` 1612.03043). Not yet:
+464 EB1 A/B papers: 1106.3771, 1104.5553, 1503.00895; `\dimexpr` 1711.06128, 2206.04438; `-4 .5` 1612.03043). The
+parser reads text, so `pgfmath_input_text` spells a name that is no `[a-zA-Z@]` run as `\csname…\endcsname`, which
+`cs_at` and TeX's re-read of an expression take whole; read as its letters, `\pal@data1H` (pagelayout.cls:237-252) was
+`\pal@data` then `1H`: 165 + 9 Errors in a `\dimexpr` on pagelayout's manuals example-grid and
+pagelayout-manual-layout-guides, a silent 0 bare (PGR1b; repro `pgfmath_csname_register_operands`). Not yet:
 TeX-exact unit conversion and pdfTeX's `px`/`nd`/`nc` (repro `pgfmath_units_as_tex_reads_them_red`), pgf's error on an
 octal 8 or 9 (`pgfmath_octal_bad_digit_red`). Guards `pgfmath_golden_tests::golden_pgfmath_corpus`,
 `perfect_kernel_batchdtl1::batchdtl1_pgfmath_rows` (repro `pgfmath_grammar_gaps`).
