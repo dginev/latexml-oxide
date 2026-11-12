@@ -35054,3 +35054,15 @@ missing, `\wd\box` read 0, and tikzscale's measuring loop (tikzscale.sty:392, 52
 `\requestedSize/0`, clamped to 16383.99998 (2010.05701, 2205.15714, 2311.08887, 2604.09771). Fit's
 `.5\dp\pgfnodeparttextbox` (tikzlibraryfit.code.tex:74) reads the node's declared size since DTL1a. Repros `graphics-tikz/pgfmath_box_dimensions.tex`, `pgfmath_tikzscale_width.tex`; guard
 `perfect_kernel_batchdtl1::batchdtl1_pgfmath_rows`.
+
+### 1006. `--verbose` prints the un-featured `Debug:` traces, and every `Debug` line carries a `Debug:<target> ` prefix (DBG1, DBG2)
+
+**Perl.** `Debug($message)` prints the bare message (`_printlines`, `Common/Error.pm` L171-183); its trace calls are
+guarded `if $LaTeXML::DEBUG{feature}` (L467), so `--verbose` alone prints no trace and `--debug=frontmatter` prints
+`FRONT Add …`.
+
+**Rust.** A `Debug!` record without a feature (`primitive invoke for …`) prints under `--verbose` (`util/logger.rs`
+`DEBUG_ALL`), and a feature's record only under its `--debug` (`DebugFeature!`). Each `Debug` line reads
+`Debug:<target> <message>` (`Debug:frontmatter FRONT Add …`), as the other severities name their category. Reason:
+the un-featured traces are Rust's own instrumentation with no Perl feature to enable them, and the prefix keeps them
+apart from `Info:` lines in a log. Guard `cluster_cli::debug_feature_scope::debug_feature_prints_only_its_feature`.

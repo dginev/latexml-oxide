@@ -3005,11 +3005,15 @@ mod quiet_keeps_log_floor {
 }
 
 mod debug_feature_scope {
-  //! `--debug=NAME` enables that feature only (Perl `Config.pm` L377 sets `$LaTeXML::DEBUG{NAME}`; every Perl
-  //! `Debug()` call is guarded `if $LaTeXML::DEBUG{feature}`, `Common/Error.pm` L467). Our un-featured `Debug!`
-  //! traces (`primitive invoke for …`) are `--verbose` output, never a feature's.
+  //! `--debug=NAME` enables that feature only (Perl `Config.pm` L377 sets `$LaTeXML::DEBUG{NAME}`; Perl guards its trace
+  //! `Debug()` calls `if $LaTeXML::DEBUG{feature}`, `Common/Error.pm` L467). Our un-featured `Debug!` traces
+  //! (`primitive invoke for …`) are `--verbose` output, never a feature's. An undeclared feature is named at the end of
+  //! the run (Perl `CheckDebuggable`, `Common/Error.pm` L483-492, `bin/latexml` L148), even under `--quiet`.
 
   use std::process::Command;
+
+  const UNDECLARED: &str = "The debugging feature(s) nosuchfeature were never declared\n";
+  const KNOWN: &str = "Known debugging features: frontmatter\n";
 
   #[test]
   fn debug_feature_prints_only_its_feature() {
@@ -3019,15 +3023,16 @@ mod debug_feature_scope {
       "\\documentclass{article}\\title{T}\\author{A}\\begin{document}\\maketitle Hi\\end{document}\n",
     )
     .expect("write tex");
-    // (flags, `FRONT …` feature lines expected, un-featured `primitive invoke` lines expected)
-    let rows: [(&[&str], bool, bool); 5] = [
-      (&[], false, false),
-      (&["--debug=frontmatter"], true, false),
-      (&["--debug=nosuchfeature"], false, false),
-      (&["--verbose"], false, true),
-      (&["--verbose", "--debug=frontmatter"], true, true),
+    // (flags, `FRONT …` feature lines expected, un-featured `primitive invoke` lines expected, undeclared reported)
+    let rows: [(&[&str], bool, bool, bool); 5] = [
+      (&[], false, false, false),
+      (&["--debug=frontmatter"], true, false, false),
+      (&["--debug=nosuchfeature"], false, false, true),
+      (&["--verbose"], false, true, false),
+      (&["--verbose", "--debug=frontmatter"], true, true, false),
     ];
-    for (flags, feature, unfeatured) in rows {
+    let mut front_counts = Vec::new();
+    for (flags, feature, unfeatured, undeclared) in rows {
       let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
         .args(flags)
         .args(["dbg.tex", "--dest", "dbg.xml"])
@@ -3036,11 +3041,15 @@ mod debug_feature_scope {
         .expect("spawn latexml_oxide");
       let stderr = String::from_utf8_lossy(&output.stderr);
       assert!(output.status.success(), "{flags:?} failed:\n{stderr}");
+      let front = stderr.matches("Debug:frontmatter FRONT ").count();
       assert_eq!(
-        stderr.contains("Debug:frontmatter FRONT "),
+        front > 0,
         feature,
         "{flags:?}: the frontmatter feature's lines"
       );
+      if feature {
+        front_counts.push(front);
+      }
       assert_eq!(
         stderr.contains("primitive invoke for"),
         unfeatured,
@@ -3050,12 +3059,31 @@ mod debug_feature_scope {
         stderr.contains("Conversion complete: No obvious problems"),
         "{flags:?}: the summary counts no Debug:\n{stderr}"
       );
+      // A declared feature (`frontmatter`, registered on this dump-on run) is never reported.
+      assert_eq!(
+        stderr.contains("were never declared"),
+        undeclared,
+        "{flags:?}: the undeclared-feature report:\n{stderr}"
+      );
+      if undeclared {
+        assert!(
+          stderr.ends_with(&format!("{UNDECLARED}{KNOWN}")),
+          "{flags:?}: the two lines end the run:\n{stderr}"
+        );
+      }
     }
-    // `--quiet`: the feature's lines reach the log only (Perl `_printlines`: STDERR needs `$VERBOSITY >= 0`).
+    // `--verbose` adds no frontmatter trace line and loses none.
+    assert_eq!(
+      front_counts[0], front_counts[1],
+      "FRONT lines without and with --verbose"
+    );
+    // `--quiet`: the feature's lines reach the log only (Perl `_printlines`: STDERR needs `$VERBOSITY >= 0`); the
+    // undeclared-feature report is a plain STDERR print, so it stays.
     let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
       .args([
         "--quiet",
         "--debug=frontmatter",
+        "--debug=nosuchfeature",
         "--log=q.log",
         "dbg.tex",
         "--dest",
@@ -3070,6 +3098,10 @@ mod debug_feature_scope {
     assert!(
       !stderr.contains("FRONT "),
       "--quiet: no feature line on STDERR:\n{stderr}"
+    );
+    assert!(
+      stderr.contains(&format!("{UNDECLARED}{KNOWN}")),
+      "--quiet: the undeclared-feature report on STDERR:\n{stderr}"
     );
     assert!(
       log.contains("Debug:frontmatter FRONT "),

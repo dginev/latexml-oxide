@@ -1687,6 +1687,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   if let Some(body) = latexml_core::watchdog::peak_memory_report() {
     emit_info("memory", "peak", &body);
   }
+  // Perl bin/latexml L148, bin/latexmlpost L216: name an undeclared `--debug` feature; the verdict below stays the last line.
+  latexml_core::common::error::check_debuggable();
   // The end-of-run verdict: the LAST line of a conversion names the COMBINED
   // core+post outcome. The core prints its own verdict when it finishes, but
   // on a post-processing run thousands of per-page lines follow it — a

@@ -46,7 +46,7 @@ fn stderr_use_color() -> bool {
 static STDERR_LEVEL: AtomicUsize = AtomicUsize::new(LevelFilter::Info as usize);
 
 /// Un-featured `Debug` records are admitted (`--verbose`). Without it a `Debug` record passes only when its target
-/// is a `--debug` feature: Perl's every `Debug()` is guarded `if $LaTeXML::DEBUG{feature}` (`Common/Error.pm` L467).
+/// is a `--debug` feature: Perl guards its trace `Debug()` calls `if $LaTeXML::DEBUG{feature}` (`Common/Error.pm` L467).
 static DEBUG_ALL: AtomicBool = AtomicBool::new(false);
 
 /// Whether un-featured `Debug` records are logged (`--verbose`; see `DEBUG_ALL`).
@@ -191,6 +191,19 @@ static STDERR_AT_LINE_START: AtomicBool = AtomicBool::new(true);
 /// rather than through `log::Log` — without this the next diagnostic record
 /// could emit a spurious leading newline.
 pub fn mark_stderr_at_line_start() { STDERR_AT_LINE_START.store(true, Ordering::Release); }
+
+/// Perl `print STDERR _freshline(\*STDERR), $text`: a direct STDERR write at any verbosity, on a fresh line. One write
+/// under the (reentrant) stderr lock, so a capture buffer shared by a test's threads never splits a line.
+pub fn stderr_fresh_line(text: &str) {
+  let _stderr = std::io::stderr().lock();
+  let lead = if STDERR_AT_LINE_START.load(Ordering::Acquire) {
+    ""
+  } else {
+    "\n"
+  };
+  stderr_echo(&format!("{lead}{text}"));
+  STDERR_AT_LINE_START.store(text.ends_with('\n'), Ordering::Release);
+}
 
 /// Start capturing log output into the buffer (Perl: bind_log).
 pub fn bind_log() { *LOG_BUFFER.borrow_mut() = Some(String::new()); }
@@ -541,16 +554,7 @@ fn write_record(level: Level, painted_message: String) {
     } else {
       strip_ansi(&painted_message)
     };
-    // The lock is reentrant: `stderr_echo`'s own locking nests inside this critical section. One
-    // write per record, so a capture buffer shared by a test's threads never splits a line.
-    let _stderr = std::io::stderr().lock();
-    let lead = if STDERR_AT_LINE_START.load(Ordering::Acquire) {
-      ""
-    } else {
-      "\n"
-    };
-    stderr_echo(&format!("{lead}{text}\n"));
-    STDERR_AT_LINE_START.store(true, Ordering::Release);
+    stderr_fresh_line(&format!("{text}\n"));
   }
 }
 

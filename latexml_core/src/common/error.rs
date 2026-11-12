@@ -800,6 +800,33 @@ pub fn enable_debug_feature(name: &str) {
   log::set_max_level(log::max_level().max(log::LevelFilter::Debug));
 }
 
+/// Perl `CheckDebuggable` (`Common/Error.pm` L483-492), at the end of a run: name the `--debug` features no loaded
+/// module declared. Tests the declaration, not its description (KNOWN_PERL_ERRORS #1224).
+pub fn check_debuggable() {
+  let known = known_debug_features();
+  let mut unknown: Vec<String> = ENABLED_DEBUG_FEATURES
+    .read()
+    .map(|enabled| {
+      enabled
+        .iter()
+        .filter(|f| !known.contains(f))
+        .cloned()
+        .collect()
+    })
+    .unwrap_or_default();
+  if !unknown.is_empty() {
+    unknown.sort();
+    crate::util::logger::stderr_fresh_line(&format!(
+      "The debugging feature(s) {} were never declared\n",
+      unknown.join(", ")
+    ));
+    crate::util::logger::stderr_fresh_line(&format!(
+      "Known debugging features: {}\n",
+      known.join(", ")
+    ));
+  }
+}
+
 /// Whether any `--debug` feature is on.
 pub fn any_debug_feature_enabled() -> bool {
   ENABLED_DEBUG_FEATURES
