@@ -6037,7 +6037,8 @@ transposed + a single-row control proven un-reordered).
 expands each top-level call of a document macro that holds author structure — a names block, an `\and`-family
 separator or the grid's `\\`, in its definition or a document macro it calls (`blocks_as_printed`,
 `holds_author_structure`) — so a grid held in a macro, a wrapper printing the separator or a cell's blocks, and a row
-break held in a macro are read as pdflatex prints them; a `\let` copy of a block command is written as the command
+break held in a macro are read as pdflatex prints them, with the definitions in force at the flush, where `\maketitle`
+expands `\@author` (P28m2, #995's P2-8a paragraph); a `\let` copy of a block command is written as the command
 (`with_block_names`) and the route is whether the body then calls `\IEEEauthorblockN` (`calls_names_block`); the grid's
 columns are the separators the separator query reads at the body's brace level (`grid_columns`,
 `argument_separators`; unread, `split_top_level`, which reads a `\let` copy of `\and` or `\\` as the command). The transposition itself
@@ -35241,6 +35242,28 @@ document macro holds keep their grades: `blocks_as_printed` writes the blocks be
 ieee_plain_route_reads_names_and_grades, ieee_block_calls_by_meaning_take_the_block_route,
 ieee_wrapper_calls_are_read_as_they_print, ieee_grid_row_and_column_by_meaning}`; repros
 `sectioning-frontmatter/{ieeetran_author_grid_two_by_two_reads_by_rows,ieeetran_author_grid_three_by_two_reads_by_rows,ieeetran_author_grid_with_marks_and_a_note,ieeetran_author_blocks_one_row_keep_their_order,ieeetran_author_blocks_one_column_keep_their_order,ieeetran_author_plain_route_reads_names_and_grades,ieeetran_author_grid_in_a_macro,ieeetran_author_grid_regular_in_a_macro,ieeetran_author_grid_through_a_wrapper,ieeetran_author_grid_wrapper_cells_in_rows,ieeetran_author_grid_row_break_in_a_macro,ieeetran_author_grid_let_copy_of_and,ieeetran_author_blocks_let_copies_of_the_block_commands,ieeetran_author_blocks_in_a_macro_keep_their_grades,ieeetran_author_plain_route_names_in_a_macro}.tex`.
+`blocks_as_printed` leaves a body no such macro reaches as it is (a document macro printing layout only, `\linebreakand`,
+is left to digestion) and a macro inside a group (a block's argument) to its block; `with_block_names` writes a copy only
+while it means the command (a document may define `\authorblockN` its own way, as `\authorrefmark` in
+`printed_refmarks`), before the route and again in `author_block_body` (authblk's labelled path left `\authorblockN`
+its own: a nameless creator, the names lost, #987).
+
+**When the body is read (P28m2).** pdflatex's `\author` stores its argument (`\def\@author{#1}`) and `\maketitle`
+expands it, with the definitions in force there; the block route reads it at `\author`, as its blocks are author calls
+the queue holds. So the class's `\author` keeps the body and its reading (`\lx@IEEE@author@reread`), and the next
+outermost flush (`place.rs` `digest_front_matter`, through `queue.rs` `reread_author_body_at_flush`) reads it again
+before its rehearsal: where the reading now differs (`\renewcommand\aut` after `\author` or in `\AtBeginDocument`, a
+`\g@addto@macro`, `\aut` or a `\let` copy defined only after `\author`), the route is taken again, its
+`begin_author_body` taking back what the first call queued and its ledger blocks (`record_author_body_clear`, the last
+block too), and the resolver keeps none of a cleared block's items, a nameless one's too (`cleared_blocks`); an
+unchanged reading digests nothing. Before it, P2-8a printed the macro's definition at `\author` (revP28m S1: Ann Able
+and Bob Baker invented, the printed Cy Coe lost, silently). authblk's `\author` drops a pending reread (it appends;
+the class's route would take its authors back) and still reads its body at the call. Guard
+`perfect_kernel_batchp28::ieee_author_body_read_at_the_flush`; repros
+`sectioning-frontmatter/{ieeetran_author_macro_renewed_after_author,ieeetran_author_macro_renewed_at_begin_document,ieeetran_author_macro_defined_after_author,ieeetran_author_plain_macro_renewed_after_author}.tex`.
+RED, post-merge (P28C): an anonymous-review conditional (`\ifblind Anonymous Authors\else <blocks>\fi`), literal or in
+the macro, reads its printed words as a nameless creator's affiliation
+(`ieeetran_author_blind_conditional{,_in_a_macro}_red.tex`).
 
 ### 996. What is appended to `\@author` after the author setter stored it is the author block's continuation: rows before its first `\and`, more authors after it, also under a binding whose `\author` stores nothing in `\@author` (FX24; RR1 gap 24)
 

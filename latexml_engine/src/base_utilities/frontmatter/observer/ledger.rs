@@ -1281,7 +1281,8 @@ pub(in crate::base_utilities) fn record_clear(tag: &str, attr: &[(&str, &str)]) 
 }
 
 /// Clear the calls the last author body made (`queue::begin_author_body`, which removes them from the queue), its own
-/// flush's, and open the next body's: the ledger's entries from here.
+/// flush's, and open the next body's: the ledger's entries from here. Its author blocks too, the last one as well (a
+/// body read again at the flush, `queue::reread_author_body_at_flush`, follows it with no input read between).
 pub(in crate::base_utilities) fn record_author_body_clear() {
   if !records_now() {
     return;
@@ -1289,12 +1290,15 @@ pub(in crate::base_utilities) fn record_author_body_clear() {
   with_ledger(|ledger| {
     let flushes = ledger.flushes;
     let (start, end) = std::mem::take(&mut ledger.author_body);
-    let clears =
-      |entry: &Entry| matches!(entry, Entry::Api(call) if call.epoch == flushes && !call.cleared);
-    ledger.change_each(start..end, clears, |entry| {
-      if let Entry::Api(call) = entry {
-        call.cleared = true;
-      }
+    let clears = |entry: &Entry| match entry {
+      Entry::Api(call) => call.epoch == flushes && !call.cleared,
+      Entry::Author(block) => block.epoch == flushes && !block.cleared,
+      _ => false,
+    };
+    ledger.change_each(start..end, clears, |entry| match entry {
+      Entry::Api(call) => call.cleared = true,
+      Entry::Author(block) => block.cleared = true,
+      _ => {},
     });
     ledger.author_body = (ledger.entries().len(), ledger.entries().len());
   });

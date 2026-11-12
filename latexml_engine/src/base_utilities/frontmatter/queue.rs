@@ -450,6 +450,28 @@ pub fn end_author_body() {
 const AUTHOR_BODY_ENTRIES: &str = "lx_author_body_entries";
 const AUTHOR_BODY_START: &str = "lx_author_body_start";
 
+/// A binding's call that reads its last `\author` body again at the next flush, with the definitions in force there, as
+/// `\maketitle` expands `\@author` (IEEEtran's `\lx@IEEE@author@reread`); `None` drops a pending one.
+pub fn reread_author_body_at_flush(call: Option<Tokens>) {
+  if frontmatter_frozen_for_replay() {
+    return;
+  }
+  assign_value(
+    AUTHOR_BODY_REREAD,
+    Stored::Tokens(call.unwrap_or_default()),
+    Some(Scope::Global),
+  );
+}
+
+/// The call [`reread_author_body_at_flush`] left, taken by the outermost flush before its rehearsal.
+pub(in crate::base_utilities) fn take_author_body_reread() -> Option<Tokens> {
+  match remove_value(AUTHOR_BODY_REREAD) {
+    Some(Stored::Tokens(call)) if !call.is_empty() => Some(call),
+    _ => None,
+  }
+}
+const AUTHOR_BODY_REREAD: &str = "lx_author_body_reread";
+
 /// A `\par` digested in the frontmatter item `item` (its whatsit's `frontmatter_item`), constructed where the schema is
 /// known: when the item's element holds only inline content (`ltx:acknowledgements`, `ltx:keywords`, `ltx:date`, …: no
 /// `ltx:p`, but `ltx:break`) and is reached from the insertion point without passing an element that holds paragraphs

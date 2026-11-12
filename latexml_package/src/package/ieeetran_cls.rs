@@ -399,19 +399,28 @@ LoadDefinitions!({
   // (the body as its document macros print it first, a block held in one, a wrapper's `\and` or `\\`: `blocks_as_printed`,
   // OXIDIZED_DESIGN_DIVERGENCES #128, P2-8a)
   DefMacro!("\\author[]{}", sub[(_short, body)] {
-    // (a document's own `\IEEEmembership` keeps its meaning: `\def\IEEEmembership#1{\textit{#1}}` in 2408.00647)
-    let ours = class_membership()?;
     // (the author structure a document macro holds, read as it means before the route: `blocks_as_printed`)
-    let body = with_block_names(blocks_as_printed(body)?);
-    // (a reference mark among other marks is the symbol it prints: 2312.10807, OXIDIZED_DESIGN_DIVERGENCES #968)
-    let body = printed_refmarks(body);
-    let (target, body) = if calls_names_block(&body) {
-      (T_CS!("\\lx@IEEE@author@blocks"), author_block_body(body, ours)?)
-    } else {
-      (T_CS!("\\lx@IEEE@author@plain"), if ours { Tokens::new(without_stop_after_grade(body.unlist())?) } else { body })
-    };
-    Ok(Invocation!(target, vec![Some(body)]))
+    let printed = with_block_names(blocks_as_printed(body.clone())?);
+    // (and read again at the flush, where pdflatex's `\maketitle` expands `\@author`: `\lx@IEEE@author@reread`)
+    let reread = printed.unlist_ref().iter().any(Token::is_executable);
+    reread_author_body_at_flush(reread.then(|| Tokens!(T_CS!("\\lx@IEEE@author@reread"))));
+    if reread {
+      assign_value(AUTHOR_BODY, Stored::Tokens(body), Some(Scope::Global));
+      assign_value(AUTHOR_PRINTED, Stored::Tokens(printed.clone()), Some(Scope::Global));
+    }
+    class_author_route(printed)
   }, locked => true);
+  // The last `\author` body, its route taken again only where its document macros now print it otherwise (a
+  // `\renewcommand` or `\AtBeginDocument` after `\author`; OXIDIZED_DESIGN_DIVERGENCES #995 P2-8a).
+  DefMacro!("\\lx@IEEE@author@reread", sub[()] {
+    let (Some(Stored::Tokens(body)), Some(Stored::Tokens(printed))) =
+      (lookup_value(AUTHOR_BODY), lookup_value(AUTHOR_PRINTED))
+    else {
+      return Ok(Tokens!());
+    };
+    let now = with_block_names(blocks_as_printed(body)?);
+    if now == printed { Ok(Tokens!()) } else { class_author_route(now) }
+  });
   // authblk's `\author` (a document's `\usepackage{authblk}`; the IEEEtaes and IEEEoj stubs load it) replaces the one
   // above; its names' grades are read as this one's are (`\lx@IEEE@grade`; Perl drops them, IEEEtran.cls.ltxml:143:
   // 1803.04687, 2202.10869, 2208.04191, 2307.05035, 2505.19506, 2506.05637), the stop after them too
@@ -430,6 +439,8 @@ LoadDefinitions!({
   DefMacro!("\\lx@IEEE@authblk@blocks{}", "\\begingroup\\def\\and{}#1\\endgroup");
   DefMacro!("\\lx@IEEE@authorblockN@labelled{}{}", "\\lx@add@authors@append[annotations={#1}]{#2}");
   DefMacro!("\\lx@IEEE@authblk@author[]{}", sub[(label, body)] {
+    // (no class `\author` read again at the flush: its route would take back the authors this one appends)
+    reread_author_body_at_flush(None);
     let ours = class_membership()?;
     let body = with_block_names(blocks_as_printed(body)?);
     if calls_names_block(&body) {
@@ -1161,6 +1172,35 @@ LoadDefinitions!({
   }
 });
 
+/// The class `\author`'s body and its reading by meaning ([`blocks_as_printed`], [`with_block_names`]), for
+/// `\lx@IEEE@author@reread`.
+const AUTHOR_BODY: &str = "lx_IEEE_author_body";
+const AUTHOR_PRINTED: &str = "lx_IEEE_author_printed";
+
+/// The class `\author`'s route for a body read by meaning: the names blocks', or the plain names list's.
+fn class_author_route(body: Tokens) -> Result<Tokens> {
+  // (a document's own `\IEEEmembership` keeps its meaning: `\def\IEEEmembership#1{\textit{#1}}` in 2408.00647)
+  let ours = class_membership()?;
+  // (a reference mark among other marks is the symbol it prints: 2312.10807, OXIDIZED_DESIGN_DIVERGENCES #968)
+  let body = printed_refmarks(body);
+  let (target, body) = if calls_names_block(&body) {
+    (
+      T_CS!("\\lx@IEEE@author@blocks"),
+      author_block_body(body, ours)?,
+    )
+  } else {
+    (
+      T_CS!("\\lx@IEEE@author@plain"),
+      if ours {
+        Tokens::new(without_stop_after_grade(body.unlist())?)
+      } else {
+        body
+      },
+    )
+  };
+  Ok(Invocation!(target, vec![Some(body)]))
+}
+
 /// The brace level after `t`, from `level` before it: a begin-group opens one, an end-group closes one (the one reader
 /// of a body's groups for [`split_top_level`], [`blocks_as_printed`] and [`grid_columns`]).
 fn brace_level(level: i32, t: &Token) -> i32 {
@@ -1187,11 +1227,8 @@ fn split_top_level(tokens: &[Token], delim: &Token) -> Vec<Vec<Token>> {
   parts
 }
 
-/// Whether an `\author` body calls a names block — by meaning: read after `blocks_as_printed` and `with_block_names`,
-/// which write each document macro holding one as it prints and each `\let` copy as `\IEEEauthorblockN`, so the command
-/// anywhere in the body (a block's group, a conditional's branch) is the route's fact. It was the body's spelling
-/// (`contains("authorblockN")`), which missed a block in a macro or a copy and took any name spelling it (a document's
-/// own `\authorblockN`) for the class's (P2-8a).
+/// Whether an `\author` body, read by [`blocks_as_printed`] and [`with_block_names`], calls a names block: the route
+/// (OXIDIZED_DESIGN_DIVERGENCES #995 P2-8a).
 fn calls_names_block(body: &Tokens) -> bool {
   body.unlist_ref().contains(&T_CS!("\\IEEEauthorblockN"))
 }
@@ -1242,17 +1279,8 @@ fn holds_author_structure(token: &Token) -> bool {
   false
 }
 
-/// The block-call fact, by meaning: an `\author` body with each top-level call of a document macro that holds author
-/// structure ([`holds_author_structure`]: names blocks, `\and`, `\\`) expanded, one step at a time, its expansion read again —
-/// the body's blocks and separators as its macros print them, before the route is chosen and the block reader's token
-/// steps (`author_block_body`) read it. A body held whole in a macro (`\newcommand\aut{\IEEEauthorblockN{Ann
-/// Able}\IEEEauthorblockA{Univ A}\and…}`, `\author{\aut}`) took the plain route by spelling (`\lx@add@authors`): one
-/// nameless creator, the names lost. A wrapper printing the separator (`\newcommand\pair[2]{#1\and#2}`) or a block
-/// (`\newcommand\cell[2]{\IEEEauthorblockN{#1}\IEEEauthorblockA{#2}}`) took the block route with its call unread: the
-/// grid's `\and`/`\\` and the bare-text wrap read `\pair`, `\cell` and their arguments' groups as text, the creators
-/// scrambled and duplicated. A body no such macro reaches is returned as it is (a document macro printing layout only,
-/// `\linebreakand`, is left to digestion); a macro inside a group (a block's argument) is the block's.
-/// OXIDIZED_DESIGN_DIVERGENCES #128 (P2-8a).
+/// An `\author` body with each top-level call of a document macro holding author structure ([`holds_author_structure`])
+/// expanded, read again: its blocks and separators as they print (OXIDIZED_DESIGN_DIVERGENCES #128, #995 P2-8a).
 fn blocks_as_printed(body: Tokens) -> Result<Tokens> {
   // (a quick read first: the top level's macros, without a mouth)
   let mut depth = 0i32;
@@ -1304,14 +1332,8 @@ fn author_block_body(body: Tokens, ours: bool) -> Result<Tokens> {
   }
 }
 
-/// An author-block body with each old block name (`\authorblockN`, `\authorblockA`, IEEEtran.cls's before 1.8, the
-/// binding's `\let`s of `\IEEEauthorblockN`, `\IEEEauthorblockA`), and any other `\let` copy of a block command
-/// (`\let\N\IEEEauthorblockN`, P2-8a), written as the one it means, while it still means it (a document may define
-/// either old name its own way, as `\authorrefmark` in `printed_refmarks`): read by name, the labelled path of authblk's
-/// `\author` left `\authorblockN` its own (`\author[1]{\authorblockN{Ann Able}}` with `\affil[1]{…}`: a nameless
-/// creator holding the affiliation, the names lost; OXIDIZED_DESIGN_DIVERGENCES #987), and the route by spelling took
-/// a copy's body for the plain route or its calls for bare text (Bob Baker lost, Ann Able twice). Read before the route
-/// (`\author`, `\lx@IEEE@authblk@author`) and again by `author_block_body`.
+/// An author-block body with each `\let` copy of a block command (`\authorblockN`, IEEEtran.cls's before 1.8; a document's
+/// `\let\N\IEEEauthorblockN`) written as the one it means while it means it (OXIDIZED_DESIGN_DIVERGENCES #987, #995 P2-8a).
 fn with_block_names(body: Tokens) -> Tokens {
   let names = [T_CS!("\\IEEEauthorblockN"), T_CS!("\\IEEEauthorblockA")];
   let means = |t: Token| {

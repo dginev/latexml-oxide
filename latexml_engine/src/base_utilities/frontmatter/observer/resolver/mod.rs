@@ -1227,6 +1227,8 @@ pub fn resolve_with(
 ) -> Resolved {
   let mut resolver = Resolver::new();
   let mut policy: &'static Policy = &policy::KERNEL;
+  // (the blocks a later clear removed, a nameless one too: none of their items is kept)
+  let mut cleared_blocks: Vec<usize> = Vec::new();
   // (counted across the whole queue, as the old split's `share_row_contacts` counted them)
   resolver.sole_shared_run = inputs
     .iter()
@@ -1275,6 +1277,7 @@ pub fn resolve_with(
         // (a block whose authors a later clear removed, as a replacing call's: `ledger::record_clear`)
         if *cleared {
           resolver.replaced.extend(start..resolver.out.creators.len());
+          cleared_blocks.push(*index);
         }
         resolver.epoch_of.resize(start, None);
         resolver
@@ -1346,13 +1349,14 @@ pub fn resolve_with(
       .map(|(_, lines)| lines)
       .collect(),
   );
-  if !resolver.replaced.is_empty() {
+  if !resolver.replaced.is_empty() || !cleared_blocks.is_empty() {
     // (and the block's own items of a replaced call: today's `\lx@clear@frontmatter` keeps nothing of it — 2510.26354's
     // first `\author`, whose `firstname.lastname@h-its.org` the second call's addresses write out)
     let replaced_blocks: Vec<usize> = resolver
       .replaced
       .iter()
       .map(|&c| out.creators[c].source)
+      .chain(cleared_blocks)
       .collect();
     let kept_block: Vec<bool> = out
       .block

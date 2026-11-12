@@ -6,7 +6,8 @@
 //! the grid's row-major order
 //! (OXIDIZED_DESIGN_DIVERGENCES #128, witness 2403.16405). Code paths, one guard each: the grid transposed and the
 //! blocks kept as written (pins of the order before P28), the plain route (a pin), a body held in a macro or written through `\\let` copies of the block commands (the route),
-//! a wrapper's calls (the block route's token steps), the grid's row break or column by meaning (the transposition).
+//! a wrapper's calls (the block route's token steps), the grid's row break or column by meaning (the transposition),
+//! the body read again at the flush (P28m2, `\lx@IEEE@author@reread`).
 //! Each converts its repros under `tools/perfect_kernel/repros/sectioning-frontmatter/` from the binary, eager and
 //! `--streaming`, and asserts the frontmatter whole, with exact Error and Warning counts.
 use super::perfect_kernel_batchp26::converted_any;
@@ -124,5 +125,33 @@ fn ieee_grid_row_and_column_by_meaning() {
   assert_eq!(
     converted_any(repro!("ieeetran_author_grid_let_copy_of_and"), 0),
     r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ B</contact> </creator> <creator before=" " role="author"> <personname>Cy Coe</personname> <contact name="Affiliation: " role="affiliation">Univ C</contact> </creator> <creator before=" " role="author"> <personname>Dan Dee</personname> <contact name="Affiliation: " role="affiliation">Univ D</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+  );
+}
+
+/// The body is read again at the flush, with the definitions `\maketitle` expands `\@author` under (P28m2,
+/// `\lx@IEEE@author@reread`): a macro renewed after `\author` or in `\AtBeginDocument` (RED on P28m: Ann Able and Bob
+/// Baker invented, Cy Coe lost; int168a: Cy Coe twice), one defined only after it (the plain block taken back, none of
+/// its items kept; RED on int168a and P28m: Bob Baker lost, Ann Able twice), a plain names list renewed (RED on P28m).
+#[test]
+fn ieee_author_body_read_at_the_flush() {
+  let cy_coe = r##"<title>T</title> <creator role="author"> <personname>Cy Coe</personname> <contact name="Affiliation: " role="affiliation">Univ C</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##;
+  assert_eq!(
+    converted_any(repro!("ieeetran_author_macro_renewed_after_author"), 0),
+    cy_coe
+  );
+  assert_eq!(
+    converted_any(repro!("ieeetran_author_macro_renewed_at_begin_document"), 0),
+    cy_coe
+  );
+  assert_eq!(
+    converted_any(repro!("ieeetran_author_macro_defined_after_author"), 0),
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able</personname> <contact name="Affiliation: " role="affiliation">Univ A</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker</personname> <contact name="Affiliation: " role="affiliation">Univ B</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+  );
+  assert_eq!(
+    converted_any(
+      repro!("ieeetran_author_plain_macro_renewed_after_author"),
+      0
+    ),
+    r##"<title>T</title> <creator role="author"> <personname>Cy Coe</personname> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }
