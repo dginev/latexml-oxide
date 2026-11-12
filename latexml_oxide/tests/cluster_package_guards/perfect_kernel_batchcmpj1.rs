@@ -26,6 +26,15 @@ const WHOLE: &str = "The frontmatter reading places an entry holding 2 label tar
 const LIST: &str = "address=1 item 1 1 item 1 First Institute, Lviv, Ukraine 2 item 2 2 item 2 Second Institute, Kyiv, \
                     Ukraine";
 
+/// A row: its name, its repro, every name whole, every creator's name and contacts, each Warning's message.
+type Row<'a> = (
+  &'a str,
+  &'a str,
+  Vec<String>,
+  &'a [&'a [&'a str]],
+  Vec<&'a str>,
+);
+
 /// Each binding's row: cmpj.sty (three names), cmpj2.sty with the document's options (`cm`, `eqsecnum`) and one
 /// address, cmpj3.sty with a spaced key list (`{la, lb}`, the space dropped as cmpj3.sty:663's `\@firstofone` drops it);
 /// and the count's safe sides: one address, and one name requesting both.
@@ -38,7 +47,7 @@ fn cmpj_address_marks_print_the_second_run() {
        labelref=\"LABEL:{key}\"/></sup></personname>"
     )
   };
-  let rows: [(&str, &str, Vec<String>, &[&[&str]], Vec<&str>); 4] = [
+  let rows: [Row; 4] = [
     (
       "cmpj",
       repro!("cmpj_refaddr_marks_print_the_second_run"),
