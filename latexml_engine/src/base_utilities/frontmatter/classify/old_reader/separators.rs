@@ -5,7 +5,7 @@
 //! `author_block/separators.rs`.
 
 use super::*;
-use crate::frontmatter_stores::LAYOUT;
+use crate::frontmatter_stores::layout;
 
 /// If `tokens` (spaces around it aside) is one brace group, its opening declarations ([`opening_declarations`]:
 /// `\bf`, `\small`) and the rest of its content.
@@ -172,8 +172,6 @@ pub(in crate::base_utilities) fn spaced_name_separators(line: Tokens) -> Tokens 
     Some(LinePart::Gap(a, b)) => b - a == 1 && (v[*a] == T_SPACE!() || v[*a] == T_ACTIVE!('~')),
     _ => false,
   };
-  // (a declaration's name read in place: no symbol interned per declaration for every token of the line)
-  let layout = |t: &Token| t.get_catcode() == Catcode::CS && t.with_str(|cs| LAYOUT.contains(&cs));
   let mut out: Vec<Token> = Vec::with_capacity(v.len() + 4);
   let mut changed = false;
   // the gap a separator just written took in (dropped), and the length of the gap last written, at the end of `out`

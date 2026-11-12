@@ -278,8 +278,9 @@ const OLD_READER_EMISSIONS: &[(&str, usize)] = &[
 /// from `defs/author_macros.rs` + 23 of the new files' own (7 `use super::*;`, 16 of `old_reader/mod.rs`'s module
 /// declarations and re-exports) — no line of an item added.
 /// P5a lowered it to 1,544: `names_split.rs` and `names_continue`, `names_list_continues`, `notes_only_line` deleted, their
-/// last caller IEEEtran's `name_memberships` gone (OD #1016).
-const OLD_READER_CODE_LINES: usize = 1_544;
+/// last caller IEEEtran's `name_memberships` gone (OD #1016). P6c to 1,541: its `LAYOUT` and name-text reads call the one
+/// font-declaration reader (`frontmatter_stores::layout`, `rows::name_text_command`).
+const OLD_READER_CODE_LINES: usize = 1_541;
 
 /// What the fence counts in the old reader's code: its ways into the API's queue, and a convention's mode.
 const OLD_READER_NEEDLES: [&str; 4] = [
@@ -405,8 +406,9 @@ const MOVED_CUT_KIND_EMISSIONS: &[(&str, usize)] = &[
 /// names' token keys) deleted from `contacts.rs`, its successor the digested reading's in `queue_reading.rs`; P5b by 225 more:
 /// `defs/frontmatter_fields/names.rs`'s collaboration readers (`whole_name_collaboration`, `wrapped_collaboration_out`,
 /// `name_and_remark` and their helpers) deleted, the reading's. P6's compaction lowers it: P6a to 1,884, `cut_list` and
-/// `CUT_COPY_PLACE` moved unchanged to `defs/frontmatter_api.rs`, `kind.rs`' `balanced` deleted (core's `Tokens::is_balanced`).
-const MOVED_CUT_KIND_CODE_LINES: usize = 1_884;
+/// `CUT_COPY_PLACE` moved unchanged to `defs/frontmatter_api.rs`, `kind.rs`' `balanced` deleted (core's `Tokens::is_balanced`);
+/// P6c to 1,878, `email_lines.rs`' and `kind.rs`' font reads the one reader's (`rows::name_text_command`, `mark_switch`).
+const MOVED_CUT_KIND_CODE_LINES: usize = 1_878;
 
 /// The fence on the moved Cut and Kind: they take no new decision either (review revZ18a check 3).
 #[test]
@@ -1526,11 +1528,14 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // by catcode, 2511.20671 — a group's braces, no spelling; P5b, 473 -> 471: `marked_after_name` deleted with its last
   // caller, `\lx@add@author`'s collaboration readers; P6a, 471 -> 468: `name_text::skip_group`'s brace walk is
   // `tokens_group_end`'s, in `rest /tokens.rs`)
-  ("classify", 468),
+  // (P6c: LaTeX's no-argument font declarations one table read by meaning, `frontmatter_stores::font_declaration`,
+  // `means_one_of`, `layout`; `rows::name_text_command`, `relocate::mark_switch`: classify 468 -> 462, old_reader
+  // 113 -> 109, defs/frontmatter_api/ 106 -> 105, events 61 -> 60, fallback 159 -> 157, relocate 135 -> 133)
+  ("classify", 462),
   // (E0h: the rest of `author_block/` Z18m moved unchanged to `classify/old_reader/`, split off from `classify`'s row;
   // P5a, 131 -> 113: `names_continue`, `names_list_continues`, `notes_only_line`, `hoist_wrapped_separators` deleted with
   // their last caller, IEEEtran's `name_memberships`)
-  ("old_reader", 113),
+  ("old_reader", 109),
   ("defs/author_macros", 20),
   // (Z18m, a new directory: the IJCAI chain moved from `author_block` with its code, as that row says)
   ("defs/author_macros/", 64),
@@ -1548,7 +1553,7 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (P4b4a3, 113 -> 112: the Cut's opening declarations moved to `classify/notes.rs`)
   // (P6a, 112 -> 106: `cut_list` moved to `defs/frontmatter_api.rs` (2); `kind.rs`' brace count is core's
   // `Tokens::is_balanced` (4))
-  ("defs/frontmatter_api/", 106),
+  ("defs/frontmatter_api/", 105),
   // (CR4, 21 -> 28: `address_as_printed`'s `math_glyphs_as_printed`, the API's e-mail/URL reading — how an address prints,
   // `$\sim$` its glyph "∼" (1301.1466, math0608476; OD #972), no owner decided: a sibling of `math_braces_as_printed`, whose
   // reads `defs/frontmatter_fields/` holds; it reads the Semiverbatim argument's tokens, which no event says)
@@ -1575,14 +1580,14 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // by one at IO3b: the lexer's arm for the rehearsal's own constructor `\lx@fm@obs@creatorcall`, as the row's others — a
   // binding's own definition, no name a document spells, 0807.4720; by one at CMPJ2: the walker's arm for an enumerate
   // item's whatsit, `\enumerate@item@`, by its definition — where an item starts, `item_led_pieces`, 1212.6367)
-  ("events", 61),
+  ("events", 60),
   // (the "Knowledge in, driver out, one pass" move: from `author_block` with Perl's whole-block fallback and its preparation, kept as its own, 826 = 629 + 197; none added)
   // (raised by one at PF1: `tabular_close_rest` reads the `\end` its copy of the body read, before the copy — no read added)
   // (DEL2, 197 -> 151: the old driver's raw-token preparation deleted)
   // (PBb, 153 -> 159: +2 the title code's tabular juggle read by its `\def` and body group, moved from `names.rs` with
   // the shared body test `tabular_close_rest_of_body` (2205.14141; review revPB S3); +4 `without_optional_line_breaks`, a
   // `\linebreak[n<4]` between a juggle's columns no row break (latex.ltx:9235-9270; review revPB S2))
-  ("fallback", 159),
+  ("fallback", 157),
   // (raised from none: moved out of core `token.rs`, unwatched there, for the hot path; a rehearsal's own reads)
   // (Z4a, 4 -> 8: an environment step by its meaning, a CS whose definition is `\begin` or `\end`, a `\let` copy too, what no frame
   // says for a raw environment; the definition's name, not the token's spelling)
@@ -1689,7 +1694,7 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (P4b3 136 -> 135: REVTeX's group rule reads the marks a block prints and the names' requests as digested
   // (`requested_marks`, `content_mark_labels`, `run_names_show_a_mark`, `group_shares_the_mark`); the token readers stay
   // only as the counted fallback of an unread argument)
-  ("relocate", 135),
+  ("relocate", 133),
   // (Z2r2: not the study's lines but what `resolver_reads` counts, a shape no reason to raise it: `text_tokens` (`text_as_tokens`
   // since E0h, its name no longer the old reader's), printed text read
   // as tokens by `is_institution` and `NameKeys` (5 with their definitions), a `'\\'` read of a label (2), a call's hook (1).

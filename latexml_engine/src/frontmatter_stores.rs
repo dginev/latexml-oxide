@@ -1562,7 +1562,7 @@ fn ends_a_line(t: &Token) -> bool {
 /// How many macros deep [`prints_text`] reads a value's expansion; past it, a macro counts as printing.
 const PRINTS_TEXT_DEPTH: usize = 6;
 
-/// Spacing, rules and breaks of TeX's and LaTeX's that print no text, taking no argument (besides [`LAYOUT`]).
+/// Spacing, rules and breaks of TeX's and LaTeX's that print no text, taking no argument (besides [`layout`]).
 const SPACING: &[&str] = &[
   "\\hfil",
   "\\hfill",
@@ -1589,7 +1589,7 @@ const SPACING: &[&str] = &[
 
 /// Does `code` print text — a character, math, or a command not known to print nothing? What prints nothing is a
 /// space, a group's braces, a font, size or shape switch (a command whose definition carries a font: LaTeX's
-/// `\itshape`, `\large`, and [`LAYOUT`]), spacing ([`SPACING`], [`LAYOUT_ARGS`] with their arguments, [`GLUE_SETTERS`]
+/// `\itshape`, `\large`, and [`layout`]), spacing ([`SPACING`], [`LAYOUT_ARGS`] with their arguments, [`GLUE_SETTERS`]
 /// and a register with their glue), a rule (`\hrule`/`\vrule` with their `height`/`width`/`depth`, LaTeX's
 /// `\rule[<raise>]{<width>}{<height>}`), a line break with its `*` and `[<skip>]`, and a parameterless macro whose
 /// expansion prints nothing, read `depth` macros deep. Only printed text is a value of a class's line (user ruling
@@ -1619,7 +1619,7 @@ fn prints_text(code: &[Token], depth: usize) -> bool {
       }
       continue;
     }
-    if cs_in(&t, LAYOUT) || cs_in(&t, SPACING) {
+    if layout(&t) || cs_in(&t, SPACING) {
       continue;
     }
     if let Some((_, nargs)) = LAYOUT_ARGS.iter().find(|(cs, _)| cs_in(&t, &[cs])) {
@@ -3739,27 +3739,8 @@ fn printed_text_before(body: &[Token], at: usize) -> Vec<Token> {
       continue;
     }
     let line_start = t.get_catcode() == Catcode::BEGIN
-      || cs_in(&t, &[
-        "\\\\",
-        "\\par",
-        "\\newline",
-        "\\else",
-        "\\fi",
-        "\\or",
-        "\\relax",
-        "\\itshape",
-        "\\bfseries",
-        "\\slshape",
-        "\\upshape",
-        "\\mdseries",
-        "\\rmfamily",
-        "\\sffamily",
-        "\\ttfamily",
-        "\\scshape",
-        "\\normalfont",
-        "\\em",
-      ])
-      || cs_in(&t, LAYOUT)
+      || cs_in(&t, &["\\\\", "\\newline", "\\else", "\\fi", "\\or"])
+      || layout(&t)
       || (t.get_catcode() == Catcode::CS
         && parameterless_body(&t).is_some()
         && matches!(lookup_meaning(&t), Some(Stored::Expandable(ref d)) if d.get_origin() == DefinitionOrigin::File));
@@ -6574,35 +6555,25 @@ pub(crate) const FONT_DECLARATIONS: &[&str] = &[
   "\\normalcolor",
 ];
 
-/// Declarations and spacing that typeset nothing (font, size, paragraph shape), taking no argument (also the
-/// declarations an author line's separator takes the gap before: `base_utilities::spaced_name_separators`). The font
-/// declarations come first, up to `\selectfont` (LaTeX's whole set: [`FONT_DECLARATIONS`]).
-pub(crate) const LAYOUT: &[&str] = &[
-  "\\tiny",
-  "\\scriptsize",
-  "\\footnotesize",
-  "\\small",
-  "\\normalsize",
-  "\\large",
-  "\\Large",
-  "\\normalfont",
-  "\\rmfamily",
-  "\\sffamily",
-  "\\ttfamily",
-  "\\bfseries",
-  "\\mdseries",
-  "\\itshape",
-  "\\upshape",
-  "\\slshape",
-  "\\scshape",
-  "\\em",
-  "\\bf",
-  "\\it",
-  "\\rm",
-  "\\sf",
-  "\\sl",
-  "\\sc",
-  "\\selectfont",
+/// Whether `t` means one of [`FONT_DECLARATIONS`] (2508.08560's `\tt`, `\LARGE`; [`means_one_of`]).
+pub(crate) fn font_declaration(t: &Token) -> bool { means_one_of(t, FONT_DECLARATIONS) }
+
+/// Whether `t` means one of the commands `names`: by name, or a `\let` copy of one (`\ifx`'s test, `x_equals`) other
+/// than one of `\relax` (latex.ltx's `\let\normalcolor\relax` until color loads). A copy shares its source's
+/// definition, so a definition of `t`'s own name is no copy and is read by name only.
+pub(crate) fn means_one_of(t: &Token, names: &[&str]) -> bool {
+  cs_in(t, names)
+    || (lookup_meaning(t)
+      .and_then(|m| m.to_definition())
+      .is_some_and(|d| *d.get_cs() != *t)
+      && !x_equals(t, &TOKEN_RELAX)
+      && names.iter().any(|name| x_equals(t, &T_CS!(*name))))
+}
+
+/// Besides [`FONT_DECLARATIONS`], the declarations and spacing that typeset nothing (paragraph shape, breaks), taking
+/// no argument: [`layout`] reads both (also the declarations an author line's separator takes the gap before:
+/// `base_utilities::spaced_name_separators`).
+const LAYOUT: &[&str] = &[
   "\\noindent",
   "\\indent",
   "\\par",
@@ -6619,6 +6590,8 @@ pub(crate) const LAYOUT: &[&str] = &[
   "\\medskip",
   "\\bigskip",
 ];
+/// Whether `t` means a command that typesets nothing and takes no argument: a font declaration or one of [`LAYOUT`].
+pub(crate) fn layout(t: &Token) -> bool { font_declaration(t) || means_one_of(t, LAYOUT) }
 /// Spacing and font commands that typeset nothing, with the number of braced arguments they take (`\vspace*` too).
 const LAYOUT_ARGS: &[(&str, usize)] = &[
   ("\\fontsize", 2),
@@ -6810,7 +6783,7 @@ fn label_item(body: &[Token], i: usize, depth: usize, out: &mut LabelText) -> Op
     Catcode::CS => {},
     _ => return None,
   }
-  if cs_in(&t, LAYOUT) {
+  if layout(&t) {
     return Some(i + 1);
   }
   if t == T_CS!("\\ ") {
@@ -6885,7 +6858,7 @@ fn label_items(body: &[Token], depth: usize, out: &mut LabelText) -> Option<()> 
 }
 
 /// The class's label in the begin code of a `{keywords}` environment that typesets only a label: the code is layout
-/// that typesets nothing ([`LAYOUT`], [`LAYOUT_ARGS`], [`GLUE_SETTERS`], a class macro made of them) around label
+/// that typesets nothing ([`layout`], [`LAYOUT_ARGS`], [`GLUE_SETTERS`], a class macro made of them) around label
 /// material — text, a heading's or font command's argument, a group of them, a class macro that is text — returned as
 /// its text ([`LabelText`]): paper.cls:621 `\small\paragraph*{\keywordname:}`, pasa.cls:101-103
 /// `\noindent\keywordfont\textbf{Keywords: }`, biometrika.cls:525-527, irmaems.cls:1131 `\noindent\small Keywords:`,
@@ -7024,7 +6997,7 @@ fn line_label_before(body: &[Token], at: usize) -> Option<(usize, usize, Tokens,
         {
           end = k - 1;
           k -= 1;
-          if k > 0 && (cs_in(&body[k - 1], STYLED) || cs_in(&body[k - 1], LAYOUT)) {
+          if k > 0 && (cs_in(&body[k - 1], STYLED) || layout(&body[k - 1])) {
             end = k - 1;
             k -= 1;
           } else if let Some((command, true)) = argument_of(body, k) {
@@ -7216,7 +7189,7 @@ fn text_right_before(body: &[Token], at: usize) -> String {
       },
       Catcode::BEGIN => pieces.push(" ".to_string()),
       Catcode::CS if *t == T_CS!("\\ ") || *t == T_CS!("\\space") => pieces.push(" ".to_string()),
-      Catcode::CS if cs_in(t, LAYOUT) || cs_in(t, STYLED) => {},
+      Catcode::CS if layout(t) || cs_in(t, STYLED) => {},
       Catcode::CS => match lookup_meaning(t) {
         Some(Stored::Expandable(defn)) if defn.get_origin() == DefinitionOrigin::File => {
           match parameterless_body(t) {

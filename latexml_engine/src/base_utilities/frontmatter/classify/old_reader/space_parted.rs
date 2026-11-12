@@ -161,8 +161,7 @@ pub(in crate::base_utilities) fn space_parted_name_line(line: &Tokens) -> bool {
     space_parted_names(spaced.clone()).unlist_ref() != spaced.unlist_ref()
   };
   parts(line.clone())
-    || whole_line_cs_wrapper(line)
-      .is_some_and(|(cs, inner)| cs.with_str(|cs| NAME_TEXT_COMMANDS.contains(&cs)) && parts(inner))
+    || whole_line_cs_wrapper(line).is_some_and(|(cs, inner)| name_text_command(&cs) && parts(inner))
     || whole_line_group(line).is_some_and(|(_, inner)| parts(inner))
 }
 
@@ -218,15 +217,14 @@ pub(in crate::base_utilities) fn space_parted_rows_joined(stuff: Tokens) -> Toke
 }
 
 /// Where the wrapper at `v[i]` ends when the name it holds ends in the name's marks or notes ([`name_marks_end`]): a
-/// font command over a group ([`NAME_TEXT_COMMANDS`]: `\textbf{Ann Able\textsuperscript{1}}`) or a group
+/// font command over a group ([`name_text_command`]: `\textbf{Ann Able\textsuperscript{1}}`) or a group
 /// (`{\bf Ann Able$^{1}$}`), a name letter before its marks. A wrapper prints its marks where its name ends, so a
 /// space after it parts the next name as after the marks themselves (2608.29120).
 fn wrapped_name_marks_end(v: &[Token], i: usize) -> Option<usize> {
   let t = v.get(i)?;
   let open = if t.get_catcode() == Catcode::BEGIN {
     i
-  } else if t.get_catcode() == Catcode::CS
-    && t.with_str(|cs| NAME_TEXT_COMMANDS.contains(&cs))
+  } else if name_text_command(t)
     && v
       .get(i + 1)
       .is_some_and(|g| g.get_catcode() == Catcode::BEGIN)

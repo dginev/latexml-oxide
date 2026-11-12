@@ -247,11 +247,9 @@ pub(in crate::base_utilities) fn switch_free(
   })
 }
 
-/// Whether `t` is one of LaTeX's font declarations taking no argument (`frontmatter_stores::FONT_DECLARATIONS`), a
-/// switch whose effect every entry after it shares (`emitter::container_wrap`).
-pub(in crate::base_utilities) fn font_declaration(t: &Token) -> bool {
-  crate::frontmatter_stores::cs_in(t, crate::frontmatter_stores::FONT_DECLARATIONS)
-}
+/// LaTeX's font declarations taking no argument, by meaning: a switch whose effect every entry after it shares
+/// (`emitter::container_wrap`).
+pub(in crate::base_utilities) use crate::frontmatter_stores::font_declaration;
 
 /// LaTeX's text font commands but `\emph` (latex.ltx:14213-14226 `\DeclareTextFontCommand`): each a macro setting its
 /// argument in a group under its declaration, no whatsit holding the ink (`\emph`'s is one).

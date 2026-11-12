@@ -2,6 +2,7 @@
 //! "Knowledge in, driver out, one pass", user ruling 2026-11-08).
 
 use super::*;
+use crate::frontmatter_stores::means_one_of;
 
 /// Best-effort content-kind classifier for a creator-scope `\thanks`, used ONLY to
 /// attach a semantic `ltx_thanks_<kind>` CSS hook (OXIDIZED_DESIGN #156) — it never
@@ -331,7 +332,7 @@ fn funding_word(word: &str) -> bool {
 /// mark, and a superscript later in the line (`Laboratory for $^{3}$He`) is the affiliation's own text.
 pub fn leads_with_mark(content: &Tokens) -> bool {
   // (past a leading font switch or group: `\affiliation{\it $^1$ Key Laboratory …}`, 0808.2763)
-  let switch = |t: &Token| MARK_SWITCHES.iter().any(|cs| *t == T_CS!(*cs));
+  let switch = mark_switch;
   // (a mark spelled otherwise — `${\,\!}^1$`, `\( ^{1} \)`, `\mbox{${\ }^{1}$}` — as the shared reader reads it,
   // `relocate::spaced_mark_at`: 2112.13115, 0807.4407)
   let all = content.unlist_ref();
@@ -502,10 +503,9 @@ const FONT_DECLARATIONS_WITH_ARGUMENTS: &[&str] = &[
 ];
 
 /// Whether `t` means a font, size or colour declaration: LaTeX's taking no argument (`frontmatter_stores::
-/// FONT_DECLARATIONS`, as `fonts::font_declaration` reads them; `\tt`, `\LARGE`, 2508.08560) or
-/// [`FONT_DECLARATIONS_WITH_ARGUMENTS`], or a `\let` copy of one (`\ifx`'s test, `x_equals`).
+/// font_declaration`; `\tt`, `\LARGE`, 2508.08560) or [`FONT_DECLARATIONS_WITH_ARGUMENTS`], or a `\let` copy of one.
 pub(in crate::base_utilities) fn sets_font(t: &Token) -> bool {
-  means_one_of(t, crate::frontmatter_stores::FONT_DECLARATIONS)
+  crate::frontmatter_stores::font_declaration(t)
     || means_one_of(t, FONT_DECLARATIONS_WITH_ARGUMENTS)
 }
 
@@ -520,15 +520,6 @@ pub(in crate::base_utilities) fn aligns(t: &Token) -> bool {
     "\\RaggedRight",
     "\\RaggedLeft",
   ])
-}
-
-/// Whether the control sequence `t` has the meaning of one of the defined commands `names`.
-fn means_one_of(t: &Token, names: &[&str]) -> bool {
-  t.get_catcode() == Catcode::CS
-    && names.iter().any(|name| {
-      let cs = T_CS!(*name);
-      *t == cs || (lookup_meaning(&cs).is_some() && x_equals(t, &cs))
-    })
 }
 
 /// The declarations a list `v` opens with before its first entry's mark (`\itshape`, `\small`, `\color{red}`:

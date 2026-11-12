@@ -20,14 +20,13 @@ pub(in crate::base_utilities) fn is_spacing_command(t: &Token) -> bool {
 }
 
 /// `tokens` after the markup a line or an entry may open with before its mark: spaces, group openings and the font and
-/// size commands of [`NAME_TEXT_COMMANDS`] (`\normalsize{$^1$I3A - Universidad de Zaragoza} ~~~~~~
+/// size commands of [`name_text_command`] (`\normalsize{$^1$I3A - Universidad de Zaragoza} ~~~~~~
 /// \normalsize{$^2$École Polytechnique Fédérale de Lausanne}`, 2308.10525).
 pub(in crate::base_utilities) fn after_leading_markup(tokens: &[Token]) -> &[Token] {
   let lead = tokens
     .iter()
     .take_while(|t| {
-      matches!(t.get_catcode(), Catcode::SPACE | Catcode::BEGIN)
-        || (t.get_catcode() == Catcode::CS && t.with_str(|s| NAME_TEXT_COMMANDS.contains(&s)))
+      matches!(t.get_catcode(), Catcode::SPACE | Catcode::BEGIN) || name_text_command(t)
     })
     .count();
   &tokens[lead..]
@@ -49,31 +48,9 @@ pub(in crate::base_utilities) fn is_line_separator(t: &Token) -> bool {
       || t.with_str(|s| matches!(s, "\\qquad" | "\\hfill" | "\\hfil" | "\\hspace")))
 }
 
-/// The font and size commands an author line styles a name or an entry with: their argument, or the group after the
-/// declaration, prints as the name it styles ([`shows_name_text`]), and an entry may open with them before its mark
-/// ([`after_leading_markup`]).
-pub(in crate::base_utilities) const NAME_TEXT_COMMANDS: &[&str] = &[
-  "\\footnotesize",
-  "\\scriptsize",
-  "\\tiny",
-  "\\LARGE",
-  "\\huge",
-  "\\Huge",
-  "\\rm",
-  "\\sf",
-  "\\tt",
-  "\\em",
-  "\\sl",
-  "\\upshape",
-  "\\itshape",
-  "\\slshape",
-  "\\scshape",
-  "\\bfseries",
-  "\\mdseries",
-  "\\rmfamily",
-  "\\sffamily",
-  "\\ttfamily",
-  "\\normalfont",
+/// The font commands an author line styles a name or an entry with besides the font declarations: their argument
+/// prints as the name it styles ([`shows_name_text`]).
+pub(in crate::base_utilities) const NAME_TEXT_ARGUMENT_COMMANDS: &[&str] = &[
   "\\textbf",
   "\\textit",
   "\\textsc",
@@ -84,11 +61,12 @@ pub(in crate::base_utilities) const NAME_TEXT_COMMANDS: &[&str] = &[
   "\\textsf",
   "\\textnormal",
   "\\emph",
-  "\\bf",
-  "\\it",
-  "\\sc",
-  "\\large",
-  "\\Large",
-  "\\normalsize",
-  "\\small",
 ];
+
+/// Whether `t` is a font or size command an author line styles a name or an entry with: their argument, or the group
+/// after the declaration (`frontmatter_stores::font_declaration`), prints as the name it styles
+/// ([`shows_name_text`]), and an entry may open with them before its mark ([`after_leading_markup`]).
+pub(in crate::base_utilities) fn name_text_command(t: &Token) -> bool {
+  crate::frontmatter_stores::font_declaration(t)
+    || crate::frontmatter_stores::cs_in(t, NAME_TEXT_ARGUMENT_COMMANDS)
+}

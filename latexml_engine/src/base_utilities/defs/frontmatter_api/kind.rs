@@ -327,7 +327,7 @@ fn note_addresses(note: &Tokens) -> Option<(Option<Tokens>, Tokens)> {
 }
 
 /// The commands a line of addresses alone prints them with, beside the font and size commands
-/// ([`NAME_TEXT_COMMANDS`], [`FONT_SWITCH`]) and the spacing ([`is_spacing`], [`is_spacing_command`],
+/// ([`name_text_command`], [`FONT_SWITCH`]) and the spacing ([`is_spacing`], [`is_spacing_command`],
 /// [`is_line_separator`]): the url and link commands, the printed braces, underscore and bar of a list of local parts
 /// ([`email_addresses`]), and the boxes and no-ops round them.
 const ADDRESS_LINE_COMMANDS: &[&str] = &[
@@ -374,11 +374,8 @@ fn prints_addresses_only(line: &Tokens) -> bool {
         || is_spacing(t)
         || is_spacing_command(t)
         || is_line_separator(t)
-        || t.with_str(|s| {
-          NAME_TEXT_COMMANDS.contains(&s)
-            || FONT_SWITCH.is_match(s)
-            || ADDRESS_LINE_COMMANDS.contains(&s)
-        })
+        || name_text_command(t)
+        || t.with_str(|s| FONT_SWITCH.is_match(s) || ADDRESS_LINE_COMMANDS.contains(&s))
     })
 }
 
@@ -397,10 +394,7 @@ fn mark_led_addresses(line: &Tokens) -> Option<(Vec<Token>, Tokens)> {
   // (the rest is the switches before the mark and the tokens after it, those a tail of the line)
   let lead = inner
     .iter()
-    .take_while(|t| {
-      **t == T_SPACE!()
-        || (t.get_catcode() == Catcode::CS && t.with_str(|s| MARK_SWITCHES.contains(&s)))
-    })
+    .take_while(|t| **t == T_SPACE!() || mark_switch(t))
     .count();
   let tail = &rest.unlist_ref()[lead.min(rest.unlist_ref().len())..];
   let mark = &inner[..inner.len().checked_sub(tail.len())?];
