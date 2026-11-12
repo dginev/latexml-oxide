@@ -1,0 +1,20 @@
+% witness: synthetic (revGA3)
+% oracle: pdflatex+bibtex, `bibtex` run on the main and the X aux (clean, 0 `!` lines); engine: pdflatex
+% expect: each list holds only its own citations: "Main [1]. Extra [2] then [3] then [4]." References [1] Delta;
+%   Further reading [2] Gamma [3] Alpha [4] Beta
+% mechanism: every multibib list renders every entry cited anywhere in the document (`\citeX` and `\cite` alike).
+% ours (GA3base and GA3): both lists hold all four entries, numbered from [1] each, and every citation reads one
+%   list's number (GA3base "[1] [2] [3] [4]", the X list's; GA3 "[3] [4] [1] [2]", the main list's)
+% status: RED
+% moves: post-merge (MBAL)
+\documentclass{article}
+\usepackage[numbers]{natbib}
+\usepackage{multibib}
+\newcites{X}{Further reading}
+\begin{document}
+Main \cite{d}. Extra \citeX{c} then \citeX{a} then \citeX{b}.
+\bibliographystyle{plainnat}
+\bibliography{multibib_lists_hold_every_entry_red}
+\bibliographystyleX{unsrtnat}
+\bibliographyX{multibib_lists_hold_every_entry_red}
+\end{document}

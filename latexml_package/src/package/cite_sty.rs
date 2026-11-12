@@ -6,13 +6,13 @@ LoadDefinitions!({
   // unless `nosort`/`nocompress` (:412, :415): the `ltx:bibref`'s class says so to the post stage, which knows the
   // numbers (sect11.rs `cite_order_class`; KNOWN_PERL_ERRORS #1072). Guard
   // `perfect_kernel_batch78j::cite_sty_sorts_and_compresses`.
-  AssignValue!("CITE_SORT" => true);
+  AssignValue!("CITE_SORTCITES" => true);
   AssignValue!("CITE_COMPRESS" => true);
   // (a label not a number, an undefined key, printed at once, before the sorted ones: cite.sty:205-230
   // `\@cite@dump@now`, "[Knu84, Lam86, 1]"; guard `perfect_kernel_batch78j::cite_sty_prints_unsorted_labels_first`)
   AssignValue!("CITE_UNSORTED_FIRST" => true);
   DeclareOption!("nosort", {
-    AssignValue!("CITE_SORT" => false);
+    AssignValue!("CITE_SORTCITES" => false);
   });
   DeclareOption!("nocompress", {
     AssignValue!("CITE_COMPRESS" => false);

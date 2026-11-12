@@ -350,7 +350,7 @@ const BOUNDARY: &[Row] = &[
     ],
   ),
   // --- bibunits' `\putbib` reads `\@startbibunitorrelax`, undefined before the first unit (bibunits.sty:251-256,
-  // 324-325): an Error by rule (3), the cite dangling (revBU1b PE1) ---
+  // 324-325): an Error by rule (3), the cite dangling (revBU1b PE1); a unit's `plain` sorts no citation (GA3) ---
   (
     "\\putbib outside every unit (repro index-bib/bibunits_chapterbib/bibunits_putbib_outside_every_unit_errs)",
     "pdflatex 1 `!` (Undefined control sequence), \"Main [?]\"; Perl 0 errors 0 warnings",
@@ -372,7 +372,7 @@ const BOUNDARY: &[Row] = &[
       (
         "para",
         "p3",
-        r#"<para xml:id="p3"><p xml:id="p3.1">Two <cite class="ltx_citemacro_cite">[<bibref bibrefs="beta" class="ltx_cite_sort" inlist="bu2" separator="," yyseparator=","/>]</cite>.</p></para>"#,
+        r#"<para xml:id="p3"><p xml:id="p3.1">Two <cite class="ltx_citemacro_cite">[<bibref bibrefs="beta" inlist="bu2" separator="," yyseparator=","/>]</cite>.</p></para>"#,
       ),
     ],
   ),
@@ -388,7 +388,7 @@ const BOUNDARY: &[Row] = &[
       (
         "para",
         "p1",
-        r#"<para xml:id="p1"><p xml:id="p1.1">One <cite class="ltx_citemacro_cite">[<bibref bibrefs="alpha" class="ltx_cite_sort" inlist="bu1" separator="," yyseparator=","/>]</cite>.</p></para>"#,
+        r#"<para xml:id="p1"><p xml:id="p1.1">One <cite class="ltx_citemacro_cite">[<bibref bibrefs="alpha" inlist="bu1" separator="," yyseparator=","/>]</cite>.</p></para>"#,
       ),
       (
         "bibliography",

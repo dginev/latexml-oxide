@@ -1,0 +1,10 @@
+% expect: natbib's `sort` sorts the citation, the unsorted style numbers by first citation: "[1, 2]" then "[3]"
+% pdflatex+bibtex: "We cite [1, 2] and then [3]." References [1] Gamma [2] Alpha [3] Beta (0 `!` lines)
+% ours (GA3 base): the same, no sort attribute; fixed: the same, sort="false"
+\documentclass{article}
+\usepackage[numbers,sort]{natbib}
+\bibliographystyle{unsrtnat}
+\begin{document}
+We cite \cite{gamma,alpha} and then \cite{beta}.
+\bibliography{cite_order}
+\end{document}

@@ -600,7 +600,8 @@ fn biblatex_ext_oa_patches_warn() {
 /// 59l: an open-access symbol package loaded without biblatex (biblatex-ext.tex:3927, "stand-alone")
 /// does not bring the biblatex binding in, so the document's natbib bibliography stays: only an
 /// overlay that loads biblatex itself (biblatex-cv) falls back to the binding. Repro
-/// index-bib/biblatex_ext_symbol_package_alone.
+/// index-bib/biblatex_ext_symbol_package_alone. The tag carries plainnat's order, `sort="true"` (GA3,
+/// OXIDIZED_DESIGN_DIVERGENCES #116).
 #[test]
 fn biblatex_ext_symbol_package_alone_keeps_the_bibliography() {
   let tex = include_str!(
@@ -615,7 +616,7 @@ fn biblatex_ext_symbol_package_alone_keeps_the_bibliography() {
     (
       "bibliography",
       "bib",
-      r##"<bibliography bibstyle="plainnat" citestyle="authoryear" files="biblatex-examples" inlist="toc" xml:id="bib"><title>References</title></bibliography>"##,
+      r##"<bibliography bibstyle="plainnat" citestyle="authoryear" files="biblatex-examples" inlist="toc" sort="true" xml:id="bib"><title>References</title></bibliography>"##,
     ),
   ]);
 }

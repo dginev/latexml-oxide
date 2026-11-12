@@ -51,7 +51,7 @@ fn natbib_style_option(option: &str) {
       natbib_style_option("nobibstyle");
     },
     "colon" => natbib_style_option("semicolon"),
-    "sort" => assign_value("CITE_SORT", true, None),
+    "sort" => assign_value("CITE_SORTCITES", true, None),
     "compress" => assign_value("CITE_COMPRESS", true, None),
     "sort&compress" => {
       natbib_style_option("sort");
@@ -597,7 +597,7 @@ LoadDefinitions!({
   // `cite_order_class`, KNOWN_PERL_ERRORS #1072; Perl's no-ops, natbib.sty.ltxml:69-71). Guard
   // `perfect_kernel_batch78j::natbib_sort_compress_numbers`.
   // (:267-268 off unless an option says so, a cite.sty loaded before natbib its `sort`, :272-274)
-  AssignValue!("CITE_SORT" => package_loaded("cite"));
+  AssignValue!("CITE_SORTCITES" => package_loaded("cite"));
   AssignValue!("CITE_COMPRESS" => false);
   // (natbib's own order: the keys with no number after the sorted ones, natbib.sty:1185-1200, a cite.sty loaded before
   // it or not)
@@ -1167,7 +1167,7 @@ LoadDefinitions!({
       for (key, _) in &owned {
         match key.as_str() {
           "sort" | "compress" | "sort&compress" => natbib_style_option(key),
-          "nosort" => assign_value("CITE_SORT", false, None),
+          "nosort" => assign_value("CITE_SORTCITES", false, None),
           "nocompress" => assign_value("CITE_COMPRESS", false, None),
           _ => {},
         }

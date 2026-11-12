@@ -409,13 +409,12 @@ pub(crate) fn load() -> Result<()> {
   // name at \bibstyle: natbib's `nobibstyle`/`[numbers]` does
   // `\let\bibstyle\@gobble`, and its author-year \bibstyle has no `\bibstyle@`
   // preset for a numeric style, so `\bibstyle{ieeetr}` otherwise vanishes.
-  // MakeBibliography reads this name to number an unsorted numeric style
-  // (ieeetr/IEEEtran/unsrt) in citation order (html_feedback #5930/#6095, the
+  // The name's order (CITE_SORT, the `.bst`'s fact) goes with it: the node's `sort`, by which MakeBibliography numbers
+  // an unsorted numeric style (ieeetr/IEEEtran/unsrt) in citation order (html_feedback #5930/#6095, the
   // natbib/revtex arm of #6294). CITE_STYLE is deliberately NOT set here —
-  // natbib owns numbers-vs-author-year via its options, and the plain-path
-  // \bibstyle DefConstructor already sets CITE_STYLE/CITE_SORT for known styles.
+  // natbib owns numbers-vs-author-year via its options.
   DefPrimitive!("\\lx@record@bibstyle{}", sub[(style)] {
-    assign_value("BIBSTYLE", pin(Expand!(style).to_string()), Some(Scope::Global));
+    record_bibstyle(&Expand!(style).to_string(), Some(Scope::Global));
   });
   DefMacro!(
     "\\bibliographystyle Semiverbatim",
@@ -1695,7 +1694,7 @@ pub(crate) fn load() -> Result<()> {
 /// The `class` of a citation's `ltx:bibref` that says how its numbers print (the post stage's `make_bibcite`, where
 /// the entries' numbers are known): `ltx_cite_sort` orders the keys by entry number, `ltx_cite_compress` joins a run of
 /// three or more consecutive numbers with an en dash ("[1–3]"), `ltx_cite_unsorted_first` puts the keys with no number
-/// before the sorted ones (cite.sty's order). `CITE_SORT`/`CITE_COMPRESS` are set by the package
+/// before the sorted ones (cite.sty's order). `CITE_SORTCITES`/`CITE_COMPRESS` are set by the package
 /// that sorts: natbib's `sort`/`compress`/`sort&compress` options (natbib.sty:267-271, applied at :377 `\NAT@sort@cites`
 /// and :401 in `\NAT@citexnum`), which revtex4*.cls (revtex4-2.cls:7042 `\RequirePackage[sort&compress]{natbib}`),
 /// achemso (achemso.cls:1396-1398) and acmart (`\bibstyle@acmnumeric`, acmart.cls:385-389) pass; cite.sty, which sorts
@@ -1703,7 +1702,7 @@ pub(crate) fn load() -> Result<()> {
 /// (natbib.sty.ltxml:69-71, cite.sty.ltxml:17-19): KNOWN_PERL_ERRORS #1072, OXIDIZED_DESIGN_DIVERGENCES #844.
 fn cite_order_class() -> String {
   let mut classes = Vec::new();
-  if lookup_bool("CITE_SORT") {
+  if lookup_bool("CITE_SORTCITES") {
     classes.push("ltx_cite_sort");
   }
   if lookup_bool("CITE_COMPRESS") {
@@ -1711,7 +1710,7 @@ fn cite_order_class() -> String {
   }
   // (cite.sty prints a citation it cannot sort, a label not a number or an undefined key, at once, before the sorted
   // ones: cite.sty:225-230 `\@cite@gobbledump@now`; natbib after them, natbib.sty:1185-1200 `\NAT@nonsort@list`)
-  if lookup_bool("CITE_SORT") && lookup_bool("CITE_UNSORTED_FIRST") {
+  if lookup_bool("CITE_SORTCITES") && lookup_bool("CITE_UNSORTED_FIRST") {
     classes.push("ltx_cite_unsorted_first");
   }
   classes.join(" ")

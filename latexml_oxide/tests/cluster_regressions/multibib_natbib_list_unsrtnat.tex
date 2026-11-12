@@ -1,0 +1,17 @@
+% expect: natbib has taken `\bibstyle`, and each multibib list still keeps its own style's order: main (plainnat) Delta;
+%   X (unsrtnat) by first citation, Gamma, Alpha, Beta
+% pdflatex+bibtex (+ bibtex X): "Main [1]. Extra [2] then [3] then [4]." References [1] Delta; Further reading [2] Gamma
+%   [3] Alpha [4] Beta (0 `!` lines)
+% ours (GA3): X sort="true", its list alphabetical; fixed: X sort="false", Gamma, Alpha, Beta (each list holds every
+%   cited entry: multibib_lists_hold_every_entry_red.tex, MBAL)
+\documentclass{article}
+\usepackage[numbers]{natbib}
+\usepackage{multibib}
+\newcites{X}{Further reading}
+\begin{document}
+Main \cite{d}. Extra \citeX{c} then \citeX{a} then \citeX{b}.
+\bibliographystyle{plainnat}
+\bibliography{multibib_order}
+\bibliographystyleX{unsrtnat}
+\bibliographyX{multibib_order}
+\end{document}

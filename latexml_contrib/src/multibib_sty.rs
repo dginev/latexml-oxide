@@ -12,9 +12,9 @@
 //! `\bibliographystylefullrefs{opticajnl}` beside the document's `opticajnlnt` (1908.11477, 2006.07118, 2008.09542,
 //! 2205.11481, 2308.15957, 2607.03975). Where `\bibstyle` is still the
 //! kernel's the list takes the style's citation style too; a package that took `\bibstyle` owns that (natbib's
-//! `\@gobble`, natbib_sty.rs). `BIBSTYLE` after the lists stays the main list's, or with none the first declared.
+//! `\@gobble`, natbib_sty.rs), and the list takes the style's name and order (`record_bibstyle`, as `\bibliographystyle`). `BIBSTYLE` after the lists stays the main list's, or with none the first declared.
 //! Limit: a style declared after its own list reaches `BIBSTYLE` only, not that list's attribute.
-use latexml_engine::latex_constructs::set_bibstyle;
+use latexml_engine::latex_constructs::{record_bibstyle, set_bibstyle};
 use latexml_package::prelude::*;
 
 LoadDefinitions!({
@@ -36,7 +36,7 @@ LoadDefinitions!({
     } else if matches!(lookup_meaning(&T_CS!("\\bibstyle")), Some(Stored::Constructor(_))) {
       set_bibstyle(&style);
     } else {
-      assign_value("BIBSTYLE", pin(style), None);
+      record_bibstyle(&style, None);
     }
   });
   RawTeX!(
