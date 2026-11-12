@@ -219,7 +219,7 @@ fn unlabelled_email_line_calls(line: Tokens, placement: AddressPlacement) -> Res
 }
 
 /// `address`, one of the addresses `line` prints, in the font `line` printed it in: the font and size declarations
-/// ([`NAME_TEXT_COMMANDS`]) and wrappers (`\texttt{…}`, [`FONT_WRAPPERS`]) around every `@` the line prints, when they
+/// ([`name_text_command`]) and wrappers (`\texttt{…}`, [`FONT_WRAPPERS`]) around every `@` the line prints, when they
 /// are one — `{\tt \{able, baker\}@x.org}` (1804.05417), `$^\ddag$\tt\{kyding,ycwang12,…\}@iflytek.com` (2311.01166),
 /// `\texttt{\{czhang, htwai, manchoso\}@se.cuhk.edu.hk}, \texttt{shangyuanliu@…}` (2410.24095) —, each written out in a
 /// group of its own: `{\tt able@x.org}`, as a line printing one address is digested whole (review rev100b2 #2). A line
@@ -253,7 +253,7 @@ fn in_line_font(line: &Tokens, address: Tokens) -> Tokens {
         }
       },
       Catcode::CS if t.with_str(|s| FONT_WRAPPERS.contains(&s)) => wrapper = Some(*t),
-      Catcode::CS if t.with_str(|s| NAME_TEXT_COMMANDS.contains(&s)) => {
+      Catcode::CS if name_text_command(t) => {
         wrapper = None;
         // (a declaration repeated before the next address is in force once: `{\tt\small a@x, \tt\small
         // \{b,c\}@y}`, 2311.04698)

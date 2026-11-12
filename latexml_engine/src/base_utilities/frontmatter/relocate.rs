@@ -818,18 +818,12 @@ fn split_marks(script: &str, past: fn(&str) -> &str) -> Vec<String> {
     .collect()
 }
 
-/// The font and size switches, and the math wrapper, a mark is printed under (`{\rm 2}`, `\mathrm{a}`,
-/// `\textsuperscript{\footnotesize\ensuremath{1}}`, 2502.16662 and 2411.14110's `\IEEEauthorrefmark`), which neither
+/// The font and size switches, and the math wrapper, a mark is printed under (`{\\rm 2}`, `\\mathrm{a}`,
+/// `\\textsuperscript{\\footnotesize\\ensuremath{1}}`, 2502.16662 and 2411.14110's `\\IEEEauthorrefmark`), which neither
 /// an affiliation's mark nor its leading text is: for the readers that have only the tokens ([`script_marks`],
-/// `notes::leads_with_mark`); a formula read from the document is read from its structure (`observer::marks`).
-pub(in crate::base_utilities) const MARK_SWITCHES: [&str; 32] = [
-  "\\rm",
-  "\\it",
-  "\\bf",
-  "\\sl",
-  "\\sf",
-  "\\tt",
-  "\\em",
+/// `notes::leads_with_mark`); a formula read from the document is read from its structure (`observer::marks`). Those
+/// besides LaTeX's font declarations (`frontmatter_stores::FONT_DECLARATIONS`), which [`mark_switch`] reads too.
+const MARK_WRAPPERS: [&str; 13] = [
   "\\mathrm",
   "\\mathit",
   "\\mathbf",
@@ -840,29 +834,23 @@ pub(in crate::base_utilities) const MARK_SWITCHES: [&str; 32] = [
   "\\textsf",
   "\\textup",
   "\\textnormal",
-  "\\itshape",
-  "\\upshape",
-  "\\bfseries",
-  "\\rmfamily",
-  "\\normalfont",
-  "\\tiny",
-  "\\scriptsize",
-  "\\footnotesize",
-  "\\small",
-  "\\normalsize",
-  "\\large",
-  "\\Large",
   "\\ensuremath",
   "\\scriptstyle",
   "\\textstyle",
 ];
 
+/// Whether `t` is a switch a mark is printed under: a font declaration, by meaning, or one of [`MARK_WRAPPERS`].
+pub(in crate::base_utilities) fn mark_switch(t: &Token) -> bool {
+  crate::frontmatter_stores::font_declaration(t)
+    || crate::frontmatter_stores::cs_in(t, &MARK_WRAPPERS)
+}
+
 /// The spacing a mark is set apart with (`{}^{a,\;b}`, `{}^{\rm b,\ c}`, `\,{}^{b,c}`: 1307.6166, hep-th0410034,
 /// 2311.14432), which no mark is: the control words; the control symbols `\,` `\;` `\:` `\!` `\ ` and the tie besides.
-/// For the token readers, as [`MARK_SWITCHES`].
+/// For the token readers, as [`MARK_WRAPPERS`].
 const MARK_SPACING: [&str; 4] = ["\\quad", "\\qquad", "\\thinspace", "\\enspace"];
 
-/// `text` past the switches it opens with ([`MARK_SWITCHES`]) and the spacing ([`MARK_SPACING`]), with the braces and
+/// `text` past the switches it opens with ([`MARK_WRAPPERS`]) and the spacing ([`MARK_SPACING`]), with the braces and
 /// spaces around them.
 fn past_mark_switches(text: &str) -> &str {
   let mut rest = text;
@@ -881,7 +869,9 @@ fn past_mark_switches(text: &str) -> &str {
       .find(|c: char| !c.is_ascii_alphabetic())
       .unwrap_or(after.len());
     if len == 0
-      || !(MARK_SWITCHES.contains(&&rest[..=len]) || MARK_SPACING.contains(&&rest[..=len]))
+      || !(crate::frontmatter_stores::FONT_DECLARATIONS.contains(&&rest[..=len])
+        || MARK_WRAPPERS.contains(&&rest[..=len])
+        || MARK_SPACING.contains(&&rest[..=len]))
     {
       return rest;
     }
@@ -1148,8 +1138,7 @@ pub fn leading_line_label(content: &Tokens) -> Option<(String, bool, Tokens)> {
   let tokens = content.unlist_ref();
   let mut at = 0;
   while let Some(t) = tokens.get(at) {
-    let switch = t.get_catcode() == Catcode::CS && t.with_str(|s| MARK_SWITCHES.contains(&s));
-    if *t == T_SPACE!() || switch {
+    if *t == T_SPACE!() || mark_switch(t) {
       at += 1;
     } else {
       break;
@@ -1785,7 +1774,7 @@ pub(in crate::base_utilities) fn spaced_marks_written(
   as_written: bool,
 ) -> Option<Tokens> {
   let tokens = content.unlist_ref();
-  let switch = |t: &Token| MARK_SWITCHES.iter().any(|cs| *t == T_CS!(*cs));
+  let switch = mark_switch;
   // (past a one-argument wrapper the block opens with, `\institution{${}^a$Univ A \quad ${}^b$Univ B}` — acmart's
   // address part, as the Cut reads it, `cut_marked_contact` — a mark command or a box of its own excepted)
   let wrapper = |i: usize| {
@@ -2037,7 +2026,7 @@ fn requested_mark_lines(content: &Tokens) -> usize {
   let tokens = content.unlist_ref();
   let marks = queued_name_marks();
   let requested = &marks.1;
-  let switch = |t: &Token| MARK_SWITCHES.iter().any(|cs| *t == T_CS!(*cs));
+  let switch = mark_switch;
   let skippable = |t: &Token| {
     *t == T_SPACE!()
       || *t == T_BEGIN!()

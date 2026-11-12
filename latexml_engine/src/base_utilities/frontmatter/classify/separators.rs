@@ -169,13 +169,10 @@ pub(in crate::base_utilities) fn leading_marks_end(tokens: &[Token]) -> usize {
   i
 }
 
-/// The font commands whose argument `wrapper_over_lines_as_lines` gives each line: [`NAME_TEXT_COMMANDS`]' `\text…` ones
-/// and `\emph` — and that wrap one entry of a run (`notes::wrapped_mark_at`).
+/// The font commands whose argument `wrapper_over_lines_as_lines` gives each line ([`NAME_TEXT_ARGUMENT_COMMANDS`]: the
+/// `\text…` ones and `\emph`) — and that wrap one entry of a run (`notes::wrapped_mark_at`).
 pub(in crate::base_utilities) fn is_text_font_command(t: &Token) -> bool {
-  t.get_catcode() == Catcode::CS
-    && t.with_str(|cs| {
-      NAME_TEXT_COMMANDS.contains(&cs) && (cs.starts_with("\\text") || cs == "\\emph")
-    })
+  crate::frontmatter_stores::cs_in(t, NAME_TEXT_ARGUMENT_COMMANDS)
 }
 
 /// Perl: positionOf($tokens, @delims) — Base_Utility.pool.ltxml (PR #2767).

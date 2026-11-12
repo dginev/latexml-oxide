@@ -977,9 +977,9 @@ fn starts_with_mark(tokens: &[Token]) -> bool {
 fn shows_name_text(before: Option<&Token>, closed_shown: bool) -> bool {
   match before {
     Some(t) if t.get_catcode() == Catcode::CS => {
-      t.with_str(|s| {
-        NAME_TEXT_COMMANDS.contains(&s) || matches!(s, "\\par" | "\\relax" | "\\noindent")
-      }) || is_line_separator(t)
+      name_text_command(t)
+        || t.with_str(|s| matches!(s, "\\par" | "\\relax" | "\\noindent"))
+        || is_line_separator(t)
         || is_spacing_command(t)
     },
     Some(t) if *t == T_END!() || *t == T_OTHER!("]") => closed_shown,
@@ -1148,12 +1148,7 @@ fn and_word_end(tokens: &[Token], reversed: bool) -> Option<usize> {
     .take_while(|t| t.get_catcode() == Catcode::SPACE)
     .count();
   // (a font command before its argument: read forwards, it opens the wrapper; read backwards, it stands after it)
-  if !reversed
-    && tokens.get(i).is_some_and(|t| {
-      t.get_catcode() == Catcode::CS && t.with_str(|s| NAME_TEXT_COMMANDS.contains(&s))
-    })
-    && tokens.get(i + 1) == Some(&open)
-  {
+  if !reversed && tokens.get(i).is_some_and(name_text_command) && tokens.get(i + 1) == Some(&open) {
     i += 1;
   }
   let wrapped = tokens.get(i) == Some(&open);

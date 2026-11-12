@@ -251,8 +251,8 @@ pub(in crate::base_utilities) fn link_line_link(line: &Tokens) -> Option<(usize,
       Catcode::SPACE | Catcode::BEGIN | Catcode::END
     ) || is_spacing_command(&t)
       || is_spacing(&t)
-      || (t.get_catcode() == Catcode::CS
-        && t.with_str(|s| NAME_TEXT_COMMANDS.contains(&s) || s == "\\texttt"))
+      || name_text_command(&t)
+      || t == T_CS!("\\texttt")
     {
       i += 1;
     } else if let Some((end, _)) = non_printing_end(v, i) {

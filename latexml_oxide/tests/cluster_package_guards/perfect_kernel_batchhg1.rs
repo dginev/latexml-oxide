@@ -644,6 +644,19 @@ fn marked_blocks_restored_read_as_printed() {
         r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup><text font="typewriter">Univ Beta</text></contact></creator>"#,
       ]),
     },
+    // (P6c: a `\let` copy of `\tt` is the declaration, the one reader by meaning, `frontmatter_stores::font_declaration`)
+    Row {
+      repro:    repro!(
+        "class-bindings/llncs_institute_marks_let_copy_tt_lead_carried_to_every_entry"
+      ),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able<sup><text font="italic">1</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">1</text></sup><text font="typewriter">Univ Alpha</text></contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup><text font="typewriter">Univ Beta</text></contact></creator>"#,
+      ]),
+    },
     Row {
       repro:    repro!(
         "sectioning-frontmatter/raw_maketitle_affiliation_tt_lead_carried_to_every_email"

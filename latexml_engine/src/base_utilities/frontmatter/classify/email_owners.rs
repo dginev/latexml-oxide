@@ -39,13 +39,13 @@ pub fn prints_nothing(line: &Tokens) -> bool {
       Catcode::BEGIN | Catcode::END | Catcode::SPACE
     ) || *t == T_CS!("\\par")
       || is_spacing_command(t)
+      || name_text_command(t)
       || (t.get_catcode() == Catcode::CS
         && t.with_str(|s| {
-          NAME_TEXT_COMMANDS.contains(&s)
-            || matches!(
-              s,
-              "\\strut" | "\\centering" | "\\raggedright" | "\\raggedleft"
-            )
+          matches!(
+            s,
+            "\\strut" | "\\centering" | "\\raggedright" | "\\raggedleft"
+          )
         }))
     {
       i += 1;
