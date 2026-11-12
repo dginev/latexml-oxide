@@ -46,14 +46,15 @@ fn creator_elements(xml: &str) -> Vec<String> {
 
 const OVERLAP: &str = "the block is written whole, as Perl's whole-block creator";
 
-/// `\newcommand{\myauthors}{Ann Able\thanks{Univ X.}, Bob Baker}`, `\author{\small\myauthors \\ Univ Z}`: at `=2` the
-/// two names' runs overlap, so the block is written whole with its `\thanks` note (int153w: each name its text, "Univ X."
-/// lost). Off is the old reader's merged creator (merged_creators), the note kept.
+/// `\newcommand{\myauthors}[1]{Ann Able\thanks{Univ X.}, Bob Baker#1}`, `\author{\small\myauthors{}\\ Univ Z}`: at `=2`
+/// the two names' runs overlap, so the block is written whole with its `\thanks` note (int153w: each name its text, "Univ
+/// X." lost). Off is the old reader's merged creator (merged_creators), the note kept. A macro of one parameter since AUT1,
+/// which reads a parameterless one unfolded, each name its own run (`perfect_kernel_batchaut1`).
 #[test]
 fn overlapping_names_write_the_block_whole_with_its_note() {
   let note = "<note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id2\"><text \
               fontsize=\"91%\" xml:id=\"id2.1\">Univ X.</text></note>";
-  let (log, xml) = run(repro!("cl9_shared_macro_note"));
+  let (log, xml) = run(repro!("cl9_shared_parameter_macro_note"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert_eq!(log.matches(OVERLAP).count(), 1, "{log}");
   assert_eq!(creator_elements(&xml), [format!(
@@ -62,7 +63,7 @@ fn overlapping_names_write_the_block_whole_with_its_note() {
   )]);
 }
 
-/// The same block with a `\footnotemark` on each name: at `=2` the whole block keeps both marks and the note (int153w: 0
+/// The same block with a `\footnotemark` on each name (the macro of one parameter, as above): at `=2` the whole block keeps both marks and the note (int153w: 0
 /// marks, nothing counting them), as off does.
 /// FN1 (OD #1001; the user's ruling 2026-11-11, which accepts this shape): a block written whole holds its notes
 /// after the joint name, each with its mark, so the name reads without their tags; pin updated (the notes' move
@@ -78,7 +79,7 @@ fn overlapping_names_keep_the_macros_marks() {
   let marks = format!("{} {}", mark(1), mark(2));
   let note = "<note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" xml:id=\"id2\"><text \
               fontsize=\"91%\" xml:id=\"id2.1\">Univ X.</text></note>";
-  let (log, xml) = run(repro!("cl9_shared_macro_note_and_marks"));
+  let (log, xml) = run(repro!("cl9_shared_parameter_macro_note_and_marks"));
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert_eq!(log.matches(OVERLAP).count(), 1, "{log}");
   assert_eq!(creator_elements(&xml), [format!(

@@ -94,7 +94,7 @@ fn entry_cut(taken: &Taken, names: &[&str]) -> Result<Option<EntryCut>> {
         return None;
       };
       let field = Field {
-        tokens: block.tokens.unlist_ref(),
+        tokens: block.read_tokens().unlist_ref(),
         base: block.range.0,
         formulas,
         environments,
@@ -740,7 +740,7 @@ pub(super) fn span_tokens_within(
       return None;
     };
     let at = |p: u16| usize::from(p).checked_sub(block.range.0);
-    let all = block.tokens.unlist_ref();
+    let all = block.read_tokens().unlist_ref();
     let Some((s, e)) = within else {
       let field = Field {
         tokens: all,

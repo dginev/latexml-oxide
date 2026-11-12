@@ -130,13 +130,13 @@ fn eptcs_the_gate_sees_a_table_after_a_hidden_and() {
 /// `\newcommand\aut{Ann Able \and Bob Baker}` then `\author{\aut \institute{Univ X}}`: the `\and`'s tokens print the
 /// names too, so no cell is cut there (`ArgSeparator::span` is `None`); the reading cuts the names, the institute under
 /// Bob Baker's column only, as pdflatex prints it. Green on int157a too (pinned): the path a cut by tokens must not take.
-/// Its two Warnings are the emitter writing each name of the macro's expansion by its text, which its events don't spell
-/// (`emit.rs` "a name its events don't spell", P3; as SEP1's macro row), on int157a too.
+/// Its names are written from the macro's expansion read in its place (AUT1, `reading::unfold_held_names`); int157a to
+/// int167a wrote each by its text, two Warnings ("a name its events don't spell").
 #[test]
 fn eptcs_a_macro_holding_names_and_the_and_stays_one_cell() {
   assert_rows_warned(
     &[row!("eptcs_author_macro_holding_names_and_the_and")],
-    2,
+    0,
     &[&["Ann Able"], &["Bob Baker", "affiliation=Univ X"]],
   );
 }

@@ -44,8 +44,8 @@ fn owned(expected: &[&[&str]]) -> Vec<Vec<String>> {
 /// `\lx@add@authors` — spelled in the line or held in a macro of the document's own (`\author{\aut}`, the search reading
 /// into the document's macros), or taken before the document renews `\and` (`\let\nx\and\renewcommand\and{…}`: the copy
 /// keeps the separator, compared with no current `\and`; SEP1: one merged creator, revSEP1 finding 1). The macro row's
-/// two Warnings are the emitter writing names its events don't spell (a
-/// macro's expansion: P3, as OC1's macro-held rows).
+/// names are written from the macro's expansion read in its place (AUT1; two by-text Warnings before, as OC1's
+/// macro-held rows).
 #[test]
 fn a_let_copy_of_and_parts_the_names() {
   for ((name, tex), counts) in [
@@ -68,7 +68,7 @@ fn a_let_copy_of_and_parts_the_names() {
         "sectioning-frontmatter",
         "author_let_copy_of_and_in_a_macro_parts_the_names"
       ),
-      (0, 2),
+      (0, 0),
     ),
     (
       row!(

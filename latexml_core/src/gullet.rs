@@ -2335,11 +2335,15 @@ pub fn field_cover_of(prov: u16) -> crate::token::FieldCover {
 /// body is a field's.
 #[cold]
 #[inline(never)]
-fn note_field_expansion(token: &Token) {
+fn note_field_expansion(token: &Token, expansion: &Tokens) {
   let cover = field_cover_of(token.prov);
   crate::token::field_cover_set_pending(cover);
   if let Some(notes) = crate::token::field_notes_hook() {
-    notes(token, cover, crate::token::FieldInvocation::Expanded);
+    notes(
+      token,
+      cover,
+      crate::token::FieldInvocation::Expanded(expansion),
+    );
   }
 }
 
@@ -2405,7 +2409,7 @@ fn invoke_expansion(token: Token, defn: &std::rc::Rc<dyn Definition>) -> Result<
   if token.prov != 0 {
     // the macro's position and its arguments are covered by the boxes its expansion digests to (or by the next ones,
     // when it expands to nothing): a field's print is whole with them (OXIDIZED_DESIGN #715)
-    note_field_expansion(&token);
+    note_field_expansion(&token, &invoked);
     crate::token::inherit_field_prov(token.prov, &mut invoked);
   }
   // token-locators: fill-only origin inheritance. A macro that

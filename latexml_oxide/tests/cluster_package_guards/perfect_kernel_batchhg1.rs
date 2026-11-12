@@ -111,9 +111,9 @@ pub(super) fn assert_rows(rows: &[Row]) {
 
 /// The restored rows, each as pdflatex prints it (a row's source and the guard it replaces in brackets); a part that is
 /// not is pinned as today and names its RED:
-/// - amsart's author reader keeps the lines a macro inside `\author` holds, the affiliation's `\footnotesize` lost and
-///   counted (one Warning) — the content the 106s guard counted as lost is kept (2007.07526; 106s
-///   `a_binding_losing_author_lines_is_counted`);
+/// - amsart's author reader keeps the lines a macro inside `\author` holds, the affiliation's `\footnotesize` and its line
+///   break kept since AUT1 (the macro read in its place; one counted Warning before) — the content the 106s guard counted
+///   as lost is kept (2007.07526; 106s `a_binding_losing_author_lines_is_counted`);
 /// - xkeyval's own plumbing under a raw class's `\ead[label=e1,mark]{…}` is no dropped text: clean, the name whole (the
 ///   106s splitter residual gone; 2101.10506; 106t `a_bindings_own_plumbing_is_no_dropped_text`);
 /// - a raw class's stores below the net's floor: the PACS (or MSC) code and the received date each a note line of the
@@ -163,12 +163,10 @@ fn hollow_guards_restored_read_as_printed() {
     Row {
       repro:    repro!("sectioning-frontmatter/check_binding_author_lines_lost_are_counted"),
       files:    &[],
-      counts:   (0, 1),
-      lines:    &[
-        "writes \"Lunar University Faculty of Craters\" as its plain text, its markup lost: a macro's span",
-      ],
+      counts:   (0, 0),
+      lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">Lunar University Faculty of Craters</contact><contact name="email: " role="email"><text font="typewriter" fontsize="80%">ann@lunar.org</text></contact></creator>"#,
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation"><text fontsize="80%">Lunar University<break/>Faculty of Craters</text></contact><contact name="email: " role="email"><text font="typewriter" fontsize="80%">ann@lunar.org</text></contact></creator>"#,
       ]),
     },
     Row {

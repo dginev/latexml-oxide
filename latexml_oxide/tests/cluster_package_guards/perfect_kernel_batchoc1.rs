@@ -43,9 +43,9 @@ macro_rules! repro {
 /// The block a class's `\author` queues, whatever split of its own ran first — OmniBus's (`inst_support_sty.rs`
 /// `\lx@add@author@split`, its whole list since P2-1), llncs's whole block and its marked split (`llncs_cls.rs`
 /// `\author`, `\lx@llncs@author@split`), the kernel's (`\lx@add@authors`, IEEEtran journal) — is cut at the `\and`
-/// the rehearsal digests from a macro, a wrapper or a `\csname`, each `\inst` picking its numbered `\institute`. The
-/// three plain-text Warnings of the macro-held rows are the emitter writing a name its events don't spell (a macro's
-/// expansion: P3), and OmniBus's missing class binding.
+/// the rehearsal digests from a macro, a wrapper or a `\csname`, each `\inst` picking its numbered `\institute`. A
+/// macro-held row's names are written from the macro's expansion read in its place (AUT1, `reading::unfold_held_names`;
+/// before it, each by its text, counted); OmniBus's one Warning is its missing class binding.
 #[test]
 fn a_block_parts_at_the_and_its_spelling_hides() {
   for ((name, tex), counts, expected) in [
@@ -54,7 +54,7 @@ fn a_block_parts_at_the_and_its_spelling_hides() {
         "sectioning-frontmatter",
         "author_call_cut_at_a_macro_held_and_omnibus"
       ),
-      (0, 3),
+      (0, 1),
       &[&["Ann Able"][..], &["Bob Baker"][..]][..],
     ),
     (
@@ -70,7 +70,7 @@ fn a_block_parts_at_the_and_its_spelling_hides() {
         "sectioning-frontmatter",
         "author_call_cut_at_a_macro_held_and_llncs"
       ),
-      (0, 2),
+      (0, 0),
       &[
         &["Ann Able", "affiliation=Univ A"][..],
         &["Bob Baker", "affiliation=Univ A"][..],

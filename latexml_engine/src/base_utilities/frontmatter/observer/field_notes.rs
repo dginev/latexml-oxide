@@ -173,10 +173,22 @@ pub struct FieldNotes {
   pub counter_moves: Vec<(u16, u16)>,
   /// each of those moves' position and the value it moved the counter from
   moved_from:        Vec<(u16, Option<i64>)>,
+  /// the one-level expansions of the document's macros the field calls ([`HeldExpansion`]), the first at each position
+  pub expansions:    Vec<HeldExpansion>,
   /// the calls whose definitions left [`Self::declarations`] since the call prints too, so no replay holds them apart from
   /// what it prints (` \footnote{#2} \newcounter{#1} `: 2407.13730, 2606.19583); only those a later token can read
   /// ([`FieldDeclaration::outlives_its_call`])
   pub printing:      Vec<PrintingCall>,
+}
+
+/// The expansion of a field token that calls a macro the document defined, of no parameters ([`FieldNotes::expansions`]): its
+/// positions `at..end` and the tokens it expanded to, which the field's text holds in its place
+/// (`reading::unfold_held_names`: `\author{\Authors}`, 2103.13804).
+#[derive(Debug, Clone, PartialEq)]
+pub struct HeldExpansion {
+  pub at:     u16,
+  pub end:    u16,
+  pub tokens: Tokens,
 }
 
 /// A call whose definitions print too ([`FieldNotes::printing`]).
@@ -635,7 +647,7 @@ fn with_expandable(token: &Token, test: impl Fn(&Expandable) -> bool) -> bool {
 /// macro reached opens a run ([`keep_declared`]), its arguments of the field's own positions none of it (`\mbox{\def\x{1}}`,
 /// `\parbox`); a block break its binding declares is noted; it is kept for what leads to the next invocation ([`read_lead`]).
 /// One for every tie of a block of a thousand names (1507.02068): a meaning is looked up only for a token no field holds there.
-fn field_expansion(token: &Token, cover: FieldCover) {
+fn field_expansion(token: &Token, cover: FieldCover, expansion: &Tokens) {
   let pos = field_prov_pos(token.prov);
   note_environment(token, pos, cover.end, true);
   FIELD_NOTES.with(|notes| {
@@ -650,6 +662,22 @@ fn field_expansion(token: &Token, cover: FieldCover) {
     if own && !in_a_definition(&notes.declarations, pos) {
       let call = (pos, cover.end.max(pos + 1));
       notes.last_call = Some(call);
+      // (a macro of no parameters: a call's cover past its arguments is not known at the field's end)
+      if !notes.expansions.iter().any(|e| e.at == pos)
+        && with_expandable(token, |meaning| {
+          meaning.get_origin() == DefinitionOrigin::Document
+            && meaning
+              .paramlist
+              .as_ref()
+              .is_none_or(|params| params.get_parameters().is_empty())
+        })
+      {
+        notes.expansions.push(HeldExpansion {
+          at:     call.0,
+          end:    call.1,
+          tokens: expansion.clone(),
+        });
+      }
       if notes.any_open {
         for declaration in &mut notes.declarations {
           declaration.open &= declaration.run_at.is_none_or(|run_at| run_at == call);
@@ -705,7 +733,7 @@ fn read_lead(waiting: Option<u16>, expanded: Option<(u16, Token)>) -> Option<u16
 fn field_notes_after(token: &Token, cover: FieldCover, invocation: FieldInvocation<'_>) {
   match invocation {
     FieldInvocation::Digested(result) => field_invocation(token, cover, result),
-    FieldInvocation::Expanded => field_expansion(token, cover),
+    FieldInvocation::Expanded(expansion) => field_expansion(token, cover, expansion),
   }
 }
 

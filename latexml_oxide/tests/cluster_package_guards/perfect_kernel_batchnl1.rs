@@ -81,11 +81,12 @@ fn a_marked_name_with_an_institution_word_is_a_name() {
     repro!("revtex_marked_list_surname_after_initial_is_a_name"),
     0,
   );
-  // (P4c: the list's printed marks shown, as pdflatex prints them — P4S Q1)
+  // (P4c: the list's printed marks shown, as pdflatex prints them — P4S Q1; since AUT1 Ann Able's `∗` too, which no entry
+  // answers and her name's run, ending at the comma before `$^{1,*}$`, does not print: "Ann Able,1,∗" in the PDF)
   let alpha = "affiliation=1 University of Alpha";
   let beta = "affiliation=2 University of Beta";
   assert_eq!(two, [
-    vec!["Ann Able", alpha],
+    vec!["Ann Able ∗", alpha],
     vec!["Bob Baker", alpha],
     vec!["Gary P. Centers", alpha],
     vec!["Dan Dee", beta],

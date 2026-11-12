@@ -135,7 +135,7 @@ pub(super) fn block_span_tokens(
       return None;
     };
     let field = Field {
-      tokens: block.tokens.unlist_ref(),
+      tokens: block.read_tokens().unlist_ref(),
       base: block.range.0,
       formulas,
       environments,

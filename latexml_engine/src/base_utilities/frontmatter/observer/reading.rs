@@ -7,17 +7,19 @@
 
 use std::fmt::Write as _;
 
+use latexml_core::{state::if_stack_depth, token::AUTHOR_PROV_POS_MASK};
+
 use super::{
   events::{
     EmailMeaning, Event, EventKind, HeldError, SepKind, creator_roles, lex_events, lex_with_inks,
     mark_held, with_block_content,
   },
+  field_notes::HeldExpansion,
   ledger::{
-    Entry, Outcome, SkipReason, Stamp, content_text, reset_ledger, stamped_block_tokens,
-    with_ledger,
+    Entry, Outcome, SkipReason, Stamp, content_text, field_stamped, reset_ledger, with_ledger,
   },
   policy::{TitleMarks, policy_for},
-  rehearsal::{Rehearsal, for_the_check, rehearse},
+  rehearsal::{Rehearsal, footnotes_carried, for_the_check, rehearse, set_footnotes_carried},
   resolver::{Assoc, Resolved, ledger_inputs, resolve},
   *,
 };
@@ -45,6 +47,55 @@ pub(in crate::base_utilities) fn read_at_flush() -> Result<HeldUndefined> {
   // (the flush empties the frontmatter queue: the calls after it are queued from position 0 again)
   with_ledger(|ledger| ledger.flushes += 1);
   Ok(held)
+}
+
+/// How deep a block's macros are unfolded ([`unfold_held_names`]): `\aut` holding `\autA` holding the names.
+pub(in crate::base_utilities) const UNFOLD_LEVELS: usize = 4;
+
+/// `tokens` (positions from `base`) with each call of a document macro whose expansion printed several names, contacts or notes
+/// at its one position (`events`' shared span) replaced by that expansion (`expansions`, `field_notes::HeldExpansion`); `None`
+/// where none did. A read of the result gives each its own positions, as the inline text does.
+pub(in crate::base_utilities) fn unfold_held_names(
+  tokens: &[Token],
+  base: usize,
+  events: &[Event],
+  expansions: &[HeldExpansion],
+) -> Option<Vec<Token>> {
+  let mut printed_at: Vec<(u16, u16)> = events
+    .iter()
+    .filter(|e| match e.kind {
+      EventKind::Name => !e.text.trim().is_empty(),
+      EventKind::Contact | EventKind::Note => true,
+      _ => false,
+    })
+    .filter_map(|e| e.span)
+    .collect();
+  printed_at.sort_unstable();
+  let shared: Vec<(u16, u16)> = printed_at
+    .windows(2)
+    .filter(|pair| pair[0] == pair[1])
+    .map(|pair| pair[0])
+    .collect();
+  let mut out = Vec::with_capacity(tokens.len());
+  let mut next = 0;
+  for held in expansions
+    .iter()
+    .filter(|held| shared.iter().any(|&(s, t)| held.at <= s && t <= held.end))
+  {
+    let at = usize::from(held.at).checked_sub(base)?;
+    let end = usize::from(held.end).checked_sub(base)?;
+    if at < next || end > tokens.len() {
+      return None;
+    }
+    out.extend_from_slice(&tokens[next..at]);
+    out.extend_from_slice(held.tokens.unlist_ref());
+    next = end;
+  }
+  if next == 0 {
+    return None;
+  }
+  out.extend_from_slice(&tokens[next..]);
+  Some(out)
 }
 
 /// The undefined commands this flush's rehearsals held an Error for (`Error:undefined:\cs`, State.pm:547-551's
@@ -167,6 +218,7 @@ fn read_pending() -> Result<HeldUndefined> {
       continue;
     };
     let mut queued_tags = Vec::new();
+    let mut unfolded = None;
     let outcome = if block.stamp == Stamp::Overflow {
       Outcome::Skipped(SkipReason::Overflow)
     } else if block.tokens.is_empty() {
@@ -177,14 +229,51 @@ fn read_pending() -> Result<HeldUndefined> {
       let block_breaks = policy.block_breaks;
       // (the block's tokens beside it: its in-block contacts' entries are read as the writer can cut them,
       // `events::labelled_entries`)
-      let rehearsal = with_block_content(block.range.0, block.tokens.clone(), || {
-        rehearse(
-          stamped_block_tokens(&block),
-          title_marks,
-          block_breaks,
-          lex_with_inks,
-        )
-      })?;
+      let rehearse_block = |tokens: &Tokens| {
+        with_block_content(block.range.0, tokens.clone(), || {
+          rehearse(
+            field_stamped(2, block.range.0, tokens.unlist_ref()),
+            title_marks,
+            block_breaks,
+            lex_with_inks,
+          )
+        })
+      };
+      let carried = footnotes_carried();
+      let conditionals = if_stack_depth();
+      let mut rehearsal = rehearse_block(&block.tokens)?;
+      // (a document macro printing several names, `\author{\Authors}` (2103.13804): its events share its one position,
+      // so the block is read again with the macro's expansion in its place, each name its own run, as written inline)
+      for _ in 0..UNFOLD_LEVELS {
+        let Rehearsal::Done {
+          value: (events, ..),
+          expansions,
+          ..
+        } = &rehearsal
+        else {
+          break;
+        };
+        let read = unfolded.as_ref().unwrap_or(&block.tokens);
+        let Some(tokens) = unfold_held_names(read.unlist_ref(), block.range.0, events, expansions)
+          .filter(|tokens| {
+            block.range.0 + tokens.len() <= usize::from(AUTHOR_PROV_POS_MASK)
+              && if_stack_depth() == conditionals
+          })
+        else {
+          break;
+        };
+        let after = footnotes_carried();
+        set_footnotes_carried(carried);
+        let tokens = Tokens::new(tokens);
+        let again = rehearse_block(&tokens)?;
+        if !matches!(again, Rehearsal::Done { .. }) {
+          set_footnotes_carried(after);
+          break;
+        }
+        rehearsal = again;
+        unfolded = Some(tokens);
+      }
+      let read = unfolded.as_ref().unwrap_or(&block.tokens);
       match rehearsal {
         Rehearsal::Done {
           value: (mut value, formulas, inks),
@@ -198,6 +287,7 @@ fn read_pending() -> Result<HeldUndefined> {
           left_open,
           unsaid,
           queued,
+          expansions: _,
         } => {
           queued_tags = queued;
           if !block.sectioned {
@@ -224,7 +314,7 @@ fn read_pending() -> Result<HeldUndefined> {
             held,
             environments,
             creators: creators.into_boxed_slice(),
-            unread: left_open.then(|| content_text(&block.tokens).into()),
+            unread: left_open.then(|| content_text(read).into()),
             unsaid,
           }
         },
@@ -239,6 +329,7 @@ fn read_pending() -> Result<HeldUndefined> {
       if let Some(Entry::Author(block)) = ledger.entries_mut().get_mut(i) {
         block.outcome = outcome;
         block.queued = queued_tags;
+        block.unfolded = unfolded;
       }
     });
   }

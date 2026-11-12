@@ -1069,8 +1069,8 @@ pub type FieldNotesHook = fn(&Token, FieldCover, FieldInvocation<'_>);
 pub enum FieldInvocation<'a> {
   /// the stomach digested it, to these boxes
   Digested(&'a [Digested]),
-  /// the gullet expanded it, its tokens about to go on the input
-  Expanded,
+  /// the gullet expanded it, to these tokens, about to go on the input
+  Expanded(&'a Tokens),
 }
 #[thread_local]
 static FIELD_NOTES_HOOK: std::cell::Cell<Option<FieldNotesHook>> = std::cell::Cell::new(None);

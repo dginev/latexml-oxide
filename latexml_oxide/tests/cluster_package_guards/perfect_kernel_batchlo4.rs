@@ -26,15 +26,15 @@ macro_rules! repro {
 /// where its span prints that one event: in `\newcommand{\ann}{Ann Able\note{…}}`, `\note{…}\note{…}` and `Dan
 /// Dorn\emailAdd{…}` the span is the macro's one token, so the command written was the whole macro, for each item —
 /// "Ann Able" a note of hers, "Visiting Univ D." moved to the next author twice, an e-mail "Dan Dorn" (review revLO3 1).
-/// Each is its text now, a contact command's note a `<contact role="note">` as with the switch off; a macro holding the
-/// command alone (`\cor`) stays the command (1403.1099, 2001.06318, 2308.04217's spans). The five texts are counted (a
-/// macro's span, a name its events don't spell: markup lost); Dan Dorn's address loses its typewriter font, which the
-/// text path has no font for.
+/// Since AUT1 the macros are read with their expansions in their place (`reading::unfold_held_names`), so each item is
+/// written from its own tokens, a contact command's note a `<contact role="note">` as with the switch off, Dan Dorn's
+/// address in its typewriter font, no Warning (int167a: the five by their text, counted, the font lost); a macro holding
+/// the command alone (`\cor`) stays the command (1403.1099, 2001.06318, 2308.04217's spans).
 #[test]
 fn a_contact_command_in_a_macro_is_its_text() {
   let tex = repro!("emit_jheppub_note_command_in_a_macro_is_its_text");
   let (log, xml) = run(tex);
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 5), "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   let want = [
     vec![
       "Ann Able",

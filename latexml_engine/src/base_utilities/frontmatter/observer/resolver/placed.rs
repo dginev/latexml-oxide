@@ -1071,6 +1071,7 @@ mod whole_tests {
       range: (0, 0),
       tokens: Tokens::new(Vec::new()),
       source: names.join(" \\\\ "),
+      unfolded: None,
       mark: input_mark(),
       window_open: false,
       outcome: Outcome::Events {
