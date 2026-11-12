@@ -83,7 +83,7 @@ affected** → **is it unblocked** → **effort**.
 ### R — Road to the main merge (user 2026-11-09: "keep planning out all steps … towards completing our main goal"; inventory `agent_reports/2026-11-09_PREMERGE_inventory.md`, 30 …
 
 - **Road to the main merge (user 2026-11-09: "keep planning out all steps … towards completing our main goal"; inventory `agent_reports/2026-11-09_PREMERGE_inventory.md`, 30 items; supersedes the 2026-11-05 close order)**
-- **The task list — the single entry for the work until the merge (DG 2026-11-12: "We should have a single point of entry for work lists").** Updated at every decision and every bundle fold; status counts are read from these two tables. Weights: easy 1, medium 3, hard 5. Done since 2026-11-11: 52 tasks (weight 142), each in its bundle's entry in `archive/SYNC_SESSIONS_2026-11.md`. **Before the merge:** 2 ongoing (8), 36 to come (110). **After the merge:** 36 (74) — DG's pragmatic bar (2026-11-12): regressions and high-frequency / high-impact gaps before the merge; newly found edge cases after it, unless one invalidates the approach. Detail per row: the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker (`~/data/pk_agents/main/bruce_qa/ACTIONS.md`), each deferred finding's `_red.tex` (`moves:` names its row).
+- **The task list — the single entry for the work until the merge (DG 2026-11-12: "We should have a single point of entry for work lists").** Updated at every decision and every bundle fold; status counts are read from these two tables. Weights: easy 1, medium 3, hard 5. Done since 2026-11-11: 52 tasks (weight 142), each in its bundle's entry in `archive/SYNC_SESSIONS_2026-11.md`. **Before the merge:** 2 ongoing (8), 36 to come (110). **After the merge:** 58 (136) — DG's pragmatic bar (2026-11-12): regressions and high-frequency / high-impact gaps before the merge; newly found edge cases after it, unless one invalidates the approach. **The BM Q&A rows** (QA01-QA93, `~/data/pk_agents/main/bruce_qa/ACTIONS.md`, which keeps each row's text and evidence; status and rank live here) are all catalogued: their PRE work in the table (QA41 → RV1 and PSF1, QA46/QA47 → QA47A, QA60 site 2 → TP3, QA27's input → CSS, QA75, QA80 with QA08, QA35, QA36, QA39, QA50, QA56, QA62 and the Perl sides of QA30 and QA45, QA84, QA92 with QA02's awaited rest), the POST / LATER / HZN rows and those DG moved post-merge in the list below (QA60 site 8 as SR4/SR5); not listed — 28 done (QA01, QA02, QA03, QA07, QA09, QA10, QA12, QA13, QA18, QA25, QA30, QA31, QA33, QA34, QA40, QA42, QA45, QA54, QA55, QA59, QA67, QA70, QA71, QA82, QA83, QA87, QA89, QA93) and 10 that need no work (QA04, QA16, QA21, QA38, QA49, QA65, QA68, QA72, QA74, QA78: confirmed or noted). Detail per row: the batch reports in `~/data/pk_agents/main/agent_reports/`, the BM Q&A rows in the Q&A tracker (`~/data/pk_agents/main/bruce_qa/ACTIONS.md`), each deferred finding's `_red.tex` (`moves:` names its row).
 
   | Id | Task | Step | Weight | Status |
   |---|---|---|---|---|
@@ -111,15 +111,15 @@ affected** → **is it unblocked** → **effort**.
   | PERF | Perf + RAM pass, remaining levers (#346) | 5 | 5 | todo |
   | ROW0A | Row 0a deferred manual REDs decided | 5 | 3 | todo |
   | CLEAN | Workspace cleanup (keep-list to DG) | 5 | 1 | todo |
-  | PSF1 | PSF1: \psfrag fragments silently lost (Rust None vs Perl save_psfrag) — reach first | 5 | 1 | todo |
-  | PGR1 | PGR1: pgfmath grammar gaps (0bp read as a binary prefix ~9% of tikz papers; \dimexpr; -4 .5) then the pgfparse Error | 5 | 3 | todo |
-  | RV1 | RV1 (QA41): reversions as Perl/user — inpgf ignorespaces (~66k), centering alias, intertext | 5b | 3 | ongoing |
-  | QA47A | Hooks fix A: run the kernel's begindocument lists; a Warning for bindings | 5b | 3 | todo |
+  | PSF1 | PSF1 (from QA41): \psfrag fragments silently lost (Rust None vs Perl save_psfrag) — reach first | 5 | 1 | todo |
+  | PGR1 | PGR1 (from EB1): pgfmath grammar gaps (0bp read as a binary prefix ~9% of tikz papers; \dimexpr; -4 .5) then the pgfparse Error | 5 | 3 | todo |
+  | RV1 | RV1 (QA41's fix; the audit done): reversions as Perl/user — inpgf ignorespaces (~66k), centering alias, intertext | 5b | 3 | ongoing |
+  | QA47A | Hooks fix A (QA47, from QA46's study): run the kernel's begindocument lists; a Warning for bindings | 5b | 3 | todo |
   | QA75 | Eyeball review of rendered HTML at the close | 5b | 3 | todo |
-  | QA80 | Upstream patch set prepared (9 patches) | 5b | 3 | todo |
+  | QA80 | Upstream patch set prepared: QA08 equationgroup id, QA30 bibunits, QA35 subparagraph, QA36 abstract-heading XSLT, QA39 TOC copy, QA45 \list labels, QA50 \pretocmd on locks, QA56 \mbox, QA62 \bm | 5b | 3 | todo |
   | QA84 | Comment compaction across the crates | 5b | 5 | todo |
-  | QA92 | Reply owed to BM (Q3.9, Q4.6, Q3.13) | 5b | 1 | todo |
-  | CSS | The sizing CSS (goal end; BM's em input) | 6 | 3 | todo |
+  | QA92 | Reply owed to BM (Q3.9, Q4.6, Q3.13; QA02's rest awaited from BM) | 5b | 1 | todo |
+  | CSS | The sizing CSS (goal end; QA27: BM's em-of-parent lengths as input) | 6 | 3 | todo |
   | DOCS | Goal docs current | 6 | 3 | todo |
   | SWEEP | Closing manual sweep (G1-G5) | 6 | 1 | todo |
   | CORTEX | 2605/2606 cortex reruns (fleet rebuild: DG's OK) | 6 | 3 | todo |
@@ -138,7 +138,7 @@ affected** → **is it unblocked** → **effort**.
   - SMB3 — Separator meaning B3: emitter `before` from the ink; 3
   - SR2 — SR2: a marked net note on the author block keeps its marks/markup or routes to the authors (SR1b open a; 2405.12817; pre-existing); 3
   - SR3 — SR3: the block note keeps _net on the creator route (floor + Warning; SR1 open c); 1
-  - SR5 — SR5: registers set only at \maketitle lose their notes uncounted (RED net_title_note_on_the_authors_set_at_maketitle_is_lost_red); 3
+  - SR5 — SR5 (QA60 site 8): registers set only at \maketitle lose their notes uncounted (RED net_title_note_on_the_authors_set_at_maketitle_is_lost_red); 3
   - TP2 — TP2: title_and for pasj00/interact/l_aa/jmlr; 3
   - ARAB — \arabic etc. on an undefined counter (DG ruling); 1
   - FOC1 — FOC1: 0-wide foreignObject (\rlap in a node) browser render check; CSS nowrap if text breaks (DTL1a Q7); 1
@@ -146,12 +146,12 @@ affected** → **is it unblocked** → **effort**.
   - RAWS — On-disk raw-class dependency-scan RED; 1
   - SVA — SV-A: \csname via \ifincsname; 3
   - TBLR — tabularray first-token, \g__tblr_table_count_int, tblr-only \hline REDs; 1
-  - QA05 — Kernel-version switch + \@ifundefined per year (QA05/06); 1
+  - QA05 — Kernel-version switch + \@ifundefined per year (QA05/QA06); 1
   - QA11 — Native pgf/l3fp vs raw TeX inventory; 3
   - QA14 — Untracked length parameters census; 3
   - QA15 — TeX's two kinds of unread: RED + reach; 3
   - QA19 — Schema-extension inventory for BM; 1
-  - QA22 — Page furniture kept as metadata: element designed with BM, implemented; 5
+  - QA22 — Page furniture kept as metadata (QA22/QA23, census done): element designed with BM, implemented; 5
   - QA24 — Minipage width on a section from a minipage; 1
   - QA29 — xml:id nesting check; 1
   - QA43 — Bindings with no semantics census; 3
@@ -163,7 +163,29 @@ affected** → **is it unblocked** → **effort**.
   - QA85 — ORGANIZATION.md extended to every crate; 1
   - QA90 — The 54 preamble-only commands after \begin{document}; 1
   - QA91 — Text before \maketitle: order (DG + BM); 1
-  - SR4 — SR4: a title note held in \title (\titlenote) becomes a pubnote (1601.00073, 1805.02241, cs0405006) — with the page-furniture element (QA22/23); 1
+  - SR4 — SR4 (QA60 site 8): a title note held in \title (\titlenote) becomes a pubnote (1601.00073, 1805.02241, cs0405006) — with the page-furniture element (QA22/23); 1
+  - QA17 — `\iffontchar` outside Computer Modern: a K-row with a repro; 1
+  - QA20 — Open/close vertical bars (VERTBAR read as MIDBAR): a math RED row (math parked); 1
+  - QA26 — Large separating spaces kept as a class or role; 3
+  - QA27 — Lengths in em of the parent: the gradual migration after the sizing CSS; 3
+  - QA28 — BM's question on our animation-frame / RDFa example clarified; 1
+  - QA32 — Semantic SVG drawings: tikz-cd and xymatrix nodes and connectors labelled; 5
+  - QA37 — Side-by-side figures (C1): BM's sibling figures vs ruling 57g (DG: deferred, "requires care"); 3
+  - QA44 — Thin the remaining bindings family by family (raw package + semantic overrides); 5
+  - QA48 — LaTeXML's own hooks onto LaTeX3 hooks (after QA47B); 5
+  - QA51 — Macro faces: the `\meaning` census (sized: 241 macros read as primitives, 276 other bodies); 3
+  - QA52 — Our reply to BM's "What do you think?" on macro faces; 1
+  - QA53 — Macro faces in the definers, subsystem by subsystem, an A/B each, proposed upstream; 5
+  - QA57 — Horizon: one binding language for Perl, compiled Rust and rhai; 1
+  - QA58 — OmniBus definitions as guesses: `\newcommand` may redefine without complaint (input to SV-D); 1
+  - QA63 — XeTeX / LuaTeX emulation modules by the intended engine; 5
+  - QA66 — Each Error's site marked in the output (`ltx:ERROR`), designed with BM; 3
+  - QA73 — `ELIDEOP` renamed to an elision role, together with Perl; 1
+  - QA77 — A Rust bst-driven BibTeX keeping each field's meaning (JATS, RDFa); 5
+  - QA79 — LaTeXML 0.9 as the reference on its release: oracle re-baselined, parity re-run; 3
+  - QA81 — A latexml-oxide home page (Sammy in the logo); 3
+  - QA86 — A principled organization shared by both implementations, proposed to BM; 3
+  - QA88 — Horizon: fully idiomatic Rust, the parity ties broken (DG's call); 1
 - Plan:
   - **Order, each step reviewed and bundled:** (1) **single engine clean** — `author_block/` gone (row 0b);
   - (1) done on `pk/int154a`: the deletion pass DEL1-DEL5 (tests −349, the switch, the old driver −5.8k, the S2b writer and census −12.2k; output byte-identical), Z18a the API's Cut/Kind out of `author_block/` (byte-identical), the llncs reroute Z18c-Z18i (OD #984; its first blockers in `agent_reports/2026-11-09_Z18c_report.md`), Z18j the API engine and field readers moved (Plan A batch 1, `256a8cd611`); history in `archive/SYNC_SESSIONS_2026-11.md` "Bundle int154a".
