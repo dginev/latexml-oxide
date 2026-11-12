@@ -928,8 +928,10 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
     // no author carries — is no answer to an author's label request, nor passes over the authors one answers)
     let legend = marker_leads(&content);
     // (an entry of the Cut shows the mark that labels it while it is digested: `\lx@sup@setlabel@affiliation`,
-    // OXIDIZED_DESIGN_DIVERGENCES #954)
-    let mark_shown = options.remove("_markshown").is_some();
+    // OXIDIZED_DESIGN_DIVERGENCES #954; a binding list's entry where the names show theirs, OD #1009)
+    let mark_shown = options.remove("_markshown").is_some_and(|shown| {
+      shown != MARK_SHOWN_WITH_NAMES || names_show_marks()
+    });
     if mark_shown {
       assign_value("lx_affiliation_mark_shown", Stored::Bool(true), Some(Scope::Global));
     }

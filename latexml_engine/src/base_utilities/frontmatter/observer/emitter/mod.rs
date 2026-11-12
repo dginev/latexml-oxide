@@ -32,7 +32,7 @@ mod repart;
 pub(super) use content::{Field, aligned};
 pub(in crate::base_utilities) use emit::{
   Analysis, EMITTING, SETTERS_RECOVERED, block_creator_written, emit_commands, emitted,
-  setters_recovered, take_digested,
+  names_show_marks, setters_recovered, take_digested,
 };
 pub(super) use plan::{entry_forms, labelled_start, span_tokens};
 

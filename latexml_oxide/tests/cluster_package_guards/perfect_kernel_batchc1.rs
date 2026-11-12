@@ -10,7 +10,7 @@ use latexml::util::test::convert_files_with_setup_then;
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
   perfect_kernel_batch84b::creators as text_creators,
-  perfect_kernel_batchz4::run,
+  perfect_kernel_batchz4::{creators_xml, run},
 };
 
 /// Converts `tex` under the arXiv preload with `--debug=frontmatter`, checks that it errs and warns nothing, and returns
@@ -402,7 +402,8 @@ fn notes(xml: &str) -> Vec<String> {
 /// shape (red on the P4c WIP): its Warning count, every creator's name and contacts, every note. IEEEtran's author-block
 /// preprocessing ahead of the Cut too (P4cR2, P4cR2b): a nested affiliation block led by marks, or after a line of marks
 /// alone (its label), a block of its own, an unmarked one spliced into the outer's lines; an ordinal-led bare name line a
-/// name.
+/// name. And a binding's own list cutter (`affiliation_calls`, P4f): its marked entries show their marks where the names
+/// show theirs (llncs shape (c), l-aa; red on int164a), hidden with them where they hide (IJCAI, the control).
 #[test]
 fn marked_list_cut_as_its_binding_declares() {
   macro_rules! repro {
@@ -813,13 +814,44 @@ fn marked_list_cut_as_its_binding_declares() {
       ]],
       &[],
     ),
+    // (P4f: the binding's own cutter shows each entry's mark as the names show theirs — 1209.0041, red on int164a: the
+    // entries' marks dropped; l-aa, astro-ph0002407, the same; IJCAI's names hide theirs, the entries too, as on the base)
+    (
+      repro!("llncs_marked_institute_entries_show_their_marks"),
+      0,
+      &[&["Ann Able 1", "affiliation=1 Univ A, Town A"], &[
+        "Bob Baker 2",
+        "affiliation=2 Univ B, Town B",
+      ]],
+      &[],
+    ),
+    (
+      repro!("l_aa_marked_institute_entries_show_their_marks"),
+      0,
+      &[&["A. Able 1", "affiliation=1 Univ A, Town A"], &[
+        "B. Baker 2",
+        "affiliation=2 Univ B, Town B",
+      ]],
+      &[],
+    ),
+    (
+      repro!("ijcai_marked_affiliations_marks_hidden_with_the_names"),
+      0,
+      &[
+        &["Ann Able", "affiliation=Univ A, Town A", "email=ann@a.org"],
+        &["Bob Baker", "affiliation=Univ B, Town B", "email=bob@b.org"],
+      ],
+      &[],
+    ),
+    // (P4f: each entry shows its mark as the names show theirs, pdflatex "1 Univ A, Town"; was hidden, RED
+    // apa6_marked_list_entry_marks_dropped_red, now apa6_marked_list_entry_marks_shown)
     (
       repro!("apa6_marked_list_entries_in_boxes"),
       0,
       &[
-        &["Ann Able 1 ∗", "affiliation=Univ A, Town"],
-        &["Bob Baker 2 ∗", "affiliation=Univ B, City"],
-        &["Cy Cole 3 ∗", "affiliation=Univ C, Ville"],
+        &["Ann Able 1 ∗", "affiliation=1 Univ A, Town"],
+        &["Bob Baker 2 ∗", "affiliation=2 Univ B, City"],
+        &["Cy Cole 3 ∗", "affiliation=3 Univ C, Ville"],
       ],
       &[
         "note:thanks=∗ Equal contribution",
@@ -828,9 +860,34 @@ fn marked_list_cut_as_its_binding_declares() {
       ],
     ),
   ];
+  // (the shown marks whole: each entry's `<sup>` opens its contact, as the name's closes its name)
+  let whole_contacts: &[(&str, &[&str])] = &[(
+    "llncs_marked_institute_entries_show_their_marks",
+    &[
+      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup><text font=\"italic\">1</text></sup>Univ A, Town \
+       A</contact>",
+      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup><text font=\"italic\">2</text></sup>Univ B, Town \
+       B</contact>",
+    ],
+  )];
+  let contact = regex::Regex::new(r"(?s)<contact\b.*?</contact>").expect("regex");
   let mut failures = Vec::new();
   for ((name, tex), warnings, expected, expected_notes) in rows {
     let (log, xml) = run(tex);
+    if let Some((_, want)) = whole_contacts.iter().find(|(n, _)| n == name) {
+      let found: Vec<String> = creators_xml(&xml)
+        .iter()
+        .flat_map(|c| {
+          contact
+            .find_iter(c)
+            .map(|m| m.as_str().to_string())
+            .collect::<Vec<_>>()
+        })
+        .collect();
+      if found != *want {
+        failures.push(format!("{name}: whole contacts {found:?}"));
+      }
+    }
     let got = (
       (error_count(&log), warning_count(&log)),
       text_creators(&xml),

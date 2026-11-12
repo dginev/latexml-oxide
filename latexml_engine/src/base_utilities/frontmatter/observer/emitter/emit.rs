@@ -66,6 +66,13 @@ const EMITTED: &str = "lx_fm_emitted";
 
 /// Whether a flush of this conversion emitted.
 pub(in crate::base_utilities) fn emitted() -> bool { lookup_value(EMITTED).is_some() }
+/// The State value saying whether a name the last flush with names wrote shows a mark it prints: a superscript its name keeps
+/// ([`per_author_marks`]), not a creator call's own label — where a binding's list cutter shows its entries' marks
+/// (`frontmatter_api::MARK_SHOWN_WITH_NAMES`, OD #1009; llncs's `\\institute{$^{1}$Univ A \\\\ $^{2}$Univ B}`, 1209.0041).
+const NAMES_SHOW_MARKS: &str = "lx_fm_names_show_marks";
+
+/// Whether the names the last flush wrote show the marks they print ([`NAMES_SHOW_MARKS`]).
+pub(in crate::base_utilities) fn names_show_marks() -> bool { lookup_bool(NAMES_SHOW_MARKS) }
 /// The State value true inside `\\lx@frontmatter@itemonly`: what an item's content marks labels nothing, the reading's
 /// labels stand (`with_pending_entry_attr`).
 pub(in crate::base_utilities) const EMITTING: &str = "lx_fm_emitting";
@@ -5210,6 +5217,20 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     .filter(|(_, keep)| **keep)
     .map(|(&source, _)| (source, marks_of(source, "inst")))
     .collect();
+  // (whether a name this flush writes shows a mark it prints — a superscript, no `\\inst` or binding's request, which print
+  // nothing: ptephy's `\\name{…}{1}`, 1703.03659; [`names_show_marks`])
+  let printed_marks: BTreeMap<usize, Vec<String>> = keeps_marks
+    .iter()
+    .filter(|(_, keep)| **keep)
+    .map(|(&source, _)| {
+      let printed = ["sup", "math", "sup parted", "math parted"]
+        .iter()
+        .flat_map(|role| marks_of(source, role))
+        .collect();
+      (source, printed)
+    })
+    .collect();
+  let mut shows_marks = false;
   for &i in fresh
     .iter()
     .filter(|&&i| !whole.contains(&resolved.creators[i].source))
@@ -5222,6 +5243,13 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     let own = creator_call_of(c)
       .map(|call| call.labels())
       .unwrap_or_default();
+    shows_marks |= keeps
+      && c.requests.iter().any(|request| {
+        !own.contains(request)
+          && printed_marks
+            .get(&c.source)
+            .is_some_and(|p| p.contains(request))
+      });
     for request in c
       .requests
       .iter()
@@ -5232,6 +5260,17 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
         annotations[i].extend(clean_frontmatter_labels(request, "affiliation"));
       }
     }
+  }
+  if !fresh.is_empty() {
+    DebugFeature!(
+      "frontmatter",
+      "FRONT the names show their marks: {shows_marks}"
+    );
+    assign_value(
+      NAMES_SHOW_MARKS,
+      Stored::Bool(shows_marks),
+      Some(Scope::Global),
+    );
   }
   // (the emission)
   let mut per_source: BTreeMap<usize, usize> = BTreeMap::new();

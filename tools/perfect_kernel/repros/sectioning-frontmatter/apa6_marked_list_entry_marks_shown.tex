@@ -1,0 +1,23 @@
+% mechanism: apa6's marked `\affiliation` list cut at its marks gives each name its entry, each entry showing the mark
+%   it prints as the names show theirs (its store, `\lx@add@store@affiliations`, through the binding lists' cutter
+%   `affiliation_calls`: `_markshown=names`, OD #1009; FIDELITY_CHARTER §2), the words in a box or not
+%   (`apa6_marked_list_entries_in_boxes` the same)
+% witness: synthetic (P4cR1; the shape of 2508.05776)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 , Bob Baker2 , Cy Cole3", "1 Univ A, Town,
+%   2 Univ B, City, 3 Univ C, Ville"
+% engines: int162a, P4b2b, P4cR1, int164a: Ann Able 1 "Univ A, Town", Bob Baker 2 "Univ B, City", Cy Cole 3 "Univ C,
+%   Ville" (the entries' marks dropped); P4f: as expected
+% expect:  0 errors, 0 warnings; Ann Able 1 "1 Univ A, Town", Bob Baker 2 "2 Univ B, City", Cy Cole 3 "3 Univ C, Ville"
+% status:  RED (P4cR1) -> GREEN (P4f; the path's guard: perfect_kernel_batchc1::marked_list_cut_as_its_binding_declares,
+%   row apa6_marked_list_entries_in_boxes)
+% preload: ar5iv.sty
+\documentclass[doc]{apa6}
+\title{T}
+\shorttitle{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$, Cy Cole$^{3}$}
+\affiliation{$^{1}$Univ A, Town, $^{2}$Univ B, City, $^{3}$Univ C, Ville}
+\abstract{Abs.}
+\begin{document}
+\maketitle
+Body.
+\end{document}
