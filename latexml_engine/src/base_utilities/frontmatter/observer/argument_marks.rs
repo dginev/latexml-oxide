@@ -71,7 +71,7 @@ fn at_own_level(events: &[Event]) -> Vec<bool> {
   own
 }
 
-/// The marks `arg` prints at its own level ([`at_own_level`]), outside its notes (a note's marks are its `inner`), in
+/// The marks `arg` prints at its own level (`at_own_level`), outside its notes (a note's marks are its `inner`), in
 /// order, each with its printed `label`; a number's suffix (`5\textsuperscript{th}`, `Event::ordinal`) is text, no mark.
 /// A mark a document macro prints is one (`\newcommand\ua{\textsuperscript{1}}`), as is a `\let` copy's.
 pub fn argument_marks(arg: &Tokens) -> Result<Option<Vec<Event>>> {
