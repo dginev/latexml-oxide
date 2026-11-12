@@ -361,8 +361,8 @@ const MOVED_CUT_KIND_EMISSIONS: &[(&str, usize)] = &[
   ("frontmatter_api/affiliations.rs lx@add@", 2),
   ("frontmatter_api/cut.rs lx@annotate@frontmatter", 2),
   ("frontmatter_api/email_lines.rs lx@add@", 6),
-  ("frontmatter_fields/names.rs annotate=", 1),
-  ("frontmatter_fields/names.rs lx@add@", 3),
+  // (P5b: names.rs's collaboration contact call, `annotate=new`, deleted with `whole_name_collaboration`)
+  ("frontmatter_fields/names.rs lx@add@", 2),
 ];
 
 /// The moved code's non-blank code lines at Z18a: a ceiling, as [`OLD_READER_CODE_LINES`] (what moved may shrink, never
@@ -401,8 +401,10 @@ const MOVED_CUT_KIND_EMISSIONS: &[(&str, usize)] = &[
 /// cutter reads where entries start as digested (`list_marks`), its callers carry each line's starts and each entry's
 /// opening mark, and the Cut's opening declarations end at the first start; the cut itself is in `classify/entry_starts.rs`.
 /// P4b4a3 to 2,217: the Cut's opening declarations (`cut.rs` `notes_lead_declarations`) moved to `classify/notes.rs`
-/// (`list_lead_declarations`), the cutter's pieces their reader too. P6's compaction lowers it.
-const MOVED_CUT_KIND_CODE_LINES: usize = 2_217;
+/// (`list_lead_declarations`), the cutter's pieces their reader too. P5b to 1,992: `defs/frontmatter_fields/names.rs`'s
+/// collaboration readers (`whole_name_collaboration`, `wrapped_collaboration_out`, `name_and_remark` and their helpers)
+/// deleted, the reading's. P6's compaction lowers it.
+const MOVED_CUT_KIND_CODE_LINES: usize = 1_992;
 
 /// The fence on the moved Cut and Kind: they take no new decision either (review revZ18a check 3).
 #[test]
@@ -538,6 +540,8 @@ fn old_reader_exports() -> std::collections::BTreeSet<String> {
 /// `binding_cut_list_attr` deleted, `cut_list` added — the Cut's body, which a binding's marked list calls with its
 /// declaration (OD #1009). P5a: `names_continue`, `names_list_continues`, `notes_only_line` and `hoist_wrapped_separators` (with
 /// `names_split.rs`) deleted — IEEEtran's `name_memberships` was their last caller; the grade is the reading's (OD #1016).
+/// P5b: `whole_name_collaboration` and `wrapped_collaboration_out` deleted — a collaboration a creator call prints is the
+/// reading's (`frames_the_names`, OD #967).
 const OLD_READER_EXPORTS: &[&str] = &[
   "AddressPlacement",
   "CUT_COPY_PLACE",
@@ -610,9 +614,7 @@ const OLD_READER_EXPORTS: &[&str] = &[
   "text_tokens",
   "unalias_mark_commands",
   "whole_line_group",
-  "whole_name_collaboration",
   "wide_space_end",
-  "wrapped_collaboration_out",
   "written_membership_out",
 ];
 
@@ -1516,7 +1518,8 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // groups, never an alignment (`notes::font_settings`, `sets_font`, `aligns`, revP4b4a2 B1/B2); a start inside an
   // environment leaves the list to its tokens (`entry_starts::starts_inside_environment`, B3). Each test is the
   // token's meaning (`x_equals`) or a group's braces, no spelling)
-  ("classify", 471),
+  // (P5b, 471 -> 469: `marked_after_name` deleted with its last caller, `\lx@add@author`'s collaboration readers)
+  ("classify", 469),
   // (E0h: the rest of `author_block/` Z18m moved unchanged to `classify/old_reader/`, split off from `classify`'s row;
   // P5a, 131 -> 113: `names_continue`, `names_list_continues`, `notes_only_line`, `hoist_wrapped_separators` deleted with
   // their last caller, IEEEtran's `name_memberships`)
@@ -1549,7 +1552,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // whose statement holds `\@author` is a reader of it (2508.08170); +3 a `\newcounter{x}` replayed by its `\c@x` (its arm,
   // its `{x}`, its definee: 2508.04047). The juggle reader moved to `fallback`, review revPB S3)
   // (Z18m, 100 -> 66: the title-code reader moved unchanged to `classify/title_code.rs`, as the `classify` row says)
-  ("defs/frontmatter_fields/", 66),
+  // (P5b, 66 -> 34: `whole_name_collaboration`, `wrapped_collaboration_out`, `name_and_remark` and their helpers deleted —
+  // a collaboration a creator call prints is the reading's, `frames_the_names`)
+  ("defs/frontmatter_fields/", 34),
   ("defs/general", 8),
   ("epl_cls.rs", 43),
   // (P22b, 28 -> 18: its unit scanners — a group, an environment, a macro's argument — moved unchanged to `tokens.rs`

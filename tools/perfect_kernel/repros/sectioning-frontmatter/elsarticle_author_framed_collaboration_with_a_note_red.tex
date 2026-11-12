@@ -1,0 +1,26 @@
+% mechanism: an author call printing a collaboration framed for the names before it with a note of its own
+%   (`\obo{} the XYZ Collaboration\fnref{f1}`): the reading makes it the names' collaboration (the first piece, a framed
+%   collaboration), but its note follows no name and becomes a nameless creator of its own. Expected: the note on the
+%   collaboration's names (or the document's), no creator. Post-merge (P5b's sibling sweep; synthetic).
+% witness: synthetic
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able, Bob Baker", "Univ X", "On behalf of the XYZ Collaboration1", the
+%   footnote "1 See list."
+% engines: rust P5bbase and P5b: three creators, the third nameless holding the note "See list."; perl: a third creator
+%   with the note
+% expect:  0 errors, 0 warnings; two creators, each with the address and the collaboration, the note no creator's
+% status:  RED (P5bbase, P5b)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\newcommand\obo{On behalf of}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author{Ann Able}
+\author{Bob Baker}
+\address{Univ X}
+\author{\obo{} the XYZ Collaboration\fnref{f1}}
+\fntext[f1]{See list.}
+\end{frontmatter}
+Text.
+\end{document}
