@@ -1,0 +1,21 @@
+% mechanism: bibunits — the main `\bibliography` lists only the main `.aux`'s cites (bibunits.sty: a unit's `\cite`
+%   writes to `bu<N>.aux` alone unless starred or `globalcitecopy`), but the post Scan registers every cite under its
+%   unit list PLUS `bibliography` (Scan.pm:379-380, kept by OD #59), so a unit-only cite is also listed in the main
+%   References.
+% witness: synthetic (bibunits papers with a unit and a main bibliography, e.g. 2510.13035)
+% oracle:  pdflatex + bibtex (main, bu1): 0 errors; unit References [1] Zimmer; main References [1] Smith only
+% engines: rust int160c, BU1: 0 errors, the main References list Smith and Zimmer; perl: not run (its Scan.pm:379-380
+%   registers both lists)
+% expect:  0 errors; the main References hold Smith only
+% status:  RED (int160c, BU1)
+\documentclass{article}
+\usepackage{bibunits}
+\begin{document}
+Main \cite{Smith2020}.
+\begin{bibunit}[plain]
+Unit \cite{zeta}.
+\putbib[bibunits_units]
+\end{bibunit}
+\bibliographystyle{plain}
+\bibliography{bibunits_units}
+\end{document}

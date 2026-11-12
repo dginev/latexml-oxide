@@ -2807,6 +2807,10 @@ minimal reproducer is 6 lines (`tests/cluster_regressions/bibunits_cite.tex`):
 deleting the single `\usepackage{bibunits}` line resolves the cite. Perl on that
 same reproducer: 1 bibitem, 1 dangling, 0 links.
 
+Since BU1 the bibunits binding stamps a unit only inside one (KNOWN_PERL_ERRORS #NEW1), so the
+reproducer's bibref carries no `inlist`; the fallback still serves chapterbib and a unit's cite whose
+unit has no bibliography of its own.
+
 ### 60. `.bib` scanning follows BibTeX, not `Text::Balanced` (escaped braces, non-ASCII keys, bare `@Comment`)
 
 **Decision:** `pre_bibtex` parses `.bib` the way **BibTeX itself** does on three

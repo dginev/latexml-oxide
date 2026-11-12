@@ -1,0 +1,20 @@
+% mechanism: bibunits — a `{bibunit}` starts (steps `\@bibunitauxcnt`) at its first `\cite`/`\putbib`
+%   (bibunits.sty `\@startbibunitorrelax`), so a unit with neither takes no number; the binding steps it at
+%   `\begin{bibunit}` (bibunits.sty.ltxml:72-76, startBibunit), so the next unit reads `bu2.bbl` where TeX's is `bu1`.
+% witness: synthetic
+% oracle:  pdflatex: 0 errors; the second unit's References from bu1.bbl: [1] Z. Zimmer, Last in the alphabet
+% engines: rust int160c, BU1: no bu2.bbl, so the `.bib` route: Error:missing_file:nosuchbib, 2 Warnings, `[zeta]`
+%   dangles, no References; perl: not run (it steps at `\begin{bibunit}` too)
+% expect:  0 errors; the unit's References hold the bu1.bbl entry Zimmer
+% status:  RED (int160c, BU1)
+\documentclass{article}
+\usepackage{bibunits}
+\begin{document}
+\begin{bibunit}
+Nothing cited here.
+\end{bibunit}
+\begin{bibunit}[plain]
+Unit \cite{zeta}.
+\putbib[nosuchbib]
+\end{bibunit}
+\end{document}

@@ -19273,3 +19273,25 @@ More.
 \end{document}
 ```
 
+## NEW1. bibunits: every `\cite` carries a unit list, even outside every unit
+
+`bibunits.sty.ltxml` L32-41 redefines `\cite` to stamp `CITE_UNIT` = `bu\the\@bibunitauxcnt` on every citation, so a
+cite before any `{bibunit}` gets `inlist="bu0"` (a list no bibliography has) and a cite after `\end{bibunit}` gets the
+last unit's `bu<N>`, which lists it in that unit's References. In bibunits.sty only `\bibunit` lets `\cite` to
+`\bu@cite`, and `\endbibunit` lets it back, so such a cite goes to the main `.aux` alone (BM, Q&A Q2.7: "the cite element
+should not have an inlist attribute"). PERL-ORIGIN, 0 errors; Perl's CrossRef then leaves `bu0` cites dangling (#50).
+Fixed in Rust (BU1): `\lx@bibunits@setglobal`/`resetglobal` stamp only while a unit is open (`CITE_UNIT` set by
+startBibunit, taken back by the `{bibunit}` group or an argless `\bibliographyunit`). Census A/B: 18 of 32 bibunits
+papers drop `inlist="buN"` from cites outside a unit (2510.13035: 11 cites after its unit), links and E/F/W unchanged.
+Guard `06_cluster_bibliography::bibunits_cite_resolves_against_the_main_bibliography` (fixtures `bibunits_cite.tex`,
+`bibunits_unit_twin.tex`, `bibunits_sectionunit.tex`). Upstream patch list QA80. Minimal trigger:
+
+```latex
+\documentclass{article}
+\usepackage{bibunits}
+\begin{document}
+First \cite{zeta}, then \cite{alpha}.
+\bibliographystyle{plain}
+\bibliography{refs}
+\end{document}
+```

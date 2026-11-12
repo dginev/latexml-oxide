@@ -24,18 +24,20 @@ LoadDefinitions!({
     "\\@ifstar{\\lx@bibunits@setglobal\\std@cite}{\\lx@bibunits@resetglobal\\std@cite}"
   );
 
-  // Perl: sets CITE_UNIT to "bibliography buN" if not global
+  // Perl: sets CITE_UNIT to "bibliography buN" if not global — but only inside a unit: outside one
+  // `\cite` is the kernel's (bibunits.sty: only `\bibunit` lets it to `\bu@cite`), so it stays in the
+  // main list, its bibref with no `inlist`. KNOWN_PERL_ERRORS #NEW1.
   DefPrimitive!("\\lx@bibunits@setglobal", None,
   after_digest => {
-    if !lookup_bool("CITE_UNIT_GLOBAL") {
+    if !lookup_bool("CITE_UNIT_GLOBAL") && in_bibunit() {
       let unit = Digest!("\\bu@unitname")?.to_string();
       assign_value("CITE_UNIT", pin(s!("bibliography {unit}")), None);
     }
   });
-  // Perl: sets CITE_UNIT to "buN" if not global
+  // Perl: sets CITE_UNIT to "buN" if not global; inside a unit only, as above.
   DefPrimitive!("\\lx@bibunits@resetglobal", None,
   after_digest => {
-    if !lookup_bool("CITE_UNIT_GLOBAL") {
+    if !lookup_bool("CITE_UNIT_GLOBAL") && in_bibunit() {
       let unit = Digest!("\\bu@unitname")?.to_string();
       assign_value("CITE_UNIT", pin(&unit), None);
     }
@@ -172,3 +174,7 @@ LoadDefinitions!({
     }
   });
 });
+
+/// A unit is open: `startBibunit` set `CITE_UNIT`, which the `{bibunit}` group or an argless
+/// `\bibliographyunit` takes back.
+fn in_bibunit() -> bool { lookup_value("CITE_UNIT").is_some() }

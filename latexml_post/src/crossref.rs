@@ -2166,10 +2166,12 @@ impl CrossRef {
     // The lists to search, most-specific first. Perl CrossRef.pm L515 reads
     // `inlist || 'bibliography'` — an *exclusive* choice, which strands every
     // citation of a document that loads `bibunits`/`chapterbib` but keeps a
-    // single main `\bibliography`: `\cite` stamps CITE_UNIT=bu0 onto the
+    // single main `\bibliography`: Perl's `\cite` stamps CITE_UNIT=bu0 onto the
     // bibref, while the bibitems register under the default `bibliography`
     // list, so the unit-only lookup never matches (witness 2303.06077: 93
-    // bibitems, 93 dangling keys, 0 links).
+    // bibitems, 93 dangling keys, 0 links). Ours stamps only inside a unit
+    // (KNOWN_PERL_ERRORS #NEW1); a unit's cite with no unit bibliography
+    // still needs this fallback.
     //
     // Perl's own Scan.pm L379-380 spells the intended chain — unit lists
     // PLUS the main one ("Citation specifies main 'bibliography', as well as
