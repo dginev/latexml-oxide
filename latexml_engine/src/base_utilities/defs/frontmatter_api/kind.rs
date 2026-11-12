@@ -88,7 +88,7 @@ pub(in crate::base_utilities) fn kind_entry_addresses(
   let mut first = true;
   // (whether the entry prints anything but addresses, its mark aside)
   let mut prints_else = false;
-  for (delimiter, line) in split_tokens_delimited(inner, affil_splits()) {
+  for (delimiter, line) in split_tokens_delimited(inner, author_affil_splits()) {
     let printed = !line.is_empty() && !prints_nothing(&line);
     // (an address line read as it prints: a formula of spacing alone a space, no text of an address —
     // `$~\quad~~$ cbray@mines.edu`, 2205.14113; `a@x $\quad$ b@y`, 2302.05182; a line that is no address line

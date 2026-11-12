@@ -610,6 +610,28 @@ fn marked_blocks_restored_read_as_printed() {
         r#"<creator before="  " role="author"><personname>Cy Three<sup>‡</sup></personname><contact name="Affiliation: " role="affiliation"><sup>†</sup><sup>‡</sup>Univ B</contact><contact name="Emails: " role="email">cy_three@sutd.edu.sg</contact></creator>"#,
       ]),
     },
+    // (P6d: the line's reading says it prints only addresses, `resolver::prints_only_addresses` on its events' text —
+    // marks a document macro prints, an address a macro prints)
+    Row {
+      repro:    repro!("class-bindings/llncs_institute_macro_marked_address_line_read_whole"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able<sup><text font="italic">1</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">1</text></sup>Univ Alpha</contact><contact name="E-mail " role="email">ann@x.org</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup>Univ Beta</contact><contact name="E-mail " role="email">bob@y.org</contact></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("class-bindings/ieeetran_authorblocka_macro_address_line_read_whole"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann One<sup>*</sup></personname><contact name="Affiliation: " role="affiliation"><sup>*</sup>Univ A</contact><contact name="Emails: " role="email">ann@x.org</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Two<sup>†</sup></personname><contact name="Affiliation: " role="affiliation"><sup>†</sup>Univ B</contact><contact name="Emails: " role="email">bob@y.org</contact></creator>"#,
+      ]),
+    },
     Row {
       repro:    repro!("class-bindings/acmart_country_glued_mark_requests_each_entry"),
       files:    &[],

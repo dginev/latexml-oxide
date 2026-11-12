@@ -1262,9 +1262,7 @@ fn row_address_lines(events: &[Event]) -> Vec<Event> {
       .iter()
       .any(|e| matches!(e.kind, EventKind::Name | EventKind::Contact));
     if !first_line && prints {
-      let address_only = |e: &Event| {
-        e.kind == EventKind::Name && !addresses_in(&e.text).is_empty() && only_addresses(&e.text)
-      };
+      let address_only = |e: &Event| e.kind == EventKind::Name && prints_only_addresses(&e.text);
       let rest_is_calls = line.iter().all(|e| {
         address_only(e)
           || matches!(e.kind, EventKind::Sep(_) | EventKind::Layout)

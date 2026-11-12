@@ -1,27 +1,8 @@
-//! The frontmatter API's line readers for an entry's marks: the affiliation splits, the mark-command aliases, a line's
+//! The frontmatter API's line readers for an entry's marks: the mark-command aliases, a line's
 //! notes and leading footnote symbol, and whether `\inst` prints its mark. Moved unchanged from `author_block/marks.rs`,
 //! `separators.rs`, `symbols.rs` and `notes.rs` (Z18j).
 
 use super::*;
-
-pub(in crate::base_utilities) fn affil_splits() -> Vec<SplitDelim> {
-  vec![
-    // The \and CONTROL-SEQUENCE family is added (vs upstream, which splits
-    // affiliations only on \quad/\qquad/\\): it lets the shared affiliation
-    // parser handle \and-separated institute/affiliation lists (e.g. LNCS
-    // \institute{A \and B}). NOTE: the literal word " and " is deliberately NOT
-    // included (unlike author_affil_splits) — institution names routinely
-    // contain "and" ("Electrical and Computer Engineering"), so splitting on it
-    // wrongly fragments them. Affiliations never use ',' as a separator either.
-    T_CS!("\\and").into(),
-    T_CS!("\\And").into(),
-    T_CS!("\\AND").into(),
-    T_CS!("\\quad").into(),
-    T_CS!("\\qquad").into(),
-    T_CS!("\\\\").into(),
-    T_CS!("\\newline").into(),
-  ]
-}
 
 /// `tokens` with every alias of a mark command written as the command it means ([`mark_command_meant`]), so the
 /// readers of an author or affiliation block that match a command by name (`\textsuperscript`'s symbol and ordinal

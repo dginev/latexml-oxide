@@ -1390,8 +1390,9 @@ in the "author" arm (`split_author_line`):
    institution names — "Princeton Language **and** Intelligence" →
    "Princeton Language" + "Intelligence, …" rejoined without a space.
    Authors written "Alice and Bob" still split, because " and " is a
-   name separator inside `split_author_line`. (Mirrors the existing
-   `affil_splits` decision to exclude literal "and".)
+   name separator inside `split_author_line`. (An affiliation list's
+   lines are cut by the same list since P6d, which folded the former
+   `affil_splits` into `author_affil_splits`.)
 
 **Why:** arXiv 2605.00347 (colm2026 class) lists 13 authors across three
 `\textbf{…}` lines with `$^{1,2,3,*}$` affiliation markers. Perl and the
@@ -15427,7 +15428,7 @@ per-class rule:
   name, so `\author{John Smith, Hong Kong}` in a per-author class gives an author "Hong Kong" (Perl: one creator), and
   so does such a place on a line of its own with a mark after it, under a name so marked (`Ann Able$^{1}$\\ Murray
   Hill$^{2}$`).
-- `\newline` breaks author lines as `\\` does, and affiliation lines too (`affil_splits`: `Dept\newline Univ` is two
+- `\newline` breaks author lines as `\\` does, and affiliation lines too (`author_affil_splits`: `Dept\newline Univ` is two
   affiliation contacts, as `Dept\\ Univ` is; Perl's `@affilsplits` lacks it); " \& " separates names, and a thin space before "and" is its space
   (`\,\,and`, 1407.0988); a names line wrapped whole in a group with its declarations splits as `\textbf{A, B}` does
   (`{\bf Daniel Boyanovsky, Da- Shin Lee}`, hep-th9212083; 2608.16650); aastex's `\altaffilmark` written after the
@@ -30997,7 +30998,8 @@ printing text (`\mydept`, `\ldots`: printed once, on the first piece; revP4b4a2 
 llncs's `\parbox` lists, `perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed`) and inside a formula at a
 mark on a base (closed and opened again); a mark on no base starts where its formula does (`classify::entry_starts`).
 A start whose span opens in the delimiter before its line (`contribution \quad\authorrefmark{2}…`, the spacing its
-reading looked past) starts that line (2601.03607); a line of addresses (`line_addresses`) is read by its tokens, its
+reading looked past) starts that line (2601.03607); a line printing only addresses (P6d: its reading's text,
+`resolver::prints_only_addresses`, the blocks' one reader; formerly `line_addresses` on its tokens) is read by its tokens, its
 marks labelling addresses and a start possibly inside one (`$\{${\it\IEEEauthorrefmark{1}a, \IEEEauthorrefmark{3}b}$\}$@x`,
 1506.02349); a cut line's last piece has its separator trimmed inside the groups it closes, as the wrapped token cut
 did (`\institution{… ~$^{5}$Peking University \\ }`, 2511.20671). The starts read a name's mark as the Link step
@@ -31410,7 +31412,7 @@ observer read some of them (`take_out_entry_addresses`, OD #938), but its writer
 
 **Fix (the structure model's Kind and Link, one call site, one chain).**
 - **Kind**, `frontmatter_api::kind::kind_entry_addresses`, at `\lx@annotate@frontmatter` right after the Cut (OD #954; each cut
-  piece passes once): an affiliation-kind contact's lines (`affil_splits`) read by the author block's reader of an
+  piece passes once): an affiliation-kind contact's lines (`author_affil_splits`) read by the author block's reader of an
   address line (`line_addresses`: a list, a brace group, one behind an e-mail label) — or, on a marked entry's first
   line, the rest behind the mark (`mark_led_addresses`) — and its notes (`\footnote`, `\thanks`) printing a labelled
   address alone (`note_addresses`: a label of at most four words ending in e-mail words, "Electronic address" now one,

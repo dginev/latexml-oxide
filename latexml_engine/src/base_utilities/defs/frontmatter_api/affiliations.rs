@@ -82,7 +82,7 @@ pub(in crate::base_utilities) fn entry_calls(
   let with_sup = marks.as_ref().is_some_and(|marks| marks.prints);
   let (lines, line_starts) = lines_starts(
     &stuff,
-    split_tokens_delimited(stuff.clone(), affil_splits()),
+    split_tokens_delimited(stuff.clone(), author_affil_splits()),
     marks.as_ref().filter(|_| with_sup),
   );
   // In a marked list, the affiliations it names, each a mark-led line (or a piece of one) with the unmarked lines

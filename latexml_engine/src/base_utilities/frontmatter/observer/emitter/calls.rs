@@ -289,7 +289,7 @@ pub(in crate::base_utilities) fn note_body(content: Tokens) -> Tokens {
 /// Split an affiliation blob at each embedded superscript mark (`$^{n}$` /
 /// `\textsuperscript{n}`), keeping the mark at the head of the following
 /// segment. The abuse idiom packs several affiliations onto ONE line delimited
-/// only by their marks (no `\\`), so `affil_splits()` (which splits on `\\`)
+/// only by their marks (no `\\`), so `author_affil_splits()` (which splits on `\\`)
 /// cannot separate them. Each returned segment then flows through
 /// `\lx@affiliation@withsup`, which turns its leading mark into the
 /// `affiliation:N` label that the authors' own marks already request

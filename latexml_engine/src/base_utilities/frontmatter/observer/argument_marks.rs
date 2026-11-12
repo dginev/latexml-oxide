@@ -287,12 +287,14 @@ fn list_prints_marks(events: &[Event]) -> bool {
 /// A list's marks as its cutter reads them ([`list_marks`]).
 pub struct ListMarks {
   /// it prints a mark ([`prints_list_marks`])
-  pub prints: bool,
+  pub prints:                           bool,
   /// where its entries' opening marks stand in it, as the API Cut's decision cuts it (`events::entry_heads`); `None`
   /// unread
-  pub starts: Option<Vec<usize>>,
+  pub starts:                           Option<Vec<usize>>,
   /// where every mark it prints at its level stands, and a note opening with a label (as `prints_list_marks` reads them)
-  pub marked: Option<Vec<usize>>,
+  pub marked:                           Option<Vec<usize>>,
+  /// the reading's events, which say what each of its lines prints (`entry_starts::lines_starts`); none unread
+  pub(in crate::base_utilities) events: Vec<Event>,
 }
 
 /// Whether a list `arg` prints a mark ([`prints_list_marks`]) and where the marks opening its entries stand, the one
@@ -307,6 +309,7 @@ pub fn list_marks(arg: &Tokens, caller: &str) -> Result<ListMarks> {
       prints,
       starts: None,
       marked: None,
+      events: Vec::new(),
     });
   };
   let prints = list_prints_marks(&events);
@@ -315,6 +318,7 @@ pub fn list_marks(arg: &Tokens, caller: &str) -> Result<ListMarks> {
       prints,
       starts: Some(Vec::new()),
       marked: Some(Vec::new()),
+      events,
     });
   }
   // (the queued names' marks read first: the entries part at the marks they request, `events::names_requested`)
@@ -355,7 +359,7 @@ pub fn list_marks(arg: &Tokens, caller: &str) -> Result<ListMarks> {
     count_unread(caller);
   }
   let (starts, marked) = starts.unzip();
-  Ok(ListMarks { prints, starts, marked })
+  Ok(ListMarks { prints, starts, marked, events })
 }
 
 /// A mark an argument prints ([`marks_as_printed`]).

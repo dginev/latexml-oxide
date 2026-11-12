@@ -3,7 +3,10 @@
 //! closes and reopens the groups and formula it falls in.
 
 use super::*;
-use crate::base_utilities::defs::frontmatter_api::{affil_splits, line_addresses};
+use crate::base_utilities::frontmatter::observer::{
+  events::{Event, events_text},
+  resolver::prints_only_addresses,
+};
 
 /// A line's entry starts (`list_marks`), from its first token, and whether it prints a mark at all.
 #[derive(Clone)]
@@ -53,7 +56,7 @@ pub(in crate::base_utilities) fn lines_starts(
     let n = lines.len();
     (lines, vec![None; n])
   };
-  let Some((Some(starts), Some(marked))) = marks.map(|marks| (&marks.starts, &marks.marked)) else {
+  let Some((marks, Some(starts), Some(marked))) = marks.map(|m| (m, &m.starts, &m.marked)) else {
     return unread(lines);
   };
   let v = stuff.unlist_ref();
@@ -79,12 +82,16 @@ pub(in crate::base_utilities) fn lines_starts(
         .collect();
       at.dedup();
       let marked = marked.iter().any(|at| reach.contains(at));
+      // (a line printing only addresses is read by its tokens: its marks label its addresses, and a start may stand
+      // inside one, `$\{${\it\IEEEauthorrefmark{1}a, \IEEEauthorrefmark{3}b}$\}$@x`, 1506.02349)
+      let printed: Vec<&Event> = marks
+        .events
+        .iter()
+        .filter(|e| e.span.is_some_and(|(s, _)| reach.contains(&usize::from(s))))
+        .collect();
+      let starts =
+        (!prints_only_addresses(&events_text(&printed))).then_some(LineStarts { at, marked });
       let line = (lines[k].0.clone(), Tokens::new(v[range].to_vec()));
-      // (a line of addresses is read by its tokens: its marks label its addresses, and a start may stand inside one,
-      // `$\{${\it\IEEEauthorrefmark{1}a, \IEEEauthorrefmark{3}b}$\}$@x`, 1506.02349)
-      let starts = line_addresses(&line.1)
-        .is_none()
-        .then_some(LineStarts { at, marked });
       (line, starts)
     })
     .unzip()
@@ -98,7 +105,7 @@ pub fn starts_inside_environment(stuff: &Tokens, marks: &ListMarks) -> bool {
     return false;
   };
   let v = stuff.unlist_ref();
-  let lines = split_tokens_delimited(stuff.clone(), affil_splits());
+  let lines = split_tokens_delimited(stuff.clone(), author_affil_splits());
   line_ranges(v, &lines).is_some_and(|ranges| environment_lines(v, ranges, starts).is_none())
 }
 
