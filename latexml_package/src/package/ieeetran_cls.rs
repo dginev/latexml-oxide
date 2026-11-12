@@ -320,7 +320,7 @@ LoadDefinitions!({
   // frontmatter's rehearsal it is a `membership` Contact, however spelled (a macro, a `\let` copy; 2508.00603, 2306.15457,
   // 2201.01230, 2408.09035), the resolver's for the name it follows, if one; at the flush it prints its text where the
   // emitter wrote it: that contact, or the line it is printed on (2408.01956, 2511.20003). Elsewhere (a biography heading,
-  // the body) dropped as in Perl (IEEEtran.cls.ltxml:143; 2408.01902); an empty grade prints nothing (1805.06045).
+  // the body) dropped as in Perl (IEEEtran.cls.ltxml:143; 2408.01902), each counted; an empty grade prints nothing (1805.06045).
   // Conference mode locks it out (IEEEtran.cls:6270) unless `\IEEEoverridecommandlockouts`. OD #1016.
   DefMacro!("\\IEEEmembership{}", "\\lx@IEEE@grade{#1}");
   // (a comma opening or ending the grade is the list's: `Chen,~\IEEEmembership{Member,~IEEE,} Yuan-Hao~Chang`, 2408.00327;
@@ -335,6 +335,11 @@ LoadDefinitions!({
     let locked_out = T_CS!("\\ifCLASSOPTIONconference").defined_as(&T_CS!("\\iftrue"))
       && !T_CS!("\\iflx@IEEE@lockouts@overridden").defined_as(&T_CS!("\\iftrue"));
     if !reading_author_fields() {
+      // (printed there, so counted: a biography heading's grade, one in the body; FIDELITY_CHARTER §4)
+      if !locked_out && start < end {
+        let grade = Tokens::new(grade[start..end].to_vec()).untex_string();
+        Warn!("missing_feature", "IEEEmembership", s!("The membership grade '{grade}' outside the author fields is not kept"));
+      }
       return Ok(Tokens::new(Vec::new()));
     }
     // (one printing nothing is read too, its span its own, not a note's after it: `Aoyu~Wu~\IEEEmembership{}`

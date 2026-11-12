@@ -2141,21 +2141,31 @@ fn ieee_membership_is_a_contact() {
 }
 
 /// 63l review: a grade whose author cannot be known — a biography heading, the body — stays dropped, as in Perl,
-/// rather than going to the author before it; names continued past a `\\` (2408.01902) keep theirs (63m). Repro
-/// sectioning-frontmatter/ieee_membership_outside_the_names_stays_dropped.
+/// rather than going to the author before it, each counted by a Warning (UNC: pdflatex prints it); names continued past a
+/// `\\` (2408.01902) keep theirs (63m). Repro sectioning-frontmatter/ieee_membership_outside_the_names_stays_dropped.
 #[test]
 fn ieee_membership_outside_the_names_stays_dropped() {
-  assert_creators(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieee_membership_outside_the_names_stays_dropped.tex"
-    ),
-    &[
-      "<creator role=\"author\"><personname>Wenming\u{a0}Li</personname></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Xiaochun\u{a0}Ye</personname></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Dongrui\u{a0}Fan</personname><contact role=\"membership\">Senior\u{a0}Member,\u{a0}IEEE</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Yuan\u{a0}Xie</personname><contact role=\"membership\">Fellow,\u{a0}IEEE</contact></creator>",
-    ],
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ieee_membership_outside_the_names_stays_dropped.tex"
   );
+  let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
+  let counts = (
+    super::perfect_kernel_batch46::error_count(&log),
+    super::perfect_kernel_batch46::warning_count(&log),
+  );
+  assert_eq!(counts, (0, 2), "{log}");
+  for grade in ["Member,~IEEE", "Stray"] {
+    let line = format!(
+      "Warning:missing_feature:IEEEmembership The membership grade '{grade}' outside the author fields is not kept"
+    );
+    assert!(log.contains(&line), "{line}\n{log}");
+  }
+  assert_eq!(super::perfect_kernel_batch61::creators_of(&xml), [
+    "<creator role=\"author\"><personname>Wenming\u{a0}Li</personname></creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Xiaochun\u{a0}Ye</personname></creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Dongrui\u{a0}Fan</personname><contact role=\"membership\">Senior\u{a0}Member,\u{a0}IEEE</contact></creator>",
+    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Yuan\u{a0}Xie</personname><contact role=\"membership\">Fellow,\u{a0}IEEE</contact></creator>",
+  ]);
 }
 
 /// 63l review: grades in an `\IEEEauthorblockN` name list followed by the author's own comma (2408.01956, 2408.00368)

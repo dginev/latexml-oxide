@@ -3323,6 +3323,36 @@ pub(super) fn reading_drops() -> BTreeSet<RuleDrop> {
   })
 }
 
+/// The notes the ledger's last reading keeps whose text holds no letter or digit, each as its block wrote it: no item is
+/// keyed by an empty text ([`plan::creator_items`], [`plan::block_items`]), so none is written — the content check counts
+/// them (`\thanks{\dots}`, `\thanks{\LaTeX}`, `\thanks{\rule{1em}{1ex}}`: kernel_thanks_*_red; FIDELITY_CHARTER §4).
+pub(super) fn unwritten_notes() -> Vec<String> {
+  let Some(made) = with_ledger(|ledger| ledger.analysis.clone()) else {
+    return Vec::new();
+  };
+  let reading = &made.reading;
+  let notes = reading.creators.iter().flat_map(|c| {
+    let contacts = c
+      .contacts
+      .iter()
+      .filter(|a| plan::contact_key(a).0 == Kind::Note);
+    c.notes.iter().chain(contacts)
+  });
+  let block = reading
+    .block
+    .iter()
+    .filter(|a| Kind::of_block(&a.role) == Kind::Note);
+  notes
+    .chain(block)
+    .filter(|a| a.role != events::PICTURE_NOTE && norm(&a.text).is_empty())
+    .filter_map(|a| match a.source {
+      Some((index, Some(span))) => span_tokens_of(index, span),
+      _ => None,
+    })
+    .map(|tokens| tokens.untex_string().to_string().trim().to_string())
+    .collect()
+}
+
 /// Whether the author block at ledger index `index` is written whole, as Perl's `\\lx@add@author` writes a block its
 /// `\\lx@add@authors` can't cut (Base_Utility.pool.ltxml:692-694, its `{tabular}` fallback): where its reading would lose a
 /// name's words (`lost`: an ink failing the names, `LostInk::names_fail`) — or as Perl's `\lx@add@authors` splits it, for a

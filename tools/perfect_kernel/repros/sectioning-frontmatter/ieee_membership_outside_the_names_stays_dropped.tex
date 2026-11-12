@@ -5,7 +5,10 @@
 %          Dongrui Fan and Yuan Xie, and the last author the biography's and the body's
 % expect:  0 errors; the continued names' grades their membership contacts (63m: the line continues the names, as the
 %          article parse reads it); the biography's and the body's grades, whose author cannot be known, stay dropped
-% status:  RED (63l r1) -> GREEN (63l); continued names' grades (63m)
+% engines: rust UNC = 0 errors, 2 warnings: the biography's and the body's grades still dropped (IEGN), each named in a
+%          `missing_feature:IEEEmembership` Warning (pdflatex prints them; ieeetran_cls.rs `\lx@IEEE@grade`); under
+%          `conference` the class locks the grade out, nothing prints and nothing is counted
+% status:  RED (63l r1) -> GREEN (63l); continued names' grades (63m); the dropped grades counted (UNC)
 \documentclass[journal]{IEEEtran}
 \begin{document}
 \title{T}

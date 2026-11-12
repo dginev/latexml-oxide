@@ -588,6 +588,7 @@ mod perfect_kernel_batchst1;
 /// ST3: a document converted after others on one thread (a persistent cortex_worker's papers) is the document alone.
 mod perfect_kernel_batchst3;
 mod perfect_kernel_batchta1;
+mod perfect_kernel_batchunc;
 /// VARW: a varwidth box measures its widest line (algxpar-doc, 2401.12710); KNOWN_PERL_ERRORS #1234.
 mod perfect_kernel_batchvarw;
 mod perfect_kernel_batchz1;

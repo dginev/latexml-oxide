@@ -6,7 +6,10 @@
 %          `<ERROR class="undefined">\undefinedcs</ERROR>`; Perl the same (`<contact role="thanks">`)
 % expect:  exactly 1 Error (undefined `\undefinedcs`), 0 warnings; the note kept, holding the error marker
 % engines: rust int160a (HG1) = 1 error (undefined \undefinedcs), 0 warnings, but no note: Ann Able's thanks note and its error marker are gone; 92e's guard discarded its conversion after DEL1
-% status:  RED (92e r1) -> GREEN (92e r2) -> RED (int160a, HG1)
+% engines: rust UNC = 1 error, 1 warning: the notes still dropped (no item is keyed by a text of no letter or
+%          digit, emitter/plan.rs `creator_items`), now counted: the content check's "1 notes … \thanks{\undefinedcs}"
+% status:  RED (92e r1) -> GREEN (92e r2) -> RED (int160a, HG1) -> counted (UNC)
+% moves:   post-merge (the notes written: key a wordless note by its place, as a picture's)
 % preload: ar5iv.sty
 \documentclass{article}
 \begin{document}

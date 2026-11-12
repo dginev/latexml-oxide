@@ -721,10 +721,11 @@ fn marked_blocks_restored_read_as_printed() {
 /// 59's, 64zd's, 65a's, 65e's, 84a's and 78s's clean conversions; review revHG1 S1): each row pins the counts and the
 /// parts of its output that are right, the rest the RED its repro's header names. Row by row:
 /// - kernel `\thanks` whose ink is a command, a math token, a rule or frame, a constructor, a colour box or an empty
-///   superscript (`kernel_thanks_*_red`, 92e): 0 E / 0 W, every name; the authors whose `\thanks` prints nothing whole
-///   (no note), Bob Baker's "B" note kept. The other notes are dropped silently: the REDs;
+///   superscript (`kernel_thanks_*_red`, 92e): 0 E, every name; the authors whose `\thanks` prints nothing whole
+///   (no note), Bob Baker's "B" note kept. The other notes are dropped, the REDs, each named in the content check's one
+///   Warning (UNC);
 /// - an undefined command in `\thanks` (`kernel_thanks_undefined_command_is_ink_red`): its one Error; the note and its
-///   error marker dropped: the RED;
+///   error marker dropped, the RED, named in the content check's Warning (UNC);
 /// - the orphan mark (`author_block_orphan_mark_is_kept_red`, 59): the name; its printed "1" lost: the RED;
 /// - 64zd's asterisk-marked revtex names, noted affiliation and other note command
 ///   (`revtex_asterisk_marked_authors_split_red`, `author_noted_affiliation_stays_affiliation_red`,
@@ -748,8 +749,10 @@ fn reds_keep_their_counts_and_right_parts() {
     Row {
       repro:    repro!("class-bindings/kernel_thanks_command_text_is_ink_red"),
       files:    &[],
-      counts:   (0, 0),
-      lines:    &[],
+      counts:   (0, 1),
+      lines:    &[
+        r#"Warning:unexpected:frontmatter Frontmatter content check: 4 notes the author blocks print with no word are missing from the placed frontmatter: \thanks{\dots} \thanks{\LaTeX} \thanks{\TeX} \thanks{\LaTeXe}."#,
+      ],
       creators: Creators::Hold(&[
         r#"<personname>Ann Able</personname>"#,
         r#"<personname>Bob Baker</personname>"#,
@@ -760,8 +763,10 @@ fn reds_keep_their_counts_and_right_parts() {
     Row {
       repro:    repro!("class-bindings/kernel_thanks_math_token_is_ink_red"),
       files:    &[],
-      counts:   (0, 0),
-      lines:    &[],
+      counts:   (0, 1),
+      lines:    &[
+        r#"Warning:unexpected:frontmatter Frontmatter content check: 3 notes the author blocks print with no word are missing from the placed frontmatter: \thanks{$\vdots$} \thanks{$\dotsc$} \thanks{\ensuremath{\ldots}}."#,
+      ],
       creators: Creators::Hold(&[
         r#"<personname>Ann Able</personname>"#,
         r#"<personname>Bob Baker</personname>"#,
@@ -772,8 +777,10 @@ fn reds_keep_their_counts_and_right_parts() {
     Row {
       repro:    repro!("class-bindings/kernel_thanks_rule_and_frame_are_ink_red"),
       files:    &[],
-      counts:   (0, 0),
-      lines:    &[],
+      counts:   (0, 1),
+      lines:    &[
+        r#"Warning:unexpected:frontmatter Frontmatter content check: 4 notes the author blocks print with no word are missing from the placed frontmatter: \thanks{\rule{1em}{1ex}} \thanks{\fbox{}} \thanks{\framebox[1em]{}} \thanks{\hrulefill}."#,
+      ],
       creators: Creators::Hold(&[
         r#"<personname>Ann Able</personname>"#,
         r#"<personname>Bob Baker</personname>"#,
@@ -788,8 +795,10 @@ fn reds_keep_their_counts_and_right_parts() {
     Row {
       repro:    repro!("class-bindings/kernel_thanks_constructor_text_is_ink_red"),
       files:    &[],
-      counts:   (0, 0),
-      lines:    &[],
+      counts:   (0, 1),
+      lines:    &[
+        r#"Warning:unexpected:frontmatter Frontmatter content check: 2 notes the author blocks print with no word are missing from the placed frontmatter: \thanks{$\openone$} \thanks{\emph{}}."#,
+      ],
       creators: Creators::Hold(&[
         r#"<personname>Ann Able</personname>"#,
         r#"<personname>Bob Baker</personname>"#,
@@ -799,8 +808,10 @@ fn reds_keep_their_counts_and_right_parts() {
     Row {
       repro:    repro!("class-bindings/kernel_thanks_colorbox_is_ink_red"),
       files:    &[],
-      counts:   (0, 0),
-      lines:    &[],
+      counts:   (0, 1),
+      lines:    &[
+        r#"Warning:unexpected:frontmatter Frontmatter content check: 5 notes the author blocks print with no word are missing from the placed frontmatter: \thanks{\colorbox{red}{}} \thanks{\colorbox{yellow}{\hspace{2em}}} \thanks{\colorbox{yellow}{\phantom{XX}}} \thanks{\colorbox{gray!30}{\strut\hspace{1em}}} \thanks{\mbox{\colorbox{yellow}{\strut}}}."#,
+      ],
       creators: Creators::Hold(&[
         r#"<personname>Ann Able</personname>"#,
         r#"<personname>Bob Baker</personname>"#,
@@ -813,8 +824,10 @@ fn reds_keep_their_counts_and_right_parts() {
     Row {
       repro:    repro!("class-bindings/kernel_thanks_empty_superscript_reads_alike_red"),
       files:    &[],
-      counts:   (0, 0),
-      lines:    &[],
+      counts:   (0, 1),
+      lines:    &[
+        r#"Warning:unexpected:frontmatter Frontmatter content check: 1 notes the author blocks print with no word are missing from the placed frontmatter: \thanks{\textsuperscript{}}."#,
+      ],
       creators: Creators::Hold(&[
         r#"<personname>Ann Able</personname>"#,
         r#"<personname>Bob Baker"#,
@@ -824,8 +837,11 @@ fn reds_keep_their_counts_and_right_parts() {
     Row {
       repro:    repro!("class-bindings/kernel_thanks_undefined_command_is_ink_red"),
       files:    &[],
-      counts:   (1, 0),
-      lines:    &[r#"Error:undefined:\undefinedcs"#],
+      counts:   (1, 1),
+      lines:    &[
+        r#"Error:undefined:\undefinedcs"#,
+        r#"Warning:unexpected:frontmatter Frontmatter content check: 1 notes the author blocks print with no word are missing from the placed frontmatter: \thanks{\undefinedcs}."#,
+      ],
       creators: Creators::Hold(&[r#"<personname>Ann Able</personname>"#]),
     },
     Row {
