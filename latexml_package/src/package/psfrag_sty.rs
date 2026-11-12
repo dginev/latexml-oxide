@@ -99,8 +99,9 @@ fn save_psfrag(stuff: Vec<Token>) {
 /// The hooks' `afterDigest` (Perl L82-87, L105-110, L127-132) for a graphic `whatsit` of any including command
 /// (`\includegraphics`, `\epsfbox` and its `\let` copies, `\psfig`). An EPS graphic (`psfrag_requirepicture`) is
 /// where psfrag places the saved fragments (psfrag.sty:46-62 `\Ginclude@eps`/`\epsfbox`) and, under a scan, the
-/// `(\\tex` strings of the file (psfrag.sty:152-209 `\pfg@scan`); they are not rendered (PSFR), so each counts as a
-/// Warning. The scan stays on until `\psfragscanoff` (psfrag.sty:24, latex + dvips), where Perl resets it per graphic.
+/// `(\\tex` strings of the file (psfrag.sty:152-209 `\pfg@scan`); they are not rendered (PSFR), so the graphic is one
+/// Warning naming each of them. The scan stays on until `\psfragscanoff` (psfrag.sty:24), where Perl resets it per
+/// graphic (OXIDIZED_DESIGN_DIVERGENCES #1017).
 pub fn psfrag_graphic(whatsit: &Whatsit) {
   let Some(saved) = lookup_tokens("saved_psfragments") else {
     return;
@@ -112,28 +113,60 @@ pub fn psfrag_graphic(whatsit: &Whatsit) {
   let Some(eps) = eps_file(&whatsit.get_property_string("candidates"), graphic.trim()) else {
     return;
   };
-  let scan = lookup_bool("psfrag_scan") || lookup_bool("psfrag_scan_all");
+  let quote = |text: &String| s!("'{text}'");
   let tags = fragment_tags(&saved);
-  for tag in &tags {
-    Warn!(
-      "missing_feature",
-      "psfrag",
-      s!("The psfrag replacement of '{tag}' in the graphic '{graphic}' is not rendered")
-    );
-  }
-  if scan {
+  let mut dropped: Vec<String> = tags.iter().map(quote).collect();
+  let mut count = tags.len();
+  if lookup_bool("psfrag_scan") || lookup_bool("psfrag_scan_all") {
     let content = eps.unwrap_or_else(|file| std::fs::read(file).unwrap_or_default());
-    let embedded = content.windows(6).filter(|w| w == br"(\\tex").count();
-    for _ in 0..embedded {
-      Warn!(
-        "missing_feature",
-        "psfrag",
-        s!(
-          "A psfrag replacement embedded in the graphic '{graphic}' (\\psfragscanon) is not rendered"
-        )
-      );
+    let embedded = embedded_fragments(&content);
+    if !embedded.is_empty() {
+      count += embedded.len();
+      let embedded: Vec<String> = embedded.iter().map(quote).collect();
+      dropped.push(s!("the embedded (\\psfragscanon) {}", embedded.join(", ")));
     }
   }
+  let (noun, verb) = match count {
+    0 => return,
+    1 => ("replacement", "is"),
+    _ => ("replacements", "are"),
+  };
+  let dropped = dropped.join(", ");
+  Warn!(
+    "missing_feature",
+    "psfrag",
+    s!("The psfrag {noun} of {dropped} in the graphic '{graphic}' {verb} not rendered")
+  );
+}
+
+/// The `(\\tex…)` strings `\pfg@scan` reads from an EPS file (psfrag.sty:152-209), each as TeX reads it: the
+/// PostScript string from `\tex` to its closing parenthesis, its `\\`, `\(` and `\)` escapes undone.
+fn embedded_fragments(content: &[u8]) -> Vec<String> {
+  let mut found = Vec::new();
+  let mut at = 0;
+  while let Some(start) = content[at..].windows(6).position(|w| w == br"(\\tex") {
+    let mut text = Vec::new();
+    let mut depth = 0usize;
+    let mut bytes = content[at + start + 1..].iter();
+    while let Some(&b) = bytes.next() {
+      match b {
+        b'\\' => text.extend(bytes.next()),
+        b'(' => {
+          depth += 1;
+          text.push(b);
+        },
+        b')' if depth == 0 => break,
+        b')' => {
+          depth -= 1;
+          text.push(b);
+        },
+        _ => text.push(b),
+      }
+    }
+    at += start + 6;
+    found.push(String::from_utf8_lossy(&text).into_owned());
+  }
+  found
 }
 
 /// The EPS file the graphic includes: a `.eps`/`.ps` candidate (`Err`, its path), else a `{filecontents}` file of the

@@ -1,8 +1,9 @@
 //! Red/green guards for batch PSF1: a `\psfrag` fragment an EPS graphic would place (latex + dvips) is not rendered
-//! (PSFR, post-merge), so each is counted by a Warning naming its tag and the graphic, at every EPS graphic in its
-//! scope (`\includegraphics`, `\epsfbox`, `\epsffile`, `\psfig`); a fragment no EPS graphic reaches prints nothing
-//! in TeX either. One table; each row's oracle (latex + dvips or pdflatex `!` count, the printed text) is in its
-//! repro header under `tools/perfect_kernel/repros/reversion/`. Red (int166a): every row 0 warnings.
+//! (PSFR, post-merge), so every EPS graphic in a fragment's scope (`\includegraphics`, `\epsfbox`, `\epsffile`,
+//! `\psfig`) is one Warning naming the graphic and every tag (and `\psfragscanon`'s embedded `\tex` string) it drops
+//! (PSF1b); a fragment no EPS graphic reaches prints nothing in TeX either. One table; each row's oracle (latex + dvips
+//! or pdflatex `!` count, the printed text) is in its repro header under `tools/perfect_kernel/repros/reversion/`.
+//! Red (int166a): every row 0 warnings.
 use latexml::util::test::{convert_files_with, xml_element};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
@@ -38,18 +39,15 @@ const ROWS: &[Row] = &[
     warnings: &["The psfrag replacement of 'A' in the graphic 'psfragfig.eps' is not rendered"],
     graphics: &[r#"<graphics graphic="psfragfig.eps" xml:id="S0.F1.g1"/>"#],
   },
-  // Preamble fragments and a `\psfrag*` placement reach both graphics, the extensionless one too: 3 x 2.
+  // Preamble fragments and a `\psfrag*` placement reach both graphics, the extensionless one too: one Warning each,
+  // naming all three placements in order.
   Row {
     name:     "psfrag_star_and_preamble_fragments_per_graphic",
     tex:      repro!("psfrag_star_and_preamble_fragments_per_graphic"),
-    counts:   (0, 6),
+    counts:   (0, 2),
     warnings: &[
-      "The psfrag replacement of 'A' in the graphic 'psfragstar.eps' is not rendered",
-      "The psfrag replacement of 'A' in the graphic 'psfragstar.eps' is not rendered",
-      "The psfrag replacement of 'B' in the graphic 'psfragstar.eps' is not rendered",
-      "The psfrag replacement of 'A' in the graphic 'psfragstar' is not rendered",
-      "The psfrag replacement of 'A' in the graphic 'psfragstar' is not rendered",
-      "The psfrag replacement of 'B' in the graphic 'psfragstar' is not rendered",
+      "The psfrag replacements of 'A', 'A', 'B' in the graphic 'psfragstar.eps' are not rendered",
+      "The psfrag replacements of 'A', 'A', 'B' in the graphic 'psfragstar' are not rendered",
     ],
     graphics: &[
       r#"<graphics graphic="psfragstar.eps" xml:id="p1.g1"/>"#,
@@ -83,14 +81,15 @@ const ROWS: &[Row] = &[
       r#"<graphics graphic="psfragbox.eps" xml:id="p3.g1"/>"#,
     ],
   },
-  // `\psfragscanon`: the EPS's embedded `(\\tex` fragment, at each graphic until `\psfragscanoff`.
+  // `\psfragscanon`: the EPS's embedded `(\\tex` fragment, named as TeX reads it, at each graphic until
+  // `\psfragscanoff`.
   Row {
     name:     "psfrag_scan_embedded_tex_fragment",
     tex:      repro!("psfrag_scan_embedded_tex_fragment"),
     counts:   (0, 2),
     warnings: &[
-      "A psfrag replacement embedded in the graphic 'psfragscan.eps' (\\psfragscanon) is not rendered",
-      "A psfrag replacement embedded in the graphic 'psfragscan.eps' (\\psfragscanon) is not rendered",
+      r"The psfrag replacement of the embedded (\psfragscanon) '\tex[bl][bl]{$\alpha$}' in the graphic 'psfragscan.eps' is not rendered",
+      r"The psfrag replacement of the embedded (\psfragscanon) '\tex[bl][bl]{$\alpha$}' in the graphic 'psfragscan.eps' is not rendered",
     ],
     graphics: &[
       r#"<graphics graphic="psfragscan.eps" xml:id="p1.g1"/>"#,

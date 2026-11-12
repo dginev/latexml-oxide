@@ -35576,3 +35576,24 @@ is neither loaded nor recorded. **Witnesses**: 2501.07980, 1712.01010, 1812.0446
 loading amsmath). **Guards**: `perfect_kernel_batchga2::one_loaded_answer_on_every_load_path`, the fence
 `perfect_kernel_batche0::one_loaded_query` (a record looked up outside `state.rs` and the loader, floor 0) with its
 self-test `a_record_lookup_counts_however_it_is_written`.
+
+### 1017. A dropped `\psfrag` fragment is counted at its graphic's constructor, one Warning per EPS graphic (PSF1, PSF1b)
+
+**TeX.** psfrag.sty:42-62 hooks `\epsfbox` and `\Ginclude@eps`: every EPS a graphic includes in a fragment's scope (local,
+psfrag's `\pfg@pcount`) places each saved fragment (`\pfg@hideend`), and under `\psfragscanon` (or `scanall`/209 mode)
+each `(\\tex…)` string `\pfg@scan` reads from the file; the switch stays on until `\psfragscanoff` (psfrag.sty:24-25).
+epsfig's `\epsffile` and `\psfig` include through `\Ginclude@eps`, so they place too. **Perl.** psfrag.sty.ltxml:24-62
+saves the fragments; at begin-document it `\let`s `\@includegraphics`, `\@includegraphicx` and `\epsfbox` to constructors
+that turn an EPS with fragments into an `ltx:picture` replaying them; epsfig's `\psfig` and the `\let` copies made before
+(`\epsffile`) keep the plain `<graphics>`, the fragment lost silently (KNOWN_PERL_ERRORS #1237). It resets `psfrag_scan`
+after each graphic, unobservably: the saved list still replays `\psfragscanon`. **Rust.** The fragment store is Perl's
+(`saved_psfragments`, `\lx@delayed@psfrag`); the fragments are not rendered yet (PSFR, post-merge), so every graphic
+constructor's after-digest (graphics' `\@includegraphics`, graphicx's `\@includegraphicx`, epsf's and epsfig's `\epsfbox`
+with their copies, epsfig's `\psfig`) calls `psfrag_sty::psfrag_graphic`, which at an EPS graphic (a `.eps`/`.ps`
+candidate or a `{filecontents}` file of that name) emits ONE `Warning:missing_feature:psfrag` naming the graphic and every
+fragment it drops in order — each tag, and each scanned `\tex` string as TeX reads it — so the count is the figures
+affected (cond-mat0310505: 35 preamble fragments x 25 figures, 25 Warnings). A non-EPS graphic, or a fragment no EPS
+graphic reaches, prints nothing in TeX and stays silent. The empty box `\psfrag` left before stays, so `tex=` reverts it
+(XML byte-identical). Residual: raw epsf.sty loaded before psfrag leaves `\epsffile` unhooked in TeX (no placement), where
+the binding's `\epsffile` shares `\epsfbox`'s constructor and warns. **Guard**:
+`perfect_kernel_batchpsf1::batchpsf1_dropped_fragments_are_counted` (repros `reversion/psfrag_*`).

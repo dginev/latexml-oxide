@@ -2,8 +2,8 @@
 %          psfrag.sty:96-106 `\@@@psfrag` keeps each placement, `\pfg@hideend` places every one at each `\Ginclude@eps`)
 % oracle:  latex + dvips, 0 `!`, both graphics print α (the `\psfrag*` placement too) and β
 % engines: rust int166a = two plain `<graphics>`, every fragment dropped, 0 errors, 0 warnings
-% expect:  one Warning per fragment per graphic (3 fragments x 2 graphics = 6), each naming its tag and graphic, 0 errors
-% status:  GREEN (PSF1); rendering the fragments moves to PSFR (post-merge)
+% expect:  one Warning per graphic (2), each naming its graphic and the three fragments' tags in order, 0 errors
+% status:  GREEN (PSF1, PSF1b); rendering the fragments moves to PSFR (post-merge)
 \documentclass{article}
 \usepackage{graphicx,psfrag}
 \begin{filecontents*}{psfragstar.eps}

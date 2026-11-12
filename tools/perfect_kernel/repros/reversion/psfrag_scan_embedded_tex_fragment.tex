@@ -4,8 +4,8 @@
 % oracle:  latex + dvips, 0 `!`, the first two graphics print α for the embedded `\tex` string, the third (after
 %          `\psfragscanoff`) the raw string
 % engines: rust int166a = three plain `<graphics>`, 0 errors, 0 warnings
-% expect:  two Warnings, one per scanned graphic's embedded fragment; 0 errors
-% status:  GREEN (PSF1); rendering moves to PSFR (post-merge)
+% expect:  two Warnings, one per scanned graphic, naming its embedded `\tex[bl][bl]{$\alpha$}`; 0 errors
+% status:  GREEN (PSF1, PSF1b); rendering moves to PSFR (post-merge)
 \documentclass{article}
 \usepackage{graphicx,psfrag}
 \begin{filecontents*}{psfragscan.eps}
