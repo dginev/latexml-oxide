@@ -791,11 +791,21 @@ pub fn known_debug_features() -> Vec<String> {
     .unwrap_or_default()
 }
 
-/// Perl: `$LaTeXML::DEBUG{$name} = 1` — called by the CLI per `--debug NAME`.
+/// Perl: `$LaTeXML::DEBUG{$name} = 1` — called by the CLI per `--debug NAME`. Raises the `log` floor to `Debug`
+/// so the feature's records pass; un-featured ones stay `--verbose`'s (`util/logger.rs` `DEBUG_ALL`).
 pub fn enable_debug_feature(name: &str) {
   if let Ok(mut enabled) = ENABLED_DEBUG_FEATURES.write() {
     enabled.insert(name.to_string());
   }
+  log::set_max_level(log::max_level().max(log::LevelFilter::Debug));
+}
+
+/// Whether any `--debug` feature is on.
+pub fn any_debug_feature_enabled() -> bool {
+  ENABLED_DEBUG_FEATURES
+    .read()
+    .map(|enabled| !enabled.is_empty())
+    .unwrap_or(false)
 }
 
 /// Perl: truthiness of `$LaTeXML::DEBUG{$name}`.
@@ -806,9 +816,9 @@ pub fn debug_enabled(name: &str) -> bool {
     .unwrap_or(false)
 }
 
-/// Would a `Debug`-status record actually reach the log right now? True only
-/// when the global `log` level admits `Debug` (default is `Info`; `--verbose`/
-/// `--debug` raise it — `util/logger.rs::init`) AND output is not suppressed.
+/// Would an un-featured `Debug`-status record actually reach the log right now? True only
+/// under `--verbose` (`util/logger.rs` `debug_all`; a `--debug` feature does not admit them)
+/// AND output is not suppressed.
 /// The `Debug!` macro gates *message construction* on this: the 2026-08-23
 /// audit measured up to ~26% of a build-bound conversion spent serializing
 /// `node_to_string` subtrees into `Debug!` messages that `emit_record` then
@@ -816,7 +826,7 @@ pub fn debug_enabled(name: &str) -> bool {
 /// read — cheap enough for token-frequency call sites.
 #[inline]
 pub fn debug_record_enabled() -> bool {
-  log::max_level() >= log::LevelFilter::Debug && !is_log_output_suppressed()
+  crate::util::logger::debug_all() && !is_log_output_suppressed()
 }
 
 /// Feature-gated debug logging — Perl's `Debug(...) if $LaTeXML::DEBUG{feature}`.

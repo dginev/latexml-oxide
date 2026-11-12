@@ -464,7 +464,7 @@ See the testbed table above (category + dominant phase per paper). Status legend
 
 ### #6 — Eager `Debug!` subtree serialization on text-absorption path (witness 2304.10050) — 2026-08-23
 - **Root cause:** `Debug!` (`latexml_core/src/common/error.rs`) and `generate_message!` constructed all format strings — including `gullet::get_location()` and, at `open_text`/`open_text_internal`/`close_element` sites, a full `node_to_string` XML subtree serialization — **before** checking whether debug logging was enabled. In text/build-heavy documents, every text node insert re-serialized the growing DOM subtree (quadratic-flavored overhead).
-- **Change:** Gated diagnostic formatting behind `debug_record_enabled()` (`max_level() >= Debug` and not suppressed), while maintaining the `note_status` tally unconditionally so exit counts remain identical. Bundled with audit mechanical wins: `is_noexpand_family` symbol memo, `generate_id` parent walk, `collect_walk_matches` sibling traversal (`get_first_child`/`get_next_sibling`), and fontmap memos (`80999906da`).
+- **Change:** Gated diagnostic formatting behind `debug_record_enabled()` (`--verbose` and not suppressed; until DBG1 `max_level() >= Debug`, which any `--debug` feature also raised), while maintaining the `note_status` tally unconditionally so exit counts remain identical. Bundled with audit mechanical wins: `is_noexpand_family` symbol memo, `generate_id` parent walk, `collect_walk_matches` sibling traversal (`get_first_child`/`get_next_sibling`), and fontmap memos (`80999906da`).
 - **Before→after:**
   - `2304.10050` (build/text-bound): **6.21 → 2.71 s (−56%)**.
   - `2408.08292` (typical math paper): **8.66 → 7.74 s (−11%)**.

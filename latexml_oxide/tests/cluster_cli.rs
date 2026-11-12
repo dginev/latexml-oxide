@@ -3003,3 +3003,81 @@ mod quiet_keeps_log_floor {
     );
   }
 }
+
+mod debug_feature_scope {
+  //! `--debug=NAME` enables that feature only (Perl `Config.pm` L377 sets `$LaTeXML::DEBUG{NAME}`; every Perl
+  //! `Debug()` call is guarded `if $LaTeXML::DEBUG{feature}`, `Common/Error.pm` L467). Our un-featured `Debug!`
+  //! traces (`primitive invoke for …`) are `--verbose` output, never a feature's.
+
+  use std::process::Command;
+
+  #[test]
+  fn debug_feature_prints_only_its_feature() {
+    let workdir = tempfile::tempdir().expect("tempdir");
+    std::fs::write(
+      workdir.path().join("dbg.tex"),
+      "\\documentclass{article}\\title{T}\\author{A}\\begin{document}\\maketitle Hi\\end{document}\n",
+    )
+    .expect("write tex");
+    // (flags, `FRONT …` feature lines expected, un-featured `primitive invoke` lines expected)
+    let rows: [(&[&str], bool, bool); 5] = [
+      (&[], false, false),
+      (&["--debug=frontmatter"], true, false),
+      (&["--debug=nosuchfeature"], false, false),
+      (&["--verbose"], false, true),
+      (&["--verbose", "--debug=frontmatter"], true, true),
+    ];
+    for (flags, feature, unfeatured) in rows {
+      let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+        .args(flags)
+        .args(["dbg.tex", "--dest", "dbg.xml"])
+        .current_dir(workdir.path())
+        .output()
+        .expect("spawn latexml_oxide");
+      let stderr = String::from_utf8_lossy(&output.stderr);
+      assert!(output.status.success(), "{flags:?} failed:\n{stderr}");
+      assert_eq!(
+        stderr.contains("Debug:frontmatter FRONT "),
+        feature,
+        "{flags:?}: the frontmatter feature's lines"
+      );
+      assert_eq!(
+        stderr.contains("primitive invoke for"),
+        unfeatured,
+        "{flags:?}: un-featured Debug! lines"
+      );
+      assert!(
+        stderr.contains("Conversion complete: No obvious problems"),
+        "{flags:?}: the summary counts no Debug:\n{stderr}"
+      );
+    }
+    // `--quiet`: the feature's lines reach the log only (Perl `_printlines`: STDERR needs `$VERBOSITY >= 0`).
+    let output = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args([
+        "--quiet",
+        "--debug=frontmatter",
+        "--log=q.log",
+        "dbg.tex",
+        "--dest",
+        "q.xml",
+      ])
+      .current_dir(workdir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let log = std::fs::read_to_string(workdir.path().join("q.log")).expect("read q.log");
+    assert!(output.status.success(), "--quiet failed:\n{stderr}");
+    assert!(
+      !stderr.contains("FRONT "),
+      "--quiet: no feature line on STDERR:\n{stderr}"
+    );
+    assert!(
+      log.contains("Debug:frontmatter FRONT "),
+      "--quiet: the feature's lines in the log"
+    );
+    assert!(
+      !log.contains("primitive invoke for"),
+      "--quiet: no un-featured line in the log"
+    );
+  }
+}

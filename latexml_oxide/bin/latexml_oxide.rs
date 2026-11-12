@@ -404,7 +404,7 @@ struct Cli {
   quiet: bool,
 
   /// Enable a named debug feature, e.g. --debug frontmatter (repeatable).
-  /// Implies debug-level logging.
+  /// Prints that feature's debugging output only (--verbose prints the rest).
   #[arg(long = "debug", value_name = "FEATURE")]
   debug: Vec<String>,
 
@@ -821,19 +821,13 @@ fn real_main() -> Result<(), Box<dyn Error>> {
   } else {
     0
   };
-  let log_level = if !cli.debug.is_empty() {
-    // --debug NAME implies debug-level logging (Perl: Debug() output is
-    // emitted whenever the feature flag is set).
-    log::LevelFilter::Debug
-  } else {
-    match verbosity {
-      v if v < 0 => log::LevelFilter::Warn,
-      0 => log::LevelFilter::Info,
-      _ => log::LevelFilter::Debug,
-    }
+  let log_level = match verbosity {
+    v if v < 0 => log::LevelFilter::Warn,
+    0 => log::LevelFilter::Info,
+    _ => log::LevelFilter::Debug,
   };
   latexml_core::util::logger::init(log_level).ok();
-  // Perl: --debug=NAME sets $LaTeXML::DEBUG{NAME}; gates DebugFeature! sites.
+  // Perl: --debug=NAME sets $LaTeXML::DEBUG{NAME}; gates DebugFeature! sites only.
   for feature in &cli.debug {
     latexml_core::common::error::enable_debug_feature(feature);
   }
