@@ -493,6 +493,8 @@ pub(in crate::base_utilities) fn shared_affiliation_calls(
 
 /// The addresses of an address line of a marked list: a line of addresses only (`email_addresses`), or one behind an
 /// e-mail label (`email: a@x, b@y`: `split_email_label`), whose label `email_line_calls` keeps as the contacts' name.
+/// Read on the tokens the e-mail calls are cut from, at the binding's call: `resolver::prints_only_addresses` on a reading
+/// says only whether (P6f).
 pub(in crate::base_utilities) fn line_addresses(line: &Tokens) -> Option<Vec<String>> {
   email_addresses(line).or_else(|| match split_email_label(line) {
     (Some(_), rest) => email_addresses(&rest),

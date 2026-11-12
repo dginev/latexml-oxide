@@ -365,7 +365,8 @@ const ADDRESS_LINE_COMMANDS: &[&str] = &[
 /// Whether `line` holds no command but those a line of addresses alone prints them with ([`ADDRESS_LINE_COMMANDS`], the
 /// font, size and spacing commands; a command whose arguments print no letter, `\color{…}`, `\hspace{…}`, aside:
 /// [`without_non_printing_arguments`]). Any other — `\orcidID{…}` (2308.02269), `\thanks{…}`, `$^\dagger$` — prints
-/// more than the addresses, and the line stays in its entry as it prints (review rev100b B1).
+/// more than the addresses, and the line stays in its entry as it prints (review rev100b B1). On the tokens the line is
+/// taken out of, as [`line_addresses`] reads its addresses (`resolver::prints_only_addresses` reads printed text; P6f).
 fn prints_addresses_only(line: &Tokens) -> bool {
   without_non_printing_arguments(line.unlist_ref())
     .iter()
