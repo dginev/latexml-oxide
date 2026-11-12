@@ -4769,14 +4769,19 @@ fn count_lost_marks(document: &mut Document, unshown: &[String]) {
     .collect::<String>();
   for mark in unshown {
     if !shown.contains(mark.as_str()) {
-      Warn!(
-        "frontmatter",
-        "unanswered_mark_lost",
-        s!(
+      // (a keyed reference's request, `fn:c1` of elsarticle's `\fnref{c1}`: its `\fntext[c1]` answers it, what is lost
+      // is the mark it prints on the name, "1")
+      let message = match mark.split_once(':') {
+        Some((kind, key)) if !kind.is_empty() && kind.chars().all(char::is_alphabetic) => s!(
+          "The note mark the reference \"{kind}:{key}\" prints on an author's name cannot be shown on the name: the \
+           printed mark is lost"
+        ),
+        _ => s!(
           "The mark {} an author requests is answered by no entry and cannot be shown on the name",
           lost_mark_as_written(mark)
-        )
-      );
+        ),
+      };
+      Warn!("frontmatter", "unanswered_mark_lost", message);
     }
   }
 }

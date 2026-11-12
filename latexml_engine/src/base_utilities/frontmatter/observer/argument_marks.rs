@@ -37,8 +37,7 @@ fn mark_events(arg: &Tokens) -> Result<Option<Vec<Event>>> {
 
 /// The level `events` print their text at: the outermost a word of them stands at, inside the box when one box holds
 /// it all (IEEEtran's `\IEEEauthorblockN{\parbox{…}{Ann\IEEEauthorrefmark{4}, …}}`, 2508.17623; acmart's
-/// `\institution{$^1$Univ A …}`); a mark in a box beside its words is none of its own (`${\mathrm Park^{1}}$`,
-/// cond-mat0206329).
+/// `\institution{$^1$Univ A …}`; apa6's `$^{1}$\mbox{Univ A}`, 2508.05776).
 fn own_level(events: &[Event]) -> u8 {
   events
     .iter()
@@ -48,15 +47,41 @@ fn own_level(events: &[Event]) -> u8 {
     .unwrap_or(0)
 }
 
-/// The marks `arg` prints at its own level (the level its words print at, inside the box when one box holds them all), outside its notes (a note's marks are its `inner`), in
+/// Which of `events` print at the argument's own level: at or above its words' ([`own_level`]), or in a box of their own
+/// there, one holding no word (`\raisebox{0pt}[0pt][0pt]{\textsuperscript{1}}`, 2307.12121, 2311.01786); a mark in a box
+/// beside its words is none (`${\mathrm Park^{1}}$`, cond-mat0206329).
+fn at_own_level(events: &[Event]) -> Vec<bool> {
+  let level = own_level(events);
+  let mut own = vec![true; events.len()];
+  let mut at = 0;
+  while at < events.len() {
+    if events[at].nest <= level {
+      at += 1;
+      continue;
+    }
+    // (the run of deeper events a box at the words' level holds)
+    let end = events[at..]
+      .iter()
+      .position(|e| e.nest <= level)
+      .map_or(events.len(), |k| at + k);
+    let wordless = events[at..end].iter().all(|e| e.kind != EventKind::Name);
+    own[at..end].fill(wordless);
+    at = end;
+  }
+  own
+}
+
+/// The marks `arg` prints at its own level ([`at_own_level`]), outside its notes (a note's marks are its `inner`), in
 /// order, each with its printed `label`; a number's suffix (`5\textsuperscript{th}`, `Event::ordinal`) is text, no mark.
 /// A mark a document macro prints is one (`\newcommand\ua{\textsuperscript{1}}`), as is a `\let` copy's.
 pub fn argument_marks(arg: &Tokens) -> Result<Option<Vec<Event>>> {
   Ok(mark_events(arg)?.map(|events| {
-    let level = own_level(&events);
+    let own = at_own_level(&events);
     events
       .into_iter()
-      .filter(|e| e.kind == EventKind::Mark && e.nest == level && !e.ordinal)
+      .zip(own)
+      .filter(|(e, own)| *own && e.kind == EventKind::Mark && !e.ordinal)
+      .map(|(e, _)| e)
       .collect()
   }))
 }
@@ -108,11 +133,17 @@ pub fn prints_list_marks(arg: &Tokens, caller: &str) -> Result<bool> {
     count_unread(caller);
     return Ok(author_mark_position(arg).is_some());
   };
-  let level = own_level(&events);
-  Ok(events.iter().filter(|e| e.nest == level).any(|e| {
-    own_mark(e)
-      || (e.kind == EventKind::Note && e.inner.iter().any(|m| m.line_first && own_mark(m)))
-  }))
+  let own = at_own_level(&events);
+  Ok(
+    events
+      .iter()
+      .zip(own)
+      .filter(|(_, own)| *own)
+      .any(|(e, _)| {
+        own_mark(e)
+          || (e.kind == EventKind::Note && e.inner.iter().any(|m| m.line_first && own_mark(m)))
+      }),
+  )
 }
 
 /// Whether `arg` prints a mark of its own ([`argument_marks`]) whose label a queued name requests (`requested_labels`);

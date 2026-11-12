@@ -143,6 +143,7 @@ fn a_script_before_printed_ink_or_on_a_base_is_text() {
       files:    &[],
       counts:   (0, 0),
       lines:    &[],
+      // (P4b2b: the names' printed marks, as pdflatex prints them)
       creators: Creators::Whole(&[
         r#"<creator role="author"><personname>Ann Able<sup><text font="italic">1</text></sup></personname><contact name="Affiliation: " role="affiliation"><Math mode="inline" tex="{\rm{}^{1}Dept}" text="^ 1 Dept"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok role="UNKNOWN">Dept</XMTok><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math> of Physics, Univ X</contact></creator>"#,
         r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><Math mode="inline" tex="{\rm{}^{2}Lab}" text="^ 2 Lab"><XMath><XMApp><XMTok role="SUPERSCRIPTOP" scriptpos="pre2"/><XMTok role="UNKNOWN">Lab</XMTok><XMTok fontsize="70%" meaning="2" role="NUMBER">2</XMTok></XMApp></XMath></Math> of Chemistry, Univ Y</contact></creator>"#,

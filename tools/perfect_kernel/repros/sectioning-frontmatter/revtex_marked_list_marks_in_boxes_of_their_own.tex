@@ -1,0 +1,20 @@
+% mechanism: REVTeX names and an `\affiliation` list whose marks each stand in a box of their own
+%   (`\raisebox{0pt}[0pt][0pt]{$^{1}$}`): the marks query (`argument_marks::at_own_level`) counts a mark in a box
+%   holding no word, so the names request theirs and the list is cut at its marks, each entry with its printed mark
+% witness: synthetic (P4cR1, the REVTeX sibling of 2307.12121's boxed refmark)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2", "1Univ A, Town A",
+%   "2Univ B, Town B"
+% engines: P4b2b: each name its entry without its mark, 2 Warnings (each entry written as its plain text)
+% expect:  0 errors, 0 warnings; Ann Able "1 Univ A, Town A", Bob Baker "2 Univ B, Town B"
+% status:  RED (P4b2b) -> GREEN (P4cR1; guard perfect_kernel_batchc1::marked_list_cut_as_its_binding_declares)
+% preload: ar5iv.sty
+\documentclass[aps]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able\raisebox{0pt}[0pt][0pt]{$^{1}$}}
+\author{Bob Baker\raisebox{0pt}[0pt][0pt]{$^{2}$}}
+\affiliation{\raisebox{0pt}[0pt][0pt]{$^{1}$}Univ A, Town A\\ \raisebox{0pt}[0pt][0pt]{$^{2}$}Univ B, Town B}
+\begin{abstract}x\end{abstract}
+\maketitle
+Text.
+\end{document}

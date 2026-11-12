@@ -160,6 +160,7 @@ fn a_raw_class_in_place_address_is_the_api() {
   // — review rev94a r2 S3, `hide_answered_marks`; each address keeps the mark it prints; each line the label its
   // leading mark gives it, `label=` — `api:label`, no longer `api:leading-mark` —, frontmatter_stores.rs
   // `contact_line_call`, review rev99b B1)
+  // (P4b2b: the names' printed marks, as pdflatex prints them)
   let xml: &[&[&str]] = &[
     &[
       "Ann Able 1",
@@ -189,6 +190,7 @@ fn a_raw_style_buffered_address_is_the_api() {
   let tex = repro!("raw_style_buffered_address_is_the_api.tex");
   // (the answered marks no longer shown on the names — review rev94a r2 S3; each line labelled by its leading mark,
   // `api:label`, review rev99b B1)
+  // (P4b2b: the names' printed marks, as pdflatex prints them)
   let xml: &[&[&str]] = &[
     &[
       "Ann Able 1,2",
@@ -492,6 +494,7 @@ fn an_optional_caption_names_the_line() {
     "address=Lab D, Place",
     "address=Lab E, Place",
   ];
+  // (P4b2b: the names' printed marks, as pdflatex prints them)
   let xml: &[&[&str]] = &[
     &[
       "Ann Able",

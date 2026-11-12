@@ -121,6 +121,7 @@ fn parted_names_share_the_affil_after_them() {
 #[test]
 fn parted_marked_names_ask_their_own_affiliations() {
   // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
+  // (P4b2b: the names' printed marks, as pdflatex prints them)
   assert_eq!(
     converted(repro!("authblk_parted_marked_names_ask_theirs"), 0),
     r##"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1"><text font="italic" xml:id="id1.1">1</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2"><text font="italic" xml:id="id2.1">1</text></sup>Univ X</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3"><text font="italic" xml:id="id3.1">2</text></sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4"><text font="italic" xml:id="id4.1">2</text></sup>Univ Y</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
@@ -160,6 +161,7 @@ fn a_name_shaped_line_with_no_affil_keeps_the_error() {
 /// as the third does.
 #[test]
 fn the_affil_run_is_every_creator_of_the_call() {
+  // (P4b2b: the name's printed mark, `\textsuperscript{*}` an asterisk, as pdflatex prints it)
   assert_eq!(
     converted(repro!("authblk_first_row_keeps_run_affil"), 0),
     r##"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">*</sup></personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id2">*</sup></personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <creator before=" " role="author"> <personname>Cat Cole<sup xml:id="id3"><Math mode="inline" tex="\dagger" text="dagger" xml:id="m1"> <XMath xml:id="m1.1"> <XMTok name="dagger" role="MULOP">†</XMTok> </XMath> </Math></sup></personname> <contact name="Affiliation: " role="affiliation">Univ X</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
@@ -285,6 +287,7 @@ fn a_macro_printing_a_link_keeps_the_error() {
 fn a_class_store_makes_no_printed_note() {
   let (log, xml) = cli_conversion(repro!("authblk_class_store_makes_no_printed_note"), false);
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  // (P4b2b: the names' printed marks, as pdflatex prints them)
   assert_eq!(creators(&xml), vec![
     vec!["Ann Able 1".to_string(), "affiliation=Univ A".to_string()],
     vec!["Bob Baker 2".to_string(), "affiliation=Univ B".to_string()],
