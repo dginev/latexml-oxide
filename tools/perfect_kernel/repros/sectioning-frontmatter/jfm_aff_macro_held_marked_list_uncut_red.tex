@@ -1,0 +1,19 @@
+% mechanism: the API's Cut of a marked list a document macro holds whole (`\affiliation{\AffList}`): the gate
+%   (`argument_marks::may_open_with_mark`) reads the body to its mark and the list is marked, but it is not cut at its
+%   marks — each author gets the whole list, both marks
+% moves:   post-merge (found by CST1; synthetic, no reach measured)
+% witness: synthetic (jfm_aff_macro_marked_list's list held in a document macro; 2103.04797 for the gate)
+% oracle:  pdflatex: jfm.cls not in TL 2025 (class-absent: judged against jfm.cls:680/733, which prints the list once
+%          under the names: "Ann Able1 and Bob Baker2 / 1Univ A, Town A / 2Univ B, Town B")
+% engines: int164a and CST1 (byte-identical): Ann Able 1 and Bob Baker 2 each "1 Univ A, Town A 2 Univ B, Town B"
+% expect:  0 errors, 0 warnings; Ann Able "1 Univ A, Town A", Bob Baker "2 Univ B, Town B"
+% status:  RED
+\documentclass{jfm}
+\newcommand\AffList{\aff{1}Univ A, Town A\\ \aff{2}Univ B, Town B}
+\begin{document}
+\title{T}
+\author{Ann Able\aff{1} \and Bob Baker\aff{2}}
+\affiliation{\AffList}
+\maketitle
+Text.
+\end{document}
