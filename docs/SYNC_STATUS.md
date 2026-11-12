@@ -59,9 +59,9 @@ Rules that keep this file honest and mergeable:
   | Rank | Id | Task | Step | Weight | Status |
   |---|---|---|---|---|---|
   | 1 | VARW | VARW — `varwidth` is a `minipage` in our binding (and Perl's `varwidth.sty.ltxml`): its natural width unmeasured, so algxpar's `\axp@SetToWidth` reads 14226.38pt and overflows — 784 counted Errors on algxpar-doc (sweep #179 G1, the goal bar) and 2401.12710 (+299); port `varwidth.sty`'s natural width (HARD) | 3 | 5 | done in int166a (`bfd297ddf4`; revVARWb SHIP) — folds at the push |
-  | 2 | P4b4a | P4b4a (P4b4's census P4b4C): where a list's entries start — `entry_calls` cuts at the digested pieces (`list_marks`, `entry_heads`), llncs (c) by `prints_list_marks`; r1/r2 (uncounted losses: 2608.21425), q2/s3; 2410.03583, 2311.02175, 1002.0172 better; 1803.02579, 2201.04974 both-hidden (AUMK, accepted) | 3 | 5 | fix round 1 (P4b4a3: revP4b4a NO-SHIP — B1 a cut inside a `tabular`/`minipage` leaves pieces unbalanced, "Univ A" lost and 0 → 3 E; B2 the box body's declarations on the first piece only, 2608.21425's `fontsize`) |
+  | 2 | P4b4a | P4b4a (P4b4's census P4b4C): where a list's entries start — `entry_calls` cuts at the digested pieces (`list_marks`, `entry_heads`), llncs (c) by `prints_list_marks`; r1/r2 (uncounted losses: 2608.21425), q2/s3; 2410.03583, 2311.02175, 1002.0172 better; 1803.02579, 2201.04974 both-hidden (AUMK, accepted) | 3 | 5 | fix round 2, the last (P4b4a4: revP4b4a2 NO-SHIP — B1/B2 closed by P4b4a3 (2506.05954 2 E → base), but the copied lead declarations duplicate a printing macro's text and put `\centering` on 2608.21425's marks (`ltx_centering` sup, 5), and a dropped start duplicates "Univ A") |
   | 2 | P4b4r | P4b4r: a bold authblk name's markup lost UNCOUNTED since P4b2b (`authblk_bold_name_markup_lost_uncounted_red`) — restore the \"markup lost\" Warning on the printed-marks path | 3 | 1 | done in int166a (no src: the lost bold is OD #122's whole-name unwrap, user 2026-08-16; the RED became the GREEN row `authblk_font_names_printed_marks`; Q1 (a) a bold holding the mark unwrapped alike) — folds at the push |
-  | 1 | CMPJ | CMPJ (P4b4C's find, ~640 arXiv): cmpj's `\refaddr` marks print TeX's second run (bindings cmpj/cmpj2/cmpj3, CMPJ1 `0e4835ec31`: no "?", no nameless creator) and its `\addresses` list cut per `\item` with each item's `\label` (CMPJ2) — the two land together | 3 | 3 | ongoing (CMPJ2) |
+  | 1 | CMPJ | CMPJ (P4b4C's find, ~640 arXiv): cmpj's `\refaddr` marks print TeX's second run (bindings cmpj/cmpj2/cmpj3, CMPJ1 `0e4835ec31`: no "?", no nameless creator) and its `\addresses` list cut per `\item` with each item's `\label` (CMPJ2) — the two land together | 3 | 3 | done in int166a (CMPJ1 + CMPJ2 + CMPJ3 `2faffdba93`: each `\item` its own entry keyed by its `\label`, its number the digested counter value; six witnesses better, 0 E; A/B 413: 0 worse; revCMPJ SHIP) — folds at the push |
   | 1 | CST2 | CST2 — int165a's cost (PERF165): P4b3's `marks_as_printed` in `group_or_marked_affiliation` and AASTeX's per-name `queued_author_marks` rehearse outside CST1's gate (2103.04797 −0.5 % instead of −10.4 %, 1901.01540 +2.2 %) — one "can print a mark anywhere" gate | 3 | 1 | done in int166a (CST2 `b1333d8d6f` + CST2b `6b9f982c77`: `may_mark` reads a whole argument through macro bodies; 2103.04797 −9.7 %, 1901.01540 −4.7 % vs int165a; A/B 599 byte-identical; revCST2 SHIP) — folds at the push |
   | 3 | P5 | Option C P5: new facts (IEEEmembership grade, "on behalf of", surname match) | 3 | 5 | todo |
   | 4 | P6 | (incl. moving the declared cut `cut_list` out of the moved directories — the fences P4c3 raised: MOVED_CUT_KIND_CODE_LINES 2219 → 2236, OLD_READER_EXPORTS; P4b2's cost gate `may_open_with_mark` and its pins TOKEN_READS 28 → 33) Option C P6 + the frontmatter code/test compaction | 3 | 5 | todo |
@@ -73,8 +73,8 @@ Rules that keep this file honest and mergeable:
   | 10 | CT1a-r | CT1a count design (DG ruling pending) | 2 | 1 | todo |
   | 11 | TRUTH | Bars: the truth set | 4 | 5 | todo |
   | 12 | HOLD4 | Bars: fresh holdout v4 read once; 98/98 | 4 | 3 | todo |
-  | 18 | GA2 | GA2 | 5 | 3 | todo |
-  | 18 | GA3 | GA3 | 5 | 3 | todo |
+  | 18 | GA2 | GA2 | 5 | 3 | in review (revGA2: `c21ad0900e`, one `state::file_loaded` = `\ver@<file>`, fence F2 at 0; A/B 507: 0 changed) |
+  | 18 | GA3 | GA3 | 5 | 3 | ongoing (the engine writes `sort` from CITE_SORT as Perl; post's style list deleted) |
   | 18 | GA4 | GA4 | 5 | 3 | todo |
   | 18 | GA5 | GA5 | 5 | 3 | todo |
   | 18 | F1-4 | Fences F1-F4 | 5 | 1 | todo |
