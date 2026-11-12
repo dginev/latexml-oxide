@@ -19501,13 +19501,13 @@ Value: \the\x.
 \end{document}
 ```
 
-## 1232. `{varwidth}` is a plain minipage: the box measures its given width, not its widest line
+## 1234. `{varwidth}` is a plain minipage: the box measures its given width, not its widest line
 
 varwidth.sty:52-60, :62-96 `\endvarwidth`: the content is set in a `\vbox` at the given width, each line re-measured at its
 natural width (`\@vwid@measure`) and the box set at the widest, or the given width where that is less. Perl's
 varwidth.sty.ltxml maps `\varwidth` to `\minipage`, so `\wd`, `\settowidth` and every measurement read the given width:
 algxpar's `\axp@SetToWidth` (a 500cm varwidth) read 14226pt and its `\deflength`/`\pgfmathparse` overflowed (algxpar-doc 784
-Errors, 2401.12710 +299), and each empty `\Comment` printed a ▷. Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #1012). Guard
+Errors, 2401.12710 +299), and each empty `\Comment` printed a ▷. Fixed in Rust (OXIDIZED_DESIGN_DIVERGENCES #1014). Guard
 `perfect_kernel_batchvarw::varwidth_takes_its_widest_line`. Minimal trigger (pdflatex `[22.3056pt]`):
 
 ```latex

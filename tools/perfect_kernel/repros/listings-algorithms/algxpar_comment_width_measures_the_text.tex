@@ -3,7 +3,7 @@
 %          its right — one ▷ per comment
 % engines: rust int164a = 4 Errors (2 `Arithmetic overflow`, 2 `pgfmath:overflow`): `\axp@SetToWidth`'s 500cm varwidth
 %          measured 14226pt, the statement's parbox width="-16384.2pt" and a second, empty "⊳" comment on line 2;
-%          perl: varwidth = minipage (KNOWN_PERL_ERRORS #1232)
+%          perl: varwidth = minipage (KNOWN_PERL_ERRORS #1234)
 % expect:  0 errors, 0 warnings; two "⊳", one per comment; no negative width
 % status:  RED (int164a) -> GREEN (VARW: `minipage_takes_natural_width`)
 \documentclass{article}

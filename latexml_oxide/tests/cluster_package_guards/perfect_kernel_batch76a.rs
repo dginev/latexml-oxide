@@ -58,7 +58,7 @@ fn math_statement_td(row: u32, var: &str, n: u32) -> String {
 }
 
 /// The statement cell of text-mode pseudocode row `row` (the `{varwidth}` of `\@pc@modebegin`, cryptocode.sty:763): its
-/// text's width, at most the 113.8pt given (VARWb, OD #1012; VARW wrote the given width). pdflatex's `\small` texts are
+/// text's width, at most the 113.8pt given (VARWb, OD #1014; VARW wrote the given width). pdflatex's `\small` texts are
 /// 33.48pt, 44.25pt and 37.54pt; ours measure at a larger size (a separate residual).
 fn text_statement_td(row: u32, text: &str) -> String {
   let width = match text {

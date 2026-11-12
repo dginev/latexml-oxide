@@ -876,7 +876,7 @@ pub(crate) fn load() -> Result<()> {
       let mut attr = string_map!("class" => "ltx_minipage");
       if !width.is_empty() { attr.insert("width".to_string(), width); }
       // A varwidth's `width` is its widest line; the HTML sizes it as varwidth does, its content's width up to the
-      // width given, so a browser font wider than the metrics does not wrap it (2507.12476's Table 1, OD #1012).
+      // width given, so a browser font wider than the metrics does not wrap it (2507.12476's Table 1, OD #1014).
       if let Some(Stored::Dimension(given)) = props.get("declared_width") {
         attr.insert("cssstyle".to_string(),
           format!("width:max-content;max-width:{}", given.to_attribute()));

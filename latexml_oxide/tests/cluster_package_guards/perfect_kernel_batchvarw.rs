@@ -1,5 +1,5 @@
 //! VARW: a varwidth box is as wide as its widest line, at most the width given (varwidth.sty `\endvarwidth`;
-//! `minipage_takes_natural_width`; KNOWN_PERL_ERRORS #1232, OD #1012). Witnesses algxpar-doc, 2401.12710.
+//! `minipage_takes_natural_width`; KNOWN_PERL_ERRORS #1234, OD #1014). Witnesses algxpar-doc, 2401.12710.
 use latexml::util::test::assert_element;
 
 use super::{
@@ -92,7 +92,7 @@ fn varwidth_takes_its_widest_line() {
   );
 }
 
-/// The HTML draws a varwidth box as its measurement (OD #1012): `width` its widest line, the style
+/// The HTML draws a varwidth box as its measurement (OD #1014): `width` its widest line, the style
 /// `width:max-content;max-width:<given>`. Each row a reader of that width: a TikZ node's foreignObject (its frame and
 /// box 4.31em, was the given 17.07em, revVARW `tz.tex`), cells under a `\resizebox` scaling them 8.2 (each cell was
 /// 345pt, off-screen, revVARW `rs1.tex`), and 2507.12476's Table 1 shape (cells in a float's resized tabular).

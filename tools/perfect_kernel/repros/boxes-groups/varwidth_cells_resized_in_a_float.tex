@@ -2,9 +2,9 @@
 % oracle:  pdflatex 0 errors; [T458.58421pt]: the tabular at its cells' widest lines, the resize scaling it by 0.7523
 % engines: rust int164a: [T1428.0pt] (each cell `\linewidth` wide), xscale 0.2416; rust VARW: [T461.91748pt], xscale
 %          0.7469, but each HTML cell `width:345.0pt`, the table drawn ~3 times its column; perl: varwidth = minipage
-%          (KNOWN_PERL_ERRORS #1232)
+%          (KNOWN_PERL_ERRORS #1234)
 % expect:  0 errors, 0 warnings; [T461.91748pt], xscale 0.7469; each varwidth cell its widest line, its HTML style
-%          `width:max-content;max-width:345.0pt` (OXIDIZED_DESIGN_DIVERGENCES #1012)
+%          `width:max-content;max-width:345.0pt` (OXIDIZED_DESIGN_DIVERGENCES #1014)
 % status:  GREEN (VARWb)
 \documentclass{article}
 \usepackage{amsmath,booktabs,varwidth,graphicx}
