@@ -1,0 +1,19 @@
+% mechanism: the list cutter (`classify::entry_starts` `line_at_starts`, `box_body`): a box body cut into its lines,
+%   the box dropped; its alignment (`\centering`) is the dropped box's, on no piece, and a macro printing text
+%   (`\mydept`) stays on the first piece alone (`fonts::sets_font`, `fonts::aligns`, by meaning)
+% witness: synthetic (revP4b4a2 B1/B2 probe d5); 2608.21425's `\parbox{…}{\centering\scriptsize …}`
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Dept of Physics, 1Univ A" over "2Univ B", centered
+% engines: rust P4b4abase: 0 errors, the whole body on Ann Able; P4b4a: each its line, the first centered;
+%   P4b4a3: Bob Baker's "Dept of Physics, 2 Univ B" (printed twice), both centered
+% expect:  0 errors, 0 warnings; Ann Able "Dept of Physics, 1 Univ A", Bob Baker "2 Univ B", neither aligned
+% status:  RED (P4b4a, P4b4a3) -> GREEN (P4b4a4), guard perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed
+% preload: ar5iv.sty
+\documentclass{llncs}
+\newcommand{\mydept}{Dept of Physics,}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1}$ \and Bob Baker$^{2}$}
+\institute{\parbox{\linewidth}{\centering\mydept\ $^{1}$Univ A\\ $^{2}$Univ B}}
+\maketitle
+Body.
+\end{document}

@@ -549,8 +549,8 @@ fn marked_blocks_restored_read_as_printed() {
       counts:   (0, 0),
       lines:    &[],
       creators: Creators::Whole(&[
-        r#"<creator role="author"><personname>Ann Able<sup><text font="italic">1</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic" fontsize="70%">1</text></sup><text align="center" fontsize="70%">Univ A, Town</text></contact></creator>"#,
-        r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic" fontsize="70%">2</text></sup><text align="center" fontsize="70%">Univ B, City</text></contact></creator>"#,
+        r#"<creator role="author"><personname>Ann Able<sup><text font="italic">1</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic" fontsize="70%">1</text></sup><text fontsize="70%">Univ A, Town</text></contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic" fontsize="70%">2</text></sup><text fontsize="70%">Univ B, City</text></contact></creator>"#,
       ]),
     },
     Row {
@@ -561,6 +561,73 @@ fn marked_blocks_restored_read_as_printed() {
       creators: Creators::Whole(&[
         r#"<creator role="author"><personname>Ann Able<sup>1</sup></personname><contact name="Affiliation: " role="affiliation"><sup><text fontsize="90%">1</text></sup><text fontsize="90%"> Univ A</text></contact></creator>"#,
         r#"<creator before="  " role="author"><personname>Bob Baker<sup>2</sup></personname><contact name="Affiliation: " role="affiliation"><sup><text fontsize="90%">2</text></sup><text fontsize="90%"> Univ B</text></contact></creator>"#,
+      ]),
+    },
+    // (P4b4a4, revP4b4a2 B1: a cut piece carries what sets the font, size or colour, by meaning; a macro printing text
+    // or a glyph before the first mark prints once, on the first piece — `\mydept`, `\ldots`, in a box too)
+    Row {
+      repro:    repro!("class-bindings/llncs_institute_macro_lead_printed_once"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able<sup><text font="italic">1</text></sup></personname><contact name="Affiliation: " role="affiliation">Dept of Physics, <sup><text font="italic">1</text></sup>Univ A</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup>Univ B</contact></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("class-bindings/llncs_institute_ldots_lead_printed_once"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able<sup><text font="italic">1</text></sup></personname><contact name="Affiliation: " role="affiliation">…<sup><text font="italic">1</text></sup>Univ A</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup>Univ B</contact></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("class-bindings/llncs_institute_parbox_centering_macro_lead_printed_once"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able<sup><text font="italic">1</text></sup></personname><contact name="Affiliation: " role="affiliation">Dept of Physics, <sup><text font="italic">1</text></sup>Univ A</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">2</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">2</text></sup>Univ B</contact></creator>"#,
+      ]),
+    },
+    // (revP4b4a2 B2: the box's alignment on no inline piece, the first included; its size on every one, 2608.21425)
+    Row {
+      repro:    repro!("class-bindings/llncs_institute_parbox_centering_marks_inline"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able<sup>1</sup></personname><contact name="Affiliation: " role="affiliation"><sup><text fontsize="70%">1</text></sup><text fontsize="70%"> Univ A</text></contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker<sup>2</sup></personname><contact name="Affiliation: " role="affiliation"><text fontsize="70%"><sup>2</sup> Univ B</text></contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Cy Cole<sup>3</sup></personname><contact name="Affiliation: " role="affiliation"><sup><text fontsize="70%">3</text></sup><text fontsize="70%"> Univ C</text></contact></creator>"#,
+      ]),
+    },
+    // (revP4b4a2 B3: a start inside an environment the list opens leaves the list to its tokens, the base's reading;
+    // 2506.05954's `\begin{footnotesize}` lines)
+    Row {
+      repro:    repro!("class-bindings/llncs_institute_minipage_one_line_marks_whole_list"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able<sup>1</sup></personname></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker<sup>2</sup></personname></creator>"#,
+        r#"<creator role="author"><contact name="Affiliation: " role="affiliation"><inline-block class="ltx_minipage" vattach="middle" width="345.0pt"><p><sup>1</sup> Univ A, <sup>2</sup> Univ B</p></inline-block></contact></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("class-bindings/revtex_affiliation_footnotesize_env_lines"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able<sup><text font="italic">a</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">a</text></sup>Univ A, Town</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker<sup><text font="italic">b</text></sup></personname><contact name="Affiliation: " role="affiliation"><sup><text font="italic">b</text></sup>Univ B, City</contact></creator>"#,
       ]),
     },
     Row {

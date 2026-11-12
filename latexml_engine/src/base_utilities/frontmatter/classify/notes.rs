@@ -444,8 +444,8 @@ pub(in crate::base_utilities) const PARAMETERLESS_SPACING: [&str; 7] = [
   "\\protect",
 ];
 
-/// The declarations among a line's unprinted lead, its spacing left out (`\small\vspace{1mm}\noindent\it` → `\small`,
-/// `\noindent`, `\it`; [`leading_unprinted_end`]; 2407.15815).
+/// The declarations among a line's unprinted lead that a cut piece carries, its spacing left out
+/// (`\small\vspace{1mm}\noindent\it` → `\small`, `\it`; [`leading_unprinted_end`], [`font_settings`]; 2407.15815).
 pub(in crate::base_utilities) fn lead_declarations(v: &[Token]) -> Vec<Token> {
   let mut declarations = Vec::new();
   let mut i = 0;
@@ -454,7 +454,7 @@ pub(in crate::base_utilities) fn lead_declarations(v: &[Token]) -> Vec<Token> {
     i += leading_spacing_end(&v[i..]);
     let found = opening_declarations(&Tokens::new(v[i..].to_vec()));
     i += found.len();
-    declarations.extend(found);
+    declarations.extend(font_settings(&found));
     if i == start {
       // (the space after them is no institution's: `{\color{blue} $^1$A, $^2$B}`)
       while declarations.last() == Some(&T_SPACE!()) {
@@ -463,6 +463,76 @@ pub(in crate::base_utilities) fn lead_declarations(v: &[Token]) -> Vec<Token> {
       return declarations;
     }
   }
+}
+
+/// Of `found` ([`opening_declarations`]), the declarations that print nothing and set the font, size or colour
+/// ([`sets_font`]), with their arguments: what a cut piece carries, never a macro printing text (`\mydept`, `\ldots`)
+/// nor an alignment (revP4b4a2 B1, B2).
+fn font_settings(found: &[Token]) -> Vec<Token> {
+  let mut out = Vec::new();
+  let (mut keep, mut depth) = (false, 0usize);
+  for t in found {
+    match t.get_catcode() {
+      Catcode::BEGIN => depth += 1,
+      Catcode::END => depth = depth.saturating_sub(1),
+      Catcode::CS if depth == 0 => keep = sets_font(t),
+      Catcode::SPACE if depth == 0 => {
+        if !out.is_empty() {
+          out.push(*t);
+        }
+        continue;
+      },
+      _ => {},
+    }
+    if keep {
+      out.push(*t);
+    }
+  }
+  out
+}
+
+/// The declarations taking brace arguments that set the font or colour (latex.ltx `\color`, the NFSS selectors).
+const FONT_DECLARATIONS_WITH_ARGUMENTS: &[&str] = &[
+  "\\color",
+  "\\fontsize",
+  "\\fontfamily",
+  "\\fontseries",
+  "\\fontshape",
+  "\\usefont",
+];
+
+/// Whether `t` means a font, size or colour declaration: LaTeX's taking no argument (`frontmatter_stores::LAYOUT`'s
+/// head up to `\selectfont`, as `fonts::font_declaration`) or [`FONT_DECLARATIONS_WITH_ARGUMENTS`], or a `\let` copy of
+/// one (`\ifx`'s test, `x_equals`).
+pub(in crate::base_utilities) fn sets_font(t: &Token) -> bool {
+  let layout = crate::frontmatter_stores::LAYOUT;
+  let end = layout
+    .iter()
+    .position(|n| *n == "\\selectfont")
+    .map_or(0, |k| k + 1);
+  means_one_of(t, &layout[..end]) || means_one_of(t, FONT_DECLARATIONS_WITH_ARGUMENTS)
+}
+
+/// Whether `t` means a paragraph alignment (`\centering`, `\raggedright`, `\raggedleft`, ragged2e's, a `\let` copy):
+/// a box's or a paragraph's, on no inline piece cut from it (2608.21425, revP4b4a2 B2).
+pub(in crate::base_utilities) fn aligns(t: &Token) -> bool {
+  means_one_of(t, &[
+    "\\centering",
+    "\\raggedright",
+    "\\raggedleft",
+    "\\Centering",
+    "\\RaggedRight",
+    "\\RaggedLeft",
+  ])
+}
+
+/// Whether the control sequence `t` has the meaning of one of the defined commands `names`.
+fn means_one_of(t: &Token, names: &[&str]) -> bool {
+  t.get_catcode() == Catcode::CS
+    && names.iter().any(|name| {
+      let cs = T_CS!(*name);
+      *t == cs || (lookup_meaning(&cs).is_some() && x_equals(t, &cs))
+    })
 }
 
 /// The declarations a list `v` opens with before its first entry's mark (`\itshape`, `\small`, `\color{red}`:
@@ -499,15 +569,6 @@ pub fn leading_unprinted_end(v: &[Token]) -> usize {
 /// first mark, text, or a command over a braced argument (`\textbf{Ann Able}` is content, not a declaration: read
 /// as one, `\large\textbf{Ann Able}$^1$` became an affiliation line and lost its author).
 pub(in crate::base_utilities) fn opening_declarations(inner: &Tokens) -> Vec<Token> {
-  // The declarations that take brace arguments (latex.ltx `\color`, the NFSS font selectors).
-  const WITH_ARGUMENTS: &[&str] = &[
-    "\\color",
-    "\\fontsize",
-    "\\fontfamily",
-    "\\fontseries",
-    "\\fontshape",
-    "\\usefont",
-  ];
   let v = inner.unlist_ref();
   let mut out = Vec::new();
   let mut i = 0;
@@ -516,7 +577,9 @@ pub(in crate::base_utilities) fn opening_declarations(inner: &Tokens) -> Vec<Tok
     let braced = v
       .get(i + 1)
       .is_some_and(|n| n.get_catcode() == Catcode::BEGIN);
-    let with_arguments = WITH_ARGUMENTS.iter().any(|cs| t == T_CS!(*cs));
+    let with_arguments = FONT_DECLARATIONS_WITH_ARGUMENTS
+      .iter()
+      .any(|cs| t == T_CS!(*cs));
     // (spacing that takes a length or a rule's dimensions is no declaration: [`leading_spacing_end`] reads it whole)
     if [
       "\\vspace",

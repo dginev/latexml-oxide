@@ -1,0 +1,20 @@
+% mechanism: the list cutter (`classify::entry_starts` `lines_starts`): a start inside an environment the list opens
+%   cuts nothing: the list is read by its tokens, as the base read it, llncs's route too (`starts_inside_environment`;
+%   no word duplicated)
+% witness: synthetic (revP4b4a2 B3 probe f1_minipage_oneline_macro)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "1 Univ A, 2 Univ B" on one line
+% engines: rust P4b4abase: 0 errors, 0 warnings, the line on a nameless creator; P4b4a: 3 errors; P4b4a3: 1 warning,
+%   Ann Able "1 Univ A", Bob Baker "1 Univ A, 2 Univ B" ("Univ A" printed twice)
+% expect:  0 errors, 0 warnings; the base's reading: the line once, on a nameless creator (owners RED, post-merge)
+% status:  RED (P4b4a, P4b4a3) -> GREEN (P4b4a4; the base's output), guard
+%   perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed
+% preload: ar5iv.sty
+\documentclass{llncs}
+\newcommand{\affmark}[1]{\textsuperscript{#1}}
+\begin{document}
+\title{A Title}
+\author{Ann Able\affmark{1} \and Bob Baker\affmark{2}}
+\institute{\begin{minipage}{\linewidth}\affmark{1} Univ A, \affmark{2} Univ B\end{minipage}}
+\maketitle
+Body.
+\end{document}

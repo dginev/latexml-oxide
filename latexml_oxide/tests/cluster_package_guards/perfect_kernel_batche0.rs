@@ -469,6 +469,9 @@ const ONE_ENGINE_REACH: &[(&str, usize)] = &[
   // readers, are the old reader's uses of its own code: their files, `classify/old_reader/`, are no source of the one
   // engine's (review revZ18m B1))
   ("relocate.rs CUT_COPY_PLACE", 1),
+  // (P4b4a4, revP4b4a2 B3: llncs's shape choice and the cutter read one fact, whether a start stands inside an
+  // environment the list opens; `starts_inside_environment` splits the list into its lines as `entry_calls` does)
+  ("classify/entry_starts.rs affil_splits", 2),
 ];
 
 /// Every file that holds the old reader's code moved out of `author_block/` unchanged, whose exports
@@ -1511,7 +1514,11 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // moved from `defs/frontmatter_api/affiliations.rs`; where entries start is read as digested, `list_marks`)
   // (P4b4a3, 458 -> 461: the `\begin`/`\end` an environment the list opens is spelled by, no cut inside it (revP4b4a
   // B1), and the Cut's opening declarations' leading spaces, moved from `defs/frontmatter_api/cut.rs`)
-  ("classify", 461),
+  // (P4b4a4, 461 -> 471: a cut piece carries only declarations meaning a font, size or colour, with their argument
+  // groups, never an alignment (`notes::font_settings`, `sets_font`, `aligns`, revP4b4a2 B1/B2); a start inside an
+  // environment leaves the list to its tokens (`entry_starts::starts_inside_environment`, B3). Each test is the
+  // token's meaning (`x_equals`) or a group's braces, no spelling)
+  ("classify", 471),
   // (E0h: the rest of `author_block/` Z18m moved unchanged to `classify/old_reader/`, split off from `classify`'s row)
   ("old_reader", 131),
   ("defs/author_macros", 20),

@@ -12,6 +12,7 @@ pub(in crate::base_utilities) use email_block_calls::*;
 // (the cut of an entry's class e-mail calls the emitter writes, and the text rules it reads a call by: moved from
 // `shared_row/` with the old row split's deletion, P27b)
 mod entry_starts;
+pub use entry_starts::starts_inside_environment;
 pub(in crate::base_utilities) use entry_starts::*;
 mod entry_emails;
 pub(in crate::base_utilities) use entry_emails::{

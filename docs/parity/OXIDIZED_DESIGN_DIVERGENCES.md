@@ -30922,18 +30922,25 @@ printing nothing, `\newcommand\affilfont{}`), is a letter or digit is not rehear
 entry or one led by unmarked text, and where each mark the list prints at its level stands): a line printing no mark
 (nor a note opening with one) continues the entry above it; a line is cut at its later starts, inside a wrapper too (the
 wrapper repeated with its declarations; a box the whole line is set in, `\parbox{\linewidth}{$^1$Univ A\\ $^2$Univ B}`,
-`\mbox`, `\hbox`, dropped: what pdflatex prints are its lines, each piece led by the declarations the body or line
-opens with (`notes::list_lead_declarations`, the Cut's own; 2608.21425's `\centering\scriptsize` — REVTeX's `\parbox`
-lists, `perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed`) and inside a formula at a mark on a base (closed
-and opened again); a mark on no
-base starts where its formula does (`classify::entry_starts`). No line break or cut stands inside an environment the list
-opens (P4b4a3, revP4b4a B1): the lines it spans are one, a later start inside it cuts nothing — of closing and reopening
-the environment (its arguments' count is its definition's, not the tokens') and leaving it uncut, the simpler; the
-whole-list token fallback would lose the marks llncs's shape (c), chosen by the reading, prints (`\institute{\begin{minipage}{…}\affmark{1}
-Univ A, \affmark{2} Univ B\end{minipage}}`). A `tabular`'s `\affmark` rows keep the base's owners, Ann Able all three
-lines (RED `llncs_institute_macro_marks_tabular_rows_red`, post-merge); the list's opening declarations end at its first start
-(`\ua` printing `\textsuperscript{1}` is none); a line whose marks lead its notes is cut inside the note by its tokens (the
-`\thanks` idiom); and llncs's shape (c) is read from the marks the institute prints (`prints_list_marks`). Unread, the
+`\mbox`, `\hbox`, dropped: what pdflatex prints are its lines, each piece led by the font, size and colour declarations
+the body or line opens with (`notes::list_lead_declarations`, the Cut's own), read by meaning (`notes::sets_font`:
+`\ifx`'s test against LaTeX's declarations, a `\let` copy too), never a macro printing text (`\mydept`, `\ldots`: printed
+once, on the first piece; revP4b4a2 B1), and no piece, the first included, with an alignment (`\centering`,
+`\raggedright`, `\raggedleft`, ragged2e's: `notes::aligns`), the dropped box's or the paragraph's (2608.21425's
+`\centering\scriptsize`: every entry at 70 %, no mark a `<sup class="ltx_centering">`; revP4b4a2 B2; REVTeX's and
+llncs's `\parbox` lists, `perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed`) and inside a formula at a
+mark on a base (closed and opened again); a mark on no base starts where its formula does (`classify::entry_starts`).
+No line break or cut stands inside an environment the list opens (P4b4a3, revP4b4a B1): the lines it spans are one. A
+start after its line's first inside one leaves the whole list to its tokens, as the base read it, the cutter and
+llncs's choice of shape (c) alike (`entry_starts::starts_inside_environment`; revP4b4a2 B3): on
+`\institute{\begin{minipage}{…}\affmark{1} Univ A, \affmark{2} Univ B\end{minipage}}` the minipage once, on a nameless
+creator (the base's output, owners post-merge); on 2506.05954's `\begin{footnotesize} ${}^a…\\ ${}^b…`, each name its
+line, as the base had them (P4b4a's cut gave 2 Errors). Of closing and reopening the environment (its arguments' count is
+its definition's, not the tokens') and leaving the list uncut, the simpler. A `tabular`'s `\affmark` rows keep the
+base's owners, Ann Able all three lines (RED `llncs_institute_macro_marks_tabular_rows_red`, post-merge); the list's
+opening declarations end at its first start (`\ua` printing `\textsuperscript{1}` is none); a line whose marks lead its
+notes is cut inside the note by its tokens (the `\thanks` idiom); and llncs's shape (c) is read from the marks the
+institute prints (`list_marks`). Unread, the
 tokens (`author_mark_position`, `marker_leads`), counted. A list whose requested entries the cutter parts fewer than two
 of still stays whole (`cut_list`'s fail-safe); the uncut copies give way only once the list is cut. Guards
 `perfect_kernel_batchc1::queued_marks_read_as_digested` (P4b4a rows), `perfect_kernel_batchz18g::llncs_institute_hand_marks_cut`
