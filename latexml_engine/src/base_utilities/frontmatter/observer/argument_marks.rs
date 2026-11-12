@@ -49,7 +49,7 @@ fn own_level(events: &[Event]) -> u8 {
 
 /// Which of `events` print at the argument's own level: at or above its words' ([`own_level`]), or in a box of their own
 /// there, one holding no word (`\raisebox{0pt}[0pt][0pt]{\textsuperscript{1}}`, 2307.12121, 2311.01786); a mark in a box
-/// beside its words is none (`${\mathrm Park^{1}}$`, cond-mat0206329).
+/// that also holds words is none.
 fn at_own_level(events: &[Event]) -> Vec<bool> {
   let level = own_level(events);
   let mut own = vec![true; events.len()];
