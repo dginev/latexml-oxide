@@ -43,11 +43,12 @@ use crate::base_utilities::{
         self as events, EventKind, Formula, InkTable, font_declaration, inked, lex_with_inks,
         text_font_command,
       },
-      field_notes::{EnvironmentStep, FieldCreator},
+      field_notes::{EnvironmentStep, FieldCreator, HeldExpansion},
       ledger::{
         ApiCall, AuthorBlock, Unsaid, annotated_parent, content_text, field_stamped, symbol,
       },
       policy::TitleMarks,
+      reading::{UNFOLD_LEVELS, unfold_held_names},
       rehearsal::{Rehearsal, rehearse},
       resolver::{
         BlockCheck, LostInk, RCreator, RuleDrop, Written, check_blocks, contact_parts,
@@ -499,7 +500,7 @@ fn past_unprinted_tail(index: usize, span: (u16, u16)) -> (u16, u16) {
     }
     let mut next = None;
     starts(events, span.1, &mut next);
-    let tokens = block.tokens.unlist_ref();
+    let tokens = block.read_tokens().unlist_ref();
     let at = |p: u16| usize::from(p).checked_sub(block.range.0);
     let (Some(from), Some(to)) = (at(span.0), at(span.1)) else {
       return span;
@@ -913,7 +914,7 @@ fn block_names(
       .filter(|(_, e)| e.kind == EventKind::Name && !norm(&e.text).is_empty())
       .collect();
     let field = Field {
-      tokens: block.tokens.unlist_ref(),
+      tokens: block.read_tokens().unlist_ref(),
       base: block.range.0,
       formulas,
       environments,
@@ -931,7 +932,8 @@ fn block_names(
     }
     type Taken = (Vec<Token>, (usize, usize), Vec<(usize, usize)>, Vec<usize>);
     let mut name_tokens = |from: usize, to: usize| -> Option<Taken> {
-      // (several events of one span: a macro printed them, `\\author{\\authorBlock}`, 2604.09547)
+      // (several events of one span: a macro the reading did not unfold printed them, one with parameters or a class's
+      // (`reading::unfold_held_names`); `\\author{\\authorBlock}`, 2604.09547, is unfolded since AUT1)
       if found[from..=to]
         .iter()
         .any(|(_, e)| printed_at.get(&e.span).is_some_and(|n| *n > 1))
@@ -1273,7 +1275,7 @@ fn list_setter_runs(index: usize) -> Vec<(usize, usize)> {
       return Vec::new();
     };
     let setter = T_CS!(setter);
-    let tokens = block.tokens.unlist_ref();
+    let tokens = block.read_tokens().unlist_ref();
     // (the rehearsal's Contact of each call, `\lx@fm@obs@affil`'s: its span the call's, opening with the setter's command)
     let calls = events.iter().filter(|e| {
       e.kind == EventKind::Contact
@@ -1441,7 +1443,7 @@ fn span_call_tokens(index: usize, span: (u16, u16)) -> Option<Tokens> {
       return None;
     };
     let at = |p: u16| usize::from(p).checked_sub(block.range.0);
-    let tokens = block.tokens.unlist_ref();
+    let tokens = block.read_tokens().unlist_ref();
     tokens
       .get(at(span.0)?..at(span.1)?)
       .map(|call| Tokens::new(call.to_vec()))
@@ -1555,8 +1557,16 @@ fn marks_of(source: usize, role: &str) -> Vec<String> {
 /// superscripts, no `\\inst` or binding's request, which print nothing (ptephy's `\\name{…}{1}`, 1703.03659; 1804.00518's
 /// `$^2$Yuankai Qi`, whose mark no name's run holds).
 fn marks_in(source: usize, runs: &[(usize, usize)]) -> Vec<String> {
+  superscripts_where(source, |(s, t)| {
+    runs.iter().any(|&(from, to)| from <= s && t <= to)
+  })
+}
+
+/// The labels of the superscripts (`sup`, `math`, parted) the block at ledger index `source` prints at the field offsets
+/// `at` accepts.
+fn superscripts_where(source: usize, at: impl Fn((usize, usize)) -> bool) -> Vec<String> {
   with_block(source, Vec::new(), |block, events| {
-    let at = |p: u16| usize::from(p).checked_sub(block.range.0);
+    let offset = |p: u16| usize::from(p).checked_sub(block.range.0);
     events
       .iter()
       .filter(|e| {
@@ -1568,12 +1578,46 @@ fn marks_in(source: usize, runs: &[(usize, usize)]) -> Vec<String> {
       })
       .filter(|e| {
         e.span
-          .and_then(|(s, t)| Some((at(s)?, at(t)?)))
-          .is_some_and(|(s, t)| runs.iter().any(|&(from, to)| from <= s && t <= to))
+          .and_then(|(s, t)| Some((offset(s)?, offset(t)?)))
+          .is_some_and(&at)
       })
       .filter_map(|e| e.label.as_deref())
       .flat_map(mark_labels)
       .collect()
+  })
+}
+
+/// The labels of the superscripts creator `i`'s block prints after its name's runs (`name_runs`) and before the next written
+/// name's, in no name's run ([`marks_in`]'s marks): the marks the reading gave it that its written name does not print.
+fn unwritten_marks_after(
+  resolved: &Resolved,
+  name_runs: &BTreeMap<usize, Vec<(usize, usize)>>,
+  i: usize,
+) -> Vec<String> {
+  let source = resolved.creators[i].source;
+  let runs_of = |j: &usize| {
+    (resolved.creators[*j].source == source)
+      .then(|| name_runs.get(j))
+      .flatten()
+  };
+  let Some(from) = name_runs
+    .get(&i)
+    .and_then(|runs| runs.iter().map(|run| run.1).max())
+  else {
+    return Vec::new();
+  };
+  let to = (i + 1..resolved.creators.len())
+    .find_map(|j| runs_of(&j))
+    .and_then(|runs| runs.iter().map(|run| run.0).min())
+    .unwrap_or(usize::MAX);
+  let written: Vec<(usize, usize)> = name_runs
+    .keys()
+    .filter_map(runs_of)
+    .flatten()
+    .copied()
+    .collect();
+  superscripts_where(source, |(s, t)| {
+    from <= s && t <= to && !written.iter().any(|&(a, b)| a <= s && t <= b)
   })
 }
 
@@ -1646,7 +1690,7 @@ fn block_pubnote(item: &Item) -> Option<Vec<Token>> {
 /// leaves it after a line break or a mark.
 fn spaced(index: usize, span: (u16, u16), tokens: Vec<Token>) -> Vec<Token> {
   let (lead, breaks) = with_block(index, (None, Vec::new()), |block, events| {
-    let written = block.tokens.unlist_ref();
+    let written = block.read_tokens().unlist_ref();
     let after_mark = events
       .iter()
       .rfind(|e| e.kind != EventKind::Layout && e.span.is_some_and(|s| s.1 < span.0))
@@ -1798,7 +1842,7 @@ fn joined_run_link(
   span: (u16, u16),
   address: &str,
 ) -> Option<(RunWrap, Option<Vec<Token>>)> {
-  let tokens = block.tokens.unlist_ref();
+  let tokens = block.read_tokens().unlist_ref();
   let at = |p: u16| usize::from(p).checked_sub(block.range.0);
   let (from, to) = (at(span.0)?, at(span.1)?.min(tokens.len()));
   let mut first = None;
@@ -2262,7 +2306,13 @@ fn item_call(
                 && e.role.as_deref() == Some("email")
                 && e.span.is_some_and(|s| s.0 <= span.0 && span.1 <= s.1)
             })
-            .find_map(|e| block.tokens.unlist_ref().get(at(e.span?.0)?).copied())
+            .find_map(|e| {
+              block
+                .read_tokens()
+                .unlist_ref()
+                .get(at(e.span?.0)?)
+                .copied()
+            })
         })
         .filter(|cs| font.is_none() && !links && is_email_command(cs).unwrap_or(false));
         let written = links
@@ -2295,7 +2345,7 @@ fn item_call(
         };
         return Ok(annotate_now("ltx:contact", &keys, content.unlist_ref()));
       }
-      // (several events of one span: a macro printed them, 2604.09547)
+      // (several events of one span: a macro the reading did not unfold printed them, 2604.09547)
       let printed_there =
         |e: &&Event| matches!(e.kind, EventKind::Name | EventKind::Contact) && e.span == Some(span);
       if with_block(index, 0, |_, events| {
@@ -2374,7 +2424,7 @@ fn item_call(
           return None;
         };
         let field = Field {
-          tokens: block.tokens.unlist_ref(),
+          tokens: block.read_tokens().unlist_ref(),
           base: block.range.0,
           formulas,
           environments,
@@ -2621,6 +2671,11 @@ fn creator_call_of(c: &RCreator) -> Option<FieldCreator> {
 /// A call's content's events, formulas and environments, from a stamped rehearsal of it, as `plan::cut` reads a piece (its
 /// positions the call's own, from 0: the author field's 15 bits).
 pub(super) fn rehearsed(content: &[Token]) -> Result<Option<CallRead>> {
+  Ok(rehearsed_with_expansions(content)?.map(|(read, _)| read))
+}
+
+/// [`rehearsed`], with the expansions of the document's macros the content calls (`field_notes::HeldExpansion`).
+fn rehearsed_with_expansions(content: &[Token]) -> Result<Option<(CallRead, Vec<HeldExpansion>)>> {
   if content.len() > usize::from(AUTHOR_PROV_POS_MASK) {
     return Ok(None);
   }
@@ -2630,11 +2685,32 @@ pub(super) fn rehearsed(content: &[Token]) -> Result<Option<CallRead>> {
       Rehearsal::Done {
         value: (events, formulas, inks),
         environments,
+        expansions,
         ..
-      } => Some((events, formulas, environments, inks)),
+      } => Some(((events, formulas, environments, inks), expansions)),
       Rehearsal::Skipped(_) => None,
     },
   )
+}
+
+/// A call's content and its read ([`rehearsed`]), the document macros printing several of its names unfolded, as the block's
+/// are (`reading::unfold_held_names`): authblk's and acmart's `\author{\aut}`.
+fn rehearsed_unfolded(content: &[Token]) -> Result<Option<(Vec<Token>, CallRead)>> {
+  let Some((mut read, mut expansions)) = rehearsed_with_expansions(content)? else {
+    return Ok(None);
+  };
+  let mut tokens = content.to_vec();
+  for _ in 0..UNFOLD_LEVELS {
+    let Some(unfolded) = unfold_held_names(&tokens, 0, &read.0, &expansions) else {
+      break;
+    };
+    let Some(again) = rehearsed_with_expansions(&unfolded)? else {
+      break;
+    };
+    (read, expansions) = again;
+    tokens = unfolded;
+  }
+  Ok(Some((tokens, read)))
 }
 
 /// The tokens of the contact printing `assoc` in `call`'s content, or with `within` its first's (one printing a list), written down to
@@ -3677,7 +3753,7 @@ fn declaration_reads_past(index: usize, resolved: &Resolved) -> bool {
     let Outcome::Events { declarations, .. } = &block.outcome else {
       return None;
     };
-    let tokens = block.tokens.unlist_ref();
+    let tokens = block.read_tokens().unlist_ref();
     let at = |p: u16| usize::from(p).checked_sub(block.range.0);
     declarations
       .iter()
@@ -3724,7 +3800,7 @@ fn printing_read_later(index: usize, resolved: &Resolved) -> bool {
     let Outcome::Events { unsaid: Some(unsaid), .. } = &block.outcome else {
       return false;
     };
-    let tokens = block.tokens.unlist_ref();
+    let tokens = block.read_tokens().unlist_ref();
     let at = |p: u16| usize::from(p).checked_sub(block.range.0);
     let span_at = |e: &Event| e.span.and_then(|(s, t)| Some((at(s)?, at(t)?)));
     unsaid.printing.iter().any(|call| {
@@ -3873,7 +3949,7 @@ fn split_owns_falsely(index: usize, resolved: &Resolved) -> bool {
   };
   with_block(index, false, |block, events| {
     // (each token of the block: the creator whose call holds it — `cut` found in the block in order)
-    let tokens = block.tokens.unlist_ref();
+    let tokens = block.read_tokens().unlist_ref();
     let mut holder: Vec<Option<usize>> = vec![None; tokens.len()];
     let mut at = 0;
     for (piece, cut) in &perl.cut {
@@ -4275,8 +4351,9 @@ fn warn_net(key: &str, what: &str) {
 /// `\author{\aut}`), written as one creator call per piece: the call's own command, its keyvals (role, label,
 /// annotations) and its wrappers (`\lx@personname{\lx@author@withinst{…}}`) kept, the group holding the `\and`s holding
 /// the piece alone — the tokens between two `\and`s, where each `\and`'s own tokens (a literal one, a `\csname
-/// and\endcsname`, an active character) part no ink; else, a macro holding names and `\and`s together (`\aut`), each
-/// piece's name by its text, counted ([`by_text`]), and only where the piece prints nothing but its name. `None` for a
+/// and\endcsname`, an active character) part no ink, a macro of no parameters holding them read in its place first
+/// ([`rehearsed_unfolded`]); else, a macro holding names and `\and`s together that is not unfolded, each piece's name by
+/// its text, counted ([`by_text`]), and only where the piece prints nothing but its name. `None` for a
 /// call not cut, or one whose pieces neither way gives (the call stays whole, its merge counted by
 /// `flag_merged_creators`). OXIDIZED_DESIGN_DIVERGENCES #993; witnesses 1909.10278, 2501.11185.
 fn creator_call_cut(call: &ApiCall) -> Result<Option<Vec<Tokens>>> {
@@ -4294,9 +4371,10 @@ fn creator_call_cut(call: &ApiCall) -> Result<Option<Vec<Tokens>>> {
     return Ok(None);
   }
   // (the content rehearsed again for its positions: the ledger's events carry none, `ApiCall::errors`)
-  let Some((events, ..)) = rehearsed(content)? else {
+  let Some((content, (events, ..))) = rehearsed_unfolded(content)? else {
     return Ok(None);
   };
+  let content = content.as_slice();
   let Some(pieces) = creator_call_pieces(&events).filter(|pieces| pieces.len() == count) else {
     return Ok(None);
   };
@@ -5431,20 +5509,30 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
       .map(|call| call.labels())
       .unwrap_or_default();
     // (the labels it shows: the requests its written runs print, [`NAMES_SHOWN_LABELS`])
-    if keeps && let Some(runs) = name_runs.get(&i) {
-      let printed = marks_in(c.source, runs);
-      shown_labels.extend(
-        c.requests
-          .iter()
-          .filter(|request| !own.contains(request) && printed.contains(request))
-          .flat_map(|request| clean_frontmatter_labels(request, "affiliation")),
-      );
-    }
-    for request in c
-      .requests
-      .iter()
-      .filter(|request| (!keeps || inst_marks.contains(request)) && !own.contains(request))
-    {
+    let printed = name_runs
+      .get(&i)
+      .filter(|_| keeps)
+      .map(|runs| marks_in(c.source, runs))
+      .unwrap_or_default();
+    shown_labels.extend(
+      c.requests
+        .iter()
+        .filter(|request| !own.contains(request) && printed.contains(request))
+        .flat_map(|request| clean_frontmatter_labels(request, "affiliation")),
+    );
+    // (a kept superscript printed after its name's runs and before the next name's, in no written run — past a gap or a
+    // comma, `Ann Able\, $^{1}$ ,` — shows as an unkept one: 2209.05831, 2201.04171, 2609.18180, 2403.18314)
+    let unwritten = std::cell::OnceCell::new();
+    let unprinted = |request: &String| {
+      keeps
+        && !printed.contains(request)
+        && unwritten
+          .get_or_init(|| unwritten_marks_after(resolved, &name_runs, i))
+          .contains(request)
+    };
+    for request in c.requests.iter().filter(|request| {
+      (!keeps || inst_marks.contains(request) || unprinted(request)) && !own.contains(request)
+    }) {
       // (a key's value is tokenized: a request spelled with a command, `\\author[a,b\\thanks{…}]`'s, 2207.11842, is no label)
       if !answered.contains(request) && !no_label(request) {
         annotations[i].extend(clean_frontmatter_labels(request, "affiliation"));

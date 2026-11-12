@@ -74,8 +74,8 @@ fn authblk_affil_run_counts_author_calls() {
 /// authblk's gates by meaning, on the shapes whose creators the spelling test already gave: a `\let` copy and a
 /// `\csname and\endcsname` (kernel separators: the list path), a document's renewed `\and` (no kernel column: the
 /// creator call, which the emitter cuts at its own `\and`), and a macro-held `\and` with a line under the names before
-/// an `\affil` (the second gate: a column's line, not rows of names; the macro's names written by their text, two
-/// counted Warnings). Green on int158a and P27. The last row pins today's output, not a ruling: `Cy Cole` is Bob
+/// an `\affil` (the second gate: a column's line, not rows of names; the macro's names written from its expansion read in
+/// its place since AUT1, two by-text Warnings before). Green on int158a and P27. The last row pins today's output, not a ruling: `Cy Cole` is Bob
 /// Baker's affiliation, where pdflatex prints it as a line in his column (no word lost; revP27 N3).
 #[test]
 fn authblk_and_gates_read_the_separator_by_meaning() {
@@ -90,7 +90,7 @@ fn authblk_and_gates_read_the_separator_by_meaning() {
       &["Ann Able", "affiliation=Univ X"],
       &["Bob Baker", "affiliation=Univ X"],
     ]),
-    (row!("authblk_macro_held_and_line_before_affil"), 2, &[
+    (row!("authblk_macro_held_and_line_before_affil"), 0, &[
       &["Ann Able", "affiliation=Univ X"],
       &["Bob Baker", "affiliation=Cy Cole", "affiliation=Univ X"],
     ]),

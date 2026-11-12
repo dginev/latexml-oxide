@@ -47,8 +47,8 @@ fn rows(rows: &[&[&str]]) -> Vec<Vec<String>> {
 
 /// One block per `\author` call, the reading's cut parting its names, on each of the three routes: the list as
 /// written (its `\and`, each piece's commas: the same XML as the split by spelling gave) and an `\and` held in a macro, which no spelling shows (the reading cut it inside a piece
-/// before P2-1 as well, OC1). The Warnings: OmniBus's missing class binding; the emitter writing the names a macro's
-/// expansion spells as plain text (P3), two.
+/// before P2-1 as well, OC1). The Warning: OmniBus's missing class binding. The names a macro's expansion spells are
+/// written from it, read in the macro's place (AUT1; two by-text Warnings before).
 #[test]
 fn an_author_list_is_one_block_the_reading_cuts() {
   let literal = rows(&[&["Ann Able"], &["Dan Dee"], &["Bob Baker"]]);
@@ -75,7 +75,7 @@ fn an_author_list_is_one_block_the_reading_cuts() {
       "omnibus hidden",
       repro!("omnibus_author_list_one_block_hidden_and"),
       false,
-      (0, 3),
+      (0, 1),
       &hidden,
     ),
     (
@@ -89,7 +89,7 @@ fn an_author_list_is_one_block_the_reading_cuts() {
       "ptephy hidden",
       repro!("ptephy_author_list_one_block_hidden_and"),
       false,
-      (0, 2),
+      (0, 0),
       &hidden,
     ),
     (
@@ -103,7 +103,7 @@ fn an_author_list_is_one_block_the_reading_cuts() {
       "webofc hidden",
       repro!("webofc_author_list_one_block_hidden_and"),
       true,
-      (0, 2),
+      (0, 0),
       &hidden_inst,
     ),
   ] {

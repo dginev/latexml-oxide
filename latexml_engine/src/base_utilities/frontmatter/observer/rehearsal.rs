@@ -27,8 +27,8 @@ use super::{
     BreakKind, EmailMeaning, Event, HeldError, break_events, declaration_events, in_block_content,
   },
   field_notes::{
-    EnvironmentStep, FieldCreator, FieldNotesHookGuard, PrintingCall, field_notes_begin,
-    field_notes_end, note_creator_call,
+    EnvironmentStep, FieldCreator, FieldNotesHookGuard, HeldExpansion, PrintingCall,
+    field_notes_begin, field_notes_end, note_creator_call,
   },
   ledger::{SkipReason, Unsaid, annotated_parent, email_meaning},
   policy::TitleMarks,
@@ -1186,13 +1186,38 @@ pub(in crate::base_utilities) enum Rehearsal<R> {
     /// the entries the run queued besides its creators ([`note_frozen_entry`]): a frontmatter setter run inside the block,
     /// a `\date` in `\author` (2503.02741), undone with the run
     queued:       Vec<RawFrontmatter>,
+    /// the expansions of the document's macros its tokens call (`field_notes::HeldExpansion`)
+    expansions:   Vec<HeldExpansion>,
   },
   /// No rehearsal was made or kept, and why: no journal could open (one is already open), its assignments could not be
   /// undone, or it ended in a Fatal error of its own (discarded with it).
   Skipped(SkipReason),
 }
 
-/// Digest `tokens` (a block's stamped tokens, `ledger::stamped_block_tokens`) under the event bindings and hand the
+/// The footnote steps the blocks rehearsed so far carry ([`rehearse`]), to read a block again from where it began
+/// (`reading::unfold_held_names`).
+pub(in crate::base_utilities) fn footnotes_carried() -> (i64, i64) {
+  (
+    lookup_int("lx_fm_obs_counter_seen"),
+    lookup_int("lx_fm_obs_steps_carried"),
+  )
+}
+
+/// Set what [`footnotes_carried`] reads.
+pub(in crate::base_utilities) fn set_footnotes_carried((seen, carried): (i64, i64)) {
+  assign_value(
+    "lx_fm_obs_counter_seen",
+    Stored::from(seen),
+    Some(Scope::Global),
+  );
+  assign_value(
+    "lx_fm_obs_steps_carried",
+    Stored::from(carried),
+    Some(Scope::Global),
+  );
+}
+
+/// Digest `tokens` (a block's stamped tokens, `ledger::field_stamped`) under the event bindings and hand the
 /// digested list to `inspect` before discarding it; nothing of it stays. A resource Fatal (the deadline, the memory
 /// budget, a runaway limit) propagates, as does one whose run could not be undone (Fatal stays Fatal); any other Fatal
 /// is the rehearsal's alone, discarded with its diagnostics.
@@ -1410,6 +1435,7 @@ pub(in crate::base_utilities) fn rehearse<R>(
       }
       .boxed(),
       queued,
+      expansions: notes.expansions,
     },
     _ => Rehearsal::Skipped(SkipReason::NotUndone),
   })

@@ -34764,18 +34764,42 @@ whole, which digests to the name and its marks as the block did, as every other 
 personname holds the call). A mark with a position of its own stays as it was: a wrapper's after the name,
 `\textbf{Yizheng Sun\textsuperscript{1}}` (2606.08894), is written apart (P2 B; a draft reading every mark by event
 order wrote "Yizheng Sun 1" into 14 papers' names). The 4 ptephy witnesses (1304.2086, 1601.07691, 1304.7885, 2210.05569)
-lose the by-text overcount; a symbol mark is kept as the PDF prints it (`Yoshiharu Kawamura<sup>∗</sup>`). Not done,
-P3's second half: a macro holding several names and their separators (`\author{\aut}`, ar1), every event's span the
-one token, stays by text, counted (RED `author_one_block/article_author_macro_of_names_written_by_text_red`): the
-rehearsal keeps no record of an expansion's tokens; the fix records a field token's one-level expansion (the core's
-`FieldInvocation::Expanded` hook, `field_notes`) and cuts it at its `Sep(And)` events as `cut_at_separators` does. Left too
-(REDs): a call in a `\parbox` (`ptephy_name_inside_its_call_in_a_parbox_red`) and a document macro's formula mark
+lose the by-text overcount; a symbol mark is kept as the PDF prints it (`Yoshiharu Kawamura<sup>∗</sup>`). P3's
+second half is AUT1, below. Left (REDs): a call in a `\parbox` (`ptephy_name_inside_its_call_in_a_parbox_red`) and a document macro's formula mark
 (`omnibus_author_name_macros_with_marks_keep_them_red`), whose marks `made_by_its_call` does not read as the call's. The
 links and marks that part a name inside a call (`ptephy_name_split_by_a_{link,mark}_invents_a_creator_red`) are the
 reading's, not the writer's. Guard `perfect_kernel_batchp3::a_name_inside_a_macro_call_is_written_from_the_call`; repros
 `class-bindings/author_one_block/{ptephy_name_inside_its_call_is_written_from_the_call,
 ptephy_name_and_cite_inside_its_call_is_written_from_the_call, article_author_name_macro_with_a_font_keeps_it,
 article_author_wrapper_mark_after_the_name_stays_apart, ptephy_author_list_glued_trailing_mark_leaves_the_name}.tex`.
+
+**AUT1 (P3's second half: names held in a document macro).** `\author{\aut}`, Frontiers' `\author{\Authors}` (30 of
+35 census Frontiers papers), CVPR's `\author{\authorBlock}`: every event the macro's expansion digests to has the call's
+one position (`token::inherit_field_prov`), so no name had a run of the block's tokens and each was written by its text,
+its markup lost, counted ("a name its events don't spell", "a macro's span", "a creator call cut where a macro holds its
+names"). The core's field hook now carries the expansion (`FieldInvocation::Expanded(&Tokens)`,
+`gullet::note_field_expansion`: the batch's only core change); the rehearsal keeps the expansion of each own field token
+calling a document macro of no parameters (`field_notes::HeldExpansion`). Where two names, contacts or notes share one
+span inside such a call, the block is rehearsed again with the expansion in the call's place (`reading::unfold_held_names`,
+up to `UNFOLD_LEVELS` = 4 nested macros, the footnote steps carried put back first), and its events and the unfolded
+tokens (`AuthorBlock::unfolded`, read through `AuthorBlock::read_tokens` by every positional reader of the emitter) are
+the block's: a held block reads as its inline twin. An API creator call is unfolded the same way before its cut
+(`emit::rehearsed_unfolded`, acmart's and authblk's `\author{\aut}`). Not unfolded, still by text and counted: a macro
+with parameters, whose cover past its arguments is unknown where the call ends the field (RED
+`article_author_macro_with_parameters_holding_names_red`), a macro a class or package defined, and a re-read that fails
+(over budget, out of positions, a conditional left open across the run): the by-text arms (`block_names`' shared-span
+return, `cut_at_separators`' by-text arm, the contacts' "a macro's span") are that fallback now. With it, a block that
+keeps its marks on the names (`per_author_marks`: OmniBus, a raw class's, revtex's) shows a request whose superscript
+it prints after the name's runs and before the next name's, in no written run, as an unkept one
+(`emit::unwritten_marks_after`): a mark past a gap or a comma (`Ann Able\, $^{1}$ ,`, `Dee Dunn,$^{4}$`, revtex's `Ann
+Able,$^{1,*}$`'s `∗`), held or inline, was lost silently (2209.05831, 2201.04171, 2609.18180, 2403.18314; hep-ph0301204,
+hep-ph0411288 inline). A leading mark (`$^2$Bob Baker`) is no such mark and stays as it was. Perl
+splits at the `\author` call by spelling and gives such a block one creator (Base_Utility.pool.ltxml:679-720). Guards
+`perfect_kernel_batchaut1::a_macro_of_names_is_read_as_its_inline_twin`, the macro-held rows of `perfect_kernel_batchoc1`,
+`oc1c`, `p21`, `p24`, `p27`, `sep1`, `lo4`, `hg1`; repros `class-bindings/author_one_block/article_author_*` (AUT1's),
+`omnibus_author_macro_of_names_mark_after_a_gap_is_shown`; REDs `omnibus_author_math_mark_in_the_name_run_is_italic_red`,
+`article_author_macro_with_parameters_holding_names_red`. Witnesses 2103.13804, 2504.00496, 2112.09018, 2206.01053,
+2311.15269, 2609.00161.
 
 ### 994. The rehearsal binds a `\let` copy of an author-line separator or note command by its meaning, as the command it copies (SEP1)
 

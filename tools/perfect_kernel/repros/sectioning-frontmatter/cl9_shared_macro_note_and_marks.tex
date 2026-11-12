@@ -1,11 +1,14 @@
-% mechanism: two names written from overlapping runs of the block's tokens (one macro prints both) write the author
-%   block whole at =2 (`emit::names_overlap`, Perl's whole-block creator, counted), never each name as its text: the
-%   macro's `\thanks` note and `\footnotemark`s are kept.
+% mechanism: a macro of no parameters printing two names, a `\thanks` and two `\footnotemark`s: read with its expansion in
+%   its place (`reading::unfold_held_names`, AUT1, OD #993), each name its own run and creator, each `\footnotemark` its
+%   name's, the note Ann Able's, Univ Z both authors' line. The overlap path this repro guarded before
+%   (`emit::names_overlap`) is `cl9_shared_parameter_macro_note_and_marks`'s now
 % witness: cond-mat9310042, 1602.03850 (`\author{\small\myauthors \\ …}` under scrartcl); review revX1 finding 1 (q4a)
-% oracle:  pdflatex 0 errors: "Ann Able*1, Bob Baker2 / Univ Z"; footnote "* Univ X."
+% oracle:  pdflatex 0 errors: "Ann Able,†∗ Bob Baker‡ / Univ Z"; footnote "∗ Univ X."
 % engines: off the block whole, note and 2 marks kept (Error 1); int153w =2 each name its text, note and marks lost;
-%   CL9b =2 the block whole, note and marks kept, Warning 1
-% expect:  =2 0 errors; the overlap Warning; one creator holding "Univ X." and 2 marks
+%   CL9b to int167a the block whole, note and marks kept, Warning 1
+% expect:  0 errors, 0 warnings; creators Ann Able (footnote mark 1, note "Univ X.", Univ Z), Bob Baker (footnote mark
+%   2, Univ Z)
+% status:  GREEN (AUT1; guard perfect_kernel_batchaut1)
 \documentclass{scrartcl}
 \newcommand{\myauthors}{Ann Able\thanks{Univ X.}\footnotemark, Bob Baker\footnotemark}
 \begin{document}

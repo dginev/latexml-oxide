@@ -64,7 +64,7 @@ pub(super) fn prefix_tokens(
       };
       joined.push_str(&text);
       if joined.len() > key.len() && joined.starts_with(key) {
-        return Some((event.span?, block.tokens.clone(), block.range.0));
+        return Some((event.span?, block.read_tokens().clone(), block.range.0));
       }
       if !key.starts_with(&joined) {
         return None;

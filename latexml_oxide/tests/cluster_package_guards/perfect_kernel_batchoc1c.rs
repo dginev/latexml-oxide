@@ -3,8 +3,9 @@
 //! call holding the `\and` — acmart's `\author` with no comma, authblk's where its gate finds no kernel separator (a document's renewed `\and`, since P27) —
 //! and that call parts its authors as pdflatex does. The reading cuts it at the `Sep(And)` at its own level, inside its
 //! `\lx@personname` (`resolver::api::creator_call_pieces`), and the emitter writes one creator call per piece
-//! (`emit::creator_call_cut`): by the tokens between the `\and`s where the `\and`'s own tokens part no ink, by each
-//! name's text where a macro holds them together (one counted Warning a piece).
+//! (`emit::creator_call_cut`): by the tokens between the `\and`s where the `\and`'s own tokens part no ink; where a
+//! macro of no parameters holds them together, the call's content is read with its expansion in its place first (AUT1,
+//! `emit::rehearsed_unfolded`; before it, each name by its text, one counted Warning a piece).
 //!
 //! Each row is a distinct path: no author block, the queue route (`emit::cut_creator_calls`) by tokens — a literal
 //! `\and`, a `\csname`, an active character, a document wrapper, each `\and` spelled by other tokens — and by text (a
@@ -69,7 +70,7 @@ fn an_api_creator_call_parts_at_its_own_and() {
         "class-bindings",
         "acmart_author_macro_held_and_parts_the_names"
       ),
-      (0, 2),
+      (0, 0),
       both,
     ),
     (
@@ -77,7 +78,7 @@ fn an_api_creator_call_parts_at_its_own_and() {
         "sectioning-frontmatter",
         "authblk_author_macro_held_and_parts_the_names"
       ),
-      (0, 2),
+      (0, 0),
       &[
         &["Cy Cole", "affiliation=Univ C"][..],
         &["Ann Able", "affiliation=Univ X", "affiliation=Univ Y"][..],
@@ -105,7 +106,7 @@ fn an_api_creator_call_parts_at_its_own_and() {
         "sectioning-frontmatter",
         "authblk_two_macro_held_calls_before_one_affil"
       ),
-      (0, 4),
+      (0, 0),
       &[
         &["Ann Able", "affiliation=Univ X"][..],
         &["Bob Baker", "affiliation=Univ X"][..],
@@ -114,14 +115,15 @@ fn an_api_creator_call_parts_at_its_own_and() {
       ][..],
     ),
     // (two cut calls spelled alike: each matched to its own queue entry. Since P27 (Option C P2-7) authblk's gate reads
-    // the macro-held `\and` by meaning, so each call is a list block the reading cuts: the four names written by their
-    // text, and no longer the content check's false excess Warning — the names print twice, once per call)
+    // the macro-held `\and` by meaning, so each call is a list block the reading cuts, and no longer the content check's
+    // false excess Warning — the names print twice, once per call; since AUT1 the names from the macro's expansion, no
+    // by-text Warning)
     (
       row!(
         "sectioning-frontmatter",
         "authblk_two_alike_macro_held_calls_each_own_affil"
       ),
-      (0, 4),
+      (0, 0),
       &[
         &["Ann Able", "affiliation=Univ X"][..],
         &["Bob Baker", "affiliation=Univ X"][..],

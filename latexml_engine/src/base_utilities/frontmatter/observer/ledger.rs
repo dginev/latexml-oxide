@@ -193,6 +193,9 @@ pub(in crate::base_utilities) struct AuthorBlock {
   /// the argument, as the call received it, and as text
   pub tokens:         Tokens,
   pub source:         String,
+  /// the argument with the document macros printing several names unfolded, which its events are read from
+  /// (`reading::unfold_held_names`); none where it holds no such macro
+  pub unfolded:       Option<Tokens>,
   /// the input at the call: an API call made before any of it is read comes from the call's own expansion
   pub mark:           InputMark,
   /// still the latest block whose expansion has not ended
@@ -203,6 +206,13 @@ pub(in crate::base_utilities) struct AuthorBlock {
   /// for the marks to point to, which the rehearsal reads as one in-block affiliation (`rehearsal::install_event_bindings`);
   /// the emitter writes the call as it is, after the block's names (`emitter::emit::list_setter_runs`, 2502.07804)
   pub list_setter:    Option<&'static str>,
+}
+
+impl AuthorBlock {
+  /// The tokens its events' positions count from [`range`](Self::range)'s start: the argument, or its unfolded reading.
+  pub(in crate::base_utilities) fn read_tokens(&self) -> &Tokens {
+    self.unfolded.as_ref().unwrap_or(&self.tokens)
+  }
 }
 
 /// The S1 stamp of one `\title` call (`\lx@field@mark`).
@@ -796,6 +806,7 @@ pub(in crate::base_utilities) fn record_author_call(
     range: (real_base, real_base + len),
     tokens: stuff.clone(),
     source: stuff.to_string(),
+    unfolded: None,
     mark: input_mark(),
     window_open: true,
     outcome: Outcome::Pending,
@@ -1536,9 +1547,4 @@ pub(in crate::base_utilities) fn field_stamped(
       })
       .collect(),
   )
-}
-
-/// The tokens of `block`, each stamped with its position in the author field, for the rehearsal.
-pub(in crate::base_utilities) fn stamped_block_tokens(block: &AuthorBlock) -> Tokens {
-  field_stamped(2, block.range.0, block.tokens.unlist_ref())
 }
