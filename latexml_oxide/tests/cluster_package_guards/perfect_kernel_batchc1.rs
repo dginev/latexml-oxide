@@ -1293,6 +1293,16 @@ fn group_rule_reads_marks_as_digested() {
         &["Cat Cole 1,2", "affiliation=Uni One", "affiliation=Uni Two"],
       ],
     ),
+    // (CST2: the marks gate reads a name past its tie and accents to the macro printing its mark, 1901.01540's tied names)
+    (
+      repro!("aastex_tied_accented_macro_marked_names_are_no_group"),
+      0,
+      &[
+        &["A. Müller 1", "affiliation=Uni One"],
+        &["B. Baça 1", "affiliation=Uni One"],
+        &["C. Colé 1,2", "affiliation=Uni One", "affiliation=Uni Two"],
+      ],
+    ),
     // (P4b3c, review revP4b3 B1: each label piece of a name's mark is read apart, `requested_labels`: `$^{*,1,2}$` requests
     // 1 and 2, `$^{\dagger 1,2}$` too, so the unmarked head is the requested 1 no line prints, as 2109.01501's; red on
     // P4b3b: a nameless creator holding the block (star first, glued dagger), the block copied onto both (every name

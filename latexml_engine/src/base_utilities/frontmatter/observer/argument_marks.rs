@@ -2,11 +2,15 @@
 //! Mark events of [`read_argument`], the one rehearsal [`super::separators`] reads too. `None` answers "unread", never
 //! "no marks"; a caller falls back to its token reading, counted ([`count_unread`]).
 
+use latexml_core::definition::PrimitiveBody;
+
 use super::{
-  events::{self, Event, EventKind, opening_ink},
+  events::{self, Event, EventKind, is_mark_char, opening_ink},
+  rehearsal,
   separators::{ArgumentReading, read_argument},
   *,
 };
+use crate::setup_binding_language::is_accent_inner;
 
 /// Count an argument the marks query could not read, which `caller` reads by tokens: a `--debug=frontmatter_marks` line
 /// each, the A/B's fallback count until P6 decides.
@@ -17,14 +21,100 @@ pub(in crate::base_utilities) fn count_unread(caller: &str) {
   );
 }
 
-/// Whether `tokens` can print a mark at all: a command, an active character or a superscript.
-fn may_mark(tokens: &[Token]) -> bool {
-  tokens.iter().any(|t| {
-    matches!(
-      t.get_catcode(),
-      Catcode::CS | Catcode::ACTIVE | Catcode::SUPER
-    )
+/// Whether `tokens` can print a mark at all: a command or an active character that may ([`prints`]), read through
+/// parameterless macros' bodies, or a superscript; a character typed in the argument is its text. The marks queries ask
+/// it before their rehearsal (2103.04797's 1,161 `\affiliation{\Amsterdam}`, an institute's name; 1901.01540's 1,204
+/// names, `\author{M.~Soares-Santos}`: not rehearsed).
+fn may_mark(tokens: &[Token]) -> bool { marks_in(tokens, true, MACRO_DEPTH, &mut Vec::new()) }
+
+/// How many macros deep the gates read a body.
+const MACRO_DEPTH: u8 = 8;
+
+/// [`may_mark`] on `tokens`, the argument's own (`typed`) or a body's, `depth` macros deep; `clean` the commands found
+/// to print no mark.
+fn marks_in(tokens: &[Token], typed: bool, depth: u8, clean: &mut Vec<Token>) -> bool {
+  tokens.iter().any(|t| match t.get_catcode() {
+    Catcode::SPACE | Catcode::BEGIN | Catcode::END => false,
+    Catcode::LETTER | Catcode::OTHER => !typed && t.with_str(|s| s.chars().any(is_mark_char)),
+    Catcode::CS | Catcode::ACTIVE => {
+      if clean.contains(t) {
+        return false;
+      }
+      let marks = match prints(t) {
+        Prints::Body(body) if depth > 0 => marks_in(body.unlist_ref(), false, depth - 1, clean),
+        Prints::Nothing | Prints::NoMark => false,
+        _ => true,
+      };
+      if !marks {
+        clean.push(*t);
+      }
+      marks
+    },
+    Catcode::SUPER => true,
+    // (a formula, a `&`: a body's read in the rehearsal)
+    _ => !typed,
   })
+}
+
+/// What a command or an active character prints, as the marks gates read it.
+enum Prints {
+  /// a parameterless macro's body
+  Body(Tokens),
+  /// nothing: a macro of no expansion (`\newcommand\affilfont{}`)
+  Nothing,
+  /// no mark, the tokens after it read on: the kernel's `\relax` and tie (`~`'s `\lx@NBSP`), an accent
+  /// (`accent_inner_name`, on the argument after it), a primitive or a `\chardef` printing no mark character (`\ss`,
+  /// `\&`)
+  NoMark,
+  /// anything: a command the rehearsal binds ([`rehearsal::rebinds`]), a macro taking arguments, any other primitive
+  Any,
+}
+
+/// What `t` prints ([`Prints`]), by its meaning here.
+fn prints(t: &Token) -> Prints {
+  if rehearsal::rebinds(t) {
+    return Prints::Any;
+  }
+  match lookup_meaning(t) {
+    Some(Stored::Expandable(defn)) => {
+      if defn.get_origin().is_latexml_owned() && defn.get_cs().with_str(is_accent_inner) {
+        return Prints::NoMark;
+      }
+      if defn
+        .get_parameters()
+        .is_some_and(|p| !p.get_parameters().is_empty())
+      {
+        return Prints::Any;
+      }
+      match defn.get_expansion() {
+        Some(ExpansionBody::Tokens(body)) => Prints::Body(body.clone()),
+        None => Prints::Nothing,
+        _ => Prints::Any,
+      }
+    },
+    Some(Stored::Primitive(defn)) if defn.origin.is_latexml_owned() => {
+      // (`\relax`, a robust command's `\protect`; the tie, `~`, `\nobreakspace`)
+      let blank = [
+        T_CS!("\\relax"),
+        T_CS!("\\lx@NBSP"),
+        T_CS!("\\lx@nobreakspace"),
+      ]
+      .contains(&defn.cs);
+      match &defn.replacement {
+        _ if blank => Prints::NoMark,
+        Some(PrimitiveBody::String(text)) if !with(*text, |s| s.chars().any(is_mark_char)) => {
+          Prints::NoMark
+        },
+        _ => Prints::Any,
+      }
+    },
+    // (a `\chardef`, `\&`)
+    Some(Stored::Register(reg)) => match reg.chardef_glyph() {
+      Some(glyph) if !with(glyph, |g| g.chars().any(is_mark_char)) => Prints::NoMark,
+      _ => Prints::Any,
+    },
+    _ => Prints::Any,
+  }
 }
 
 /// The events of `arg`, or none read where it cannot print a mark.
@@ -232,7 +322,7 @@ fn own_mark(event: &Event) -> bool {
 /// macros' bodies (8 deep) and on past a body that prints nothing (`\newcommand\affilfont{}`), is no letter or digit,
 /// which TeX prints first. The readers of an opening mark ask it before their rehearsal (2103.04797's 1,161
 /// `\affiliation{\Amsterdam}`, each a macro of an institute's name, not rehearsed).
-fn may_open_with_mark(arg: &Tokens) -> bool { first_may_be_mark(arg.unlist_ref(), 8) }
+fn may_open_with_mark(arg: &Tokens) -> bool { first_may_be_mark(arg.unlist_ref(), MACRO_DEPTH) }
 
 /// [`may_open_with_mark`] on `tokens`, `depth` macros deep.
 fn first_may_be_mark(tokens: &[Token], depth: u8) -> bool {
@@ -247,26 +337,13 @@ fn first_may_be_mark(tokens: &[Token], depth: u8) -> bool {
   let first = &tokens[at];
   match first.get_catcode() {
     Catcode::LETTER | Catcode::OTHER => !first.with_str(|s| s.chars().all(char::is_alphanumeric)),
-    Catcode::CS | Catcode::ACTIVE if depth > 0 => match lookup_definition(first) {
-      Ok(Some(defn))
-        if defn.is_expandable()
-          && defn
-            .get_parameters()
-            .is_none_or(|p| p.get_parameters().is_empty()) =>
-      {
-        match defn.get_expansion() {
-          Some(ExpansionBody::Tokens(body)) => {
-            let mut next = body.unlist_ref().to_vec();
-            next.extend_from_slice(&tokens[at + 1..]);
-            first_may_be_mark(&next, depth - 1)
-          },
-          // (an empty body is no expansion; a conditional has none either)
-          None if defn.get_conditional_type().is_none() => {
-            first_may_be_mark(&tokens[at + 1..], depth - 1)
-          },
-          _ => true,
-        }
+    Catcode::CS | Catcode::ACTIVE if depth > 0 => match prints(first) {
+      Prints::Body(body) => {
+        let mut next = body.unlist();
+        next.extend_from_slice(&tokens[at + 1..]);
+        first_may_be_mark(&next, depth - 1)
       },
+      Prints::Nothing => first_may_be_mark(&tokens[at + 1..], depth - 1),
       _ => true,
     },
     _ => true,

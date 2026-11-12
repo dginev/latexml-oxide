@@ -395,7 +395,7 @@ fn printed_footnote_mark(value: i64) -> Result<String> {
   }
   let mut print = vec![T_BEGIN!(), T_CS!("\\c@footnote")];
   print.extend(Explode!(value));
-  print.extend([T_CS!("\\relax"), T_CS!("\\thefootnote"), T_END!()]);
+  print.extend([T_CS!("\\relax"), T_CS!(THEFOOTNOTE), T_END!()]);
   let mut text = String::new();
   ink_text(&digest(Tokens::new(print))?, &mut text);
   Ok(text.trim().to_string())
@@ -635,11 +635,8 @@ fn let_copies_of_bound_commands(
     if !t.is_executable() || !seen.insert(t) {
       continue;
     }
-    let by_name = t.with_cs_name(|name| {
-      ALWAYS_BOUND.iter().any(|(cs, ..)| *cs == name)
-        || BOUND_WHEN_DEFINED.iter().any(|(cs, ..)| *cs == name)
-        || block_breaks.iter().any(|(cs, _)| *cs == name)
-    });
+    let by_name =
+      t.with_cs_name(|name| bound_by_name(name) || block_breaks.iter().any(|(cs, _)| *cs == name));
     if by_name {
       continue;
     }
@@ -658,6 +655,22 @@ fn let_copies_of_bound_commands(
     }
   }
   found
+}
+
+/// Whether the rehearsal binds the command `name` by its name ([`ALWAYS_BOUND`], [`BOUND_WHEN_DEFINED`]).
+fn bound_by_name(name: &str) -> bool {
+  ALWAYS_BOUND.iter().any(|(cs, ..)| *cs == name)
+    || BOUND_WHEN_DEFINED.iter().any(|(cs, ..)| *cs == name)
+}
+
+/// Whether a rehearsal may give `t` a meaning of its own ([`install_event_bindings`]): what it prints there is not
+/// what its definition here says.
+pub(super) fn rebinds(t: &Token) -> bool {
+  t.with_cs_name(|name| {
+    bound_by_name(name)
+      || BOUND_IN_A_BLOCK.iter().any(|(cs, _)| *cs == name)
+      || [SINK, SINK_MEANING, THEFOOTNOTE].contains(&name)
+  })
 }
 
 /// What a block's own API calls are in its rehearsal, read as digested: an API call's content, rehearsed alone, has no names
@@ -701,6 +714,9 @@ const BOUND_WHEN_DEFINED: &[(&str, &str, bool)] = &[
 /// `perfect_kernel_batchfms2a1::title_footnote_hook_overrides_fnsymbol`,
 /// `perfect_kernel_batch78o::declared_title_thefootnote_prints_the_marks_the_observer_labels`.
 const TITLE_FOOTNOTE_HOOK: &str = crate::latex_constructs::TITLE_THEFOOTNOTE;
+
+/// The footnote mark's command, which the rehearsal binds to the title's marks ([`install_event_bindings`]).
+const THEFOOTNOTE: &str = "\\thefootnote";
 
 /// Bind the Layer-B event commands, in the rehearsal's group, and the title's footnote marks: `\thefootnote` the
 /// declared [`TITLE_FOOTNOTE_HOOK`] when there is one; else, as the block's conventions say (`title_marks`), the
@@ -751,15 +767,11 @@ fn install_event_bindings(
     let_i(&T_CS!(SINK), &T_CS!("\\lx@fm@obs@add"), None);
   }
   if lookup_definition(&T_CS!(TITLE_FOOTNOTE_HOOK))?.is_some() {
-    let_i(&T_CS!("\\thefootnote"), &T_CS!(TITLE_FOOTNOTE_HOOK), None);
+    let_i(&T_CS!(THEFOOTNOTE), &T_CS!(TITLE_FOOTNOTE_HOOK), None);
   } else if title_marks == TitleMarks::Fnsymbol
     && lookup_definition(&T_CS!("\\@fnsymbol"))?.is_some()
   {
-    let_i(
-      &T_CS!("\\thefootnote"),
-      &T_CS!("\\lx@fm@obs@thefootnote"),
-      None,
-    );
+    let_i(&T_CS!(THEFOOTNOTE), &T_CS!("\\lx@fm@obs@thefootnote"), None);
   }
   for (cs, target, needs_argument) in BOUND_WHEN_DEFINED {
     if !block_breaks.iter().any(|(declared, _)| declared == cs)
@@ -1182,8 +1194,7 @@ pub(in crate::base_utilities) fn rehearse<R>(
   inspect: impl FnOnce(&Digested) -> R,
 ) -> Result<Rehearsal<R>> {
   // (read before anything is changed: the counter the bare `\footnotemark`s print from)
-  let footnotes =
-    footnote_counter().is_some() && lookup_definition(&T_CS!("\\thefootnote"))?.is_some();
+  let footnotes = footnote_counter().is_some() && lookup_definition(&T_CS!(THEFOOTNOTE))?.is_some();
   let counter = if footnotes {
     counter_value("footnote")?.value_of()
   } else {

@@ -731,7 +731,7 @@ impl Definition for Register {
           )
         } else {
           let value = self.value.clone().unwrap().value_of();
-          let glyph = font::decode_str(value as u8, None, false).unwrap_or_else(|| pin!(""));
+          let glyph = self.chardef_glyph().unwrap_or_else(|| pin!(""));
           // Perl CharDef.pm L61-62: a TEXT \chardef invoked IN math still
           // gets its unicode math properties, so the dump's `\&` (CD 38)
           // in `$\&\&$` carries role/meaning instead of injecting a bare
@@ -825,6 +825,18 @@ impl Definition for Register {
 }
 
 impl Register {
+  /// What a `\chardef` prints here: its math glyph, or its code's glyph in the current font's encoding (as
+  /// `invoke_primitive` digests it); `None` for any other register.
+  pub fn chardef_glyph(&self) -> Option<SymStr> {
+    if !matches!(self.register_type, RegisterType::CharDef) {
+      return None;
+    }
+    if let Some(glyph) = self.mathglyph {
+      return Some(arena::pin_char(glyph));
+    }
+    let value = self.value.clone()?.value_of();
+    font::decode_str(value as u8, None, false)
+  }
   /// The State key of this register's value for `args` (Perl Register.pm:52-56, the address
   /// followed by the arguments' text). A number argument (`\count255`) is written as its
   /// digits directly; any other argument by `text`, the caller's rendering of it.
