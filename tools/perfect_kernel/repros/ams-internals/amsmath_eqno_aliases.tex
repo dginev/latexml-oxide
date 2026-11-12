@@ -1,0 +1,20 @@
+% witness: 1409.3102 (SO3control2a.tex:101 `\let\veqno\@@leqno`); amsmath.sty:2767-2771 `\@@eqno`, `\@@leqno`, `\veqno`
+% oracle:  pdflatex 0 errors (tags "(1)", "(2)", "(3)" beside their formulas; "After.")
+% engines: rust int160b = 2 errors (`\veqno` undefined, then `\let` to the undefined `\@@leqno`; tags (1) and (2)
+%          inside their formulas; `\@@eqno` already is Base_Deprecated's); Perl the same (amsmath.sty.ltxml defines none)
+% expect:  0 errors, 0 warnings; three displayed equations, each with its tag (1), (2), (3) and no tag text in the math
+% status:  RED (int160b) -> GREEN (PI1)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\makeatletter
+\newcommand{\LeftEqNo}{\let\veqno\@@leqno}
+\newcommand{\RightEqNo}{\@@eqno}
+\makeatother
+\begin{document}
+$$ a=b \veqno(1) $$
+\LeftEqNo
+$$ c=d \veqno(2) $$
+$$ e=f \RightEqNo(3) $$
+After.
+\end{document}

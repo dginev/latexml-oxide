@@ -450,14 +450,18 @@ LoadDefinitions!({
   // runs them in that order: a local `reqno` beats a global `leqno`, and
   // amsart's default `leqno` plus `[reqno]` gives right tags (Perl's binding
   // declares `reqno` first; DIVERGENCES #336).
+  // amsmath.sty:53 `\newif\iftagsleft@`, set by `leqno`/`reqno` (:54-55); read at :2771 for `\veqno`.
+  DefConditional!("\\iftagsleft@");
   DeclareOption!("leqno", {
     assign_mapping("DOCUMENT_CLASSES", "ltx_leqno", Some(Stored::Bool(true)));
+    Let!("\\iftagsleft@", "\\iftrue");
   });
   // Perl `ltx_leqno => undef`: remove the class. `Some(Stored::None)` stored
   // the key, so `\documentclass[reqno]{amsart}` read `ltx_leqno` once the
   // options were processed (56ku A/B: 2605.02221).
   DeclareOption!("reqno", {
     assign_mapping("DOCUMENT_CLASSES", "ltx_leqno", None::<bool>);
+    Let!("\\iftagsleft@", "\\iffalse");
   });
   DeclareOption!("fleqn", {
     assign_mapping("DOCUMENT_CLASSES", "ltx_fleqn", Some(Stored::Bool(true)));
@@ -2258,13 +2262,17 @@ Extra braces must be added to prevent wrong output}\@ehc}
   // `\pseudocode` without `width=`; zx-calculus 3, Perl identical, pdflatex
   // clean). amsmath's "no columns measured" default is the empty list.
   Let!("\\maxcolumn@widths", "\\@empty");
-  DefConditional!("\\iftagsleft@");
   // amsmath.sty:1289 `\newif\iftag@` (a tag is pending; xreview sets it)
   // and :1292 `\newif\ifshifttag@`.
   DefConditional!("\\iftag@");
   DefConditional!("\\ifshifttag@");
   // `\if@fleqn` moved up (before the options block, Perl L53 / #2835) so the
   // `fleqn` option can `\Let` it to `\iftrue`.
+  // amsmath.sty:2767-2771, which authors alias (1409.3102 `\let\veqno\@@leqno`).
+  RawTeX!(
+    r"\let\@@eqno\eqno \let\@@leqno\leqno
+\let\veqno=\@@eqno \iftagsleft@ \let\veqno=\@@leqno \fi"
+  );
 });
 
 /// amsmath's macro accent `\<name>#1` over LaTeXML's own `\<name>` accent, kept as `\lx@ams@kernel@<name>`.

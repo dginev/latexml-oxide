@@ -1,0 +1,14 @@
+% witness: synthetic (sibling of 1409.3102's alias); amsmath.sty:54 `leqno` sets `\tagsleft@true`, :2771
+%          `\iftagsleft@ \let\veqno=\@@leqno \fi`
+% oracle:  pdflatex 0 errors (the tag "(1)" left of the formula; `\iftagsleft@` true prints "L")
+% engines: rust int160b = 1 error (`\veqno` undefined, the tag inside the formula) and "R" (`leqno` left
+%          `\iftagsleft@` false); Perl the same error
+% expect:  0 errors, 0 warnings; the equation holds its tag (1); the text reads "L."
+% status:  RED (int160b) -> GREEN (PI1)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[leqno]{amsmath}
+\begin{document}
+$$ a=b \veqno(1) $$
+\makeatletter\iftagsleft@ L\else R\fi\makeatother.
+\end{document}

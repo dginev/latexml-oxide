@@ -3,6 +3,8 @@
 use crate::prelude::*;
 
 LoadDefinitions!({
+  // microtype.sty:189-190; etoolbox is sometimes used as implied (Perl's binding, arXiv:2507.04590).
+  RequirePackage!("keyval");
   RequirePackage!("etoolbox");
 
   // All microtypography macros are no-ops.
