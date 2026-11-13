@@ -296,6 +296,48 @@ Rules that keep this file honest and mergeable:
   - CORERES — latexml_core residue (`2026-11-13_CORE0_report.md`): uncalled `dump_frame_bindings` (stomach.rs), `merge_selected_font` (content.rs; sect13.rs:2568's stale comment), `memory_fatal_seen` (watchdog.rs; check MEMORY_FATAL_SEEN's reader first); cache `LXML_TRACE_NODE_BOXES` / `LATEXML_EXPL_TRACE`; arena.rs `first_bytes` aliasing → through `with`; pathname.rs `set_var("TEXMFROOT")` — its thread context unverified (the prewarm may run on a background thread); one frame-id counter (`NEXT_FRAME_ID` / `FRAME_SERIAL`); 2
   - CMTLEN — comment length: 4.8k lines of latexml_core sit in 6+-line comment blocks (BM's "short comments"); the narrative to OD entries, every witness id kept (`2026-11-13_CORE0_report.md`); 2
   - MATHAB — A/B analysis: skip parsed-math-only changes when the `tex=` attributes are equal — the math parser's limits are wall-clock, 25 of int171a's 81 changed papers flipped under load (`2026-11-13_CL171b_report.md`); 1
+  - WIN1 — the suite on the CURRENT TeX Live (tlnet r81108; Windows CI installs the latest, Linux CI's apt TL is a 2026-01 snapshot): 67 red, all package drift (babel, tcolorbox, fontspec, latex-lab, aliascnt, …), detail and install recipe in "WIN1" below; 5
+
+### WIN1 — the suite on the current TeX Live (found by the Windows CI bring-up, 2026-11-13)
+
+- **Why it surfaces on Windows first:** `windows-ci-manual-trigger.yml` installs the latest TeX Live (`TeX-Live/setup-texlive-action`); Linux CI uses Ubuntu's `texlive 2025.20260124`. None of the rows below is Windows-specific: each reproduces on any host whose TL2026 is updated (`tlmgr update --all`, 2026-11-13).
+- **The TeX Live it was found on:** TL 2026 from tlnet at repository revision **81108** (tlmgr's catalog, 2026-11-13), CI's package set (`windows-ci-manual-trigger.yml`): `scheme-medium` + `collection-{latexextra,mathscience,bibtexextra,publishers,fontsextra,langgerman,langfrench,langgreek,langcyrillic}` + `dvipng`.
+- **Revisions that matter (`tlmgr info --only-installed --data name,revision <pkg>`):** latex, latex-lab, graphics, tools r80868; l3kernel r80334; babel r81049; fancyvrb r80718; tcolorbox r79191; fontspec r79934; biblatex r80368; pgf r79866; aliascnt r79461; hyperref r80959; polyglossia r80238; ieeeconf r79618.
+- **tlnet keeps no daily snapshots:** an install made later gets these revisions or newer — compare with the line above; a newer one may add rows, not remove them.
+- **Install recipe (Linux, beside any distro TeX):**
+
+  ```bash
+  mkdir -p ~/tl2026-win1 && cd ~/tl2026-win1
+  curl -LO https://mirror.ctan.org/systems/texlive/tlnet/install-tl-unx.tar.gz
+  tar xzf install-tl-unx.tar.gz --strip-components=1
+  cat > win1.profile <<'EOF'
+  selected_scheme scheme-medium
+  TEXDIR /opt/texlive-win1/2026
+  TEXMFLOCAL /opt/texlive-win1/texmf-local
+  TEXMFSYSVAR /opt/texlive-win1/2026/texmf-var
+  TEXMFSYSCONFIG /opt/texlive-win1/2026/texmf-config
+  instopt_adjustpath 0
+  tlpdbopt_install_docfiles 0
+  tlpdbopt_install_srcfiles 0
+  EOF
+  sudo ./install-tl --profile=win1.profile
+  export PATH=/opt/texlive-win1/2026/bin/x86_64-linux:$PATH
+  sudo env PATH=$PATH tlmgr install collection-latexextra collection-mathscience collection-bibtexextra \
+    collection-publishers collection-fontsextra collection-langgerman collection-langfrench \
+    collection-langgreek collection-langcyrillic dvipng
+  sudo env PATH=$PATH tlmgr update --self --all
+  ```
+
+- **Then, in the checkout:** with that PATH, `KPSEWHICH=$(command -v kpsewhich) cargo build` (the build-time link decision is cached until `KPSEWHICH` changes — PATH is not tracked), `tools/make_formats.sh` (its zero-error gate is the WIN1 kernel guard), and `cargo nextest run --workspace -E 'test(/<name>/)'` per row below. The dual-TL guard pins `TEXMF*` to the PATH tree.
+- **State on this TeX Live (Windows, `ci` profile, branch `ci/windows-latest-texlive`):** 8096 tests, 67 red — all package drift (rows below); every Windows-only failure is fixed on the branch (CHANGELOG "Unreleased"): the kernel's `\file_get:nnN{glyphtounicode}` at format build (137 init errors → 0), the linked-kpathsea probe (a 3-line article 7.2 s → 0.7 s; the whole suite ~16 min at 16 threads), the locator's `.index.tex` source names, the `\\?\` source directory, the texlua frames, `make_formats.ps1`'s gate, and Windows paths in tests.
+- **WIN1a, babel r81049 (26.16, 2026/11/10):** `undefined:\mainlocalename` (babel.sty:658/:1190 `\let\mainlocalename` from the main language; our language loading skips it). 18 red: `81_babel german_test`, `cluster_thousands_separator_eu`, the streaming shard 0, and `perfect_kernel_*` babel_extras_hooks, babel_ngerman_umlaut_shorthands, german_sty_germantex_switch, mdwtab_hlx, bare_babel_takes_the_class_language, microtype_babel_kerning, shorthandoff_star, utf8_input_keeps_latin1 (bibarts), today_follows_the_babel_language, autoref_names_follow_the_babel_language, gbrief_letter, shorthandoff_reports…, the_doors_stay_the_formats_macros, french_high_punctuation.
+- **WIN1b, tcolorbox r79191 (6.10.0, 2026/05/28):** `undefined:\tcb@proc@options@init` (tcolorbox_sty.rs:898 `tcb_listing_startend`, tcblistingscore_code_tex.rs:132). 6.10 renamed it `\__tcobox_proc_options_init:nn` (tcolorbox.sty:2472, same `{init}{name}`) and moved the counter wiring into expl3 (`\__tcobox_proc_counter_addcounter:n` appends `code={…\thetcbcounter…\stepcounter}` to `\tcb@new@colopt`, :2428-2444). Calling the new name alone is not enough (tried): `\thetcbcounter` stays undefined and `readBalanced` runs out unbalanced — `tcb_counter_step_code` must follow the `\tcb@new@colopt` path, keeping the old one for ≤ 6.9. 15 red: `cluster_newtcblisting_leading_optarg` and the tcb guards of batches 40_43, 54, 59, 77m, 78g.
+- **WIN1c, fontspec r79934:** `undefined:\UnicodeFontFile`. 11 red: batch54 font_exists_test, fontspec_definers, physics2_* ×2; batch56 fourier_mathbb, setmathfont_version, unicode_math_rebinds, xetex_only_packages; batch60 fontspec_selects_tu, fontspec_text_is_tu; batchm1 ijsra_abstract.
+- **WIN1d, latex-lab r80868 (the November kernel):** `LaTeX socket Error: Socket 'tagsupport/{minipage,parbox}/{before,after}' already declared!` — declared by both the kernel and a latex-lab file we load. 9 red: class_census documentmetadata_loads_pdfmanagement; batch54 documentmetadata_loads_tagpdf, documentmetadata_tikz_alt_key, pdffile_and_pdfdict; batch56 sweep44_single_name_gaps, testphase_tagging_sockets, xcolor_definecolor_bridges; batchm1 block_instances; the streaming shard 1. Also `Socket 'caption/label' undeclared!`: batch60 autoref_name_diagnostics, batch74b asmejour_keywords (+ `undefined:\setlist`).
+- **WIN1e, aliascnt r79461:** now warns `Package aliascnt Warning: The package is obsolete`, one Warning more for each guard that counts them `(0, 1)`: batch66h lipics_autoref_alias, batch68g aliascnt_autoref_names_the_alias + llncs_aliascntresetthe, batch77c pasa_era_pushfilename, batch97c svproc_institute_is_each_authors. Decide: an Info for a package's obsolescence notice, or the guards count it.
+- **WIN1f, biblatex r80368:** `undefined:\DeclareDatafieldSet` — batch54 biblatex_style_internal_surface, style_def_printbibliography_override.
+- **WIN1g, fancyvrb r80718 (4.8, 2026/10/20):** every `Verbatim` line ends with a space (`TEST 1  ABC ` for `TEST 1  ABC`): `00_tokenize fancyvrb_test`, `fancyvrb_frame_test`. fancyvrb_sty.rs raw-loads the .sty (`InputDefinitions!(noltxml)`); see what 4.8 changed in its line read (`\FV@PreProcessLine`, fancyvrb.sty:200-300).
+- **WIN1h, single rows:** `86_tikz unit_tests_by_silviu_test` — S14's second picture opens a new paragraph (golden line 1867; pgf r79866); batch56 polyglossia_script_check (`The current main roman font, cmr10, does not …`, polyglossia r80238); batch61 csvsimple_rows_in_a_siunitx_column (`Extra alignment tab '&'`); batch68d author_file_stand_ins — `ieeeconf.cls` is now a TeX Live file (r79618): drop it from `AUTHOR_FILE_STAND_INS` or move it to `FORMER_TEX_LIVE`'s opposite.
 
 ### The road — conclusions (row R; its history in the archive's SYNC3 section)
 
