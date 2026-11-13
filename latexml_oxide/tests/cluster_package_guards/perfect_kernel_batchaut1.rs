@@ -151,7 +151,8 @@ fn a_macro_of_names_is_read_as_its_inline_twin() {
 /// GRP1: a declaration the block makes is replayed whole, cut from the tokens its events were read from (the unfolded ones), as
 /// far as its call read (`field_notes::note_call_read`), or taken back by a box of that call. One row per path: a macro's
 /// `\ifthenelse` unfolded (2605.24599), babel's robust `\foreignlanguage` (2606.14878), a macro `\begin` running the kernel's
-/// `{CJK*}` (2606.12938), and the safe side, a robust call defining after it printed, replayed for a later name.
+/// `{CJK*}` (2606.12938), and the safe side, a robust call defining after it printed, replayed for a later name, and a raw
+/// class's `\received` in the block (Taylor & Francis: 0809.5152, 1110.6375, 0906.2789; declined before GRP1).
 #[test]
 fn a_declaration_is_replayed_as_far_as_its_call_read() {
   assert_rows(&[
@@ -204,6 +205,20 @@ fn a_declaration_is_replayed_as_far_as_its_call_read() {
       creators: Creators::Whole(&[
         r#"<creator role="author"><personname>Ann Lee<sup>1</sup></personname></creator>"#,
         r#"<creator before="  " role="author"><personname>Bob Ray<sup><text font="italic">2</text></sup> (with Ann Lee)</personname></creator>"#,
+      ]),
+    },
+    // (the date the source's, "12 May 2008": the date lost and "may 2008" unclaimed were two of CAU1's three Warnings)
+    Row {
+      repro:    repro!(
+        "class-bindings/author_one_block/raw_class_author_received_declaration_is_replayed"
+      ),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation"><text font="italic">Univ A</text></contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks"><sup>∗</sup>Corresponding author. Email: bob@a.edu</note><contact name="Affiliation: " role="affiliation"><text font="italic">Univ A</text></contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Cy Cole</personname><contact name="Affiliation: " role="affiliation"><text font="italic">Univ B</text></contact></creator>"#,
       ]),
     },
   ]);

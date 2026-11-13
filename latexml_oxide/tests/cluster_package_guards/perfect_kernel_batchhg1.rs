@@ -843,12 +843,12 @@ fn reds_keep_their_counts_and_right_parts() {
       lines:    &[
         r#"Warning:unexpected:frontmatter Frontmatter content check: 1 notes the author blocks print with no word are missing from the placed frontmatter: \thanks{\dots}."#,
       ],
-      // (the logos' notes written since LOGO1: a constant template's text is ink, `util_text::printed_own_text`)
+      // (the logos' notes whole since LOGO1: a constant template's text is ink, `util_text::printed_own_text`)
       creators: Creators::Hold(&[
         r#"<personname>Ann Able</personname>"#,
-        r#"<personname>Bob Baker</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks"><text class="ltx_LaTeX_logo""#,
-        r#"<personname>Cat Cole</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks"><text class="ltx_TeX_logo""#,
-        r#"<personname>Dan Doe</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks"><text class="ltx_LaTeX_logo""#,
+        r#"<personname>Bob Baker</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks"><text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.1em">L<text cssstyle="font-variant:small-caps;" yoffset="0.4ex">a</text>T<text cssstyle="font-variant:small-caps;font-size:120%" yoffset="-0.2ex">e</text>X</text></note></creator>"#,
+        r#"<personname>Cat Cole</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks"><text class="ltx_TeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.2em">T<text cssstyle="font-variant:small-caps;font-size:120%;" yoffset="-0.2ex">e</text>X</text></note></creator>"#,
+        r#"<personname>Dan Doe</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks"><text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0.2em; margin-right:0.1em">L<text cssstyle="font-variant:small-caps;" yoffset="0.4ex">a</text>T<text cssstyle="font-variant:small-caps;font-size:120%" yoffset="-0.2ex">e</text>X 2<text cssstyle="font-style:italic" yoffset="-0.3ex">ε</text></text></note></creator>"#,
       ]),
     },
     Row {
