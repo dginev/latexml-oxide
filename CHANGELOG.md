@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+  - **etoc binding (#760).** `\localtableofcontents` now lists the enclosing
+    chapter's or section's units, to the depth `\etocsetnexttocdepth` sets, and
+    `\tableofcontents` stays the document's contents; `\invisibletableofcontents`
+    prints nothing, as in etoc. A `<ltx:TOC>` whose `scope` is a unit's `xml:id`
+    lists that unit's children (the schema's documented meaning; Perl reads only
+    `global`).
   - **`{verbatim}` honours upquote (#801).** With `\usepackage{upquote}`, the
     `verbatim` and `verbatim*` environments now print `'` and `` ` `` upright, as
     fancyvrb's `Verbatim` and `\verb` already did and as pdflatex prints all of

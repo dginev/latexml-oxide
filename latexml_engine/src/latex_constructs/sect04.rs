@@ -711,7 +711,7 @@ fn after_heading_hook(whatsit: &mut Whatsit) -> Result<()> {
 /// only) yields `[part]` and `{-2}` or lower yields `select=''` (an empty ToC). Computed in SIGNED space: `tocdepth` is a
 /// signed counter, so the old `value_of() as usize` wrapped on negatives — a debug overflow panic, and in release a
 /// silently over-full ToC (`{-2}` listed everything).
-fn toc_select() -> Result<String> {
+pub fn toc_select() -> Result<String> {
   let s = [
     "ltx:part",
     "ltx:chapter",

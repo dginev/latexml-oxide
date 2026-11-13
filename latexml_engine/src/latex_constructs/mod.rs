@@ -8795,7 +8795,7 @@ pub use sect01::{
 mod sect02;
 mod sect03;
 mod sect04;
-pub use sect04::kernel_chapter_with_warning;
+pub use sect04::{kernel_chapter_with_warning, toc_select};
 mod sect05;
 pub use sect05::note_title_page_part;
 pub(crate) use sect05::{

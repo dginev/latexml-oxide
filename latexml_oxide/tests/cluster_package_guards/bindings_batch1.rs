@@ -95,3 +95,53 @@ fn verbatim_quotes_follow_upquote() {
     "{xml}"
   );
 }
+
+/// Issue #760: etoc's `\localtableofcontents` lists the enclosing section's subsections, to `\etocsetnexttocdepth`'s
+/// depth, `\tableofcontents` the document's sections, `\invisiblelocaltableofcontents` nothing (pdflatex, two runs).
+/// Red: 2 Errors (both commands undefined), one table.
+#[test]
+fn etoc_local_table_lists_the_unit() {
+  if !kpse_has("etoc.sty") {
+    return;
+  }
+  let tex = repro!("package-bindings", "etoc_local_table_lists_the_unit.tex");
+  let xml = clean(tex);
+  assert_element(
+    &xml,
+    "ltx:TOC",
+    &["scope=\"S1\""],
+    "<TOC lists=\"toc\" scope=\"S1\" select=\"ltx:part | ltx:chapter | ltx:section | ltx:subsection | ltx:appendix | \
+     ltx:index | ltx:bibliography\"><title>Contents</title></TOC>",
+  );
+  assert_eq!(xml.matches("<TOC ").count(), 2, "{xml}");
+  let html = latexml::util::test::convert_to_html_page(tex).expect("HTML");
+  let tables: Vec<String> = html
+    .split("<nav class=\"ltx_TOC")
+    .skip(1)
+    .map(|nav| {
+      let nav = &nav[nav.find('>').map_or(0, |at| at + 1)..nav.find("</nav>").unwrap_or(nav.len())];
+      let mut text = String::new();
+      let mut in_tag = false;
+      for c in nav.chars() {
+        match c {
+          '<' => in_tag = true,
+          '>' => {
+            in_tag = false;
+            text.push(' ');
+          },
+          c if !in_tag => text.push(c),
+          _ => {},
+        }
+      }
+      text.split_whitespace().collect::<Vec<_>>().join(" ")
+    })
+    .collect();
+  assert_eq!(
+    tables,
+    [
+      "Contents 1 First section 2 Second section",
+      "Contents 1.1 First subsection 1.2 Second subsection"
+    ],
+    "{html}"
+  );
+}

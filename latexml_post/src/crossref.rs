@@ -1493,9 +1493,17 @@ impl CrossRef {
       // *page* hierarchy (parent → its pageid → …) and taking the root page's
       // `pageid`. Default scope (`current` or absent) keeps the current-page id,
       // so the inline `\tableofcontents` placeholder stays page-local.
-      if toc.get_attribute("scope").as_deref() == Some("global") {
-        id = self.get_root_page_id(&id);
-      }
+      // Any other scope is the xml:id of the unit whose children it lists (LaTeXML.rnc `TOC_attributes`: "otherwise
+      // an xml:id"; etoc's `\localtableofcontents`, etoc_sty.rs; Perl reads only `global`).
+      let scope = toc.get_attribute("scope").unwrap_or_default();
+      let unit = match scope.as_str() {
+        "global" => {
+          id = self.get_root_page_id(&id);
+          None
+        },
+        "" | "current" => None,
+        unit => Some(unit),
+      };
       let show = toc
         .get_attribute("show")
         .unwrap_or_else(|| self.toc_show.clone());
@@ -1523,7 +1531,17 @@ impl CrossRef {
       // (`gentoc_context`), which forces `lists={toc}`. Any other value yields
       // no toclist (Perl leaves `@list` empty).
       let format = toc.get_attribute("format").unwrap_or_default();
-      let list = if format.is_empty() || format.starts_with("normal") {
+      let list = if let Some(unit) = unit {
+        let children = self
+          .db
+          .lookup(&format!("ID:{unit}"))
+          .map(|e| e.get_children().to_vec());
+        children
+          .unwrap_or_default()
+          .iter()
+          .flat_map(|child| self.gen_toc(child, &show, types.as_ref(), &lists, None, None))
+          .collect()
+      } else if format.is_empty() || format.starts_with("normal") {
         self.gen_toc(&id, &show, types.as_ref(), &lists, None, None)
       } else if format == "context" {
         let toc_lists: HashSet<&str> = HashSet::from_iter(["toc"]);
