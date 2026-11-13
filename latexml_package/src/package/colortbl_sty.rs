@@ -206,9 +206,8 @@ LoadDefinitions!({
   // tabularht/keyvaltable `\CT@arc@`): the binding stands in for colortbl.sty
   // (Perl colortbl.sty.ltxml omits them too). `\CT@everycr` MUST be the
   // `\everycr` toks register (colortbl.sty:116 `\let\CT@everycr\everycr` —
-  // tabu assigns to it and `\the`s it); the colour painters are the
-  // unrendered rule/cell colours (:75-166 `\let…\relax`/`\@empty`), so they
-  // are the same no-ops as the public `\arrayrulecolor`. Witness
+  // tabu assigns to it and `\the`s it); the cell colour painters are unrendered
+  // (:75-166 `\let…\relax`/`\@empty`), the rule colours `\CT@arc@`/`\CT@drsc@` as colortbl's (below). Witness
   // srdp-mathematik (`\multiplechoice` → raw tabu). Guard:
   // `perfect_kernel_batch54::colortbl_internal_surface_is_defined`.
   Let!("\\CT@everycr", "\\everycr");
@@ -216,19 +215,73 @@ LoadDefinitions!({
     r"\let\CT@arc@\relax \let\CT@drsc@\relax \let\CT@do@color\relax
 \let\CT@@do@color\relax \let\CT@column@color\@empty \let\CT@row@color\relax
 \let\CT@cell@color\relax \let\CT@color\relax \let\CT@setup\relax
-\let\CT@start\relax \let\CT@end\relax \let\CT@LT@sep\relax
+\let\CT@LT@sep\relax
 \def\CT@extract#1#2#3#4{}"
   );
-  // Perl L85/L88: `\arrayrulecolor`, `\doublerulesepcolor` — ignored, the rule colour unrendered. Their argument is what
-  // colortbl.sty:156-164 reads, `\def\arrayrulecolor#1#{\CT@arc{#1}}` and `\def\CT@arc#1#2{…}`: everything up to the
-  // first `{` (the `[model]`, or nothing), then that group — so `\arrayrulecolor\hhline{---~~~}` takes the `\hhline`
-  // and its spec, as pdflatex does, where Perl's `[]{}` takes `\hhline` alone and leaves the spec a cell's text between
-  // rows ("\noalign cannot be used here", 1910.02206; KNOWN_PERL_ERRORS #889). Guard
-  // `perfect_kernel_batch69a::arrayrulecolor_reads_to_the_brace`.
+  // colortbl.sty:119-135: the rule colours are saved as a tabular or array starts and restored, globally, as it ends
+  // (there `\@tabarray`, `\endarray`), so an `\arrayrulecolor` inside a table holds to its end. A tabular's hooks are
+  // between its rows, where a save is no cell's local: a stack, one level per open table.
   RawTeX!(
-    r"\def\arrayrulecolor#1#{\lx@CT@gobble@color{#1}}\def\doublerulesepcolor#1#{\lx@CT@gobble@color{#1}}
-\def\lx@CT@gobble@color#1#2{}"
+    r"\newcount\lx@CT@depth
+\def\lx@CT@push{\global\advance\lx@CT@depth\@ne
+  \expandafter\global\expandafter\let\csname lx@CT@arc@\the\lx@CT@depth\endcsname\CT@arc@
+  \expandafter\global\expandafter\let\csname lx@CT@drsc@\the\lx@CT@depth\endcsname\CT@drsc@}
+\def\lx@CT@pop{\ifnum\lx@CT@depth>\z@
+  \expandafter\global\expandafter\let\expandafter\CT@arc@\csname lx@CT@arc@\the\lx@CT@depth\endcsname
+  \expandafter\global\expandafter\let\expandafter\CT@drsc@\csname lx@CT@drsc@\the\lx@CT@depth\endcsname
+  \global\advance\lx@CT@depth\m@ne\fi}
+\def\CT@start{\lx@hidden@noalign{\lx@CT@push}}\def\CT@end{\lx@hidden@noalign{\lx@CT@pop}}
+\let\lx@CT@array@bindings\@array@bindings \def\@array@bindings{\lx@CT@push\lx@CT@array@bindings}
+\let\lx@CT@end@array\@end@array \def\@end@array{\lx@CT@end@array\lx@CT@pop}"
   );
+  for (hook, cs) in [
+    ("\\@tabular@before", "\\CT@start"),
+    ("\\@tabular@after", "\\CT@end"),
+  ] {
+    let (hook, tokens) = (T_CS!(hook), Tokens!(T_CS!(cs)));
+    AddToMacro!(hook, tokens);
+  }
+  // colortbl.sty:156-164: `\arrayrulecolor` stores `\color[model]{colour}` in `\CT@arc@`, evaluated as each rule is
+  // drawn; its argument runs to the first `{` and takes that group, so `\arrayrulecolor\hhline{---~~~}` takes the
+  // `\hhline` and its spec, as pdflatex does (1910.02206; Perl's `[]{}` left the spec a cell, KNOWN_PERL_ERRORS #889;
+  // guard `perfect_kernel_batch69a::arrayrulecolor_reads_to_the_brace`). Between rows it is `\noalign` material.
+  // `\doublerulesepcolor` is stored alike, unrendered (a border has no colour for the gap of `||`).
+  RawTeX!(
+    r"\def\arrayrulecolor#1#{\CT@arc{#1}}\def\CT@arc#1#2{\lx@hidden@noalign{\gdef\CT@arc@{\color#1{#2}}}}
+\def\doublerulesepcolor#1#{\CT@drs{#1}}\def\CT@drs#1#2{\lx@hidden@noalign{\gdef\CT@drsc@{\color#1{#2}}}}"
+  );
+  // colortbl.sty:166-192 draws `\hline`, `\cline` and `|` as `{\CT@arc@ <rule>}`: here the colour `\CT@arc@` gives
+  // is the next rule's border colour (`alignment::RULE_COLOR`), the default black none. A `|` is drawn at its cell's
+  // end, after the cell's template (a `\multicolumn`'s, its own). Beyond Perl (a no-op, colortbl.sty.ltxml:85): OD #1025 (#773).
+  DefPrimitive!("\\lx@CT@arc@draw", {
+    let arc = T_CS!("\\CT@arc@");
+    let mut color = None;
+    if !arc.defined_as(&T_CS!("\\relax")) {
+      bgroup();
+      digest(Tokens!(arc))?;
+      color = lookup_font()
+        .and_then(|font| font.color)
+        .map(|color| color.to_attribute())
+        .filter(|color| *color != common::color::BLACK.to_attribute());
+      egroup()?;
+    }
+    if color.is_some() || lookup_value(alignment::RULE_COLOR).is_some() {
+      let value = color.map_or(Stored::None, |color| Stored::String(pin(&color)));
+      assign_value(alignment::RULE_COLOR, value, Some(Scope::Global));
+    }
+  });
+  RawTeX!(
+    r"\let\lx@CT@hline\@@alignment@hline \def\@@alignment@hline{\lx@CT@arc@draw\lx@CT@hline}
+\let\lx@CT@cline\lx@cline \def\lx@cline{\lx@CT@arc@draw\lx@CT@cline}
+\let\lx@CT@multicolumn\multicolumn \long\def\multicolumn#1#2#3{\lx@CT@multicolumn{#1}{#2}{#3\lx@CT@arc@draw}}"
+  );
+  {
+    let (hook, tokens) = (
+      T_CS!("\\lx@alignment@column@after"),
+      Tokens!(T_CS!("\\lx@CT@arc@draw")),
+    );
+    AddToMacro!(hook, tokens);
+  }
 
   // Perl L93: \minrowclearance
   DefRegister!("\\minrowclearance", Dimension::new(0));

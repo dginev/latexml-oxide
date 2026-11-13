@@ -1,0 +1,17 @@
+% issue #773: colortbl's `\arrayrulecolor{black!25}` colours the table's rules (colortbl.sty:156-192, `\CT@arc@`
+% evaluated as each rule is drawn): every bordered side carries the rule colour, `cssstyle="border-<side>-color:…"`.
+% witness: synthetic (issue #773)
+% oracle:  pdflatex 0 errors: grey rules
+% engines: rust fix/bindings-batch1 = 0 errors, `border` with no colour (ours gobbled it, colortbl_sty.rs:222);
+%   Perl = the same (a no-op, colortbl.sty.ltxml:85)
+% expect:  0 errors; each bordered side carries #BFBFBF
+% status:  RED (6df4632fb1) -> GREEN (fix/arrayrulecolor); guard perfect_kernel_batchw4::arrayrulecolor_colours_the_rules_drawn_under_it
+\documentclass{article}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\arrayrulecolor{black!25}
+\begin{document}
+\begin{tabular}{|l|l|}\hline
+1 & a\\\hline
+\end{tabular}
+\end{document}

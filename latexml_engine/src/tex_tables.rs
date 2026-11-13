@@ -1904,6 +1904,7 @@ pub fn extract_alignment_column(
 
   // --- Write phase: apply to current column ---
   let in_thead = alignment.is_in_tabular_head();
+  let rule_color = alignment::take_rule_color();
   {
     let colspec = alignment.get_column(n0).unwrap();
     let is_justify = align == Align::Justify;
@@ -1911,8 +1912,8 @@ pub fn extract_alignment_column(
     if !is_justify {
       colspec.width = None;
     }
-    let new_border = s!("{}{}", old_border, border);
-    colspec.border = new_border;
+    colspec.border = old_border;
+    colspec.add_border(&border, rule_color.as_deref());
     colspec.boxes = Some(digested_out.clone());
     // Perl L526-527: store lspaces/rspaces
     if !lspaces.is_empty() {

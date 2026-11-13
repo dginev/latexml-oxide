@@ -1,0 +1,16 @@
+% issue #773: without `\arrayrulecolor` the rules keep the default ink: a table in coloured text carries no border
+% colour (the output of 6df4632fb1, byte for byte). pdflatex draws these rules red (the current colour; colortbl's
+% `\CT@arc@` is `\relax`); the borders' colour is colortbl's alone here (OD #1025).
+% witness: synthetic (issue #773)
+% oracle:  pdflatex 0 errors: red text, red rules
+% engines: rust 6df4632fb1 = 0 errors, no border colour; Perl = the same
+% expect:  0 errors; `border` with no `cssstyle`
+% status:  GREEN (pins today's output); guard perfect_kernel_batchw4::arrayrulecolor_colours_the_rules_drawn_under_it
+\documentclass{article}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\begin{document}
+{\color{red}\begin{tabular}{|l|l|}\hline
+1 & a\\\hline
+\end{tabular}}
+\end{document}

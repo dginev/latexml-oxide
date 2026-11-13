@@ -1,0 +1,20 @@
+% issue #773: a mid-table `\arrayrulecolor` colours exactly the rules drawn after it (colortbl.sty:161-192): the rows'
+% `|` rules as each row is set, `\hline`, `\cline` and a `\multicolumn`'s own `|c|`; the `[rgb]` model argument; a
+% return to black adds nothing (the default ink).
+% witness: synthetic (issue #773)
+% oracle:  pdflatex 0 errors: row 1 black, rows 2-3 red `|` rules, red rule above row 2 and over b's column, blue
+%   rule under row 3, then a black rule under the `\multicolumn` row
+% engines: rust 6df4632fb1 = 0 errors, no border colour; Perl = the same (no-op)
+% expect:  0 errors; the colours as the oracle
+% status:  RED (6df4632fb1) -> GREEN (fix/arrayrulecolor); guard perfect_kernel_batchw4::arrayrulecolor_colours_the_rules_drawn_under_it
+\documentclass{article}
+\usepackage{xcolor}
+\usepackage{colortbl}
+\begin{document}
+\begin{tabular}{|l|l|}\hline
+1 & a\\\arrayrulecolor{red}\hline
+2 & b\\\cline{2-2}
+3 & c\\\arrayrulecolor[rgb]{0,0,1}\hline
+\multicolumn{1}{|c|}{d} & e\\\arrayrulecolor{black}\hline
+\end{tabular}
+\end{document}
