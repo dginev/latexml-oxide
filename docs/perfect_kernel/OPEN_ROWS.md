@@ -1443,3 +1443,32 @@ Moved whole from `docs/SYNC_STATUS.md` when its ranked rows folded into row R's 
 - **Shared, surpass candidate:** `2604.16007` acmart `\@ACM@balancefalse`/`\@ACM@pbalancefalse` undefined (acmart.cls:123
   `\define@boolkey`; neither binding defines them).
 
+### ROW0A — M3: the manuals' remaining regressions (post-merge lines FNTN, GINS, TUZK; moved from SYNC_STATUS "Detail for the live pre-merge rows" at the int171a fold, DG 2026-11-12)
+
+- Row 0 (the TeX Live manuals, every regression addressed before the merge: met at sweep #152, held through #156; its record in the archive's SYNC3 section) leaves only these deferred REDs.
+- **M3: the manuals' remaining regressions**, F1-F10 fixed (`perfect_kernel/MANUAL_REGRESSIONS.md`, guards `perfect_kernel_batchm3`).
+- **Deferred, each with its evidence:** F11 `\fontname\font` under NFSS (typog-example: `cmr10` vs `LinLibertineT-tlf-t1`, tex_fonts.rs:150, `\projectoutfontname##1-##2-##3` runs away; needs `\font@name` to TFM through `.fd`; `\fontname` in 2,027 census papers);
+- `\includegraphics` global vs `\lx@Gin@include` local (graphicx_sty.rs:133, :163; draftfigure);
+- tuzuk's 2 Errors vs pdflatex's 1.
+- **floatrow-rus is no deadline defect:** a TeX loop in xkeyval's `\XKV@f@r` under a `\the` its own cascade redefined (doc.sty v3 has no `\Describe@Macro`, so `\DescribeMacro{\DeclareNewFloatType}` runs the command; pdflatex stops at the absent picins.sty, l.95).
+- `--timeout` stops it (Fatal:Timeout at 20, 30, 170 s);
+- the sweep's 124 is run_doc.sh's outer `timeout` of the same length winning the race.
+- Open on it: `\def\a}` (KPE #1216, in gullet.rs) and a Timeout's 39-byte XML (`digest_internal`, "not recovering", R35.A).
+- Left of F4: an `\item`'s `\everypar` (KPE #1214), tabularx's X, tabulary's columns, wrapfig's body (RED `boxes-groups/everypar_in_tabularx_tabulary_wrapfig_red`).
+- **The review's fix round (M3r2):** `lstlisting` declared at `\begin{document}` (KPE #1217; 2405.15073), `\end`'s own test of `\protect` with a siunitx `S` cell's read of it (2505.21533, 2105.06936), the case changer's `\begin`, `\end`, pgfmath's array text (OD #973), tabularray's `preto`, `appto` (OD #976).
+- **REDs:** `graphics-tikz/pgfmath_string_and_units_in_arithmetic_red`, `graphics-tikz/pgfmath_string_keeps_protected_commands_red`, `expansion-primitives/afterassignment_through_a_toks_assignment_red` (KPE #1215's sibling, nothing relies on it), `alignment-bindings/tblr_inline_expl_command_in_a_key_red`, `listings-algorithms/listings_numberbychapter_red`.
+- **Post-release (user 2026-11-06):** Timeout handling: `run_doc.sh`'s outer `timeout` margin, `status=124` on the Timeout Fatal, `scoreboard.py` and `sweep.sh`'s reading of it, a Timeout's salvage.
+- **Left by the re-review (revM3r2P1), synthetic, each a RED repro or an OD #973/#976 line:** `width({"a"})` 0.0 with no Error, a sublist of one number returned as text, a spanned cell's `preto` lost with no Warning, an `S` cell ended by a `\let` copy of `\end`.
+- `\end` now loses its meaning too if a spurious message under `\globaldefs` leaves a display `\protect` global (no oracle: pdflatex stops; `\begingroup\globaldefs\@ne\PackageWarning{p}{note}\PackageInfo{p}{n}\endgroup`).
+- **Noticed by M3r2, no fix yet:** `xpeekahead`'s lost "something else" lines and `pkginfograb`'s missing paragraph (both match the base, so not M3's), and book-class listings print "Listing 1" where pdflatex prints "Listing 1.1" (`listings_numberbychapter_red`; Perl shares it, a fix changes `xml:id`s).
+- State: F1-F10 done, 3 deferred
+- Size: S
+- Detail: `perfect_kernel/MANUAL_REGRESSIONS.md`
+
+### T1 — Repro suite move (moved from SYNC_STATUS "Detail for the live pre-merge rows" at the int171a fold; DG 2026-11-12: after the merge)
+
+- **Repro suite move**: `tools/perfect_kernel/repros` (1,469 files) → `latexml_oxide/tests/repros` header-contract trials (release CI + `LATEXML_FULL_TESTS=1`);
+- drain `tools/`
+- State: **OPEN**, not started (user 2026-10-02)
+- Size: large
+- Detail: memory `project_repro_suite_move`
