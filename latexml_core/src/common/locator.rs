@@ -137,8 +137,13 @@ impl Locator {
         let (base, ext) = pathname::url_split(source);
         s!("{}.{}", base, ext)
       } else {
-        let (_path, base, _ext) = pathname::split(source);
-        base
+        // Perl Locator.pm L59-60: "$base.$ext", the file named with its extension (#794).
+        let (_path, base, ext) = pathname::split(source);
+        if ext.is_empty() {
+          base
+        } else {
+          s!("{base}.{ext}")
+        }
       }
     })
   }
@@ -315,6 +320,22 @@ mod tests {
     let s = format!("{l}");
     assert!(s.contains("paper"), "got {s:?}");
     assert!(s.contains("line 42"), "got {s:?}");
+  }
+
+  /// #794: the log locator names the file with its extension, as Perl's getShortSource
+  /// (Locator.pm L51-60) does, so a problem matcher can resolve it.
+  #[test]
+  fn display_names_the_file_with_its_extension() {
+    let l = Locator::new("/work/dir/t.tex", 10, 21, 10, 21);
+    assert_eq!(format!("{l}"), "t.tex; line 10 col 21 - line 10 col 21");
+    assert_eq!(
+      format!("{}", Locator::new("dir/refs.bib", 9, 0, 0, 0)),
+      "refs.bib; line 9"
+    );
+    assert_eq!(
+      format!("{}", Locator::new("dir/README", 1, 2, 0, 0)),
+      "README; line 1 col 2"
+    );
   }
 
   #[test]

@@ -2,6 +2,15 @@
 
 ## Unreleased
 
+  - **The log locator names the file with its extension** (#794). A diagnostic's
+    location line read `at t; line 10 col 21 - …`, the file stem only; it now reads
+    `at t.tex; line 10 col 21 - …`, as Perl's `getShortSource` prints it, so a problem
+    matcher written for Perl's logs can find the file (a `.bib`'s own diagnostics name
+    `refs.bib` likewise when the reader has its path). The message layout is Perl's
+    (the message, then `at …`, then detail lines). Guard
+    `locator::tests::display_names_the_file_with_its_extension`; eleven guards that
+    pinned the stem now pin the file name.
+
   - **A failing stylesheet is a Fatal, exits 1 and writes no output** (#782). A bad
     XPath, an `xsl:message terminate="yes"` or a missing `xsl:import` logged
     `Error:post:convert`, exited 0 and wrote the untransformed XML under the `.html`
