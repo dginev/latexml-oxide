@@ -541,7 +541,8 @@ impl Resolver {
   /// AASTeX 5 `\email{able@x.org}` after `\author{Ann Able and Bob Baker}` (0911.3506's `bourouaine@` on Eckart Marsch,
   /// 1506.04035, 1203.1317, 0904.0560: 92 of the 688 aas census papers); a copy that author holds already is dropped;
   /// one a label placed stays (`\correspondingauthor{…}\email{…}`: 2003.00016, 2003.11098, 2204.06937). After the grid
-  /// and the labels, the one respell since P6e deleted the DOM pass `insert::respell_emails` — its target picked by the
+  /// and the labels (P6e deleted the DOM pass `insert::respell_emails`; what the reading does not place, the queue's
+  /// `place::shared_block_email_labels` respells by the same rule) — its target picked by the
   /// names as printed, a transliterated spelling counted as one (`NameKeys::as_printed`; user ruling 2026-11-05: Anna
   /// Smith's own `\email{mueller-group@x.de}` moves to Jörg Müller), base letters only keeping an address on the holder
   /// it spells so (`\email{muller-group@x.de}` stays hers, FIDELITY_CHARTER §4 #420; 2410.00275's `javier.martinez@`

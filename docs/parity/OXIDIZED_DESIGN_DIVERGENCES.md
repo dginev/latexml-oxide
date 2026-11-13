@@ -29005,8 +29005,9 @@ those today's can cut (`writer::take_out_again`), an entry today's holds no item
 paper). G3: an `\email` call printing several addresses alone (`resolver::listed_addresses`; a label word beside them
 keeps it whole, as the group write-out does) is placed once every name is read (`Resolver::answer_listed_emails`), each
 address the author's it spells, else its call's own authors' (`owner:call`); the writer's group write-out reads the
-same lists. G6: the reading's `Resolver::respell_emails` (since P6e the only one: the DOM pass `insert::respell_emails`,
-alike, deleted) picks the author an address moves to
+same lists. G6: the reading's `Resolver::respell_emails` (the DOM pass `insert::respell_emails`, alike, deleted at P6e; an e-mail
+the reading does not place, a flush with no author block or a document's note, is respelled on the queue by
+`place::shared_block_email_labels` only after a run of two or more names, P6e2) picks the author an address moves to
 by the names as printed and keeps an address on the
 holder it spells by base letters (`resolver::base_letters`, as the reading does since 92c): `javier.martinez@` stays on
 Javier Martínez-López, whom it spells by base letters (as printed it spells Carlos Javier Navarro alone), and Anna

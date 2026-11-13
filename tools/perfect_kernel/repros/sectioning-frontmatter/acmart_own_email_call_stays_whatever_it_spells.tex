@@ -1,0 +1,25 @@
+% acmart's own calls: `\author{Ann Able}…\email{bbaker@x.org}` then `\author{Bob Baker}…\email{bob@y.org}`. Each
+% address follows one name, its author's own call, so it stays hers whatever it spells; and an address two own calls
+% give stays on both (`place::shared_block_email_labels` moves only an address after two or more names).
+% witness: 2208.05647, 2306.14314, 2609.11148 (own call); 2205.01906, 2403.05668 (on both) (CL169)
+% oracle:  pdflatex 0 errors: Ann Able's block prints bbaker@x.org and lab@x.org, Bob Baker's bob@y.org and lab@x.org
+% engines: rust int168a = bbaker@x.org moved to Bob Baker (the DOM respell); rust int169a = right
+% expect:  0 errors, 1 warning (the content check counts lab@x.org placed twice, printed twice: on int168a too); Ann
+%          Able: bbaker@x.org, lab@x.org; Bob Baker: bob@y.org, lab@x.org
+% status:  GREEN (P6e2)
+% preload: ar5iv.sty
+\documentclass[sigconf]{acmart}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\affiliation{\institution{X Univ}\city{C}\country{D}}
+\email{bbaker@x.org}
+\email{lab@x.org}
+\author{Bob Baker}
+\affiliation{\institution{Y Univ}\city{C}\country{D}}
+\email{bob@y.org}
+\email{lab@x.org}
+\begin{abstract}A.\end{abstract}
+\maketitle
+Text.
+\end{document}
