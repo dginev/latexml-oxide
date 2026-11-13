@@ -645,26 +645,41 @@ fn scope_of(scope: &str) -> Option<Scope> {
   }
 }
 
-/// Marshal a `Stored` out to a Rhai value: `Digested` as a live handle,
-/// scalars as scalars, the rest via `Display`.
+/// Marshal a `Stored` out to a Rhai value with its type (Perl hands back the stored object, Package.pm
+/// LookupValue :257, LookupMapping :283): a string, bool, int, float, `Token`, `Tokens` or digested handle as
+/// itself, a list value as an array of such (Perl's arrayref, #315), `None` as `()` (undef). A value with no
+/// Rhai type yet (Dimension, Glue, …: round C) is its string form. The inverse of [`dynamic_to_stored`].
 fn stored_to_dynamic(v: Stored) -> Dynamic {
   match v {
-    Stored::Digested(d) => Dynamic::from(d),
+    Stored::None => Dynamic::UNIT,
     Stored::String(s) => Dynamic::from(arena::to_string(s)),
     Stored::Bool(b) => Dynamic::from(b),
+    Stored::Int(i) => Dynamic::from(i),
+    Stored::Number(n) => Dynamic::from(n.0),
+    Stored::Float(f) => Dynamic::from(f.0),
+    Stored::Tokens(t) => Dynamic::from(t),
+    Stored::Token(t) => Dynamic::from(t),
+    Stored::Digested(d) => Dynamic::from(d),
+    Stored::Strings(ss) => Dynamic::from_array(
+      ss.iter()
+        .map(|s| Dynamic::from(arena::to_string(*s)))
+        .collect(),
+    ),
+    Stored::VecDequeStored(items) => {
+      Dynamic::from_array(items.into_iter().map(stored_to_dynamic).collect())
+    },
     other => Dynamic::from(other.to_string()),
   }
 }
 
-/// Marshal a Rhai value INTO a `Stored` for the value-table list ops
-/// (`PushValue`/`UnshiftValue`). The inverse of [`popped_stored_to_dynamic`].
-/// Perl's `PushValue` is untyped; the Rust State layer holds any `Stored`, so we
-/// preserve every Rhai-representable type — string, int, float, bool, `Tokens`,
-/// and a digested handle. There is no Rhai value for `Dimension`/`Glue`/`Font`/…,
-/// so those are unreachable from a script; anything unrecognized falls back to
-/// its string form (#540).
+/// Marshal a Rhai value INTO a `Stored` (Perl's value table is untyped, Package.pm AssignValue :261,
+/// AssignMapping :287, PushValue): string, int, float, bool, `Token`, `Tokens` and a digested handle keep their
+/// type, `()` is `None` (undef); anything else falls back to its string form (#540). The inverse of
+/// [`stored_to_dynamic`].
 fn dynamic_to_stored(v: Dynamic) -> Stored {
-  if v.is_string() {
+  if v.is_unit() {
+    Stored::None
+  } else if v.is_string() {
     v.into_string().unwrap_or_default().into()
   } else if let Ok(i) = v.as_int() {
     Stored::Int(i)
@@ -683,22 +698,17 @@ fn dynamic_to_stored(v: Dynamic) -> Stored {
   }
 }
 
-/// Marshal a popped/shifted `Stored` back to a *typed* Rhai value — the
-/// type-preserving counterpart of [`stored_to_dynamic`], used only by
-/// `PopValue`/`ShiftValue` so a pushed int/float/`Tokens` round-trips as itself
-/// rather than as text. (`stored_to_dynamic` stays string-leaning because it
-/// also marshals counter/whatsit property maps, which expect that.)
-fn popped_stored_to_dynamic(v: Stored) -> Dynamic {
-  match v {
-    Stored::String(s) => Dynamic::from(arena::to_string(s)),
-    Stored::Bool(b) => Dynamic::from(b),
-    Stored::Int(i) => Dynamic::from(i),
-    Stored::Number(n) => Dynamic::from(n.0),
-    Stored::Float(f) => Dynamic::from(f.0),
-    Stored::Tokens(t) => Dynamic::from(t),
-    Stored::Token(t) => Dynamic::from(t),
-    Stored::Digested(d) => Dynamic::from(d),
-    other => Dynamic::from(other.to_string()),
+/// A closure's returned expansion or reversion as Tokens: a `Token` or `Tokens` as itself (a Perl macro sub
+/// returns tokens), `()` as nothing, a string (the Rhai shorthand) TokenizeInternal'd as before.
+fn dynamic_to_tokens(d: Dynamic) -> Tokens {
+  if let Some(tokens) = d.clone().try_cast::<Tokens>() {
+    tokens
+  } else if let Some(token) = d.clone().try_cast::<Token>() {
+    Tokens::new(vec![token])
+  } else if d.is_unit() {
+    Tokens::default()
+  } else {
+    mouth::tokenize_internal(TeXString::assembled(dynamic_to_string(d)))
   }
 }
 

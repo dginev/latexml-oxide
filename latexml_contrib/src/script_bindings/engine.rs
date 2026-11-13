@@ -141,6 +141,16 @@ pub(super) fn make_engine() -> Engine {
       latexml_core::stomach::digest(Tokens::new(vec![t])).map_err(rhai_err)
     },
   );
+  // A string is TeX source, TokenizeInternal'd (Package.pm:393).
+  engine.register_fn(
+    "Digest",
+    |s: &str| -> std::result::Result<Digested, Box<EvalAltResult>> {
+      latexml_core::stomach::digest(mouth::tokenize_internal(TeXString::assembled(
+        s.to_string(),
+      )))
+      .map_err(rhai_err)
+    },
+  );
   // Perl's `Tokens(@tokens)` (Tokens.pm:29): an array of `Token`s and `Tokens`, flattened; also
   // `Tokens()` and `Tokens(a, …)` with up to four items, Rhai having no variadic functions.
   engine.register_fn("Tokens", || Tokens::new(Vec::new()));
@@ -157,6 +167,9 @@ pub(super) fn make_engine() -> Engine {
   // Perl's token constructors and catcode constants (Token.pm:26-37, :45-84); a Perl
   // constant (`T_MATH`, `CC_ACTIVE`) is a zero-argument function here.
   engine.register_type_with_name::<Token>("Token");
+  // A token value in a string context (`"(" + ReadArg() + ")"`, `${…}`) is its TeX source, as `UnTeX` gives it.
+  engine.register_fn("to_string", |t: &mut Token| Tokens::new(vec![*t]).untex());
+  engine.register_fn("to_string", |t: &mut Tokens| t.clone().untex());
   engine.register_fn("T_CS", |name: &str| -> Token { latexml_core::T_CS!(name) });
   engine.register_fn("T_LETTER", |c: &str| -> Token {
     Token::new(c, Catcode::LETTER)
@@ -266,12 +279,13 @@ pub(super) fn make_engine() -> Engine {
   // ── the binding-language surface, 1:1 under its macro names ──
   // Each registration lowers to the SAME native function its compile-time
   // macro does (setup_binding_language.rs), so a Rhai binding reads like the
-  // `.pool`/`_sty.rs` original. String values in, strings/handles out.
-  engine.register_fn("AssignValue", |k: &str, v: &str| {
-    latexml_core::state::assign_value(k, v.to_string(), None);
+  // `.pool`/`_sty.rs` original.
+  // A value keeps its type both ways (Package.pm AssignValue :261 / LookupValue :257).
+  engine.register_fn("AssignValue", |k: &str, v: Dynamic| {
+    latexml_core::state::assign_value(k, dynamic_to_stored(v), None);
   });
-  engine.register_fn("AssignValue", |k: &str, v: &str, scope: &str| {
-    latexml_core::state::assign_value(k, v.to_string(), scope_of(scope));
+  engine.register_fn("AssignValue", |k: &str, v: Dynamic, scope: &str| {
+    latexml_core::state::assign_value(k, dynamic_to_stored(v), scope_of(scope));
   });
   // Typed `Assign*` counterparts to the typed `Lookup*` readers below (#543).
   // Before these, a binding could only ever assign a *string*, so a value
@@ -326,13 +340,13 @@ pub(super) fn make_engine() -> Engine {
   });
   engine.register_fn("PopValue", |k: &str| -> Dynamic {
     match latexml_core::state::pop_value(k) {
-      Ok(Some(popped)) => popped_stored_to_dynamic(popped),
+      Ok(Some(popped)) => stored_to_dynamic(popped),
       _ => Dynamic::UNIT,
     }
   });
   engine.register_fn("ShiftValue", |k: &str| -> Dynamic {
     match latexml_core::state::shift_value(k) {
-      Ok(Some(shifted)) => popped_stored_to_dynamic(shifted),
+      Ok(Some(shifted)) => stored_to_dynamic(shifted),
       _ => Dynamic::UNIT,
     }
   });
@@ -350,26 +364,10 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn("LookupString", |k: &str| -> String {
     latexml_core::state::lookup_string(k)
   });
-  // Perl-style `LookupValue`: returns the stored value in its natural shape. A
-  // list value (e.g. `class_options`, a pushed queue) becomes a Rhai array —
-  // mirroring Perl's `LookupValue` returning the arrayref (#315) — rather than
-  // the leaked Debug repr `LookupString` used to emit. Scalars stringify as
-  // before; a missing key is unit (Perl `undef`).
+  // Perl's `LookupValue` (Package.pm:257): the stored value with its type — a list value (`class_options`, a
+  // pushed queue) as a Rhai array (Perl's arrayref, #315), a missing key as `()` (undef).
   engine.register_fn("LookupValue", |k: &str| -> Dynamic {
-    match latexml_core::state::lookup_value(k) {
-      None => Dynamic::UNIT,
-      Some(v) if v.is_list() => {
-        let arr: rhai::Array = v
-          .list_items()
-          .unwrap_or_default()
-          .into_iter()
-          .map(Dynamic::from)
-          .collect();
-        Dynamic::from_array(arr)
-      },
-      Some(Stored::String(s)) => arena::to_string(s).into(),
-      Some(other) => other.to_string().into(),
-    }
+    latexml_core::state::lookup_value(k).map_or(Dynamic::UNIT, stored_to_dynamic)
   });
   engine.register_fn("LookupNumber", |k: &str| -> i64 {
     latexml_core::state::lookup_number(k)
@@ -398,19 +396,57 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn("LookupTokens", |k: &str| -> Tokens {
     latexml_core::state::lookup_tokens(k).unwrap_or_default()
   });
-  // Catcode access: the char as a 1-char string, the catcode as its TeX int.
-  engine.register_fn("LookupCatcode", |c: &str| -> i64 {
-    c.chars()
-      .next()
+  // The char-code tables (Package.pm :295-381): the char as a 1-char string, the code as its TeX int, `()` for a
+  // char the table does not hold (Perl undef); each Assign* takes the macro's optional scope.
+  engine.register_fn("LookupCatcode", |c: &str| -> Dynamic {
+    char_of(c)
       .and_then(latexml_core::state::lookup_catcode)
-      .map(|cc| cc as i64)
-      .unwrap_or(12)
+      .map_or(Dynamic::UNIT, |cc| Dynamic::from(cc as i64))
   });
   engine.register_fn("AssignCatcode", |c: &str, code: i64| {
-    if let Some(ch) = c.chars().next() {
-      latexml_core::state::assign_catcode(ch, Catcode::from(code as u8), None);
-    }
+    assign_code(assign_catcode, c, code, "")
   });
+  engine.register_fn("AssignCatcode", |c: &str, code: i64, scope: &str| {
+    assign_code(assign_catcode, c, code, scope)
+  });
+  engine.register_fn("LookupMathcode", |c: &str| {
+    code_of(latexml_core::state::lookup_mathcode(c))
+  });
+  engine.register_fn("LookupSFcode", |c: &str| {
+    code_of(char_of(c).and_then(latexml_core::state::lookup_sfcode))
+  });
+  engine.register_fn("LookupLCcode", |c: &str| {
+    code_of(char_of(c).and_then(latexml_core::state::lookup_lccode))
+  });
+  engine.register_fn("LookupUCcode", |c: &str| {
+    code_of(char_of(c).and_then(latexml_core::state::lookup_uccode))
+  });
+  engine.register_fn("LookupDelcode", |c: &str| {
+    code_of(char_of(c).and_then(latexml_core::state::lookup_delcode))
+  });
+  for (name, assign) in [
+    (
+      "AssignMathcode",
+      latexml_core::state::assign_mathcode::<u16> as fn(char, u16, Option<Scope>),
+    ),
+    ("AssignSFcode", latexml_core::state::assign_sfcode::<u16>),
+    (
+      "AssignLCcode",
+      latexml_core::state::assign_lccode::<u16, char>,
+    ),
+    (
+      "AssignUCcode",
+      latexml_core::state::assign_uccode::<u16, char>,
+    ),
+    ("AssignDelcode", latexml_core::state::assign_delcode::<u16>),
+  ] {
+    engine.register_fn(name, move |c: &str, code: i64| {
+      assign_code(assign, c, code, "")
+    });
+    engine.register_fn(name, move |c: &str, code: i64, scope: &str| {
+      assign_code(assign, c, code, scope)
+    });
+  }
   // StartSemiverbatim/EndSemiverbatim (Perl `Package.pm` exports, L1002-1008):
   // read the following content raw — the default neutralizes the math/special
   // catcodes (`^ _ ~ & $ # '`) to `OTHER` so they are literal, keeping `\ { }`
@@ -587,6 +623,7 @@ pub(super) fn make_engine() -> Engine {
   });
   // DigestText: digest a TeX string into a `Digested` handle — the workhorse
   // of `properties` closures that precompute content (e.g. IEEEproof's title).
+  // A string is TeX source, TokenizeInternal'd; a `Token`/`Tokens` is digested as is (Package.pm:405).
   engine.register_fn(
     "DigestText",
     |s: &str| -> std::result::Result<Digested, Box<EvalAltResult>> {
@@ -594,6 +631,18 @@ pub(super) fn make_engine() -> Engine {
         s.to_string(),
       )))
       .map_err(rhai_err)
+    },
+  );
+  engine.register_fn(
+    "DigestText",
+    |t: Tokens| -> std::result::Result<Digested, Box<EvalAltResult>> {
+      latexml_core::binding::content::digest_text(t).map_err(rhai_err)
+    },
+  );
+  engine.register_fn(
+    "DigestText",
+    |t: Token| -> std::result::Result<Digested, Box<EvalAltResult>> {
+      latexml_core::binding::content::digest_text(Tokens::new(vec![t])).map_err(rhai_err)
     },
   );
   // ToString/ToAttribute/Revert on a Digested handle (Perl ToString/Revert).
@@ -807,16 +856,21 @@ pub(super) fn make_engine() -> Engine {
     },
   );
 
-  // AssignMapping / mapping lookup (Perl AssignMapping/LookupMapping).
-  engine.register_fn("AssignMapping", |map: &str, key: &str, value: &str| {
-    latexml_core::state::assign_mapping(map, key, Some(value.to_string()));
+  // AssignMapping / LookupMapping / LookupMappingKeys (Package.pm :283-293): a value keeps its type, as
+  // AssignValue's; a missing key is `()` (undef); the keys come sorted, as State.pm:261-265 sorts them.
+  engine.register_fn("AssignMapping", |map: &str, key: &str, value: Dynamic| {
+    let value = (!value.is_unit()).then(|| dynamic_to_stored(value));
+    latexml_core::state::assign_mapping(map, key, value);
   });
-  engine.register_fn("LookupMapping", |map: &str, key: &str| -> String {
-    latexml_core::state::with_mapping(map, key, |meaning| match meaning {
-      Some(Stored::String(s)) => arena::to_string(*s),
-      Some(other) => other.to_string(),
-      None => String::new(),
-    })
+  engine.register_fn("LookupMapping", |map: &str, key: &str| -> Dynamic {
+    latexml_core::state::lookup_mapping(map, key).map_or(Dynamic::UNIT, stored_to_dynamic)
+  });
+  engine.register_fn("LookupMappingKeys", |map: &str| -> rhai::Array {
+    let mut keys: Vec<String> = latexml_core::state::with_mapping_keys(map, |keys| {
+      keys.iter().map(|k| arena::to_string(*k)).collect()
+    });
+    keys.sort();
+    keys.into_iter().map(Dynamic::from).collect()
   });
 
   // GetKeyVal / GetKeyVals over a keyval argument. A `KeyVals`/`OptionalKeyVals`
@@ -1249,35 +1303,23 @@ pub(super) fn make_engine() -> Engine {
       latexml_core::gullet::skip_spaces().map_err(rhai_err)
     },
   );
-  // ReadArg: one balanced argument off the stream (unexpanded), as TeX source.
-  engine.register_fn(
-    "ReadArg",
-    || -> std::result::Result<String, Box<EvalAltResult>> {
-      latexml_core::gullet::read_arg(latexml_core::gullet::ExpansionLevel::Off)
-        .map(|t| t.untex())
-        .map_err(rhai_err)
-    },
-  );
-  // ReadUntil(delim): tokens up to (and consuming) the delimiter TeX string.
-  engine.register_fn(
-    "ReadUntil",
-    |delim: &str| -> std::result::Result<String, Box<EvalAltResult>> {
-      latexml_core::gullet::read_until(&mouth::tokenize_internal(TeXString::assembled(
-        delim.to_string(),
-      )))
-      .map(|t| t.unwrap_or_default().untex())
-      .map_err(rhai_err)
-    },
-  );
-  // ReadOptional: a bracketed [..] optional ("" when absent).
-  engine.register_fn(
-    "ReadOptional",
-    || -> std::result::Result<String, Box<EvalAltResult>> {
-      latexml_core::gullet::read_optional(None)
-        .map(|t| t.map(|tt| tt.untex()).unwrap_or_default())
-        .map_err(rhai_err)
-    },
-  );
+  // The gullet's reads return Tokens (Perl `$gullet->readArg` …, Core/Gullet.pm), so a catcode the
+  // source gave survives. They are methods of a `Gullet` handle, the object a `DefParameterType` reader will
+  // receive (round D), and free functions for a macro body, which has no handle (the Perl body's `$_[0]`).
+  engine.register_type_with_name::<GulletHandle>("Gullet");
+  engine.register_fn("readArg", |_g: &mut GulletHandle| read_arg());
+  engine.register_fn("ReadArg", read_arg);
+  engine.register_fn("readUntil", |_g: &mut GulletHandle, delim: Dynamic| {
+    read_until(delim)
+  });
+  engine.register_fn("ReadUntil", read_until);
+  engine.register_fn("readOptional", |_g: &mut GulletHandle| read_optional());
+  engine.register_fn("ReadOptional", read_optional);
+  engine.register_fn("readToken", |_g: &mut GulletHandle| read_token());
+  engine.register_fn("ReadToken", read_token);
+  engine.register_fn("skipSpaces", |_g: &mut GulletHandle| {
+    latexml_core::gullet::skip_spaces().map_err(rhai_err)
+  });
 
   // ── package/class machinery (content.rs, the RequirePackage!/… family) ──
   engine.register_fn(
@@ -2182,4 +2224,64 @@ fn tokens_of(items: rhai::Array) -> std::result::Result<Tokens, Box<EvalAltResul
     }
   }
   Ok(Tokens::new(list))
+}
+
+/// The char of a 1-char string argument (Perl passes the char itself).
+fn char_of(c: &str) -> Option<char> { c.chars().next() }
+
+/// A char-code table's entry as a Rhai int, or `()` for an entry the table does not hold (Perl undef).
+fn code_of(code: Option<u16>) -> Dynamic {
+  code.map_or(Dynamic::UNIT, |n| Dynamic::from(i64::from(n)))
+}
+
+fn assign_catcode(ch: char, code: u16, scope: Option<Scope>) {
+  latexml_core::state::assign_catcode(ch, Catcode::from(code as u8), scope);
+}
+
+/// An `Assign*code(char, code[, scope])` call, as its macro (Package.pm :299-381).
+fn assign_code(assign: fn(char, u16, Option<Scope>), c: &str, code: i64, scope: &str) {
+  if let (Some(ch), Ok(code)) = (char_of(c), u16::try_from(code)) {
+    assign(ch, code, scope_of(scope));
+  }
+}
+
+/// A handle on the gullet (thread-local state, so the handle carries nothing): the receiver of Perl's
+/// `$gullet->read*` methods.
+#[derive(Clone, Copy, Debug, Default)]
+pub(super) struct GulletHandle;
+
+type RhaiResult<T> = std::result::Result<T, Box<EvalAltResult>>;
+
+/// One balanced argument off the stream, unexpanded (Perl `readArg`).
+fn read_arg() -> RhaiResult<Tokens> {
+  latexml_core::gullet::read_arg(latexml_core::gullet::ExpansionLevel::Off).map_err(rhai_err)
+}
+
+/// The tokens up to, and consuming, the delimiter (Perl `readUntil`): a string delimiter is TeX source,
+/// TokenizeInternal'd; a `Token`/`Tokens` is used as is.
+fn read_until(delim: Dynamic) -> RhaiResult<Tokens> {
+  let delim = if delim.is_string() {
+    mouth::tokenize_internal(TeXString::assembled(
+      delim.into_string().unwrap_or_default(),
+    ))
+  } else {
+    tokens_of(vec![delim])?
+  };
+  latexml_core::gullet::read_until(&delim)
+    .map(Option::unwrap_or_default)
+    .map_err(rhai_err)
+}
+
+/// A bracketed optional argument, or `()` when there is none (Perl `readOptional` returns undef).
+fn read_optional() -> RhaiResult<Dynamic> {
+  latexml_core::gullet::read_optional(None)
+    .map(|t| t.map_or(Dynamic::UNIT, Dynamic::from))
+    .map_err(rhai_err)
+}
+
+/// The next token, unexpanded, or `()` at the end of input (Perl `readToken`).
+fn read_token() -> RhaiResult<Dynamic> {
+  latexml_core::gullet::read_token()
+    .map(|t| t.map_or(Dynamic::UNIT, Dynamic::from))
+    .map_err(rhai_err)
 }

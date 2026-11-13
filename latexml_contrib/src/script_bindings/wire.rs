@@ -61,9 +61,7 @@ pub(super) fn wire_macro(
       Ok(v) => v,
       Err(e) => return contain(&format!("macro {cs_name}"), e, Tokens::default()),
     };
-    Ok(mouth::tokenize_internal(TeXString::assembled(
-      dynamic_to_string(ret),
-    )))
+    Ok(dynamic_to_tokens(ret))
   });
 
   def_macro(cs, paramlist, ExpansionBody::Closure(closure), None)?;
@@ -372,10 +370,8 @@ pub(super) fn apply_opts<B: BindingBuilder>(
           let map = val.cast::<Map>();
           builder = builder.properties(Rc::new(move |_args| Ok(rhai_map_to_props(map.clone()))));
         } else if key.as_str() == "reversion" {
-          // String reversion (`reversion => "\\begin{x}#1\\end{x}"`, "" disables).
-          builder = builder.reversion(Reversion::Tokens(mouth::tokenize_internal(
-            TeXString::assembled(dynamic_to_string(val)),
-          )));
+          // A string or Tokens reversion (`reversion => "\\begin{x}#1\\end{x}"`, "" disables).
+          builder = builder.reversion(Reversion::Tokens(dynamic_to_tokens(val)));
         } else if key.as_str() == "font" && val.is_map() {
           // Partial-font directive (`font => { family => 'typewriter', … }`).
           let font = font_from_rhai_map(val.cast::<Map>());
@@ -723,9 +719,7 @@ pub(super) fn wire_macro_opts(
     let dyn_args: Vec<Dynamic> = args.into_iter().map(arg_to_dynamic).collect();
     let ret: Dynamic = call_deferred_body(&engine, &ast, &body, dyn_args)
       .or_else(|e| contain(&format!("macro {cs_name}"), e, Dynamic::UNIT))?;
-    Ok(mouth::tokenize_internal(TeXString::assembled(
-      dynamic_to_string(ret),
-    )))
+    Ok(dynamic_to_tokens(ret))
   });
   def_macro(
     cs,
@@ -878,9 +872,7 @@ pub(super) fn wire_columntype(
     let dyn_args: Vec<Dynamic> = args.into_iter().map(arg_to_dynamic).collect();
     let ret: Dynamic = call_deferred_body(&engine, &ast, &body, dyn_args)
       .or_else(|e| contain(&format!("column type {cs_name}"), e, Dynamic::UNIT))?;
-    Ok(mouth::tokenize_internal(TeXString::assembled(
-      dynamic_to_string(ret),
-    )))
+    Ok(dynamic_to_tokens(ret))
   });
   def_macro(cs, paramlist, ExpansionBody::Closure(closure), None)?;
   Ok(())
@@ -926,11 +918,7 @@ pub(super) fn math_options_from_map(
             ast.clone(),
           )))
         },
-        None => {
-          o.reversion = Some(Reversion::Tokens(mouth::tokenize_internal(
-            TeXString::assembled(s()),
-          )))
-        },
+        None => o.reversion = Some(Reversion::Tokens(dynamic_to_tokens(val.clone()))),
       },
       "sizer" => match val.clone().try_cast::<FnPtr>() {
         Some(fp) => o.sizer = Some(sizer_trampoline(fp, engine.clone(), ast.clone())),
@@ -1129,9 +1117,7 @@ pub(super) fn reversion_trampoline(
         .collect();
       let ret = call_deferred_body(&engine, &ast, &fp, dyn_args)
         .or_else(|e| contain("reversion", e, Dynamic::UNIT))?;
-      Ok(mouth::tokenize_internal(TeXString::assembled(
-        dynamic_to_string(ret),
-      )))
+      Ok(dynamic_to_tokens(ret))
     },
   )
 }
@@ -1293,11 +1279,7 @@ fn parse_rewrite_options(kind: &str, opts: Map) -> latexml_core::rewrite::Rewrit
         }
       },
       "regexp" => o.regexp = Some(dynamic_to_string(val)),
-      "match" => {
-        o.on_match = Some(mouth::tokenize_internal(TeXString::assembled(
-          dynamic_to_string(val),
-        )))
-      },
+      "match" => o.on_match = Some(dynamic_to_tokens(val)),
       // A rewrite's scope is a Perl scope pattern (`label:…`, `id:…`, or one Perl reports as
       // unrecognized), never an assignment scope: `scope_of` kept only `local`/`global` and
       // dropped `label:…`, so the rule applied document-wide (57as review).

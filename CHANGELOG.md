@@ -62,6 +62,30 @@
     (`DefConditional("\\iffoo")`, with `SetCondition`); its test receives Tokens.
     Guard `cluster_package_guards::perfect_kernel_batchw3ra`.
 
+  - **BREAKING: Rhai values keep their type both ways** (PR #829 round B). `LookupValue`
+    and `LookupMapping` return the value as it was stored (a bool, an int, a float,
+    `Token`, `Tokens`, a digested handle; a list as an array), where they returned its
+    string form; a missing key is `()`, where `LookupMapping` returned `""`. `AssignValue`
+    and `AssignMapping` take any of these values, where they took only a string
+    (`AssignValue(k, Tokenize(…))` was "Function not found"); `()` stores undef, and
+    removes a mapping key. A whatsit property or counter property read from a script
+    keeps its type too. Guard `cluster_package_guards::perfect_kernel_batchw3rb`.
+  - **BREAKING: the Rhai gullet reads return Tokens.** `ReadArg`, `ReadUntil` and
+    `ReadOptional` return `Tokens`, keeping the catcodes the source gave, where they
+    returned an untokenized string; `ReadOptional` without a `[…]` is `()`, where it was
+    `""`. A `Token` or `Tokens` in a string context (`"(" + ReadArg() + ")"`) is its TeX
+    source. New `ReadToken`, and a `Gullet` handle with Perl's methods (`readArg`,
+    `readUntil`, `readOptional`, `readToken`, `skipSpaces`).
+  - **A Rhai macro or reversion closure may return a `Token` or `Tokens`**, as a Perl macro
+    sub returns tokens; it expanded to the type's name (`Token`) before.
+  - **Rhai argument shapes as Perl's:** `Digest` takes a string (TeX source), `DigestText`
+    a `Token` or `Tokens`; `AssignCatcode` takes a scope; `LookupCatcode` of a character the
+    table does not hold is `()` (Perl undef), where it was 12.
+  - **New Rhai calls:** `LookupMathcode`/`AssignMathcode`, `LookupSFcode`/`AssignSFcode`,
+    `LookupLCcode`/`AssignLCcode`, `LookupUCcode`/`AssignUCcode`,
+    `LookupDelcode`/`AssignDelcode` (each Assign* with an optional scope), and
+    `LookupMappingKeys` (sorted, as Perl's).
+
   - **`post::PostOptions::nodefaultresources` is now `default_resources`, with the
     meaning inverted.** The double negative (`nodefaultresources: false`) is gone.
     The positive name is Perl's option name (`Config.pm:120` `defaultresources!`),

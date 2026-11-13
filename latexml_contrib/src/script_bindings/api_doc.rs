@@ -48,6 +48,11 @@ const GROUPS: &[(Option<&str>, &str, &str)] = &[
     "An already-installed definition, for pushing hooks onto it.",
   ),
   (
+    Some("Gullet"),
+    "`Gullet` methods",
+    "Perl's `$gullet->read…`: the gullet handle a parameter-type reader receives.",
+  ),
+  (
     Some("Command"),
     "`Command` methods",
     "The `std::process::Command` mirror, for a binding that shells out.",
@@ -162,8 +167,15 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "AssignCatcode",
     Doc::Rust(
-      "Set a character's category code.",
+      "Set a character's category code, with an optional scope.",
       "latexml_core::state::assign_catcode",
+    ),
+  ),
+  (
+    "AssignDelcode",
+    Doc::Rust(
+      "Set a character's delimiter code, with an optional scope.",
+      "latexml_core::state::assign_delcode",
     ),
   ),
   (
@@ -174,10 +186,24 @@ const DOCS: &[(&str, Doc)] = &[
     ),
   ),
   (
+    "AssignLCcode",
+    Doc::Rust(
+      "Set a character's lowercase code, with an optional scope.",
+      "latexml_core::state::assign_lccode",
+    ),
+  ),
+  (
     "AssignMapping",
     Doc::Rust(
-      "Bind one key inside a named mapping.",
+      "Bind one key inside a named mapping to any value, as `AssignValue`; `()` removes the key.",
       "latexml_core::state::assign_mapping",
+    ),
+  ),
+  (
+    "AssignMathcode",
+    Doc::Rust(
+      "Set a character's math code, with an optional scope.",
+      "latexml_core::state::assign_mathcode",
     ),
   ),
   (
@@ -195,6 +221,13 @@ const DOCS: &[(&str, Doc)] = &[
     ),
   ),
   (
+    "AssignSFcode",
+    Doc::Rust(
+      "Set a character's space-factor code, with an optional scope.",
+      "latexml_core::state::assign_sfcode",
+    ),
+  ),
+  (
     "AssignString",
     Doc::Rust(
       "Bind a key to a string value, with a scope (the typed twin of `AssignValue`).",
@@ -202,9 +235,16 @@ const DOCS: &[(&str, Doc)] = &[
     ),
   ),
   (
+    "AssignUCcode",
+    Doc::Rust(
+      "Set a character's uppercase code, with an optional scope.",
+      "latexml_core::state::assign_uccode",
+    ),
+  ),
+  (
     "AssignValue",
     Doc::Rust(
-      "Bind a key in the value table, with a scope.",
+      "Bind a key in the value table to any value (string, number, bool, `Token`, `Tokens`, handle), with a scope; `()` stores undef.",
       "latexml_core::state::assign_value",
     ),
   ),
@@ -403,14 +443,14 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "Digest",
     Doc::Rust(
-      "Digest tokens (a `Tokens`, or one `Token`) into boxes, independent of the current gullet.",
+      "Digest TeX source (a string, TokenizeInternal'd), a `Token` or `Tokens`, returning the digested handle.",
       "latexml_core::stomach::digest",
     ),
   ),
   (
     "DigestText",
     Doc::Rust(
-      "Digest tokens in text mode, whatever mode the caller is in.",
+      "Digest TeX source, a `Token` or `Tokens` in restricted horizontal mode, returning the digested handle.",
       "latexml_core::binding::content::digest_text",
     ),
   ),
@@ -506,7 +546,7 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "LookupCatcode",
     Doc::Rust(
-      "The category code currently in force for a character.",
+      "The category code currently in force for a character; `()` when the table holds none.",
       "latexml_core::state::lookup_catcode",
     ),
   ),
@@ -517,6 +557,13 @@ const DOCS: &[(&str, Doc)] = &[
     ),
   ),
   (
+    "LookupDelcode",
+    Doc::Rust(
+      "A character's delimiter code; `()` when the table holds none.",
+      "latexml_core::state::lookup_delcode",
+    ),
+  ),
+  (
     "LookupFloat",
     Doc::Rust(
       "Read a value as a fractional (float) number, keeping the fraction `LookupNumber` would truncate.",
@@ -524,10 +571,31 @@ const DOCS: &[(&str, Doc)] = &[
     ),
   ),
   (
+    "LookupLCcode",
+    Doc::Rust(
+      "A character's lowercase code; `()` when the table holds none.",
+      "latexml_core::state::lookup_lccode",
+    ),
+  ),
+  (
     "LookupMapping",
     Doc::Rust(
-      "Read one key out of a named mapping.",
-      "latexml_core::state::with_mapping",
+      "Read one key out of a named mapping, with the type it was stored as; `()` when absent.",
+      "latexml_core::state::lookup_mapping",
+    ),
+  ),
+  (
+    "LookupMappingKeys",
+    Doc::Rust(
+      "The keys of a named mapping, sorted.",
+      "latexml_core::state::with_mapping_keys",
+    ),
+  ),
+  (
+    "LookupMathcode",
+    Doc::Rust(
+      "A character's math code; `()` when the table holds none.",
+      "latexml_core::state::lookup_mathcode",
     ),
   ),
   (
@@ -545,6 +613,13 @@ const DOCS: &[(&str, Doc)] = &[
     ),
   ),
   (
+    "LookupSFcode",
+    Doc::Rust(
+      "A character's space-factor code; `()` when the table holds none.",
+      "latexml_core::state::lookup_sfcode",
+    ),
+  ),
+  (
     "LookupString",
     Doc::Rust(
       "Read a value as a string; empty when unset.",
@@ -559,9 +634,16 @@ const DOCS: &[(&str, Doc)] = &[
     ),
   ),
   (
+    "LookupUCcode",
+    Doc::Rust(
+      "A character's uppercase code; `()` when the table holds none.",
+      "latexml_core::state::lookup_uccode",
+    ),
+  ),
+  (
     "LookupValue",
     Doc::Rust(
-      "Read a value, whatever type it was stored as.",
+      "Read a value with the type it was stored as (a list as an array); `()` when unset.",
       "latexml_core::state::lookup_value",
     ),
   ),
@@ -664,21 +746,28 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "ReadArg",
     Doc::Rust(
-      "Read one TeX argument: a token, or a braced group.",
+      "Read one TeX argument, a token or a braced group, as `Tokens`.",
       "latexml_core::gullet::read_arg",
     ),
   ),
   (
     "ReadOptional",
     Doc::Rust(
-      "Read a LaTeX optional `[…]` argument, or a default.",
+      "Read a LaTeX optional `[…]` argument as `Tokens`; `()` when there is none.",
       "latexml_core::gullet::read_optional",
+    ),
+  ),
+  (
+    "ReadToken",
+    Doc::Rust(
+      "Read the next token, unexpanded; `()` at the end of input.",
+      "latexml_core::gullet::read_token",
     ),
   ),
   (
     "ReadUntil",
     Doc::Rust(
-      "Read a balanced token sequence up to a delimiter.",
+      "Read a balanced token sequence up to a delimiter (TeX source, `Token` or `Tokens`), as `Tokens`.",
       "latexml_core::gullet::read_until",
     ),
   ),
@@ -1114,7 +1203,7 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "getProperty",
     Doc::Note(
-      "One whatsit property by name, inside a constructor body — its typed value (string / `Digested` handle / …), or `()` when absent. The read-sibling of `absorbProperty`.",
+      "One whatsit property by name, inside a constructor body — its typed value (string / int / bool / `Tokens` / `Digested` handle / …), or `()` when absent. The read-sibling of `absorbProperty`.",
     ),
   ),
   (
@@ -1241,6 +1330,34 @@ const DOCS: &[(&str, Doc)] = &[
     ),
   ),
   (
+    "readArg",
+    Doc::Rust(
+      "`gullet.readArg()`: `ReadArg` on a `Gullet` handle.",
+      "latexml_core::gullet::read_arg",
+    ),
+  ),
+  (
+    "readOptional",
+    Doc::Rust(
+      "`gullet.readOptional()`: `ReadOptional` on a `Gullet` handle.",
+      "latexml_core::gullet::read_optional",
+    ),
+  ),
+  (
+    "readToken",
+    Doc::Rust(
+      "`gullet.readToken()`: `ReadToken` on a `Gullet` handle.",
+      "latexml_core::gullet::read_token",
+    ),
+  ),
+  (
+    "readUntil",
+    Doc::Rust(
+      "`gullet.readUntil(delim)`: `ReadUntil` on a `Gullet` handle.",
+      "latexml_core::gullet::read_until",
+    ),
+  ),
+  (
     "removeAttribute",
     Doc::Rust(
       "Remove a possibly-prefixed attribute.",
@@ -1288,6 +1405,13 @@ const DOCS: &[(&str, Doc)] = &[
     "setProperty",
     Doc::Note(
       "Set a property on the current whatsit. Only a DIGEST hook may: in a construction hook the whatsit is already read-only, and this is a clean script error.",
+    ),
+  ),
+  (
+    "skipSpaces",
+    Doc::Rust(
+      "`gullet.skipSpaces()`: `SkipSpaces` on a `Gullet` handle.",
+      "latexml_core::gullet::skip_spaces",
     ),
   ),
   (
@@ -1353,6 +1477,22 @@ const DOCS: &[(&str, Doc)] = &[
 /// [`ambiguous_names`] enforces the rule: a name that appears under more than
 /// one handle must have an entry here for EACH of them.
 const HANDLE_DOCS: &[(&str, &str, Doc)] = &[
+  (
+    "Token",
+    "to_string",
+    Doc::Rust(
+      "The token as TeX source (what a string context shows).",
+      "latexml_core::tokens::Tokens::untex",
+    ),
+  ),
+  (
+    "Tokens",
+    "to_string",
+    Doc::Rust(
+      "The tokens as TeX source (what a string context shows).",
+      "latexml_core::tokens::Tokens::untex",
+    ),
+  ),
   (
     "Document",
     "setAttribute",

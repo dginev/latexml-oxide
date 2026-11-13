@@ -35,20 +35,25 @@ closure-registered functions; only the accepted types are.
 
 Called at the top level of a binding file, or from inside any body.
 
-141 functions, 192 calls.
+153 functions, 213 calls.
 
 | call | documentation |
 |---|---|
 | `AddToCounter(string, int)` | Add a number to a counter. ([`add_to_counter`](latexml_core::binding::counter::dialect::add_to_counter)) |
 | `AppendSearchPath(string)` | Append a directory to the input search path (searched after existing paths). ([`add_search_path`](latexml_core::state::add_search_path)) |
 | `AssignBool(string, bool)`<br>`AssignBool(string, bool, string)` | Bind a key to a boolean value, with a scope. ([`assign_value`](latexml_core::state::assign_value)) |
-| `AssignCatcode(string, int)` | Set a character's category code. ([`assign_catcode`](latexml_core::state::assign_catcode)) |
+| `AssignCatcode(string, int)`<br>`AssignCatcode(string, int, string)` | Set a character's category code, with an optional scope. ([`assign_catcode`](latexml_core::state::assign_catcode)) |
+| `AssignDelcode(string, int)`<br>`AssignDelcode(string, int, string)` | Set a character's delimiter code, with an optional scope. ([`assign_delcode`](latexml_core::state::assign_delcode)) |
 | `AssignFloat(string, float)`<br>`AssignFloat(string, float, string)` | Bind a key to a fractional (float) value, with a scope. ([`assign_value`](latexml_core::state::assign_value)) |
-| `AssignMapping(string, string, string)` | Bind one key inside a named mapping. ([`assign_mapping`](latexml_core::state::assign_mapping)) |
+| `AssignLCcode(string, int)`<br>`AssignLCcode(string, int, string)` | Set a character's lowercase code, with an optional scope. ([`assign_lccode`](latexml_core::state::assign_lccode)) |
+| `AssignMapping(string, string, ?)` | Bind one key inside a named mapping to any value, as `AssignValue`; `()` removes the key. ([`assign_mapping`](latexml_core::state::assign_mapping)) |
+| `AssignMathcode(string, int)`<br>`AssignMathcode(string, int, string)` | Set a character's math code, with an optional scope. ([`assign_mathcode`](latexml_core::state::assign_mathcode)) |
 | `AssignMeaning(string\|Token, string\|Token)` | Give a token (CS name or `Token`) the current meaning of another. ([`assign_meaning`](latexml_core::state::assign_meaning)) |
 | `AssignNumber(string, int)`<br>`AssignNumber(string, int, string)` | Bind a key to an integer (Number) value, with a scope. ([`assign_value`](latexml_core::state::assign_value)) |
+| `AssignSFcode(string, int)`<br>`AssignSFcode(string, int, string)` | Set a character's space-factor code, with an optional scope. ([`assign_sfcode`](latexml_core::state::assign_sfcode)) |
 | `AssignString(string, string)`<br>`AssignString(string, string, string)` | Bind a key to a string value, with a scope (the typed twin of `AssignValue`). ([`assign_value`](latexml_core::state::assign_value)) |
-| `AssignValue(string, string)`<br>`AssignValue(string, string, string)` | Bind a key in the value table, with a scope. ([`assign_value`](latexml_core::state::assign_value)) |
+| `AssignUCcode(string, int)`<br>`AssignUCcode(string, int, string)` | Set a character's uppercase code, with an optional scope. ([`assign_uccode`](latexml_core::state::assign_uccode)) |
+| `AssignValue(string, ?)`<br>`AssignValue(string, ?, string)` | Bind a key in the value table to any value (string, number, bool, `Token`, `Tokens`, handle), with a scope; `()` stores undef. ([`assign_value`](latexml_core::state::assign_value)) |
 | `AtBeginDocument(Token)`<br>`AtBeginDocument(Tokens)`<br>`AtBeginDocument(string)` | Queue TeX source (or a `Tokens` or `Token` value) to run at `\begin{document}`. ([`push_value`](latexml_core::state::push_value)) |
 | `AtEndDocument(Token)`<br>`AtEndDocument(Tokens)`<br>`AtEndDocument(string)` | Queue TeX source (or a `Tokens` or `Token` value) to run at `\end{document}`. ([`push_value`](latexml_core::state::push_value)) |
 | `CC_ACTIVE() -> int` | The catcode constant `CC_ACTIVE` (13), for `Token(string, catcode)`. |
@@ -87,8 +92,8 @@ Called at the top level of a binding file, or from inside any body.
 | `DefPrimitive(string, Fn)`<br>`DefPrimitive(string, Fn, map)` | Define a primitive: it runs at digestion, after expansion. ([`def_primitive`](latexml_core::binding::def::dialect::def_primitive)) |
 | `DefRegister(string, int)`<br>`DefRegister(string, string)` | Define a register with an initial value. ([`def_register`](latexml_core::binding::def::dialect::def_register)) |
 | `DefRewrite(map)`<br>`DefRewrite(map, Fn)` | Register a document rewrite rule (data form, or a replace closure). |
-| `Digest(Token) -> Digested`<br>`Digest(Tokens) -> Digested` | Digest tokens (a `Tokens`, or one `Token`) into boxes, independent of the current gullet. ([`digest`](latexml_core::stomach::digest)) |
-| `DigestText(string) -> Digested` | Digest tokens in text mode, whatever mode the caller is in. ([`digest_text`](latexml_core::binding::content::digest_text)) |
+| `Digest(Token) -> Digested`<br>`Digest(Tokens) -> Digested`<br>`Digest(string) -> Digested` | Digest TeX source (a string, TokenizeInternal'd), a `Token` or `Tokens`, returning the digested handle. ([`digest`](latexml_core::stomach::digest)) |
+| `DigestText(Token) -> Digested`<br>`DigestText(Tokens) -> Digested`<br>`DigestText(string) -> Digested` | Digest TeX source, a `Token` or `Tokens` in restricted horizontal mode, returning the digested handle. ([`digest_text`](latexml_core::binding::content::digest_text)) |
 | `EndSemiverbatim()` | Close a `StartSemiverbatim` region, restoring the saved catcodes. ([`end_semiverbatim`](latexml_core::state::end_semiverbatim)) |
 | `Error(string, string, string)` | Log an `Error:`. Past `MAX_ERRORS` this escalates to `Fatal` and ends the conversion. |
 | `ExecuteOptions(array)` | Run the handlers for a list of class/package options. ([`execute_options`](latexml_core::binding::content::execute_options)) |
@@ -104,15 +109,21 @@ Called at the top level of a binding file, or from inside any body.
 | `Let(string\|Token, string\|Token)`<br>`Let(string\|Token, string\|Token, string)` | TeX's `\let`: copy one token's meaning onto another, with an optional scope (`"global"` is `\global\let`). Each token is a CS name string or a `Token`. ([`let_definition`](latexml_core::state::let_definition)) |
 | `LoadClass(string)`<br>`LoadClass(string, array)` | Load a document class, falling back to a prefix match then OmniBus. ([`load_class`](latexml_core::binding::content::load_class)) |
 | `LookupBool(string) -> bool` | Read a value as a boolean. ([`lookup_bool`](latexml_core::state::lookup_bool)) |
-| `LookupCatcode(string) -> int` | The category code currently in force for a character. ([`lookup_catcode`](latexml_core::state::lookup_catcode)) |
+| `LookupCatcode(string) -> ?` | The category code currently in force for a character; `()` when the table holds none. ([`lookup_catcode`](latexml_core::state::lookup_catcode)) |
 | `LookupDefinition(string\|Token) -> Definition?` | Fetch the installed definition of a CS name or `Token` so hooks can be pushed onto it; `()` when undefined or `\let` to a character. |
+| `LookupDelcode(string) -> ?` | A character's delimiter code; `()` when the table holds none. ([`lookup_delcode`](latexml_core::state::lookup_delcode)) |
 | `LookupFloat(string) -> float` | Read a value as a fractional (float) number, keeping the fraction `LookupNumber` would truncate. ([`lookup_float`](latexml_core::state::lookup_float)) |
-| `LookupMapping(string, string) -> string` | Read one key out of a named mapping. ([`with_mapping`](latexml_core::state::with_mapping)) |
+| `LookupLCcode(string) -> ?` | A character's lowercase code; `()` when the table holds none. ([`lookup_lccode`](latexml_core::state::lookup_lccode)) |
+| `LookupMapping(string, string) -> ?` | Read one key out of a named mapping, with the type it was stored as; `()` when absent. ([`lookup_mapping`](latexml_core::state::lookup_mapping)) |
+| `LookupMappingKeys(string) -> array` | The keys of a named mapping, sorted. ([`with_mapping_keys`](latexml_core::state::with_mapping_keys)) |
+| `LookupMathcode(string) -> ?` | A character's math code; `()` when the table holds none. ([`lookup_mathcode`](latexml_core::state::lookup_mathcode)) |
 | `LookupMeaning(string\|Token) -> string` | What a token means right now: its definition, or itself. ([`lookup_meaning`](latexml_core::state::lookup_meaning)) |
 | `LookupNumber(string) -> int` | Read a value as a number. ([`lookup_number`](latexml_core::state::lookup_number)) |
+| `LookupSFcode(string) -> ?` | A character's space-factor code; `()` when the table holds none. ([`lookup_sfcode`](latexml_core::state::lookup_sfcode)) |
 | `LookupString(string) -> string` | Read a value as a string; empty when unset. ([`lookup_string`](latexml_core::state::lookup_string)) |
 | `LookupTokens(string) -> Tokens` | Read a value as tokens. ([`lookup_tokens`](latexml_core::state::lookup_tokens)) |
-| `LookupValue(string) -> ?` | Read a value, whatever type it was stored as. ([`lookup_value`](latexml_core::state::lookup_value)) |
+| `LookupUCcode(string) -> ?` | A character's uppercase code; `()` when the table holds none. ([`lookup_uccode`](latexml_core::state::lookup_uccode)) |
+| `LookupValue(string) -> ?` | Read a value with the type it was stored as (a list as an array); `()` when unset. ([`lookup_value`](latexml_core::state::lookup_value)) |
 | `MergeFont(map)` | Merge font attributes into the current font, group-locally. ([`merge_font`](latexml_core::binding::content::merge_font)) |
 | `NewCounter(string)`<br>`NewCounter(string, string)` | Declare a new counter. ([`new_counter`](latexml_core::binding::counter::dialect::new_counter)) |
 | `Note(string)` | Write a progress note to both the conversion log and stderr. |
@@ -128,9 +139,10 @@ Called at the top level of a binding file, or from inside any body.
 | `ProgressStep(string)` | Advance the progress indicator; a no-op in this port. ([`progress_step`](latexml_core::common::error::progress_step)) |
 | `PushValue(string, ?)` | Push a value (string/int/float/bool/Tokens) onto a value-table list, creating it (global) if absent. ([`push_value`](latexml_core::state::push_value)) |
 | `RawTeX(string)` | Process a chunk of literal TeX as definitions. ([`raw_tex`](latexml_core::stomach::raw_tex)) |
-| `ReadArg() -> string` | Read one TeX argument: a token, or a braced group. ([`read_arg`](latexml_core::gullet::read_arg)) |
-| `ReadOptional() -> string` | Read a LaTeX optional `[…]` argument, or a default. ([`read_optional`](latexml_core::gullet::read_optional)) |
-| `ReadUntil(string) -> string` | Read a balanced token sequence up to a delimiter. ([`read_until`](latexml_core::gullet::read_until)) |
+| `ReadArg() -> Tokens` | Read one TeX argument, a token or a braced group, as `Tokens`. ([`read_arg`](latexml_core::gullet::read_arg)) |
+| `ReadOptional() -> ?` | Read a LaTeX optional `[…]` argument as `Tokens`; `()` when there is none. ([`read_optional`](latexml_core::gullet::read_optional)) |
+| `ReadToken() -> ?` | Read the next token, unexpanded; `()` at the end of input. ([`read_token`](latexml_core::gullet::read_token)) |
+| `ReadUntil(?) -> Tokens` | Read a balanced token sequence up to a delimiter (TeX source, `Token` or `Tokens`), as `Tokens`. ([`read_until`](latexml_core::gullet::read_until)) |
 | `RefCurrentID(string) -> map` | Reuse the last id without stepping, when its box was pruned. ([`ref_current_id`](latexml_core::binding::counter::dialect::ref_current_id)) |
 | `RefStepCounter(string) -> map` | Step a counter and return its `refnum` and `id`. ([`ref_step_counter`](latexml_core::binding::counter::dialect::ref_step_counter)) |
 | `RefStepID(string) -> map` | Step only the uncounter, for an UN-numbered unit; returns the id. ([`ref_step_id`](latexml_core::binding::counter::dialect::ref_step_id)) |
@@ -204,7 +216,7 @@ Reached through the `document` handle a constructor body receives as its first a
 | `getElement() -> Node?` | The element at, or containing, the insertion point. ([`Document::get_element`](latexml_core::document::Document::get_element)) |
 | `getNode() -> Node` | The current insertion point. ([`Document::get_node`](latexml_core::document::Document::get_node)) |
 | `getProperties() -> map` | The whatsit's whole property map (a Rhai object map), inside a constructor body. |
-| `getProperty(string) -> ?` | One whatsit property by name, inside a constructor body — its typed value (string / `Digested` handle / …), or `()` when absent. The read-sibling of `absorbProperty`. |
+| `getProperty(string) -> ?` | One whatsit property by name, inside a constructor body — its typed value (string / int / bool / `Tokens` / `Digested` handle / …), or `()` when absent. The read-sibling of `absorbProperty`. |
 | `insertElement(string) -> Node`<br>`insertElement(string, Digested) -> Node`<br>`insertElement(string, Digested, map) -> Node`<br>`insertElement(string, map) -> Node` | Open, absorb and close in one step; returns the new element. ([`Document::insert_element`](latexml_core::document::Document::insert_element)) |
 | `insertPI(string)`<br>`insertPI(string, map)` | Insert a processing instruction: a target, with optional attributes. ([`Document::insert_pi`](latexml_core::document::Document::insert_pi)) |
 | `insertXML(Node)`<br>`insertXML(array)`<br>`insertXML(string)` | Splice ALREADY-PARSED nodes in at the insertion point. ([`Document::insert_nodes`](latexml_core::document::Document::insert_nodes)) |
@@ -273,6 +285,20 @@ An already-installed definition, for pushing hooks onto it.
 | `unshiftAfterDigestBody(Fn)` | Prepend a hook to that definition's `afterDigestBody` list. |
 | `unshiftBeforeConstruct(Fn)` | Prepend a hook to that definition's `beforeConstruct` list. |
 | `unshiftBeforeDigest(Fn)` | Prepend a hook to that definition's `beforeDigest` list. |
+
+## `Gullet` methods
+
+Perl's `$gullet->read…`: the gullet handle a parameter-type reader receives.
+
+5 functions, 5 calls.
+
+| call | documentation |
+|---|---|
+| `readArg() -> Tokens` | `gullet.readArg()`: `ReadArg` on a `Gullet` handle. ([`read_arg`](latexml_core::gullet::read_arg)) |
+| `readOptional() -> ?` | `gullet.readOptional()`: `ReadOptional` on a `Gullet` handle. ([`read_optional`](latexml_core::gullet::read_optional)) |
+| `readToken() -> ?` | `gullet.readToken()`: `ReadToken` on a `Gullet` handle. ([`read_token`](latexml_core::gullet::read_token)) |
+| `readUntil(?) -> Tokens` | `gullet.readUntil(delim)`: `ReadUntil` on a `Gullet` handle. ([`read_until`](latexml_core::gullet::read_until)) |
+| `skipSpaces()` | `gullet.skipSpaces()`: `SkipSpaces` on a `Gullet` handle. ([`skip_spaces`](latexml_core::gullet::skip_spaces)) |
 
 ## `Command` methods
 

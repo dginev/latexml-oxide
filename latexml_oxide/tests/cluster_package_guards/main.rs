@@ -613,6 +613,7 @@ mod perfect_kernel_batchunc;
 /// VARW: a varwidth box measures its widest line (algxpar-doc, 2401.12710); KNOWN_PERL_ERRORS #1234.
 mod perfect_kernel_batchvarw;
 mod perfect_kernel_batchw3ra;
+mod perfect_kernel_batchw3rb;
 mod perfect_kernel_batchz1;
 mod perfect_kernel_batchz14;
 mod perfect_kernel_batchz18c;
