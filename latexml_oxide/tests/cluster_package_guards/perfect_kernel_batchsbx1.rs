@@ -37,6 +37,15 @@ const ROWS: &[(Source, (usize, usize), Expect)] = &[
       "\\renewenvironment{multline*}",
     ]),
   ),
+  (
+    Source::Repro("sectioning-frontmatter/fairmeta_one_author_call_names_several.tex"),
+    (0, 0),
+    Expect::Creators(&[
+      &["Ann Able", "affiliation=MIT"],
+      &["Bob Baker", "affiliation=Stanford University"],
+      &["Carl Cole", "affiliation=MIT"],
+    ]),
+  ),
 ];
 
 #[test]

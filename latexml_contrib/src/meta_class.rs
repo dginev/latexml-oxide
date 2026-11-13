@@ -29,21 +29,18 @@ pub fn install_meta_class_frontmatter() -> Result<()> {
   // `\contribution[mark]{text}` link authors to institutions/notes by superscript
   // MARK (`\author[1,2,*]{…}` cites `\affiliation[1]{…}` and `\contribution[*]{…}`).
   // Route the marks through LaTeXML's author-annotation / contact-label plan — the
-  // authblk.sty.ltxml idiom (`\lx@add@creator[annotations={#1}]` +
+  // authblk idiom (authblk_sty.rs `\lx@add@authors@append[annotations={#1}]` +
   // `\lx@add@contact[role,annotate,label={#1}]`), whose `relocate_annotations`
   // step attaches each contact to the creators that cite its mark. Dropping the
   // mark (the old `\lx@add@author{#2}` + detached `ltx:note`) lost every
   // author↔institution association (arXiv/html_feedback#1396 and the fairmeta
-  // family #662/#3512/#4707/#4971/#5035/#5466). The annotation/label mechanism is
-  // byte-identical to Perl LaTeXML (verified via the shared `\lx@add@creator`/
-  // `\lx@add@contact` primitives); on the fairmeta papers themselves Rust
-  // surpasses Perl, which has no binding and mangles them under OmniBus. An
-  // uncited mark has no target and is dropped — parity with Perl's plan; the
-  // marks in real papers are always cited. `\author` must NOT expand to `\author`
-  // (that re-matches this macro and recurses) — use `\lx@add@creator`.
+  // family #662/#3512/#4707/#4971/#5035/#5466); Perl has no binding and mangles
+  // them under OmniBus. An uncited mark has no target and is dropped. The body is
+  // read as a per-author class's author line: one `\author{}` may name several
+  // authors and their affiliations (13 in 2605.17829).
   DefMacro!(
     "\\author[]{}",
-    "\\lx@add@creator[role=author,annotations={#1}]{#2}"
+    "\\lx@add@authors@append[annotations={#1}]{#2}"
   );
   DefMacro!(
     "\\affiliation[]{}",
