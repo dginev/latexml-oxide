@@ -272,7 +272,23 @@ fn tex_live_runfiles() -> Option<std::collections::HashSet<String>> {
     .output()
     .ok()?;
   let root = String::from_utf8_lossy(&root.stdout).trim().to_string();
-  let db = std::fs::read_to_string(std::path::Path::new(&root).join("tlpkg/texlive.tlpdb")).ok()?;
+  let tlpkg = std::path::Path::new(&root).join("tlpkg");
+  // The installed `texlive.tlpdb` lists only what is INSTALLED: on a partial tree (CI's Windows `scheme-medium`)
+  // pstricks or vntex would read as outside TeX Live. tlmgr's cached copy of the repository's catalog
+  // (`texlive.tlpdb.main.<hash>`) lists all of it; the installed one does only on a `scheme-full` install.
+  let catalog = std::fs::read_dir(&tlpkg).ok()?.flatten().find_map(|entry| {
+    let name = entry.file_name();
+    name
+      .to_str()?
+      .starts_with("texlive.tlpdb.main.")
+      .then(|| std::fs::read_to_string(entry.path()).ok())?
+  });
+  let db = match catalog {
+    Some(catalog) => catalog,
+    None => std::fs::read_to_string(tlpkg.join("texlive.tlpdb"))
+      .ok()
+      .filter(|db| db.lines().any(|line| line == "name scheme-full"))?,
+  };
   let mut in_runfiles = false;
   let mut runfiles = std::collections::HashSet::new();
   for line in db.lines() {

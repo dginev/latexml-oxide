@@ -138,10 +138,11 @@ pub fn discover(root: &Path, depth: usize) -> Discovery {
   let mut found = Discovery::default();
   let mut queue = vec![(root.to_path_buf(), 0)];
   while let Some((dir, level)) = queue.pop() {
+    // A key names the document on both sides, so it is `/`-separated on every platform ([`load`] joins it back).
     let rel = || {
       dir
         .strip_prefix(root)
-        .map(|r| r.to_string_lossy().into_owned())
+        .map(|r| r.to_string_lossy().replace('\\', "/"))
         .unwrap_or_default()
     };
     if level > 0 && doc_files(&dir).is_some() {
