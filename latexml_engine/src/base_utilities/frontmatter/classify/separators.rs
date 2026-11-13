@@ -2,7 +2,9 @@
 //! "Knowledge in, driver out, one pass", user ruling 2026-11-08).
 
 use super::*;
-use crate::base_utilities::frontmatter::observer::split_at_kernel_separators;
+use crate::base_utilities::frontmatter::observer::{
+  kernel_separator_runs, may_hold_kernel_separator, split_at_runs,
+};
 
 /// The line breaks an author line's printed separator may stand beside, with their optional `*` and `[…]`: a break
 /// before the word or after it is no name's (`Ann Able\orcidID{…} and\\ Bob Baker`, svmult; `Badr~Kaoui$^{3,4}$\break
@@ -239,14 +241,25 @@ pub(in crate::base_utilities) fn author_affil_splits() -> Vec<SplitDelim> {
 }
 
 /// An affiliation list's lines, the frontmatter API's cutter's and Kind step's: cut first at the kernel's `\and` by
-/// meaning (a document's macro holding it, a `\csname and\endcsname`, as the spelled one; `split_at_kernel_separators`),
-/// then at [`author_affil_splits`] by spelling. Beamer's `\institute{\inst{1}Univ A \sep Univ B}`, `\def\sep{\and}`.
+/// meaning (a document's macro holding it, a `\csname and\endcsname`, as the spelled one; `kernel_separator_runs`),
+/// outside balanced parentheses as the spelling's cut (OD #36), then at [`author_affil_splits`] by spelling. Beamer's
+/// `\institute{\inst{1}Univ A \sep Univ B}`, `\def\sep{\and}`; `\inst{1}Univ A (North \and South)` one line.
 pub(in crate::base_utilities) fn affiliation_lines(stuff: &Tokens) -> Result<DelimitedPieces> {
-  Ok(split_at_kernel_separators(stuff.clone(), author_affil_splits())?.0)
+  let delims = author_affil_splits();
+  if !may_hold_kernel_separator(stuff, &delims) {
+    return Ok(split_tokens_delimited(stuff.clone(), delims));
+  }
+  let v = stuff.unlist_ref();
+  let runs = kernel_separator_runs(stuff)?
+    .unwrap_or_default()
+    .into_iter()
+    .filter(|&(start, _)| !inside_balanced_parens(v, start))
+    .collect();
+  Ok(split_at_runs(stuff.clone(), delims, runs).0)
 }
 
-/// Whether a cut of [`affiliation_lines`] parts two entries: the `\and` family spelled, or a cut by meaning (no
-/// [`author_affil_splits`] token spelled in it).
+/// Whether a cut of [`affiliation_lines`] parts two entries: the `\and` family spelled (a `\let` copy of the current
+/// `\and` too, [`delimiter_token_matches`]), or a cut by meaning (no [`author_affil_splits`] token spelled in it).
 pub(in crate::base_utilities) fn parts_entries(delimiter: &[Token]) -> bool {
   let spelled = |delims: &[SplitDelim]| {
     delimiter.iter().any(|t| {
