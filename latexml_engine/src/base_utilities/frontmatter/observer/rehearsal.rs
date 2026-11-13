@@ -1244,35 +1244,29 @@ fn set_footnote_base(footnotes: bool, base: i64) {
   FOOTNOTE_BASE.with(|cell| cell.set(base));
 }
 
-/// The rehearsals of text alone one reading made ([`rehearse_text`]): by the content's tokens as they are (a space's
-/// text and a field stamp too), the events lexed and the tokens read.
+/// The rehearsals of API calls' contents one reading made ([`rehearse_call`]): by the content's tokens as they are (a
+/// space's text and a field stamp too), the events lexed and the tokens read.
 #[derive(Default)]
-pub(in crate::base_utilities) struct TextRehearsals(
+pub(in crate::base_utilities) struct CallRehearsals(
   std::collections::HashMap<Vec<(SymStr, Catcode, u16)>, (Vec<Event>, usize)>,
 );
 
-/// [`rehearse`] of an API call's `content`, lexed by [`lex_events`]: the events of the same
-/// text rehearsed before in this reading (`seen`) when it is text alone — characters and braces, which call no command,
-/// so only the state each run's rollback leaves decides them — and that run left nothing behind (no diagnostic, no
-/// conditional, no footnote step, nothing queued); its reads counted again as a run's, from the same budget
-/// (1901.01540's 1,427 `\affiliation`s, 228 texts; 1710.09320's 1,257, 160).
-pub(in crate::base_utilities) fn rehearse_text(
-  seen: &mut TextRehearsals,
+/// [`rehearse`] of an API call's `content`, lexed by [`lex_events`]: the events of the same content rehearsed before in
+/// this reading (`seen`) when that run left nothing behind — no diagnostic, conditional, footnote step, definition,
+/// environment or queued entry, no group open — so the state each run's rollback restores decides them alike; its reads
+/// counted again, from the same budget (1901.01540's 1,427 `\affiliation`s, 228 contents; 1710.09320's 1,257, 160;
+/// 2103.04797's 1,161 REVTeX `\affiliation{\Amsterdam}`-style macros).
+pub(in crate::base_utilities) fn rehearse_call(
+  seen: &mut CallRehearsals,
   content: Tokens,
   title_marks: TitleMarks,
 ) -> Result<Rehearsal<Vec<Event>>> {
-  let key: Option<Vec<_>> = content
+  let key: Vec<_> = content
     .unlist_ref()
     .iter()
-    .map(|t| {
-      matches!(
-        t.code,
-        Catcode::LETTER | Catcode::OTHER | Catcode::SPACE | Catcode::BEGIN | Catcode::END
-      )
-      .then_some((t.text, t.code, t.prov))
-    })
+    .map(|t| (t.text, t.code, t.prov))
     .collect();
-  if let Some((events, reads)) = key.as_ref().and_then(|key| seen.0.get(key))
+  if let Some((events, reads)) = seen.0.get(&key)
     && rehearsal_budget().is_some_and(|budget| budget >= *reads)
   {
     let (footnotes, counter, carried) = footnote_start()?;
@@ -1298,9 +1292,6 @@ pub(in crate::base_utilities) fn rehearse_text(
       expansions:   Vec::new(),
     });
   }
-  let Some(key) = key else {
-    return rehearse(content, title_marks, &[], lex_events);
-  };
   let left = READS_LEFT.get();
   let progress = token_progress();
   let conditionals = (if_count(), if_stack_depth());

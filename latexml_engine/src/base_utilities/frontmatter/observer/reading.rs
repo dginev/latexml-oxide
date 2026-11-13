@@ -20,7 +20,7 @@ use super::{
   },
   policy::{TitleMarks, policy_for},
   rehearsal::{
-    Rehearsal, TextRehearsals, footnotes_carried, for_the_check, rehearse, rehearse_text,
+    CallRehearsals, Rehearsal, footnotes_carried, for_the_check, rehearse, rehearse_call,
     set_footnotes_carried,
   },
   resolver::{Assoc, Resolved, ledger_inputs, resolve},
@@ -355,14 +355,14 @@ fn read_pending() -> Result<HeldUndefined> {
       .collect()
   });
   let calls_mark = StomachMark::take();
-  // (a text the calls repeat is rehearsed once: AASTeX's 1,427 `\affiliation`s, 228 texts, 1901.01540)
-  let mut texts = TextRehearsals::default();
+  // (a content the calls repeat is rehearsed once: AASTeX's 1,427 `\affiliation`s, 228 contents, 1901.01540)
+  let mut seen = CallRehearsals::default();
   for (i, content, inside) in calls {
     let read = if content.is_empty() {
       Some((Vec::new(), 0, None, Vec::new()))
     } else {
       // (an inside call's, for the check alone, from the check's own allowance: `rehearsal::for_the_check`)
-      let mut rehearsal = || rehearse_text(&mut texts, content.clone(), TitleMarks::Fnsymbol);
+      let mut rehearsal = || rehearse_call(&mut seen, content.clone(), TitleMarks::Fnsymbol);
       let rehearsed = if inside {
         for_the_check(rehearsal)
       } else {
