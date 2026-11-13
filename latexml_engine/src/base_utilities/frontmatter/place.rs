@@ -147,6 +147,88 @@ pub(in crate::base_utilities) fn sequenced_contact_labels(
   Ok(labels)
 }
 
+/// The flush's e-mails printed in a block several names share, for a flush the reading does not write (OD #970 G6): an
+/// e-mail entry, or a note holding one, after a run of ≥ 2 names goes to the name it spells — acmart (2310.06444,
+/// 2601.17008, 1907.07581, 2504.00797), Wiley `\corres` (2311.07985, 2407.08541, 2505.23112, 2503.06763); one after a
+/// single name stays its own (2208.05647, 2306.14314, 2609.11148), as does an address two own calls give (2205.01906,
+/// 2211.05700). Read per entry in `\lx@annotate@frontmatter@now` ([`ENTRY_RESPELL`]).
+pub(in crate::base_utilities) fn shared_block_email_labels(
+  commands: &[RawFrontmatter],
+  emitted: bool,
+) -> Result<Vec<Option<(String, String)>>> {
+  // (a creator the emitter wrote, its keys in its call alone, is one of the reading's authors)
+  let author = |entry: &RawFrontmatter| {
+    entry.0 == "ltx:creator" && entry.1.get("role").is_none_or(|role| role == "author")
+  };
+  // (a name's note: a note, or a contact of role `note`, acmart's `\authornote`)
+  let note = |entry: &RawFrontmatter| {
+    entry.0 == "ltx:note" || entry.1.get("role").map(String::as_str) == Some("note")
+  };
+  let mut out = vec![None; commands.len()];
+  let numbered = lookup_mapping_int("num_ltx:creator", "author");
+  for (at, entry) in commands.iter().enumerate() {
+    let positional = entry.0 == "ltx:contact"
+      && entry.1.get("role").map(String::as_str) == Some("email")
+      && entry
+        .1
+        .get("label")
+        .is_none_or(|label| label.trim().is_empty())
+      && !entry.1.contains_key("_sequence");
+    // (where the reading wrote the flush, only an entry it left as queued: a document's note, not a creator's call)
+    if (!positional && entry.0 != "ltx:note")
+      || (emitted && resolver::creator_call(&entry.0, &annotated_parent(&entry.2)))
+    {
+      continue;
+    }
+    // (the run of names before it, back over the entries between; a name's note, acmart's `\authornote`, ends no run:
+    // 1907.07581)
+    let end = (0..at)
+      .rev()
+      .find(|&k| author(&commands[k]))
+      .map_or(0, |k| k + 1);
+    let start = (0..end)
+      .rev()
+      .find(|&k| !author(&commands[k]) && !note(&commands[k]))
+      .map_or(0, |k| k + 1);
+    let run: Vec<usize> = (start..end).filter(|&k| author(&commands[k])).collect();
+    if run.len() < 2 {
+      continue;
+    }
+    // (its one address, an `\href{mailto:a@x}{a@x}` read once)
+    let text = content_text(&last_group(&entry.2));
+    let mut addresses = resolver::addresses_in(&text);
+    addresses.sort_unstable();
+    addresses.dedup();
+    let [address] = addresses.as_slice() else {
+      continue;
+    };
+    if lists_local_parts(address) {
+      continue;
+    }
+    let mut printed = Vec::with_capacity(run.len());
+    let mut based = Vec::with_capacity(run.len());
+    for &k in &run {
+      let text = argument_name_text(&queued_name(&commands[k].2))?.unwrap_or_default();
+      let name = Tokens::new(ExplodeText!(&text));
+      printed.push(NameKeys::as_printed(&name));
+      based.push(NameKeys::of(&name));
+    }
+    let holder = run.len() - 1;
+    if let [owner] = spelled_owners(&printed, address).as_slice()
+      && *owner != holder
+      && !own_call_keeps(&based[holder], &printed[*owner], address, true)
+    {
+      let place = commands[..run[*owner]].iter().filter(|e| author(e)).count();
+      let n = numbered + i64::try_from(place).unwrap_or(0) + 1;
+      out[at] = Some((address.clone(), s!("author:{n}")));
+    }
+  }
+  Ok(out)
+}
+
+/// The queued entry's respelled e-mail being digested, `address\u{2}author:N` ([`shared_block_email_labels`]), or empty.
+pub(in crate::base_utilities) const ENTRY_RESPELL: &str = "lx_frontmatter_entry_respell";
+
 /// Step 2 of [`sequenced_contact_labels`], kept apart so a ruling can switch it off in one change: the place (from 0)
 /// of each address of `listed` (its call, its known author) in the authors' order, when the list is one place for
 /// each of `authors` authors and no known author is another than the one at its place; `None` when it is no such list.
@@ -496,7 +578,7 @@ pub fn digest_front_matter() -> Result<()> {
   // (a contact the class prints under the whole row of names, every author's, OXIDIZED_DESIGN_DIVERGENCES #901, is the
   // reading's: the emitter writes a flush holding one with or without an author block, `stays_out`; under a block no
   // rehearsal read it is digested as Perl's, as the rest of the queue)
-  emit_commands(&mut commands)?;
+  let emitted = emit_commands(&mut commands)?;
   // (what this flush digests is off the queue: no later flush's emitter writes it again, astro-ph9808358)
   take_digested(&commands);
   // The entries a seal drops in this flush, whose annotations go with them ([`seal_digested_frontmatter`]) — this
@@ -574,9 +656,18 @@ pub fn digest_front_matter() -> Result<()> {
       &T_CS!("\\lx@annotate@frontmatter@now"),
       None,
     );
-    for entry in commands {
+    // (the shared blocks' e-mails the reading did not place: `shared_block_email_labels`)
+    let respelled = shared_block_email_labels(&commands, emitted)?;
+    for (entry, respell) in commands.into_iter().zip(respelled) {
+      let respell = respell.map(|(address, label)| s!("{address}\u{2}{label}"));
+      assign_value(
+        ENTRY_RESPELL,
+        Stored::String(pin(respell.as_deref().unwrap_or(""))),
+        Some(Scope::Local),
+      );
       digest_queued_entry(entry)?;
     }
+    assign_value(ENTRY_RESPELL, Stored::String(pin("")), Some(Scope::Local));
   }
   // (an entry a late block's flush set after this queue's own, `defer_to_flush_end`: a title, subtitle or date read
   // in a block this outermost flush digests — `\title{…\author{…\date{One}}}` — placed here, at the end of the

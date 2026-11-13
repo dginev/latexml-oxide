@@ -1045,7 +1045,7 @@ pub(in crate::base_utilities) fn record_api_call(
 /// but the text its column spec places, `@{Inst }`, review revI3 finding 1, `rehearsal::past_tabular_call`), another control sequence, its argument's group (`\IEEEauthorrefmark{1}Univ Alpha` →
 /// ` 1 Univ Alpha`) or a math shift parts words. Nothing is spelled but a control sequence's length, its letter's
 /// catcode and a control symbol's character: a letter command (`Gro{\ss}e`, a control word) parts its word.
-pub(super) fn content_text(content: &Tokens) -> ContentText {
+pub(in crate::base_utilities) fn content_text(content: &Tokens) -> ContentText {
   let mut text = String::new();
   // (where it read past a control symbol or a one-letter control word inside a word, or an accent's control symbol or a
   // one-letter control word before its first letter, `\'Ecole Normale` (review revH3 2), `\v{S}koda`: its byte in `text`, and whether a one-letter control
@@ -1198,7 +1198,7 @@ fn starts_word(t: &Token) -> bool {
 
 /// The tag a queued call annotates, its first argument (`\lx@annotate@frontmatter@now{ltx:creator}…`), empty for a call
 /// that annotates none: the API boundary's one read of a command.
-pub(super) fn annotated_parent(command: &Tokens) -> String {
+pub(in crate::base_utilities) fn annotated_parent(command: &Tokens) -> String {
   match command.unlist_ref().as_slice() {
     [first, rest @ ..] if *first == T_CS!("\\lx@annotate@frontmatter@now") => {
       first_group(rest).to_string().trim().to_string()

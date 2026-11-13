@@ -918,6 +918,15 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
         labels = vec![label.to_string()];
       }
     }
+    // (an e-mail of a block several names share, placed on the name it spells: `shared_block_email_labels`)
+    if role == "email" && labels.is_empty() {
+      let respell = lookup_string(ENTRY_RESPELL);
+      if let Some((address, label)) = respell.split_once('\u{2}')
+        && visible_name_text(content.unlist_ref()).contains(address)
+      {
+        labels = vec![label.to_string()];
+      }
+    }
     // (whether the call names its entry itself, which an entry digested inside it of its kind does not override: `_name`
     // on the stub below)
     let name_given = options.contains_key("name");
