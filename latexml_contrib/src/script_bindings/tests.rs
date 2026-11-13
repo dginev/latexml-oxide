@@ -184,6 +184,118 @@ fn let_takes_a_scope() {
   );
 }
 
+/// #796: `Let` and its token-taking siblings take a string as a control-sequence name, or any `Token` as is (Perl
+/// `Package.pm:383-390`), so Perl's `Let(T_ACTIVE(" "), '\space')`, `Let(T_MATH, …)`, `Let(T_ALIGN, '\&')` port.
+#[test]
+fn let_takes_any_token() {
+  use latexml_core::{T_ACTIVE, T_CS, T_MATH, T_OTHER, common::store::Stored, state};
+  fresh_state();
+  load_script(r##"RawTeX("\\def\\ltfoo{FOO}");"##).expect("define \\ltfoo");
+  let math_before = state::lookup_definition_stored(&T_MATH!()).expect("lookup $");
+  let tilde_before = state::lookup_meaning(&T_ACTIVE!('~'));
+  state::push_frame();
+  load_script(
+    r##"
+      Let(T_ACTIVE("~"), "\\ltfoo");
+      assign_global("lt:tilde", UnTeX(Expand(T_ACTIVE("~"))));
+      Let(T_MATH(), "\\ltfoo");
+      Let("\\ltx", T_OTHER("a"));
+      assign_global("lt:xeq", if XEquals("\\ltx", T_OTHER("a")) && IsDefined("\\ltx") { "eq" } else { "ne" });
+      Let(Token("+", CC_ACTIVE()), T_OTHER("b"));
+      assign_global("lt:plus", if XEquals(T_ACTIVE("+"), Token("b", CC_OTHER())) { "eq" } else { "ne" });
+      Let(T_ACTIVE("?"), "\\ltfoo", "global");
+      AssignMeaning(T_ACTIVE("="), T_ACTIVE("~"));
+      assign_global("lt:assign", UnTeX(Expand(Tokens([T_ACTIVE("="), T_OTHER("x"), T_CS("\\ltfoo")]))));
+      assign_global("lt:meaning", LookupMeaning(T_OTHER("a")));
+      assign_global("lt:def", if LookupDefinition(T_ACTIVE("~")) == () { "none" } else { "some" });
+      assign_global("lt:digest", ToString(Digest(T_CS("\\ltfoo"))));
+    "##,
+  )
+  .expect("token-taking Let script should load cleanly");
+  assert_eq!(
+    lookup_str("lt:tilde"),
+    "FOO",
+    "~ let to \\ltfoo expands as \\ltfoo"
+  );
+  assert!(
+    state::lookup_definition_stored(&T_MATH!()).expect("lookup $")
+      == state::lookup_meaning(&T_CS!("\\ltfoo")),
+    "Let(T_MATH(), …) gives $ the meaning of \\ltfoo"
+  );
+  assert!(
+    matches!(state::lookup_meaning(&T_CS!("\\ltx")), Some(Stored::Token(t)) if t == T_OTHER!("a")),
+    "\\ltx is the character a"
+  );
+  assert_eq!(lookup_str("lt:xeq"), "eq");
+  assert!(
+    matches!(state::lookup_meaning(&T_ACTIVE!('+')), Some(Stored::Token(t)) if t == T_OTHER!("b")),
+    "a Token on both sides: the active + is the character b"
+  );
+  assert_eq!(lookup_str("lt:plus"), "eq");
+  assert_eq!(
+    lookup_str("lt:assign"),
+    "FOOxFOO",
+    "AssignMeaning takes tokens; Tokens([...]) builds a list"
+  );
+  assert_eq!(
+    lookup_str("lt:meaning"),
+    "a",
+    "a character's meaning is itself"
+  );
+  assert_eq!(lookup_str("lt:def"), "some");
+  assert_eq!(lookup_str("lt:digest"), "FOO", "Digest takes a Token");
+  state::pop_frame().expect("pop the test's group");
+  assert!(
+    state::lookup_definition_stored(&T_MATH!()).expect("lookup $") == math_before,
+    "a local Let of $ ends with the group"
+  );
+  assert!(
+    state::lookup_meaning(&T_ACTIVE!('~')) == tilde_before,
+    "a local Let of ~ ends with the group"
+  );
+  assert!(
+    state::x_equals(&T_ACTIVE!('?'), &T_CS!("\\ltfoo")),
+    "a global Let of a Token survives the group"
+  );
+  // A token list where a token is meant is an error naming the call, as `Tokens` is not a `Token`.
+  for (src, call) in [
+    (
+      r##"Let(T_ACTIVE("~"), TokenizeInternal("\\a\\b"));"##,
+      "Let",
+    ),
+    (
+      r##"Let(TokenizeInternal("\\relax"), "\\ltfoo", "global");"##,
+      "Let",
+    ),
+    (
+      r##"XEquals(TokenizeInternal("\\relax"), "\\relax");"##,
+      "XEquals",
+    ),
+  ] {
+    let err = load_script(src)
+      .expect_err("a Tokens is not a Token")
+      .to_string();
+    assert!(err.contains(call) && err.contains("Token"), "{src}: {err}");
+  }
+  // As `Let!` (`state::let_definition`): a provide-only binding load declines a `Let` of a name defined before it.
+  load_script(r##"RawTeX("\\def\\ltkept{KEPT}");"##).expect("define \\ltkept");
+  {
+    use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard, ProvideOnlyGuard};
+    let _origin = OriginGuard::new(DefinitionOrigin::Binding);
+    let _provide = ProvideOnlyGuard::new();
+    load_script(r##"Let("\\ltkept", "\\ltfoo"); Let(T_ACTIVE("<"), "\\ltfoo");"##)
+      .expect("provide-only Let script should load cleanly");
+  }
+  assert!(
+    !state::x_equals(&T_CS!("\\ltkept"), &T_CS!("\\ltfoo")),
+    "a provide-only load keeps the earlier \\ltkept"
+  );
+  assert!(
+    state::x_equals(&T_ACTIVE!('<'), &T_CS!("\\ltfoo")),
+    "a provide-only load still lets an undefined token"
+  );
+}
+
 /// #540: the value-table list family (`PushValue`/`PopValue`/`UnshiftValue`/
 /// `ShiftValue`, Perl `Package.pm` L265-279) plus the dedicated search-path
 /// bindings. As of #561 `SEARCHPATHS` is itself a group-scoped value-table list

@@ -482,14 +482,14 @@ fn wrong_kind_err(cs: &str, family: HookFamily, stored: &Stored) -> Box<EvalAltR
 /// global (harmless for BookML, which only patches already-global defs, but a
 /// real divergence — see PR #333 discussion r3623947537, @xworld21).
 pub(super) fn push_definition_hook(
-  cs: &str,
+  token: &Token,
   family: HookFamily,
   at_front: bool,
   fp: FnPtr,
 ) -> std::result::Result<(), Box<EvalAltResult>> {
   let (engine, ast) = current_script()?;
-  let token = latexml_core::T_CS!(cs);
-  let stored = lookup_definition_stored(&token)
+  let cs = token.to_string();
+  let stored = lookup_definition_stored(token)
     .map_err(rhai_err)?
     .ok_or_else(|| {
       Box::<EvalAltResult>::from(format!(
@@ -520,7 +520,7 @@ pub(super) fn push_definition_hook(
           insert_hook(&mut d.options.before_digest, at_front, hook);
           install_definition(d, Some(Scope::InPlace));
         },
-        other => return Err(wrong_kind_err(cs, family, &other)),
+        other => return Err(wrong_kind_err(&cs, family, &other)),
       }
     },
     HookFamily::AfterDigest => {
@@ -541,7 +541,7 @@ pub(super) fn push_definition_hook(
           insert_hook(&mut d.options.after_digest, at_front, hook);
           install_definition(d, Some(Scope::InPlace));
         },
-        other => return Err(wrong_kind_err(cs, family, &other)),
+        other => return Err(wrong_kind_err(&cs, family, &other)),
       }
     },
     HookFamily::BeforeConstruct => {
@@ -552,7 +552,7 @@ pub(super) fn push_definition_hook(
           insert_hook(&mut d.before_construct, at_front, hook);
           install_definition(d, Some(Scope::InPlace));
         },
-        other => return Err(wrong_kind_err(cs, family, &other)),
+        other => return Err(wrong_kind_err(&cs, family, &other)),
       }
     },
     HookFamily::AfterConstruct => {
@@ -563,7 +563,7 @@ pub(super) fn push_definition_hook(
           insert_hook(&mut d.after_construct, at_front, hook);
           install_definition(d, Some(Scope::InPlace));
         },
-        other => return Err(wrong_kind_err(cs, family, &other)),
+        other => return Err(wrong_kind_err(&cs, family, &other)),
       }
     },
     HookFamily::AfterDigestBody => {
@@ -574,7 +574,7 @@ pub(super) fn push_definition_hook(
           insert_hook(&mut d.after_digest_body, at_front, hook);
           install_definition(d, Some(Scope::InPlace));
         },
-        other => return Err(wrong_kind_err(cs, family, &other)),
+        other => return Err(wrong_kind_err(&cs, family, &other)),
       }
     },
   }

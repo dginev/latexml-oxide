@@ -35,7 +35,7 @@ closure-registered functions; only the accepted types are.
 
 Called at the top level of a binding file, or from inside any body.
 
-104 functions, 139 calls.
+137 functions, 179 calls.
 
 | call | documentation |
 |---|---|
@@ -45,12 +45,31 @@ Called at the top level of a binding file, or from inside any body.
 | `AssignCatcode(string, int)` | Set a character's category code. ([`assign_catcode`](latexml_core::state::assign_catcode)) |
 | `AssignFloat(string, float)`<br>`AssignFloat(string, float, string)` | Bind a key to a fractional (float) value, with a scope. ([`assign_value`](latexml_core::state::assign_value)) |
 | `AssignMapping(string, string, string)` | Bind one key inside a named mapping. ([`assign_mapping`](latexml_core::state::assign_mapping)) |
-| `AssignMeaning(string, string)` | Make a control sequence mean a definition, or another token. ([`assign_meaning`](latexml_core::state::assign_meaning)) |
+| `AssignMeaning(?, ?)` | Give a token (CS name or `Token`) the current meaning of another. ([`assign_meaning`](latexml_core::state::assign_meaning)) |
 | `AssignNumber(string, int)`<br>`AssignNumber(string, int, string)` | Bind a key to an integer (Number) value, with a scope. ([`assign_value`](latexml_core::state::assign_value)) |
 | `AssignString(string, string)`<br>`AssignString(string, string, string)` | Bind a key to a string value, with a scope (the typed twin of `AssignValue`). ([`assign_value`](latexml_core::state::assign_value)) |
 | `AssignValue(string, string)`<br>`AssignValue(string, string, string)` | Bind a key in the value table, with a scope. ([`assign_value`](latexml_core::state::assign_value)) |
-| `AtBeginDocument(Tokens)`<br>`AtBeginDocument(string)` | Queue TeX source (or a Tokens value) to run at `\begin{document}`. ([`push_value`](latexml_core::state::push_value)) |
-| `AtEndDocument(Tokens)`<br>`AtEndDocument(string)` | Queue TeX source (or a Tokens value) to run at `\end{document}`. ([`push_value`](latexml_core::state::push_value)) |
+| `AtBeginDocument(Token)`<br>`AtBeginDocument(Tokens)`<br>`AtBeginDocument(string)` | Queue TeX source (or a `Tokens` or `Token` value) to run at `\begin{document}`. ([`push_value`](latexml_core::state::push_value)) |
+| `AtEndDocument(Token)`<br>`AtEndDocument(Tokens)`<br>`AtEndDocument(string)` | Queue TeX source (or a `Tokens` or `Token` value) to run at `\end{document}`. ([`push_value`](latexml_core::state::push_value)) |
+| `CC_ACTIVE() -> int` | The catcode constant `CC_ACTIVE` (13), for `Token(string, catcode)`. |
+| `CC_ALIGN() -> int` | The catcode constant `CC_ALIGN` (4), for `Token(string, catcode)`. |
+| `CC_ARG() -> int` | The catcode constant `CC_ARG` (18), for `Token(string, catcode)`. |
+| `CC_BEGIN() -> int` | The catcode constant `CC_BEGIN` (1), for `Token(string, catcode)`. |
+| `CC_COMMENT() -> int` | The catcode constant `CC_COMMENT` (14), for `Token(string, catcode)`. |
+| `CC_CS() -> int` | The catcode constant `CC_CS` (16), for `Token(string, catcode)`. |
+| `CC_END() -> int` | The catcode constant `CC_END` (2), for `Token(string, catcode)`. |
+| `CC_EOL() -> int` | The catcode constant `CC_EOL` (5), for `Token(string, catcode)`. |
+| `CC_ESCAPE() -> int` | The catcode constant `CC_ESCAPE` (0), for `Token(string, catcode)`. |
+| `CC_IGNORE() -> int` | The catcode constant `CC_IGNORE` (9), for `Token(string, catcode)`. |
+| `CC_INVALID() -> int` | The catcode constant `CC_INVALID` (15), for `Token(string, catcode)`. |
+| `CC_LETTER() -> int` | The catcode constant `CC_LETTER` (11), for `Token(string, catcode)`. |
+| `CC_MARKER() -> int` | The catcode constant `CC_MARKER` (17), for `Token(string, catcode)`. |
+| `CC_MATH() -> int` | The catcode constant `CC_MATH` (3), for `Token(string, catcode)`. |
+| `CC_OTHER() -> int` | The catcode constant `CC_OTHER` (12), for `Token(string, catcode)`. |
+| `CC_PARAM() -> int` | The catcode constant `CC_PARAM` (6), for `Token(string, catcode)`. |
+| `CC_SPACE() -> int` | The catcode constant `CC_SPACE` (10), for `Token(string, catcode)`. |
+| `CC_SUB() -> int` | The catcode constant `CC_SUB` (8), for `Token(string, catcode)`. |
+| `CC_SUPER() -> int` | The catcode constant `CC_SUPER` (7), for `Token(string, catcode)`. |
 | `Command(string) -> Command` | Start a `std::process::Command` builder. A Rhai-only shim; nothing runs until `output()`. |
 | `CounterValue(string) -> int` | The current value of a counter. ([`counter_value`](latexml_core::binding::counter::dialect::counter_value)) |
 | `DeclareOption(Fn)`<br>`DeclareOption(string, Fn)`<br>`DeclareOption(string, string)` | Declare a class/package option: named with a body, or the bare-closure form for the default handler (Perl `DeclareOption(undef, sub {...})`). |
@@ -68,28 +87,28 @@ Called at the top level of a binding file, or from inside any body.
 | `DefPrimitive(string, Fn)`<br>`DefPrimitive(string, Fn, map)` | Define a primitive: it runs at digestion, after expansion. ([`def_primitive`](latexml_core::binding::def::dialect::def_primitive)) |
 | `DefRegister(string, int)`<br>`DefRegister(string, string)` | Define a register with an initial value. ([`def_register`](latexml_core::binding::def::dialect::def_register)) |
 | `DefRewrite(map)`<br>`DefRewrite(map, Fn)` | Register a document rewrite rule (data form, or a replace closure). |
-| `Digest(Tokens) -> Digested` | Digest tokens into boxes, independent of the current gullet. ([`digest`](latexml_core::stomach::digest)) |
+| `Digest(Token) -> Digested`<br>`Digest(Tokens) -> Digested` | Digest tokens (a `Tokens`, or one `Token`) into boxes, independent of the current gullet. ([`digest`](latexml_core::stomach::digest)) |
 | `DigestText(string) -> Digested` | Digest tokens in text mode, whatever mode the caller is in. ([`digest_text`](latexml_core::binding::content::digest_text)) |
 | `EndSemiverbatim()` | Close a `StartSemiverbatim` region, restoring the saved catcodes. ([`end_semiverbatim`](latexml_core::state::end_semiverbatim)) |
 | `Error(string, string, string)` | Log an `Error:`. Past `MAX_ERRORS` this escalates to `Fatal` and ends the conversion. |
 | `ExecuteOptions(array)` | Run the handlers for a list of class/package options. ([`execute_options`](latexml_core::binding::content::execute_options)) |
-| `Expand(Tokens) -> Tokens` | Fully expand tokens, without digesting them. ([`do_expand`](latexml_core::gullet::do_expand)) |
-| `ExpandPartially(Tokens) -> Tokens` | Expand tokens only up to the first unexpandable one. ([`do_expand_partially`](latexml_core::gullet::do_expand_partially)) |
+| `Expand(Token) -> Tokens`<br>`Expand(Tokens) -> Tokens` | Fully expand tokens (a `Tokens`, or one `Token`), without digesting them. ([`do_expand`](latexml_core::gullet::do_expand)) |
+| `ExpandPartially(Token) -> Tokens`<br>`ExpandPartially(Tokens) -> Tokens` | Expand tokens only up to the first unexpandable one. ([`do_expand_partially`](latexml_core::gullet::do_expand_partially)) |
 | `Fatal(string, string, string)` | End the conversion with a `Fatal:`. |
 | `GetKeyVal(?, string) -> string` | One value out of a parsed keyval set. |
 | `GetKeyVals(?) -> map` | A whole parsed keyval set as a map. Accepts a digested `KeyVals` argument (as `KeyVals`/`OptionalKeyVals` params deliver to a constructor) or its `k=v,…` source string. |
 | `Info(string, string, string)` | Log an `Info:` line. |
 | `InputDefinitions(string)`<br>`InputDefinitions(string, map)` | Find and load the definitions for a package or class. ([`input_definitions`](latexml_core::binding::content::input_definitions)) |
-| `IsDefined(string) -> bool` | Whether a control sequence is defined, and not `\let` to `\relax`. ([`is_defined_token`](latexml_core::binding::def::dialect::is_defined_token)) |
+| `IsDefined(?) -> bool` | Whether a token (CS name or `Token`) is defined, and not `\let` to `\relax`. ([`is_defined_token`](latexml_core::binding::def::dialect::is_defined_token)) |
 | `LaTeXMLVersion() -> string` | The engine version string — the `LATEXML_VERSION` value ([`lookup_string`](latexml_core::state::lookup_string)). |
-| `Let(string, string)`<br>`Let(string, string, string)` | TeX's `\let`: copy one token's meaning onto another, with an optional scope (`"global"` is `\global\let`). ([`let_i`](latexml_core::state::let_i)) |
+| `Let(?, ?)`<br>`Let(?, ?, string)` | TeX's `\let`: copy one token's meaning onto another, with an optional scope (`"global"` is `\global\let`). Each token is a CS name string or a `Token`. ([`let_definition`](latexml_core::state::let_definition)) |
 | `LoadClass(string)`<br>`LoadClass(string, array)` | Load a document class, falling back to a prefix match then OmniBus. ([`load_class`](latexml_core::binding::content::load_class)) |
 | `LookupBool(string) -> bool` | Read a value as a boolean. ([`lookup_bool`](latexml_core::state::lookup_bool)) |
 | `LookupCatcode(string) -> int` | The category code currently in force for a character. ([`lookup_catcode`](latexml_core::state::lookup_catcode)) |
-| `LookupDefinition(string) -> Definition?` | Fetch an installed definition so hooks can be pushed onto it; `()` when undefined. |
+| `LookupDefinition(?) -> Definition?` | Fetch the installed definition of a CS name or `Token` so hooks can be pushed onto it; `()` when undefined or `\let` to a character. |
 | `LookupFloat(string) -> float` | Read a value as a fractional (float) number, keeping the fraction `LookupNumber` would truncate. ([`lookup_float`](latexml_core::state::lookup_float)) |
 | `LookupMapping(string, string) -> string` | Read one key out of a named mapping. ([`with_mapping`](latexml_core::state::with_mapping)) |
-| `LookupMeaning(string) -> string` | What a token means right now: its definition, or itself. ([`lookup_meaning`](latexml_core::state::lookup_meaning)) |
+| `LookupMeaning(?) -> string` | What a token means right now: its definition, or itself. ([`lookup_meaning`](latexml_core::state::lookup_meaning)) |
 | `LookupNumber(string) -> int` | Read a value as a number. ([`lookup_number`](latexml_core::state::lookup_number)) |
 | `LookupString(string) -> string` | Read a value as a string; empty when unset. ([`lookup_string`](latexml_core::state::lookup_string)) |
 | `LookupTokens(string) -> Tokens` | Read a value as tokens. ([`lookup_tokens`](latexml_core::state::lookup_tokens)) |
@@ -126,18 +145,32 @@ Called at the top level of a binding file, or from inside any body.
 | `SkipSpaces()` | Discard any run of spaces at the head of the input. ([`skip_spaces`](latexml_core::gullet::skip_spaces)) |
 | `StartSemiverbatim()`<br>`StartSemiverbatim(array)` | Begin a SEMI-verbatim region: neutralize the math/special catcodes (`^ _ ~ & $ # '`) to literal `OTHER`, but keep `\ { }` special so control sequences and `\end{env}` still parse. This is NOT full verbatim — a backslash command is still expanded (e.g. the Mathematica `\[Gamma]` fires `\[`, which opens display math), and because `{` `}` stay group-markers a literal brace in the source is consumed as grouping, not printed: `{}` yields nothing and `{x}` yields `x`. Only the `{verbatim}` / fancyvrb environments read a body as raw lines where even `\ { }` are literal. Pass extra single-char strings to neutralize them too — but not `\`, since `\end{env}` needs it. Pair with `EndSemiverbatim` in a `DefEnvironment`'s `beforeDigest`/`beforeDigestEnd`. ([`begin_semiverbatim`](latexml_core::state::begin_semiverbatim)) |
 | `StepCounter(string)` | Step a counter; usually you want `RefStepCounter` instead. ([`step_counter`](latexml_core::binding::counter::dialect::step_counter)) |
-| `T_CS(string) -> Tokens` | One control-sequence token, wrapped as `Tokens` so it composes with `Digest`/`Expand`. |
+| `T_ACTIVE(string) -> Token` | One active-character `Token` (Perl `T_ACTIVE`), e.g. for `Let(T_ACTIVE("~"), "\\nobreakspace")`. |
+| `T_ALIGN() -> Token` | The `Token` `&` under `CC_ALIGN` (a Perl constant; call it as `T_ALIGN()`). |
+| `T_BEGIN() -> Token` | The `Token` `{` under `CC_BEGIN` (a Perl constant; call it as `T_BEGIN()`). |
+| `T_CR() -> Token` | The `Token` a newline under `CC_SPACE` (a Perl constant; call it as `T_CR()`). |
+| `T_CS(string) -> Token` | One control-sequence `Token`; `Digest`, `Expand`, `UnTeX`, `absorb` take it as a one-token list. |
+| `T_END() -> Token` | The `Token` `}` under `CC_END` (a Perl constant; call it as `T_END()`). |
+| `T_LETTER(string) -> Token` | One letter `Token` (catcode 11). |
+| `T_MATH() -> Token` | The `Token` `$` under `CC_MATH` (a Perl constant; call it as `T_MATH()`). |
+| `T_OTHER(string) -> Token` | One other-character `Token` (catcode 12). |
+| `T_PARAM() -> Token` | The `Token` `#` under `CC_PARAM` (a Perl constant; call it as `T_PARAM()`). |
+| `T_SPACE() -> Token` | The `Token` a space under `CC_SPACE` (a Perl constant; call it as `T_SPACE()`). |
+| `T_SUB() -> Token` | The `Token` `_` under `CC_SUB` (a Perl constant; call it as `T_SUB()`). |
+| `T_SUPER() -> Token` | The `Token` `^` under `CC_SUPER` (a Perl constant; call it as `T_SUPER()`). |
 | `Tag(string, map)` | Declare document-model properties for one element tag. ([`install_tag`](latexml_core::binding::content::install_tag)) |
 | `TeX(string)` | Tokenize a TeX source string (style catcodes) and digest it. ([`digest`](latexml_core::stomach::digest)) |
 | `ToAttribute(Digested) -> string` | The digested value as a string fit for an XML attribute. ([`Digested::to_attribute`](latexml_core::digested::Digested::to_attribute)) |
 | `ToString(Digested) -> string` | The digested value as plain text (its `Display`). |
 | `Today() -> string` | Today's date, as `\today` renders it. ([`today`](latexml_engine::base_utilities::today)) |
+| `Token(string) -> Token`<br>`Token(string, int) -> Token` | Perl's `Token(string, catcode)`: one `Token`; the catcode is a `CC_*` value, `CC_OTHER()` if omitted. |
 | `Tokenize(string) -> Tokens` | Tokenize a string under the standard catcode table. ([`tokenize`](latexml_core::mouth::tokenize)) |
 | `TokenizeInternal(string) -> Tokens` | Tokenize a string under the style-file table, where `@` is a letter. ([`tokenize_internal`](latexml_core::mouth::tokenize_internal)) |
-| `UnTeX(Tokens) -> string` | Tokens back to the TeX source that could have produced them. ([`Tokens::untex`](latexml_core::tokens::Tokens::untex)) |
-| `UnshiftValue(string, ?)` | Prepend a value (string/int/float/bool/Tokens) to a value-table list, creating it (global) if absent. ([`unshift_value`](latexml_core::state::unshift_value)) |
+| `Tokens(array) -> Tokens` | Perl's `Tokens(@tokens)`: a token list from an array of `Token`s and `Tokens` (flattened). Where a call takes a `Token` (`Let`, `XEquals`, …), a `Tokens` is an error. |
+| `UnTeX(Token) -> string`<br>`UnTeX(Tokens) -> string` | Tokens (or one `Token`) back to the TeX source that could have produced them. ([`Tokens::untex`](latexml_core::tokens::Tokens::untex)) |
+| `UnshiftValue(string, ?)` | Prepend a value (string/int/float/bool/Tokens/Token) to a value-table list, creating it (global) if absent. ([`unshift_value`](latexml_core::state::unshift_value)) |
 | `Warn(string, string, string)` | Log a `Warning:` with the given category and object. |
-| `XEquals(string, string) -> bool` | Whether two control sequences have the same meaning. ([`x_equals`](latexml_core::state::x_equals)) |
+| `XEquals(?, ?) -> bool` | Whether two tokens (CS name strings or `Token`s) have the same meaning. ([`x_equals`](latexml_core::state::x_equals)) |
 | `assign_global(string, string)` | [`assign_value`](latexml_core::state::assign_value) with [`Scope::Global`](latexml_core::state::Scope::Global): the binding survives the enclosing TeX group. |
 | `assign_value(string, string)` | [`assign_value`](latexml_core::state::assign_value) with [`Scope::Local`](latexml_core::state::Scope::Local), TeX's default: the binding expires with the enclosing group. |
 | `lookup_value(string) -> string` | [`lookup_value`](latexml_core::state::lookup_value) coerced to a string; empty when unset, so an unbound key and an empty one are indistinguishable here. |
@@ -148,11 +181,11 @@ Called at the top level of a binding file, or from inside any body.
 
 Reached through the `document` handle a constructor body receives as its first argument — Perl's `$document->method`.
 
-29 functions, 42 calls.
+29 functions, 43 calls.
 
 | call | documentation |
 |---|---|
-| `absorb(Digested)`<br>`absorb(Tokens)` | Absorb a digested value at the current insertion point. ([`Document::absorb`](latexml_core::document::Document::absorb)) |
+| `absorb(Digested)`<br>`absorb(Token)`<br>`absorb(Tokens)` | Absorb a digested value at the current insertion point. ([`Document::absorb`](latexml_core::document::Document::absorb)) |
 | `absorbProperty(string)` | Absorb one of the whatsit's properties, by name. ([`Document::absorb`](latexml_core::document::Document::absorb)) |
 | `absorbString(string)` | Absorb a plain string at the current insertion point. ([`Document::absorb_string`](latexml_core::document::Document::absorb_string)) |
 | `addClass(Node, string)` | Add CSS classes to a node, keeping those it already has. ([`Document::add_class`](latexml_core::document::Document::add_class)) |

@@ -459,7 +459,7 @@ struct WhatsitProxy;
 /// this proxy, when the CS is undefined.
 #[derive(Clone)]
 struct DefinitionProxy {
-  cs: String,
+  cs: Token,
 }
 
 /// Resolve the top whatsit active-context (used by `WhatsitProxy` methods).
@@ -611,6 +611,27 @@ fn rhai_err<E: std::fmt::Display + 'static>(e: E) -> Box<EvalAltResult> {
   Box::<EvalAltResult>::from(text)
 }
 
+/// A token argument: a string names a control sequence (Perl `Let`'s "most common case", Package.pm:385-387), a
+/// `Token` is used as is; anything else, a `Tokens` included, is an error naming the call.
+fn token_arg(call: &str, v: Dynamic) -> std::result::Result<Token, Box<EvalAltResult>> {
+  if v.is_string() {
+    Ok(latexml_core::T_CS!(
+      v.into_immutable_string().unwrap_or_default().as_str()
+    ))
+  } else if let Some(t) = v.clone().try_cast::<Token>() {
+    Ok(t)
+  } else {
+    let got = v.type_name();
+    Err(
+      format!(
+        "{call}: expected a control-sequence name or a Token, got {}",
+        got.rsplit("::").next().unwrap_or(got)
+      )
+      .into(),
+    )
+  }
+}
+
 /// Parse a scope string ("local"/"global", anything else = None → TeX default).
 fn scope_of(scope: &str) -> Option<Scope> {
   match scope {
@@ -649,6 +670,8 @@ fn dynamic_to_stored(v: Dynamic) -> Stored {
     Stored::Bool(b)
   } else if let Some(tokens) = v.clone().try_cast::<Tokens>() {
     Stored::Tokens(tokens)
+  } else if let Some(token) = v.clone().try_cast::<Token>() {
+    Stored::Token(token)
   } else if let Some(digested) = v.clone().try_cast::<Digested>() {
     Stored::Digested(digested)
   } else {
@@ -669,6 +692,7 @@ fn popped_stored_to_dynamic(v: Stored) -> Dynamic {
     Stored::Number(n) => Dynamic::from(n.0),
     Stored::Float(f) => Dynamic::from(f.0),
     Stored::Tokens(t) => Dynamic::from(t),
+    Stored::Token(t) => Dynamic::from(t),
     Stored::Digested(d) => Dynamic::from(d),
     other => Dynamic::from(other.to_string()),
   }

@@ -127,11 +127,96 @@ pub(super) fn make_engine() -> Engine {
       latexml_core::stomach::digest(t).map_err(rhai_err)
     },
   );
-  // `T_CS('\foo')` — a single control-sequence token (wrapped as `Tokens` so it
-  // composes with `Digest`/`Expand`). The dominant token-constructor use.
-  engine.register_fn("T_CS", |name: &str| -> Tokens {
-    Tokens::new(vec![latexml_core::T_CS!(name)])
+  engine.register_fn(
+    "Digest",
+    |t: Token| -> std::result::Result<Digested, Box<EvalAltResult>> {
+      latexml_core::stomach::digest(Tokens::new(vec![t])).map_err(rhai_err)
+    },
+  );
+  // Perl's `Tokens(@tokens)` (Tokens.pm:29): an array of `Token`s and `Tokens`, flattened.
+  engine.register_fn(
+    "Tokens",
+    |items: rhai::Array| -> std::result::Result<Tokens, Box<EvalAltResult>> {
+      let mut list = Vec::with_capacity(items.len());
+      for item in items {
+        if let Some(t) = item.clone().try_cast::<Token>() {
+          list.push(t);
+        } else if let Some(ts) = item.clone().try_cast::<Tokens>() {
+          list.extend(ts.unlist());
+        } else {
+          return Err(
+            format!(
+              "Tokens: expected a Token or Tokens, got {}",
+              item.type_name()
+            )
+            .into(),
+          );
+        }
+      }
+      Ok(Tokens::new(list))
+    },
+  );
+  // Perl's token constructors and catcode constants (Token.pm:26-37, :45-84); a Perl
+  // constant (`T_MATH`, `CC_ACTIVE`) is a zero-argument function here.
+  engine.register_type_with_name::<Token>("Token");
+  engine.register_fn("T_CS", |name: &str| -> Token { latexml_core::T_CS!(name) });
+  engine.register_fn("T_LETTER", |c: &str| -> Token {
+    Token::new(c, Catcode::LETTER)
   });
+  engine.register_fn("T_OTHER", |c: &str| -> Token {
+    Token::new(c, Catcode::OTHER)
+  });
+  engine.register_fn("T_ACTIVE", |c: &str| -> Token {
+    Token::new(c, Catcode::ACTIVE)
+  });
+  engine.register_fn(
+    "Token",
+    |s: &str, cc: i64| -> std::result::Result<Token, Box<EvalAltResult>> {
+      match u8::try_from(cc) {
+        Ok(cc) if cc <= Catcode::ARG as u8 => Ok(Token::new(s, Catcode::from(cc))),
+        _ => Err(format!("Token: no catcode {cc}").into()),
+      }
+    },
+  );
+  engine.register_fn("Token", |s: &str| -> Token {
+    Token::new(s, Catcode::OTHER)
+  });
+  for (name, token) in [
+    ("T_BEGIN", latexml_core::T_BEGIN!()),
+    ("T_END", latexml_core::T_END!()),
+    ("T_MATH", latexml_core::T_MATH!()),
+    ("T_ALIGN", latexml_core::T_ALIGN!()),
+    ("T_PARAM", latexml_core::T_PARAM!()),
+    ("T_SUB", latexml_core::T_SUB!()),
+    ("T_SUPER", latexml_core::T_SUPER!()),
+    ("T_SPACE", latexml_core::T_SPACE!()),
+    ("T_CR", latexml_core::T_CR!()),
+  ] {
+    engine.register_fn(name, move || -> Token { token });
+  }
+  for (name, cc) in [
+    ("CC_ESCAPE", Catcode::ESCAPE),
+    ("CC_BEGIN", Catcode::BEGIN),
+    ("CC_END", Catcode::END),
+    ("CC_MATH", Catcode::MATH),
+    ("CC_ALIGN", Catcode::ALIGN),
+    ("CC_EOL", Catcode::EOL),
+    ("CC_PARAM", Catcode::PARAM),
+    ("CC_SUPER", Catcode::SUPER),
+    ("CC_SUB", Catcode::SUB),
+    ("CC_IGNORE", Catcode::IGNORE),
+    ("CC_SPACE", Catcode::SPACE),
+    ("CC_LETTER", Catcode::LETTER),
+    ("CC_OTHER", Catcode::OTHER),
+    ("CC_ACTIVE", Catcode::ACTIVE),
+    ("CC_COMMENT", Catcode::COMMENT),
+    ("CC_INVALID", Catcode::INVALID),
+    ("CC_CS", Catcode::CS),
+    ("CC_MARKER", Catcode::MARKER),
+    ("CC_ARG", Catcode::ARG),
+  ] {
+    engine.register_fn(name, move || -> i64 { cc as i64 });
+  }
 
   // ── state API (for primitive side-effects / value-reading macros) ──
   // `assign_value` is group-local (TeX default); `assign_global` persists past
@@ -329,30 +414,55 @@ pub(super) fn make_engine() -> Engine {
       latexml_core::state::end_semiverbatim().map_err(rhai_err)
     },
   );
-  // LookupMeaning: the meaning of a CS as its display string ("" if none).
-  engine.register_fn("LookupMeaning", |cs: &str| -> String {
-    match latexml_core::state::lookup_meaning(&latexml_core::T_CS!(cs)) {
-      Some(m) => m.to_string(),
-      None => String::new(),
-    }
-  });
-  engine.register_fn("Let", |a: &str, b: &str| {
-    latexml_core::state::let_i(&latexml_core::T_CS!(a), &latexml_core::T_CS!(b), None);
-  });
+  // A token argument is a string naming a control sequence, or a `Token` as is (Perl `Let`, Package.pm:383-390;
+  // `IsDefined`, :330-336), through the core calls the `Let!`/`XEquals!`/`IsDefined!` macros make (#796).
+  engine.register_fn(
+    "LookupMeaning",
+    |cs: Dynamic| -> std::result::Result<String, Box<EvalAltResult>> {
+      Ok(
+        match latexml_core::state::lookup_meaning(&token_arg("LookupMeaning", cs)?) {
+          Some(m) => m.to_string(),
+          None => String::new(),
+        },
+      )
+    },
+  );
+  engine.register_fn(
+    "Let",
+    |a: Dynamic, b: Dynamic| -> std::result::Result<(), Box<EvalAltResult>> {
+      latexml_core::state::let_definition(&token_arg("Let", a)?, &token_arg("Let", b)?, None);
+      Ok(())
+    },
+  );
   // Perl `Let($token1, $token2, $scope)` (Package.pm:383): "local"/"global", as `AssignValue` (#796).
-  engine.register_fn("Let", |a: &str, b: &str, scope: &str| {
-    latexml_core::state::let_i(
-      &latexml_core::T_CS!(a),
-      &latexml_core::T_CS!(b),
-      scope_of(scope),
-    );
-  });
-  engine.register_fn("XEquals", |a: &str, b: &str| -> bool {
-    latexml_core::state::x_equals(&latexml_core::T_CS!(a), &latexml_core::T_CS!(b))
-  });
-  engine.register_fn("IsDefined", |cs: &str| -> bool {
-    latexml_core::binding::def::dialect::is_defined_token(&latexml_core::T_CS!(cs))
-  });
+  engine.register_fn(
+    "Let",
+    |a: Dynamic, b: Dynamic, scope: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+      latexml_core::state::let_definition(
+        &token_arg("Let", a)?,
+        &token_arg("Let", b)?,
+        scope_of(scope),
+      );
+      Ok(())
+    },
+  );
+  engine.register_fn(
+    "XEquals",
+    |a: Dynamic, b: Dynamic| -> std::result::Result<bool, Box<EvalAltResult>> {
+      Ok(latexml_core::state::x_equals(
+        &token_arg("XEquals", a)?,
+        &token_arg("XEquals", b)?,
+      ))
+    },
+  );
+  engine.register_fn(
+    "IsDefined",
+    |cs: Dynamic| -> std::result::Result<bool, Box<EvalAltResult>> {
+      Ok(latexml_core::binding::def::dialect::is_defined_token(
+        &token_arg("IsDefined", cs)?,
+      ))
+    },
+  );
   // RawTeX: process literal TeX as definitions input (the raw-`\def` escape
   // hatch every nontrivial binding uses). TeX: tokenize-internal + digest.
   engine.register_fn(
@@ -387,6 +497,13 @@ pub(super) fn make_engine() -> Engine {
     },
   );
   engine.register_fn(
+    "AtBeginDocument",
+    |token: Token| -> std::result::Result<(), Box<EvalAltResult>> {
+      latexml_core::state::push_value("@at@begin@document", Tokens::new(vec![token]))
+        .map_err(rhai_err)
+    },
+  );
+  engine.register_fn(
     "AtEndDocument",
     |text: &str| -> std::result::Result<(), Box<EvalAltResult>> {
       latexml_core::state::push_value(
@@ -400,6 +517,13 @@ pub(super) fn make_engine() -> Engine {
     "AtEndDocument",
     |tokens: Tokens| -> std::result::Result<(), Box<EvalAltResult>> {
       latexml_core::state::push_value("@at@end@document", tokens).map_err(rhai_err)
+    },
+  );
+  engine.register_fn(
+    "AtEndDocument",
+    |token: Token| -> std::result::Result<(), Box<EvalAltResult>> {
+      latexml_core::state::push_value("@at@end@document", Tokens::new(vec![token]))
+        .map_err(rhai_err)
     },
   );
   engine.register_fn(
@@ -425,6 +549,21 @@ pub(super) fn make_engine() -> Engine {
     },
   );
   engine.register_fn("UnTeX", |t: Tokens| -> String { t.untex() });
+  engine.register_fn(
+    "Expand",
+    |t: Token| -> std::result::Result<Tokens, Box<EvalAltResult>> {
+      latexml_core::gullet::do_expand(Tokens::new(vec![t])).map_err(rhai_err)
+    },
+  );
+  engine.register_fn(
+    "ExpandPartially",
+    |t: Token| -> std::result::Result<Tokens, Box<EvalAltResult>> {
+      latexml_core::gullet::do_expand_partially(Tokens::new(vec![t])).map_err(rhai_err)
+    },
+  );
+  engine.register_fn("UnTeX", |t: Token| -> String {
+    Tokens::new(vec![t]).untex()
+  });
   // DigestText: digest a TeX string into a `Digested` handle — the workhorse
   // of `properties` closures that precompute content (e.g. IEEEproof's title).
   engine.register_fn(
@@ -634,13 +773,18 @@ pub(super) fn make_engine() -> Engine {
     },
   );
 
-  // AssignMeaning: bind a CS's meaning to another CS's current meaning by
-  // name (the string form; Tokens-meaning binding goes via Let/RawTeX).
-  engine.register_fn("AssignMeaning", |cs: &str, other: &str| {
-    if let Some(m) = latexml_core::state::lookup_meaning(&latexml_core::T_CS!(other)) {
-      latexml_core::state::assign_meaning(&latexml_core::T_CS!(cs), m, None);
-    }
-  });
+  // AssignMeaning: bind a token's meaning to another token's current meaning
+  // (each a CS name or a `Token`, as `Let`).
+  engine.register_fn(
+    "AssignMeaning",
+    |cs: Dynamic, other: Dynamic| -> std::result::Result<(), Box<EvalAltResult>> {
+      let cs = token_arg("AssignMeaning", cs)?;
+      if let Some(m) = latexml_core::state::lookup_meaning(&token_arg("AssignMeaning", other)?) {
+        latexml_core::state::assign_meaning(&cs, m, None);
+      }
+      Ok(())
+    },
+  );
 
   // AssignMapping / mapping lookup (Perl AssignMapping/LookupMapping).
   engine.register_fn("AssignMapping", |map: &str, key: &str, value: &str| {
@@ -1806,6 +1950,16 @@ pub(super) fn make_engine() -> Engine {
       })
     },
   );
+  engine.register_fn(
+    "absorb",
+    |_d: &mut DocProxy, token: Token| -> std::result::Result<(), Box<EvalAltResult>> {
+      let arg = Digested::from(Tokens::new(vec![token]));
+      with_doc(|doc, _props| {
+        doc.absorb(&arg, None).map_err(rhai_err)?;
+        Ok(())
+      })
+    },
+  );
   // Absorb a whatsit property at the current point — the imperative analog of a
   // template's `#name` hole at content position. The workhorse is
   // `document.absorbProperty("body")` inside an imperative `DefEnvironment`
@@ -1922,12 +2076,17 @@ pub(super) fn make_engine() -> Engine {
   // before/after lists. Returns `()` for an undefined CS (Perl undef). Each
   // `push*` appends (Perl `push`), each `unshift*` prepends (Perl `unshift`).
   engine.register_type_with_name::<DefinitionProxy>("Definition");
-  engine.register_fn("LookupDefinition", |cs: &str| -> Dynamic {
-    match latexml_core::state::lookup_definition_stored(&latexml_core::T_CS!(cs)) {
-      Ok(Some(_)) => Dynamic::from(DefinitionProxy { cs: cs.to_string() }),
-      _ => Dynamic::UNIT,
-    }
-  });
+  // `()` also for a token `\let` to a character, as `LookupDefinition!` and Perl `lookupDefinition` (State.pm:399-416).
+  engine.register_fn(
+    "LookupDefinition",
+    |cs: Dynamic| -> std::result::Result<Dynamic, Box<EvalAltResult>> {
+      let cs = token_arg("LookupDefinition", cs)?;
+      Ok(match latexml_core::state::lookup_definition(&cs) {
+        Ok(Some(_)) => Dynamic::from(DefinitionProxy { cs }),
+        _ => Dynamic::UNIT,
+      })
+    },
+  );
   macro_rules! def_hook_method {
     ($rhai:literal, $family:expr, $at_front:expr) => {
       engine.register_fn(

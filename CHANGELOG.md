@@ -32,7 +32,18 @@
 
   - **Rhai `Let(a, b, scope)`** (#796). A binding can now write a global `\let`
     (`Let("\\alias", "\\target", "global")`), as Perl's `Let($t1, $t2, $scope)`;
-    the 2-arg form stays local. Guard `script_bindings::tests::let_takes_a_scope`.
+    the 2-arg form stays local. Each side is a string, taken as a control-sequence
+    name, or any `Token`, as in Perl: `Let(T_ACTIVE("~"), "\\nobreakspace")`,
+    `Let(T_MATH(), …)`, `Let("\\x", T_OTHER("a"))`. New token constructors, as Perl's
+    Token.pm exports them: `T_LETTER`, `T_OTHER`, `T_ACTIVE`, `Token(string, catcode)`,
+    the constants `T_BEGIN()` … `T_CR()` and `CC_ESCAPE()` … `CC_ARG()`, and
+    `Tokens([…])`. `T_CS` now returns a single `Token`, not a one-token `Tokens`;
+    `Digest`, `Expand`, `ExpandPartially`, `UnTeX`, `AtBeginDocument`, `AtEndDocument`
+    and `absorb` take either. `XEquals`, `IsDefined`, `LookupMeaning`,
+    `LookupDefinition` and `AssignMeaning` take the same token arguments as `Let`.
+    `Let` now goes through `state::let_definition`, as the `Let!` macro does, so a
+    provide-only binding load declines it. Guards `script_bindings::tests::let_takes_a_scope`,
+    `script_bindings::tests::let_takes_any_token`.
 
   - **`post::PostOptions::nodefaultresources` is now `default_resources`, with the
     meaning inverted.** The double negative (`nodefaultresources: false`) is gone.

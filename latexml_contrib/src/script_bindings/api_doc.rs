@@ -171,7 +171,7 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "AssignMeaning",
     Doc::Rust(
-      "Make a control sequence mean a definition, or another token.",
+      "Give a token (CS name or `Token`) the current meaning of another.",
       "latexml_core::state::assign_meaning",
     ),
   ),
@@ -199,16 +199,92 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "AtBeginDocument",
     Doc::Rust(
-      "Queue TeX source (or a Tokens value) to run at `\\begin{document}`.",
+      "Queue TeX source (or a `Tokens` or `Token` value) to run at `\\begin{document}`.",
       "latexml_core::state::push_value",
     ),
   ),
   (
     "AtEndDocument",
     Doc::Rust(
-      "Queue TeX source (or a Tokens value) to run at `\\end{document}`.",
+      "Queue TeX source (or a `Tokens` or `Token` value) to run at `\\end{document}`.",
       "latexml_core::state::push_value",
     ),
+  ),
+  (
+    "CC_ACTIVE",
+    Doc::Note("The catcode constant `CC_ACTIVE` (13), for `Token(string, catcode)`."),
+  ),
+  (
+    "CC_ALIGN",
+    Doc::Note("The catcode constant `CC_ALIGN` (4), for `Token(string, catcode)`."),
+  ),
+  (
+    "CC_ARG",
+    Doc::Note("The catcode constant `CC_ARG` (18), for `Token(string, catcode)`."),
+  ),
+  (
+    "CC_BEGIN",
+    Doc::Note("The catcode constant `CC_BEGIN` (1), for `Token(string, catcode)`."),
+  ),
+  (
+    "CC_COMMENT",
+    Doc::Note("The catcode constant `CC_COMMENT` (14), for `Token(string, catcode)`."),
+  ),
+  (
+    "CC_CS",
+    Doc::Note("The catcode constant `CC_CS` (16), for `Token(string, catcode)`."),
+  ),
+  (
+    "CC_END",
+    Doc::Note("The catcode constant `CC_END` (2), for `Token(string, catcode)`."),
+  ),
+  (
+    "CC_EOL",
+    Doc::Note("The catcode constant `CC_EOL` (5), for `Token(string, catcode)`."),
+  ),
+  (
+    "CC_ESCAPE",
+    Doc::Note("The catcode constant `CC_ESCAPE` (0), for `Token(string, catcode)`."),
+  ),
+  (
+    "CC_IGNORE",
+    Doc::Note("The catcode constant `CC_IGNORE` (9), for `Token(string, catcode)`."),
+  ),
+  (
+    "CC_INVALID",
+    Doc::Note("The catcode constant `CC_INVALID` (15), for `Token(string, catcode)`."),
+  ),
+  (
+    "CC_LETTER",
+    Doc::Note("The catcode constant `CC_LETTER` (11), for `Token(string, catcode)`."),
+  ),
+  (
+    "CC_MARKER",
+    Doc::Note("The catcode constant `CC_MARKER` (17), for `Token(string, catcode)`."),
+  ),
+  (
+    "CC_MATH",
+    Doc::Note("The catcode constant `CC_MATH` (3), for `Token(string, catcode)`."),
+  ),
+  (
+    "CC_OTHER",
+    Doc::Note("The catcode constant `CC_OTHER` (12), for `Token(string, catcode)`."),
+  ),
+  (
+    "CC_PARAM",
+    Doc::Note("The catcode constant `CC_PARAM` (6), for `Token(string, catcode)`."),
+  ),
+  (
+    "CC_SPACE",
+    Doc::Note("The catcode constant `CC_SPACE` (10), for `Token(string, catcode)`."),
+  ),
+  (
+    "CC_SUB",
+    Doc::Note("The catcode constant `CC_SUB` (8), for `Token(string, catcode)`."),
+  ),
+  (
+    "CC_SUPER",
+    Doc::Note("The catcode constant `CC_SUPER` (7), for `Token(string, catcode)`."),
   ),
   (
     "Command",
@@ -315,7 +391,7 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "Digest",
     Doc::Rust(
-      "Digest tokens into boxes, independent of the current gullet.",
+      "Digest tokens (a `Tokens`, or one `Token`) into boxes, independent of the current gullet.",
       "latexml_core::stomach::digest",
     ),
   ),
@@ -349,7 +425,7 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "Expand",
     Doc::Rust(
-      "Fully expand tokens, without digesting them.",
+      "Fully expand tokens (a `Tokens`, or one `Token`), without digesting them.",
       "latexml_core::gullet::do_expand",
     ),
   ),
@@ -384,7 +460,7 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "IsDefined",
     Doc::Rust(
-      "Whether a control sequence is defined, and not `\\let` to `\\relax`.",
+      "Whether a token (CS name or `Token`) is defined, and not `\\let` to `\\relax`.",
       "latexml_core::binding::def::dialect::is_defined_token",
     ),
   ),
@@ -397,8 +473,8 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "Let",
     Doc::Rust(
-      "TeX's `\\let`: copy one token's meaning onto another, with an optional scope (`\"global\"` is `\\global\\let`).",
-      "latexml_core::state::let_i",
+      "TeX's `\\let`: copy one token's meaning onto another, with an optional scope (`\"global\"` is `\\global\\let`). Each token is a CS name string or a `Token`.",
+      "latexml_core::state::let_definition",
     ),
   ),
   (
@@ -424,7 +500,9 @@ const DOCS: &[(&str, Doc)] = &[
   ),
   (
     "LookupDefinition",
-    Doc::Note("Fetch an installed definition so hooks can be pushed onto it; `()` when undefined."),
+    Doc::Note(
+      "Fetch the installed definition of a CS name or `Token` so hooks can be pushed onto it; `()` when undefined or `\\let` to a character.",
+    ),
   ),
   (
     "LookupFloat",
@@ -700,10 +778,57 @@ const DOCS: &[(&str, Doc)] = &[
     ),
   ),
   (
+    "T_ACTIVE",
+    Doc::Note(
+      "One active-character `Token` (Perl `T_ACTIVE`), e.g. for `Let(T_ACTIVE(\"~\"), \"\\\\nobreakspace\")`.",
+    ),
+  ),
+  (
+    "T_ALIGN",
+    Doc::Note("The `Token` `&` under `CC_ALIGN` (a Perl constant; call it as `T_ALIGN()`)."),
+  ),
+  (
+    "T_BEGIN",
+    Doc::Note("The `Token` `{` under `CC_BEGIN` (a Perl constant; call it as `T_BEGIN()`)."),
+  ),
+  (
+    "T_CR",
+    Doc::Note("The `Token` a newline under `CC_SPACE` (a Perl constant; call it as `T_CR()`)."),
+  ),
+  (
     "T_CS",
     Doc::Note(
-      "One control-sequence token, wrapped as `Tokens` so it composes with `Digest`/`Expand`.",
+      "One control-sequence `Token`; `Digest`, `Expand`, `UnTeX`, `absorb` take it as a one-token list.",
     ),
+  ),
+  (
+    "T_END",
+    Doc::Note("The `Token` `}` under `CC_END` (a Perl constant; call it as `T_END()`)."),
+  ),
+  ("T_LETTER", Doc::Note("One letter `Token` (catcode 11).")),
+  (
+    "T_MATH",
+    Doc::Note("The `Token` `$` under `CC_MATH` (a Perl constant; call it as `T_MATH()`)."),
+  ),
+  (
+    "T_OTHER",
+    Doc::Note("One other-character `Token` (catcode 12)."),
+  ),
+  (
+    "T_PARAM",
+    Doc::Note("The `Token` `#` under `CC_PARAM` (a Perl constant; call it as `T_PARAM()`)."),
+  ),
+  (
+    "T_SPACE",
+    Doc::Note("The `Token` a space under `CC_SPACE` (a Perl constant; call it as `T_SPACE()`)."),
+  ),
+  (
+    "T_SUB",
+    Doc::Note("The `Token` `_` under `CC_SUB` (a Perl constant; call it as `T_SUB()`)."),
+  ),
+  (
+    "T_SUPER",
+    Doc::Note("The `Token` `^` under `CC_SUPER` (a Perl constant; call it as `T_SUPER()`)."),
   ),
   (
     "Tag",
@@ -738,6 +863,12 @@ const DOCS: &[(&str, Doc)] = &[
     ),
   ),
   (
+    "Token",
+    Doc::Note(
+      "Perl's `Token(string, catcode)`: one `Token`; the catcode is a `CC_*` value, `CC_OTHER()` if omitted.",
+    ),
+  ),
+  (
     "Tokenize",
     Doc::Rust(
       "Tokenize a string under the standard catcode table.",
@@ -752,16 +883,22 @@ const DOCS: &[(&str, Doc)] = &[
     ),
   ),
   (
+    "Tokens",
+    Doc::Note(
+      "Perl's `Tokens(@tokens)`: a token list from an array of `Token`s and `Tokens` (flattened). Where a call takes a `Token` (`Let`, `XEquals`, …), a `Tokens` is an error.",
+    ),
+  ),
+  (
     "UnTeX",
     Doc::Rust(
-      "Tokens back to the TeX source that could have produced them.",
+      "Tokens (or one `Token`) back to the TeX source that could have produced them.",
       "latexml_core::tokens::Tokens::untex",
     ),
   ),
   (
     "UnshiftValue",
     Doc::Rust(
-      "Prepend a value (string/int/float/bool/Tokens) to a value-table list, creating it (global) if absent.",
+      "Prepend a value (string/int/float/bool/Tokens/Token) to a value-table list, creating it (global) if absent.",
       "latexml_core::state::unshift_value",
     ),
   ),
@@ -772,7 +909,7 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "XEquals",
     Doc::Rust(
-      "Whether two control sequences have the same meaning.",
+      "Whether two tokens (CS name strings or `Token`s) have the same meaning.",
       "latexml_core::state::x_equals",
     ),
   ),
