@@ -51,6 +51,17 @@ pub(super) fn wire_macro(
   body: FnPtr,
 ) -> Result<()> {
   let (cs, paramlist) = parse_prototype(proto, true)?;
+  wire_macro_token(engine, ast, cs, paramlist, body)
+}
+
+/// [`wire_macro`] for a control sequence already in hand (Perl `DefMacroI`).
+pub(super) fn wire_macro_token(
+  engine: &Rc<Engine>,
+  ast: &Rc<AST>,
+  cs: Token,
+  paramlist: Option<latexml_core::parameter::Parameters>,
+  body: FnPtr,
+) -> Result<()> {
   let cs_name = cs.to_string();
   let engine = engine.clone();
   let ast = ast.clone();
@@ -303,6 +314,22 @@ pub(super) fn checked_opts(
   Ok(opts)
 }
 
+/// An option value as Perl flattens it (Package.pm:1304): an array of closures is each closure in turn.
+pub(super) fn hooks_of(val: Dynamic) -> impl Iterator<Item = Dynamic> {
+  let items = if val.is_array()
+    && val
+      .clone()
+      .cast::<rhai::Array>()
+      .iter()
+      .all(|v| v.is::<FnPtr>())
+  {
+    val.cast::<rhai::Array>()
+  } else {
+    vec![val]
+  };
+  items.into_iter()
+}
+
 /// Apply a Rhai option bag onto a builder: closure options become trampolines
 /// (typed setters), `properties` also accepts a static map, scalars route
 /// through the builder's single-source `set_option`. Shared by the constructor
@@ -314,7 +341,10 @@ pub(super) fn apply_opts<B: BindingBuilder>(
   engine: &Rc<Engine>,
   ast: &Rc<AST>,
 ) -> Result<B> {
-  for (key, val) in opts {
+  for (key, val) in opts
+    .into_iter()
+    .flat_map(|(k, v)| hooks_of(v).map(move |v| (k.clone(), v)))
+  {
     match val.clone().try_cast::<FnPtr>() {
       Some(fp) => {
         // Closure option → typed builder setter (front-end builds the closure).
@@ -783,13 +813,13 @@ pub(super) fn primitive_options_from_map(
         None => unsupported_option(&operation, "font as a string"),
       },
       "beforeDigest" => {
-        if let Some(fp) = val.clone().try_cast::<FnPtr>() {
+        for fp in hooks_of(val.clone()).filter_map(|v| v.try_cast::<FnPtr>()) {
           o.before_digest
             .push(before_digest_trampoline(fp, engine.clone(), ast.clone()));
         }
       },
       "afterDigest" => {
-        if let Some(fp) = val.clone().try_cast::<FnPtr>() {
+        for fp in hooks_of(val.clone()).filter_map(|v| v.try_cast::<FnPtr>()) {
           o.after_digest
             .push(after_digest_trampoline(fp, engine.clone(), ast.clone()));
         }
@@ -937,13 +967,13 @@ pub(super) fn math_options_from_map(
       "lpadding" => o.lpadding = val.as_int().ok().map(|i| i as usize),
       "rpadding" => o.rpadding = val.as_int().ok().map(|i| i as usize),
       "beforeDigest" => {
-        if let Some(fp) = val.clone().try_cast::<FnPtr>() {
+        for fp in hooks_of(val.clone()).filter_map(|v| v.try_cast::<FnPtr>()) {
           o.before_digest
             .push(before_digest_trampoline(fp, engine.clone(), ast.clone()));
         }
       },
       "afterDigest" => {
-        if let Some(fp) = val.clone().try_cast::<FnPtr>() {
+        for fp in hooks_of(val.clone()).filter_map(|v| v.try_cast::<FnPtr>()) {
           o.after_digest
             .push(after_digest_trampoline(fp, engine.clone(), ast.clone()));
         }
@@ -1407,4 +1437,30 @@ pub(super) fn wire_math_ligature_matcher(
     regex:     None,
   }]);
   Ok(())
+}
+
+/// A `Tag` `afterOpen`/`afterClose` hook (Package.pm:2005-2030): Perl calls it with `($document, $node, $box)`;
+/// the Rhai closure receives the document and the node (and the box's digested handle, when it declares it).
+pub(super) fn tag_trampoline(
+  fp: FnPtr,
+  engine: Rc<Engine>,
+  ast: Rc<AST>,
+) -> TagConstructionClosure {
+  Rc::new(
+    move |document: &mut Document,
+          node: &mut libxml::tree::Node,
+          boxed: Option<&Digested>|
+          -> Result<()> {
+      let props = SymHashMap::default();
+      let _ctx_guard = CtorCtxGuard::new(CtorCtx { document, props: &props });
+      let args = (
+        Dynamic::from(DocProxy),
+        Dynamic::from(NodeProxy::borrowed(node.clone())),
+        boxed.map_or(Dynamic::UNIT, |b| Dynamic::from(b.clone())),
+      );
+      let _: Dynamic = call_deferred_body(&engine, &ast, &fp, args)
+        .or_else(|e| contain("Tag", e, Dynamic::UNIT))?;
+      Ok(())
+    },
+  )
 }

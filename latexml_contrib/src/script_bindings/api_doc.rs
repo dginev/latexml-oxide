@@ -251,14 +251,14 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "AtBeginDocument",
     Doc::Rust(
-      "Queue TeX source (or a `Tokens` or `Token` value) to run at `\\begin{document}`.",
+      "Queue TeX source, a `Tokens`/`Token` value, or a closure (installed as a macro) to run at `\\begin{document}`.",
       "latexml_core::state::push_value",
     ),
   ),
   (
     "AtEndDocument",
     Doc::Rust(
-      "Queue TeX source (or a `Tokens` or `Token` value) to run at `\\end{document}`.",
+      "Queue TeX source, a `Tokens`/`Token` value, or a closure (installed as a macro) to run at `\\end{document}`.",
       "latexml_core::state::push_value",
     ),
   ),
@@ -464,7 +464,7 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "Error",
     Doc::Note(
-      "Log an `Error:`. Past `MAX_ERRORS` this escalates to `Fatal` and ends the conversion.",
+      "Log an `Error:`, with Perl's trailing details (a string or an array). Past `MAX_ERRORS` this escalates to `Fatal` and ends the conversion.",
     ),
   ),
   (
@@ -488,7 +488,10 @@ const DOCS: &[(&str, Doc)] = &[
       "latexml_core::gullet::do_expand_partially",
     ),
   ),
-  ("Fatal", Doc::Note("End the conversion with a `Fatal:`.")),
+  (
+    "Fatal",
+    Doc::Note("End the conversion with `Fatal:<cat>:<obj>`, plus optional details."),
+  ),
   (
     "GetKeyVal",
     Doc::Note("One value out of a parsed keyval set."),
@@ -501,7 +504,10 @@ const DOCS: &[(&str, Doc)] = &[
        `k=v,…` source string.",
     ),
   ),
-  ("Info", Doc::Note("Log an `Info:` line.")),
+  (
+    "Info",
+    Doc::Note("Log an `Info:` line, plus optional details."),
+  ),
   (
     "InputDefinitions",
     Doc::Rust(
@@ -781,8 +787,8 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "RefStepCounter",
     Doc::Rust(
-      "Step a counter and return its `refnum` and `id`.",
-      "latexml_core::binding::counter::dialect::ref_step_counter",
+      "Step a counter through `\\refstepcounter`'s meaning (`noreset`: directly) and return its `refnum` and `id`.",
+      "latexml_core::binding::counter::dialect::ref_step_counter_by_meaning",
     ),
   ),
   (
@@ -816,7 +822,7 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "RequirePackage",
     Doc::Rust(
-      "Load a package: its binding, or the raw `.sty` when `INCLUDE_STYLES` allows.",
+      "Load a package (options: Perl's `options`, `type`, `notex`, `after`, …): its binding, or the raw `.sty` when `INCLUDE_STYLES` allows.",
       "latexml_core::binding::content::require_package",
     ),
   ),
@@ -959,7 +965,7 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "Tag",
     Doc::Rust(
-      "Declare document-model properties for one element tag.",
+      "Declare document-model properties for one element tag: `autoOpen`, `autoClose`, the `afterOpen`/`afterClose` hooks.",
       "latexml_core::binding::content::install_tag",
     ),
   ),
@@ -1030,7 +1036,7 @@ const DOCS: &[(&str, Doc)] = &[
   ),
   (
     "Warn",
-    Doc::Note("Log a `Warning:` with the given category and object."),
+    Doc::Note("Log a `Warning:` with the given category and object, plus optional details."),
   ),
   (
     "XEquals",

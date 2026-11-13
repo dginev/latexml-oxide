@@ -66,7 +66,7 @@ use latexml_core::{
     primitive::PrimitiveOptions,
   },
   digested::Digested,
-  document::Document,
+  document::{Document, tag::TagConstructionClosure},
   mouth,
   state::Scope,
   token::{Catcode, Token},
@@ -226,7 +226,18 @@ pub(super) fn call_deferred_body<A: rhai::FuncArgs>(
   args: A,
 ) -> std::result::Result<Dynamic, Box<EvalAltResult>> {
   let _script_guard = ScriptCtxGuard::new((engine.clone(), ast.clone()));
-  body.call::<Dynamic>(engine, ast, args)
+  let mut args_vec: Vec<Dynamic> = Vec::new();
+  args.parse(&mut args_vec);
+  // A Perl sub takes any number of arguments: a closure's missing ones are `()` (undef), extra ones dropped.
+  // A closure's captured variables are curried ahead of its own parameters.
+  let mut arities = ast
+    .iter_functions()
+    .filter(|f| f.name == body.fn_name())
+    .map(|f| f.params.len());
+  if let (Some(params), None) = (arities.next(), arities.next()) {
+    args_vec.resize(params.saturating_sub(body.curry().len()), Dynamic::UNIT);
+  }
+  body.call::<Dynamic>(engine, ast, args_vec)
 }
 
 /// Copy the top active-context out (so we never hold the `CTOR_CTX` borrow
@@ -637,13 +648,10 @@ fn token_arg(call: &str, v: Dynamic) -> std::result::Result<Token, Box<EvalAltRe
   }
 }
 
-/// Parse a scope string ("local"/"global", anything else = None → TeX default).
+/// A scope string as the macros read it: "local"/"global", "" for the TeX default, any other name a named scope
+/// (Perl's `'section:1'`, active only once activated).
 fn scope_of(scope: &str) -> Option<Scope> {
-  match scope {
-    "local" => Some(Scope::Local),
-    "global" => Some(Scope::Global),
-    _ => None,
-  }
+  latexml_core::binding::def::traits::IntoOption::into_option(scope)
 }
 
 /// Marshal a `Stored` out to a Rhai value with its type (Perl hands back the stored object, Package.pm

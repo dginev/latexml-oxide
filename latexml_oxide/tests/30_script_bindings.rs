@@ -1640,6 +1640,7 @@ type FatalRow<'a> = (
   &'a str,
 );
 
+// A script's Fatal is `Fatal:<cat>:<obj>`, Perl's (Error.pm:271); W3RD moved it off `Fatal:Internal:Unexpected`.
 #[test]
 fn a_rhai_fatal_is_logged_once() {
   let rows: &[FatalRow] = &[
@@ -1650,7 +1651,7 @@ fn a_rhai_fatal_is_logged_once() {
         r#"Fatal("unexpected", "Internal", "wftop requires something"); DefMacro("\\wftopmacro", "OK");"#,
       )],
       "Before \\wftopmacro\\ after.",
-      &["unexpected:Internal wftop requires something"],
+      &["Fatal:unexpected:Internal  wftop requires something"],
       0,
       "",
     ),
@@ -1661,7 +1662,7 @@ fn a_rhai_fatal_is_logged_once() {
         r#"DefMacro("\\wftopmacro", || { Fatal("unexpected", "Internal", "wfbody gives up"); "X" });"#,
       )],
       "Before \\wftopmacro\\ after.",
-      &["unexpected:Internal wfbody gives up"],
+      &["Fatal:unexpected:Internal  wfbody gives up"],
       0,
       "",
     ),
@@ -1689,7 +1690,7 @@ fn a_rhai_fatal_is_logged_once() {
         ),
       ],
       "Before \\wftopmacro\\ after.",
-      &["unexpected:Internal wfinner requires something"],
+      &["Fatal:unexpected:Internal  wfinner requires something"],
       0,
       "",
     ),
@@ -1701,7 +1702,7 @@ fn a_rhai_fatal_is_logged_once() {
            DefMacro("\\wfb", || { throw "wfb plain trouble"; "B" });"#,
       )],
       "Before \\wfa\\ middle \\wfb\\ after.",
-      &["unexpected:Internal wfa caught one"],
+      &["Fatal:unexpected:Internal  wfa caught one"],
       1,
       "Before A middle",
     ),
@@ -1713,7 +1714,7 @@ fn a_rhai_fatal_is_logged_once() {
            DefConstructor("\\wfc", "<ltx:text class=\"wfc\">C</ltx:text>", #{ afterDigest: || { throw "wfc hook trouble"; } });"#,
       )],
       "Before \\wfa\\ middle \\wfc\\ after.",
-      &["unexpected:Internal wfa gives up"],
+      &["Fatal:unexpected:Internal  wfa gives up"],
       1,
       "Before A middle",
     ),
@@ -1729,7 +1730,7 @@ fn a_rhai_fatal_is_logged_once() {
       ],
       "Before \\wftopmacro\\ after.",
       &[
-        "unexpected:Internal wftop caught one",
+        "Fatal:unexpected:Internal  wftop caught one",
         "script-binding run error: Runtime error: wfinner plain trouble",
       ],
       0,

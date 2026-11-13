@@ -1333,6 +1333,8 @@ pub enum ErrorCategory {
   /// watermark so the CLI can rerun the document under `--streaming` before
   /// the memory fuse (batch 56dz). Reported as an Info, never a Fatal.
   StreamingRestart,
+  /// A binding's own object, logged as spelled (Perl `Fatal(…, $object, …)`, Error.pm:271).
+  Named(String),
 }
 
 #[derive(Debug)]
@@ -1357,6 +1359,28 @@ pub enum ErrorTarget {
   TargetUnexpected,
   TooManyErrors,
   Timeout,
+  /// A binding's own category, logged as spelled (Perl `Fatal($category, …)`, Error.pm:271): a runtime binding's.
+  Named(String),
+}
+
+impl ErrorTarget {
+  /// The category slot of a `Fatal:<category>:<object>` line.
+  fn log_name(&self) -> String {
+    match self {
+      ErrorTarget::Named(name) => name.clone(),
+      other => format!("{other:?}"),
+    }
+  }
+}
+
+impl ErrorCategory {
+  /// The object slot of a `Fatal:<category>:<object>` line.
+  fn log_name(&self) -> String {
+    match self {
+      ErrorCategory::Named(name) => name.clone(),
+      other => format!("{other:?}"),
+    }
+  }
 }
 
 impl fmt::Display for ErrorCategory {
@@ -1388,6 +1412,7 @@ impl fmt::Display for ErrorCategory {
       MemoryBudget => write!(f, "memory_budget"),
       ReadBudget => write!(f, "read_budget"),
       StreamingRestart => write!(f, "streaming-restart"),
+      Named(name) => write!(f, "{name}"),
     }
   }
 }
@@ -1419,12 +1444,23 @@ impl Error {
     let key = self.fatal_key();
     emit_record(
       LogStatus::Fatal,
-      &s!("Fatal:{:?}:{:?} ", self.target, self.category),
+      &s!(
+        "Fatal:{}:{} ",
+        self.target.log_name(),
+        self.category.log_name()
+      ),
       &self.message,
     );
     LAST_FATAL_LOGGED.with(|c| *c.borrow_mut() = Some(key));
   }
-  fn fatal_key(&self) -> String { s!("{:?}:{:?}:{}", self.target, self.category, self.message) }
+  fn fatal_key(&self) -> String {
+    s!(
+      "{}:{}:{}",
+      self.target.log_name(),
+      self.category.log_name(),
+      self.message
+    )
+  }
   /// Whether this is the Fatal `log_fatal` printed last: an `Err` carrying an already-reported Fatal.
   pub fn is_logged_fatal(&self) -> bool {
     let key = self.fatal_key();

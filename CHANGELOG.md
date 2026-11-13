@@ -86,6 +86,20 @@
     `LookupDelcode`/`AssignDelcode` (each Assign* with an optional scope), and
     `LookupMappingKeys` (sorted, as Perl's). A code the table cannot hold (a catcode
     above 15, a code outside 0..65535) is an Error naming the call, not dropped.
+  - **Rhai diagnostics as Perl's:** `Fatal(cat, obj, msg)` logs `Fatal:<cat>:<obj>`, where it
+    logged `Fatal:Internal:Unexpected` (#792); `Warn`/`Error`/`Info`/`Fatal` take Perl's
+    trailing details (a string or an array of strings, one line each).
+  - **Rhai options Perl accepts, honoured** (PR #829 round D): `Tag`'s `afterOpen`/`afterClose`
+    hooks (and `:early`/`:late`; another key is an Error); `NewCounter`'s `idprefix`/`idwithin`/
+    `nested`; `RequirePackage`/`LoadClass` option maps (`options`, `type`, `notex`, `after`,
+    `withoptions`, …); `ProcessOptions(#{inorder, keysets})`; `AtBeginDocument`/`AtEndDocument`
+    of a closure; an array of hook closures (`afterDigest: [f, g]`), each run.
+  - **Rhai calls lower to their macro's core call:** `RefStepCounter` steps through
+    `\refstepcounter`'s current meaning, as `RefStepCounter!` (`RefStepCounter(c, true)` steps
+    directly); `AssignMeaning` to an undefined token undefines; a scope string other than
+    local/global is a named scope, as the macros read it, where it was dropped to the default.
+  - **A Rhai closure takes any number of arguments, as a Perl sub:** missing ones are `()`,
+    extra ones dropped (a `DefConditional` test, a `Tag` hook), where the count had to match.
   - **Rhai arrays and maps are stored as lists and hashes** (`AssignValue`, `AssignMapping`,
     `PushValue`): `let o = LookupValue(k); o.push(x); AssignValue(k, o)` round-trips, where
     the array was stored as its printed text. A `Token`/`Tokens` given where a string is

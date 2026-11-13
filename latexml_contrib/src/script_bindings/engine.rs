@@ -561,6 +561,15 @@ pub(super) fn make_engine() -> Engine {
         .map_err(rhai_err)
     },
   );
+  // The closure form (Package.pm:2815): the code becomes a macro, whose token is pushed, as Perl's `DefMacroI`.
+  engine.register_fn(
+    "AtBeginDocument",
+    |body: FnPtr| -> std::result::Result<(), Box<EvalAltResult>> {
+      let cs = latexml_core::T_CS!(code_macro_name().as_str());
+      wire_now(|e, a| wire_macro_token(e, a, cs, None, body))?;
+      latexml_core::state::push_value("@at@begin@document", Tokens::new(vec![cs])).map_err(rhai_err)
+    },
+  );
   engine.register_fn(
     "AtEndDocument",
     |text: &str| -> std::result::Result<(), Box<EvalAltResult>> {
@@ -582,6 +591,15 @@ pub(super) fn make_engine() -> Engine {
     |token: Token| -> std::result::Result<(), Box<EvalAltResult>> {
       latexml_core::state::push_value("@at@end@document", Tokens::new(vec![token]))
         .map_err(rhai_err)
+    },
+  );
+  // The closure form (Package.pm:2815): the code becomes a macro, whose token is pushed, as Perl's `DefMacroI`.
+  engine.register_fn(
+    "AtEndDocument",
+    |body: FnPtr| -> std::result::Result<(), Box<EvalAltResult>> {
+      let cs = latexml_core::T_CS!(code_macro_name().as_str());
+      wire_now(|e, a| wire_macro_token(e, a, cs, None, body))?;
+      latexml_core::state::push_value("@at@end@document", Tokens::new(vec![cs])).map_err(rhai_err)
     },
   );
   engine.register_fn(
@@ -661,38 +679,42 @@ pub(super) fn make_engine() -> Engine {
       latexml_engine::base_utilities::today().map_err(rhai_err)
     },
   );
+  // Diagnostics (Perl Common/Error.pm :271-378): `cat:obj msg`, plus Perl's trailing `@details` as a string or an
+  // array of strings, one line each.
   engine.register_fn("Warn", |cat: &str, obj: &str, msg: &str| {
     latexml_core::Warn!(cat, obj, msg.to_string());
   });
   engine.register_fn(
-    "Error",
-    |cat: &str, obj: &str, msg: &str| -> std::result::Result<(), Box<EvalAltResult>> {
-      // Error! escalates to Fatal past MAX_ERRORS (a latexml `Err`) — surface
-      // that to the script as a Rhai error so conversion aborts cleanly.
-      let res: Result<()> = (|| {
-        latexml_core::Error!(cat, obj, msg.to_string());
-        Ok(())
-      })();
-      res.map_err(rhai_err)
+    "Warn",
+    |cat: &str, obj: &str, msg: &str, details: Dynamic| {
+      latexml_core::Warn!(cat, obj, msg.to_string(), details_of(details));
     },
   );
-  // ── the rest of the diagnostics surface (Perl Common/Error.pm), completing
-  // the Warn/Error pair above (#319). ──
+  engine.register_fn("Error", |cat: &str, obj: &str, msg: &str| {
+    script_error(cat, obj, msg, None)
+  });
+  engine.register_fn(
+    "Error",
+    |cat: &str, obj: &str, msg: &str, details: Dynamic| {
+      script_error(cat, obj, msg, Some(details_of(details)))
+    },
+  );
   engine.register_fn("Info", |cat: &str, obj: &str, msg: &str| {
     latexml_core::Info!(cat, obj, msg.to_string());
   });
   engine.register_fn(
+    "Info",
+    |cat: &str, obj: &str, msg: &str, details: Dynamic| {
+      latexml_core::Info!(cat, obj, msg.to_string(), details_of(details));
+    },
+  );
+  engine.register_fn("Fatal", |cat: &str, obj: &str, msg: &str| {
+    script_fatal(cat, obj, msg, None)
+  });
+  engine.register_fn(
     "Fatal",
-    |cat: &str, obj: &str, msg: &str| -> std::result::Result<(), Box<EvalAltResult>> {
-      // Perl `Fatal($cat,$obj,$msg)` logs a fatal and aborts. Surface it as a
-      // Rhai error so the script/conversion aborts cleanly, carrying the
-      // "cat:obj msg" identity, and note the fatal status for the run tally.
-      let res: Result<()> = (|| {
-        latexml_core::Fatal!(Internal, Unexpected, format!("{cat}:{obj} {msg}"));
-        #[allow(unreachable_code)]
-        Ok(())
-      })();
-      res.map_err(rhai_err)
+    |cat: &str, obj: &str, msg: &str, details: Dynamic| {
+      script_fatal(cat, obj, msg, Some(details_of(details)))
     },
   );
   // Notes + progress reporting (Perl `Note`/`NoteSTDERR`/`NoteLog`, `ProgressStep`,
@@ -805,6 +827,35 @@ pub(super) fn make_engine() -> Engine {
       latexml_core::binding::counter::dialect::new_counter(c, within, None).map_err(rhai_err)
     },
   );
+  // Perl `NewCounter($ctr, $within, idprefix => …, idwithin => …, nested => [...])` (Package.pm:676), as `NewCounter!`.
+  engine.register_fn(
+    "NewCounter",
+    |c: &str, within: &str, opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
+      let (mut idprefix, mut idwithin, mut nested) = (String::new(), String::new(), Vec::new());
+      for (key, val) in opts {
+        match key.as_str() {
+          "idprefix" => idprefix = dynamic_to_string(val),
+          "idwithin" => idwithin = dynamic_to_string(val),
+          "nested" if val.is_array() => {
+            nested = val
+              .cast::<rhai::Array>()
+              .into_iter()
+              .map(dynamic_to_string)
+              .collect()
+          },
+          "nested" => nested = vec![dynamic_to_string(val)],
+          other => unsupported_option("NewCounter", other),
+        }
+      }
+      let options = latexml_core::binding::counter::dialect::NewCounterOptions {
+        idprefix: &idprefix,
+        idwithin: &idwithin,
+        nested:   nested.iter().map(String::as_str).collect(),
+      };
+      latexml_core::binding::counter::dialect::new_counter(c, within, Some(options))
+        .map_err(rhai_err)
+    },
+  );
   engine.register_fn(
     "StepCounter",
     |c: &str| -> std::result::Result<(), Box<EvalAltResult>> {
@@ -814,7 +865,7 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn(
     "ResetCounter",
     |c: &str| -> std::result::Result<(), Box<EvalAltResult>> {
-      latexml_core::binding::counter::dialect::reset_counter(&latexml_core::T_LETTER!(c))
+      latexml_core::binding::counter::dialect::reset_counter(&latexml_core::T_OTHER!(c))
         .map_err(rhai_err)
     },
   );
@@ -834,12 +885,25 @@ pub(super) fn make_engine() -> Engine {
   );
   // RefStepCounter: returns the refnum/id property map (Digested values come
   // back as handles a `properties` closure can return directly — the amsmath
-  // `properties => ref_step_counter("equation")` idiom).
+  // `properties => ref_step_counter("equation")` idiom). Through `\refstepcounter`'s
+  // current meaning, as `RefStepCounter!`; `noreset` steps the counter directly.
   engine.register_fn(
     "RefStepCounter",
     |c: &str| -> std::result::Result<Map, Box<EvalAltResult>> {
-      let props =
-        latexml_core::binding::counter::dialect::ref_step_counter(c, false).map_err(rhai_err)?;
+      let props = latexml_core::binding::counter::dialect::ref_step_counter_by_meaning(c)
+        .map_err(rhai_err)?;
+      Ok(props_to_map(props))
+    },
+  );
+  engine.register_fn(
+    "RefStepCounter",
+    |c: &str, noreset: bool| -> std::result::Result<Map, Box<EvalAltResult>> {
+      let props = if noreset {
+        latexml_core::binding::counter::dialect::ref_step_counter(c, true)
+      } else {
+        latexml_core::binding::counter::dialect::ref_step_counter_by_meaning(c)
+      }
+      .map_err(rhai_err)?;
       Ok(props_to_map(props))
     },
   );
@@ -850,9 +914,10 @@ pub(super) fn make_engine() -> Engine {
     "AssignMeaning",
     |cs: Dynamic, other: Dynamic| -> std::result::Result<(), Box<EvalAltResult>> {
       let cs = token_arg("AssignMeaning", cs)?;
-      if let Some(m) = latexml_core::state::lookup_meaning(&token_arg("AssignMeaning", other)?) {
-        latexml_core::state::assign_meaning(&cs, m, None);
-      }
+      // An undefined `other` makes `cs` undefined, as Perl's assignMeaning($token, undef).
+      let meaning = latexml_core::state::lookup_meaning(&token_arg("AssignMeaning", other)?)
+        .unwrap_or(Stored::None);
+      latexml_core::state::assign_meaning(&cs, meaning, None);
       Ok(())
     },
   );
@@ -1346,6 +1411,79 @@ pub(super) fn make_engine() -> Engine {
       .map_err(rhai_err)
     },
   );
+  // Perl `RequirePackage($package, %options)` (Package.pm:2672-2697); a key outside Perl's table is an Error.
+  engine.register_fn(
+    "RequirePackage",
+    |name: &str, opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
+      const REQUIRE_OPTIONS: &[&str] = &[
+        "options",
+        "withoptions",
+        "type",
+        "as_class",
+        "noltxml",
+        "notex",
+        "raw",
+        "after",
+        "searchpaths_only",
+      ];
+      let operation = format!("RequirePackage ({name})");
+      check_options(&operation, REQUIRE_OPTIONS, opts.keys().map(|k| k.as_str()))
+        .map_err(rhai_err)?;
+      let mut o = latexml_core::binding::content::RequireOptions::default();
+      for (key, val) in opts {
+        match key.as_str() {
+          "options" => o.options = string_list(val),
+          "type" => o.extension = Some(dynamic_to_string(val).into()),
+          "as_class" => o.as_class = val.as_bool().unwrap_or(false),
+          "noltxml" => o.noltxml = val.as_bool().ok(),
+          "notex" => o.notex = val.as_bool().ok(),
+          "raw" if val.as_bool().unwrap_or(false) => o.notex = Some(false),
+          "after" => o.after = dynamic_to_tokens(val),
+          "searchpaths_only" => o.searchpaths_only = val.as_bool().unwrap_or(false),
+          // `withoptions` is accepted and recomputed from `options`, as Perl's (:2694).
+          _ => {},
+        }
+      }
+      latexml_core::binding::content::require_package(name, o).map_err(rhai_err)
+    },
+  );
+  // Perl `LoadClass($class, %options)` (Package.pm:2699-2730): `options`, `withoptions` (the document's options),
+  // `after`; `notex`/`searchpaths_only` reach no class-load option yet (a Warning).
+  engine.register_fn(
+    "LoadClass",
+    |name: &str, opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
+      const LOADCLASS_OPTIONS: &[&str] = &[
+        "options",
+        "withoptions",
+        "after",
+        "notex",
+        "searchpaths_only",
+      ];
+      let operation = format!("LoadClass ({name})");
+      check_options(
+        &operation,
+        LOADCLASS_OPTIONS,
+        opts.keys().map(|k| k.as_str()),
+      )
+      .map_err(rhai_err)?;
+      let (mut options, mut withoptions, mut after) = (Vec::new(), false, Tokens::default());
+      for (key, val) in opts {
+        match key.as_str() {
+          "options" => options = string_list(val),
+          "withoptions" => withoptions = val.as_bool().unwrap_or(false),
+          "after" => after = dynamic_to_tokens(val),
+          other => unsupported_option(&operation, other),
+        }
+      }
+      if withoptions {
+        latexml_core::binding::content::load_class_with_options(name, after)
+      } else {
+        latexml_core::binding::content::load_class(name, options, after)
+      }
+      .and_then(|()| latexml_engine::latex_constructs::settle_chapter_after_class_load())
+      .map_err(rhai_err)
+    },
+  );
   // A script binding's `LoadClass` makes the "has chapters" step after the load, as a compiled binding's `LoadClass!`
   // (OXIDIZED_DESIGN #179, `settle_chapter_after_class_load`).
   engine.register_fn(
@@ -1379,6 +1517,29 @@ pub(super) fn make_engine() -> Engine {
     "ProcessOptions",
     |inorder: bool| -> std::result::Result<(), Box<EvalAltResult>> {
       latexml_core::binding::content::process_options(inorder, &[]).map_err(rhai_err)
+    },
+  );
+  // Perl `ProcessOptions(inorder => 1, keysets => [...])` (Package.pm:2444-2447).
+  engine.register_fn(
+    "ProcessOptions",
+    |opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
+      check_options(
+        "ProcessOptions",
+        &["inorder", "keysets"],
+        opts.keys().map(|k| k.as_str()),
+      )
+      .map_err(rhai_err)?;
+      let inorder = opts
+        .get("inorder")
+        .and_then(|v| v.as_bool().ok())
+        .unwrap_or(false);
+      let keysets = opts
+        .get("keysets")
+        .cloned()
+        .map(string_list)
+        .unwrap_or_default();
+      let keysets: Vec<&str> = keysets.iter().map(String::as_str).collect();
+      latexml_core::binding::content::process_options(inorder, &keysets).map_err(rhai_err)
     },
   );
   engine.register_fn(
@@ -1447,24 +1608,56 @@ pub(super) fn make_engine() -> Engine {
     }
     latexml_core::binding::content::require_resource(r);
   });
-  // Tag: the scalar subset (autoOpen/autoClose) of TagOptions.
-  engine.register_fn("Tag", |tag: &str, opts: Map| {
-    let mut options = latexml_core::document::tag::TagOptions::default();
-    for (key, val) in opts {
-      match key.as_str() {
-        "autoOpen" => {
-          options.auto_open = val
-            .as_bool()
-            .map(Into::into)
-            .or_else(|_| val.as_float().map(Into::into))
-            .ok()
-        },
-        "autoClose" => options.auto_close = val.as_bool().ok(),
-        _ => {},
+  // Tag (Package.pm:2005-2030): autoOpen/autoClose, and the afterOpen/afterClose hooks (each also `:early`, prepended,
+  // and `:late`), a closure or an array of closures; any other key is an Error, as Perl's CheckOptions.
+  engine.register_fn(
+    "Tag",
+    |tag: &str, opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
+      const TAG_OPTIONS: &[&str] = &[
+        "autoOpen",
+        "autoClose",
+        "afterOpen",
+        "afterClose",
+        "afterOpen:early",
+        "afterClose:early",
+        "afterOpen:late",
+        "afterClose:late",
+      ];
+      let operation = format!("Tag ({tag})");
+      check_options(&operation, TAG_OPTIONS, opts.keys().map(|k| k.as_str())).map_err(rhai_err)?;
+      let (engine, ast) = current_script()?;
+      let mut options = latexml_core::document::tag::TagOptions::default();
+      for (key, val) in opts {
+        let hooks = || {
+          Some(
+            hooks_of(val.clone())
+              .filter_map(|v| v.try_cast::<FnPtr>())
+              .map(|fp| tag_trampoline(fp, engine.clone(), ast.clone()))
+              .collect(),
+          )
+        };
+        match key.as_str() {
+          "autoOpen" => {
+            options.auto_open = val
+              .as_bool()
+              .map(Into::into)
+              .or_else(|_| val.as_float().map(Into::into))
+              .ok()
+          },
+          "autoClose" => options.auto_close = val.as_bool().ok(),
+          "afterOpen" => options.after_open = hooks(),
+          "afterClose" => options.after_close = hooks(),
+          "afterOpen:early" => options.after_open_early = hooks(),
+          "afterClose:early" => options.after_close_early = hooks(),
+          "afterOpen:late" => options.after_open_late = hooks(),
+          "afterClose:late" => options.after_close_late = hooks(),
+          _ => {},
+        }
       }
-    }
-    latexml_core::binding::content::install_tag(tag, options);
-  });
+      latexml_core::binding::content::install_tag(tag, options);
+      Ok(())
+    },
+  );
   // MergeFont: merge the given partial font into the current one (Perl
   // `MergeFont(family=>…)`); string keys family/series/shape/size.
   engine.register_fn("MergeFont", |opts: Map| {
@@ -2305,4 +2498,80 @@ fn read_token() -> RhaiResult<Dynamic> {
   latexml_core::gullet::read_token()
     .map(|t| t.map_or(Dynamic::UNIT, Dynamic::from))
     .map_err(rhai_err)
+}
+
+/// Perl's trailing `@details` (Error.pm:271-378): a string, or an array of strings joined one per line.
+fn details_of(details: Dynamic) -> String {
+  if details.is_array() {
+    let lines: Vec<String> = details
+      .cast::<rhai::Array>()
+      .into_iter()
+      .map(dynamic_to_string)
+      .collect();
+    lines.join("\n\t")
+  } else {
+    dynamic_to_string(details)
+  }
+}
+
+/// `Error(cat, obj, msg[, details])`. `Error!` escalates to a Fatal past MAX_ERRORS (an `Err`), which the script
+/// sees as a Rhai error so the conversion aborts cleanly.
+fn script_error(cat: &str, obj: &str, msg: &str, details: Option<String>) -> RhaiResult<()> {
+  let res: Result<()> = (|| {
+    match details {
+      Some(details) => latexml_core::Error!(cat, obj, msg.to_string(), details),
+      None => latexml_core::Error!(cat, obj, msg.to_string()),
+    }
+    Ok(())
+  })();
+  res.map_err(rhai_err)
+}
+
+/// `Fatal(cat, obj, msg[, details])`: logged as `Fatal:<cat>:<obj> <msg>` (Error.pm:271), ending the run (#792).
+fn script_fatal(cat: &str, obj: &str, msg: &str, details: Option<String>) -> RhaiResult<()> {
+  use latexml_core::common::error::{ErrorCategory, ErrorTarget};
+  let message = match details {
+    Some(details) => format!("{msg}\n\t{details}"),
+    None => msg.to_string(),
+  };
+  let res: Result<()> = (|| {
+    latexml_core::Fatal!(
+      ErrorTarget::Named(cat.to_string()),
+      ErrorCategory::Named(obj.to_string()),
+      message
+    );
+    #[allow(unreachable_code)]
+    Ok(())
+  })();
+  res.map_err(rhai_err)
+}
+
+/// A list option (`options => [...]`, `keysets => [...]`): an array of strings, or one comma-separated string.
+fn string_list(val: Dynamic) -> Vec<String> {
+  if val.is_array() {
+    val
+      .cast::<rhai::Array>()
+      .into_iter()
+      .map(dynamic_to_string)
+      .collect()
+  } else {
+    dynamic_to_string(val)
+      .split(',')
+      .map(|s| s.trim().to_string())
+      .filter(|s| !s.is_empty())
+      .collect()
+  }
+}
+
+thread_local! {
+  static CODE_MACROS: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
+}
+
+/// A fresh name for a closure installed as a macro, as Perl's `T_CS(ToString($code))` (`\CODE(0x…)`).
+fn code_macro_name() -> String {
+  let n = CODE_MACROS.with(|c| {
+    c.set(c.get() + 1);
+    c.get()
+  });
+  format!("\\CODE({n})")
 }

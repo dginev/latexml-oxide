@@ -201,13 +201,8 @@ fn apply_scalar_option(
     "alias" => options.alias = Some(value.into_string()?),
     "locked" => options.locked = value.into_bool()?,
     "robust" => options.robust = value.into_bool()?,
-    "scope" => {
-      options.scope = match value.into_string()?.as_str() {
-        "global" => Some(crate::state::Scope::Global),
-        "local" => Some(crate::state::Scope::Local),
-        _ => None,
-      }
-    },
+    // "local"/"global" or a named scope (Perl's `scope => 'section:1'`), as the macro's option.
+    "scope" => options.scope = super::traits::IntoOption::into_option(value.into_string()?),
     "nargs" => match value {
       OptionValue::Int(n) => options.nargs = usize::try_from(n).ok(),
       _ => return Err(Error::from("nargs expects an integer")),
