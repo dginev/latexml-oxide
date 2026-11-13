@@ -1,7 +1,7 @@
 //! Small token/text utilities and the front matter debug and ink helpers (`unitlength_sp`, `already_reported`,
 //! `digested_to_text`, `ink_text`, `shown_arguments`).
 
-use super::{frontmatter::observer::separators::KERNEL_SEPARATOR, *};
+use super::{frontmatter::observer::separators::is_kernel_separator, *};
 
 /// `\unitlength` in sp, exact (65536, 1pt, when it is undefined): the picture
 /// unit every `{picture}` and pict2e coordinate is multiplied by (Perl
@@ -947,7 +947,7 @@ pub(crate) fn printed_own_text(w: &Whatsit) -> Option<String> {
       let definition = w.get_definition();
       // (the kernel's `\and` is latex.ltx's column break, no text: its " and " is the XML's, Perl's
       // `DefConstructor('\and', ' and ')` (LaTeX.pool), never the page's — fx25's title page print)
-      if *definition.get_cs() == T_CS!(KERNEL_SEPARATOR) {
+      if is_kernel_separator(definition.as_ref()) {
         return None;
       }
       definition.replacement_template().and_then(template_text)

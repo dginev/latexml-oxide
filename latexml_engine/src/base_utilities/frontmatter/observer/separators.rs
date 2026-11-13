@@ -90,9 +90,14 @@ fn made_by(origin: DefinitionOrigin) -> SepMeaning {
 }
 
 /// The kernel layer's separator, `latex_constructs/sect05.rs`'s `\and` constructor: the definition a kernel meaning must be
-/// (`\And` and `\AND` are `\let` to it), the one `frontmatter_stores::kernel_and_list` asks for (P2-6); a whatsit of it
-/// prints no text (`util_text::printed_own_text`).
-pub(in crate::base_utilities) const KERNEL_SEPARATOR: &str = "\\and";
+/// (`\And` and `\AND` are `\let` to it), the one `frontmatter_stores::kernel_and_list` asks for (P2-6).
+const KERNEL_SEPARATOR: &str = "\\and";
+
+/// Whether `definition` is [`KERNEL_SEPARATOR`]'s (a `\let` copy's too: its own cs) — a whatsit of it prints no text
+/// (`util_text::printed_own_text`).
+pub(in crate::base_utilities) fn is_kernel_separator(definition: &dyn Definition) -> bool {
+  *definition.get_cs() == T_CS!(KERNEL_SEPARATOR)
+}
 
 /// What `token` means now ([`SepMeaning`]): the kernel separator is the [`KERNEL_SEPARATOR`] constructor a kernel layer
 /// made (a pool, a dump, a format: `is_latexml_owned` and not `is_binding_made`).
@@ -100,7 +105,7 @@ fn meaning_of(token: &Token) -> SepMeaning {
   match lookup_meaning(token) {
     Some(Stored::Constructor(defn)) => {
       let kernel = defn.origin.is_latexml_owned() && !defn.origin.is_binding_made();
-      if kernel && *defn.get_cs() == T_CS!(KERNEL_SEPARATOR) {
+      if kernel && is_kernel_separator(defn.as_ref()) {
         SepMeaning::Kernel
       } else {
         made_by(defn.origin)
