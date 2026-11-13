@@ -7,7 +7,8 @@
 % oracle:  pdflatex 0 errors
 % engines: perl=0 (no spacing); rust bf059b707e=0, five read top: the `\captionof` after a paragraph in a minipage,
 %          the second caption, the `\captionof` after text in a float and in a paragraph, the longtable's last caption
-% expect:  0 errors; margins top, bottom, bottom, top, top, bottom, top, top, top, bottom
+% expect:  0 errors; caption positions bottom, top, top, bottom, bottom, top, bottom, bottom, bottom, top (the skip
+%          on the side facing the body: margin-top on a bottom caption, margin-bottom on a top one)
 % status:  GREEN (guard bindings_batch2::caption_justification_and_skip)
 \documentclass{article}
 \usepackage[skip=5pt]{caption}

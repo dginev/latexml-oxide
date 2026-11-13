@@ -185,6 +185,8 @@ LoadDefinitions!({
           "type*" if !typed => "type",
           // caption3.sty:774-775: `labelseparator` is `labelsep`.
           "labelseparator" => "labelsep",
+          // caption3.sty:674: `slc` is `singlelinecheck`.
+          "slc" => "singlelinecheck",
           other => other,
         };
         assign_value(&s!("{prefix}{key}"), Stored::String(pin(text_value.clone())), None);
@@ -689,6 +691,8 @@ LoadDefinitions!({
         return Ok(Tokens::new(out));
       }
     }
+    // The inline caption formats nothing: `\lx@caption@where`'s mark is dropped here, not left to the next caption.
+    take_caption_auto();
     Ok(Tokens!(T_CS!("\\@@generic@caption")))
   });
   // caption.sty:389-391: `\captionof` is `\caption@of`, `\setcaptiontype*{<type>}` then the
@@ -1119,17 +1123,21 @@ LoadDefinitions!({
     let side = if (register == "above") == top { "bottom" } else { "top" };
     add_caption_style(document, &mut caption, &s!("margin-{side}:{}", length.to_attribute()))?;
   }, sizer => 0, reversion => "");
-  // `\lx@caption@justify{<text-align>}`: a set justification replaces the alignment class a `\centering` &c. of the
-  // caption's float gives it (`_justified`, the float's `after_close` below): TeX's caption box runs `\@parboxrestore`.
-  DefConstructor!("\\lx@caption@justify{}", sub[document, args] {
+  // `\lx@caption@justify{<text-align>}{<singlelinecheck>}`: a set justification replaces the alignment class a
+  // `\centering` &c. of the caption's float gives it (`_justified`, the float's `after_close` below): TeX's caption box
+  // runs `\@parboxrestore`. Under `singlelinecheck` a caption that fits one line is centred (caption3.sty:1497, :1568
+  // `\caption@slc`): a fit-content box between auto margins.
+  DefConstructor!("\\lx@caption@justify{}{}", sub[document, args] {
     let align = args[0].as_ref().map(ToString::to_string).unwrap_or_default();
+    let single_line = args[1].as_ref().is_some_and(|a| !a.to_string().is_empty());
     let Some(mut caption) = document.get_element() else { return Ok(()) };
     if document::get_node_qname(&caption) != pin!("ltx:caption") {
       return Ok(());
     }
     document.remove_class(&mut caption, CAPTION_ALIGN_CLASSES);
     document.set_attribute(&mut caption, "_justified", "true")?;
-    add_caption_style(document, &mut caption, &s!("text-align:{align}"))?;
+    let fit = if single_line { ";width:fit-content;margin-left:auto;margin-right:auto" } else { "" };
+    add_caption_style(document, &mut caption, &s!("text-align:{align}{fit}"))?;
   }, sizer => 0, reversion => "");
   for float in ["ltx:figure", "ltx:table", "ltx:float"] {
     Tag!(float, after_close => sub[document, node, _whatsit] {
@@ -1373,6 +1381,15 @@ fn caption_setting(ty: &str, key: &str) -> Option<String> {
   Some(lookup_string(&s!("CAPTION_{key}"))).filter(|v| !v.is_empty())
 }
 
+/// The `position=auto` side `\lx@caption@where` marked at the caption's `\caption`/`\captionof` (longtable's at its
+/// caption), cleared as read: each caption formatted, or dropped, takes its own mark, so none reaches a caption
+/// formatted without one (listings' `\lx@format@caption@@{lstlisting}` after a sub-caption: review revCAP2 q5).
+fn take_caption_auto() -> String {
+  let auto = lookup_string("lx@caption@auto");
+  assign_value("lx@caption@auto", Stored::None, Some(Scope::Global));
+  auto
+}
+
 /// The alignment classes `\centering`, `\raggedright`, `\raggedleft` give a node (sect06.rs `\@add@centering` &c.).
 const CAPTION_ALIGN_CLASSES: &str = "ltx_centering ltx_align_left ltx_align_right ltx_align_center";
 
@@ -1388,8 +1405,9 @@ fn add_caption_style(document: &mut Document, caption: &mut Node, style: &str) -
 /// The caption's layout settings for float type `ty` as tokens on its `ltx:caption`: `justification=` as the
 /// `text-align` its body's last `\centering`/`\raggedright`/`\raggedleft` (or ragged2e's) sets, `justify` for an empty
 /// one (`\caption@hj@<name>`, caption3.sty:955-969, 1361-1364; `\lx@caption@justify`), and the skips
-/// (`\lx@caption@skip`). Beyond Perl, which ignores both (caption.sty.ltxml:30,52; OXIDIZED_DESIGN_DIVERGENCES #1024).
-fn caption_layout_tokens(ty: &str) -> Vec<Token> {
+/// (`\lx@caption@skip`); `auto` is the position `\lx@caption@where` marked for this caption ([`take_caption_auto`]).
+/// Beyond Perl, which ignores both (caption.sty.ltxml:30,52; OXIDIZED_DESIGN_DIVERGENCES #1024).
+fn caption_layout_tokens(ty: &str, auto: String) -> Vec<Token> {
   let get = |key: &str| caption_setting(ty, key);
   let braced = |tokens: &mut Vec<Token>, arg: &str| {
     tokens.push(T_BEGIN!());
@@ -1408,7 +1426,8 @@ fn caption_layout_tokens(ty: &str) -> Vec<Token> {
     if body.unlist_ref().is_empty() {
       return Some("justify");
     }
-    body.unlist_ref().iter().rev().find_map(|t| {
+    // A body with no alignment command (`{\hyphenpenalty=10000}`) leaves `\@parboxrestore`'s justified text.
+    let last_align = body.unlist_ref().iter().rev().find_map(|t| {
       t.with_cs_name(|cs| match cs {
         "\\centering" | "\\Centering" | "\\centerlast" | "\\centerfirst" => Some("center"),
         "\\raggedright" | "\\RaggedRight" | "\\flushleft" => Some("left"),
@@ -1416,16 +1435,21 @@ fn caption_layout_tokens(ty: &str) -> Vec<Token> {
         "\\justifying" => Some("justify"),
         _ => None,
       })
-    })
+    });
+    last_align.or(Some("justify"))
   });
   if let Some(align) = justification {
     tokens.push(T_CS!("\\lx@caption@justify"));
     braced(&mut tokens, align);
+    // caption3.sty:131-139, :677: `singlelinecheck` is on unless set to `0`/`false`/`no`/`off`.
+    let single_line = !matches!(
+      get("singlelinecheck").as_deref(),
+      Some("0" | "false" | "no" | "off")
+    );
+    braced(&mut tokens, if single_line { "1" } else { "" });
   }
   // `position=auto` as `\caption@autoposition` read it when the caption began (`\lx@caption@where`).
   let mut position = get("position").unwrap_or_default();
-  let auto = lookup_string("lx@caption@auto");
-  assign_value("lx@caption@auto", Stored::None, Some(Scope::Global));
   if matches!(position.as_str(), "" | "auto") && !auto.is_empty() {
     position = auto;
   }
@@ -1661,6 +1685,7 @@ fn caption_text_is_empty(text: &Tokens) -> bool {
 /// floatrow, subfig's `caption=false`), which formats nothing. Sub-captions keep their packages' formats
 /// (subcaption_sty.rs, subfig_sty.rs).
 fn caption_format_tokens(ty: Tokens, text: Tokens) -> Result<Tokens> {
+  let auto = take_caption_auto();
   let ty_name = ty.to_string().trim().to_string();
   let text_empty = caption_text_is_empty(&text);
   // A `\captionof` panel a binding hosts (`\lx@caption@hosted`, `\@captionof@`) is caption's `\caption` of that
@@ -1706,7 +1731,7 @@ fn caption_format_tokens(ty: Tokens, text: Tokens) -> Result<Tokens> {
   let mut tokens = if ty_name.is_empty() || (ty_name.starts_with("sub") && !hosted) {
     Vec::new()
   } else {
-    caption_layout_tokens(&ty_name)
+    caption_layout_tokens(&ty_name, auto)
   };
   let braced = |tokens: &mut Vec<Token>, inner: Vec<Token>| {
     tokens.push(T_BEGIN!());
@@ -1842,6 +1867,7 @@ fn caption_text_format(text: Tokens, text_format: Option<String>) -> Result<Toke
 /// in [`caption_format_tokens`]. Probe `capstar.tex` (sel78k, `[font=small,labelfont=bf,textfont=it]`: the starred
 /// caption italic and small, as pdflatex sets it); guard `perfect_kernel_batch78l::caption_star_takes_the_caption_fonts`.
 fn caption_star_format_tokens(ty: Tokens, text: Tokens) -> Result<Tokens> {
+  let auto = take_caption_auto();
   let ty_name = ty.to_string().trim().to_string();
   let hosted = lookup_bool("lx@caption@hosted");
   if ty_name.is_empty() || (ty_name.starts_with("sub") && !hosted) {
@@ -1851,7 +1877,7 @@ fn caption_star_format_tokens(ty: Tokens, text: Tokens) -> Result<Tokens> {
   let (font, text_font) = (get("font"), get("textfont"));
   let text_format =
     get("textformat").filter(|f| f != "simple" && f != "default" && !caption_text_is_empty(&text));
-  let mut tokens = caption_layout_tokens(&ty_name);
+  let mut tokens = caption_layout_tokens(&ty_name, auto);
   if font.is_none() && text_font.is_none() && text_format.is_none() {
     tokens.extend(text.unlist());
     return Ok(Tokens::new(tokens));

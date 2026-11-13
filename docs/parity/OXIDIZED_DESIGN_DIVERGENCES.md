@@ -36076,15 +36076,20 @@ in vertical mode once the list holds a box (`\prevdepth`), a longtable's bottom 
 `\LT@rows`), and a longtable's caption takes `\captionsetup[longtable]` over its type's (ltcaption `\caption@LT@setup`).
 **Rust.** `caption_layout_tokens` (caption_sty.rs) puts on the caption, from its settings, `\lx@caption@justify`: the
 `text-align` in its `cssstyle` the justification's body sets (its last alignment command, so a `\DeclareCaptionJustification`
-of the document's counts; `justify` for an empty body), which also removes the alignment class a `\centering` &c. of
+of the document's counts; `justify` for a body with none, as `\@parboxrestore` leaves it — an alignment reached through a
+user macro reads as `justify` too), under `singlelinecheck` (caption3.sty:677, on by default; `slc`) with
+`width:fit-content;margin-left:auto;margin-right:auto` beside it, the HTML reading of `\caption@slc` (:1497, :1568): a
+caption that fits one line sits centred, a longer one fills the line with the set alignment; this also removes the alignment class a `\centering` &c. of
 the float gives the caption (a `_justified` mark, the floats' `after_close`); and `\lx@caption@skip{above|below}
 {<position>}<glue>`, `margin-top`/`margin-bottom` in the same `cssstyle` (the schema's caption has no spacing
 attribute; `cssstyle` is Common, as framed.sty.ltxml:78 uses it), nothing for a zero below-skip. `\lx@caption@where`,
 at `\caption`/`\captionof`, records `auto` as bottom in horizontal mode; in vertical mode the constructor reads the
 list (an element other than `ltx:tags`/`ltx:toccaption` before the caption, or before a `\captionof`'s wrapper outside a
-float); longtable's caption records it by the table's rows. Only a key the document or class sets emits anything. A
-`Dimension` key's value is stored as its length (`skip=20pt` was stored empty). Not done: `singlelinecheck` (HTML has
-no line count; the themes' flex column centres a short caption alike), `centerlast`/`centerfirst` read as centring,
+float); longtable's caption records it by the table's rows. The mark is its caption's: the caption formatter reads and
+clears it before any early return (a sub-caption) and the inline caption of a `\caption` outside a float drops it, so a
+caption formatted without `\caption` (listings') never reads another's. Only a key the document or class sets emits anything. A
+`Dimension` key's value is stored as its length (`skip=20pt` was stored empty). Not done: a `\DeclareCaptionSinglelinecheck`
+of the document's (read as on), `centerlast`/`centerfirst` read as centring,
 `margin=`/`width=`, subcaption's sub-captions (`\captionsetup[sub]`, subcaption.sty:220 `skip=6pt`; RED repro
 `captions-floats/subcaption_justification_and_skip_red`), and a skip in relative units (`\baselineskip`, `em`) is read
 at the caption, not at the `\captionsetup`.

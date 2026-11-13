@@ -1,0 +1,18 @@
+% issue #787, review revCAP2 p6: with `singlelinecheck` on (caption's default, caption3.sty:677) a caption that fits
+% one line is centred whatever the justification (caption3.sty:1497, :1568 `\caption@slc`): the caption is a
+% fit-content box between auto margins beside its `text-align`; `singlelinecheck=false` and its alias `slc=off` leave
+% the `text-align` alone.
+% witness: synthetic (review revCAP2 p6)
+% oracle:  pdflatex 0 errors; "Figure 1: Short on." centred, "Table 1: Short off." and "Figure 2: Off by slc." flush left
+% engines: perl=0 (no alignment); rust df5149f093=0, `text-align:left` on all three, the figure's not centred
+% expect:  0 errors, 0 warnings; Figure 1 text-align left + fit-content and auto margins; Table 1, Figure 2 text-align
+%          left only
+% status:  GREEN (guard bindings_batch2::caption_justification_and_skip)
+\documentclass{article}
+\usepackage[justification=raggedright]{caption}
+\captionsetup[table]{singlelinecheck=false}
+\begin{document}
+\begin{figure}\centering X\caption{Short on.}\end{figure}
+\begin{table}\centering\caption{Short off.}Y\end{table}
+\begin{figure}\captionsetup{slc=off}\centering Z\caption{Off by slc.}\end{figure}
+\end{document}
