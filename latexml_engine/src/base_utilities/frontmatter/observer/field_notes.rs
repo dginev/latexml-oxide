@@ -19,7 +19,7 @@ use latexml_core::{
   gullet::{pushback_is_empty, pushback_len},
   keyvals::KeyVals,
   state::{self, MeaningAssigned, lookup_definition},
-  stomach::{field_token_encloses, token_stack_depth},
+  stomach::{field_position_encloses, field_token_encloses, token_stack_depth},
   token::{
     Catcode, FieldCover, FieldInvocation, TOKEN_EXPANDAFTER, Token, field_cover_pending,
     field_prov_field, field_prov_pos, set_field_notes_hook,
@@ -52,6 +52,10 @@ pub struct FieldDeclaration {
   /// the field's call it ran at, its token being one of the body of a macro the field defined ([`in_a_definition`]): that
   /// token's position says where it was written, the call where it runs ([`FieldNotes::last_call`])
   run_at:       Option<(u16, u16)>,
+  /// one past the last position its call read, the call's inner macros reading on past `end` (babel's robust
+  /// `\foreignlanguage`, `\ifthenelse`'s branches: 2606.14878, 2605.24599); its span's end once settled;
+  /// 0 for one made after its call printed
+  read:         u16,
 }
 
 impl FieldDeclaration {
@@ -156,6 +160,8 @@ pub struct FieldNotes {
   /// the last call of a macro at a position no definition of the field holds, and as far as it read: what a token of a body the
   /// field defined runs at ([`FieldDeclaration::run_at`]), `\def\m{\def\n{1}} Ann\m`'s `\n` at `\m` past " Ann"
   last_call:         Option<(u16, u16)>,
+  /// the last call of the field heard, as far as it read ([`note_call_read`])
+  call_read:         Option<CallRead>,
   /// the environments opened and closed ([`EnvironmentStep`]), and what reading them takes: the frames and environments open at
   /// the last field token heard, and that token, whether it was expanded (what it opens is open by the next token heard); and the
   /// position of the last `\begin` or `\end` heard and as far as what ran at its position read (its arguments, the
@@ -189,6 +195,15 @@ pub struct HeldExpansion {
   pub at:     u16,
   pub end:    u16,
   pub tokens: Tokens,
+}
+
+/// A field's call as far as it read: its position, one past the last position it or its expansion's tokens read, and whether
+/// a token of its arguments made a box yet ([`note_call_read`]).
+#[derive(Debug, Clone, Copy)]
+struct CallRead {
+  at:      u16,
+  read:    u16,
+  printed: bool,
 }
 
 /// A call whose definitions print too ([`FieldNotes::printing`]).
@@ -406,6 +421,7 @@ fn settle_declarations(notes: &mut FieldNotes) {
     }
   };
   for mut declaration in notes.declarations.drain(..) {
+    declaration.end = declaration.end.max(declaration.read);
     let at = declaration.start;
     let in_a_body = written
       .iter()
@@ -684,6 +700,7 @@ fn field_expansion(token: &Token, cover: FieldCover, expansion: &Tokens) {
         }
       }
     }
+    note_call_read(notes, token, pos, cover.end, false);
     let owned = !own && with_expandable(token, |meaning| meaning.get_origin().is_latexml_owned());
     if !notes.kernel_runs.is_empty() || owned {
       let held = pushback_len();
@@ -716,6 +733,48 @@ fn in_a_definition(declarations: &[FieldDeclaration], pos: u16) -> bool {
   declarations
     .iter()
     .any(|declaration| declaration.start < pos && pos < declaration.end)
+}
+
+/// Note that the field token `token` at `pos` read as far as `end`: a token of a call's expansion (its position) or of its
+/// arguments (inside its reach) reads on for that call, any other of the field's own tokens starts the next. A declaration still
+/// open of that call reads as far ([`FieldDeclaration::read`]).
+fn note_call_read(notes: &mut FieldNotes, token: &Token, pos: u16, end: u16, boxed: bool) {
+  notes.call_read = match notes.call_read {
+    Some(call) if call.at == pos => Some(CallRead {
+      read: call.read.max(end),
+      ..call
+    }),
+    Some(call) if call.at < pos && pos < call.read => Some(CallRead {
+      printed: call.printed || boxed,
+      ..call
+    }),
+    _ if notes
+      .field
+      .get(usize::from(pos))
+      .copied()
+      .flatten()
+      .as_ref()
+      == Some(token) =>
+    {
+      Some(CallRead {
+        at:      pos,
+        read:    end.max(pos + 1),
+        printed: false,
+      })
+    },
+    other => other,
+  };
+  if notes.any_open {
+    for declaration in &mut notes.declarations {
+      if declaration.open
+        && declaration.call == pos
+        && declaration.run_at.is_none()
+        && declaration.read > 0
+      {
+        declaration.read = declaration.read.max(end);
+      }
+    }
+  }
 }
 
 /// Where what leads to an invocation starts ([`FieldNotes::lead`]): the prefixes waiting for it, and the `\expandafter`s last expanded
@@ -757,7 +816,8 @@ fn field_invocation(token: &Token, cover: FieldCover, result: &[Digested]) {
   if !result.is_empty()
     && state::meaning_log_is_empty()
     && FIELD_NOTES.with(|notes| {
-      let notes = notes.borrow();
+      let notes = &mut *notes.borrow_mut();
+      note_call_read(notes, token, pos, cover.end, true);
       notes.kernel_runs.is_empty()
         && notes.expanded.is_none()
         && notes.lead.is_none()
@@ -853,8 +913,10 @@ fn field_invocation(token: &Token, cover: FieldCover, result: &[Digested]) {
         .push((pos, reach.max(pos + 1), errors - notes.errors_seen));
     }
     notes.errors_seen = errors;
+    note_call_read(notes, token, pos, reach, !result.is_empty());
     if notes.any_open {
       let in_a_body = in_a_definition(&notes.declarations, pos);
+      let stack = notes.stack;
       let printing = &mut notes.printing;
       notes.declarations.retain_mut(|declaration| {
         if declaration.open
@@ -875,14 +937,15 @@ fn field_invocation(token: &Token, cover: FieldCover, result: &[Digested]) {
             return false;
           }
         } else if declaration.open {
-          if pos >= declaration.end
-            || (pending.field == cover.field && pending.end > declaration.end)
-          {
+          // (a box of what its call digests past its reach: `\begin{CJK*}`'s arguments and body, 2606.12938)
+          let end = declaration.end.max(declaration.read);
+          let past = pos >= end && !field_position_encloses(stack, declaration.call);
+          if past || (pending.field == cover.field && pending.end > end) {
             declaration.open = false;
           } else if !result.is_empty() && declaration.start <= pos {
             if declaration.outlives_its_call() {
               printing.push(PrintingCall {
-                span:     (declaration.start, declaration.end),
+                span:     (declaration.start, end),
                 definees: declaration.definees.clone(),
                 global:   declaration.global,
               });
@@ -927,17 +990,27 @@ fn field_invocation(token: &Token, cover: FieldCover, result: &[Digested]) {
           }
         }
         let start = read_lead(notes.lead_read, notes.read_expanded).unwrap_or(pos);
+        let end = balanced_reach(&notes.field, start, reach.max(pos + 1));
+        let run_at = notes
+          .last_call
+          .filter(|_| in_a_definition(&notes.declarations, pos));
+        let call = notes
+          .call_read
+          .filter(|call| run_at.is_none() && call.at == pos);
         notes.declarations.push(FieldDeclaration {
           start,
-          end: balanced_reach(&notes.field, start, reach.max(pos + 1)),
+          end,
           definees: once,
           global,
           depth: depth.unwrap_or(0).saturating_sub(notes.depth),
           open: true,
           call: pos,
-          run_at: notes
-            .last_call
-            .filter(|_| in_a_definition(&notes.declarations, pos)),
+          run_at,
+          // (made after its call printed: its span as noted, which `emit::declaration_reads_past` reads, NE5's `\footremember`)
+          read: call.map_or(
+            end,
+            |call| if call.printed { 0 } else { call.read.max(end) },
+          ),
         });
         notes.any_open = true;
       },

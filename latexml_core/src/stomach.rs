@@ -2310,6 +2310,20 @@ pub fn field_token_encloses(depth: usize) -> bool {
     })
 }
 
+/// Whether a token of field position `pos` is being invoked around the one on top of the stack, from `depth` up
+/// ([`field_token_encloses`]): a call at that position still digesting what it reads (an environment's `\begin`, its body).
+pub fn field_position_encloses(depth: usize, pos: u16) -> bool {
+  let stomach = stomach!();
+  let stack = &stomach.token_stack;
+  stack
+    .get(depth..stack.len().saturating_sub(1))
+    .is_some_and(|below| {
+      below
+        .iter()
+        .any(|t| t.prov != 0 && crate::token::field_prov_pos(t.prov) == pos)
+    })
+}
+
 /// The depth of the stack of tokens being invoked, for [`truncate_token_stack`] to put back.
 pub fn token_stack_depth() -> usize { stomach!().token_stack.len() }
 

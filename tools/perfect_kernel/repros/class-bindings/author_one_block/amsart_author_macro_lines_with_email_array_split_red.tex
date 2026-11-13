@@ -1,0 +1,33 @@
+% mechanism: the emitter's entry cut over an affiliation macro's lines and an array of e-mail lines (`\\` rows of
+%   `\text{email}^1\text{: \texttt{\href{mailto:..}{..}}}`): the e-mail labels land in the affiliation and a second
+%   affiliation "email 2", the array whole in Bob Minuta's e-mail contact
+% witness: 2605.24599 (RDX1 a_rdx1b without its `\ifthenelse`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Fodor1 and Bob Minuta2 / Babes University / Faculty of
+%   Mathematics / Cluj, Romania / email1 : ann@ubb.ro / email2 : bob@ubb.ro"
+% engines: int167a, CAU1, GRP1: 0 errors, 4 warnings; Bob Minuta's affiliations "Babes University Faculty of Mathematics
+%   Cluj, Romania email 1" and "email 2", his e-mail the whole array; perl not run
+% expect:  one affiliation "Babes University Faculty of Mathematics Cluj, Romania" for both, ann@ubb.ro Ann's e-mail and
+%   bob@ubb.ro Bob's, no e-mail label in an affiliation
+% status:  RED (int167a, CAU1, GRP1)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{amsart}
+\usepackage{hyperref}
+\usepackage{xifthen}
+\newcommand{\emailA}{ann@ubb.ro}
+\newcommand{\emailB}{bob@ubb.ro}
+\newcommand{\institutionA}{Babes University\\
+Faculty of Mathematics\\
+Cluj, Romania}
+\author[A. Fodor and B. Minuta]{\large{Ann Fodor$^1$ \and Bob Minuta$^2$}\\
+{\footnotesize \institutionA\\
+$\begin{array}{l}
+\text{email}^1\text{: \texttt{\href{mailto:\emailA}{\emailA}}}\\
+\text{email}^2\text{: \texttt{\href{mailto:\emailB}{\emailB}}}
+\end{array}$
+}}
+\title{T}
+\begin{document}
+\begingroup\def\uppercasenonmath#1{}\let\MakeUppercase\relax\maketitle\endgroup
+Hi.
+\end{document}

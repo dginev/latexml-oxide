@@ -1,0 +1,33 @@
+% mechanism: emit.rs `declarations` / `declaration_cuts`, field_notes.rs `note_call_read`: a declaration (xifthen's
+%   `\ifthenelse`, which defines `\@tempc`, `\ifTE@val`, ...) inside a document macro the reading unfolds (AUT1,
+%   `reading::unfold_held_names`) is cut from the unfolded tokens its span counts (`AuthorBlock::read_tokens`), and its
+%   span reaches the branches its inner `\@firstoftwo` reads, so the branch it prints takes it back
+% witness: 2605.24599 (RDX1 a_rdx1b)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Fodor1 and Bob Minuta2 / Babes University / Faculty of
+%   Mathematics / Cluj, Romania / email1 : ann@ubb.ro / email2 : bob@ubb.ro"
+% engines: int167a 0 errors; int169b, CAU1 1 error ("\lx@frontmatterhere Attempt to close boxing group": the 6-token
+%   span of `\ifthenelse{1>0}` in unfolded positions cut from the folded list, `email}`); perl 0 errors
+% expect:  0 errors, 4 warnings (the e-mail array's lines, RED amsart_author_macro_lines_with_email_array_split_red);
+%   ann@ubb.ro Ann Fodor's e-mail contact, bob@ubb.ro in an e-mail contact
+% status:  RED (int169b, CAU1) -> GREEN (GRP1; guard perfect_kernel_batchaut1)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\usepackage{hyperref}
+\usepackage{xifthen}
+\newcommand{\emailA}{ann@ubb.ro}
+\newcommand{\emailB}{bob@ubb.ro}
+\newcommand{\institutionA}{Babes University\\
+\ifthenelse{1>0}{Faculty of Mathematics\\}{}
+Cluj, Romania}
+\author[A. Fodor and B. Minuta]{\large{Ann Fodor$^1$ \and Bob Minuta$^2$}\\
+{\footnotesize \institutionA\\
+$\begin{array}{l}
+\text{email}^1\text{: \texttt{\href{mailto:\emailA}{\emailA}}}\\
+\text{email}^2\text{: \texttt{\href{mailto:\emailB}{\emailB}}}
+\end{array}$
+}}
+\title{T}
+\begin{document}
+\begingroup\def\uppercasenonmath#1{}\let\MakeUppercase\relax\maketitle\endgroup
+Hi.
+\end{document}
