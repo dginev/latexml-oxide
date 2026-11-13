@@ -1257,8 +1257,8 @@ pub type Result<T> = result::Result<T, Error>;
 
 pub struct Error(Box<ErrorData>);
 
-/// As a plain struct would print, since this text reaches the log (`Warning:recovery:digest_internal`,
-/// `Error:document:convert`) and a panic message: the box is no part of what an error says.
+/// As a plain struct would print, since this text reaches the log (`Error:document:convert`) and a panic message:
+/// the box is no part of what an error says.
 impl fmt::Debug for Error {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     f.debug_struct("Error")
@@ -1629,7 +1629,7 @@ pub fn note_end(_stage: &str) {
 mod tests {
   use super::*;
 
-  /// The text the log carries (`Warning:recovery:digest_internal`, `Error:document:convert`) and a panic prints.
+  /// The text the log carries (`Error:document:convert`) and a panic prints.
   #[test]
   fn an_error_debugs_as_a_plain_struct() {
     let error = Error::from(ErrorData {

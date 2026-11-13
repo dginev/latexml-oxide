@@ -78,7 +78,7 @@ pub(crate) fn with_expl_syntax_restored<T>(load: impl FnOnce() -> Result<T>) -> 
 /// mhchem's `\ce`; OD #1027).
 fn report_muted_reload(muted: IgnoredRecords, stopped: Option<Error>) -> Result<()> {
   let counts = s!(
-    "{} Error and {} Fatal records muted",
+    "{} Error and {} Fatal records dropped",
     muted.errors,
     muted.fatals
   );

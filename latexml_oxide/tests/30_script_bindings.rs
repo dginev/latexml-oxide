@@ -1626,9 +1626,19 @@ fn a_rewrite_scope_names_its_unit() {
 
 /// #792: a Rhai `Fatal()` prints ONE `Fatal:` line (Perl `Fatal` logs once, then dies), wherever it is
 /// raised: at a binding's top level, inside a body, by `Error()` past MAX_ERRORS, or in a binding another
-/// binding loads. Each row: the `.sty.rhai` files, the document body, the message the one line carries.
-/// (row name, the `.sty.rhai` files, the document body, the message the one `Fatal:` line names)
-type FatalRow<'a> = (&'a str, &'a [(&'a str, &'a str)], &'a str, &'a str);
+/// binding loads; and no `Warning:` beside it (Perl prints the one line). A Fatal a script CATCHES was printed at its
+/// raise; a later plain error stays its own contained `Error:script:` and the document carries on.
+/// (row name, the `.sty.rhai` files, the document body, the messages the `Fatal:` lines name, the contained
+/// `Error:script:` lines, a text the document keeps). A binding's top-level throw is its own Fatal, as Perl's
+/// `Fatal('die', …, "File … had an error")` (Package.pm:2338).
+type FatalRow<'a> = (
+  &'a str,
+  &'a [(&'a str, &'a str)],
+  &'a str,
+  &'a [&'a str],
+  usize,
+  &'a str,
+);
 
 #[test]
 fn a_rhai_fatal_is_logged_once() {
@@ -1640,7 +1650,9 @@ fn a_rhai_fatal_is_logged_once() {
         r#"Fatal("unexpected", "Internal", "wftop requires something"); DefMacro("\\wftopmacro", "OK");"#,
       )],
       "Before \\wftopmacro\\ after.",
-      "unexpected:Internal wftop requires something",
+      &["unexpected:Internal wftop requires something"],
+      0,
+      "",
     ),
     (
       "macro body",
@@ -1649,7 +1661,9 @@ fn a_rhai_fatal_is_logged_once() {
         r#"DefMacro("\\wftopmacro", || { Fatal("unexpected", "Internal", "wfbody gives up"); "X" });"#,
       )],
       "Before \\wftopmacro\\ after.",
-      "unexpected:Internal wfbody gives up",
+      &["unexpected:Internal wfbody gives up"],
+      0,
+      "",
     ),
     (
       "Error() past MAX_ERRORS",
@@ -1658,7 +1672,9 @@ fn a_rhai_fatal_is_logged_once() {
         r#"for i in 0..120 { Error("wf", "many", "wfmany " + i); }"#,
       )],
       "Body.",
-      "Too many errors (> 100)!",
+      &["Too many errors (> 100)!"],
+      0,
+      "",
     ),
     (
       "a binding another binding loads",
@@ -1673,25 +1689,78 @@ fn a_rhai_fatal_is_logged_once() {
         ),
       ],
       "Before \\wftopmacro\\ after.",
-      "unexpected:Internal wfinner requires something",
+      &["unexpected:Internal wfinner requires something"],
+      0,
+      "",
+    ),
+    (
+      "a caught Fatal, then a plain throw in another body",
+      &[(
+        "wftop.sty.rhai",
+        r#"DefMacro("\\wfa", || { try { Fatal("unexpected", "Internal", "wfa caught one"); } catch (e) { } "A" });
+           DefMacro("\\wfb", || { throw "wfb plain trouble"; "B" });"#,
+      )],
+      "Before \\wfa\\ middle \\wfb\\ after.",
+      &["unexpected:Internal wfa caught one"],
+      1,
+      "Before A middle",
+    ),
+    (
+      "a caught Fatal, then a throw in an afterDigest hook",
+      &[(
+        "wftop.sty.rhai",
+        r#"DefMacro("\\wfa", || { try { Fatal("unexpected", "Internal", "wfa gives up"); } catch (e) { } "A" });
+           DefConstructor("\\wfc", "<ltx:text class=\"wfc\">C</ltx:text>", #{ afterDigest: || { throw "wfc hook trouble"; } });"#,
+      )],
+      "Before \\wfa\\ middle \\wfc\\ after.",
+      &["unexpected:Internal wfa gives up"],
+      1,
+      "Before A middle",
+    ),
+    (
+      "a caught Fatal, then a plain throw at a later binding's top level",
+      &[
+        (
+          "wftop.sty.rhai",
+          r#"try { Fatal("unexpected", "Internal", "wftop caught one"); } catch (e) { }
+             DefMacro("\\wftopmacro", "OK"); RequirePackage("wfinner");"#,
+        ),
+        ("wfinner.sty.rhai", r#"throw "wfinner plain trouble";"#),
+      ],
+      "Before \\wftopmacro\\ after.",
+      &[
+        "unexpected:Internal wftop caught one",
+        "script-binding run error: Runtime error: wfinner plain trouble",
+      ],
+      0,
+      "",
     ),
   ];
   let mut failures = Vec::new();
-  for (name, files, body, message) in rows {
+  for (name, files, body, messages, want_contained, kept) in rows {
     let tex = format!(
       "\\documentclass{{article}}\\usepackage{{wftop}}\\begin{{document}}{body}\\end{{document}}"
     );
-    let (log, _, _, code) = latexml::util::test::convert_files_with_status(&tex, files, None);
+    let (log, xml, _, code) = latexml::util::test::convert_files_with_status(&tex, files, None);
     let fatals: Vec<&str> = log.lines().filter(|l| l.starts_with("Fatal:")).collect();
-    let contained = log
-      .lines()
-      .filter(|l| l.starts_with("Error:script:"))
-      .count();
-    if fatals.len() != 1 || !fatals[0].contains(message) || code != 3 || contained != 0 {
+    let opening = |prefix: &str| log.lines().filter(|l| l.starts_with(prefix)).count();
+    let (contained, warnings) = (opening("Error:script:"), opening("Warning:"));
+    if fatals.len() != messages.len()
+      || fatals
+        .iter()
+        .zip(messages.iter())
+        .any(|(l, m)| !l.contains(m))
+      || code != 3
+      || contained != *want_contained
+      || warnings != 0
+      || !xml.contains(kept)
+    {
       failures.push(format!(
-        "{name}: {} Fatal: lines (want 1, naming {message:?}), status {code}, {contained} contained \
-         Error:script: lines (a body's Fatal is not demoted); fatals={fatals:#?}",
-        fatals.len()
+        "{name}: {} Fatal: lines (want those naming {messages:?}), status {code}, {contained} contained \
+         Error:script: lines (want {want_contained}), {warnings} Warning: lines (want 0), keeps {kept:?}: {}; \
+         fatals={fatals:#?}\n{log}",
+        fatals.len(),
+        xml.contains(kept)
       ));
     }
   }

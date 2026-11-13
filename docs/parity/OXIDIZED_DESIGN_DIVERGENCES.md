@@ -36030,7 +36030,8 @@ Multi-page or multi-frame sources (PDF, PS, TIFF, GIF) keep `page=`. **Guard**:
 (`LATEXML_NODUMP=1`, or no dump for the tree) `expl3.sty` re-reads expl3-code.tex raw, and `expl3_sty.rs` drops that
 load's raw-load-only cascade whole (Perl `IGNORE_ERRORS`, issue #651; 5015 Error records on TL 2025). The scope now
 tallies what it drops (`IgnoreDiagnosticsScope::dropped`), and `expl3_sty::report_muted_reload` reports it: one
-`Warning:expl3:raw-load` naming the Error and Fatal counts when the reload completed, an `Error:expl3:raw-load` when it
+`Warning:expl3:raw-load` naming the Error and Fatal records dropped when the reload completed (the records the scope
+dropped, not the undefined-CS Errors `SUPPRESS_UNDEFINED_ERRORS`, stomach.rs, never emitted), an `Error:expl3:raw-load` when it
 stopped early (the expl3 functions after the stop are undefined: on TL 2026 it stopped in l3unicode, leaving
 `\regex_match:NnTF`, `\text_lowercase:n`, `\sys_if_shell:TF` undefined and mhchem's `\ce` broken). The dump path never
 reloads and is unchanged. **Guards**: `common::error::tests::an_ignoring_scope_tallies_what_it_drops`,

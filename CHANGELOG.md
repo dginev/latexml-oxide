@@ -5,7 +5,7 @@
   - **The no-dump expl3 reload no longer mutes its diagnostics silently** (#825). When
     `expl3.sty` re-reads `expl3-code.tex` raw (no kernel dump), the records the scope
     drops are now tallied (`IgnoreDiagnosticsScope::dropped`) and reported: a Warning
-    naming the muted error and fatal counts, or an Error when the reload stopped early,
+    naming the error and fatal records dropped, or an Error when the reload stopped early,
     which leaves the expl3 functions it had yet to define missing (mhchem's `\ce` on
     TL 2026). On TL 2025 a `LATEXML_NODUMP=1` run now warns of the 5015 records
     the reload mutes. Guards `common::error::tests::an_ignoring_scope_tallies_what_it_drops`,
@@ -24,7 +24,10 @@
     line; this holds at a binding's top level, in a binding another binding loads, and
     for `Error()` past MAX_ERRORS. A `Fatal()` inside a body (macro, constructor, hook)
     now ends the conversion, as Perl's `Fatal` dies, instead of being contained as an
-    `Error:script:` line. Guard `30_script_bindings::a_rhai_fatal_is_logged_once`.
+    `Error:script:` line. A Fatal the script catches never stands in for a later error,
+    which stays its own `Error:script:` line. A Fatal ending digestion prints its one
+    `Fatal:` line, no longer repeated by a `Warning:recovery:digest_internal`.
+    Guard `30_script_bindings::a_rhai_fatal_is_logged_once`.
 
   - **Rhai `Let(a, b, scope)`** (#796). A binding can now write a global `\let`
     (`Let("\\alias", "\\target", "global")`), as Perl's `Let($t1, $t2, $scope)`;

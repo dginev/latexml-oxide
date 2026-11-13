@@ -67,16 +67,11 @@ fn a_recovered_fatal_leaves_no_token_stack_behind() {
       !log.contains("build stopped early"),
       "streaming={streaming}: {log}"
     );
-    // (the lax `error_count` reads the recovery Warning's `Error {…}` debug text: count the lines)
+    // (the Fatal's one line, no recovery Warning repeating it, #792)
     let opening = |prefix: &str| log.lines().filter(|l| l.starts_with(prefix)).count();
     assert_eq!(
       (opening("Error:"), opening("Warning:"), opening("Fatal:")),
-      (0, 1, 1),
-      "streaming={streaming}: {log}"
-    );
-    assert_eq!(
-      opening("Warning:recovery:digest_internal"),
-      1,
+      (0, 0, 1),
       "streaming={streaming}: {log}"
     );
     let xml = body(&xml);

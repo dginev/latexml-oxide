@@ -127,16 +127,20 @@ thread_local! {
   /// `setProperty` errors there instead of mutating through a shared ref.
   static WHATSIT_CTX: RefCell<Vec<(*mut Whatsit, bool)>> = const { RefCell::new(Vec::new()) };
 
-  /// The already-logged Fatal a registered function returned into Rhai, which can only carry its text: the
-  /// script's caller returns it as raised, so it prints once (#792).
-  static RAISED_FATAL: RefCell<Option<Error>> = const { RefCell::new(None) };
+  /// The already-logged Fatal a registered function returned into Rhai, which can only carry its text (kept
+  /// beside it): the script's caller returns it as raised, so it prints once (#792).
+  static RAISED_FATAL: RefCell<Option<(Error, String)>> = const { RefCell::new(None) };
 }
 
-/// The logged Fatal a registered function raised into the failing script, if any (see `RAISED_FATAL`).
-pub(super) fn take_raised_fatal() -> Option<Error> {
-  RAISED_FATAL
-    .with(|r| r.borrow_mut().take())
-    .filter(Error::is_logged_fatal)
+/// The logged Fatal a registered function raised, if the script's failure `e` is that Fatal; always taken, so a
+/// Fatal the script caught never stands in for a later, unrelated error (see `RAISED_FATAL`).
+pub(super) fn take_raised_fatal(e: &EvalAltResult) -> Option<Error> {
+  let (fatal, text) = RAISED_FATAL.with(|r| r.borrow_mut().take())?;
+  let raised = match e.unwrap_inner() {
+    EvalAltResult::ErrorRuntime(v, _) => v.is_string() && v.to_string() == text,
+    _ => false,
+  };
+  (raised && fatal.is_logged_fatal()).then_some(fatal)
 }
 
 #[derive(Clone, Copy)]
@@ -522,7 +526,7 @@ pub fn load_script(src: &str) -> Result<usize> {
   let run = {
     let _script_guard = ScriptCtxGuard::new((cached.engine.clone(), cached.ast.clone()));
     cached.engine.run_ast(&cached.ast).map_err(|e| {
-      take_raised_fatal().unwrap_or_else(|| Error::from(format!("script-binding run error: {e}")))
+      take_raised_fatal(&e).unwrap_or_else(|| Error::from(format!("script-binding run error: {e}")))
     })
   };
   run?;
@@ -601,7 +605,7 @@ fn rhai_err<E: std::fmt::Display + 'static>(e: E) -> Box<EvalAltResult> {
   if let Ok(err) = (Box::new(e) as Box<dyn std::any::Any>).downcast::<Error>()
     && err.is_logged_fatal()
   {
-    RAISED_FATAL.with(|r| *r.borrow_mut() = Some(*err));
+    RAISED_FATAL.with(|r| *r.borrow_mut() = Some((*err, text.clone())));
   }
   Box::<EvalAltResult>::from(text)
 }

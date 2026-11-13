@@ -87,15 +87,12 @@ fn recoverable_fatal_keeps_the_already_digested_document() {
   // directions, so neither seam can drift from the other again: a `Fatal:` in the log REQUIRES the fatal verdict
   // (code 3, the code cortex reads), and no `Fatal:` forbids it.
   if stderr.contains("Fatal:") {
-    // "1 warning; 1 fatal error", not "1 fatal error" alone: the salvage
-    // path's own `Warning:…digest_internal` note is a raw `log::warn!`, and
-    // since the lossless-tally fix (2026-08-02) every printed diagnostic
-    // record counts — the warning's presence in the tally is that fix
-    // working, not tally noise.
+    // "1 fatal error" alone: the Fatal prints one line, as Perl's does; the salvage path no longer repeats it as a
+    // `Warning:recovery:digest_internal` (#792).
     assert_eq!(
-      status, "1 warning; 1 fatal error",
-      "the log reports a Fatal (and the salvage warning), so the status must be exactly \"1 warning; 1 fatal \
-         error\" — recovering boxes is not a licence to reclassify the verdict.\n{stderr}",
+      status, "1 fatal error",
+      "the log reports a Fatal, so the status must be exactly \"1 fatal error\" — recovering boxes is not a \
+         licence to reclassify the verdict.\n{stderr}",
     );
     assert_eq!(
       status_code, 3,
