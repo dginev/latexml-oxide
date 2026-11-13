@@ -125,14 +125,29 @@ LoadDefinitions!({
     assign_value("SUPPRESS_UNEXPECTED_ERRORS", true, None);
   }
 
-  let _ = with_expl_syntax_restored(|| Ok(input_definitions("expl3", NewDefault!(InputDefinitionOptions,
+  let loaded = with_expl_syntax_restored(|| Ok(input_definitions("expl3", NewDefault!(InputDefinitionOptions,
     noltxml => true, extension => Some(Cow::Borrowed("sty"))))));
 
   if raw_load_will_run {
     assign_value("SUPPRESS_UNDEFINED_ERRORS", false, None);
     assign_value("SUPPRESS_UNEXPECTED_ERRORS", false, None);
   }
+  let muted = ignore_scope.as_ref().map(IgnoreDiagnosticsScope::dropped).unwrap_or_default();
   drop(ignore_scope);
+  // What the scope muted is counted, never silent (#825): a Warning, an Error when the load stopped early, leaving
+  // every expl3 function after that point undefined (TL 2026 stopped in l3unicode, breaking mhchem's `\ce`).
+  let stopped = match loaded {
+    Ok(Err(e)) | Err(e) => Some(e),
+    Ok(Ok(_)) => None,
+  };
+  let counts = s!("{} errors and {} fatal errors muted", muted.errors, muted.fatals);
+  match stopped.filter(|_| raw_load_will_run) {
+    Some(e) => Error!("expl3", "raw-load", s!("The raw expl3-code.tex reload (no kernel dump) stopped early ({counts}): \
+      {e}; the expl3 functions it had yet to define are missing")),
+    None if muted.errors + muted.fatals > 0 => Warn!("expl3", "raw-load",
+      s!("The raw expl3-code.tex reload (no kernel dump) completed with {counts}")),
+    None => {},
+  }
 
   // Post-load fixup for `\__kernel_msg_info:nnxx`. xparse-2018-04-12.sty
   // (line 101, 112, 218, 222) calls `\__kernel_msg_info:nnxx { xparse }

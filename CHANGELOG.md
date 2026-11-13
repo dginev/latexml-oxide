@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+  - **The no-dump expl3 reload no longer mutes its diagnostics silently** (#825). When
+    `expl3.sty` re-reads `expl3-code.tex` raw (no kernel dump), the records the scope
+    drops are now tallied (`IgnoreDiagnosticsScope::dropped`) and reported: a Warning
+    naming the muted error and fatal counts, or an Error when the reload stopped early,
+    which leaves the expl3 functions it had yet to define missing (mhchem's `\ce` on
+    TL 2026). Guard `common::error::tests::an_ignoring_scope_tallies_what_it_drops`.
+
   - **`page=` on an SVG, PNG or JPEG no longer re-encodes it** (#791). A single-page
     format has no page to select (pdfTeX ignores `page=` on a PNG), so
     `\includegraphics[page=1]{fig.svg}` now copies `fig.svg` as it is, with its
