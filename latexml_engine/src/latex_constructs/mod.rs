@@ -1917,7 +1917,7 @@ fn after_digest_verbatim(starred: bool, whatsit: &mut Whatsit) -> Result<()> {
       T_END!(),
     ]);
     let mut printed = String::new();
-    crate::base_utilities::ink_text(&digest(typeset)?, &mut printed);
+    ink_text(&digest(typeset)?, &mut printed);
     upquotes.push((c, printed));
   }
   let mut lines: Vec<_> = Vec::new();
