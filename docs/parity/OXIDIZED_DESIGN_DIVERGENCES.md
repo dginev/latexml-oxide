@@ -36083,16 +36083,21 @@ border move (normalize.rs's spans and pruned rows and columns, emulateapj's head
 the stylesheet's colour (LaTeXML.css `.ltx_border_t`), adds nothing. The binding stores `\CT@arc@` as colortbl does
 and evaluates it as each rule is drawn (`\lx@CT@arc@draw`, ahead of `\@@alignment@hline`, `\lx@cline` — `\hhline`
 and booktabs' `\cmidrule` too), so an author's raw `\gdef\CT@arc@` colours too. Only a `|` takes the colour, as only
-`\@arrayrule` wraps `{\CT@arc@\vline}`: the binding's `|` column type puts `\lx@CT@vrule\lx@CT@arc@<n>` in the template,
-`\lx@CT@arc@<n>` a copy of `\CT@arc@` frozen as the preamble (or a `\multicolumn`'s) is read, or `\lx@CT@vrule@live`
-(reading `\CT@arc@` as the rule is drawn) when that is `\relax`; each draws the `\vrule` with that colour on the box.
-The template skip lists (`template_after_fill_defeated`, `intercol_reachable_in_before`) read these by their
-`\lx@CT@` prefix, as they read `\vrule` by its spelling (e0's spelling pins +1 each). A `!{\vrule}` or a typed
+`\@arrayrule` wraps `{\CT@arc@\vline}`: the binding's `|` column type puts `\vrule\lx@CT@paint\lx@CT@arc@<n>` in the
+template, `\lx@CT@arc@<n>` a copy of `\CT@arc@` frozen as the preamble (or a `\multicolumn`'s) is read, one per distinct
+body, or `\vrule\lx@CT@paint@live` (reading `\CT@arc@` as the rule is drawn) when that is `\relax`; the paint token
+sets that colour on the rule box just drawn. The rule box is the template's `\vrule`, as the base's `\vrule\relax`, so a
+cell's reversion trims it and a math array's `tex=` stays its source with or without a colour
+(`colortbl_bar_array_tex_is_its_source.tex`). The template skip lists (`template_after_fill_defeated`,
+`intercol_reachable_in_before`) read the paint tokens by their `\lx@CT@` prefix, as they read `\vrule` by its spelling
+(e0's spelling pins +1 each). A `!{\vrule}` or a typed
 `\vline` keeps the default ink, and a table nested in a cell leaves the cell's rules theirs. `\CT@start`
 saves locally just before `\lx@begin@alignment` of a table `\@tabular@bindings`/`\@array@bindings` set up (a request
 local to the table's group), and
 `\CT@end` restores after `\lx@end@alignment` (`\lx@CT@restore`), so a last row without `\\` keeps the colour. `\arrayrulecolor` is `\lx@hidden@noalign` material, where
-colortbl tests `\baselineskip` for a `\noalign` (so mid-cell in an `l` column TeX errs, ours does not).
+colortbl tests `\baselineskip` for a `\noalign` (so mid-cell in an `l` column, in an explicit `\noalign` or before a
+`\multicolumn` TeX errs, ours does not: `arrayrulecolor_mid_cell_misplaced_noalign_red.tex`,
+`arrayrulecolor_noalign_and_before_multicolumn_red.tex`, post-merge).
 `\doublerulesepcolor` is stored, unrendered (a border has no colour for the gap of `||`). Without `\arrayrulecolor`
 the output is unchanged: a table in coloured text keeps uncoloured borders, where pdflatex draws its rules in the
 current colour. Residual (post-merge): `\hhline`'s `>{…}` colour codes stay skipped

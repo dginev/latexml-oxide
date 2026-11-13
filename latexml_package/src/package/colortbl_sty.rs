@@ -264,23 +264,19 @@ LoadDefinitions!({
   DefColumnType!("|", {
     let arc = T_CS!("\\CT@arc@");
     let rule = if arc.defined_as(&T_RELAX!()) {
-      vec![T_CS!("\\lx@CT@vrule@live")]
+      vec![T_CS!("\\vrule"), T_CS!("\\lx@CT@paint@live")]
     } else {
-      let n = lookup_int("lx@CT@arc@frozen") + 1;
-      assign_value("lx@CT@arc@frozen", n, Some(Scope::Global));
-      let frozen = T_CS!(s!("\\lx@CT@arc@{n}"));
-      let_i(&frozen, &arc, Some(Scope::Global));
-      vec![T_CS!("\\lx@CT@vrule"), frozen]
+      vec![T_CS!("\\vrule"), T_CS!("\\lx@CT@paint"), frozen_arc(&arc)]
     };
     with_building_template(|template| template.add_between_column(rule));
   });
-  // The `|` rule: a `\vrule` carrying its colour as `border_color`, which the cell's border takes (`tex_tables.rs`
-  // `extract_alignment_column`).
-  DefPrimitive!("\\lx@CT@vrule Token", sub[(arc)] {
-    arc_vrule(&arc)
+  // The `|` rule is the template's own `\vrule`, so a cell's reversion trims it (`tex_tables.rs` `trim_column_template`);
+  // the token after it sets its colour as `border_color`, which the cell's border takes (`extract_alignment_column`).
+  DefPrimitive!("\\lx@CT@paint Token", sub[(arc)] {
+    paint_rule(&arc)
   });
-  DefPrimitive!("\\lx@CT@vrule@live", sub[_args] {
-    arc_vrule(&T_CS!("\\CT@arc@"))
+  DefPrimitive!("\\lx@CT@paint@live", sub[_args] {
+    paint_rule(&T_CS!("\\CT@arc@"))
   });
 
   // Perl L93: \minrowclearance
@@ -304,19 +300,40 @@ LoadDefinitions!({
   );
 });
 
-/// A `\vrule` drawn in the colour `arc` gives, its `border_color`.
-fn arc_vrule(arc: &Token) -> Result<Vec<Digested>> {
-  let color = arc_color(arc)?;
-  let mut rule = digest(Tokens!(T_CS!("\\vrule")))?.unlist();
-  if let Some(color) = color {
-    for rule in rule
-      .iter_mut()
-      .filter(|rule| rule.get_property_bool("isVerticalRule"))
-    {
+/// The global copy of `arc`'s colour a preamble freezes (array.sty:54 `\xdef`), one per distinct body.
+fn frozen_arc(arc: &Token) -> Token {
+  let body = match lookup_meaning(arc) {
+    Some(Stored::Expandable(defn)) => match defn.get_expansion() {
+      Some(ExpansionBody::Tokens(body)) => Some(body.to_string()),
+      _ => None,
+    },
+    _ => None,
+  };
+  let key = body.map(|body| s!("lx@CT@arc@frozen@{body}"));
+  if let Some(Stored::Token(frozen)) = key.as_deref().and_then(lookup_value) {
+    return frozen;
+  }
+  let n = lookup_int("lx@CT@arc@frozen") + 1;
+  assign_value("lx@CT@arc@frozen", n, Some(Scope::Global));
+  let frozen = T_CS!(s!("\\lx@CT@arc@{n}"));
+  let_i(&frozen, arc, Some(Scope::Global));
+  if let Some(key) = key {
+    assign_value(&key, Stored::Token(frozen), Some(Scope::Global));
+  }
+  frozen
+}
+
+/// Gives the rule just drawn, the current list's last box, the colour `arc` gives as its `border_color`.
+fn paint_rule(arc: &Token) -> Result<Vec<Digested>> {
+  if let Some(color) = arc_color(arc)?
+    && let Some(mut rule) = pop_box_list()
+  {
+    if rule.get_property_bool("isVerticalRule") {
       rule.set_property("border_color", Stored::String(pin(&color)));
     }
+    push_box_list(rule);
   }
-  Ok(rule)
+  Ok(Vec::new())
 }
 
 /// The colour `arc` gives (colortbl.sty:161-192 `\CT@arc@`, or a preamble's frozen copy); black and `\relax` none.

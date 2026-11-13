@@ -1,0 +1,21 @@
+% issue #773: `\arrayrulecolor` in an explicit `\noalign`, or in a cell before `\multicolumn`: colortbl's `\CT@arc`
+% (colortbl.sty:161-164) puts its own `\noalign` there, and TeX errs "Misplaced \noalign" (and, before `\multicolumn`,
+% "Misplaced \omit"); ours reads it as `\lx@hidden@noalign` material and sets the colour silently.
+% witness: synthetic (the review of fix/arrayrulecolor 7942f6bb7a: probe na)
+% oracle:  pdflatex 8 errors: 2 Misplaced \noalign in the first table; 3 Misplaced \noalign + 3 Misplaced \omit in the second
+% engines: rust 7942f6bb7a = 0 errors, the rules red, blue, green as set; Perl = 0 errors, no colour (a no-op)
+% expect:  the Errors TeX reports (2 and 6); the colours as now
+% status:  RED
+% moves:   post-merge (the error boundary of colortbl's \noalign test, beside arrayrulecolor_mid_cell_misplaced_noalign_red)
+\documentclass{article}
+\usepackage{colortbl,tabularx,longtable}
+\begin{document}
+\begin{tabular}{|c|c|}\noalign{\arrayrulecolor{red}}\hline
+a & b\\\noalign{\arrayrulecolor{blue}}\cline{1-1}
+c & d\\\hline
+\end{tabular}
+\arrayrulecolor{black}
+\begin{tabularx}{4cm}{|X|c|}\hline
+e & \arrayrulecolor{green}\multicolumn{1}{|c|}{f}\\\hline
+\end{tabularx}
+\end{document}

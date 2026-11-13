@@ -1679,7 +1679,7 @@ fn template_after_fill_defeated(after: &Option<Tokens>) -> bool {
       || s.contains("intercol")
       || s == "\\lx@column@trimright"
       || s == "\\vrule"
-      // colortbl's `|`: `\lx@CT@vrule@live`, or `\lx@CT@vrule` and its frozen `\lx@CT@arc@<n>` (colortbl_sty.rs)
+      // colortbl's `|` paint: `\lx@CT@paint@live`, or `\lx@CT@paint` and its frozen `\lx@CT@arc@<n>` (colortbl_sty.rs)
       || s.starts_with("\\lx@CT@")
       || s == "\\relax"
       || s == "\\hfil"

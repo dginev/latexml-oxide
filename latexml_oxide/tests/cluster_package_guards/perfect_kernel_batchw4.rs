@@ -11,7 +11,7 @@ fn squash(xml: &str) -> String { xml.split_whitespace().collect::<Vec<_>>().join
 /// Every repro's bordered cells, whole and in order; no other element carries a `cssstyle`.
 #[test]
 fn arrayrulecolor_colours_the_rules_drawn_under_it() {
-  let rows: [(&str, &str, &[&str]); 8] = [
+  let rows: [(&str, &str, &[&str]); 9] = [
     // the preamble's colour on every rule (#773's shape)
     (
       "borders",
@@ -123,6 +123,25 @@ fn arrayrulecolor_colours_the_rules_drawn_under_it() {
         r#"<td align="center" border="b l r t" cssstyle="border-top-color:#FF0000;border-bottom-color:#FF0000;border-left-color:#FF0000;border-right-color:#FF0000" xml:id="p1.1.2.1">"#,
         r#"<td align="center" xml:id="p1.1.2.1.1.1.1">y</td>"#,
         r#"<td align="center" border="b r t" cssstyle="border-top-color:#FF0000;border-bottom-color:#FF0000;border-right-color:#FF0000" xml:id="p1.1.2.2">d</td>"#,
+      ],
+    ),
+    // a math array's `tex=` is its source, no colour, a live and a frozen one (7942f6bb7a leaked the `|` template)
+    (
+      "array-tex",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/alignment-bindings/colortbl_bar_array_tex_is_its_source.tex"
+      ),
+      &[
+        r#"<Math mode="inline" tex="\begin{array}[]{|c|c|}\hline\cr x&amp;y\\&#10;\hline\cr\end{array}" text="Array[[, ], [x, y]]" xml:id="p1.m1">"#,
+        r#"<Math mode="display" tex="\left(\begin{array}[]{c|c}a&amp;b\\&#10;c&amp;d\end{array}\right)" text="Array[[a, b], [c, d]]" xml:id="S0.Ex1.m1">"#,
+        r#"<Math mode="inline" tex="\begin{array}[]{|c|}\hline\cr m\\&#10;\hline\cr\end{array}" text="Array[[], [m]]" xml:id="p1.m2">"#,
+        r#"<XMCell border="t" cssstyle="border-top-color:#FF0000" xml:id="p1.m2.1.1.1.1"/>"#,
+        r#"<XMCell align="center" border="b l r" cssstyle="border-bottom-color:#FF0000;border-left-color:#FF0000;border-right-color:#FF0000" xml:id="p1.m2.1.1.2.1">"#,
+        r#"<Math mode="inline" tex="\begin{array}[]{|c|c|}\hline\cr x&amp;y\\&#10;\hline\cr\end{array}" text="Array[[, ], [x, y]]" xml:id="p1.m3">"#,
+        r#"<XMCell border="t" cssstyle="border-top-color:#0000FF" xml:id="p1.m3.1.1.1.1"/>"#,
+        r#"<XMCell border="t" cssstyle="border-top-color:#0000FF" xml:id="p1.m3.1.1.1.2"/>"#,
+        r#"<XMCell align="center" border="b l r" cssstyle="border-bottom-color:#0000FF;border-left-color:#0000FF;border-right-color:#0000FF" xml:id="p1.m3.1.1.2.1">"#,
+        r#"<XMCell align="center" border="b r" cssstyle="border-bottom-color:#0000FF;border-right-color:#0000FF" xml:id="p1.m3.1.1.2.2">"#,
       ],
     ),
     // no `\arrayrulecolor`: the ambient text colour is no rule colour (the base's output)
