@@ -1,0 +1,36 @@
+% A bound class's frontmatter whose every printed word the output holds: the title-page check's second source (what
+% TeX makes of what the document gave elsarticle's frontmatter commands, title_page_check.rs `note_frontmatter_entry`)
+% counts nothing — `\author`'s and `\affiliation`'s labels (`[a]`) and `\cortext`'s are optional arguments of commands
+% the document writes; the arguments handed on are read as their entries digest them: `\corref`'s key a mark, the
+% affiliation's keyval keys (`organization=`, `city=`) the binding's to read, the document's own `\hidden`, which prints
+% nothing, nothing; the e-mail is the creator's contact, the keywords and the corresponding-author note the
+% frontmatter's.
+% witness: control (FIDELITY_CHARTER §4: a Warning names words really printed and really missing; the keyval keys of
+%          2206.12015, 2412.03249, the gobbled `\cntext{…}` of 2604.10287 — 106t r1's token reading counted them)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Ann Ablea,∗", "a Lunar College, Moon,",
+%          "Abstract", "Text of the abstract.", "Keywords: alpha, beta", "Body.", "∗ Corresponding author", "Email
+%          address: ann.able@lunarcollege.org (Ann Able)" (no "Zed Zebra")
+% engines: rust int135e = 0 errors, 0 warnings; 106t r1's first A/B build = 1 warning ("zed zebra"); perl = 0 errors,
+%          0 warnings
+% expect:  0 errors, 0 warnings, no frontmatter:class_text Info
+% status:  GREEN (negative)
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\newcommand\hidden[1]{}
+\begin{document}
+\begin{frontmatter}
+\title{A Title}
+\author[a]{Ann Able\hidden{Zed Zebra}\corref{c1}}
+\cortext[c1]{Corresponding author}
+\ead{ann.able@lunarcollege.org}
+\affiliation[a]{organization={Lunar College},
+  city={Moon}}
+\begin{abstract}
+Text of the abstract.
+\end{abstract}
+\begin{keyword}
+alpha \sep beta
+\end{keyword}
+\end{frontmatter}
+Body.
+\end{document}

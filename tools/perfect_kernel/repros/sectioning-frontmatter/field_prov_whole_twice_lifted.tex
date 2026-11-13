@@ -1,0 +1,16 @@
+% The whole title printed twice on one line, with a space between (probe r3) and without (sibling): two whole prints,
+% each lifted (user ruling 2026-10-17, "lift every whole print"; fms1 round-3 review finding 4: the second print's
+% first box starts a new run).
+% status:  GREEN (round 3 lifted each line as one run; round 4 lifts two runs per line).
+% oracle:  pdflatex 0 errors: "Twice Title Twice Title", "Twice TitleTwice Title", then the title block.
+% expect:  0 errors, 0 warnings; `field_ink` Info ×4; no body copy of the title.
+\documentclass{article}
+\makeatletter
+\title{Twice Title}\author{Ann Author}
+\begin{document}
+\begin{center}\@title\ \@title\end{center}
+\begin{center}\@title\@title\end{center}
+\maketitle
+\section{Intro}
+Text.
+\end{document}

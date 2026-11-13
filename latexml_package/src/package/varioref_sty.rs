@@ -72,4 +72,7 @@ LoadDefinitions!({
   // binding models no page-reference spacing, so only the switch is needed.
   // Guard: `binding_singletons_56::varioref_handlespace_switch_exists`.
   RawTeX!(r"\newif\if@vrefhandlespace\@vrefhandlespacetrue");
+  // varioref.sty:803, the counter cleveref's varioref support steps and reads (cleveref.sty:2386-2388; 1602.00476,
+  // 2409.11413, 2505.14566). Perl's binding lacks it too.
+  NewCounter!("vrcnt");
 });

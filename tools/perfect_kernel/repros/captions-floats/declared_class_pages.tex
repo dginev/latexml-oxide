@@ -1,0 +1,33 @@
+% witness: review rev79c2 finding 1 (acmart[sigconf] `figure*` panelline 1 for the PDF's 2.100: 30 papers / 90 floats of
+%          popint70a; article[twocolumn] 2 for 2.044: 21 papers / 84 floats; elsarticle[5p] 1 for 2.071); 2109.08525
+%          (iopart 446.4pt at 12pt); the guard swaps the class line for each class and option set below
+% oracle:  pdflatex 0 errors, 0 overfull; `\the\columnwidth`/`\the\textwidth` in each float, per class and options
+%          (TL 2025, or the copy papers ship): article/report/book[twocolumn] 229.5/469pt (letter), [a4paper] 221/452pt,
+%          [landscape] 320/650pt, `\documentstyle[twocolumn]{article}` 200/410pt; acmart[sigconf|siggraph|sigchi|
+%          acmengage] 241.147/506.295pt, [sigplan] 240.945/505.89pt, [acmtog] 243.147/510.295pt (after `\maketitle`);
+%          elsarticle[5p] 252/522pt, [3p,twocolumn] 222/468pt, [preprint,twocolumn] 229.5/469pt; emulateapj
+%          245.267/513.117pt, [onecolumn] 513.117pt; mn2e and mn 240/504pt, [onecolumn] 504pt; svjour3[twocolumn]
+%          238.964/495pt; svjour[epj] 250.309/512pt; iopart 372pt, [12pt] 446.4pt; ieeeconf[conference]
+%          245.718/505.89pt; revtex[aps,twocolumn] 246/510pt, [aps,preprint,twocolumn] 229/468pt; aastex
+%          [preprint2] 216.81/469.755pt, [preprint] 469.755pt
+% engines: rust int75a = every class the registers' 345pt line (a two-column one 345pt as the column and 690pt as the
+%          text: `figure*` panelline 2, or 1 where the binding keeps \if@twocolumn false); ieeeconf IEEEtran's 252/516pt;
+%          Perl 0.8.8 = no grid markup (every float at the 345pt \hsize)
+% expect:  0 errors, 0 warnings; Figure 1's panels `panelwidth` 100pt of the column, Figure 2's of the text,
+%          Figure 2 `panelline` text/column (3 decimals)
+% status:  RED (int75a) -> GREEN (79f: each class binding declares its page, `declare_panel_page`, OXIDIZED_DESIGN_DIVERGENCES #885)
+% preload: ar5iv.sty
+\documentclass[twocolumn]{article}
+\begin{document}
+Text.
+\begin{figure}
+\centering
+\rule{100pt}{1cm}\hfill\rule{100pt}{1cm}
+\caption{Two 100pt panels in a column.}
+\end{figure}
+\begin{figure*}
+\centering
+\rule{100pt}{1cm}\hfill\rule{100pt}{1cm}
+\caption{Two 100pt panels across the page.}
+\end{figure*}
+\end{document}

@@ -5,7 +5,7 @@
 use latexml_package::prelude::*;
 
 /// Interpret the shipped class `name` raw (as the document asked for it, a path-prefixed copy included:
-/// [`crate::shipped_class::requested_shipped_class`]), then route the frontmatter it stores for its own title page to the
+/// [`latexml_package::shipped_class::requested_shipped_class`]), then route the frontmatter it stores for its own title page to the
 /// frontmatter, as the JHEP binding does (Perl JHEP.cls.ltxml):
 /// - `\received`, `\revised`, `\accepted`, `\published` (JINST.cls:764-774) and the copyright dates (`\JINSTcopydate`
 ///   :777, `\JHEPcopydate`, `\CECScopydate`) are frontmatter dates, after the class's own setter has run for the flags
@@ -24,13 +24,15 @@ use latexml_package::prelude::*;
 ///   deposited.
 ///
 /// The `\author` and `\abstract` checks of `\AtBeginDocument` read flags the kernel's locked `\author`/`\abstract` set
-/// by replaying the class's own (OXIDIZED_DESIGN #482). A paper whose source lacks the class falls to OmniBus.
+/// by replaying the class's own (OXIDIZED_DESIGN #482). A paper whose source lacks the class falls to OmniBus, with
+/// the loader's missing-file Warning.
 pub(crate) fn jhep_family_class(name: &str) -> Result<()> {
-  let Some(class) = crate::shipped_class::requested_shipped_class(name)? else {
-    LoadClass!("OmniBus");
+  if !crate::shipped_class::read_raw(&crate::shipped_class::RawRead {
+    shipped: true,
+    ..crate::shipped_class::RawRead::new(name, "cls")
+  })? {
     return Ok(());
-  };
-  InputDefinitions!(&class, noltxml => true, extension => Some(Cow::Borrowed("cls")));
+  }
   // a class only named like the family (the prefix fallback's `JINSTfoo`) is left as it is: without the JHEP title
   // page (`\auto@maketitle`), nothing it stores is laid out only there
   if !IsDefined!(&T_CS!("\\auto@maketitle")) {
@@ -69,9 +71,21 @@ pub(crate) fn jhep_family_class(name: &str) -> Result<()> {
   // digested any later, still need.
   Let!("\\lx@jhep@auto@maketitle", "\\auto@maketitle");
   RawTeX!(r"\def\auto@maketitle{\maketitle\lx@jhep@auto@maketitle}");
-  DefMacro!("\\dedicated{}", "\\lx@add@pubnote[role=dedication]{#1}");
-  DefMacro!("\\preprint{}", "\\lx@add@pubnote[role=preprint]{#1}");
-  DefMacro!("\\conference{}", "\\lx@add@pubnote[role=conference]{#1}");
+  // No label, as the class prints none (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921): JINST.cls, JHEP.cls's sibling (1508.06575's copy),
+  // sets the dedication in italics, the report number in the preprint header and the conference line alone — the
+  // role stays.
+  DefMacro!(
+    "\\dedicated{}",
+    "\\lx@add@pubnote[role=dedication,name={}]{#1}"
+  );
+  DefMacro!(
+    "\\preprint{}",
+    "\\lx@add@pubnote[role=preprint,name={}]{#1}"
+  );
+  DefMacro!(
+    "\\conference{}",
+    "\\lx@add@pubnote[role=conference,name={}]{#1}"
+  );
   Let!("\\@maketitle", "\\@empty");
   Let!("\\lx@dropped@maketitle", "\\relax");
   Ok(())

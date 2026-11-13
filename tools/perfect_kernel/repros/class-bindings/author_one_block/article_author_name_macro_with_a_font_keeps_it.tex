@@ -1,0 +1,16 @@
+% mechanism: emit.rs `event_run_at`: a document macro printing the one name in a font (`\nm{Ann Able}` →
+%   `\textsc{Ann Able}`): the call is written whole, the font kept, never by text (Option C P3, OD #993)
+% witness: synthetic (the P3 brief)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able" in small capitals
+% engines: int159a and P3: 0 errors, 0 warnings; personname `<text font="smallcaps">Ann Able</text>`; perl not run
+% expect:  0 errors, 0 warnings; personname `<text font="smallcaps">Ann Able</text>`
+% status:  GREEN (int159a and P3; guard perfect_kernel_batchp3)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand\nm[1]{\textsc{#1}}
+\begin{document}
+\title{T}
+\author{\nm{Ann Able}}
+\maketitle
+Text.
+\end{document}

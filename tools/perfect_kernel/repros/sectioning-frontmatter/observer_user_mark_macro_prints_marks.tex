@@ -1,0 +1,17 @@
+% mechanism: a user macro printing a mark (`\newcommand*{\affmark}[1][*]{\textsuperscript{#1}}`) is a mark by what it
+%   prints, not by its name; the frontmatter observer's shadow events (OXIDIZED_DESIGN_DIVERGENCES #837) read
+%   N M1 S:gap:3 N M1,2 B M1^ N B M2^ N (guard perfect_kernel_batchfms2a1::user_mark_macro_prints_marks)
+% witness: 2304.13998's shape (the FM S2 design refresh's probe `mac`, 2026-10-21_fms2_design_refresh.md §0)
+% oracle:  pdflatex 0 errors: "Ann Able1 Bob Baker1,2" over "1Univ A" and "2Univ B"
+% engines: rust int50a: a junk creator "2]", every author with both affiliations, Bob Baker's mark split off
+% expect:  0 errors, 0 warnings; Ann Able with Univ A, Bob Baker with Univ A and Univ B (stage S2b)
+% status:  RED (int50a)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand*{\affmark}[1][*]{\textsuperscript{#1}}
+\begin{document}
+\title{T}
+\author{Ann Able\affmark[1]~~ Bob Baker\affmark[1,2]\\ \affmark[1]Univ A\\ \affmark[2]Univ B}
+\maketitle
+Body.
+\end{document}

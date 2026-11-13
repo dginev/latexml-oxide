@@ -1,0 +1,15 @@
+% mechanism: control — a one-line run parted by a plain space, in the kernel's `\author`, each entry its marks' names
+% witness: 2510.24320 (the shape; its loss was authblk's note, cut_run_authblk_no_affil_marks_its_own_lines)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1 , Bob Baker2 , Cy Cole1,2 / 1 Univ A 2 Univ B"
+% engines: rust int139a: as expected
+% expect:  0 errors, 0 warnings; Ann "Univ A", Bob "Univ B", Cy both
+% status:  GREEN (int139a, control; no guard: 99a's cut)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$, Cy Cole$^{1,2}$ \\
+$^1$Univ A $^2$Univ B}
+\maketitle
+Text.
+\end{document}

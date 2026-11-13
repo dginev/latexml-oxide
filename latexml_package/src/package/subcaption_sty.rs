@@ -36,19 +36,51 @@ pub(crate) fn subcaption_width_props(args: &[Option<Digested>]) -> Result<SymHas
   Ok(props)
 }
 
+/// A sub-float environment is subcaption's minipage (subcaption.sty:70-92 `\subcaption@iiminipage`, `\minipage[#1]#2{#3}`):
+/// its width argument (the fourth) sets the width registers inside it, `\linewidth` among them (`set_minipage_width`;
+/// KNOWN_PERL_ERRORS #1028, witness 2509.19464 A1.F6). `\subcaptionbox`, which opens one with its optional width, sets
+/// them only when given a width (caption.sty:460-489 `\parbox{#6}`); without, its content is measured at the outer
+/// width (:462-464 `\hbox{#4}`), so the `0pt` stand-in (`\@@subcaptionbox`) changes none (html_feedback #6903's
+/// `\subcaptionbox{}{\includegraphics[width=0.48\linewidth]{…}}`). Its box is a `\parbox` (caption.sty:473, :482), which
+/// sets `\hsize` and `\linewidth` only (latex.ltx `\@iiiparbox`), `\textwidth` and `\columnwidth` staying the outer ones
+/// (rev78d probe sfw case G); `\@@subcaptionbox` marks its sub-float `\lx@subcaption@parbox`.
+fn subfloat_minipage_width(whatsit: &mut Whatsit) -> Result<()> {
+  let parbox = lookup_bool("lx@subcaption@parbox");
+  if parbox {
+    // This sub-float's alone: one in its body is a minipage again.
+    assign_value("lx@subcaption@parbox", false, Some(Scope::Local));
+  }
+  if let Some(width) = whatsit.get_arg(4).map(|w| w.value_of()).filter(|w| *w > 0) {
+    if parbox {
+      let rv: RegisterValue = Dimension::new(width).into();
+      for register in ["\\hsize", "\\linewidth"] {
+        assign_register(register, rv.clone(), None, Vec::new())?;
+      }
+    } else {
+      set_minipage_width(Dimension::new(width))?;
+    }
+  }
+  Ok(())
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: subcaption.sty.ltxml
   // Provides subfigure/subtable environments and \subcaption, \subfloat, \subcaptionbox, \subref
 
   RequirePackage!("caption");
+  // subcaption.sty:43 loads caption itself, even after floatrow's `caption3` (whose stand-in, the caption binding, marks
+  // `\lx@caption@kernel@only`, caption_sty.rs): caption replaces a class's own `\@makecaption` (jfm_cls.rs). Guard
+  // `perfect_kernel_batch78a::jfm_copy_caption_yields_to_caption_loaders_after_floatrow`.
+  RawTeX!(r"\lx@caption@full@load");
 
   //======================================================================
   // Counters and formatting
   // subcaption.sty:214-222: the package options are `\captionsetup[sub]` settings, over subcaption's
   // own defaults for sub-captions (`labelformat=parens`, …).
   DeclareOption!(None, {
-    Digest!("\\edef\\lx@subcaption@option{\\noexpand\\captionsetup[sub]{\\CurrentOption}}\\lx@subcaption@option")?;
+    // The option's tokens unexpanded (`\caption@ProcessOptions`), as caption_sty.rs passes its own.
+    Digest!(r"\def\lx@subcaption@optionsetup#1{\captionsetup[sub]{#1}}\expandafter\lx@subcaption@optionsetup\expandafter{\CurrentOption}")?;
   });
   // subcaption.sty:223 reads its options with `\caption@ProcessOptions`: `\@curroptions` stays as it was.
   ProcessKeyOptions!();
@@ -79,13 +111,17 @@ LoadDefinitions!({
     // subfigure reads "Figure 1a" (hyperref_sty.rs `\lx@autorefnum@@`). caption3's empty
     // `\subfigurename` (:1791) is left out: here a defined name makes the `typerefnum` tag, " 1a".
     DefMacro!("\\subfigureautorefname", "\\figureautorefname");
+    // A sub-type of caption's (`\caption@subtypelist`, caption3.sty:1788-1796): a later `\DeclareCaptionSubType`
+    // modifies its numbering (caption_sty.rs).
+    RawTeX!(r"\lx@caption@addsubtype{subfigure}");
   }
   // subcaption cannot be used with subfig (subcaption.sty:44-47, an error); a document that loads
   // both — or keeps subfig out by `\@namedef{ver@subfig.sty}`, which our loader does not honour (a
-  // class's `\EmulatedPackage` marks packages whose bindings are its semantic layer) — means
+  // class's `\EmulatedPackage` marks packages whose bindings are its semantic layer; only a binding's
+  // dependency scan does, DIVERGENCES #605) — means
   // subcaption's sub-labels: subfig's `labelformat=empty` package option dropped the
   // "(a)" of subcaption's `{subfigure}` captions (2605.20200).
-  if lookup_bool("subfig.sty_loaded") {
+  if package_loaded("subfig") {
     DefMacro!("\\fnum@subfigure", "\\lx@subcaption@fnum{subfigure}{\\thesubfigure}");
     DefMacro!("\\fnum@subtable", "\\lx@subcaption@fnum{subtable}{\\thesubtable}");
   }
@@ -95,17 +131,20 @@ LoadDefinitions!({
     DefMacro!("\\fnum@subtable",  "\\lx@subcaption@fnum{subtable}{\\thesubtable}");
     Let!("\\p@subtable",    "\\thetable");
     DefMacro!("\\subtableautorefname", "\\tableautorefname");
+    RawTeX!(r"\lx@caption@addsubtype{subtable}");
   }
   Let!("\\ext@subfigure", "\\ext@figure");
   Let!("\\ext@subtable",  "\\ext@table");
 
-  DefMacro!("\\fnum@font@float",         "\\small");
-  DefMacro!("\\format@title@font@float", "\\small");
-
-  DefMacro!("\\fnum@font@subfigure",         "\\fnum@font@figure");
-  DefMacro!("\\fnum@font@subtable",          "\\fnum@font@table");
-  DefMacro!("\\format@title@font@subfigure", "\\format@title@font@figure");
-  DefMacro!("\\format@title@font@subtable",  "\\format@title@font@table");
+  // subcaption.sty:218-222 sets `font+=small` (`smaller` under `\captionsetup{font=small}`) for `\captionsetup[sub]`
+  // only: the sub-captions are `\small`, the float's own caption keeps the kernel's size (sect09.rs `\fnum@font@float`
+  // `\@empty`; pdflatex `\f@size` 9 in the sub-caption, 10 in the main one). Perl subcaption.sty.ltxml:34-35 makes
+  // every float caption `\small` (KNOWN_PERL_ERRORS #1021; about 378,000 papers use subcaption and `\caption`). Guard
+  // `perfect_kernel_batch78c::subcaption_main_caption_keeps_the_normal_size`.
+  DefMacro!("\\fnum@font@subfigure",         "\\small");
+  DefMacro!("\\fnum@font@subtable",          "\\small");
+  DefMacro!("\\format@title@font@subfigure", "\\small");
+  DefMacro!("\\format@title@font@subtable",  "\\small");
 
   // Perl: \format@title@subfigure and \format@title@subtable use " " separator (not ": ")
   DefMacro!(
@@ -163,6 +202,21 @@ LoadDefinitions!({
     }
   });
 
+  // `\subcaption`'s sub-type (subcaption.sty:251 `\subcaption@newabbreviation\subcaption\caption`: `\caption` with
+  // `\@captype` `sub<type>`), local to the box it is in. The first sub-caption of a float steps the float's counter
+  // ahead of its own caption, as a `{subfigure}` does (`before_float`'s preincrement): pdflatex numbers a sub-caption
+  // in a minipage "1a" before the figure's `\caption` (2011.13897). The minipage holding it is the sub-float
+  // (`begin_caption_box`, OXIDIZED_DESIGN_DIVERGENCES #853).
+  DefPrimitive!("\\lx@subcaption@type{}", sub[(ctype)] {
+    let ctype = ctype.to_string();
+    let subtype = s!("sub{ctype}");
+    def_macro(T_CS!("\\@captype"), None, Tokens::new(ExplodeText!(&subtype)), None)?;
+    if lookup_bool("lx@in@float") {
+      preincrement_float_counter(&subtype, &ctype);
+      assign_value("LAST_FLOATTYPE", Stored::String(pin(&subtype)), Some(Scope::Global));
+    }
+  });
+
   //======================================================================
   // \subcaption — Perl L47-56: if \@captype is defined, prepend "sub" (unless already
   // sub-prefixed) locally, then delegate to \caption.
@@ -172,11 +226,9 @@ LoadDefinitions!({
       let ctype = do_expand(Tokens!(T_CS!("\\@captype")))?.to_string();
       let ctype = ctype.trim().to_string();
       if !ctype.is_empty() && !ctype.starts_with("sub") {
-        // Local redefinition via \def\@captype{sub<ctype>} tokens.
-        tokens.push(T_CS!("\\def"));
-        tokens.push(T_CS!("\\@captype"));
+        tokens.push(T_CS!("\\lx@subcaption@type"));
         tokens.push(T_BEGIN!());
-        tokens.extend(Explode!(s!("sub{}", ctype)));
+        tokens.extend(Explode!(ctype));
         tokens.push(T_END!());
       }
     }
@@ -236,8 +288,11 @@ LoadDefinitions!({
       // The begin code opens a TeX group of its own: subcaption.sty:70-80 `\minipage` (latex.ltx:16310 `\vbox\bgroup`).
       tex_group => { TexGroup::Box },
       before_digest => { before_float("subfigure", Some("figure"))?; },
+      after_digest_begin => sub[whatsit] { subfloat_minipage_width(whatsit)?; },
       after_digest => sub[whatsit] { after_float(whatsit); }
     );
+    // The width its last argument states is the panel's (the panel grid rule, `declare_panel_width`).
+    declare_panel_parbox_width("\\begin{subfigure}", 4);
   }
 
   // Perl L77: `{subfigure*}` passes double => 1, widening \hsize to
@@ -252,8 +307,10 @@ LoadDefinitions!({
     // The begin code opens a TeX group of its own: subcaption.sty:70-80 `\minipage` (latex.ltx:16310 `\vbox\bgroup`).
     tex_group => { TexGroup::Box },
     before_digest => { before_float_ex("subfigure", Some("figure"), true)?; },
+    after_digest_begin => sub[whatsit] { subfloat_minipage_width(whatsit)?; },
     after_digest => sub[whatsit] { after_float(whatsit); }
   );
+  declare_panel_parbox_width("\\begin{subfigure*}", 4);
 
   // subcaption v1.3+ added `{subcaptionblock}` as a sibling of `{subfigure}`
   // — same signature and semantics, just a more-generic name. Witness
@@ -268,8 +325,10 @@ LoadDefinitions!({
     // The begin code opens a TeX group of its own: subcaption.sty:70-80 `\minipage` (latex.ltx:16310 `\vbox\bgroup`).
     tex_group => { TexGroup::Box },
     before_digest => { before_float("subfigure", Some("figure"))?; },
+    after_digest_begin => sub[whatsit] { subfloat_minipage_width(whatsit)?; },
     after_digest => sub[whatsit] { after_float(whatsit); }
   );
+  declare_panel_parbox_width("\\begin{subcaptionblock}", 4);
   DefEnvironment!("{subcaptionblock*}[][][]{SetlengthDimension}",
     "^<ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1')>\
       #tags\
@@ -280,8 +339,10 @@ LoadDefinitions!({
     // The begin code opens a TeX group of its own: subcaption.sty:70-80 `\minipage` (latex.ltx:16310 `\vbox\bgroup`).
     tex_group => { TexGroup::Box },
     before_digest => { before_float_ex("subfigure", Some("figure"), true)?; },
+    after_digest_begin => sub[whatsit] { subfloat_minipage_width(whatsit)?; },
     after_digest => sub[whatsit] { after_float(whatsit); }
   );
+  declare_panel_parbox_width("\\begin{subcaptionblock*}", 4);
 
   // Same `\newenvironment` guard for `\subtable` (subfigure.sty's `\subtable`
   // macro), for the same reason as `\subfigure` above.
@@ -300,8 +361,10 @@ LoadDefinitions!({
       // The begin code opens a TeX group of its own: subcaption.sty:70-80 `\minipage` (latex.ltx:16310 `\vbox\bgroup`).
       tex_group => { TexGroup::Box },
       before_digest => { before_float("subtable", Some("table"))?; },
+      after_digest_begin => sub[whatsit] { subfloat_minipage_width(whatsit)?; },
       after_digest => sub[whatsit] { after_float(whatsit); }
     );
+    declare_panel_parbox_width("\\begin{subtable}", 4);
   }
 
   // Perl L97: `{subtable*}` passes double => 1 (see {subfigure*} above).
@@ -315,8 +378,10 @@ LoadDefinitions!({
     // The begin code opens a TeX group of its own: subcaption.sty:70-80 `\minipage` (latex.ltx:16310 `\vbox\bgroup`).
     tex_group => { TexGroup::Box },
     before_digest => { before_float_ex("subtable", Some("table"), true)?; },
+    after_digest_begin => sub[whatsit] { subfloat_minipage_width(whatsit)?; },
     after_digest => sub[whatsit] { after_float(whatsit); }
   );
+  declare_panel_parbox_width("\\begin{subtable*}", 4);
 
   //======================================================================
   // \subfloat — a sub-float with its caption. subcaption.sty:278-291 reads `[list][caption]{body}`
@@ -327,8 +392,14 @@ LoadDefinitions!({
   // #323; fixture svg_subfloat_2563). Without an optional subcaption sets a `\phantomcaption`
   // (:293-300), as here (`\lx@subcaption@subfloat@phantom`; Perl printed an empty caption).
   // `\columnwidth` stands in for the box's natural width (Perl L102-103).
-  DefMacro!("\\subfloat",
+  // subcaption provides `\subfloat` only at `\begin{document}` (subcaption.sty:262-276
+  // `\caption@AtBeginDocument{…\providecommand*\subfloat{\subcaption@subfloat}}`), so a preamble's own
+  // `\newcommand{\subfloat}` (2511.09162) or subfig's stays; defined at load, the binding's took the author's away
+  // (Perl subcaption.sty.ltxml:104 the same, KNOWN_PERL_ERRORS #965). Guard:
+  // `perfect_kernel_batch73a::subcaption_subfloat_is_provided_at_begin_document`.
+  DefMacro!("\\lx@subcaption@subfloat",
     "\\kernel@ifnextchar[\\lx@subcaption@subfloat@list\\lx@subcaption@subfloat@phantom");
+  RawTeX!(r"\AtBeginDocument{\providecommand*\subfloat{\lx@subcaption@subfloat}}");
   DefMacro!("\\lx@subcaption@subfloat@list[]",
     "\\kernel@ifnextchar[{\\lx@subcaption@subfloat@caption{#1}}{\\lx@subcaption@subfloat@@{}{#1}}");
   DefMacro!("\\lx@subcaption@subfloat@caption{}[]", "\\lx@subcaption@subfloat@@{#1}{#2}");
@@ -347,8 +418,12 @@ LoadDefinitions!({
   DefMacro!("\\subcaptionbox",
     "\\expandafter\\@@subcaptionbox\\expandafter{\\@captype}"
   );
+  // The sub-float is the box's `\parbox` (`subfloat_minipage_width`).
+  DefPrimitive!("\\lx@subcaption@parbox", {
+    assign_value("lx@subcaption@parbox", true, Some(Scope::Local));
+  });
   DefMacro!("\\@@subcaptionbox{} []{} Optional:0pt []{}",
-    "\\begingroup\\csname sub#1\\endcsname{#4}\
+    "\\begingroup\\lx@subcaption@parbox\\csname sub#1\\endcsname{#4}\
      #6\
      \\caption{#3}\
      \\ifx.#2.\\else\\lx@subcaption@addinlist{#2}\\fi\
@@ -366,9 +441,6 @@ LoadDefinitions!({
   // \subref — delegates to \ref
   DefMacro!("\\subref OptionalMatch:* Semiverbatim", "\\ref{#2}");
 
-  //======================================================================
-  // \DeclareCaptionSubType — stub (should be in caption/caption3)
-  def_macro_noop("\\DeclareCaptionSubType OptionalMatch:* [] {}")?;
 });
 
 /// `{list}{caption}{body}` in a `sub<type>` environment. The type is `\@captype` less a leading
@@ -389,9 +461,22 @@ fn subfloat_tokens(list: Tokens, caption: Option<Tokens>, body: Tokens) -> Resul
     }
   }
   let env = Tokens!(T_BEGIN!(), Explode!(s!("sub{}", ctype)), T_END!());
-  let mut tokens = vec![T_CS!("\\begin")];
+  // The `{\columnwidth}` is the binding's, not a width the source states: subcaption's `\subfloat` boxes its body
+  // at its natural width (subcaption.sty:293-300 `\sbox\subcaption@box`), so the panel grid rule keeps nothing of it
+  // (`\lx@panel@unstated`; it made a `figure*`'s first `\subfloat` 0 wide against a two-column class's real column,
+  // review rev78x finding 1: 2602.06569 S4.F1/F2, 1902.05392 S3.F3), and its body's widths are the float's.
+  let mut tokens = vec![
+    T_CS!("\\begingroup"),
+    T_CS!("\\lx@panel@unstated"),
+    T_CS!("\\begin"),
+  ];
   tokens.extend(env.clone().unlist());
-  tokens.extend([T_BEGIN!(), T_CS!("\\columnwidth"), T_END!()]);
+  tokens.extend([
+    T_BEGIN!(),
+    T_CS!("\\columnwidth"),
+    T_END!(),
+    T_CS!("\\lx@panel@stated"),
+  ]);
   tokens.extend(body.unlist());
   match caption {
     Some(caption) => {
@@ -408,5 +493,6 @@ fn subfloat_tokens(list: Tokens, caption: Option<Tokens>, body: Tokens) -> Resul
   }
   tokens.push(T_CS!("\\end"));
   tokens.extend(env.unlist());
+  tokens.push(T_CS!("\\endgroup"));
   Ok(Tokens::new(tokens))
 }

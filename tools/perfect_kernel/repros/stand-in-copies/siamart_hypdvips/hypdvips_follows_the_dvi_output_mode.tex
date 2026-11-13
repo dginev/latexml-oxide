@@ -1,0 +1,15 @@
+% witness: 2605.04427, 2606.08053, 1703.08345 (a shipped siamart copy, siamart251216.cls:1302-1336, loads hyperref
+%          with no driver option and then `\ifpdf\else\usepackage{hypdvips}\fi`; hypdvips.sty:27-36 errs unless
+%          `\Hy@driver` is `hdvips`); 14 papers of the cortex 2605/2606 reruns
+% oracle:  pdflatex 0 errors ("Driver (default): hdvips"; "See arXiv and https://example.org.")
+% engines: rust int128b = 1 error (hyperref_sty.rs's constant `\Hy@driver` = hpdftex); Perl 0 errors, 3 warnings
+%          (no siamart binding: OmniBus, the copy is not read)
+% expect:  0 errors, 1 warning (hypdvips.sty:2002 `\g@addto@macro{\endfigure}`: a constructor here, the flag
+%          reset dropped as Perl drops it, Package.pm:2542); both links kept
+% status:  RED (int128b) -> GREEN (101a)
+% preload: ar5iv.sty
+\pdfoutput=0
+\documentclass{siamart}
+\begin{document}
+See \href{https://arxiv.org}{arXiv} and \url{https://example.org}.
+\end{document}

@@ -1,5 +1,5 @@
 use std::{
-  cell::RefCell,
+  cell::{Cell, RefCell},
   sync::atomic::{AtomicBool, AtomicI32, AtomicU64, AtomicUsize, Ordering},
 };
 
@@ -39,11 +39,19 @@ fn stderr_use_color() -> bool {
 /// (`Common/Error.pm` `_printline`). `--quiet` lowers THIS (to `Warn`) without
 /// lowering what the log keeps — so `(Loading …)` progress notes and `Info:`
 /// records still reach `.latexml.log`, which is what BookML's makefile dependency
-/// tracking reads (issue #763). `--verbose`/`--debug` raise it (to `Debug`).
+/// tracking reads (issue #763). `--verbose` raises it (to `Debug`).
 ///
 /// Stored as the `LevelFilter` discriminant (`Off`=0 … `Trace`=5). Process-global
 /// like `max_level`: one shared stderr descriptor across `cortex_worker`'s pool.
 static STDERR_LEVEL: AtomicUsize = AtomicUsize::new(LevelFilter::Info as usize);
+
+/// Un-featured `Debug` records are admitted (`--verbose`). Without it a `Debug` record passes only when its target
+/// is a `--debug` feature: Perl guards its trace `Debug()` calls `if $LaTeXML::DEBUG{feature}` (`Common/Error.pm` L467).
+static DEBUG_ALL: AtomicBool = AtomicBool::new(false);
+
+/// Whether un-featured `Debug` records are logged (`--verbose`; see `DEBUG_ALL`).
+#[inline]
+pub fn debug_all() -> bool { DEBUG_ALL.load(Ordering::Relaxed) }
 
 /// The current STDERR verbosity (see [`STDERR_LEVEL`]).
 fn stderr_level() -> LevelFilter {
@@ -183,6 +191,19 @@ static STDERR_AT_LINE_START: AtomicBool = AtomicBool::new(true);
 /// rather than through `log::Log` — without this the next diagnostic record
 /// could emit a spurious leading newline.
 pub fn mark_stderr_at_line_start() { STDERR_AT_LINE_START.store(true, Ordering::Release); }
+
+/// Perl `print STDERR _freshline(\*STDERR), $text`: a direct STDERR write at any verbosity, on a fresh line. One write
+/// under the (reentrant) stderr lock, so a capture buffer shared by a test's threads never splits a line.
+pub fn stderr_fresh_line(text: &str) {
+  let _stderr = std::io::stderr().lock();
+  let lead = if STDERR_AT_LINE_START.load(Ordering::Acquire) {
+    ""
+  } else {
+    "\n"
+  };
+  stderr_echo(&format!("{lead}{text}"));
+  STDERR_AT_LINE_START.store(text.ends_with('\n'), Ordering::Release);
+}
 
 /// Start capturing log output into the buffer (Perl: bind_log).
 pub fn bind_log() { *LOG_BUFFER.borrow_mut() = Some(String::new()); }
@@ -355,7 +376,12 @@ fn stderr_echo(text: &str) {
 }
 
 impl log::Log for LatexmlLogger {
-  fn enabled(&self, metadata: &Metadata) -> bool { metadata.level() <= max_level() }
+  fn enabled(&self, metadata: &Metadata) -> bool {
+    metadata.level() <= max_level()
+      && (metadata.level() <= Level::Info
+        || debug_all()
+        || crate::common::error::debug_enabled(metadata.target()))
+  }
 
   fn log(&self, record: &Record) {
     if self.enabled(record.metadata()) {
@@ -520,23 +546,15 @@ fn write_record(level: Level, painted_message: String) {
   // success rates from `Error:`/`Fatal:` lines). `Error` is the lowest `Level`
   // value and Fatal records are emitted at `Level::Error`, so `<= Error`
   // captures both.
-  let to_stderr = level <= Level::Error || stderr_admits(level);
+  // A `Debug` record that got here is wanted (`--verbose` or its feature); it prints at Perl's `$VERBOSITY >= 0`.
+  let to_stderr = level <= Level::Error || stderr_admits(level.min(Level::Info));
   if to_stderr {
     let text = if stderr_use_color() {
       painted_message
     } else {
       strip_ansi(&painted_message)
     };
-    // The lock is reentrant: `stderr_echo`'s own locking nests inside this critical section. One
-    // write per record, so a capture buffer shared by a test's threads never splits a line.
-    let _stderr = std::io::stderr().lock();
-    let lead = if STDERR_AT_LINE_START.load(Ordering::Acquire) {
-      ""
-    } else {
-      "\n"
-    };
-    stderr_echo(&format!("{lead}{text}\n"));
-    STDERR_AT_LINE_START.store(true, Ordering::Release);
+    stderr_fresh_line(&format!("{text}\n"));
   }
 }
 
@@ -623,6 +641,39 @@ impl DiagnosticsHold {
     now.error.saturating_sub(then.error) + usize::from(now.fatal && !then.fatal)
   }
 
+  /// Whether a Fatal was raised since [`begin`](Self::begin): counted (the report's flag set) or held as a record — what
+  /// [`defer`](Self::defer) never sets aside, and a caller taking back its work must not [`discard`](Self::discard).
+  pub fn fatal_raised(&self) -> bool {
+    let fatal_now = {
+      let now = crate::common::error::REPORT.borrow();
+      now.fatal && !self.snapshot.report.fatal
+    };
+    fatal_now
+      || HELD.borrow().as_ref().is_some_and(|records| {
+        records
+          .iter()
+          .any(|(_, m)| strip_ansi(m).starts_with("Fatal:"))
+      })
+  }
+
+  /// Warnings raised since [`begin`](Self::begin) (a suppressed one counted too).
+  pub fn warnings_raised(&self) -> usize {
+    let now = crate::common::error::REPORT.borrow();
+    now.warning.saturating_sub(self.snapshot.report.warning)
+  }
+
+  /// The errors held since [`begin`](Self::begin), in order: each record's first line, without its colors.
+  pub fn held_errors(&self) -> Vec<String> {
+    HELD.borrow().as_ref().map_or_else(Vec::new, |records| {
+      records
+        .iter()
+        .map(|(_, message)| strip_ansi(message))
+        .filter(|message| message.starts_with("Error:"))
+        .map(|message| message.lines().next().unwrap_or("").to_string())
+        .collect()
+    })
+  }
+
   fn take_held(&mut self) -> Vec<(Level, String)> {
     self.resolved = true;
     let mut held = HELD.borrow_mut();
@@ -652,6 +703,17 @@ impl DiagnosticsHold {
         report.error,
         report.fatal,
       ) == (then.debug, then.info, then.warning, then.error, then.fatal)
+  }
+
+  /// The scope raised nothing but Debug messages (counted, never written): [`is_empty`](Self::is_empty) but for those.
+  /// A held tag whose typesetting only traced itself holds nothing to defer (latexml_engine tags_refnums.rs
+  /// `\lx@tag@intags@held`).
+  pub fn is_empty_but_debug(&self) -> bool {
+    let report = crate::common::error::REPORT.borrow();
+    let then = &self.snapshot.report;
+    HELD.borrow().as_ref().is_none_or(Vec::is_empty)
+      && (report.info, report.warning, report.error, report.fatal)
+        == (then.info, then.warning, then.error, then.fatal)
   }
 
   /// Keep the scope's diagnostics: write the held records.
@@ -884,17 +946,43 @@ pub fn replay_shown_deferred() {
   }
 }
 
-/// Forget the job's deferred diagnostics (each conversion's `initialize_report`).
+/// Forget the job's deferred diagnostics (each conversion's `initialize_report`), the empty held tags it was waiting
+/// on too: a persistent worker's next paper starts at none.
 pub fn reset_deferred_diagnostics() {
   DEFERRED.borrow_mut().clear();
   DEFERRED_AT_LABEL.borrow_mut().take();
   LABEL_USES.borrow_mut().clear();
+  EMPTY_HELD_TAGS.set(0);
 }
+
+/// How many empty held tags are kept in the document, waiting for their target to settle them
+/// ([`note_empty_held_tag`]).
+#[thread_local]
+static EMPTY_HELD_TAGS: Cell<usize> = Cell::new(0);
+
+/// A held tag (`\lx@tag@intags@held`, latexml_engine tags_refnums.rs) that typeset nothing but holds diagnostics
+/// (`_deferred`) is kept, empty, until its target closes, which ties them to its labels (latex_constructs sect11.rs
+/// `tie_held_tags`) and then removes it ([`take_empty_held_tag`]); one no target closed over (a caption's tags folded
+/// into a minipage panel) is settled once the document is built (sect11.rs `settle_empty_held_tags`, tied to its
+/// owner's labels only: an unlabelled owner drops it with its diagnostics). A form that errs
+/// gives no content, and its errors are raised where a reference prints its role (cleveref_sty.rs
+/// `\lx@cref@docformat`; 2008.12750, 2604.24399).
+pub fn note_empty_held_tag() { EMPTY_HELD_TAGS.set(EMPTY_HELD_TAGS.get() + 1); }
+
+/// Whether an empty held tag is waiting for its target to settle it ([`note_empty_held_tag`]).
+pub fn empty_held_tags_pending() -> bool { EMPTY_HELD_TAGS.get() > 0 }
+
+/// One empty held tag ([`note_empty_held_tag`]) was removed.
+pub fn take_empty_held_tag() { EMPTY_HELD_TAGS.set(EMPTY_HELD_TAGS.get().saturating_sub(1)); }
+
+/// The document is built: every empty held tag is settled ([`note_empty_held_tag`]).
+pub fn settled_empty_held_tags() { EMPTY_HELD_TAGS.set(0); }
 
 /// initialize the logger at a given STDERR verbosity `level`
 ///
 /// `level` is the **console** verbosity (`--quiet` ⇒ `Warn`, default ⇒ `Info`,
-/// `--verbose`/`--debug` ⇒ `Debug`). Perl decouples this from the log-file floor:
+/// `--verbose` ⇒ `Debug`, which also admits un-featured `Debug` records; a `--debug`
+/// feature raises only the `max_level` floor, [`crate::common::error::enable_debug_feature`]). Perl decouples this from the log-file floor:
 /// the `.latexml.log` keeps a minimum of `Info` regardless of `--quiet`, while
 /// STDERR follows `level` (`Common/Error.pm` `_printline`; issue #763). So the
 /// global `log` `max_level` is set to the MORE verbose of `level` and `Info` (the
@@ -911,7 +999,13 @@ pub fn init(level: LevelFilter) -> Result<(), SetLoggerError> {
   // reflect the requested verbosity even if the logger was already installed (a
   // second `init` in-process returns `Err` from `set_logger`, which callers `.ok()`).
   STDERR_LEVEL.store(level as usize, Ordering::Relaxed);
-  log::set_max_level(level.max(LevelFilter::Info));
+  DEBUG_ALL.store(level >= LevelFilter::Debug, Ordering::Relaxed);
+  let floor = if crate::common::error::any_debug_feature_enabled() {
+    LevelFilter::Debug
+  } else {
+    LevelFilter::Info
+  };
+  log::set_max_level(level.max(floor));
   log::set_logger(&LOGGER)
 }
 
@@ -962,6 +1056,32 @@ mod tests {
     note_label_use("LABEL:a", "autoref");
     replay_shown_deferred();
     assert_eq!(get_status(LogStatus::Error), 0, "stale deferred set");
+  }
+
+  /// A hold tells a Fatal raised in its scope (`fatal_raised`), which a caller taking its work back commits rather
+  /// than discards — Fatal stays Fatal (review rev94a r5, the writer's re-part take-back); an Error alone is no Fatal.
+  #[test]
+  fn a_hold_tells_a_fatal_raised_in_it() {
+    use crate::common::error::{LogStatus, get_status, initialize_report, note_status_from_logger};
+    initialize_report();
+    let hold = DiagnosticsHold::begin();
+    note_status_from_logger(LogStatus::Error);
+    assert!(!hold.fatal_raised(), "an Error is no Fatal");
+    note_status_from_logger(LogStatus::Fatal);
+    assert!(hold.fatal_raised());
+    hold.commit();
+    assert_eq!(
+      get_status(LogStatus::Fatal),
+      1,
+      "committed, the Fatal stays"
+    );
+    let hold = DiagnosticsHold::begin();
+    assert!(
+      !hold.fatal_raised(),
+      "one raised before the hold is not its own"
+    );
+    hold.discard();
+    initialize_report();
   }
 
   #[test]

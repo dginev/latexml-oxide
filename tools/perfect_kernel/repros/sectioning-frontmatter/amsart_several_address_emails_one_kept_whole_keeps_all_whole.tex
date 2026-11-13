@@ -1,0 +1,24 @@
+% mechanism: 95e's fail-safe hands every several-address `\email` call back whole together (the S2b writer's `give_back_listed`, deleted
+%   in DEL4) when the plan cannot write one of them out: the first call's `\href` around one
+%   address leaves no one text leaf to write from, so the second call (cat@, dan@), which alone is written out
+%   (probe p10_twocalls), stays one contact too.
+% witness: synthetic (rev95e S3, probe p11_twohref); equal to int123a
+% oracle:  pdflatex 0 errors: "ANN ABLE & BOB BAKER", "CAT COLE & DAN DORN", each "Email address:" line as printed
+% engines: rust 95e: names re-parted; ann@/bob@ one contact; cat@/dan@ one contact; int123a: the same e-mail contacts
+% expect:  cat@ on Cat Cole, dan@ on Dan Dorn (the second call written out); the first call whole on its author;
+%   0 errors. Fix: keep whole only the call the plan declines, one at a time
+% status:  RED (catalog, no guard: rev95e S3; synthetic only)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Ann Able $\&$ Bob Baker}
+\address{Univ X}
+\email{\href{mailto:ann@x.org}{ann@x.org},\:bob@y.org}
+\author{Cat Cole $\&$ Dan Dorn}
+\address{Univ Z}
+\email{cat@z.org,\:dan@z.org}
+\maketitle
+Text.
+\end{document}

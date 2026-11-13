@@ -1,0 +1,23 @@
+% mechanism: the binding-callable separator query (`observer/separators.rs` `argument_separators`, `\lx@fm@separators`;
+%   OD #995, Option C P2-0) answers `None` (`unread`) where the argument's rehearsal left a group open
+%   (`Rehearsal::Done { left_open: true }`: a `\begingroup` with no `\endgroup`, before or after the separator): no
+%   kernel author line holds one (pdflatex's `\end{tabular}` meets the open group), so its separators are unknown, not
+%   a list. The closed argument (G1) still reads `kernel`
+% witness: synthetic (revP20 N4)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: `\lx@fm@separators` provided as its argument detokenized,
+%   each line prints its tokens ("G2[Ann Able \and Bob Baker\begingroup ]")
+% engines: Perl 0.8.8: no such query (not run); P20 (93541f6f93): G1[kernel] G2[kernel] G3[kernel]; P20b: below
+% expect:  0 errors, 0 warnings; the lines read G1[kernel] G2[unread] G3[unread]
+% status:  GREEN (P20b; guard perfect_kernel_batchp20::a_separator_query_over_an_open_group_is_unread)
+\documentclass{article}
+\makeatletter
+\providecommand\lx@fm@separators[1]{\detokenize{#1}}
+\newcommand\sep[1]{[\lx@fm@separators{#1}]}
+\makeatother
+\begin{document}
+G1\sep{Ann Able \and Bob Baker}
+
+G2\sep{Ann Able \and Bob Baker\begingroup}
+
+G3\sep{\begingroup Ann Able \and Bob Baker}
+\end{document}

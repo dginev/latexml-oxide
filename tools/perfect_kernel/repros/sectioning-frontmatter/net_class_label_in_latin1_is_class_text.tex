@@ -1,0 +1,29 @@
+% A raw class under `[latin1]{inputenc}` sets its own label in Latin-1 around the author's argument
+% (`\gdef\@xa{Université de Genève: #1}`, the class file's bytes written here as `^^e9`/`^^e8`), and only its own
+% `\@author` prints the store. inputenc reads each such byte as one active token outside any UTF-8 sequence; the net's
+% reading of the class's own text (frontmatter_stores.rs `net_class_text`) decoded a run of active bytes as UTF-8 and
+% turned the lone byte into U+FFFD, so the label's words were not the class's and the line raised a false
+% `Warning:frontmatter:unclaimed … universite geneve`. Now a byte outside a UTF-8 sequence is its own Latin-1
+% character: the label is the class's text, the name the author's, no note and no Warning.
+% witness: synthetic (review rev105a3 finding 2, probe `lat1`, a class file in Latin-1 bytes)
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able", "Université de Genève: Ann Able", "Text."
+% engines: rust int133a1 = 0 errors, 1 warning (frontmatter:unclaimed \@xa "universite geneve"); 105a r2 the same;
+%          perl not run
+% expect:  0 errors, 0 warnings; no note
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{netprobe.cls}
+\ProvidesClass{netprobe}\LoadClass{article}
+\RequirePackage[latin1]{inputenc}
+\def\@anames{}\def\@xa{}
+\renewcommand\author[1]{\gdef\@anames{#1}}
+\newcommand\xa[1]{\gdef\@xa{Universit^^e9 de Gen^^e8ve: #1}}
+\renewcommand\@author{\@anames\\\@xa}
+\end{filecontents*}
+\documentclass{netprobe}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\xa{Ann Able}
+\maketitle
+Text.
+\end{document}

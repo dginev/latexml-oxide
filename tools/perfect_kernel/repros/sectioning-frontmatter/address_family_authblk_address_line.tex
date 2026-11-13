@@ -1,0 +1,20 @@
+% An address line inside one authblk `\affil` (shape A): the Kind step takes the line out of the entry as its e-mails
+% (affiliations.rs `kind_entry_addresses`), the Link step gives each the author it spells (insert.rs `link_entry_addresses`).
+% witness: 2502.01754
+% oracle:  pdflatex 0 errors: "Univ A", "Town", "{aable, bbaker, ccole}@a.edu" under three names
+% engines: rust int127a = 0 errors; each author holds `Univ A Town {aable, bbaker, ccole}@a.edu` as an affiliation; perl = the same
+% expect:  0 errors, 0 warnings; each author: affiliation "Univ A Town" (a line break), then own e-mail
+% status:  RED (int127a) -> GREEN (100b)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\title{T}
+\author{Ann Able}
+\author{Bob Baker}
+\author{Cat Cole}
+\affil{Univ A \\ Town \\ \{aable, bbaker, ccole\}@a.edu}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

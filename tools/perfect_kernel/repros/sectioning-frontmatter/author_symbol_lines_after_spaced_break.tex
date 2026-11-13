@@ -1,0 +1,20 @@
+% witness: 2602.16540; the r7 re-review of batch 77p (finding 1)
+% oracle:  pdflatex 0 errors: two names marked ⋆ and ♯ with footnotes, a \hspace before the line break, the two
+%          ⋆/♯-labelled institutions on lines of
+%          their own in {\it \normalsize …} groups
+% engines: rust 77p r10 = 0 errors; a creator named "⋆School of Mathematics …" (int34a, 77p r9 the same) and the ♯ line
+%          an affiliation of all three
+% expect:  0 errors, 0 warnings; two creators: the ⋆ institution on Ann Able, the ♯ one on Bob Baker; no creator named
+%          by an institution
+% status:  RED (77p r10) -> GREEN (77p r11)
+\documentclass{article}
+\usepackage{hyperref}
+\usepackage{xcolor}
+\title{T}
+\author{Ann Able$^\star$\footnote{E-mail: \textcolor{teal}{\texttt{aable@x.ie}}}\,\,\, and\, Bob Baker$^\sharp$\footnote{E-mail: \textcolor{teal}{\texttt{bbaker@y.hk}}}\hspace{.2cm}\\
+    {\it \normalsize $^\star$School of Mathematics and Statistics, Univ A, Dublin 4, Republic of Ireland}\\
+    {\it \normalsize $^\sharp$Department of Biostatistics, Univ B, Hong Kong}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

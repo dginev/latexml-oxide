@@ -1,5 +1,8 @@
 //! Stub for interact.cls (Taylor & Francis interact class).
+use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 use latexml_package::prelude::*;
+
+use crate::and_by_meaning::and_runs;
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
@@ -25,15 +28,19 @@ LoadDefinitions!({
   // name list `\name{A\textsuperscript{a}, B\textsuperscript{b}}` is its authors, linked by their marks (Perl maps
   // `\name` to its argument, one creator; 2112.10522, 2312.11500, 2403.20182). Each later `\name` opens a group of its
   // own (`\name{A}\affil{X}\name{B}\affil{Y}`), and the class's `\and` prints "and ".
+  // The `\and`s: each written, as before (the class's whatever the document made it: `\author` defines it), and each held
+  // in a macro of the document's, which the separator query reads as the kernel's (`and_by_meaning`, Option C P2-5).
   DefMacro!("\\author{}", sub[(body)] {
     let toks = body.unlist();
+    let ands = and_runs(&toks, &[T_CS!("\\and")])?.runs;
     let mut lines: Vec<Token> = Vec::new();
     let mut named = false;
     let mut i = 0;
     while i < toks.len() {
       let t = toks[i];
       i += 1;
-      if t == T_CS!("\\and") {
+      if let Some(end) = ands.get(&(i - 1)) {
+        i = *end;
         // (before a later `\name`, which opens a group of its own, it separates nothing more)
         if toks[i..].iter().find(|u| **u != T_SPACE!()) != Some(&T_CS!("\\name")) {
           lines.extend(Tokenize!("and").unlist());
@@ -71,12 +78,19 @@ LoadDefinitions!({
           break;
         }
       }
-      for u in &toks[start + 1..i - 1] {
-        if *u == T_CS!("\\and") {
+      // (the argument read on its own: an `\affil`'s or `\email`'s is a note's, whose separators the block's query
+      // leaves to the note)
+      let argument = &toks[start + 1..i - 1];
+      let inner = and_runs(argument, &[T_CS!("\\and")])?.runs;
+      let mut k = 0;
+      while k < argument.len() {
+        if let Some(end) = inner.get(&k) {
           lines.extend(Tokenize!("and").unlist());
           lines.push(T_SPACE!());
+          k = *end;
         } else {
-          lines.push(*u);
+          lines.push(argument[k]);
+          k += 1;
         }
       }
       lines.push(T_CS!("\\\\"));
@@ -129,5 +143,132 @@ LoadDefinitions!({
   DefMacro!(
     "\\journalname{}",
     "\\@add@frontmatter{ltx:note}[role=journal]{#1}"
+  );
+  // interact.cls v1.05 (2017/07/31; 90 of the 124 copies papers ship, 1711.05866's; v1.01-v1.03 the same), what
+  // papers call (run 347: 46 interact papers), a copy without one leaving it to the paper (`DefinitionOrigin::Fallback`):
+  // - :493-527 the keyword-like blocks under the abstract: `{abbreviations}` "Abbreviations: …" (10 papers: 1901.07015,
+  //   2102.04929), and the classifications `{jelcode}` "JEL CLASSIFICATION" and `{pacscode}` "PACS CLASSIFICATION",
+  //   as `{amscode}` (2306.12924, 2307.12161; 1610.08232, 1611.05230), and v4.0's (2015/06/03, 1709.02637's copy :342)
+  //   `{classcode}` "AMS Subject Classification";
+  // - :167-226 the upright Greek letters `\ualpha`…`\uvarphi`, `\upartial` and their bold forms `\ubalpha`…
+  //   (`\mathup`, the upright math version, and `\mathbup` its bold, here `\boldsymbol` of the upright letter;
+  //   `\umu` 5 papers: 1709.03559, 2207.06123; `\upartial` 4, `\upi` 3,
+  //   `\uomega`, `\udelta`);
+  // - :635-640 `{tabnote}[heading]`, a note under a table, its heading italic (1711.08876, 1712.07848, 2304.00568);
+  // - :237-243 `\jvol`, `\jnum`, `\jmonth`, `\jyear`, `\jname`, the running head's journal issue (2208.03936,
+  //   2211.01356): stored, as the class stores them; :268 `\history`, the article history `\received` sets
+  //   (2609.06135); :591 `\figwidth`/`\figheight`; :642 `\x`, the column spacing of a full-width table;
+  // - v4.0 :572-573 `\colrule`, `\botrule`, the tables' inner and closing rules (1709.02637).
+  {
+    let _class = OriginGuard::new(DefinitionOrigin::Fallback);
+    RawTeX!(
+      r"\newcommand\abbreviationsname{Abbreviations}
+\newenvironment{abbreviations}{\par\noindent{\bfseries \abbreviationsname: }\ignorespaces}{\par}
+\newcommand\jelcodename{JEL CLASSIFICATION}
+\newcommand\pacscodename{PACS CLASSIFICATION}
+\def\tabnotefont{\footnotesize}
+\newenvironment{tabnote}{\par\tabnotefont\@ifnextchar[{\@tabnote}{\@tabnote[]}}{\par}
+\def\@tabnote[#1]{\def\@Tempa{#1}\ifx\@Tempa\@empty\else{\itshape #1:}\ \fi\ignorespaces}
+\def\jname#1{\gdef\@jname{#1}}\gdef\@jname{}
+\def\jvol#1{\gdef\@jvol{#1}}\gdef\@jvol{00}
+\def\jnum#1{\gdef\@jnum{#1}}\gdef\@jnum{00}
+\def\jmonth#1{\gdef\@jmonth{#1}}\gdef\@jmonth{Month}
+\def\jyear#1{\gdef\@jyear{#1}}\gdef\@jyear{20XX}
+\def\history#1{\received{#1}}
+\newdimen\figheight
+\newdimen\figwidth
+\def\x{@{\extracolsep{\fill}}}
+\def\Hline{\noalign{\ifnum0=`}\fi\hrule \@height 2\arrayrulewidth \futurelet\@tempa\@xhline}
+\def\colrule{\\[-7.5pt]\hline\\[-5pt]}
+\def\botrule{\\[-7.7pt]\Hline}"
+    );
+    DefEnvironment!(
+      "{jelcode}",
+      "<ltx:classification scheme='JEL'>#body</ltx:classification>"
+    );
+    DefEnvironment!(
+      "{pacscode}",
+      "<ltx:classification scheme='PACS'>#body</ltx:classification>"
+    );
+    DefEnvironment!(
+      "{classcode}",
+      "<ltx:classification scheme='AMS'>#body</ltx:classification>"
+    );
+    DefMath!("\\ualpha", "α", font => { shape => "upright", forceshape => true });
+    DefMath!("\\ubeta", "β", font => { shape => "upright", forceshape => true });
+    DefMath!("\\ugamma", "γ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\udelta", "δ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\uepsilon", "ϵ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\uzeta", "ζ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\ueta", "η", font => { shape => "upright", forceshape => true });
+    DefMath!("\\utheta", "θ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\uiota", "ι", font => { shape => "upright", forceshape => true });
+    DefMath!("\\ukappa", "κ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\ulambda", "λ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\umu", "μ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\unu", "ν", font => { shape => "upright", forceshape => true });
+    DefMath!("\\uxi", "ξ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\upi", "π", font => { shape => "upright", forceshape => true });
+    DefMath!("\\urho", "ρ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\usigma", "σ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\utau", "τ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\uupsilon", "υ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\uphi", "ϕ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\uchi", "χ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\upsi", "ψ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\uomega", "ω", font => { shape => "upright", forceshape => true });
+    DefMath!("\\uvarepsilon", "ε", font => { shape => "upright", forceshape => true });
+    DefMath!("\\uvartheta", "ϑ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\uvarpi", "ϖ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\uvarphi", "φ", font => { shape => "upright", forceshape => true });
+    DefMath!("\\upartial", "∂", font => { shape => "upright", forceshape => true });
+    DefMacro!("\\ubalpha", "\\boldsymbol{\\ualpha}");
+    DefMacro!("\\ubbeta", "\\boldsymbol{\\ubeta}");
+    DefMacro!("\\ubgamma", "\\boldsymbol{\\ugamma}");
+    DefMacro!("\\ubdelta", "\\boldsymbol{\\udelta}");
+    DefMacro!("\\ubepsilon", "\\boldsymbol{\\uepsilon}");
+    DefMacro!("\\ubzeta", "\\boldsymbol{\\uzeta}");
+    DefMacro!("\\ubtheta", "\\boldsymbol{\\utheta}");
+    DefMacro!("\\ubiota", "\\boldsymbol{\\uiota}");
+    DefMacro!("\\ubkappa", "\\boldsymbol{\\ukappa}");
+    DefMacro!("\\ublambda", "\\boldsymbol{\\ulambda}");
+    DefMacro!("\\ubmu", "\\boldsymbol{\\umu}");
+    DefMacro!("\\ubnu", "\\boldsymbol{\\unu}");
+    DefMacro!("\\ubxi", "\\boldsymbol{\\uxi}");
+    DefMacro!("\\ubpi", "\\boldsymbol{\\upi}");
+    DefMacro!("\\ubrho", "\\boldsymbol{\\urho}");
+    DefMacro!("\\ubsigma", "\\boldsymbol{\\usigma}");
+    DefMacro!("\\ubtau", "\\boldsymbol{\\utau}");
+    DefMacro!("\\ubupsilon", "\\boldsymbol{\\uupsilon}");
+    DefMacro!("\\ubphi", "\\boldsymbol{\\uphi}");
+    DefMacro!("\\ubchi", "\\boldsymbol{\\uchi}");
+    DefMacro!("\\ubpsi", "\\boldsymbol{\\upsi}");
+    DefMacro!("\\ubomega", "\\boldsymbol{\\uomega}");
+    DefMacro!("\\ubvarepsilon", "\\boldsymbol{\\uvarepsilon}");
+    DefMacro!("\\ubvartheta", "\\boldsymbol{\\uvartheta}");
+    DefMacro!("\\ubvarpi", "\\boldsymbol{\\uvarpi}");
+    DefMacro!("\\ubvarphi", "\\boldsymbol{\\uvarphi}");
+    DefMacro!("\\ubpartial", "\\boldsymbol{\\upartial}");
+    // (:203 `\uboldeta`, not `\ubeta`, which is the upright beta; :194-195 `\let\uvarrho\varrho`, `\let\uvarsigma
+    // \varsigma`, and :223-224 their bold forms, `\boldsymbol{\varrho}`, `\boldsymbol{\varsigma}`)
+    DefMacro!("\\uboldeta", "\\boldsymbol{\\ueta}");
+    Let!("\\uvarrho", "\\varrho");
+    Let!("\\uvarsigma", "\\varsigma");
+    DefMacro!("\\ubvarrho", "\\boldsymbol{\\varrho}");
+    DefMacro!("\\ubvarsigma", "\\boldsymbol{\\varsigma}");
+  }
+  // interact.cls:562-573 (v1.05, 1603.08785's copy; v1.01-v1.03 alike, 44 copies) `\appendix`: the appendix sections
+  // "A", subsections "A.1", the equations, figures and tables numbered within each appendix, "A1" (reset by each
+  // appendix section). The kernel's `\appendix` (article_cls.rs `\@appendix`) runs first for the `ltx:appendix` units.
+  // Perl has no interact binding; the OmniBus base left the kernel's (equation 4, figure 2): KNOWN_PERL_ERRORS #1098.
+  // Guard `perfect_kernel_batch78q::appendix_counters_interact_elsart`.
+  RawTeX!(
+    r"\renewcommand\appendix{\@appendix
+  \setcounter{equation}{0}\renewcommand\theequation{\thesection\arabic{equation}}%
+  \setcounter{section}{0}\renewcommand\thesection{\Alph{section}}%
+  \setcounter{subsection}{0}\renewcommand\thesubsection{\thesection.\arabic{subsection}}%
+  \setcounter{table}{0}\renewcommand\thetable{\thesection\@arabic\c@table}%
+  \setcounter{figure}{0}\renewcommand\thefigure{\thesection\@arabic\c@figure}%
+  \@addtoreset{equation}{section}\@addtoreset{table}{section}\@addtoreset{figure}{section}}"
   );
 });

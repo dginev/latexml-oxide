@@ -1,0 +1,27 @@
+% mechanism: an image or a rule printed beside an address — in its link, `\href{mailto:…}{\rule{1ex}{1ex}\,…}`, in its
+%   wrapper, `\textit{\rule{1ex}{1ex}\,…}` — is not the address's (RT1 row 56, `dom::wraps_text`): the switch off cuts the
+%   address's text alone, the link and its rule staying in the entry, the e-mail in its font; `=2` only
+% witness: review revP1br2 S3's probe r4_href_icon (synthetic)
+% oracle:  pdflatex 0 errors; "1 Univ X, ann.able@x.org, Dept Y"; "2 Univ Z, bob.baker@z.org, Dept W", a square rule before
+%   each address, Bob's italic
+% engines: off: `Univ X, <ref href="mailto:…"><rule/></ref>, Dept Y` + `Email: ann.able@x.org`; `Univ Z, <rule/>, Dept W` +
+%   the e-mail italic. rust P1c `=2` (= P1br2): the wrapper taken whole, the rule moved into each e-mail. A decline (the entry
+%   given back whole) writes no e-mail at all (LO4 `=2`): worse. The fix needs the link's characters' own positions (the
+%   lexer reads `\href`'s text as `arg(2)`'s ink, no `InkTable` record) and a reach preferring them where the cover holds
+%   an icon (a recorded fact: `InkTable` icons) — deferred (P1c report)
+% expect:  0 errors, 0 warnings; creators as off: each entry keeps its icon where it printed
+% status:  RED (P1br2, P1c) — no guard
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\usepackage{hyperref}
+\begin{document}
+\title{An icon beside an address}
+\author[1]{Ann Able}
+\author[2]{Bob Baker}
+\affil[1]{Univ X, \href{mailto:ann.able@x.org}{\rule{1ex}{1ex}\,ann.able@x.org}, Dept Y}
+\affil[2]{Univ Z, \textit{\rule{1ex}{1ex}\,bob.baker@z.org}, Dept W}
+\date{}
+\maketitle
+Text.
+\end{document}

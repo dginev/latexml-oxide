@@ -597,6 +597,87 @@ fn remove_paths(paths: Vec<(u64, std::path::PathBuf)>) {
   }
 }
 
+/// Set by the first allocation failure that reaches a binary's allocation-failure hook.
+static ALLOC_FAILURE: AtomicBool = AtomicBool::new(false);
+
+std::thread_local! {
+  /// Whether this thread is inside the allocation-failure hook (const-initialized, no destructor:
+  /// reading it allocates nothing).
+  static IN_ALLOC_FAILURE_HOOK: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// The first call of a binary's allocation-failure hook. The hook then runs alone and without
+/// allocating: it writes its line ([`write_stderr_unlocked`]), sweeps the run's trees
+/// ([`try_remove_registered_paths`]) and ends the process ([`exit_now`]).
+///
+/// When memory is spent, anything the hook allocates fails as well and calls the hook again, on the
+/// same thread. Run again, it would allocate again: a fleet child printed 6,048 nested
+/// `Fatal:oom:alloc_failed` lines in a millisecond (each re-entry failing at reading
+/// `RUST_BACKTRACE`, 1 byte). Or it would wait forever. The old hook formatted a backtrace while
+/// holding the standard library's backtrace lock and the stderr lock. Symbolizing the backtrace
+/// allocated, the re-entered hook waited on the backtrace lock, and the watchdog's own
+/// `Fatal:timeout` waited on stderr. The child stayed parked until the harness killed it as
+/// unresponsive and re-leased its paper (run 351, 2026-10-14; 1804.07640 among the papers). So a
+/// re-entry on the same thread ends the process at once. An allocation failure on another thread
+/// meanwhile waits for the first thread's exit, and exits itself if that has not come in ten seconds.
+pub fn enter_alloc_failure_hook() {
+  if IN_ALLOC_FAILURE_HOOK
+    .try_with(|inside| inside.replace(true))
+    .unwrap_or(true)
+  {
+    exit_now(EXIT_OOM);
+  }
+  if ALLOC_FAILURE.swap(true, Ordering::AcqRel) {
+    for _ in 0..10 {
+      thread::sleep(Duration::from_secs(1));
+    }
+    exit_now(EXIT_OOM);
+  }
+}
+
+/// Ends the process now with `code`: `_exit`, without the atexit handlers, destructors and stream
+/// flushes of [`std::process::exit`], any of which can allocate or wait on a lock held by a thread
+/// that will never release it.
+pub fn exit_now(code: i32) -> ! {
+  #[cfg(unix)]
+  // SAFETY: `_exit` takes no pointers and does not return.
+  unsafe {
+    libc::_exit(code)
+  }
+  #[cfg(not(unix))]
+  std::process::exit(code)
+}
+
+/// Writes `args` to standard error in one `write(2)`, formatted into a stack buffer (cut at 1 KiB).
+/// Unlike `eprintln!` it neither allocates nor takes the standard library's stderr lock. That makes
+/// it safe in an allocation-failure hook, and for the watchdog when a stuck thread holds that lock.
+pub fn write_stderr_unlocked(args: std::fmt::Arguments) {
+  struct StackLine {
+    bytes: [u8; 1024],
+    len:   usize,
+  }
+  impl std::fmt::Write for StackLine {
+    fn write_str(&mut self, text: &str) -> std::fmt::Result {
+      let take = text.len().min(self.bytes.len() - self.len);
+      self.bytes[self.len..self.len + take].copy_from_slice(&text.as_bytes()[..take]);
+      self.len += take;
+      Ok(())
+    }
+  }
+  let mut line = StackLine { bytes: [0; 1024], len: 0 };
+  let _ = std::fmt::write(&mut line, args);
+  #[cfg(unix)]
+  // SAFETY: a write of `len` initialized bytes from a stack buffer to the standard error descriptor.
+  unsafe {
+    libc::write(2, line.bytes.as_ptr().cast(), line.len);
+  }
+  #[cfg(not(unix))]
+  {
+    use std::io::Write;
+    let _ = std::io::stderr().write_all(&line.bytes[..line.len]);
+  }
+}
+
 /// The exit code claimed when the watchdog (or an allocation-failure hook) begins to exit, 0 while none is. Its sweep
 /// deletes the run's trees while the other threads still run, and one finishing in that window must neither exit first
 /// with its own code (the first `exit` wins) nor hand on output built over the deleted trees: [`park_if_exiting`] holds
@@ -665,9 +746,10 @@ impl Watchdog {
         if cancelled.load(Ordering::Relaxed) {
           return;
         }
-        eprintln!(
-          "Fatal:timeout:wallclock latexml-oxide: main-level wall-clock timeout after {timeout_secs}s — exiting process"
-        );
+        // Unlocked: a thread stuck while holding the stderr lock must not hold up the exit.
+        write_stderr_unlocked(format_args!(
+          "Fatal:timeout:wallclock latexml-oxide: main-level wall-clock timeout after {timeout_secs}s — exiting process\n"
+        ));
         // Run the optional pre-exit hook (e.g. cortex_worker writing a
         // structured Status:conversion:3 placeholder to its --output path)
         // BEFORE exiting. The hook is invoked at most once per process.
@@ -694,13 +776,13 @@ impl Watchdog {
         if cancelled.load(Ordering::Relaxed) {
           return;
         }
-        eprintln!(
+        write_stderr_unlocked(format_args!(
           "Fatal:oom:rss latexml-oxide: resident memory {}MB exceeded the {}MB ceiling — exiting \
            process. This document needs a larger ceiling: rerun with a higher --max-memory on a \
-           machine with enough free RAM.",
+           machine with enough free RAM.\n",
           rss / 1024,
           max_rss_kb / 1024
-        );
+        ));
         claim_exit(EXIT_OOM);
         run_pre_exit_hook(EXIT_OOM);
         remove_registered_paths();

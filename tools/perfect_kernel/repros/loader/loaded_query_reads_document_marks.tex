@@ -1,0 +1,23 @@
+% witness: synthetic (sibling of aa_copy/aa_copy_loads_amsmath_one_answer.tex): a document takes back the mark of a
+%          package it loaded (`\let\ver@amsmath.sty\relax`), and marks foo only inside a group
+% oracle:  pdflatex 0 errors: "amsmath not loaded. foo loaded. foo not loaded. amsmath not loaded.", the equation
+%          unnumbered (amsmath's `\nonumber` stays in force)
+% engines: rust int166a = 0 errors, "amsmath loaded. foo not loaded. foo not loaded. amsmath loaded." (the records)
+% expect:  0 errors, 0 warnings; pdflatex's four answers
+% status:  RED (int166a) -> GREEN (GA2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\makeatletter
+\newcommand\st[1]{#1 \@ifpackageloaded{#1}{loaded}{not loaded}.}
+\expandafter\let\csname ver@amsmath.sty\endcsname\relax
+\edef\a{\st{amsmath}}
+{\@namedef{ver@foo.sty}{x}\xdef\b{\st{foo}}}
+\edef\c{\st{foo}}
+\makeatother
+\begin{document}
+\a{} \b{} \c{} \st{amsmath}
+\begin{equation}
+a=b\nonumber
+\end{equation}
+\end{document}

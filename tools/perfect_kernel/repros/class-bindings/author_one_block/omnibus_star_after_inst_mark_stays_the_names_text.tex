@@ -1,0 +1,18 @@
+% mechanism: the emitter's kept `\inst` marks are a name's own (`RCreator::class_requests`, the reading's): a `*`
+%   printed after a name's `\inst` mark is the name's text, no request of the label `*`, also where another name of a
+%   whole-list block requests `*` (`\inst{1*}`). Read per block, Ann's `*` had matched Bob's `\inst` and gained a shown
+%   "∗" beside the "*" her name keeps
+% witness: synthetic (OmniBus's whole-list `\author`, inst_support_sty.rs `\inst`); the aa twin's 2407.13764 (`Qianqian Wang\inst{1,2}* \and Vickie Ye\inst{1*}`, llncs's list as one block: P23b's step 2 attempt)
+% oracle:  none: an unknown class is no pdflatex input; the shape is aa's (`aa_star_after_inst_mark_stays_the_names_text`)
+% engines: int169a (632698e1d8) and P23b: Ann Able's personname "Ann Able*" and a sup "∗"; P23c: "Ann Able*" alone
+% expect:  0 errors, 1 warning (no binding for nosuchclass); Ann Able's name "Ann Able*" with no mark beside it; Bob Baker's mark "∗"
+% status:  GREEN (P23c; guard perfect_kernel_batchp23b::a_star_after_an_inst_mark_is_the_names_text)
+% preload: ar5iv.sty
+\documentclass{nosuchclass}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1,2}* \and Bob Baker\inst{1*} \and Cy Coe\inst{2}}
+\institute{Univ A \and Univ B}
+\maketitle
+Text.
+\end{document}

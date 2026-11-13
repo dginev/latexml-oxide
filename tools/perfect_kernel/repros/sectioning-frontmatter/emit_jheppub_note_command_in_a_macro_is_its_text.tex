@@ -1,0 +1,37 @@
+% mechanism: a contact command inside an author block (jheppub's `\note{…}` = `\lx@add@contact[role=note]{…}`, Perl's
+%   jheppub.sty.ltxml:39; `\emailAdd`) is written as the command it is only where its span prints that one event: a
+%   macro holding a name and the command, or two commands, spans them all (the one source token), so the command
+%   written there was the whole macro, for each item — the name twice as a note, a note moved to the next author. There
+%   the item is its text, a note of a contact command a `<contact role="note">` (`emitter::emit::item_call`); `=2` only
+% witness: review revLO3 1 (no corpus paper: 354 jheppub/jcappub/jinstpub papers using `\note`, none with a macro
+%   holding one in an `\author`); the contact commands of 1403.1099, 2001.06318, 2308.04217 (one event a span) stay
+%   written as their commands
+% oracle:  pdflatex (the shortened jheppub.sty beside this repro) 0 errors: "Ann Ablea Bob Bakera Dan Dornb and Cy
+%   Coleb", "a Univ A", "b Univ B", the footnotes "1 Corresponding author.", "2 Also at Univ C.", "3 Visiting Univ D.",
+%   "4 Equal contribution."; Dan Dorn's `\emailAdd` runs inside `\maketitle`'s author group, its address printed nowhere
+%   (kept, as `jheppub_emailadd_in_author_is_the_authors`)
+% engines: perl: the notes on their authors, dan@ Ann Able's (the n-th rule), a creator "and Cy Cole"; rust off: Dan
+%   Dorn's address his, the notes on their authors; LO3 `=2`: "Ann Able" also a note of Ann Able, "Visiting Univ D." Dan
+%   Dorn's, Dan Dorn's e-mail "Dan Dorn" and his address
+% expect:  0 errors; `=2` 5 Warnings (a macro's span written as its text: two names, three notes, markup lost), the
+%   creators as with the switch off
+% status:  RED (LO3 `=2`) -> GREEN (perfect_kernel_batchlo4::a_contact_command_in_a_macro_is_its_text)
+% preload: ar5iv.sty
+\documentclass[a4paper,11pt]{article}
+\usepackage{jheppub}
+\newcommand{\ann}{Ann Able\note{Corresponding author.}}
+\newcommand{\twonotes}{\note{Also at Univ C.}\note{Visiting Univ D.}}
+\newcommand{\dan}{Dan Dorn\emailAdd{dan@b.org}}
+\newcommand{\cor}{\note{Equal contribution.}}
+\title{T}
+\author[a]{\ann}
+\author[a]{Bob Baker\twonotes}
+\author[b]{\dan}
+\author[b]{and Cy Cole\cor}
+\affiliation[a]{Univ A}
+\affiliation[b]{Univ B}
+\abstract{Abs.}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -31,7 +31,8 @@ single-level expansion tolerates — our/Perl recursion guard is load-bearing),
 also invokes at CONSTRUCTION time inside elements — the wrapper leaks tokens
 into the DOM), `titleps_sty.rs`/`schooldocs_sty.rs` (purely presentational
 page-style surfaces with no XML counterpart; schooldocs hides its one semantic
-command inside a `\fancypagestyle` body both engines discard),
+command inside a `\fancypagestyle` body, which Perl discards and ours stores as the
+style, read but never run),
 `frontespizio_sty.rs` (the package typesets its title page in a SECOND pdflatex
 run on a generated file and re-includes it as a graphic — external compilation,
 out of scope like shell-escape; the binding forces the package's own inline
@@ -55,7 +56,10 @@ bindings of the same justified kind: `floatrow_sty.rs` (58i: LaTeXML's locked `\
 `\@floatcapt`, so the kernel's caption material is pointed at it) and `enotez_sty.rs` (58l: the package fills its list
 only from the previous run's `.aux`). Phase 59 added `g_brief_cls.rs`/`g_brief2_cls.rs` (59o: the letter's sender and
 addressee live only in a first-page style LaTeXML never typesets; they become frontmatter at `\begin{g-brief}`, user
-ruling 2026-10-01). A raw-first attempt is still the default for every new cluster; a new binding
+ruling 2026-10-01). Batch 68u added `beilstein_cls.rs`/`lni_cls.rs` (their author blocks live in accumulators only
+the refused `\maketitle` reads, built through an `\author` the kernel's or authblk's lock refuses; OXIDIZED_DESIGN #644)
+and `apa6_cls.rs`/`apa_cls.rs` (the numbered author forms, apa6.cls:745-777, read only by the refused `\maketitle`).
+A raw-first attempt is still the default for every new cluster; a new binding
 requires a justification of this kind in the file header.
 
 > **Stages.** The error-free stage (S0∧S1) closed 2026-09-17; the program now measures content preservation and markup
@@ -157,6 +161,6 @@ semantics, side-notes …) are cataloged in
 | [ARCHITECTURE_THEMES.md](ARCHITECTURE_THEMES.md) | Design brief: the twelve kernel mechanisms behind the recurring root causes (group/mode stacks, seam binding, `\halign`, token stream, engine persona, loader/VFS, typed parameters, the horizontal list, bibliographies, the regression net, box sizes, math ranking) with tex.web/latex.ltx models, witnesses, fix shapes and ordering |
 | [KERNEL_CAPABILITIES.md](KERNEL_CAPABILITIES.md) | **The approved generalized kernel-capability program** (2026-09-05): K1–K19 with source of truth, abstraction, landing plan, guards, order |
 | [gemini.md](gemini.md) | Open-task brief for the second collaborating agent (no open tasks since 2026-10-04) |
-| [archive/](archive/) | Frozen: the phase 59-62 close (`PERFECT_KERNEL_PHASE59_62_CLOSE_2026-10-04.md`: sweeps #135-148, the ranked path, the stream-G log), the old root-causer preamble (`AGENT_PREAMBLE_W3_2026-09-23.md`, superseded by `.claude/agents/root-causer.md`), Gemini round 13 (`gemini_ROUND13_2026-09-29.md`); the phase-56 and phase-57/58 ledgers (`LEDGER_PHASE56_2026-09-27.md`, `LEDGER_PHASE57_58_2026-10-02.md`), landed/stopped/closed plans (`PLANS_DONE_PHASE56_2026-09-27.md`, `PLANS_CLOSED_2026-10-02.md`), the KERNEL_CAPABILITIES status log through 09-24 and its landed designs (`KERNEL_CAPABILITIES_LANDED_2026-10-02.md`), superseded PERFECT_KERNEL notes (phase 56; the phase-57/58 plan and corpus-wide scoreboard s113-s130, `PERFECT_KERNEL_PHASE57_58_PLAN_2026-10-02.md`), DIFFICULT_CASES before its 2026-10-02 compaction, CLUSTERS (sweeps 2–25), and the 09-17/09-19 snapshots (recall triage, semantic-markup audit, red-test triage, Windows validation) |
+| [archive/](archive/) | Frozen: the phase 59-62 close (`PERFECT_KERNEL_PHASE59_62_CLOSE_2026-10-04.md`: sweeps #135-148, the ranked path, the stream-G log), the 2026-10 close status with its superseded "Still to close" list, the s130-s138 scoreboard and the 2026-09-27 off-the-path leads (`PERFECT_KERNEL_CLOSE_2026-10-04.md`, moved at the 2026-11 close), the old root-causer preamble (`AGENT_PREAMBLE_W3_2026-09-23.md`, superseded by `.claude/agents/root-causer.md`), Gemini round 13 (`gemini_ROUND13_2026-09-29.md`); the phase-56 and phase-57/58 ledgers (`LEDGER_PHASE56_2026-09-27.md`, `LEDGER_PHASE57_58_2026-10-02.md`), landed/stopped/closed plans (`PLANS_DONE_PHASE56_2026-09-27.md`, `PLANS_CLOSED_2026-10-02.md`), the KERNEL_CAPABILITIES status log through 09-24 and its landed designs (`KERNEL_CAPABILITIES_LANDED_2026-10-02.md`), superseded PERFECT_KERNEL notes (phase 56; the phase-57/58 plan and corpus-wide scoreboard s113-s130, `PERFECT_KERNEL_PHASE57_58_PLAN_2026-10-02.md`), DIFFICULT_CASES before its 2026-10-02 compaction, CLUSTERS (sweeps 2–25), and the 09-17/09-19 snapshots (recall triage, semantic-markup audit, red-test triage, Windows validation) |
 
 Branch discipline: all of this lives on the `perfect_kernel` branch, pushed at checkpoints.

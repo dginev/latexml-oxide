@@ -1,0 +1,22 @@
+% mechanism: a run of a cut holds its environments in pairs by their meanings and the digestion's frames (`field_notes::EnvironmentStep`, `emitter::Field::environments`), as `events::formula_extent`'s come from
+%   digestion (spelled before Z4a)
+% witness: review revZ3r2 (no corpus witness). The guard's table: `\bx…\ex` (a macro pair, this file), `\bb…\ee` (`\let` copies), `\detokenize{\begin}`, `\detokenize{\end}`, `\ifx\zz\end`;
+%   review revZ4a: `$\begin{array}{c}a\end{array}$` (an environment a formula holds is the formula's), `\begin{tabular}{c}a\\ b\end{tabular}`, `\begin{ff}…\end{ff}`
+%   (a `\newenvironment` around a tabular), `\begin{ec}…\end{ec}` (one around a center), each also with the switch on (`perfect_kernel_batchz4::a_piece_holds_its_environments_whole`)
+% oracle:  pdflatex 0 errors, each shape: the table or the words printed, then ", 2 Univ Y"
+% engines: Perl has no cut. A macro pair, `\let` copies: E 1, W 1, the last cell "d" lost, on int142a and Z3r3 alike (false negatives). `\detokenize`, `\ifx`: the two entries one, nothing lost, E 0 (false positives, against int142a).
+%   The array in a formula: one entry on Z4a (its frames counted twice); the switch on, Z4a: a tabular's, a center's cells lost, `ff`'s piece replaced by "2 Univ Y", the array's "a" twice
+% expect:  0 errors, 0 warnings; affiliation "1 Univ X a b c d" and "2 Univ Y"; the other shapes two entries too
+% status:  RED (revZ3r2) -> GREEN (perfect_kernel_batchz4::an_environment_by_its_frames, OD #980); renamed without `_red` (ST1)
+\documentclass{revtex4-1}
+\def\bx{\begin{tabular}{cc}}\def\ex{\end{tabular}}
+\let\bb\begin\let\ee\end
+\newenvironment{ff}{\begin{tabular}{c}}{\end{tabular}}
+\newenvironment{ec}{\begin{center}}{\end{center}}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{note}}
+\affiliation{$^{1}$Univ X \bx a&b\\ c&d\ex, $^{2}$Univ Y}
+\maketitle
+Body.
+\end{document}

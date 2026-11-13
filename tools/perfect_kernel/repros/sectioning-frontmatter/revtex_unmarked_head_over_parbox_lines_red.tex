@@ -1,0 +1,21 @@
+% mechanism: REVTeX's group rule (`group_or_marked_affiliation`): an unmarked head over marked lines, all inside one
+%   `\parbox`: the head rule (2109.01501's) reads the lines of a block, not of a box it holds, so the whole box goes to a
+%   nameless creator, silently; plain `$^{1,2}$` marks, so not the label-parts reading (`requested_label_keys`)
+% witness: synthetic (P4b3e sibling sweep; `$^{1*,2}$` gives the same)
+% oracle:  pdflatex (TL 2025, revtex4-2, -no-shell-escape) 0 errors: "Ann Able1,2 and Bob Baker2,3 / Univ A, Town A /
+%          2 Univ B, Town B / 3 Univ C, Town C"
+% engines: P4b3base, P4b3e: both names bare, a nameless creator holding "Univ A, Town A 2 Univ B, Town B 3 Univ C, Town C"
+%          (0 errors, 0 warnings)
+% expect:  Ann Able "Univ A, Town A", "2 Univ B, Town B"; Bob Baker "2 Univ B, Town B", "3 Univ C, Town C"; else a Warning
+% status:  RED (pre-existing; reach unmeasured)
+% moves:   post-merge
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1,2}$}
+\author{Bob Baker$^{2,3}$}
+\affiliation{\parbox{\linewidth}{Univ A, Town A\\ $^{2}$Univ B, Town B\\ $^{3}$Univ C, Town C}}
+\begin{abstract}x\end{abstract}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,25 @@
+% mechanism: a list's items are numbered only under `\@nmbrlisttrue` (latex.ltx:16024 `\item`; `\list` sets it false,
+%   :15860, `\usecounter` true, :16048). memoir.cls:4580's raw `\list` keeps the outer `\@listctr`, so inside
+%   `thebibliography` (now `\@listctr` = enumiv, as `\usecounter{enumiv}` leaves it) an unnumbered list must not take
+%   enumiv's numbers; a `\usecounter` list there, and both shapes in an enumerate, keep theirs.
+% witness: synthetic (GA1d: the `\@listctr` fix alone numbered the first list "0()A", "0()B")
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: [1] First. Inner one. Inner two. [2] Second. (1) Counted one.
+%   (2) Counted two. / 1. Outer. Nested. [1] Counted.
+% engines: rust int163a as expected; GA1d1 (the `\@listctr` fix without the `\if@nmbrlist` test) "0()A"/"0()B" refnums
+%   on the first inner list
+% expect:  0 errors, 1 warning (memoir's `\@iffirstamp`, as on the base); the unnumbered lists carry no refnum
+% status:  RED (GA1d1) -> GREEN (GA1d)
+\documentclass{memoir}
+\newcounter{foo}
+\begin{document}
+\begin{thebibliography}{9}
+\bibitem{a} First.
+ \begin{list}{}{}\item Inner one.\item Inner two.\end{list}
+\bibitem{b} Second.
+ \begin{list}{(\arabic{foo})}{\usecounter{foo}}\item Counted one.\item Counted two.\end{list}
+\end{thebibliography}
+\begin{enumerate}\item Outer.
+ \begin{list}{}{}\item Nested.\end{list}
+ \begin{list}{[\arabic{foo}]}{\usecounter{foo}}\item Counted.\end{list}
+\end{enumerate}
+\end{document}

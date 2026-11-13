@@ -1,0 +1,20 @@
+% witness: 0704.3719, 0801.4910 (`\preprint{\arXivid{…}}`); 0709.3309, 0801.2642 (in the references); hep-ph0112089
+%          (`\@firstaubox`)
+% oracle:  pdflatex with 0709.3309's JHEP3.cls: "arXiv:0704.3719 [hep-th]", "[1] B. Author, A paper, arXiv:0706.2722."; 0 errors
+% engines: rust 67int10 = 2 errors, 1 warning (undefined `\arXivid`, `\@firstaubox`)
+% expect:  0 errors, 0 warnings; both identifiers linked to arxiv.org/abs/, typewriter
+% status:  RED (67int10) -> GREEN (68k)
+% preload: ar5iv.sty
+\documentclass{JHEP3}
+\title{A JHEP Paper}
+\author{Ann Author\\ Somewhere University\\ E-mail: \email{ann@x.org}}
+\preprint{\arXivid{0704.3719 [hep-th]}}
+\abstract{An abstract.}
+\keywords{Field theory}
+\begin{document}
+\makeatletter\setbox\@firstaubox\hbox{A. Author}\makeatother
+Text.
+\begin{thebibliography}{1}
+\bibitem{a} B.~Author, \emph{A paper}, \arXivid{0706.2722}.
+\end{thebibliography}
+\end{document}

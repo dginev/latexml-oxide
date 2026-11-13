@@ -1,0 +1,25 @@
+% mechanism: an AASTeX `\affil` e-mail line led by a mark one name requests (`\affil{$^*$ Email: zz@uni.edu}` under
+%   `Bob Baker\altaffilmark{2,*}`) is that author's e-mail even where the address spells no one: the line goes as the
+%   affiliation entry its mark labels (aas_support_sty.rs `\affiliation`), its address line the Kind step's
+%   (`kind_entry_addresses`), placed by the Link step on the entry's one carrier (`entry_address_owners`,
+%   `owner:only-carrier`; FIDELITY_CHARTER §4 R1, marks win; OD #992). The block form (`\affil{$^1$ Uni One \\ $^2$ Uni
+%   Two \\ $^*$ Email: …}`, the entries loop) and a line of its own (`group_or_marked_affiliation`) are both read so.
+% witness: 1808.01089's shape (`Yang Gao\altaffilmark{2, 3, *}` … `\affil{$^*$ Email: gaoyang25@…}`, whose address
+%   spells him), with an address no one spells
+% oracle:  pdflatex (TL 2025, emulateapj) 0 errors: "Ann Able1, Bob Baker2,* and Cat Cole1,2 / 1 Uni One / 2 Uni Two /
+%   * Email: zz@uni.edu"
+% engines: rust int155a1 (`placed_email_line_calls`, the mark read only as a request of the first author showing it,
+%   the address's spelling first): the block's nameless creator; perl: an affiliation of the last author
+% expect:  0 errors, 0 warnings; Ann Able Uni One, Bob Baker Uni Two and zz@uni.edu (name "Email: "), Cat Cole both
+% status:  RED (int155a1) -> GREEN (Z18l)
+\documentclass{emulateapj}
+\begin{document}
+\title{T}
+\author{Ann Able\altaffilmark{1}, Bob Baker\altaffilmark{2,*} and Cat Cole\altaffilmark{1,2}}
+\affil{$^1$ Uni One \\
+$^2$ Uni Two \\
+$^*$ Email: zz@uni.edu}
+\begin{abstract}A.\end{abstract}
+\section{Intro}
+Text.
+\end{document}

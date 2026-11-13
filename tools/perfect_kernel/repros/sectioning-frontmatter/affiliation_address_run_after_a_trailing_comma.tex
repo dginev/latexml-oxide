@@ -1,0 +1,22 @@
+% mechanism: a marked affiliation list whose entry ends in a separator (`\IEEEauthorrefmark{1}Univ A,\\`) followed by an
+%   address line (`\{ann, bob\}@a.edu;\\`) and another marked entry. The address run, under an affiliation two authors
+%   request, continues that entry, spliced at the length the entry had when the run was read; the entry's trailing
+%   separator was trimmed when the next entry was pushed, so the splice point lay past its end: a panic, "range end
+%   index 11 out of range for slice of length 10" (affiliations.rs `place_address_runs`). Now each entry but the last is
+%   trimmed once its runs are in place, as it prints: "Univ A," then the addresses.
+% witness: 2509.13772 (IEEEtran `\IEEEauthorrefmark{2}CS\&CCS, …, Nankai University,\\ \{…\}@mail.nankai.edu.cn, …;\\`;
+%   "range end index 44 out of range for slice of length 43" on int54a and on)
+% oracle:  pdflatex 0 errors; "Ann Alpha∗ , Bob Beta∗ , Cy Gamma†", "∗ Univ A,", "{ann, bob}@a.edu;", "† Univ B, cy@b.edu"
+% engines: perl: not run (Perl reads the block as one affiliation line); rust int61a: Fatal (panic caught)
+% expect:  0 errors, 0 warnings; Ann and Bob's affiliation "Univ A," + break + "{ann, bob}@a.edu", Cy's "Univ B, cy@b.edu"
+% status:  GREEN (78v)
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Alpha\IEEEauthorrefmark{1}, Bob Beta\IEEEauthorrefmark{1}, Cy Gamma\IEEEauthorrefmark{2}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ A,\\
+\{ann, bob\}@a.edu;\\
+\IEEEauthorrefmark{2}Univ B, cy@b.edu}}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,25 @@
+% mechanism: a document that defines its own `\maketitle` over REVTeX's (2509.25344: `\def\maketitle{\@author@finish
+%   \title@column\titleblock@produce\suppressfloats[t]}`, without the class's `\let\date…`/`\let\author\@gobble` lines)
+%   keeps the setters live after it, so the switch REVTeX's own `\maketitle` makes (revtex4_cls.rs
+%   `switch_off_author_block_after_maketitle`) yields to it, as the kernel cleanup does (`\maketitle:redefined`): a
+%   `\date` after it is the document's date
+% witness: 2509.25344 (`\date{\today}` after its own `\maketitle`; RB1's first cut lost its `<date role="creation">`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "T / Ann Able / Univ X, Town / A. / Text."
+% engines: rust int159a, RB1: 0 errors; Ann Able (Univ X, Town); `<date role="creation">May 5</date>`
+% expect:  0 errors, 0 warnings; Ann Able (Univ X, Town); the date May 5
+% status:  GREEN
+\documentclass[aps,prl]{revtex4-2}
+\makeatletter
+\def\maketitle{\@author@finish\title@column\titleblock@produce\suppressfloats[t]}
+\makeatother
+\begin{document}
+\title{T}
+\author{Ann Able}
+\affiliation{Univ X, Town}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+\date{May 5}
+Text.
+\end{document}

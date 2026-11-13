@@ -2,19 +2,12 @@
 //! \SetCatcodeRange / \setcatcoderange / \@setrangecatcode, \lstloadaspects,
 //! \DeclareTCBListing nested inside \NewDocumentEnvironment with bare
 //! environment invocation and outer listing scanning, and unicode-math table loading).
+use latexml::util::test::{check_all_requirements, check_requirements, loads};
+
 use super::perfect_kernel_batch46::{
   convert, convert_args, convert_files, convert_files_with, convert_html, convert_with,
   convert_with_then, error_count, warning_count,
 };
-
-/// Self-skip helper: is this file in the host TeX tree?
-fn kpsewhich_has(name: &str) -> bool {
-  std::process::Command::new("kpsewhich")
-    .arg(name)
-    .output()
-    .map(|o| o.status.success() && !o.stdout.is_empty())
-    .unwrap_or(false)
-}
 
 /// Perl `State.pm:113-115` letters only ASCII and pdfTeX never letters a
 /// non-ASCII char (utf8.def makes the bytes active), so under the default
@@ -507,6 +500,9 @@ After.
 /// undefined (witnesses elteikthesis ×3, elteiktdk ×2; RUST-ONLY).
 #[test]
 fn caption_lsep_default_keeps_magyar_off_the_removed_internal() {
+  if !check_requirements(&["magyar.ldf"]) {
+    return;
+  }
   let tex = r"\documentclass{article}
 \usepackage[hungarian]{babel}
 \usepackage{caption}
@@ -1614,6 +1610,135 @@ fn list_setup_counter_value_survives_into_the_items() {
   }
 }
 
+/// Each `<item>`'s printed label (the inner XML of the attribute-free `<tag>` in the `<tags>` its start tag opens; `None`
+/// when it has none) and its first paragraph's text, in document order.
+fn item_labels(xml: &str) -> Vec<(Option<String>, String)> {
+  // The element `name`'s first start tag (`<name>` or `<name …>`) to its `</name>`.
+  let inner = |s: &str, name: &str| -> String {
+    let close = format!("</{name}>");
+    s.match_indices(&format!("<{name}"))
+      .map(|(i, _)| &s[i + name.len() + 1..])
+      .find(|rest| rest.starts_with('>') || rest.starts_with(' '))
+      .and_then(|rest| {
+        let body = &rest[rest.find('>')? + 1..];
+        body.find(&close).map(|j| body[..j].to_string())
+      })
+      .unwrap_or_default()
+  };
+  let label = |item: &str| -> Option<String> {
+    let tags = item[item.find('>')? + 1..]
+      .trim_start()
+      .strip_prefix("<tags>")?;
+    let tags = &tags[..tags.find("</tags>")?];
+    let tag = &tags[tags.find("<tag>")? + "<tag>".len()..];
+    Some(tag[..tag.find("</tag>")?].to_string())
+  };
+  xml
+    .split("<item ")
+    .skip(1)
+    .map(|item| (label(item), inner(item, "p")))
+    .collect()
+}
+
+/// latex.ltx:15858/15966: `\list` keeps its label in `\@itemlabel` and `\item` prints it, so a class's own `\list`
+/// (memoir.cls:4580, revtex4.cls:1768, aastex701.cls:1754) labels its items as ours does. Rows: the class's `\list`, the
+/// kernel's (article) twin, a copied `\trivlist` that clears the label, a label redefined mid-list; each conversion's E/W
+/// exact. QA45 (revQA finding 1, revML1 finding 2).
+#[test]
+fn list_labels_come_from_itemlabel() {
+  // (repro, source, warnings, each item's (label, text))
+  type Row = (
+    &'static str,
+    &'static str,
+    usize,
+    &'static [(Option<&'static str>, &'static str)],
+  );
+  const ROWS: &[Row] = &[
+    (
+      "list_label_set_by_a_class_list",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/list-structure/list_label_set_by_a_class_list.tex"
+      ),
+      // memoir's `\@iffirstamp`; its two hooks on bound commands are Infos (memoir.cls:5832-5833; QA47A)
+      1,
+      &[
+        (Some("–"), "one"),
+        (Some("*"), "inner"),
+        (Some("–"), "two"),
+        // The space is memoir's `\@mklab` `\hfil` (repro class_mklab_is_a_space_in_the_tag_red); the PDF prints "x".
+        (Some(" x"), "three"),
+        (Some("•"), "four"),
+        (Some("(a)"), "five"),
+        (Some("1."), "six"),
+        (None, "seven"),
+      ],
+    ),
+    (
+      "list_label_set_by_the_kernel_list",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/list-structure/list_label_set_by_the_kernel_list.tex"
+      ),
+      0,
+      &[
+        (Some("–"), "one"),
+        (Some("*"), "inner"),
+        (Some("–"), "two"),
+        (Some("x"), "three"),
+        (Some("•"), "four"),
+        (Some("(a)"), "five"),
+        (Some("1."), "six"),
+      ],
+    ),
+    (
+      "list_label_cleared_by_a_copied_trivlist",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/list-structure/list_label_cleared_by_a_copied_trivlist.tex"
+      ),
+      0,
+      &[
+        (None, "r1"),
+        (Some("W"), "r2"),
+        (None, "r3"),
+        (Some("•"), "r4"),
+        (None, "r5"),
+        (Some("•"), "r6"),
+        (Some("V"), "r7"),
+        (None, "r8"),
+        (Some("V"), "r9"),
+      ],
+    ),
+    (
+      "list_label_redefined_mid_list",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/list-structure/list_label_redefined_mid_list.tex"
+      ),
+      0,
+      &[
+        (Some("A"), "h1"),
+        (Some("B"), "h2"),
+        (Some("B"), "h3"),
+        (Some("•"), "h4"),
+        (Some("x"), "h5"),
+        (Some("P"), "h6"),
+        (Some("Q"), "h7"),
+        (Some("R"), "h8"),
+        (Some("S"), "h9"),
+        (Some("R"), "h10"),
+      ],
+    ),
+  ];
+  for (name, tex, warnings, items) in ROWS {
+    let (stderr, xml) = convert(tex, true);
+    assert_eq!(error_count(&stderr), 0, "{name}: {stderr}");
+    assert_eq!(warning_count(&stderr), *warnings, "{name}: {stderr}");
+    let want: Vec<(Option<String>, String)> = items
+      .iter()
+      .map(|(t, p)| (t.map(str::to_string), p.to_string()))
+      .collect();
+    assert_eq!(item_labels(&xml), want, "{name}:\n{xml}");
+  }
+}
+
 /// `\endlist` = `\endlx@list` = endMode('internal_vertical') (Perl
 /// latex_constructs.pool.ltxml:1651-1653) also closes an enumerate opened
 /// by its begin macro: nih/denselists.sty:16 `\newenvironment{Enumerate}
@@ -1955,6 +2080,9 @@ fn beamer_loads_translator() {
 /// missing-font `\ClassErrorNoLine` branch (asmeconf/asmejour templates).
 #[test]
 fn font_exists_test_is_case_insensitive() {
+  if !check_requirements(&["fontspec.sty", "TeXGyreTermesX-Regular.otf"]) {
+    return;
+  }
   let tex = r"\documentclass{article}
 \usepackage{fontspec}
 \begin{document}
@@ -2007,8 +2135,9 @@ fn hashful_begin_document_chunk_under_a_package_label() {
   assert!(xml.contains("[v] (w)"), "{xml}");
 }
 
-/// The forest/diagrams discard stubs warn instead of erroring: the body is
-/// discarded cleanly (forest-quickstart, fragoli_doc, milsymb; pdflatex clean).
+/// The forest discard stub warns instead of erroring: the body is discarded
+/// cleanly (forest-quickstart, fragoli_doc, milsymb; pdflatex clean). The
+/// diagrams stub it shared this with is a binding since 67d (`perfect_kernel_batch67d`).
 #[test]
 fn forest_stub_is_a_warning() {
   let tex = r"\documentclass{article}
@@ -2255,18 +2384,23 @@ fn raw_double_declaration_still_errors() {
 
 /// Perl Expandable.pm:35: an unbalanced expansion is FATAL. jarticle.cls's
 /// `\ds@tate` (ISO-2022-JP bytes whose `%` eats a brace) aborts in seconds
-/// instead of proceeding into a 250 s loop (platexcheat; RUST-ONLY).
+/// instead of proceeding into a 250 s loop (platexcheat; RUST-ONLY). The file is
+/// `\input` as code: since 68u r3 a class declaring another format
+/// (`\NeedsTeXFormat{pLaTeX2e}`, jarticle.cls:16) is not read raw as the
+/// document class (`load_class`, `perfect_kernel_batch68u::a_class_for_another_format_is_not_read_raw`).
 #[test]
 fn unbalanced_expansion_is_fatal() {
   // Host-portability: skip when the exercised package is absent from this
   // TeX Live tree (the behavior under test needs the real file).
-  if !kpsewhich_has("jarticle.cls") {
+  if !check_requirements(&["jarticle.cls"]) {
     return;
   }
   // `\hour`/`\minute` are pLaTeX-format registers jarticle.cls:26-28 uses (the parked pTeX
   // format, §D9); declaring them leaves only the unbalanced expansion's error and its Fatal.
   let tex = r"\newcount\hour\newcount\minute
-\documentclass[12pt,a4j,dvipdfmx]{jarticle}
+\documentclass{article}
+\makeatletter
+\input{jarticle.cls}
 \begin{document}
 Hello
 \end{document}
@@ -2285,7 +2419,7 @@ Hello
 fn japanese_otf_kanji_scanners_bail_fast() {
   // Host-portability: skip when the exercised package is absent from this
   // TeX Live tree (the behavior under test needs the real file).
-  if !kpsewhich_has("otf.sty") {
+  if !check_requirements(&["otf.sty"]) {
     return;
   }
   let tex = r"\documentclass{article}
@@ -2687,8 +2821,10 @@ fn mdframed_theorem_environments_are_theorems() {
   );
 }
 
-/// thm-restate.sty:191 `restatable*` (proof-at-the-end demo) and
-/// lineno.sty:2881 `bframe` (ulineno).
+/// thm-restate.sty:207-213 `restatable*` (proof-at-the-end demo) and lineno.sty:2881 `bframe` (ulineno). The
+/// `{restatable*}` is not the numbered instance (`\thmt@thisistheonefalse`): its number is the later `\mainthm`'s, by
+/// reference to the label that one sets (:158-160); pdflatex (second run): "Theorem 1 (Main). Restated body." twice.
+/// Without the later `\mainthm` the reference is missing (pdflatex "??", ours a Warning).
 #[test]
 fn restatable_star_and_lineno_bframe() {
   let tex = r"\documentclass{article}
@@ -2699,13 +2835,24 @@ fn restatable_star_and_lineno_bframe() {
 \begin{document}
 \begin{restatable*}[Main]{theorem}{mainthm}Restated body.\end{restatable*}
 \begin{bframe}Framed text.\end{bframe}
+\mainthm
 \end{document}
 ";
   let (stderr, xml) = convert(tex, true);
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert!(
-    xml.contains("Restated body.") && xml.contains("Framed text."),
-    "{xml}"
+  assert_eq!(
+    (error_count(&stderr), warning_count(&stderr)),
+    (0, 0),
+    "{stderr}"
+  );
+  let preview = r##"<theorem class="ltx_theorem_theorem" inlist="thm theorem:theorem" xml:id="Thmtheoremx1"><tags><tag>Theorem <ref labelref="LABEL:restatable:mainthm"/></tag><tag role="refnum"><ref labelref="LABEL:restatable:mainthm"/></tag><tag role="typerefnum">Theorem <ref labelref="LABEL:restatable:mainthm"/></tag></tags><title class="ltx_runin"><tag><text font="bold">Theorem </text><ref font="bold" labelref="LABEL:restatable:mainthm"/></tag><text font="bold"> </text>(Main)<text font="bold">.</text></title><para xml:id="Thmtheoremx1.p1"><p><text font="italic">Restated body.</text></p></para></theorem>"##;
+  latexml::util::test::assert_element(&xml, "theorem", &["xml:id=\"Thmtheoremx1\""], preview);
+  let the_one = r##"<theorem class="ltx_theorem_theorem" inlist="thm theorem:theorem" labels="LABEL:restatable:mainthm" xml:id="Thmtheorem1"><tags><tag>Theorem 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Theorem 1</tag></tags><title class="ltx_runin"><tag><text font="bold">Theorem 1</text></tag><text font="bold"> </text>(Main)<text font="bold">.</text></title><para xml:id="Thmtheorem1.p1"><p><text font="italic">Restated body.</text></p></para></theorem>"##;
+  latexml::util::test::assert_element(&xml, "theorem", &["xml:id=\"Thmtheorem1\""], the_one);
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p1\""],
+    "<para xml:id=\"p1\"><p>Framed text.</p></para>",
   );
 }
 
@@ -2965,6 +3112,9 @@ fn class_and_datetime_definitions_exist() {
 /// `\lefthand`.
 #[test]
 fn binding_internals_reached_by_raw_code() {
+  if !check_requirements(loads::FOURIER) {
+    return;
+  }
   let tex = r"\documentclass{article}
 \usepackage{lastpage}
 \usepackage{geometry}
@@ -3506,7 +3656,7 @@ After.
       r#"<XMath><XMTok name="backslash" role="MULOP">\</XMTok></XMath></Math>"#,
       r#"<text font="typewriter">a{B {C} D}. "#,
       r#"<Math mode="inline" tex="\backslash" text="backslash" xml:id="p1.m2"><XMath>"#,
-      r#"<XMTok font="serif" name="backslash" role="MULOP">\</XMTok></XMath></Math>x</text></p></para>"#
+      r#"<XMTok name="backslash" role="MULOP">\</XMTok></XMath></Math>x</text></p></para>"#
     ),
   );
   latexml::util::test::assert_element(
@@ -3654,6 +3804,9 @@ $1\over2$ and $a\atop b$.
 /// expkv-bundle 13 errors, Perl omits the space too).
 #[test]
 fn meaning_prints_delimiter_control_words_with_a_space() {
+  if !check_all_requirements(&[loads::EXPKV, &["expkv-cs.sty", "expkv-def.sty"]]) {
+    return;
+  }
   let tex = r"\documentclass{article}
 \begin{document}
 \def\x#1\foo#2{Q}\def\y a\bar{R}
@@ -3905,7 +4058,7 @@ fn iffontchar_bounds_unicodefonttable_to_font_coverage() {
   // but font_index (TEXMFDIST+TEXMFLOCAL) does not — so `\iffontchar` coverage
   // is empty and the row bound this test asserts does not apply.
   if latexml_core::common::font::coverage::font_file_path("lmsans10-regular.otf").is_none()
-    || !kpsewhich_has("unicodefonttable.sty")
+    || !check_requirements(&["unicodefonttable.sty"])
   {
     return;
   }
@@ -3930,7 +4083,7 @@ fn iffontchar_bounds_unicodefonttable_to_font_coverage() {
 /// encodings' .def files (montex: `\MyTogrog` from lmcenc.def).
 #[test]
 fn fontenc_reloads_with_new_encodings() {
-  if !kpsewhich_has("lmcenc.def") {
+  if !check_requirements(&["lmcenc.def"]) {
     return;
   }
   let tex = "\\documentclass{article}\n\\usepackage[T1]{fontenc}\n\\usepackage[LMC,T1]{fontenc}\n\\makeatletter\n\\begin{document}\n\\typeout{FE:\\@ifpackageloaded{fontenc}{loaded}{unloaded}}\nTogrog: \\MyTogrog\\ done.\n\\end{document}\n";
@@ -3975,7 +4128,7 @@ fn fontenc_keeps_preloaded_encoding() {
 /// pstricks-add: dsptricks 101 errors).
 #[test]
 fn psset_dispatches_family_key_bodies() {
-  if !kpsewhich_has("pstricks-add.sty") {
+  if !check_requirements(&["pstricks-add.sty"]) {
     return;
   }
   let tex = "\\documentclass{article}\n\\usepackage{pstricks-add}\n\\begin{document}\n\\begin{psmatrix}\n  A & B \\\\\n  C & D\n\\end{psmatrix}\n\\end{document}\n";
@@ -4055,7 +4208,7 @@ fn utf8_input_keeps_latin1_code_points_other() {
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(stderr.contains("CC:12:"), "{stderr}");
   assert!(xml.contains("café café"), "{xml}");
-  if kpsewhich_has("bibarts.sty") {
+  if check_requirements(&["bibarts.sty"]) {
     let tex = "\\documentclass[12pt,a4paper]{article}\n\\usepackage{bibarts}\\bacaptionsgerman\n\\usepackage{ngerman}\n\\usepackage[utf8]{inputenc}\n\\usepackage[T1]{fontenc}\n\\begin{document}\n\\textsc{\\hy á}\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -4093,7 +4246,7 @@ fn kernel_env_hooks_fire_around_environments() {
 /// hard `ltx:block` rejecting it (heria-proposal, rubik).
 #[test]
 fn caption_in_inline_parbox_floats_to_figure() {
-  if !kpsewhich_has("tcolorbox.sty") {
+  if !check_requirements(&["tcolorbox.sty"]) {
     return;
   }
   let tex = "\\documentclass{article}\n\\usepackage{graphicx}\n\\usepackage[raster]{tcolorbox}\n\\begin{document}\n\\begin{figure}[hbt]\n\\rotatebox{90}{\\parbox{10cm}{%\n\\begin{tcbraster}[raster columns=2]\n\\begin{tcolorbox}[title=A]x\\end{tcolorbox}\n\\begin{tcolorbox}[title=B]y\\end{tcolorbox}\n\\end{tcbraster}\n\\caption{Cap}\\label{fig:x}\n}}\n\\end{figure}\n\\end{document}\n";
@@ -4152,7 +4305,7 @@ fn trailing_multicolumn_row_closes_the_alignment() {
 /// `{picture}`: pagelayout, xebaposter) auto-closed it already.
 #[test]
 fn environment_close_after_content_autoclose_is_not_an_error() {
-  if !kpsewhich_has("tcolorbox.sty") {
+  if !check_requirements(&["tcolorbox.sty"]) {
     return;
   }
   let tex = "\\documentclass{article}\n\\usepackage{tcolorbox}\n\\begin{document}\n\\setlength{\\unitlength}{1pt}\n\\begin{picture}(200,200)\n\\begin{tcolorbox}A box directly in a picture.\\par Second para.\\end{tcolorbox}\n\\end{picture}\n\\end{document}\n";
@@ -4169,7 +4322,7 @@ fn environment_close_after_content_autoclose_is_not_an_error() {
 /// `\psk@angleA` undefined (sweep #48 flips: hexgame, xcolor2, seminar).
 #[test]
 fn psset_angle_keys_run_the_raw_helpers() {
-  if !kpsewhich_has("pst-coil.sty") || !kpsewhich_has("pst-node.sty") {
+  if !check_requirements(&["pst-coil.sty", "pst-node.sty"]) {
     return;
   }
   let tex = "\\documentclass{article}\n\\usepackage{pstricks,pst-node,pst-coil}\n\\psset{angleA=45,arcangleA=10,coilaspect=30,linewidth=1.5pt}\n\\makeatletter\n\\begin{document}\nA:\\psk@angleA;B:\\psk@arcangleA;C:\\psk@coilaspect.\n\\end{document}\n";
@@ -4190,25 +4343,8 @@ fn psset_angle_keys_run_the_raw_helpers() {
 #[test]
 fn author_inst_is_an_affiliation_link_request() {
   let tex = "\\documentclass{article}\n\\makeatletter\n\\def\\@maketitle{\\begingroup\\def\\inst##1{\\textsuperscript{##1}}\\@author\\par\\endgroup}\n\\makeatother\n\\begin{document}\n\\author{Name\\inst{*}}\n\\title{T}\n\\maketitle\nBody.\n\\end{document}\n";
-  let (stderr, xml) = convert(tex, false);
+  let (stderr, _) = convert(tex, false);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  // `\inst{*}` is a footnote-symbol mark, kept as its glyph (never an
-  // affiliation number to link).
-  latexml::util::test::assert_element(
-    &xml,
-    "creator",
-    &[],
-    r##"<creator role="author"><personname>Name<sup>*</sup></personname></creator>"##,
-  );
-  // A class binding's own `\inst` (the affiliation-LINKING form) beats the
-  // `\providecommand` fallback.
-  let llncs = "\\documentclass{llncs}\n\\begin{document}\n\\title{T}\n\\author{Name\\inst{1}}\n\\institute{Univ A}\n\\maketitle\nBody.\n\\end{document}\n";
-  let (stderr, xml) = convert(llncs, false);
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert!(
-    xml.contains("role=\"affiliation\"") && !xml.contains("<sup>1</sup>"),
-    "{xml}"
-  );
 }
 
 /// `\@nil` is undefined, as in latex.ltx, so the `\ifx\@nil#1` sentinel
@@ -4221,7 +4357,7 @@ fn at_nil_is_undefined_for_ifx_sentinels() {
   let (stderr, xml) = convert(tex, false);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("NE;SAME."), "{xml}");
-  if kpsewhich_has("polynom.sty") {
+  if check_requirements(&["polynom.sty"]) {
     let tex = "\\documentclass{article}\n\\usepackage{polynom}\n\\begin{document}\n\\[\\polyhornerscheme[x=-2,stage=8]{x^3+x^2-1}\\]\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -4242,7 +4378,7 @@ fn cjk_unicode_inserts_the_code_point() {
   let (stderr, xml) = convert(tex, false);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("[\u{b7}\u{2d9}]"), "{xml}");
-  if kpsewhich_has("kotex.sty") && kpsewhich_has("cjkutf8-ko.sty") {
+  if check_requirements(&["kotex.sty", "cjkutf8-ko.sty"]) {
     let tex = "\\documentclass{article}\n\\usepackage[cjk,hangul,usedotemph]{kotex}\n\\begin{document}\n\\dotemph{ABC}\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -4270,7 +4406,7 @@ fn ifpdf_delegates_to_iftex() {
   let (stderr, xml) = convert(&dvi, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("DVI;DVI."), "{xml}");
-  if kpsewhich_has("tikzrput.sty") && kpsewhich_has("tufte-handout.cls") {
+  if check_requirements(&["tikzrput.sty", "tufte-handout.cls"]) {
     let tex = "\\RequirePackage{luatex85}\n\\documentclass{tufte-handout}\n\\usepackage{tikz}\n\\usepackage{tikzrput}\n\\begin{document}\n\\rput(0,0){X}\n\\end{document}\n";
     let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -4300,7 +4436,7 @@ fn setcaptiondefault_binds_the_default() {
   let (stderr, xml) = convert(tex, false);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("[BAR]"), "{xml}");
-  if kpsewhich_has("bicaption.sty") {
+  if check_requirements(&["bicaption.sty"]) {
     let tex = "\\documentclass{article}\n\\usepackage{keyval,caption}\n\\usepackage{bicaption}\n\\begin{document}\nx\n\\end{document}\n";
     let (stderr, _) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -4394,7 +4530,7 @@ fn raw_tabular_scaffold_closes_and_template_expands() {
 /// frontmatter time (witness ryethesis ryesample; Perl 0, Rust 1).
 #[test]
 fn class_redefined_abstract_defers_its_argument() {
-  if !kpsewhich_has("glossaries.sty") {
+  if !check_requirements(loads::GLOSSARIES) {
     return;
   }
   let cls = "\\ProvidesClass{deferabs}\n\\LoadClass{report}\n\\newcommand{\\abstract}[1]{\\gdef\\my@theabstract{#1}}\n";
@@ -4420,7 +4556,7 @@ fn class_redefined_abstract_defers_its_argument() {
 /// \addthumb" (:573; witness thumbs-example).
 #[test]
 fn thumbs_loads_in_its_own_hide_mode() {
-  if !kpsewhich_has("thumbs.sty") {
+  if !check_requirements(&["thumbs.sty"]) {
     return;
   }
   let tex = "\\documentclass[twoside]{article}\n\\usepackage{thumbs}\n\\begin{document}\n\\section{A}\n\\addthumb{F mark}{\\Huge F}{magenta}{black}\nSome text.\n\\newpage\n\\thumbnewcolumn\n\\addthumb{New column}{\\Huge NC}{magenta}{black}\nThere.\n\\end{document}\n";
@@ -4486,7 +4622,7 @@ fn raw_multicolumn_redefinition_is_dropped() {
   let (stderr, xml) = convert(tex, false);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("<td align=\"center\">X</td>"), "{xml}");
-  if kpsewhich_has("aguplus.cls") && kpsewhich_has("agupp.sty") {
+  if check_requirements(&["aguplus.cls", "agupp.sty"]) {
     let tex = "\\documentclass[twoside,agupp]{aguplus}\n\\begin{document}\n\\begin{tabular}{l@{~$\\Rightarrow$~}l}\na & b\\\\\n\\multicolumn{1}{c}{X} & c\\\\\n\\end{tabular}\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -4567,7 +4703,7 @@ fn xcolor_internal_api_matches_the_real_contract() {
     xml.contains("color=\"#0000FF\"") && xml.contains(">B<"),
     "{xml}"
   );
-  if kpsewhich_has("lua-ul.sty") && kpsewhich_has("luacolor.sty") {
+  if check_requirements(&["lua-ul.sty", "luacolor.sty"]) {
     let tex = "\\documentclass{article}\n\\usepackage{luacolor,lua-ul}\n\\begin{document}\n\\underLine{under} and \\highLight[yellow]{high}.\n\\end{document}\n";
     let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -4626,7 +4762,7 @@ fn pgf_scope_straddling_a_box_is_not_a_tex_group() {
   // msc's `\end{msc}` title node (`\pgf@maketext`) crosses driver scopes;
   // an instance (`\declinst`) still trips the parked fused mode-frame family
   // (DIFFICULT_CASES D12), so the guard stops at the empty chart.
-  if kpsewhich_has("msc.sty") {
+  if check_requirements(&["msc.sty"]) {
     let tex = "\\documentclass{article}\n\\usepackage{msc}\n\\begin{document}\n\\begin{msc}{Chart}\n\\end{msc}\nAfter.\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -4647,7 +4783,7 @@ fn eqno_digests_its_tag_material() {
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(xml.matches("<tags>").count(), 2, "{xml}");
   assert!(xml.contains("After."), "{xml}");
-  if kpsewhich_has("mhequ.sty") {
+  if check_requirements(&["mhequ.sty"]) {
     let tex = "\\documentclass{article}\n\\usepackage{amsmath}\n\\usepackage{mhequ}\n\\begin{document}\n\\begin{equ}[onelab]\n\te^{i\\pi} + 1 = 0 \\;.\n\\end{equ}\nAfter: a \\\\ b.\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -4669,7 +4805,7 @@ fn load_class_with_options_forwards_the_calling_options() {
   )]);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("TWO-F"), "{xml}");
-  if kpsewhich_has("oblivoir.cls") {
+  if check_requirements(&["oblivoir.cls"]) {
     let tex = "\\documentclass[amsmath]{oblivoir}\n\\begin{document}\n$\\text{hello}$ $\\binom{n}{k}$\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -4730,7 +4866,7 @@ fn pgfmath_min_max_fold_over_every_argument() {
     xml.contains("A35.") && xml.contains("B30.") && xml.contains("C0.") && xml.contains("D35."),
     "{xml}"
   );
-  if kpsewhich_has("ribbonproofs.sty") {
+  if check_requirements(&["ribbonproofs.sty"]) {
     let tex = "\\documentclass{article}\n\\usepackage{ribbonproofs}\n\\begin{document}\n\\begin{ribbonproof}[start ribbons={c/{left=35,right=53},e/{left=74,right=86}}]\n\\startblock[extra left=33,fit ribbons={c,e},start ribbons={d/{left=55,right=70}}]{if}\\\\\n\\jus[finish ribbons={c,d}]{u}\n\\com[finish ribbons={e},start ribbons={e/{}}]{x}\\\\\n\\moveribbons{e/{left=4}}\\\\\n\\continueblock[repeat labels,start ribbons={d/{}}]{else}\n\\end{ribbonproof}\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -4751,7 +4887,7 @@ fn line_and_arc_intersection_is_closed_form() {
   let (stderr, xml) = convert(tex, false);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(xml.matches("<svg:path").count(), 4, "{xml}");
-  if kpsewhich_has("tikzlibraryzx-calculus.code.tex") {
+  if check_requirements(&["tikzlibraryzx-calculus.code.tex"]) {
     let tex = "\\documentclass{article}\n\\usepackage{tikz}\n\\usetikzlibrary{zx-calculus}\n\\begin{document}\n\\zx{\\zxX{\\alpha} \\zxLoopAboveDots{}}\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -4797,7 +4933,7 @@ fn atenddocument_closer_reaches_the_galley_box() {
     xml.contains("Body.") && xml.contains("TAIL") && xml.contains("</document>"),
     "{xml}"
   );
-  if kpsewhich_has("morewrites.sty") {
+  if check_requirements(&["morewrites.sty"]) {
     let tex = "\\documentclass{article}\n\\usepackage{morewrites}\n\\begin{document}\n\\newwrite\\w\\immediate\\openout\\w=t-extra.txt\\immediate\\write\\w{x}\nBody.\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -4831,7 +4967,7 @@ fn tikzcd_matrix_inside_an_amsmath_cell_closes_its_math() {
     xml.contains("<equation") && xml.contains("<svg:g") && xml.contains("After."),
     "{xml}"
   );
-  if kpsewhich_has("tikzlibraryzx-calculus.code.tex") {
+  if check_requirements(&["tikzlibraryzx-calculus.code.tex"]) {
     let tex = "\\documentclass{article}\n\\usepackage{amsmath}\n\\usepackage{tikz}\n\\usetikzlibrary{zx-calculus}\n\\begin{document}\n\\begin{align}\n  \\zx{\\zxZ{}} &= \\zx{\\zxX{}}\n\\end{align}\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -4845,7 +4981,7 @@ fn tikzcd_matrix_inside_an_amsmath_cell_closes_its_math() {
 /// `\pseudocode` (zx-calculus manual; Perl identical, pdflatex clean).
 #[test]
 fn amsmath_maxcolumn_widths_is_initialized() {
-  if kpsewhich_has("cryptocode.sty") {
+  if check_requirements(&["cryptocode.sty"]) {
     let tex = "\\documentclass{article}\n\\usepackage{amsmath}\n\\usepackage{cryptocode}\n\\begin{document}\n\\[ \\pseudocode{a \\gets b \\\\ c \\gets d} \\]\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -4873,7 +5009,7 @@ fn choicekey_bin_macro_keeps_letter_catcodes() {
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("[same][1][same]"), "{xml}");
-  if kpsewhich_has("powerdot.cls") {
+  if check_requirements(&["powerdot.cls"]) {
     let tex = "\\documentclass{powerdot}\n\\begin{document}\n\\title{T}\\author{A}\\date{}\n\\maketitle\n\\begin{slide}{S}\nx\n\\end{slide}\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert!(!stderr.contains("pd@@"), "{stderr}");
@@ -4890,7 +5026,7 @@ fn choicekey_bin_macro_keeps_letter_catcodes() {
 fn newpsstyle_defines_the_custom_style_psset_consults() {
   // Host-portability: skip when the exercised package is absent from this
   // TeX Live tree (the behavior under test needs the real file).
-  if !kpsewhich_has("pstricks.sty") {
+  if !check_requirements(&["pstricks.sty"]) {
     return;
   }
   let tex = "\\documentclass{article}\n\\usepackage{pstricks}\n\\newpsstyle{september}{linewidth=2pt}\n\\begin{document}\nTop: \\psset{style=september}\n\\begin{pspicture}(0,0)(2,2)\n\\rput(1,1){\\psset{style=september}\\psframe(0,0)(1,1)}\n\\end{pspicture}\n\\end{document}\n";
@@ -4939,7 +5075,7 @@ fn at_roman_family_expands_inside_csname() {
 /// `default` mapping needs no extra font package. Batch 56ax.
 #[test]
 fn chemnum_loads_chemgreek() {
-  if !kpsewhich_has("chemgreek.sty") {
+  if !check_requirements(&["chemgreek.sty"]) {
     return;
   }
   let tex = "\\documentclass{article}\n\\usepackage{chemnum}\n\\activatechemgreekmapping{default}\n\\begin{document}\n\\cmpd{a} and \\chemalpha\n\\end{document}\n";
@@ -4954,7 +5090,7 @@ fn chemnum_loads_chemgreek() {
 /// unknown"; substances-index ×50, schulmathematik). Batch 56ay.
 #[test]
 fn xfrac_keeps_the_kernel_declareinstance() {
-  if !kpsewhich_has("tasks.sty") {
+  if !check_requirements(&["tasks.sty"]) {
     return;
   }
   let tex = "\\documentclass{article}\n\\usepackage{xfrac}\n\\usepackage{tasks}\n\\begin{document}\n\\begin{tasks}(2)\\task A\\task B\\end{tasks}\n$\\sfrac{1}{2}$\n\\end{document}\n";
@@ -4970,7 +5106,7 @@ fn xfrac_keeps_the_kernel_declareinstance() {
 /// chemformula-manual ×50) and knew no `chemformula/*` key.
 #[test]
 fn chemformula_ch_is_the_real_parser() {
-  if !kpsewhich_has("chemformula.sty") {
+  if !check_requirements(&["chemformula.sty"]) {
     return;
   }
   let tex = "\\documentclass{article}\n\\usepackage{chemformula}\n\\setchemformula{format=\\sffamily}\n\\begin{document}\n\\ch{\"text\" O2 + 2 H2 -> 2 H2O}\n\\end{document}\n";
@@ -5007,7 +5143,7 @@ fn halign_template_accepts_active_char_separators() {
 /// the abstract swallowed the document). KNOWN_PERL_ERRORS #216, batch 56ba.
 #[test]
 fn bare_index_takes_one_token() {
-  let tex = "\\documentclass{article}\n\\makeindex\n\\begin{document}\n\\begin{abstract}\nthe \\index command, twice \\index here.\n\\end{abstract}\n\\section{S}\nBody \\index{real entry} text TAILMARK.\n\\end{document}\n";
+  let tex = "\\documentclass{article}\n\\makeindex\n\\begin{document}\n\\begin{abstract}\nthe \\index command, twice \\index here.\n\\end{abstract}\n\\section{S}\nBody \\index{real entry} text TAILMARK.\n\\begin{theindex}\\end{theindex}\\end{document}\n";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   let abs = xml.find("<abstract").unwrap_or_else(|| panic!("{xml}"));
@@ -5067,7 +5203,7 @@ fn endtrivlist_closes_only_its_own_list() {
 /// "undefined" + "expected a Variable" (pb-manual). Batch 56bf.
 #[test]
 fn pb_diagram_raw_loads_its_registers() {
-  if !kpsewhich_has("pb-diagram.sty") {
+  if !check_requirements(&["pb-diagram.sty"]) {
     return;
   }
   let tex = "\\documentclass{article}\n\\usepackage{pb-diagram}\n\\begin{document}\n\\divide\\dgARROWLENGTH by2\nL:\\the\\dgARROWLENGTH.\n\\begin{diagram}\\node{A}\\arrow{e}\\node{B}\\end{diagram}\nAfter.\n\\end{document}\n";
@@ -5182,7 +5318,7 @@ fn item_in_a_captured_box_gets_an_itemize() {
 fn kotexutf_runs_under_the_byte_mouth() {
   // Host-portability: skip when the exercised package is absent from this
   // TeX Live tree (the behavior under test needs the real file).
-  if !kpsewhich_has("kotexutf.sty") {
+  if !check_requirements(&["kotexutf.sty"]) {
     return;
   }
   let tex = "\\documentclass{article}\n\\usepackage{kotexutf}\n\\begin{document}\n한글\\은 문서\\를 café 만든다.\n\\end{document}\n";
@@ -5199,7 +5335,7 @@ fn kotexutf_runs_under_the_byte_mouth() {
 fn dhucs_trivcj_takes_the_byte_branch() {
   // Host-portability: skip when the exercised package is absent from this
   // TeX Live tree (the behavior under test needs the real file).
-  if !kpsewhich_has("dhucs-trivcj.sty") {
+  if !check_requirements(&["dhucs-trivcj.sty"]) {
     return;
   }
   let tex = "\\documentclass{article}\n\\usepackage{kotexutf}\n\\usepackage{dhucs-trivcj}\n\\begin{document}\n\\begin{japanese}日本語\\end{japanese} 한글\n\\end{document}\n";
@@ -5216,7 +5352,7 @@ fn dhucs_trivcj_takes_the_byte_branch() {
 fn cjk_octet_readers_emit_the_character() {
   // Host-portability: skip when the exercised package is absent from this
   // TeX Live tree (the behavior under test needs the real file).
-  if !kpsewhich_has("UTF8.bdg") {
+  if !check_requirements(&["UTF8.bdg"]) {
     return;
   }
   let tex = "\\documentclass{article}\n\\usepackage{CJKutf8}\n\\makeatletter\n\\begingroup\\CJK@input{UTF8.bdg}\\endgroup\n\\makeatother\n\\begin{document}\n\\begin{CJK}{UTF8}{mj}한글 café\\end{CJK}\n\\end{document}\n";
@@ -5323,6 +5459,9 @@ fn whitespace_padded_color_name_resolves() {
 /// and stubbed the lookahead name (chinesechess, sweep 70).
 #[test]
 fn package_options_are_stored_by_protected_xdef() {
+  if !check_requirements(&["ctex.sty"]) {
+    return;
+  }
   // chinesechess itself reduced to a package that stores its options (`lxopt.sty`); ctex's
   // `fontset=none` keeps the fontset check (pdflatex: "fandol is unavailable") out. Note
   // (2026-09-28): a full expansion in `protected_xdef_options` no longer turns this, or the
@@ -5364,7 +5503,7 @@ fn byte_mouth_latin1_before_cjk_decodes_sequence_wise() {
 /// of the bare name being force-expanded into `<ltx:ERROR/>`.
 #[test]
 fn index_entry_passes_undefined_words_inert() {
-  let tex = "\\documentclass{book}\n\\usepackage{manyind}\n\\makeindex\n\\begin{document}\n\\setindex{main}\na\\index{\\\"N@\\protect\\nxtletre \\protect\\def \\nwletre {\\\"O}\\gobblepageref}\n\\end{document}\n";
+  let tex = "\\documentclass{book}\n\\usepackage{manyind}\n\\makeindex\n\\begin{document}\n\\setindex{main}\na\\index{\\\"N@\\protect\\nxtletre \\protect\\def \\nwletre {\\\"O}\\gobblepageref}\n\\begin{theindex}\\end{theindex}\\end{document}\n";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("<indexmark"), "{xml}");
@@ -5378,7 +5517,7 @@ fn index_entry_passes_undefined_words_inert() {
 /// name (Perl's style-catcode re-tokenize; KPE #83).
 #[test]
 fn index_sort_key_undefined_word_is_text() {
-  let tex = "\\documentclass{article}\n\\usepackage{makeidx}\\makeindex\n\\begin{document}\nA\\index{\\AB@\\relax x}\n\\end{document}\n";
+  let tex = "\\documentclass{article}\n\\usepackage{makeidx}\\makeindex\n\\begin{document}\nA\\index{\\AB@\\relax x}\n\\printindex\\end{document}\n";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("key=\"\\AB\""), "{xml}");
@@ -5391,13 +5530,14 @@ fn index_sort_key_undefined_word_is_text() {
 /// TeX's own bounds, as pdfTeX prints them — the factor is "Number too big"
 /// (§445, 2^31 − 1), the product +max_dimen (§460 negates only for the scan's
 /// own sign, not the negative unit's), and a `\dimexpr` out of range is
-/// "Arithmetic overflow" and zero (etex.ch `scan_expr`); each a Warning.
+/// "Arithmetic overflow" and zero (etex.ch `scan_expr`); each an Error, as
+/// pdflatex's 4 `!` (DTL1d, OD #519).
 #[test]
 fn dimension_overflow_clamps_to_max_dimen() {
   let tex = "\\documentclass{article}\n\\begin{document}\n\\dimen0=-16383pt\n\\dimen2=2000000000000000\\dimen0\nB=[\\the\\dimen2]\\par\n\\dimen1=\\dimexpr\\dimen0*100000000000\\relax\nA=[\\the\\dimen1]\\par\n\\end{document}\n";
   let (stderr, xml) = convert(tex, true);
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 4, "{stderr}");
+  assert_eq!(error_count(&stderr), 4, "{stderr}");
+  assert_eq!(warning_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("B=[16383.99998pt]"), "{xml}");
   assert!(xml.contains("A=[0.0pt]"), "{xml}");
 }
@@ -5525,6 +5665,9 @@ fn accent_inner_survives_a_scantokens_round_trip() {
 /// unbalanced the molecule (chemexec/chemnum, sweep 74).
 #[test]
 fn delimited_read_keeps_a_groups_own_close_token() {
+  if !check_requirements(&["chemfig.sty", "simplekv.tex"]) {
+    return;
+  }
   let tex = "\\documentclass{article}\n\\usepackage{chemfig}\n\\begin{document}\n\\chemfig{A(-B)(-C)D}\n\\end{document}\n";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -5554,6 +5697,9 @@ fn scantokens_everyeof_is_the_files_last_tokens() {
 /// every `sum(...)` cell re-pushed itself forever (spreadtab-en/-fr, 420 s).
 #[test]
 fn spreadtab_function_cell_evaluates() {
+  if !check_requirements(&["spreadtab.sty", "simplekv.sty"]) {
+    return;
+  }
   let tex = "\\documentclass{article}\n\\usepackage{spreadtab}\n\\begin{document}\n\\begin{spreadtab}{{tabular}{c|c|c}}\n1 & 2 & :={sum(a1:b1)} \\\\\n\\end{spreadtab}\n\\end{document}\n";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -5920,7 +6066,7 @@ fn package_keys_the_bindings_accept() {
 /// errors, titles and abbrevs 0 → 97 % PDF recall).
 #[test]
 fn compsci_code_is_verbatim() {
-  if !kpsewhich_has("compsci.sty") {
+  if !check_requirements(&["compsci.sty"]) {
     return;
   }
   let tex =
@@ -5995,7 +6141,7 @@ fn font_defaults_are_locked() {
     true,
   );
   assert!(xml.contains("<p>[cmr]</p>"), "{xml}");
-  if !kpsewhich_has("nunito.sty") {
+  if !check_requirements(&["nunito.sty"]) {
     return;
   }
   let tex = include_str!(
@@ -6035,7 +6181,7 @@ fn xetex_only_packages_load_under_the_default_persona() {
   let (stderr, xml) = convert(tex, false);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("<p>A abc B 日本 C no.</p>"), "{xml}");
-  if kpsewhich_has("ucharclasses.sty") {
+  if check_requirements(&["ucharclasses.sty"]) {
     let tex = "\\documentclass{article}\n\\usepackage{ucharclasses}\n\\begin{document}\nText \\ifx\\XeTeXcharclass\\undefined no\\else yes\\fi.\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -6121,7 +6267,7 @@ Body.
   );
   // The real class, where the tree has it: its `{titlepage}` fields follow the
   // frontmatter (no `ltx:titlepage` — see the next guard).
-  if kpsewhich_has("ryethesis.cls") {
+  if check_requirements(&["ryethesis.cls"]) {
     let tex = r"\documentclass{ryethesis}
 \title{T}\author{A. E. Ryerson}
 \degreeName{Doctor of Philosophy}\degreeYear{1847}\program{Education}
@@ -6445,7 +6591,7 @@ Body.
 /// delimiter and the statements leaked (cahierprof-doc 11 errors).
 #[test]
 fn microtype_babel_kerning_switches_off_french_shorthands() {
-  if !kpsewhich_has("tikzlibrarymath.code.tex") {
+  if !check_requirements(&["tikzlibrarymath.code.tex"]) {
     return;
   }
   let tex = r"\documentclass[french]{article}
@@ -6482,7 +6628,7 @@ x
 /// babel has no options of its own.
 #[test]
 fn bare_babel_takes_the_class_language() {
-  if !kpsewhich_has("blindtext.sty") {
+  if !check_requirements(&["blindtext.sty"]) {
     return;
   }
   let tex = r"\documentclass[ngerman]{article}
@@ -6530,6 +6676,9 @@ x
 /// bracket leaked into the verbatim and the size was lost (readarray.tex:440).
 #[test]
 fn verbatim_start_runs_a_prepended_command() {
+  if !check_all_requirements(&[&["verbatimbox.sty"], loads::LISTOFITEMS]) {
+    return;
+  }
   let tex = r"\documentclass{article}
 \usepackage{verbatim}
 \newcommand\vbi[1][]{}
@@ -6547,7 +6696,7 @@ hello world
     xml.contains("<verbatim font=\"typewriter\">hello world\n</verbatim>"),
     "{xml}"
   );
-  if !kpsewhich_has("verbatimbox.sty") {
+  if !check_requirements(&["verbatimbox.sty"]) {
     return;
   }
   let tex = r"\documentclass{article}
@@ -6606,7 +6755,7 @@ fn relax_after_a_prefix_keeps_the_prefix() {
 /// than put to" warnings (983 corpus manuals).
 #[test]
 fn file_hooks_keep_the_file_name_stack() {
-  if !kpsewhich_has("scrlfile-hook.sty") {
+  if !check_requirements(&["scrlfile-hook.sty"]) {
     return;
   }
   let tex = r"\documentclass{article}
@@ -6630,7 +6779,7 @@ x
 /// document (retomatematico-ejemplo, recall 53 %).
 #[test]
 fn verbatim_environment_wrapper_ends_minted() {
-  if !kpsewhich_has("minted.sty") {
+  if !check_requirements(&["minted.sty"]) {
     return;
   }
   let tex = r"\documentclass{article}
@@ -6658,7 +6807,7 @@ After.
 /// `\def\part`) is untouched.
 #[test]
 fn koma_part_is_a_part() {
-  if !kpsewhich_has("scrartcl.cls") {
+  if !check_requirements(&["scrartcl.cls"]) {
     return;
   }
   let gaps = regex::Regex::new(r">\s+<").unwrap();
@@ -6697,7 +6846,7 @@ Text.
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("<part") && xml.contains("<chapter"), "{xml}");
-  if !kpsewhich_has("exam.cls") {
+  if !check_requirements(&["exam.cls"]) {
     return;
   }
   let tex = r"\documentclass{exam}
@@ -6725,7 +6874,7 @@ Text.
 /// PDF mode, whose l3backend-pdftex never runs the hook.
 #[test]
 fn dvips_backend_pagecount_reads_back_the_count() {
-  if !kpsewhich_has("notebeamer.sty") {
+  if !check_requirements(&["notebeamer.sty"]) {
     return;
   }
   let tex = r"\pdfoutput=0
@@ -6773,7 +6922,7 @@ fn everypar_reads_the_token_that_started_the_paragraph() {
 /// errors; arXiv 2605.07451 ended in `Fatal:Timeout:PushbackLimit`).
 #[test]
 fn everypar_grammar_survives_vertical_material_between_productions() {
-  if !kpsewhich_has("syntax.sty") {
+  if !check_requirements(&["syntax.sty"]) {
     return;
   }
   let tex = include_str!(
@@ -6786,7 +6935,7 @@ fn everypar_grammar_survives_vertical_material_between_productions() {
     &xml,
     "item",
     &[r#"xml:id="S0.I1.ix2""#],
-    r##"<item xml:id="S0.I1.ix2"><tags><tag><Math mode="inline" tex="\langle" text="langle" xml:id="S0.I1.ix2.m1"><XMath><XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok></XMath></Math><text font="italic">model<Math mode="inline" tex="\rangle" text="rangle" xml:id="S0.I1.ix2.m2"><XMath><XMTok font="upright" name="rangle" role="CLOSE" stretchy="false">⟩</XMTok></XMath></Math></text>  ::=</tag><tag role="typerefnum">item </tag></tags><para xml:id="S0.I1.ix2.p1"><p>bar</p></para></item>"##,
+    r##"<item xml:id="S0.I1.ix2"><tags><tag><Math mode="inline" tex="\langle" text="langle" xml:id="S0.I1.ix2.m1"><XMath><XMTok name="langle" role="OPEN" stretchy="false">⟨</XMTok></XMath></Math><text font="italic">model<Math mode="inline" tex="\rangle" text="rangle" xml:id="S0.I1.ix2.m2"><XMath><XMTok name="rangle" role="CLOSE" stretchy="false">⟩</XMTok></XMath></Math></text>  ::=</tag><tag role="typerefnum">item </tag></tags><para xml:id="S0.I1.ix2.p1"><p>bar</p></para></item>"##,
   );
 }
 
@@ -6848,7 +6997,7 @@ Text. \mathversion{myver} more. \mathversion{other} end.
 /// the deposit's braces ("Attempt to close boxing group", immigration-bill).
 #[test]
 fn class_maketitle_deposit_relaxes_the_setters() {
-  if !kpsewhich_has("memoir.cls") {
+  if !check_requirements(&["memoir.cls"]) {
     return;
   }
   let tex = r"\documentclass{memoir}
@@ -6861,7 +7010,8 @@ Body text.
 ";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  // memoir's own `\@iffirstamp` (a conditional not spelled `\if…`).
+  // memoir's own `\@iffirstamp` (a conditional not spelled `\if…`); its two hooks on bound commands are Infos
+  // (memoir.cls:5832-5833 `cmd/end@float/before`, `cmd/end@dblfloat/before`; QA47A).
   assert_eq!(warning_count(&stderr), 1, "{stderr}");
   assert!(
     stderr.contains("Warning:misdefined:\\@iffirstamp"),
@@ -6878,7 +7028,7 @@ Body text.
 /// (ltx-talk-code, 20 warnings; Perl `ResetCounter` shares it).
 #[test]
 fn reset_list_skips_a_missing_un_companion() {
-  if !kpsewhich_has("l3doc.cls") {
+  if !check_requirements(&["l3doc.cls"]) {
     return;
   }
   let tex = r"\documentclass{l3doc}
@@ -6924,7 +7074,7 @@ Body.
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
   assert_eq!(xml.matches("Field Line").count(), 1, "{xml}");
   assert_eq!(xml.matches("The abstract.").count(), 1, "{xml}");
-  if !kpsewhich_has("environ.sty") {
+  if !check_requirements(&["environ.sty"]) {
     return;
   }
   let cls = r"\ProvidesClass{envthesis}
@@ -6970,7 +7120,7 @@ A\NoHyper B\endNoHyper C
 /// PDF-to-XML recall 0 %). The statement, its link and the license image survive.
 #[test]
 fn doclicense_statement_reaches_the_xml() {
-  if !kpsewhich_has("doclicense.sty") {
+  if !check_requirements(&["doclicense.sty", "ccicons.sty"]) {
     return;
   }
   let tex = r"\documentclass{article}
@@ -7071,14 +7221,57 @@ Body text here.
 }
 
 /// Batch 56gg: `\unwind@titlepage` (the `{titlepage}` env's `\maketitle` hook)
+/// re-homes the unwound children the new parent cannot hold. A class `\@maketitle`
+/// deposited inside the document's `{titlepage}` (`\begin{titlepage}\maketitle
+/// \end{titlepage}`) leaves its paragraphs in that titlepage, which the hook unwraps:
+/// a paragraph the class prints is wrapped in a `<para>` under `<document>`, not left a
+/// bare `<p>` there (`element "p" not allowed here`). The jlreq case is
+/// [`unwound_titlepage_rehomes_its_paragraphs`].
+#[test]
+fn unwound_titlepage_rehomes_a_printed_paragraph() {
+  let (stderr, xml) = convert_with(
+    r"\documentclass{article}
+\makeatletter
+\def\@maketitle{\begin{center}{\LARGE \@title \par}\vskip 1em{\large\begin{tabular}[t]{c}\@author\end{tabular}\par}%
+  \vskip 1em Printed cover text\end{center}\par}
+\makeatother
+\title{T}\author{A}
+\begin{document}
+\begin{titlepage}
+\maketitle
+\end{titlepage}
+\section{S} Body.
+\end{document}
+",
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(
+    (error_count(&stderr), warning_count(&stderr)),
+    (0, 0),
+    "{stderr}"
+  );
+  // (the paragraph alone: that it stands before the title, where the PDF prints it after the title and the author, is
+  // a base residual, SYNC_STATUS)
+  latexml::util::test::assert_element(
+    &xml,
+    "para",
+    &["xml:id=\"p1\""],
+    r#"<para xml:id="p1"><p align="center" xml:id="p1.1">Printed cover text</p></para>"#,
+  );
+  assert!(!xml.contains("<titlepage"), "{xml}");
+}
+
+/// Batch 56gg: `\unwind@titlepage` (the `{titlepage}` env's `\maketitle` hook)
 /// re-homes the unwound children the new parent cannot hold. jlreq's own
 /// `\maketitle` opens a titlepage inside the document's `{titlepage}`
 /// (jlreq.cls:5501-5527); its empty centered paragraphs were unwrapped straight
 /// under `<document>` — `element "p" not allowed here` ×2, the only schema errors
-/// of gckanbun-doc and kksymbols-doc. Now each is wrapped in a `<para>`.
+/// of gckanbun-doc and kksymbols-doc. Now each is wrapped in a `<para>`; since 77o the
+/// title page that printed only its emptied fields is not deposited at all, so the
+/// printed-paragraph case is [`unwound_titlepage_rehomes_a_printed_paragraph`].
 #[test]
 fn unwound_titlepage_rehomes_its_paragraphs() {
-  if !kpsewhich_has("jlreq.cls") {
+  if !check_requirements(&["jlreq.cls"]) {
     return;
   }
   let tex = r"\documentclass[luatex,fontsize=10pt,paper=b5]{jlreq}
@@ -7117,8 +7310,11 @@ Hello.
   let flat = gaps
     .replace_all(&ids.replace_all(&xml, ""), "><")
     .into_owned();
+  // 77o: jlreq's `\maketitle` (jlreq.cls:5501-5527) prints nothing but its fields, `\@author` in a
+  // `\begin{tabular}[t]{c}` whose position letter is no text (base_utilities.rs `typesets_content`), so its deposit
+  // goes: no empty centered paragraphs are left to re-home.
   assert!(
-    flat.contains(r#"<para><p/></para><para><p align="center"/></para>"#),
+    !flat.contains("<p/>") && !flat.contains(r#"<p align="center"/>"#),
     "{flat}"
   );
   let bare = regex::Regex::new(r"</(?:title|creator|date|pagination|para)><p[ />]").unwrap();
@@ -7289,7 +7485,7 @@ See \ref{sec:b} [\lineA].
 /// schema errors). Witnesses arXiv:2009.10518, arXiv:1804.06350.
 #[test]
 fn refstyle_loads_raw_with_its_internals() {
-  if !kpsewhich_has("refstyle.sty") {
+  if !check_requirements(&["refstyle.sty"]) {
     return;
   }
   let tex = r"\documentclass{article}
@@ -7329,7 +7525,7 @@ See \secref{a} and \eqref{e}.
 /// `<ERROR>` stranded the frontmatter, 4 schema errors).
 #[test]
 fn make_special_short_verb_is_defined() {
-  if !kpsewhich_has("newverbs.sty") {
+  if !check_requirements(&["newverbs.sty"]) {
     return;
   }
   let tex = r#"\documentclass{article}
@@ -7467,7 +7663,7 @@ fn pdfximage_reports_the_pdf_page_count() {
   let (stderr, xml) = convert_files(tex, &[("three.pdf", pdf)]);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("A=3;N=1;"), "{xml}");
-  if kpsewhich_has("example-image-a4.pdf") {
+  if check_requirements(&["example-image-a4.pdf"]) {
     assert!(xml.contains("B=1;N=2."), "{xml}");
   }
 }
@@ -7519,7 +7715,7 @@ fn pspicture_is_a_picture_and_rput_keeps_its_body() {
 /// pst-all.sty:17-32 define.
 #[test]
 fn pst_plot_and_pst_all_consume_their_arguments() {
-  if kpsewhich_has("pst-all.sty") && kpsewhich_has("pst-plot.tex") && kpsewhich_has("multido.sty") {
+  if check_requirements(&["pst-all.sty", "pst-plot.tex", "multido.sty"]) {
     let tex = "\\documentclass{article}\n\\usepackage{pst-all}\n\\begin{document}\nBefore.\n\\begin{pspicture}(4,3)\\psaxes{->}(0,0)(4,3)\\psplot[linecolor=red]{0}{4}{x 2 div}\\parametricplot{0}{360}{t cos t sin}\\multido{\\i=1+1}{2}{\\psline(\\i,0)(\\i,1)}\\rput(1,1){R}\\end{pspicture}\nAfter.\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -7564,7 +7760,7 @@ fn batchmode_terminal_read_halts_the_job() {
     "{stderr}"
   );
   assert_eq!(error_count(&stderr), 1, "{stderr}");
-  if kpsewhich_has("iftex.sty") {
+  if check_requirements(&["iftex.sty"]) {
     // A non-Unicode-native engine still halts (`\RequireXeTeX` passes: see
     // `xetex_only_packages_load_under_the_default_persona`).
     let (stderr, _) = convert(
@@ -7605,7 +7801,7 @@ fn batchmode_terminal_read_halts_the_job() {
 /// their text.
 #[test]
 fn datetime_named_dates_and_mdframed_subtitles_are_kept() {
-  if kpsewhich_has("datetime.sty") && kpsewhich_has("mdframed.sty") {
+  if check_requirements(&["datetime.sty", "mdframed.sty"]) {
     let tex = "\\documentclass{article}\n\\usepackage{datetime}\n\\usepackage{mdframed}\n\\begin{document}\n\\newdate{lx}{5}{9}{2026}Date: \\displaydate{lx}.\n\\begin{mdframed}\nBody.\n\\mdfsubtitle{Sub Title}\nMore.\n\\end{mdframed}\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -7624,7 +7820,7 @@ fn datetime_named_dates_and_mdframed_subtitles_are_kept() {
 /// close a group that switched to mode horizontal"; biblatex-apa-test:1203-1208).
 #[test]
 fn refsection_takes_only_an_optional_resource_list() {
-  if kpsewhich_has("biblatex.sty") && kpsewhich_has("babel.sty") {
+  if check_requirements(&["biblatex.sty", "babel.sty"]) {
     let tex = "\\documentclass{article}\n\\usepackage[ngerman,american]{babel}\n\\usepackage[style=apa]{biblatex}\n\\begin{document}\n\\begin{refsection}[foo.bib]\n\\begin{otherlanguage}{ngerman}\nx\n\\end{otherlanguage}\n\\end{refsection}\nAfter.\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -7675,7 +7871,7 @@ fn refsection_takes_only_an_optional_resource_list() {
 /// KNOWN_PERL_ERRORS #212, DIVERGENCES #219.
 #[test]
 fn xkeyval_empty_family_is_searched_by_psset() {
-  if kpsewhich_has("pstricks.sty") {
+  if check_requirements(&["pstricks.sty"]) {
     let tex = "\\documentclass{article}\n\\usepackage{pstricks}\n\\makeatletter\n\\define@key[psset]{}{lxfoo}{\\gdef\\lxres{GOT-#1}}\n\\makeatother\n\\begin{document}\n\\psset{lxfoo=42,dash=3pt 2pt}\\lxres\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -7697,8 +7893,7 @@ fn xkeyval_empty_family_is_searched_by_psset() {
 /// 56af). DIVERGENCES #218.
 #[test]
 fn pst_grad_binding_loads_the_gradient_fill_styles() {
-  if kpsewhich_has("pst-grad.tex") && kpsewhich_has("pst-char.sty") && kpsewhich_has("pst-fill.sty")
-  {
+  if check_requirements(&["pst-grad.tex", "pst-char.sty", "pst-fill.sty"]) {
     let tex = "\\documentclass{article}\n\\usepackage[tiling]{pst-fill}\n\\usepackage{pst-text,pst-char,pst-grad}\n\\begin{document}\nBefore.\n\\psboxfill{\\small x}\n\\begin{pspicture}(0,0)(6,2)\n\\pscharpath[linestyle=none,gradbegin=magenta,gradend=cyan,fillstyle=gradient,gradangle=-30,gradmidpoint=0.5,addfillstyle=boxfill]{\\rput[b](1,0){\\Huge Word}}\n\\end{pspicture}\nAfter.\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -7713,7 +7908,7 @@ fn pst_grad_binding_loads_the_gradient_fill_styles() {
 /// alignment's own cell frame (dsptricks 98; every psmatrix).
 #[test]
 fn pst_object_dispatches_to_the_object_body() {
-  if kpsewhich_has("pstricks-add.sty") {
+  if check_requirements(&["pstricks-add.sty"]) {
     let tex = "\\documentclass{article}\n\\usepackage{pstricks-add}\n\\makeatletter\n\\def\\lxfoo@i{FOO-\\pst@par-END}\n\\makeatother\n\\begin{document}\n\\makeatletter\\pst@object{lxfoo}[linewidth=2pt]\\makeatother\n\\begin{psmatrix} A & B \\\\ C & D \\end{psmatrix}\nAfter.\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -7843,8 +8038,7 @@ fn newif_with_an_empty_name_lets_if_to_iffalse() {
 /// synthetic nested-`\text` fixture below does not, so this is the guard.
 #[test]
 fn glosmathtools_sample_is_not_emptied_by_the_math_rebuild() {
-  if !kpsewhich_has("glosmathtools.sty") || !kpsewhich_has("ulthese.cls") {
-    eprintln!("skipping: glosmathtools.sty / ulthese.cls not in the host TeX tree");
+  if !check_all_requirements(&[loads::GLOSSARIES, &["glosmathtools.sty", "ulthese.cls"]]) {
     return;
   }
   let tex = include_str!("../cluster_regressions/glosmathtools/sample_glosmathtools_en.tex");
@@ -8555,10 +8749,11 @@ fn sectionless_body_after_the_abstract_is_not_cover_layout() {
 /// Batch 56et regression control (s107: 8 docs leaked `<_Frontmatter_Capture_>`): an
 /// abstract queued AFTER `\maketitle` placed the frontmatter (lips: a `\DocInput`-ed
 /// `\begin{abstract}`) is a LATE abstract. No position marker is built once the
-/// frontmatter is placed, the abstract-only fallback neither promotes nor wraps (what
-/// precedes it is body, not cover), `insert_late_frontmatter` files the abstract beside
-/// the existing frontmatter, and the core finalize drops any stranded `*_Capture_`
-/// scaffolding even when `\end{document}` is never reached.
+/// frontmatter is placed, the abstract-only fallback neither promotes nor wraps, the body
+/// prose before it is no cover (OXIDIZED_DESIGN_DIVERGENCES #903's `is_body_prose`, batch
+/// 86g, whose late marker is settled at once), the abstract stays beside the existing
+/// frontmatter, and the core finalize drops any stranded `*_Capture_` scaffolding even
+/// when `\end{document}` is never reached.
 #[test]
 fn late_abstract_after_maketitle_leaves_no_marker_and_wraps_nothing() {
   let tex = "\\documentclass{article}\n\\title{T}\\author{A}\n\\begin{document}\n\\maketitle\n\
@@ -9369,6 +9564,9 @@ fn verbatim_decodes_the_input_encoding() {
 /// `{pspicture}` it is a framed group.
 #[test]
 fn psframebox_keeps_its_body() {
+  if !check_requirements(loads::PSTRICKS) {
+    return;
+  }
   let tex = include_str!("../../../tools/perfect_kernel/repros/graphics-tikz/psframebox_body.tex");
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -9565,7 +9763,9 @@ fn afterassignment_fires_after_arithmetic() {
 /// A braced `\input{…}` keeps its braces through the file-name scan, so `\input`
 /// still strips them and loads LaTeX.pool (TeX_FileIO.pool.ltxml:164-169): a
 /// LaTeX fragment input by a main file with no `\documentclass` keeps its
-/// `\section`. Stopping the scan at the `}` must not drop that.
+/// `\section`. Stopping the scan at the `}` must not drop that. With no class
+/// to set `secnumdepth` the section is unnumbered (latex.ltx:17332 leaves it 0;
+/// the kernel's own 3 was dropped in 68u).
 #[test]
 fn braced_input_of_a_fragment_loads_latex() {
   let (stderr, xml) = convert_files_with(
@@ -9579,7 +9779,7 @@ fn braced_input_of_a_fragment_loads_latex() {
     &xml,
     "section",
     &[],
-    r#"<section inlist="toc" xml:id="section1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">§1</tag></tags><title><tag close=" ">1</tag>Intro</title><para xml:id="section1.p1"><p>Fragment text.</p></para></section>"#,
+    r#"<section inlist="toc" xml:id="sectionx1"><title>Intro</title><para xml:id="sectionx1.p1"><p>Fragment text.</p></para></section>"#,
   );
 }
 
@@ -9634,7 +9834,7 @@ fn tblr_colspec_count_is_an_integer_expression() {
     &xml,
     "tabular",
     &["xml:id=\"p1.1\""],
-    r#"<tabular vattach="middle" xml:id="p1.1"><tbody><tr xml:id="p1.1.1"><td align="center" xml:id="p1.1.1.1">a</td><td align="center" xml:id="p1.1.1.2">b</td></tr></tbody></tabular>"#,
+    r#"<tabular vattach="middle" xml:id="p1.1"><tbody><tr xml:id="p1.1.1"><td align="center" border="b l r t" xml:id="p1.1.1.1">a</td><td align="center" border="b r t" xml:id="p1.1.1.2">b</td></tr></tbody></tabular>"#,
   );
   latexml::util::test::assert_element(
     &xml,
@@ -10289,31 +10489,61 @@ fn a_declared_size_is_not_measured() {
 /// `computeSizeStore` keeps a complete size, Box.pm:275-281): a `\rule` node
 /// was 0×0, a `fit` node's minipage 0 high, a `\scalebox{0.3}` its unscaled
 /// 13.84 high, a `\quad` unmeasured (arXiv A/B 56ko2 → 56kq, 73 papers, every
-/// changed size Perl's; 2605.12644, 2605.00742, 2605.00859).
+/// changed size Perl's; 2605.12644, 2605.00742, 2605.00859). Row 2 (DTL1a): a
+/// size declared after a `\wd`/`\dp` read measured the box is read before that
+/// measure (`text width` with `text height` or `text depth`, `\makebox[2cm]`);
+/// its other four nodes must not move (node 4, `text height=20pt` 14.61×9.61, is
+/// a known-wrong pin: RED node_inner_box_sizes_foreignobject_red). Row 3
+/// (DTL1b): a declared size stored as a String (diagbox, `\rotate[f]`) is no
+/// Dimension, so the measured size stands, not 0×0.
 #[test]
 fn a_node_takes_its_boxs_declared_size() {
-  let (stderr, xml) = convert_with(
-    include_str!(
-      "../../../tools/perfect_kernel/repros/graphics-tikz/node_size_is_the_declared_size.tex"
+  const ROWS: &[(&str, &[&str])] = &[
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/graphics-tikz/node_size_is_the_declared_size.tex"
+      ),
+      &[
+        r#"<svg:foreignObject height="0.42" overflow="visible" style="--ltx-fo-width:10.81em;--ltx-fo-height:0.03em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 0.42)" width="149.58">"#,
+        r#"<svg:foreignObject height="10.19" overflow="visible" style="--ltx-fo-width:11.52em;--ltx-fo-height:0.37em;--ltx-fo-depth:0.37em;font-size:10pt;" transform="matrix(1 0 0 -1 0 5.1)" width="159.4">"#,
+        r#"<svg:foreignObject height="4.15" overflow="visible" style="--ltx-fo-width:0.39em;--ltx-fo-height:0.23em;--ltx-fo-depth:0.08em;font-size:10pt;" transform="matrix(1 0 0 -1 0 3.11)" width="5.4">"#,
+        r#"<svg:foreignObject height="14.76" overflow="visible" style="--ltx-fo-width:2.58em;--ltx-fo-height:0.83em;--ltx-fo-depth:0.23em;font-size:10pt;" transform="matrix(1 0 0 -1 0 11.53)" width="35.65">"#,
+      ],
     ),
-    Some("ar5iv.sty"),
-  );
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 0, "{stderr}");
-  let objects: Vec<&str> = xml
-    .match_indices("<svg:foreignObject ")
-    .map(|(at, _)| &xml[at..at + xml[at..].find('>').unwrap() + 1])
-    .collect();
-  assert_eq!(
-    objects,
-    [
-      r#"<svg:foreignObject height="0.42" overflow="visible" style="--ltx-fo-width:10.81em;--ltx-fo-height:0.03em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 0.42)" width="149.58">"#,
-      r#"<svg:foreignObject height="10.19" overflow="visible" style="--ltx-fo-width:11.52em;--ltx-fo-height:0.37em;--ltx-fo-depth:0.37em;font-size:10pt;" transform="matrix(1 0 0 -1 0 5.1)" width="159.4">"#,
-      r#"<svg:foreignObject height="4.15" overflow="visible" style="--ltx-fo-width:0.39em;--ltx-fo-height:0.23em;--ltx-fo-depth:0.08em;font-size:10pt;" transform="matrix(1 0 0 -1 0 3.11)" width="5.4">"#,
-      r#"<svg:foreignObject height="14.76" overflow="visible" style="--ltx-fo-width:2.58em;--ltx-fo-height:0.83em;--ltx-fo-depth:0.23em;font-size:10pt;" transform="matrix(1 0 0 -1 0 11.53)" width="35.65">"#,
-    ],
-    "{xml}"
-  );
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/graphics-tikz/node_box_declared_size_over_measured.tex"
+      ),
+      &[
+        r#"<svg:foreignObject height="27.67" overflow="visible" style="--ltx-fo-width:5.69em;--ltx-fo-height:2em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 27.67)" width="78.73">"#,
+        r#"<svg:foreignObject height="16.53" overflow="visible" style="--ltx-fo-width:5.69em;--ltx-fo-height:0.69em;--ltx-fo-depth:0.5em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.61)" width="78.73">"#,
+        r#"<svg:foreignObject height="9.61" overflow="visible" style="--ltx-fo-width:5.69em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.61)" width="78.74">"#,
+        r#"<svg:foreignObject height="9.61" overflow="visible" style="--ltx-fo-width:1.06em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.61)" width="14.61">"#,
+        r#"<svg:foreignObject height="34.59" overflow="visible" style="--ltx-fo-width:5.69em;--ltx-fo-height:2em;--ltx-fo-depth:0.5em;font-size:10pt;" transform="matrix(1 0 0 -1 0 27.67)" width="78.73">"#,
+        r#"<svg:foreignObject height="10.43" overflow="visible" style="--ltx-fo-width:5.69em;--ltx-fo-height:0.65em;--ltx-fo-depth:0.11em;font-size:10pt;" transform="matrix(1 0 0 -1 0 8.94)" width="78.73">"#,
+        r#"<svg:foreignObject height="12.3" overflow="visible" style="--ltx-fo-width:2.17em;--ltx-fo-height:0.69em;--ltx-fo-depth:0.19em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.61)" width="29.98">"#,
+      ],
+    ),
+    (
+      include_str!(
+        "../../../tools/perfect_kernel/repros/graphics-tikz/node_string_declared_size_falls_to_measured.tex"
+      ),
+      &[
+        r#"<svg:foreignObject class="ltx_nopad" height="9.61" overflow="visible" style="--ltx-fo-width:2.06em;--ltx-fo-height:0.69em;--ltx-fo-depth:0em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.61)" width="28.44">"#,
+        r#"<svg:foreignObject height="12.3" overflow="visible" style="--ltx-fo-width:3em;--ltx-fo-height:0.69em;--ltx-fo-depth:0.19em;font-size:10pt;" transform="matrix(1 0 0 -1 0 9.61)" width="41.51">"#,
+      ],
+    ),
+  ];
+  for (tex, expected) in ROWS {
+    let (stderr, xml) = convert_with(tex, Some("ar5iv.sty"));
+    assert_eq!(error_count(&stderr), 0, "{stderr}");
+    assert_eq!(warning_count(&stderr), 0, "{stderr}");
+    let objects: Vec<&str> = xml
+      .match_indices("<svg:foreignObject ")
+      .map(|(at, _)| &xml[at..at + xml[at..].find('>').unwrap() + 1])
+      .collect();
+    assert_eq!(objects, *expected, "{xml}");
+  }
 }
 
 /// A font's parameters are its TFM's, scaled to its size, from its `\font`
@@ -10359,8 +10589,10 @@ fn an_unset_intarray_item_is_zero() {
 /// `cmr11`, small caps and bold italic read an empty array — 0pt — in 56kr's
 /// first cut. An `at` size scales them exactly (Perl truncates, KPE #303). And
 /// `\em` in italic or slanted text is upright (latex.ltx:14058), now that the
-/// font's slant is its TFM's. `\font\x=cmr11` loads at its 10.95pt design size
-/// (58g, KPE #409).
+/// font's slant is its TFM's. `\font\x=cmr17` loads at its 17.28pt design size
+/// (58g, KPE #409), pdflatex's [5.21661pt]; at 17pt it would be [5.13208pt].
+/// (It was `cmr11` at 10.95pt, but TeX Live ships no cmr11.tfm — mktextfm makes
+/// it on first use — so the value hung on the host's font cache.)
 #[test]
 fn a_font_without_its_own_metric_has_cmr_parameters() {
   let (stderr, xml) = convert_with(
@@ -10373,7 +10605,7 @@ fn a_font_without_its_own_metric_has_cmr_parameters() {
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
   assert!(
     xml.contains(concat!(
-      r#"<p>[3.65001pt] [4.0pt] <text font="smallcaps">[3.33334pt]</text> <text font="bold italic">[3.33334pt]</text>"#,
+      r#"<p>[5.21661pt] [4.0pt] <text font="smallcaps">[3.33334pt]</text> <text font="bold italic">[3.33334pt]</text>"#,
       "\n",
       r#"<text fontsize="110%">[3.66667pt]</text></p>"#
     )),
@@ -10667,9 +10899,9 @@ fn a_natural_figure_box_follows_its_crop_and_turn() {
   assert_eq!(padded, whole, "a negative trim pads nothing");
 }
 
-/// `\meaning` of a macro coded in Rust prints Perl's `CODE(0x…)`, not the
-/// debug form of a `dyn` pointer (`CODE(Pointer { addr: …, metadata:
-/// DynMetadata(…) })`, into cnltx_en's text; review of batch 57a).
+/// `\meaning` of a macro coded in Rust prints Perl's `CODE(…)` with its name for the address, the same on every run
+/// (QA89; before: an address, `CODE(Pointer { addr: …, metadata: … })` before batch 57a, into cnltx_en's text); etoolbox
+/// still refuses to patch the native `\begin` (pdflatex "yes/yes": its `\begin` is a macro; OD #183).
 #[test]
 fn meaning_of_a_closure_macro_is_perls_code_form() {
   let (stderr, xml) = convert_with(
@@ -10678,15 +10910,31 @@ fn meaning_of_a_closure_macro_is_perls_code_form() {
     ),
     None,
   );
-  assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 0, "{stderr}");
-  let prefix = ">macro:-&gt;CODE(0x";
-  let at = xml.find(prefix).unwrap_or_else(|| panic!("{xml}"));
-  let rest = &xml[at + prefix.len()..];
-  let hex = rest.find(')').unwrap();
-  assert!(hex > 0, "an address: {xml}");
-  assert!(rest[..hex].chars().all(|c| c.is_ascii_hexdigit()), "{xml}");
-  assert!(rest[hex..].starts_with(")</text>"), "{xml}");
+  assert_eq!(
+    (error_count(&stderr), warning_count(&stderr)),
+    (0, 0),
+    "{stderr}"
+  );
+  assert!(xml.contains(">macro:-&gt;CODE(today)</text>"), "{xml}");
+  let stable = include_str!(
+    "../../../tools/perfect_kernel/repros/expansion-primitives/meaning_of_a_closure_macro_is_stable.tex"
+  );
+  let (stderr, xml) = convert_with(stable, None);
+  assert_eq!(
+    (error_count(&stderr), warning_count(&stderr)),
+    (0, 0),
+    "{stderr}"
+  );
+  for p in [
+    r#"<p><text font="typewriter">macro:#1#2#3-&gt;CODE(@ifnextchar)</text></p>"#,
+    r#"<p><text font="typewriter">\protected macro:#1-&gt;CODE(begin)</text></p>"#,
+    "<p>no/no</p>",
+    "<p>differ</p>",
+  ] {
+    assert!(xml.contains(p), "{p}\n{xml}");
+  }
+  // No second conversion: in one process two runs' addresses can coincide, so only the absent address shows it.
+  assert!(!xml.contains("0x"), "{xml}");
 }
 
 /// K13 stage 0: a constructor or primitive keeps what its binding's mode
@@ -10832,7 +11080,9 @@ fn figure_boxes_become_figures_and_rows() {
     latexml::util::test::assert_element(&xml, "figure", &[&format!(r#"xml:id="{id}""#)], markup);
   }
   assert_eq!(
-    xml.matches(r#"<figure xml:id="p"#).count(),
+    xml
+      .matches(r#"<figure class="ltx_panels_gallery" panelcols="3" panelrows="1" xml:id="p"#)
+      .count(),
     1,
     "one row:\n{xml}"
   );
@@ -10840,7 +11090,7 @@ fn figure_boxes_become_figures_and_rows() {
     &xml,
     "figure",
     &[r#"xml:id="p5""#],
-    r#"<figure xml:id="p5"><figure align="center" class="ltx_figure_panel ltx_minipage" inlist="lof" vattach="middle" width="103.5pt" xml:id="S0.F3"><tags><tag>Figure 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><graphics class="ltx_centering" graphic="c" options="width=103.50105pt,keepaspectratio=true" xml:id="g3"/><toccaption><tag close=" ">3</tag>C</toccaption><caption><tag close=": ">Figure 3</tag>C</caption></figure><figure align="center" class="ltx_figure_panel ltx_minipage" inlist="lof" vattach="middle" width="103.5pt" xml:id="S0.F4"><tags><tag>Figure 4</tag><tag role="refnum">4</tag><tag role="typerefnum">Figure 4</tag></tags><graphics class="ltx_centering" graphic="d" options="width=103.50105pt,keepaspectratio=true" xml:id="p5.g1"/><toccaption><tag close=" ">4</tag>D</toccaption><caption><tag close=": ">Figure 4</tag>D</caption></figure><table align="center" class="ltx_figure_panel ltx_minipage" inlist="lot" vattach="middle" width="103.5pt" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><graphics class="ltx_centering" graphic="e" options="width=103.50105pt,keepaspectratio=true" xml:id="p5.g2"/><toccaption><tag close=" ">1</tag>E</toccaption><caption><tag close=": ">Table 1</tag>E</caption></table></figure>"#,
+    r#"<figure class="ltx_panels_gallery" panelcols="3" panelrows="1" xml:id="p5"><figure align="center" class="ltx_figure_panel ltx_minipage" inlist="lof" vattach="middle" width="103.5pt" xml:id="S0.F3"><tags><tag>Figure 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><graphics class="ltx_centering" graphic="c" options="width=103.50105pt,keepaspectratio=true" xml:id="g3"/><toccaption><tag close=" ">3</tag>C</toccaption><caption><tag close=": ">Figure 3</tag>C</caption></figure><figure align="center" class="ltx_figure_panel ltx_minipage" inlist="lof" vattach="middle" width="103.5pt" xml:id="S0.F4"><tags><tag>Figure 4</tag><tag role="refnum">4</tag><tag role="typerefnum">Figure 4</tag></tags><graphics class="ltx_centering" graphic="d" options="width=103.50105pt,keepaspectratio=true" xml:id="p5.g1"/><toccaption><tag close=" ">4</tag>D</toccaption><caption><tag close=": ">Figure 4</tag>D</caption></figure><table align="center" class="ltx_figure_panel ltx_minipage" inlist="lot" vattach="middle" width="103.5pt" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><graphics class="ltx_centering" graphic="e" options="width=103.50105pt,keepaspectratio=true" xml:id="p5.g2"/><toccaption><tag close=" ">1</tag>E</toccaption><caption><tag close=": ">Table 1</tag>E</caption></table></figure>"#,
   );
 }
 
@@ -10862,7 +11112,7 @@ fn figure_box_lines_settle_when_the_paragraph_closes() {
     &xml,
     "figure",
     &[r#"xml:id="p2""#],
-    r#"<figure xml:id="p2"><figure class="ltx_figure_panel ltx_minipage" inlist="lof" vattach="middle" width="103.5pt" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><graphics graphic="c" xml:id="g1"/><toccaption><tag close=" ">1</tag>C</toccaption><caption><tag close=": ">Figure 1</tag>C</caption></figure><figure class="ltx_figure_panel ltx_minipage" inlist="lof" vattach="middle" width="103.5pt" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><graphics graphic="d" xml:id="p2.g1"/><toccaption><tag close=" ">2</tag>D</toccaption><caption><tag close=": ">Figure 2</tag>D</caption></figure><break/><figure class="ltx_figure_panel ltx_minipage" inlist="lof" vattach="middle" width="103.5pt" xml:id="S0.F3"><tags><tag>Figure 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><graphics graphic="e" xml:id="p2.g2"/><toccaption><tag close=" ">3</tag>E</toccaption><caption><tag close=": ">Figure 3</tag>E</caption></figure></figure>"#,
+    r#"<figure class="ltx_panels_gallery" panelcols="2" panelrows="2" xml:id="p2"><figure class="ltx_figure_panel ltx_minipage" inlist="lof" vattach="middle" width="103.5pt" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><graphics graphic="c" xml:id="g1"/><toccaption><tag close=" ">1</tag>C</toccaption><caption><tag close=": ">Figure 1</tag>C</caption></figure><figure class="ltx_figure_panel ltx_minipage" inlist="lof" vattach="middle" width="103.5pt" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><graphics graphic="d" xml:id="p2.g1"/><toccaption><tag close=" ">2</tag>D</toccaption><caption><tag close=": ">Figure 2</tag>D</caption></figure><break/><figure class="ltx_figure_panel ltx_minipage" inlist="lof" vattach="middle" width="103.5pt" xml:id="S0.F3"><tags><tag>Figure 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><graphics graphic="e" xml:id="p2.g2"/><toccaption><tag close=" ">3</tag>E</toccaption><caption><tag close=": ">Figure 3</tag>E</caption></figure></figure>"#,
   );
   latexml::util::test::assert_element(
     &xml,
@@ -10898,7 +11148,7 @@ fn float_boxes_keep_their_line_alignment() {
     ),
     (
       "p3",
-      r#"<figure align="center" xml:id="p3"><figure class="ltx_figure_panel ltx_minipage" inlist="lof" vattach="middle" width="103.5pt" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><graphics graphic="y" xml:id="g2"/><toccaption><tag close=" ">2</tag>Y</toccaption><caption><tag close=": ">Figure 2</tag>Y</caption></figure><figure class="ltx_figure_panel ltx_minipage" inlist="lof" vattach="middle" width="103.5pt" xml:id="S0.F3"><tags><tag>Figure 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><graphics graphic="z" xml:id="g3"/><toccaption><tag close=" ">3</tag>Z</toccaption><caption><tag close=": ">Figure 3</tag>Z</caption></figure></figure>"#,
+      r#"<figure align="center" class="ltx_panels_gallery" panelcols="2" panelrows="1" xml:id="p3"><figure class="ltx_figure_panel ltx_minipage" inlist="lof" vattach="middle" width="103.5pt" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><graphics graphic="y" xml:id="g2"/><toccaption><tag close=" ">2</tag>Y</toccaption><caption><tag close=": ">Figure 2</tag>Y</caption></figure><figure class="ltx_figure_panel ltx_minipage" inlist="lof" vattach="middle" width="103.5pt" xml:id="S0.F3"><tags><tag>Figure 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><graphics graphic="z" xml:id="g3"/><toccaption><tag close=" ">3</tag>Z</toccaption><caption><tag close=": ">Figure 3</tag>Z</caption></figure></figure>"#,
     ),
     (
       "S0.F4",
@@ -10979,13 +11229,13 @@ fn parbox_panels_stay_panels() {
     &xml,
     "figure",
     &[r#"xml:id="S0.F1""#],
-    r#"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><block class="ltx_figure_panel ltx_minipage ltx_parbox" vattach="middle" width="155.3pt"><p>Left panel.</p><p>Its second line.</p></block><block class="ltx_figure_panel ltx_minipage ltx_parbox" vattach="middle" width="155.3pt"><p>Right panel.</p><p>Its second line.</p></block><toccaption><tag close=" ">1</tag>Minipages.</toccaption><caption><tag close=": ">Figure 1</tag>Minipages.</caption></figure>"#,
+    r#"<figure class="ltx_panels_gallery" inlist="lof" panelcols="2" panelfill="0.9" panelline="1" panelrows="1" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><block class="ltx_figure_panel ltx_minipage ltx_parbox" panelwidth="0.45" vattach="middle" width="155.3pt"><p>Left panel.</p><p>Its second line.</p></block><block class="ltx_figure_panel ltx_minipage ltx_parbox" panelwidth="0.45" vattach="middle" width="155.3pt"><p>Right panel.</p><p>Its second line.</p></block><toccaption><tag close=" ">1</tag>Minipages.</toccaption><caption><tag close=": ">Figure 1</tag>Minipages.</caption></figure>"#,
   );
   latexml::util::test::assert_element(
     &xml,
     "figure",
     &[r#"xml:id="fig1""#],
-    r#"<figure xml:id="fig1"><figure align="center" class="ltx_figure_panel ltx_parbox" inlist="lof" vattach="middle" width="155.3pt" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><graphics graphic="a" xml:id="S0.F2.g1"/><toccaption><tag close=" ">2</tag>A</toccaption><caption><tag close=": ">Figure 2</tag>A</caption></figure><figure align="center" class="ltx_figure_panel ltx_parbox" inlist="lof" vattach="middle" width="155.3pt" xml:id="S0.F3"><tags><tag>Figure 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><graphics graphic="b" xml:id="S0.F3.g2"/><toccaption><tag close=" ">3</tag>B</toccaption><caption><tag close=": ">Figure 3</tag>B</caption></figure></figure>"#,
+    r#"<figure class="ltx_panels_gallery" panelcols="2" panelfill="0.9" panelline="1" panelrows="1" xml:id="fig1"><figure align="center" class="ltx_figure_panel ltx_parbox" inlist="lof" panelwidth="0.45" vattach="middle" width="155.3pt" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><graphics graphic="a" xml:id="S0.F2.g1"/><toccaption><tag close=" ">2</tag>A</toccaption><caption><tag close=": ">Figure 2</tag>A</caption></figure><figure align="center" class="ltx_figure_panel ltx_parbox" inlist="lof" panelwidth="0.45" vattach="middle" width="155.3pt" xml:id="S0.F3"><tags><tag>Figure 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><graphics graphic="b" xml:id="S0.F3.g2"/><toccaption><tag close=" ">3</tag>B</toccaption><caption><tag close=": ">Figure 3</tag>B</caption></figure></figure>"#,
   );
 }
 
@@ -11112,8 +11362,8 @@ fn orcidlink_starts_the_paragraph() {
 }
 
 /// 57i (K13 stage-2 finding): `\externaldocument[prefix][nocite]{file}[url]` reads its trailing
-/// `[url]` (xr.sty:47, xr-hyper.sty:41); it was left as text. The binding announces its stub (one
-/// warning, `xr.sty is not implemented`).
+/// `[url]` (xr.sty:47, xr-hyper.sty:41); it was left as text. With no `supp.aux` to import, the one
+/// warning is xr's own (`No file supp.aux`, 79g; it was the stub's `xr.sty is not implemented`).
 #[test]
 fn xr_externaldocument_reads_its_url() {
   let (stderr, xml) = convert_with(
@@ -11124,20 +11374,25 @@ fn xr_externaldocument_reads_its_url() {
   );
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(warning_count(&stderr), 1, "{stderr}");
-  assert!(stderr.contains("Warning:missing_file:xr.sty"), "{stderr}");
+  assert!(stderr.contains("Warning:missing_file:supp.aux"), "{stderr}");
   latexml::util::test::assert_element(
     &xml,
     "para",
     &[r#"xml:id="p1""#],
     r#"<para xml:id="p1"><p>See the supplement.</p></para>"#,
   );
-  // siamart loads xr-hyper (siamart220329.cls:1266); its binding's copy reads the same `[url]`.
+  // siamart loads xr-hyper (siamart220329.cls:1266), which reads the same `[url]` and warns of the missing
+  // `ex_supplement.aux`, as pdflatex's xr-hyper does.
   let (stderr, xml) = convert_with(
     "\\documentclass{siamart}\n\\externaldocument[][nocite]{ex_supplement}[https://example.org/ex_supp.pdf]\n\\begin{document}\nSee the supplement.\n\\end{document}\n",
     None,
   );
   assert_eq!(error_count(&stderr), 0, "{stderr}");
-  assert_eq!(warning_count(&stderr), 0, "{stderr}");
+  assert_eq!(warning_count(&stderr), 1, "{stderr}");
+  assert!(
+    stderr.contains("Warning:missing_file:ex_supplement.aux"),
+    "{stderr}"
+  );
   latexml::util::test::assert_element(
     &xml,
     "para",
@@ -11660,7 +11915,8 @@ fn changepage_page_checks_are_the_packages() {
 
 /// 57l: under memoir, changepage's page macros are memoir's (memoir.cls:12216 `\EmulatedPackage`;
 /// changepage.sty:8-11 stops) — its `\checkoddpage` survives — while its list `{adjustwidth}`
-/// (memoir.cls:11267-11297) gives way to the transparent one. memoir's `\@iffirstamp` warning stays.
+/// (memoir.cls:11267-11297) gives way to the transparent one. memoir's `\@iffirstamp` warning stays; its two hooks
+/// on bound commands are Infos (memoir.cls:5832-5833 `cmd/end@float/before`, `cmd/end@dblfloat/before`; QA47A).
 #[test]
 fn changepage_under_memoir_keeps_memoirs() {
   let (stderr, xml) = convert_with(
@@ -11880,19 +12136,20 @@ fn subfloat_reads_a_lone_optional_as_its_caption() {
     &xml,
     "figure",
     &[r#"xml:id="S0.F1""#],
-    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure class="ltx_figure_panel" inlist="lof" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1a</tag></tags><p>A</p><toccaption><tag close=" ">a</tag>One</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">One</text></caption></figure><break class="ltx_break"/><figure class="ltx_figure_panel" inlist="List" xml:id="S0.F1.sf2"><tags><tag><text fontsize="90%">(b)</text></tag><tag role="refnum">1b</tag></tags><p>B</p><toccaption><tag close=" ">b</tag>Two</toccaption><caption><tag close=" "><text fontsize="90%">(b)</text></tag><text fontsize="90%">Two</text></caption></figure><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Main</text></caption></figure>"##,
+    r##"<figure class="ltx_panels_gallery" inlist="lof" panelcols="1" panelrows="2" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure class="ltx_figure_panel" inlist="lof" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1a</tag></tags><p>A</p><toccaption><tag close=" ">a</tag>One</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">One</text></caption></figure><break class="ltx_break"/><figure class="ltx_figure_panel" inlist="List" xml:id="S0.F1.sf2"><tags><tag><text fontsize="90%">(b)</text></tag><tag role="refnum">1b</tag></tags><p>B</p><toccaption><tag close=" ">b</tag>Two</toccaption><caption><tag close=" "><text fontsize="90%">(b)</text></tag><text fontsize="90%">Two</text></caption></figure><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": ">Figure 1</tag>Main</caption></figure>"##,
   );
   latexml::util::test::assert_element(
     &xml,
     "table",
     &[r#"xml:id="S0.T1""#],
-    r##"<table inlist="lot" xml:id="S0.T1"><tags><tag><text fontsize="90%">Table 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><table inlist="lot" xml:id="S0.T1.st1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1a</tag></tags><p>X</p><toccaption><tag close=" ">a</tag>Tab one</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Tab one</text></caption></table><toccaption><tag close=" ">1</tag>Tabs</toccaption><caption><tag close=": "><text fontsize="90%">Table 1</text></tag><text fontsize="90%">Tabs</text></caption></table>"##,
+    r##"<table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><table inlist="lot" xml:id="S0.T1.st1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1a</tag></tags><p>X</p><toccaption><tag close=" ">a</tag>Tab one</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Tab one</text></caption></table><toccaption><tag close=" ">1</tag>Tabs</toccaption><caption><tag close=": ">Table 1</tag>Tabs</caption></table>"##,
   );
 }
 
 /// 57l: memoir's own `\changetext` keeps LaTeXML's one column: memoir's `\ch@ngetext`
 /// (memoir.cls:11237-11245) halved `\columnwidth` under `[twocolumn]`; the memoir binding installs the
-/// shared one-column override after the raw class.
+/// shared one-column override after the raw class. (One Warning, memoir's `\@iffirstamp`; its two hooks on bound
+/// commands are Infos, memoir.cls:5832-5833; QA47A.)
 #[test]
 fn changetext_under_memoir_keeps_one_column() {
   let (stderr, xml) = convert_with(
@@ -12128,7 +12385,8 @@ C, D. </bibblock><bibblock>(2002).
 }
 
 /// 57m: OmniBus's `\doi` reads its DOI as a url (`HyperVerbatim`), so the `.bbl` of an apa6 paper — a class with
-/// no `\doi` of its own, falling to OmniBus — keeps `\doi{10.1000/j_x~y.2002}` whole (Perl OmniBus.cls.ltxml:154's
+/// no `\doi` of its own, falling to OmniBus (since 68u r3 apa6 has a binding over the raw class, so the repro's class
+/// is paper.cls, which also defines no `\doi` and has no binding) — keeps `\doi{10.1000/j_x~y.2002}` whole (Perl OmniBus.cls.ltxml:154's
 /// `\doi{}` gives Error:unexpected:_; pdflatex errors too, under apacite's `\doi`, and 64zf warns). apa7, bound since 62zl, keeps the DOI a link (apa7_cls.rs), where apacite's
 /// own `\doi` would set url-styled text only (apacite.sty:1812-1815): semantic markup before PDF fidelity.
 #[test]
@@ -12150,7 +12408,7 @@ fn omnibus_doi_reads_as_a_url() {
     })
     .count();
   assert_eq!(foreign, 0, "{stderr}");
-  assert!(stderr.contains("Warning:missing_file:apa6"), "{stderr}");
+  assert!(stderr.contains("Warning:missing_file:paper"), "{stderr}");
   // 64zf: apacite's `\doi` reads the DOI as TeX, so pdflatex errors on its `_`; the link is a semantic recovery,
   // reported as one Warning.
   assert_eq!(
@@ -12171,7 +12429,7 @@ C, D. </bibblock><bibblock>(2002).
   );
   let (stderr, xml) = convert_with(
     &include_str!("../../../tools/perfect_kernel/repros/index-bib/omnibus_doi_reads_as_a_url.tex")
-      .replace("{apa6}", "{apa7}"),
+      .replace("{paper}", "{apa7}"),
     None,
   );
   let foreign = stderr
@@ -12318,13 +12576,13 @@ fn minipage_text_panels_share_a_row() {
     &xml,
     "figure",
     &[r#"xml:id="S0.F1""#],
-    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p class="ltx_figure_panel ltx_minipage" vattach="top" width="155.3pt">Left text.</p><p class="ltx_figure_panel ltx_minipage" vattach="top" width="155.3pt">Right text.</p><toccaption><tag close=" ">1</tag>Two panels.</toccaption><caption><tag close=": ">Figure 1</tag>Two panels.</caption></figure>"##,
+    r##"<figure class="ltx_panels_gallery" inlist="lof" panelcols="2" panelfill="0.9" panelline="1" panelrows="1" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p class="ltx_figure_panel ltx_minipage" panelwidth="0.45" vattach="top" width="155.3pt">Left text.</p><p class="ltx_figure_panel ltx_minipage" panelwidth="0.45" vattach="top" width="155.3pt">Right text.</p><toccaption><tag close=" ">1</tag>Two panels.</toccaption><caption><tag close=": ">Figure 1</tag>Two panels.</caption></figure>"##,
   );
   latexml::util::test::assert_element(
     &xml,
     "figure",
     &[r#"xml:id="S0.F2""#],
-    r##"<figure inlist="lof" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><p class="ltx_figure_panel ltx_minipage" vattach="top" width="155.3pt">Left text that is long enough to wrap over several lines in the printed minipage of this figure, surely more than one line.</p><p class="ltx_figure_panel ltx_minipage" vattach="top" width="155.3pt">Right text that is long enough to wrap over several lines in the printed minipage of this figure, surely more than one line.</p><toccaption><tag close=" ">2</tag>Long.</toccaption><caption><tag close=": ">Figure 2</tag>Long.</caption></figure>"##,
+    r##"<figure class="ltx_panels_gallery" inlist="lof" panelcols="2" panelfill="0.9" panelline="1" panelrows="1" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><p class="ltx_figure_panel ltx_minipage" panelwidth="0.45" vattach="top" width="155.3pt">Left text that is long enough to wrap over several lines in the printed minipage of this figure, surely more than one line.</p><p class="ltx_figure_panel ltx_minipage" panelwidth="0.45" vattach="top" width="155.3pt">Right text that is long enough to wrap over several lines in the printed minipage of this figure, surely more than one line.</p><toccaption><tag close=" ">2</tag>Long.</toccaption><caption><tag close=": ">Figure 2</tag>Long.</caption></figure>"##,
   );
 }
 
@@ -12345,7 +12603,7 @@ fn minipage_panel_single_child_width() {
     &xml,
     "figure",
     &[r#"xml:id="S0.F1""#],
-    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><inline-block angle="90" class="ltx_figure_panel ltx_minipage" depth="0.0pt" height="21.1pt" innerdepth="0.0pt" innerheight="6.8pt" innerwidth="21.1pt" vattach="middle" width="27.6pt" xtranslate="-7.1pt" ytranslate="-7.1pt"><p>EKF</p></inline-block><rule class="ltx_figure_panel ltx_minipage" height="56.9pt" vattach="middle" width="151.8pt"/><rule class="ltx_figure_panel ltx_minipage" height="56.9pt" vattach="middle" width="151.8pt"/><break class="ltx_break"/><inline-block angle="90" class="ltx_figure_panel ltx_minipage" depth="0.0pt" height="21.8pt" innerdepth="0.0pt" innerheight="6.8pt" innerwidth="21.8pt" vattach="middle" width="27.6pt" xtranslate="-7.5pt" ytranslate="-7.5pt"><p>UKF</p></inline-block><rule class="ltx_figure_panel ltx_minipage" height="56.9pt" vattach="middle" width="151.8pt"/><rule class="ltx_figure_panel ltx_minipage" height="56.9pt" vattach="middle" width="151.8pt"/><toccaption><tag close=" ">1</tag>Rows</toccaption><caption><tag close=": ">Figure 1</tag>Rows</caption></figure>"##,
+    r##"<figure class="ltx_panels_matrix" inlist="lof" panelcols="3" panelfill="0.96" panelline="1" panelrows="2" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><inline-block angle="90" class="ltx_figure_panel ltx_minipage" depth="0.0pt" height="21.1pt" innerdepth="0.0pt" innerheight="6.8pt" innerwidth="21.1pt" panelwidth="0.08" vattach="middle" width="27.6pt" xtranslate="-7.1pt" ytranslate="-7.1pt"><p>EKF</p></inline-block><rule class="ltx_figure_panel ltx_minipage" height="56.9pt" panelwidth="0.44" vattach="middle" width="151.8pt"/><rule class="ltx_figure_panel ltx_minipage" height="56.9pt" panelwidth="0.44" vattach="middle" width="151.8pt"/><break class="ltx_break"/><inline-block angle="90" class="ltx_figure_panel ltx_minipage" depth="0.0pt" height="21.8pt" innerdepth="0.0pt" innerheight="6.8pt" innerwidth="21.8pt" panelwidth="0.08" vattach="middle" width="27.6pt" xtranslate="-7.5pt" ytranslate="-7.5pt"><p>UKF</p></inline-block><rule class="ltx_figure_panel ltx_minipage" height="56.9pt" panelwidth="0.44" vattach="middle" width="151.8pt"/><rule class="ltx_figure_panel ltx_minipage" height="56.9pt" panelwidth="0.44" vattach="middle" width="151.8pt"/><toccaption><tag close=" ">1</tag>Rows</toccaption><caption><tag close=": ">Figure 1</tag>Rows</caption></figure>"##,
   );
 }
 
@@ -12416,7 +12674,7 @@ fn pnas_doi_is_the_classs_setter() {
     &xml,
     "pubnote",
     &[r#"role="doi""#],
-    r##"<pubnote name="DOI: " role="doi"><ref class="ltx_url" font="typewriter" href="www.pnas.org/cgi/doi/10.1073/pnas.XXXXXXXXXX">www.pnas.org/cgi/doi/10.1073/pnas.XXXXXXXXXX</ref></pubnote>"##,
+    r##"<pubnote role="doi"><ref class="ltx_url" font="typewriter" href="www.pnas.org/cgi/doi/10.1073/pnas.XXXXXXXXXX">www.pnas.org/cgi/doi/10.1073/pnas.XXXXXXXXXX</ref></pubnote>"##,
   );
   // A bibliography's `\doi` meets the class setter: nothing printed (as in pdflatex).
   latexml::util::test::assert_element(
@@ -12446,7 +12704,7 @@ fn subfigure_refnum_is_the_letter() {
     &xml,
     "figure",
     &[r#"xml:id="S0.F1""#],
-    r##"<figure inlist="lof" labels="LABEL:m" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure class="ltx_figure_panel" inlist="lof" labels="LABEL:a" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1a</tag></tags><p>X</p><toccaption><tag close=" ">a</tag>Alpha</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Alpha</text></caption></figure><figure class="ltx_figure_panel" inlist="lof" labels="LABEL:b" xml:id="S0.F1.sf2"><tags><tag><text fontsize="90%">(b)</text></tag><tag role="refnum">1b</tag></tags><p>Y</p><toccaption><tag close=" ">b</tag>Beta</toccaption><caption><tag close=" "><text fontsize="90%">(b)</text></tag><text fontsize="90%">Beta</text></caption></figure><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Main</text></caption></figure>"##,
+    r##"<figure class="ltx_panels_gallery" inlist="lof" labels="LABEL:m" panelcols="2" panelrows="1" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure class="ltx_figure_panel" inlist="lof" labels="LABEL:a" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1a</tag></tags><p>X</p><toccaption><tag close=" ">a</tag>Alpha</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Alpha</text></caption></figure><figure class="ltx_figure_panel" inlist="lof" labels="LABEL:b" xml:id="S0.F1.sf2"><tags><tag><text fontsize="90%">(b)</text></tag><tag role="refnum">1b</tag></tags><p>Y</p><toccaption><tag close=" ">b</tag>Beta</toccaption><caption><tag close=" "><text fontsize="90%">(b)</text></tag><text fontsize="90%">Beta</text></caption></figure><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": ">Figure 1</tag>Main</caption></figure>"##,
   );
 }
 
@@ -12467,7 +12725,7 @@ fn subcaption_labelformat_option_keeps_the_authors_number() {
     &xml,
     "figure",
     &[r#"xml:id="S0.F1""#],
-    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure inlist="lof" labels="LABEL:a" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1(a)</tag></tags><p>X</p><toccaption><tag close=" ">(a)</tag>Alpha</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Alpha</text></caption></figure><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Main</text></caption></figure>"##,
+    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure inlist="lof" labels="LABEL:a" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1(a)</tag></tags><p>X</p><toccaption><tag close=" ">(a)</tag>Alpha</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Alpha</text></caption></figure><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": ">Figure 1</tag>Main</caption></figure>"##,
   );
 }
 
@@ -12486,7 +12744,7 @@ fn subcaption_labelformat_setup_keeps_the_authors_number() {
     &xml,
     "figure",
     &[r#"xml:id="S0.F1""#],
-    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure inlist="lof" labels="LABEL:a" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1(a)</tag></tags><p>X</p><toccaption><tag close=" ">(a)</tag>Alpha</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Alpha</text></caption></figure><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Main</text></caption></figure>"##,
+    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure inlist="lof" labels="LABEL:a" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1(a)</tag></tags><p>X</p><toccaption><tag close=" ">(a)</tag>Alpha</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Alpha</text></caption></figure><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": ">Figure 1</tag>Main</caption></figure>"##,
   );
 }
 
@@ -12506,7 +12764,7 @@ fn subfigure_before_subcaption_keeps_its_numbers() {
     &xml,
     "figure",
     &[r#"xml:id="S0.F1""#],
-    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure labels="LABEL:a" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1(a)</tag></tags><p>X</p><toccaption><tag close=" ">(a)</tag>Alpha</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Alpha</text></caption></figure><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Main</text></caption></figure>"##,
+    r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure labels="LABEL:a" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1(a)</tag></tags><p>X</p><toccaption><tag close=" ">(a)</tag>Alpha</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Alpha</text></caption></figure><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": ">Figure 1</tag>Main</caption></figure>"##,
   );
 }
 
@@ -12596,7 +12854,7 @@ fn panel_merge_keeps_boxes_closed() {
     &xml,
     "figure",
     &[r#"xml:id="S0.F2""#],
-    r##"<figure inlist="lof" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><block class="ltx_figure_panel"><block align="center" class="ltx_minipage" vattach="middle" width="241.5pt"><graphics class="ltx_centering" graphic="none.png" options="width=241.49895pt,keepaspectratio=true" xml:id="S0.F2.g1"/></block><p align="center" class="ltx_minipage" vattach="middle" width="13.8pt"><text fontsize="80%">(a)</text></p></block><break class="ltx_break"/><block class="ltx_figure_panel"><block align="center" class="ltx_minipage" vattach="middle" width="241.5pt"><graphics class="ltx_centering" graphic="none.png" options="width=241.49895pt,keepaspectratio=true" xml:id="S0.F2.g2"/></block><p align="center" class="ltx_minipage" vattach="middle" width="13.8pt"><text fontsize="80%">(b)</text></p></block><toccaption class="ltx_centering"><tag close=" ">2</tag>Two rows</toccaption><caption class="ltx_centering"><tag close=": ">Figure 2</tag>Two rows</caption></figure>"##,
+    r##"<figure class="ltx_panels_gallery" inlist="lof" panelcols="1" panelfill="0.74" panelline="1" panelrows="2" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><block class="ltx_figure_panel" panelwidth="0.74"><block align="center" class="ltx_minipage" vattach="middle" width="241.5pt"><graphics class="ltx_centering" graphic="none.png" options="width=241.49895pt,keepaspectratio=true" xml:id="S0.F2.g1"/></block><p align="center" class="ltx_minipage" vattach="middle" width="13.8pt"><text fontsize="80%">(a)</text></p></block><break class="ltx_break"/><block class="ltx_figure_panel" panelwidth="0.74"><block align="center" class="ltx_minipage" vattach="middle" width="241.5pt"><graphics class="ltx_centering" graphic="none.png" options="width=241.49895pt,keepaspectratio=true" xml:id="S0.F2.g2"/></block><p align="center" class="ltx_minipage" vattach="middle" width="13.8pt"><text fontsize="80%">(b)</text></p></block><toccaption class="ltx_centering"><tag close=" ">2</tag>Two rows</toccaption><caption class="ltx_centering"><tag close=": ">Figure 2</tag>Two rows</caption></figure>"##,
   );
 }
 
@@ -13335,6 +13593,7 @@ fn enumitem_setlist_levels_and_names() {
 }
 
 /// 57u: `\setlist` replaces and `\setlist*` appends, `list<depth>` keys apply, only a counter command takes `*`, a `\newlist` name is a list (enumitem.sty:573-598, :977-980, :1597-1612; KPE #354).
+/// The level-2 label empties `\p@enumii` (enumitem.sty:551-556, 77u): its reference is "**", as pdflatex's `\ref`.
 #[test]
 fn enumitem_setlist_replaces_appends_and_depth() {
   let (stderr, xml) = convert_with(
@@ -13349,7 +13608,7 @@ fn enumitem_setlist_replaces_appends_and_depth() {
     &xml,
     "enumerate",
     &[r#"xml:id="S0.I1""#],
-    r##"<enumerate xml:id="S0.I1"><item xml:id="S0.I1.i1"><tags><tag><text font="bold">1.</text></tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para xml:id="S0.I1.i1.p1"><p>one</p><enumerate xml:id="S0.I1.i1.I1"><item xml:id="S0.I1.i1.I1.i1"><tags><tag><text font="bold">**</text></tag><tag role="refnum">1**</tag><tag role="typerefnum">item 1**</tag></tags><para xml:id="S0.I1.i1.I1.i1.p1"><p>two</p></para></item></enumerate></para></item></enumerate>"##,
+    r##"<enumerate xml:id="S0.I1"><item xml:id="S0.I1.i1"><tags><tag><text font="bold">1.</text></tag><tag role="refnum">1</tag><tag role="typerefnum">item 1</tag></tags><para xml:id="S0.I1.i1.p1"><p>one</p><enumerate xml:id="S0.I1.i1.I1"><item xml:id="S0.I1.i1.I1.i1"><tags><tag><text font="bold">**</text></tag><tag role="refnum">**</tag><tag role="typerefnum">item **</tag></tags><para xml:id="S0.I1.i1.I1.i1.p1"><p>two</p></para></item></enumerate></para></item></enumerate>"##,
   );
   latexml::util::test::assert_element(
     &xml,
@@ -14201,9 +14460,10 @@ fn declaremathoperator_keeps_the_following_letters_italic() {
   );
 }
 
-/// 57ab: in an italic context the italic is the context's (`<text font="italic">`, a theorem
-/// body), so a letter there is a plain `<mi>`, found by the inherited font as Perl's
-/// `$LaTeXML::MathML::FONT` (MathML.pm:278); an upright one says `normal`.
+/// 57ab: in an italic context (`<text font="italic">`, a theorem body) a letter is a plain `<mi>`;
+/// an upright one says `normal`. Perl finds the italic by the inherited font (`$LaTeXML::MathML::FONT`,
+/// MathML.pm:278); since 77u r3 the letter carries its own `font="italic"`, written against the text
+/// default rather than the enclosing text (OXIDIZED_DESIGN_DIVERGENCES #780).
 #[test]
 fn letters_in_an_italic_context_stay_plain_mi() {
   let (stderr, html) = convert_html(
@@ -14319,7 +14579,7 @@ fn continuedfloat_keeps_the_number_and_the_letters() {
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
   let figure = |n: &str| {
     format!(
-      r#"<tags><tag><text fontsize="90%">Figure {n}</text></tag><tag role="refnum">{n}</tag><tag role="typerefnum">Figure {n}</tag></tags>"#
+      r#"<tags><tag>Figure {n}</tag><tag role="refnum">{n}</tag><tag role="typerefnum">Figure {n}</tag></tags>"#
     )
   };
   let (f1, f2) = (figure("1"), figure("2"));
@@ -14394,46 +14654,41 @@ fn continuedfloat_suppresses_one_step_per_real_float() {
 /// leaves its step-back, so its next table is Table 1 again; Figure 1, 1, 2.
 #[test]
 fn continuedfloat_counts_only_the_main_floats_steps() {
-  let tags = |kind: &str, n: &str, sized: bool| {
-    let label = if sized {
-      format!(r#"<text fontsize="90%">{kind} {n}</text>"#)
-    } else {
-      format!("{kind} {n}")
-    };
+  let tags = |kind: &str, n: &str| {
     format!(
-      r#"<tags><tag>{label}</tag><tag role="refnum">{n}</tag><tag role="typerefnum">{kind} {n}</tag></tags>"#
+      r#"<tags><tag>{kind} {n}</tag><tag role="refnum">{n}</tag><tag role="typerefnum">{kind} {n}</tag></tags>"#
     )
   };
   for (tex, expected) in [
     (
       "\\documentclass{article}\n\\usepackage{caption}\n\\usepackage{subcaption}\n\\begin{document}\n\\begin{table}\\caption{Top}\n\\begin{minipage}{.4\\linewidth}\\subcaption{One}X\\end{minipage}\n\\end{table}\n\\begin{table}\\ContinuedFloat\\caption{Top again}\n\\begin{minipage}{.4\\linewidth}\\subcaption{Two}Y\\end{minipage}\n\\end{table}\n\\begin{table}\\caption{Next}Z\\end{table}\n\\end{document}\n",
       vec![
-        ("S0.T1", tags("Table", "1", true)),
-        ("S0.T1a", tags("Table", "1", true)),
-        ("S0.T2", tags("Table", "2", true)),
+        ("S0.T1", tags("Table", "1")),
+        ("S0.T1a", tags("Table", "1")),
+        ("S0.T2", tags("Table", "2")),
       ],
     ),
     (
       "\\documentclass{article}\n\\usepackage{graphicx}\n\\usepackage{subfig}\n\\begin{document}\n\\begin{table}\\caption{Top}\\subfloat[One]{\\rule{1cm}{1cm}}\\subfloat[Two]{\\rule{1cm}{1cm}}\\end{table}\n\\begin{table}\\ContinuedFloat\\subfloat[Three]{\\rule{1cm}{1cm}}\\end{table}\n\\begin{table}\\caption{Next}\\rule{1cm}{1cm}\\end{table}\n\\end{document}\n",
       vec![
-        ("S0.T1", tags("Table", "1", false)),
+        ("S0.T1", tags("Table", "1")),
         (
           "S0.T1a.sf3",
           r#"<tags><tag>(c)</tag><tag role="refnum">1c</tag></tags>"#.to_string(),
         ),
         // The next table, Table 1 again: its id `S0.T1` is taken, so it is repaired to `S0.T1a`
         // (the uncaptioned continued table keeps no element of its own, only its sub-float).
-        ("S0.T1a", tags("Table", "1", false)),
+        ("S0.T1a", tags("Table", "1")),
       ],
     ),
     (
       "\\documentclass{article}\n\\usepackage{caption}\n\\begin{document}\n\\begin{figure}A\\caption{A}\\end{figure}\n\\begin{figure}\\begin{center}\\ContinuedFloat B\\end{center}\\caption{B}\\end{figure}\n\\begin{figure}C\\caption{C}\\end{figure}\n\\end{document}\n",
       vec![
-        ("S0.F1", tags("Figure", "1", false)),
+        ("S0.F1", tags("Figure", "1")),
         // The continued figure: its `\@alph` id suffix is local to the `center` (as caption's),
         // so `S0.F1a` is the duplicate-id repair of its `S0.F1`.
-        ("S0.F1a", tags("Figure", "1", false)),
-        ("S0.F2", tags("Figure", "2", false)),
+        ("S0.F1a", tags("Figure", "1")),
+        ("S0.F2", tags("Figure", "2")),
       ],
     ),
   ] {

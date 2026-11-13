@@ -1,0 +1,36 @@
+% witness: 1710.06503 Fig 1 (ws-procs961x669 binding net, int70a: 0 -> 8 errors, `<ltx:caption> isn't allowed in <ltx:block>`):
+%          `\hspace*{5pt}` first in a float's `{center}`, then two `\parbox` panels holding a `\par` (the paper's
+%          `\figsubcap`); Fig 2 the same row after a plain `\hskip`
+% oracle:  pdflatex 0 errors: one line per float, the leading glue then the two 151.8pt parboxes (latex.ltx:9427
+%          `\@hspacer`'s `\vrule`, and `\hskip`, begin the paragraph in vertical mode)
+% engines: rust int69b = one row, the parboxes inline `ltx:block`s, the caption the figure's; int70a (78x r5) = the
+%          leading glue's row separator (`note_panel_separator`, an internal `ltx:break`) counted as the `{center}`
+%          capture's content in `insert_block_as`: the inline candidate holding it was chosen, the parboxes hoisted out as
+%          `ltx:logical-block`s and the caption kept inside the capture's `ltx:block` (4 Errors per float); Perl 0.8.8 as
+%          int69b
+% expect:  0 errors, 0 warnings; no `ltx:logical-block`; each caption its figure's, after the row
+% status:  RED (int70a) -> GREEN (78x r6: a row separator is a mark, not a capture's content)
+% preload: ar5iv.sty
+\documentclass{article}
+\def\figsubcap#1{\par\noindent\centering\footnotesize(#1)}
+\begin{document}
+\begin{figure}[t]
+\begin{center}
+\hspace*{5pt}\vspace{5pt}
+\parbox{2.1in}{\hspace*{-25pt}\rule{200pt}{10pt}\figsubcap{a}}
+\hspace*{25pt}
+\parbox{2.1in}{\hspace*{-25pt}\rule{200pt}{10pt}\figsubcap{b}}
+\caption{Cap.}
+\label{ICHEP}
+\end{center}
+\end{figure}
+\begin{figure}[t]
+\begin{center}
+\hskip 5pt
+\parbox{2.1in}{\rule{100pt}{10pt}\figsubcap{c}}
+\hspace*{25pt}
+\parbox{2.1in}{\rule{100pt}{10pt}\figsubcap{d}}
+\caption{Cap two.}
+\end{center}
+\end{figure}
+\end{document}

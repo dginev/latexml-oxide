@@ -1,0 +1,23 @@
+% mechanism: in llncs's sole institute (every author's, `_share=authors`, OXIDIZED_DESIGN_DIVERGENCES #901) an
+%   `Email:` label and a `\email` group list on the institute's own line after `;\@` are an e-mail line of the row:
+%   the space factor's `\@` prints nothing, so it goes with the call as a separator does (`shared_row::emails`
+%   `is_call_separator`) and the list is parted, each address to the author it spells; an address no name spells
+%   stays the block's
+% witness: 2602.18622 (`…, USA;\@ Email: \email{\{alopez3,jmuirhead,cpinciroli\}@wpi.edu}`; census129 §6 (i);
+%   batch 104d L4)
+% oracle:  pdflatex (TL 2025 llncs.cls) 0 errors: "Ann Able, Bob Baker, and Cat Cole" / "Dept. of Robotics, Univ A,
+%   Town, USA; Email: {aable,bbaker,ccole}@a.edu" / "info@a.edu"
+% engines: rust int130a: the institute "…, USA" on each author and " Email: {aable,bbaker,ccole}@a.edu" with
+%   info@a.edu on a nameless creator
+% expect:  0 errors, 0 warnings; each author the institute and the address it spells; info@a.edu on the block
+% status:  RED (int130a) -> GREEN (104d)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker \and Cat Cole}
+\institute{Dept.\ of Robotics, Univ A, Town, USA;\@ Email: \email{\{aable,bbaker,ccole\}@a.edu}\\ \email{info@a.edu}}
+\maketitle
+\begin{abstract}Abs.\end{abstract}
+Text.
+\end{document}

@@ -1,0 +1,27 @@
+% A shared corresponding-author note listing its carriers' addresses (elsarticle `\cortext[cor1]{Corresponding
+%   authors:\\ cole.c@x.org; q77@y.org}` under two `\corref{cor1}`): the addresses are distributed by the placement
+%   order, not copied — `cole.c@` Cat Cole's by its spelling, `q77@` Dan Dee's, the one carrier left (elimination); the
+%   note's words stay its carriers' (`distribute_address_lists`, OD #972; census138 ADDR-b).
+% witness: 2302.03296 (`\cortext[cor1]{Corresponding authors:\\zjsong@fudan.edu.cn; Chenxizhang@fudan.edu.cn}`)
+% oracle:  pdflatex 0 errors: "Ann Able1, Cat Cole1,∗, Dan Dee2,∗", "∗ Corresponding authors: cole.c@x.org; q77@y.org"
+% engines: rust int139a3 = the whole note copied to Cat Cole and Dan Dee
+% expect:  0 errors, 0 warnings; Ann Able: Univ X; Cat Cole: "Corresponding authors:", cole.c@x.org, Univ X; Dan Dee:
+%   "Corresponding authors:", q77@y.org, Univ Y
+% status:  RED (int139a3) -> GREEN (107f)
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author[1]{Ann Able}
+\author[1]{Cat Cole\corref{cor1}}
+\author[2]{Dan Dee\corref{cor1}}
+\cortext[cor1]{Corresponding authors:\\ cole.c@x.org; q77@y.org}
+\address[1]{Univ X, Town}
+\address[2]{Univ Y, City}
+\begin{abstract}
+A.
+\end{abstract}
+\end{frontmatter}
+Text.
+\end{document}

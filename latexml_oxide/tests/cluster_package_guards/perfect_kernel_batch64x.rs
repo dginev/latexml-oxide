@@ -397,13 +397,18 @@ Able, A. 1990, ApJ, 1
 "#,
     Some("ar5iv.sty"),
   );
-  assert_diagnostics(&log, 1, &["<ltx:bibitem> isn't allowed in <ltx:figure>"]);
+  // The second diagnostic is latex209.def's trap on the 2.09 document's `\usepackage` (pdflatex the same; user ruling
+  // 2026-10-17, OXIDIZED_DESIGN_DIVERGENCES #725); graphicx still loads.
+  assert_diagnostics(&log, 2, &[
+    "<ltx:bibitem> isn't allowed in <ltx:figure>",
+    "LaTeX2e command \\usepackage in LaTeX 2.09 document",
+  ]);
   assert_eq!(xml.matches("<graphics ").count(), 2, "{xml}");
   assert_element(
     &xml,
     "figure",
     &[],
-    r#"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="autoref">Figure 1<text xml:id="S0.F1.1"/></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><block class="ltx_figure_panel ltx_minipage" vattach="middle" width="142.3pt" xml:id="S0.F1.2"><graphics graphic="p1" xml:id="S0.F1.g1"/></block><bibitem class="ltx_figure_panel" xml:id="bib.bibx4"><bibblock><inline-block class="ltx_minipage" vattach="middle" width="142.3pt" xml:id="bib.bibx4.1"><graphics graphic="p2" xml:id="bib.bibx4.g1"/></inline-block></bibblock></bibitem><toccaption><tag close=" ">1</tag>Panels.</toccaption><caption><tag close=": ">Figure 1</tag>Panels.</caption></figure>"#,
+    r#"<figure class="ltx_panels_gallery" inlist="lof" panelcols="2" panelrows="1" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="autoref">Figure 1<text xml:id="S0.F1.1"/></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><block class="ltx_figure_panel ltx_minipage" panelwidth="0.412" vattach="middle" width="142.3pt" xml:id="S0.F1.2"><graphics graphic="p1" xml:id="S0.F1.g1"/></block><bibitem class="ltx_figure_panel" xml:id="bib.bibx4"><bibblock><inline-block class="ltx_minipage" vattach="middle" width="142.3pt" xml:id="bib.bibx4.1"><graphics graphic="p2" xml:id="bib.bibx4.g1"/></inline-block></bibblock></bibitem><toccaption><tag close=" ">1</tag>Panels.</toccaption><caption><tag close=": ">Figure 1</tag>Panels.</caption></figure>"#,
   );
   let xml = convert_clean(
     r#"\documentclass{article}\usepackage{graphicx}
@@ -441,12 +446,13 @@ Text \cite{a}.
 \end{document}
 "#,
   );
+  // A keyless entry has no reference forms: no `\cite` prints its `\b@` (OXIDIZED_DESIGN_DIVERGENCES #750).
   assert_element(
     &xml,
     "bibliography",
     &[],
-    r#"<bibliography inlist="toc" xml:id="bib"><title>References</title><biblist><bibitem xml:id="bib.bibx1"><tags><tag>[Able(2000)]</tag><tag role="refnum">Able(2000)</tag></tags><bibblock> Able, A.
-</bibblock></bibitem><bibitem xml:id="bib.bibx2"><tags><tag>[Baker(2001)]</tag><tag role="refnum">Baker(2001)</tag></tags><bibblock></bibblock></bibitem><bibitem key="a" xml:id="bib.bib1"><tags><tag>[1]</tag><tag role="refnum">1</tag></tags><bibblock> Cole.
+    r#"<bibliography inlist="toc" xml:id="bib"><title>References</title><biblist><bibitem xml:id="bib.bibx1"><tags><tag>[Able(2000)]</tag></tags><bibblock> Able, A.
+</bibblock></bibitem><bibitem xml:id="bib.bibx2"><tags><tag>[Baker(2001)]</tag></tags><bibblock></bibblock></bibitem><bibitem key="a" xml:id="bib.bib1"><tags><tag>[1]</tag><tag role="refnum">1</tag></tags><bibblock> Cole.
 </bibblock></bibitem></biblist></bibliography>"#,
   );
   // natbib: the author's label keeps an empty entry too (`\@lbibitem`'s `#1`).
@@ -1013,7 +1019,8 @@ fn amstex_end_ends_the_document() {
     &xml,
     "document",
     &[],
-    "<document xmlns=\"http://dlmf.nist.gov/LaTeXML\"><title>A title</title><para xml:id=\"p1\"><p xml:id=\"p1.1\">Some text.\n</p></para></document>",
+    "<document class=\"ltx_leqno\" xmlns=\"http://dlmf.nist.gov/LaTeXML\"><title>A title</title><para xml:id=\"p1\">\
+     <p xml:id=\"p1.1\">Some text.</p></para></document>",
   );
   let xml = convert_clean(include_str!(
     "../../../tools/perfect_kernel/repros/amstex/amsppt_bare_end.tex"
@@ -1022,7 +1029,8 @@ fn amstex_end_ends_the_document() {
     &xml,
     "document",
     &[],
-    "<document xmlns=\"http://dlmf.nist.gov/LaTeXML\"><para xml:id=\"p1\"><p xml:id=\"p1.1\">Some text.\n</p></para></document>",
+    "<document class=\"ltx_leqno\" xmlns=\"http://dlmf.nist.gov/LaTeXML\"><para xml:id=\"p1\">\
+     <p xml:id=\"p1.1\">Some text.</p></para></document>",
   );
 }
 

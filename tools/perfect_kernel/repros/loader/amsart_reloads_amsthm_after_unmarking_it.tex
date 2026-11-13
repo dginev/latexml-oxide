@@ -1,0 +1,29 @@
+% witness: 1510.08833, 1704.05671, 1707.00258, 1611.00843, 2106.07418, 2304.10644: amsart marks amsthm loaded
+%          (amsart.cls:41-42 `\ver@amsthm.sty`); the paper unmarks it, removes amsart's theorem commands and loads
+%          amsthm.sty for its `{proof}`
+% oracle:  pdflatex 0 errors ("Proof. A proof." and a QED box)
+% engines: rust 67u2 = 1 error ({proof} undefined: the loader kept amsthm loaded, `\let\proof\relax` stood); Perl 1 error
+%          the same (its loader reads only `<file>_loaded`) (KNOWN_PERL_ERRORS #720)
+% expect:  0 errors, 0 warnings; one <ltx:proof>
+% status:  RED (67u2) -> GREEN (67y)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\expandafter\let\csname ver@amsthm.sty\endcsname\relax
+\let\theoremstyle\relax
+\let\newtheoremstyle\relax
+\let\pushQED\relax
+\let\popQED\relax
+\let\qedhere\relax
+\let\mathqed\relax
+\let\openbox\relax
+\let\proof\relax\let\endproof\relax
+\usepackage{amsthm}
+\makeatletter
+\newcommand\amsthmstate{\@ifpackageloaded{amsthm}{loaded}{unloaded}}
+\makeatother
+\begin{document}
+amsthm \amsthmstate.
+\begin{proof}
+A proof.
+\end{proof}
+\end{document}

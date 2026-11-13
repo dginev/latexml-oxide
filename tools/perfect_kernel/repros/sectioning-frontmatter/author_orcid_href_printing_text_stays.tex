@@ -1,0 +1,32 @@
+% mechanism: an `\href` to an ORCID record in an author's name is the author's ORCID contact only when its ink prints
+%   no letter or digit (`\lx@author@href`, `ink_prints_text`; OXIDIZED_DESIGN_DIVERGENCES #960): two icons are two
+%   contacts; a linked name stays the name, the iD printed as digits (with or without its `X` checksum) stays printed
+% witness: review rev103b S1 probes o5 (`\author{Carl Cole \href{https://orcid.org/0000-0002-1825-0097}
+%   {0000-0002-1825-0097}}`: pdflatex prints the digits, 103b drew the logo), o3 (`…-233X` stayed printed); the linked
+%   name `\href{https://orcid.org/…}{T.J.C. Bezerra}` (2606.03745); two iDs in one name (rev103b probe o1's Eve Elm)
+% oracle:  pdflatex (TL 2025 revtex4-2) 0 errors: "Ann Able", "Bob Baker", "Carl Cole 0000-0002-1825-0097", "Dan Dorn
+%   0000-0002-1694-233X", "Univ A, Town"
+% engines: rust 103b: Carl Cole's digits replaced by an ORCID contact and logo, Dan Dorn's kept; int130a: every link in
+%   the personname; perl: not run
+% expect:  0 errors, 0 warnings; Ann Able two ORCID contacts (0000-0002-1825-0097, 0000-0001-5109-3700), Bob Baker's
+%   personname his linked name, Carl Cole's and Dan Dorn's personnames their names and printed iD links
+% status:  RED (103b) -> GREEN (103b r2) — perfect_kernel_batch103b::an_orcid_link_printing_text_stays_printed
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\usepackage{graphicx,hyperref}
+\newcommand{\orcidA}{\href{https://orcid.org/0000-0002-1825-0097}{\includegraphics[width=1em]{example-image}}}
+\newcommand{\orcidB}{\href{https://orcid.org/0000-0001-5109-3700}{\includegraphics[width=1em]{example-image}}}
+\begin{document}
+\title{T}
+\author{Ann Able \orcidA\orcidB}
+\affiliation{Univ A, Town}
+\author{\href{https://orcid.org/0000-0003-0320-5768}{Bob Baker}}
+\affiliation{Univ A, Town}
+\author{Carl Cole \href{https://orcid.org/0000-0002-1825-0097}{0000-0002-1825-0097}}
+\affiliation{Univ A, Town}
+\author{Dan Dorn \href{https://orcid.org/0000-0002-1694-233X}{0000-0002-1694-233X}}
+\affiliation{Univ A, Town}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Text.
+\end{document}

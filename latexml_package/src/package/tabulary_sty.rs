@@ -20,7 +20,7 @@ LoadDefinitions!({
     egroup()?;
     restore_dollar_outside_alignment();
   });
-  DefConstructor!("\\@@tabulary{Dimension}[] Undigested DigestedBody",
+  DefConstructor!("\\@@tabulary{Dimension} OptionalPosition Undigested DigestedBody",
     "#4",
     reversion => "\\begin{tabulary}{#1}[#2]{#3}#4\\end{tabulary}",
     before_digest => { bgroup(); },

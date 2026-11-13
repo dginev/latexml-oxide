@@ -1,0 +1,14 @@
+% witness: synthetic (SYNC 57cn fonts row); T2A/T2B/T2C set І і Ј ј (and Ԛ ԛ Ԝ ԝ Ѕ ѕ) in the slots of the Latin
+%          letters (t2aenc.def:230-237), so the fontmap read `\cyrii` (a UTF-8 `і`, t2aenc.dfu) as Latin `i`
+% oracle:  pdflatex 0 errors (pdftotext reads the shared glyphs as Latin i/j too; the letters are Cyrillic)
+% engines: rust int34a and Perl: "Ukrainian: i, Ї, Iван. Serbian: j, J." in Latin i/j/I/J
+% expect:  0 errors, 0 warnings; "Ukrainian: і, Ї, Іван. Serbian: ј, Ј. Explicit: і І ј Ј. Latin: ij IJ." with
+%          U+0456 U+0406 U+0458 U+0408 and the Latin letters Latin (OXIDIZED_DESIGN_DIVERGENCES #776)
+% status:  RED (int34a) -> GREEN (77s)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[T2A]{fontenc}
+\usepackage[utf8]{inputenc}
+\begin{document}
+Ukrainian: і, Ї, Іван. Serbian: ј, Ј. Explicit: \cyrii\ \CYRII\ \cyrje\ \CYRJE. Latin: ij IJ.
+\end{document}

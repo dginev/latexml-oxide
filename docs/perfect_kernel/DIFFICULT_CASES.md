@@ -167,7 +167,7 @@ Every witness below except xebaposter and elzcards is lualatex/pdflatex-unclean 
   (structural, not Flow); widening `sectional-block` (leading empty `ltx:p` invalid).
 - **elzcards/elzcards-examples** — OUT OF SCOPE (user 2026-10-02; PERFECT_KERNEL.md → Scope; geometry #99). The
   `landscape` order dependence is fixed (geometry_sty.rs:44-52); open side findings (`\stop` = `\endinput`, kernel paper
-  swap) are in HANDOFF; unverified since 56bp: `\usepackage[vmargin={0mm,0mm}]{geometry}` losing brace-protected commas.
+  swap) are SYNC rows (agent_reports/2026-10-02_elzcards_geometry_rootcause.md); unverified since 56bp: `\usepackage[vmargin={0mm,0mm}]{geometry}` losing brace-protected commas.
 - **etoolbox environment hooks** — settled dead end: one `@environment@X@atbegin` store for every name DOUBLE-FIRES (the
   magic `\begin{X}` constructor, dialect.rs:1244-1247, digests the store AND fires `\UseHook{env/X/begin}`); the
   `verbatim` predicate feeds the one store-only constructor (mod.rs:788-799). cora-macs-doc's 28 errors: Perl's XML is

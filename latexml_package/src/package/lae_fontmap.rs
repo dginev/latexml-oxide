@@ -156,6 +156,15 @@ LoadDefinitions!({
     0xB3u8 => "\u{0644}\u{0625}", // lamwithalefhamzabelowisolated
     0xB4u8 => "\u{0644}\u{0622}", // lamwithalefmaddaabovefinal
     0xB5u8 => "\u{0644}\u{0622}", // lamwithalefmaddaaboveisolatedd
+    // laeenc.def:83-97 `\shaddanasb` … `\shaddakasra`: the default font (ararabeyes.enc) has no glyph at
+    // 198-203, arabi's DTP Naskh LAE font (ardtpnaskh.enc `shaddah_fathatan` …) draws shadda with the vowel
+    // there, as LFE 0xC6-0xCB.
+    0xC6u8 => "\u{0651}\u{064B}", // shaddah_fathatan
+    0xC7u8 => "\u{0651}\u{064C}", // shaddah_dammatan
+    0xC8u8 => "\u{0651}\u{064D}", // shaddah_kasratan
+    0xC9u8 => "\u{0651}\u{064E}", // shaddah_fathah
+    0xCAu8 => "\u{0651}\u{064F}", // shaddah_dammah
+    0xCBu8 => "\u{0651}\u{0650}", // shaddah_kasrah
     0xFCu8 => "\u{0644}\u{0644}\u{0651}\u{0647}", // allahisolated: lam lam shadda heh, `\alef\llahchar` = الله
     0xFDu8 => "\u{0645}\u{062D}\u{0645}\u{062F}", // mhmd
     0xFFu8 => "\u{0635}\u{0644}\u{0649}\u{0020}\u{0627}\u{0644}\u{0644}\u{0647}\u{0020}\u{0639}\u{0644}\u{064A}\u{0647}\u{0020}\u{0648}\u{0633}\u{0644}\u{0645}",

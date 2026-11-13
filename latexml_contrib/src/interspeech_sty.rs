@@ -11,6 +11,8 @@ LoadDefinitions!({
   RequirePackage!("bm");
   RequirePackage!("textcomp");
   RequirePackage!("booktabs");
+  // INTERSPEECH2021.sty:54 `\RequirePackage[inline]{enumitem}`: the inline lists (`{enumerate*}`, 2104.05980).
+  RequirePackage!("enumitem", options => vec![s!("inline")]);
   RequirePackage!("caption", options => vec![s!("textfont=it"), s!("tableposition=top")]);
   RequirePackage!("spconf");
   // INTERSPEECH2021.sty:69-70: vectors and matrices are bold, not arrow-accented.

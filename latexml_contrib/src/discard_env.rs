@@ -1,7 +1,9 @@
 //! Shared helper: discard an environment body by reading tokens up to
 //! matching `\end{kind}`. Mirrors the Perl `discard_env_body` closures
 //! used in ar5iv-bindings/nicematrix / forest / diagrams / pb-diagram
-//! stub packages.
+//! stub packages. Here the users are pb-diagram's stub and the body readers
+//! of forest and animate; Paul Taylor's `diagrams` is a native binding
+//! (diagrams_tex.rs, OXIDIZED_DESIGN_DIVERGENCES #589).
 //!
 //! Perl reference (identical across those stubs):
 //! ```perl
@@ -21,16 +23,12 @@
 //!   return; }
 //! ```
 
-use std::cell::RefCell;
-
 use latexml_package::prelude::*;
 use rustc_hash::FxHashSet as HashSet;
 
-thread_local! {
-  /// One error per kind per conversion run, matching Perl's
-  /// `our $reported{$kind}` cache inside each stub package.
-  static REPORTED: RefCell<HashSet<String>> = RefCell::new(HashSet::default());
-}
+/// One error per kind per conversion run, matching Perl's `our $reported{$kind}` cache inside each stub package. A rollback
+/// puts it back with the diagnostic it discards: a rehearsal's report left the document's own unsaid.
+static REPORTED: DocumentState<HashSet<String>> = DocumentState::new("discard_env_reported");
 
 /// Read the raw (unexpanded) tokens of the current environment body up to
 /// the first `\end{kind}`, which is consumed and not returned; an `\end` of
@@ -73,8 +71,7 @@ pub fn discard_env_body(kind: &str, source: &str) -> Result<()> {
 
 /// The one-per-kind stub diagnostic shared by the discard helpers.
 fn report_stub_once(kind: &str, source: &str) -> Result<()> {
-  let first_time = REPORTED.with(|cell| {
-    let mut set = cell.borrow_mut();
+  let first_time = REPORTED.update(|set| {
     if set.contains(kind) {
       false
     } else {

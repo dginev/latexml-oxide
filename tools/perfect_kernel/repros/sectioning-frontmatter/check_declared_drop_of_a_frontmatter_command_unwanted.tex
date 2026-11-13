@@ -1,0 +1,26 @@
+% A frontmatter command's argument the binding drops as the real class does, declared on the binding's definition, is
+% no loss: aomart.cls:357-366 `\subject{<primary|secondary>}{<scheme>}{<codes>}` prints the scheme only under its
+% `printscheme` option, off by default (:64-66), so pdflatex prints "AMS Classification: Primary: 05C10." without
+% "msc2010". The binding's `\subject{}{}{}` (aomart_cls.rs) names no #2 and declares it dropped by design
+% (`drops => [2]`, `Expandable::dropped_by_design`), so the title-page check's second source (`never_digested`, the
+% document call's arguments its body never names) wants none of it. 106t r2 counted "msc 2010".
+% witness: control (rev106t S2: the binding drops that the real class makes too — aomart `\subject` #2; lmcs
+%          `\lmcsheading` #1-#4 and #7, 2306.08266; midl `\orcid`, 2605.00538; icml's `\comment`, 1803.00942)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "By Ann Able", "Abstract", "Text of the
+%          abstract.", "Body.", "Ann Able", "Lunar College", "AMS Classification: Primary: 05C10."
+% engines: rust int135e = 0 errors, 0 warnings; 106t r2 = 0 errors, 1 warning ("msc 2010"); perl = not run
+% expect:  0 errors, 0 warnings
+% status:  GREEN (int135e) -> RED (106t r2) -> GREEN (106t r3)
+% preload: ar5iv.sty
+\documentclass{aomart}
+\title{A Title}
+\author{Ann Able}
+\address{Lunar College}
+\subject{primary}{msc2010}{05C10}
+\begin{document}
+\begin{abstract}
+Text of the abstract.
+\end{abstract}
+\maketitle
+Body.
+\end{document}

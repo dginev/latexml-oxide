@@ -56,6 +56,14 @@ fn merge_limits(pos: &str) {
 /// none (OXIDIZED_DESIGN #550). Witnesses 1904.06560, 2205.04819 (natbib labels), 1303.1693, 1206.2108 (`\caption[short_x]`).
 pub const WRITTEN_COPY: &str = "lx@written@copy";
 
+/// The state value naming a digestion that re-reads a source the document also typesets where it stands, set locally
+/// by `\lx@reread@copy`: the toc copy of a heading or caption that has no `[short]` (sect04.rs, `\lx@toc@copy@text`),
+/// the reference forms of a tag (`\lx@make@tags`: an `\item[…]` label's `typerefnum`, a `\tag{…}`'s `refnum`), and
+/// natbib's label copies (`\NAT@@wrout`, which TeX writes to the .aux and reads only at a citation). A diagnostic that
+/// stands for one source occurrence (OXIDIZED_DESIGN_DIVERGENCES #721's Warning) is given at the typeset reading and not
+/// again here. A `[short]` title or caption is no re-read: it is its own source, digested once, into the list.
+pub const REREAD_COPY: &str = "lx@reread@copy";
+
 static SCRIPT_NAME_RE: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"^\\lx@(floating|post)@(subscript|superscript)$").unwrap());
 
@@ -487,7 +495,14 @@ fn end_math_or_defer(mode: &str, ender: &str) -> Result<()> {
     // Perl's ("Attempt to end mode math"). Before, the end was deferred to that group's end, which an unbalanced paper
     // never reaches, and the rest of it was digested as math. OXIDIZED_DESIGN #553. Guard
     // `perfect_kernel_batch65n::math_shift_closes_a_group_opened_in_the_formula`.
-    if let Some(closer) = off_save_closer().filter(|_| inline_formula_reachable()) {
+    // (a display opened by `$$` too, its groups the author's: 1309.7562's `$$ H^k{X,\C/\Z) … $$`, a `{` typed for a
+    // `(`, left the display open to the error limit — pdflatex 1 error)
+    let reachable = if mode == "display_math" {
+      formula_reachable(DISPLAY_FORMULA)
+    } else {
+      inline_formula_reachable()
+    };
+    if let Some(closer) = off_save_closer().filter(|_| reachable) {
       Error!(
         "expected",
         closer.to_string(),
@@ -574,7 +589,8 @@ fn end_math_at_group(mode: &str, twin: &str) -> Result<()> {
   if !is_value_bound("BOUND_MODE", Some(0))
     && lookup_string("MODE") == mode
     && let Some(t) = ::latexml_core::state::lookup_token_sym(::latexml_core::pin!("groupInitiator"))
-    && (t.get_catcode() == Catcode::BEGIN || t == T_CS!("\\bgroup") || t == T_CS!("\\begingroup"))
+    // by meaning: `\bgroup`, `\begingroup` or a `\let` copy (`\let\lb\bgroup`) opens the same group
+    && (t.get_catcode() == Catcode::BEGIN || t.defined_as(&T_BEGIN!()) || t.defined_as(&T_CS!("\\begingroup")))
   {
     push_value("afterGroup", T_CS!(twin))?;
     return Ok(());
@@ -669,8 +685,24 @@ LoadDefinitions!({
         return Ok(Vec::new());
       }
       if mode == "display_math" {
-        if next_is_math_shift()? {
-          read_token()?;
+        // tex.web §1197 (`after_math`, "Check that another $ follows") reads the second `$` by `get_x_token`, so
+        // a macro may produce it (`$\full{$}$x=1.$\full{$}` with `\full{#1}` = `#1`; arXiv 2110.14271, rc_struct3
+        // E3); §1138's opening `$$` is `get_token` (`next_is_math_shift`). The token read, if not a math shift, goes
+        // back as read (`back_error`). Known residual: it is expanded in the display's own mode, where §1194 has
+        // already popped the display's nest (`fin_mlist`, tex.web:22415), so `$$y=2$\ifmmode$\fi` finds `\ifmmode`
+        // true and closes silently (pdflatex errs). Reading it under the enclosing mode needs §1197's recovery too
+        // (finish the display, then `back_error`) — with Perl's "Ignoring" recovery the follower would be expanded
+        // as text and re-read in the display left open (arXiv 2207.12569: each `$` of a `\boxed{$u$…}` in a `$$…$$`
+        // cascaded, 6 -> 101 errors). One coupled change: SYNC_STATUS int19 row, KNOWN_PERL_ERRORS #899. Guards:
+        // `perfect_kernel_batch69b::display_closing_dollar_from_a_macro`,
+        // `perfect_kernel_batch69b::display_closing_dollar_enclosing_mode_residual`,
+        // `perfect_kernel_batchint19::display_closing_dollar_text_after_the_display_kept`.
+        let next = read_x_token(None, false, None)?;
+        let shift = next.is_some_and(|t| t.defined_as(&T_MATH!()));
+        if let Some(t) = next.filter(|_| !shift) {
+          unread_one(t);
+        }
+        if shift {
           op = "\\lx@end@display@math";
         } else {
           Error!(
@@ -745,6 +777,34 @@ LoadDefinitions!({
       }
     }
   });
+  // A math that TeX sets inside a box of its own, `\hbox{$…$}`, where an author's `$` ends that math and the next
+  // `$` begins it again, the text between them set in the box (tex.web §1193 `after_math` back in restricted
+  // horizontal mode, §1138 `init_math` there): amsmath's display under `\if@fleqn` (amsmath.sty:2794-2812
+  // `\mathdisplay`'s `\hbox to\displaywidth\bgroup … $\displaystyle`, amsmath_sty.rs `\lx@mathdisplay@hook`),
+  // proof.sty's label, conclusion and premises (proof.sty:160-166 `\hbox{$#1$}`, the `$##$` cells; proof_sty.rs),
+  // accents.sty's under-accent (accents.sty:206-213 `\cc@uaccentset`, `\hbox{$…#1$}`; accents_sty.rs), fleqn.clo's,
+  // iopart's and pasj's `{equation}` (fleqn.clo:92-103; fleqn_sty.rs `math_displays_in_hbox`), amsbsy's `\boldsymbol`
+  // (amsbsy.sty:28-36; bm_sty.rs `bold_math`; 73b: cond-mat0202518, 1905.11073, 2311.01721, 2508.01295). Here the
+  // math is the enclosing formula's, so `$` takes the meaning it has in a math alignment cell, which balances the
+  // cell's hidden `$` the same way: the first opens in-math text, the next ends it (`\lx@dollar@in@mathmode`), and a
+  // `$…$` inside a text box of that math (`\mbox{$x$}`) is still a formula. Local to the group of the math.
+  // Perl has no such frame and errs "Missing $ closing display math" twice (KNOWN_PERL_ERRORS #907). Witnesses: the
+  // rc_struct3 E1 sample (agent_reports/2026-10-17_rc_struct3.md). Guards
+  // `perfect_kernel_batch69c::{dollar_in_an_amsmath_fleqn_display_is_text, dollar_in_proof_and_accents_hbox_math_is_text,
+  // dollar_in_a_display_still_errs}`.
+  DefPrimitive!("\\lx@math@in@hbox", {
+    if lookup_bool_sym(pin!("IN_MATH")) {
+      let_i(&T_MATH!(), &T_CS!("\\lx@dollar@in@mathmode"), None);
+      assign_value("MATH_ALIGN_$_BEGUN", 0, None);
+    }
+  });
+  // The same for one argument, in a hidden group of its own (`\lx@hidden@bgroup`, no braces in the `tex`), so the `$`
+  // keeps its meaning after it: a binding's argument may be digested in no group of its own (proof.sty's `\infer`
+  // parts, digested as an `\lx@dual`'s arguments: 1805.04852, 2009.04437, 2504.10800 `$\vcenter{\infer[(R)]{A}{B}}$`).
+  DefMacro!(
+    "\\lx@math@in@hbox@group{}",
+    "\\lx@hidden@bgroup\\lx@math@in@hbox #1\\lx@hidden@egroup"
+  );
   //======================================================================
   // For inserting (non-trivial?) text while in math mode
   DefConstructor!("\\lx@begin@inmath@text",
@@ -753,6 +813,16 @@ LoadDefinitions!({
     alias => "$",
     // Perl: beginMode('restricted_horizontal') — NOT 'text'
     before_digest => sub { begin_mode("restricted_horizontal")?; },
+    // An empty text (`$$` in a math TeX sets in a box, bm's `\boldsymbol{e^+e^-$$\rightarrow$$J/\psi}`: a formula
+    // ends and the next begins, 2506.20975) is no operand: dropped — the text just built, the last child if an `ltx:XMText`. Guard `perfect_kernel_batch73b::dollar_in_boldsymbol_is_text`.
+    after_construct => sub[document, _whatsit] {
+      if let Some(node) = document.get_node().get_last_child()
+        && node.get_first_child().is_none()
+        && document::with_node_qname(&node, |qn| qn == "ltx:XMText")
+      {
+        document.remove_node(node);
+      }
+    },
     capture_body => true
   );
   DefConstructor!("\\lx@end@inmath@text", "", alias => "$",
@@ -768,8 +838,13 @@ LoadDefinitions!({
     before_digest => {
       // Perl: $_[0]->enterHorizontal; (TeX_Math.pool.ltxml line 134)
       enter_horizontal();
+      let in_alignment = lookup_alignment().is_some();
       // begin_mode handles \everydisplay injection (Stomach.pm lines 504-507)
       begin_mode("display_math")?;
+      // (the display a math shift ends through the groups opened in it, outside alignments: `DISPLAY_FORMULA`)
+      if !in_alignment {
+        assign_frame_value(DISPLAY_FORMULA, true);
+      }
     },
     // Perl #2798: display math carries padtop=\abovedisplayskip,
     // padbottom=\belowdisplayskip — the S5 padding mechanism adds these to the
@@ -1179,9 +1254,11 @@ LoadDefinitions!({
     after_construct => sub[document, whatsit] { stretch_delimiter(document, whatsit)?; });
 
   // tex.web §1191 `push_math(math_left_group)`: the group `\left` opens is the `\lx@hidden@bgroup` that follows it,
-  // and this, the first thing digested inside it, records its group code.
+  // and this, the first thing digested inside it, records its group code — and the input the `\left` was read in, so
+  // that only that input's end closes the group (stomach.rs `close_left_group_at_input_end`; 2605.02768, 2606.01486).
   DefPrimitive!("\\lx@math@left@group", sub[_args] {
     assign_frame_value("lx@group@code", Stored::Token(T_CS!("\\left")));
+    record_left_group_input();
   });
 
   // \lx@hidden@egroup@right: like \lx@hidden@egroup, but softer about missing \left
@@ -1833,13 +1910,14 @@ LoadDefinitions!({
   // `perfect_kernel_batch56::eqno_digests_its_tag_material`.
   DefMacro!("\\eqno", "\\lx@eqno");
   Let!("\\leqno", "\\eqno");
+  // by meaning, as Perl's `defined_as` (TeX_Math.pool.ltxml:1245-1253): `\let\dollar=$` ends the tag too
   fn eqno_stops_at(t: &Token) -> bool {
-    *t == T_MATH!()
-      || *t == T_CS!("\\]")
-      || *t == T_CS!("\\cr")
-      || *t == T_CS!("\\lx@hidden@cr")
-      || *t == T_CS!("\\lx@end@display@math")
-      || *t == T_CS!("\\begingroup")
+    t.defined_as(&T_MATH!())
+      || t.defined_as(&T_CS!("\\]"))
+      || t.defined_as(&T_CS!("\\cr"))
+      || t.defined_as(&T_CS!("\\lx@hidden@cr"))
+      || t.defined_as(&T_CS!("\\lx@end@display@math"))
+      || t.defined_as(&T_CS!("\\begingroup"))
       || t.with_str(|s| s.starts_with("\\begin{") || s.starts_with("\\end{"))
   }
   DefParameterType!(EqnoTag, sub[_inner, _extra] {
@@ -1869,8 +1947,14 @@ LoadDefinitions!({
     }
   );
   // Revert to nothing, since it really doesn't belong in the TeX string(?)
+  // A display a raw counter step numbered (`$$ \refstepcounter{foo}\label{x2} c=d \eqno(B) $$`) keeps one
+  // `ltx:tags`: the tag joins the step's number (`Document::merge_raw_refstep_tags`, OXIDIZED_DESIGN_DIVERGENCES #813;
+  // repro `cross-references/unnumbered_display_label_takes_the_step_number.tex`).
   DefConstructor!("\\lx@eqno EqnoTag",
     "^ <ltx:tags><ltx:tag><ltx:Math><ltx:XMath>#1</ltx:XMath></ltx:Math></ltx:tag></ltx:tags>",
+    after_construct => sub[document, _whatsit] {
+      document.merge_raw_refstep_tags();
+    },
     reversion => "");
 
   //======================================================================
@@ -2560,6 +2644,8 @@ pub static DELIMITER_MAP: Lazy<HashMap<&'static str, DelimiterMeta>> = Lazy::new
     "\\|"     => DelimiterMeta{ char: '\u{2016}',
                   left_role: "OPEN", right_role: "CLOSE", name: Some("||") },
     "\\Vert"  => DelimiterMeta{ char: '\u{2016}',
+                  left_role: "OPEN", right_role: "CLOSE", name: Some("||") },
+    "\\lx@math@Vert" => DelimiterMeta{ char: '\u{2016}',
                   left_role: "OPEN", right_role: "CLOSE", name: Some("||") },
     "\\vert"  => DelimiterMeta{ char: '|',
                   left_role: "VERTBAR", right_role: "VERTBAR", name: None },

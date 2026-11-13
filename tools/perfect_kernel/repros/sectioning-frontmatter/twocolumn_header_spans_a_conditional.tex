@@ -1,0 +1,13 @@
+% witness: 1810.09262 (price.sty:94-112 \mymaketitle), 1812.09662, 1904.00825 (15); 1912.04806 (achemso \ifpreprint\else\twocolumn[, ]) (29)
+% oracle: pdflatex 0 errors (latex.ltx \@topnewpage typesets the [..] argument in a \vbox; its \fi balances the outer \if)
+% expect: 0 Errors; "Title" once, "Body." kept
+% mechanism: sect05.rs \twocolumn[] = \ifx.#1.\else...\fi: the argument's own \fi ends the \ifx (Perl latex_constructs.pool.ltxml:1015 identical)
+% status: GREEN (66r: sect05.rs \twocolumn tests the header in Rust; KPE #672)
+\documentclass{article}
+\newif\ifmulticol \multicoltrue
+\begin{document}
+\ifmulticol\twocolumn[\begin{@twocolumnfalse}\fi
+Title
+\ifmulticol\end{@twocolumnfalse}]\fi
+Body.
+\end{document}

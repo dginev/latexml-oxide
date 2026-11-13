@@ -78,3 +78,6 @@ dead ends) — conclusions only, the play-by-play stays in the agent transcript.
 | `paragraph-mode` | mode changes at paragraph boundaries: tex.web §1046-1047 `\par`/`\end{X}` in inline math ("Missing $ inserted"), the formula's end around a stray `}` |
 | `singletons` | one-off package defects whose mechanism has no topic of its own |
 | `stub-dependencies` | a stub binding (a package not interpreted raw) loads what the real package loads, option-driven loads included, and defines its public names; class bindings likewise for their classes |
+| `stand-in-copies` | a stand-in binding followed by the paper's copy of its file, which only provides: extras, owned names kept, scratch logic, nested loads, deferred hooks (OXIDIZED_DESIGN_DIVERGENCES #731) |
+| `cross-references` | `\label`/`\ref`: the object a label names and the number `\ref` prints — a label after a raw `\refstepcounter` (tcolorbox boxes, a `\put`) names the box the step numbers (OXIDIZED_DESIGN_DIVERGENCES #813) |
+| `reversion` | what a definer reverts to in `tex=`: the user-level macro, never a `\lx@…` internal — a Perl `sub { }` body leaves no box, an undef body's box reverts its arguments, an internal constructor carries its macro's `alias` |

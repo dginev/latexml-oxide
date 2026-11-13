@@ -97,9 +97,9 @@
 <text font="sansserif bold">1 <Math mode="inline" tex="\nicefrac{{m}}{{s}}" text="m / s" xml:id="S2.p3.m1">
             <XMath>
               <XMApp>
-                <XMTok font="serif medium" meaning="divide" role="MULOP" stretchy="true" width="-0.15em" xoffset="-0.1em">/</XMTok>
-                <XMTok class="ltx_unit" fontsize="70%" role="ID" rpadding="-0.5em" yoffset="0.3em">m</XMTok>
-                <XMTok class="ltx_unit" fontsize="70%" role="ID">s</XMTok>
+                <XMTok meaning="divide" role="MULOP" stretchy="true" width="-0.15em" xoffset="-0.1em">/</XMTok>
+                <XMTok class="ltx_unit" font="sansserif bold" fontsize="70%" role="ID" rpadding="-0.5em" yoffset="0.3em">m</XMTok>
+                <XMTok class="ltx_unit" font="sansserif bold" fontsize="70%" role="ID">s</XMTok>
               </XMApp>
             </XMath>
           </Math></text>
@@ -122,9 +122,9 @@
 <text font="sansserif italic" fontsize="70%">1 <Math mode="inline" tex="\nicefrac{{m}}{{s}}" text="m / s" xml:id="S2.p4.m1">
             <XMath>
               <XMApp>
-                <XMTok font="serif upright" meaning="divide" role="MULOP" stretchy="true" width="-0.15em" xoffset="-0.1em">/</XMTok>
-                <XMTok class="ltx_unit" fontsize="70%" role="ID" rpadding="-0.5em" yoffset="0.3em">m</XMTok>
-                <XMTok class="ltx_unit" fontsize="70%" role="ID">s</XMTok>
+                <XMTok meaning="divide" role="MULOP" stretchy="true" width="-0.15em" xoffset="-0.1em">/</XMTok>
+                <XMTok class="ltx_unit" font="sansserif italic" fontsize="70%" role="ID" rpadding="-0.5em" yoffset="0.3em">m</XMTok>
+                <XMTok class="ltx_unit" font="sansserif italic" fontsize="70%" role="ID">s</XMTok>
               </XMApp>
             </XMath>
           </Math></text>

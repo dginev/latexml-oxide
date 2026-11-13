@@ -1,0 +1,6 @@
+\NeedsTeXFormat{LaTeX2e}\ProvidesPackage{poq68h}
+\def\poq@log{}
+\DeclareOption{alpha}{\g@addto@macro\poq@log{<ALPHA>}}
+\DeclareOption*{\expandafter\g@addto@macro\expandafter\poq@log\expandafter{\expandafter[\CurrentOption]}}
+\ProcessOptions\relax
+\newcommand\showpoq{\texttt{\meaning\poq@log}}

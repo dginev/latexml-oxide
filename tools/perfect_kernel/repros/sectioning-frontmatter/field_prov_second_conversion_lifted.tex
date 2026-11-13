@@ -1,0 +1,20 @@
+
+% The document's own whole prints of `\@title`, converted twice on one thread without an engine reset (a persistent
+% `cortex_worker` thread, a streaming restart, the CLI's supplements): the field provenance's thread state (the
+% stamped gate, the field ledger and its settled flag, the pending cover) is reset at every conversion's start, so the
+% second conversion lifts as the first does (fms1 round-4 review finding 1, probe two/: `latexml_oxide main.tex
+% supp.tex` lifted 2 + 0).
+% status:  RED (fms1 round 4: the second conversion lifted nothing, its ledger settled by the first) → GREEN (fms1
+%          round 5).
+% oracle:  pdflatex 0 errors: "Twice Title Twice Title", then the title block "Twice Title / Ann Author", "1 Intro
+%          Text.".
+% expect:  0 errors, 0 warnings; `field_ink` Info ×2 in each conversion.
+\documentclass{article}
+\title{Twice Title}\author{Ann Author}
+\makeatletter
+\begin{document}
+\begin{center}\@title\ \@title\end{center}
+\maketitle
+\section{Intro}
+Text.
+\end{document}

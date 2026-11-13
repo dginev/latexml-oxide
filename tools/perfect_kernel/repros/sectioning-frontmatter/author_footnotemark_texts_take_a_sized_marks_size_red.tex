@@ -1,0 +1,19 @@
+% mechanism: `Bob Baker {\small\footnotemark[3]} \footnotemark[4]` and `\footnotetext[3]{Note C.}\footnotetext[4]{Note
+%   D.}` after `\maketitle`: both texts are written at 90 %, mark 3's from its `\small` group and mark 4's, set
+%   outside it, too (relocate_footnote fills each note; the size is the base's, not the lift's)
+% witness: synthetic (FN1b's trim repro `author_two_footnotemarks_name_end_trimmed.tex`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Bob Baker ‡ §", footnotes "3 Note C." "4 Note D." in one
+%   size
+% engines: int159a2 (`latexml_oxide.int159a2-rel`) and FN1b: 0 errors, 0 warnings; both notes' texts `<text fontsize="90%">`
+%   ("Note C." and "Note D."); perl not run
+% expect:  0 errors, 0 warnings; "Note C." and "Note D." with no `fontsize` (pdflatex sets both texts in one size)
+% status:  RED (int159a2, FN1b)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Bob Baker {\small\footnotemark[3]} \footnotemark[4]}
+\begin{document}
+\maketitle
+\footnotetext[3]{Note C.}\footnotetext[4]{Note D.}
+Text.
+\end{document}

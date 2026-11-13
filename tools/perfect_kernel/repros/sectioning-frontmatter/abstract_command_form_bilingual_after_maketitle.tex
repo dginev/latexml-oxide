@@ -1,0 +1,20 @@
+% Two `\abstract{…}`s after `\maketitle`, English then French: both printed where they stand, both kept (no dequeue
+% after `\maketitle`, nor across a name or language: queue_digest.rs `COMMAND_FORM`, OXIDIZED_DESIGN #154).
+% witness: review probe q16 (86i r1).
+% Guard: perfect_kernel_batch86i::abstract_command_form_twice_before_maketitle_keeps_the_last.
+% oracle:  pdflatex 0 errors: "Abstract English abstract words. Résumé Mots du résumé. 1 Intro".
+% engines: perl: the French abstract only. rust int117a: both. rust 86i r1: the French only.
+% expect:  0 errors, 0 warnings; title, creator, abstract (English), abstract (French), section.
+% status:  GREEN (int117a) -> RED (86i r1) -> GREEN (86i r2)
+\documentclass{article}
+\usepackage[french,english]{babel}
+\begin{document}
+\title{Probe}\author{Ann}
+\maketitle
+\abstract{English abstract words.}
+\begin{otherlanguage}{french}
+\abstract{Mots du résumé.}
+\end{otherlanguage}
+\section{Intro}
+Body.
+\end{document}

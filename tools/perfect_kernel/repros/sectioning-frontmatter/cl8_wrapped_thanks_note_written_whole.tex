@@ -1,0 +1,14 @@
+% mechanism: a note's span `\cmd{arg}` whose plain-character argument prints less than the note is no note command's
+%   argument (`emit::note_argument`): the note is written whole, never the argument (the id) alone.
+% witness: 2608.08994, 2202.03759 (SCITEPRESS `\orcidAuthor{id}` = `\thanks{\epsfig{orcid.eps}~https://orcid.org/#1}`)
+% oracle:  pdflatex 0 errors: notes "ORCID https://orcid.org/0000-0001-8817-2744", "ORCID https://orcid.org/0000-0002-6100-8255"
+% engines: off whole; int153z =2 the id alone; CL8 =2 whole by text (Warning "markup lost: note no argument" each)
+% expect:  0 errors; 2 warnings; each note's text whole
+\documentclass{article}
+\newcommand\orcidAuthor[1]{\thanks{ORCID~https://orcid.org/#1}}
+\title{Title}
+\author{Ann Able\orcidAuthor{0000-0001-8817-2744}, Bob Bee\orcidAuthor{0000-0002-6100-8255}}
+\begin{document}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,32 @@
+% witness: plweb/pl (pl.sty:121 `\everypar{\parbox{…}{…\hfill}…}`, a Fatal recursion on int141a)
+% oracle:  pdflatex (TL 2025) 0 errors: [E] at "Text." and "Second." only, none in the parbox, minipage, p cell, float, note or marginpar
+%          (latex.ltx:16279 `\@arrayparboxrestore`'s `\everypar{}`).
+% engines: int141a: [E] in the parbox, minipage, p cell and float. The two lines before the rule recurse, a Fatal (`\everypar` ran the box in the box).
+% expect:  0 errors; the elements whole
+% status:  GREEN
+\documentclass{article}
+\newlength\PrologIndent \PrologIndent=2em
+\begin{document}
+\begingroup
+\everypar{\parbox{\PrologIndent}{\hfill}\setbox0=\hbox\bgroup}
+\def\par{\leavevmode\egroup\box0\endgraf}
+First line.\par
+\endgroup
+\begingroup
+\everypar{\begin{minipage}{1cm}\hfill\end{minipage}\ }
+Second line.\par
+\endgroup
+
+\begingroup
+\everypar{[E]}
+Text.
+\parbox{2cm}{Parbox}
+\begin{minipage}{2cm}Minipage\end{minipage}
+\footnote{Note}
+\marginpar{Margin}
+\begin{tabular}{p{2cm}l}Pcell & Lcell\end{tabular}
+
+Second.
+\begin{figure}Float\caption{Cap}\end{figure}
+\endgroup
+\end{document}

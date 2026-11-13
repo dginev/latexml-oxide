@@ -1,0 +1,20 @@
+% A numbered entry `$^2$Dedicated to the memory of his teacher C. Dee` that only Bob Baker's name requests
+% (`Bob Baker$^{1,2}$`): the Kind step for a dedication leaves a contact's first line its mark labels (`legend_mark`) to
+% the Kind step for a legend, which makes it its carrier's note (review rev107c S1: 107c r2).
+% witness: none on arXiv yet; the flush-time sibling of legend_kind_marked_dedication_line
+% oracle:  pdflatex 0 errors: "Ann Able1 and Bob Baker1,2", "1Univ A, Town", "2Dedicated to the memory of his teacher C.
+%          Dee"
+% engines: rust 107c r1 = the paper's dedication pubnote
+% expect:  0 errors, 0 warnings; Able, Baker: Univ A, Town; Baker: the note marked 2
+% status:  RED (107c r1) -> GREEN (107c r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{1,2}$\\
+$^1$Univ A, Town\\
+$^2$Dedicated to the memory of his teacher C. Dee}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

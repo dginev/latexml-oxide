@@ -1,0 +1,11 @@
+% witness: 2604.22493 (lipics-v2021 + keytheorems, root-causer K4d); 2211.04601 (the option)
+% oracle: none (lipics-v2021.cls ships with the papers, not TL); engine: pdflatex
+% expect: 0 errors; keytheorems loads (no thmtools conflict)
+% mechanism: lipics-v2021.cls:193/:1015-1016 loads thm-restate only on its `thm-restate` option; the binding loaded it
+%   always, and its thmtools made keytheorems refuse to load. Fixed: lipics_cls.rs reads \@classoptionslist.
+% status:  GREEN
+\documentclass{lipics-v2021}
+\usepackage{keytheorems}
+\begin{document}
+Text.
+\end{document}

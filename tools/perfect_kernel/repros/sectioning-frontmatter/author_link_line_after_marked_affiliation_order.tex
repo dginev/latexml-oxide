@@ -1,0 +1,13 @@
+% witness: the r5 re-review of batch 77p (finding 8, probe u14)
+% oracle:  pdflatex 0 errors: two columns, each a name, its institution, then its URL
+% engines: rust 77p r8 = 0 errors; each name's URL before its institution
+% expect:  0 errors, 0 warnings; each name's institution, then its URL, as printed
+% status:  RED (77p r8) -> GREEN (77p r9)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able$^1$ \\ $^1$Univ A \\ \url{https://a.org} \and Bob Baker$^2$ \\ $^2$Univ B \\ \url{https://b.org}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

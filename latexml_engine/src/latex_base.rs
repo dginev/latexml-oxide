@@ -517,6 +517,10 @@ LoadDefinitions!({
   \DeclareRobustCommand\usebox[1]{\leavevmode\copy #1\relax}
   """#
   );
+  // latex.ltx:16368 saves the primitive before its robust `\underline` (between `\rule` and `\raisebox`); the dump
+  // records it (`M \@@underline PA \underline`), Perl latex_base.pool.ltxml has no copy, so without a dump
+  // `\@@underline` was undefined (KNOWN_PERL_ERRORS #987).
+  Let!("\\@@underline", "\\underline");
 
   //======================================================================
   // Error/Warning/Info infrastructure

@@ -23,17 +23,24 @@ This file is the **index + overview**. The detail lives in a themed family:
 > "Speculative function application"**) are in MATH; (3) **`#76` is a retired
 > number** — its entry was consolidated into `#74` and the number was not
 > reused, so a gap in the sequence is expected, not a missing file. Next free
-> number: **#565**. When in doubt,
+> number: **#907**. When in doubt,
 > `grep '### N\.' docs/parity/OXIDIZED_DESIGN_*.md docs/math/OXIDIZED_DESIGN_MATH.md`.
 
 ---
 
 ## Guiding Principles
 
+- **The core principle** (BM — Bruce Miller, LaTeXML's author — in the design Q&A of 2026-11-05): "The core conversion
+  should carry out the processing of the TeX source as faithfully to TeX's model as possible, while constructing an
+  augmented document model which preserves the semantics implied by the markup as well as the most important details
+  of its presentation." Post-processing has principles of its own. Exact TeX is the goal, "but secondary to getting
+  good semantics and reasonable rendering".
 - **Faithfulness first.** Aim for behavioral parity with Perl; follow its
   organization, abstractions, and naming. Diverge only when Rust's type system
   enables a meaningfully better representation, or the Perl behavior is a known
-  bug — and record it in [OXIDIZED_DESIGN_DIVERGENCES.md](OXIDIZED_DESIGN_DIVERGENCES.md).
+  bug — and record it in [OXIDIZED_DESIGN_DIVERGENCES.md](OXIDIZED_DESIGN_DIVERGENCES.md). Literal in the data model
+  and the interfaces, idiomatic Rust inside (BM, Q8.3); where Perl approximates TeX, follow TeX, record the divergence in
+  [OXIDIZED_DESIGN_DIVERGENCES.md](OXIDIZED_DESIGN_DIVERGENCES.md) and offer Perl the fix.
 - **Meaningful types for untyped Perl.** Replace strings / arrayrefs / blessed
   hashrefs with enums, structs, and newtypes that make invalid states
   unrepresentable — without changing observable behavior.

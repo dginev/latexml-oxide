@@ -2,7 +2,7 @@ use std::borrow::Cow;
 
 use libxml::{
   tree::{Document, Node, NodeType},
-  xpath::Context,
+  xpath::{Context, Expression},
 };
 use rustc_hash::FxHashMap as HashMap;
 
@@ -187,14 +187,40 @@ impl ParsedFragment {
 }
 
 pub struct XPath {
-  context: Context,
+  context:  Context,
+  /// Each expression compiled once: a document asks some 60 distinct expressions 15k–32k times, and libxml2's string
+  /// evaluators compile on every call (docs/performance/PERFORMANCE.md P10).
+  compiled: HashMap<Box<str>, Expression>,
+}
+
+/// How many compiled expressions an [`XPath`] keeps: an expression built from data (an id, a label) past it is
+/// evaluated from its string, as before.
+const COMPILED_XPATH_LIMIT: usize = 1024;
+
+/// `xpath` compiled, from `compiled` or compiled now; `None` when it does not compile (its string evaluation then
+/// reports it as before — compiling it a second time, so libxml2's stderr line prints twice: PERFORMANCE.md P10) or
+/// `compiled` is full.
+pub fn compiled_xpath<'a>(
+  compiled: &'a mut HashMap<Box<str>, Expression>,
+  xpath: &str,
+) -> Option<&'a Expression> {
+  if !compiled.contains_key(xpath) {
+    if compiled.len() >= COMPILED_XPATH_LIMIT {
+      return None;
+    }
+    compiled.insert(xpath.into(), Expression::compile(xpath).ok()?);
+  }
+  compiled.get(xpath)
 }
 
 // pub type XPathClosure = Rc<Fn(&mut Gullet, Tokens) -> bool>;
 impl XPath {
   pub fn new(doc: &Document, _mappings: HashMap<String, String>) -> Self {
     let context = Context::new(doc).unwrap();
-    XPath { context }
+    XPath {
+      context,
+      compiled: HashMap::default(),
+    }
   }
 
   pub fn register_namespace(&mut self, codeprefix: &str, namespace: &str) -> Result<()> {
@@ -213,7 +239,14 @@ impl XPath {
   }
 
   pub fn findnodes(&mut self, xpath: &str, node: Option<&Node>) -> Vec<Node> {
-    match self.context.findnodes(xpath, node) {
+    let found = match compiled_xpath(&mut self.compiled, xpath) {
+      Some(expression) => self
+        .context
+        .findnodes_compiled(expression, node)
+        .map_err(|_| ()),
+      None => self.context.findnodes(xpath, node),
+    };
+    match found {
       Ok(nodes) => nodes,
       Err(e) => {
         // A relative query whose context node has been detached from the tree
@@ -249,7 +282,14 @@ impl XPath {
   }
 
   pub fn findvalues(&mut self, xpath: &str, node: Option<&Node>) -> Vec<String> {
-    match self.context.findvalues(xpath, node) {
+    let found = match compiled_xpath(&mut self.compiled, xpath) {
+      Some(expression) => self
+        .context
+        .findvalues_compiled(expression, node)
+        .map_err(|_| ()),
+      None => self.context.findvalues(xpath, node),
+    };
+    match found {
       Ok(vals) => vals,
       Err(e) => {
         // A null (detached) context node has no descendants: empty, not an
@@ -272,7 +312,11 @@ impl XPath {
   }
 
   pub fn findvalue(&mut self, xpath: &str, node: Option<&Node>) -> String {
-    self.context.findvalue(xpath, node).unwrap_or_default()
+    match compiled_xpath(&mut self.compiled, xpath) {
+      Some(expression) => self.context.findvalue_compiled(expression, node).ok(),
+      None => self.context.findvalue(xpath, node).ok(),
+    }
+    .unwrap_or_default()
   }
 }
 

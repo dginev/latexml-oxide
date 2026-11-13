@@ -1,0 +1,15 @@
+% witness: 2408.09945 (`\begin{mdframed}[backgroundcolor=chinese_red, …]`)
+% oracle:  pdflatex (clean): mdframed.sty:583-588 hands the options to `\mdfsetup`
+% engines: rust 67int22 = 2 errors (the options digested: `_`); Perl: no binding (raw mdframed)
+% expect:  0 errors, 1 warning (mdframed.sty "only minimally stubbed", the binding's standing notice); the framed "Text."
+% status:  RED (67int22) -> GREEN (73a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{xcolor}
+\usepackage{mdframed}
+\definecolor{chinese_red}{RGB}{205,7,30}
+\begin{document}
+\begin{mdframed}[backgroundcolor=chinese_red, linecolor=chinese_red, linewidth=2pt]
+Text.
+\end{mdframed}
+\end{document}

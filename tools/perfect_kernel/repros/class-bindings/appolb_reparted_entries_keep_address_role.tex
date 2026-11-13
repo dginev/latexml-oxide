@@ -1,0 +1,20 @@
+% witness: 1501.05548 (appolb, 76 `$^{n}$`-marked names, the first braced, `\address{$^{1}$…\\ …}` inside `\author`),
+%          0710.5369, 0809.3340, cond-mat0311409 (svjour): today's names merged, re-parted by the writer
+% oracle:  pdflatex (TL 2025, 0710.2601's appolb.cls): "Ann Able1 , Bob Baker2 , Cy Cole1", "1 Univ A, Town A",
+%          "2 Univ B, Town B"
+% engines: rust 97c = "Ann Able1, Bob Baker2" one creator (Error merged_creators), both lines Cy Cole's one address;
+%          97e r1 = re-parted, its entries made `affiliation`s
+% expect:  0 errors, 0 warnings; inst_support written, re-parted: each name its line, an `address` contact as today's
+%          role is (the re-part takes the role every affiliation of today's holds)
+% status:  RED (97c, 97e r1) -> GREEN (97e) — perfect_kernel_batch97e::a_reparted_entry_keeps_todays_address_role
+% preload: ar5iv.sty
+\documentclass{appolb}
+\begin{document}
+\title{T}
+\author{{Ann Able$^{1}$,}
+Bob Baker$^{2}$, Cy Cole$^{1}$
+\address{$^{1}$Univ A, Town A\\
+$^{2}$Univ B, Town B}}
+\maketitle
+Body.
+\end{document}

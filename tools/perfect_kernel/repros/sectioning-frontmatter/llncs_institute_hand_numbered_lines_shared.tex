@@ -1,0 +1,14 @@
+% witness: dev20k 1905.07852 (`\institute{Skoltech, Moscow, Russia\\ $^1$Aeronet, $^2$ADASE\\ \mailsc}`)
+% oracle:  pdflatex 0 errors: "Ann Able1 and Bob Baker2" over "Univ A, Town" and "1 Lab B, 2 Lab C"
+% engines: rust 97b = "Univ A, Town" Bob's alone; with the first line shared but the hand-typed 2 read as numbering the
+%          one institute (`marks_pick`'s and `share_unpicked`'s "several" rule) it was Ann's today and the block's in
+%          the reading, and the writer declined; Perl the whole institute on Ann
+% expect:  0 errors 0 warnings; Ann holds "Univ A, Town" and "Lab B", Bob "Univ A, Town" and "Lab C"
+% status:  RED (97b) -> GREEN (97c)
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$ \and Bob Baker$^2$}
+\institute{Univ A, Town \\ $^1$Lab B, $^2$Lab C}
+\maketitle
+\end{document}

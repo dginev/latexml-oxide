@@ -1,0 +1,18 @@
+% mechanism: the API's Cut over a list whose marks a document macro prints: pinned as today (the Cut's "marked"
+%   stays on tokens, `requested_marked_entries_in`; its port to the digested reading is P4b's open item (b))
+% witness: synthetic (P4c3 open item (b): two readers of the Cut's "marked")
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "ANN ABLE1 AND BOB BAKER2 / 1 Univ A, Town A, 2 Univ B, Town B"
+% engines: P4bbase and P4b: the creators below
+% expect:  0 errors, 0 warnings; Ann Able "1 Univ A, Town A", Bob Baker "2 Univ B, Town B"
+% status:  GREEN (guard perfect_kernel_batchc1::marks_lead_as_digested)
+\documentclass{amsart}
+\newcommand\ua{${}^{1}$}
+\newcommand\ub{${}^{2}$}
+\begin{document}
+\title{T}
+\author{Ann Able${}^{1}$}
+\author{Bob Baker${}^{2}$}
+\address{\ua Univ A, Town A\\ \ub Univ B, Town B}
+\maketitle
+Text.
+\end{document}

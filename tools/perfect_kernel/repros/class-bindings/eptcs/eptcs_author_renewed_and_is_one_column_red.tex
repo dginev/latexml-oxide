@@ -1,0 +1,20 @@
+% mechanism: a renewed `\and` (`\renewcommand\and{\quad}`) in an eptcs `\author`: pdflatex prints one column, but the
+%   rehearsal binds `\and` by name (`ALWAYS_BOUND`), so the reading cuts two creators (trap T8 in the
+%   reading; P24 report, open)
+% witness: synthetic (P24 report; none of the 73 eptcs census papers renews `\and`)
+% oracle:  pdflatex with eptcs.cls beside it (TL 2025, -no-shell-escape) 0 errors: one column "Ann Able" / "Univ A
+%   Bob Baker" / "Univ B"
+% engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 0 warnings; creators Ann Able (Univ A), Bob Baker (Univ
+%   B); perl has no eptcs binding
+% expect:  0 errors; the renewed `\and` is no separator: the block's words in the PDF's one column, in printed order
+%   (the owner of "Univ A Bob Baker" is the main session's ruling)
+% status:  RED (int158a; RR1 gap 22)
+% preload: ar5iv.sty
+\documentclass{eptcs}
+\renewcommand\and{\quad}
+\title{T}
+\author{Ann Able \institute{Univ A} \and Bob Baker \institute{Univ B}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,17 @@
+% witness: 1201.5726 (elsarticle, `\author{on behalf of the KM3NeT consortium}`), 1301.6619 (`\author{for the IceCube collaboration}`), which the PDF prints under the names
+% oracle:  pdflatex 0 errors: "A. Able*, B. Baker, on behalf of the KM3NeT consortium", the address under them
+% engines: Perl: a creator named so; ours before Z14: today's a collaboration, the reading a name (an honest `creator_not_a_name` under the emitter)
+% expect:  0 errors; two creators, each with the collaboration and the address; a later name is no one's collaboration (perfect_kernel_batchz14::a_collaboration_in_a_call_of_its_own_covers_the_names_before)
+% status:  GREEN (Z14)
+\documentclass{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author{A. Able\corref{cor}}
+\author{B. Baker}
+\author{on behalf of the KM3NeT consortium}
+\address{Univ A, Town A}
+\cortext[cor]{Corresponding author}
+\end{frontmatter}
+Body.
+\end{document}

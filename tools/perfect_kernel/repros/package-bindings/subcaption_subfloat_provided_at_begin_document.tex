@@ -1,0 +1,16 @@
+% witness: 2511.09162 (a preamble `\newcommand{\subfloat}[2]` with subcaption loaded)
+% oracle:  pdflatex (clean): subcaption.sty:262-276 provides `\subfloat` only at `\begin{document}`, so the author's stands
+% engines: rust 67int22 = 1 error (the binding's `\subfloat` read the file name as a caption: `_`); Perl = 1
+%          (subcaption.sty.ltxml:104, KNOWN_PERL_ERRORS #965)
+% expect:  0 errors, 0 warnings; the author's `\fbox{A}`
+% status:  RED (67int22) -> GREEN (73a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{subcaption}
+\newcommand{\subfloat}[2]{\fbox{#2}}
+\begin{document}
+\begin{figure}
+\subfloat{figures/quant/subsidised_fc.pdf}{A}
+\caption{Two panels.}
+\end{figure}
+\end{document}

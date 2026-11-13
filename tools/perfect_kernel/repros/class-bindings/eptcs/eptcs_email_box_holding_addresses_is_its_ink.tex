@@ -1,0 +1,21 @@
+% mechanism: in the reading's e-mail text (`events::raw_lines`) a box, no script or mark, whose ink holds an `@` is what
+%   it prints, never its source: `\mbox{E-mail: able@x.org}` gives the label and the address, `\mbox{a@x, b@y}` both
+%   addresses (OXIDIZED_DESIGN_DIVERGENCES #991); a mark's `\textsuperscript{\Letter}` stays its source (2410.20769)
+% witness: review revZ18k R1 (synthetic); 1210.2456 (eptcs's `\makebox[0cm][c]{sbb@…}`, one address a box)
+% oracle:  pdflatex with eptcs.cls beside it: 0 errors; "Ann Able Bob Baker" over "Univ A" and "E-mail: able@x.org,
+%   baker@x.org" in typewriter type
+% engines: rust int155a0 = a nameless creator's e-mail "E-mail: able@x.org , baker@x.org"; Z18k2 = the owners right, plus
+%   a nameless creator's note `\mbox{E-mail: able@x.org}, baker@x.org`, 3 warnings
+% expect:  0 errors, 0 warnings; Ann Able: Univ A, able@x.org; Bob Baker: Univ A, baker@x.org
+% status:  RED (int155a0, Z18k2) -> GREEN (Z18k3)
+% preload: ar5iv.sty
+\documentclass{eptcs}
+\usepackage{url}
+\title{T}
+\author{Ann Able \qquad Bob Baker
+\institute{Univ A}
+\email{\mbox{E-mail: able@x.org}, \mbox{baker@x.org}}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -9,20 +9,18 @@ LoadDefinitions!({
   // reads the preamble, so a document's `\newcolumntype{X}[1]{…p{#1}}` does not reach it (2606.05563: `|l|c|X|` read
   // `|` as the width of every X cell; KNOWN_PERL_ERRORS #463).
   // `\let\verb\TX@verb` (tabularx.sty:91): within the environment `\verb` ends at its delimiter token however it was
-  // read (`read_verb_invocation`), so a `\verb` in a cell's pre-read argument is whole.
+  // read, so a `\verb` in a cell's pre-read argument is whole (2404.06128, 2309.04295).
   DefMacro!(
     "\\tabularx{}[]{}",
-    "\\lx@tabularx@verb\\let\\NC@rewrite@X\\lx@tabularx@X\\@tabular@bindings{#3}[vattach=#2,width=#1]\\@@tabularx{#1}[#2]{#3}\\lx@begin@alignment"
+    "\\let\\verb\\TX@verb\\let\\NC@rewrite@X\\lx@tabularx@X\\@tabular@bindings{#3}[vattach=#2,width=#1]\\@@tabularx{#1}[#2]{#3}\\lx@begin@alignment"
   );
-  DefPrimitive!("\\lx@tabularx@verb", {
-    AssignValue!("lx@tabularx@verb" => true);
-  });
+  DefMacro!("\\TX@verb", { engine::latex_constructs::verb_group(true)? });
   DefMacro!("\\endtabularx", "\\lx@end@alignment\\@end@tabularx");
   DefPrimitive!(T_CS!("\\@end@tabularx"), None, {
     egroup()?;
     restore_dollar_outside_alignment();
   });
-  DefConstructor!("\\@@tabularx{Dimension}[] Undigested DigestedBody",
+  DefConstructor!("\\@@tabularx{Dimension} OptionalPosition Undigested DigestedBody",
     "#4",
     reversion => "\\begin{tabularx}{#1}[#2]{#3}#4\\end{tabularx}",
     before_digest => { bgroup(); },

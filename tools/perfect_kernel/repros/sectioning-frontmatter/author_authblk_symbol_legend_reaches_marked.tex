@@ -1,0 +1,21 @@
+% witness: 77n r3 review probe q04 — a footnote-symbol legend `\affil` after mark-picked ones: control for the run's
+%          `new` reading a mark-answered author as answered (77n r5)
+% oracle:  pdflatex 0 errors: "Ann1† and Bob2 / 1Univ X / 2Univ Y / †Corresponding author"
+% engines: rust int32a = Ann with Univ X, Bob with Univ X, Univ Y and the legend; 77n r4 = Ann with the legend and
+%          Univ X, Bob with the legend and Univ Y
+% expect:  0 errors, 0 warnings; 2 creators, Ann with the legend and Univ X, Bob with the legend and Univ Y (a legend is
+%          every author's of the run: a legend reads the run's `new` by the contact only; 77n r4's)
+% status:  GREEN (77n r4, r5)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann$^{1\dagger}$}
+\author{Bob$^{2}$}
+\affil{$^1$Univ X}
+\affil{$^2$Univ Y}
+\affil{$^\dagger$Corresponding author}
+\maketitle
+x
+\end{document}

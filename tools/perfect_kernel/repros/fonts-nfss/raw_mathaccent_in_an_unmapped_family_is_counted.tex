@@ -1,0 +1,14 @@
+% witness: review 89c r1 (P2, probe rev89c/raw case C): a raw `\mathaccent` whose family is a symbol font with no font
+%          map — newtxsf's `lettersA` (`U/ntxsfmia`), the slot of its `\hat` (223, newtxsf.sty:307)
+% oracle:  pdflatex: "C x̂" (the font's hat over x), 0 errors
+% engines: rust int120a and 89c r2 = 0 errors, 0 warnings, the accent an empty `<XMTok/>` (a silent loss); `\hat{x}`
+%          in the same font is the kernel's ^ (89c, OD #27)
+% expect:  0 errors; the accent visible and counted — U+FFFD with the font's one Warning, as `\DeclareMathAccent`'s
+%          undecodable accent is (OD #27; SYNC_STATUS Font-Selection residual 9; deferred, out of 89c's scope)
+% status:  RED (89c r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{newtxsf}
+\begin{document}
+C $\mathaccent\numexpr"7000+\symlettersA*256+223\relax{x}$
+\end{document}

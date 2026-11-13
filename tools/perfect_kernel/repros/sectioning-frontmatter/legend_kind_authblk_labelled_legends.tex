@@ -1,0 +1,28 @@
+% authblk's labelled legends, `\affil[$\dagger$]{These authors contributed equally.}` and `\affil[*]{Corresponding
+% author: bob@a.edu}`, under `\author[1,$\dagger$]{Ann Able}`, `\author[1,$\dagger$,*]{Bob Baker}`, `\author[2]{Cat Cole}`:
+% each is its carriers' note (`affiliations::legend_entry_call`), its address still the entry's e-mail, placed by the
+% Link step (`LEGEND_ENTRY`, OD #956's chain) — they had been affiliations of the names showing the label.
+% witness: 2409.05386, 2603.21906, 2607.25951, 2305.02663, 0909.5125, 2401.09637 (authblk under article; wlscirep,
+%          googledeepmind, osajnl load it too: 1611.06677, 2406.19953, 2605.00933, 2311.18459)
+% oracle:  pdflatex 0 errors: "Ann Able1,†, Bob Baker1,†,* and Cat Cole2", "1Univ A, Town", "2Univ B, City", "†These
+%          authors contributed equally.", "*Corresponding author: bob@a.edu"
+% engines: rust int130a = "These authors contributed equally." an affiliation of Able and Baker, "Corresponding author"
+%          an affiliation of Baker beside his e-mail bob@a.edu
+% expect:  0 errors, 0 warnings; Able: Univ A, the ltx_thanks_contribution note mark="†"; Baker: Univ A, the same note,
+%          the ltx_thanks_correspondence note mark="*" "Corresponding author" and the e-mail bob@a.edu; Cole: Univ B
+% status:  RED (int130a) -> GREEN (103c)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author[1,$\dagger$]{Ann Able}
+\author[1,$\dagger$,*]{Bob Baker}
+\author[2]{Cat Cole}
+\affil[1]{Univ A, Town}
+\affil[2]{Univ B, City}
+\affil[$\dagger$]{These authors contributed equally.}
+\affil[*]{Corresponding author: bob@a.edu}
+\maketitle
+Text.
+\end{document}

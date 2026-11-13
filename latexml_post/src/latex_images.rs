@@ -111,14 +111,20 @@ impl LaTeXImages {
     }
 
     // Trim leading/trailing TeX spacing commands
-    let spacing_re = regex::Regex::new(r"^(?:\\[,!>;:/ ]|\\ )*").unwrap();
+    static SPACING_RE: std::sync::LazyLock<regex::Regex> =
+      std::sync::LazyLock::new(|| regex::Regex::new(r"^(?:\\[,!>;:/ ]|\\ )*").unwrap());
+    let spacing_re = &*SPACING_RE;
     s = spacing_re.replace(&s, "").to_string();
-    let trailing_re = regex::Regex::new(r"(?:\\[,!>;:/ ]|\\ )*$").unwrap();
+    static TRAILING_RE: std::sync::LazyLock<regex::Regex> =
+      std::sync::LazyLock::new(|| regex::Regex::new(r"(?:\\[,!>;:/ ]|\\ )*$").unwrap());
+    let trailing_re = &*TRAILING_RE;
     s = trailing_re.replace(&s, "").to_string();
 
     // Strip comments (but not escaped %)
     // Note: Rust regex doesn't support lookbehinds, so we use a simple approach
-    let comment_re = regex::Regex::new(r"([^\\])%[^\n]*\n").unwrap();
+    static COMMENT_RE: std::sync::LazyLock<regex::Regex> =
+      std::sync::LazyLock::new(|| regex::Regex::new(r"([^\\])%[^\n]*\n").unwrap());
+    let comment_re = &*COMMENT_RE;
     s = comment_re.replace_all(&s, "$1").to_string();
 
     if !style.is_empty() {

@@ -1,0 +1,18 @@
+% witness: 2503.14633 (its sagej.cls:447-449 heads `{sm}` "Supplemental Material"; 78 of the 79 sampled copies,
+%          2101.10072's :464-466, "Supplemental material")
+% oracle:  pdflatex with 2503.14633's sagej.cls: the heading "Supplemental Material" (one error, the copy's title-page
+%          graphic Figures/dummy_box.png, which the paper ships)
+% engines: rust 67z = 0 errors, the statement named "sm" (the XHTML heading "sm.")
+% expect:  0 errors, 0 warnings; the statement named "Supplemental Material"
+% status:  RED (67z) -> GREEN (67z r2)
+% files:   sagej.cls here, the lines of 2503.14633's copy the binding reads
+% preload: ar5iv.sty
+\documentclass{sagej}
+\begin{document}
+\title{A Title}
+\author{Ann Author}
+\maketitle
+\section{One}
+Text.
+\begin{sm}Supplementary material is online.\end{sm}
+\end{document}

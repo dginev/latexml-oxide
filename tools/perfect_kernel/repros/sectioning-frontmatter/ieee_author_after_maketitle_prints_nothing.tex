@@ -1,0 +1,14 @@
+% witness: revZ2r2 (synthetic; 2406.00439's `\author{}` after `\maketitle` is the live relative, and keeps its 15)
+% oracle:  pdflatex 0 errors: "Ann Able / Univ A" only, even with a second `\maketitle` after the late call: IEEEtran's `\maketitle` ends
+%          by `\let\maketitle\relax`, so `\@author` is never read again
+% engines: Perl one creator, Ann Able; rust (int140a to Z2r3) Ann Able and After Call: the late call's blocks are queued and placed
+% expect:  0 errors; Ann Able, Univ A alone
+% status:  RED (Z2r3); no guard, a pre-existing shape of a late `\author`, in `docs/SYNC_STATUS.md`'s Z2 row
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able}\IEEEauthorblockA{Univ A}}
+\maketitle
+Body.
+\author{\IEEEauthorblockN{After Call}\IEEEauthorblockA{Univ Z}}
+\end{document}

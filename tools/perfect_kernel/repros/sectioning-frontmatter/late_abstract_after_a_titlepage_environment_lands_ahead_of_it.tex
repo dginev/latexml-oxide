@@ -1,0 +1,28 @@
+% article, after `\maketitle`: a `{titlepage}` environment holding "Cover one", `{abstract}First`, "Cover two",
+% `{abstract}Second`; then "Cover three" and `{abstract}Third`. The two inside stay in the `<ltx:titlepage>`; the third
+% is set ahead of the whole titlepage, where pdflatex prints it after "Cover three": visible content reordered (a
+% readability item). Pre-existing: int117a, 86i r3 and r4 alike. DEFERRED_FAMILIES "Abstracts a class stores or
+% queues" (e).
+% witness: none in the corpus; 86i r4 review probe n3.
+% oracle:  pdflatex 0 errors: "Probe / Ann / <date> / Cover one / Abstract First late words. / Cover two / Abstract
+%          Second late words. / Cover three / Abstract Third late words. / 1 Intro".
+% engines: rust int117a, 86i r3 and r4: abstract (Third), titlepage[Cover one, First, Cover two, Second],
+%          para (Cover three), section.
+% expect:  0 errors, 0 warnings; titlepage[Cover one, First, Cover two, Second], para (Cover three), abstract (Third),
+%          section.
+% status:  RED (86i r4; no guard)
+\documentclass{article}
+\begin{document}
+\title{Probe}\author{Ann}
+\maketitle
+\begin{titlepage}
+\begin{center}Cover one\end{center}
+\begin{abstract}First late words.\end{abstract}
+\begin{center}Cover two\end{center}
+\begin{abstract}Second late words.\end{abstract}
+\end{titlepage}
+\begin{center}Cover three\end{center}
+\begin{abstract}Third late words.\end{abstract}
+\section{Intro}
+Body.
+\end{document}

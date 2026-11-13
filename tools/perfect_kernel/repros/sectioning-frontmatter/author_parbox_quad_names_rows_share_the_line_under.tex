@@ -1,0 +1,16 @@
+% Two rows of `\quad`-parted names in a `\parbox`, then an institution under both after a gap: one row of five
+% names, the institution every name's, as it prints under them all (R12's shared line).
+% witness: synthetic (review rev107b B1, probe r04)
+% oracle:  pdflatex 0 errors: "Ann Able Bob Baker Cat Cole", "Dan Dee Eve Eden", "University of Alpha"
+% engines: rust 107b r1 = Cat Cole holding the affiliation "Dan Dee", Eve Eden alone "University of Alpha", 0 errors
+%          (silent); Perl one creator
+% expect:  0 errors, 0 warnings; five creators, each "University of Alpha"
+% status:  RED (107b r1) -> GREEN (107b r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{\parbox{\textwidth}{\centering Ann Able \quad Bob Baker \quad Cat Cole\\ Dan Dee \quad Eve Eden\\[1em] University of Alpha}}
+\maketitle
+Body.
+\end{document}

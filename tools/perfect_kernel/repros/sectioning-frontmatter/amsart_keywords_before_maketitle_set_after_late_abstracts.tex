@@ -1,0 +1,29 @@
+% amsart: `\keywords` and `\subjclass` before `\maketitle`, three late `{abstract}`s each after its cover line. amsart
+% prints the keywords and the classification in the first page's footnote (`\@adminfootnotes`, amsart.cls:655-658:
+% `\@footnotetext{\@setsubjclass}`, `\@footnotetext{\@setkeywords}`); we set them as frontmatter right after the
+% last late abstract, ahead of the body. Pre-existing: int117a, 86i r3 and r4 alike. DEFERRED_FAMILIES "Abstracts a
+% class stores or queues" (g).
+% witness: none in the corpus; 86i r4 review probe n9.
+% oracle:  pdflatex 0 errors: "PROBE / ANN / Cover one / Abstract. First late words. / Cover two / Abstract. Second
+%          late words. / Cover three / Abstract. Third late words. / 1. Intro / Body." with the page-1 footnote
+%          "2020 Mathematics Subject Classification. 00A00. / Key words and phrases. kwmaketitle.".
+% engines: rust int117a, 86i r3 and r4: titlepage[Cover one], First, para (Cover two), Second, para (Cover three),
+%          Third, keywords (kwmaketitle), classification (00A00), section.
+% expect:  0 errors, 0 warnings; keywords and classification as the class's page-foot material (with the head, as
+%          OD #246 passes it over), not after the last late abstract.
+% status:  RED (86i r4; no guard)
+\documentclass{amsart}
+\begin{document}
+\title{Probe}\author{Ann}
+\keywords{kwmaketitle}
+\subjclass{00A00}
+\maketitle
+\begin{center}Cover one\end{center}
+\begin{abstract}First late words.\end{abstract}
+\begin{center}Cover two\end{center}
+\begin{abstract}Second late words.\end{abstract}
+\begin{center}Cover three\end{center}
+\begin{abstract}Third late words.\end{abstract}
+\section{Intro}
+Body.
+\end{document}

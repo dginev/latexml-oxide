@@ -1,0 +1,26 @@
+% A raw class's store its title page reads only as a number — `\setcounter{page}{\@fp}` (gammas.cls:305,
+% kluwer.cls:1049), `\ifnum\@vol>100` — is not printed there, so it is not handed on as a note. A store counts as
+% printed only when both its sentinels reach the speculative run's text (`sentinels_printed`, frontmatter_stores.rs):
+% TeX's "Missing number" recovery typesets a letters sentinel, a numeric context consumes a digits one.
+% witness: none (synthetic; review probe `num` of 77i r2; the shape: gammas.cls:305, kluwer.cls:1049).
+% oracle:  pdflatex 0 errors: "T", "Anton", "Text." on page 17; no "17" or "Big volume" in the title block.
+% engines: rust 77i r2: an invented `<pubnote>17</pubnote>`; rust 67int35: right (no note).
+% expect:  0 errors, 0 warnings; no `pubnote`, no "17" in the document.
+% status:  RED (77i r2) -> GREEN (77i r3)
+\begin{filecontents*}[overwrite]{rcnum.cls}
+\ProvidesClass{rcnum}
+\LoadClass{article}
+\def\@fp{1}
+\newcommand{\firstpage}[1]{\def\@fp{#1}}
+\def\@vol{0}
+\newcommand{\volnum}[1]{\def\@vol{#1}}
+\renewcommand\maketitle{\setcounter{page}{\@fp}\begin{center}{\Large\@title}\par\@author\par\ifnum\@vol>100 Big volume\fi\end{center}}
+\end{filecontents*}
+\documentclass{rcnum}
+\title{T}\author{Anton}
+\firstpage{17}
+\volnum{12}
+\begin{document}
+\maketitle
+Text.
+\end{document}

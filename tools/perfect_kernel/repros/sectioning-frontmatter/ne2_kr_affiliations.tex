@@ -1,0 +1,20 @@
+% mechanism: an IJCAI sectioned block under a sectioned caller (`\lx@add@authors`, `@adaptive`, `@list`) goes to the
+%   section split under `=2` as off does (`author_macros.rs` `ijcai_sectioned`), its names then `\lx@ijcai@names`'s whole
+%   block; the `labelseq=author` affiliation is the N-th author's `author:N`, Perl's `CleanLabel` (resolver `api.rs`)
+% witness: 2202.05511 (kr.sty: 1 x undefined `\affiliations` at =2; "58084 Hagen" and "Germany" became creators)
+% oracle:  pdflatex 0 errors; "Ann Able, Bob Baker", "Univ X, City, Country", "{ann, bob}@x.edu"
+% engines: rust off: 2 creators, Ann Able holds the affiliation (Perl's labelseq=author); rust =2 (int152c): 1 error,
+%   the piece "Bob Baker \affiliations Univ X" digested
+% expect:  0 errors, 0 warnings, 2 creators, one affiliation (off: Ann Able's, labelseq=author; =2: under both, as printed)
+% status:  RED (int152c) -> GREEN (perfect_kernel_batchne2::an_ijcai_block_is_split_at_its_sections)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter\input{ne2_kr_affiliations.sty}\makeatother
+\begin{document}
+\title{T}
+\author{Ann Able\and Bob Baker
+\affiliations Univ X, City, Country
+\emails \{ann, bob\}@x.edu}
+\maketitle
+Text.
+\end{document}

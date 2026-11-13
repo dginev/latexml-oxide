@@ -1,0 +1,21 @@
+% witness: review rev92a_r1 B1 (probe p11, the spelled twin of amsart_thanks_link_stays_the_notes)
+% oracle:  pdflatex: "Correspondence to Bob Baker, bob.baker@y.org." in the unnumbered title note
+% engines: perl 0.8.8 = 0 errors, 3 warnings, the addresses lost; rust 90a = 0 errors, written: Ann Able University X, Bob Baker University Y, the
+%          link in the note; rust 92a r1 = the shadow put the link's address on Bob Baker by its spelling, the
+%          writer declined and both addresses went to a nameless creator
+% expect:  0 errors, 0 warnings; written as 90a: the link, though it spells Bob Baker, stays the note's text
+% status:  RED (92a r1) -> GREEN (92a r2)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\usepackage{hyperref}
+\begin{document}
+\title{A title}
+\author{Ann Able\textsuperscript{\ref{a1}}}
+\address{\label{a1}University X, Town}
+\email{ann@x.org}
+\author{Bob Baker\textsuperscript{\ref{a2}}}
+\address{\label{a2}University Y, City}
+\thanks{Correspondence to Bob Baker, \href{mailto:bob.baker@y.org}{bob.baker@y.org}}
+\maketitle
+Text.
+\end{document}

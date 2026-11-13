@@ -1,0 +1,24 @@
+% An author's own call keeps an address another name spells better only where a key of the holder's name is a whole
+%   word of the local part or opens one, never through a truncation (FIDELITY_CHARTER §4 #420): Peter Andersen's
+%   "anders" (his surname's first six letters) is no key of `anderson@`, so the address moves to Maria Anderson, whose
+%   whole surname it is (review rev107f finding 3).
+% witness: none (synthetic) — rev107f probe s_own_trunc
+% oracle:  pdflatex 0 errors: "Maria Anderson1 and Peter Andersen2, ∗", "∗ anderson@y.edu" (REVTeX's endnote)
+% engines: rust 107f r1 (2afa80e78b) = anderson@ kept on Peter Andersen; int139a4 = moved to Maria Anderson
+% expect:  0 errors, 0 warnings; Maria Anderson: Univ X, Town, anderson@y.edu; Peter Andersen: Univ Y, City
+% status:  RED (107f r1) -> GREEN (107f r2)
+% preload: ar5iv.sty
+\documentclass[aps,prl,superscriptaddress]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Maria Anderson}
+\affiliation{Univ X, Town}
+\author{Peter Andersen}
+\email{anderson@y.edu}
+\affiliation{Univ Y, City}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

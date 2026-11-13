@@ -1,0 +1,21 @@
+% witness: 1810.10167 (`\institute{\textsuperscript{1} … \and\\ \textsuperscript{2} … \and\\ \textsuperscript{3} …}`, the
+%          marks shown in the names, `Fan Zhang\textsuperscript{1,3,4}`)
+% oracle:  pdflatex with 1810.10167's svjour3.cls: "Hao Wang1 · Fan Zhang1,3 · Yaohua Hu2", "1 Univ A, Shanghai",
+%          "2 Univ B, Shenzhen", "3 Univ C, Beijing"; 0 errors
+% engines: rust 68k = Fan Zhang with Univ C only through his name's stray label `3`, Yaohua Hu without Univ B (shared
+%          below the authors): a `\\` opening a piece hid its mark
+% expect:  0 errors, 0 warnings; each author with the institutes the marks name
+% status:  RED (68k) -> GREEN (68k round 2)
+% preload: ar5iv.sty
+\documentclass{svjour3}
+\begin{document}
+\title{A Title}
+\author{Hao Wang\textsuperscript{1} \and Fan Zhang\textsuperscript{1,3} \and Yaohua Hu\textsuperscript{2}}
+\institute{\textsuperscript{1} Univ A, Shanghai
+  \and\\
+  \textsuperscript{2} Univ B, Shenzhen
+  \and\\
+  \textsuperscript{3} Univ C, Beijing}
+\maketitle
+Text.
+\end{document}

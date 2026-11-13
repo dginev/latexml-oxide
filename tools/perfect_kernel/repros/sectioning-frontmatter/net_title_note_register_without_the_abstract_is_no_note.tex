@@ -1,0 +1,25 @@
+% The unclaimed-text net's A2 run (OD #953) took a store only the class's refused `{abstract}` begin code prints as
+% printed whether or not the document opens the environment: without an abstract, pdflatex prints the title note's
+% mark alone, and the note was invented. The begin code's candidates are handed on only when the document opens the
+% environment after `\maketitle` (frontmatter_stores.rs `hand_net_begin_code_stores`, from `\lx@abstract@class@setters`),
+% with the values they then have (review rev98c S1; sibling `net_title_note_register_abstract_before_maketitle_is_no_note`).
+% witness: 1206.6940, cs0405006 (sig-alternate; the positive shape)
+% oracle:  pdflatex 0 errors: "A Title∗", "Ann Able", "Text without any abstract." — no footnote text
+% engines: rust 98c = 0 errors, 1 warning (frontmatter:unclaimed, \tntoks), a note "Supported by the Danish Council…";
+%          perl = 0 errors, OmniBus `\titlenote` → pubnote (OmniBus.cls.ltxml:245)
+% expect:  0 errors, 0 warnings; no ltx:note; Ann Able the one creator
+% status:  RED (98c) -> GREEN (99b)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{nettn.cls}
+\ProvidesClass{nettn}\LoadClass{article}
+\newtoks\tntoks
+\def\titlenote#1{$^{\ast}$\global\tntoks={#1}}
+\renewenvironment{abstract}{\insert\footins{\footnotesize$^{\ast}$\the\tntoks\par}\section*{Abstract}}{\par}
+\end{filecontents*}
+\documentclass{nettn}
+\begin{document}
+\title{A Title\titlenote{Supported by the Danish Council for Independent Research.}}
+\author{Ann Able}
+\maketitle
+Text without any abstract.
+\end{document}

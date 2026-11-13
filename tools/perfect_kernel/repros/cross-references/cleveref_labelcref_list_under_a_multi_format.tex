@@ -1,0 +1,19 @@
+% witness: rev78j2 f2/lc1 (siamart `\crefmultiformat{equation}`, 1905.03839)
+% oracle:  pdflatex 0 errors: "A 1 and 3. B Eqs. (1) and (3). C 1 and 2." (cleveref.sty:8028-8030: no \labelcref
+%          multi format for a type the document gave a \cref multi format; the default \labelcref format)
+% engines: rust 78j r2 = "A (1) and (3)."
+% expect:  0 errors; as pdflatex
+% status:  RED (78j r2) -> GREEN (78j r3)
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{cleveref}
+\crefmultiformat{equation}{Eqs.~(#2#1#3)}{ and~(#2#1#3)}{, (#2#1#3)}{, and~(#2#1#3)}
+\crefformat{table}{Tab.~#2#1#3}
+\begin{document}
+\begin{equation}a\label{e1}\end{equation}
+\begin{equation}b\label{e2}\end{equation}
+\begin{equation}c\label{e3}\end{equation}
+\begin{table}x\caption{c}\label{t1}\end{table}
+\begin{table}x\caption{c}\label{t2}\end{table}
+A \labelcref{e1,e3}. B \cref{e1,e3}. C \labelcref{t1,t2}.
+\end{document}

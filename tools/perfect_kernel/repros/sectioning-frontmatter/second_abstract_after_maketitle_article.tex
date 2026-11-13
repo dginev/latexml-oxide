@@ -1,0 +1,15 @@
+% Two `{abstract}`s after article's `\maketitle`, each printed where it stands: both kept, in source order (the
+% article sibling of second_abstract_after_maketitle_amsart.tex; OXIDIZED_DESIGN #154).
+% witness: none (synthetic; the article shape of 1006.5288).
+% Guard: perfect_kernel_batch86i::second_abstract_kept_in_other_classes.
+% oracle:  pdflatex 0 errors: "Abstract English words. Abstract Second words."
+% engines: perl (vendored HEAD) 0 errors, both. rust int117a: 0 errors, only "Second words.".
+% expect:  0 errors, 0 warnings; two `ltx:abstract`s, "English words." then "Second words.".
+% status:  RED (int117a) -> GREEN (86i)
+\documentclass{article}
+\begin{document}
+\title{Probe}\author{Ann}\maketitle
+\begin{abstract}English words.\end{abstract}
+\begin{abstract}Second words.\end{abstract}
+\section{Intro}Body.
+\end{document}

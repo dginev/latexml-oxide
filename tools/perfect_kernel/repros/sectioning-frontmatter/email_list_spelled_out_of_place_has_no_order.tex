@@ -1,0 +1,14 @@
+% "As many left as names left, in order" holds only when the spelled addresses agree with that order.
+% witness: 2606.04646 (`chang_liu@` second, Chang Liu third; rev108a3 B3a)
+% oracle:  pdflatex (TL 2025) clean
+% engines: int139c and 108a r3 place the unspelled addresses by position
+% expect:  0 errors; each spelled address on its name, the unspelled on the block
+\documentclass{article}
+\usepackage[hidelinks]{hyperref}
+
+\begin{document}
+\title{T}
+\author{Ann Able \quad Bob Baker \quad Cat Cole \quad Dan Doe \quad Eve Elm\\ Univ X\\ \texttt{\{ann, cat, ddoe, zz1\}@x.edu} \quad \texttt{zz2@y.edu}}
+\maketitle
+Text.
+\end{document}

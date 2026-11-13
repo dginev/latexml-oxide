@@ -305,6 +305,7 @@ fn locked_names_derived_classes() {
     r"\@startsection",
     r"\@tabular",
     r"\@textsuperscript",
+    r"\@trivlist",
     r"\@twocolumna",
     r"\DeclareTextAccent",
     r"\DeclareTextCommand",

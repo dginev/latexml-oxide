@@ -412,6 +412,7 @@ fn command_declared_mode(
   forbid_math: bool,
 ) -> (Option<String>, DeclaredMode) {
   let text = mode.as_deref() == Some("text");
+  let restricted_box = mode.as_deref() == Some("restricted_horizontal");
   let mode = if text {
     Some("restricted_horizontal".to_string())
   } else {
@@ -424,6 +425,7 @@ fn command_declared_mode(
     bounded: mode.is_none() && bounded,
     require_math,
     forbid_math,
+    restricted_box,
   };
   (mode, declared_mode)
 }
@@ -514,6 +516,7 @@ pub fn def_primitive(
   let size_switch = paramlist.is_none()
     && matches!(&options.font, Some(FontDirective::Asset(font))
       if font.size.is_some() && font.family.is_none() && font.series.is_none() && font.shape.is_none());
+  let declared_font = options.font.clone();
   match options.font {
     Some(FontDirective::Asset(chosen_font)) => {
       // A pure size switch (`\small` … `\Huge`, `font => {size => N}` in the
@@ -643,6 +646,7 @@ pub fn def_primitive(
       reversion: options.reversion,
       font_id: options.font_id,
       declared_mode: Some(declared_mode),
+      font: declared_font,
     },
     scope,
   );
@@ -926,6 +930,7 @@ pub fn def_math_primitive(
   let shared_options = Rc::new(options.clone());
   let variablesize_op = shared_options.variablesize_op;
   let dynamic_scriptpos = shared_options.dynamic_scriptpos;
+  let letters_class = shared_options.letters_class;
   // Perl defmath_prim (Package.pm:1831): the box reverts to the alias when there is one
   // (`\{` is `\lx@math@lbrace` with alias `\{`).
   let reversion_cs = options.alias.as_deref().map_or(cs, Token::from);
@@ -970,13 +975,16 @@ pub fn def_math_primitive(
         } else {
           None
         };
+        // A glyph declared from the `letters` symbol font takes its class's shape (`Font::specialize_letters`).
+        let specialize = |font: &Font| match letters_class {
+          Some(class) => font.specialize_letters(&presentation, class),
+          None => font.specialize(&presentation),
+        };
         let font = Rc::new(if let Some(ref reqfont) = reqfont_opt {
           let this_reqfont = reqfont.get_font(None)?;
-          state_font
-            .merge_ref(&this_reqfont)
-            .specialize(&presentation)
+          specialize(&state_font.merge_ref(&this_reqfont))
         } else {
-          state_font.specialize(&presentation)
+          specialize(&state_font)
         });
 
         Ok(vec![Digested::from(Tbox {
@@ -1308,7 +1316,13 @@ pub fn def_constructor(
   );
 
   if declared_mode.require_math {
-    let cs_name_cloned = cs_name.clone();
+    // (named as the command it reverts as, its `alias`, where it stands in for one: the Springer classes' `\vec` is
+    // `\lx@sv@vec@boldmath`, and pdflatex's "Missing $ inserted" is the author's `\vec`'s; probe rev79b/ltext)
+    let cs_name_cloned = options
+      .alias
+      .clone()
+      .filter(|alias| alias.starts_with('\\') && alias.len() > 1)
+      .unwrap_or_else(|| cs_name.clone());
     let require_math_closure = before_digest_simple!({ requireMath!(cs_name_cloned) });
     before_digest_closures.push(require_math_closure);
   }
@@ -1343,6 +1357,7 @@ pub fn def_constructor(
   //  LaTeXML seems to currently rely on both the top-level "font" option but *also*
   //  has code checking for a second-tier "properties => { font => VALUE}" option
   //  Can we consolidate into a single, top-level, font handler?
+  let declared_font = options.font.clone();
   match options.font {
     Some(FontDirective::Asset(chosen_font)) => {
       let merge_font_closure = before_digest_simple!({
@@ -1389,6 +1404,9 @@ pub fn def_constructor(
     capture_body: options.capture_body,
     properties: options.properties,
     declared_mode: Some(declared_mode),
+    font: declared_font,
+    halign_primitive: options.halign_primitive,
+    template: options.template,
     // outer
     // long
     ..Constructor::default()
@@ -1464,7 +1482,7 @@ pub fn def_environment(
   name: String,
   paramlist: Option<Parameters>,
   compiled_replacement: Option<ReplacementClosure>,
-  options: ConstructorOptions,
+  mut options: ConstructorOptions,
 ) {
   // One environment, all or none of its names (`\begin{X}`, `\end{X}`, `\X`, `\endX`).
   if provide_only_declines(&T_CS!(s!("\\begin{{{name}}}"))) {
@@ -1489,6 +1507,8 @@ pub fn def_environment(
     bounded:          false,
     require_math:     options.require_math,
     forbid_math:      options.forbid_math,
+    // an environment is a box by its begin code's group (`TexGroup::Box`, below), not by its mode
+    restricted_box:   false,
   };
 
   if declared_mode.require_math {
@@ -1611,6 +1631,23 @@ pub fn def_environment(
   // Clone fields needed for the bare \name constructor (Perl Package.pm lines 1949-1969)
   // before they are moved into the \begin{name} constructor below.
   let bare_after_digest_begin = options.after_digest_begin.clone();
+  // An environment whose begin code opens a box group (`\setbox\@tempboxa\vbox\bgroup`, a minipage) is a TeX box: the
+  // first element its constructor opens is marked for a frontmatter field's print (`document::FIELD_BOX_PROPERTY`,
+  // OXIDIZED_DESIGN #715), unless the binding's run-time kind says otherwise. The field-ink gate first: the kind is a
+  // State lookup, for every such body (review r5 finding 3).
+  if tex_group == TexGroup::Box {
+    let box_key = tex_group_key.clone();
+    options.after_digest_body.insert(
+      0,
+      after_digest_simple!(whatsit, {
+        if crate::document::field_box_marks_live()
+          && environment_tex_group(&box_key, TexGroup::Box) == TexGroup::Box
+        {
+          crate::document::field_box_whatsit(whatsit);
+        }
+      }),
+    );
+  }
   let bare_after_digest_body = options.after_digest_body.clone();
   let bare_before_construct = options.before_construct.clone();
   let bare_after_construct = options.after_construct.clone();
@@ -1676,6 +1713,9 @@ pub fn def_environment(
     reversion:         options.reversion,
     alias:             options.alias,
     declared_mode:     Some(declared_mode),
+    font:              None,
+    halign_primitive:  false,
+    template:          None,
   });
   install_definition(begin_name_constructor, options.scope);
 
@@ -1705,8 +1745,15 @@ pub fn def_environment(
   match mode {
     Some(ref emode) => {
       let emode = emode.clone();
+      let own_end = T_CS!(end_name.as_str());
+      let own_name = name.clone();
       let emode_closure = Rc::new(move |_whatsit: &mut Whatsit| {
-        // Perl Package.pm L1944-1945:
+        // `\end{X}` over a `\begingroup` the class opened inside X (raa.cls:322-349): it closes that group and X,
+        // and X's group stays for the class's `\endgroup` (stomach.rs `end_environment_over_plain_groups`).
+        if end_environment_over_plain_groups(&own_name, own_end)? {
+          return Ok(Vec::new());
+        }
+        // Perl Package.pm L1961-1962:
         //   # Switch mode (w/stack frame pop), OR egroup
         //   ($mode ? (sub { $_[0]->endMode($mode) }) : sub { $_[0]->egroup; }),
         // endMode(mode) with no second arg defaults to noframe=0 — it DOES
@@ -1833,6 +1880,9 @@ pub fn def_environment(
     reversion: bare_reversion,
     alias: bare_alias,
     declared_mode: Some(declared_mode),
+    font: None,
+    halign_primitive: false,
+    template: None,
   });
   install_definition(name_constructor, options.scope);
   let end_name = s!("\\end{}", &name);
@@ -1841,8 +1891,34 @@ pub fn def_environment(
   match mode {
     Some(ref emode) => {
       let emode = emode.clone();
+      // The frames a bare `\endFOO` may end are environments' frames: a bare `\X`'s (marked `lx@env@bare@end`), a
+      // `\begin{X}`'s (`lx@env@begin@end`), or one a group's end handed back (`lx@env@ended@by@group`, stomach.rs
+      // `close_environment_frame`) — any environment's, not only FOO's: amsmath ends a `\equation*` display with
+      // `\endequation` (tcolorbox's `ams equation*`, tcbtheorems.code.tex:301; 2211.17024), and `end_mode` still checks the
+      // mode. A frame no environment opened is left alone, with one Warning: LaTeX's `\endquotation` is
+      // `\endlist`/`\endtrivlist` (latex.ltx), no group work, so an IEEE Open Journal `\IEEEkeywords` box's
+      // `\vbox\bgroup … \par\endquotation\egroup` (ieeetmlcn.cls:3711-3715) must not lose the box's frame — ending the
+      // mode there made the box reader read the whole body into the box (2301.00752, 2602.19492; 54 papers). Perl ends
+      // the mode there too (an Error, content kept; KNOWN_PERL_ERRORS #674, OD #584). Guard:
+      // `perfect_kernel_batch66t::bare_end_without_its_begin_keeps_the_box`.
+      let own_end = end_name.clone();
       after_digest_end.push(Rc::new(move |_whatsit: &mut Whatsit| {
-        end_mode(&emode)?;
+        let owns_top_frame = [
+          "lx@env@ended@by@group",
+          "lx@env@bare@end",
+          "lx@env@begin@end",
+        ]
+        .iter()
+        .any(|key| is_value_bound(key, Some(0)));
+        if owns_top_frame {
+          end_mode(&emode)?;
+        } else {
+          Warn!(
+            "unexpected",
+            T_CS!(own_end.as_str()),
+            s!("{own_end} without an environment open: no environment frame to end")
+          );
+        }
         Ok(Vec::new())
       }));
     },
@@ -2146,7 +2222,16 @@ fn transfer_common_constructor_options(
   cons: &mut Constructor,
 ) {
   let cs_str = cs.with_str(ToString::to_string);
-  let properties = options.to_hash_stored();
+  let mut properties = options.to_hash_stored();
+  // (an accent's glyph, `accent`, which its token prints over or under its base: Rust only, for the readers of what a
+  // digested mark prints — `\bar{\dag}` is no `\dag`, the frontmatter label keys, latexml_engine
+  // `util_text::accent_combining_form`)
+  if matches!(
+    options.operator_role.as_deref(),
+    Some("OVERACCENT" | "UNDERACCENT")
+  ) {
+    properties.insert("accent", Stored::from(presentation.to_string()));
+  }
   cons.alias = Some(options.alias.unwrap_or_else(|| cs_str.clone()));
   if let Some(sizer) = infer_sizer(options.sizer.as_ref(), options.reversion.as_ref()) {
     cons.sizer = Some(sizer);
@@ -2177,6 +2262,21 @@ fn transfer_common_constructor_options(
       bgroup();
     }));
   }
+  // A Warning raised where the box is printed (`absorb_warning`, an undecodable glyph's): its position is the
+  // gullet's here, as the arguments are about to be read (the one a simple symbol's Tbox carries as its locator),
+  // recorded in the constructor's group and moved onto the whatsit after digestion, for the document to raise it at
+  // (core `document::ABSORB_WARNING_LOCATOR_PROPERTY`). Not the whatsit's own locator: that is `--source-map`'s.
+  // Witness 1902.03183 (newtxsf's `\bar`, `\dot`).
+  let records_absorb_locator = options.absorb_warning.is_some();
+  if records_absorb_locator {
+    before_digest_closures.push(before_digest_simple!({
+      assign_value(
+        crate::document::ABSORB_WARNING_LOCATOR_PROPERTY,
+        Stored::from(gullet::get_locator()),
+        Some(Scope::Local),
+      );
+    }));
+  }
   // Perl Package.pm:1708: `MergeFont(%{ $options{font} })` inside the group just opened.
   if let Some(font) = options.font {
     before_digest_closures.push(before_digest_simple!({
@@ -2200,6 +2300,13 @@ fn transfer_common_constructor_options(
       _args.set_property("mathstyle", Stored::from(mathstyle.to_string()));
     }));
   }
+  if records_absorb_locator {
+    after_digest_closures.push(after_digest_simple!(_args, {
+      if let Some(locator) = lookup_value(crate::document::ABSORB_WARNING_LOCATOR_PROPERTY) {
+        _args.set_property(crate::document::ABSORB_WARNING_LOCATOR_PROPERTY, locator);
+      }
+    }));
+  }
   if declared_mode.bounded {
     after_digest_closures.push(after_digest_simple!(_args, {
       egroup()?;
@@ -2215,6 +2322,7 @@ fn transfer_common_constructor_options(
   // tests/parse/math_lexemes.tex#defmath_accent_takes_the_digestion_font.
   let presentation_for_font = presentation.to_owned();
   let mathstyle_for_font = options.mathstyle;
+  let letters_class = options.letters_class;
   // Perl `scriptpos => \&doScriptpos` (TeX_Math.pool.ltxml:350): `mid` in display, else `post`,
   // read with the other code properties — a starred `\DeclareMathOperator` puts its limits
   // below in display (amsopn.sty.ltxml:26).
@@ -2235,10 +2343,11 @@ fn transfer_common_constructor_options(
         ..Font::default()
       }));
     }
-    properties.insert(
-      "font",
-      Stored::Font(Rc::new(font.specialize(&presentation_for_font))),
-    );
+    let font = match letters_class {
+      Some(class) => font.specialize_letters(&presentation_for_font, class),
+      None => font.specialize(&presentation_for_font),
+    };
+    properties.insert("font", Stored::Font(Rc::new(font)));
     Ok(properties)
   });
 }

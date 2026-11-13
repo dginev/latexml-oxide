@@ -1,0 +1,25 @@
+% ieeeconf's `\keywords` is a label with no extent; inside `{abstract}` it ends with the abstract
+% (`\lx@end@abstract` ends a keywords body opened inside it first, base_utilities.rs).
+% witness: 1401.5657 (`\begin{abstract} … \keywords \MyKeywords \end{abstract}`)
+% oracle:  pdflatex 0 errors (beside the minimal ieeeconf.cls); the abstract, "Index Terms---alpha, beta", "1 Introduction"
+% engines: rust 67int27 = the abstract kept open past its `\end{abstract}`: the whole document inside
+%          <ltx:keywords>, 3 Errors; perl not run
+% expect:  0 errors, 0 warnings; the abstract and the keywords hold only their text; the section is the document's
+% status:  RED (67int27) -> GREEN (int26 A/B fix round)
+% preload: ar5iv.sty
+\documentclass[conference]{ieeeconf}
+\begin{document}
+\title{T}
+\author{A. Author}
+\maketitle
+\begin{abstract}
+Abstract text.
+
+\keywords
+alpha, beta
+
+\end{abstract}
+
+\section{Introduction}
+Body text here.
+\end{document}

@@ -1,0 +1,20 @@
+% witness: 2609.35807 (`$^{*}$\daplablogo\ Columbia University\ \ \ \ \ \ \ \ \ \ $^{\dagger}$University at Buffalo`
+%          under names marked only with footnote symbols); the 77p r4 re-review's probes h1 (`$^{*}$Univ A~~~~
+%          $^{\dagger}$Univ B` under the names line), h3 (the same on a later line)
+% oracle:  pdflatex 0 errors: each affiliation line printed under the names as written
+% engines: rust 77p r4 = 0 errors; "†Univ B", "*Univ E", "†University at Buffalo" creators (the symbol-led line read as
+%          mark-led, its run parting entries, then the unmarked branch splitting groups there); int34a the lines whole
+%          on the names
+% expect:  0 errors, 0 warnings; creators Ann Able, Bob Baker, Cat Cole, Dan Dorn, Eve Eads, Fay Fox only, each line
+%          whole as an affiliation of the names above it (the symbol-mark SYNC_STATUS residual: a line is not given to
+%          the names its symbol marks)
+% status:  RED (77p r4) -> GREEN (77p r5)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{*}$, Bob Baker$^{\dagger}$ \\ $^{*}$Univ A~~~~$^{\dagger}$Univ B
+\and Cat Cole, Dan Dorn \\ Univ C \\ $^{\dagger}$Univ D~~~~$^{*}$Univ E
+\and Eve Eads$^{*}$, Fay Fox$^{\dagger}$ \\ $^{*}$Columbia University\ \ \ \ \ \ $^{\dagger}$University at Buffalo}
+\begin{document}
+\maketitle
+Text.
+\end{document}

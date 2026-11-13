@@ -62,7 +62,9 @@ pub struct PostOptions<'a> {
   /// the destination, in addition to the document's own paths, the current
   /// directory, and the binary's embedded resource table.
   pub search_paths:              &'a [String],
-  pub nodefaultresources:        bool,
+  /// Link and copy the bundled CSS/JS resources (Perl `defaultresources`, Config.pm:120; `--nodefaultresources`
+  /// clears it). The XSLT step receives its negation as `no_resources`, as LaTeXML.pm:584 hands `noresources`.
+  pub default_resources:         bool,
   pub css_files:                 &'a [String],
   pub js_files:                  &'a [String],
   pub noinvisibletimes:          bool,
@@ -529,7 +531,7 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
     source_directory,
     site_directory,
     search_paths,
-    nodefaultresources,
+    default_resources,
     css_files,
     js_files,
     noinvisibletimes,
@@ -1032,7 +1034,7 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
     match latexml_post::xslt::XSLT::new(
       xsl_path,
       xslt_params,
-      nodefaultresources,
+      !default_resources,
       None,
       searchpaths,
     ) {
@@ -1173,7 +1175,7 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
       intent_literal,
       stylesheet: stylesheet.map(String::from),
       xslt_params: manifest_xslt_params,
-      nodefaultresources,
+      default_resources,
       searchpaths: manifest_searchpaths,
       is_html_out,
       schemadocs,

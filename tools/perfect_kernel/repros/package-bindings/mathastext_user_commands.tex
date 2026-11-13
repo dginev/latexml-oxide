@@ -1,0 +1,15 @@
+% witness: 1712.02869, 1804.04170 (\MTsetmathskips, 54 papers), 1902.05677, 2003.08783
+% oracle:  pdflatex 0 errors, "Text a + b and x."
+% engines: rust 67int6 = 6 undefined (the empty binding); perl = no binding, mathastext skipped
+% expect:  0 errors, 0 warnings; no stray argument text
+% status:  RED (67int6) -> GREEN (68c); guard perfect_kernel_batch68c::mathastext_user_commands_take_their_arguments
+\documentclass{article}
+\usepackage{mathastext}
+\MTsetmathskips{a}{1mu}{1mu}
+\MTfamily{cmr}
+\Mathastext
+\MTnonlettersobeymathxx
+\MTexplicitbracesobeymathxx
+\begin{document}
+Text $a+b$ and $\Mathsf{x}$.
+\end{document}

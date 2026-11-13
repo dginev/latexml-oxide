@@ -1,0 +1,23 @@
+% mechanism: an address inside an entry that spells no author: on a symbol-led line every carrier's (FIDELITY_CHARTER
+%   §4, 2026-10-30, "every symbol carrier"), taken out of the entry; under a numbered entry two authors carry, the
+%   chain's next step the block — which the reading cannot tell, so it stays in the entry as today's prints it (the
+%   brief's fail-safe).
+% witness: 2603.12826 (the shape of its `$^\dagger$` line), 0810.2791
+%   (The symbol line before the numbered one: set after it, today's old reader joins the two lines into one
+%   affiliation the writer cannot cut — `\\ $^1$ Univ X (office@x.org) \\ $^\dagger$ Univ Z, desk@z.org`, declined
+%   by the base and here alike.)
+% oracle:  pdflatex 0 errors: "Ann Able1,†, Bob Baker1,†" over "† Univ Z, desk@z.org" and "1 Univ X (office@x.org)"
+% engines: rust 94b-r7: both addresses inside their affiliations, on both names; perl: one creator
+% expect:  0 errors, 0 warnings; Ann Able and Bob Baker each "† Univ Z" (today's keeps the line's mark), desk@z.org,
+%   "Univ X (office@x.org)"
+% status:  RED (94b-r7) -> GREEN (95c)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1,\dagger}$, Bob Baker$^{1,\dagger}$ \\
+$^\dagger$ Univ Z, desk@z.org \\
+$^1$ Univ X (office@x.org)}
+\maketitle
+Text.
+\end{document}

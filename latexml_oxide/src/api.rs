@@ -95,8 +95,40 @@ pub fn convert_to_xml(tex: &str) -> Result<String, String> {
 /// Figures are left as raw `<ltx:graphics>` references — image conversion
 /// writes files next to a destination, and this string-returning API has none;
 /// use [`crate::post`] with a `destination` when you need converted images.
+///
+/// The page links the bundled CSS/JS, and with no destination those files are
+/// copied into the working directory; [`convert_to_html_with`] and
+/// [`HtmlOptions`] choose otherwise.
 pub fn convert_to_html(tex: &str) -> Result<String, String> {
+  convert_to_html_with(tex, &HtmlOptions::default())
+}
+
+/// The settings [`convert_to_html_with`] takes. [`Default`] is what
+/// [`convert_to_html`] does. Construct with `..Default::default()`, so that a
+/// setting added later leaves existing callers compiling:
+///
+/// ```no_run
+/// use latexml::api::{HtmlOptions, convert_to_html_with};
+/// let options = HtmlOptions { default_resources: false, ..Default::default() };
+/// let html = convert_to_html_with(r"\documentclass{article}\begin{document}Hi\end{document}", &options)?;
+/// # Ok::<(), String>(())
+/// ```
+#[derive(Clone, Debug)]
+pub struct HtmlOptions {
+  /// Link and copy the bundled CSS/JS (`true`, Perl `defaultresources`). With no
+  /// destination the files land in the working directory; `false` is the
+  /// `--nodefaultresources` equivalent: no links to them, nothing written.
+  pub default_resources: bool,
+}
+
+impl Default for HtmlOptions {
+  fn default() -> Self { HtmlOptions { default_resources: true } }
+}
+
+/// [`convert_to_html`] with the given [`HtmlOptions`].
+pub fn convert_to_html_with(tex: &str, options: &HtmlOptions) -> Result<String, String> {
   let tex = tex.to_string();
+  let options = options.clone();
   on_worker(move || {
     let opts = library_config(OutputFormat::HTML5);
     let mut converter = Converter::from_config(opts.clone());
@@ -119,7 +151,7 @@ pub fn convert_to_html(tex: &str) -> Result<String, String> {
       source_directory:          None,
       site_directory:            None,
       search_paths:              &[],
-      nodefaultresources:        false,
+      default_resources:         options.default_resources,
       css_files:                 &[],
       js_files:                  &[],
       noinvisibletimes:          false,
@@ -165,7 +197,8 @@ mod tests {
 
   #[test]
   fn html_conversion_returns_page() {
-    let html = convert_to_html(DOC).expect("convert_to_html");
+    let html = convert_to_html_with(DOC, &HtmlOptions { default_resources: false })
+      .expect("convert_to_html_with");
     assert!(html.contains("Hello"), "HTML should contain the body text");
     assert!(
       html.contains("<math") || html.contains("ltx_Math"),

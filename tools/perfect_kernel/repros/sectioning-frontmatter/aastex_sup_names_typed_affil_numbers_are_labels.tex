@@ -1,0 +1,22 @@
+% mechanism: a hand-printed number leading an `\affil` line (`2) Uni Two`) under names marked `$^{N}$` is that mark's
+%   label (user ruling R2, 2026-11-01): the line is the marked line `$^{2}$Uni Two` (aas_support_sty.rs `\affiliation`
+%   rewrites it; `relocate::leading_line_label`), which goes by its mark — a mark every queued name shows by REVTeX's
+%   group rule (`group_or_marked_affiliation`), any other to the names showing it.
+% witness: 0909.0058 (aastex, `\affil{1) Astronomy Department, Wesleyan …}`), astro-ph0108212; review rev97cd F1
+% oracle:  pdflatex (TL 2025, emulateapj) 0 errors: "Ann Able1, Bob Baker1 and Cat Cole1,2 / 1) Uni One and / 2) Uni
+%   Two"
+% engines: rust 97f r1: each author both lines; rust 97d: every author "1) Uni One", Cat Cole "2) Uni Two" too; perl:
+%   Cat Cole both
+% expect:  0 errors, 0 warnings; Ann Able and Bob Baker "1 Uni One" (the group's line keeps its mark), Cat Cole that and
+%   "Uni Two"
+% status:  RED (97f r1) -> GREEN (97f r2)
+\documentclass{emulateapj}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{1}$ and Cat Cole$^{1,2}$}
+\affil{1) Uni One}
+\affil{2) Uni Two}
+\begin{abstract}A.\end{abstract}
+\section{Intro}
+Text.
+\end{document}

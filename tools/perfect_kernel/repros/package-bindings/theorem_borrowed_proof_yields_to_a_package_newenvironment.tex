@@ -1,0 +1,18 @@
+% witness: cc.cls's ccproof.sty:56 `\newenvironment{proof}{\namedproof{\Proof}}{\endnamedproof}` after
+%          `\RequirePackage{theorem}` (1507.02955, under the raw-class lever); synthetic shape: 67ps review t1
+% oracle:  pdflatex 0 errors, "MyProof. Body one."
+% engines: rust a03442572a (and 67o1) = <proof> "Proof." with ∎ — "Ignoring redefinition", the borrowed amsthm proof
+%          kept; perl = the same (theorem.sty.ltxml loads amsthm for real)
+% expect:  0 errors, 0 warnings; no <proof>; the package's bold "MyProof." head
+% status:  RED (a03442572a) -> GREEN (67ps); guard
+%          perfect_kernel_batch67ps::borrowed_proof_yields_to_a_package_newenvironment
+\begin{filecontents*}[overwrite]{mpfpkg.sty}
+\ProvidesPackage{mpfpkg}
+\newenvironment{proof}{\par\textbf{MyProof.} }{\par}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{theorem}
+\usepackage{mpfpkg}
+\begin{document}
+\begin{proof}Body one.\end{proof}
+\end{document}

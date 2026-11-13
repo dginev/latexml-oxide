@@ -1,0 +1,9 @@
+% A `\dimexpr` past `\maxdimen` is "Arithmetic overflow" and the expression is 0pt (etex.ch `scan_expr`).
+% witness: synthetic (DTL1d).
+% status:  GREEN (DTL1d; int162a: 0 errors, 1 warning, [0.0pt]).
+% oracle:  pdflatex 1 `!` (Arithmetic overflow), [0.0pt]; Perl 0 errors 0 warnings, [32766.0pt].
+% expect:  1 error (Arithmetic overflow), 0 warnings, [0.0pt].
+\documentclass{article}
+\begin{document}
+\dimen0=\dimexpr 16383pt*2\relax A=[\the\dimen0]
+\end{document}

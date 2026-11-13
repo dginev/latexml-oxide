@@ -1,0 +1,18 @@
+% witness: none on arXiv found (the reviewer's p7 shape); the lapse is what lets a package define the proof once the
+%          document has undefined amsart's: 0705.0545's nccthm `[1][]` goes through on the copy rule alone
+%          (amsthm_proof_lock_passes_an_empty_default.tex)
+% oracle:  pdflatex 0 errors, "Nachweis. Body seven."
+% engines: rust a03442572a = Error:undefined:\proof (the document's \let went through, the package's copy
+%          `[1][Nachweis]` was refused by the proof lock); perl = as pdflatex (no lock)
+% expect:  0 errors, 0 warnings; the package's bold "Nachweis." head, no <proof>
+% status:  RED (a03442572a) -> GREEN (67ps); guard perfect_kernel_batch67ps::proof_lock_lapses_once_the_document_undefines_it
+\begin{filecontents*}[overwrite]{nachweispkg.sty}
+\ProvidesPackage{nachweispkg}
+\newenvironment{proof}[1][Nachweis]{\par\noindent\textbf{#1.}\ }{\par}
+\end{filecontents*}
+\documentclass{amsart}
+\let\proof\undefined\let\endproof\undefined
+\usepackage{nachweispkg}
+\begin{document}
+\begin{proof}Body seven.\end{proof}
+\end{document}

@@ -1,0 +1,28 @@
+% mechanism: `\email{\{a@x\}}` — one address in printed braces — is that address, set as written (`row_email_calls`,
+%   OXIDIZED_DESIGN_DIVERGENCES #901): the three calls under llncs's shared `\institute` are one address per author,
+%   which no spelled address contradicts, so each is the author's at its place (FIDELITY_CHARTER §4).
+% witness: 2410.04091 (this shape, its names and addresses)
+% oracle:  pdflatex 0 errors; "Fatemeh Allahdadi, Rahil Mahdian Toroghi, and Hassan Zareian" over "Iran Broadcasting
+%   University (IRIBU), Tehran, Iran" and "{fatima.iribu@gmail.com}, {mahdiantr1974@ieee.org}, {zareian@iribu.ac.ir}"
+% engines: rust 85b r1 = `{fatima.iribu@gmail.com}` on all three authors, the other two on Hassan Zareian; int114a =
+%   the institute and the first address on a nameless creator, the second on Rahil Mahdian Toroghi, the third on Hassan
+%   Zareian
+% expect:  0 errors, 0 warnings; the institute on the three; each address, as printed, its author's in order
+% status:  RED (85b r1) -> GREEN (85b r2)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{A Title}
+\author{Fatemeh Allahdadi \and
+	Rahil Mahdian Toroghi \and
+	Hassan Zareian
+}
+\institute{Iran Broadcasting University (IRIBU), Tehran, Iran
+	\\
+	\email{\{fatima.iribu@gmail.com\}},	\email{\{mahdiantr1974@ieee.org\}},
+	\email{\{zareian@iribu.ac.ir\}}
+}
+\maketitle
+\begin{abstract}Text.\end{abstract}
+Body.
+\end{document}

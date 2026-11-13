@@ -1,0 +1,21 @@
+% mechanism: one `\href{mailto:able@x.org}{\{able,baker\}@x.org}` printing a group of two addresses: the e-mail made of
+%   each keeps the link whole only when the link prints that one address or links to it — `able@` the link, `baker@`
+%   the font alone (brief 95c r3 F3).
+% witness: synthetic (review rev95c_r2 probe c2); the group shape of 2009.00299, 2311.18002
+% oracle:  pdflatex 0 errors: "1 Univ X, {able,baker}@x.org", "2 Univ Z, cole@z.org"
+% engines: rust 95c-r2: Bob Baker's `baker@x.org` inside `<ref href="mailto:able@x.org">`; rust int123a: the group
+%   inside the affiliation on both carriers; perl: not run
+% expect:  0 errors, 0 warnings; Ann Able "Univ X", e-mail `<ref href="mailto:able@x.org">able@x.org</ref>`; Bob
+%   Baker "Univ X", e-mail "baker@x.org"
+% status:  RED (95c-r2) -> GREEN (95c-r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{hyperref}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^1$, Cat Cole$^2$ \\
+$^1$ Univ X, \href{mailto:able@x.org}{\{able,baker\}@x.org} \\
+$^2$ Univ Z}
+\maketitle
+Text.
+\end{document}

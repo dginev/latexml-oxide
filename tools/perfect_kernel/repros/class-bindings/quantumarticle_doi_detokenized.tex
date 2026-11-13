@@ -1,0 +1,20 @@
+% witness: 1902.03164 (quantumarticle with natbib; its `.bbl`'s `\doi{10.1007/978-3-540-27821-4_23}`; 1 error)
+% oracle:  pdflatex 1 error (TL 2025 harness: "Sorting rule for 'begindocument' hook applied too late", the class's nameref/showkeys
+%          rule): "[1] A. Author. A paper. DOI: 10.1007/978-3-540-27821-4˙23." (OT1 prints the detokenized `_` as a dot accent)
+% engines: rust 67int15 = 3 Error (the `.bbl`'s fallback `\doi`: `\burlalt` undefined, the DOI typeset); Perl 0.8.8 the same, no
+%          quantumarticle `\doi`
+% expect:  0 errors; the class's `\doi` (quantumarticle.cls:1396-1400): a link to https://doi.org/<doi> showing "DOI: <doi>",
+%          its `_` an underscore (the address, not the OT1 accident)
+% status:  FIXED (68w)
+% preload: ar5iv.sty
+\pdfoutput=1
+\documentclass[a4paper,noarxiv]{quantumarticle}
+\usepackage[numbers]{natbib}
+\begin{document}
+Text \cite{a}.
+\begin{thebibliography}{1}
+\expandafter\ifx\csname doi\endcsname\relax
+  \def\doi#1{\burlalt{doi:#1}{http://dx.doi.org/#1}}\fi
+\bibitem{a} A.~Author. A paper. \doi{10.1007/978-3-540-27821-4_23}.
+\end{thebibliography}
+\end{document}

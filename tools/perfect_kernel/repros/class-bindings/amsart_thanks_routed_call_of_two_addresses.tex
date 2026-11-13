@@ -1,0 +1,21 @@
+% witness: review rev92a_r3 S2 (probe d1; d4 the same `\email` outside a note): a routed call of two addresses
+% oracle:  pdflatex: "Email address: p@x.org, q@y.org" under University Y, City, Bob Baker's address
+% engines: perl 0.8.8 = 0 errors (1 warning, ar5iv.sty absent), "p@x.org, q@y.org" on Bob Baker; rust int120a = the
+%          same XML, the writer declined; rust 92a r3 = the same XML, the shadow p@x.org on Ann Able and q@y.org on Bob
+%          Baker (owner:order), the writer declined
+% expect:  0 errors, 0 warnings; the whole call Bob Baker's own (api:annotate:last owner:own-call), as d4's outside a
+%          note; the writer "same"
+% status:  RED (92a r3) -> GREEN (92a r4)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\usepackage{hyperref}
+\begin{document}
+\title{A title}
+\author{Ann Able}
+\address{University X, Town}
+\author{Bob Baker}
+\address{University Y, City}
+\thanks{Contact: \email{p@x.org, q@y.org}}
+\maketitle
+Text.
+\end{document}

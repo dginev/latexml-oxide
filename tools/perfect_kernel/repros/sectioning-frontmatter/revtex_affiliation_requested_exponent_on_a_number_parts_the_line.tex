@@ -1,0 +1,19 @@
+% mechanism: an exponent on a number is a label when a name requests it: `Lab $5^{2}$Univ Y` under `Bob Baker$^{2}$` parts
+%   the line at the `2` (`events::mark_led_pieces`, `names_requested`); the content check reads "5" and "Univ" (`emitter::dom`)
+% witness: synthetic (revISO1 S1, probe c8); 2203.01892's unrequested `OR $97403^{3}$` stays text
+% oracle:  pdflatex (TL 2025 revtex4-1) 0 errors: "1Univ X, Lab 52Univ Y"
+% engines: rust int160c = 0 errors, 2 warnings (a false "Univ" missing and "5Univ" duplicated), the formula in both entries;
+%   ISO1 = 2 warnings, Able the whole line, Baker none; ISO1b = 1 warning ("5" duplicated), Able "¹Univ X, Lab 5²", Baker
+%   "5²Univ Y"
+% expect:  0 errors, 0 warnings; Able "Univ X, Lab 5"; Baker "Univ Y" (the formula's base Able's, its script Baker's label)
+% status:  RED (ISO1b: the duplicated base counted by its Warning) -> GREEN (P4b4a: the cutter cuts inside the formula
+%   at the mark, closing it and opening it again, `classify::entry_starts`; guard perfect_kernel_batch90a)
+% preload: ar5iv.sty
+\documentclass{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$}
+\affiliation{$^{1}$Univ X, Lab $5^{2}$Univ Y}
+\maketitle
+Text.
+\end{document}

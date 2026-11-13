@@ -1,0 +1,23 @@
+% witness: non-decimal-units/non-decimal-units (non-decimal-units.sty:778 `\NewColumnType{#1}[2]{Q[r, cmd=\ndu_tblr_cell:nnn{##1}{##2}]}`)
+% oracle:  pdflatex (TL 2025) 0 errors: (One), <Two>, [a|b|Three], [x|d|Four], [y|d|Five] (the last two defined after the column type).
+% engines: int141a: 2 errors per column: the body's string retokenized `\my_later:nnn` as `\my` and `_`.
+% expect:  0 errors; the row whole, each `cmd` given the cell's text trimmed (tabularray.sty:3749-3759)
+% status:  GREEN
+\documentclass{article}
+\usepackage{tabularray}
+\makeatletter
+\def\my@wrap#1{(#1)}
+\def\mywrap#1{<#1>}
+\NewColumnType{W}{Q[l,cmd=\my@wrap]}
+\NewColumnType{P}{Q[l,cmd=\mywrap]}
+\makeatother
+\ExplSyntaxOn
+\NewColumnType{U}[2]{ Q[r,cmd=\my_later:nnn{#1}{#2}] }
+\NewColumnType{D}[1][x]{ Q[c,cmd=\my_later:nnn{#1}{d}] }
+\cs_new_protected:Npn \my_later:nnn #1#2#3 { [#1|#2|#3] }
+\ExplSyntaxOff
+\begin{document}
+\begin{tblr}{W P U{a}{b} D D[y]}
+One & Two & Three & Four & Five \\
+\end{tblr}
+\end{document}

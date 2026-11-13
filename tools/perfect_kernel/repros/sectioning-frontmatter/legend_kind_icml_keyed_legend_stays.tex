@@ -1,0 +1,33 @@
+% icml's `\icmlaffiliation{intern}{Work done during an internship}` under `\icmlauthor{Ann Able}{equal,uofa,intern}`:
+% the label is a key, which icml prints as the number of the affiliation's place (`\icmlauthor`'s "1 2" and the
+% notice's "2 Work done during an internship"), never as written. No name prints "intern", so the line stays the
+% affiliation it is (`insert::kind_legend_contacts`: a legend is a note only under a mark its carriers' names print, or
+% a label its binding prints; review rev103c2 B-A).
+% witness: 2106.09776 (`\icmlaffiliation{intern}{Work done during an internship}`, icml_arxiv_2021)
+% oracle:  pdflatex (icml2021.sty from 2106.09776, TL 2025) 0 errors: "Ann Able * 1 2 Bob Baker * 1",
+%          "*Equal contribution 1Univ A, Town 2Work done during an internship. Correspondence to: Ann Able
+%          <ann@a.org>."
+% engines: rust int130a = both lines affiliations of their authors; rust 103c r2 = "Work done during an internship" a
+%          note mark="intern"
+% expect:  0 errors, 0 warnings; Ann Able: Univ A and "Work done during an internship" as affiliations, her e-mail;
+%          Bob Baker: Univ A; no note
+% status:  RED (103c r2) -> GREEN (103c r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[accepted]{icml2021}
+\begin{document}
+\twocolumn[
+\icmltitle{T}
+\icmlsetsymbol{equal}{*}
+\begin{icmlauthorlist}
+\icmlauthor{Ann Able}{equal,uofa,intern}
+\icmlauthor{Bob Baker}{equal,uofa}
+\end{icmlauthorlist}
+\icmlaffiliation{uofa}{Univ A, Town}
+\icmlaffiliation{intern}{Work done during an internship}
+\icmlcorrespondingauthor{Ann Able}{ann@a.org}
+\vskip 0.3in
+]
+\printAffiliationsAndNotice{\icmlEqualContribution}
+Text.
+\end{document}

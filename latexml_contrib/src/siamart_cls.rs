@@ -3,7 +3,10 @@
 //! Activated via prefix-match: any class name starting with "siamart" routes
 //! here. Defines the high-level macros papers use (\newsiamthm, \newsiamremark,
 //! \headers, \dedicatory) on top of OmniBus's article-like behaviour.
+use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 use latexml_package::prelude::*;
+
+use crate::shipped_class::class_option_given;
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
@@ -67,15 +70,10 @@ LoadDefinitions!({
     "\\fundingsource{}",
     "\\@add@frontmatter{ltx:note}[role=funding-source]{#1}"
   );
-  // siamart papers often \externaldocument supplement/article before
-  // loading xr — pre-stub. siamart loads xr-hyper (not xr), which
-  // supports `\externaldocument[prefix][nocite]{file}` (two optional
-  // args). Semiverbatim on the file arg neutralizes `_` so paper-
-  // bundled filenames like `ex_supplement` don't trip text-mode `_`
-  // errors. Witness 2402.12241. The trailing `[url]` is xr-hyper's too
-  // (xr-hyper.sty:38-41; siamart220329.cls:1266 loads it), as in xr_sty.rs.
-  def_macro_noop("\\externaldocument[][] Semiverbatim OptionalSemiverbatim")?;
-  def_macro_noop("\\externalcitedocument[][] Semiverbatim OptionalSemiverbatim")?;
+  // siamart220329.cls:1266 loads xr-hyper, whose `\externaldocument[][nocite]{ex_supplement}` (the SIAM template's
+  // article ↔ supplement idiom) imports the other document's labels from its `.aux` (xr_sty.rs; a file name with `_`
+  // stays Semiverbatim, witness 2402.12241).
+  RequirePackage!("xr-hyper");
   // siamart220329 L1130: \funding{...} writes a marked line in the
   // titlepage. Preserve as a frontmatter ltx:acknowledgements via
   // \@add@frontmatter so the element lands at top-level no matter
@@ -127,4 +125,54 @@ LoadDefinitions!({
     "{@doisec}{}",
     "<ltx:inline-logical-block class='ltx_doisec'><ltx:text font='bold'>#1. </ltx:text>#body</ltx:inline-logical-block>"
   );
+  // What every siamart/siamonline release papers ship defines (1116 to 251216; 2006.12120's siamart220329.cls, as the
+  // 169 siamart and 55 siamonline copies have it) and papers call (run 347: 31+19 siamart and 26 siamonline papers), a
+  // copy without one leaving it to the paper (`DefinitionOrigin::Fallback`):
+  // - :1426 `\proofbox`, the proofs' hollow box (`\theoremsymbol{\proofbox}`, 1805.01916; 30 papers);
+  // - :491-498 `\slugger{journal}{year}{vol}{no}{pages}`, the title page's slug line, page furniture (1311.2828;
+  //   13 papers); :517-522 `\siamprelabel` (`SM` under the `supplement` option), the supplement's label prefix;
+  // - :749 `{DOI}` "DOI." (1901.02925; 11+19 papers), :747 `{AM}` "AMS subject classification" (1801.00197), :744
+  //   `{MSCcode}` "MSC code" (2101.02911), :746 `{ACM}` (2006.12120), as `{MSCcodes}` and `{AMS}`;
+  // - :710-718 `{romannum}`, `{remunerate}`, lists numbered (i), (ii)… and 1., 2.… (1902.07263, 1601.00044);
+  // - :924-930 `\appendixnotitle`, an appendix numbered but untitled (1703.08345);
+  // - siamonline250211.cls :837 `{Code}` "Code repository" (10 copies, 2306.16314, 2509.14771), siamonline :550
+  //   `\dedication{text}`, a dedication under the title (2210.02418).
+  {
+    let _class = OriginGuard::new(DefinitionOrigin::Fallback);
+    let supplement = class_option_given("supplement")?;
+    RawTeX!(if supplement {
+      r"\def\siamprelabel{SM}\def\siampretitle{Supplementary Materials: }"
+    } else {
+      r"\def\siamprelabel{}\def\siampretitle{}"
+    });
+    Let!("\\proofbox", "\\openbox");
+    RawTeX!(
+      r"\def\slugger#1#2#3#4#5{}
+\newcommand\DOIname{DOI\@}
+\newenvironment{DOI}{\begin{@doisec}{\DOIname}}{\end{@doisec}}
+\newcounter{rmnum}
+\newenvironment{romannum}{\begin{list}{{\upshape (\roman{rmnum})}}{\usecounter{rmnum}}}{\end{list}}
+\newcounter{muni}
+\newenvironment{remunerate}{\begin{list}{{\upshape \arabic{muni}.}}{\usecounter{muni}}}{\end{list}}
+\newcommand{\appendixnotitle}{\section{}}
+\newcommand\codelink{Code repository\@}
+\newenvironment{Code}{\begin{@abssec}{\codelink}}{\end{@abssec}}"
+    );
+    DefEnvironment!(
+      "{AM}",
+      "<ltx:classification scheme='AMS'>#body</ltx:classification>"
+    );
+    DefEnvironment!(
+      "{MSCcode}",
+      "<ltx:classification scheme='MSC'>#body</ltx:classification>"
+    );
+    DefEnvironment!(
+      "{ACM}",
+      "<ltx:classification scheme='ACM'>#body</ltx:classification>"
+    );
+    DefMacro!(
+      "\\dedication{}",
+      "\\@add@frontmatter{ltx:note}[role=dedication]{#1}"
+    );
+  }
 });

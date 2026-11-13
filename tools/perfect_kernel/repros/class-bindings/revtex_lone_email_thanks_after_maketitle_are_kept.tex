@@ -1,0 +1,21 @@
+% mechanism: an `\email` and a `\thanks` after `\maketitle` with no `\author` before them are not a repeated block: the
+%   e-mail goes to the last author and the `\thanks` text stays (the kernel's `\relax`), as int159b (revtex4_cls.rs
+%   `switch_off_author_block_after_maketitle`). REVTeX 4.0 defines its own `\email` (revtex4_cls.rs); the guard runs it
+%   also under revtex4-2.
+% witness: synthetic (siblings of 1309.4768, 1106.2389, 2304.09163; study WR160)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "T / Ann Able and Bob Baker / Text." (revtex4.cls:4709-4717
+%   `\let\email\@gobble`, `\let\thanks\@gobble`)
+% engines: rust int159b: 0 errors, Bob Baker holds bob.baker@y.org, the body "Funded by Z. Text."; int160b (RB1): both
+%   lost silently. RB1c: as expected
+% expect:  0 errors, 0 warnings; Ann Able; Bob Baker (bob.baker@y.org); the body "Funded by Z. Text."
+% status:  GREEN
+\documentclass[aps,prl]{revtex4}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\author{Bob Baker}
+\maketitle
+\email{bob.baker@y.org}
+\thanks{Funded by Z.}
+Text.
+\end{document}

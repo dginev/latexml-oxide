@@ -33,6 +33,16 @@ struct KVData {
   digested_value: Option<Digested>,
 }
 
+thread_local! {
+  /// The (prefix, key, keysets) of each unknown key reported in this conversion, each reported once.
+  static SEEN_MISSING: std::cell::RefCell<rustc_hash::FxHashSet<(String, String, String)>> =
+    std::cell::RefCell::default();
+}
+
+/// Forget the unknown keys reported: a conversion reports its own (`initialize_report`, as Perl's `$$state{status} = {}`
+/// per conversion, LaTeXML.pm:232), not only those a persistent worker's earlier paper did not (ST3).
+pub fn reset_unknown_keys_reported() { SEEN_MISSING.with_borrow_mut(|seen| seen.clear()); }
+
 #[allow(dead_code)] // TODO: remove when KeyVals is fully implemented
 #[derive(Debug, Clone)]
 pub struct KeyVals {
@@ -52,6 +62,9 @@ pub struct KeyVals {
   cached_pairs:         Vec<(String, ArgWrap)>,
   cached_hash:          HashMap<String, Vec<ArgWrap>>,
   cached_hash_digested: HashMap<String, Vec<Digested>>,
+  /// The tokens each typed length value states (`width=0.48\textwidth`), in the order given, kept under
+  /// `parameter::KEEP_STATED_LENGTHS` ([`Self::stated_entry`]).
+  stated:               Vec<(String, Tokens)>,
 }
 
 impl Default for KeyVals {
@@ -69,6 +82,7 @@ impl Default for KeyVals {
       cached_pairs:         Vec::new(),
       cached_hash:          HashMap::default(),
       cached_hash_digested: HashMap::default(),
+      stated:               Vec::new(),
     }
   }
 }
@@ -267,16 +281,15 @@ impl KeyVals {
         // maxWarnings limits; our rate-limit is per (prefix,key,keysets)
         // and unbounded in count, so the first occurrence is always
         // visible but repeats are silently dropped.
-        type SeenSet = rustc_hash::FxHashSet<(String, String, String)>;
-        thread_local! {
-          static SEEN_MISSING: std::cell::RefCell<SeenSet> =
-            std::cell::RefCell::new(SeenSet::default());
-        }
         let all_joined = allkeysets.join(",");
+        // (a speculative digestion's diagnostics go with it: what it sees is not seen, or the document's own Warning goes unsaid)
         let is_new = SEEN_MISSING.with(|cell| {
-          cell
-            .borrow_mut()
-            .insert((prefix.clone(), key.to_string(), all_joined.clone()))
+          let seen = (prefix.clone(), key.to_string(), all_joined.clone());
+          if gullet::in_speculative_digestion() {
+            !cell.borrow().contains(&seen)
+          } else {
+            cell.borrow_mut().insert(seen)
+          }
         });
         if is_new && !(prefix == "KV" && unknown_keyval_keys_ignored()) {
           // Intentional divergence from Perl (KeyVals.pm L97 uses Info).
@@ -407,6 +420,18 @@ impl KeyVals {
   // Public accessors of all the values
   //======================================================================
   // Note: The API of this need to be stable, as people may be using it
+
+  /// The tokens the last of `keys` given states as its length value (`width=0.48\textwidth`), where they were kept
+  /// (`parameter::KEEP_STATED_LENGTHS`), with the key that stated them (`width`, `totalheight`; the value they gave is
+  /// [`Self::get_value`]'s): a key given again replaces its value.
+  pub fn stated_entry(&self, keys: &[&str]) -> Option<(&str, &Tokens)> {
+    self
+      .stated
+      .iter()
+      .rev()
+      .find(|(key, _)| keys.contains(&key.as_str()))
+      .map(|(key, tokens)| (key.as_str(), tokens))
+  }
 
   /// return the value of a given key. If multiple values are given, return the last one.
   pub fn get_value(&self, key: &str) -> Option<&ArgWrap> {
@@ -1099,6 +1124,8 @@ impl KeyVals {
       None,
     );
 
+    // the typed lengths' stated tokens kept (`stated_entry`)
+    let mut stated: Vec<(String, Tokens)> = Vec::new();
     let punct_tks = Tokens!(T_OTHER!(","));
     let until_tks = Tokens!(until);
     // iterate over all the key-value pairs to read
@@ -1175,6 +1202,12 @@ impl KeyVals {
             let stripped_toks = self.replace_pointers(keyset, raw_toks)?;
             if !stripped_toks.is_empty() {
               if let Some(Stored::Parameter(ref keytype)) = keytype_opt {
+                // a length's tokens as stated, where they are kept (`stated_entry`)
+                if (keytype.name == crate::pin!("Dimension") || keytype.name == crate::pin!("Glue"))
+                  && state::lookup_bool(crate::parameter::KEEP_STATED_LENGTHS)
+                {
+                  stated.push((key.to_string(), stripped_toks.clone()));
+                }
                 value = keytype.reparse(stripped_toks)?;
               } else {
                 value = ArgWrap::Tokens(stripped_toks);
@@ -1235,6 +1268,7 @@ impl KeyVals {
       }
     }
 
+    self.stated.extend(stated);
     // rebuild and return nothing
     self.rebuild(None);
 
@@ -1263,7 +1297,7 @@ impl KeyVals {
           let expanded = gullet::do_expand(vtks)?;
           let mut exp_str = expanded.to_string();
           if exp_str == "{}" {
-            exp_str = String::new();
+            exp_str.clear();
           }
           tks.push(T_OTHER!(exp_str));
         },

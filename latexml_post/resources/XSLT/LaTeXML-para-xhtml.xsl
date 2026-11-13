@@ -320,6 +320,19 @@
               </xsl:variable>
               <xsl:element name="div" namespace="{$html_ns}">
                 <xsl:attribute name="class">ltx_flex_cell ltx_flex_size_<xsl:value-of select="$panel_count_keyword"/></xsl:attribute>
+                <!-- (latexml-oxide) the panel's width as a fraction of its row's line, and the columns it spans in a
+                     matrix (OXIDIZED_DESIGN_DIVERGENCES #887), on the flex item they size; each only for a numeric
+                     value, written as the number -->
+                <xsl:if test="number(@panelwidth) = number(@panelwidth) or number(@panelspan) = number(@panelspan)">
+                  <xsl:attribute name="style">
+                    <xsl:if test="number(@panelwidth) = number(@panelwidth)">
+                      <xsl:value-of select="concat('--ltx-panel-width:',number(@panelwidth),';')"/>
+                    </xsl:if>
+                    <xsl:if test="number(@panelspan) = number(@panelspan)">
+                      <xsl:value-of select="concat('--ltx-panel-span:',number(@panelspan),';')"/>
+                    </xsl:if>
+                  </xsl:attribute>
+                </xsl:if>
                 <xsl:apply-templates select=".">
                   <xsl:with-param name="context" select="$context"/>
                 </xsl:apply-templates>

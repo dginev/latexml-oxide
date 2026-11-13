@@ -1,0 +1,18 @@
+% mechanism: REVTeX's queue-time cut of an `\affiliation` at its marks (a token reader, refactor stage 5) parts the line at `\textsuperscript{3}He` after a
+%   comma — a superscript glued to letters no author requests: the "3" lost, "He Lab" a nameless creator's
+% witness: synthetic (ISO1)
+% oracle:  pdflatex (TL 2025 revtex4-1) 0 errors: "1 Univ X / 2 Univ Y, 3He Lab"
+% engines: rust int160c = ISO1 = 0 errors, 0 warnings: Baker "Univ Y", "He Lab" a nameless creator's, the "3" dropped silently
+%          P4c3: Able "1 Univ X"; Baker "2 Univ Y"; "3 He Lab" a nameless creator's (the "3" kept and shown), 0 W
+% expect:  0 errors, 0 warnings; Able "Univ X"; Baker "Univ Y, ³He Lab"
+% status:  RED (int160c, ISO1; P4c3 reverted 0f8a176508's token rule in `emitter/calls.rs` `split_marked_pieces`: the
+%          token reads rose 98 -> 101, the TOKEN_READS fence) — moves: post-merge
+% preload: ar5iv.sty
+\documentclass{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$}
+\affiliation{$^{1}$Univ X\\ $^{2}$Univ Y, \textsuperscript{3}He Lab}
+\maketitle
+Text.
+\end{document}

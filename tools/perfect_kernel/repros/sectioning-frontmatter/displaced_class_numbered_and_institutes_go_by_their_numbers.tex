@@ -1,0 +1,32 @@
+% A raw class's displaced `\institute` store (`\gdef\@institute{\it #1}`, OD #955) whose title page numbers its `\and`
+% entries (caosp.sty:519-527 `\institutename`: `\def\and{…\stepcounter{@inst}…$^{\the@inst}$…}`), under names marked
+% `\inst{n}`. The argument went to the API whole, where the kernel's `\and` printed " and ": one contact of all the
+% institutes under every author, "and" written in. Entry n is now labelled n, as the class prints it
+% (`class_numbered_institutes`, the shared reader K11's store route uses), each the authors' requesting it (review
+% rev99b B2).
+% witness: astro-ph9805069 (caosp)
+% oracle:  pdflatex 0 errors: "Ann Able1 , Bob Baker2 and Cy Cole1,2", "1Univ A, Town", "2Univ B, City"
+% engines: rust 99b0 = 0 errors, 0 warnings, the entries body paragraphs; rust 99b r1 = "Univ A, Town and Univ B, City"
+%          under every author; perl = no raw class load (OmniBus `\institute`)
+% expect:  0 errors, 0 warnings; Ann Able holds "1Univ A, Town", Bob Baker "2Univ B, City", Cy Cole both; no " and "
+% status:  RED (99b r1) -> GREEN (99b r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{cainst.cls}
+\ProvidesClass{cainst}\LoadClass{article}
+\newcounter{@inst}
+\def\inst#1{\unskip$^{#1}$}
+\def\institute#1{\gdef\@institute{\it #1}}
+\def\institutename{\par\begingroup\parindent=0pt\setcounter{@inst}{1}%
+  \def\and{\par\stepcounter{@inst}\noindent$^{\the@inst}$\enspace\ignorespaces}%
+  \noindent$^{1}$\enspace\ignorespaces\@institute\par\endgroup}
+\def\@maketitle{\begin{center}{\LARGE\@title\par}\vskip1em{\large\@author\par}\end{center}
+  {\small\institutename}\vskip1em}
+\end{filecontents*}
+\documentclass{cainst}
+\begin{document}
+\title{A Title}
+\author{Ann Able\inst{1}, Bob Baker\inst{2} and Cy Cole\inst{1,2}}
+\institute{Univ A, Town \and Univ B, City}
+\maketitle
+Text.
+\end{document}

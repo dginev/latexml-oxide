@@ -1,0 +1,21 @@
+% mechanism: the writer's re-part (OD #928): names, marks and lines inside `\begin{minipage}` within `\author{}`,
+%   `\quad` between names; today's old reader keeps the whole minipage as one creator's name. The observer reads
+%   three names and their marked lines; the writer writes them, its word check reading the cells and rows of a
+%   layout as parting words (`dom::words_without_marks`).
+% witness: 2609.32870 (11 names in a minipage, one creator), 2609.33104
+% oracle:  pdflatex 0 errors: "Ann Able1 Bob Baker2 Cid Cole1,∗" over "1 Univ X 2 Univ Y" and "∗ Equal advising."
+% engines: rust 93a: one creator holding the minipage; perl: the same (one creator)
+% expect:  0 errors, 0 warnings; Ann Able Univ X, Bob Baker Univ Y, Cid Cole Univ X + "Equal advising."
+% status:  GREEN (94a)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title}
+\author{\begin{minipage}[t]{\textwidth}
+\centering Ann Able$^{1}$ \quad Bob Baker$^{2}$ \quad Cid Cole$^{1,*}$\\[0.6em]
+\normalfont\small$^{1}$Univ X \quad$^{2}$Univ Y\\[0.3em]
+$^{*}$Equal advising.
+\end{minipage}}
+\maketitle
+Body.
+\end{document}

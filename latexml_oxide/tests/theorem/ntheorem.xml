@@ -234,7 +234,7 @@ Also for displayed arrays of this form, it looks good:</text></p>
           </equation>
           <p><text class="ltx_align_floatright" font="slanted"><Math mode="inline" tex="\heartsuit" text="heartsuit" xml:id="ThmLemma1.p1.m1">
                 <XMath>
-                  <XMTok font="upright" name="heartsuit" role="UNKNOWN">♡</XMTok>
+                  <XMTok name="heartsuit" role="UNKNOWN">♡</XMTok>
                 </XMath>
               </Math></text></p>
         </para>
@@ -344,7 +344,7 @@ math material) … If anyone knows, please inform us.</text></p>
           </equation>
           <p><text class="ltx_align_floatright" font="slanted"><Math mode="inline" tex="\heartsuit" text="heartsuit" xml:id="ThmLemma2.p1.m1">
                 <XMath>
-                  <XMTok font="upright" name="heartsuit" role="UNKNOWN">♡</XMTok>
+                  <XMTok name="heartsuit" role="UNKNOWN">♡</XMTok>
                 </XMath>
               </Math></text></p>
         </para>
@@ -682,7 +682,7 @@ That’s no bug, it’s <text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0
           </equationgroup>
           <p><text class="ltx_align_floatright" font="slanted"><Math mode="inline" tex="\heartsuit" text="heartsuit" xml:id="ThmLemma3.p2.m1">
                 <XMath>
-                  <XMTok font="upright" name="heartsuit" role="UNKNOWN">♡</XMTok>
+                  <XMTok name="heartsuit" role="UNKNOWN">♡</XMTok>
                 </XMath>
               </Math></text></p>
         </para>
@@ -995,7 +995,7 @@ That’s no bug, it’s <text class="ltx_LaTeX_logo" cssstyle="letter-spacing:-0
         <p><text font="slanted">That’s it (the end of the Theorem).
 <text class="ltx_align_floatright"><Math mode="inline" tex="\diamondsuit" text="diamondsuit" xml:id="ThmTheorem1.p4.m1">
                 <XMath>
-                  <XMTok font="upright" name="diamondsuit" role="UNKNOWN">♢</XMTok>
+                  <XMTok name="diamondsuit" role="UNKNOWN">♢</XMTok>
                 </XMath>
               </Math></text></text></p>
       </para>
@@ -1134,7 +1134,7 @@ the last one gets the endmark:</p>
         </itemize>
         <p><text class="ltx_align_floatright" font="italic"><Math mode="inline" tex="\clubsuit" text="clubsuit" xml:id="ThmDefinition1.p1.m1">
               <XMath>
-                <XMTok font="upright" name="clubsuit" role="UNKNOWN">♣</XMTok>
+                <XMTok name="clubsuit" role="UNKNOWN">♣</XMTok>
               </XMath>
             </Math></text></p>
         <rule height="1px" width="100%"/>
@@ -1151,7 +1151,7 @@ the last one gets the endmark:</p>
         <p><text font="slanted">And here is a trivial corollary, which is ended by
 <text class="ltx_align_floatright">q.e.d</text><text class="ltx_align_floatright"><Math mode="inline" tex="\spadesuit" text="spadesuit" xml:id="ThmTheorem2.p1.m1">
                 <XMath>
-                  <XMTok font="upright" name="spadesuit" role="UNKNOWN">♠</XMTok>
+                  <XMTok name="spadesuit" role="UNKNOWN">♠</XMTok>
                 </XMath>
               </Math></text></text></p>
       </para>
@@ -1309,7 +1309,7 @@ same line as the text ends.
       <para xml:id="ThmTheorem3.p2">
         <p><text class="ltx_align_floatright" font="slanted"><Math mode="inline" tex="\diamondsuit" text="diamondsuit" xml:id="ThmTheorem3.p2.m1">
               <XMath>
-                <XMTok font="upright" name="diamondsuit" role="UNKNOWN">♢</XMTok>
+                <XMTok name="diamondsuit" role="UNKNOWN">♢</XMTok>
               </XMath>
             </Math></text></p>
       </para>
@@ -1332,7 +1332,7 @@ name in the list of corollaries:</p>
         <p align="center"><text font="slanted">environment.</text></p>
         <p><text class="ltx_align_floatright" font="slanted"><Math mode="inline" tex="\spadesuit" text="spadesuit" xml:id="ThmTheorem4.p1.m1">
               <XMath>
-                <XMTok font="upright" name="spadesuit" role="UNKNOWN">♠</XMTok>
+                <XMTok name="spadesuit" role="UNKNOWN">♠</XMTok>
               </XMath>
             </Math></text></p>
       </para>
@@ -1353,7 +1353,7 @@ surrounding text.</text></p>
         </quote>
         <p><text class="ltx_align_floatright" font="slanted"><Math mode="inline" tex="\diamondsuit" text="diamondsuit" xml:id="ThmTheorem5.p1.m1">
               <XMath>
-                <XMTok font="upright" name="diamondsuit" role="UNKNOWN">♢</XMTok>
+                <XMTok name="diamondsuit" role="UNKNOWN">♢</XMTok>
               </XMath>
             </Math></text></p>
       </para>
@@ -1372,7 +1372,7 @@ manual handling:</p>
       <para xml:id="ThmTheorem6.p1">
         <p><text font="slanted">a line of text with a manually set endmark  <text class="ltx_align_floatright"><Math mode="inline" tex="\diamondsuit" text="diamondsuit" xml:id="ThmTheorem6.p1.m1">
                 <XMath>
-                  <XMTok font="upright" name="diamondsuit" role="UNKNOWN">♢</XMTok>
+                  <XMTok name="diamondsuit" role="UNKNOWN">♢</XMTok>
                 </XMath>
               </Math></text><break/>some more text, but no automatic endmark set.</text></p>
       </para>
@@ -1449,7 +1449,7 @@ Note that we define a complex header text and a complex end mark.</p>
             </XMath>
           </Math><text font="bold">-Theorem</text></tag><text font="bold"> (1st <Math mode="inline" tex="\kappa" text="kappa" xml:id="ThmTheorem8.m4">
             <XMath>
-              <XMTok font="medium italic" name="kappa" role="UNKNOWN">κ</XMTok>
+              <XMTok font="italic" name="kappa" role="UNKNOWN">κ</XMTok>
             </XMath>
           </Math>-Theorem):</text></title>
       <para xml:id="ThmTheorem8.p1">

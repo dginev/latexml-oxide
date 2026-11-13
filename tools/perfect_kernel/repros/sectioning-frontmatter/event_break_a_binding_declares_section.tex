@@ -1,0 +1,15 @@
+% witness: FRONTMATTER_SINGLE_ENGINE_PLAN gap 3, ijcai `\emails` (ijcai19.sty:124-130: `\def\emails{\egroup\par\bgroup\rm}`)
+% oracle:  pdflatex (ijcai21.sty of 2105.02711) 0 errors: "Ann Able" line; "Bob Baker" line; "Univ A"; "ann@a.org"
+% engines: Perl has no events; ours before this fix: `\emails` is the binding's no-op, and no event says where it was called
+% expect:  0 errors; its call stands as a Break of kind `section` beside the events, which it does not part; `\affiliations`
+%          ends the names' block, the binding's split, as before
+%          (perfect_kernel_batchz2::a_break_a_binding_declares_stands_beside_the_events)
+% status:  GREEN (Z2)
+\documentclass{article}
+\usepackage{ijcai21}
+\begin{document}
+\title{T}
+\author{Ann Able\emails Bob Baker \affiliations Univ A \emails ann@a.org}
+\maketitle
+Body.
+\end{document}

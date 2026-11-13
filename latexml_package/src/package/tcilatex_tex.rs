@@ -384,6 +384,23 @@ freely copied and distributed.}
 \def\ChildDefaults#1{}%
 \def\QTagDef#1#2#3{}%
 %
+% Constructs added with Scientific Notebook, from the later copies (4.0 :497-507, 0802.0560 `\U`; 5.0 :521-533;
+% 3.0 :438-446 has \UNICODE and \CustomNote without \U): \U{code} and \UNICODE{code} stand for a character the
+% export could not name, a filled square in the PDF. The binding serves every version (2.5 to 5.0) and a binding
+% wins over a shipped copy, so these 4.0 definitions win over a paper's own later \newcommand{\U} (an Info, not a
+% redefinition; `$\U$` then reads the `$` as its argument) -- the union-of-versions ruling; a 160-paper tcilatex scan
+% (0210, 0802, 1202) found no paper that defines \U, \UNICODE or \CustomNote.
+\@ifundefined{correctchoice}{\def\correctchoice{\relax}}{}
+\@ifundefined{HTML}{\def\HTML#1{\relax}}{}
+\@ifundefined{TCIIcon}{\def\TCIIcon#1#2#3#4{\relax}}{}
+\if@compatibility
+  \typeout{Not defining UNICODE  U or CustomNote commands for LaTeX 2.09.}
+\else
+  \providecommand{\UNICODE}[2][]{\protect\rule{.1in}{.1in}}
+  \providecommand{\U}[1]{\protect\rule{.1in}{.1in}}
+  \providecommand{\CustomNote}[3][]{\marginpar{#3}}
+\fi
+%
 % Macros for style editor docs
 \@ifundefined{StyleEditBeginDoc}{\def\StyleEditBeginDoc{\relax}}{}
 %
@@ -571,8 +588,27 @@ freely copied and distributed.}
     {\def\AmS{{\protect\usefont{OMS}{cmsy}{m}{n}%
                 A\kern-.1667em\lower.5ex\hbox{M}\kern-.125emS}}}{}%
 \@ifundefined{AmSTeX}{\def\AmSTeX{\protect\AmS-\protect\TeX\@}}{}%
-%
-\RequirePackage{amsmath}
+\makeatother
+"##);
+  // Scientific Word 2.5's tcilatex.tex loads no amsmath (0805.4522's copy, whose `\pmatrix{…}` is Plain TeX's in
+  // pdflatex, no "Old form" error); 5.x's does (2212.12000's :851 "Always load amsmath in LaTeX2e mode"): the paper's
+  // copy decides. amsmath's `\tag`, `\iint`… for the definitions below either way
+  // (`amsmath_sty::require_amsmath_beyond_original`; KNOWN_PERL_ERRORS #993).
+  amsmath_sty::require_amsmath_beyond_original(
+    crate::shipped_class::shipped_file_loads("tcilatex", "tex", "amsmath"),
+    &[],
+  )?;
+  RawTeX!(r##"
+\makeatletter
+
+% \TCItag{n} / \TCItag*{text}: the equation tag of Scientific Word 3.0 and later, which writes it in eqnarray rows
+% (tcilatex.tex 3.0 <19 May 1997> :676-683, the copy 0906.0198 ships; 4.0 :750-757, 0802.0560; 5.0 :776-783,
+% 2002.12128). Its body sets \@taggnum to `(n)' (`text' starred) and \@currentlabel to the tag for its own
+% \@@eqncr; here the tag is amsmath's \tag (`(n)', \tag* the text as given), which the equation rows read
+% (nlin0106009, hep-th0210191, hep-ph0210025; this copy is 2.5, which has no \TCItag).
+\def\TCItag{\@ifnextchar*{\@TCItagstar}{\@TCItag}}
+\def\@TCItag#1{\tag{#1}}
+\def\@TCItagstar*#1{\tag*{#1}}
 
 %JCS - added braces and \mathop around \displaystyle\int, etc.
 %

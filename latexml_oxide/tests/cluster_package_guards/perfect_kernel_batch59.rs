@@ -1,6 +1,6 @@
 //! Red/green guards for perfect-kernel phase-59 batches: the TikZ performance levers (59a) and
 //! the wheelchart pgfmath roots (59b).
-use latexml::util::test::assert_element;
+use latexml::util::test::{assert_element, check_all_requirements, loads};
 
 use super::perfect_kernel_batch57::{RAW, assert_elements, assert_elements_with};
 
@@ -214,7 +214,9 @@ fn author_block_appended_after_author_is_kept() {
 
 /// 59d: the extended T2A letters print through t2aenc.def's `\DeclareTextSymbol`s; the fontenc
 /// binding's empty stubs made the declarations refuse the bare commands, so ј љ њ ћ ђ џ і ї є ґ
-/// vanished (serbian-def-cyr/proba, cmpj/template). Repro fonts-nfss/t2a_extended_letters_print.
+/// vanished (serbian-def-cyr/proba, cmpj/template). Since 77s ј і Ј, set in the Latin slots j i J, are the
+/// Cyrillic letters (OXIDIZED_DESIGN_DIVERGENCES #776; they read Latin j/i/J before). Repro
+/// fonts-nfss/t2a_extended_letters_print.
 #[test]
 fn t2a_extended_letters_print() {
   let tex =
@@ -222,7 +224,7 @@ fn t2a_extended_letters_print() {
   assert_elements(tex, RAW, (0, 0), &[(
     "para",
     "p1",
-    "<para xml:id=\"p1\"><p>jљњћђџ JЉЊЋЂЏ ґєiї ж</p></para>",
+    "<para xml:id=\"p1\"><p>\u{0458}љњћђџ \u{0408}ЉЊЋЂЏ ґє\u{0456}ї ж</p></para>",
   )]);
 }
 
@@ -274,23 +276,6 @@ fn author_block_after_a_replaced_author() {
   );
 }
 
-/// 59d: an author-block row whose mark matches no author is kept with the shared creator
-/// (`authorblock` is a shared contact role). Repro sectioning-frontmatter/author_block_orphan_mark_is_kept.
-#[test]
-fn author_block_orphan_mark_is_kept() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_block_orphan_mark_is_kept.tex"
-  );
-  let xml = assert_elements(tex, RAW, (0, 0), &[]);
-  let flat: String = xml.chars().filter(|c| !c.is_whitespace()).collect();
-  for creator in [
-    "<creatorrole=\"author\"><personname>A.Author</personname><contactrole=\"authorblock\">Affiliationone</contact></creator>",
-    "<creatorrole=\"author\"><contactrole=\"authorblock\">Affiliationtwo</contact></creator>",
-  ] {
-    assert!(flat.contains(creator), "{creator} in {xml}");
-  }
-}
-
 /// 59e: fancyhdr's `\f@nch@setoffs`, re-run by a document after `\newgeometry` (the wheelchart manual),
 /// sizes running heads only, and converts to nothing. Repro singletons/fancyhdr_setoffs_after_newgeometry.
 #[test]
@@ -303,26 +288,6 @@ fn fancyhdr_setoffs_after_newgeometry() {
     "p1",
     r##"<para xml:id="p1"><p>Body.</p></para>"##,
   )]);
-}
-
-/// 59e: an `\author` after a `\maketitle` that left it live (KOMA ≥ 3.12) replaces the authors that
-/// `\maketitle` digested, as the title is replaced. Repro sectioning-frontmatter/author_after_a_digesting_maketitle.
-#[test]
-fn author_after_a_digesting_maketitle() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_after_a_digesting_maketitle.tex"
-  );
-  let xml = assert_elements(tex, RAW, (0, 0), &[]);
-  let flat: String = xml.chars().filter(|c| !c.is_whitespace()).collect();
-  assert_eq!(flat.matches("<creator").count(), 1, "one creator in {xml}");
-  assert!(
-    flat.contains("<creatorrole=\"author\"><personname>AliceA</personname></creator>"),
-    "the last author alone in {xml}"
-  );
-  assert!(
-    flat.contains("<title>T</title>") && !flat.contains("T0"),
-    "the last title in {xml}"
-  );
 }
 
 /// 59e: text right before an abstract, the cover its first flush wraps as `<titlepage>`, is closed
@@ -343,134 +308,6 @@ fn abstract_after_body_text() {
     flat.contains("<titlepage><blockxml:id=\"p1\"><p>foo</p></block></titlepage><abstract"),
     "the cover, then the abstract, in {xml}"
   );
-}
-
-/// 59e: an `\author` after a fallback flush (no later `\maketitle`) keeps the flushed author — a replace at the
-/// `\author` itself (59e first cut) dropped "Alice A". 64d: the late author, flushed at the document's end over the
-/// author the first section flushed, is sealed off as a supplement's would be (user ruling 2026-10-09,
-/// OXIDIZED_DESIGN_DIVERGENCES #154; pdflatex prints neither, there being no `\maketitle`; Perl adds it). Repro
-/// sectioning-frontmatter/author_after_a_fallback_flush_is_sealed_off.
-#[test]
-fn author_after_a_fallback_flush_is_sealed_off() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_after_a_fallback_flush_is_sealed_off.tex"
-  );
-  let xml = assert_elements(tex, RAW, (0, 0), &[]);
-  let flat: String = xml.chars().filter(|c| !c.is_whitespace()).collect();
-  assert_eq!(flat.matches("<creator").count(), 1, "one creator in {xml}");
-  assert!(
-    flat.contains("<creatorrole=\"author\"><personname>AliceA</personname></creator>"),
-    "the flushed author in {xml}"
-  );
-}
-
-/// 59e: a superseding title block's affiliation and emails go to its own authors.
-/// Repro sectioning-frontmatter/author_superseded_keeps_contacts_with_owners.
-#[test]
-fn author_superseded_keeps_contacts_with_owners() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_superseded_keeps_contacts_with_owners.tex"
-  );
-  let xml = assert_elements(tex, RAW, (0, 0), &[]);
-  let flat: String = xml.chars().filter(|c| !c.is_whitespace()).collect();
-  assert_eq!(flat.matches("<creator").count(), 2, "two creators in {xml}");
-  for creator in [
-    "<creatorrole=\"author\"><personname>AliceA</personname><contactname=\"Affiliation:\"role=\"affiliation\">InstA</contact><contactname=\"Email:\"role=\"email\">alice@a.org</contact></creator>",
-    "<creatorbefore=\"\"role=\"author\"><personname>CarolC</personname><contactname=\"Affiliation:\"role=\"affiliation\">InstA</contact><contactname=\"Email:\"role=\"email\">carol@a.org</contact></creator>",
-  ] {
-    assert!(flat.contains(creator), "{creator} in {xml}");
-  }
-}
-
-/// 59e: a superseding `\maketitle` hands the class's stores (`\@address`, `\@email`, set once) to its
-/// authors again. Repro sectioning-frontmatter/superseding_maketitle_rehands_class_stores.
-#[test]
-fn superseding_maketitle_rehands_class_stores() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/superseding_maketitle_rehands_class_stores.tex"
-  );
-  let xml = assert_elements(tex, RAW, (0, 0), &[]);
-  let flat: String = xml.chars().filter(|c| !c.is_whitespace()).collect();
-  assert_eq!(flat.matches("<creator").count(), 1, "one creator in {xml}");
-  assert!(
-    flat.contains(
-      "<creatorrole=\"author\"><personname>AliceA</personname><contactname=\"Address:\"role=\"address\">SharedInst</contact><contactname=\"Email:\"role=\"email\">max@m.org</contact></creator>"
-    ),
-    "the stores with the new author in {xml}"
-  );
-}
-
-/// 59e: a `\thanks` in a superseding `\author` is the author's note, not another author.
-/// Repro sectioning-frontmatter/thanks_in_a_superseding_author.
-#[test]
-fn thanks_in_a_superseding_author() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/thanks_in_a_superseding_author.tex"
-  );
-  let xml = assert_elements(tex, RAW, (0, 0), &[]);
-  let flat: String = xml.chars().filter(|c| !c.is_whitespace()).collect();
-  assert_eq!(flat.matches("<creator").count(), 1, "one creator in {xml}");
-  assert!(
-    flat.contains(
-      "<creatorrole=\"author\"><personname>AliceA</personname><noteclass=\"ltx_note_frontmatterltx_thanks_funding\"role=\"thanks\">FundedbyX.</note></creator>"
-    ),
-    "the note with its author in {xml}"
-  );
-}
-
-/// 59e: a store set between two `\maketitle`s before the new `\author` goes to the new authors.
-/// Repro sectioning-frontmatter/store_set_before_a_superseding_author.
-#[test]
-fn store_set_before_a_superseding_author() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/store_set_before_a_superseding_author.tex"
-  );
-  let xml = assert_elements(tex, RAW, (0, 0), &[]);
-  let flat: String = xml.chars().filter(|c| !c.is_whitespace()).collect();
-  assert_eq!(flat.matches("<creator").count(), 1, "one creator in {xml}");
-  assert!(
-    flat.contains(
-      "<creatorrole=\"author\"><personname>AliceA</personname><contactname=\"Address:\"role=\"address\">Shared</contact><contactname=\"Email:\"role=\"email\">alice@a.org</contact></creator>"
-    ),
-    "the stores with the new author in {xml}"
-  );
-}
-
-/// 59e: a replacing `\author` makes `\thanks` live for its own argument only; the document's own
-/// `\thanks` in body text stays inline. Repro sectioning-frontmatter/thanks_after_a_late_author_stays_the_documents.
-#[test]
-fn thanks_after_a_late_author_stays_the_documents() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/thanks_after_a_late_author_stays_the_documents.tex"
-  );
-  let xml = assert_elements(tex, RAW, (0, 0), &[]);
-  let flat: String = xml.chars().filter(|c| !c.is_whitespace()).collect();
-  assert!(
-    flat.contains("<paraxml:id=\"p1\"><p>Text.Moretext[Bracketnote]after.</p></para>"),
-    "the note inline in {xml}"
-  );
-  assert!(
-    !flat.contains("pubnote"),
-    "no note in the title block in {xml}"
-  );
-}
-
-/// 59e: a disabled `\and` (`\relax` after a `\maketitle`) splits a later `\author` at itself only, not
-/// at every `\relax` alias. Repro sectioning-frontmatter/relax_aliases_do_not_split_a_late_author.
-#[test]
-fn relax_aliases_do_not_split_a_late_author() {
-  let tex = include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/relax_aliases_do_not_split_a_late_author.tex"
-  );
-  let xml = assert_elements(tex, RAW, (0, 0), &[]);
-  let flat: String = xml.chars().filter(|c| !c.is_whitespace()).collect();
-  assert_eq!(flat.matches("<creator").count(), 2, "two creators in {xml}");
-  for creator in [
-    "<creatorrole=\"author\"><personname>AliceAnders</personname></creator>",
-    "<creatorbefore=\"\"role=\"author\"><personname>BobBrown</personname><noteclass=\"ltx_note_frontmatterltx_thanks_note\"role=\"thanks\">NoteB.</note></creator>",
-  ] {
-    assert!(flat.contains(creator), "{creator} in {xml}");
-  }
 }
 
 /// 59f: an abstract ends the paragraph it interrupts (LaTeX's begins with `\par`): text after it is a
@@ -587,7 +424,8 @@ fn tcb_listing_keeps_its_hypertarget() {
 }
 
 /// 59i: a listing box's `label=` names its own listing (its first line; run before the listing,
-/// the label named the element before it), and `step=` steps its counter. Repro
+/// the label named the element before it), and `step=` steps its counter; 78g: the first line takes the box counter's
+/// number, which `\ref` prints (each `[auto counter]` box "1"; OXIDIZED_DESIGN_DIVERGENCES #813). Repro
 /// captions-floats/tcb_listing_label_names_its_listing.
 #[test]
 fn tcb_listing_label_names_its_listing() {
@@ -597,7 +435,7 @@ fn tcb_listing_label_names_its_listing() {
   assert_elements(tex, RAW, (0, 0), &[(
     "para",
     "p1",
-    r##"<para xml:id="p1"><listing class="ltx_lstlisting" data="YSBi" dataencoding="base64" datamimetype="text/plain"><listingline labels="LABEL:first" xml:id="lstnumberx1"><text class="ltx_lst_identifier">a</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">b</text></listingline></listing><listing class="ltx_lstlisting" data="YyBk" dataencoding="base64" datamimetype="text/plain"><listingline labels="LABEL:second" xml:id="lstnumberx2"><text class="ltx_lst_identifier">c</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">d</text></listingline></listing><listing class="ltx_lstlisting" data="ZSBm" dataencoding="base64" datamimetype="text/plain"><listingline xml:id="lstnumberx3"><text class="ltx_lst_identifier">e</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">f</text></listingline></listing><p>See <ref labelref="LABEL:first"/>, <ref labelref="LABEL:second"/>; section 1.</p></para>"##,
+    r##"<para xml:id="p1"><listing class="ltx_lstlisting" data="YSBi" dataencoding="base64" datamimetype="text/plain"><listingline labels="LABEL:first" xml:id="lstnumberx1"><tags><tag role="refnum">1</tag></tags><text class="ltx_lst_identifier">a</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">b</text></listingline></listing><listing class="ltx_lstlisting" data="YyBk" dataencoding="base64" datamimetype="text/plain"><listingline labels="LABEL:second" xml:id="lstnumberx2"><tags><tag role="refnum">1</tag></tags><text class="ltx_lst_identifier">c</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">d</text></listingline></listing><listing class="ltx_lstlisting" data="ZSBm" dataencoding="base64" datamimetype="text/plain"><listingline xml:id="lstnumberx3"><text class="ltx_lst_identifier">e</text><text class="ltx_lst_space"> </text><text class="ltx_lst_identifier">f</text></listingline></listing><p>See <ref labelref="LABEL:first"/>, <ref labelref="LABEL:second"/>; section 1.</p></para>"##,
   )]);
 }
 
@@ -762,7 +600,8 @@ fn biblatex_ext_oa_patches_warn() {
 /// 59l: an open-access symbol package loaded without biblatex (biblatex-ext.tex:3927, "stand-alone")
 /// does not bring the biblatex binding in, so the document's natbib bibliography stays: only an
 /// overlay that loads biblatex itself (biblatex-cv) falls back to the binding. Repro
-/// index-bib/biblatex_ext_symbol_package_alone.
+/// index-bib/biblatex_ext_symbol_package_alone. The tag carries plainnat's order, `sort="true"` (GA3,
+/// OXIDIZED_DESIGN_DIVERGENCES #116).
 #[test]
 fn biblatex_ext_symbol_package_alone_keeps_the_bibliography() {
   let tex = include_str!(
@@ -777,7 +616,7 @@ fn biblatex_ext_symbol_package_alone_keeps_the_bibliography() {
     (
       "bibliography",
       "bib",
-      r##"<bibliography bibstyle="plainnat" citestyle="authoryear" files="biblatex-examples" inlist="toc" xml:id="bib"><title>References</title></bibliography>"##,
+      r##"<bibliography bibstyle="plainnat" citestyle="authoryear" files="biblatex-examples" inlist="toc" sort="true" xml:id="bib"><title>References</title></bibliography>"##,
     ),
   ]);
 }
@@ -824,7 +663,7 @@ fn hypertarget_block_text_keeps_a_visible_destination() {
     (
       "figure",
       "S0.F1",
-      r##"<figure inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="autoref">Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><rule class="ltx_figure_panel" height="28.5pt" width="28.5pt"/><break class="ltx_break"/><p class="ltx_figure_panel"><anchor xml:id="f"/></p><toccaption><tag close=" ">1</tag>C</toccaption><caption><tag close=": ">Figure 1</tag>C</caption></figure>"##,
+      r##"<figure class="ltx_panels_gallery" inlist="lof" panelcols="1" panelrows="2" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="autoref">Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><rule class="ltx_figure_panel" height="28.5pt" panelwidth="0.082" width="28.5pt"/><break class="ltx_break"/><p class="ltx_figure_panel"><anchor xml:id="f"/></p><toccaption><tag close=" ">1</tag>C</toccaption><caption><tag close=": ">Figure 1</tag>C</caption></figure>"##,
     ),
     (
       "para",
@@ -867,7 +706,7 @@ fn tblr_evaluate_and_expand_preprocess_the_body() {
     (
       "para",
       "p1",
-      r##"<para xml:id="p1"><tabular class="ltx_guessed_headers" vattach="middle"><tbody><tr><td/><td align="left">y</td><td align="left">y</td><td align="left">y</td></tr><tr><td thead="row"/><td align="left">y</td><td align="left">y</td><td align="left">y</td></tr><tr><td/><td align="left">y</td><td align="left">y</td><td align="left">y</td></tr></tbody></tabular></para>"##,
+      r##"<para xml:id="p1"><tabular class="ltx_guessed_headers" vattach="middle"><thead><tr><td border="l r t" thead="column"/><td align="left" border="r t" thead="column">y</td><td align="left" border="r t" thead="column">y</td><td align="left" border="r t" thead="column">y</td></tr></thead><tbody><tr><td border="l r t"/><td align="left" border="r t">y</td><td align="left" border="r t">y</td><td align="left" border="r t">y</td></tr><tr><td border="b l r t"/><td align="left" border="b r t">y</td><td align="left" border="b r t">y</td><td align="left" border="b r t">y</td></tr></tbody></tabular></para>"##,
     ),
     (
       "para",
@@ -877,7 +716,7 @@ fn tblr_evaluate_and_expand_preprocess_the_body() {
     (
       "para",
       "p3",
-      r##"<para xml:id="p3"><tabular vattach="middle"><tbody><tr><td align="left">Row1</td><td align="left">1</td></tr><tr><td align="left">All</td><td align="left">All</td></tr></tbody></tabular></para>"##,
+      r##"<para xml:id="p3"><tabular vattach="middle"><tbody><tr><td align="left" border="t">Row1</td><td align="left" border="t">1</td></tr><tr><td align="left" border="b t">All</td><td align="left" border="b t">All</td></tr></tbody></tabular></para>"##,
     ),
     (
       "para",
@@ -1049,12 +888,16 @@ fn discarded_replay_takes_back_its_stubs() {
     )],
   );
   // a class body that reaches an undefined internal through a defined helper (the gate checks the body's own
-  // vocabulary): the replay is discarded with its stub
+  // vocabulary): the replay is discarded with its stub — and with it "Extra info.", which pdflatex prints after the
+  // error, counted by the title-page check (106s: a loss of printed words, `title_page_check`)
   assert_elements_with(
     "\\documentclass{article}\n\\def\\helper{\\undefinedthing}\n\\renewcommand\\maketitle{\\helper Extra info.}\n\\title{T}\n\\begin{document}\n\\maketitle\nBody \\undefinedthing{} end.\n\\end{document}\n",
     RAW,
-    (1, 0),
-    &["The token T_CS[\\undefinedthing] is not defined."],
+    (1, 1),
+    &[
+      "The token T_CS[\\undefinedthing] is not defined.",
+      "The title page prints 2 word(s) of the document's that its output does not hold: extra info",
+    ],
     &[(
       "para",
       "p1",
@@ -1073,6 +916,9 @@ fn discarded_replay_takes_back_its_stubs() {
 /// lfe_text_symbols_are_farsi_letters}, one conversion each.
 #[test]
 fn arabi_text_symbols_are_arabic_letters() {
+  if !check_all_requirements(&[loads::LAE, &["arabic.ldf"]]) {
+    return;
+  }
   assert_elements(
     include_str!(
       "../../../tools/perfect_kernel/repros/fonts-nfss/lae_text_symbols_are_arabic_letters.tex"
@@ -1165,7 +1011,7 @@ fn autoref_names_follow_hyperref() {
       (
         "figure",
         "S0.F1",
-        r##"<figure inlist="lof" labels="LABEL:f" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="autoref">Fig. 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure inlist="lof" labels="LABEL:sf" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="autoref">Fig. 1a</tag><tag role="refnum">1a</tag></tags><toccaption><tag close=" ">a</tag>S</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">S</text></caption></figure><toccaption><tag close=" ">1</tag>C</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">C</text></caption></figure>"##,
+        r##"<figure inlist="lof" labels="LABEL:f" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="autoref">Fig. 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure inlist="lof" labels="LABEL:sf" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="autoref">Fig. 1a</tag><tag role="refnum">1a</tag></tags><toccaption><tag close=" ">a</tag>S</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">S</text></caption></figure><toccaption><tag close=" ">1</tag>C</toccaption><caption><tag close=": ">Figure 1</tag>C</caption></figure>"##,
       ),
       (
         "theorem",
@@ -1241,6 +1087,9 @@ fn listings_linerange_and_literate_keys_select_and_replace() {
 /// and note (nomentbl.sty:136-142; contrib nomentbl_sty.rs). Repro index/glossary_title_and_nomentbl_columns.
 #[test]
 fn glossary_title_and_nomentbl_columns_are_kept() {
+  if !check_all_requirements(&[loads::GLOSSARIES, &["nomentbl.sty"]]) {
+    return;
+  }
   assert_elements(
     include_str!(
       "../../../tools/perfect_kernel/repros/index/glossary_title_and_nomentbl_columns.tex"

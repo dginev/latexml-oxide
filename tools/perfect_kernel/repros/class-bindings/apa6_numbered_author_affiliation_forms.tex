@@ -1,0 +1,24 @@
+% witness: 2102.04789 (apa6 \threeauthors/\threeaffiliations: Najko Jahn, Lisa Matthias, Mikael Laakso and their
+%   Goettingen address), 1710.04173 (\sixauthors/\sixaffiliations); 64 apa6 + 7 apa papers of the rawclasses
+%   population use the numbered forms
+% oracle: pdflatex 0 errors; title page "Ann Author / First University / Bob Builder / Second Institute / Cy Coder /
+%   Third College"
+% engines: rust 68u r2: no creator at all (names and affiliations lost); perl: OmniBus, the names as text beside an
+%   ERROR (no apa6 binding)
+% expect: 0 errors; three creators, each with the affiliation of its number
+% status: RED (68u r2) -> GREEN (68u r3)
+% preload: ar5iv.sty
+% mechanism: apa6.cls:745-777 stores the n-th name in \@authorOne..\@authorSix and the n-th affiliation in
+%   \@affilOne..\@affilSix; every title-page layout (man :1143-1214, jou/doc \put@two@authaffil :1344-1365) sets
+%   name n over affiliation n. Only the class's refused \maketitle reads the stores, so the apa6/apa bindings
+%   (latexml_contrib apa6_cls.rs, apa_cls.rs) hand them to the frontmatter at \maketitle, pair by pair.
+\documentclass[man]{apa6}
+\title{The Title}
+\shorttitle{Short}
+\threeauthors{Ann Author}{Bob Builder}{Cy Coder}
+\threeaffiliations{First University}{Second Institute}{Third College}
+\abstract{Abs.}
+\begin{document}
+\maketitle
+Text.
+\end{document}

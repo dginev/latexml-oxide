@@ -9,6 +9,14 @@ LoadDefinitions!({
   // so the box stayed void and every foot was lost; the kernel's caption material goes through
   // `\lx@setfloatcapt` (sect09.rs), which a floatbox points at `\@floatcapt`.
   InputDefinitions!("floatrow", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+  // floatrow.sty:34-37 marks float.sty and rotfloat.sty loaded (`\@namedef{ver@float.sty}`: it carries its own excerpt
+  // of both), so LaTeX skips a later `\usepackage{float}` (latex.ltx `\@onefilewithoptions`). Our loader keys on its
+  // own record, not on `\ver@`, so the binding records the same; otherwise float's binding replaced floatrow's
+  // `\float@end` and every restyled float stayed open (2010.00977, 2003.11778, 2011.10793, 2105.04869;
+  // KNOWN_PERL_ERRORS #668; user ruling 2026-10-14: floatrow's marks, no general `\ver@` rule). Guard:
+  // `perfect_kernel_batch66v::floatrow_marks_float_loaded`.
+  AssignValue!("float.sty_loaded" => true, Some(Scope::Global));
+  AssignValue!("rotfloat.sty_loaded" => true, Some(Scope::Global));
 
   // `\FBget@box` runs once per floatbox (`\@@@floatbox`, :776), in its group, before every
   // measuring pass and the real one (`\FBsetbox@obj`); each pass refills `\@floatcapt`, as
@@ -23,4 +31,18 @@ LoadDefinitions!({
 \let\lx@flrow@FBget@box\FBget@box
 \def\FBget@box{\let\lx@setfloatcapt\lx@flrow@setfloatcapt\lx@flrow@FBget@box}
 \def\RawCaption#1{{\let\@makecaption\FR@makecaption\let\lx@setfloatcapt\lx@kernel@setfloatcapt#1}}");
+  // A plain `figure`/`table` (no floatbox object) is the kernel's float, which never reaches floatrow's float end
+  // (`\float@end`, floatrow.sty:114-127, :421-424, whose layout `\FB@foot` sets `\flrow@foot` under the caption): its
+  // `\floatfoot` filled the box (`\floatfoot@`, :502-504) and nothing set it, the text lost with 0 errors. The float's
+  // end sets a foot still pending there, and empties the box globally, as `\floatfoot@` filled it. A floatbox inside the
+  // float sets and empties it in its own layout first. Repro captions-floats/floatrow_floatfoot_in_plain_figure.
+  // A `\DeclareNewFloatType` float ends with floatrow's own `\float@end`/`\float@dblend`/`\float@endH` (`\let` to its
+  // `\end<type>` when the type is declared, floatrow.sty:126-127, :274), whose layout sets the foot only beside a filled
+  // caption box — which the kernel's caption leaves void: the pending foot is set first there too.
+  RawTeX!(r"\def\lx@flrow@plainfoot{\ifvoid\flrow@foot\else\par\copy\flrow@foot\global\setbox\flrow@foot\box\voidb@x\fi}
+\AddToHook{env/figure/end}{\lx@flrow@plainfoot}\AddToHook{env/figure*/end}{\lx@flrow@plainfoot}
+\AddToHook{env/table/end}{\lx@flrow@plainfoot}\AddToHook{env/table*/end}{\lx@flrow@plainfoot}
+\let\lx@flrow@float@end\float@end\def\float@end{\lx@flrow@plainfoot\lx@flrow@float@end}
+\let\lx@flrow@float@dblend\float@dblend\def\float@dblend{\lx@flrow@plainfoot\lx@flrow@float@dblend}
+\let\lx@flrow@float@endH\float@endH\def\float@endH{\lx@flrow@plainfoot\lx@flrow@float@endH}");
 });

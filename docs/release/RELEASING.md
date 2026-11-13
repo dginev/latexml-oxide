@@ -505,11 +505,14 @@ settings.
     git push origin X.Y.Z
     ```
 
-5. **Watch the workflow.** `Release` on the Actions tab. It runs seven
+5. **Watch the workflow.** `Release` on the Actions tab. It runs eight
    jobs: `dumps` (TL-window generation) → `notices` (assembles THIRD-PARTY-NOTICES
    once, handed to every leg) → `build-macos` (Apple Silicon, `macos-15`) ‖
    `build-macos-intel` (Intel, `macos-15-intel`) ‖ `build-linux-arm64`
-   (`ubuntu-22.04-arm`) ‖ `build-windows` (`windows-latest`) → `release`
+   (`ubuntu-22.04-arm`) ‖ `build-windows` (`windows-latest`) ‖ `windows-ci` (the
+   full Windows test suite, `windows-ci-manual-trigger.yml` called with
+   `require_guards: true`: 3 required shards + 8 `perfect_kernel_*` guard shards,
+   every one must pass) → `release`
    (Linux x86_64 tarball + `.deb`, then collects every other leg's artifacts and
    attaches all **eight** assets). The Intel-macOS leg's fat-LTO `maxperf` build on the
    slower `macos-15-intel` runner is the long pole (up to ~120 min budget).

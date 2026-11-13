@@ -2,7 +2,8 @@
 %          `Berlin, Germany, foo@bar.de` gave Berlin@bar.de and Germany@bar.de)
 % oracle:  pdflatex 0 errors: "Ann Able, Bob Baker" / "Berlin, Germany, foo@bar.de"
 % engines: rust 63m6 = three invented addresses; Perl keeps the line with Bob Baker as an affiliation
-% expect:  0 errors; 2 authors, each with the affiliation "Berlin, Germany, foo@bar.de"; no email
+% expect:  0 errors; 2 authors, each with the affiliation "Berlin, Germany"; foo@bar.de the block creator's e-mail
+%          (107c: an unlabelled tail address leaves the affiliation; no invented address)
 % status:  RED (63m6) -> GREEN (63m)
 \documentclass{article}
 \title{T}

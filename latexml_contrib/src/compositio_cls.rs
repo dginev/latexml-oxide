@@ -4,7 +4,7 @@
 use latexml_package::prelude::*;
 
 /// Interpret the shipped class `name` raw (as the document asked for it, a path-prefixed copy included:
-/// [`crate::shipped_class::requested_shipped_class`]), then route the frontmatter it stores for its own title page and closing
+/// [`latexml_package::shipped_class::requested_shipped_class`]), then route the frontmatter it stores for its own title page and closing
 /// address block to the frontmatter:
 /// - `\address`, `\curraddr`, `\email`, `\homepage` (compositio.cls:141-165, hha.cls:104-137) append to the current
 ///   author's `\@curr@author` and the `\AtEndDocument` `\@addresses` block, and error without an `\author` the kernel
@@ -21,14 +21,16 @@ use latexml_package::prelude::*;
 ///   (OXIDIZED_DESIGN #265): with `\@authors` filled by its replayed `\author` (#482) it typeset the names again in
 ///   the body, its `\address\relax` an empty contact, and its emptied stores' warnings ("No MSC classification").
 ///
-/// A paper whose source lacks the class falls to OmniBus, as before the binding (OXIDIZED_DESIGN #444).
+/// A paper whose source lacks the class falls to OmniBus, with the loader's missing-file Warning, as before the binding
+/// (OXIDIZED_DESIGN #444).
 pub(crate) fn compositio_family_class(name: &str) -> Result<()> {
-  let Some(class) = crate::shipped_class::requested_shipped_class(name)? else {
-    LoadClass!("OmniBus");
-    return Ok(());
-  };
   Let!("\\lx@compositio@kernel@thanks", "\\thanks");
-  InputDefinitions!(&class, noltxml => true, extension => Some(Cow::Borrowed("cls")));
+  if !crate::shipped_class::read_raw(&crate::shipped_class::RawRead {
+    shipped: true,
+    ..crate::shipped_class::RawRead::new(name, "cls")
+  })? {
+    return Ok(());
+  }
   // a class only named like the family (the prefix fallback's `jcmfoo`, `hhafoo`) is left as it is: without the
   // family's current-author store (`\@curr@author`, compositio.cls:126, hha.cls, jcm.cls:7), it has none of its setters
   if !IsDefined!(&T_CS!("\\@curr@author")) {
@@ -92,7 +94,11 @@ pub(crate) fn compositio_family_class(name: &str) -> Result<()> {
     "\\submitted{}",
     "\\lx@add@pubnote[role=communicated,name={communicated by }]{#1}"
   );
-  DefMacro!("\\dedication{}", "\\lx@add@pubnote[role=dedication]{#1}");
+  // compositio.cls:179, :244-245: the dedication in italics, no label (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921) (2501.00323).
+  DefMacro!(
+    "\\dedication{}",
+    "\\lx@add@pubnote[role=dedication,name={}]{#1}"
+  );
   Let!("\\lx@dropped@maketitle", "\\relax");
   Let!("\\@maketitle", "\\@empty");
   Ok(())

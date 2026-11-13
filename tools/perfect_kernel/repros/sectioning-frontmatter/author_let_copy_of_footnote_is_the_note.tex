@@ -1,0 +1,17 @@
+% mechanism: a `\let` copy of `\footnote` in the author line (`\let\Fn\footnote`): bound by its meaning to
+%   `\footnote`'s event (`let_copies_of_bound_commands`, OD #994), so the note is the author's contact, as `\footnote` written
+%   out is; bound by name only, the copy's note text ("footnote", the mark, "Univ A") was read into the name
+% witness: SEP1's sibling of OC1's `\let` probe (www-notes.cls `\let\Affiliation\footnote` in `\preauthor`, 1712.07684,
+%   is the shape; there `\Affiliation` is `\@gobble` outside `\preauthor`, and its output is unchanged)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able∗" and "Bob Baker", the note "Univ A"
+% engines: OC1b: two creators, the first named "Ann Able * * footnote * Univ A", 2 warnings
+% expect:  0 errors, 0 warnings; creators Ann Able (note "Univ A"), Bob Baker
+% status:  GREEN (SEP1; guard perfect_kernel_batchsep1)
+\documentclass{article}
+\let\Fn\footnote
+\title{T}
+\author{Ann Able\Fn{Univ A} \and Bob Baker}
+\begin{document}
+\maketitle
+Text.
+\end{document}

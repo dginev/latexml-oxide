@@ -1,0 +1,19 @@
+% witness: 1702.08280 (aa, `\tiny{ ... \and M.~de~Naurois \inst{30}`: aa's `~` is a control space, 0.347 em at `\tiny`, over the reading's interword 0.34; "M. de", "Naurois" two creators, the writer's regression of E1)
+% oracle:  pdflatex 0 errors: one line each, "M. de Naurois" and "X. de Ab" tiny, "T. Le Du" and "K. da Silva" typewriter (cmtt's word space, 0.525 em), "J. van Vu" normal
+% engines: rust before this fix: at `\tiny` and in typewriter, a control space read as a gap wider than a word space, parting the name
+% expect:  0 errors; a control space or a tie is the word space of its font, whatever its width in em; twin: a wider skip of the same
+%          font parts two names (perfect_kernel_batchz2::a_word_space_is_its_fonts_at_any_size)
+% status:  GREEN (Z2)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{{\tiny M.\ de\ Naurois}
+\and {\tiny X.~de~Ab}
+\and {\ttfamily T.\ Le\ Du}
+\and {\tiny\ttfamily K.\ da\ Silva}
+\and J.\ van\ Vu
+\and {\tiny Ann Lee\hspace{0.6em}Bob Ray}
+\and {\ttfamily Cat Roe\quad Dan Fox}}
+\maketitle
+Body.
+\end{document}

@@ -138,30 +138,30 @@ LoadDefinitions!({
   // (no PS parameter state), hence no `fillframe` (its SVG filter is not ported).
   // Guard: `perfect_kernel_batch56::psframebox_keeps_its_body`.
   RawTeX!(r"\def\lx@ps@set#1{\if\relax\detokenize{#1}\relax\else\psset{#1}\fi}");
-  DefMacro!("\\psframebox OptionalMatch:* []{}", "{\\lx@ps@set{#2}\\lx@ps@framebox{#3}}");
-  DefMacro!("\\psdblframebox OptionalMatch:* []{}", "{\\lx@ps@set{#2}\\lx@ps@dblframebox{#3}}");
-  DefMacro!("\\psshadowbox OptionalMatch:* []{}", "{\\lx@ps@set{#2}\\lx@ps@shadowbox{#3}}");
-  DefMacro!("\\pscirclebox OptionalMatch:* []{}", "{\\lx@ps@set{#2}\\lx@ps@circlebox{#3}}");
-  DefMacro!("\\psovalbox OptionalMatch:* []{}", "{\\lx@ps@set{#2}\\lx@ps@ovalbox{#3}}");
-  DefConstructor!("\\lx@ps@framebox{}",
-    "?#inpicture(<ltx:g framed='true'>#1</ltx:g>)(<ltx:text framed='rectangle'>#1</ltx:text>)",
-    alias => "\\psframebox", mode => "restricted_horizontal",
+  DefMacro!("\\psframebox OptionalMatch:* []{}", "{\\lx@ps@set{#2}\\lx@ps@mathflag\\lx@ps@framebox{#3}{\\lx@ps@mathbox{#3}}}");
+  DefMacro!("\\psdblframebox OptionalMatch:* []{}", "{\\lx@ps@set{#2}\\lx@ps@mathflag\\lx@ps@dblframebox{#3}{\\lx@ps@mathbox{#3}}}");
+  DefMacro!("\\psshadowbox OptionalMatch:* []{}", "{\\lx@ps@set{#2}\\lx@ps@mathflag\\lx@ps@shadowbox{#3}{\\lx@ps@mathbox{#3}}}");
+  DefMacro!("\\pscirclebox OptionalMatch:* []{}", "{\\lx@ps@set{#2}\\lx@ps@mathflag\\lx@ps@circlebox{#3}{\\lx@ps@mathbox{#3}}}");
+  DefMacro!("\\psovalbox OptionalMatch:* []{}", "{\\lx@ps@set{#2}\\lx@ps@mathflag\\lx@ps@ovalbox{#3}{\\lx@ps@mathbox{#3}}}");
+  DefConstructor!("\\lx@ps@framebox Undigested {}",
+    "?#inpicture(<ltx:g framed='true'>#2</ltx:g>)(<ltx:text framed='rectangle'>#2</ltx:text>)",
+    reversion => "\\psframebox{#1}", mode => "restricted_horizontal",
     properties => sub[_args] { ps_frame_properties() });
-  DefConstructor!("\\lx@ps@dblframebox{}",
-    "?#inpicture(<ltx:g framed='true' doubleline='true'>#1</ltx:g>)(<ltx:text framed='rectangle'>#1</ltx:text>)",
-    alias => "\\psdblframebox", mode => "restricted_horizontal",
+  DefConstructor!("\\lx@ps@dblframebox Undigested {}",
+    "?#inpicture(<ltx:g framed='true' doubleline='true'>#2</ltx:g>)(<ltx:text framed='rectangle'>#2</ltx:text>)",
+    reversion => "\\psdblframebox{#1}", mode => "restricted_horizontal",
     properties => sub[_args] { ps_frame_properties() });
-  DefConstructor!("\\lx@ps@shadowbox{}",
-    "?#inpicture(<ltx:g framed='true' shadowbox='true'>#1</ltx:g>)(<ltx:text framed='rectangle'>#1</ltx:text>)",
-    alias => "\\psshadowbox", mode => "restricted_horizontal",
+  DefConstructor!("\\lx@ps@shadowbox Undigested {}",
+    "?#inpicture(<ltx:g framed='true' shadowbox='true'>#2</ltx:g>)(<ltx:text framed='rectangle'>#2</ltx:text>)",
+    reversion => "\\psshadowbox{#1}", mode => "restricted_horizontal",
     properties => sub[_args] { ps_frame_properties() });
-  DefConstructor!("\\lx@ps@circlebox{}",
-    "?#inpicture(<ltx:g framed='true' frametype='circle'>#1</ltx:g>)(<ltx:text framed='rectangle'>#1</ltx:text>)",
-    alias => "\\pscirclebox", mode => "restricted_horizontal",
+  DefConstructor!("\\lx@ps@circlebox Undigested {}",
+    "?#inpicture(<ltx:g framed='true' frametype='circle'>#2</ltx:g>)(<ltx:text framed='rectangle'>#2</ltx:text>)",
+    reversion => "\\pscirclebox{#1}", mode => "restricted_horizontal",
     properties => sub[_args] { ps_frame_properties() });
-  DefConstructor!("\\lx@ps@ovalbox{}",
-    "?#inpicture(<ltx:g framed='true' frametype='oval'>#1</ltx:g>)(<ltx:text framed='rectangle'>#1</ltx:text>)",
-    alias => "\\psovalbox", mode => "restricted_horizontal",
+  DefConstructor!("\\lx@ps@ovalbox Undigested {}",
+    "?#inpicture(<ltx:g framed='true' frametype='oval'>#2</ltx:g>)(<ltx:text framed='rectangle'>#2</ltx:text>)",
+    reversion => "\\psovalbox{#1}", mode => "restricted_horizontal",
     properties => sub[_args] { ps_frame_properties() });
 
   // Misc

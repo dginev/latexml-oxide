@@ -1,0 +1,20 @@
+% mechanism: a line naming a collaboration unframed (no "the", "for", "on behalf of", "representing", brackets or
+%   dashes) whose address goes on under it is an employer's line, an affiliation (`collaboration_line_before`,
+%   author_block/collaborations.rs; OXIDIZED_DESIGN_DIVERGENCES #946); and a team or group word on a line of its own
+%   names a collaboration only framed by more than a bare "the" (`collaboration_line_framing`): `The Robotics Group`,
+%   `the Applied Mathematics Group` under a name are its institution's. Review rev97cd D2.
+% witness: 2501.13770 (`\textit{WIDE Consortium}\\ \.Zabbar\\ Malta` beside the next column's `\textit{ACURRAENT UG}\\
+%   Frankfurt (Oder)\\ Germany`: 97d r1 made WIDE Consortium a collaboration, 97b an affiliation)
+% oracle:  pdflatex (TL 2025) 0 errors: three columns, each name over its institution and address lines
+% engines: rust 97d r1: WIDE Consortium, The Robotics Group, the Applied Mathematics Group collaborations; perl: not run
+% expect:  0 errors, 0 warnings; three creators, every line under each name its affiliation, no collaboration contact
+% status:  RED (97d r1) -> GREEN (97d r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\\ \textit{WIDE Consortium}\\ Zabbar\\ Malta \and Bob Baker\\ The Robotics Group\\ Massachusetts
+Institute of Technology \and Cid Cole\\ the Applied Mathematics Group\\ Univ X}
+\maketitle
+Body.
+\end{document}

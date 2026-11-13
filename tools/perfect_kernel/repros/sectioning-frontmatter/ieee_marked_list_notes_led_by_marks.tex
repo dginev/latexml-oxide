@@ -1,0 +1,25 @@
+% mechanism: a binding's marked list cut by the Cut as the binding declares it (`MARKED_LIST_CUT`, OD #1009): every
+%   mark cuts it, address lines are entry text, legends and notes stay notes, no placement attribute; each mark shown
+%   (IEEEtran `\thanks{\IEEEauthorrefmark{1} …}` after the block, which the binding hands over as a marked list: its marks are the labels the notes open with)
+% witness: 1504.01072
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able∗ and Bob Baker", footnotes "∗ A. Able is now with Lab C.", "† This version corrects typos."
+% engines: P4cbase: Ann Able "A. Able is now with Lab C." (mark dropped); P4c WIP: a document pubnote, no creator's; perl: no cut of the list
+% expect:  0 errors, 0 warnings; Ann Able "Univ A", ann@a.edu, "∗ A. Able is now with Lab C."; Bob Baker "Univ A", bob@a.edu; pubnote "† This version corrects typos."
+% status:  RED (P4c WIP 0f8a176508) -> GREEN (P4c2)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+\begin{document}
+\title{T}
+\author{
+\IEEEauthorblockN{\normalsize Ann Able\IEEEauthorrefmark{1} and Bob Baker}
+\IEEEauthorblockA{\small Univ A\\
+\small\em \{ann,bob\}@a.edu}
+\thanks{ \IEEEauthorrefmark{1} A. Able is now with Lab C.
+}
+\thanks{ \IEEEauthorrefmark{2} This version corrects typos.
+}
+}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,14 @@
+% RED. `\rangeHsb` and `\rangetHsb` redefined: the binding's Hsb and tHsb keep the default ranges (xcolor_sty.rs :87, :104).
+% witness: the review of M2 r2 (`thsb3`). Hsb pre-existing; tHsb is new with M2 r2's conversion.
+% oracle:  pdflatex and Perl (TL 2025): `I` #80FF00.
+% engines: M2 r2 `I` #FF3500, `K` #FF6A00.
+% expect:  the colours pdflatex paints.
+\documentclass{article}
+\usepackage{xcolor}
+\def\rangeHsb{100}
+\def\rangetHsb{50,50;80,60}
+\definecolor{i}{tHsb}{25,1,1}
+\definecolor{k}{Hsb}{25,1,1}
+\begin{document}
+\textcolor{i}{I} \textcolor{k}{K}
+\end{document}

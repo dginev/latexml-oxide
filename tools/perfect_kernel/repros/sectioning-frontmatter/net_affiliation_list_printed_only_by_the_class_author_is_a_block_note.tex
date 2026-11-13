@@ -1,0 +1,32 @@
+% A raw class keeps its affiliations in a list only its own `\@author` prints (authblk's shape embedded in the class:
+% copernicus.cls:1290-1352 `\renewcommand\@author{\AB@names\AB@affillist}`; oasics.cls:610-635 under the authblk
+% binding); the kernel's `\author` (or the binding's) replaces that `\@author`, so no title-page run printed the list and
+% the affiliation was lost with 0 errors. The unclaimed-text net (frontmatter_stores.rs `net_candidates`,
+% `hand_net_stores`; sect05.rs `keep_class_author_reader`; insert.rs `keep_unclaimed_net_notes`) keeps the class's
+% `\@author` for the speculative run of its title page, finds the list printed there and typeset by no kept run, and
+% writes it as a note of the author block, with one Warning.
+% witness: 0712.1312 (copernicus), 1401.4706 (esapub2005), 1709.00722 (oasics)
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able1, Bob Baker1", "1Institute of Risk and Disaster Reduction,
+%          University College London"
+% engines: rust 98c0 = 0 errors, 0 warnings, the affiliation lost; perl = 0 errors, the affiliation kept as a
+%          paragraph before the title, garbled (OmniBus `\affil`, OmniBus.cls.ltxml:93; rev98c B1)
+% expect:  0 errors, 1 warning (frontmatter:unclaimed, \AB@affillist); a trailing nameless <ltx:creator> holding
+%          <ltx:note role="note"><sup>1</sup>Institute of Risk and Disaster Reduction, University College London</note>
+% status:  RED (98c0) -> GREEN (98c)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{netab.cls}
+\ProvidesClass{netab}\LoadClass{article}
+\def\AB@names{}\def\AB@affillist{}
+\renewcommand\author[2][]{\g@addto@macro\AB@names{#2$^{#1}$, }}
+\newcommand\affil[2][]{\g@addto@macro\AB@affillist{\\$^{#1}$#2}}
+\renewcommand\@author{\AB@names\AB@affillist}
+\end{filecontents*}
+\documentclass{netab}
+\begin{document}
+\title{A Title}
+\author[1]{Ann Able}
+\author[1]{Bob Baker}
+\affil[1]{Institute of Risk and Disaster Reduction, University College London}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,18 @@
+% witness: hep-lat9207028 (`\author{{}~\\~\\ \large{\sc Jun Nishimura}…`), 0812.2273 (`{}\\[0mm] Meijiao Guan\\ …`),
+%          0901.1754, hep-lat0105010 and math0306336 (`~\\ Name\\ …`; math0306336 `~\\\large John Rawnsley\\[30pt]`),
+%          1706.10067 (`\IEEEauthorblockN{~\\[-0.4ex]\large …}`): an author block opening with lines that print nothing —
+%          an empty group, a tie, a line-break option — before the name line
+% oracle:  pdflatex 0 errors: one centred column — a blank line, Ann Able (large), Department of Physics, University of X
+% engines: rust int126a = no creator and no Warning (the tie read as an empty names line, its lines the lines of a
+%          nameless creator, which `coalesce_empty_creators` dropped with them); Perl 0.8.8 = an empty personname and
+%          the three lines as affiliations
+% expect:  0 errors, 0 warnings; one creator Ann Able, with Department of Physics and University of X
+% status:  RED (int126a) -> GREEN (98b) — perfect_kernel_batch98b::leading_spacer_lines_are_no_names_line
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{{}~\\[0mm]~\\ \large Ann Able\\ Department of Physics\\ University of X}
+\begin{document}
+\maketitle
+Text.
+\end{document}

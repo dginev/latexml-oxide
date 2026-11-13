@@ -1,0 +1,22 @@
+% mechanism: llncs's sole `\institute` (`_share=authors`, OXIDIZED_DESIGN_DIVERGENCES #901) under authblk's `\author`
+%   calls: each call is one `\lx@add@creator`, so the flush holds no author block. The emitter writes such a flush when
+%   its queue holds a `_share` contact (`emit.rs` `stays_out`), so the institute is every author's and each class
+%   `\email` its speller's; before P27b the old row split (`shared_row::share_row_contacts`) shaped the queue for Perl's
+%   digestion with the same output
+% witness: synthetic (Z18n probe `keep_lists/z18n_probe/llncs_authblk_two.tex`; P27's S8 measure)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: prints "Bob Baker" alone (llncs's `\maketitle` sets the last
+%   `\author`; Ann Able's name is in the source, kept), "University of Somewhere, Sometown", "ann.able@x.edu,
+%   bob.baker@x.edu"
+% engines: Perl 0.8.8 (llncs.cls.ltxml:46-49, read, not run): `affiliation:1`, which no author requests; int159a1 (base):
+%   Ann Able (the institute, ann.able@x.edu), Bob Baker (the institute, bob.baker@x.edu), 0 errors, 0 warnings
+% expect:  0 errors, 0 warnings; Ann Able and Bob Baker, each the institute and their own e-mail
+% status:  GREEN (int159a1 and P27b; guard perfect_kernel_batchp27b::llncs_authblk_calls_share_the_sole_institute)
+\documentclass{llncs}
+\usepackage{authblk}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\author{Bob Baker}
+\institute{University of Somewhere, Sometown \\ \email{ann.able@x.edu}, \email{bob.baker@x.edu}}
+\maketitle
+\end{document}

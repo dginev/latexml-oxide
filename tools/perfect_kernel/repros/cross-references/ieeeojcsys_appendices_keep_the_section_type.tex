@@ -1,0 +1,21 @@
+% witness: 2206.03535 (ships IEEEojcsys.cls, whose `\appendices`, :4058-4080, is IEEEtran.cls:5755's code and never calls
+%          `\appendix`); review rev79d2 finding 9
+% oracle:  pdflatex 0 errors with 2206.03535's IEEEojcsys.cls and ojcsys-logo.jpg beside it (the class is not in TL
+%          2025; the repro converts through the binding) and TL 2025's first aid for cleveref removed as below: "See
+%          section I and section A." (the heading "Appendix A One"; cleveref's patched `\appendix` never runs, so the
+%          appendix keeps its counter's `section` type, `.aux` `[section][1][]A`)
+% engines: rust 79d r2 "appendix A", the heading "Appendix" without its letter (the binding let `\appendices` be
+%          `\appendix`, IEEEtran's single unlettered appendix); Perl 0.8.8 has no IEEEojcsys binding
+% expect:  0 errors, 0 warnings; creftype "section" for s:intro and a:one, the appendix tagged "Appendix A"
+% status:  RED (79d r2) -> GREEN (79d r3)
+% preload: ar5iv.sty
+\documentclass{IEEEojcsys}
+\usepackage{graphicx}
+\RemoveFromHook{package/cleveref/after}[firstaid]\usepackage{cleveref}
+\begin{document}
+\section{Intro}\label{s:intro}
+See \cref{s:intro} and \cref{a:one}.
+\appendices
+\section{One}\label{a:one}
+Text.
+\end{document}

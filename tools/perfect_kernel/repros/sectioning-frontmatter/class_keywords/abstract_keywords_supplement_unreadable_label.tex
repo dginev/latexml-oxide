@@ -1,0 +1,25 @@
+% A supplement's abstract kept in place whose class's keywords label cannot be read (kwmttlang.cls, mtt.cls:181's
+% `\item…{\bfseries\mtt@keywords:}`): its keywords stay in place without a label — never an English label the PDF
+% does not have (1310.0585: pdflatex "Ключовi слова: гiростат, …"; 1310.0589, 1212.3890). The main abstract's
+% keywords are the frontmatter's, under the default name (the language-chosen label is not read: a known limitation).
+% witness: 1310.0585, 1310.0589, 1212.3890 (68n round 2 printed "Keywords:" in their Ukrainian/Russian abstracts)
+% oracle:  pdflatex (kwmttlang.cls beside it) 0 errors: "Résumé principal. Mots-clés: mots principaux 1 Intro Body.
+%          Résumé. Mots-clés: mots supplémentaires"
+% expect:  0 errors, 0 warnings; <keywords> "mots principaux"; "mots supplémentaires" a body paragraph, no label
+% status:  RED (68n round 2: "Keywords: mots supplémentaires") -> GREEN (68n round 3)
+% preload: ar5iv.sty
+\documentclass{kwmttlang}
+\begin{document}
+\title{T}\author{A. Author}
+\maketitle
+\begin{abstract}[fr]
+R\'esum\'e principal.
+\keywords{mots principaux}
+\end{abstract}
+\section{Intro}
+Body.
+\begin{abstract}[fr]
+R\'esum\'e.
+\keywords{mots suppl\'ementaires}
+\end{abstract}
+\end{document}

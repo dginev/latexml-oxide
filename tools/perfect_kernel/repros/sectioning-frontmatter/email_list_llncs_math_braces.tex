@@ -1,0 +1,19 @@
+% llncs's `\email{$\{$aable,bbaker$\}$@x.org}`: a list of local parts in math braces prints as the text-brace list,
+%   "{aable,bbaker}@x.org"; the class's verbatim `\email` argument kept the math shifts as characters, so the list was
+%   one unread "${$aable,bbaker$}$@x.org" e-mail on a nameless creator. Read as the brace it prints (`$\lbrace$`,
+%   `$\rbrace$` too): an address each, on the author it spells (`math_braces_as_printed`, OD #972; census138 ADDR-b).
+% witness: 1106.2694 (`\email{$\{$fargyriou,mikebekos,symvonis$\}$@math.ntua.gr}`), 2308.00146, 1602.04934
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker1, Cat Cole2, and Dan Dee2", "1 Univ X, Town {aable,bbaker}@x.org",
+%   "2 Univ Y, City {cat.cole, ddee}@y.org"
+% engines: rust int139a3 = both lists one e-mail each on a nameless creator
+% expect:  0 errors, 0 warnings; each author: their institute and the address they spell
+% status:  RED (int139a3) -> GREEN (107f)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{1} \and Cat Cole\inst{2} \and Dan Dee\inst{2}}
+\institute{Univ X, Town\\ \email{$\{$aable,bbaker$\}$@x.org} \and Univ Y, City\\ \email{$\lbrace$cat.cole, ddee$\rbrace$@y.org}}
+\maketitle
+Text.
+\end{document}

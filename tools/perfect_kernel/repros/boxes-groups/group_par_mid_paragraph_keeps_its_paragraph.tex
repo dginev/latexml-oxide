@@ -1,0 +1,24 @@
+% witness: 2410.06985 (`\node[…]{\phantom{Cpd}\\\phantom{pt}}`, its tikz twin group_par_in_tikz_node_keeps_its_paragraph)
+% oracle:  pdflatex 0 errors: every phantom's blank stays before its `\par`; Perl TeX_Box.pool.ltxml:30-42 lists an
+%          open-brace box (no space) in the paragraph, so repackHorizontal (Stomach.pm:463-465) keeps x<phantom>
+% engines: rust int162a = <p>x</p>, the phantom lost: Ca, Ea Eb, Ja, Aa, Pa, Qa, Ra, Sa (Da under `\begingroup` and Fa
+%          in a nested group kept); perl = x<phantom> for all
+% expect:  0 errors, 0 warnings; each x followed by its phantom in one <p>, as Perl
+% status:  RED (int162a) -> GREEN (RG1)
+\documentclass{article}
+\begin{document}
+x{\phantom{Ca}\par Cb}
+
+x\begingroup\phantom{Da}\par Db\endgroup
+
+x{\em\phantom{Ea}\phantom{Eb}\par Ec}
+
+x{{\phantom{Fa}}\par Fb}\quad x{\phantom{Ja}\par\phantom{Jb}\par Jc}
+
+\begin{minipage}{5cm}x\bgroup\phantom{Aa}\par Ab\egroup\end{minipage}
+
+x\footnote{y{\phantom{Pa}\par Pb}}
+\begin{tabular}{p{3cm}}x{\phantom{Qa}\par Qb}\end{tabular}
+\parbox{3cm}{x{\phantom{Ra}\par Rb}}
+\begin{itemize}\item x{\phantom{Sa}\par Sb}\end{itemize}
+\end{document}

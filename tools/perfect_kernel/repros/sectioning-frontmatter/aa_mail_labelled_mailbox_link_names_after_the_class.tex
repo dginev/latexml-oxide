@@ -1,0 +1,35 @@
+% mechanism: an entry's line led by a label of its own is named after the class's name of the entry where both print,
+%   one rule for both readers of the Kind step (classify/email_block_calls.rs `entry_line_label`): an e-mail label's
+%   line (`email_line_label`) and a mailbox link line's text before its link (`mailbox_link_line`). aa's `\mail` is
+%   `\lx@add@address[name={\mailname}]` (aa_support_sty.rs; Perl aa_support.sty.ltxml:118-119, which reads no e-mail
+%   in it: an address contact holding the link); this file's aa.cls is the v7.0 stand-in of
+%   aa_mail_printing_copy_keeps_its_label.tex. Review revZ18o N1
+% witness: none in the corpus (synthetic, review revZ18o N1); the address line's 0805.1001 ("Correspondence to: e-mail:")
+% oracle:  pdflatex (TL 2025) 0 errors: "T", "A. Smith", "Univ. X, Y", "Body.", footnote "Correspondence to: Contact:
+%          here", "here" a mailto link
+% engines: rust int156a (27ca6acecc) = <contact name="Contact: " role="email">, the class's name lost; rust MB1
+%          (0da5a8b23c) = "Correspondence to  Contact: ", a double space and no colon (the join read `name={\mailname}`
+%          unexpanded and added a space after the one `\mailname` held, review revMB1 N1; the colon revMB1 P2)
+% expect:  0 errors, 0 warnings; A. Smith: Univ. X, Y and <contact name="Correspondence to: Contact: " role="email">
+%          holding `<ref href="mailto:zz@x.org">here</ref>` (the name's space `\mail`'s `name={\mailname\ }`, as
+%          aa_mail_email_label_names_after_the_class.tex)
+% status:  RED (int156a) -> GREEN (MB1); RED (MB1) -> GREEN (MB2) —
+%          perfect_kernel_batchmb1::labelled_line_is_named_after_the_class
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{aa.cls}
+\NeedsTeXFormat{LaTeX2e}\ProvidesClass{aa}[2010/01/01 v7.0 stand-in]
+\LoadClass{article}
+\def\mailname{{\it Correspondence to\/}:}
+\def\email#1{{e-mail: \tt#1}}
+\def\institute#1{\gdef\@institute{#1}}\def\@institute{}
+\def\mail#1{\gdef\@mail{#1}}\def\@mail{}
+\def\@maketitle{{\Large\@title\par}\@author\par\@institute\par
+  \if!\@mail!\else\footnotetext[0]{\mailname\ \ignorespaces\@mail}\fi}
+\end{filecontents*}
+\documentclass{aa}
+\usepackage{hyperref}
+\begin{document}
+\title{T}\author{A. Smith}\institute{Univ. X, Y}\mail{Contact: \href{mailto:zz@x.org}{here}}\date{Received 2010}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,15 @@
+% witness: 2305.14297 (NSARK.tex:61-80, 119, 351: `decision tree/.style={for tree={…,math content}}`, node `\hphantom{.}^{[\mu]}`)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; each node's content is a formula; "AFTERWORDS survive."
+% mechanism: forest.sty:3944-3946 `content format`, the code a node's content is typeset through; `math content` makes
+%   it `\ensuremath{\forestoption{content}}`. The binding (forest_sty.rs) digested the bare label, so its scripts were
+%   text. Fixed: the node's `content format` is applied before digestion (forest_sty.rs `format_content`).
+% status:  GREEN
+\documentclass{article}
+\usepackage{forest}
+\forestset{dtree/.style={for tree={math content}}}
+\begin{document}
+Before the tree.
+\Forest{dtree [x^{[\mu]} [y_{[\nu]}]]}
+After the tree, AFTERWORDS survive.
+\end{document}

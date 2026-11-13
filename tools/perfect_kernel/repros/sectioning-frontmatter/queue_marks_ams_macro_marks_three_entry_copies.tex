@@ -1,0 +1,27 @@
+% mechanism: the Cut's uncut copies give way by the queue's printed-text requests (`place_uncut_copies` reads
+%   `queued_requesters`, as the Cut's decision does; review revF0 B1): amsart's `\address` list repeated after the first
+%   and third names, the marks printed by document macros (`\newcommand\ua{\textsuperscript{1}}`). The second copy is
+%   cut (Ann and Cy request 1, Bob 2); the first, uncut while only Ann was queued, gives way to it, as its token twin
+%   `$^{1}$` does (scratch d7). F0 read the uncut copy's names by tokens, saw no mark in `\ua`, kept it and dropped the
+%   cut's unrequested entry 3 (counted: "content check: 4 words … missing").
+% witness: synthetic (review revF0 probe d6)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 , Bob Baker2 , and Cy Cole1", the address list
+%          "1 Univ A, Town A, 2 Univ B, Town B, 3 Univ C, Town C" printed twice
+% engines: int160c: Ann and Cy hold "1 Univ A…" and "3 Univ C…", Bob "2 Univ B…", W=0; F0: entry 3 lost, W=1;
+%          P4d: as the token twin, below; perl: not compared
+% expect:  0 errors, 0 warnings; Ann Able and Cy Cole "1 Univ A, Town A", Bob Baker "2 Univ B, Town B", a nameless
+%          creator "3 Univ C, Town C" (the entry no name requests, kept at the block)
+% status:  RED (F0) -> GREEN (P4d step 0; guard perfect_kernel_batchc1::queued_marks_read_as_digested)
+\documentclass{amsart}
+\newcommand\ua{\textsuperscript{1}}
+\newcommand\ub{\textsuperscript{2}}
+\begin{document}
+\title{T}
+\author{Ann Able\ua}
+\address{$^{1}$Univ A, Town A\\ $^{2}$Univ B, Town B\\ $^{3}$Univ C, Town C}
+\author{Bob Baker\ub}
+\author{Cy Cole\ua}
+\address{$^{1}$Univ A, Town A\\ $^{2}$Univ B, Town B\\ $^{3}$Univ C, Town C}
+\maketitle
+Body.
+\end{document}

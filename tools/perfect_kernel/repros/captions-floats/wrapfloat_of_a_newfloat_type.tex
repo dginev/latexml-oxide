@@ -1,0 +1,27 @@
+% witness: 2411.16612 (minted's newfloat `listing` in `{wrapfloat}{listing}`: undefined {wrapfloat}, "\caption
+%          outside any known float", 3 listing references wrong)
+% oracle:  pdflatex 0 errors; "Listing 1: Code.", "See 1."; "Program 1: More.", "See 1."
+% engines: rust (int57a) = 2 Errors, 1 Warning; perl = 2 Errors (wrapfig.sty.ltxml defines only two)
+% expect:  0 errors; <float class="ltx_float_listing" float="right" width="30%"> with label l, and the same
+%          ltx_float_program float with label m
+% mechanism: wrapfig.sty:40 `\wrapfloat{type}`; :265-301 a float.sty `\newfloat` after wrapfig gets `wrap<type>`. KPE #1118.
+% status:  GREEN (78s)
+\documentclass{article}
+\usepackage{newfloat}
+\DeclareFloatingEnvironment[name=Listing]{listing}
+\usepackage{float}
+\usepackage{wrapfig}
+\newfloat{program}{tbp}{lop}
+\floatname{program}{Program}
+\begin{document}
+\begin{wrapfloat}{listing}{r}{0.3\textwidth}
+int x;
+\caption{Code.}\label{l}
+\end{wrapfloat}
+See \ref{l}.
+\begin{wrapprogram}{r}{0.3\textwidth}
+int y;
+\caption{More.}\label{m}
+\end{wrapprogram}
+See \ref{m}.
+\end{document}

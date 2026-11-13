@@ -1,0 +1,22 @@
+% mechanism: a run-in `\paragraph`/`\subparagraph` inside `{quote}`/`{quotation}`/`{verse}` (latex.ltx `\@startsection`
+%   with a negative after-skip, article.cls:314-321; the quote is `\list{}{\rightmargin\leftmargin}\item\relax`,
+%   article.cls:405-408): pdflatex sets the heading and the text after it up to `\end{quote}` inside the quote's
+%   margins, so the unit opens an `ltx:inline-sectional-block` in the quote (main-session ruling 2026-10-17,
+%   OXIDIZED_DESIGN_DIVERGENCES #678); the quote's end closes it
+% witness: 2607.27159 (`\paragraph` cases of an algorithm in a quote); 2505.18677 2305.11603 1809.03802 2208.14587
+% oracle:  pdflatex 0 errors: "1 Intro", the body line at full width, then indented "Throughout ...", "Base case 1:
+%   Suppose ...", "Main step: Otherwise ...", and "If none of the trials accepted ..." at full width again
+% engines: rust 67int17b = Error:malformed:ltx:paragraph (in <ltx:quote>); 69a r2 closed the quote at the heading (the
+%   rest left the quote, the text after it joined the heading's paragraph); Perl errs as 67int17b
+% expect:  0 errors; the quote holds its lead paragraph and an inline-sectional-block with both paragraphs; the text
+%   after the quote is an `ltx:p` after it, outside
+% status:  RED (67int17b, 69a r2) -> GREEN (69a r3; r1 the same)
+% preload: ar5iv.sty
+\documentclass{article}\begin{document}\section{Intro}
+Body text before the quote, a long enough line to show the full text width of the page here.
+\begin{quote}Throughout the subroutine we keep this text indented within the quote margins ok.
+\paragraph{Base case 1:} Suppose a thing holds, a long enough line to show where the quote margin is.
+\paragraph{Main step:} Otherwise pick a vertex, a long enough line to show where the quote margin is.
+\end{quote}
+If none of the trials accepted, reject: a long enough line to show the full text width here too.
+\end{document}

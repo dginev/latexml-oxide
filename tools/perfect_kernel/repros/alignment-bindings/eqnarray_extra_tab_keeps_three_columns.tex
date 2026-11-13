@@ -3,12 +3,12 @@
 %          fourth, number column, :15764), as here; the PDF numbers the rows (1) and (2)
 % engines: rust 64h4 = 1 error; 64ra v1 (9fcd4598e3) = 1 error but the rows regrouped (the extra cell widened the
 %          columns `rearrange_eqnarray` read: the `&&+d` row "new", not a continuation); Perl 1 error
-% expect:  1 error; the equationgroup byte-identical to 64h4 (columns 0/1/2, Perl latex_constructs.pool.ltxml:2307-2309):
-%          one equation, one number — the `&&+d` row joined as a continuation, the base/Perl rule
-%          (latex_constructs.pool.ltxml:2357-2364), not pdflatex's two numbers
+% expect:  1 error; the rows read over columns 0/1/2 (Perl latex_constructs.pool.ltxml:2307-2309), the `&&+d` row a
+%          continuation of the first; since 79d two equations numbered (1) and (2) as pdflatex, the continuation
+%          printing a number of its own (OXIDIZED_DESIGN_DIVERGENCES #888; 64h4-79c: one equation, the last number)
 %          65o: the fourth cell is the number column's (latex.ltx:15764), right-aligned, and the error is pdflatex's
 %          `Error:unexpected:eqnarray Too many columns in eqnarray environment` (was "Extra alignment tab")
-% status:  RED (64ra v1) -> GREEN (64ra)
+% status:  RED (64ra v1) -> GREEN (64ra); re-pinned 79d
 % preload: ar5iv.sty
 \documentclass{article}
 \begin{document}

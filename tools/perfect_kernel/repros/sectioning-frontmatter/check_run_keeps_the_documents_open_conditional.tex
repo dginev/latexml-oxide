@@ -1,0 +1,19 @@
+% A speculative run of the title page puts back the conditionals the document had open (`StomachMark`): a `\fi` of the
+% run's that closes one opened before it leaves it open for the document. CUP-JNL-DCE.cls:505's `\keywords` leaves its
+% `\ifx` open — its `\fi` sits inside `\@keywords` — and `\printkeywords` (:500) balances it when the title page prints.
+% The title-page check's run (sect05.rs `note_title_page_print`) printed `\@keywords` and closed the document's `\ifx`;
+% the class's real `\maketitle` then raised "Didn't expect a \fi", its deposit was dropped, and the keywords handed on
+% as a note of the author block raised a second one.
+% witness: 2003.03814 (CUP-JNL-DCE)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "A Title", "Ann Able", "Keywords: inverse problems;
+%          tomography", "Text."
+% engines: rust int134b = 0 errors; rust 106s (int135b) = 1 error (unexpected:fi), 1 warning (frontmatter:unclaimed)
+% expect:  0 errors, 0 warnings; the keywords kept where the class's title page prints them
+\documentclass{check_dangling_keywords}
+\title{A Title}
+\author{Ann Able}
+\keywords{inverse problems; tomography}
+\begin{document}
+\maketitle
+Text.
+\end{document}

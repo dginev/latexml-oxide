@@ -1,0 +1,23 @@
+% mechanism: a note macro reached through a chain of macros four deep (`\fnM→\fnN→\fnO→\fnP{8\footnotemark}`) inside
+%   an author's mark: `makes_a_note`/`prints_beside_a_note` (preprocess.rs) look three deep at most, so `\fnM` is
+%   neither taken out whole nor read in place; it stays in the label, which nothing answers, and the "8" and the
+%   footnotemark are both lost. It should fall back to being taken out whole, as a three-deep chain is. Older than 78v
+%   (int62a has it; review rev78v2 finding 6b, probe sh.tex)
+% witness: none in the census (review rev78v2 probe sh.tex)
+% oracle:  pdflatex 0 errors; "Ann Alpha1∗ , Di Delta8†"
+% engines: rust int62a, int63a: Ann's "1" in her name text, her mark kept; 78v r3: Ann's mark "1" and her footnotemark;
+%   all three: Di's "8" and his mark lost
+% expect:  0 errors, 0 warnings; Di's "8" (in the name text or a `<sup>`) and his footnotemark
+% status:  RED (78v r3)
+\documentclass{article}
+\newcommand\fnP{8\footnotemark}
+\newcommand\fnO{\fnP}
+\newcommand\fnN{\fnO}
+\newcommand\fnM{\fnN}
+\newcommand\fnL{1\footnotemark}
+\begin{document}
+\title{T}
+\author{Ann Alpha\textsuperscript{\fnL}, Di Delta\textsuperscript{\fnM}}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,22 @@
+% mechanism: a stand-in copy's title code (`state::copy_kept_meaning`: the copy's `\@maketitle` beside the binding's,
+%   read only while the binding's meaning the copy's frame gave back is in force) defines a tabular juggle, read by its
+%   meaning (`fallback::title_code_juggle`); a `\linebreak[0]` between its columns forces no break
+%   (`fallback::without_optional_line_breaks`, latex.ltx:9235-9270), so it parts authors as `\and` does
+% side file: neurips_2022.sty, a copy of neurips_2022.sty:264-293's shape (in the guard):
+%   \ProvidesPackage{neurips_2022}
+%   \renewcommand{\@maketitle}{\def\NewAnd{\end{tabular}\hfil\linebreak[0]\hfil\begin{tabular}[t]{c}\ignorespaces}%
+%     \begin{tabular}[t]{c}\@author\end{tabular}}
+% witness: 2205.14141, 2205.14539 (the copy path); review revPB S2 (`probes/d_juggle_unmarked.tex`, the unmarked names)
+% oracle:  pdflatex 0 errors: three columns "Ann Able", "Bob Baker", "Carl Cole"
+% engines: rust int155a0: Error:undefined:\NewAnd, "Bob Baker \NewAnd Carl Cole" one name; rust PB (live title code):
+%   Bob Baker with the affiliation "Carl Cole", 0 errors 0 warnings; perl not run
+% expect:  0 errors, 0 warnings; three creators
+% status:  RED (PB) -> GREEN (perfect_kernel_batchpb::a_copys_title_code_juggle_parts_unmarked_names)
+\documentclass{article}
+\usepackage{neurips_2022}
+\title{T}
+\author{Ann Able \and Bob Baker \NewAnd Carl Cole}
+\begin{document}
+\maketitle
+Body.
+\end{document}

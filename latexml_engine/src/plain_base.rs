@@ -179,8 +179,11 @@ LoadDefinitions!({
   //======================================================================
   // Low-level bits that appear within alignments or \halign
 
-  // "Initialized" alignment; presets spacing, but since we're ignoring it anyway...
-  Let!("\\ialign", "\\halign");
+  // "Initialized" alignment: plain.tex `\def\ialign{\everycr{}\tabskip\z@skip\halign}`. Perl's
+  // `Let('\ialign','\halign')` (plain_base.pool.ltxml:118) matched it only while `\halign` inserted no `\everycr`
+  // (KNOWN_PERL_ERRORS #1019); the dump branch reads plain.tex's own (repro
+  // kernel-alignment/ialign_clears_everycr_nodump, the rev78b review's finding 3)
+  DefMacro!("\\ialign", r"\everycr{}\tabskip\z@skip\halign");
   // Overlapping alignments.
   // Perl: plain_base.pool.ltxml L121-137
   DefMacro!(

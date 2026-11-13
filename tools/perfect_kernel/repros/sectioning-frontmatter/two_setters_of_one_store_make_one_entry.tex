@@ -1,0 +1,27 @@
+% A raw class with two setters of one store — `\let\keyword\keywords` (`\@keywords`), `\let\resumen\abst` (`\@abst`) —
+% whose title page prints both stores: the entry is the store's (`_store=<store>`, `labelled_api`,
+% frontmatter_stores.rs), and `\maketitle` hands each store on once (`harvest_stores`), whichever setter the document
+% called — not once per setter.
+% witness: none (synthetic; review probes `al1`, `al2` of 77i r4; no shipped class found with these aliases).
+% oracle:  pdflatex 0 errors: "Class abstract." once, "alpha, beta" once.
+% engines: rust 77i r4: the abstract and the keywords twice each (0 errors); base int29a: once each.
+% expect:  0 errors, 0 warnings; one `ltx:abstract` "Class abstract.", one `ltx:keywords` "alpha, beta".
+% status:  RED (77i r4) -> GREEN (77i r5)
+\begin{filecontents*}[overwrite]{rctwoset.cls}
+\ProvidesClass{rctwoset}
+\LoadClass{article}
+\newcommand*\keywords[1]{\gdef\@keywords{#1}}
+\let\keyword\keywords
+\def\@keywords{}
+\newcommand*\abst[1]{\gdef\@abst{#1}}
+\let\resumen\abst
+\def\@abst{}
+\def\@maketitle{\begin{center}{\Large\@title\par}\@author\par\end{center}\begin{quote}\itshape\@abst\end{quote}\par\@keywords\par}
+\end{filecontents*}
+\documentclass{rctwoset}
+\title{T}\author{Anton}
+\keyword{alpha, beta}\abst{Class abstract.}
+\begin{document}
+\maketitle
+Text.
+\end{document}

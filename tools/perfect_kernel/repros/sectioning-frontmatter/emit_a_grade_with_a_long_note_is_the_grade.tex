@@ -1,0 +1,18 @@
+% mechanism: `\lx@add@author`'s membership readout reads a grade as a suffix of grade words, its commas from the last leftward,
+%   stopping at the first tail holding another word (`author_block::name_text::written_membership_out`, `holds_other_word`):
+%   linear, no cap on what a grade's group holds — F1's 256-token cap read `{\itshape Fellow, IEEE\thanks{<300 chars>}}` as
+%   no grade, with the switch off too
+% witness: 1507.02068 (418 names, Perl's whole-block creator under `=2`: the readout per comma was quadratic)
+% oracle:  pdflatex 0 errors; Ann Able, Fellow, IEEE (a footnote), Bob Baker, Member, IEEE
+% engines: rust F1: Ann Able's personname "Ann Able, Fellow, IEEE", the thanks the creator's note; int145a: the membership
+% expect:  0 errors, 0 warnings; both creators a `membership` contact, as int145a
+% status:  RED (F1) -> GREEN (perfect_kernel_batchf1::a_grade_with_a_long_note_is_the_grade)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able, {\itshape Fellow, IEEE\thanks{A. Able is with the Department of Electrical and Computer Engineering, University of Somewhere, Some City, Some State 12345, USA, and with the Institute for Advanced Studies in Signal Processing and Communications, Another University, Another City 67890, Another Country (e-mail: ann.able@somewhere.edu).}}
+\and Bob Baker, {\itshape Member, IEEE}}
+\maketitle
+Body.
+\end{document}

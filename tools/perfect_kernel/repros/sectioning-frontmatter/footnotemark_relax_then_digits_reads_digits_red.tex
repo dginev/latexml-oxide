@@ -1,0 +1,17 @@
+% mechanism: `\footnotemark[\relax 2]` / `[\value{nosuch}2]`: `footnote_number_digits` (latexml_engine/src/latex_constructs/mod.rs
+%   ~:722) checks the EXPANDED spelling, whose `Expand!` look drops the `\relax`-meaning token, so the text reads as all digits
+%   and `tex_footnote_number` is never reached; TeX's `\c@mpfn #1\relax` reads no number at `\relax` ("Missing number"), the
+%   mark 0, the "2" body text. Also `[{}]`/`[\relax{}]`: a tail of only braces prints nothing but the "prints nothing" check
+%   accepts only spaces and `\relax` (empty mark, silent; pdflatex 1 `!`, mark 0). Fix: the digit check on the reader's value
+%   and tail, an empty group counted as printing nothing (revGA1f 1, 2)
+% witness: synthetic (revGA1f); `[\value{nosuch}2]` was an empty mark on int163a (also silent)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 3 `!` ("Missing number, treated as zero."): "Text20", "More20", "Tail0"
+% engines: rust int163a: marks 2, empty, empty, 0 W; GA1f: marks 2, 2, empty, 0 W
+% expect:  3 "Missing number" Warnings; marks 0, the 2s body text
+% status:  RED (int163a, GA1f) — moves: post-merge (with #851's open part)
+\documentclass{article}
+\begin{document}
+Text\footnotemark[\relax 2] and more.
+More\footnotemark[\value{nosuch}2] and more.
+Tail\footnotemark[{}] end.
+\end{document}

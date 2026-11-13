@@ -1,0 +1,17 @@
+% witness: the user's ruling 2026-10-30 (FIDELITY_CHARTER §4, "A frontmatter note reads as the class prints it"), the
+%          92e audit of the notes a binding labels by its role: IEEEoj's and ieeetj's `\doiinfo` (18 census papers; 2503.03013, 2510.05542)
+% oracle:  pdflatex with 2503.03013's IEEEoj.cls (:3447, :3458); as `\documentclass{ieeetj}`, 2510.05542's ieeetj.cls (:3440): 0 errors; "Digital Object Identifier 10.1109/OJCOMS.2024.011100" above the title
+% engines: rust b4c8392 = the pubnote named "DOI: " (the role default, `\lx@pubnote@doi@name`); Perl the same
+%          (no binding)
+% expect:  0 errors, 0 warnings; the pubnote named "Digital Object Identifier ", role doi, holding "10.1109/OJCOMS.2024.011100"
+% status:  RED (b4c8392) -> GREEN (92e)
+% preload: ar5iv.sty
+\documentclass{IEEEoj}
+\doiinfo{OJCOMS.2024.011100}
+\begin{document}
+\title{T}
+\author{A. Able}
+\maketitle
+\section{S}
+Text.
+\end{document}

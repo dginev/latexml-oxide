@@ -1,0 +1,28 @@
+% witness: 1803.04935, 1910.07402 (ieeeaccess.cls:270-300 `\Figure[pos](keys)[gopts]{file}{caption}`)
+% oracle:  pdflatex with this cut of the class (clean): a figure with the image and its caption
+% engines: rust 67int22 = 0 errors, no figure (the binding's `\Figure`=`\@gobble`: the file name spilled as text; in the witnesses its
+%          `_` erred); Perl: no binding
+% expect:  0 errors, 0 warnings; one `<figure>` with the graphic and the caption
+% status:  RED (67int22) -> GREEN (73a)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{ieeeaccess.cls}
+\ProvidesClass{ieeeaccess}
+\LoadClass{IEEEtran}
+\RequirePackage{xkeyval}
+\define@key{figkeys}{topskip}{\def\fig@topskip{#1}}
+\define@key{figkeys}{midskip}{\def\fig@midskip{#1}}
+\define@key{figkeys}{botskip}{\def\fig@botskip{#1}}
+\def\Figure{\@ifnextchar[{\@Figure}{\@Figure[t!]}}
+\def\@Figure[#1]{\@ifnextchar({\@@Figure[#1]}{\@@Figure[#1](topskip=0pt)}}
+\def\@@Figure[#1](#2){\@ifnextchar[{\@@@Figure[#1](#2)}{\@@@Figure[#1](#2)[scale=1]}}
+\def\@@@Figure[#1](#2)[#3]#4#5{\setkeys{figkeys}{#2}\begin{figure}[#1]\centering\includegraphics[#3]{#4}\caption{#5}\end{figure}}
+\def\EOD{}
+\end{filecontents*}
+\documentclass{ieeeaccess}
+\usepackage{graphicx}
+\begin{document}
+\title{T}
+\Figure[t!](topskip=0pt, botskip=0pt, midskip=0pt)[scale=0.1]{example-image-a.png}
+{Block diagram of the passband system.\label{block_diagram}}
+Text.\EOD
+\end{document}

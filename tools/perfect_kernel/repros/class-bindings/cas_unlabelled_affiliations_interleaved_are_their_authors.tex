@@ -1,0 +1,22 @@
+% mechanism: cas-sc's interleaved `\author{Ann}\affiliation{…}\author{Bob}\affiliation{…}`, no marks: two unlabelled
+%   entries, each its run's — the author before it (`annotate=run`, the companion
+%   cas_unlabelled_affiliations_are_their_runs; OXIDIZED_DESIGN_DIVERGENCES #901)
+% witness: 2202.06096 (review rev104d B1, probe p/cas1, p/cas2)
+% oracle:  pdflatex (TL 2025 cas-sc.cls) 0 errors: "Ann Able, Bob Baker" / "Univ A, Town, Land" / "Univ B, City, Land"
+% engines: rust int130a: Ann Able Univ A, Bob Baker Univ B; 104d r1: both authors both
+% expect:  0 errors, 0 warnings; Ann Able holds Univ A, Bob Baker Univ B
+% status:  GREEN (int130a) -> RED (104d r1) -> GREEN (104d r2)
+% preload: ar5iv.sty
+\documentclass{cas-sc}
+\begin{document}
+\shorttitle{T}
+\shortauthors{A. Able and B. Baker}
+\title[mode=title]{T}
+\author{Ann Able}
+\affiliation{organization={Univ A}, city={Town}, country={Land}}
+\author{Bob Baker}
+\affiliation{organization={Univ B}, city={City}, country={Land}}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Text.
+\end{document}

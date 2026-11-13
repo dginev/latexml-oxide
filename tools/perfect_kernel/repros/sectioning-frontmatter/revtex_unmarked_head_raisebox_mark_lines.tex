@@ -1,0 +1,22 @@
+% mechanism: REVTeX's group rule reads the marks an affiliation block prints as digested (`relocate::requested_marks`,
+%   `marks_as_printed`, Option C P4b3): a mark set in a box of its own by a document macro with an argument
+%   (`\raisebox{0pt}[0pt][0pt]{\textsuperscript{#1}}`, P4cR1's shape) opens its line, which no token reader sees
+% witness: synthetic (P4cR1's `\raisebox` refmark: 2307.12121, 2311.01786)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1,2 , Bob Baker2,3 , and Cy Cole / Univ A, Town A /
+%          2Univ B, Town B / 3Univ C, Town C"
+% engines: P4b3base: every author the whole block; P4b3: as expected
+% expect:  0 errors, 0 warnings; Ann Able "Univ A, Town A", "2 Univ B, Town B"; Bob Baker "2 Univ B, Town B",
+%          "3 Univ C, Town C"; Cy Cole none
+% status:  RED (P4b3base) -> GREEN (P4b3; guard perfect_kernel_batchc1::group_rule_reads_marks_as_digested)
+\documentclass[aps,prl]{revtex4-2}
+\newcommand\rmk[1]{\raisebox{0pt}[0pt][0pt]{\textsuperscript{#1}}}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1,2}$}
+\author{Bob Baker$^{2,3}$}
+\author{Cy Cole}
+\affiliation{Univ A, Town A\\ \rmk{2}Univ B, Town B\\ \rmk{3}Univ C, Town C}
+\begin{abstract}x\end{abstract}
+\maketitle
+Text.
+\end{document}

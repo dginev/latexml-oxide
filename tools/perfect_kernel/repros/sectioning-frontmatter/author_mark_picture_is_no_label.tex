@@ -1,0 +1,17 @@
+% witness: 2605.02769 (`\inst{\ref{leiden}\orcidicon{…}}`, its `\orcidicon` a TikZ ORCID logo in an `\href`)
+% oracle:  pdflatex: "Ann Able1,[a drawn line] and Bob Baker2" / 1 Univ One / 2 Univ Two
+% engines: perl 0.8.8 = 0 errors, Univ One Ann Able's; rust 92b r1 the same, the shadow's requests the picture's path
+%          data `[1,M,0,0,L,7.87,7.87fill:none]` (2605.02769's logo: the XML too once the printed text is parted at its
+%          spaces, the marks M, C, 0, L, Z on every name)
+% expect:  0 errors, 0 warnings; Univ One Ann Able's, Univ Two Bob Baker's, no label read off the picture (the shadow
+%          requests [1])
+% status:  RED (92b r1, the shadow) -> GREEN (92b r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{tikz}
+\title{T}
+\author{Ann Able$^{1,\tikz{\draw (0,0) -- (0.2,0.2);}}$ \and Bob Baker$^{2}$\\ $^1$Univ One \\ $^2$Univ Two}
+\begin{document}
+\maketitle
+Text.
+\end{document}

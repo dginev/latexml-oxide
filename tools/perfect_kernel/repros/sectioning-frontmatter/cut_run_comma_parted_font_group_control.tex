@@ -1,0 +1,15 @@
+% mechanism: control — a one-line run parted by a comma inside one font group
+% witness: 2608.24199 (the shape `{\small $^1$NVIDIA, $^2$CMR Surgical}`; its loss was authblk's note)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1 , Bob Baker2 / 1 Univ A, 2 Univ B"
+% engines: rust int139a: as expected
+% expect:  0 errors, 0 warnings; Ann "Univ A", Bob "Univ B"
+% status:  GREEN (int139a, control; no guard: 99a's cut)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$ \\
+{\small $^1$Univ A, $^2$Univ B}}
+\maketitle
+Text.
+\end{document}

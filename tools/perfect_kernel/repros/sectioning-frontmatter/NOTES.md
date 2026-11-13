@@ -164,3 +164,53 @@ runs `\@dblarg\\author[opt]{arg}`, which sets `\firstshortauthor` for the class'
 the internal of a refused definition, so the replay's vocabulary gate dropped the call and the line was lost; restored
 in 66d r2 (sect08.rs `define_optional_internal`, OD #567). Guard
 `perfect_kernel_batch66b::refused_dblarg_setter_reaches_its_internal`.
+
+## class_keywords/* (GREEN, 68n rounds 1-2)
+
+A raw class's keywords, in two shapes the K11 store reroute (frontmatter_stores.rs) did not serve. (1) A one-argument
+`\keywords` the class defines only for its abstract's body: wiley-article.cls:446-489 (`\NewEnviron{wiley@abstract}
+{\newcommand{\keywords}[1]{…}…}` with `\renewcommand{\abstract}{\wiley@abstract}`, kwwiley.cls), astlb.cls:91-205
+(`{pazhabstract}` in `\@maketitle`, reached from `\endabstract` → `\maketitle`, kwpazh.cls), mtt.cls:176-181 (its own
+`\renewenvironment{abstract}`, kwmtt.cls). The kernel's locked `{abstract}` refuses the class's, so `\keywords` was
+undefined (SHARED: KNOWN_PERL_ERRORS #835, latex_constructs.pool.ltxml:1130-1142). Fix: `abstract_setter_definitions`
+walks the refused `\lx@dropped@abstract`/`\lx@dropped@endabstract` and what they hand control to, and
+`\lx@abstract@class@setters` (the head of `\lx@begin@abstract`) defines the setter there as the frontmatter's keywords —
+as the class defines it (`\def` over the document's own, `\newcommand` not), in place in a supplement's abstract. A
+refused `\renewenvironment` now keeps its code (sect08.rs), which mtt's needed. (2) A `{keywords}` whose begin code only
+typesets a label (paper.cls:621-627, kwpaper.cls; pasa/biometrika, kwlabels.cls): `label_only_begin_code` +
+`\lx@class@keywords` — the environment is the frontmatter's keywords named by the label, a braced command too, a bare
+one the class's code (RUST-ONLY under the rawclasses lever and localrawclasses; OmniBus mapped any `{keywords}`).
+CONTROLs: a flag in the begin code (kwflag.cls) keeps the class's; the document's own `{keywords}` and an undefined
+`\keywords` stay. OXIDIZED_DESIGN_DIVERGENCES #634; guards `perfect_kernel_batch68n`. Dead end: one `\lx@add@keywords`
+per abstract without the in-place rule let a supplement abstract's keywords clear the paper's (1310.0585).
+Round 2 (review): `keywords_group_label_{va,vb,ve,emsprocart,ieice,lni}` (kwgroups.cls, one class option per shape) —
+a label that is a brace group named the keywords with its `\noindent`/`\vskip` and set the keywords text bold
+(emsprocart 1202.4161, 1006.0632, 1610.08545; ieice 2002.00666, 1604.03276, 2509.21881; lni 1604.03313); the label is
+now its text only (`LabelText`). `keywords_environment_braced_first_group` (`\keywords {alpha}, beta, gamma`: the class's
+code, not keywords "alpha" + a stray ", beta, gamma"), `keywords_environment_bare_endkeywords` (`\endkeywords` outside
+the environment is the class's `\par\bigskip`), `abstract_keywords_setter_that_only_warns` (kwwarn.cls: a setter that
+does not use its argument is the class's own, its warning the one diagnostic); the supplement repro's in-place keywords
+now keep the class's label (its own definition), as its oracle prints.
+
+## ieee_shared_block/* (104a; OXIDIZED_DESIGN_DIVERGENCES #962)
+
+RUST-ONLY (Perl: one creator holding the whole block). `wrap_bare_author_block_text` (ieeetran_cls.rs) wrapped every
+bare run between IEEE blocks in `\IEEEauthorblockA{…}`; a run printing nothing (`blank_line`, `vspace`,
+`line_break_with_length`; 1401.2118, 1705.03529) or of notes (`thanks`; 1508.00691) became an affiliation printing
+nothing that took the names before the shared block (`annotate=new`). Fix: such a run is layout (`prints_nothing`,
+its spaces and braces kept) or, before an `\IEEEauthorblockA`, the document's notes (`document_notes`);
+`notes_after_the_names_without_a_block` (0710.2705) is the CONTROL that notes no block follows stay wrapped.
+`printed_text_line_break` (2605.15804): its `\\` made a regular `\and`×`\\` grid, transposed (`transpose_ieee_author_grid`,
+OD #128); a grid now transposes only when every printing cell names an author (`printed_text_control` the CONTROL;
+`printed_text_line_break_one_author` the trailing-`\\` trim). `refmark_led_address_line` (2301.03018, 2510.06608):
+relocate.rs `leading_line_label` compared with `\textsuperscript` literally; now `is_mark_command`. RED, no guard:
+`explicit_empty_block` (an empty `\IEEEauthorblockA{}` still claims the names; needs a binding-declared rule) and
+`email_line_marked_addresses` (2209.10056, 2109.15322; `affiliations.rs` `entry_calls`). Invalid input under TL 2025
+(not kept): a group around a block, `{\small \IEEEauthorblockA{…}}` — IEEEtran's author `\halign` rejects it
+(cs0507001 ships an older IEEEtran.cls). Round 2: `starred_names_one_line` (1909.04111) — the writer's re-part gate
+(`emitter/repart.rs`) accepts the API's `api:annotate:new`/`run` items, so the unsplit names line becomes three
+creators; `and_inside_a_block`, `and_inside_a_block_thanks` (2105.06537) — an `\and` that a block macro follows inside
+an affiliation block's argument closes it and starts the next author; `thanks_vspace` — a run of notes and spacing is
+the document's notes (`document_notes`); `ordinal_names` (2503.04159, 1806.11431, 2406.04658) the CONTROL that the gate's API exemption needs one holder of today's and no name opening with a mark (a re-part would take the IEEE ordinal's `\textsuperscript{st}` out). RED, no guard: `mixed_grid_column_major` (a grid left in its columns gives
+column-major creators; SYNC row 104a). Guards `perfect_kernel_batch104a` (9).
+

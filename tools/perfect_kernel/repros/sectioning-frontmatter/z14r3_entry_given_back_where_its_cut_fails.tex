@@ -1,0 +1,17 @@
+% witness: astro-ph0007423 (revtex 3: `\author{ Aurel BULGAC $^{1,2}$ and Piotr MAGIERSKI $^{1,3}$}` over four `\address` calls, the last `e--mail:  bulgac@phys.washington.edu and magiersk@if.pw.edu.pl`)
+% oracle:  pdflatex 0 errors: the names, the three numbered lines, the line of addresses
+% engines: Perl: every address on both authors; int143b: each author their numbered lines, the line of addresses on both; ours at Z14r2: the take-out of the addresses kept because today's prints them in an item, which the plan cannot cut (`e–mail:` no label it reads), so the paper declined, every address on both authors
+% expect:  0 errors; each author their own numbered lines and the line of addresses, as int143b (perfect_kernel_batchz14::an_entry_whose_cut_fails_is_given_back)
+% status:  GREEN (Z14r3)
+\documentclass{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author{Ann Able$^{1,2}$ and Bob Baker$^{1,3}$}
+\address{$^1$Univ A, Town A}
+\address{$^2$Univ B, Town B}
+\address{$^3$Univ C, Town C}
+\address{e--mail: ann@a.org and bob@b.org}
+\end{frontmatter}
+Body.
+\end{document}

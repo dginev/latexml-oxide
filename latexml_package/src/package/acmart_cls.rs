@@ -4,55 +4,35 @@ use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 
 use crate::{
   engine::latex_constructs::{after_float, before_float},
+  float_description::{define_float_description, float_description_tokens},
+  package::caption_sty,
   prelude::*,
 };
 
-/// A description's tokens with the characters text rejects outside math (`_ ^ & #`) as the text commands for them;
-/// math is `$…$` or `\(…\)`.
-fn description_text(tokens: &Tokens) -> Vec<Token> {
-  let mut in_math = false;
-  tokens
-    .unlist_ref()
-    .iter()
-    .map(|t| match t.get_catcode() {
-      Catcode::MATH => {
-        in_math = !in_math;
-        *t
-      },
-      Catcode::CS if *t == T_CS!("\\(") || *t == T_CS!("\\)") => {
-        in_math = *t == T_CS!("\\(");
-        *t
-      },
-      Catcode::SUB if !in_math => T_CS!("\\textunderscore"),
-      Catcode::SUPER if !in_math => T_CS!("\\textasciicircum"),
-      Catcode::ALIGN if !in_math => T_CS!("\\&"),
-      Catcode::PARAM if !in_math => T_CS!("\\#"),
-      _ => *t,
-    })
-    .collect()
-}
-
-/// Add `ids` to `node`'s `aria:describedby`, keeping whatever is already there.
-///
-/// `aria-describedby` is an id LIST, and a second `\Description` in the same
-/// float (or one alongside another that already wired the same host) would
-/// otherwise `set_attribute` straight over the first one's reference, leaving
-/// that description hidden in the DOM and announced by nothing — silently
-/// losing an annotation the author wrote. Existing ids keep their position,
-/// since order is announcement order.
-fn add_describedby(document: &mut Document, node: &mut Node, ids: &[String]) -> Result<()> {
-  let existing = node.get_attribute("aria:describedby").unwrap_or_default();
-  let mut refs: Vec<&str> = existing.split_whitespace().collect();
-  for id in ids {
-    if !refs.contains(&id.as_str()) {
-      refs.push(id);
-    }
-  }
-  document.set_attribute(node, "aria:describedby", &refs.join(" "))
-}
+/// This binding's frontmatter conventions (the observer's, OXIDIZED_DESIGN_DIVERGENCES #837), declared at its load
+/// (`declare_frontmatter_conventions`, user ruling 2026-10-28: each binding declares its own): acmart's own `\author`
+/// (below) reads an argument holding a comma as the kernel's author list (acmart.cls:1620-1621), its `\affiliation` and
+/// `\email` each the current author's call — the kernel's reading. `written`: the observer's writer writes acmart's
+/// creators (brief 95b, OD #942: 2311.10779, 2010.12245; a paper whose reading it cannot apply keeps today's output).
+pub const FRONTMATTER_CONVENTIONS: FmConventions = FmConventions {
+  name: "acmart",
+  binding: "acmart.cls",
+  // (its title page prints `\addresses`, never `\@author`: acmart.cls:1619-1643, :2240 `\@mkauthors`, :2631 — a
+  // document's tail on `\@author` prints nowhere, FX27b)
+  title_page: FmTitlePageDecl {
+    author: FmAuthorPage::Own(&["acmart.cls"]),
+    // (its `\maketitle` never runs `\@maketitle`: acmart.cls:2226-2379; a document's own prints nowhere, TP1b)
+    maketitle_runs: &[("acmart.cls", FmMaketitleRuns::Never, "acmart.cls:2226-2379")],
+    ..FM_KERNEL_CONVENTIONS.title_page
+  },
+  cite: "acmart.cls:1620-1621 (several authors in one `\\author`); OD #942 (2311.10779, 2010.12245)",
+  ..FM_KERNEL_CONVENTIONS
+};
 
 #[rustfmt::skip]
 LoadDefinitions!({
+  // (this binding's frontmatter conventions, first: OXIDIZED_DESIGN_DIVERGENCES #837)
+  declare_frontmatter_conventions(&FRONTMATTER_CONVENTIONS);
   // acmart.cls:44-47: before anything else the class reads `acmart-preload-hook.tex`, where a paper puts what must
   // precede its packages (2609.29962: `\PassOptionsToPackage{svgnames}{xcolor}`; without it 293 `DarkViolet` errors;
   // KNOWN_PERL_ERRORS #507), with the class's warning.
@@ -61,7 +41,7 @@ LoadDefinitions!({
   // with `reqno` as well: ACM numbers equations on the right, where amsart's
   // default is the left (DIVERGENCES #336, KPE #306; 2605.02222, 2605.24417).
   Digest!("\\PassOptionsToClass{reqno}{amsart}")?;
-  load_class_with_options("amsart", Tokens!())?;
+  LoadClass!("amsart", withoptions => true);
 
   // Beyond-Perl fidelity (OXIDIZED_DESIGN "acmart establishes T1 font
   // encoding"): real acmart.cls loads libertine + `\RequirePackage[T1]{fontenc}`
@@ -75,6 +55,25 @@ LoadDefinitions!({
   RequirePackage!("geometry");
   RequirePackage!("comment");
   RequirePackage!("natbib");
+  // (acmart.cls:299-300 `\if@ACM@natbib\RequirePackage{natbib}`: the class's own load, so a document's
+  // `\usepackage[authoryear]{natbib}` is LaTeX's "Option clash", its options dropped — binding/content.rs
+  // `apply_new_options_on_reload`. Under `natbib=false` (acmart.cls:131-138) the class loads no natbib: the binding's
+  // load stays an early one, which the document's own load replaces.)
+  // acmart.cls:379-393: the class's two citation styles, `\citestyle{acmnumeric}` (numbers in square brackets, ","
+  // between them: "[1, 2]") its default under natbib, `\citestyle{acmauthoryear}` the author-year one ("[Able 2001]").
+  // Perl's binding (acmart.cls.ltxml:23) only loads natbib, so acmart citations came out author-year "(Able, 2001)"
+  // (KNOWN_PERL_ERRORS #1023; about 61,700 papers, witness 2112.15328). Guard
+  // `perfect_kernel_batch78c::acmart_citations_are_numeric_by_default`.
+  RawTeX!(r"\newcommand{\bibstyle@acmauthoryear}{\setcitestyle{authoryear,open={[},close={]},citesep={;},aysep={},%
+yysep={,},notesep={, }}}
+\newcommand{\bibstyle@acmnumeric}{\setcitestyle{numbers,sort&compress,open={[},close={]},citesep={,},notesep={, }}}");
+  if acmart_natbib_option()? {
+    AssignValue!("natbib.sty:requested_by_binding" => false, Some(Scope::Global));
+    // acmart.cls:306-345 renews `\setcitestyle` to read natbib's ordering words too (`sort`, `nosort`, `compress`,
+    // `nocompress`, `sort&compress`): `acmnumeric` sorts and compresses, "[1–3]" (natbib_sty.rs `\setcitestyle`).
+    AssignValue!("natbib@setcitestyle@orders" => true, Some(Scope::Global));
+    RawTeX!(r"\citestyle{acmnumeric}");
+  }
   RequirePackage!("textcomp");
   RequirePackage!("graphicx");
   // Real acmart.cls passes [prologue,table]{xcolor} but doesn't pass
@@ -98,7 +97,13 @@ LoadDefinitions!({
   RequirePackage!("hyperref");
   RequirePackage!("caption");
   RequirePackage!("float");
-  // RequirePackage('environ');
+  // acmart.cls:288 (TL 2025 v2.16; 121 of the 128 copies papers ship, v1.25 on) `\RequirePackage{environ}`, whose
+  // `\NewEnviron` papers use without loading it (17 papers; 67u). environ has no binding: it is read raw, so only where
+  // styles are (`INCLUDE_STYLES`, the ar5iv profile; amsrefs_sty.rs's idiom). Perl's acmart.cls.ltxml:32 leaves it
+  // commented out (KNOWN_PERL_ERRORS #741).
+  if lookup_bool("INCLUDE_STYLES") {
+    RequirePackage!("environ");
+  }
   // RequirePackage('zi4');
   RequirePackage!("setspace");
   RequirePackage!("newtxmath");
@@ -126,7 +131,22 @@ LoadDefinitions!({
   // acmart tests `#1` for emptiness). Each is its own date, the later ones `accumulate` — Perl's
   // `\lx@add@date[role=received]` for every call (acmart.cls.ltxml:58) clears the earlier ones, so only the last
   // survived, as "Received" (KNOWN_PERL_ERRORS #522, 2307.05988).
+  // The class's history text `\@received` (:1859-1872), which papers print themselves (2210.01206, 2307.15641,
+  // 2607.11435 `{\small\normalfont\@received\par}`), is kept beside the dates (the class prints it at the document's
+  // end, :1873-1876; here the dates are the frontmatter's).
+  RawTeX!(r"\def\@received{}\newcommand\lx@acm@received@history[2][]{\def\@tempa{#1}\ifx\@tempa\@empty
+  \ifx\@received\@empty\gdef\@received{Received #2}\else\g@addto@macro{\@received}{; revised #2}\fi
+\else\ifx\@received\@empty\gdef\@received{#1 #2}\else\g@addto@macro{\@received}{; #1 #2}\fi\fi}");
   DefMacro!("\\received[]{}", sub[(label, date)] {
+    let mut history = vec![T_CS!("\\lx@acm@received@history")];
+    if let Some(label) = &label {
+      history.push(T_OTHER!("["));
+      history.extend(label.unlist_ref().iter().copied());
+      history.push(T_OTHER!("]"));
+    }
+    history.push(T_BEGIN!());
+    history.extend(date.unlist_ref().iter().copied());
+    history.push(T_END!());
     let first = lookup_value("lx_acm_received_given").is_none();
     assign_value("lx_acm_received_given", Stored::Bool(true), Some(Scope::Global));
     let label = label.filter(|label| !label.is_empty());
@@ -167,333 +187,54 @@ LoadDefinitions!({
     };
     out.extend(date.unlist());
     out.push(T_END!());
-    Ok(Tokens::new(out))
+    history.extend(out);
+    Ok(Tokens::new(history))
   });
-  DefMacro!("\\acmJournal{}", "\\lx@add@pubnote[role=journal]{#1}");
+  // As the class prints them (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921): the journal's name, the conference's line (the
+  // first-page footnote, "In …" of the ACM reference) and the DOI's https://doi.org/ link (acmart.cls:2309-2321, :2961)
+  // with no label; the volume "Vol. V" in the journal formats' running foot (:3088, :3206).
+  DefMacro!("\\acmJournal{}", "\\lx@add@pubnote[role=journal,name={}]{#1}");
   DefMacro!("\\acmSubmissionID{}", "\\lx@add@pubnote[role=submissionid]{#1}");
   // Under `nonacm` the class prints no conference, booktitle, ISBN or price (acmart.cls:2943, :3079-3250: the rights
   // block and the ACM reference are skipped), so these notes are added only without it, as the PDF shows them
   // (display-toggle ruling 2026-10-06); an unescaped `&` in such a conference name is then legal (2403.18105). The DOI
   // stays: `printacmref=true` prints it under `nonacm` too (acmart.cls:2961), and it is read verbatim. Read when the
   // command is: a later `\@ACM@nonacmtrue` does not withdraw a note already added.
-  DefMacro!("\\acmConference[]{}{}{}", "\\if@ACM@nonacm\\else\\lx@add@pubnote[role=conference]{#2; #3; #4}\\fi");
+  // acmart.cls:1582-1596 also keeps the four parts, `\acmConference@shortname` (the name when no short one is given),
+  // `@name`, `@date`, `@venue`, which papers print in their own lines (`\newcommand{\confdate}{\acmConference@date}`,
+  // 23 papers that ship acmart.cls and 7 on TeX Live's: 2604.15990, 2604.21043, 2604.27997); outside the journal formats
+  // the class starts from a placeholder conference (:1597-1600), set without its note.
+  DefMacro!("\\acmConference[]{}{}{}", "\\gdef\\acmConference@shortname{#1}\\gdef\\acmConference@name{#2}\\gdef\\acmConference@date{#3}\\gdef\\acmConference@venue{#4}\\ifx\\acmConference@shortname\\@empty\\gdef\\acmConference@shortname{#2}\\fi\\if@ACM@nonacm\\else\\lx@add@pubnote[role=conference,name={}]{#2; #3; #4}\\fi");
   DefMacro!("\\acmBooktitle{}", "\\if@ACM@nonacm\\else\\lx@add@pubnote[role=booktitle]{#1}\\fi");
   DefMacro!("\\acmArticle{}", "\\lx@add@pubnote[role=article]{#1}");
   DefMacro!("\\acmArticleSeq{}", "\\lx@add@pubnote[role=articleseq]{#1}");
   // read verbatim: acmart.cls:2052 prints the DOI through `\url` (2401.02563: `10.475/123_4`, its `_` an error)
-  DefMacro!("\\acmDOI Semiverbatim", "\\lx@add@pubnote[role=doi]{#1}");
-  DefMacro!("\\acmISBN{}", "\\if@ACM@nonacm\\else\\lx@add@pubnote[role=isbn]{#1}\\fi");
+  DefMacro!("\\acmDOI Semiverbatim", "\\lx@add@pubnote[role=doi,name={}]{#1}");
+  // labelled as the class prints it (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #915): acmart.cls:2320 (TL 2025)
+  // `ACM~ISBN~\@acmISBN` — not the role's "ISBN: ".
+  DefMacro!("\\acmISBN{}", "\\if@ACM@nonacm\\else\\lx@add@pubnote[role=isbn,name={ACM~ISBN~}]{#1}\\fi");
   DefMacro!("\\acmMonth{}", "\\lx@add@pubnote[role=publicationmonth]{#1}");
   DefMacro!("\\acmNumber{}", "\\lx@add@pubnote[role=number]{#1}");
   DefMacro!("\\acmPrice{}", "\\if@ACM@nonacm\\else\\lx@add@pubnote[role=price,name={Price:~}]{#1}\\fi");
-  DefMacro!("\\acmVolume{}", "\\lx@add@pubnote[role=volume]{#1}");
+  DefMacro!("\\acmVolume{}", "\\lx@add@pubnote[role=volume,name={Vol.~}]{#1}");
   // acmart.cls:1749-1750: `\@acmYear` (default `\the\year`) is the copyright year's default.
   RawTeX!(r"\def\@acmYear{\the\year}");
   DefMacro!("\\acmYear{}", "\\def\\@acmYear{#1}\\lx@add@date[role=published]{#1}");
-  DefMacro!("\\subtitle{}", "\\lx@add@subtitle{#1}");
+  // acmart.cls:1611-1612 `\def\subtitle#1{\def\@subtitle{#1}}\subtitle{}`: the subtitle a paper's own reference line
+  // tests (2608.16886 `\ifx\@subtitle\@empty`).
+  DefMacro!("\\subtitle{}", "\\def\\@subtitle{#1}\\lx@add@subtitle{#1}");
+  Let!("\\@subtitle", "\\@empty");
   DefMacro!("\\keywords{}", "\\lx@add@keywords{#1}");
   DefMacro!("\\terms{}", "\\lx@add@keywords{#1}");
 
   //======================================================================
-  // Accessible figure descriptions
-  // Register WAI-ARIA namespace for accessible descriptions
-  RegisterDocumentNamespace!("aria", "http://www.w3.org/ns/wai-aria");
-
-  NewCounter!("acmlabel", "");
-  // `\Description[short]{long}` — acmart's accessible figure description
-  // (acmart.cls L895 gobbles both args; ACM requires the description, and HTML
-  // can carry it where PDF cannot, so we surface it rather than follow the
-  // class into discarding it).
-  //
-  // The MANDATORY long description is the real alt text, so it is what we
-  // emit. It is read `Undigested` — `ExpansionLevel::Off`, kept as
-  // `DigestedData::Postponed` tokens — so nothing inside it expands: the
-  // author never sees a defect there under pdflatex (the class gobbles it), so
-  // expanding it only manufactures errors. Witness arXiv:2607.21760, whose
-  // `\D1 … \D5` (a copy-paste slip from the adjacent `alt=` text, which has
-  // plain `D1 … D5`) raised `Error:undefined:\D` for content we then dropped.
-  //
-  // `LaTeXML-common.xsl` L404-421 maps any `aria:*` attribute to `aria-*`
-  // under HTML5, so setting them here needs no XSLT change. WHICH element
-  // they land on, and which slot each argument fills, is the
-  // `before_construct` table below.
-  //
-  // `[short]` and `{long}` are two DISTINCT authored fields, so they get two
-  // distinct elements — never concatenated into one. Merging them yields a
-  // run-on ("Fly 1 and Fly 2 look identical. Fly 1 and fly 2 comparison
-  // shows…") and destroys the distinction, so no consumer can tell which text
-  // the author wrote as the brief alternative. `aria-describedby` takes a
-  // SPACE-SEPARATED ID LIST and is announced in order, so where both are
-  // referenced it is short first, each still individually addressable.
-  //
-  // The old binding emitted the short one ALONE, which is why
-  // `t/complex/acm_aria` recorded "Fly 1 and Fly 2 look identical" and lost the
-  // sentence that actually describes the figure.
-  //
-  // Carried as `<ltx:note>` — the document builder places a note inside the
-  // float's `<caption>`, where the old binding put it. An `<ltx:text>` is
-  // INLINE, so the builder auto-opens a `<p>` for it, and a `<p>` at figure
-  // level is tagged `ltx_figure_panel`, which makes the post-processor spin up
-  // a whole `ltx_flex_figure`/`ltx_flex_cell` wrapper around two hidden spans
-  // (inert, since the caption partitions it and the real subfigures keep their
-  // width class, but pure noise in the output).
-  //
-  // The footnote decoration a note normally gets — the `†` mark and the
-  // `<role>: ` type prefix — is suppressed for these by a dedicated template in
-  // `LaTeXML-meta-xhtml.xsl` keyed on `ltx_acm_description`, so the referenced
-  // text stays clean for assistive technology.
-  //
-  // The short description needs its OWN id: it is referenced by
-  // `aria-describedby` whenever its text is not the one that became the
-  // image's `@alt`. It is derived in `properties` rather than written as
-  // `#id-short` in the template, which does NOT work: a `#name` hole runs to
-  // the end of the identifier, so `#id-short` names a property called
-  // `id-short` — absent, so the element silently emits NO xml:id at all —
-  // instead of `#id` followed by a literal `-short`. That produced a dangling
-  // `aria-describedby`, a reference resolving to nothing. Ids use a `-short`
-  // suffix rather than a dotted one so they need no escaping in a CSS
-  // selector.
-  // acmart.cls:895 `\Description` typesets nothing, so authors leave unescaped what LaTeX would reject in text
-  // (`\Description{Complaint_Loss}`, 2502.07049): outside math, `_ ^ & #` are the characters they show, and the
-  // description is digested as written otherwise.
+  // Accessible figure descriptions: `\Description[short]{long}` (acmart.cls:895 gobbles both), the description of
+  // the float's image, which HTML carries where PDF cannot (float_description.rs, shared with oup-authoring-template's
+  // `\figalttext`).
+  define_float_description("\\Description")?;
   DefMacro!("\\Description[]{}", sub[(short, long)] {
-    let mut out = vec![T_CS!("\\lx@acm@description")];
-    if let Some(short) = short {
-      out.push(T_OTHER!("["));
-      out.push(T_BEGIN!());
-      out.extend(description_text(&short));
-      out.push(T_END!());
-      out.push(T_OTHER!("]"));
-    }
-    out.push(T_BEGIN!());
-    out.extend(description_text(&long));
-    out.push(T_END!());
-    Ok(Tokens::new(out))
+    Ok(float_description_tokens(short.as_ref(), &long))
   });
-  DefConstructor!("\\lx@acm@description[]{}",
-    "^^?#1(<ltx:note xml:id='#shortid' class='ltx_nodisplay ltx_acm_description_short'>#1</ltx:note>)()\
-     <ltx:note xml:id='#id' class='ltx_nodisplay ltx_acm_description'>#2</ltx:note>",
-    sizer => sub[_whatsit] { Ok(out_of_line_size()) },
-    properties => {
-      let mut props = RefStepCounter!("acmlabel")?;
-      if let Some(id) = props.get("id") {
-        let short = format!("{id}-short");
-        props.insert("shortid", Stored::from(short));
-      }
-      // Perl acmart.cls.ltxml L79 sets these so the hidden note claims no
-      // layout space; carried over.
-      props.insert("width", Stored::from(Dimension!("0pt")));
-      props.insert("height", Stored::from(Dimension!("0pt")));
-      Ok(props)
-    },
-    // acmart's own documentation: "Unlike \caption, which is used alongside the
-    // image, \Description is intended to be used INSTEAD OF the image." So a
-    // `\Description` is a TEXT ALTERNATIVE — and the thing it is an alternative
-    // TO is the image, not the float. It therefore lands on the IMAGE:
-    //
-    //   `\Description[s]{l}`           → img @alt = s, aria-describedby → l
-    //   `\Description{l}`, l plain     → img @alt = l (it replaces the image)
-    //   `\Description{l}`, l w/ markup → img @alt untouched, describedby → l
-    //
-    // `@alt` (via `ltx:graphics/@description`, `LaTeXML-misc-xhtml.xsl` L167-171)
-    // rather than `aria-label`, because that is the attribute an `<img>` has for
-    // exactly this purpose and the one assistive technology expects there.
-    //
-    // NOT `aria:label` on the `<ltx:figure>`, which is what this binding did
-    // before: `aria-label` sets the accessible NAME, and a float's name is its
-    // caption, so labelling the figure with the description DISPLACED
-    // "Figure 1. caption text" and hid the caption from a screen reader
-    // (reviewer report, brucemiller/LaTeXML#430 r3674103638; the fix that
-    // review asks for is precisely "label + description should be attached to
-    // the first image in the figure … and the `<img>` tag eventually gets
-    // `@alt` and not `@aria-label`").
-    //
-    // `@alt` is a plain string and cannot carry markup, so the slot is chosen by
-    // the description's tokens as written (its reversion): a control sequence
-    // (or an active/`$`/`^`/`_` token) means real markup, so the block carries
-    // it. The argument itself is digested, as Perl's `{}` (acmart.cls.ltxml:78)
-    // and LaTeX do: read `Undigested`, the block printed its markup as raw TeX
-    // (`\sysname{}`, 2403.09168; 2401.04997, 2304.01062, 2312.11013).
-    //
-    // The block is always emitted, so the text stays addressable, but it is
-    // referenced only when it is not already the `@alt` — otherwise the same
-    // sentence would be announced twice. An unreferenced hidden block is inert:
-    // `display:none` content is announced only when something references it.
-    //
-    // TWO CASES HAVE NO IMAGE TO USE. An author's annotation is never dropped,
-    // so it goes to the next best host — the enclosing float — as
-    // `aria:describedby`, which supplements the name instead of replacing it,
-    // so the caption survives either way. Both `Warn!`, because the result is
-    // second-best and the author can do something about it:
-    //
-    //  * No `ltx:graphics` in the float at all — a figure built from tabular,
-    //    text or TikZ content (`t/complex/acm_aria` is one), a `table` float,
-    //    or an empty one. There is no image to be the alternative to.
-    //  * MORE than one. A `\Description` is scoped to the whole float, so on a
-    //    multi-panel figure it describes the ensemble; making it panel 1's
-    //    `@alt` would assert that one sentence is the alternative for one
-    //    panel, which is a claim the author never made. The review says "the
-    //    first image"; we narrow that to the case where "first" is also "only",
-    //    where it is unambiguous.
-    //
-    // We can only see the graphics ALREADY BUILT when `\Description` is
-    // constructed, so a `\Description` written BEFORE its `\includegraphics`
-    // falls into the first case. That is the safe direction to fail — the
-    // description is still announced, just not as the image's alternative — the
-    // warning names it as a possible cause, and acmart's own documentation puts
-    // `\Description` after the graphic.
-    //
-    // acmart's NEWER mechanism for the same purpose is `\includegraphics[alt=…]`
-    // (switched on by `\DocumentMetadata`), handled in `graphicx_sty.rs` and
-    // landing on the same `description` attribute. When an author uses BOTH —
-    // e.g. arXiv:2607.21760, which repeats the same paragraph in each — the
-    // explicit `alt=` WINS: it names one image, while `\Description` names the
-    // float, so the more specific statement stands. `\Description` then only
-    // adds its `aria-describedby` references.
-    before_construct => sub[document, whatsit] {
-      let Some(id) = whatsit.get_property("id").map(|v| v.to_string()) else {
-        return Ok(());
-      };
-      // Does the long description contain markup, or is it plain text?
-      let long_is_plain = whatsit
-        .get_arg(2)
-        .map(|d| d.revert())
-        .transpose()?
-        .is_some_and(|tks| {
-          tks.unlist_ref().iter().all(|t| {
-            matches!(
-              t.get_catcode(),
-              Catcode::LETTER | Catcode::OTHER | Catcode::SPACE | Catcode::EOL
-            )
-          })
-        });
-      // `\Description[]{…}` gives an empty optional argument, which the
-      // template's `?#1(…)` declines to emit — so there is no short note and
-      // no id to reference. Treat it as absent.
-      let short = whatsit
-        .get_arg(1)
-        .map(|d| d.to_attribute())
-        .filter(|s| !s.is_empty());
-      let short_id = whatsit.get_property("shortid").map(|v| v.to_string());
-      let Some(mut figure) = document.get_element() else {
-        return Ok(());
-      };
-      let mut graphics = document.findnodes(".//ltx:graphics", Some(&figure));
-      // Exactly one image: it IS the figure, so the description is its
-      // alternative. Zero or several: see the note above, keep it on the float.
-      let lone_graphic = (graphics.len() == 1).then(|| graphics.remove(0));
-      let mut described_by: Vec<String> = Vec::new();
-      match lone_graphic {
-        Some(mut graphic) => {
-          // `\includegraphics[alt=…]` already spoke for this image; it is the
-          // more specific statement, so it stands.
-          let alt = if graphic.get_attribute("description").is_some() {
-            None
-          } else if short.is_some() {
-            short.clone()
-          } else if long_is_plain {
-            whatsit.get_arg(2).map(|d| d.to_attribute())
-          } else {
-            None
-          };
-          match alt {
-            // Something of ours became the alternative. Whatever did NOT is
-            // still worth announcing, so reference it.
-            Some(text) => {
-              document.set_attribute(&mut graphic, "description", &text)?;
-              if short.is_some() {
-                described_by.push(id);
-              }
-            },
-            // Nothing of ours is the alternative — the author's own `alt=`
-            // holds it, or the lone description carries markup. Reference
-            // everything we emitted.
-            None => {
-              if short.is_some() && let Some(sid) = short_id {
-                described_by.push(sid);
-              }
-              described_by.push(id);
-            },
-          }
-          if !described_by.is_empty() {
-            add_describedby(document, &mut graphic, &described_by)?;
-          }
-        },
-        // Nowhere better to put it. Attach to the enclosing element rather than
-        // drop the author's annotation, and say so — the text is still
-        // announced, but not as the alternative for any one image, which is
-        // what a `\Description` is for.
-        None => {
-          if short.is_some() && let Some(sid) = short_id {
-            described_by.push(sid);
-          }
-          described_by.push(id);
-          add_describedby(document, &mut figure, &described_by)?;
-          let host = figure.get_name();
-          if graphics.is_empty() && host == "table" {
-            // NOT a fallback: a table float has no image BY CONSTRUCTION, and
-            // acmart asks for a `\Description` on every float — so the table
-            // itself is where the description belongs, and this is the author
-            // doing the right thing. Warning here demoted otherwise-clean
-            // papers: 27 of 45 sampled `no_problem -> warning` regressions in
-            // the 2026-07-30 sandbox-arxiv-2605 rerun were this one message.
-            // Report it (the attachment point is worth knowing), as INFO.
-            Info!("aria", "\\Description",
-              &s!("attached to the enclosing <table> as aria:describedby — a \
-                   table has no image to describe, so this is where the \
-                   description belongs"));
-          } else {
-            let why = if !graphics.is_empty() {
-              s!("it holds more than one image, so which one is described is ambiguous")
-            } else if host == "figure" {
-              s!("the float has no image to describe (a \\Description written \
-                  before its \\includegraphics, or a figure with no graphic)")
-            } else {
-              // Not a float at all — `\Description` outside a figure/table,
-              // where acmart's own `\@Description@present` bookkeeping expects it.
-              s!("it is outside any figure or table, so there is no image to describe")
-            };
-            Warn!("unexpected", "\\Description",
-              &s!("attached to the enclosing <{host}> as aria:describedby, because \
-                   {why}. The text is still announced, but it is not any image's \
-                   alt text; put a \\Description after the \\includegraphics it \
-                   describes, or use \\includegraphics[alt=...] per image"));
-          }
-        },
-      }
-    },
-    // A `\label` after the `\Description` names the float, as in LaTeX, where
-    // `\Description` typesets nothing (acmart.cls:895). `\label` takes the
-    // nearest element with an id from the current node's last child
-    // (`float_to_label`, Perl Document.pm floatToLabel), and that was the note,
-    // which moves into the caption only when the float closes (`arrange_panels`):
-    // 2403.09168's ten labels sat on hidden notes, so each `\ref` pointed at one
-    // (Perl 0.8.8 the same, KNOWN_PERL_ERRORS #535). So the caption already in the
-    // float before it — the last, the description's own — takes the notes now,
-    // where the float's close would put them.
-    after_construct => sub[document, whatsit] {
-      let ids: Vec<String> = ["id", "shortid"]
-        .iter()
-        .filter_map(|key| whatsit.get_property(key).map(|v| v.to_string()))
-        .collect();
-      let Some(float) = document.get_element() else {
-        return Ok(());
-      };
-      let children = float.get_child_elements();
-      let Some(mut caption) = children
-        .iter()
-        .rev()
-        .find(|c| c.get_name() == "caption").cloned() else {
-        return Ok(());
-      };
-      for mut note in children.into_iter().filter(|c| {
-        c.get_name() == "note" && c.get_attribute_ns("id", XML_NS).is_some_and(|id| ids.contains(&id))
-      }) {
-        note.unlink_node();
-        caption.add_child(&mut note)?;
-      }
-    }
-  );
 
   //======================================================================
   // Use \author for EACH author, follow with \orcid, \affiliation, \email as needed.
@@ -550,8 +291,9 @@ LoadDefinitions!({
   DefMacro!("\\postcode{}",      "\\lx@acm@addresspart{postcode}{#1}");
   DefMacro!("\\country{}",       "\\lx@acm@addresspart{country}{#1}");
 
-  DefMacro!("\\titlenote{}",    "\\lx@add@pubnote[role=note]{#1}");
-  DefMacro!("\\subtitlenote{}", "\\lx@add@pubnote[role=note]{#1}");
+  // acmart.cls:1708-1720: footnotes of the title and the subtitle, no label (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921).
+  DefMacro!("\\titlenote{}",    "\\lx@add@pubnote[role=note,name={}]{#1}");
+  DefMacro!("\\subtitlenote{}", "\\lx@add@pubnote[role=note,name={}]{#1}");
   DefMacro!("\\authornote{}",   "\\lx@add@contact[role=note]{#1}");
   // acmart 2026 (acmart.cls:1683-1686): `\correspondingauthor` marks the current author the corresponding one, an
   // envelope (`\ding{41}`) after the name, outside anonymous mode. 76 2609 papers (2609.06664, 2609.07038).
@@ -604,6 +346,9 @@ LoadDefinitions!({
   //======================================================================
   // Acknowledgements
   DefMacro!("\\acknowledgmentsname", "Acknowledgements");
+  // acmart.cls:3570 the heading the class's `{acks}` prints, which papers reuse (`\section*{\acksname}`: 2208.13741,
+  // 2609.08098, 2609.26305); babel's languages rename it (:410-437).
+  RawTeX!(r"\newcommand\acksname{Acknowledgments}");
   // Perl L167-168 ships properties => sub { (name => Digest(T_CS('\acknowledgmentsname'))) }
   // so a user `\renewcommand{\acknowledgmentsname}{Danksagung}` localizes the
   // attribute. Rust previously hard-coded "Acknowledgements", ignoring any
@@ -741,16 +486,25 @@ LoadDefinitions!({
   {\@acmdefinitionbodyfont}{\@acmdefinitionindent}{\@acmdefinitionheadfont}{.}{.5em}%
   {\thmname{#1}\thmnumber{ #2}\thmnote{ {\@acmdefinitionnotefont(#3)}}}");
 
+  // acmart.cls:3460-3489 (TL 2025; 2510.04987's copy :3405-3430): the class's theorems are made at the end of the
+  // preamble, under the `acmthm` key (default true, :86-93), each only when the document has not defined that name,
+  // so an author's own `\newtheorem{theorem}` (numbered as the author says: 2306.01662, PDF "Theorem 1", "Theorem 2")
+  // or `\newcommand{\example}` (2510.04987) wins. Perl's acmart.cls.ltxml:236-243 makes them at class load.
   RawTeX!(r"\theoremstyle{acmplain}");
-  RawTeX!(r"\newtheorem{theorem}{Theorem}[section]");
-  RawTeX!(r"\newtheorem{conjecture}[theorem]{Conjecture}");
-  RawTeX!(r"\newtheorem{proposition}[theorem]{Proposition}");
-  RawTeX!(r"\newtheorem{lemma}[theorem]{Lemma}");
-  RawTeX!(r"\newtheorem{corollary}[theorem]{Corollary}");
-  RawTeX!(r"\theoremstyle{acmdefinition}");
-  RawTeX!(r"\newtheorem{example}[theorem]{Example}");
-  RawTeX!(r"\newtheorem{definition}[theorem]{Definition}");
-  RawTeX!(r"\theoremstyle{acmplain}");
+  RawTeX!(
+    r"\AtEndPreamble{\if@ACM@acmthm
+  \theoremstyle{acmplain}%
+  \@ifundefined{theorem}{\newtheorem{theorem}{Theorem}[section]}{}%
+  \@ifundefined{conjecture}{\newtheorem{conjecture}[theorem]{Conjecture}}{}%
+  \@ifundefined{proposition}{\newtheorem{proposition}[theorem]{Proposition}}{}%
+  \@ifundefined{lemma}{\newtheorem{lemma}[theorem]{Lemma}}{}%
+  \@ifundefined{corollary}{\newtheorem{corollary}[theorem]{Corollary}}{}%
+  \theoremstyle{acmdefinition}%
+  \@ifundefined{example}{\newtheorem{example}[theorem]{Example}}{}%
+  \@ifundefined{definition}{\newtheorem{definition}[theorem]{Definition}}{}%
+  \fi
+  \theoremstyle{acmplain}}"
+  );
 
   Let!("\\proof", "\\@proof");
   Let!("\\endproof", "\\end@proof");
@@ -784,6 +538,9 @@ LoadDefinitions!({
   DefConditional!("\\if@ACM@balance");
   Let!("\\if@ACM@balance", "\\iftrue");
   DefConditional!("\\if@ACM@pbalance");
+  // acmart.cls:86-93 the `acmthm` boolkey (default true): the class's theorem set, made at the end of the preamble.
+  DefConditional!("\\if@ACM@acmthm");
+  Let!("\\if@ACM@acmthm", "\\iftrue");
   // acmart.cls:139 the `anonymous` boolkey, set from the class options below; the class and its
   // author macros (`\correspondingauthor`, :1683) test it (8 2609 papers named it, 2609.06664).
   DefConditional!("\\if@ACM@anonymous");
@@ -1104,6 +861,7 @@ LoadDefinitions!({
       (false, false, false, String::from("manuscript"));
     // acmart.cls:123-130: `balance` defaults true, `pbalance` false.
     let (mut balance, mut pbalance) = (true, false);
+    let mut acmthm = true;
     for option in options.split(',') {
       let option: String = option.chars().filter(|c| !c.is_whitespace()).collect();
       let (key, value) = match option.split_once('=') {
@@ -1120,6 +878,7 @@ LoadDefinitions!({
         "anonymous" => anonymous = flag(&value),
         "balance" => balance = flag(&value),
         "pbalance" => pbalance = flag(&value),
+        "acmthm" => acmthm = flag(&value),
         "format" => format = value.unwrap_or_else(|| String::from("manuscript")),
         "manuscript" | "acmsmall" | "acmlarge" | "acmtog" | "sigconf" | "siggraph" | "sigplan"
         | "sigchi" | "sigchi-a" | "acmengage" | "acmcp"
@@ -1139,6 +898,9 @@ LoadDefinitions!({
     if pbalance {
       Digest!("\\@ACM@pbalancetrue")?;
     }
+    if !acmthm {
+      Digest!("\\@ACM@acmthmfalse")?;
+    }
     if nonacm {
       Digest!("\\@ACM@nonacmtrue")?;
     }
@@ -1148,7 +910,100 @@ LoadDefinitions!({
     if format == "acmcp" {
       Digest!("\\@ACM@acmcptrue")?;
     }
+    // acmart.cls:51-56 `\define@choicekey*+{…}{format}[\ACM@format\ACM@format@nr]`: the format's name and its number
+    // in the choice list, which the class's font and proof settings below dispatch on.
+    let number = ["manuscript", "acmsmall", "acmlarge", "acmtog", "sigconf", "siggraph", "sigplan", "sigchi",
+      "sigchi-a", "acmengage", "acmcp"].iter().position(|f| *f == format).unwrap_or(0);
+    RawTeX!(&s!("\\def\\ACM@format{{{format}}}\\def\\ACM@format@nr{{{number}}}"));
+    // The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`): the format's
+    // geometry (acmart.cls:701-779), as pdflatex gives it after `\maketitle`, which sets the two-column formats in two
+    // columns (:2464-2486 `\twocolumn[\box\mktitle@bx]`) — sigconf, siggraph, sigchi and acmengage 506.295pt in two
+    // 241.147pt columns 2pc apart, sigplan 505.89pt in two of 240.945pt, acmtog 510.295pt in two of 243.147pt (24pt
+    // apart). The registers' 345pt read as the page made a sigconf `figure*` one column wide where the PDF sets it 2.100
+    // (review rev79c2 finding 1). The one-column formats are the registers' page.
+    match format.as_str() {
+      "sigconf" | "siggraph" | "sigchi" | "acmengage" => declare_panel_page(241.14749, 506.295, true),
+      "sigplan" => declare_panel_page(240.94499, 505.89, true),
+      "acmtog" => declare_panel_page(243.14749, 510.295, true),
+      _ => {},
+    }
+    // sigchi-a sets `\@ACM@sigchiamodetrue` (acmart.cls:238-240) and with it a sans body (:888-890
+    // `\renewcommand{\familydefault}{\sfdefault}`; OXIDIZED_DESIGN_DIVERGENCES #779); aamas.cls passes its format on.
+    if format == "sigchi-a" {
+      RawTeX!(r"\@ACM@sigchiamodetrue\renewcommand{\familydefault}{\sfdefault}");
+    }
   }
+  // acmart.cls:214-254: the manuscript, journal and bibstrip flags by format, the journal formats manuscript, acmsmall,
+  // acmlarge, acmtog and acmcp (the class's own tests, and papers', read them: the caption settings below, the
+  // placeholder conference further down).
+  RawTeX!(r"\ifnum\ACM@format@nr=0\relax\@ACM@manuscripttrue\else\@ACM@manuscriptfalse\fi
+\ifcase\ACM@format@nr\relax\@ACM@journaltrue\or\@ACM@journaltrue\or\@ACM@journaltrue
+\or\@ACM@journaltrue\@ACM@journal@bibstrip@or@togtrue\or\@ACM@journalfalse\or\@ACM@journalfalse\or\@ACM@journalfalse
+\or\@ACM@journalfalse\or\@ACM@journalfalse\or\@ACM@journalfalse\@ACM@engagetrue\or\@ACM@journaltrue\fi
+\if@ACM@journal\@ACM@journal@bibstriptrue\@ACM@journal@bibstrip@or@togtrue\else\@ACM@journal@bibstripfalse\fi");
+  // acmart.cls:952-984, after its `\RequirePackage{caption, float}` (:951): caption's settings by format, which every
+  // caption type takes alike — figure, table, a float.sty or newfloat type (minted's `listing`: sigplan's "Listing
+  // 1.", 1807.03757) and the class's own — over caption's AMS default ". " (caption-ams-smf.sto; acmart is amsart's,
+  // caption_sty.rs `CAPTION_DEFAULT_LABELSEP`): the journal formats "Fig. 1. text", sigconf and the other conference
+  // formats "Figure 1: text", sigplan "Figure 1. text". Before, every format read ". " from amsart's `\@makecaption`
+  // and a float.sty type ": " (review rev78s2 finding 5). The names and separators only: the class's caption fonts —
+  // the journals' small sans serif, the conferences' bold, siggraph's italic text, sigchi's small figure and table
+  // captions — are set under the class caption fonts knob alone (caption_sty.rs `CLASS_CAPTION_FONTS`, off by
+  // default; OXIDIZED_DESIGN_DIVERGENCES #884). Guards `perfect_kernel_batch78y::acmart_*`.
+  if caption_sty::class_caption_fonts() {
+    RawTeX!(r"\captionsetup[table]{position=top}
+\if@ACM@journal
+  \captionsetup{labelfont={sf, small},textfont={sf, small}, margin=\z@}\captionsetup[figure]{name={Fig.}}
+\else
+  \captionsetup{labelfont={bf},textfont={bf}, labelsep=colon, margin=\z@}
+  \ifcase\ACM@format@nr\relax\or\or\or\or
+  \or\captionsetup{textfont={it}}
+  \or\captionsetup{labelfont={bf},textfont={normalfont}, labelsep=period, margin=\z@}
+  \or\captionsetup[figure]{labelfont={bf, small},textfont={bf, small}}\captionsetup[table]{labelfont={bf, small},textfont={bf, small}}
+  \or\captionsetup[figure]{labelfont={bf, small},textfont={bf, small}}\captionsetup[table]{labelfont={bf, small},textfont={bf, small}}
+  \or\or
+  \fi
+\fi");
+  } else {
+    RawTeX!(r"\captionsetup[table]{position=top}
+\if@ACM@journal
+  \captionsetup{margin=\z@}\captionsetup[figure]{name={Fig.}}
+\else
+  \captionsetup{labelsep=colon, margin=\z@}
+  \ifnum\ACM@format@nr=6 \captionsetup{labelsep=period}\fi
+\fi");
+  }
+  // The class's title-block fonts by format, which papers set their own title lines in (`\@titlefont`: 12 papers that
+  // ship acmart.cls, 2 on TeX Live's: 2006.07812, 2201.00614, 2201.05893; `\@authorfont`/`\@affiliationfont`:
+  // 1810.00952, 2604.02778): acmart.cls:2515-2539, :2659-2687; the proof heading's font and indent (:3490-3508;
+  // 2608.06906).
+  RawTeX!(r"\def\@titlefont{\ifcase\ACM@format@nr\relax\LARGE\sffamily\bfseries\or\LARGE\sffamily\bfseries
+\or\LARGE\sffamily\bfseries\or\Huge\sffamily\or\Huge\sffamily\bfseries\or\Huge\sffamily\bfseries\or\Huge\bfseries
+\or\Huge\sffamily\bfseries\or\Huge\bfseries\or\Huge\sffamily\bfseries\or\LARGE\sffamily\bfseries\fi}
+\def\@authorfont{\Large\sffamily}\def\@affiliationfont{\normalsize\normalfont}
+\ifcase\ACM@format@nr\relax
+\or\def\@authorfont{\large\sffamily}\def\@affiliationfont{\small\normalfont}
+\or
+\or\def\@authorfont{\LARGE\sffamily}\def\@affiliationfont{\large}
+\or\def\@authorfont{\LARGE}\def\@affiliationfont{\large}
+\or\def\@authorfont{\normalsize\normalfont}\def\@affiliationfont{\normalsize\normalfont}
+\or\def\@authorfont{\Large\normalfont}\def\@affiliationfont{\normalsize\normalfont}
+\or\def\@authorfont{\bfseries}\def\@affiliationfont{\mdseries}
+\or\def\@authorfont{\bfseries}\def\@affiliationfont{\mdseries}
+\or\def\@authorfont{\LARGE}\def\@affiliationfont{\large}
+\or\def\@authorfont{\large\sffamily}\def\@affiliationfont{\small\normalfont}
+\fi
+\def\@proofnamefont{\scshape}\def\@proofindent{\indent}
+\ifnum\ACM@format@nr=6 \def\@proofnamefont{\itshape}\def\@proofindent{\noindent}\fi");
+  // The title block's registers, which papers set before their own title code (`\author@bx@sep=0.5pc`: 2606.30549,
+  // 2607.17095, 2608.10413, 2608.17671, 2609.14255, …; `\num@authorgroups`: 2608.24300; `\@ACM@title@width`:
+  // 2608.20335, 2609.23169): acmart.cls:1613-1614, :1767, :2225, :2758-2761. The procedures that fill them
+  // (`\@mktitle`, `\@mkauthors`, `\@printendtopmatter`) are not ported: the title block is the frontmatter here.
+  RawTeX!(r"\newcount\num@authorgroups\num@authorgroups=0\relax\newlength\@ACM@title@width\newbox\mktitle@bx
+\newbox\author@bx\newdimen\author@bx@wd\newskip\author@bx@sep\author@bx@sep=1pc\relax");
+  // The placeholder conference outside the journal formats (acmart.cls:1597-1600), without its note.
+  RawTeX!(r"\if@ACM@journal\else\gdef\acmConference@shortname{Conference'17}\gdef\acmConference@name{ACM Conference}
+\gdef\acmConference@date{July 2017}\gdef\acmConference@venue{Washington, DC, USA}\fi");
   AddToMacro!("\\lx@maketitle@body", "\\lx@acm@copyright");
 
   // What the acmart 2.x versions add (TL 2025's acmart.cls, as the newer shipped copies; older copies lack them, so a
@@ -1233,4 +1088,34 @@ fn separates_names(tokens: &[Token]) -> bool {
     }
     depth == level && !math && *t == T_OTHER!(",")
   })
+}
+
+/// acmart.cls:131-138's `natbib` boolkey (`\ExecuteOptionsX{natbib=true}`), as xkeyval's `\ProcessOptionsX` sees the
+/// class's options: `\opt@acmart.cls` (or `\@classoptionslist`), the last setting winning, a bare `natbib` true.
+fn acmart_natbib_option() -> Result<bool> {
+  let mut options = String::new();
+  for list in ["\\opt@acmart.cls", "\\@classoptionslist"] {
+    if let Some(defn) = lookup_definition(&T_CS!(list))?
+      && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
+    {
+      options = body.to_string();
+      break;
+    }
+  }
+  let mut natbib = true;
+  for option in options.split(',') {
+    let option: String = option.chars().filter(|c| !c.is_whitespace()).collect();
+    match option.split_once('=') {
+      Some(("natbib", value)) => {
+        let value = value
+          .strip_prefix('{')
+          .and_then(|v| v.strip_suffix('}'))
+          .unwrap_or(value);
+        natbib = value.eq_ignore_ascii_case("true");
+      },
+      None if option == "natbib" => natbib = true,
+      _ => {},
+    }
+  }
+  Ok(natbib)
 }

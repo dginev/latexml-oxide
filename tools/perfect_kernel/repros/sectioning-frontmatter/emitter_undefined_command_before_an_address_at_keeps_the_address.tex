@@ -1,0 +1,17 @@
+% mechanism: an undefined command glues an address when the same word has ink on both sides of it before its `@`
+%   (`events::glues_an_address`, `Event::glued_undef`): a local part wholly before the command ("ann|@",
+%   `ann\foo@x.org`) is the address itself, which is read as without the command, the segmentation unchanged.
+%   OXIDIZED_DESIGN_DIVERGENCES #983
+% witness: review revERR2b finding 3 (ERR2, ERR2b: 3 creators, a spurious "ann \foo @x.org"; with `\def\foo{}`, 2)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 1 "Undefined control sequence": "Ann Able, ann@x.org" and "Bob Baker, bob@y.org"
+% engines: Perl 0.8.8: 1 Error, 4 creators (its split at the commas: Ann Able, ann<ERROR>\foo</ERROR>@x.org, Bob Baker,
+%   bob@y.org); `\def\foo{}` (ours): creators Ann Able (e-mail ann@x.org) and Bob Baker (e-mail bob@y.org)
+% expect:  1 Error (`\foo`, raised by the flush's net: the address is written as its text), 0 Warnings; the creators
+%   Ann Able (e-mail ann@x.org) and Bob Baker (e-mail bob@y.org)
+% status:  RED (ERR2b) -> GREEN (ERR2c)
+\documentclass{article}
+\author{Ann Able, ann\foo@x.org \and Bob Baker, bob@y.org}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

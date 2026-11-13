@@ -1,10 +1,12 @@
 % witness: 63g review r2 (synthetic; HEAD alike): two `\bib` keys in one biblist that differ only in case
 % oracle:  pdflatex 0 errors: "Text [1], [2]."; References [1] Ann Able, First (2001); [2] Other (2005) — amsrefs keys
 %          are case-sensitive, two entries
-% engines: rust 63g = 1 bibitem ("Other"), the first merged away under the lowercased key (scan_bibentries), no
-%          warning naming the loss; Perl's MakeBibliography `lc` alike
-% expect:  2 bibitems, both printed and each cited by its own \cite; or, at the least, a Warning naming the merged key
-% status:  RED (63g)
+% engines: rust 63g = 1 bibitem ("Other"), the first merged away under the lowercased key (scan_bibentries), only
+%          post Warnings (case_mismatch, missing_keys), 0 errors; Perl's MakeBibliography `lc` alike
+% expect:  2 bibitems, both printed and each cited by its own \cite; until then an Error naming the replaced entry
+% status:  PARTIAL (int27): the lost entry is an honest Error naming both keys (make_bibliography.rs
+%          `scan_bibentries`; guard `amsrefs_case_distinct_keys::case_distinct_amsrefs_keys_report_the_lost_entry`); RED
+%          for keeping both entries (case-sensitive keys through citation and bibliography)
 \documentclass{amsart}
 \usepackage{amsrefs}
 \begin{document}

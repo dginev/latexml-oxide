@@ -1,0 +1,28 @@
+% witness: synthetic (QA41 side finding: psfrag_sty.rs `\psfrag` is `DefPrimitive!(…, None)` where Perl
+%          psfrag.sty.ltxml:46-53 saves the fragment for its `\includegraphics` hook; census: 98 of the 30k uniform
+%          sample use `\psfrag` (~9,100 arXiv papers), 630 load psfrag)
+% oracle:  latex + dvips, 0 `!`, prints α in place of the figure's "A" (psfrag works through dvips only; pdflatex
+%          -no-shell-escape cannot convert the EPS, 1 `!`); Perl turns an EPS figure with saved fragments into an `ltx:picture` whose `tex=` replays
+%          them (psfrag_requirepicture, only through its `\@includegraphics`/`\@includegraphicx`/`\epsfbox` hooks)
+% engines: rust int166a = a plain `<graphics graphic="psfragfig.eps">`, the fragment dropped, 0 errors, 0 warnings;
+%          rust PSF1 = the same `<graphics>`, 1 Warning "missing_feature:psfrag" naming 'A' and psfragfig.eps;
+%          perl 0.8.8 = the same plain `<graphics>` for this graphicx shape (its hook does not fire), 0 errors
+% expect:  the replacement reaches the output (PSFR); until then one Warning counts the dropped fragment
+% status:  RED (rendering); the count GREEN since PSF1, guard perfect_kernel_batchpsf1::batchpsf1_dropped_fragments_are_counted
+% moves:   PSFR after the merge (render the fragments)
+\documentclass{article}
+\usepackage{graphicx,psfrag}
+\begin{filecontents*}{psfragfig.eps}
+%!PS-Adobe-3.0 EPSF-3.0
+%%BoundingBox: 0 0 72 36
+/Times-Roman findfont 12 scalefont setfont
+10 10 moveto (A) show
+showpage
+\end{filecontents*}
+\begin{document}
+\begin{figure}
+\psfrag{A}{$\alpha$}
+\includegraphics{psfragfig.eps}
+\caption{Fragments}
+\end{figure}
+\end{document}

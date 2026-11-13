@@ -1,0 +1,23 @@
+% witness: 2409.01115 (sn-jnl, siunitx + tikz: `\tikzmath{… \ya = 1.45; \yb = .6;}` in images/SROV.tikz, 1,001 errors
+%          and a Fatal, every \ref after the figure dangling)
+% oracle:  pdflatex: siunitx keeps its unit commands to its unit arguments (`\__siunitx_unit_<name>:w`,
+%          siunitx.sty:6620-6631) and makes its own free ones `\protected` `\ERROR` at \begin{document}
+%          (siunitx.sty:8369-8378); `\yb` (yoctobarn, siunitx-version-1.cfg only) is undefined: "B. D. Then km."
+% engines: rust int100c = `\yb` let to `\relax` at `\DeclareSIUnit` (Perl siunitx.sty.ltxml:1352, KNOWN_PERL_ERRORS
+%          #1181); tikz's math library takes a defined non-macro for a keyword and builds
+%          `\csname tikz@math@process@keyword@\yb…` (1,001 errors)
+% expect:  0 errors, 0 warnings; "B." (\yb undefined), "D." (\metre defined), the picture, "km"
+% status:  RED (int100c) -> GREEN (80l: siunitx_sty.rs declares units without defining their commands)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{siunitx}
+\usepackage{tikz}
+\usetikzlibrary{math}
+\begin{document}
+\ifdefined\yb A\else B\fi. \ifdefined\metre D\else U\fi.
+\tikzmath{ \ya = 1.5; \yb = 0.6; }
+\begin{tikzpicture}
+\draw (0,\ya) -- (1,\yb);
+\end{tikzpicture}
+Then \si{\kilo\metre}.
+\end{document}

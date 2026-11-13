@@ -1,0 +1,21 @@
+% mechanism: a document's `\DeclareCaptionStyle{ruled}{…}` (caption3.sty:629-637) replaces caption.sty:907's `ruled`
+%   style, which a ruled float.sty float takes as it begins (caption.sty:864 `\caption@setstyle*\float@style`, after
+%   caption3.sty:655-662 `\caption@resetstyle`), so the AAAI templates' `labelfont=normalfont,labelsep=colon` makes
+%   their ruled algorithms "Algorithm 1: …" while figures keep the global `labelfont=bf,labelsep=period`.
+%   caption_sty.rs had `\DeclareCaptionStyle` as a no-op and no caption styles (`declare_caption_style`,
+%   `float_style_setting`).
+% witness: 2512.05464 (AAAI-26 `\DeclareCaptionStyle{ruled}{labelfont=normalfont,labelsep=colon,strut=off}`), the
+%   AAAI author kits; review rev78s2 finding 2
+% oracle:  pdflatex 0 errors; "Algorithm 1: Two." (label CMR10), "Figure 1. Three." (label CMBX10)
+% engines: perl: caption settings not applied (KNOWN_PERL_ERRORS #795); rust int61a: "Algorithm 1. Two." bold
+% expect:  0 errors, 0 warnings; the algorithm's tag "Algorithm 1" closed by ": ", no bold; the figure's bold, ". "
+% status:  GREEN (78v)
+\documentclass{article}
+\usepackage{caption}
+\usepackage{algorithm}
+\DeclareCaptionStyle{ruled}{labelfont=normalfont,labelsep=colon,strut=off}
+\captionsetup{labelfont=bf,labelsep=period}
+\begin{document}
+\begin{algorithm}[h]Y\caption{Two.}\end{algorithm}
+\begin{figure}[h]Y\caption{Three.}\end{figure}
+\end{document}

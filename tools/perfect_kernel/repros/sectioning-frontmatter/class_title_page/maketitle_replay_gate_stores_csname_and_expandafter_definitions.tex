@@ -1,0 +1,19 @@
+% The replay gate reads `\expandafter\def\csname tp@mark\endcsname{…\@thefnmark}` and
+% `\expandafter\def\expandafter\tp@x\expandafter{\@venue\@thefnmark}` as TeX runs them: the name tokens run, and the
+% one token after the brace expands, while the rest of each replacement text is stored (tex.web §473) — the body
+% never calls either macro, so `\@thefnmark` (undefined outside a footnote) does not stop the replay (sect05.rs
+% `vocabulary_is_defined`; 75a review r2 finding 2).
+% oracle:  pdflatex (tpstored.cls beside it) 0 errors: "Venue: Widget Conf / Body text." (the class's `\maketitle`
+%          prints no title)
+% engines: rust 67int28 and 75a r2 (a59de2000b) = 0 errors, the venue lost (Info "not replayed: it uses \@thefnmark");
+%          perl (OmniBus, the class is not read) = 1 error (\venue undefined)
+% expect:  0 errors, 0 warnings; "Venue: Widget Conf" once, a paragraph after the title
+% status:  RED (75a r2) -> GREEN (75a r3)
+% preload: ar5iv.sty
+\documentclass{tpstored}
+\venue{Widget Conf}
+\begin{document}
+\title{On Widgets}\author{A. Author}
+\maketitle
+Body text.
+\end{document}

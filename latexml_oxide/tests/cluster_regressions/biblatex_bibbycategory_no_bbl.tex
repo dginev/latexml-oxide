@@ -1,0 +1,15 @@
+% witness: 77a r2 review probe p5 without a .bbl
+% oracle:  pdflatex without biber prints no bibliography; with biber none either (the category has no keys). The
+%          binding reads the .bib when there is no .bbl and applies no filter there (OXIDIZED_DESIGN_DIVERGENCES #762)
+% engines: rust 77a r1 printed nothing (no category had keys); before 77a one list of both entries
+% expect:  clean (0 errors, 0 warnings); one bibliography {knuth, lamport}, as before 77a
+% status:  GREEN (77a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[backend=biber]{biblatex}
+\addbibresource{biblatex_bibbycategory_no_bbl.bib}
+\DeclareBibliographyCategory{books}
+\begin{document}
+X \nocite{knuth,lamport}.
+\bibbycategory
+\end{document}

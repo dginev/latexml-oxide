@@ -1,0 +1,20 @@
+% witness: review rev92a_r3 B1 (probe c6): aa's `\offprints` with the paper's own `\email`
+% oracle:  pdflatex (1707.06238's aa.cls): "Send offprint requests to: A. Able, carl@z.org"
+% engines: perl 0.8.8 = 0 errors (1 warning, ar5iv.sty absent), carl@z.org in the `ltx:pubnote`; rust int120a = the
+%          same; rust 92a r3 = the same XML, the shadow carl@z.org on Bob Baker (owner:own-call), 92a r2 on Ann Able
+% expect:  0 errors, 0 warnings; the call is no binding's, so it stays the note's text: no creator holds carl@z.org,
+%          in the XML or the reading
+% status:  RED (92a r3) -> GREEN (92a r4)
+% preload: ar5iv.sty
+\documentclass{aa}
+\usepackage{hyperref}
+\renewcommand{\email}[1]{\texttt{#1}}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2}}
+\institute{Univ X \and Univ Y}
+\offprints{A. Able, \email{carl@z.org}}
+\abstract{A}{B}{C}{D}{E}
+\maketitle
+Text.
+\end{document}

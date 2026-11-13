@@ -162,7 +162,7 @@ impl Scan {
   /// Build common properties for a scanned element WITHOUT mutating self.
   /// Labels and tag nodes are collected but not yet registered.
   fn collect_common(
-    &self,
+    &mut self,
     doc: &PostDocument,
     node: &Node,
     tag: &str,
@@ -208,7 +208,6 @@ impl Scan {
     }
 
     // tag nodes (refnum, typerefnum, etc.)
-    // Stored as String, where Perl stores the cleaned deep copy.
     let mut has_refnum = false;
     for tagnode in child_tag_nodes(node) {
       let key = if let Some(role) = tagnode.get_attribute("role") {
@@ -223,8 +222,17 @@ impl Scan {
       if key == "refnum" {
         has_refnum = true;
       }
-      // Perl `Scan.pm` L269: the tag is stored as its `cleanNode` copy.
-      sp.push(&key, Value::from(clean_text_content(&tagnode)));
+      // Perl `Scan.pm` L269: the tag is stored as its `cleanNode` copy, which a reference deep-copies. A tag of text
+      // alone is stored as that text (the same content, no copy); one with markup as its copy, so that a reference
+      // prints a `\tag{$\mathrm{P_1}$}`'s math as math, "(P1)" where the flattened text read "( P 1 )" with the
+      // formula's whitespace (2609.28438, 1905.03839, 2510.06152). Guard
+      // `perfect_kernel_batch78j::cleveref_document_format_with_math_in_the_tag`.
+      let value = if has_markup(&tagnode) {
+        self.clean_node(doc, &tagnode)
+      } else {
+        Value::from(clean_text_content(&tagnode))
+      };
+      sp.push(&key, value);
     }
 
     // pdflatex parity (surpass-Perl): a `\label` placed at `\begin{eqnarray}` (or
@@ -1178,6 +1186,16 @@ fn clean_text_content(node: &Node) -> String {
   let mut text = String::new();
   push_clean_text(node, &mut text);
   text
+}
+
+/// Whether `node` holds markup: an element child with text, other than an `ltx:indexmark` (which a stored copy leaves
+/// out). An empty one (a name's `<ltx:text/>` from a group that typeset nothing) adds nothing to the text.
+fn has_markup(node: &Node) -> bool {
+  std::iter::successors(node.get_first_child(), |child| child.get_next_sibling()).any(|child| {
+    child.get_type() == Some(NodeType::ElementNode)
+      && !is_indexmark(&child)
+      && !clean_text_content(&child).trim().is_empty()
+  })
 }
 
 fn push_clean_text(node: &Node, text: &mut String) {

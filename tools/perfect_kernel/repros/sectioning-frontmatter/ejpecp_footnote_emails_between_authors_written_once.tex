@@ -1,0 +1,25 @@
+% mechanism: as ejpecp_footnote_email_setter_written_once.tex — each note followed by an `\and` is written from its
+%   argument, whose digestion ran its `\EMAIL` a second time, beside the entry the recovery writes (emit.rs
+%   `recover_queued`); a note closing the block was written by its text, its `\EMAIL` once. Two authors, one of each
+% witness: 2206.01959, 1904.02213 (two authors), 1904.07135 (four)
+% oracle:  pdflatex (TL 2025's ejpecp.cls, -no-shell-escape) 0 errors: "Ann Able* Bob Baker†", footnotes "*Univ X
+%          E-mail: ann@x.org", "†Univ Y E-mail: bob@y.org"
+% engines: rust int157a = two contacts by their text (2 Warnings), two e-mail notes; P21e = three e-mail notes (Ann
+%          Able's twice), 1 Warning (Bob Baker's note by its text)
+% expect:  0 errors, 1 warning (Bob Baker's note by its text); Ann Able (note "Univ X"), Bob Baker (note "Univ Y"),
+%          exactly one e-mail note per address
+% status:  RED (P21e) -> GREEN (EJ1)
+% preload: ar5iv.sty
+\documentclass[EJP]{ejpecp}
+\TITLE{T}
+\DOI{vVOL-PID}
+\AUTHORS{%
+  Ann Able\footnote{Univ X
+    \EMAIL{ann@x.org}}
+  \and
+  Bob Baker\footnote{Univ Y
+    \EMAIL{bob@y.org}}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

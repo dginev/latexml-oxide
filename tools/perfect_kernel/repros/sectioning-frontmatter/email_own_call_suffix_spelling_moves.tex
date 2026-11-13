@@ -1,0 +1,24 @@
+% An author's own call keeps an address another name spells better only where a key of the holder's name is a whole
+%   word of the local part or opens one (FIDELITY_CHARTER §4 #420): Mark Anderson's "anderson" is the tail of
+%   `sanderson@`, so the address moves to Lee Sanderson, whose whole surname it is (review rev107f finding 3; #420's
+%   count, 22 of 24 addresses set after the last author his).
+% witness: none (synthetic) — rev107f probe s_own_suffix
+% oracle:  pdflatex 0 errors: "Lee Sanderson1 and Mark Anderson2, ∗", "∗ sanderson@y.edu" (REVTeX's endnote)
+% engines: rust 107f r1 (2afa80e78b) = sanderson@ kept on Mark Anderson; int139a4 = moved to Lee Sanderson
+% expect:  0 errors, 0 warnings; Lee Sanderson: Univ X, Town, sanderson@y.edu; Mark Anderson: Univ Y, City
+% status:  RED (107f r1) -> GREEN (107f r2)
+% preload: ar5iv.sty
+\documentclass[aps,prl,superscriptaddress]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Lee Sanderson}
+\affiliation{Univ X, Town}
+\author{Mark Anderson}
+\email{sanderson@y.edu}
+\affiliation{Univ Y, City}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,24 @@
+% mechanism: the queue reading of the names' marks (`queue_reading::author_marks`, `argument_marks` on
+%   `queued_name`) finds no mark in REVTeX names under a math-active `^` (catcode 12, mathcode "8000, breqn/flexisym's
+%   setting from `\begin{document}`), so no name requests a label and the group rule copies the whole block on every
+%   author; the amsart twin of the list reads them (P4b2's `api_cut_math_active_marks_list`)
+% witness: synthetic (P4b3; breqn's math-active `^`, 2504.02633)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1,2 , Bob Baker2,3 , and Cy Cole / Univ A, Town A /
+%          2Univ B, Town B / 3Univ C, Town C"
+% engines: P4b3base and P4b3: every author "Univ A, Town A 2 Univ B, Town B 3 Univ C, Town C"
+% expect:  Ann Able "Univ A, Town A", "2 Univ B, Town B"; Bob Baker "2 Univ B, Town B", "3 Univ C, Town C"; Cy Cole none
+% status:  RED (P4b3base, P4b3)
+% moves:   post-merge (the names' marks under a math-active `^` in the queue reading's rehearsal)
+\documentclass[aps,prl]{revtex4-2}
+\begingroup\catcode`\^=\active \global\let^=\sp \endgroup
+\AtBeginDocument{\mathcode`\^="8000 \catcode`\^=12 }
+\begin{document}
+\title{T}
+\author{Ann Able$^{1,2}$}
+\author{Bob Baker$^{2,3}$}
+\author{Cy Cole}
+\affiliation{Univ A, Town A\\ $^{2}$Univ B, Town B\\ $^{3}$Univ C, Town C}
+\begin{abstract}x\end{abstract}
+\maketitle
+Text.
+\end{document}

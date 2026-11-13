@@ -159,6 +159,7 @@ A\index{a_b@\texttt{a\_b}}
 B\idx{\key @\show}
 C\index{\key @\show}
 D\index{plain}\index{p|see{plain}}
+\begin{theindex}\end{theindex}
 \end{document}
 ",
     true,
@@ -187,6 +188,7 @@ fn tcolorbox_doccommand_index_key_expands() {
 \begin{document}
 \begin{docCommand}{tag_if_active:TF}{}\end{docCommand}
 Text.
+\begin{theindex}\end{theindex}
 \end{document}
 ",
     true,

@@ -143,6 +143,7 @@ figure_attributes =
   Positionable.attributes,
   Transformable.attributes,
   Backgroundable.attributes,
+  PanelGrid.attributes,
   Data.attributes,
   
   ## the vertical floating placement parameter that determines where the object is displayed.
@@ -168,6 +169,7 @@ table_attributes =
   Positionable.attributes,
   Transformable.attributes,
   Backgroundable.attributes,
+  PanelGrid.attributes,
   Data.attributes,
   
   ## the vertical floating placement parameter that determines where the object is displayed.
@@ -190,6 +192,7 @@ float_attributes =
   Positionable.attributes,
   Transformable.attributes,
   Backgroundable.attributes,
+  PanelGrid.attributes,
   Data.attributes,
 
   ## The kind of float; could be something like a listing, or some other thing

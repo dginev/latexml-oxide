@@ -1,0 +1,17 @@
+% A template's `\author` replaced by a second one: LaTeX's `\def\@author` drops the first and Perl dequeues it
+% (Base_Utility.pool.ltxml:691), so its undefined `\name`, `\email` are never read. The flush's net raised the Errors
+% its rehearsal held (`reading.rs` `HeldUndefined`); a superseded block's are not collected (`reading::superseded`).
+% witness: 2605.26243 (JMLR `\name`/`\email`), 2605.25890 (llncs, an `\IEEEauthorblockN` template)
+% oracle:  pdflatex 0 `!`; Perl 0 errors
+% engines: rust CAU1: 2 errors (undefined:\name, undefined:\email); output already right
+% expect:  0 errors, 0 warnings; one creator Ann Lee, Univ A
+% status:  RED (CAU1) -> GREEN (SBX2; perfect_kernel_error_boundary)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{\name Ann Lee \email a@b.edu}
+\author{Ann Lee \\ Univ A}
+\begin{document}
+\maketitle
+Hi.
+\end{document}

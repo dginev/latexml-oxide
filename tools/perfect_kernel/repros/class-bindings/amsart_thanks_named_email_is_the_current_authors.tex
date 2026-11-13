@@ -1,0 +1,24 @@
+% witness: review rev92a_r2 B1 (probe q20: a name in amsart's `\thanks` before an `\email` call)
+% oracle:  pdflatex: "Email address: carl@z.org" under University Y, City, Bob Baker's address; the note prints only
+%          "Correspondence to Ann Able,"
+% engines: perl 0.8.8 = 0 errors, 3 warnings (the orphaned `\ref` labels), carl@z.org on Bob Baker; rust 90a = 0 errors,
+%          carl@z.org on Bob Baker, the addresses on a nameless creator (the writer declined); rust 92a r2 = written,
+%          carl@z.org on Ann Able by the note's name (api:note-name), Bob Baker without it
+% expect:  0 errors, 0 warnings; amsart's `\email` is not printed in place (amsart.cls:538 stores it for the address
+%          block), so the call is the current author's own (FIDELITY_CHARTER §4, #420): carl@z.org on Bob Baker
+%          (api:annotate:last owner:own-call), as today's; the writer writes each address to the name requesting it
+% status:  RED (92a r2) -> GREEN (92a r3)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\usepackage{hyperref}
+\begin{document}
+\title{A title}
+\author{Ann Able\textsuperscript{\ref{a1}}}
+\address{\label{a1}University X, Town}
+\email{ann@x.org}
+\author{Bob Baker\textsuperscript{\ref{a2}}}
+\address{\label{a2}University Y, City}
+\thanks{Correspondence to Ann Able, \email{carl@z.org}}
+\maketitle
+Text.
+\end{document}

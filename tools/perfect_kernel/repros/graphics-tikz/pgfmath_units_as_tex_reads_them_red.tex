@@ -1,0 +1,15 @@
+% mechanism: pgf reads `<number><unit>` as TeX's `\pgfmath@dimen=<number><unit>` (pgfmathparser.code.tex:519-530),
+%   in scaled points, and pdfTeX's `px`, `nd`, `nc` are units there (:242-244); ours converts in floating point
+%   (`pgfmath_convert`, the last digit off) and stops before `px`/`nd`/`nc`.
+% witness: synthetic (found by PGR1's sibling sweep)
+% oracle:  pdflatex 0 `!`: [2.00749][2.84526][3.84526][2.0075][2.13394][25.60747]
+% engines: rust int162a (b7acabe304): [2.0075][2.84528][3.84528][2][2][2], 0 errors; PGR1 the same values, and with
+%   the pgfparse Error (held back) 3 Errors (`Left: px+0pt`, `nd+0pt`, `nc+0pt`)
+% expect:  the pdflatex values, 0 errors, 0 warnings
+% status:  RED (PGR1)
+% moves:   post-merge (the unit conversion through the core's TeX-exact `convert_unit_ratio`)
+\documentclass{article}
+\usepackage{pgf}
+\begin{document}
+\pgfmathparse{2bp}[\pgfmathresult]\pgfmathparse{1mm}[\pgfmathresult]\pgfmathparse{1mm+1pt}[\pgfmathresult]\pgfmathparse{2px+0pt}[\pgfmathresult]\pgfmathparse{2nd+0pt}[\pgfmathresult]\pgfmathparse{2nc+0pt}[\pgfmathresult]
+\end{document}

@@ -1,0 +1,20 @@
+% mechanism: a numbered store whose own mark a document macro prints (`\ma` = `\textsuperscript{a}`) under names requesting
+%   numbers: the class numbers the `\and` entries (numinst.cls, llncs.cls:870-885 `\institutename`), and the store's mark,
+%   which no name requests, is the entry's text (`prints_requested_marks`, Option C P4c); P4d declined the numbers at any
+%   store mark read by meaning while the cut read the list by tokens, so every entry went to every author
+% witness: synthetic (revP4d S1, probe r1_macro_letter_mark)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2", "1 aUniv A, Town A", "2 Univ B, Town B"
+% engines: int160c, F0: Ann "a Univ A, Town A", Bob "Univ B, Town B"; P4d (= 9d38af1d10): both authors both entries;
+%          P4c: as int160c; perl: no binding for the class
+% expect:  0 errors, 0 warnings; Ann Able "a Univ A, Town A", Bob Baker "Univ B, Town B"
+% status:  RED (P4d) -> GREEN (P4c; guard perfect_kernel_batchc1::class_numbered_institutes_read_by_meaning)
+% preload: ar5iv.sty
+\documentclass{numinst}
+\newcommand\ma{\textsuperscript{a}}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$}
+\institute{\ma Univ A, Town A \and Univ B, Town B}
+\maketitle
+Text.
+\end{document}

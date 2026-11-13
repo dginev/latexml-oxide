@@ -1,0 +1,14 @@
+% witness: the 77y review (finding 1, probes a1-a3, a7, a8; no paper in its scan of the 2026 corpus)
+% oracle:  pdflatex 0 errors: four \and columns, each a linked name over its institution: Lawrence E. Page (Univ A),
+%          Hans-Peter Link (Univ B), Lucy Page-Smith (Univ C), Mary Ann Code (Univ D)
+% engines: rust 77y r1 = 0 errors; each column a creator named by its institution holding the name as a URL contact
+% expect:  0 errors, 0 warnings; four authors, each linked name with its institution
+% status:  RED (77y r1) -> GREEN (77y r2)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{\href{https://x.org/lp}{Lawrence E. Page} \\ Univ A \and \href{https://x.org/hj}{Hans-Peter Link} \\ Univ B \and \href{https://x.org/ls}{Lucy Page-Smith} \\ Univ C \and \href{https://x.org/mc}{Mary Ann Code} \\ Univ D}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,19 @@
+% mechanism: two glued e-mail labels (`Email:Mail:zz@…`) on an amsart `\address` line: no e-mail contact is made and
+%   the line stays in the address (presumably the first-label filter in `email_line_label`,
+%   email_block_calls.rs:136-138, unconfirmed; revGL1b pre-existing)
+% witness: synthetic (revGL1b; no census paper by shape)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "ANN ABLE", "Univ A, Town, Email:Mail:zz@x.org"
+% engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 0 warnings; Ann Able: one address contact "Univ A,
+%   Town<break/>Email:Mail:zz@x.org", no e-mail contact; perl not run
+% expect:  0 errors, 0 warnings; Ann Able: the address "Univ A, Town" and an e-mail contact zz@x.org named by both
+%   labels ("Email:Mail: ")
+% status:  RED (int158a; RR1 gap 15)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\address{Univ A, Town\\ Email:Mail:zz@x.org}
+\maketitle
+Text.
+\end{document}

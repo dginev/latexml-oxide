@@ -1,0 +1,21 @@
+% witness: synthetic (GA4N, revGA4 q02: the TeX rule of GA0 finding 3, the Error side)
+% oracle:  pdflatex 10 errors ("Missing { inserted" and its cascade): array's `\@arraycr` opens with `\relax\iffalse{\fi`,
+%          no brace for `\noalign` (latex.ltx `\@arraycr`, tex.web §785); rows a/b and c/d printed
+% engines: rust GA4base = 1 Error:expected:{; GA4 = 0 errors: `\@arraycr` and `\@tabularcr` are both `\let` to
+%          `\lx@alignment@newline` (latex_constructs/sect10.rs), so the rule's `\ifx` test takes it for the kernel
+%          tabular's `\@tabularcr`; the rows are kept
+% expect:  1 Error:expected:{ "Missing { inserted"; rows a/b and c/d
+% status:  RED (GA4, GA4b)
+% moves:   post-merge (GA4N: distinct `\@tabularcr`/`\@arraycr`/`\LT@tabularcr` meanings, as
+%          noalign_tabularcr_through_a_macro_red)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeatletter
+\begin{document}
+\begin{tabular}{ll}
+a & b \\
+\hline\noalign\@arraycr
+c & d \\
+\end{tabular}
+After TEXT.
+\end{document}

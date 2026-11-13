@@ -1,0 +1,14 @@
+% witness: review of M3's KPE #1215 (finding 9): base_parameter_types.rs holds a pending `\afterassignment` through `\edef` and `\xdef`, the only forms the kernel pairs with `\restore@protect`
+% oracle:  pdflatex (TL 2025) 0 errors: T=|z⟩'s tokens with no \foo, AFTERFOO printed once.
+% engines: M3r2, M3, int141a: `\foo` written into the toks, AFTERFOO lost. Perl the same.
+% expect:  0 errors; AFTERFOO, and no `\foo` in T
+% status:  RED
+\documentclass{article}
+\usepackage{braket}
+\newtoks\tk
+\newcommand\foo{\typeout{AFTERFOO}}
+\begin{document}
+\afterassignment\foo\tk=\expandafter{\ket{z}}
+\typeout{T=\the\tk}
+Word.
+\end{document}

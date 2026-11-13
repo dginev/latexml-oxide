@@ -1,0 +1,16 @@
+% mechanism: an undefined command right after a `\footnotemark` the reading writes apart from the name: the mark's piece
+%   grows over it (`content::Field::past_held_undefined`), and the name's scan past its marks (`emit::block_names`)
+%   takes it no more — the mark's run counts to where its piece's tokens end. One Error, one ERROR stub.
+%   OXIDIZED_DESIGN_DIVERGENCES #983
+% witness: review revERR2c finding 1 (ERR2, ERR2b, ERR2c: 1 Error, two `<ERROR>\foo</ERROR>` in Ann's personname);
+%   the user's ruling "never twice"
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 1 "Undefined control sequence": "Ann Able* and Bob Baker"
+% engines: Perl 0.8.8: 1 Error, one stub; ERR1b: one stub; Z18a: 0 Errors, no stub (the silenced Error)
+% expect:  1 Error (`\foo`), 0 Warnings; Ann Able with her footnotemark and one ERROR stub, Bob Baker
+% status:  RED (ERR2c) -> GREEN (DEL5b)
+\documentclass{article}
+\author{Ann Able\footnotemark\foo{} \and Bob Baker}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

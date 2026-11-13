@@ -7,6 +7,10 @@ use once_cell::sync::Lazy;
 
 use crate::prelude::*;
 
+/// Set once `\documentstyle` has applied latex209.def's definitions (`\lx@latex@ix@definitions`): a later class
+/// declaration after an OmniBus fallback does not apply them again.
+const LATEX_IX_DEFINITIONS_APPLIED: &str = "lx@latex@ix@definitions@applied";
+
 // Process-once cached env var (see WISDOM #56 — getenv hot-path race).
 static SOURCE_DATE_EPOCH: Lazy<Option<String>> =
   Lazy::new(|| std::env::var("SOURCE_DATE_EPOCH").ok());
@@ -168,6 +172,19 @@ LoadDefinitions!({
       .filter(|c| !c.is_ascii_whitespace())
       .collect();
 
+    // A second class declaration loads no class: latex.ltx's `\documentclass` has made itself `\@twoclasseserror`
+    // (:18617-18618, :18944-18947), which `\documentstyle`'s calls too (:18622-18624), "Two \documentclass or
+    // \documentstyle commands". A first declaration no binding and no file answered (the OmniBus fallback, branch 3
+    // below; `sect01.rs` `\documentclass`) does not count (main-session ruling 2026-10-19): astro-ph9812142's line 1
+    // `#\documentstyle[psfig,epsf]{/disk/3/roud/home/Texstuff/aa}` names a path no tree has (the `#` is no comment:
+    // pdflatex's "You can't use macro parameter character #", then the missing class stops it), and its line 2
+    // `\documentstyle[psfig,epsf]{aa}` loads the real class (aa's `\thesaurus`, `\offprints`, bibitem tags).
+    if lookup_bool(crate::latex_constructs::CLASS_DECLARED) {
+      return Ok(TokenizeInternal!(
+        r"\@latex@error{Two \noexpand\documentclass or \noexpand\documentstyle commands}{The document may only declare one class.}"));
+    }
+    assign_value(crate::latex_constructs::CLASS_DECLARED, true, Some(Scope::Global));
+
     let pool = if class == "amsppt" { "AmSTeX" } else { "LaTeX" };
     input_definitions(pool, InputDefinitionOptions {
       extension: Some(Cow::Borrowed("pool")),
@@ -196,6 +213,18 @@ LoadDefinitions!({
         ..RequireOptions::default()
       });
       return Ok(Tokens!());
+    }
+
+    // latex.ltx:18623 `\documentstyle` inputs latex209.def before the class (`\lx@latex@ix@definitions`), and the
+    // class's end runs latex209.def's `\@documentclasshook` (latex.ltx:18721), ahead of `\compat@loadpackages`.
+    // Once per document: after a first declaration's OmniBus fallback (above), applying it again would save the
+    // settled `\normalsize` as `\original@normalsize` and make the two call each other (astro-ph9812142). The second
+    // class's load is again under the 2e-command traps' `\@gobble`, until its own `\@documentclasshook`.
+    if lookup_bool(LATEX_IX_DEFINITIONS_APPLIED) {
+      digest(TokenizeInternal!(r"\let\@latex@e@error\@gobble"))?;
+    } else {
+      assign_value(LATEX_IX_DEFINITIONS_APPLIED, true, Some(Scope::Global));
+      digest(Tokens!(T_CS!("\\lx@latex@ix@definitions")))?;
     }
 
     // Perl L132-135 `compatDefinitions` — pre-bind LaTeX 2.09 dimensions.
@@ -228,8 +257,8 @@ LoadDefinitions!({
 
     // Perl uses `notex => !LookupValue('INCLUDE_CLASSES')`, but its FindFile prefers a `.ltxml` binding whatever
     // `notex` says (Package.pm:2126-2129; only `noltxml` gates it). These probes ask for bindings, which Rust's
-    // `find_file` consults only under `notex` — so they always set it: with `localrawclasses` (INCLUDE_CLASSES set,
-    // the arXiv profile since 62k) they missed `mn.cls`'s binding and fell to OmniBus (`\ifoldfss` undefined,
+    // `find_file` consults only under `notex` — so they always set it: with raw classes on (INCLUDE_CLASSES set, the
+    // arXiv profile since 62k) they missed `mn.cls`'s binding and fell to OmniBus (`\ifoldfss` undefined,
     // `{keywords}` lost; astro-ph0008081, astro-ph0105519). A paper-local raw `.sty` is probed below, only when no
     // binding answers, so a shipped `mn.sty` yields to the `mn` binding (astro-ph0602372).
     let notex = true;
@@ -272,8 +301,8 @@ LoadDefinitions!({
         &class,
         Some(FindFileOptions { ext_type: Some(Cow::Borrowed("sty")), forbid_ltxml: true, ..Default::default() }),
       ).is_some();
-    // With INCLUDE_CLASSES set (`rawclasses`, or the arXiv profile's `localrawclasses`), a raw `<class>.cls` no binding
-    // answers is the class (Perl latex_constructs.pool.ltxml:115-118 `FindFile(type=>'cls', notex=>!INCLUDE_CLASSES)`
+    // With INCLUDE_CLASSES set (`rawclasses`, the arXiv profile's since 67v, or `localrawclasses`), a raw `<class>.cls`
+    // no binding answers is the class (Perl latex_constructs.pool.ltxml:115-118 `FindFile(type=>'cls', notex=>!INCLUDE_CLASSES)`
     // takes the binding first, then the file), searched locally only under `searchpaths`.
     let class_cls_raw = !class_cls_binding_exact
       && !class_cls_via_fallback
@@ -291,7 +320,13 @@ LoadDefinitions!({
     let class_cls_found = !class_sty_found && (class_cls_binding_exact
       || class_cls_via_fallback || class_cls_raw);
 
-    let after = Tokens!(T_CS!("\\compat@loadpackages"));
+    // (OXIDIZED_DESIGN #179: the "has chapters" answer is stored where the class's load ends, before the style options)
+    crate::latex_constructs::store_chapter_after_latex_ix_class_load(true);
+    let after = Tokens!(
+      T_CS!("\\@documentclasshook"),
+      T_CS!("\\lx@latex@ix@store@chapters"),
+      T_CS!("\\compat@loadpackages")
+    );
 
     if class_sty_found {
       // Branch 1 — class is actually a `.sty` (e.g. spackap, aipproc,
@@ -338,6 +373,7 @@ LoadDefinitions!({
       })?;
     } else if class_cls_found {
       // Branch 2 — `<class>.cls` exists: load it as the document class.
+      crate::latex_constructs::note_document_class(&class);
       load_class(&class, opts_vec, after)?;
       crate::latex_constructs::make_missing_float_counters()?;
     } else {
@@ -357,9 +393,77 @@ LoadDefinitions!({
         as_class: true,
         ..RequireOptions::default()
       })?;
+      // No binding and no file answered: a later `\documentstyle` may still declare the class (above).
+      assign_value(crate::latex_constructs::CLASS_DECLARED, false, Some(Scope::Global));
     }
 
     Ok(Tokens!())
+  });
+
+  // What latex209.def (TL 2025 v0.55, read whole) defines that the native `\documentstyle` path lacks and a 2.09
+  // class or document uses. The size switch first: `\normalsize` is the class's `\@normalsize` (:138-139), which a
+  // 2.09 class defines (`\def\@normalsize{\@setsize\normalsize{12pt}\xpt\@xpt}` then `\normalsize`; witnesses
+  // hep-ex0107077 dp_delphi.cls, 0802.1120 klu.cls, astro-ph0009372 cupconf.cls: "The font size command \normalsize is
+  // not defined"), and at the class's end `\@documentclasshook` (:124-137) settles the pair: `\normalsize` the
+  // class's `\@normalsize`, else `\@normalsize` the class's `\normalsize`, else the kernel's placeholder again.
+  // `\@normalsize` is undefined until then, as in latex.ltx (only its own `\@documentclasshook`, :18348, gives it a
+  // meaning; latex_constructs/sect13.rs's default stands for that hook), so a class defining neither meets
+  // "undefined", not a `\normalsize`/`\@normalsize` loop. Then the 2.09 registers and macros a class reads
+  // (:234-236 `\@cla`, `\@clb`, `\mscount`; :213 `\@lquote`; :229-233 `\SLiTeX`; :342 `\load`; :336-338 the old
+  // font scaling words; :356-367 the old size commands `\vpt`…`\xxvpt`) and latexsym (:307). The LaTeX2e-command
+  // traps come first, as in the file (:79-123): `\usepackage`, `\listfiles`, `\lrbox` and `\@xargdef` call
+  // `\@latex@e@error` before their own meaning, a `\@gobble` until the class's end, where `\@documentclasshook`
+  // makes it latex209.def's "LaTeX2e command … in LaTeX 2.09 document" error (:137) — so a `\usepackage` after
+  // `\documentstyle` errs as in pdflatex and still loads the package (user ruling 2026-10-17; no paper of the 250 `\documentstyle` papers in the census sample
+  // uses it — 0806.0904 redefines `\usepackage` itself); and
+  // the `\@ifdefinable` wrapper lets a 2.09 document define the 2e-only names it lists (`\th`, `\SS`, the guillemets).
+  // The `\ensuremath` trap (:88) is held: our bindings call `\ensuremath` where their 2.09-era originals do not (AASTeX 4
+  // aaspp4.sty `\def\fd{\hbox{$.\!\!^{\rm d}$}}` against aas_support_sty.rs `\ensuremath{\@fd}`; REVTeX 3,
+  // emulateapj), so the trap would fire on binding code pdflatex never runs (astro-ph9606143, astro-ph9701025,
+  // cond-mat9906271, astro-ph9809336, astro-ph9806372) — it lands once binding internals use a kernel-internal
+  // ensure-math (SYNC row). OXIDIZED_DESIGN_DIVERGENCES #725.
+  // Not applied, the native engine standing for them: the missing-file and obsolete-file fallbacks (:140-168, the
+  // `.sty`-as-class branches below), the byte catcodes
+  // (:214-228), `\verb`, the font-selection redefinitions (`\rm`…`\em`, `\@setfontsize`, the symbol fonts and math
+  // alphabets, `\DeclareOldFontCommand`, :273-335), tracefnt (:273), the marks and the output-routine resets. Perl's
+  // `\documentstyle` (latex_constructs.pool.ltxml:97-129) applies none of it (KNOWN_PERL_ERRORS #925). Guard
+  // `perfect_kernel_batch70b::documentstyle_class_sets_normalsize_through_at_normalsize`.
+  DefMacro!(
+    "\\lx@latex@ix@definitions",
+    r"\def\@tempa#1#2{\expandafter\let\csname @@\string#1\endcsname#1%
+\edef#1{\noexpand\@latex@e@error{\noexpand#2}\expandafter\noexpand\csname @@\string#1\endcsname}}%
+\@tempa\usepackage\usepackage\@tempa\listfiles\listfiles
+\@tempa\lrbox{\begin{lrbox}}\@tempa\@xargdef{\newcommand{cmd}[args][def]}%
+\let\@latex@e@error\@gobble
+\def\@latex@e@error@#1{\@latexerr{LaTeX2e command \string#1\space in LaTeX 2.09 document}{This is a LaTeX 2.09
+document, but it contains \string#1.^^JIf you want to use the new features of LaTeX2e, your document^^Jshould begin
+with \string\documentclass\space rather than \string\documentstyle}}%
+\let\@old@ifdefinable\@ifdefinable
+\long\def\@ifdefinable#1{\def\@tempa####1#1####2#1####3#1####4\@tempa{\def\@latex@e@commands{####1####2}####3\expandafter
+\@firstofone\else\expandafter\@old@ifdefinable\expandafter#1\fi}\expandafter\@tempa\@latex@e@commands
+#1\iftrue#1\iffalse#1\@tempa}%
+\let\@@ifdefinable\@ifdefinable
+\def\@latex@e@commands{\usepackage\listfiles\ensuremath\LaTeXe\lrbox\th\dh\ng\dj\TH\DH\NG\DJ\k\r\SS
+\guillemetleft\guillemetright\guillemotleft\guillemotright\guilsinglleft\guilsinglright\quotedblbase\quotesinglbase}%
+\let\original@normalsize\normalsize\def\normalsize{\@normalsize}\let\@normalsize\@undefined
+\def\@documentclasshook{\def\@tempa{\@normalsize}\ifx\normalsize\@tempa\let\normalsize\@normalsize\fi
+\ifx\@normalsize\@undefined\let\@normalsize\normalsize\fi
+\ifx\normalsize\@undefined\let\normalsize\original@normalsize\fi\let\@latex@e@error\@latex@e@error@}
+\ifx\@cla\@undefined\newcount\@cla\fi\ifx\@clb\@undefined\newcount\@clb\fi\ifx\mscount\@undefined\newcount\mscount\fi
+\def\@lquote{\leavevmode{\kern\z@}`}
+\DeclareRobustCommand{\SLiTeX}{{\normalfont S\kern -.06em{\scshape l\kern -.035emi}\kern -.06em\TeX}}
+\let\load\@gobbletwo
+\def\@halfmag{ scaled \magstephalf}\def\@magscale#1{ scaled \magstep#1 }\def\@ptscale#1{ scaled #100 }
+\def\vpt{\edef\f@size{\@vpt}\rm}\def\vipt{\edef\f@size{\@vipt}\rm}\def\viipt{\edef\f@size{\@viipt}\rm}
+\def\viiipt{\edef\f@size{\@viiipt}\rm}\def\ixpt{\edef\f@size{\@ixpt}\rm}\def\xpt{\edef\f@size{\@xpt}\rm}
+\def\xipt{\edef\f@size{\@xipt}\rm}\def\xiipt{\edef\f@size{\@xiipt}\rm}\def\xivpt{\edef\f@size{\@xivpt}\rm}
+\def\xviipt{\edef\f@size{\@xviipt}\rm}\def\xxpt{\edef\f@size{\@xxpt}\rm}\def\xxvpt{\edef\f@size{\@xxvpt}\rm}
+\RequirePackage{latexsym}"
+  );
+
+  // OXIDIZED_DESIGN #179: the 2.09 class's end stores its "has chapters" answer (`store_chapter_after_latex_ix_class_load`).
+  DefPrimitive!("\\lx@latex@ix@store@chapters", {
+    crate::latex_constructs::store_chapter_after_latex_ix_class_load(false);
   });
 
   // Initial alias `\documentstyle = \lx@documentstyle@impl`. The latex_dump

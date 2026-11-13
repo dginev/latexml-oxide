@@ -1,0 +1,23 @@
+% authblk's `\affil[1,2]{These authors contributed equally.}` under `\author[1]{Ann Able}` and `\author[2]{Bob Baker}`
+% (each with an institution too): authblk prints the label as written before the line ("1,2"), and each name its own
+% label. The legend is each carrier's note under the mark its name prints: Ann Able's "1", Bob Baker's "2" — not the
+% list's first label for both (`insert::kind_legend_contacts`; review rev103c2 B-A).
+% witness: 2301.13111 (`\affil[1,2]{\small{\textrm{These authors contributed equally to the manuscript.}}}`)
+% oracle:  pdflatex 0 errors: "Ann Able1,3 Bob Baker2,3", "1,2These authors contributed equally.", "3Univ A, Town"
+% engines: rust int130a = an affiliation of both authors; rust 103c r2 = a note mark="1" on both
+% expect:  0 errors, 0 warnings; Ann Able: the ltx_thanks_contribution note mark="1", Univ A; Bob Baker: the same note
+%          mark="2", Univ A
+% status:  RED (103c r2) -> GREEN (103c r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author[1,3]{Ann Able}
+\author[2,3]{Bob Baker}
+\affil[1,2]{These authors contributed equally.}
+\affil[3]{Univ A, Town}
+\date{}
+\maketitle
+Text.
+\end{document}

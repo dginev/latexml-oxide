@@ -2,6 +2,27 @@
 
 ## Unreleased
 
+  - **`post::PostOptions::nodefaultresources` is now `default_resources`, with the
+    meaning inverted.** The double negative (`nodefaultresources: false`) is gone.
+    The positive name is Perl's option name (`Config.pm:120` `defaultresources!`),
+    and the XSLT step still receives its negation as `noresources`, as
+    `LaTeXML.pm:584` passes it. The CLI flags `--defaultresources` and
+    `--nodefaultresources` are unchanged.
+  - **New `api::convert_to_html_with(tex, &HtmlOptions)`.** `HtmlOptions` holds the
+    settings of the library's HTML entry point, and its `Default` is what
+    `api::convert_to_html(tex)` does, so that function is unchanged. The first
+    setting is `default_resources`; set it to `false` (the `--nodefaultresources`
+    equivalent) to get the page without links to the bundled CSS/JS and with
+    nothing written to the working directory. Construct `HtmlOptions` with
+    `..Default::default()`, so a setting added later leaves callers compiling. The
+    tests use it through `util::test::convert_to_html_page`, so a test run no
+    longer leaves `LaTeXML.css`/`ltx-*.css` in `latexml_oxide/`.
+  - **A symbolic link among the cached format dumps is never trusted on macOS.**
+    `private_to_user` rejected a link by its mode bits, which are `0o777` on
+    Linux but follow the umask on macOS, so a link to another file passed there.
+    It now rejects links by file type. Guard
+    `only_this_users_files_no_one_else_can_write_are_trusted`, red on macOS
+    before.
   - **`--init` no longer segfaults intermittently on Linux.** `LATEXML_INI_MODE`
     was set after the kpathsea prewarm thread started, so glibc's `setenv`
     reallocated `environ` under that thread's `getenv` (7 of 200

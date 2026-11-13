@@ -1,0 +1,49 @@
+% witness: 1402.7103 (proto.cls, a renamed AASTeX 5.2 class: `\ProvidesClass{aastex}`, routed to the aastex binding;
+%          :798 `\def\abstractname{~}`, :1694 `\def\fnum@figure{{\rmfamily Fig.\space\thefigure.---}}`, :1731
+%          `\newcommand\apj{\ref@jnl{\it Astrophys.\ J.}}`); 1106.2565 (emulateapj-rtx4.cls:911's label met the binding's
+%          caption separator under 78h r1: "Fig. 1.—.— "); 1803.06644 (a routed svjour3 copy's `\@thmcountersep`, "Theorem
+%          51" under r1); aascopy.cls is a shortened stand-in
+% oracle:  pdflatex 0 errors (the "provides aastex" LaTeX Warning): "ABSTRACT An abstract. 1 Introduction Text EXTRA.
+%          Journals: Astrophys. J.; Applied Optics. Fig. 1.—: A figure. TABLE 1: A table. Also: [new paragraph] Astron.
+%          J.. Theorem 11 A theorem. ⋆ An item. Acknowledgments Thanks. A Proofs Appendix text."
+% engines: rust dbe1eb8db2 (int47a) = every copy definition of a name the binding owns held only inside its code:
+%          "Figure 1", "Table 1", "ApJ", "Appl. Opt.", "Abstract"; 78h r1 (2460d8ba71) = what only prints stood: "Fig.
+%          1.—" with the binding's ": ", "TABLE 1", "Theorem 11", the item's star, "Astrophys. J.", "ABSTRACT"; Perl: no
+%          binding for aascopy, read raw only under --includestyles
+% expect:  0 errors, 0 warnings; the text names the binding declares stand — "ABSTRACT", the aas_macros journal names
+%          "Astrophys. J." (italic) and "Applied Optics" —; `\figurename` "Fig." stands by rule 1's text default (article
+%          assigns it, the aastex binding does not own it), not by its declaration, in the binding's caption label
+%          "Fig. 1" and separator ": "; the rest is the binding's: its caption formats ("Table 1"), its theorem number
+%          "1.1", its item label "•", its structure (<acknowledgements>, <appendix xml:id="A1"> "Appendix A"); a declared
+%          name the copy defines as more than text (`\aj`, a paragraph) keeps the binding's "AJ"
+% status:  RED (2460d8ba71, 78h r1) -> GREEN (78h r2: a routed copy supplies only the text names its binding declares)
+% preload: ar5iv.sty
+\documentclass{aascopy}
+\newtheorem{thm}{Theorem}[section]
+\begin{document}
+\begin{abstract}
+An abstract.
+\end{abstract}
+\section{Introduction}
+Text \aasextra.
+\begin{figure}[h]
+\caption{A figure.}
+\end{figure}
+\begin{table}[h]
+\caption{A table.}
+\end{table}
+Journals: \apj; \ao.
+
+Also: \aj.
+\begin{thm}
+A theorem.
+\end{thm}
+\begin{itemize}
+\item An item.
+\end{itemize}
+\acknowledgments
+Thanks.
+\appendix
+\section{Proofs}
+Appendix text.
+\end{document}

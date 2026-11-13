@@ -1,0 +1,24 @@
+% witness: 2407.07678, 2605.02769, 2608.18287 (`\inst{\ref{inst1} \orcidicon{\myorcidid}}`, `\inst{1,2,\orcidicon{…}}`,
+%          the paper's `\orcidicon` an
+%          `\href{https://orcid.org/#1}{…tikzpicture…}`); found by 92a r2's shadow census
+% oracle:  pdflatex with 1707.06238's aa.cls: "Ann Able1 and Bob Baker2", the logo after each mark; institutes 1 Univ X,
+%          2 Univ Y
+% engines: perl 0.8.8 = 0 errors, 3 warnings, both institutes lost; rust 90a = 0 errors, both institutes on a nameless
+%          creator (today's XML, unchanged); the shadow read the logo's path data as the marks' labels (92a r2 before
+%          this: its digits parted onto institutes 1-7 of 2407.07678)
+% expect:  0 errors, 0 warnings; in the shadow reading each mark its key or number alone, the ORCID link after it the
+%          name's ORCID
+% status:  RED (90a, the shadow) -> GREEN (92a r2)
+% preload: ar5iv.sty
+\documentclass{aa}
+\usepackage{tikz}
+\usepackage{hyperref}
+\newcommand\orcidicon[1]{\href{https://orcid.org/#1}{\begin{tikzpicture}\draw (0,0) circle (2pt);\end{tikzpicture}}}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{\ref{ia} \orcidicon{0000-0001-2345-6789}} \and Bob Baker\inst{2\orcidicon{0000-0002-3456-7890}}}
+\institute{Univ X\label{ia} \and Univ Y\label{ib}}
+\abstract{A}{B}{C}{D}{E}
+\maketitle
+Text.
+\end{document}

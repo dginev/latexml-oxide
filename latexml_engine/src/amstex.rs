@@ -35,6 +35,12 @@ LoadDefinitions!({
   DefMacro!("\\undefine Token", "\\let#1\\relax");
   // amstex.tex:80-85 the error reporter its packages call (amsppt.sty's `\add@missing`); `\errhelp\defaulthelp@` left out.
   RawTeX!(r"\def\err@#1{\errmessage{AmS-TeX error: #1}}\def\Err@{\err@}");
+  // amstex.tex:251-252, which a style marks the commands it does not allow with (amams.sty:63-64 `\Invalid@\nofrills`;
+  // math0402285, math9806089).
+  RawTeX!(r"\def\Invalid@#1{\def#1{\Err@{\Invalid@@\string#1}}}\def\Invalid@@{Invalid use of }");
+  // amstex.tex:72-73, the mode tests its own macros and the macro files written for it use (Michor's diag.tex,
+  // `\RIfM@`: math9611223 and 6 more papers, 6 of the 7 out of their Fatal; Perl's pool lacks them too).
+  RawTeX!(r"\def\RIfM@{\relax\ifmmode}\def\RIfMIfI@{\relax\ifmmode\ifinner}");
 
   //======================================================================
   // Style choices (Perl L62-119)
@@ -53,11 +59,31 @@ LoadDefinitions!({
   // `\documentstyle{fic}` (fic.sty is a paper-local AmSTeX style
   // derived from amsppt). Without the fallback, `\leftheadtext` and
   // 23 other amsppt CSes stayed undefined.
+  //
+  // amstex.tex:1731 `\def\documentstyle#1{\W@{}\input #1.sty\relax}`: a style of its own with no binding that is on
+  // the search path — the paper's (math0402285's and math9806089's amams.sty, whose `\title#1\endtitle` the amsppt
+  // fallback lacks: a Fatal runaway, 0 words) — is read raw, as `\input` reads it. A style that `\input`s another
+  // style is that style's variation (gr-qc9507042's fic.sty `\input amsppt.sty`, math0406145's grubb-p.sty and
+  // 0803.2668's conm-p-mod.sty `\input ams-p.sty`, not in TeX Live): its changes are to the internals of the style it
+  // builds on, which the amsppt binding stands in for, as before. Perl requires a binding (`notex => 1`,
+  // AmSTeX.pool.ltxml:71) and falls back to amsppt (KNOWN_PERL_ERRORS #1051). Guard
+  // `perfect_kernel_batch78i::amstex_local_style_is_read`.
   DefConstructor!("\\documentstyle Semiverbatim",
     "<?latexml class='#1' amstex='true'?>",
     after_digest => sub[whatsit] {
       let style = whatsit.get_arg(1).map(|d| d.to_string()).unwrap_or_default();
       let style = style.trim().to_string();
+      if !style.is_empty()
+        && !binding_exists(&style, "sty")
+        && let Some(path) = find_file(&s!("{style}.sty"), None)
+        && !inputs_a_style(&path)
+      {
+        let mut input = vec![T_CS!("\\input")];
+        input.extend(Explode!(s!("{style}.sty")));
+        input.push(T_CS!("\\relax"));
+        unread(Tokens::new(input));
+        return Ok(Vec::new());
+      }
       let primary_ok = if style.is_empty() { false } else {
         require_package(&style, RequireOptions {
           extension: Some(Cow::Borrowed("sty")),
@@ -66,8 +92,7 @@ LoadDefinitions!({
           ..RequireOptions::default()
         })?;
         let filename = s!("{}.sty", style);
-        lookup_bool(&s!("{}_loaded", filename))
-          || lookup_bool(&s!("{}_raw_loaded", filename))
+        load_recorded(&filename)
       };
       if !primary_ok {
         require_package("amsppt", RequireOptions::default())?;
@@ -83,8 +108,19 @@ LoadDefinitions!({
   // amstex.tex:590-593: `\TagsAsMath` sets later tags in math (`\tagform@{$\m@th#1$}`), `\TagsAsText` (the
   // default) as text; `\tag` reads the switch.
   RawTeX!(r"\newif\ifmathtags@ \def\TagsAsMath{\global\mathtags@true}\def\TagsAsText{\global\mathtags@false}");
-  def_macro_noop("\\TagsOnLeft")?;
-  def_macro_noop("\\TagsOnRight")?;
+  // amstex.tex:587-590: `\TagsOnLeft` (the default, set at load) and `\TagsOnRight` choose the side of the tags,
+  // `\tagsleft@`, read by `\tag`: here the document's `ltx_leqno` class, as the `leqno` option of the LaTeX classes
+  // and amsmath sets it (amsmath_sty.rs). Perl's (AmSTeX.pool.ltxml:83-84) are no-ops, so an AMS-TeX document's tags
+  // were on the right where pdftex sets them on the left (KNOWN_PERL_ERRORS #1025; about 2,060 papers). Guard
+  // `perfect_kernel_batch78c::amstex_tags_are_on_the_left_by_default`.
+  DefPrimitive!("\\TagsOnLeft", {
+    Let!("\\iftagsleft@", "\\iftrue", Scope::Global);
+    assign_mapping("DOCUMENT_CLASSES", "ltx_leqno", Some(Stored::Bool(true)));
+  });
+  DefPrimitive!("\\TagsOnRight", {
+    Let!("\\iftagsleft@", "\\iffalse", Scope::Global);
+    assign_mapping("DOCUMENT_CLASSES", "ltx_leqno", None::<bool>);
+  });
   def_macro_noop("\\CenteredTagsOnSplits")?;
   def_macro_noop("\\TopOrBottomTagsOnSplits")?;
 
@@ -134,7 +170,18 @@ LoadDefinitions!({
 
   //======================================================================
   // The Document (Perl L122-128)
-  DefConstructor!("\\document", "<ltx:document>",
+  // amstex.tex:1793 `\def\document{\def\alloclist@{}\def\fontlist@{}}` and amsppt.sty:546-550 (`\document@true`,
+  // fonts, `\tenpoint`) only set up: whatever the file typesets before `\document` is the paper's — an epigraph
+  // after `\endtopmatter` (math0002213's `\hskip2in {\eightrus …}`), and the topmatter `\endtopmatter` sets
+  // (amsppt.sty:515-543). That material opens the document element; opening a second one replaced it, and the title,
+  // the authors and the abstract went with it (Perl's `<ltx:document>` the same: KNOWN_PERL_ERRORS #816). As LaTeX's
+  // `\begin{document}` (sect02.rs), one already open is the document. Guard
+  // `perfect_kernel_batch68r::amstex_material_before_document_is_kept`.
+  DefConstructor!("\\document", sub[document, _args, _props] {
+    if document.findnode("/ltx:document", None).is_none() {
+      document.open_element("ltx:document", None, None)?;
+    }
+  },
     after_digest => sub[_w] {
       assign_value("inPreamble", false, None);
     });
@@ -161,16 +208,15 @@ LoadDefinitions!({
   });
 
   //======================================================================
-  // Front Matter (Perl PR #2767)
-  def_macro_noop("\\topmatter")?;
-  def_macro_noop("\\endtopmatter")?;
-  DefMacro!("\\title Until:\\endtitle", "\\lx@add@title{#1}");
-  DefMacro!("\\author Until:\\endauthor", "\\lx@add@author{#1}");
-  DefMacro!("\\thanks Until:\\endthanks", "\\lx@add@pubnote[role=thanks]{#1}");
-  DefMacro!("\\abstract Until:\\endabstract", "\\lx@add@abstract{#1}");
+  // Front Matter (Perl PR #2767, AmSTeX.pool.ltxml:133-138) is amsppt.sty's (:298-414), not amstex.tex's, which
+  // defines no `\topmatter`/`\title`/`\author`/`\thanks`/`\abstract`: amsppt_sty.rs. A document's own `\title#1`
+  // made before `\input amstex` (AGT's gtmacros.tex:806, agtout.tex:16; math0103177 and 6 more) stays its own, where
+  // Perl's pool replaced it with `\title … \endtitle` and the scan read to the end of the file.
 
   //======================================================================
   // Document structure (Perl L144-158)
+  // (`\nofrills` after a command: the binding that reads it decides — amsppt's `\subjclass`, and in a reference a marker
+  // amsppt_sty.rs `\@bibfield` takes out; anywhere else it prints nothing)
   def_macro_noop("\\nofrills")?;
 
   // \comment ... \endcomment — Perl L148-154. Reads raw lines (no
@@ -246,11 +292,76 @@ LoadDefinitions!({
   // here — the AmSTeX pattern is `\foo … \endfoo`. The amsmath et al.
   // bindings work in either context, so we load them (Perl L220-225).
   RequirePackage!("amsmath");
+  // amstex.tex:590 `\TagsOnLeft`, after amsmath's binding, whose `reqno` default clears `ltx_leqno` (amsmath_sty.rs).
+  Digest!("\\TagsOnLeft")?;
+  // AMS-TeX's `\matrix`, `\pmatrix`, `\cases`, … read their rows to `\endmatrix`, `\endpmatrix`, `\endcases`
+  // (amstex.tex:512-552): the amsmath binding's environment forms, always — its `\matrix@check` old-form branch
+  // (amsmath_sty.rs `\lx@ams@matrix@check`, for LaTeX's `\@currenvir`) is LaTeX's, not AMS-TeX's
+  // (1411.5748 `\left(\matrix \format … \endmatrix\right)`).
+  RawTeX!(r"\long\def\lx@ams@matrix@check#1#2#3{#2}");
   RequirePackage!("amssymb");
   RequirePackage!("amsfonts");
   RequirePackage!("amsopn");
   RequirePackage!("amsxtra");
   RequirePackage!("amscd");
+  // amstex.tex:96-107: the active `@` is the connector reader everywhere, `\FN@\at@` looking up the
+  // `\csname\space @\string#1\endcsname` the `\atdef@` arrows define (:1660-1702), so `@>>>`, `@<<<`, `@VVV` are
+  // arrows in any formula, `\CD` or not (`\ifCD@` only adds the spacing and the cell breaks). The amscd binding's
+  // reader and connectors (`\cd@`, `\atdef@`, `@>`, …) are those; its `\ampersand@` is `\relax` outside a `\CD`.
+  // A document that makes `@` active (amstex.tex:1804 does at its end; our pool leaves its catcode alone, as Perl's)
+  // got "The token T_ACTIVE[@] is not defined" and its arrows printed as "@>>>" (math0004017; 88 papers in the 68r
+  // A/B; KNOWN_PERL_ERRORS #1018). The diagrams it then runs need `\halign`'s `\everycr` (lamstex `\newCD` counts its
+  // rows there: math0005042, Fatal without it; tex_tables.rs `insert_everycr`, KNOWN_PERL_ERRORS #1019). Guard
+  // `perfect_kernel_batch78b::amstex_active_at_reads_the_arrows`.
+  Let!("@", "\\cd@", Scope::Global);
+  // amstex.tex:108 `\atdef@`: a document's connector is ` @<token>` (the space-prefixed name), which `\cd@` reads
+  // before the binding's `@<token>`; the amscd binding's own `\atdef@` (`@<token>`, for LaTeX's amscd) would put the
+  // document's arrows in the namespace of its own (math0005042: `\atdef@({\FN@\ARROW@}` and a `\def` of
+  // `\csname\string @(\endcsname`, two different names in AMS-TeX, one in the binding's).
+  RawTeX!(r"\def\atdef@#1{\expandafter\def\csname\space @\string#1\endcsname}");
+  // amstex.tex:162-164, :166-172, :318-320: the punctuation connectors (`@,` and `@!` a tenth of a thin space in a
+  // formula, math0009033's `\mathbin{Y@!@!@!@!}`; `@.` a cell break in a formula, else a sentence-ending period;
+  // `@-` a hyphen, en or em dash in a box). amstex.tex:69-71's
+  // `\FN@` looks ahead into `\next` (the amsmath binding's amsgen `\FN@` into `\@let@token`), as these connectors and a
+  // document's own AMS-TeX macros test (math0005042's lamstex arrows: `\def\ARROW@{\ifx\next)…`); :166 `\relaxnext@`.
+  RawTeX!(r#"\def\FN@{\futurelet\next}\def\DN@{\def\next@}\def\DNii@{\def\nextii@}\def\relaxnext@{\let\next\relax}
+\atdef@;{\leavevmode\null;}\atdef@:{\leavevmode\null:}\atdef@?{\leavevmode\null?}
+\atdef@-{\relaxnext@\leavevmode
+ \DN@{\ifx\next-\DN@-{\FN@\nextii@}\else
+  \DN@{\leavevmode\hbox{-}}\fi\next@}%
+ \DNii@{\ifx\next-\DN@-{\leavevmode\hbox{---}}\else
+  \DN@{\leavevmode\hbox{--}}\fi\next@}%
+ \FN@\next@}
+\atdef@,{\RIfM@\mskip.1\thinmuskip\else\leavevmode\null,\fi}
+\atdef@!{\RIfM@\mskip-.1\thinmuskip\else\leavevmode\null!\fi}
+\atdef@.{\RIfM@&&\else\leavevmode.\spacefactor3000 \fi}"#);
+  // amstex.tex:173-190: `@"` spaces nested quotes (``` ``@"`Hi'@"'' ```: a sixth of an em between the double and
+  // the single mark on the outside, a thirty-sixth on the inside), reading the quotes after it with `\FN@`, and
+  // :90-91 `\space@`, the space token it compares with. Undefined, every `@"` was an Error (KNOWN_PERL_ERRORS #1018,
+  // the connector the 78b port left out). Guard `perfect_kernel_batch78c::amstex_quote_connector_spaces_the_quotes`.
+  RawTeX!(r##"\def\space@.{\futurelet\space@\relax}\space@. %
+\def\srdr@{\kern.16667em}\def\drsr@{\kern.02778em}\def\sldl@{\drsr@}\def\dlsl@{\srdr@}
+\atdef@"{\unskip\relaxnext@
+ \DN@{\ifx\next\space@\DN@. {\FN@\nextii@}\else
+  \DN@.{\FN@\nextii@}\fi\next@.}%
+ \DNii@{\ifx\next`\DN@`{\FN@\nextiii@}\else
+  \ifx\next\lq\DN@\lq{\FN@\nextiii@}\else
+  \DN@####1{\FN@\nextiv@}\fi\fi\next@}%
+ \def\nextiii@{\ifx\next`\DN@`{\sldl@``}\else\ifx\next\lq
+  \DN@\lq{\sldl@``}\else\DN@{\dlsl@`}\fi\fi\next@}%
+ \def\nextiv@{\ifx\next'\DN@'{\srdr@''}\else
+  \ifx\next\rq\DN@\rq{\srdr@''}\else\DN@{\drsr@'}\fi\fi\next@}%
+ \FN@\next@}"##);
+  // amstex.tex:486 `\Let@`, the row end a document's own AMS-TeX alignment sets up before its `\halign` (diag.tex's
+  // `\newCD`, math9611222, math9611223, math9412232, math0005042): `\\` is `\cr`, its brace pair hidden from the
+  // alignment count. The amsmath binding loaded above has amsmath.sty's `\let\\\math@cr` (65s), whose `\@ifstar` plain
+  // AMS-TeX lacks: the `\\` left its braces open at the row's `\cr` ("Missing } inserted", tex.web §1127) and the
+  // diagram's rows lost (KNOWN_PERL_ERRORS #949).
+  // Guard `perfect_kernel_batchint20::amstex_let_sets_the_row_end_to_cr`.
+  RawTeX!(r"\def\Let@{\relax\iffalse{\fi\let\\=\cr\iffalse}\fi}");
+  // amstex.tex:1507-1509: `\frak` is the Euler Fraktur switch, `\let\goth\frak` its older name (hep-th9306053,
+  // alg-geom9410018 `$\goth m_Z$`); `\frak` is the amsfonts binding's.
+  Let!("\\goth", "\\frak");
   // AMS-TeX's `\Bbb` and `\bold` are font switches of their own (amstex.tex:1358-1361 `\Bbb@@#1{\noaccents@\fam
   // \msbfam\relax#1}`, :1263-1266 `\bold@@#1{\fam\bffam\relax#1}`), not the amsfonts binding's aliases of `\mathbb`
   // (Perl's too, AmSTeX.pool loading amsfonts.sty.ltxml:22-23), which the AMS-TeX idiom `\def\mathbb{\Bbb}` turned
@@ -275,8 +386,8 @@ LoadDefinitions!({
   // `equation`/`align`) or, in a `$$` display and its math alignments, floats to it (`\lx@equation@settag@float`); a
   // quoted tag is the `\tag*` form (`\maketag@@@"#1"#2\maketag@{\hbox{\rm#1}}`), `\TagsAsMath` wraps the text in `$…$`.
   // The float path is defined here, so a plain `\input amstex` document without the LaTeX pool has it (math9412232,
-  // hep-th9308082, hep-th9206021, hep-th9111004, 1102.5649). `\TagsOnLeft`, AMS-TeX's default (:590), puts the PDF's
-  // tags on the left; ours are on the right. Guards `perfect_kernel_batch66e::{amstex_display_tag_is_a_text_tag,
+  // hep-th9308082, hep-th9206021, hep-th9111004, 1102.5649). `\TagsOnLeft`, AMS-TeX's default (:590), puts the
+  // tags on the left (the document's `ltx_leqno`, above). Guards `perfect_kernel_batch66e::{amstex_display_tag_is_a_text_tag,
   // amstex_align_row_tags_run_to_the_row_end, amstex_tags_as_math_switch, plain_amstex_tags_need_no_latex_pool,
   // amstex_row_tag_ends_at_every_row_ender, amstex_display_tag_in_an_halign_cell_reads_to_the_display_end,
   // amstex_tag_argument_errors, amstex_row_tag_cell_ends_at_par_and_extra_brace,
@@ -311,10 +422,15 @@ LoadDefinitions!({
   // \format Until:\\\\ — analog to \align's template; we ignore it.
   def_macro_noop("\\format Until:\\\\")?;
 
+  // amstex.tex:1217-1226: `\text` is `\text@@` = `\leavevmode\hbox{#1}` in text and a `\mathchoice` of `\hbox`es in
+  // math, so its argument is digested inside box braces: the count an alignment's `&`/`\cr` is tested at is raised
+  // for it, as amstext_sty.rs `\text` (KNOWN_PERL_ERRORS #931).
   DefConstructor!("\\text {}",
     "<ltx:text _noautoclose='1'>#1</ltx:text>",
     mode => "restricted_horizontal",
-    enter_horizontal => true);
+    enter_horizontal => true,
+    before_digest => { increment_align_group_count(); },
+    after_digest => { decrement_align_group_count(); });
 
   DefConstructor!("\\overset Until:\\to {}",
     "<ltx:XMApp>\
@@ -617,6 +733,28 @@ LoadDefinitions!({
   def_macro_noop("\\showallocations")?;
   def_macro_noop("\\syntax")?;
 });
+
+/// The document is an AMS-TeX one: its format is plain.tex + amstex.tex (TL amstex.ini: `\input plain \input amstex`),
+/// so plain's tabbing shorthand `\+` (plain.tex:608 `\outer\def\+{\tabalign}`; Perl plain_dump.pool.ltxml:104) is the
+/// document's, whatever LaTeX format it is read on. One rule: the LaTeX kernel seam's retraction of `\+` (latex.rs, after
+/// cond-mat0001412's `\!+\+` typo) does not apply to an AMS-TeX document — the seam skips it once this has run (`\input
+/// amstex \input amsppt.sty` and a later `\newcommand` autoloading the LaTeX pool), and a retraction the seam made before
+/// (the arXiv preload's LaTeX pool, then `\input amstex`; a `\documentstyle{amsppt}` read on the LaTeX format) is undone
+/// here. Called where the AMS-TeX format is established: `\input amstex` (amstex_tex.rs) and amsppt.sty unless a LaTeX
+/// document loads it as a package (amsppt_sty.rs; `\documentclass{article}\usepackage{amsppt}`,
+/// `\documentstyle[amsppt]{article}` keep the retraction: a stray `\+` there is one undefined-macro error). Not by this
+/// pool, which a LaTeX document's AMS-TeX command also autoloads (tex.rs triggers). Witnesses math0103164, math0105110,
+/// math0106202, math0109193 (an `\input amstex` or amsppt document's `\settabs` rows were an undefined `\+` and a stray
+/// `&` each). Guards `perfect_kernel_batch68r::amstex_plain_tabbing_rows`, `…::latex_stray_plus_stays_undefined`,
+/// `…::amstex_mode_keeps_plain_tabbing`.
+pub fn enter_amstex_format() -> Result<()> {
+  AssignValue!("lx@amstex@format" => true, Some(Scope::Global));
+  if lookup_bool("lx@plain@tabalign@retracted") && !IsDefined!(&T_CS!("\\+")) {
+    RawTeX!(r"\outer\def\+{\tabalign}");
+  }
+  AssignValue!("lx@plain@tabalign@retracted" => false, Some(Scope::Global));
+  Ok(())
+}
 
 /// The tokens that end an AMS-TeX `\tag`'s text in an alignment row: the row's end (`\\` is `\cr` there, amstex.tex:486
 /// `\Let@`), the row enders an AMS-TeX alignment defines (`\displaybreak`, `\allowdisplaybreak` and `\intertext` begin
@@ -1050,4 +1188,21 @@ fn tie_floated_tags_to_row(document: &mut Document) -> Result<()> {
     ancestor = a.get_parent();
   }
   Ok(())
+}
+
+/// Whether the AMS-TeX style file at `path` `\input`s another style (`\input amsppt.sty`, `\input ams-p.sty`), outside
+/// comments.
+fn inputs_a_style(path: &str) -> bool {
+  static INPUT: Lazy<Regex> =
+    Lazy::new(|| Regex::new(r"\\input\s*\{?\s*([A-Za-z0-9_.-]+)").unwrap());
+  let Ok(bytes) = std::fs::read(path) else {
+    return false;
+  };
+  String::from_utf8_lossy(&bytes).lines().any(|line| {
+    let code = line.split('%').next().unwrap_or_default();
+    INPUT.captures_iter(code).any(|c| {
+      let name = &c[1];
+      name.ends_with(".sty") || name == "amsppt"
+    })
+  })
 }

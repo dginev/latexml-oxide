@@ -1,0 +1,22 @@
+% acmart's `\author{Ann Able}\authornote{…}\author{Bob Baker}\affiliation{…}\email{able@x.org}\email{baker@x.org}`: the
+% `\authornote` is a mark on Ann Able's name, not an entry of the block, so the two names still share it and each address
+% is the name's it spells (`place::shared_block_email_labels`: a name's note ends no run of names).
+% witness: 1907.07581 (CL169)
+% oracle:  pdflatex 0 errors: "Ann Able*", "Bob Baker", "X Univ", "able@x.org", "baker@x.org", the note in the footer
+% engines: rust int168a = right (the DOM respell); rust int169a = both addresses on Bob Baker
+% expect:  0 errors, 0 warnings; able@x.org on Ann Able (with her note), baker@x.org on Bob Baker
+% status:  GREEN (P6e2)
+% preload: ar5iv.sty
+\documentclass[sigconf]{acmart}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\authornote{Both authors contributed equally.}
+\author{Bob Baker}
+\affiliation{\institution{X Univ}\city{C}\country{D}}
+\email{able@x.org}
+\email{baker@x.org}
+\begin{abstract}A.\end{abstract}
+\maketitle
+Text.
+\end{document}

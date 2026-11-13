@@ -1,0 +1,14 @@
+% witness: FRONTMATTER_SINGLE_ENGINE_PLAN gap 3 (a `\par` in a `c` column prints nothing, tex.web 1094, where `\\` ends a row)
+% oracle:  pdflatex 0 errors: "Ann Able"; "UnivLab" on one line of the tabular's cell, past the `\par`; "CatDanEve GilHal" under them, `\newline`,
+%          `\linebreak` and the group's `\par` printing nothing either (`\par` through a macro: the kernel's `\author` is not `\long`)
+% engines: Perl has no events; ours before this fix read all of them as one Break
+% expect:  0 errors; each Break says `par` or nothing, its role as it was (perfect_kernel_batchz2::a_break_says_what_made_it)
+% status:  GREEN (Z2)
+\documentclass{article}
+\newcommand\pp{\par}
+\begin{document}
+\title{T}
+\author{Ann Able\\ Univ\pp Lab\\ Cat\newline Dan\linebreak Eve {Gil\pp Hal}}
+\maketitle
+Body.
+\end{document}

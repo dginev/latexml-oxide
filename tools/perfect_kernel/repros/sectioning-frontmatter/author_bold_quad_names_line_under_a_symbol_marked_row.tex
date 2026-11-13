@@ -1,0 +1,17 @@
+% 2507.19054's shape: names marked by footnote symbols only (the unmarked reader), a `\textbf` line of
+% `\quad`-parted names under them (`space_parted_rows_joined` through the whole-line wrapper).
+% witness: 2507.19054 (neurips_2025: `Binxu Li$^\star$ \quad Yuhui Zhang$^{\star,\dagger}$ \quad Xiaohan Wang \quad
+%          Weixin Liang \\ \textbf{Ludwig Schmidt \quad Serena Yeung-Levy} \\ Stanford University`)
+% oracle:  pdflatex 0 errors: "Ann Able⋆ Bob Baker⋆,† Cat Cole", "Dan Dee Eve Eden", "Stanford University"
+% engines: rust int138a = Cat Cole holding "Dan Dee Eve Eden" (silent); 107b r1 = the same, 1 merged_creators Error;
+%          Perl one creator
+% expect:  0 errors, 0 warnings; five creators, each "Stanford University", the symbols shown
+% status:  RED (107b r1) -> GREEN (107b r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^\star$ \quad Bob Baker$^{\star,\dagger}$ \quad Cat Cole \\ \textbf{Dan Dee \quad Eve Eden} \\ Stanford University}
+\maketitle
+Body.
+\end{document}

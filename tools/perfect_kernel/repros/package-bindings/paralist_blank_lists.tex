@@ -1,0 +1,15 @@
+% witness: 1205.4564, 1306.3906, 1801.06340 ({inparablank}, 15 papers), 1707.03997 ({asparablank}), 1209.4819, 1301.6228 (\defaultleftmargin, 24), 0907.0929, math0106001 (\defaultenum)
+% oracle:  pdflatex 0 errors, 1 warning (Paralist: \defaultleftmargin deprecated); "We need apples, pearstoday. First paragraph. Second paragraph."
+% engines: rust 67int9 = undefined \defaultleftmargin, {inparablank}, {asparablank}; perl = the same (KNOWN_PERL_ERRORS #804)
+% expect:  0 errors, 1 warning (the deprecation, as pdflatex); unlabeled inline-itemize and itemize
+% status:  RED (67int9) -> GREEN (68i); guard perfect_kernel_batch68i::paralist_blank_lists
+\documentclass{article}
+\usepackage[defblank]{paralist}
+\defaultleftmargin{1em}{}{}{}
+\begin{document}
+We need \begin{inparablank}\item apples, \item pears\end{inparablank} today.
+\begin{asparablank}
+\item First paragraph.
+\item Second paragraph.
+\end{asparablank}
+\end{document}

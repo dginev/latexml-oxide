@@ -5,10 +5,11 @@
 //! and the other icon galleries: ~27,700 corpus figures) never resolved.
 //! The whole `<graphics>` element is pinned with its texmf candidate path
 //! normalized (it is host-relative).
+use latexml::util::test::check_requirements;
 
 #[test]
 fn extensioned_texmf_graphic_is_a_candidate() {
-  if !latexml::util::test::kpse_has("example-image-a.pdf") {
+  if !check_requirements(&["example-image-a.pdf"]) {
     return; // no such asset on this TeX Live
   }
   let tex = "\\documentclass{article}\n\\usepackage{graphicx}\n\\begin{document}\n\\includegraphics{example-image-a.pdf}\n\\end{document}\n";

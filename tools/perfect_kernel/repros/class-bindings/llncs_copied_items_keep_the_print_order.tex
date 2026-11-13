@@ -1,0 +1,17 @@
+% witness: 2207.06953 (Sangyoun Lee$^{1,2}$: PDF 1 Yonsei, 2 KIST; written KIST, Yonsei), 2608.05923 (S. Mangla$^{1,2}$,
+%          O. M. Smirnov$^{6,5,7,8,9}$: written in the order of the institutes' names); review rev92c S1
+% oracle:  pdflatex: "Ann Able1 and Bob Baker1,2", "1 Zeta University", "2 Alpha Institute"
+% engines: perl 0.8.8 = 0 errors, both institutes on a nameless creator; rust int122w = the same; int122y (92c) = written,
+%          Bob Baker's Alpha Institute before Zeta University (the copies made in the order of their texts)
+% expect:  0 errors, 0 warnings; each copy placed where the reading prints it among its owner's items — the institute
+%          list's order, as today's places `\inst{2,1}`
+% status:  RED (92c) -> GREEN (92c r2) — perfect_kernel_batch92c::written_items_keep_the_print_order
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$ \and Bob Baker$^{1,2}$}
+\institute{Zeta University \and Alpha Institute}
+\maketitle
+Text.
+\end{document}

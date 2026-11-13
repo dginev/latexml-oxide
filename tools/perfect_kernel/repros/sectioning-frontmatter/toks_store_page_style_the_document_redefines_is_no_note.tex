@@ -1,0 +1,21 @@
+% A raw class's token register printed in the foot of the fancyhdr page style its `\maketitle` selects, which the
+% document's preamble redefines without the register (`\fancypagestyle{firststyle}{\fancyfoot[L]{Preprint}}`): pdflatex
+% prints "Preprint", no note. K11's toks store is decided at the class's end (frontmatter_stores.rs `toks_store`), so it
+% still makes the corresponding note; `harvest_stores` does not check `\ps@firststyle` again.
+% witness: none (synthetic, review rev95d S5, probe p2); the shape of 2607.06973's googlecloud.cls footer
+% oracle:  pdflatex 0 errors: "T", "Ann Able", "Text.", footer "Preprint"
+% engines: rust int124a = 0 errors, no note; rust 95d = 0 errors, <ltx:note role="corresponding">Corresponding
+%          author(s): ann@x.org</ltx:note>; perl = 1 error (undefined \correspondingauthor)
+% expect:  0 errors, 0 warnings; no <ltx:note>
+% status:  RED (95d, 95d-r2): the selected style is read at the class's end only
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{redeftoks.cls}
+\LoadClass{article}\RequirePackage{fancyhdr}
+\newtoks\correspondingauthor
+\fancypagestyle{firststyle}{\fancyfoot[L]{Corresponding author(s): \the\correspondingauthor}}
+\renewcommand{\maketitle}{{\@title\par\@author\par}\thispagestyle{firststyle}}
+\end{filecontents*}
+\documentclass{redeftoks}
+\title{T}\author{Ann Able}\correspondingauthor{ann@x.org}
+\fancypagestyle{firststyle}{\fancyfoot[L]{Preprint}}
+\begin{document}\maketitle Text.\end{document}

@@ -1,0 +1,27 @@
+% mechanism: `\__hook_patch_command:Nnn` (latex.ltx:6888) patches every TeX macro by its kind: a
+%   `\DeclareRobustCommand`'s inner macro, an `\NewDocumentCommand`'s code (its prefixes read with `\escapechar` `/`,
+%   latex.ltx:7011-7016), a delimited `\def` (retokenized), a kept kernel macro (`\ttfamily`, `\appendix`); a hook
+%   added in the body, inside a group too, patches at once (the delayed patcher is gone after `\begin{document}`).
+% witness: synthetic (QA47A); 2602.09577 `cmd/appendix`
+% oracle:  pdflatex 0 `!`; "Re Xf Dg T [rxdDt]." then "Appendix A App" and "[rxdDtp]."
+% engines: rust int161a: "[]." and "[]."; QA47A: as pdflatex; Perl: `\AddToHook` a no-op (latex_base.pool.ltxml:833).
+% expect:  0 errors, 0 warnings; <p>Re Xf Dg T [rxdDt].</p>, <p>[rxdDtp].</p>
+% status:  GREEN (QA47A)
+\documentclass{article}
+\newcommand\hits{}
+\DeclareRobustCommand\rob[1]{R#1}
+\NewDocumentCommand\xp{m}{X#1}
+\def\deli#1.{D#1}
+\AddToHook{cmd/rob/before}{\xdef\hits{\hits r}}
+\AddToHook{cmd/xp/after}{\xdef\hits{\hits x}}
+\AddToHook{cmd/deli/before}{\xdef\hits{\hits d}}
+\AddToHook{cmd/ttfamily/after}{\xdef\hits{\hits t}}
+\AddToHook{cmd/appendix/before}{\xdef\hits{\hits p}}
+\begin{document}
+{\AddToHook{cmd/deli/after}{\xdef\hits{\hits D}}}
+\rob{e} \xp{f} \deli g. {\ttfamily T} [\hits].
+
+\appendix
+\section{App}
+[\hits].
+\end{document}

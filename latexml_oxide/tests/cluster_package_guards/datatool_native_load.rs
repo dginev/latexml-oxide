@@ -5,6 +5,8 @@
 //! and requires byte-identical core XML; the typing golden is pdflatex's.
 //! The fixtures name their CSV relative to the crate root, the test cwd.
 
+use latexml::util::test::{check_requirements, loads};
+
 /// `super::convert(tex, true)` with the native `\DTLloaddb` forced on or off in the
 /// conversion's thread (`datatool_sty::set_native_override`; the process env stays untouched).
 fn convert_native(tex: &str, native: bool) -> (String, String) {
@@ -40,6 +42,9 @@ fn both_ways(fixture: &str) -> String {
 /// column counts, the key index, the last-loaded name.
 #[test]
 fn default_csv_load_matches_the_raw_engine() {
+  if !check_requirements(loads::DATATOOL) {
+    return;
+  }
   let xml = both_ways("contract");
   latexml::util::test::assert_element(
     &xml,
@@ -55,6 +60,9 @@ fn default_csv_load_matches_the_raw_engine() {
 /// tikz-network.sty:804-816) the loop state is untouched.
 #[test]
 fn string_comparisons_match_the_raw_engine() {
+  if !check_requirements(loads::DATATOOL) {
+    return;
+  }
   let xml = both_ways("ifeq_strings");
   latexml::util::test::assert_element(
     &xml,
@@ -69,6 +77,9 @@ fn string_comparisons_match_the_raw_engine() {
 /// five; the golden is pdflatex's, so this runs the native comparator only.
 #[test]
 fn numeric_comparisons_follow_pdflatex() {
+  if !check_requirements(loads::DATATOOL) {
+    return;
+  }
   let tex = std::fs::read_to_string("tests/cluster_regressions/datatool/ifeq_numbers.tex")
     .expect("fixture");
   let (stderr, xml) = convert_native(&tex, true);
@@ -82,6 +93,9 @@ fn numeric_comparisons_follow_pdflatex() {
 /// The golden is pdflatex's (the raw path here types the columns 0).
 #[test]
 fn ragged_rows_get_default_column_keys() {
+  if !check_requirements(loads::DATATOOL) {
+    return;
+  }
   let tex =
     std::fs::read_to_string("tests/cluster_regressions/datatool/ragged.tex").expect("fixture");
   let (stderr, xml) = convert_native(&tex, true);
@@ -97,6 +111,9 @@ fn ragged_rows_get_default_column_keys() {
 /// Options and a second load of a name go to the raw `\DTLread`.
 #[test]
 fn options_and_reloads_stay_raw() {
+  if !check_requirements(loads::DATATOOL) {
+    return;
+  }
   let xml = both_ways("tiny");
   latexml::util::test::assert_element(&xml, "p", &[], r##"<p>A:1/2. [name—qty][a—1]</p>"##);
 }
@@ -107,6 +124,9 @@ fn options_and_reloads_stay_raw() {
 /// column string, so this test runs the native load only.
 #[test]
 fn column_types_follow_the_datum_parser() {
+  if !check_requirements(loads::DATATOOL) {
+    return;
+  }
   let tex =
     std::fs::read_to_string("tests/cluster_regressions/datatool/types.tex").expect("fixture");
   let (stderr, xml) = convert_native(&tex, true);

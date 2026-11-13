@@ -16,7 +16,7 @@
 //! - `NOTATION:<name>` — notation entries
 
 use libxml::tree::Node;
-use rustc_hash::FxHashMap as HashMap;
+use rustc_hash::{FxHashMap as HashMap, FxHashSet};
 
 /// A single entry in the ObjectDB.
 ///
@@ -24,9 +24,15 @@ use rustc_hash::FxHashMap as HashMap;
 #[derive(Debug, Clone)]
 pub struct Entry {
   /// The key this entry is stored under.
-  pub key: String,
+  pub key:       String,
   /// Attribute-value pairs.
-  values:  HashMap<String, Value>,
+  values:        HashMap<String, Value>,
+  /// Per list attribute, the `Display` strings of its items as `push_new` left them: Perl's
+  /// `grep { $_ eq $value } @$list` as a set lookup instead of a scan that formats every item
+  /// (1702.06564: one parent with thousands of children spent 247 of 323 s in that scan). An
+  /// attribute's set is dropped whenever another method writes that attribute, and rebuilt from
+  /// the list on the next `push_new`.
+  push_new_seen: HashMap<String, FxHashSet<String>>,
 }
 
 /// A value stored in an Entry.
@@ -123,8 +129,9 @@ impl Entry {
   /// Create a new entry with the given key.
   pub fn new(key: &str) -> Self {
     Entry {
-      key:    key.to_string(),
-      values: HashMap::default(),
+      key:           key.to_string(),
+      values:        HashMap::default(),
+      push_new_seen: HashMap::default(),
     }
   }
 
@@ -169,6 +176,7 @@ impl Entry {
   /// Port of `Entry::setValues`.
   pub fn set_values(&mut self, pairs: Vec<(&str, Value)>) {
     for (key, value) in pairs {
+      self.push_new_seen.remove(key);
       match value {
         Value::Null => {
           self.values.remove(key);
@@ -182,6 +190,7 @@ impl Entry {
 
   /// Set a single value.
   pub fn set_value(&mut self, attr: &str, value: Value) {
+    self.push_new_seen.remove(attr);
     match value {
       Value::Null => {
         self.values.remove(attr);
@@ -196,6 +205,7 @@ impl Entry {
   ///
   /// Port of `Entry::pushValues`.
   pub fn push_values(&mut self, attr: &str, values: Vec<Value>) {
+    self.push_new_seen.remove(attr);
     let list = self
       .values
       .entry(attr.to_string())
@@ -216,9 +226,12 @@ impl Entry {
       .entry(attr.to_string())
       .or_insert_with(|| Value::List(Vec::new()));
     if let Value::List(items) = list {
+      let seen = self
+        .push_new_seen
+        .entry(attr.to_string())
+        .or_insert_with(|| items.iter().map(Value::to_string).collect());
       for v in values {
-        let s = v.to_string();
-        if !items.iter().any(|existing| existing.to_string() == s) {
+        if seen.insert(v.to_string()) {
           items.push(v);
         }
       }
@@ -233,6 +246,7 @@ impl Entry {
     if keys.is_empty() {
       return;
     }
+    self.push_new_seen.remove(keys[0]);
     if keys.len() == 1 {
       self.values.insert(keys[0].to_string(), Value::Bool(true));
       return;
@@ -795,6 +809,20 @@ mod tests {
     // "b" should not be duplicated
     let children = entry.get_children();
     assert_eq!(children, vec!["a", "b", "c"]);
+    // Writes through the other methods are seen by the next push_new.
+    entry.push_values("children", vec![Value::from("d")]);
+    entry.push_new("children", vec![
+      Value::from("d"),
+      Value::from("a"),
+      Value::from("e"),
+    ]);
+    assert_eq!(entry.get_children(), vec!["a", "b", "c", "d", "e"]);
+    entry.set_value("children", Value::List(vec![Value::from("x")]));
+    entry.push_new("children", vec![Value::from("a"), Value::from("x")]);
+    assert_eq!(entry.get_children(), vec!["x", "a"]);
+    entry.set_value("children", Value::Null);
+    entry.push_new("children", vec![Value::from("x"), Value::from("x")]);
+    assert_eq!(entry.get_children(), vec!["x"]);
   }
 
   #[test]

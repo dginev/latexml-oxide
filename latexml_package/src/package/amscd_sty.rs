@@ -66,8 +66,16 @@ LoadDefinitions!({
     let Some(token) = read_token_required("\\cd@")? else {
       return Ok(vec![]);
     };
-    let cs_name = token.with_str(|s| format!("@{s}"));
-    unread(Tokens::from(T_CS!(&*cs_name)));
+    // amscd.sty:43 and amstex.tex:108 name a connector `\csname\space @\string#1\endcsname`: one a document defines
+    // with their `\atdef@` (AMS-TeX's, amstex.rs) is read first, else the binding's `@<token>` (math0005042's lamstex
+    // diagrams define ` @(` with `\atdef@` and their own `@(` with `\csname\string @(\endcsname`).
+    let spaced = T_CS!(&*token.with_str(|s| format!("\\ @{s}")));
+    if is_defined_token(&spaced) {
+      unread(Tokens::from(spaced));
+    } else {
+      let cs_name = token.with_str(|s| format!("@{s}"));
+      unread(Tokens::from(T_CS!(&*cs_name)));
+    }
   });
 
   // Horizontal connectors

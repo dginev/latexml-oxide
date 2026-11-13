@@ -1,0 +1,29 @@
+% mechanism: one `\emailAdd` address that spells no author, on a multi-author paper, goes to the one author marked
+%   as the corresponding author — here by the mark `*` (`\author[a,*]{…}`, jheppub.sty:110-116 `$^{a,*}$`) whose
+%   legend `\affiliation[*]{Corresponding author}` says so (`marked_corresponding_author`, user ruling 2026-10-21); two
+%   authors marked so leave it to the author block (jheppub_emailadd_two_marked_authors_stay_the_blocks)
+% witness: 1304.1216 (the legend as an affiliation, `\affiliation[f]{\textcolor{blue}{Corresponding authors}}`, two
+%          carriers); not 2308.06532 (`\author[1,*]{Zhaoyi Xu}`, `zyxu@`: no legend, placed by its address's
+%          "(Corresponding author)", jheppub_emailadd_address_naming_correspondence_goes_to_the_star); 1802.03677,
+%          1901.08773, 2510.11030 (notes)
+% oracle:  pdflatex (the shortened jheppub.sty beside this repro, v.1.1227 from 2305.01585) 0 errors: "Ann Able,a Bob
+%          Bakera and Cat Colea,∗",
+%          "a Univ A", "* Corresponding author", "E-mail: zq77@x.org"
+% engines: rust 78f r1 = zq77@ the author block's; int47a and perl: Ann Able's (the n-th rule)
+% expect:  0 errors, 0 warnings; zq77@ Cat Cole's
+% status:  RED (78f r1) -> GREEN (78f r2)
+% preload: ar5iv.sty
+\documentclass[a4paper,11pt]{article}
+\usepackage{jheppub}
+\title{T}
+\author[a]{Ann Able,}
+\author[a]{Bob Baker}
+\author[a,*]{and Cat Cole}
+\affiliation[a]{Univ A}
+\affiliation[*]{Corresponding author}
+\emailAdd{zq77@x.org}
+\abstract{Abs.}
+\begin{document}
+\maketitle
+Text.
+\end{document}

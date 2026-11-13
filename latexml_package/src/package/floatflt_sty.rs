@@ -160,4 +160,8 @@ LoadDefinitions!({
   RawTeX!("\\newif\\ifpageaftertab  \\pageaftertabfalse");
   RawTeX!("\\newif\\ifoddpages");
   RawTeX!("\\newif\\ifoutput");
+  // floatflt.sty:22-23 `\DeclareOption*{\OptionNotUsed}\ProcessOptions`: its options take effect, and its handlers do
+  // not outlive it (content.rs `process_options_by`).
+  DeclareOption!(None, {});
+  ProcessOptions!();
 });

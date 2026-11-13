@@ -1,0 +1,20 @@
+% mechanism: the events' walker reads a paragraph's list as no group only at the block's own level (events/mod.rs
+%   `paragraph_is_no_group`, OD #993 P2-1c). Inside a box's body (`{minipage}`; `{varwidth}` reads alike) the
+%   paragraph a `\par` packs stays a group; read as no group, the braced mark's group became the box, and the e-mail
+%   contact was written as its address alone (`\lx@frontmatter@itemonly`), its `\texttt` lost
+% witness: 2402.02104 (authblk, `\author[ ]{\begin{varwidth|minipage}{\linewidth}Name{\textsuperscript{1}}\par \texttt{addr}…}`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 / a@x.org / 1 Univ X"
+% engines: rust int158a = `<contact name="Email: " role="email">a@x.org</contact>`; int157a = P21e's XML; Perl 0 errors
+%          (the typewriter kept)
+% expect:  0 errors, 0 warnings; Ann Able (email "Email: " a@x.org in typewriter, affiliation Univ X)
+% status:  RED (int158a) -> GREEN (P21e) — perfect_kernel_batchp21e::a_paragraph_in_a_box_keeps_a_contacts_markup
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk,varwidth}
+\title{T}
+\author[ ]{\begin{minipage}{\linewidth}Ann Able{\textsuperscript{1}}\par \texttt{a@x.org}\end{minipage}}
+\affil[1]{Univ X}
+\begin{document}
+\maketitle
+Text.
+\end{document}

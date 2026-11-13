@@ -1,0 +1,55 @@
+% mechanism: a raw class's `\institute` store its title page numbers by `\refstepcounter{inst}` (sab.cls:402-444,
+%   edpsci.cls:325-367, baaa.cls:586-644, verbatim here) under an `\and` a document macro holds
+%   (`\newcommand\nx{\and}`): the numbering run reads it (`note_and_numbering`), and the store's entries are cut by the
+%   separator's meaning (`class_numbered_institutes`, Option C P4d), entry n going to the names marked n. The token
+%   split saw one entry: the whole list, " and " written in, under every author (revP26 N2's missing input).
+% witness: synthetic (P4d; the route of 2308.05831, 2308.05830, 2501.08874, 2206.02830)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 , Bob Baker2 and Cy Cole1", "1 Univ A, Town A",
+%          "2 Univ B, Town B"
+% engines: F0: each author "Univ A, Town A and Univ B, Town B", marks kept, 0 W; P4d: below; perl: no raw class load
+% expect:  0 errors, 0 warnings; Ann Able and Cy Cole "Univ A, Town A", Bob Baker "Univ B, Town B"
+% status:  RED (F0) -> GREEN (P4d; guard perfect_kernel_batchc1::class_numbered_institutes_read_by_meaning)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{sabinst.cls}
+\ProvidesClass{sabinst}\LoadClass{article}
+\newcounter{inst}
+\newdimen\instindent
+\def\institute#1{\gdef\@institute{#1}}
+\def\institutename{\par
+ \begingroup
+ \parindent=0pt
+ \parskip=0pt
+ \refstepcounter{inst}%July 2009
+ \def\and{\par\refstepcounter{inst}%July 2009
+ \hangindent\instindent
+ \noindent
+ \hbox to\instindent{\hss$^{\theinst}$\enspace}\ignorespaces}%
+ \setbox0=\vbox{\def\thanks##1{}\@institute}
+ \ifnum\value{inst}>9\relax\setbox0=\hbox{$^{88}$\enspace}%
+                 \else\setbox0=\hbox{$^{8}$\enspace}\fi
+ \instindent=\wd0\relax
+ \ifnum\value{inst}=1\relax
+ \else
+   \setcounter{inst}{1}%
+   \hangindent\instindent
+   \noindent
+   \hbox to\instindent{\hss$^{\theinst}$\enspace}\ignorespaces
+ \fi
+ \small
+ \ignorespaces
+ \@institute\par
+ \endgroup}
+\def\inst#1{\unskip$^{#1}$}
+\def\@maketitle{\newpage\noindent{\Large\@title\par}\vskip6pt
+  {\large\noindent\ignorespaces\@author\par}\vskip6pt
+  \small\rm\leftskip=.8cm\rightskip=\leftskip\institutename}
+\end{filecontents*}
+\documentclass{sabinst}
+\newcommand\nx{\and}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1}, Bob Baker\inst{2} and Cy Cole\inst{1}}
+\institute{Univ A, Town A \nx Univ B, Town B}
+\maketitle
+Text.
+\end{document}

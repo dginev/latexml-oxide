@@ -208,8 +208,10 @@ struct BibEntryData {
   year:         String,
   /// BibTeX type (article, book, inproceedings, etc.).
   entry_type:   String,
-  /// Reference style (number within bibliography).
+  /// Reference style (number within bibliography): its place in the list.
   number:       u32,
+  /// The number its backend gave it ([`given_number`]), printed instead of [`Self::number`] ([`Self::shown_number`]).
+  label_number: Option<u32>,
   /// IDs that cite this entry (from outside bibliography).
   referrers:    HashSet<String>,
   /// Bib keys that cite this entry (from other bib entries).
@@ -528,20 +530,25 @@ impl MakeBibliography {
         None => continue,
       };
       let lc_key = bibkey.to_lowercase();
-      // Extract citations from within this bibentry
-      let citations: Vec<String> = srcdoc
-        .findnodes_at(".//@bibrefs", Some(&bibentry))
-        .iter()
-        .filter_map(|n| {
-          let val = n.get_content();
-          if val.is_empty() { None } else { Some(val) }
-        })
-        .flat_map(|s| s.split(',').map(String::from).collect::<Vec<_>>())
-        .filter(|s| !s.is_empty())
-        .collect();
+      let citations = Self::entry_citations(srcdoc, &bibentry);
 
       // A key repeated in a later source keeps its first position (bibtex keeps the first entry, "Repeated
       // entry"), its content from the later source as Perl.
+      // Two entries whose keys differ only in case are one key here (lowercased, as Perl's `lc` and bibtex's
+      // case-insensitive keys), so one of them is lost: bibtex reports it as an error ("Repeated entry"), and amsrefs,
+      // whose keys are case-sensitive, prints both — an honest Error naming the entry that is replaced.
+      if let Some(previous) = entries.get(&lc_key)
+        && previous.bib_key != bibkey
+      {
+        Error!(
+          "unexpected",
+          &bibkey,
+          "Bibliography entries '{}' and '{}' differ only in case: they share one key and the entry '{}' is replaced",
+          previous.bib_key,
+          bibkey,
+          previous.bib_key
+        );
+      }
       let db_index = entries.get(&lc_key).map_or(entries.len(), |e| e.db_index);
       entries.insert(lc_key, BibEntryData {
         bib_key: bibkey,
@@ -554,6 +561,7 @@ impl MakeBibliography {
         year: String::new(),
         entry_type: String::new(),
         number: 0,
+        label_number: None,
         referrers: HashSet::default(),
         bibreferrers: HashSet::default(),
         citations,
@@ -561,6 +569,20 @@ impl MakeBibliography {
         db_index,
       });
     }
+  }
+
+  /// The keys the citations inside `bibentry` cite.
+  fn entry_citations(srcdoc: &PostDocument, bibentry: &Node) -> Vec<String> {
+    srcdoc
+      .findnodes_at(".//@bibrefs", Some(bibentry))
+      .iter()
+      .filter_map(|n| {
+        let val = n.get_content();
+        if val.is_empty() { None } else { Some(val) }
+      })
+      .flat_map(|s| s.split(',').map(String::from).collect::<Vec<_>>())
+      .filter(|s| !s.is_empty())
+      .collect()
   }
 
   /// The bib keys this document cites, for the recursive raw-`.bib` conversion
@@ -627,6 +649,21 @@ impl MakeBibliography {
     // inline `ltx:bibentry`, so this scan is a no-op for them.
     // Witness 2605.01646 (AIPFa.tex, 23 entries), 2605.00783, 2605.03852.
     Self::scan_bibentries(&mut entries, doc);
+    // A key several bibliographies list inline is formatted from this bibliography's own entry: the scan above kept
+    // the document's last copy, another list's — its data and its `labelnumber` ([`given_number`]). biblatex's
+    // refsections each print their own list, numbered on their own (probe r1: refsection 1's list read [3] Knuth,
+    // [2] Lamport where pdflatex prints [1], [2]; arXiv 2308.00515, 2406.01695).
+    for own in doc.findnodes_at(".//ltx:bibentry", Some(bib_node)) {
+      let Some(key) = own.get_attribute("key") else {
+        continue;
+      };
+      if let Some(entry) = entries.get_mut(&key.to_lowercase())
+        && entry.bib_key == key
+      {
+        entry.citations = Self::entry_citations(doc, &own);
+        entry.bibentry = Some(own);
+      }
+    }
     // This bibliography's own entries (an amsrefs `biblist`) are its References as written: amsrefs typesets every
     // `\bib` of a biblist, cited or not, where a `.bib` is a library to take the cited entries from (1012.2719: 34
     // entries, 29 cited, the PDF lists 34). Each bibliography prints its own (two `bibdiv`s, two lists).
@@ -735,6 +772,7 @@ impl MakeBibliography {
                     year:         String::new(),
                     entry_type:   String::new(),
                     number:       0,
+                    label_number: None,
                     referrers:    HashSet::default(),
                     bibreferrers: HashSet::default(),
                     citations:    Vec::new(),
@@ -1055,7 +1093,7 @@ impl MakeBibliography {
           ("role".to_string(), "number".to_string()),
           ("class".to_string(), "ltx_bib_number".to_string()),
         ])),
-        children:   vec![NodeData::Text(entry.number.to_string())],
+        children:   vec![NodeData::Text(entry.shown_number().to_string())],
       });
     }
 
@@ -1096,7 +1134,7 @@ impl MakeBibliography {
             ("open".to_string(), "[".to_string()),
             ("close".to_string(), "]".to_string()),
           ])),
-          children:   vec![NodeData::Text(entry.number.to_string())],
+          children:   vec![NodeData::Text(entry.shown_number().to_string())],
         });
       },
       CitationStyle::Alpha => {
@@ -1688,14 +1726,15 @@ impl Processor for MakeBibliography {
       // done for when that flag lands, and because the counter belongs with
       // the walk it counts.
       let mut number = 0u32;
+      // The numbers the list prints ([`number_entry`]): an entry its backend labelled takes none.
+      let mut shown = 0u32;
 
       // Citation-order numbering for an UNSORTED style: the References are
       // numbered by first citation, not alphabetically — matching the `.bst` and
       // the published PDF (html_feedback #6294). Perl always `unisort`s (it reads
       // the sort flag into `%STYLE` but ignores it), so this is a deliberate
-      // surpass-Perl. Detected from the `bibstyle` NAME — the reliable signal on
-      // the main node (Perl's `beginBibliography` never emits `sort`) — plus an
-      // explicit `sort='false'` for the bibunits `\bibstyle` path / external XML.
+      // surpass-Perl. Read from the node's `sort`, which the engine writes from the
+      // style (`CITE_SORT`; OXIDIZED_DESIGN_DIVERGENCES #116).
       // Only the non-split walk uses it; `--splitbibliography` is inherently
       // initial-major (alphabetical) and never combines with it.
       //
@@ -1710,11 +1749,7 @@ impl Processor for MakeBibliography {
         .as_deref()
         .map(|s| s.is_empty() || s == "numbers")
         .unwrap_or(true);
-      let unsorted_style = bib.get_attribute("sort").as_deref() == Some("false")
-        || bib
-          .get_attribute("bibstyle")
-          .as_deref()
-          .is_some_and(is_citation_order_style);
+      let unsorted_style = bib.get_attribute("sort").as_deref() == Some("false");
       let cite_order = (is_numeric && unsorted_style).then(|| citation_order(&doc));
       // A backend's listing keeps its own order in every style: biber applied
       // the style's sorting scheme (the `.bbl` order is the PDF's), and biblatex
@@ -1768,8 +1803,7 @@ impl Processor for MakeBibliography {
           for key in &by_initial[initial] {
             debug_assert!(entries.contains_key(key), "grouped key {key} left entries");
             if let Some(entry) = entries.get_mut(key) {
-              number += 1;
-              entry.number = number;
+              number_entry(entry, &mut number, &mut shown, &style);
             }
           }
           // Build a subset HashMap for this initial
@@ -1786,8 +1820,7 @@ impl Processor for MakeBibliography {
         for key in &sorted_keys {
           debug_assert!(entries.contains_key(key), "sorted key {key} left entries");
           if let Some(entry) = entries.get_mut(key) {
-            number += 1;
-            entry.number = number;
+            number_entry(entry, &mut number, &mut shown, &style);
           }
         }
         let biblist = self.make_bibliography_list(&doc, &bib_id, None, &entries, &style);
@@ -1844,7 +1877,7 @@ impl Processor for MakeBibliography {
         if entry_given_label(entry, &style).is_none() {
           values.push((
             "number",
-            crate::object_db::Value::from(entry.number.to_string().as_str()),
+            crate::object_db::Value::from(entry.shown_number().to_string().as_str()),
           ));
         }
         self.db.register(&format!("ID:{}", bibitem_id), values);
@@ -3615,20 +3648,6 @@ fn unisort(keys: &mut [String]) {
   keys.sort_by_cached_key(|k| (collation_primary_key(k), k.clone()));
 }
 
-/// Whether a `\bibliographystyle` produces an UNSORTED (citation-order)
-/// bibliography — bibtex's `sort='false'` styles. Kept in sync with the
-/// engine's `lookup_bibstyle_params` (`latex_constructs.rs`): the two live in
-/// different crates, but both encode the same small, stable bibtex fact.
-/// `unsrt`/`unsrtnat` are the base-table unsorted styles; `ieeetr`/`IEEEtran`
-/// are the surpass-Perl additions matching the real IEEE `.bst` + PDF, and
-/// `abntex2-num` numbers by citation too (abntex2-num.bst:2021-2022).
-fn is_citation_order_style(bibstyle: &str) -> bool {
-  matches!(
-    bibstyle,
-    "unsrt" | "unsrtnat" | "ieeetr" | "IEEEtran" | "abntex2-num" | "figbib"
-  )
-}
-
 /// Whether a bibliography style prints an entry's `url` field. biblatex's
 /// standard styles do (`url=true`, the biblatex binding records `biblatex` —
 /// or `biblatex-giveninits`, [`style_given_name_form`] — as the style), and so
@@ -3752,18 +3771,75 @@ fn given_listing(doc: &PostDocument, bib: &Node) -> Option<Vec<String>> {
 /// `\printfield{labelalpha}\printfield{extraalpha}`, the latter through
 /// `\mknumalph` (biblatex.def:476): "Knu84", "Knu84a". Perl has no such
 /// label; its alphabetic refnum is its own (`make_alpha_label`).
+///
+/// In a biblatex bibliography an entry's `shorthand` is its label in every style that labels (biblatex.sty:8920
+/// `\let\abx@field@labelnumber\abx@field@shorthand`; biber's default labelalpha template starts with it): such an
+/// entry takes no number (arXiv 2406.00136's `[SAG]`, `[HTT]` beside [1]-[17]).
+///
+/// Only a biblatex bibliography's: under natbib/BibTeX a `.bib` field `labelalpha`, `extraalpha` or `shorthand` is
+/// data the `.bst` never prints, and the entry keeps its number (`labelalpha={Knu84}` under natbib numbers prints
+/// `[1]`, cited `[1]`; it printed `[Knu84]`, cited `[, 1]`). Guard
+/// `06_cluster_bibliography::natbib_labelalpha_field_is_no_label`.
 fn given_label(bibentry: &Node) -> Option<String> {
+  if !is_biblatex_bibliography() {
+    return None;
+  }
   let field = |role: &str| {
     PostDocument::findnodes_foreign(&format!("ltx:bib-data[@role='{role}']"), bibentry)
       .first()
       .map(|node| node.get_content().trim().to_string())
       .filter(|text| !text.is_empty())
   };
+  if let Some(shorthand) = field("shorthand") {
+    return Some(shorthand);
+  }
   let mut label = field("labelalpha")?;
   if let Some(extra) = field("extraalpha").and_then(|n| n.parse::<u32>().ok()) {
     label.push_str(&mknumalph(extra));
   }
   Some(label)
+}
+
+/// The number a backend gave the entry: biblatex's `labelnumber`, which a `.bbl`'s entries carry (biblatex_sty.rs
+/// `\biblatex@bbl@number`) — its place in its refsection's datalist, the same in every list of that refsection
+/// (biblatex numbers each refsection on its own, biblatex.sty:8891-8923), or with `defernumbers=true` the one it got
+/// where it was first printed. Read from this bibliography's own copy of the entry ([`MakeBibliography::get_bib_entries`]):
+/// another refsection's list numbers the key apart. MakeBibliography's own number restarts at 1 in each
+/// `ltx:bibliography`, so the filtered lists of one `.bbl` (`\printbibliography[type=…]`) gave two entries one label.
+/// Only a biblatex bibliography's: a `.bib` field `labelnumber` under natbib is no label. Witnesses arXiv 2406.00136,
+/// 2308.00515, 2406.01695.
+fn given_number(entry: &BibEntryData) -> Option<u32> {
+  if !is_biblatex_bibliography() {
+    return None;
+  }
+  let bibentry = entry.bibentry.as_ref()?;
+  PostDocument::findnodes_foreign("ltx:bib-data[@role='labelnumber']", bibentry)
+    .first()
+    .and_then(|node| node.get_content().trim().parse().ok())
+}
+
+/// Numbers the next entry of the list: [`BibEntryData::number`], its place (its id, `bib.bib<number>`), and the
+/// number it prints, [`BibEntryData::label_number`]: the one its backend gave it ([`given_number`]), else its place
+/// among the entries that print a number — one with a label of its own ([`entry_given_label`], a biblatex `shorthand`
+/// or alphabetic label) takes none, as biblatex gives a `shorthand` entry no `labelnumber` (biblatex.sty:8920). On a
+/// `.bib` read without a `.bbl` the list of `balbes` (`shorthand={Balbes \& Dwinger}`) and four others printed
+/// `[Balbes & Dwinger] [2] [3] [4] [5]`; pdflatex prints [1]-[4]. Guard
+/// `06_cluster_bibliography::biblatex_bib_route_shorthand_takes_no_number`.
+fn number_entry(
+  entry: &mut BibEntryData,
+  number: &mut u32,
+  shown: &mut u32,
+  style: &CitationStyle,
+) {
+  *number += 1;
+  entry.number = *number;
+  entry.label_number = given_number(entry);
+  if entry_given_label(entry, style).is_none() {
+    *shown += 1;
+    if entry.label_number.is_none() && *shown != *number {
+      entry.label_number = Some(*shown);
+    }
+  }
 }
 
 /// [`given_label`] of an entry of a bibliography cited in `style`: an
@@ -4220,6 +4296,11 @@ fn bibitem_id(bib_id: &str, entry: &BibEntryData, bibentry: &Node) -> String {
   }
 }
 
+impl BibEntryData {
+  /// The number its label prints: the one its backend gave it, else its place in the list.
+  fn shown_number(&self) -> u32 { self.label_number.unwrap_or(self.number) }
+}
+
 /// Clone a BibEntryData (for split operation).
 fn clone_entry(e: &BibEntryData) -> BibEntryData {
   BibEntryData {
@@ -4233,6 +4314,7 @@ fn clone_entry(e: &BibEntryData) -> BibEntryData {
     year:         e.year.clone(),
     entry_type:   e.entry_type.clone(),
     number:       e.number,
+    label_number: e.label_number,
     referrers:    e.referrers.clone(),
     bibreferrers: e.bibreferrers.clone(),
     citations:    e.citations.clone(),

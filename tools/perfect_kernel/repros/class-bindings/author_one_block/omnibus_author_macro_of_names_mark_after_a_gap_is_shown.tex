@@ -1,0 +1,22 @@
+% mechanism: emit.rs (the requests a written name shows): under a block that keeps its marks on the names (OmniBus's
+%   `\lx@add@author@split`, a raw class's, `per_author_marks`), a mark glued to its name is written in the name's run,
+%   one past a gap or a comma (`Ann Able\, $^{1}$ ,`, `Dee Dunn,$^{4}$`) in nobody's: such a request, which no written run
+%   prints (`marks_in`), shows as an unkept one does (`show_unanswered_marks`). Here held in a macro read in its place
+%   (`reading::unfold_held_names`, OD #993 "AUT1"); the inline list takes the same path
+% witness: 2209.05831 (`Wimmer-Schweingruber\, $^{1,4,*}$ ,`), 2201.04171 (`Macario-Rojas \,$^{1,*}$`), 2609.18180
+%   (`Busillo,$^{2,3}$`), 2403.18314 (`Zaghouani \,$^{2*}$`), each held in Frontiers' `\Authors`; synthetic
+% oracle:  pdflatex (TL 2025, -no-shell-escape; article, the class missing here) 0 errors: "Ann Able 1 , Bob Baker 2 and
+%   Cy Cole 3 , Dee Dunn,4 Eve Ell5"
+% engines: int167a: the names by their text (5 Warnings and OmniBus's), every mark shown; AUT1 before this step: from the unfolded
+%   tokens, marks 1, 3 and 4 lost, uncounted (the inline list on int167a too)
+% expect:  1 warning (OmniBus's missing binding); every creator its mark
+% status:  RED (int167a inline; AUT1's first unfold held) -> GREEN (AUT1; guard perfect_kernel_batchaut1)
+% preload: ar5iv.sty
+\documentclass{nosuchclass}
+\def\Authors{Ann Able\, $^{1}$ , Bob Baker\,$^{2}$ and Cy Cole \,$^{3}$, Dee Dunn,$^{4}$ Eve Ell$^{5}$}
+\begin{document}
+\title{T}
+\author{\Authors}
+\maketitle
+Text.
+\end{document}

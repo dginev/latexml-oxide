@@ -1,0 +1,17 @@
+% GREEN (brief 107g, mechanism 5; 107b r1's wrapper reading): a wrapper under the names over lines with no names and no
+%   marks stays one entry, as the base read it (`wrapper_holds_names_or_marks`).
+% witness: 2509.02924 (this `\parbox`), 2404.17162, 2106.11727, astro-ph0412305, 0902.2761 (a group: wrap_a below); 2010.09850 goes
+%   with them: "University of Groningen, The Netherlands \\ TU Wien, Austria" is the same shape, one affiliation as on base
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors
+% engines: int138a: one affiliation each; int139a: four on the wrapper's last holder
+% expect:  0 errors; each author one affiliation
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\\
+\parbox{1.4in}{\scriptsize \centering Media Arts \& Technology \\ UC Santa Barbara}
+\and Bob Baker\\
+\parbox{1.4in}{\scriptsize \centering Media Arts \& Technology \\ UC Santa Barbara}}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,29 @@
+% A `\{…\}@domain` list set over two lines that the Kind step for an address line declines — a tag follows the list,
+%   `… cy.coe\}@alpha.edu (Ann)`, which no address reader parts (as one-line `a@x (Matvey)`, 2512.10975, stays): the
+%   list stays as printed in the affiliation the author block welded it into, and says so with one counted
+%   `Warning:frontmatter:address-list` (signal integrity: fail toward flagging; OXIDIZED_DESIGN_DIVERGENCES #970).
+% witness: html_feedback #7233 (the split list's fail-safe)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "{ann.able,xq.zz," / "cy.coe}@alpha.edu (Ann)"
+% engines: rust int138a: the list glued into Cy Coe's affiliation, 0 warnings
+% expect:  0 errors, 1 warning (frontmatter:address-list); Cy Coe's affiliation as printed, the list in it
+% status:  RED (int138a) -> GREEN (107a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\title{A Title}
+\author{%
+  Ann Able$^{1}$ \\
+  \and
+  Bo Baker$^{1}$ \\
+  \and
+  Cy Coe$^{2}$ \\
+  \and
+ {\normalfont $^1$University of Alpha} \\
+ {\normalfont $^2$Department of Physics, University of Beta} \\
+ \texttt{\{ann.able,xq.zz,}\\
+ \texttt{cy.coe\}@alpha.edu (Ann)}
+}
+\begin{document}
+\maketitle
+Text.
+\end{document}

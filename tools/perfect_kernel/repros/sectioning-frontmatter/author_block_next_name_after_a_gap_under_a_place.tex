@@ -1,0 +1,42 @@
+% witness: 0801.1297 (`Comunidad de Palo Blanco, Salamanca Gto. México.\\ \\ V.I. Tkach`: the line above the gap
+%          reads as names), the 85a r1 review's q11, q12, r2, the r2 review's t17: after a gap a name line starts
+%          the next author, whatever the line above it reads as — a place or an institution that reads as a name
+%          (`Hong Kong`, `Costa Rica`, `Hanson Robotics`); a name of initials and ties (`J.~R.~Smith`); in an `\and`
+%          group (a marked block: author_block_marked_block_gaps). OD #900
+% oracle:  pdflatex 0 errors: one centred column per group, a blank line before each later name
+% engines: rust int114a = each later name among the lines of the author above (Ann Able holding "Bob Baker", …);
+%          rust 85a r2, r3 = as expected
+% expect:  0 errors, 0 warnings; the nine creators, each with its own lines
+% status:  RED (int114a) -> GREEN (85a r1) — a catalog repro, no guard: the gap path rides on
+%          perfect_kernel_batch85a::next_name_after_a_spacer_line, the veto's edge (q11) on stacked_names_keep_their_lines
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able \\
+Hanson Robotics \\
+Hong Kong \\
+\\
+Bob Baker \\
+Univ B
+\and Cat Cole \\
+University of X \\
+Costa Rica \\
+\\
+Dan Dorn \\
+University B
+\and Eve Eads \\
+Univ A \\
+\\
+J.~R.~Smith \\
+Univ B
+\and Fay Fox \\
+Univ A \\
+\\
+Gil Gray \\
+Boston, MA
+\and Hal Hunt \\
+Univ C}
+\begin{document}
+\maketitle
+Text.
+\end{document}

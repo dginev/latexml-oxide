@@ -57,6 +57,7 @@ pub fn restart_budget(max_memory_mib: u64, source: &str) -> Option<usize> {
 /// the second.
 pub fn release_before_rerun() -> (u64, u64) {
   drop(stomach::salvage_pending_box_lists(false));
+  stomach::clear_token_stack();
   unsafe {
     libmimalloc_sys::mi_collect(true);
   }

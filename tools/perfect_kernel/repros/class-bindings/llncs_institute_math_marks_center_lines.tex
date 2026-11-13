@@ -1,0 +1,18 @@
+% mechanism: the list cutter (`classify::entry_starts` `lines_starts`): a line break inside an environment the
+%   list opens (`\begin{center}$^{1}$ Univ A\\ $^{2}$ Univ B\end{center}`) joins its lines,
+%   cut only outside it, as no piece may hold half of the environment (revP4b4a B1, sibling `center`)
+% witness: synthetic (P4b4a3 sibling probe s2)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2" over "1 Univ A / 2 Univ B"
+% engines: rust P4b4abase: 0 errors, 0 warnings, each name its line; P4b4a: 3 errors (`\egroup Attempt to close a group
+%   that switched to mode horizontal`, `Can't close environment center`, `\end{center} Attempt to end mode
+%   internal_vertical`), Ann Able's line in a centered box
+% expect:  0 errors, 0 warnings; Ann Able "1 Univ A", Bob Baker "2 Univ B"
+% status:  RED (P4b4a) -> GREEN (P4b4a3; guard perfect_kernel_batchc1::queued_marks_read_as_digested)
+\documentclass{llncs}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1}$ \and Bob Baker$^{2}$}
+\institute{\begin{center}$^{1}$ Univ A\\ $^{2}$ Univ B\end{center}}
+\maketitle
+Body.
+\end{document}

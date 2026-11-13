@@ -1,0 +1,23 @@
+% mechanism: a store whose separator is a document macro holding the kernel's `\and` and more
+%   (`\newcommand\nx{\and\ignorespaces}`) under a class numbering the `\and` entries (llncs's `\institutename`,
+%   numinst.cls): `split_at_kernel_separators` finds no separator run in a macro holding more than the separator, so
+%   the store reads as one entry, the kernel's " and " written in, under every author (revP4d P2, probe q11). The
+%   macro holding the bare `\and` is cut (class_numbered_institutes_macro_held_separator). Pre-existing.
+% witness: synthetic (revP4d P2)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2", "1 Univ A, Town A",
+%          "2 Univ B, Town B"
+% engines: rust int161a, F0, P4d, int162a: Ann Able 1 and Bob Baker 2 each "Univ A, Town A and Univ B, Town B", 0 W
+%          (the " and " is invented); perl: no binding for the class (its `\institute` raw)
+% expect:  0 errors, 0 warnings; Ann Able "Univ A, Town A", Bob Baker "Univ B, Town B"
+% status:  RED (int161a, F0, P4d, int162a)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{numinst}
+\newcommand\nx{\and\ignorespaces}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$}
+\institute{Univ A, Town A \nx Univ B, Town B}
+\maketitle
+Text.
+\end{document}

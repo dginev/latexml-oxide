@@ -1,0 +1,21 @@
+% mechanism: a frontmatter setter inside an author block read while a flush digests its queue (`\date` in an `\author`
+%   nested in `\title`: the `\author` runs in the title's digestion, a late block with a flush of its own,
+%   `\lx@frontmatter@late`) runs `\lx@add@frontmatter@now`, not the queue; its rehearsal notes the entry as the command
+%   a queued one is digested by (`rehearsal::note_frozen_entry`), and the emitter queues it at that flush
+%   (`emitter::emit::recover_queued`; OXIDIZED_DESIGN_DIVERGENCES #985), as for `\date` in a top-level `\author`.
+% witness: 1411.6693 (`\title{\textbf{…}\author{… \date{{\small {$^1$ School of …}}}}} \maketitle \date{}`)
+% oracle:  pdflatex 0 errors; `\maketitle` runs the `\date` while typesetting `\@author` inside `\@title`, so the date
+%   line prints "1 School of Zebrawords, Northeast Normal University, Changchun 130024, China"
+% engines: rust int154x / CR3: no date, no Warning (a silent loss); old engine (int153m, LATEXML_FM_EMIT=0): the date
+% expect:  <date role="creation"> with the superscript 1 and the school's words; Ann Able the one creator; 0 Warnings
+% status:  RED (CR3) -> GREEN (CR3b; guard perfect_kernel_batchcr3::date_inside_author_inside_title_is_the_date)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{\textbf{A Title}
+\author{Ann Able$^{1}$
+ \date{$^1$ School of Zebrawords, Northeast Normal University, Changchun 130024, China}}}
+\maketitle
+\date{}
+Body.
+\end{document}

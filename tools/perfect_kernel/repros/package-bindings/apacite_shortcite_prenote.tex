@@ -1,0 +1,17 @@
+% witness: 1805.05444 (`\let\cite\shortcite`, then `\cite<e.g.>[]{Rigden_2017}`; 23 errors)
+% oracle:  pdflatex 0 errors: "closure (e.g., Rigden, 2017). Soil (Or, 2013, p. 3)."
+% engines: rust 67int15 = 1 Error:unexpected:_ (the keys typeset as text: "e.g.>[]Rigden_2017"); Perl 0.8.8 no apacite
+%          `<pre-note>` on the short family either
+% expect:  0 errors; both citations cite their keys, with the pre-note and post-note
+% status:  FIXED (68w)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{apacite}
+\let\cite\shortcite
+\begin{document}
+Stomatal closure \cite<e.g.>[]{Rigden_2017}. Soil \shortciteNP[p.~3]{Or_2013}.
+\begin{thebibliography}{}
+\bibitem[\protect\citeauthoryear{Rigden}{Rigden}{2017}]{Rigden_2017} Rigden, A. (2017). A paper.
+\bibitem[\protect\citeauthoryear{Or}{Or}{2013}]{Or_2013} Or, D. (2013). Another.
+\end{thebibliography}
+\end{document}

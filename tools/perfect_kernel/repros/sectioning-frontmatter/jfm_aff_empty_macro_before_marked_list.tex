@@ -1,0 +1,19 @@
+% mechanism: CST1: jfm's `\affiliation` asks `leads_with_label` behind the opening-mark gate
+%   (`argument_marks::may_open_with_mark`), which reads on past a macro printing nothing (`\newcommand\affilfont{}`)
+%   to the class's mark `\aff{1}`: rehearsed, the list cut by its marks (a gate answering "no mark" would leave it one
+%   document note)
+% witness: synthetic (jfm_aff_macro_marked_list with a font macro before it; 2103.04797 for the gate)
+% oracle:  pdflatex: jfm.cls not in TL 2025 (class-absent: judged against jfm.cls:680/733, which prints the list once
+%          under the names: "Ann Able1 and Bob Baker2 / 1Univ A, Town A / 2Univ B, Town B")
+% engines: int164a and CST1: the creators below (byte-identical)
+% expect:  0 errors, 0 warnings; Ann Able "1 Univ A, Town A", Bob Baker "2 Univ B, Town B"
+% status:  GREEN (guard perfect_kernel_batchc1::marks_lead_as_digested)
+\documentclass{jfm}
+\newcommand\affilfont{}
+\begin{document}
+\title{T}
+\author{Ann Able\aff{1} \and Bob Baker\aff{2}}
+\affiliation{\affilfont\aff{1}Univ A, Town A\\ \aff{2}Univ B, Town B}
+\maketitle
+Text.
+\end{document}

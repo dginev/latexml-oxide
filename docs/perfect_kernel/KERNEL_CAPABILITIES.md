@@ -57,7 +57,7 @@ dedicated sessions once a large goal completes, not inside the batch that found 
 | K20 | Gullet expansion fidelity: four tex.web algorithms the gullet deviates from (column ends by command code §342/§789, `\left`/`\middle`/`\right` as primitives with `scan_delimiter` §1160/§1188-1192, §395 extra `}` in a delimited argument, peeking macros as one unexpandable step §380/§440-445/§506/§785) | C5 (study 2026-10-11) | ~400-700 arXiv papers: X1 62 IfLimit Fatals in `\xymatrix`, redefined `\span` ~127, V1b cell-head `_` ~61, part of Mouth:EoF 338; 8 REDs; queued rows 64n/64o/64v; OD #500's expansion-only residual | 2 (after P0) | OPEN, ordered G4 → G2 → G3 → G1 (user 2026-10-11) |
 | K21 | Environments as TeX does them: `Streamed` (group + element opened/closed) vs `Captured` (`#body` box) DefEnvironments, no default mode, the XML element stack independent of the save stack | C2; extends K9, K2 | M1 residual 82/150 (64y), `$$` in 64 mode-less `#body` environments (~1,700 fixed by 64ra), `\endlx@list` 839, ~5k first errors, 15 REDs, HF6 | 3 (behind P0) | OPEN; HIGH risk, staged |
 | K22 | Binding provenance and ownership: a FileIdentity per class/package load, an owned set per binding over a raw-loaded real file, the shipped-copy delta, a corpus-copy conformance audit | C1; generalizes K1 step 3 and K13 stage 3 | `undefined:` 63% of run-336 first errors (227 clusters of ≥100 papers ≈54k tasks), binding surplus over the paper (OSA abbreviations, PoS/JHEP macros, EPL `{widetext}`), 31 renamed JHEP3 copies, ~15 REDs | read-only audit in parallel with K20 | step 2 census DONE 2026-10-11 (83.6% of the not-in-TL bound families' papers ship the file); FileIdentity + owned-set overlay OPEN |
-| K23 | Frontmatter author-block event model: a lexer of author blocks into events (name, mark, separator, affiliation, contact, note, layout, group), per-binding association policy, one resolver, one emission | C4 (beyond Perl) | 49 REDs, HF2 residual 16, A2 rows, ~24 KPE / ~15 OD frontmatter entries, 20+ batches and 30+ NO-SHIP rounds | after K24's frontmatter extractor | OPEN — shadow mode first (user: needs very careful testing) |
+| K23 | Frontmatter author-block event model: a lexer of author blocks into events (name, mark, separator, affiliation, contact, note, layout, group), per-binding association policy, one resolver, one emission | C4 (beyond Perl) | 49 REDs, HF2 residual 16, A2 rows, ~24 KPE / ~15 OD frontmatter entries, 20+ batches and 30+ NO-SHIP rounds | after K24's frontmatter extractor | IN PROGRESS — superseded as a design record by [`../parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`](../parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md) (the observer is the one engine's reading, the emitter (the default since the flip, 2026-11-09; the switch and the old driver deleted, DEL2), the rest of the old reader removed before the merge); the FM S2a.1-S2a.2 r1-r7 history, this row's status as it stood, in `../archive/SYNC_SESSIONS_2026-11.md` |
 | K24 | One audited A/B comparator: stamped revisions or refuse, per-qname element counts, attribute text, canonical XML diff with mapped ids, frontmatter tuples; entry numbers allocated at integration | P0; extends K17 to arXiv; seed of the A4 audit | ≥7 missed or near-missed regressions in one week (64zc r1, 64x r1/r4, 63w4, 64k5, 64u EPL, 64b), 122 ad-hoc compare scripts, 3 renumberings | 1 | LANDED (p0 `1e47551e6c`, 2026-10-11): `ab_audit run/compare/audit` + `tools/perfect_kernel/next_entry_numbers.sh` |
 
 ## K1 — Definition provenance and raw-load-then-overlay bindings
@@ -267,7 +267,7 @@ matching closer with "Missing } inserted". Perl fuses the two
 **Today.** One `State` frame stack carries groups AND modes: `begin_mode` =
 `push_stack_frame(false)` + `BOUND_MODE` bound in that frame (stomach.rs `begin_mode`); `end_mode` demands the top
 frame be the mode frame; `egroup`/`endgroup` gate on `BOUND_MODE`-on-top + `groupNonBoxing`; the box reader's
-terminal is the raw frame depth (base_utilities.rs). Batch 56z added `lx@group@code` for `bounded` environments only.
+terminal is the raw frame depth (base_utilities/boxes_lists.rs). Batch 56z added `lx@group@code` for `bounded` environments only.
 
 **Abstraction (staged; each stage = guard + control).**
 - Stage 0, no behaviour change: every opener writes its group code
@@ -325,20 +325,51 @@ labels linked from the authors' `$^{n,}$` (`\lx@author@withsup` /
 `\lx@affiliation@withsup`).
 
 **Mechanism (as landed: 56dj, extended 58m, 58q, 59d, 59e).** After a raw `.cls` loads (the
-`latexml_core/src/binding/content.rs` after-hook site; a binding's own raw self-load does not fire it),
+`latexml_core/src/binding/content.rs` after-hook site; since 68x also for the class a binding reads raw, at the end
+of that class load, the binding's own setters kept),
 `\lx@class@loaded@raw{name}` runs `frontmatter_stores::reroute_raw_class_stores`: each setter of the NAME → kind
 table that the class defined as a pure store — one argument, or `[optional]{mandatory}` (58m, bfhlayout
-`\institute`) — is rerouted to the frontmatter API, and once any store was captured `\let\@maketitle\@empty`, as
-Perl's locked `\maketitle` discards it; off-table stores are dropped with it (Perl parity; guard
-`only_table_names_with_store_bodies_are_rerouted`). Since 58m the stores are read where the class reads them:
-creator stores (affiliation, address, e-mail, ORCID; editor, speaker) at `\maketitle`, the others when set. 58q
+`\institute`) — is rerouted to the frontmatter API. The class's `\@maketitle` is kept (it was `\let` to `\@empty`
+until sweep 93): `\lx@deposit@maketitle` (sect05.rs) digests it with the title fields and the captured stores read as
+empty and keeps what it typesets when it raises no error, and replays the class's own refused `\maketitle`
+(`\lx@dropped@maketitle`) the same way when the replay gate finds its vocabulary defined (`body_vocabulary_is_defined`;
+since 75a a `\def`'s replacement text and a called macro's delimiters are not checked as run, and a class's
+`\appto`/`\g@addto@macro` to the refused `\maketitle` extends the class's definition, state.rs
+`extended_refused_definition`; OXIDIZED_DESIGN_DIVERGENCES #756-#757). An off-table store whose
+title-page code does not typeset — a refused body the gate rejects, a deposit or replay that errs, a class field the
+deposit reads as empty (jfpc's `\@author` built from its stores) — is handed on at `\maketitle` since 77i — the document's title or
+authors when the class's own `\title`/`\author` hands its argument to the store's setter (or its `\@author` prints the
+store as the names) and the document has none, rows of the creators' author block for a store its `\@author` prints
+beside the names, nothing for a store that only repeats the creators' names (no label printed before it, every creator
+named), else an `ltx:pubnote` named by the label the title page prints before it (when TeX's run prints it right before
+the store, `verify_title_page_labels`, 77i r4) — when speculative runs of the class's title page with each store set to
+a letters and then a digits sentinel print both, a plain value is in the run with the document's own values, and no
+kept deposit or replay typesets it (`before_title_page_runs`,
+`hand_untypeset_stores`, OXIDIZED_DESIGN_DIVERGENCES #767); one only a refused class environment
+prints (wiley-article's abstract) was tabled in 75a (#758). Guard
+`only_table_names_with_store_bodies_are_rerouted`. Since 58m the stores are read where the class reads them:
+creator stores (affiliation, address, e-mail, ORCID; editor, speaker) and an abstract or keywords the title page reads (named
+by its label or not, 77i r4) at `\maketitle`,
+the others when set (once a
+`\maketitle` placed one — handed on and printed by its title page, the sentinel run — a later call only re-sets the store; a store the title page prints after a label is named by
+it, 77i, #154). 58q
 leaves a binding's own setters alone (`latexml_core::binding::store_setters`, KPE #418/#419); 59d hands what code
 appends to `\@author` to the creator (DIVERGENCES #405); 59e lets a later `\maketitle` typeset the authors set
 after the last one (DIVERGENCES #406). Inside author content `\inst{n}` is the affiliation link request
 (`\lx@author@withinst`). The 56dj text and the original steps are in the archive.
 
+68u r2 (DIVERGENCES #643) widens what a setter is, by the NAME's semantics: (rule (a)) a table setter storing its
+argument in a macro of another name is the frontmatter's when the reader scan finds only the class's title-page code
+reading it (apa6.cls:760 `\affiliation` → `\@affil`, :779 `\authornote` → `\@acks`; a store another class macro
+reads stays raw, sweep 93's letter `\fromaddress` / afthesis `\addr@ss`); a setter may define side macros beside its
+store (tufte-common.def:608-614); a raw class's redefinition of the kernel's unlocked `\date` storing `\@date` keeps its
+definitions and sets the frontmatter's date; a `{keywords}` collecting its body (`\Collect@Body`) for the title page
+only is the frontmatter's keywords (cclayout.sty:71-73).
+
 **Open.** List-append stores other than `\@author` (verify a witness first); retire the per-class bindings whose only
-content is store rerouting (ptptex first), keeping those with non-store shapes.
+content is store rerouting (ptptex first), keeping those with non-store shapes; apa/apa6's numbered author and
+affiliation forms (`\twoauthors` … `\sixaffiliations`, 64 of 188 papers, no creator at all); expl3 stores
+(asmejour.cls:1483 `\date` → `\g__asmejour_date_tl`).
 
 ## Ordering
 
@@ -582,20 +613,12 @@ commands.
 
 ## K23 — Frontmatter author-block event model
 
-**Model:** none in TeX for "a name" (beyond Perl: Perl emits one creator, KPE #521) — the reason per-shape fixes do not
-converge. **Abstraction:** Layer A, a lexer of an author block into events with source spans (Name, Mark, Sep, Affil,
-Contact, Note, Layout, Group); Layer B, per binding and syntax only (which commands make which events, the association
-policy, the block shape); Layer C, one class-independent resolver recording the rule behind each association; Layer D,
-one emission with no relocation pass.
-
-**Landing:** (0) K24's frontmatter-tuple extractor and a snapshot of ~10k frontmatter-bearing papers by family; (1)
-Layer A in shadow mode beside today's path, logging disagreements, no output change; (2) one family at a time, new and
-small first (OSA/EPL/l-aa, interact, elsarticle/cas, IEEE, acmart, generic article last), byte-identical on the family
-corpus plus every frontmatter guard, any intended change a RED→GREEN repro with a ruling; (3) delete the superseded
-heuristics in `base_utilities.rs`.
-
-**Class guard:** shadow disagreement < 0.5% per family before migrating; the 49 frontmatter REDs go green without new
-per-shape rules. **Risk:** HIGH; needs very careful testing (user 2026-10-11).
+**Superseded as a design record (2026-11-08).** The event model landed as the frontmatter observer (FM S2a.1-S2a.2,
+OD #837; the event gaps Z1-Z3, OD #978) and is now the one engine's reading. Its design, state and remaining path are one
+living doc, [`../parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`](../parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md) ("Where it
+stands", "The path", "Definition of done"). The 2026-10 design (layers A-D, the landing plan, the class guard) and its
+"As landed" notes are in [`../archive/SYNC_SESSIONS_2026-11.md`](../archive/SYNC_SESSIONS_2026-11.md) "From
+`perfect_kernel/KERNEL_CAPABILITIES.md`", verbatim.
 
 ## K24 — One audited A/B comparator
 

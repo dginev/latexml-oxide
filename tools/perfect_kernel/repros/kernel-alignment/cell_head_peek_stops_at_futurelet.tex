@@ -1,0 +1,22 @@
+% witness: 2406.11917 (diagbox \diagbox[dir=SW]{}<spaces>&, diagbox.sty:212 \newcommand\diagbox[3][]); rc_struct2 A7
+% oracle:  pdflatex 0 errors; row 2 "a | [o|x|] | b" (the third argument is the cell's v-part, TeX's \unskip\hfil),
+%          rows 3-6 "wide" spanning 2 columns, a rule, "om", "(s1)(s2)" one spanned cell
+% expect:  0 errors; the cell-head peek (tex.web §785/§791) stops at a \newcommand optional-argument macro (its
+%          \@protected@testopt reaches \futurelet's \let); \omit, \noalign and \span reached by expansion still act
+% status:  GREEN (batch 68z, perfect_kernel_batch68z::a_cell_head_newcommand_optional_macro_reads_its_arguments_in_the_cell);
+%          before 68z row 2 was "[o|x|" and "] b" (the macro's third argument was the cell's &)
+\documentclass{article}
+\newcommand\dg[3][]{[#1|#2|#3]}
+\def\om{\omit}
+\def\hl{\noalign{\hrule}}
+\def\sp{\span}
+\begin{document}
+\begin{tabular}{ccc}
+a & \dg{x}{y} & b \\
+a & \dg[o]{x}     & b \\
+\multicolumn{2}{c}{wide} & c \\
+\hl
+a & b & \om om \\
+\end{tabular}
+\halign{(#)&(#)\cr s1\sp s2\cr}
+\end{document}

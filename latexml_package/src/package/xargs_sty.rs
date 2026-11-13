@@ -137,6 +137,15 @@ fn convert_xargs_args(nargs: usize, keyval: Option<&KeyVals>) -> Result<Option<P
       paramlist.push(Parameter::new("Plain", "{}", None)?);
     }
   }
+  // (a command with an optional argument is `\@protected@testopt\cs…` or `\@protected@testopt@xargs\cs…`, which stays
+  // unexpanded whenever `\protect` is not `\@typeset@protect` — xargs.sty:205-212 `\xargs@xargdef`/`\xargs@xargsdef`,
+  // :20-25: inside ifthen's `\xdef` of a test, an `\equal` argument holding `\sequence{1}` keeps it, 2002.09653)
+  if nargs > 0
+    && (1..=nargs).any(|i| keyval.is_some_and(|kv| kv.get_value(&i.to_string()).is_some()))
+    && let Some(first) = paramlist.first_mut()
+  {
+    first.testopt = true;
+  }
   Ok(if paramlist.is_empty() {
     None
   } else {

@@ -1,0 +1,25 @@
+% mechanism: a binding's marked list cut by the Cut as the binding declares it (`MARKED_LIST_CUT`, OD #1009): every
+%   mark cuts it, address lines are entry text, legends and notes stay notes, no placement attribute; each mark shown
+%   (IEEEtran marks set by `\text{*}` and `\textsuperscript{…}`, a `§Corresponding author` note on an entry's e-mail line, and a tail after the blocks)
+% witness: 2512.10732
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able*§ , Bob Baker*, Cy Cole†", "*Univ A, Town A", "ann@a.edu § Corresponding author", "† Univ C, Town C cy@c.edu", "Accepted at a conference (DOI pending)"
+% engines: P4cbase: the note Ann's; P4c WIP: "§ Corresponding author" merged into Ann's and Bob's affiliation; perl: no cut of the list
+% expect:  0 errors, 0 warnings; Ann Able "* Univ A, Town A", note "ann@a.edu § Corresponding author"; Cy Cole "† Univ C, Town C", cy@c.edu; the tail every author's (the base's)
+% status:  RED (P4c WIP 0f8a176508) -> GREEN (P4c2)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\usepackage{amsmath}
+\begin{document}
+\title{T}
+\author{
+\IEEEauthorblockN{Ann Able\text{*}\textsuperscript{\S}, Bob Baker\text{*}, Cy Cole\textsuperscript{\textdagger}}
+\IEEEauthorblockA{\text{*}Univ A, Town A\\
+ann@a.edu \textsuperscript{\S}Corresponding author}
+\IEEEauthorblockA{\textsuperscript{\textdagger}Univ C, Town C
+cy@c.edu}
+Accepted at a conference\\
+(DOI pending)
+}
+\maketitle
+Text.
+\end{document}

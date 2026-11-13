@@ -1,0 +1,13 @@
+% witness: 2207.13707, 2403.04828, 2508.03993, 2508.03994, 2601.20155 (phfnote `hyperrefdefs=defer` under revtex4-2)
+% oracle:  pdflatex 0 errors, "Text." (revtex4-2.cls never loads hyperref: :476 only tests for it)
+% engines: rust int32a = Fatal Timeout:Convert (phfnote's deferred \hypersetup re-adding its \AtBeginDocument code);
+%          Perl 0 errors (begin-document hooks run per call there)
+% expect:  0 errors, 0 warnings; text "Text."
+% status:  GREEN (batch 77r: the revtex support's hyperref preload is marked unloaded, so the document's own
+%          \usepackage{hyperref} runs the binding and restores \hypersetup; KNOWN_PERL_ERRORS #997)
+\documentclass{revtex4-2}
+\usepackage[hyperrefdefs={defer}]{phfnote}
+\usepackage{hyperref}
+\begin{document}
+Text.
+\end{document}

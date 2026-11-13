@@ -1,0 +1,22 @@
+% RED (brief 107g, synthetic; pre-existing, base too): an `\email` written inside an `\affiliation` is placed by the observer's
+%   entry-address chain (`Resolver`, "reading entry e-mails", `owner:spelled`), not by `own_call_keeps`: on a tie the surname's
+%   spelling takes it (`yang91@` to Hengyun Yang), where an `\email` beside the `\affiliation` stays Yang Zhang's (1707.09730).
+% witness: none (synthetic; no changed paper of pop107g shows it)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors
+% engines: int138a, int139a, 107g: yang91@ on Hengyun Yang
+% expect:  0 errors; yang91@ on Yang Zhang
+\documentclass[aps,prl,superscriptaddress]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Hengyun Yang}
+\affiliation{Univ A, Town}
+\author{Yang Zhang}
+\affiliation{Univ B, City \email{yang91@b.edu}}
+\author{Cat Cole}
+\affiliation{Univ C, City}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

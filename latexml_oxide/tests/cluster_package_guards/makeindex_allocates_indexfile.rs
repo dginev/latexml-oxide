@@ -13,6 +13,7 @@ const TEX: &str = "\\documentclass{article}\n\
     \\ifdefined\\@indexfile STREAMDEFINED\\else STREAMMISSING\\fi\n\
     \\protected@write\\@indexfile{}{raw-write-payload}\n\
     \\makeatother\n\
+    \\begin{theindex}\\end{theindex}\n\
     \\end{document}\n";
 
 #[test]

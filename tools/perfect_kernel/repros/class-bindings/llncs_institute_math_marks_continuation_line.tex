@@ -1,0 +1,19 @@
+% mechanism: llncs's `\institute` with hand-typed `$^{1}$` marks, an unmarked line after the first entry (`Street A`)
+%   and an e-mail line after the second: shape (c), the unmarked line the entry's above it (the twin of
+%   llncs_institute_macro_marks_continuation_line, pinned unchanged by P4b4a's port of the cutter)
+% witness: synthetic (P4b4C probe q2b)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2" over "1 Univ A, Town A / Street A /
+%          2 Univ B, Town B / b@x.org"
+% engines: int165a and P4b4a: the expected below
+% expect:  0 errors, 0 warnings; Ann Able "1 Univ A, Town A Street A", Bob Baker "2 Univ B, Town B", the e-mail on a
+%          nameless creator
+% status:  GREEN (guard perfect_kernel_batchc1::queued_marks_read_as_digested)
+\documentclass{llncs}
+\newcommand{\affmark}[1]{\textsuperscript{#1}}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1}$ \and Bob Baker$^{2}$}
+\institute{$^{1}$ Univ A, Town A\\ Street A\\ $^{2}$ Univ B, Town B\\ \email{b@x.org}}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,23 @@
+% witness: 0710.0460 (30 Errors: a `{proof}` whose end code calls `\endlist`), siuro210301.cls:995-1000,
+%          lt6-proc.cls:988-994; rc_struct3 L2 (3 of 25 sampled `\endlx@list` first-error papers; est. 94)
+% oracle:  pdflatex 0 errors: "Text." "Proof:It holds. QED" "After." and one bulleted item
+% engines: rust 67int18b = 2 Error:unexpected:\endlx@list "Attempt to end mode internal_vertical"; Perl 0.8.8 the
+%          same (1 for the load-time `\endlist`)
+% expect:  latex.ltx:15915-15930 `\endtrivlist` with no list open is paragraph and skip bookkeeping only: nothing
+%          to end, no diagnostic
+% status:  RED (67int18b) -> GREEN (69b)
+% preload: ar5iv.sty
+\documentclass{article}
+% siuro210301.cls:995-1000 repeats \newenvironment{thebibliography}'s end code, so
+% {\def\@noitemerr{...}\endlist} runs at class load (lt6-proc.cls:988-994 the same via blank lines)
+\makeatletter
+{\def\@noitemerr{\@latex@warning{Empty `thebibliography' environment}}\endlist}
+\makeatother
+% 0710.0460: a proof whose end code calls \endlist
+\newenvironment{myproof}{\par{\bfseries Proof:}}{\hspace*{\fill}QED\endlist\par\bigskip}
+\begin{document}
+Text.
+\begin{myproof}It holds.\end{myproof}
+After.
+\begin{itemize}\item A list still closes.\end{itemize}
+\end{document}

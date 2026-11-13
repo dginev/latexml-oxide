@@ -92,7 +92,12 @@ Guards 1–4 bound a **single conversion** (per-process); guard 5 bounds the
 3. **Alloc-error hook** (`custom_alloc_error_hook`) — when any *Rust* allocation
    returns null (e.g. an `ENOMEM` from the hard cap below; C libraries such as libxml2 call `malloc` directly and never
    reach it), emits
-   `Fatal:oom:alloc_failed` and exits `137`. Portable.
+   `Fatal:oom:alloc_failed` and exits `137`. Portable. The memory is spent, so the hook allocates nothing and takes no
+   lock: its line is formatted on the stack and written straight to fd 2 (`watchdog::write_stderr_unlocked`), it prints
+   no backtrace, and it ends with `_exit` (`watchdog::exit_now`). A re-entry (its own sweep failing to allocate) ends
+   the process at once (`watchdog::enter_alloc_failure_hook`). Before 67m it formatted a backtrace under the fleet's
+   `RUST_BACKTRACE=1` and could re-enter itself and wait forever on the backtrace lock, with stderr held, so the
+   watchdog's timeout blocked too; the harness's 360 s unresponsive kill then re-leased the paper (SYNC_STATUS 67m).
 4. **Hard `RLIMIT_AS` cap** (`--child-mem-limit-mb`, applied by the harness) —
    the kernel refuses allocations past the address-space ceiling, which surfaces
    as `ENOMEM` → guard #3 → clean attributable exit → respawn. Contains a
@@ -134,8 +139,10 @@ and 2.7 GB VSZ; after 20 minutes children held about 1 GB RSS and 4.8-5.6 GB of 
 nothing, logging a hundred `Error:post:xpath` "no libxml2 error detail" and ending in `Fatal:TooManyErrors` on large
 papers that convert cleanly in a fresh process (113 of run 336's first 253 TooManyErrors; math0005012, 1209.0448,
 1310.4783; `VmPeak` 3.6 GB for 1106.3786 on both 62zt and 62zu). So a harness child also **recycles when its `VmSize`
-comes within 1.5 GiB of its `RLIMIT_AS`** (`cortex_worker.rs` `address_space_near_cap`, after the result is returned;
-the log line names which recycle fired). A child whose cap leaves less than that headroom above a fresh worker's 2.7 GB
+comes within 1.5 GiB of its `RLIMIT_AS`, or passes 3 GiB** (`cortex_worker.rs` `address_space_near_cap`,
+`RECYCLE_ADDRESS_SPACE_KB`, after the result is returned; the log line names which recycle fired). The 3 GiB rule (67o,
+user ruling 2026-10-15) keeps heavy papers out of grown children: 53 of run 353's 59 Error→Fatal `oom:alloc_failed`
+papers convert cleanly in a fresh process under the same cap (hep-ph0006359, math0111204, math0305067). A child whose cap leaves less than that headroom above a fresh worker's 2.7 GB
 (a cap below about 4.1 GiB) turns the check off at start and says so, rather than recycling after every paper.
 Standalone and pooled workers, which nothing respawns, never take it.
 
@@ -154,6 +161,50 @@ Standalone and pooled workers, which nothing respawns, never take it.
   the platform makes ergonomic; `--harness` is the portable fallback.
 * **Never `--pool-size N` for production** — it shares one RAM ceiling across N
   conversions.
+
+## Host TeX Live for arXiv coverage
+
+A worker resolves every `.sty`/`.cls`/`.tex` an arXiv paper loads through the host's libkpathsea tree — on Debian/Ubuntu
+the distro TeX Live in `/usr/share/texlive` (+ `/usr/share/texmf`), whatever `PATH`'s `kpsewhich` says. A package missing
+from that tree fails only on the fleet: the gates and local A/Bs read the vendor TL 2025 tree, so they cannot see it
+(run 349: `{fmffile}` 298 and `\Tree` 302 papers were such fleet-only errors).
+
+`texlive-full` is **not** needed. Its TeX collections are, minus documentation, command-line tools and ConTeXt:
+
+```bash
+sudo apt install --no-install-recommends \
+  texlive texlive-base texlive-binaries texlive-latex-base texlive-latex-recommended texlive-latex-extra \
+  texlive-fonts-recommended texlive-fonts-extra texlive-fonts-extra-links texlive-font-utils \
+  texlive-bibtex-extra texlive-extra-utils texlive-formats-extra texlive-games texlive-humanities \
+  texlive-lang-all texlive-luatex texlive-metapost texlive-music texlive-pictures texlive-plain-generic \
+  texlive-pstricks texlive-publishers texlive-science texlive-xetex \
+  feynmf
+```
+
+- `feynmf` is its own Debian package (feynmf.sty/feynmp.sty); `texlive-metapost` only *Recommends* it, so
+  `--no-install-recommends` skips it unless it is named.
+- `texlive-humanities` carries qtree, `texlive-metapost` mfpic/feynmp-auto, `texlive-music` musixtex; these were the
+  collections the cortex host lacked until 2026-10-14.
+- Optional: `asymptote` (asymptote.sty, asycolors.sty, ocg.sty for papers that `\usepackage{asymptote}`; pulls the
+  `asy` program and 6 libraries).
+- What `texlive-full` adds beyond this list ships no LaTeX input arXiv papers load: the nine `texlive-*-doc` packages,
+  tools (`biber`, `latexmk`, `chktex`, `lacheck`, `latexdiff`, `psutils`, `purifyeps`, `dvidvi`, `fragmaster`,
+  `lcdf-typetools`, `prerex`, `vprerex`), `context` (ConTeXt, not LaTeX) and `texinfo` (texinfo.tex).
+
+Installing collections leaves the live dumps valid: their `# source` stamps name latex.ltx and expl3-code.tex, which
+these packages do not touch. Keep the distro TL version uniform (`apt-get -s install …` must show 0 upgraded).
+
+To check a host, compare its TeX input files with a full TeX Live (2026-10-14 on the cortex host, after the list
+above: 250 of 17,402 file names missing — ConTeXt ~190, texinfo 24, the arphic CJK `.fd` files, asymptote's 3, and a
+handful newer than the distro snapshot):
+
+```bash
+find /usr/local/texlive/2025/texmf-dist/tex -type f \( -name '*.sty' -o -name '*.cls' -o -name '*.tex' -o -name '*.def' \) \
+  -printf '%f\n' | LC_ALL=C sort -u > /tmp/full.txt
+find /usr/share/texlive/texmf-dist/tex /usr/share/texmf/tex -type f \( -name '*.sty' -o -name '*.cls' -o -name '*.tex' \
+  -o -name '*.def' \) -printf '%f\n' | LC_ALL=C sort -u > /tmp/host.txt
+LC_ALL=C comm -23 /tmp/full.txt /tmp/host.txt
+```
 
 ## Exit-code reference (per child)
 
@@ -210,7 +261,9 @@ dispatcher's lease reaper, be re-leased, and after the retry budget end as
   budget instead of recording it, reporting the last such cause (not
   `never_completed_with_retries`) once the budget is spent. A crash by a signal (a stack overflow
   included) and the memory limits (`oom:rss`, `oom:alloc_failed`) are final on their first
-  occurrence. A document's own lines shaped `<severity>:cortex:…` (a `\message`; any severity, as
+  occurrence — except an `oom:alloc_failed` in a child whose address space at the paper's start (the claim's
+  `space <KiB>` line, written by `begin_task`) was already past a fresh worker's 2.7 GB: that is the child's history,
+  so it is retryable (`exit_report::retryable`, user ruling 2026-10-15). A document's own lines shaped `<severity>:cortex:…` (a `\message`; any severity, as
   CorTeX lowercases it and files an unknown one as Info) are indented by a space in every log the
   worker returns, so they cannot pose as the tag.
 * **Deploy order:** deploy the CorTeX dispatcher at `fix/late-results-and-exit-causes` (round 2 or

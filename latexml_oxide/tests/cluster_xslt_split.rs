@@ -108,6 +108,7 @@ mod xslt_head_keywords {
   #[test]
   fn head_keywords_distinct_sorted() {
     const DOC: &str = "\\documentclass{article}\n\
+                       \\usepackage{makeidx}\n\
                        \\begin{document}\n\
                        \\section{S}\n\
                        Text\\index{banana} more\\index{apple} and\\index{banana} \

@@ -1,0 +1,21 @@
+% mechanism: a `\date` inside an `\author` nested in `\title` runs while `\maketitle` typesets `\@author`, after every
+%   `\date` the document made before: its date is the one printed. The late block's recovered entry (a title, subtitle
+%   or date read while an outer flush digests its queue) is queued for the end of the outermost flush, after its own
+%   entries (`emitter::emit::recover_queued`, `defer_to_flush_end`, `place::digest_front_matter`), so the `\date` queued
+%   before it does not replace it. OXIDIZED_DESIGN_DIVERGENCES #985
+% witness: review revCR3b finding 2 (probe d2); the shape of 1411.6693 with an outer `\date` after `\title`
+% oracle:  pdflatex 0 errors: "A Title" / "Ann Able" / "Dinner One"
+% engines: CR3b: <date>Dinner Two</date>, no Warning (a silent replacement)
+% expect:  0 errors; <date role="creation">Dinner One</date>; 1 Warning, the title-page check's "unclaimed: two" (its
+%          speculative run prints the outer `\date` TeX never prints: a false positive erring the safe way, as for the
+%          outer `\date` before `\title`)
+% status:  RED (CR3b) -> GREEN (CR4; guard perfect_kernel_batchcr4::date_inside_author_inside_title_over_later_date;
+%          with a `\section` after `\maketitle`: date_inside_author_inside_title_section_after.tex, CR4b)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title \author{Ann Able \date{Dinner One}}}
+\date{Dinner Two}
+\maketitle
+Body.
+\end{document}

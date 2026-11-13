@@ -1,0 +1,26 @@
+% A raw class's in-place `\address` line holding an `\and` the class defines for its lines (a `&`, as smfart.cls's
+% `\address{… \and …}` in 2508.07946): the separator's meaning is the class's (`raw`, `argument_separators`, OD #995),
+% so the gate `frontmatter_stores.rs` `kernel_and_list` does not keep the class's line, and the API's contact prints the
+% class's `&`. A pin of trap T8 (the rehearsal reads every `\and` as a separator, so the gate asks what it means), the
+% same on int158a and P26.
+% witness: 2508.07946 (smfart's `\address`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Univ A, Town & Univ B, City", then "A Title", "Ann Able"
+% engines: rust int158a = P26 = 0 errors, 0 warnings, Ann Able's address "Univ A, Town & Univ B, City";
+%          perl = no raw class load (OmniBus `\address`)
+% expect:  0 errors, 0 warnings; Ann Able's contact "Univ A, Town & Univ B, City"
+% status:  GREEN (pin, P26; guard perfect_kernel_batchp26::an_in_place_line_is_the_classs_where_a_separator_means_the_kernels)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{ipclassand.cls}
+\ProvidesClass{ipclassand}
+\LoadClass{article}
+\def\and{\unskip{} \&\ \ignorespaces}
+\newcommand\address[1]{\par{\small #1}\par}
+\end{filecontents*}
+\documentclass{ipclassand}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\address{Univ A, Town \and Univ B, City}
+\maketitle
+Body.
+\end{document}

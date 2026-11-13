@@ -1,12 +1,6 @@
-use super::perfect_kernel_batch46::{convert, error_count, warning_count};
+use latexml::util::test::{check_requirements, loads};
 
-fn kpsewhich_has(name: &str) -> bool {
-  std::process::Command::new("kpsewhich")
-    .arg(name)
-    .output()
-    .map(|o| o.status.success() && !o.stdout.is_empty())
-    .unwrap_or(false)
-}
+use super::perfect_kernel_batch46::{convert, error_count, warning_count};
 
 /// lineno.sty manual surface (witness lineno/ulineno): \linenumberwidth,
 /// \bframesep, \bframerule, \linerefp, \linerefr, and bare \internallinenumbers
@@ -183,9 +177,10 @@ fn spill_gated_node_boxes_stays_bounded() {
 /// entries per `align` (7,203 → 303 here). The finishing yield sweeps, so none
 /// is pinned through pass 2 and the spine tail (batch 56it). This document
 /// yields only when its RSS crosses the spill watermark, so the watermark is
-/// pinned (`LATEXML_SPILL_AT_MIB`) well below the run's footprint (~130 MB):
-/// derived from `--max-memory` (a third of the fuse, 192 MB at 768), it sat
-/// 7 MB under a 199 MB run, and batch 56kp's 67 MB saving stopped the yield.
+/// pinned (`LATEXML_SPILL_AT_MIB`) well below the run's own growth (the mark is
+/// the watermark above the conversion's starting RSS, STRM): derived from
+/// `--max-memory` (a third of the fuse, 192 MB at 768), it sat 7 MB under a
+/// 199 MB run, and batch 56kp's 67 MB saving stopped the yield.
 #[test]
 fn align_stale_node_boxes_are_swept() {
   let body: String = (0..300)
@@ -196,7 +191,7 @@ fn align_stale_node_boxes_are_swept() {
   );
   let (stderr, xml) = convert_env_args(&tex, &["--streaming", "--max-memory=768"], &[
     ("LXML_TRACE_NODE_BOXES", "1"),
-    ("LATEXML_SPILL_AT_MIB", "64"),
+    ("LATEXML_SPILL_AT_MIB", "16"),
   ]);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
@@ -231,6 +226,9 @@ fn align_stale_node_boxes_are_swept() {
 /// 149.3 s with identical XML. Streaming output stays identical to eager.
 #[test]
 fn resident_glossary_does_not_sweep_every_yield() {
+  if !check_requirements(loads::GLOSSARIES) {
+    return;
+  }
   let tex =
     include_str!("../../../tools/perfect_kernel/repros/streaming/resident_glossary_sweeps.tex");
   let (stderr, streamed) =
@@ -664,6 +662,9 @@ fn istgame_and_tikz_trees_child_nodes() {
 /// swallow subsequent spaces from input when to_match expects another space.
 #[test]
 fn expkv_ekvcsvloop_delimiter_adjacent_spaces() {
+  if !check_requirements(loads::EXPKV) {
+    return;
+  }
   let tex = r"\documentclass{article}
 \usepackage{expkv}
 \newcommand*\myprocessor[1]{(#1)}
@@ -1738,7 +1739,7 @@ fn pgf_functional_shading_and_gradients() {
 /// (witness: tikzpingus/tikzpingus-doc.tex Figure 1 Table 3).
 #[test]
 fn tikzpingus_cloak_functional_shading() {
-  if !kpsewhich_has("tikzpingus.sty") {
+  if !check_requirements(&["tikzpingus.sty"]) {
     return;
   }
   let tex = r"\documentclass{article}
@@ -1972,7 +1973,7 @@ World
 /// per entry, a leaked `<XMath>` swallowing the paragraph; pdflatex clean).
 #[test]
 fn index_separator_inside_math_is_phrase_material() {
-  let tex = "\\documentclass{article}\n\\usepackage{makeidx}\\makeindex\n\\begin{document}\nX\\index{arroba@$@$} Y\n\\end{document}\n";
+  let tex = "\\documentclass{article}\n\\usepackage{makeidx}\\makeindex\n\\begin{document}\nX\\index{arroba@$@$} Y\n\\printindex\\end{document}\n";
   let (stderr, xml) = convert(tex, false);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   latexml::util::test::assert_element(
@@ -1997,7 +1998,8 @@ fn index_string_of_undefined_command_stringifies_its_name() {
 \begin{document}
 \indexcommand\insertframetitle
 \indexcommand\ifbeamercolorempty
-X\end{document}
+X\printindex
+\end{document}
 ";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -2270,15 +2272,18 @@ fn french_high_punctuation_unskips_the_space() {
 #[test]
 fn bare_subfloat_has_a_phantom_caption() {
   let body = "\\documentclass{article}\n\\usepackage{graphicx}\n\\usepackage{PKG}\n\\begin{document}\n\\begin{figure}\n\\subfloat{\\rule{1cm}{1cm}}\n\\subfloat[]{\\rule{1cm}{1cm}}\n\\subfloat[Cap C]{\\rule{1cm}{1cm}}\n\\caption{Main}\n\\end{figure}\n\\end{document}\n";
-  // subcaption sets its sub-captions small and lists them; subfig does neither.
+  // subcaption sets its sub-captions small and lists them; subfig does neither. subfig measures the body
+  // (subfig.sty:375-376 `\sbox\@tempboxa{#2}`), so its panels state their 1cm (`note_sub_float_body_width`), three on
+  // a line as pdflatex sets them; subcaption's `\subfloat` sizes its box of its own accord and states none.
   let rule = r#"<rule height="28.5pt" width="28.5pt"/>"#;
-  for (pkg, small, inlist) in [
+  for (pkg, small, inlist, panel) in [
     (
       "subcaption",
       (r#"<text fontsize="90%">"#, "</text>"),
       r#" inlist="lof""#,
+      "",
     ),
-    ("subfig", ("", ""), ""),
+    ("subfig", ("", ""), "", r#" panelwidth="0.082""#),
   ] {
     let (stderr, xml) = convert(&body.replace("PKG", pkg), true);
     assert_eq!(error_count(&stderr), 0, "{pkg}: {stderr}");
@@ -2290,7 +2295,7 @@ fn bare_subfloat_has_a_phantom_caption() {
       "figure",
       &[r#"xml:id="S0.F1.sf1""#],
       &format!(
-        r#"<figure class="ltx_figure_panel" xml:id="S0.F1.sf1"><tags><tag>{open}(a){close}</tag><tag role="refnum">1a</tag></tags>{rule}</figure>"#
+        r#"<figure class="ltx_figure_panel"{panel} xml:id="S0.F1.sf1"><tags><tag>{open}(a){close}</tag><tag role="refnum">1a</tag></tags>{rule}</figure>"#
       ),
     );
     // Control (passed before the fix): the captioned third sub-figure.
@@ -2300,11 +2305,12 @@ fn bare_subfloat_has_a_phantom_caption() {
       &[r#"xml:id="S0.F1.sf3""#],
       &format!(
         concat!(
-          r#"<figure class="ltx_figure_panel"{inlist} xml:id="S0.F1.sf3"><tags><tag>{open}(c){close}</tag><tag role="refnum">1c</tag></tags>"#,
+          r#"<figure class="ltx_figure_panel"{inlist}{panel} xml:id="S0.F1.sf3"><tags><tag>{open}(c){close}</tag><tag role="refnum">1c</tag></tags>"#,
           r#"{rule}<toccaption><tag close=" ">c</tag>Cap C</toccaption>"#,
           r#"<caption><tag close=" ">{open}(c){close}</tag>{open}Cap C{close}</caption></figure>"#
         ),
         inlist = inlist,
+        panel = panel,
         open = open,
         close = close,
         rule = rule
@@ -2336,8 +2342,7 @@ fn bare_subfloat_has_a_phantom_caption() {
     "figure",
     &[r#"xml:id="S0.F1""#],
     &format!(
-      r#"<figure xml:id="S0.F1"><tags><tag>{}</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags>{}{}</figure>"#,
-      small("Figure 1"),
+      r#"<figure class="ltx_panels_gallery" panelcols="2" panelrows="1" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags>{}{}</figure>"#,
       panel("1", "a", "A"),
       panel("2", "b", "C")
     ),
@@ -2346,13 +2351,9 @@ fn bare_subfloat_has_a_phantom_caption() {
     &xml,
     "figure",
     &[r#"xml:id="S0.F2""#],
-    &format!(
-      concat!(
-        r#"<figure inlist="lof" xml:id="S0.F2"><tags><tag>{fig}</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags>"#,
-        r#"<p>B</p><toccaption><tag close=" ">2</tag>B</toccaption><caption><tag close=": ">{fig}</tag>{b}</caption></figure>"#
-      ),
-      fig = small("Figure 2"),
-      b = small("B")
+    concat!(
+      r#"<figure inlist="lof" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags>"#,
+      r#"<p>B</p><toccaption><tag close=" ">2</tag>B</toccaption><caption><tag close=": ">Figure 2</tag>B</caption></figure>"#
     ),
   );
 }
@@ -2471,7 +2472,7 @@ fn captionof_in_a_float_keeps_the_float_type() {
     &xml,
     "figure",
     &[r#"xml:id="S0.F1""#],
-    r#"<figure inlist="lof" labels="LABEL:fig:a" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p class="ltx_figure_panel">x</p><toccaption><tag close=" ">1</tag>Fig cap</toccaption><caption><tag close=": ">Figure 1</tag>Fig cap</caption><table class="ltx_figure_panel" inlist="lot" labels="LABEL:tab:a" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Tab cap</toccaption><caption><tag close=": ">Table 1</tag>Tab cap</caption></table></figure>"#,
+    r#"<figure class="ltx_panels_gallery" inlist="lof" labels="LABEL:fig:a" panelcols="1" panelrows="2" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p class="ltx_figure_panel">x</p><toccaption><tag close=" ">1</tag>Fig cap</toccaption><caption><tag close=": ">Figure 1</tag>Fig cap</caption><table class="ltx_figure_panel" inlist="lot" labels="LABEL:tab:a" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Tab cap</toccaption><caption><tag close=": ">Table 1</tag>Tab cap</caption></table></figure>"#,
   );
   // `\setcaptiontype{figure}` after a `\captionof{table}`: the figure's own caption is Figure 1.
   let tex = "\\documentclass{article}\n\\usepackage{caption}\n\\begin{document}\n\\begin{figure}\n\\captionof{table}{Tab cap}\n\\setcaptiontype{figure}\nx\n\\caption{Fig cap}\\label{fig:a}\n\\end{figure}\n\\end{document}\n";
@@ -2482,7 +2483,7 @@ fn captionof_in_a_float_keeps_the_float_type() {
     &xml,
     "figure",
     &[r#"xml:id="S0.F1""#],
-    r#"<figure inlist="lof" labels="LABEL:fig:a" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><table class="ltx_figure_panel" inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Tab cap</toccaption><caption><tag close=": ">Table 1</tag>Tab cap</caption></table><break class="ltx_break"/><p class="ltx_figure_panel">x</p><toccaption><tag close=" ">1</tag>Fig cap</toccaption><caption><tag close=": ">Figure 1</tag>Fig cap</caption></figure>"#,
+    r#"<figure class="ltx_panels_gallery" inlist="lof" labels="LABEL:fig:a" panelcols="1" panelrows="2" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><table class="ltx_figure_panel" inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Tab cap</toccaption><caption><tag close=": ">Table 1</tag>Tab cap</caption></table><break class="ltx_break"/><p class="ltx_figure_panel">x</p><toccaption><tag close=" ">1</tag>Fig cap</toccaption><caption><tag close=": ">Figure 1</tag>Fig cap</caption></figure>"#,
   );
 }
 
@@ -2501,7 +2502,7 @@ fn subcaptiongroup_numbers_the_panels() {
     &xml,
     "figure",
     &[r#"xml:id="S0.F1""#],
-    r#"<figure inlist="lof" labels="LABEL:a LABEL:b LABEL:f" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p>x</p><toccaption><tag close=" ">1</tag>Grouped</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Grouped</text></caption></figure>"#,
+    r#"<figure inlist="lof" labels="LABEL:a LABEL:b LABEL:f" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p>x</p><toccaption><tag close=" ">1</tag>Grouped</toccaption><caption><tag close=": ">Figure 1</tag>Grouped</caption></figure>"#,
   );
 }
 
@@ -2530,7 +2531,7 @@ fn phantom_numbered_panel_keeps_its_place_and_labels() {
     &xml,
     "figure",
     &[r#"xml:id="S0.F1""#],
-    r#"<figure inlist="lof" labels="LABEL:main" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure labels="LABEL:a" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1a</tag></tags><p>x</p></figure><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Main</text></caption></figure>"#,
+    r#"<figure inlist="lof" labels="LABEL:main" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure labels="LABEL:a" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1a</tag></tags><p>x</p></figure><toccaption><tag close=" ">1</tag>Main</toccaption><caption><tag close=": ">Figure 1</tag>Main</caption></figure>"#,
   );
 }
 
@@ -2567,7 +2568,7 @@ fn collapsed_panel_content_stays_in_place() {
     &xml,
     "figure",
     &[],
-    r#"<figure xml:id="fig2"><p class="ltx_figure_panel">Before</p><break class="ltx_break"/><p class="ltx_figure_panel">Inner</p><break class="ltx_break"/><p class="ltx_figure_panel">After</p></figure>"#,
+    r#"<figure class="ltx_panels_gallery" panelcols="1" panelrows="3" xml:id="fig2"><p class="ltx_figure_panel">Before</p><break class="ltx_break"/><p class="ltx_figure_panel">Inner</p><break class="ltx_break"/><p class="ltx_figure_panel">After</p></figure>"#,
   );
 }
 
@@ -2586,16 +2587,16 @@ fn subcaptiongroup_steps_the_figure_counter_once() {
     &xml,
     "figure",
     &[r#"xml:id="S0.F2""#],
-    r#"<figure inlist="lof" labels="LABEL:c LABEL:g" xml:id="S0.F2"><tags><tag><text fontsize="90%">Figure 2</text></tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><figure inlist="lof" labels="LABEL:d" xml:id="S0.F2.sf2"><tags><tag><text fontsize="90%">(b)</text></tag><tag role="refnum">2b</tag></tags><p>y</p><toccaption><tag close=" ">b</tag>Sub</toccaption><caption><tag close=" "><text fontsize="90%">(b)</text></tag><text fontsize="90%">Sub</text></caption></figure><toccaption><tag close=" ">2</tag>Mixed</toccaption><caption><tag close=": "><text fontsize="90%">Figure 2</text></tag><text fontsize="90%">Mixed</text></caption></figure>"#,
+    r#"<figure inlist="lof" labels="LABEL:c LABEL:g" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><figure inlist="lof" labels="LABEL:d" xml:id="S0.F2.sf2"><tags><tag><text fontsize="90%">(b)</text></tag><tag role="refnum">2b</tag></tags><p>y</p><toccaption><tag close=" ">b</tag>Sub</toccaption><caption><tag close=" "><text fontsize="90%">(b)</text></tag><text fontsize="90%">Sub</text></caption></figure><toccaption><tag close=" ">2</tag>Mixed</toccaption><caption><tag close=": ">Figure 2</tag>Mixed</caption></figure>"#,
   );
   for (id, figure) in [
     (
       "S0.F1",
-      r#"<figure inlist="lof" labels="LABEL:a LABEL:b LABEL:f" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p>x</p><toccaption><tag close=" ">1</tag>Grouped</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Grouped</text></caption></figure>"#,
+      r#"<figure inlist="lof" labels="LABEL:a LABEL:b LABEL:f" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p>x</p><toccaption><tag close=" ">1</tag>Grouped</toccaption><caption><tag close=": ">Figure 1</tag>Grouped</caption></figure>"#,
     ),
     (
       "S0.F3",
-      r#"<figure inlist="lof" labels="LABEL:h" xml:id="S0.F3"><tags><tag><text fontsize="90%">Figure 3</text></tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><p>z</p><toccaption><tag close=" ">3</tag>Third</toccaption><caption><tag close=": "><text fontsize="90%">Figure 3</text></tag><text fontsize="90%">Third</text></caption></figure>"#,
+      r#"<figure inlist="lof" labels="LABEL:h" xml:id="S0.F3"><tags><tag>Figure 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><p>z</p><toccaption><tag close=" ">3</tag>Third</toccaption><caption><tag close=": ">Figure 3</tag>Third</caption></figure>"#,
     ),
   ] {
     latexml::util::test::assert_element(&xml, "figure", &[&format!(r#"xml:id="{id}""#)], figure);
@@ -2610,13 +2611,13 @@ fn subcaptiongroup_steps_the_figure_counter_once() {
     &xml,
     "figure",
     &[r#"xml:id="S0.F2""#],
-    r#"<figure inlist="lof" labels="LABEL:f2" xml:id="S0.F2"><tags><tag><text fontsize="90%">Figure 2</text></tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><figure inlist="lof" labels="LABEL:a" xml:id="S0.F2.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">2a</tag></tags><rule height="28.5pt" width="28.5pt"/><toccaption><tag close=" ">a</tag>A</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">A</text></caption></figure><toccaption><tag close=" ">2</tag>Two</toccaption><caption><tag close=": "><text fontsize="90%">Figure 2</text></tag><text fontsize="90%">Two</text></caption></figure>"#,
+    r#"<figure inlist="lof" labels="LABEL:f2" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><figure inlist="lof" labels="LABEL:a" xml:id="S0.F2.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">2a</tag></tags><rule height="28.5pt" width="28.5pt"/><toccaption><tag close=" ">a</tag>A</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">A</text></caption></figure><toccaption><tag close=" ">2</tag>Two</toccaption><caption><tag close=": ">Figure 2</tag>Two</caption></figure>"#,
   );
   latexml::util::test::assert_element(
     &xml,
     "figure",
     &[r#"xml:id="S0.F3""#],
-    r#"<figure inlist="lof" labels="LABEL:f3" xml:id="S0.F3"><tags><tag><text fontsize="90%">Figure 3</text></tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><rule height="28.5pt" width="28.5pt"/><toccaption><tag close=" ">3</tag>Three</toccaption><caption><tag close=": "><text fontsize="90%">Figure 3</text></tag><text fontsize="90%">Three</text></caption></figure>"#,
+    r#"<figure inlist="lof" labels="LABEL:f3" xml:id="S0.F3"><tags><tag>Figure 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><rule height="28.5pt" width="28.5pt"/><toccaption><tag close=" ">3</tag>Three</toccaption><caption><tag close=": ">Figure 3</tag>Three</caption></figure>"#,
   );
 }
 
@@ -2632,7 +2633,7 @@ fn phantom_numbered_outer_keeps_its_captioned_panel() {
     &xml,
     "figure",
     &[r#"xml:id="S0.F1""#],
-    r#"<figure labels="LABEL:outer" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure inlist="lof" labels="LABEL:sub" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1a</tag></tags><p>y</p><toccaption><tag close=" ">a</tag>Sub</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Sub</text></caption></figure></figure>"#,
+    r#"<figure labels="LABEL:outer" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><figure inlist="lof" labels="LABEL:sub" xml:id="S0.F1.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">1a</tag></tags><p>y</p><toccaption><tag close=" ">a</tag>Sub</toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag><text fontsize="90%">Sub</text></caption></figure></figure>"#,
   );
 }
 
@@ -2658,7 +2659,7 @@ fn inner_float_without_a_panel_number_collapses() {
     &[r#"xml:id="S0.T1""#],
     r#"<table class="ltx_minipage" inlist="lot" labels="LABEL:t" placement="H" width="345.0pt" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Outer</toccaption><caption><tag close=": ">Table 1</tag>Outer</caption><tabular class="ltx_centering" vattach="middle"><tbody><tr><td align="center">a</td></tr></tbody></tabular></table>"#,
   );
-  if !kpsewhich_has("ltablex.sty") {
+  if !check_requirements(&["ltablex.sty"]) {
     return;
   }
   let tex = "\\documentclass{article}\n\\usepackage{ltablex}\n\\begin{document}\n\\begin{table}\\caption{Outer}\n\\begin{tabularx}{\\linewidth}{X}a\\\\\\end{tabularx}\\label{L}\\addtocounter{table}{-1}\n\\end{table}\n\\begin{table}x\\caption{Next}\\end{table}\n\\end{document}\n";

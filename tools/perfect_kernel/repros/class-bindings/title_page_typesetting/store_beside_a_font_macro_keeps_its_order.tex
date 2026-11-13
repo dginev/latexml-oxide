@@ -1,0 +1,21 @@
+% mechanism: K11 (raw-class title-page stores, frontmatter_stores.rs `reroute_raw_class_stores`,
+%   `may_become_a_value`). A store whose title-page line holds another `\@` macro that prints nothing waits for
+%   `\maketitle` (`lx_store_deferred_<name>`) only when that macro is a placeholder the document can fill (undefined,
+%   `\relax`, expanding to nothing); zzfmi.cls's `{\@journalfont\@journal\par}`, `\@journalfont` a font switch, is the
+%   line's typesetting, so `\journal` is handed on as the document sets it, before `\volume`, in the document's order.
+%   79a r2 deferred it for the font macro and put the journal after the volume (2605.00042, USG.cls:1590
+%   `\smash{\@journalfont\@journal}`; review rev79a2 finding 5).
+% witness: 2605.00042 (USG.cls)
+% oracle:  pdflatex: 0 errors; "Journal of Probes" (bold italic) / "3" (italic) / "The Title" / "An Author"
+% engines: rust 79a r1: the journal pubnote, then the volume; 79a r2: the volume, then the journal
+% expect:  0 errors, 0 warnings; the journal pubnote, then the volume pubnote
+% status:  RED (79a r2) -> GREEN (79a r3)
+% preload: ar5iv.sty
+\documentclass{zzfmi}
+\title{The Title}\author{An Author}
+\journal{Journal of Probes}
+\volume{3}
+\begin{document}
+\maketitle
+Body text.
+\end{document}

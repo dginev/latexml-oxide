@@ -1,0 +1,16 @@
+% witness: 2412.00032 (cimart.cls:295-315 `\newtheorem{definition}{Definition}[section]`,
+%          `\newtheorem{theorem}[definition]{Theorem}`; the reviewer's probe thm_copy), 2408.07575 (WileyNJDv5's
+%          `{example}`): OmniBus's theorem stubs under the stand-in binding
+% oracle:  pdflatex 0 errors: "Definition 1.1. A def." (sans bold head), "Theorem 1.2. A thm." (italic body), "After."
+% engines: rust 72a r4 = 1 Warning "open groups … theorem" (the binding's \begin{theorem} with the copy's
+%          \end{theorem}); a pair rule without the stub's step-aside numbered them "Definition 1.0", "Theorem 1.1"
+% expect:  0 errors, 0 warnings; the copy's theorems: Definition 1.1, Theorem 1.2
+% status:  RED (72a r4) -> GREEN (72a r5)
+% preload: ar5iv.sty
+\documentclass{cimart}
+\begin{document}
+\section{A}
+\begin{definition}A def.\end{definition}
+\begin{theorem}A thm.\end{theorem}
+After.
+\end{document}

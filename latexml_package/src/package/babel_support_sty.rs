@@ -301,10 +301,12 @@ LoadDefinitions!({
   });
   RawTeX!(r"\AtBeginDocument{\lx@bbl@begindoc@french@punct}");
 
-  // Pretend we've got hyphenation patterns for ANY language (Perl L158-167)
+  // Pretend we've got hyphenation patterns for ANY language (Perl L158-167). A language the format has patterns for
+  // (`\l@french`) is tested by expansion only, as babel's own `\iflanguage` (babel.sty:562-568) — cjs-rcs-article.cls:368
+  // `\edef\CJS@runningauthor@and{\iflanguage{french}{ et }{ and }}` (2608.13762); Perl's `\edef\@@@@lang{…}` (read
+  // nowhere) was undefined there, an Error (KNOWN_PERL_ERRORS #861). Only an unknown one is allocated.
   DefMacro!("\\iflanguage{}", r#"\expandafter\ifx\csname l@#1\endcsname\relax
   \expandafter\newlanguage\csname l@#1\endcsname\fi
-\expandafter\edef\expandafter\@@@@lang\expandafter{\csname l@#1\endcsname}
 \ifnum\csname l@#1\endcsname=\language
   \expandafter\@firstoftwo
 \else

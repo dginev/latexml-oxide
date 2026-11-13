@@ -29,6 +29,33 @@ pub(crate) fn load() -> Result<()> {
   // These are defined in terms of \@startsection so that
   // casual user redefinitions work, too.
   DefMacro!("\\chapter", "\\@startsection{chapter}{0}{}{}{}{}", locked=>true);
+  // The same definition kept under a name of LaTeXML's own: what the "has chapters" step puts back when a binding's
+  // class has chapters, and what a binding that `\let`s to the kernel's chapter reads, whether or not `\chapter`
+  // exists (sect01.rs `settle_chapter_after_class_load`, OXIDIZED_DESIGN #179).
+  DefMacro!("\\lx@kernel@chapter", "\\@startsection{chapter}{0}{}{}{}{}");
+  // …and what the lock puts back in place of a class's own `\chapter` it refused while the class loaded (sect01.rs
+  // `retract_chapter_before_class_load`): a class that defines its `\chapter` may make no chapter counter of LaTeXML's
+  // kind (a `\providecommand\chapter` whose body steps none), so LaTeXML's chapter standing in for it makes its own at
+  // the first call, as report.cls.ltxml's (`undefined:\thechapter` otherwise, KNOWN_PERL_ERRORS #962).
+  DefMacro!("\\lx@kernel@chapter@counted", {
+    if lookup_definition(&T_CS!("\\c@chapter"))?.is_none() {
+      NewCounter!("chapter", "document", idprefix => "Ch");
+    }
+    Ok(Tokens!(T_CS!("\\lx@kernel@chapter")))
+  });
+  // OXIDIZED_DESIGN #734: what a `\chapter` call reads in a class without chapters, where `\chapter` stays undefined
+  // (`\begin{document}` names it as the undefined `\chapter`'s stand-in, sect02.rs). TeX stops there with an
+  // undefined control sequence; LaTeXML keeps the author's chapter, with one Warning per document saying so.
+  DefMacro!("\\lx@chapterless@chapter", {
+    let stood_in = lookup_string("\\chapter:class@stood@in");
+    let message = if stood_in.is_empty() {
+      s!("The class defines no \\chapter, so TeX stops here with an undefined control sequence; LaTeXML's \\chapter is used")
+    } else {
+      // (0909.2812: mn_thesis.cls loads report through mnphd.cls; its binding here is the prefix alternate `mn`)
+      s!("The binding answering class {stood_in} defines no \\chapter; LaTeXML's \\chapter is used")
+    };
+    kernel_chapter_with_warning("undefined", &message)
+  });
 
   // not locked since sometimes redefined as partition?
   DefMacro!("\\part", "\\@startsection{part}{-1}{}{}{}{}");
@@ -84,8 +111,11 @@ pub(crate) fn load() -> Result<()> {
 
   def_macro_noop("\\@startsection@hook")?;
 
+  // latex.ltx:17332 `\newcount\c@secnumdepth` leaves it 0, as Perl does (latex_base.pool.ltxml:312): the class sets
+  // it (article.cls 3, report/book 2), and letter.cls sets nothing, so a letter's `\section` is unnumbered and needs no
+  // `\thesubsection` (the rawclasses lever's 11 letter papers, 0907.4214; regression study R8). The kernel's own 3
+  // (Rust-only since #220) numbered them. Guard `perfect_kernel_batch68u::a_letter_section_is_unnumbered`.
   NewCounter!("secnumdepth");
-  SetCounter!("secnumdepth", Number::new(3));
   DefMacro!(
     "\\@startsection{}{}{}{}{}{} OptionalMatch:*",
     sub[(type_tokens, level_arg, _ignore3, _ignore4, _ignore5, _ignore6, flag)] {
@@ -152,7 +182,11 @@ pub(crate) fn load() -> Result<()> {
         tokens.extend(type_tokens.unlist());
         tokens.extend(vec![T_END!(), T_BEGIN!(), T_END!()]);
       } else if empty_type || level_int > CounterValue!("secnumdepth").value_of() ||
-        lookup_bool("no_number_sections") {
+        lookup_bool("no_number_sections") ||
+        // A class whose chapters are numbered in the main matter only (book.cls:355-366 `\@chapter`'s
+        // `\if@mainmatter`, after `\backmatter`; book_cls.rs): the chapter level (an appendix's too), the other
+        // levels numbered still.
+        (level_int == 0 && lookup_bool("no_number_chapters")) {
         // No number, but in TOC
         tokens = vec![
           T_CS!("\\par"), T_CS!("\\lx@trivlist@end@group"), T_CS!("\\@startsection@hook"), T_CS!("\\@@unnumbered@section"),
@@ -165,6 +199,11 @@ pub(crate) fn load() -> Result<()> {
         tokens.extend(type_tokens.unlist());
         tokens.extend(vec![T_END!(), T_BEGIN!(), T_OTHER!("toc"), T_END!()]);
       };
+      // At section level or above, a heading inside an abstract or keywords ends it first
+      // (`\lx@heading@ends@frontmatter`, sect05.rs; user ruling 2026-10-18).
+      if level_int <= 1 {
+        tokens.insert(0, T_CS!("\\lx@heading@ends@frontmatter"));
+      }
       Ok(Tokens::new(tokens))
     },
     locked => true
@@ -271,23 +310,33 @@ pub(crate) fn load() -> Result<()> {
         && let Some(bme) = lookup_mapping("BACKMATTER_ELEMENT", &s!("ltx:{stype_str}")) {
           props.insert("backmatterelement", bme);
         }
-      let toctitle = match toctitle_arg {
-        Some(v) => if !v.to_string().is_empty() {
-          args[2].as_ref().unwrap()
-        } else {
-          title
-        },
-        None => title
-      };
+      let short = toctitle_arg.filter(|v| !v.to_string().is_empty());
+      let toctitle = short.unwrap_or(title);
       // Cluster A: rebuild tokens from sanitized stype_str so the trailing
       // \par token doesn't propagate into \lx@format@title@@'s body.
       let stype_clean_tokens = Tokens::new(Explode!(stype_str));
-      let title_tokens = title.revert()?;
+      // The title font is handed the title as a braced group, as latex.ltx:17256-17259 `\@sect` hands `#6` its
+      // `{\@hangfrom…#8\@@par}`: a style ending in a one-argument command (sectsty's `\sectionfont{\large\centering
+      // \uppercase}`, 1509.02957: "Expected opening '{'") takes the whole title; the group is transparent for a
+      // declaration. A caption is not braced: `\@makecaption` sets its text in one `\sbox` with no font argument
+      // (2206.05542, 2407.00688). Guard `perfect_kernel_batch73b::section_font_ending_in_a_command_takes_the_title`.
+      let title_tokens =
+        Tokens::new(std::iter::once(T_BEGIN!()).chain(title.revert()?.unlist()).chain(std::iter::once(T_END!())).collect());
       let invoked_title =
         Invocation!(T_CS!("\\lx@format@title@@"), vec![stype_clean_tokens.clone(), title_tokens]);
       let xtitle    = digest(invoked_title)?;
+      // Without a `[short]` the toc copy re-reads the title, which the heading typesets: `\lx@reread@copy` (a Warning for
+      // one source occurrence is given there only: OXIDIZED_DESIGN_DIVERGENCES #721; guard
+      // `perfect_kernel_batch71a::undelimited_argument_warning_once_per_occurrence`). A `[short]` is its own source,
+      // digested here only.
+      let mut toctitle_tokens = toctitle.revert()?;
+      if short.is_none() {
+        toctitle_tokens = Tokens::new(
+          std::iter::once(T_CS!("\\lx@reread@copy")).chain(toctitle_tokens.unlist()).collect(),
+        );
+      }
       let invoked_toctitle = Invocation!(T_CS!("\\lx@format@toctitle@@"),
-          vec![stype_clean_tokens, toctitle.revert()?]);
+          vec![stype_clean_tokens, toctitle_tokens]);
       let xtoctitle = digest(invoked_toctitle)?;
 
       if xtoctitle.to_string() != xtitle.to_string() {
@@ -318,12 +367,18 @@ pub(crate) fn load() -> Result<()> {
       // Mirror the same schema sanitization as \@@numbered@section above.
       // Cluster A: strip trailing CS (e.g. \par) from stype.
       let stype_str = type_name(stype);
-      let tagname = section_element_for_type(&stype_str, false);
-      let section = document.open_element(&tagname,
-        Some(string_map!(
+      let mut tagname = section_element_for_type(&stype_str, false);
+      let mut attrs = string_map!(
           "xml:id" => clean_id(&id),
           "inlist"  => inlist.to_string()
-        )), None)?;
+        );
+      // An appendix unit in a float body, as in `\@@numbered@section` (a `\section*` after `\appendix` in a figure:
+      // 2605.02378, 2605.25534).
+      if tagname == "ltx:appendix" && props.get("in_float_body").is_some() {
+        tagname = "ltx:section".into();
+        attrs.insert("class".to_string(), "ltx_appendix".to_string());
+      }
+      let section = document.open_element(&tagname, Some(attrs), None)?;
       let title = prop_digested!(props, "title");
       document.insert_element("ltx:title", title, None)?;
 
@@ -345,6 +400,10 @@ pub(crate) fn load() -> Result<()> {
       // Cluster A sanitization (see \@@numbered@section).
       let stype_str = type_name(stype);
       let mut props = RefStepID!(&stype_str)?;
+      // Digested in a float body, as for a numbered unit.
+      if lookup_bool("lx@in@float") {
+        props.insert("in_float_body", Stored::Bool(true));
+      }
       // For appendix, look up the backmatter element mapping
       if stype_str == "appendix"
         && let Some(bme) = lookup_mapping("BACKMATTER_ELEMENT", &s!("ltx:{stype_str}")) {
@@ -354,8 +413,20 @@ pub(crate) fn load() -> Result<()> {
         // TODO: is .clone() on the tokens before they are unlisted a sign that
         // the DigestedData::Postponed variant isn't ideal?
         // should we be draining it? Or is there a better conceptual organization?
-        digest(
-          Tokens!(T_CS!("\\lx@hidden@bgroup"), tokens.clone().unlist(), T_CS!("\\lx@hidden@egroup")))?
+        // In the class's title font, as a numbered unit's (`\lx@format@title@@`): Perl
+        // latex_constructs.pool.ltxml:666-670 (IEEEtran's small-caps `\section*{Acknowledgment}`, sectsty's
+        // `\allsectionsfont`; witnesses 2605.04767, 2605.05014, 2605.13768). Guard
+        // `perfect_kernel_batch78a::unnumbered_section_takes_the_title_font`.
+        // A format that opens what its after-code closes (tufte-common.def:1613-1619's `\chapter`,
+        // `\begin{fullwidth}` … `\end{fullwidth}`) has that closed after the title too
+        // (`\lx@format@title@after@@`, titlesec_sty.rs).
+        let font = Invocation!(T_CS!("\\lx@format@title@font@@"), vec![Tokens::new(Explode!(&stype_str))]);
+        let after = Invocation!(T_CS!("\\lx@format@title@after@@"), vec![Tokens::new(Explode!(&stype_str))]);
+        // The title braced, as a numbered unit's (`\lx@format@title@@`'s `{#2}`): a format ending in an
+        // argument-taking macro (`{\bfseries\MakeUppercase}`) takes the whole title.
+        digest(Tokens!(
+          T_CS!("\\lx@hidden@bgroup"), font, T_BEGIN!(), tokens.clone().unlist(), T_END!(), after,
+          T_CS!("\\lx@hidden@egroup")))?
       } else {
         title.clone()
       };
@@ -364,9 +435,10 @@ pub(crate) fn load() -> Result<()> {
       if let Some(toctitle) = toctitle_arg
         && let Postponed(toctokens) = toctitle.data()
           && !toctokens.is_empty() {
+            let font = Invocation!(T_CS!("\\lx@format@toctitle@font@@"), vec![Tokens::new(Explode!(&stype_str))]);
             let toctitle_digested = digest(
-              Tokens!(T_CS!("\\lx@hidden@bgroup"),
-                toctokens.clone().unlist(), T_CS!("\\lx@hidden@egroup")))?;
+              Tokens!(T_CS!("\\lx@hidden@bgroup"), font,
+                T_BEGIN!(), toctokens.clone().unlist(), T_END!(), T_CS!("\\lx@hidden@egroup")))?;
             props.insert("toctitle", toctitle_digested.into());
           }
       Ok(props)
@@ -443,31 +515,40 @@ pub(crate) fn load() -> Result<()> {
   // whose failure branch runs an undefined `\fail`; TeX Live class census
   // 2026-09-24), but running it would read a stale `\jobname.toc` from disk
   // (sect08.rs `\@starttoc`). The TOC element is built in post-processing.
+  // The three begin as the heading they are in article.cls, report.cls and amsart.cls (`\section*{\contentsname…}`,
+  // `\chapter*` in book.cls): a paragraph ends, and the sectioning hook runs (`\@startsection@hook`, sect04.rs
+  // `\@@unnumbered@section`), so a TOC after an unclosed `\abstract` or `\abstract{…` ends it as a `\section` does
+  // (sect05.rs `\abstract`; 2007.03709, 2202.05904, 2512.04732, hep-lat9910044). OXIDIZED_DESIGN_DIVERGENCES #753.
+  // The heading is in `\lx@kernel@<name>`, `\protected` as the `\section*` it stands for is robust, and the user
+  // name's first token: an `\edef` that expands the user name meets that one token and stops, as before.
+  // tocbasic.sty:1175-1179's `\edef\@tempa{\noexpand\newcommand*\csname listof\tb@nt@types\endcsname{…}}` (KOMA's
+  // `\DeclareNewTOC{lof}`, scrbook.cls:7341) expands `\listoffigures` there: with a second token the `\newcommand`
+  // named the first, and its body group was typeset in the preamble, a starred chapter
+  // (`perfect_kernel_batchint23::scrbook_front_matter_chapters_are_unnumbered`).
+  // `\lx@kernel@listof{<ext>}{<title>}`: the list of `<ext>` headed `<title>` (untitled when empty), for the kernel's
+  // three and a binding whose class runs `\@starttoc` (memoir_cls.rs `\newlistof`), the title in a group of its own
+  // (`perfect_kernel_batch65a::contents_name_font_stays_in_the_toc_title`). The names: `latex_constructs_rust_only.rs` §8.
   RawTeX!(r"\long\def\lx@kernel@listbody#1{}");
+  RawTeX!(r"\protected\long\def\lx@kernel@listof#1#2{\par\@startsection@hook
+    \if\relax\detokenize{#2}\relax\lx@kernel@listof@element{#1}\else\lx@kernel@listof@element[{{#2}}]{#1}\fi}");
+  RawTeX!(r"\protected\def\lx@kernel@tableofcontents{\lx@kernel@listof{toc}{\contentsname}}");
+  RawTeX!(r"\protected\def\lx@kernel@listoffigures{\lx@kernel@listof{lof}{\listfigurename}}");
+  RawTeX!(r"\protected\def\lx@kernel@listoftables{\lx@kernel@listof{lot}{\listtablename}}");
   DefMacro!("\\tableofcontents", "\\lx@kernel@tableofcontents\\lx@kernel@listbody{\\@starttoc{toc}}");
-  DefConstructor!("\\lx@kernel@tableofcontents",
-    "<ltx:TOC lists='toc' scope='global' select='#select'><ltx:title>#name</ltx:title></ltx:TOC>",
-    properties => {
-      let s  = ["ltx:part", "ltx:chapter", "ltx:section", "ltx:subsection", "ltx:subsubsection",
-          "ltx:paragraph", "ltx:subparagraph"];
-      // Perl latex_constructs.pool.ltxml L727-733: `$td = tocdepth+1`, clamp to
-      // the last section-type index, then take `s[0 .. $td]`. Perl's `0 .. $td`
-      // is an EMPTY range when `$td < 0`, so `\setcounter{tocdepth}{-1}` (parts
-      // only) yields `[part]` and `{-2}` or lower yields `select=''` (an empty
-      // ToC). Compute in SIGNED space: `tocdepth` is a signed counter, so the
-      // old `value_of() as usize` wrapped on negatives — a debug overflow panic,
-      // and in release a silently over-full ToC (`{-2}` listed everything).
-      let td = (CounterValue!("tocdepth").value_of() + 1).min((s.len() - 1) as i64);
-      let take = usize::try_from(td + 1).unwrap_or(0);
-      let mut s_depth : Vec<&'static str> = s.into_iter().take(take).collect();
-      if !s_depth.is_empty() {
-        s_depth.push("ltx:appendix");
-        s_depth.push("ltx:index");
-        s_depth.push("ltx:bibliography");
-      }
-
-      Ok(stored_map!("select" => s_depth.join(" | "),
-        "name" => digest_in_group(T_CS!("\\contentsname"))?))
+  DefMacro!("\\listoffigures", "\\lx@kernel@listoffigures\\lx@kernel@listbody{\\@starttoc{lof}}");
+  DefMacro!("\\listoftables", "\\lx@kernel@listoftables\\lx@kernel@listbody{\\@starttoc{lot}}");
+  // Perl latex_constructs.pool.ltxml:725-743 "<ltx:TOC lists='toc' scope='global' select='#select'><ltx:title>#name
+  // </ltx:title></ltx:TOC>" (no `select` for lof/lot), placed by `insert_toc` (a TOC inside an abstract goes after it);
+  // untitled without `[<title>]` (tocbibind_sty.rs `\tocfile` under a numbered heading). `<ext>` is a name, read
+  // `Undigested`: typeset under a Greek font it read "τος" (0712.0401).
+  DefConstructor!("\\lx@kernel@listof@element[] Undigested", sub[document, args, props] {
+      let title = args[0].as_ref().map(|title| vec![title]);
+      insert_toc(document, &prop_string!(props, "lists"), Some(prop_string!(props, "select")), title)?;
+    },
+    properties => sub[args] {
+      let lists = args[1].as_ref().map(|ext| ext.to_string()).unwrap_or_default();
+      let select = if lists == "toc" { toc_select()? } else { String::new() };
+      Ok(stored_map!("lists" => lists, "select" => select))
     }
   );
 
@@ -481,15 +562,6 @@ pub(crate) fn load() -> Result<()> {
   });
 
   // \listfigurename / \listtablename live in `latex_constructs_rust_only.rs` section 8.
-  DefMacro!("\\listoffigures", "\\lx@kernel@listoffigures\\lx@kernel@listbody{\\@starttoc{lof}}");
-  DefConstructor!("\\lx@kernel@listoffigures",
-    "<ltx:TOC lists='lof' scope='global'><ltx:title>#name</ltx:title></ltx:TOC>",
-    properties => { Ok(stored_map!("name" => digest_in_group(T_CS!("\\listfigurename"))?)) });
-
-  DefMacro!("\\listoftables", "\\lx@kernel@listoftables\\lx@kernel@listbody{\\@starttoc{lot}}");
-  DefConstructor!("\\lx@kernel@listoftables",
-    "<ltx:TOC lists='lot' scope='global'><ltx:title>#name</ltx:title></ltx:TOC>",
-    properties => { Ok(stored_map!("name" => digest_in_group(T_CS!("\\listtablename"))?)) });
 
   // The three under names of their own, for a binding that interprets a package raw and puts them back (tocloft_sty.rs:
   // tocloft's own run `\@starttoc`, which reads a `.toc` LaTeXML never writes; 1811.09408).
@@ -512,7 +584,11 @@ pub(crate) fn load() -> Result<()> {
   // raw KOMA `\numberline` became 1-arg and stopped swallowing the title).
   // Perl hangs on the 8-line repro. KNOWN_PERL_ERRORS #120; guard
   // `perfect_kernel_batch53::addcontentsline_title_is_not_digested`.
-  DefConstructor!("\\addcontentsline{}{} Undigested", sub[document,args] {
+  // The file extension and the unit type (#1, #2) are only written too (`\@writefile{#1}` and
+  // `\contentsline{#2}`), so they are read as names, not digested: a template's leftover
+  // `\addcontentsline{file}{sec_unit}{entry}` raised "Script _ can only appear in math mode" where
+  // pdflatex is silent (1204.2781, 2402.17181; Perl digests both, KNOWN_PERL_ERRORS #986).
+  DefConstructor!("\\addcontentsline Semiverbatim Semiverbatim Undigested", sub[document,args] {
       if let [inlist,_vtype,_title @ ..] = args.as_slice() {
         // Note that the node can be inlist $inlist.
         // Could conceivably want to add $title as toctitle???
@@ -525,12 +601,13 @@ pub(crate) fn load() -> Result<()> {
           // but it's not yet an idiomatic Rust interface. Something to ponder...
           let mut node  = document.get_node().clone();
           let inlist_str = inlist.as_ref().map(|v|v.to_string()).unwrap_or_default();
-          let inlist_v = if let Some(lists) = node.get_attribute("inlist") {
-            if !lists.is_empty() {
-              s!("{lists} {inlist_str}")
-            } else { inlist_str }
-          } else {
-            inlist_str
+          // A list the node is already in is not added again (Perl latex_constructs.pool.ltxml:755-757 appends it
+          // regardless): amsart's `\@tocwriteb` (ams_support_sty.rs), which a paper's own sectioning calls, adds
+          // `toc` to a section the kernel already put in the contents, which read `inlist="toc toc"` (2004.14791).
+          let inlist_v = match node.get_attribute("inlist") {
+            Some(lists) if lists.split_whitespace().any(|list| list == inlist_str) => lists,
+            Some(lists) if !lists.is_empty() => s!("{lists} {inlist_str}"),
+            _ => inlist_str,
           };
           document.set_attribute(&mut node, "inlist", &inlist_v)?;
           document.set_node(&savenode);
@@ -624,6 +701,84 @@ fn after_heading_hook(whatsit: &mut Whatsit) -> Result<()> {
     tokens.extend(Explode!(inlist.trim()));
     tokens.push(T_END!());
     unread(Tokens::new(tokens));
+  }
+  Ok(())
+}
+
+/// The `select` of a table of contents: the sectional units down to `tocdepth`, then the appendix, index and
+/// bibliography. Perl latex_constructs.pool.ltxml L727-733: `$td = tocdepth+1`, clamp to the last section-type index,
+/// then take `s[0 .. $td]`. Perl's `0 .. $td` is an EMPTY range when `$td < 0`, so `\setcounter{tocdepth}{-1}` (parts
+/// only) yields `[part]` and `{-2}` or lower yields `select=''` (an empty ToC). Computed in SIGNED space: `tocdepth` is a
+/// signed counter, so the old `value_of() as usize` wrapped on negatives — a debug overflow panic, and in release a
+/// silently over-full ToC (`{-2}` listed everything).
+fn toc_select() -> Result<String> {
+  let s = [
+    "ltx:part",
+    "ltx:chapter",
+    "ltx:section",
+    "ltx:subsection",
+    "ltx:subsubsection",
+    "ltx:paragraph",
+    "ltx:subparagraph",
+  ];
+  let td = (CounterValue!("tocdepth").value_of() + 1).min((s.len() - 1) as i64);
+  let take = usize::try_from(td + 1).unwrap_or(0);
+  let mut s_depth: Vec<&'static str> = s.into_iter().take(take).collect();
+  if !s_depth.is_empty() {
+    s_depth.push("ltx:appendix");
+    s_depth.push("ltx:index");
+    s_depth.push("ltx:bibliography");
+  }
+  Ok(s_depth.join(" | "))
+}
+
+/// A `\chapter` call TeX would refuse, read as LaTeXML's chapter (OXIDIZED_DESIGN #734, the OD #721 precedent: a TeX
+/// error whose recovery keeps the author's content is a Warning): one Warning per document (`category`, `message`
+/// saying what TeX does there), a chapter counter of its own where the class made none (report.cls.ltxml's, without its
+/// reset of the sections: the class's own numbering stands; Perl's kernel `\chapter` in an article raises
+/// `undefined:\thechapter`, KNOWN_PERL_ERRORS #962), then `\lx@kernel@chapter`. The chapterless class's stand-in
+/// (`\lx@chapterless@chapter`) and jmlr's article `\chapter` (jmlr.cls:743-745 `\artchapter`'s ClassError) read it.
+/// That counter is the stand-in's, marked so (`\chapter:stand@in@counter`): it is no chapter counter of the class's
+/// for [`has_chapter_counter`](super::has_chapter_counter), so an `\appendix` after it is lettered as the class
+/// letters it — jmlr's `\artappendix` (jmlr.cls:720-729) "Appendix A", not "Appendix 1.A" — and every binding that
+/// reuses this helper is covered.
+pub fn kernel_chapter_with_warning(category: &str, message: &str) -> Result<Tokens> {
+  if !lookup_bool("\\chapter:fallback@warned") {
+    assign_value("\\chapter:fallback@warned", true, Some(Scope::Global));
+    Warn!(category, "\\chapter", message);
+  }
+  if lookup_definition(&T_CS!("\\c@chapter"))?.is_none() {
+    NewCounter!("chapter", "document", idprefix => "Ch");
+    assign_value("\\chapter:stand@in@counter", true, Some(Scope::Global));
+  }
+  Ok(Tokens!(T_CS!("\\lx@kernel@chapter")))
+}
+
+/// The kernel's `\tableofcontents`/`\listoffigures`/`\listoftables` element, `<ltx:TOC lists=… scope='global'
+/// [select=…]><ltx:title>name</ltx:title></ltx:TOC>` (Perl latex_constructs.pool.ltxml:725-743). Inside a frontmatter
+/// container, whose model refuses it (`ltx:abstract`, Block.model), it goes to the nearest open ancestor that admits
+/// it, after the container, and what follows stays in the container (`Document::float_out_of_frontmatter`, Perl's
+/// `floatToElement`): pdflatex prints it inside the abstract's quotation, where the schema has no place for it — a
+/// LyX abstract that ends with `\tableofcontents{}` (1011.3976, 1310.0349, 1509.04736), one with it mid-abstract
+/// (1602.08755). OXIDIZED_DESIGN_DIVERGENCES #753.
+fn insert_toc(
+  document: &mut Document,
+  lists: &str,
+  select: Option<String>,
+  title: Option<Vec<&Digested>>,
+) -> Result<()> {
+  let save = document.float_out_of_frontmatter("ltx:TOC")?;
+  let mut attrs = string_map!("lists" => lists.to_string(), "scope" => "global".to_string());
+  if let Some(select) = select.filter(|s| !s.is_empty()) {
+    attrs.insert("select".to_string(), select);
+  }
+  document.open_element("ltx:TOC", Some(attrs), None)?;
+  if let Some(title) = title {
+    document.insert_element("ltx:title", title, None)?;
+  }
+  document.close_element("ltx:TOC")?;
+  if let Some(save) = save {
+    document.set_node(&save);
   }
   Ok(())
 }

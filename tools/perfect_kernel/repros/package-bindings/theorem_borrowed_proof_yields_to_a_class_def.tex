@@ -1,0 +1,21 @@
+% witness: synthetic (67ps integrated review t10): a class built on theorem.sty that `\def`s its own proof; cc.cls's
+%          ccproof.sty:56 is the arXiv shape of a file's own proof after theorem.sty (1507.02955)
+% oracle:  pdflatex 0 errors, "Beweis. Body ten. □"
+% engines: rust 67o1 = as pdflatex; rust a03442572a = one <proof> titled "Proof." with ∎ (the borrowed amsthm set
+%          the proof lock, which refused the class's \def); perl = as pdflatex (no lock)
+% expect:  0 errors, 0 warnings; no <proof>; the class's bold "Beweis." head and its □
+% status:  RED (a03442572a) -> GREEN (67ps); guard perfect_kernel_batch67ps::borrowed_proof_yields_to_a_class_def
+\begin{filecontents*}[overwrite]{oldproofcls.cls}
+\ProvidesClass{oldproofcls}
+\LoadClass{article}
+\RequirePackage{theorem}
+\RequirePackage{amssymb}
+\def\proof{\par\noindent\textbf{Beweis.}\ }
+\def\endproof{\hfill$\Box$\par}
+\newtheorem{thm}{Theorem}
+\end{filecontents*}
+\documentclass{oldproofcls}
+\begin{document}
+\begin{thm}Claim.\end{thm}
+\begin{proof}Body ten.\end{proof}
+\end{document}

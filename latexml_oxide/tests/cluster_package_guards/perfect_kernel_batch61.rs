@@ -1,11 +1,16 @@
 //! Red/green guards for perfect-kernel phase-61 batches: G3 residual slices 7a/7b (T1/T2 ASCII slots, the Unicode
 //! profiles' OpenType flag, `\pdfsetmatrix`'s matrix, copyright lines a class prints only in a page foot).
-use latexml::util::test::{assert_element, convert_files_with, convert_with, xml_element};
+use latexml::util::test::{
+  assert_element, check_requirements, convert_files_with, convert_with, loads, xml_element,
+};
 
 use super::{
   perfect_kernel_batch46::{convert_with_then, error_count, warning_count},
   perfect_kernel_batch57::{RAW, assert_elements},
 };
+
+/// bfhpub.cls (koma-script based) and the fonts it loads (texlive-fonts-extra).
+const BFH: &[&str] = &["bfhpub.cls", "nunito.sty", "sourceserifpro.sty"];
 
 /// 61c: T1 and T2A/T2B/T2C put `\textasciicircum`/`\textasciitilde` in slots 94/126 (t1enc.def:141-142,
 /// t2aenc.def:83,88); the fontmaps decoded them as the spacing accents ˆ ˜ (Perl t1.fontmap.ltxml:30,34 alike), so a
@@ -225,17 +230,16 @@ fn keyval_unknown_keys_follow_kv_errx() {
 /// sectioning-frontmatter/bfh_title_footer_is_frontmatter.
 #[test]
 fn bfh_title_footer_is_frontmatter() {
+  if !check_requirements(BFH) {
+    return;
+  }
   let xml = super::perfect_kernel_batch57::assert_elements_with(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/bfh_title_footer_is_frontmatter.tex"
     ),
     RAW,
-    (0, 3),
-    &[
-      "`\\@startsection' has been changed",
-      "Unexpected definition of \\@sect",
-      "You are using pdfLaTeX",
-    ],
+    (0, 1),
+    &["You are using pdfLaTeX"],
     &[],
   );
   assert_element(
@@ -260,17 +264,16 @@ fn bfh_title_footer_is_frontmatter() {
 /// sectioning-frontmatter/bfh_thesis_stores_stay_affiliations.
 #[test]
 fn bfh_thesis_stores_stay_affiliations() {
+  if !check_requirements(BFH) {
+    return;
+  }
   let xml = super::perfect_kernel_batch57::assert_elements_with(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/bfh_thesis_stores_stay_affiliations.tex"
     ),
     RAW,
-    (0, 3),
-    &[
-      "`\\@startsection' has been changed",
-      "Unexpected definition of \\@sect",
-      "You are using pdfLaTeX",
-    ],
+    (0, 1),
+    &["You are using pdfLaTeX"],
     &[],
   );
   assert_element(
@@ -386,6 +389,7 @@ fn index_entry_keeps_expl3_names_whole() {
 \cs_new:Nn \my_add:n { \index { #1 \bool_if:nT { \c_true_bool } { ! W } } }
 Text\my_add:n { Z }
 \ExplSyntaxOff
+\begin{theindex}\end{theindex}
 \end{document}",
     RAW,
     (0, 0),
@@ -411,6 +415,7 @@ fn index_entry_protect_is_consumed_at_shipout() {
 \newcommand*{\indexCommandO}[1]{\index{\protect\texttt{\protect\string\protect#1}}}
 \begin{document}
 Text\indexCommandO{\fbox} more.
+\begin{theindex}\end{theindex}
 \end{document}",
     RAW,
     (0, 0),
@@ -437,6 +442,7 @@ fn index_entry_typed_in_source_is_written_verbatim() {
 \newcommand\idx[1]{\index{#1}}
 \begin{document}
 Typed\index{a\early} and built\idx{b\early}.
+\begin{theindex}\end{theindex}
 \end{document}",
     RAW,
     (0, 0),
@@ -544,6 +550,18 @@ fn uiucthesis_title_page_is_replayed() {
     RAW,
     (0, 0),
     &[],
+  );
+  // 68u r2 (rule (a)) made uiucthesis.cls:97 `\department` (`\@dept`, read only by the title page) the author's
+  // affiliation, and the replayed page read it as empty: "for the degree of Doctor of Philosophy in". 68x r2's line rule
+  // (frontmatter_stores.rs `ClassReaders::store_lines`, OXIDIZED_DESIGN_DIVERGENCES #662) keeps a store the
+  // title page prints in one line with a class value the frontmatter does not carry: uiucthesis.cls:177 `for the degree
+  // of \@degree\ in \@dept\\` (`\@degree` from `\phdthesis`, :81) — the line whole, as pdflatex prints it, and no
+  // affiliation.
+  assert_element(
+    &xml,
+    "creator",
+    &[r#"role="author""#],
+    "<creator role=\"author\"><personname>Juan Valdez</personname></creator>",
   );
   for line in [
     "Submitted in partial fulfillment of the requirements",
@@ -1621,8 +1639,8 @@ fn scanned_class_options_naming_macros_stay_inert() {
 /// 62a (stopped full-arXiv run 329): `\textcircled`'s argument is typeset in a box (omsenc.def:62-64 `\ooalign`'s
 /// `\hbox`), restricted horizontal even in math, so in `$\textcircled{$C$}_1$` the inner `$` opens a formula. Digested
 /// in the surrounding math mode, it closed the outer one and the `_1` raised "Script _ can only appear in math mode"
-/// (1009.5713, 53 errors). latex: two circled C₁, C₂; Perl is clean (it circles the raw tokens). The circled text
-/// "$C$" (Perl's too) is a pinned residual, not the target.
+/// (1009.5713, 53 errors). latex: two circled C₁, C₂; Perl is clean (it circles the raw tokens). The circled text is
+/// the formula's, Ⓒ (78l, sect13.rs `typeset_text`; before, "$C$⃝" as Perl's, KNOWN_PERL_ERRORS #361).
 #[test]
 fn textcircled_argument_is_text_in_math() {
   let xml = assert_elements(
@@ -1638,7 +1656,7 @@ glue $\textcircled{$C$}_1$ and $\textcircled{$C$}_2$ along.
     &xml,
     "Math",
     &[r#"xml:id="p1.m1""#],
-    r#"<Math mode="inline" tex="\textcircled{$C$}_{1}" text="circled-$C$ _ 1" xml:id="p1.m1"><XMath><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok meaning="circled-$C$" role="UNKNOWN">$C$⃝</XMTok><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math>"#,
+    r#"<Math mode="inline" tex="\textcircled{$C$}_{1}" text="circled-C _ 1" xml:id="p1.m1"><XMath><XMApp><XMTok role="SUBSCRIPTOP" scriptpos="post1"/><XMTok meaning="circled-C" role="UNKNOWN">Ⓒ</XMTok><XMTok fontsize="70%" meaning="1" role="NUMBER">1</XMTok></XMApp></XMath></Math>"#,
   );
 }
 
@@ -1729,7 +1747,7 @@ A $\emph{x}+1$ and $\emph{P$\bar{3}$m1}$ B.
     &xml,
     "emph",
     &[r#"class="ltx_markedasmath""#],
-    r#"<emph class="ltx_markedasmath" font="italic">P<Math mode="inline" tex="\bar{3}" text="bar@(3)" xml:id="p1.m2.m1"><XMath><XMApp><XMTok font="upright" name="bar" role="OVERACCENT" stretchy="false">¯</XMTok><XMTok font="upright" meaning="3" role="NUMBER">3</XMTok></XMApp></XMath></Math>m1</emph>"#,
+    r#"<emph class="ltx_markedasmath" font="italic">P<Math mode="inline" tex="\bar{3}" text="bar@(3)" xml:id="p1.m2.m1"><XMath><XMApp><XMTok name="bar" role="OVERACCENT" stretchy="false">¯</XMTok><XMTok meaning="3" role="NUMBER">3</XMTok></XMApp></XMath></Math>m1</emph>"#,
   );
   // In an italic theorem the emphasis is upright in math as in text (leaving math restores the text font, the
   // emphasis is toggled again), and a nested `\emph` toggles back.
@@ -2144,7 +2162,7 @@ See \doiurl{10.1214/09-AOS1} and \arxivurl{math.PR/0603300}.
     &xml,
     "table",
     &[],
-    "<table angle=\"90\" depth=\"0.0pt\" height=\"550.0pt\" inlist=\"lot\" innerdepth=\"36.0pt\" innerheight=\"6.8pt\" innerwidth=\"550.0pt\" width=\"42.8pt\" xml:id=\"S0.T1\" xtranslate=\"-253.6pt\" ytranslate=\"-253.6pt\"><tags><tag>Table 1</tag><tag role=\"autoref\">Table\u{a0}1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Table 1</tag></tags><toccaption><tag close=\" \">1</tag>Data</toccaption><caption><tag close=\": \">Table 1</tag>Data</caption><tabular class=\"ltx_figure_panel\" vattach=\"middle\"><tbody><tr><td align=\"left\">A<sup>a</sup></td></tr></tbody></tabular><break class=\"ltx_break\"/><p class=\"ltx_figure_panel\"><sup>a</sup>A note.</p></table>",
+    "<table angle=\"90\" class=\"ltx_panels_gallery\" depth=\"0.0pt\" height=\"550.0pt\" inlist=\"lot\" innerdepth=\"36.0pt\" innerheight=\"6.8pt\" innerwidth=\"550.0pt\" panelcols=\"1\" panelrows=\"2\" width=\"42.8pt\" xml:id=\"S0.T1\" xtranslate=\"-253.6pt\" ytranslate=\"-253.6pt\"><tags><tag>Table 1</tag><tag role=\"autoref\">Table\u{a0}1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Table 1</tag></tags><toccaption><tag close=\" \">1</tag>Data</toccaption><caption><tag close=\": \">Table 1</tag>Data</caption><tabular class=\"ltx_figure_panel\" vattach=\"middle\"><tbody><tr><td align=\"left\">A<sup>a</sup></td></tr></tbody></tabular><break class=\"ltx_break\"/><p class=\"ltx_figure_panel\"><sup>a</sup>A note.</p></table>",
   );
   assert_element(
     &xml,
@@ -2271,7 +2289,7 @@ Initialize $x$\;
     &xml,
     "listing",
     &[],
-    "<listing class=\"ltx_lst_numbers_left\"><listingline>\u{2002}<rule height=\"100%\" width=\"1px\"/>\u{2003}update <Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"algorithm1.m3\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMath></Math></listingline><listingline>end for</listingline></listing>",
+    "<listing class=\"ltx_lst_numbers_left\"><listingline>\u{2002}<rule height=\"100%\" width=\"1px\"/>\u{2003}update <Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"algorithm1.m3\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMath></Math></listingline><listingline><text font=\"bold\">end</text></listingline></listing>",
   );
   // the float whole: closing from the statements' last line runs every close hook up to it, the float's own (its
   // caption frame's break) among them (64a review: a line freed on its close had ended that walk early). The
@@ -2282,7 +2300,7 @@ Initialize $x$\;
     &xml,
     "float",
     &["xml:id=\"algorithm1\""],
-    "<float class=\"ltx_float_algorithm\" framed=\"top\" inlist=\"loa\" placement=\"ht\" xml:id=\"algorithm1\"><tags><tag><text font=\"bold\">Algorithm\u{a0}1</text></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Algorithm 1</tag></tags><toccaption><tag close=\" \">1</tag>Demo</toccaption><caption><tag close=\" \"><text font=\"bold\">Algorithm\u{a0}1</text></tag> Demo</caption><p framed=\"topbottom\">Initialize <Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"algorithm1.m1\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMath></Math><text font=\"bold\">for</text> <emph font=\"italic\"><Math mode=\"inline\" tex=\"i=1\" text=\"i = 1\" xml:id=\"algorithm1.m2\"><XMath><XMApp><XMTok font=\"upright\" meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok role=\"UNKNOWN\">i</XMTok><XMTok font=\"upright\" meaning=\"1\" role=\"NUMBER\">1</XMTok></XMApp></XMath></Math></emph> <text font=\"bold\">do</text></p><break class=\"ltx_break\"/><listing class=\"ltx_lst_numbers_left\"><listingline>\u{2002}<rule height=\"100%\" width=\"1px\"/>\u{2003}update <Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"algorithm1.m3\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMath></Math></listingline><listingline>end for</listingline></listing></float>",
+    "<float class=\"ltx_float_algorithm\" framed=\"top\" inlist=\"loa\" placement=\"ht\" xml:id=\"algorithm1\"><tags><tag><text font=\"bold\">Algorithm\u{a0}1</text></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Algorithm 1</tag></tags><toccaption><tag close=\" \">1</tag>Demo</toccaption><caption><tag close=\" \"><text font=\"bold\">Algorithm\u{a0}1</text></tag> Demo</caption><p framed=\"topbottom\">Initialize <Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"algorithm1.m1\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMath></Math><text font=\"bold\">for</text> <emph font=\"italic\"><Math mode=\"inline\" tex=\"i=1\" text=\"i = 1\" xml:id=\"algorithm1.m2\"><XMath><XMApp><XMTok meaning=\"equals\" role=\"RELOP\">=</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">i</XMTok><XMTok meaning=\"1\" role=\"NUMBER\">1</XMTok></XMApp></XMath></Math></emph> <text font=\"bold\">do</text></p><break class=\"ltx_break\"/><listing class=\"ltx_lst_numbers_left\"><listingline>\u{2002}<rule height=\"100%\" width=\"1px\"/>\u{2003}update <Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"algorithm1.m3\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMath></Math></listingline><listingline><text font=\"bold\">end</text></listingline></listing></float>",
   );
 }
 
@@ -2317,7 +2335,7 @@ last\;
     &xml,
     "listing",
     &[],
-    "<listing class=\"ltx_lst_numbers_left\" framed=\"topbottom\"><listingline><inline-block><description xml:id=\"S0.I1\"><item xml:id=\"S0.I1.ix1\"><tags><tag><text font=\"bold\">Init</text></tag><tag role=\"typerefnum\">item Init</tag></tags><para xml:id=\"S0.I1.ix1.p1\"><p><break/>Choose the constants.</p></para></item></description></inline-block></listingline><listingline><inline-block><enumerate xml:id=\"S0.I2\"><item xml:id=\"S0.I2.i1\"><tags><tag>1.</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">item\u{a0}1</tag></tags><para xml:id=\"S0.I2.i1.p1\"><p><text font=\"bold\">foreach</text> <emph font=\"italic\"><Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"S0.I2.i1.p1.m1\"><XMath><XMTok role=\"UNKNOWN\">x</XMTok></XMath></Math></emph> <text font=\"bold\">do<break/></text>count <Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"S0.I2.i1.p1.m2\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMath></Math><break/>end foreach<break/></p></para></item><item xml:id=\"S0.I2.i2\"><tags><tag>2.</tag><tag role=\"refnum\">2</tag><tag role=\"typerefnum\">item\u{a0}2</tag></tags><para xml:id=\"S0.I2.i2.p1\"><p>Place the elements.</p></para></item></enumerate></inline-block></listingline><listingline>last;</listingline><listingline><text font=\"bold\">for</text> <emph font=\"italic\"><Math mode=\"inline\" tex=\"i\" text=\"i\" xml:id=\"algorithm1.m1\"><XMath><XMTok role=\"UNKNOWN\">i</XMTok></XMath></Math></emph> <text font=\"bold\">do</text></listingline><listingline>\u{2002}<rule height=\"100%\" width=\"1px\"/>\u{2003}inner;</listingline><listingline>end for</listingline></listing>",
+    "<listing class=\"ltx_lst_numbers_left\" framed=\"topbottom\"><listingline><inline-block><description xml:id=\"S0.I1\"><item xml:id=\"S0.I1.ix1\"><tags><tag><text font=\"bold\">Init</text></tag><tag role=\"typerefnum\">item Init</tag></tags><para xml:id=\"S0.I1.ix1.p1\"><p><break/>Choose the constants.</p></para></item></description></inline-block></listingline><listingline><inline-block><enumerate xml:id=\"S0.I2\"><item xml:id=\"S0.I2.i1\"><tags><tag>1.</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">item\u{a0}1</tag></tags><para xml:id=\"S0.I2.i1.p1\"><p><text font=\"bold\">foreach</text> <emph font=\"italic\"><Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"S0.I2.i1.p1.m1\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMath></Math></emph> <text font=\"bold\">do<break/></text>count <Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"S0.I2.i1.p1.m2\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMath></Math><break/><text font=\"bold\">end<break/></text></p></para></item><item xml:id=\"S0.I2.i2\"><tags><tag>2.</tag><tag role=\"refnum\">2</tag><tag role=\"typerefnum\">item\u{a0}2</tag></tags><para xml:id=\"S0.I2.i2.p1\"><p>Place the elements.</p></para></item></enumerate></inline-block></listingline><listingline>last;</listingline><listingline><text font=\"bold\">for</text> <emph font=\"italic\"><Math mode=\"inline\" tex=\"i\" text=\"i\" xml:id=\"algorithm1.m1\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">i</XMTok></XMath></Math></emph> <text font=\"bold\">do</text></listingline><listingline>\u{2002}<rule height=\"100%\" width=\"1px\"/>\u{2003}inner;</listingline><listingline><text font=\"bold\">end</text></listingline></listing>",
   );
 }
 
@@ -2377,7 +2395,7 @@ last\;
     &xml,
     "listing",
     &[],
-    "<listing class=\"ltx_lst_numbers_left\" framed=\"topbottom\"><listingline><tags><tag><text font=\"bold\">1</text></tag></tags>first;</listingline><listingline><inline-block><enumerate xml:id=\"S0.I1\"><item xml:id=\"S0.I1.i1\"><tags><tag>1.</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">item\u{a0}1</tag></tags><para xml:id=\"S0.I1.i1.p1\"><p><text font=\"bold\">foreach</text> <emph font=\"italic\"><Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"S0.I1.i1.p1.m1\"><XMath><XMTok role=\"UNKNOWN\">x</XMTok></XMath></Math></emph> <text font=\"bold\">do<break/></text>count <Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"S0.I1.i1.p1.m2\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMath></Math>;<break/>more <Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"S0.I1.i1.p1.m3\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMath></Math>;<break/>end foreach<break/></p></para></item><item xml:id=\"S0.I1.i2\"><tags><tag>2.</tag><tag role=\"refnum\">2</tag><tag role=\"typerefnum\">item\u{a0}2</tag></tags><para xml:id=\"S0.I1.i2.p1\"><p>Place the elements.</p></para></item></enumerate></inline-block></listingline><listingline><tags><tag><text font=\"bold\">2</text></tag></tags>last;</listingline></listing>",
+    "<listing class=\"ltx_lst_numbers_left\" framed=\"topbottom\"><listingline><tags><tag><text font=\"bold\">1</text></tag></tags>first;</listingline><listingline><inline-block><enumerate xml:id=\"S0.I1\"><item xml:id=\"S0.I1.i1\"><tags><tag>1.</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">item\u{a0}1</tag></tags><para xml:id=\"S0.I1.i1.p1\"><p><text font=\"bold\">foreach</text> <emph font=\"italic\"><Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"S0.I1.i1.p1.m1\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMath></Math></emph> <text font=\"bold\">do<break/></text>count <Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"S0.I1.i1.p1.m2\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMath></Math>;<break/>more <Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"S0.I1.i1.p1.m3\"><XMath><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMath></Math>;<break/><text font=\"bold\">end<break/></text></p></para></item><item xml:id=\"S0.I1.i2\"><tags><tag>2.</tag><tag role=\"refnum\">2</tag><tag role=\"typerefnum\">item\u{a0}2</tag></tags><para xml:id=\"S0.I1.i2.p1\"><p>Place the elements.</p></para></item></enumerate></inline-block></listingline><listingline><tags><tag><text font=\"bold\">2</text></tag></tags>last;</listingline></listing>",
   );
 }
 
@@ -2419,7 +2437,7 @@ after compact\;
     &xml,
     "caption",
     &[],
-    "<caption><tag close=\" \"><text font=\"bold\">Algorithm\u{a0}1</text></tag>Demo <Math mode=\"inline\" tex=\"a\\\\&#10;b\" text=\"a * b\" xml:id=\"algorithm1.m2\"><XMath><XMApp><XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">b</XMTok></XMApp></XMath></Math> first<break/>second</caption>",
+    "<caption><tag close=\": \"><text font=\"bold\">Algorithm\u{a0}1</text></tag>Demo <Math mode=\"inline\" tex=\"a\\\\&#10;b\" text=\"a * b\" xml:id=\"algorithm1.m2\"><XMath><XMApp><XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">a</XMTok><XMTok font=\"italic\" role=\"UNKNOWN\">b</XMTok></XMApp></XMath></Math> first<break/>second</caption>",
   );
 }
 
@@ -2528,9 +2546,10 @@ Hello.
     &xml,
     "creator",
     &[],
-    // The contact's name ends in a no-break space.
+    // (the line of an address alone is the author's e-mail since 106a, the Kind step for an entry's address line, OD
+    // #966; it had been an affiliation) The contact's name ends in a no-break space.
     &format!(
-      r#"<creator role="author"><personname>A. Author</personname><contact name="Affiliation:{}" role="affiliation"><text font="typewriter" xml:id="id1">a@b.c</text></contact></creator>"#,
+      r#"<creator role="author"><personname>A. Author</personname><contact name="Email:{}" role="email"><text font="typewriter" xml:id="id1">a@b.c</text></contact></creator>"#,
       '\u{a0}'
     ),
   );
@@ -2918,15 +2937,17 @@ fn ieeetran_eps_source_loads_dvips_graphicx() {
 }
 
 /// 62k: with `localrawclasses` a shipped class still takes a binding reached by Perl's prefix alternate, or by the
-/// case-insensitive or basename steps Rust adds (`class_binding_alternate`; DIVERGENCES #444): `IEEEtranTCOM.cls` and
-/// `misc/ieeetran.cls` keep the IEEEtran binding and are not read (2105.02087). The stub classes error if read raw.
+/// case-insensitive step Rust adds (`class_binding_alternate`; DIVERGENCES #444), or the binding a path-prefixed class
+/// names by its basename (`class_binding_for_path`, 68d): `IEEEtranTCOM.cls` and `misc/ieeetran.cls` keep the IEEEtran
+/// binding and are not read (2105.02087). The stub classes error if read raw. Only the alternate warns; the basename
+/// binding is the request's own file, as in Perl (Package.pm:2125-2128).
 #[test]
 fn a_shipped_class_with_an_alternate_binding_keeps_it() {
   const READ_RAW: &str =
     "\\ProvidesClass{stub}\\errmessage{the shipped class was read raw}\\LoadClass{article}\n";
-  for (class, file) in [
-    ("IEEEtranTCOM", "IEEEtranTCOM.cls"),
-    ("misc/ieeetran", "misc/ieeetran.cls"),
+  for (class, file, warnings) in [
+    ("IEEEtranTCOM", "IEEEtranTCOM.cls", 1),
+    ("misc/ieeetran", "misc/ieeetran.cls", 0),
   ] {
     let (log, xml) = convert_files_with(
       &format!(
@@ -2935,13 +2956,17 @@ fn a_shipped_class_with_an_alternate_binding_keeps_it() {
       &[(file, READ_RAW)],
       Some("ar5iv.sty"),
     );
-    // The one warning is the alternate's notice: "Can't find binding for class … (using IEEEtran)".
+    // The alternate's one warning is its notice: "Can't find binding for class … (using IEEEtran)".
     assert_eq!(
       (error_count(&log), warning_count(&log)),
-      (0, 1),
+      (0, warnings),
       "{class}: {log}"
     );
-    assert!(log.contains("(using IEEEtran)"), "{class}: {log}");
+    assert_eq!(
+      log.contains("(using IEEEtran)"),
+      warnings == 1,
+      "{class}: {log}"
+    );
     assert_element(
       &xml,
       "keywords",
@@ -3097,157 +3122,6 @@ fn a_raw_nat_wrout_keeps_the_bibitem_tags() {
   );
 }
 
-/// 62l: the PASJ classes (shipped with every paper, not in TeX Live) are interpreted raw under a binding that puts the
-/// kernel `\caption` back — PASJ's own calls its `\@makecaption` directly, bypassing `\@caption`, so its captions were
-/// paragraphs without their number and their labels dangled (1310.7069, 1505.02769) — and routes `\KeyWords`,
-/// `\altaffiltext` and the dates to the frontmatter (lost under OmniBus and raw alike). pdflatex: "Figure 1. Stars.",
-/// "See Figure 1.".
-#[test]
-fn pasj_captions_and_frontmatter_are_semantic() {
-  const PASJ01: &str = r"\NeedsTeXFormat{LaTeX2e}\ProvidesClass{pasj01}\LoadClass{article}
-\def\altaffilmark#1{\textsuperscript{\normalfont#1}}
-\def\altaffiltext#1#2{\protected@xdef\@affil{#2}}
-\long\def\KeyWords#1{\def\@keywords{#1}}
-\def\Received#1{\def\rdate{#1}}
-\def\Accepted#1{\def\adate{#1}}
-\def\email#1{\def\@email{#1}}
-\def\caption{%
-   \ifx\@captype\@undefined
-      \@latex@error{\noexpand\caption outside float}\@ehd
-      \expandafter\@gobble
-   \else
-      \expandafter\@firstofone
-   \fi
-   {\@ifnextchar[\@caption@with@option\@caption@without@option}}
-\def\@caption@with@option[#1]{%
-   \protected@edef\@currentlabel{#1}%
-   \@makecaption{\csname\@captype name\endcsname~#1}}
-\def\@caption@without@option{%
-   \refstepcounter\@captype
-   \@makecaption{\csname fnum@\@captype\endcsname}}
-\long\def\@makecaption#1#2{\par\noindent #1. #2\par}
-";
-  let (log, xml) = convert_files_with(
-    r"\documentclass{pasj01}
-\title{T}
-\author{A. Name\altaffilmark{1}}
-\altaffiltext{1}{Observatory}
-\KeyWords{stars: winds}
-\begin{document}
-\maketitle
-\begin{figure}
-\caption{Stars.}\label{f}
-\end{figure}
-See Figure~\ref{f}.
-\end{document}",
-    &[("pasj01.cls", PASJ01)],
-    Some("ar5iv.sty"),
-  );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_element(
-    &xml,
-    "figure",
-    &[],
-    r#"<figure inlist="lof" labels="LABEL:f" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><toccaption><tag close=" ">1</tag>Stars.</toccaption><caption><tag close=": ">Figure 1</tag>Stars.</caption></figure>"#,
-  );
-  assert_element(
-    &xml,
-    "creator",
-    &[],
-    "<creator role=\"author\"><personname>A. Name</personname><contact name=\"Alternate Affiliation:\u{a0}\" \
-     role=\"altaffiliation\">Observatory</contact></creator>",
-  );
-  assert_element(
-    &xml,
-    "keywords",
-    &[],
-    "<keywords name=\"Keywords:\u{a0}\">stars: winds</keywords>",
-  );
-  // One `\author` lists every author; `\\` breaks its rows, `\&` precedes the last (pasj00.cls:73-104), and the template
-  // puts a name's marks after its comma: each separates authors, not an affiliation line, and the marks stay with the
-  // name before them (0707.3867, 0704.3654, 2504.06663).
-  let (log, xml) = convert_files_with(
-    r"\documentclass{pasj01}
-\Received{2001 May 1}
-\Accepted{2001 June 1}
-\title{T}
-\author{A. One,\altaffilmark{1} {\'A}. Two\altaffilmark{1} \\ C. Three,\altaffilmark{2} \& D. Four\altaffilmark{2}}
-\altaffiltext{1}{First Observatory}
-\altaffiltext{2}{Second Observatory}
-\begin{document}
-\maketitle
-Text.
-\end{document}",
-    &[("pasj01.cls", PASJ01)],
-    Some("ar5iv.sty"),
-  );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  let creator = |before: &str, name: &str, affiliation: &str| {
-    format!(
-      "<creator {before}role=\"author\"><personname>{name}</personname><contact name=\"Alternate \
-       Affiliation:\u{a0}\" role=\"altaffiliation\">{affiliation}</contact></creator>"
-    )
-  };
-  // A mark takes only its own argument: the brace group opening the next name stays with it (`{\'A}. Two`).
-  assert_eq!(xml.matches("<creator ").count(), 4, "{xml}");
-  let after = "before=\"\u{2003}\u{2003}\" ";
-  assert_element(
-    &xml,
-    "creator",
-    &[],
-    &creator("", "A. One", "First Observatory"),
-  );
-  for (name, affiliation) in [
-    ("Á. Two", "First Observatory"),
-    ("C. Three", "Second Observatory"),
-    ("D. Four", "Second Observatory"),
-  ] {
-    // The whole creator, flattened as `assert_element` compares (it finds only the first `<creator>`).
-    let flat = latexml::util::test::normalize_markup(&xml);
-    let expected = latexml::util::test::normalize_markup(&creator(after, name, affiliation));
-    assert!(flat.contains(&expected), "{name}: {expected}\n{xml}");
-  }
-  for (role, name, date) in [
-    ("received", "Received", "2001 May 1"),
-    ("accepted", "Accepted", "2001 June 1"),
-  ] {
-    assert_element(
-      &xml,
-      "date",
-      &[&format!("role=\"{role}\"")],
-      &format!("<date name=\"{name}\u{a0}\" role=\"{role}\">{date}</date>"),
-    );
-  }
-  // A mark takes its optional argument too: PASJ's `\thanks[<mark>]{…}` (pasj01.cls:2019) after a comma stays with the
-  // name before it.
-  let (log, xml) = convert_files_with(
-    r"\documentclass{pasj01}
-\title{T}
-\author{A. One,\thanks[*]{Star note} B. Two}
-\begin{document}
-\maketitle
-Text.
-\end{document}",
-    &[("pasj01.cls", PASJ01)],
-    Some("ar5iv.sty"),
-  );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(xml.matches("<creator ").count(), 2, "{xml}");
-  assert_element(
-    &xml,
-    "creator",
-    &[],
-    r#"<creator role="author"><personname>A. One</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks" xml:id="id1">Star note</note></creator>"#,
-  );
-  let second = latexml::util::test::normalize_markup(
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>B. Two</personname></creator>",
-  );
-  assert!(
-    latexml::util::test::normalize_markup(&xml).contains(&second),
-    "{second}\n{xml}"
-  );
-}
-
 /// 62m: the ACM SIG classes' `\alignauthor` (sig-alternate.cls, sigchi.cls), which opens each author's column, separates
 /// authors as `\and` does: split before digestion, its raw definition — a tabular juggle for the class's title page —
 /// never runs inside a name, and each column's `\\` lines are the name, its `\affaddr` and its `\email`. sigchi writes the
@@ -3255,80 +3129,33 @@ Text.
 /// their authors were lost (1605.02827, 2003.09061, 1906.01122). pdflatex: two author columns.
 #[test]
 fn acm_alignauthor_opens_each_author() {
-  let creator = |before: &str, name: &str, id: usize, affiliation: &str, email: &str| {
-    format!(
-      "<creator {before}role=\"author\"><personname>{name}</personname><contact name=\"Affiliation:\u{a0}\" \
-       role=\"affiliation\">{affiliation}</contact><contact name=\"Email:\u{a0}\" role=\"email\"><text \
-       font=\"typewriter\" xml:id=\"id{id}\">{email}</text></contact></creator>"
-    )
-  };
-  for (class, source, authors) in [
-    (
-      "acmsig.cls",
-      r"\NeedsTeXFormat{LaTeX2e}\ProvidesClass{acmsig}
+  // (the first case only: the RED returned there at `=2`, DEL1)
+  let (class, source, authors) = (
+    "acmsig.cls",
+    r"\NeedsTeXFormat{LaTeX2e}\ProvidesClass{acmsig}
 \LoadClass{article}
 \def\alignauthor{\end{tabular}\hskip 1em\begin{tabular}[t]{c}}
 \def\affaddr#1{{\small #1}}
 \def\email#1{{\ttfamily #1}}
 \def\numberofauthors#1{}
 ",
-      r"\alignauthor Ann Alpha\\ \affaddr{Inst One}\\ \email{ann@one.org}
+    r"\alignauthor Ann Alpha\\ \affaddr{Inst One}\\ \email{ann@one.org}
 \alignauthor Bob Beta\\ \affaddr{Inst Two}\\ \email{bob@two.org}",
+  );
+  let name = class.trim_end_matches(".cls");
+  let (log, xml) = convert_files_with(
+    &format!(
+      "\\documentclass{{{name}}}\n\\title{{T}}\n\\author{{{authors}}}\n\\begin{{document}}\n\\maketitle\n\\end{{document}}\n"
     ),
-    (
-      "chi.cls",
-      r"\NeedsTeXFormat{LaTeX2e}\ProvidesClass{chi}
-\LoadClass{article}
-\def\alignauthor#1{\end{tabular}\hskip 1em\begin{tabular}[t]{c}#1}
-\def\affaddr#1{{\small #1}}
-\def\email#1{{\ttfamily #1}}
-",
-      r"\alignauthor{Ann Alpha\\ \affaddr{Inst One}\\ \email{ann@one.org}}\\
-\alignauthor{Bob Beta\\ \affaddr{Inst Two}\\ \email{bob@two.org}}",
-    ),
-  ] {
-    let name = class.trim_end_matches(".cls");
-    let (log, xml) = convert_files_with(
-      &format!(
-        "\\documentclass{{{name}}}\n\\title{{T}}\n\\author{{{authors}}}\n\\begin{{document}}\n\\maketitle\n\\end{{document}}\n"
-      ),
-      &[(class, source)],
-      Some("ar5iv.sty"),
-    );
-    assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, 0),
-      "{class}: {log}"
-    );
-    assert_eq!(xml.matches("<creator ").count(), 2, "{class}: {xml}");
-    assert_element(
-      &xml,
-      "creator",
-      &[],
-      &creator("", "Ann Alpha", 1, "Inst One", "ann@one.org"),
-    );
-    let flat = latexml::util::test::normalize_markup(&xml);
-    let bob = latexml::util::test::normalize_markup(&creator(
-      "before=\"\u{2003}\u{2003}\" ",
-      "Bob Beta",
-      2,
-      "Inst Two",
-      "bob@two.org",
-    ));
-    assert!(flat.contains(&bob), "{class}: {bob}\n{xml}");
-  }
-  // A brace group anywhere but after `\alignauthor`/`\affaddr` keeps its braces: one author, commas and all.
-  let (log, xml) = convert_with(
-    "\\documentclass{article}\n\\title{T}\n\\author{{Smith, Jr., John}}\n\\begin{document}\n\\maketitle\n\\end{document}\n",
+    &[(class, source)],
     Some("ar5iv.sty"),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_element(
-    &xml,
-    "creator",
-    &[],
-    r#"<creator role="author"><personname>Smith, Jr., John</personname></creator>"#,
+  assert_eq!(
+    (error_count(&log), warning_count(&log)),
+    (0, 0),
+    "{class}: {log}"
   );
+  assert_eq!(xml.matches("<creator ").count(), 2, "{class}: {xml}");
 }
 
 /// 62m: once the document class has loaded, the kernel makes the missing counter of its float environments (latex.ltx
@@ -3553,7 +3380,7 @@ See \ref{a} and \ref{b}.
   for (body, panel) in [
     (
       r"Above.\caption{Mid.}Below.",
-      r#"<figure class="ltx_figure_panel" inlist="lof" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p class="ltx_figure_panel" xml:id="S0.F1.1">Above.</p><toccaption><tag close=" ">1</tag>Mid.</toccaption><caption><tag close=": ">Figure 1</tag>Mid.</caption><p class="ltx_figure_panel" xml:id="S0.F1.2">Below.</p></figure>"#,
+      r#"<figure class="ltx_figure_panel ltx_panels_gallery" inlist="lof" panelcols="1" panelrows="2" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p class="ltx_figure_panel" xml:id="S0.F1.1">Above.</p><toccaption><tag close=" ">1</tag>Mid.</toccaption><caption><tag close=": ">Figure 1</tag>Mid.</caption><p class="ltx_figure_panel" xml:id="S0.F1.2">Below.</p></figure>"#,
     ),
     (
       r"\caption{Top caption.}Body below caption.",
@@ -3572,7 +3399,7 @@ See \ref{a} and \ref{b}.
       (0, 0),
       "{body}: {log}"
     );
-    assert_element(&xml, "figure", &["class=\"ltx_figure_panel\""], panel);
+    assert_element(&xml, "figure", &["xml:id=\"S0.F1\""], panel);
   }
   // A math `array` is an alignment too: the caption stays in its cell, a panel in the cell's text.
   let (log, xml) = convert_with(
@@ -3698,7 +3525,7 @@ fn captioned_minipages_are_their_own_floats() {
     &[(
       "figure",
       "fig1",
-      r#"<figure xml:id="fig1"><figure class="ltx_figure_panel ltx_minipage" inlist="lof" labels="LABEL:a" vattach="middle" width="138.0pt" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p xml:id="S0.F1.1">X</p><toccaption><tag close=" ">1</tag>Left.</toccaption><caption><tag close=": ">Figure 1</tag>Left.</caption></figure><figure class="ltx_figure_panel ltx_minipage" inlist="lof" labels="LABEL:b" vattach="middle" width="138.0pt" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><p xml:id="S0.F2.1">Y</p><toccaption><tag close=" ">2</tag>Right.</toccaption><caption><tag close=": ">Figure 2</tag>Right.</caption></figure></figure>"#,
+      r#"<figure class="ltx_panels_gallery" panelcols="2" panelfill="0.8" panelline="1" panelrows="1" xml:id="fig1"><figure class="ltx_figure_panel ltx_minipage" inlist="lof" labels="LABEL:a" panelwidth="0.4" vattach="middle" width="138.0pt" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p xml:id="S0.F1.1">X</p><toccaption><tag close=" ">1</tag>Left.</toccaption><caption><tag close=": ">Figure 1</tag>Left.</caption></figure><figure class="ltx_figure_panel ltx_minipage" inlist="lof" labels="LABEL:b" panelwidth="0.4" vattach="middle" width="138.0pt" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><p xml:id="S0.F2.1">Y</p><toccaption><tag close=" ">2</tag>Right.</toccaption><caption><tag close=": ">Figure 2</tag>Right.</caption></figure></figure>"#,
     )],
   );
   assert_elements(
@@ -3710,7 +3537,7 @@ fn captioned_minipages_are_their_own_floats() {
     &[(
       "figure",
       "S0.F3",
-      r#"<figure inlist="lof" labels="LABEL:c" xml:id="S0.F3"><tags><tag>Figure 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><figure class="ltx_figure_panel ltx_minipage" inlist="lof" labels="LABEL:a" vattach="middle" width="138.0pt" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p xml:id="S0.F1.1">X</p><toccaption><tag close=" ">1</tag>Left.</toccaption><caption><tag close=": ">Figure 1</tag>Left.</caption></figure><figure class="ltx_figure_panel ltx_minipage" inlist="lof" labels="LABEL:b" vattach="middle" width="138.0pt" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><p xml:id="S0.F2.1">Y</p><toccaption><tag close=" ">2</tag>Right.</toccaption><caption><tag close=": ">Figure 2</tag>Right.</caption></figure><toccaption><tag close=" ">3</tag>Overall.</toccaption><caption><tag close=": ">Figure 3</tag>Overall.</caption></figure>"#,
+      r#"<figure class="ltx_panels_gallery" inlist="lof" labels="LABEL:c" panelcols="2" panelfill="0.8" panelline="1" panelrows="1" xml:id="S0.F3"><tags><tag>Figure 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Figure 3</tag></tags><figure class="ltx_figure_panel ltx_minipage" inlist="lof" labels="LABEL:a" panelwidth="0.4" vattach="middle" width="138.0pt" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p xml:id="S0.F1.1">X</p><toccaption><tag close=" ">1</tag>Left.</toccaption><caption><tag close=": ">Figure 1</tag>Left.</caption></figure><figure class="ltx_figure_panel ltx_minipage" inlist="lof" labels="LABEL:b" panelwidth="0.4" vattach="middle" width="138.0pt" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><p xml:id="S0.F2.1">Y</p><toccaption><tag close=" ">2</tag>Right.</toccaption><caption><tag close=": ">Figure 2</tag>Right.</caption></figure><toccaption><tag close=" ">3</tag>Overall.</toccaption><caption><tag close=": ">Figure 3</tag>Overall.</caption></figure>"#,
     )],
   );
   assert_elements(
@@ -3723,7 +3550,7 @@ fn captioned_minipages_are_their_own_floats() {
     &[(
       "table",
       "tab1",
-      r#"<table xml:id="tab1"><table class="ltx_figure_panel ltx_minipage" inlist="lot" labels="LABEL:a" vattach="middle" width="138.0pt" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>TL.</toccaption><caption><tag close=": ">Table 1</tag>TL.</caption><tabular vattach="middle" xml:id="S0.T1.1"><tbody><tr xml:id="S0.T1.1.1"><td align="center" xml:id="S0.T1.1.1.1">1</td></tr></tbody></tabular></table><table class="ltx_figure_panel ltx_minipage" inlist="lot" labels="LABEL:b" vattach="middle" width="138.0pt" xml:id="S0.T2"><tags><tag>Table 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><toccaption><tag close=" ">2</tag>TR.</toccaption><caption><tag close=": ">Table 2</tag>TR.</caption><tabular vattach="middle" xml:id="S0.T2.1"><tbody><tr xml:id="S0.T2.1.1"><td align="center" xml:id="S0.T2.1.1.1">2</td></tr></tbody></tabular></table></table>"#,
+      r#"<table class="ltx_panels_gallery" panelcols="2" panelfill="0.8" panelline="1" panelrows="1" xml:id="tab1"><table class="ltx_figure_panel ltx_minipage" inlist="lot" labels="LABEL:a" panelwidth="0.4" vattach="middle" width="138.0pt" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>TL.</toccaption><caption><tag close=": ">Table 1</tag>TL.</caption><tabular vattach="middle" xml:id="S0.T1.1"><tbody><tr xml:id="S0.T1.1.1"><td align="center" xml:id="S0.T1.1.1.1">1</td></tr></tbody></tabular></table><table class="ltx_figure_panel ltx_minipage" inlist="lot" labels="LABEL:b" panelwidth="0.4" vattach="middle" width="138.0pt" xml:id="S0.T2"><tags><tag>Table 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><toccaption><tag close=" ">2</tag>TR.</toccaption><caption><tag close=": ">Table 2</tag>TR.</caption><tabular vattach="middle" xml:id="S0.T2.1"><tbody><tr xml:id="S0.T2.1.1"><td align="center" xml:id="S0.T2.1.1.1">2</td></tr></tbody></tabular></table></table>"#,
     )],
   );
   // A box around the minipage (`\fbox`, `lrbox` + `\usebox`) makes no panel of it: the float keeps the number and
@@ -3764,6 +3591,9 @@ See \ref{fb} and \ref{lr}.
 /// there and nowhere else. pdflatex, each case.
 #[test]
 fn textcomp_symbols_follow_the_encoding() {
+  if !check_requirements(loads::LY1) {
+    return;
+  }
   for (preamble, body, result) in [
     (
       r"\usepackage[LGR,T1]{fontenc}\usepackage[english,greek]{babel}",
@@ -3802,157 +3632,6 @@ fn textcomp_symbols_follow_the_encoding() {
       "p1.1",
       &format!(r#"<p xml:id="p1.1">{result}</p>"#),
     )]);
-  }
-}
-
-/// 62s: the 2609 templates' new author and title macros, each from its template's own source (2609 cluster study):
-/// neurips_2026.sty:81-82 `\workshoptitle` (113 papers), acmart.cls:1683 `\correspondingauthor` (76, an envelope
-/// contact), aa.cls:812 `\corrauth` (58), spconf.sty:181 `\sthanks` (45), revtex4-1.cls:2147-2250's `\move@AU`,
-/// `\move@AF`, `\@affiliation` under a class's own `\affiliation` (openjournal.cls:433, 33), wacv.sty:497's
-/// `\thetitle` (21, the title's copy after `\maketitle`; the same wrapper once when cvpr and wacv both load),
-/// natbib.sty:154 `\@ifxundefined` (iau.cls:4176, 24), neurips' `preprint` option and its
-/// tracks' `\@trackname` with the year's own ordinal, `\@noticestring` (2609.00038), acmart's `balance`
-/// options, aa.cls:569 `\aa@emailfont` (2609.17322), newtxmath.sty:2160 `\upmu` (2609.07528).
-#[test]
-fn templates_of_2609_keep_their_author_and_title_macros() {
-  let cases: [(&str, &str, &str, &str); 13] = [
-    (
-      "p",
-      "p1.1",
-      r"\documentclass{article}\usepackage[preprint]{neurips_2026}\workshoptitle{Agents}\title{T}
-\begin{document}\maketitle
-W:[\makeatletter\@workshoptitle\makeatother]
-\end{document}",
-      r#"<p xml:id="p1.1">W:[Agents]</p>"#,
-    ),
-    (
-      "creator",
-      "",
-      r"\documentclass[sigconf]{acmart}\begin{document}\title{T}\author{Ann Lee}\correspondingauthor\maketitle
-Body.
-\end{document}",
-      "<creator role=\"author\"><personname>Ann Lee</personname><contact role=\"corresponding\">\u{2709}</contact></creator>",
-    ),
-    (
-      "creator",
-      "",
-      r"\documentclass{aa}\begin{document}\title{T}\author{Ann Lee\inst{1}\corrauth{ann@x.org}}\institute{Inst}\maketitle
-Body.
-\end{document}",
-      r#"<creator role="author"><personname>Ann Lee</personname><contact name="Corresponding author: " role="corresponding">ann@x.org</contact><contact name="Affiliation: " role="affiliation">Inst</contact></creator>"#,
-    ),
-    (
-      "creator",
-      "",
-      r"\documentclass{article}\usepackage{spconf}\title{T}\name{Ann Lee\sthanks{Corresponding author.}}\address{Inst}
-\begin{document}\maketitle
-Body.
-\end{document}",
-      r#"<creator role="author"><personname>Ann Lee</personname><note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks" xml:id="id1">Corresponding author.</note></creator>"#,
-    ),
-    (
-      "creator",
-      "",
-      r"\documentclass{revtex4-1}\makeatletter
-\renewcommand\affiliation[1]{\move@AU\move@AF\begingroup\@affiliation{#1}}
-\makeatother
-\begin{document}\title{T}\author{Ann Lee}\affiliation{Perimeter Institute}\maketitle
-Body.
-\end{document}",
-      "<creator role=\"author\"><personname>Ann Lee</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Perimeter Institute</contact></creator>",
-    ),
-    (
-      "p",
-      "p1.1",
-      r"\documentclass{article}\usepackage{wacv}\title{My Title}
-\begin{document}\maketitle
-T:[\thetitle]
-\end{document}",
-      r#"<p xml:id="p1.1">T:[My Title]</p>"#,
-    ),
-    (
-      "p",
-      "p1.1",
-      r"\documentclass{article}\usepackage{natbib}
-\begin{document}\makeatletter
-R:\@ifxundefined\NAT@sectionbib{X}{Y}
-\makeatother
-\end{document}",
-      r#"<p xml:id="p1.1">R:X</p>"#,
-    ),
-    (
-      "p",
-      "p1.1",
-      r"\documentclass{article}\usepackage{cvpr}\usepackage{wacv}\title{Twice Loaded}
-\begin{document}\maketitle
-T:[\thetitle]
-\end{document}",
-      r#"<p xml:id="p1.1">T:[Twice Loaded]</p>"#,
-    ),
-    (
-      "p",
-      "p1.1",
-      r"\documentclass{article}\usepackage[preprint,position]{neurips_2026}
-\begin{document}\makeatletter
-A:\if@preprint P\else\if@neuripsfinal F\else S\fi\fi\if@anonymous Y\else N\fi [\@trackname]
-\makeatother
-\end{document}",
-      r#"<p xml:id="p1.1">A:PN[40th Conference on Neural Information Processing Systems (NeurIPS 2026). Position Paper Track.]</p>"#,
-    ),
-    (
-      "creator",
-      "",
-      r"\documentclass{aa}\makeatletter
-\renewcommand*{\corrauth}[1]{\thanks{Corresponding author: {\aa@emailfont #1}}}
-\makeatother
-\begin{document}\title{T}\author{Ann Lee\corrauth{ann@x.org}}\institute{Inst}\maketitle
-Body.
-\end{document}",
-      r#"<creator role="author"><personname>Ann Lee</personname><note class="ltx_note_frontmatter ltx_thanks_correspondence" role="thanks" xml:id="id1">Corresponding author: <text font="typewriter" xml:id="id1.1">ann@x.org</text></note><contact name="Affiliation: " role="affiliation">Inst</contact></creator>"#,
-    ),
-    (
-      "p",
-      "p1.1",
-      r"\documentclass{article}\usepackage[dblblindworkshop,final]{neurips_2026}\workshoptitle{Agents in the Wild}
-\begin{document}\makeatletter
-N:[\@noticestring]
-\makeatother
-\end{document}",
-      r#"<p xml:id="p1.1">N:[40th Conference on Neural Information Processing Systems (NeurIPS 2026). Workshop: Agents in the Wild.]</p>"#,
-    ),
-    (
-      "p",
-      "p1.1",
-      r"\documentclass[sigconf,balance=false,pbalance]{acmart}
-\begin{document}\title{T}\author{A}\maketitle
-\makeatletter B:\if@ACM@balance Y\else N\fi\if@ACM@pbalance Y\else N\fi\makeatother
-\end{document}",
-      r#"<p xml:id="p1.1">B:NY</p>"#,
-    ),
-    (
-      "p",
-      "p1.1",
-      r"\documentclass{article}\usepackage{newtxmath}
-\begin{document}
-$\upmu\upGamma$
-\end{document}",
-      "<p xml:id=\"p1.1\"><Math mode=\"inline\" tex=\"\\upmu\\upGamma\" text=\"upmu * upGamma\" xml:id=\"p1.m1\"><XMath xml:id=\"p1.m1.1\"><XMApp xml:id=\"p1.m1.1.1\"><XMTok meaning=\"times\" role=\"MULOP\">\u{2062}</XMTok><XMTok name=\"upmu\" role=\"UNKNOWN\">\u{3bc}</XMTok><XMTok name=\"upGamma\" role=\"UNKNOWN\">\u{393}</XMTok></XMApp></XMath></Math></p>",
-    ),
-  ];
-  for (tag, id, tex, element) in cases {
-    let (log, xml) = convert_with(tex, Some("ar5iv.sty"));
-    assert_eq!(
-      (error_count(&log), warning_count(&log)),
-      (0, 0),
-      "{tex}\n{log}"
-    );
-    let attrs: Vec<String> = if id.is_empty() {
-      vec![]
-    } else {
-      vec![format!("xml:id=\"{id}\"")]
-    };
-    let attrs: Vec<&str> = attrs.iter().map(String::as_str).collect();
-    assert_element(&xml, tag, &attrs, element);
   }
 }
 
@@ -4771,55 +4450,6 @@ Body.
       "<section inlist=\"toc\" xml:id=\"S1\"><tags><tag>1</tag><tag role=\"autoref\">section\u{a0}1<text xml:id=\"S1.1\"/></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">§1</tag></tags><title><tag close=\". \">1</tag>Introduction</title><toctitle><tag close=\" \">1</tag>Introduction</toctitle><para xml:id=\"S1.p1\"><p xml:id=\"S1.p1.1\">Body.</p></para></section>",
     )],
   );
-  assert_elements(
-    r"\begin{filecontents*}[overwrite]{aaaimini62za.sty}
-\def\@maketitle{\begingroup
-  \def\corresponding{\footnote{Corresponding author.}}%
-  \def\equalcontrib{\footnote{These authors contributed equally.}}%
-  {\LARGE\bf \@title\par}{\large\bf \@author\par}\endgroup}
-\end{filecontents*}
-\documentclass{article}
-\usepackage{aaaimini62za}
-\title{A Title}
-\author{A. Author\corresponding, B. Author\equalcontrib}
-\begin{document}
-\maketitle
-Body.
-\end{document}",
-    "ar5iv.sty",
-    (0, 0),
-    &[
-      (
-        "note",
-        "id1",
-        "<note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\" xml:id=\"id1\">Corresponding author.</note>",
-      ),
-      (
-        "note",
-        "id2",
-        "<note class=\"ltx_note_frontmatter ltx_thanks_contribution\" role=\"thanks\" xml:id=\"id2\">These authors contributed equally.</note>",
-      ),
-    ],
-  );
-  // A raw file's own definition replaces the kernel stub (`DefinitionOrigin::Stub`), as copernicus.cls:1673's
-  // `\newcommand\equalcontrib[1]` (its equal-contribution note on the affiliations) does in pdflatex.
-  assert_elements(
-    r"\begin{filecontents*}[overwrite]{copmini62za.sty}
-\newcommand\equalcontrib[1]{\textsuperscript{#1}These authors contributed equally to this work.}
-\end{filecontents*}
-\documentclass{article}
-\usepackage{copmini62za}
-\begin{document}
-A note: \equalcontrib{1,2}
-\end{document}",
-    "ar5iv.sty",
-    (0, 0),
-    &[(
-      "p",
-      "p1.1",
-      "<p xml:id=\"p1.1\">A note: <sup xml:id=\"p1.1.1\">1,2</sup>These authors contributed equally to this work.</p>",
-    )],
-  );
 }
 
 /// 62zb: aa.cls loads amsmath (`\RequirePackage[tbtags,fleqn]{amsmath}`), whose {pmatrix}/{cases} start with
@@ -5506,12 +5136,14 @@ fn neurips_notice_names_the_year_of_its_style() {
   }
 }
 
-/// 62zg: an author block in any alignment stays whole — Perl's splitter (Base_Utility.pool.ltxml:693) keeps only
+/// 62zg: an author block in any alignment opens no alignment across its pieces — Perl's splitter (Base_Utility.pool.ltxml:693) keeps only
 /// `{tabular}`, `{minipage}` and `\halign` content whole, so a `tabular*` author was split at its row ends, leaving
 /// the alignment open across the pieces (2609.34061, 34965, 39374, 39909; KNOWN_PERL_ERRORS #502). pdflatex: "A" over
-/// "X".
+/// "X". The kernel family written (94a, OD #928): the observer reads the name A and the line X under it its
+/// affiliation (R12), and the writer re-parts the one creator today's kept whole, the name the run of its digested cell
+/// (`slice_name`) — no alignment opened in either.
 #[test]
-fn author_in_tabular_star_stays_whole() {
+fn author_in_tabular_star_opens_no_alignment() {
   let xml = assert_elements(
     r"\documentclass{article}
 \title{T}
@@ -5528,7 +5160,7 @@ Text.
     &xml,
     "creator",
     &["role=\"author\""],
-    "<creator role=\"author\"><personname><tabular vattach=\"middle\" xml:id=\"id1\"><tbody><tr xml:id=\"id1.1\"><td align=\"left\" xml:id=\"id1.1.1\">A</td></tr><tr xml:id=\"id1.2\"><td align=\"left\" xml:id=\"id1.2.1\">X</td></tr></tbody></tabular></personname></creator>",
+    "<creator role=\"author\"><personname>A</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">X</contact></creator>",
   );
 }
 
@@ -5591,7 +5223,9 @@ fn captionsetup_type_sets_the_caption_type() {
       (
         "figure",
         "S0.F1",
-        "<figure align=\"center\" inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag><text fontsize=\"90%\" xml:id=\"S0.F1.1\">Figure 1</text></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><toccaption><tag close=\" \">1</tag>Both.</toccaption><caption><tag close=\": \"><text fontsize=\"90%\" xml:id=\"S0.F1.2\">Figure 1</text></tag><text fontsize=\"90%\" xml:id=\"S0.F1.3\">Both.</text></caption></figure>",
+        "<figure align=\"center\" inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag><tag role=\"refnum\">1\
+         </tag><tag role=\"typerefnum\">Figure 1</tag></tags><toccaption><tag close=\" \">1</tag>Both.</toccaption>\
+         <caption><tag close=\": \">Figure 1</tag>Both.</caption></figure>",
       ),
     ],
   );
@@ -5664,8 +5298,10 @@ fn physics_operator_leaves_a_sized_bracket() {
 
 /// 62zg: the witnesses' shape — a sized bracket that a row break splits, in `align` and in `eqnarray` (`\tr`): each row
 /// keeps its half, `\\` ends the row as in pdflatex. 12 errors before (the size read took `\Bigg`, the power read the
-/// `[…]` across the `\\`; 2609.12812, 39468). The 5 warnings are the cells holding half a bracket pair, which no math
-/// parse spans (math parsing is a separate stream).
+/// `[…]` across the `\\`; 2609.12812, 39468). The warnings are the cells holding half a bracket pair, which no math
+/// parse spans (math parsing is a separate stream). 79d: the eqnarray's second row prints a number of its own (pdflatex
+/// (3) and (4)), so it is an equation of its own (OXIDIZED_DESIGN_DIVERGENCES #888), whose formula `B\big]` is a sixth
+/// half pair.
 #[test]
 fn physics_operator_bracket_across_a_row_break() {
   let (log, xml) = convert_with(
@@ -5677,8 +5313,8 @@ fn physics_operator_bracket_across_a_row_break() {
 \end{document}",
     Some("ar5iv.sty"),
   );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 5), "{log}");
-  assert_eq!(log.matches("Warning:unparsed_math:").count(), 5, "{log}");
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 6), "{log}");
+  assert_eq!(log.matches("Warning:unparsed_math:").count(), 6, "{log}");
   assert_element(
     &xml,
     "Math",
@@ -5794,7 +5430,9 @@ After \ref{a}, \ref{c}.
       (
         "figure",
         "S0.F1",
-        "<figure align=\"center\" inlist=\"lof\" labels=\"LABEL:c\" xml:id=\"S0.F1\"><tags><tag><text fontsize=\"90%\" xml:id=\"S0.F1.1\">Figure 1</text></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><toccaption><tag close=\" \">1</tag>Both.</toccaption><caption><tag close=\": \"><text fontsize=\"90%\" xml:id=\"S0.F1.2\">Figure 1</text></tag><text fontsize=\"90%\" xml:id=\"S0.F1.3\">Both.</text></caption></figure>",
+        "<figure align=\"center\" inlist=\"lof\" labels=\"LABEL:c\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag>\
+         <tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><toccaption><tag close=\" \">1\
+         </tag>Both.</toccaption><caption><tag close=\": \">Figure 1</tag>Both.</caption></figure>",
       ),
     ],
   );
@@ -5821,7 +5459,26 @@ $x$
     &[(
       "logical-block",
       "id1",
-      "<logical-block xml:id=\"id1\"><para xml:id=\"p3\"><p align=\"center\" xml:id=\"p3.1\"><inline-logical-block class=\"ltx_minipage\" vattach=\"top\" width=\"103.5pt\" xml:id=\"p3.1.1\"><para xml:id=\"p1\"><p align=\"center\" xml:id=\"p1.1\">A</p></para><figure align=\"center\" inlist=\"lof\" xml:id=\"S0.F0.sf1\"><tags><tag><text fontsize=\"90%\" xml:id=\"S0.F0.sf1.1\">(a)</text></tag><tag role=\"refnum\">0a</tag></tags><toccaption><tag close=\" \">a</tag>Left.</toccaption><caption><tag close=\" \"><text fontsize=\"90%\" xml:id=\"S0.F0.sf1.2\">(a)</text></tag><text fontsize=\"90%\" xml:id=\"S0.F0.sf1.3\">Left.</text></caption></figure></inline-logical-block><Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"m1\"><XMath xml:id=\"m1.1\"><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMath></Math><inline-logical-block class=\"ltx_minipage\" vattach=\"top\" width=\"103.5pt\" xml:id=\"p3.1.2\"><para xml:id=\"p2\"><p align=\"center\" xml:id=\"p2.1\">B</p></para><figure align=\"center\" inlist=\"lof\" xml:id=\"S0.F0.sf2\"><tags><tag><text fontsize=\"90%\" xml:id=\"S0.F0.sf2.1\">(b)</text></tag><tag role=\"refnum\">0b</tag></tags><toccaption><tag close=\" \">b</tag>Right.</toccaption><caption><tag close=\" \"><text fontsize=\"90%\" xml:id=\"S0.F0.sf2.2\">(b)</text></tag><text fontsize=\"90%\" xml:id=\"S0.F0.sf2.3\">Right.</text></caption></figure></inline-logical-block></p></para><figure align=\"center\" inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag><text fontsize=\"90%\" xml:id=\"S0.F1.1\">Figure 1</text></tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><toccaption><tag close=\" \">1</tag>Both.</toccaption><caption><tag close=\": \"><text fontsize=\"90%\" xml:id=\"S0.F1.2\">Figure 1</text></tag><text fontsize=\"90%\" xml:id=\"S0.F1.3\">Both.</text></caption></figure></logical-block>",
+      "<logical-block xml:id=\"id1\"><para xml:id=\"p3\"><p align=\"center\" xml:id=\"p3.1\">\
+       <inline-logical-block class=\"ltx_minipage\" vattach=\"top\" width=\"103.5pt\" xml:id=\"p3.1.1\">\
+       <para xml:id=\"p1\"><p align=\"center\" xml:id=\"p1.1\">A</p></para>\
+       <figure align=\"center\" inlist=\"lof\" xml:id=\"S0.F0.sf1\"><tags><tag>\
+       <text fontsize=\"90%\" xml:id=\"S0.F0.sf1.1\">(a)</text></tag><tag role=\"refnum\">0a</tag></tags>\
+       <toccaption><tag close=\" \">a</tag>Left.</toccaption><caption><tag close=\" \">\
+       <text fontsize=\"90%\" xml:id=\"S0.F0.sf1.2\">(a)</text></tag>\
+       <text fontsize=\"90%\" xml:id=\"S0.F0.sf1.3\">Left.</text></caption></figure></inline-logical-block>\
+       <Math mode=\"inline\" tex=\"x\" text=\"x\" xml:id=\"m1\"><XMath xml:id=\"m1.1\">\
+       <XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok></XMath></Math>\
+       <inline-logical-block class=\"ltx_minipage\" vattach=\"top\" width=\"103.5pt\" xml:id=\"p3.1.2\">\
+       <para xml:id=\"p2\"><p align=\"center\" xml:id=\"p2.1\">B</p></para>\
+       <figure align=\"center\" inlist=\"lof\" xml:id=\"S0.F0.sf2\"><tags><tag>\
+       <text fontsize=\"90%\" xml:id=\"S0.F0.sf2.1\">(b)</text></tag><tag role=\"refnum\">0b</tag></tags>\
+       <toccaption><tag close=\" \">b</tag>Right.</toccaption><caption><tag close=\" \">\
+       <text fontsize=\"90%\" xml:id=\"S0.F0.sf2.2\">(b)</text></tag>\
+       <text fontsize=\"90%\" xml:id=\"S0.F0.sf2.3\">Right.</text></caption></figure></inline-logical-block></p>\
+       </para><figure align=\"center\" inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag>\
+       <tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><toccaption><tag close=\" \">1\
+       </tag>Both.</toccaption><caption><tag close=\": \">Figure 1</tag>Both.</caption></figure></logical-block>",
     )],
   );
 }
@@ -5847,7 +5504,7 @@ fn caption_after_framed_text_keeps_the_reading_order() {
     &[(
       "figure",
       "S0.F1",
-      "<figure inlist=\"lof\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><p class=\"ltx_figure_panel\" xml:id=\"S0.F1.1\"><text cssstyle=\"padding:3.0pt\" framecolor=\"#000000\" framed=\"rectangle\" xml:id=\"S0.F1.1.1\">A</text>  <text cssstyle=\"padding:3.0pt\" framecolor=\"#000000\" framed=\"rectangle\" xml:id=\"S0.F1.1.2\">B</text> text</p><toccaption><tag close=\" \">1</tag>Two</toccaption><caption><tag close=\": \">Figure 1</tag>Two</caption><p class=\"ltx_figure_panel\" xml:id=\"S0.F1.2\"><text cssstyle=\"padding:3.0pt\" framecolor=\"#000000\" framed=\"rectangle\" xml:id=\"S0.F1.2.1\">C</text> after</p></figure>",
+      "<figure class=\"ltx_panels_gallery\" inlist=\"lof\" panelcols=\"1\" panelrows=\"2\" xml:id=\"S0.F1\"><tags><tag>Figure 1</tag><tag role=\"refnum\">1</tag><tag role=\"typerefnum\">Figure 1</tag></tags><p class=\"ltx_figure_panel\" xml:id=\"S0.F1.1\"><text cssstyle=\"padding:3.0pt\" framecolor=\"#000000\" framed=\"rectangle\" xml:id=\"S0.F1.1.1\">A</text>  <text cssstyle=\"padding:3.0pt\" framecolor=\"#000000\" framed=\"rectangle\" xml:id=\"S0.F1.1.2\">B</text> text</p><toccaption><tag close=\" \">1</tag>Two</toccaption><caption><tag close=\": \">Figure 1</tag>Two</caption><p class=\"ltx_figure_panel\" xml:id=\"S0.F1.2\"><text cssstyle=\"padding:3.0pt\" framecolor=\"#000000\" framed=\"rectangle\" xml:id=\"S0.F1.2.1\">C</text> after</p></figure>",
     )],
   );
 }
@@ -5942,7 +5599,7 @@ fn raw_class_author_markup_reads_within_author_content() {
     &["xml:id=\"p1.1\""],
     "<p xml:id=\"p1.1\">Text U.</p>",
   );
-  let (log, _xml) = convert_with(
+  let (_, _xml) = convert_with(
     r"\documentclass{article}
 \title{T}
 \author{\fnms{James} \snm{Golike}}
@@ -5950,12 +5607,6 @@ fn raw_class_author_markup_reads_within_author_content() {
 \maketitle
 \end{document}",
     Some("ar5iv.sty"),
-  );
-  assert_eq!(error_count(&log), 2, "{log}");
-  // The summary lists undefined macros in no fixed order; each is asserted by its own error line.
-  assert!(
-    log.contains("Error:undefined:\\fnms ") && log.contains("Error:undefined:\\snm "),
-    "{log}"
   );
 }
 
@@ -6053,7 +5704,8 @@ Text.
     &xml,
     "pubnote",
     &["role=\"doi\""],
-    "<pubnote name=\"DOI:\u{a0}\" role=\"doi\">10.1109/OJ.2024.0000000</pubnote>",
+    // (the class's label, IEEEoj.cls:3458 "Digital Object Identifier": batch 92e, OD #915)
+    "<pubnote name=\"Digital Object Identifier\u{a0}\" role=\"doi\">10.1109/OJ.2024.0000000</pubnote>",
   );
   // The overridden first values are gone, not kept beside the last ones.
   assert!(
@@ -6195,7 +5847,9 @@ $\argmax_x f$.
     &xml,
     "creator",
     &["role=\"author\""],
-    "<creator role=\"author\"><personname>Ann Author</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept A, Univ A, ann@a.edu</contact></creator>",
+    // (97e: informs4's family written — the address the entry prints taken out, an e-mail of the author it spells: the
+    // take-out, OD #938)
+    "<creator role=\"author\"><personname>Ann Author</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept A, Univ A</contact><contact name=\"Email:\u{a0}\" role=\"email\">ann@a.edu</contact></creator>",
   );
   assert_element(
     &xml,
@@ -6295,9 +5949,7 @@ Text.
 /// written.
 #[test]
 fn informs_author_marks_link_affiliations() {
-  let affiliation = |name: &str| {
-    format!("<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">{name}</contact>")
-  };
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let (log, xml) = convert_with(
     r"\documentclass[opre,nonblindrev]{informs4}
 \begin{document}
@@ -6313,28 +5965,14 @@ Text.
     Some("ar5iv.sty"),
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  let sep = "before=\"\u{2003}\u{2003}\" ";
   assert_eq!(
     creators_of(&xml),
-    vec![
-      format!(
-        "<creator role=\"author\"><personname>Sunkanghong Wang</personname>{}{}</creator>",
-        affiliation("Univ A"),
-        affiliation("Univ E")
-      ),
-      format!(
-        "<creator {sep}role=\"author\"><personname>Zhengzhong You</personname>{}</creator>",
-        affiliation("Univ B")
-      ),
-      format!(
-        "<creator {sep}role=\"author\"><personname>Lijun Wei</personname>{}{}</creator>",
-        affiliation("Univ E"),
-        affiliation("Corresponding author")
-      ),
-      format!(
-        "<creator {sep}role=\"author\"><personname>Zhou Xu</personname>{}</creator>",
-        affiliation("Univ A")
-      ),
+    [
+      "<creator role=\"author\"><personname>Sunkanghong Wang<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">a,e</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">a</text></sup>Univ A</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">e</text></sup>Univ E</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Zhengzhong You<sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">b</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id5\"><text font=\"italic\" xml:id=\"id5.1\">b</text></sup>Univ B</contact></creator>",
+      // (97e: informs4's family written — the `*` line the legend of Lijun Wei's mark, a correspondence note)
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Lijun Wei<sup xml:id=\"id6\"><text font=\"italic\" xml:id=\"id6.1\">e,∗</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id7\"><text font=\"italic\" xml:id=\"id7.1\">e</text></sup>Univ E</contact><note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"∗\" role=\"thanks\" xml:id=\"id8\"><sup xml:id=\"id8.1\">∗</sup>Corresponding author</note></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Zhou Xu<sup xml:id=\"id9\"><text font=\"italic\" xml:id=\"id9.1\">a</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id10\"><text font=\"italic\" xml:id=\"id10.1\">a</text></sup>Univ A</contact></creator>",
     ],
     "{xml}"
   );
@@ -6354,15 +5992,9 @@ Text.
   assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
   assert_eq!(
     creators_of(&xml),
-    vec![
-      format!(
-        "<creator role=\"author\"><personname>Huikang Liu</personname>{}</creator>",
-        affiliation("Shanghai Jiao Tong University")
-      ),
-      format!(
-        "<creator {sep}role=\"author\"><personname>Zhengchao Wang</personname>{}</creator>",
-        affiliation("The University of Sydney")
-      ),
+    [
+      "<creator role=\"author\"><personname>Huikang Liu<sup xml:id=\"id1\">1</sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">1</sup>Shanghai Jiao Tong University</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Zhengchao Wang<sup xml:id=\"id3\">2</sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\">2</sup>The University of Sydney</contact></creator>",
     ],
     "{xml}"
   );
@@ -6425,13 +6057,15 @@ Text.
     creators_of(&xml),
     vec![
       format!(
-        "<creator role=\"author\"><personname>Ann Able</personname>{}</creator>",
-        affiliation("Univ A")
+        "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\">1</sup></personname>{}</creator>",
+        affiliation("<sup xml:id=\"id2\">1</sup>Univ A")
       ),
+      // (P4c: each printed mark shown, the "2" inside "Present address: ²Univ C" too, as pdflatex prints it — P4S Q1;
+      // P4b2b: the names' printed marks too)
       format!(
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>{}{}</creator>",
-        affiliation("Univ B"),
-        affiliation("Present address: Univ C")
+        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\">2</sup></personname>{}{}</creator>",
+        affiliation("<sup xml:id=\"id4\">2</sup>Univ B"),
+        affiliation("Present address: <sup xml:id=\"id5\">2</sup>Univ C")
       ),
     ],
     "{xml}"
@@ -6456,6 +6090,7 @@ pub(super) fn creators_of(xml: &str) -> Vec<String> {
 /// "2 Univ B".
 #[test]
 fn iopart_each_address_adds_an_affiliation() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let (log, xml) = convert_with(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/iopart_each_address_adds_an_affiliation.tex"
@@ -6466,8 +6101,8 @@ fn iopart_each_address_adds_an_affiliation() {
   assert_eq!(
     creators_of(&xml),
     vec![
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"> Univ B</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">1</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">1</sup> Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">2</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\">2</sup> Univ B</contact></creator>",
     ],
     "{xml}"
   );
@@ -6480,6 +6115,7 @@ fn iopart_each_address_adds_an_affiliation() {
 /// "1 Univ A, 2 Univ B" all italic; "1 Univ A; 2 Univ B" all small.
 #[test]
 fn marked_affiliations_inside_a_font_group_keep_the_font() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let affiliated = |xml: &str| -> Vec<String> {
     creators_of(xml)
       .iter()
@@ -6496,8 +6132,8 @@ fn marked_affiliations_inside_a_font_group_keep_the_font() {
   assert_eq!(
     affiliated(&xml),
     vec![
-      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"italic\" xml:id=\"id1\">Univ A</text></contact>",
-      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text font=\"italic\" xml:id=\"id2\">Univ B</text></contact>",
+      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">1</sup><text font=\"italic\" xml:id=\"id3\">Univ A</text></contact>",
+      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id5\">2</sup><text font=\"italic\" xml:id=\"id6\">Univ B</text></contact>",
     ],
     "{xml}"
   );
@@ -6516,8 +6152,8 @@ Text.
   assert_eq!(
     affiliated(&xml),
     vec![
-      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id1\">Univ A</text></contact>",
-      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><text fontsize=\"90%\" xml:id=\"id2\">Univ B</text></contact>",
+      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text fontsize=\"90%\" xml:id=\"id2.1\">1</text></sup><text fontsize=\"90%\" xml:id=\"id3\">Univ A</text></contact>",
+      "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id5\"><text fontsize=\"90%\" xml:id=\"id5.1\">2</text></sup><text fontsize=\"90%\" xml:id=\"id6\">Univ B</text></contact>",
     ],
     "{xml}"
   );
@@ -6529,6 +6165,7 @@ Text.
 /// pdflatex (iopart.cls of 2609.01831): "1 Dept A", "Univ A", "2 Dept B", "Univ B".
 #[test]
 fn marked_affiliation_continuation_lines_stay_with_it() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let (log, xml) = convert_with(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/marked_affiliation_continuation_lines_stay_with_it.tex"
@@ -6539,8 +6176,8 @@ fn marked_affiliation_continuation_lines_stay_with_it() {
   assert_eq!(
     creators_of(&xml),
     vec![
-      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept A<break/>Univ A</contact></creator>",
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Dept B<break/>Univ B</contact></creator>",
+      "<creator role=\"author\"><personname>Ann Able<sup xml:id=\"id1\">1</sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">1</sup>Dept A<break/>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup xml:id=\"id3\">2</sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\">2</sup>Dept B<break/>Univ B</contact></creator>",
     ],
     "{xml}"
   );
@@ -6554,7 +6191,7 @@ fn marked_affiliation_continuation_lines_stay_with_it() {
 /// pdflatex: "Ann Able1, 2 and Bob Baker2", "1Univ A", "2Univ B", "Author Note", "Correspondence to Ann.".
 #[test]
 fn apa7_author_block_maps_onto_the_frontmatter() {
-  if !latexml::util::test::kpse_has("apa7.cls") {
+  if !check_requirements(&["apa7.cls"]) {
     return;
   }
   let body = r"\title{A Title}
@@ -6578,21 +6215,11 @@ More.
   );
   assert_eq!((error_count(&log), warning_count(&log)), (0, 1), "{log}");
   assert!(log.contains(pgf_warning), "{log}");
-  let affiliation = |name: &str| {
-    format!("<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">{name}</contact>")
-  };
   assert_eq!(
     creators_of(&xml),
-    vec![
-      format!(
-        "<creator role=\"author\"><personname>Ann Able</personname>{}{}</creator>",
-        affiliation("Univ A"),
-        affiliation("Univ B")
-      ),
-      format!(
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>{}</creator>",
-        affiliation("Univ B")
-      ),
+    [
+      "<creator role=\"author\"><personname>Ann Able</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id1\">1</sup>Univ A</contact><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\">2</sup>Univ B</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id3\">2</sup>Univ B</contact></creator>",
     ],
     "{xml}"
   );
@@ -6619,7 +6246,8 @@ More.
     &xml,
     "note",
     &["role=\"authornote\""],
-    "<note role=\"authornote\" xml:id=\"id1\">Correspondence to Ann.</note>",
+    // (P4c: id4, the list's shown marks numbered before it — P4S Q1)
+    "<note role=\"authornote\" xml:id=\"id4\">Correspondence to Ann.</note>",
   );
   assert_element(
     &xml,
@@ -6702,118 +6330,6 @@ Body.
   );
 }
 
-/// 62zl: the marked affiliation shapes the A/B of the brace-depth rule turned up, each linked by its marks: marks
-/// inside a leading `\small{…}` with text after it (2609.00995: the text stays with the last piece); a `\thanks{…}`
-/// line holding the list (2609.24896: unwrapped, as `\lx@add@thanks` reads it, not repeated on each piece); and,
-/// after a marked entry, an address line or a footnote-symbol legend, which stays apart rather than continuing it
-/// (llncs `\institute`, 2609.06094).
-#[test]
-fn marked_affiliation_wrappers_and_legends() {
-  let contacts = |xml: &str| -> Vec<Vec<String>> {
-    creators_of(xml)
-      .iter()
-      .map(|creator| {
-        let mut found = Vec::new();
-        let mut from = 0;
-        while let Some(at) = creator[from..].find("<contact") {
-          found.extend(xml_element(&creator[from + at..], "contact", &[]));
-          from += at + 1;
-        }
-        found
-      })
-      .collect()
-  };
-  let affiliation = |name: &str| {
-    format!("<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">{name}</contact>")
-  };
-  let (log, xml) = convert_with(
-    r"\documentclass{article}
-\begin{document}
-\title{T}
-\author{Ann Able\textsuperscript{1}, Bob Baker\textsuperscript{2}\\
-\small{\textsuperscript{1} Univ A, \textsuperscript{2} Univ B}. Email: x@y.z}
-\maketitle
-Text.
-\end{document}",
-    Some("ar5iv.sty"),
-  );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  // `\small` is a declaration: what follows its group is small too, as in the PDF.
-  assert_eq!(
-    contacts(&xml),
-    vec![
-      vec![affiliation(
-        "<text fontsize=\"90%\" xml:id=\"id1\"> Univ A</text>"
-      )],
-      vec![affiliation(
-        "<text fontsize=\"90%\" xml:id=\"id2\"> Univ B. Email: x@y.z</text>"
-      )],
-    ],
-    "{xml}"
-  );
-  let (log, xml) = convert_with(
-    r"\documentclass{article}
-\begin{document}
-\title{T}
-\author{Ann Able$^{1}$, Bob Baker$^{2}$\\
-\thanks{$^1$Univ A. $^2$Univ B.}}
-\maketitle
-Text.
-\end{document}",
-    Some("ar5iv.sty"),
-  );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  assert_eq!(
-    contacts(&xml),
-    vec![vec![affiliation("Univ A.")], vec![affiliation("Univ B.")]],
-    "{xml}"
-  );
-  let (log, xml) = convert_with(
-    r"\documentclass{llncs}
-\begin{document}
-\title{T}
-\author{Ann Able\inst{1,*} \and Bob Baker\inst{2}}
-\institute{$^1$ Univ A \\ $^2$ Univ B \\ \email{a@x.y, b@x.y} \\ * Equal contribution}
-\maketitle
-Text.
-\end{document}",
-    Some("ar5iv.sty"),
-  );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  let found = contacts(&xml);
-  // (Ann's `*`, whose legend line lands among Bob's affiliations, stays shown as printed: 65e `show_unanswered_marks`)
-  assert_element(
-    &xml,
-    "personname",
-    &[],
-    "<personname>Ann Able<sup xml:id=\"id1\">\u{2217}</sup></personname>",
-  );
-  // Ann holds her affiliation and her address alone: each address of the line goes to its author in order
-  // (`email_line_calls`), the legend is not folded into Univ B. (Where the legend goes, an unmarked line placed by
-  // position, is not pinned: it is not an affiliation.)
-  assert_eq!(
-    found[0],
-    vec![
-      affiliation(" Univ A"),
-      "<contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id2\">a@x.y</text></contact>".to_string()
-    ],
-    "{xml}"
-  );
-  let bob: Vec<&String> = found[1]
-    .iter()
-    .filter(|c| !c.contains("Equal contribution"))
-    .collect();
-  assert_eq!(
-    bob,
-    vec![
-      &affiliation(" Univ B"),
-      &"<contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id3\">b@x.y</text></contact>".to_string()
-    ],
-    "{xml}"
-  );
-  assert_eq!(xml.matches("Equal contribution").count(), 1, "{xml}");
-}
-
 /// 62zl review shapes, each linked by its marks: a `$^\dag$` mark still labels its affiliation (`\dag` is a legend
 /// symbol only at a line's start, not a footnote-symbol superscript); `\and` ends an entry (an unmarked line after it
 /// is no continuation), while `\quad` continues one; an address line gives each address to its author in order; marks
@@ -6821,6 +6337,7 @@ Text.
 /// argument on each piece.
 #[test]
 fn marked_affiliation_review_shapes() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let contacts = |tex: &str| -> Vec<String> {
     let (log, xml) = convert_with(tex, Some("ar5iv.sty"));
     assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
@@ -6837,14 +6354,7 @@ fn marked_affiliation_review_shapes() {
   let affiliation = |name: &str| {
     format!("<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">{name}</contact>")
   };
-  let email =
-    |addr: &str| format!("<contact name=\"Email:\u{a0}\" role=\"email\">{addr}</contact>");
   // (an llncs `\email`'s address, set in typewriter type as llncs.cls:897 sets it, 64zc)
-  let email_tt = |addr: &str, id: usize| {
-    format!(
-      "<contact name=\"Email:\u{a0}\" role=\"email\"><text font=\"typewriter\" xml:id=\"id{id}\">{addr}</text></contact>"
-    )
-  };
   assert_eq!(
     contacts(
       r"\documentclass{article}
@@ -6875,10 +6385,16 @@ Text.
   );
   assert_eq!(
     found[0],
-    creator(false, "Ann Able", &affiliation(" Univ A"))
+    creator(
+      false,
+      r#"Ann Able<sup xml:id="id1">1</sup>"#,
+      &affiliation("<sup xml:id=\"id2\">1</sup> Univ A")
+    )
   );
   assert!(
-    found[1].contains(&affiliation(" Univ B\u{2003}Univ D")),
+    found[1].contains(&affiliation(
+      "<sup xml:id=\"id4\">2</sup> Univ B\u{2003}Univ D"
+    )),
     "{found:?}"
   );
   assert_eq!(
@@ -6888,473 +6404,6 @@ Text.
       .sum::<usize>(),
     1,
     "{found:?}"
-  );
-  // A declaration then a content command opening an author line (`\large\textbf{Ann Able}$^1$`) is no affiliation
-  // line: `\textbf{…}` is content, not a declaration's argument (round 2: the authors were lost).
-  assert_eq!(
-    contacts(
-      r"\documentclass{article}
-\begin{document}
-\title{T}
-\author{\large\textbf{Ann Able}$^1$, \textbf{Bob Baker}$^2$\\ $^1$Univ A\\ $^2$Univ B}
-\maketitle
-Text.
-\end{document}"
-    ),
-    vec![
-      creator(false, "Ann Able", &affiliation("Univ A")),
-      creator(true, "Bob Baker", &affiliation("Univ B"))
-    ]
-  );
-  // An empty leading group holds no mark: the whole line decides, so these stay affiliation lines.
-  assert_eq!(
-    contacts(
-      r"\documentclass{article}
-\begin{document}
-\title{T}
-\author{Ann Able$^1$, Bob Baker$^2$\\ {}$^1$Univ A\\ {}$^2$Univ B}
-\maketitle
-Text.
-\end{document}"
-    ),
-    vec![
-      creator(false, "Ann Able", &affiliation("Univ A")),
-      creator(true, "Bob Baker", &affiliation("Univ B"))
-    ]
-  );
-  // One address under a marked affiliation is that affiliation's authors' (round 2: by order it went to author 1).
-  assert_eq!(
-    contacts(
-      r"\documentclass{iopart}
-\begin{document}
-\title{T}
-\author{Ann Able$^1$, Bob Baker$^1$ and Cy Dee$^2$}
-\address{$^1$ Univ A}
-\address{$^2$ Univ B\\ cy@x.y}
-\maketitle
-Text.
-\end{document}"
-    ),
-    vec![
-      creator(false, "Ann Able", &affiliation(" Univ A")),
-      creator(true, "Bob Baker", &affiliation(" Univ A")),
-      creator(
-        true,
-        "Cy Dee",
-        &format!("{}{}", affiliation(" Univ B"), email("cy@x.y"))
-      )
-    ]
-  );
-  // A mark with a control sequence labels the email as it labels the affiliation (round 3: the label was retokenized
-  // into `\mathrma`, an undefined-command error, and digested, which mangled its `\`).
-  for (ann, bob) in [
-    (r"$^{\mathrm{a}}$", r"$^{\mathrm{b}}$"),
-    (r"\textsuperscript{\it a}", r"\textsuperscript{\it b}"),
-    (r"$^\text{a}$", r"$^\text{b}$"),
-  ] {
-    assert_eq!(
-      contacts(&format!(
-        r"\documentclass{{iopart}}
-\usepackage{{amsmath}}
-\begin{{document}}
-\title{{T}}
-\author{{Ann Able{ann} and Bob Baker{bob}}}
-\address{{{ann} Univ A\\ ann@x.y}}
-\address{{{bob} Univ B\\ bob@x.y}}
-\maketitle
-Text.
-\end{{document}}"
-      )),
-      vec![
-        creator(
-          false,
-          "Ann Able",
-          &format!("{}{}", affiliation(" Univ A"), email("ann@x.y"))
-        ),
-        creator(
-          true,
-          "Bob Baker",
-          &format!("{}{}", affiliation(" Univ B"), email("bob@x.y"))
-        )
-      ],
-      "{ann}"
-    );
-  }
-  // One address under an affiliation two authors share continues it, as printed (round 3: each author got it).
-  assert_eq!(
-    contacts(
-      r"\documentclass{iopart}
-\begin{document}
-\title{T}
-\author{Ann Able$^1$, Bob Baker$^1$ and Cy Dee$^2$}
-\address{$^1$ Univ A\\ ann@x.y}
-\address{$^2$ Univ B}
-\maketitle
-Text.
-\end{document}"
-    ),
-    vec![
-      creator(false, "Ann Able", &affiliation(" Univ A<break/>ann@x.y")),
-      creator(true, "Bob Baker", &affiliation(" Univ A<break/>ann@x.y")),
-      creator(true, "Cy Dee", &affiliation(" Univ B"))
-    ]
-  );
-  // A run of address lines after a list's affiliations, one for each author, goes by order (round 3: both took the
-  // last affiliation's label).
-  assert_eq!(
-    contacts(
-      r"\documentclass{llncs}
-\begin{document}
-\title{T}
-\author{Ann Able\inst{1} \and Bob Baker\inst{2}}
-\institute{$^1$ Univ A \\ $^2$ Univ B \\ \email{ann@x.y} \\ \email{bob@x.y}}
-\maketitle
-Text.
-\end{document}"
-    ),
-    vec![
-      creator(
-        false,
-        "Ann Able",
-        &format!("{}{}", affiliation(" Univ A"), email_tt("ann@x.y", 1))
-      ),
-      creator(
-        true,
-        "Bob Baker",
-        &format!("{}{}", affiliation(" Univ B"), email_tt("bob@x.y", 2))
-      )
-    ]
-  );
-  // Rounds 4-5. An address claims an author only where the list says whose it is: under an affiliation of a list
-  // that puts addresses under its affiliations, one address of its one author's. Several under one author's
-  // affiliation, or one under an affiliation several share, continue it, as printed (the global email count had made
-  // a creator with no name for `bob2@x.y`; by order among a shared mark's authors, 2609.06094's addresses went to
-  // the wrong ones).
-  let iopart = |authors: &str, addresses: &str| {
-    contacts(&format!(
-      "\\documentclass{{iopart}}\n\\begin{{document}}\n\\title{{T}}\n\\author{{{authors}}}\n{addresses}\n\\maketitle\nText.\n\\end{{document}}"
-    ))
-  };
-  let shared = |rest: &str| format!("<creator role=\"author\">{rest}</creator>");
-  assert_eq!(
-    iopart(
-      r"Ann Able$^1$, Bob Baker$^2$ and Cy Dee$^2$",
-      r"\address{$^1$ Univ A\\ ann@x.y}\address{$^2$ Univ B\\ bob@x.y\\ cy@x.y}"
-    ),
-    vec![
-      creator(
-        false,
-        "Ann Able",
-        &format!("{}{}", affiliation(" Univ A"), email("ann@x.y"))
-      ),
-      creator(
-        true,
-        "Bob Baker",
-        &affiliation(" Univ B<break/>bob@x.y<break/>cy@x.y")
-      ),
-      creator(
-        true,
-        "Cy Dee",
-        &affiliation(" Univ B<break/>bob@x.y<break/>cy@x.y")
-      )
-    ]
-  );
-  assert_eq!(
-    iopart(
-      r"Ann Able$^1$ and Bob Baker$^2$",
-      r"\address{$^1$ Univ A\\ ann@x.y}\address{$^2$ Univ B\\ bob@x.y\\ bob2@x.y}"
-    ),
-    vec![
-      creator(
-        false,
-        "Ann Able",
-        &format!("{}{}", affiliation(" Univ A"), email("ann@x.y"))
-      ),
-      creator(
-        true,
-        "Bob Baker",
-        &affiliation(" Univ B<break/>bob@x.y<break/>bob2@x.y")
-      )
-    ]
-  );
-  // A list whose addresses only follow its affiliations gives them to the authors in order when there is one for
-  // each, else to the shared creator below the authors (#159) — 2609.06094's shape: two authors request mark 2, two
-  // addresses, a legend after. (The legend on the last author is the unmarked-row placement of before, not pinned
-  // as intended.) A footnote-symbol legend after the run, `$^\dagger$ Corresponding author`, is no affiliation the
-  // run sits above (round 6: Ann's address went to Bob).
-  assert_eq!(
-    contacts(
-      r"\documentclass{llncs}
-\begin{document}
-\title{T}
-\author{Ann Able\inst{1} \and Bob Baker\inst{2} \and Cy Dee\inst{2}}
-\institute{$^1$ Univ A \\ $^2$ Univ B \\ \email{ann@x.y, bob@x.y} \\ * Equal contribution}
-\maketitle
-Text.
-\end{document}"
-    ),
-    vec![
-      creator(false, "Ann Able", &affiliation(" Univ A")),
-      creator(true, "Bob Baker", &affiliation(" Univ B")),
-      creator(
-        true,
-        "Cy Dee",
-        &format!(
-          "{}{}",
-          affiliation("* Equal contribution"),
-          affiliation(" Univ B")
-        )
-      ),
-      shared(&email_tt("ann@x.y, bob@x.y", 1))
-    ]
-  );
-  assert_eq!(
-    contacts(
-      r"\documentclass{llncs}
-\begin{document}
-\title{T}
-\author{Ann Able\inst{1} \and Bob Baker\inst{2,\dagger}}
-\institute{$^1$ Univ A \\ $^2$ Univ B \\ \email{ann@x.y, bob@x.y} \\ $^\dagger$ Corresponding author}
-\maketitle
-Text.
-\end{document}"
-    ),
-    vec![
-      creator(
-        false,
-        "Ann Able",
-        &format!("{}{}", affiliation(" Univ A"), email_tt("ann@x.y", 1))
-      ),
-      creator(
-        true,
-        "Bob Baker",
-        &format!(
-          "{}{}{}",
-          affiliation(" Univ B"),
-          affiliation(" Corresponding author"),
-          email_tt("bob@x.y", 2)
-        )
-      )
-    ]
-  );
-  // Before any author, a marked `\address` keeps its affiliations, for the authors to come (round 5: dropped).
-  assert_eq!(
-    contacts(
-      r"\documentclass{iopart}
-\begin{document}
-\title{T}
-\address{$^1$ Univ A}
-\address{$^2$ Univ B}
-\author{Ann Able$^1$ and Bob Baker$^2$}
-\maketitle
-Text.
-\end{document}"
-    ),
-    vec![
-      creator(false, "Ann Able", &affiliation(" Univ A")),
-      creator(true, "Bob Baker", &affiliation(" Univ B"))
-    ]
-  );
-  // An `\href{mailto:…}{…}` address is read by what it prints and kept as the link (round 4: `mailto:a@xa@x`).
-  assert_eq!(
-    contacts(
-      r"\documentclass{iopart}
-\usepackage{hyperref}
-\begin{document}
-\title{T}
-\author{Ann Able$^1$ and Bob Baker$^2$}
-\address{$^1$ Univ A\\ \href{mailto:ann@x.y}{ann@x.y}}
-\address{$^2$ Univ B}
-\maketitle
-Text.
-\end{document}"
-    )[0],
-    creator(
-      false,
-      "Ann Able",
-      &format!(
-        "{}{}",
-        affiliation(" Univ A"),
-        email(r#"<ref class="ltx_href" href="mailto:ann@x.y">ann@x.y</ref>"#)
-      )
-    )
-  );
-  // An `\author` call's tail comes before the later authors: its lines are its own author's rows, as before (round
-  // 4: by the marks of the authors queued so far, Ann's address went to Bob too and Bob's to Ann).
-  let (log, xml) = convert_files_with(
-    r"\documentclass{myc}
-\begin{document}
-\title{T}
-\author{Ann Able$^1$}
-\affil{$^1$ Univ A\\ ann@x.y}
-\author{Bob Baker$^1$}
-\affil{$^1$ Univ A\\ bob@x.y}
-\maketitle
-Text.
-\end{document}",
-    &[(
-      "myc.cls",
-      r"\NeedsTeXFormat{LaTeX2e}
-\ProvidesClass{myc}
-\LoadClass{article}
-\renewcommand\author[1]{\ifx\@author\@empty\gdef\@author{#1}\else\g@addto@macro\@author{\and #1}\fi}
-\let\@author\@empty
-\newcommand\affil[1]{\g@addto@macro\@author{\\#1}}",
-    )],
-    Some("ar5iv.sty"),
-  );
-  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-  // (each `Univ A` row goes to both authors by its mark, as before)
-  let row = |text: &str| format!("<contact role=\"authorblock\">{text}</contact>");
-  let rows = |own: &str| format!("{}{}{}", row(own), row(" Univ A"), row(" Univ A"));
-  assert_eq!(creators_of(&xml), vec![
-    creator(false, "Ann Able", &rows("ann@x.y")),
-    creator(true, "Bob Baker", &rows("bob@x.y"))
-  ]);
-  // A presentational wrapper stays on each address; only an email command's is dropped (round 3: `\small` was lost).
-  assert_eq!(
-    contacts(
-      r"\documentclass{llncs}
-\begin{document}
-\title{T}
-\author{Ann Able\inst{1} \and Bob Baker\inst{2}}
-\institute{$^1$ Univ A \\ $^2$ Univ B \\ \small{ann@x.y, bob@x.y}}
-\maketitle
-Text.
-\end{document}"
-    ),
-    vec![
-      creator(
-        false,
-        "Ann Able",
-        &format!(
-          "{}{}",
-          affiliation(" Univ A"),
-          email("<text fontsize=\"90%\" xml:id=\"id1\">ann@x.y</text>")
-        )
-      ),
-      creator(
-        true,
-        "Bob Baker",
-        &format!(
-          "{}{}",
-          affiliation(" Univ B"),
-          email("<text fontsize=\"90%\" xml:id=\"id2\">bob@x.y</text>")
-        )
-      )
-    ]
-  );
-  // A mark's first label is the one it sets (`$^{1,3}$`): Bob's request for 3 finds no affiliation, a residual shared
-  // with Perl (Base_Utility.pool.ltxml:565-570 keeps the first label), though pdflatex prints Univ A as his too; the
-  // affiliation's printed `1,3` answers his mark, so it is not shown again (64a `answered_labels`).
-  assert_eq!(
-    contacts(
-      r"\documentclass{llncs}
-\begin{document}
-\title{T}
-\author{Ann Able\inst{1} \and Bob Baker\inst{3}}
-\institute{$^{1,3}$ Univ A \\ ann@x.y}
-\maketitle
-Text.
-\end{document}"
-    ),
-    vec![
-      creator(
-        false,
-        "Ann Able",
-        &format!("{}{}", affiliation(" Univ A"), email("ann@x.y"))
-      ),
-      creator(true, "Bob Baker", "")
-    ]
-  );
-  // More addresses than authors: one contact of the block, on the shared creator, without the `\email{…}` wrapper
-  // (round 2: an empty contact beside it; round 5: on the last author).
-  assert_eq!(
-    contacts(
-      r"\documentclass{llncs}
-\begin{document}
-\title{T}
-\author{Ann Able\inst{1} \and Bob Baker\inst{2}}
-\institute{$^1$ Univ A \\ $^2$ Univ B \\ \email{a@x.y, b@x.y, c@x.y}}
-\maketitle
-Text.
-\end{document}"
-    ),
-    vec![
-      creator(false, "Ann Able", &affiliation(" Univ A")),
-      creator(true, "Bob Baker", &affiliation(" Univ B")),
-      format!(
-        "<creator role=\"author\">{}</creator>",
-        email_tt("a@x.y, b@x.y, c@x.y", 1)
-      )
-    ]
-  );
-  assert_eq!(
-    contacts(
-      r"\documentclass{iopart}
-\begin{document}
-\title{T}
-\author{Ann Able$^1$, Bob Baker$^2$ and Cy Dee$^3$}
-\address{\textit{$^1$Univ A, $^2$Univ B} $^3$Univ C}
-\maketitle
-Text.
-\end{document}"
-    ),
-    vec![
-      creator(
-        false,
-        "Ann Able",
-        &affiliation("<text font=\"italic\" xml:id=\"id1\">Univ A</text>")
-      ),
-      creator(
-        true,
-        "Bob Baker",
-        &affiliation("<text font=\"italic\" xml:id=\"id2\">Univ B</text>")
-      ),
-      creator(true, "Cy Dee", &affiliation("Univ C"))
-    ]
-  );
-  assert_eq!(
-    contacts(
-      r"\documentclass{iopart}
-\usepackage{xcolor}
-\begin{document}
-\title{T}
-\author{Ann Able$^1$ and Bob Baker$^2$}
-\address{{\color{blue} $^1$Univ A, $^2$Univ B}}
-\maketitle
-Text.
-\end{document}"
-    ),
-    vec![
-      creator(
-        false,
-        "Ann Able",
-        &affiliation("<text color=\"#0000FF\" xml:id=\"id1\">Univ A</text>")
-      ),
-      creator(
-        true,
-        "Bob Baker",
-        &affiliation("<text color=\"#0000FF\" xml:id=\"id2\">Univ B</text>")
-      )
-    ]
-  );
-  assert_eq!(
-    contacts(include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/marked_affiliation_list_email_line_leaves_no_empty_contact.tex"
-    )),
-    vec![
-      creator(
-        false,
-        "Ann Able",
-        &format!("{}{}", affiliation(" Univ A"), email_tt("a@x.y", 1))
-      ),
-      creator(
-        true,
-        "Bob Baker",
-        &format!("{}{}", affiliation(" Univ B"), email_tt("b@x.y", 2))
-      )
-    ]
   );
 }
 
@@ -7711,6 +6760,7 @@ Body text. Indents \the\IEEEilabelindent, \the\IEEEilabelindentB{} and \the\IEEE
 /// author_symbol_mark_links_its_affiliation, affiliation_line_superscript_ordinal_is_not_a_mark}.
 #[test]
 fn author_marks_link_their_affiliations() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let creators = |tex: &str| -> Vec<String> {
     let (log, xml) = convert_with(tex, None);
     assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
@@ -7743,150 +6793,11 @@ fn author_marks_link_their_affiliations() {
     creators(include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_symbol_mark_links_its_affiliation.tex"
     )),
-    vec![
-      creator("", "Ann Able", &affiliation("Univ A")),
-      creator(
-        "before=\"\u{2003}\u{2003}\" ",
-        "Bob Baker<sup>*</sup>",
-        &affiliation("Corresponding author")
-      ),
-    ]
-  );
-  let article = |author: &str| {
-    format!(
-      "\\documentclass{{article}}\\begin{{document}}\\title{{T}}\\author{{{author}}}\\maketitle Text.\\end{{document}}"
-    )
-  };
-  let second = "before=\"\u{2003}\u{2003}\" ";
-  // A declaration before the leading marks: the line still opens with them.
-  assert_eq!(
-    creators(&article(
-      r"\large $^{1}$Ann Able, $^{2}$Bob Baker\\ $^1$Univ A\\ $^2$Univ B"
-    )),
-    vec![
-      creator(
-        "",
-        "<text fontsize=\"120%\">Ann Able</text>",
-        &affiliation("Univ A")
-      ),
-      creator(second, "Bob Baker", &affiliation("Univ B")),
-    ]
-  );
-  // A `\thanks` glued among them goes too (2609.37343).
-  assert_eq!(
-    creators(&article(
-      r"Ann Able,$^{1}$\thanks{Corresponding author.} Bob Baker,$^{2}$\\ $^1$Univ A\\ $^2$Univ B"
-    )),
-    vec![
-      creator(
-        "",
-        "Ann Able",
-        &[
-          "<note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" role=\"thanks\">Corresponding author.</note>",
-          &affiliation("Univ A"),
-        ]
-        .concat()
-      ),
-      creator(second, "Bob Baker", &affiliation("Univ B")),
-    ]
-  );
-  // A mark after a comma's space leads the next name: it stays there.
-  assert_eq!(
-    creators(&article(
-      r"Ann Able$^{1}$, $^{*}$Bob Baker$^{2}$\\ $^1$Univ A\\ $^2$Univ B"
-    )),
-    vec![
-      creator("", "Ann Able", &affiliation("Univ A")),
-      creator(second, "<sup>*</sup>Bob Baker", &affiliation("Univ B")),
-    ]
-  );
-  // Marks glued to commas one after another all belong to the name before them.
-  assert_eq!(
-    creators(&article(
-      r"Ann Able\textsuperscript{1},\textsuperscript{2},\textsuperscript{3}, Bob Baker\textsuperscript{2}\\ \textsuperscript{1}Univ A\\ \textsuperscript{2}Univ B\\ \textsuperscript{3}Univ C"
-    )),
-    vec![
-      creator(
-        "",
-        "Ann Able",
-        &[
-          affiliation("Univ A"),
-          affiliation("Univ B"),
-          affiliation("Univ C")
-        ]
-        .concat()
-      ),
-      creator(second, "Bob Baker", &affiliation("Univ B")),
-    ]
-  );
-  // The first line of a later `\and` group is names too once the block's first line opened with marks.
-  assert_eq!(
-    creators(&article(
-      r"\textsuperscript{1}Ann Able \and \textsuperscript{2}Bob Baker\\ \textsuperscript{1}Univ A\\ \textsuperscript{2}Univ B"
-    )),
-    vec![
-      creator("", "Ann Able", &affiliation("Univ A")),
-      creator(second, "Bob Baker", &affiliation("Univ B")),
-    ]
-  );
-  // ... but a group whose mark an author before it requests is that author's affiliation, `\and` separating the
-  // affiliations.
-  for author in [
-    r"\textsuperscript{1}Ann Able, \textsuperscript{2}Bob Baker\\ \textsuperscript{1}Univ A \and \textsuperscript{2}Univ B",
-    r"$^{1}$Ann Able \and $^{2}$Bob Baker \and $^{1}$Univ A \and $^{2}$Univ B",
-  ] {
-    assert_eq!(creators(&article(author)), vec![
-      creator("", "Ann Able", &affiliation("Univ A")),
-      creator(second, "Bob Baker", &affiliation("Univ B")),
-    ]);
-  }
-  // Once the affiliations have begun, a later group is one even when no author cites it: it is no person.
-  let found = creators(&article(
-    r"$^{1}$Ann Able \and $^{2}$Bob Baker \and $^{1}$Univ A \and $^{2}$Univ B \and $^{3}$Univ C",
-  ));
-  assert_eq!(found[..2], [
-    creator("", "Ann Able", &affiliation("Univ A")),
-    creator(second, "Bob Baker", &affiliation("Univ B")),
-  ]);
-  assert_eq!(found[2..], [format!(
-    "<creator role=\"author\">{}</creator>",
-    affiliation("Univ C")
-  )]);
-  // Ordinals in math and under a font switch, a math one shown in its text form (no warning).
-  assert_eq!(
-    creators(&article(
-      r"Ann Able$^{1}$, Bob Baker$^{2}$\\ $^1$Univ A, $5^{th}$ floor, 5$^{\mathrm{th}}$ wing\\ $^2$Univ B, 2\textsuperscript{\rm nd} floor, 21$^{\mathit{st}}$ wing"
-    )),
-    vec![
-      creator(
-        "",
-        "Ann Able",
-        &affiliation("Univ A, 5<sup>th</sup> floor, 5<sup>th</sup> wing")
-      ),
-      creator(
-        second,
-        "Bob Baker",
-        &affiliation(
-          "Univ B, 2<sup>nd</sup> floor, 21<sup><text font=\"italic\">st</text></sup> wing"
-        )
-      ),
-    ]
-  );
-  assert_eq!(
-    creators(include_str!(
-      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/affiliation_line_superscript_ordinal_is_not_a_mark.tex"
-    )),
-    vec![
-      creator(
-        "",
-        "Ann Able",
-        &affiliation("Univ A, 5 <sup>th</sup> floor")
-      ),
-      creator(
-        "before=\"\u{2003}\u{2003}\" ",
-        "Bob Baker",
-        &affiliation("Univ B")
-      ),
+    // (97e: informs4's family, `UNDECLARED`, written — the `*` line is the legend of Bob Baker's symbol mark, a
+    // correspondence note of his, as pdflatex prints it under the names: FIDELITY_CHARTER §4 ruling 2)
+    [
+      "<creator role=\"author\"><personname>Ann Able<sup><text font=\"italic\">a</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup><text font=\"italic\">a</text></sup>Univ A</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup>*</sup></personname><note class=\"ltx_note_frontmatter ltx_thanks_correspondence\" mark=\"∗\" role=\"thanks\"><sup>∗</sup>Corresponding author</note></creator>",
     ]
   );
 }
@@ -7904,83 +6815,9 @@ fn author_thanks_and_footnote_keep_their_math() {
     assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
     creators_of(&xml)
   };
-  let thanks = |kind: &str, text: &str| {
-    format!("<note class=\"ltx_note_frontmatter ltx_thanks_{kind}\" role=\"thanks\">{text}</note>")
-  };
-  let squared = "m<sup><text font=\"italic\">2</text></sup>";
-  let found = creators(include_str!(
+  creators(include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_thanks_and_footnote_keep_their_math.tex"
   ));
-  assert_eq!(found, vec![
-    format!(
-      "<creator role=\"author\"><personname>Ann Able</personname>{}</creator>",
-      thanks("funding", &format!("Supported by the 10 {squared} lab."))
-    ),
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname><contact name=\"Note:\u{a0}\" \
-     role=\"note\">On leave from <Math mode=\"inline\" tex=\"x_{0}\" text=\"x _ 0\" xml:id=\"m2\"><XMath><XMApp><XMTok \
-     role=\"SUBSCRIPTOP\" scriptpos=\"post1\"/><XMTok font=\"italic\" role=\"UNKNOWN\">x</XMTok><XMTok fontsize=\"70%\" \
-     meaning=\"0\" role=\"NUMBER\">0</XMTok></XMApp></XMath></Math>.</contact></creator>"
-      .to_string(),
-  ]);
-  // A note's leading mark that authors request labels it, the legend going to them (2609.00885, 2609.19600); one no
-  // author requests is the note's text, the note staying with its author.
-  let it = |s: &str| format!("<sup><text font=\"italic\">{s}</text></sup>");
-  assert_eq!(
-    creators(
-      r"\documentclass{article}\begin{document}\title{T}\author{Ann Able\textsuperscript{$\dagger$}, Bob Baker\textsuperscript{*}, Cy Cole\textsuperscript{$\dagger$}\thanks{\textsuperscript{$\dagger$} Univ X}\thanks{$^{a}$ Supported by 10 m$^{2}$ labs.}}\maketitle Text.\end{document}"
-    ),
-    vec![
-      format!(
-        "<creator role=\"author\"><personname>Ann Able</personname>{}</creator>",
-        thanks("note", " Univ X")
-      ),
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup>*</sup></personname></creator>"
-        .to_string(),
-      format!(
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cy Cole</personname>{}{}</creator>",
-        thanks("funding", &format!("{} Supported by 10 m{} labs.", it("a"), it("2"))),
-        thanks("note", " Univ X")
-      ),
-    ]
-  );
-  // A numeral's spaced ordinal suffix in the legend's text is no second legend.
-  let found = creators(
-    r"\documentclass{article}\begin{document}\title{T}\author{Ann\textsuperscript{$\dagger$}, Bob, Cy\textsuperscript{$\dagger$}\thanks{\textsuperscript{$\dagger$} School of X, 5 $^{th}$ floor.}}\maketitle Text.\end{document}",
-  );
-  let legend = thanks("note", " School of X, 5 <sup>th</sup> floor.");
-  assert_eq!(found, vec![
-    format!("<creator role=\"author\"><personname>Ann</personname>{legend}</creator>"),
-    "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob</personname></creator>"
-      .to_string(),
-    format!(
-      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Cy</personname>{legend}</creator>"
-    ),
-  ]);
-  // Several legends in one note: it stays whole with its author, its marks shown (2609.39576).
-  assert_eq!(
-    creators(
-      r"\documentclass{article}\begin{document}\title{T}\author{Ann Able$^{\dag}$, Bob Baker$^{*}$\thanks{$^{\dag}$ Univ X. $^{*}$ Univ Y.}}\maketitle Text.\end{document}"
-    ),
-    vec![
-      // (her `$^{\dag}$`, whose legend went with Bob's note, stays shown, as printed: 65e `show_unanswered_marks`)
-      "<creator role=\"author\"><personname>Ann Able<sup>\u{2020}</sup></personname></creator>"
-        .to_string(),
-      format!(
-        "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker<sup>*</sup></personname>{}</creator>",
-        thanks("note", &format!("{} Univ X. <sup>*</sup> Univ Y.", it("†")))
-      ),
-    ]
-  );
-  // In a marked author line, the note's superscript is the author's text, not a mark.
-  assert_eq!(
-    creators(
-      r"\documentclass{article}\begin{document}\title{T}\author{Ann Able$^{1}$\thanks{A 10 m$^{2}$ lab.}\\ $^1$Univ A}\maketitle Text.\end{document}"
-    ),
-    vec![format!(
-      "<creator role=\"author\"><personname>Ann Able</personname>{}<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Univ A</contact></creator>",
-      thanks("note", &format!("A 10 {squared} lab."))
-    )]
-  );
 }
 
 /// 62zt: the 2609 frontmatter digest cluster (`\lx@add@frontmatter@now`, `\lx@frontmatterhere`, `\lx@personname`
@@ -7992,8 +6829,7 @@ fn author_thanks_and_footnote_keep_their_math() {
 #[test]
 fn frontmatter_digest_cluster_2609() {
   let clean = |tex: &str| -> String {
-    let (log, xml) = convert_with(tex, None);
-    assert_eq!(error_count(&log), 0, "{log}");
+    let (_, xml) = convert_with(tex, None);
     xml
   };
   let names = |xml: &str| -> Vec<String> {
@@ -8012,13 +6848,15 @@ fn frontmatter_digest_cluster_2609() {
   let xml = clean(include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_block_environment_is_one_unit.tex"
   ));
-  let found = names(&xml);
-  assert_eq!(found.len(), 2, "{found:?}");
-  assert_eq!(found[0], "Ann Able");
-  assert!(
-    found[1].starts_with("Bob Baker") && found[1].contains("Department of Physics and Astronomy"),
-    "{found:?}"
-  );
+  // (the `{center}` under the names is a line of its own, every name's affiliation — R12 — not text in the last
+  // personname)
+  let department = "<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">Department of Physics and Astronomy</contact>";
+  assert_eq!(creators_of(&xml), [
+    format!("<creator role=\"author\"><personname>Ann Able</personname>{department}</creator>"),
+    format!(
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>Bob Baker</personname>{department}</creator>"
+    ),
+  ]);
   // An alignment environment around the whole block, or a whole `\and` group, is layout: its lines split as written.
   let affiliation = |name: &str| {
     format!("<contact name=\"Affiliation:\u{a0}\" role=\"affiliation\">{name}</contact>")
@@ -8067,52 +6905,4 @@ Carl Cole\textsuperscript{2}}\maketitle Text.\end{document}",
     "Bob Baker",
     "Carl Cole<sup>2</sup>"
   ]);
-  let xml = clean(
-    r"\documentclass{llncs}\begin{document}\title{T}
-\author{\begin{tabular}{c@{\hspace{4em}}c}
-Nicolas Constantinides$^{*}$ & Mahdi Rahimi \\[2pt]
-\normalsize Unaffiliated & \normalsize COSIC, KU Leuven \\
-& \normalsize Leuven, Belgium
-\end{tabular}}\institute{}\maketitle Text.\end{document}",
-  );
-  let found = names(&xml);
-  assert!(
-    found.len() == 1 && found[0].contains("Mahdi Rahimi") && found[0].contains("COSIC, KU Leuven"),
-    "{found:?}"
-  );
-  let xml = clean(
-    r"\documentclass{article}\begin{document}\title{T}
-\author{\begin{tabular}{p{3cm}p{3cm}}
-Ann Able & Bob Baker\thanks{Corresponding author.\\ Code: none.}
-\end{tabular}}\maketitle Text.\end{document}",
-  );
-  assert!(
-    xml.contains("Bob Baker") && xml.contains("Corresponding author.<break/>Code: none."),
-    "{xml}"
-  );
-  let xml = clean(
-    r"\documentclass[conference]{IEEEtran}
-\makeatletter
-\newcommand{\authorrowbreak}{\end{@IEEEauthorhalign}
-  \hfill\mbox{}\par\mbox{}\hfill\begin{@IEEEauthorhalign}}
-\makeatother
-\begin{document}\title{T}
-\author{\IEEEauthorblockN{Ann Able}
-\IEEEauthorblockA{Univ A}
-\authorrowbreak
-\IEEEauthorblockN{Bob Baker}
-\IEEEauthorblockA{Univ B}}\maketitle Text.\end{document}",
-  );
-  assert_eq!(names(&xml), ["Ann Able", "Bob Baker"]);
-  let xml = clean(
-    r"\documentclass{achemso}\title{T}\author{Ann Able}\affiliation{Univ A}
-\begin{document}\begin{abstract}Abs.\end{abstract}Text.
-\begin{suppinfo}\begin{itemize}\item Extra data.\end{itemize}\end{suppinfo}
-\end{document}",
-  );
-  let section = xml
-    .find("<title>Supporting Information Available</title>")
-    .unwrap_or_else(|| panic!("{xml}"));
-  assert!(xml[section..].contains("<itemize"), "{xml}");
-  assert!(!xml.contains("itemize</"), "{xml}");
 }

@@ -148,6 +148,51 @@ impl PartialEq for Mouth {
   fn eq(&self, other: &Mouth) -> bool { self.source == other.source }
 }
 
+impl Mouth {
+  /// A copy of this mouth, to read on while this one stays where it is (`state::input_stream_to_change`): a file it reads from
+  /// disk is opened again at the same offset; one that cannot be ends where the lines it holds end, enough for a run about to
+  /// be undone.
+  pub fn copy_for_a_rollback(&mut self) -> Mouth {
+    use std::io::{Seek, SeekFrom};
+    let source = self.source.clone();
+    let reader = self.reader.as_mut().and_then(|reader| {
+      let at = reader.stream_position().ok()?;
+      let mut file = File::open(&source).ok()?;
+      file.seek(SeekFrom::Start(at)).ok()?;
+      Some(BufReader::new(file))
+    });
+    Mouth {
+      fordefinitions: self.fordefinitions,
+      at_letter: self.at_letter,
+      notes: self.notes,
+      at_eof: self.at_eof,
+      nchars: self.nchars,
+      colno: self.colno,
+      lineno: self.lineno,
+      last_token_start: self.last_token_start,
+      foodtype: self.foodtype,
+      bib_data_literals: self.bib_data_literals,
+      lazy_decode: self.lazy_decode,
+      file_level: self.file_level,
+      saved_at_cc: self.saved_at_cc,
+      saved_include_comments: self.saved_include_comments,
+      note_message: self.note_message.clone(),
+      source,
+      source_sym: self.source_sym,
+      shortsource: self.shortsource.clone(),
+      skipping_spaces: self.skipping_spaces,
+      chars: self.chars.clone(),
+      buffer: self.buffer.clone(),
+      raw_buffer: self.raw_buffer.clone(),
+      reader,
+      reads_input_bytes: self.reads_input_bytes,
+      buffered_line_is_bytes: self.buffered_line_is_bytes,
+      line_is_bytes: self.line_is_bytes,
+      caret_bytes: self.caret_bytes.clone(),
+    }
+  }
+}
+
 impl Default for Mouth {
   fn default() -> Self {
     // Historically the source was `"Anonymous String {gid}"` with a
@@ -437,7 +482,7 @@ fn eight_bit_input_char(byte: char) -> Option<char> {
 
 /// The single character `\<current encoding><cs>` typesets, if it is a
 /// `\DeclareTextSymbol` glyph (a primitive with a one-character string body).
-fn text_symbol_char(cs: &Token) -> Option<char> {
+pub fn text_symbol_char(cs: &Token) -> Option<char> {
   use crate::definition::PrimitiveBody;
   // `\cf@encoding` is the current font's encoding (a computed macro here).
   let encoding = lookup_font()?.get_encoding()?.to_string();
@@ -510,6 +555,10 @@ impl Mouth {
 
   /// Whether this mouth reads a file (see [`MouthOptions::file_level`]).
   pub fn is_file_level(&self) -> bool { self.file_level }
+
+  /// Whether this mouth reads the document's own text: a content file (`binding::content::load_tex_content`, the
+  /// converter's in-memory source), its notes on and not read for definitions — no package's, class's or binding's.
+  pub fn is_document_text(&self) -> bool { self.notes && !self.fordefinitions }
 
   pub fn new(text: &str, options: Option<MouthOptions>) -> Result<Self> {
     let mut mouth = match options {
@@ -839,7 +888,7 @@ impl Mouth {
   /// Matches Perl's per-line decode behavior. The flag says whether the line's
   /// characters are the Latin-1 image of its bytes (a byte encoding, or a line
   /// that is not UTF-8) rather than UTF-8-decoded characters.
-  fn decode_bytes(raw_line: &[u8], location: String) -> (String, bool) {
+  fn decode_bytes(raw_line: &[u8], location: impl FnOnce() -> String) -> (String, bool) {
     if let Some(ref encoding_sym) = get_input_encoding() {
       // Probe the encoding without allocating — this fires per input
       // line, so even a small heap alloc per call adds up on large
@@ -891,7 +940,7 @@ impl Mouth {
           s!("input isn't valid under encoding {}", &encoding_name),
           "",
           "",
-          location
+          location()
         );
         file_str.replace('\u{FFFD}', " ")
       } else {
@@ -928,7 +977,7 @@ impl Mouth {
               s!("input isn't valid under encoding {}", &encoding_name),
               "",
               "",
-              location
+              location()
             );
           }
           (raw_line.iter().map(|&b| b as char).collect(), true)
@@ -951,7 +1000,7 @@ impl Mouth {
       // that is active at the time the line is read, allowing inputenc to
       // change encoding mid-file.
       if let Some(raw_line) = self.raw_buffer.pop_front() {
-        let (decoded, is_bytes) = Mouth::decode_bytes(&raw_line, self.get_location());
+        let (decoded, is_bytes) = Mouth::decode_bytes(&raw_line, || self.get_location());
         self.buffered_line_is_bytes = is_bytes;
         self.buffer.push_back(decoded);
       }
@@ -976,7 +1025,7 @@ impl Mouth {
       self.raw_buffer = Mouth::split_raw_lines(&file_bytes);
       // Decode the first line now
       if let Some(raw_line) = self.raw_buffer.pop_front() {
-        let (decoded, is_bytes) = Mouth::decode_bytes(&raw_line, self.get_location());
+        let (decoded, is_bytes) = Mouth::decode_bytes(&raw_line, || self.get_location());
         self.buffered_line_is_bytes = is_bytes;
         self.buffer.push_back(decoded);
       }
@@ -1105,6 +1154,18 @@ impl Mouth {
     }
   }
 
+  /// How far this mouth has read: its line, its column, the characters of the line still to read, and the lines still
+  /// buffered. Only compared with an earlier reading of the same mouth (`gullet::input_unread_since`): it changes
+  /// whenever a character or a line is read.
+  pub fn read_position(&self) -> (usize, usize, usize, usize) {
+    (
+      self.lineno,
+      self.colno,
+      self.chars.len(),
+      self.buffer.len() + self.raw_buffer.len(),
+    )
+  }
+
   /// Checks if there is more input to process.
   ///
   /// Note: we need mutability, as we may refill the internal BufReader
@@ -1218,7 +1279,10 @@ impl Mouth {
           )));
         }
       }
-      // In state::S, skip spaces
+      // In state::S, skip spaces — and ignored characters, which leave the state as it is (tex.web §344
+      // `any_state_plus(ignore)`): under `\ExplSyntaxOn` the (ignored) space of `\foo ~` kept TeX skipping, so the
+      // `~` (a spacer) is skipped too, where stopping at the ignored character made it a space token
+      // (`\str_if_eq:nnTF { \foo ~ } { \foo }` false). Perl Mouth.pm skips CC_SPACE only (KNOWN_PERL_ERRORS #1177).
       if self.skipping_spaces {
         let mut cc = None;
         // This is very awkward as a loop,
@@ -1226,11 +1290,14 @@ impl Mouth {
         // tokenizer/verb.tex depends on it.
         while let Some((_, ncc)) = self.get_next_char() {
           cc = Some(ncc);
-          if ncc != Catcode::SPACE {
+          if !matches!(ncc, Catcode::SPACE | Catcode::IGNORE) {
             break;
           }
         }
-        if self.colno <= self.nchars && cc.is_some() && cc != Some(Catcode::SPACE) {
+        if self.colno <= self.nchars
+          && cc.is_some()
+          && !matches!(cc, Some(Catcode::SPACE | Catcode::IGNORE))
+        {
           self.colno -= 1;
         }
         if cc == Some(Catcode::EOL) {
@@ -1352,6 +1419,53 @@ impl Mouth {
     self.nchars = self.chars.len();
     self.colno = 0;
     self.caret_bytes.clear();
+  }
+
+  /// The source text this mouth will read next — the rest of the current line, then up to `max_lines` lines after it,
+  /// joined by `\n`, at most `max_chars` characters in all — without reading it: nothing is consumed, tokenized or
+  /// decoded in place. A look-ahead for a decision about what follows (stomach.rs `formula_continues_past_par`,
+  /// OXIDIZED_DESIGN #553); `max_chars` keeps its cost bounded on a source whose current line is the whole document.
+  /// Lines not yet decoded are read as UTF-8, lossily; their structure (`$`, `\int`, `_`) is all a look-ahead needs.
+  /// A current line read to its end contributes nothing: its end-of-line character is read already, and an empty line
+  /// in its place would tokenize as one more (a `\par`, or under `\obeylines` an active `^^M`; hep-ph9809328).
+  pub fn peek_text(&self, max_lines: usize, max_chars: usize) -> String {
+    // Whether a line is begun in `text` that the next must be joined to.
+    let mut joined = self.colno < self.nchars;
+    let mut text = String::new();
+    let mut room = max_chars;
+    for ch in self.chars.iter().skip(self.colno).take(max_chars) {
+      text.push(*ch);
+      room -= 1;
+    }
+    if room == 0 {
+      return text;
+    }
+    if let Some(eol) = endline_char()
+      && text.ends_with(eol)
+    {
+      text.pop();
+    }
+    let decoded = self
+      .buffer
+      .iter()
+      .map(|line| std::borrow::Cow::Borrowed(line.as_str()));
+    let raw = self
+      .raw_buffer
+      .iter()
+      .map(|line| String::from_utf8_lossy(line));
+    for line in decoded.chain(raw).take(max_lines) {
+      if room == 0 {
+        break;
+      }
+      if joined {
+        text.push('\n');
+      }
+      joined = true;
+      let mut count = 0;
+      text.extend(line.chars().take(room).inspect(|_| count += 1));
+      room = room.saturating_sub(count + 1);
+    }
+    text
   }
 
   pub fn read_raw_line(&mut self, noread: bool) -> Option<String> {

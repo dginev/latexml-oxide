@@ -1,0 +1,18 @@
+% an.cls v1.03's title page prints the class's label before its abstract store (an.cls:662
+% `\noindent{\bfseries\abstractname}\ \@abstract`): with the store the frontmatter's abstract, the label is the
+% abstract's name and the title block keeps no lone bold "Abstract" paragraph (an_cls.rs).
+% witness: astro-ph0306340 (an623.tex, `\abstract{We discuss a new member candidate of the TW Hydrae association …}`)
+% oracle:  pdflatex 0 errors (beside the trimmed an.cls): "Abstract We discuss a new member candidate." under the date
+% engines: rust 77b r1 = 0 errors, <abstract> plus a lone bold "Abstract" <text> paragraph in the title block; perl (OmniBus, no an binding) = 0 errors, <abstract name="Abstract">
+% expect:  0 errors, 0 warnings; <ltx:abstract name="Abstract"><ltx:p>We discuss a new member candidate.</ltx:p></ltx:abstract>, the text once, no bold "Abstract" text
+% status:  RED (77b r1) -> GREEN (77b r2)
+% preload: ar5iv.sty
+\documentclass{an}
+\begin{document}
+\title{A Title}
+\author{A. Author}
+\abstract{We discuss a new member candidate.}
+\maketitle
+\section{Introduction}
+Body text.
+\end{document}

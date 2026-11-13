@@ -1,0 +1,18 @@
+% mechanism: as revtex_math_number_marks_label_lines (OXIDIZED_DESIGN_DIVERGENCES #964): a `$1$` first line over
+%   `$^2$`-led ones is mark 1's entry, the block led by the number mark
+% witness: 0909.5340 (`\affiliation{$1$Department of Modern Physics, …\\ $^2$Department of Physics, University of
+%   Fribourg, …\\ $^3$…}`, census129 cluster 4)
+% oracle:  pdflatex (TL 2025, revtex4) 0 errors: "Ann Able1,2 and Bob Baker3 / 1Univ A / 2 Univ B / 3 Univ C"
+% engines: rust int131a0: no author an affiliation, a nameless creator "1 Univ A2Univ B 3Univ C"; perl: one affiliation
+% expect:  0 errors, 0 warnings; Ann "Univ A" and "Univ B", Bob "Univ C"
+% status:  RED (int131a0) -> GREEN (104c) — perfect_kernel_batch104c::math_number_marks_label_lines
+% preload: ar5iv.sty
+\documentclass[aps]{revtex4}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1,2}$}
+\author{Bob Baker$^{3}$}
+\affiliation{$1$Univ A\\ $^2$Univ B \\ $^3$Univ C}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,14 @@
+% witness: 0710.2354, 0802.0639, 1007.2821 (lscape); 0801.1195, 0802.1229, 0704.2560 (psfrag): `\includegraphics`,
+%          `\scalebox` with only lscape or psfrag loaded (lscape.sty:35, psfrag.sty:35 `\RequirePackage{graphics}`)
+% oracle:  pdflatex 0 errors ("A [scaled] B")
+% engines: rust 67o1 = 2 errors (`\scalebox`, `\resizebox` undefined: the lscape and psfrag bindings load nothing);
+%          Perl's lscape.sty.ltxml and psfrag.sty.ltxml the same (KNOWN_PERL_ERRORS #692)
+% expect:  0 errors, 0 warnings; the scaled and resized text kept
+% status:  RED (67o1) -> GREEN (67u)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{lscape}
+\usepackage{psfrag}
+\begin{document}
+A \scalebox{0.5}{scaled} B \resizebox{2cm}{!}{resized}.
+\end{document}

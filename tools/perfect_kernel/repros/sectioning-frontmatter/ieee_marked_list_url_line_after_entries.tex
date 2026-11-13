@@ -1,0 +1,36 @@
+% mechanism: a binding's marked list cut by the Cut as the binding declares it (`MARKED_LIST_CUT`, OD #1009), the names
+%   in a `\parbox`: their marks are the names' own (`argument_marks` at the level their words print at), so the
+%   binding cuts the list and the link line after the entries stays the last entry's
+% witness: 2508.17623
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able§∗ , Bob Baker†∗ , Cy Cole¶ , Di Dow‡", "§ Univ A † Univ B
+%          ‡ Univ C ¶ Univ D", "https://example.org/project/"
+% engines: P4cbase (9d38af1d10): Cy Cole "Univ D" + url; P4c2: the names read unmarked (marks inside the box), the list
+%          left to the reading, the url in no creator, 1 Warning (8 words missing in the witness); P4c3: the base's
+%          entries with their marks shown, the url Cy Cole's
+% expect:  0 errors, 0 warnings; the url kept (Cy Cole's, as the base, or the block's)
+% status:  RED (P4c2 237a9e11af) -> GREEN (P4c3)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\usepackage{url}
+\begin{document}
+\title{T}
+\author{%
+  \IEEEauthorblockN{%
+    \parbox{\linewidth}{\centering
+      Ann Able\IEEEauthorrefmark{4}$^*$, %
+      Bob Baker\IEEEauthorrefmark{2}$^*$, %
+      Cy Cole\IEEEauthorrefmark{5}, Di Dow\IEEEauthorrefmark{3}%
+    }
+  }
+  \vspace{2mm}
+  \IEEEauthorblockA{\normalsize
+    \IEEEauthorrefmark{4}Univ A \quad
+    \IEEEauthorrefmark{2}Univ B \quad
+    \IEEEauthorrefmark{3}Univ C
+    \IEEEauthorrefmark{5}Univ D \\[0.1em]%
+    \small{\tt \url{https://example.org/project/}}
+  }
+}
+\maketitle
+Text.
+\end{document}

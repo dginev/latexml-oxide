@@ -1,5 +1,47 @@
 use crate::prelude::*;
 
+/// A token list as etoolbox's `\patchcmd` writes it out (etoolbox.sty:1358-1371): a macro's body as `\meaning`
+/// prints it (`params_doubled`: a nested parameter `##`), the search and replacement texts as `\detokenize` prints
+/// them with `#` an other character (:1355). A control sequence whose name is a word (or a letter or `@`, which the
+/// rescan under `\makeatletter`, :1376-1382, reads as letters) is followed by a space (tex.web §262 `print_cs`), so the text
+/// rescans to the same tokens whatever follows it.
+fn etb_patch_text(tokens: &Tokens, params_doubled: bool) -> String {
+  let mut out = String::new();
+  for t in tokens.unlist_ref() {
+    match t.get_catcode() {
+      Catcode::COMMENT => {},
+      Catcode::CS => t.with_str(|text| {
+        let name = text.strip_prefix('\\').unwrap_or(text);
+        out.push('\\');
+        out.push_str(name);
+        let mut chars = name.chars();
+        let word = match (chars.next(), chars.next()) {
+          (Some(_), Some(_)) => true,
+          (Some(c), None) => c.is_alphabetic() || c == '@',
+          _ => false,
+        };
+        if word {
+          out.push(' ');
+        }
+      }),
+      Catcode::PARAM => t.with_str(|text| {
+        out.push_str(text);
+        if params_doubled {
+          out.push_str(text);
+        }
+      }),
+      // A space token is one space in `\meaning`, whatever its source text (a line end keeps `\n`): review rev78p.
+      Catcode::SPACE => out.push(' '),
+      Catcode::ARG => {
+        out.push('#');
+        t.with_str(|text| out.push_str(text));
+      },
+      _ => t.with_str(|text| out.push_str(text)),
+    }
+  }
+  out
+}
+
 LoadDefinitions!({
   // RawTeX! (not TeX!) because \etb@catcodes etc. need @ as letter at runtime.
   // TeX! tokenizes at compile time with @ = OTHER, breaking \etb@catcodes into \etb + @catcodes.
@@ -1418,33 +1460,22 @@ LoadDefinitions!({
       ExpansionBody::Tokens(t) => t.clone(),
       _ => unreachable!(),
     };
+    // etoolbox.sty:1358-1371 patches text: the macro's `\meaning` and the search and replacement texts
+    // `\detokenize`d (with `#` made other, :1355 `\@makeother\#`), then rescans the result. In that text a control
+    // word is always followed by a space (tex.web §262 `print_cs`), so `\patchcmd{\x}{|}{\mid}` on `o|s` rescans
+    // `o\mid s` and keeps `\mid` (`etb_patch_text`); `untex`'s text, which spaces a control word only before a letter
+    // already beside it, welded the replacement into `\mids` (2011.13897; Perl shares it, KNOWN_PERL_ERRORS #1091).
     // A stored body keeps a nested macro's parameter (`##1` of an inner `\def`)
-    // as one PARAM token, which `untex` writes as a single `#`; re-tokenized and
-    // packed below it became the OUTER parameter — pgfornament.sty:47-51's
-    // `\def\m ##1 ##2 {…}` in the patched `\pgf@@ornamenthan` turned into
-    // `\def\m #1 #2`, the ornament number, so every path operator of
-    // pgfornament-han missed its delimiter and the ornaments drew nothing.
-    // Written as `##`, as `\meaning` and etoolbox's own patterns do (`#1` the
-    // macro's parameter, `##1` a nested one), the round trip is exact. Perl
-    // shares the corruption (KNOWN_PERL_ERRORS #221).
-    let string = Tokens::new(
-      expansion_tokens
-        .unlist_ref()
-        .iter()
-        .flat_map(|t| {
-          if t.get_catcode() == Catcode::PARAM { vec![*t, *t] } else { vec![*t] }
-        })
-        .collect(),
-    )
-    .untex();
-    let search_string = search.untex();
-    // All characters are meant to be matched as literal, avoid regex interpretation
-    // search_string = quotemeta(search_string);
-    // let search_regex = qr/$search_string/;
+    // as one PARAM token: written as `##`, as `\meaning` writes it (`#1` the
+    // macro's parameter, `##1` a nested one), the round trip is exact —
+    // pgfornament.sty:47-51's `\def\m ##1 ##2 {…}` in the patched
+    // `\pgf@@ornamenthan` had become `\def\m #1 #2` (KNOWN_PERL_ERRORS #221).
+    let string = etb_patch_text(&expansion_tokens, true);
+    let search_string = etb_patch_text(&search, false);
     if string.contains(&search_string) {
       // Should the token substitution happen on the actual data structure?
       // string replacement is a quick&dirty way out...
-      let replace_string = replace.untex();
+      let replace_string = etb_patch_text(&replace, false);
       // Once: etoolbox's `\etb@resrvdb` is delimited by the FIRST occurrence
       // of the search text (etoolbox.sty:1365-1366), and Perl's `s///`
       // (etoolbox.sty.ltxml:1308) has no `/g`.
@@ -2023,8 +2054,11 @@ LoadDefinitions!({
   // etoolbox.sty:1745 `\AfterEndPreamble` is `\AddToHook{begindocument/end}` on a 2020+ format:
   // a one-time hook, so code added once it has run executes at once (Perl etoolbox.sty.ltxml:1718
   // queues it on a list nothing reads again, dropping it).
+  // (a stand-in's copy registers no document-time code: `state::copy_provides_defers`; mdpi.cls:1089)
   DefMacro!("\\AfterEndPreamble[]{}", sub[(_label, arg)] {
-  if lookup_bool("@document@preamble@afterend@done") {
+  if copy_provides_defers("\\AfterEndPreamble") {
+    Tokens!()
+  } else if lookup_bool("@document@preamble@afterend@done") {
     arg
   } else {
     push_value("@document@preamble@afterend", arg.unlist())?;
@@ -2032,7 +2066,9 @@ LoadDefinitions!({
   }},
   protected => true, peeks_by_futurelet => true);
   DefMacro!("\\AfterEndDocument[]{}", sub[(_label, arg)] {
-  push_value("@after@end@document", arg.unlist())?; },
+  if !copy_provides_defers("\\AfterEndDocument") {
+    push_value("@after@end@document", arg.unlist())?;
+  } },
   protected => true, peeks_by_futurelet => true);
 
   // Perl's `\AtEndDocument{\let\AfterEndPreamble\@gobble}` (etoolbox.sty.ltxml:1724) is
@@ -2143,9 +2179,9 @@ LoadDefinitions!({
 
   // LaTeXML-only: \robustify must NO-OP on a NATIVE (closure-bodied) binding.
   // Many LaTeXML commands (e.g. natbib's \cite) are realized as Rust closures,
-  // whose \meaning renders as "...->CODE(0x...)". etoolbox's \robustify
+  // whose \meaning renders as "...->CODE(<name>)" (Perl's "CODE(0x...)", QA89). etoolbox's \robustify
   // reconstructs a macro from its \meaning via \scantokens; for a native binding
-  // that yields a broken text-bodied "CODE(0x...)" macro that grabs the wrong
+  // that yields a broken text-bodied "CODE(<name>)" macro that grabs the wrong
   // number of args (Perl has the SAME bug — it silently emits the pointer text;
   // we surfaced it as errors when the mangled \cite swallowed a following
   // \begin{equation}, witness 2110.11931, mnras templates ship \robustify{\cite}).
@@ -2155,7 +2191,15 @@ LoadDefinitions!({
   // sentinel "Stored[" — DefMath/constructor natives render that way (e.g.
   // \bmod = DefMath in math_common.rs, whose real latex.ltx L15556 body IS a
   // robust macro, so real \robustify succeeds; ours must no-op, not error
-  // "not a macro". Witness yquant-doc.tex L244 `\robustify\bmod`).
+  // "not a macro". Witness yquant-doc.tex L244 `\robustify\bmod`). A
+  // LaTeX-robust command (`\DeclareRobustCommand`, meaning `\protect \cite  `)
+  // is a macro whose body is not native: \robustify then works on its inner
+  // `\cite ` (`\ifdefltxprotect`, etoolbox.sty:1271-1273), which is — the
+  // kernel's `\cite` binding — so the test is made on that inner command too;
+  // without it the rebuilt `\cite` set the literal text "CODE(…)" in place of
+  // the citation and swallowed its key and the next token (arXiv 2210.15126,
+  // wiley-article.cls:774 `\robustify{\cite}`; Perl the same, KNOWN_PERL_ERRORS
+  // #902). Guard: `perfect_kernel_batch69b::robustify_ltx_protected_native_cite`.
   RawTeX!(
     r"
 \newcommand{\lx@ifnativecmd}{}
@@ -2174,7 +2218,12 @@ LoadDefinitions!({
 \lx@etb@ifnativecmdb{\notblank{#2}}
 \let\lx@saved@robustify\robustify
 \protected\def\robustify#1{%
-  \lx@ifnativecmd{#1}{}{\lx@ifnativecmdb{#1}{}{\lx@saved@robustify{#1}}}}
+  \lx@ifnativecmd{#1}{}{\lx@ifnativecmdb{#1}{}{%
+    \ifdefltxprotect{#1}%
+      {\expandafter\lx@robustify@ltxprotect\csname\expandafter\@gobble\string#1 \endcsname#1}%
+      {\lx@saved@robustify{#1}}}}}
+\def\lx@robustify@ltxprotect#1#2{%
+  \lx@ifnativecmd{#1}{}{\lx@ifnativecmdb{#1}{}{\lx@saved@robustify{#2}}}}
 "
   );
 });

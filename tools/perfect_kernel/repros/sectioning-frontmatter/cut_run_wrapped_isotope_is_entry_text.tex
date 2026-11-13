@@ -1,0 +1,16 @@
+% mechanism: a font group holding a mark and text that goes on after it is no entry's own wrapper: its mark is the
+%   entry's text (an isotope), not a cut point (`notes::wrapped_mark_at`: a wrapper is the entry's own only where nothing
+%   but a separator follows it up to the next mark or line break)
+% witness: review rev107e finding 3 (p4)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Lee1 and Bob Ray2 / 1 Univ A, 2 H Lab, Rome 2 Univ B"
+% engines: rust 107e (r1): Ann "Univ A", Bob "H Lab, Rome" and "Univ B"; int139a: right
+% expect:  0 errors, 0 warnings; Ann "Univ A, ²H Lab, Rome" (the isotope's superscript kept); Bob "Univ B"
+% status:  RED (107e r1) -> GREEN (107e r2) — perfect_kernel_batch107e::a_wrapped_isotope_is_entry_text
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Lee$^{1}$ and Bob Ray$^{2}$\\
+$^{1}$Univ A, \textit{$^{2}$H} Lab, Rome $^{2}$Univ B}
+\maketitle
+\end{document}

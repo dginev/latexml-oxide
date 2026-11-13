@@ -1,0 +1,22 @@
+% mechanism: a store entry led by its own mark (`$^{a}$Univ A, Town A`) under a class numbering the `\and` entries
+%   (llncs's `\institutename`, numinst.cls): the class prints "1 aUniv A", the class's number then the entry's own
+%   mark. The store's mark declines the numbering, and the token pairing sends entry `a` to no author's mark: Ann
+%   loses Univ A to a nameless creator. The same with the mark in a group (`{$^{a}$}Univ A`) or as
+%   `\textsuperscript{a}Univ A` (revP4d P1, probes q3, q13, r4). Pre-existing.
+% witness: synthetic (revP4d P1)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2", "1 aUniv A, Town A",
+%          "2 Univ B, Town B"
+% engines: rust int161a, F0, P4d, int162a: Ann Able 1 (no contact), Bob Baker 2 "Univ B, Town B", a nameless creator
+%          "Univ A, Town A", 0 W; perl: no binding for the class (its `\institute` raw)
+% expect:  0 errors, 0 warnings; Ann Able "a Univ A, Town A", Bob Baker "Univ B, Town B"
+% status:  RED (int161a, F0, P4d, int162a)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{numinst}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$}
+\institute{$^{a}$Univ A, Town A \and Univ B, Town B}
+\maketitle
+Text.
+\end{document}

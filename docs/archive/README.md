@@ -35,6 +35,7 @@ citations are why the file is kept.
   live residuals in `../SYNC_STATUS.md`). Cited by `bibtex.rs`.
 - `frontmatter_api_refactor.md` — design/decisions log for the upstream PR #2767
   frontmatter-API port (landed). Cited by `../parity/OXIDIZED_DESIGN_DIVERGENCES.md`.
+- **The frontmatter series, archived 2026-11-08** (superseded by the one engine, `../parity/FRONTMATTER_SINGLE_ENGINE_PLAN.md`): `AUTHOR_MARKUP_PIPELINE_2026-11-03.md` (the old two-branch `\lx@add@authors` unification worklist, 2026-08-16 →), `AUTHOR_BLOCK_LABELING_DESIGN_2026-10-28.md` (a data-driven labelling proposal, never built; cited by `../parity/DEFERRED_FAMILIES.md`), `FRONTMATTER_ARCHITECTURE_AUDIT_2026-10-28.md` (the architecture audit whose item 9 became the one engine), `FRONTMATTER_PERF_AUDIT_2026-10-31.md` (the pipeline perf study; levers in `../performance/PERFORMANCE.md` P9-P11), `FRONTMATTER_DIGESTED_REFACTOR_2026-11-07.md` (the digested refactor's history: the 2026-10-29 spelling inventory, Stages 1-8, and the plan's own superseded parts — the original Z0-Z23 order, the waves, the 2026-11-01 Stages 0-7; its live sections moved into the plan).
 - `UPSTREAM_SYNC_2767_to_2833_2026-06-26.md` — per-PR catalog for the "translate
   upstream PRs since #2767" mission (U1–U11, all landed via PR #271).
 - `MATHML_POST_LINE_AUDIT_2026-07-05.md` — exhaustive MathML-post line audit
@@ -92,6 +93,13 @@ citations are why the file is kept.
 - `SYNC_SESSIONS_2026-09.md`, `SYNC_SESSIONS_2026-10.md` — the same for September and for 2026-10-04's compaction: the
   cortex sandbox validation (61r), the stop and resumption of the full arXiv run 329 (62a-62c) and the run-329 cluster
   batches 62d-62f; their open residuals stay in SYNC_STATUS "Run-329 and sandbox open residuals".
+- `SYNC_SESSIONS_2026-11.md` — two moves, both verbatim. (1) DOC1, 2026-11-08: the frontmatter series' landed rows
+  from SYNC_STATUS's "Silent-loss inventory" (batches 77d-108b, the S2b families, Z1-Z14, the bundle rows
+  int117a-int145b), from `../perfect_kernel/OPEN_ROWS.md`, and `../perfect_kernel/KERNEL_CAPABILITIES.md`'s K23 design
+  record. (2) SYNC1, 2026-11-09, section "Moved from SYNC_STATUS by the 2026-11-09 compaction (SYNC1)": the closed
+  ranked rows (G, XP, R4), the bundle rows int119a-int152a and int133a, row 98d, the pre-flip leftovers' history, the
+  long rows' full records and the Rust Error Fixes' bodies, split into one fact per line. Each live residual keeps its
+  row, under the same title, in SYNC_STATUS or (since SYNC1b) `../perfect_kernel/SILENT_LOSS_INVENTORY.md`.
 - `GEMINI_IMPROVEMENT_IDEAS_2026-09-19.md` — the Gemini engineering review; P1/P5/P6/P7 landed, P3/P4 settled, the
   open ideas lifted into `../performance/BEYOND_PERL_LEVERS.md`.
 - `round19_iteration_log.md` — pre-Round-25 sprint narratives. Cited by `CHANGELOG.md`.

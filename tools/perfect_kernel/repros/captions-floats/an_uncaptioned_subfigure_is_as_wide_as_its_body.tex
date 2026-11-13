@@ -1,0 +1,23 @@
+% witness: 1007.2355 Figs 1, 3 (`\subfigure{⏎\includegraphics[width=0.45\textwidth]{…}⏎\label{…}}` pairs: one
+%          row in the PDF, two in int65a)
+% oracle:  pdflatex 0 errors; one row of two; "See 1(a) and 1(b)."
+% engines: rust int65a = one panel per row (an uncaptioned panel measured whole: its spaces and the `\label`
+%          whatsit's key text); Perl 0.8.8 the same
+% expect:  0 errors, 0 warnings; no `ltx:break`
+% status:  RED (int65a) -> GREEN (78x, OXIDIZED_DESIGN_DIVERGENCES #885)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{subfigure}
+\begin{document}
+\begin{figure}
+\centering
+\subfigure{
+\rule{0.45\textwidth}{1cm}
+\label{fig:left}}
+\subfigure{
+\rule{0.45\textwidth}{1cm}
+\label{fig:right}}
+\caption{Left and right.}
+\end{figure}
+See \ref{fig:left} and \ref{fig:right}.
+\end{document}

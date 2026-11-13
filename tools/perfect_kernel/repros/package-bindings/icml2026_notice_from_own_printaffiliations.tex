@@ -1,0 +1,19 @@
+% witness: 2601.22575 (the ICML 2026 example paper's own \printAffiliationsAndNotice, 95 papers set
+%          \icml@noticeprintedtrue), 2601.23143 (\Notice@String, 32 papers)
+% oracle:  pdflatex (with 2601.22575's icml2026.sty) 0 errors, footnote "Proceedings of the 43rd International
+%          Conference on Machine Learning, Seoul, South Korea. PMLR 306, 2026. Copyright 2026 by the author(s)."
+% engines: rust 67int6 = undefined \icml@noticeprintedtrue, \Notice@String
+% expect:  0 errors, 0 warnings; the notice as the footnote text
+% status:  RED (67int6) -> GREEN (68c); guard perfect_kernel_batch68c::icml2026_notice_string_and_flag
+\documentclass{article}
+\usepackage[accepted]{icml2026}
+\makeatletter
+\renewcommand{\printAffiliationsAndNotice}[1]{%
+  \global\icml@noticeprintedtrue
+  {\let\thefootnote\relax\footnotetext{#1 \Notice@String}}}
+\makeatother
+\begin{document}
+\twocolumn[\icmltitle{Title}]
+\printAffiliationsAndNotice{}
+Text.
+\end{document}

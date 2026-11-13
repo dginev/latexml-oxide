@@ -1,0 +1,22 @@
+% witness: 77n S4 — an IEEEtran names line held in one wrapper, the wrapper followed by spacing, a paragraph break and
+%          notes only: `\author{\emph{Wenzhuo Ouyang, Atilla Eryilmaz, and Ness B. Shroff} \vspace{-9pt}\par
+%          \vspace{-5pt} \thanks{…}\thanks{…}}` (1108.3768)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker, and Cat Cole" in italics, the two notes' marks after Cat Cole
+% engines: rust int31a = one creator "Ann Able, Bob Baker, and Cat Cole" (+1 Error:frontmatter:merged_creators);
+%          Perl merges alike (SplitTokens passes over groups, Base_Utility.pool.ltxml:152-165)
+% expect:  0 errors, 0 warnings; 3 creators "Ann Able", "Bob Baker", "Cat Cole", each in italics, the notes Cat
+%          Cole's (after the last name, as LaTeX prints their marks)
+% status:  RED (int31a) -> GREEN (77n)
+% preload: ar5iv.sty
+\documentclass{IEEEtran}
+\begin{document}
+\title{T}
+\author{\emph{Ann Able, Bob Baker, and Cat Cole}
+\vspace{-9pt}
+
+\vspace{-5pt}
+\thanks{Ann Able and Bob Baker are with Univ A.}
+\thanks{A preliminary version appeared in X.}}
+\maketitle
+x
+\end{document}

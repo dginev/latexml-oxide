@@ -1,0 +1,22 @@
+% A two-author article block whose line `{\small * Corresponding author, E-mail: qz@a.org }` opens with the `*` the first
+% name prints glued to it as text (`Ann Able$^{a}$*`, not a superscript): the mark is that name's, so the address is
+% Ann's, with her correspondence note — never the block's for want of a name showing `*` (review rev107c B1: 107c r2).
+% witness: 1711.00192 (`Jian Shi$^{a}$*`, its one-author form)
+% oracle:  pdflatex 0 errors: "Ann Ablea * and Bob Bakera", "aUniv A, Town,", "Country.",
+%          "* Corresponding author, E-mail: qz@a.org"
+% engines: rust int139a0 = the line in both affiliations; 107c r1 = the e-mail on a nameless block creator
+% expect:  0 errors, 0 warnings; Able: Univ A, Town, Country, the `*` correspondence note, qz@a.org; Baker: Univ A, Town,
+%          Country
+% status:  RED (107c r1) -> GREEN (107c r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{a}$* and Bob Baker$^{a}$\\
+{\small $^{a}$Univ A, Town,}\\
+{\small Country.}\\
+{\small * Corresponding author, E-mail: qz@a.org }}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

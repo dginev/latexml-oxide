@@ -1,0 +1,14 @@
+% mechanism: a row of addresses joined at a `\quad`: no separator reaches an address, a comma before the space none either
+% witness: 2505.22665; review probes n14, b8
+% oracle:  pdflatex: 0 errors; "Ann Able", "Bob Baker", "e-mail: ann@x.org, bob@y.org"
+% engines: rust 108a r2: `˜˜ bob@y.org`; int139c: `bob@y.org` a creator
+% expect:  0 errors; each its address, under the label, no comma and no tilde
+% status:  RED (108a r2) -> GREEN (108a r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\quad Bob Baker\\ e-mail: ann@x.org, \quad bob@y.org}
+\maketitle
+Text.
+\end{document}

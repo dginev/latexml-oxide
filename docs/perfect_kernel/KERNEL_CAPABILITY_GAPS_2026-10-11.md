@@ -20,7 +20,7 @@ Count bases (reports and tables under `~/data/pk_agents/main/agent_reports/`):
 - the 222 RED repros, by header (sectioning-frontmatter 49, boxes-groups 27, captions-floats 22, graphics-tikz 14,
   singletons 12, index-bib 11, macro-state 10, math-parse 10, kernel-alignment 9, block-model 8, loader 7, …);
 - the HF rows; KPE #520–585; OD #440–500;
-- the 64-series payload reports; HANDOFF 63t–64zb.
+- the 64-series payload reports; agent_reports 2026-10-09..10-11 (63t–64zb).
 
 ## 0. Conclusion — invest in this order
 

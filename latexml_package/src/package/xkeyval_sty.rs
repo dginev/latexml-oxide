@@ -460,11 +460,13 @@ LoadDefinitions!({
     let skeysets_str = do_expand(keysets_tks)?.to_string();
     let skey = do_expand(key_tks)?.to_string();
 
+    // Every entry is searched, the empty family included: `\XKV@sp@deflist`
+    // (xkvutils.tex:228-237) keeps empty entries and `\XKV@whilist`
+    // (:110-126) visits `{}` as one empty family, whose header is `<prefix>@`
+    // (xkeyval.tex:83-87). Perl's `split(',', …)` yields no entry for `{}` and
+    // `KeyVals` drops empty ones (LaTeXML #2777) — KNOWN_PERL_ERRORS #212.
     for skeyset in skeysets_str.split(',') {
       let skeyset = skeyset.trim();
-      // Perl #2777 (2026-03-27): skip empty keyset names from leading,
-      // trailing, or doubled commas.
-      if skeyset.is_empty() { continue; }
       if keyval::has_keyval(&sprefix, skeyset, &skey) {
         let keyset_owned = skeyset.to_string();
         DefMacro!(T_CS!("\\XKV@tfam"), None, {
@@ -512,23 +514,25 @@ LoadDefinitions!({
   DefParameterTypeWO!(OptionalAngle, Parameter {
     name: pin!("OptionalAngle"),
     optional: true,
+    // An absent `<…>` is `None` (Perl's `undef`), an explicit `<>` is the
+    // empty family: xkeyval.sty:78-80/:93-95 take `<\@currname.\@currext>`
+    // only when no `<` follows, and `\XKV@makehd` (xkeyval.tex:83-87) gives
+    // the empty family the header `<prefix>@` (sapthesis.cls
+    // `\ProcessOptionsX[sap]<>`; witnesses 2503.03277, 2403.20315).
     reader: reader!(_inner, _extra, {
       if if_next(T_OTHER!("<"))? {
         read_token()?;
-        read_until_token(T_OTHER!(">"))
+        read_until_token(T_OTHER!(">")).map(Some)
       } else {
-        Ok(Tokens!())
+        Ok(None::<Tokens>)
       }
     }),
+    // Perl reverts any present value, empty included, to `<…>`.
     reversion: Some(Rc::new(|tks: Vec<Token>, _params: Option<&Parameters>, _extra: &[Tokens]| -> Result<Tokens> {
-      if tks.is_empty() {
-        Ok(Tokens!())
-      } else {
-        let mut out: Vec<Token> = vec![T_OTHER!("<")];
-        out.extend(tks);
-        out.push(T_OTHER!(">"));
-        Ok(Tokens::new(out))
-      }
+      let mut out: Vec<Token> = vec![T_OTHER!("<")];
+      out.extend(tks);
+      out.push(T_OTHER!(">"));
+      Ok(Tokens::new(out))
     })),
     ..Parameter::default()
   });
@@ -572,8 +576,9 @@ LoadDefinitions!({
       tokens.extend(prefix.unlist());
       tokens.push(T_OTHER!("]"));
     }
-    // keyset defaults to current file name
-    if let Some(keyset) = keyset_opt.filter(|t| !t.is_empty()) {
+    // keyset defaults to current file name; an explicit `<>` is the empty
+    // family (xkeyval.sty:92-94 `\XKV@@d@x`, Perl xkeyval.sty.ltxml:302-303).
+    if let Some(keyset) = keyset_opt {
       tokens.push(T_BEGIN!());
       tokens.extend(keyset.unlist());
       tokens.push(T_END!());
@@ -639,11 +644,9 @@ LoadDefinitions!({
     let skip_opt: Option<Tokens> = skip_arg.owned_tokens();
 
     let file_name = xkeyval_get_file_name();
-    let keysets = if let Some(ks) = keysets_opt.filter(|t| !t.is_empty()) {
-      ks
-    } else {
-      Tokens::new(Explode!(file_name))
-    };
+    // An explicit `<>` stays the empty family (Perl xkeyval.sty.ltxml:330
+    // `defined($keysets) ? …`); only an absent `<…>` is the file's own.
+    let keysets = keysets_opt.unwrap_or_else(|| Tokens::new(Explode!(file_name)));
 
     // expand options for this file
     let opt_cs = T_CS!(s!("\\opt@{file_name}"));

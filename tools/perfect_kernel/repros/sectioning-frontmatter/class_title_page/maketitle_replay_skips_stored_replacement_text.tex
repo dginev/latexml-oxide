@@ -1,0 +1,19 @@
+% A raw class's `\maketitle` the lock refused replays (\lx@deposit@maketitle) although its body `\def`s a macro whose
+% replacement text reads `\@thefnmark` (defined only for a footnote) and peeks with `\futurelet`: a `\def`'s parameter
+% and replacement text are stored, not run (tex.web §473), and `\futurelet` defines what it lets (§1221).
+% witness: 1505.04771 (sig-alternate-05-2015.cls:726-737, :1049 `\toappear`); 204 of the 3,000 sample papers logged
+%          "not replayed: it uses \@thefnmark" (0712.1016, 1301.5612, 1506.04304, 2407.00478)
+% oracle:  pdflatex (tpfnmark.cls beside it) 0 errors: "On Widgets / A. Author / <date> / This is a pre-print of an
+%          article appearing at KDD'16. / Body text."
+% engines: rust 67int27 = 0 errors, the `\toappear` text lost (Info "not replayed: it uses \@thefnmark");
+%          perl (OmniBus, the class is not read) = 1 error (\toappear undefined)
+% expect:  0 errors, 0 warnings; the text once, in a parbox paragraph after the title; title and creator once
+% status:  RED (67int27) -> GREEN (75a)
+% preload: ar5iv.sty
+\documentclass{tpfnmark}
+\toappear{This is a pre-print of an article appearing at KDD'16.}
+\begin{document}
+\title{On Widgets}\author{A. Author}
+\maketitle
+Body text.
+\end{document}

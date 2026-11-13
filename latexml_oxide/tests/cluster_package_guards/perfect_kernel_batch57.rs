@@ -1,6 +1,8 @@
 //! Red/green guards for perfect-kernel phase-57 batches from 57ah on: the K13 stage-2 binding
 //! audit's residue (bindings that read differently from their real macro, 57ah) and the math
 //! follow-ups of the 57ag classification against Perl (57ai).
+use latexml::util::test::{check_requirements, loads};
+
 use super::perfect_kernel_batch46::{convert_with, error_count, warning_count};
 
 /// 57ah: amsart's `\authors`, `\shortauthors` and `\addresses` are parameterless storage macros
@@ -616,7 +618,13 @@ fn opfunction_chain_parses_past_the_tree_sampler() {
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/math-parse/opfunction_chain_parses_past_the_tree_sampler.tex"
   );
-  let (stderr, xml) = convert_with(tex, None);
+  // The parse's wall-clock limits (2 s with no parse yet, the second chance's 5 s) cut the sixteen
+  // logs' sample under load (FLK1: 21.9 s beside 24 busy loops); lifted, the count budgets decide.
+  let no_deadlines = || {
+    latexml_math_parser::set_parse_deadlines_override(Some(std::time::Duration::from_secs(3600)))
+  };
+  let (stderr, xml, ()) =
+    super::perfect_kernel_batch46::convert_with_setup_then(tex, None, no_deadlines, |_| ());
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(warning_count(&stderr), 2, "{stderr}");
   assert_eq!(
@@ -651,7 +659,10 @@ fn opfunction_chain_parses_past_the_tree_sampler() {
   let (stderr, xml, ()) = super::perfect_kernel_batch46::convert_with_setup_then(
     tex,
     None,
-    || latexml_math_parser::set_asf_second_chance_alternatives_override(Some(500)),
+    move || {
+      no_deadlines();
+      latexml_math_parser::set_asf_second_chance_alternatives_override(Some(500));
+    },
     |_| (),
   );
   assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -928,7 +939,9 @@ fn declaration_scopes_resolve_as_perl() {
 /// content is one panel of the outer, and its box geometry and box/panel classes describe the panel: a side
 /// caption's `0.3\linewidth` minipage gave its figure `width="103.5pt"` around a `0.65\linewidth` panel
 /// (2605.03502), and a `0.4\linewidth` subfigure of a `0.1\linewidth` caption minipage and a panel claimed
-/// `width="34.5pt"`, so three of them shared one row (2605.15932); now the third starts a row, as pdflatex.
+/// `width="34.5pt"`, so three of them shared one row (2605.15932); now the third starts a row, as pdflatex. A
+/// `0.8\linewidth` minipage in a `0.4\linewidth` subfigure is 110.4pt, the subfigure's `\linewidth` (78d,
+/// KNOWN_PERL_ERRORS #1028; 276.0pt, the page's, before).
 /// A lone inner float still gives its float its geometry, and classes merge in both cases: the algorithm
 /// keeps `ltx_float_algorithm` (2605.17037). Each keeps the id its tags carry (`S0.F1`, `S0.F2.sf1`,
 /// `algorithm1`; 57cp, #372). OXIDIZED_DESIGN_DIVERGENCES #375; repro captions-floats/collapsed_panel_keeps_the_float_geometry.
@@ -946,19 +959,19 @@ fn collapsed_panel_keeps_the_float_geometry() {
     &xml,
     "figure",
     &[r#"xml:id="S0.F1""#],
-    r#"<figure inlist="lof" labels="LABEL:f" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p class="ltx_figure_panel ltx_minipage" vattach="middle" width="224.3pt">Wide panel.</p><toccaption><tag close=" ">1</tag>Side caption.</toccaption><caption><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">Side caption.</text></caption></figure>"#,
+    r#"<figure inlist="lof" labels="LABEL:f" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p class="ltx_figure_panel ltx_minipage" vattach="middle" width="224.3pt">Wide panel.</p><toccaption><tag close=" ">1</tag>Side caption.</toccaption><caption><tag close=": ">Figure 1</tag>Side caption.</caption></figure>"#,
   );
   latexml::util::test::assert_element(
     &xml,
     "figure",
     &[r#"xml:id="S0.F2""#],
-    r#"<figure inlist="lof" xml:id="S0.F2"><tags><tag><text fontsize="90%">Figure 2</text></tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><figure class="ltx_figure_panel" inlist="lof" labels="LABEL:a" xml:id="S0.F2.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">2a</tag></tags><toccaption><tag close=" ">a</tag></toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag></caption><p class="ltx_figure_panel ltx_minipage" vattach="middle" width="276.0pt">One.</p></figure><figure class="ltx_figure_panel" inlist="lof" labels="LABEL:b" xml:id="S0.F2.sf2"><tags><tag><text fontsize="90%">(b)</text></tag><tag role="refnum">2b</tag></tags><toccaption><tag close=" ">b</tag></toccaption><caption><tag close=" "><text fontsize="90%">(b)</text></tag></caption><p class="ltx_figure_panel ltx_minipage" vattach="middle" width="276.0pt">Two.</p></figure><break class="ltx_break"/><figure class="ltx_figure_panel" inlist="lof" labels="LABEL:c" xml:id="S0.F2.sf3"><tags><tag><text fontsize="90%">(c)</text></tag><tag role="refnum">2c</tag></tags><toccaption><tag close=" ">c</tag></toccaption><caption><tag close=" "><text fontsize="90%">(c)</text></tag></caption><p class="ltx_figure_panel ltx_minipage" vattach="middle" width="276.0pt">Three.</p></figure><toccaption><tag close=" ">2</tag>Rows.</toccaption><caption><tag close=": "><text fontsize="90%">Figure 2</text></tag><text fontsize="90%">Rows.</text></caption></figure>"#,
+    r#"<figure class="ltx_panels_gallery" inlist="lof" panelcols="2" panelfill="0.8" panelline="1" panelrows="2" xml:id="S0.F2"><tags><tag>Figure 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Figure 2</tag></tags><figure class="ltx_figure_panel" inlist="lof" labels="LABEL:a" panelwidth="0.4" xml:id="S0.F2.sf1"><tags><tag><text fontsize="90%">(a)</text></tag><tag role="refnum">2a</tag></tags><toccaption><tag close=" ">a</tag></toccaption><caption><tag close=" "><text fontsize="90%">(a)</text></tag></caption><p class="ltx_figure_panel ltx_minipage" vattach="middle" width="110.4pt">One.</p></figure><figure class="ltx_figure_panel" inlist="lof" labels="LABEL:b" panelwidth="0.4" xml:id="S0.F2.sf2"><tags><tag><text fontsize="90%">(b)</text></tag><tag role="refnum">2b</tag></tags><toccaption><tag close=" ">b</tag></toccaption><caption><tag close=" "><text fontsize="90%">(b)</text></tag></caption><p class="ltx_figure_panel ltx_minipage" vattach="middle" width="110.4pt">Two.</p></figure><break class="ltx_break"/><figure class="ltx_figure_panel" inlist="lof" labels="LABEL:c" panelwidth="0.4" xml:id="S0.F2.sf3"><tags><tag><text fontsize="90%">(c)</text></tag><tag role="refnum">2c</tag></tags><toccaption><tag close=" ">c</tag></toccaption><caption><tag close=" "><text fontsize="90%">(c)</text></tag></caption><p class="ltx_figure_panel ltx_minipage" vattach="middle" width="110.4pt">Three.</p></figure><toccaption><tag close=" ">2</tag>Rows.</toccaption><caption><tag close=": ">Figure 2</tag>Rows.</caption></figure>"#,
   );
   latexml::util::test::assert_element(
     &xml,
     "float",
     &[r#"xml:id="algorithm1""#],
-    r#"<float class="ltx_float_algorithm ltx_minipage" framed="top" inlist="loa" labels="LABEL:alg" vattach="middle" width="345.0pt" xml:id="algorithm1"><tags><tag><text font="bold">Algorithm 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Algorithm 1</tag></tags><toccaption><tag close=" ">1</tag>Alg</toccaption><caption><tag close=" "><text font="bold">Algorithm 1</text></tag> Alg</caption><p framed="topbottom">Step.</p></float>"#,
+    r#"<float class="ltx_float_algorithm ltx_minipage" framed="top" inlist="loa" labels="LABEL:alg" vattach="middle" width="345.0pt" xml:id="algorithm1"><tags><tag><text font="bold">Algorithm 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Algorithm 1</tag></tags><toccaption><tag close=" ">1</tag>Alg</toccaption><caption><tag close=" "><text font="bold">Algorithm 1</text></tag>Alg</caption><p framed="topbottom">Step.</p></float>"#,
   );
 }
 
@@ -1214,6 +1227,9 @@ fn assert_repro(tex: &str, preload: &str, tag: &str, attrs: &[&str], expected: &
 /// mfirstuc-manual 32 → 0 jing lines. Repro index/glshyperlink_target_resolves.
 #[test]
 fn glshyperlink_target_resolves() {
+  if !check_requirements(loads::GLOSSARIES_EXTRA) {
+    return;
+  }
   let tex =
     include_str!("../../../tools/perfect_kernel/repros/index/glshyperlink_target_resolves.tex");
   assert_repro(
@@ -1485,7 +1501,7 @@ fn tabularray_long_table_caption_notes() {
     (
       "table",
       "S0.T1",
-      r##"<table class="ltx_tblr_box" inlist="lot" labels="LABEL:tab:a" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Short A</toccaption><caption><tag close=": ">Table 1</tag>Cap A</caption><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="left">Alpha</td><td align="left">Beta<sup>a</sup></td></tr></tbody></tabular><break class="ltx_break"/><p class="ltx_figure_panel"><sup><text font="sansserif">a</text></sup> First note.</p><break class="ltx_break"/><p class="ltx_figure_panel"><text font="italic">Source</text>: Somewhere</p></table>"##,
+      r##"<table class="ltx_panels_gallery ltx_tblr_box" inlist="lot" labels="LABEL:tab:a" panelcols="1" panelrows="3" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Short A</toccaption><caption><tag close=": ">Table 1</tag>Cap A</caption><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="left">Alpha</td><td align="left">Beta<sup>a</sup></td></tr></tbody></tabular><break class="ltx_break"/><p class="ltx_figure_panel"><sup><text font="sansserif">a</text></sup> First note.</p><break class="ltx_break"/><p class="ltx_figure_panel"><text font="italic">Source</text>: Somewhere</p></table>"##,
     ),
     (
       "para",
@@ -1515,12 +1531,12 @@ fn tabularray_long_table_caption_notes() {
     (
       "table",
       "S0.T4",
-      r##"<table class="ltx_tblr_box" framed="rectangle" inlist="lot" xml:id="S0.T4"><tags><tag>Table 4</tag><tag role="refnum">4</tag><tag role="typerefnum">Table 4</tag></tags><toccaption><tag close=" ">4</tag>Boxed</toccaption><caption><tag close=": ">Table 4</tag>Boxed</caption><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="left">Box</td><td align="left">Six</td></tr></tbody></tabular><break class="ltx_break"/><p class="ltx_figure_panel"><sup><text font="sansserif">b</text></sup> Boxed note.</p></table>"##,
+      r##"<table class="ltx_panels_gallery ltx_tblr_box" framed="rectangle" inlist="lot" panelcols="1" panelrows="2" xml:id="S0.T4"><tags><tag>Table 4</tag><tag role="refnum">4</tag><tag role="typerefnum">Table 4</tag></tags><toccaption><tag close=" ">4</tag>Boxed</toccaption><caption><tag close=": ">Table 4</tag>Boxed</caption><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="left">Box</td><td align="left">Six</td></tr></tbody></tabular><break class="ltx_break"/><p class="ltx_figure_panel"><sup><text font="sansserif">b</text></sup> Boxed note.</p></table>"##,
     ),
     (
       "table",
       "S0.T5",
-      r##"<table class="ltx_tblr_box" inlist="lot" xml:id="S0.T5"><tags><tag>Table 5</tag><tag role="refnum">5</tag><tag role="typerefnum">Table 5</tag></tags><toccaption><tag close=" ">5</tag>Untagged too</toccaption><caption>Untagged too</caption><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="left">Hash</td><td align="left">Seven</td></tr></tbody></tabular><break class="ltx_break"/><p class="ltx_figure_panel"><sup><text font="sansserif">c</text></sup> At <ref class="ltx_nolink ltx_url" font="typewriter" href="http://x.org/#1x">http://x.org/#1x</ref></p></table>"##,
+      r##"<table class="ltx_panels_gallery ltx_tblr_box" inlist="lot" panelcols="1" panelrows="2" xml:id="S0.T5"><tags><tag>Table 5</tag><tag role="refnum">5</tag><tag role="typerefnum">Table 5</tag></tags><toccaption><tag close=" ">5</tag>Untagged too</toccaption><caption>Untagged too</caption><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="left">Hash</td><td align="left">Seven</td></tr></tbody></tabular><break class="ltx_break"/><p class="ltx_figure_panel"><sup><text font="sansserif">c</text></sup> At <ref class="ltx_nolink ltx_url" font="typewriter" href="http://x.org/#1x">http://x.org/#1x</ref></p></table>"##,
     ),
   ]);
 }
@@ -1551,7 +1567,7 @@ fn tabularray_unknown_column_type() {
       (
         "para",
         "p1",
-        r##"<para xml:id="p1"><tabular vattach="middle"><tbody><tr><td align="left">Head</td><td align="left">Head</td></tr><tr><td align="left">111</td><td align="left">2.1</td></tr></tbody></tabular></para>"##,
+        r##"<para xml:id="p1"><tabular vattach="middle"><tbody><tr><td align="left" border="l r t">Head</td><td align="left" border="r t">Head</td></tr><tr><td align="left" border="b l r t">111</td><td align="left" border="b r t">2.1</td></tr></tbody></tabular></para>"##,
       ),
       (
         "para",
@@ -1591,7 +1607,7 @@ fn tabularray_table_commands_and_key_lists() {
     (
       "para",
       "p2",
-      r##"<para xml:id="p2"><tabular vattach="middle"><tbody><tr><td align="left">One</td><td align="left">Two</td><td align="left">Three</td></tr></tbody></tabular></para>"##,
+      r##"<para xml:id="p2"><tabular vattach="middle"><tbody><tr><td align="left" border="b t">One</td><td align="left" border="b t">Two</td><td align="left" border="b t">Three</td></tr></tbody></tabular></para>"##,
     ),
     (
       "para",
@@ -1606,7 +1622,7 @@ fn tabularray_table_commands_and_key_lists() {
     (
       "para",
       "p5",
-      r##"<para xml:id="p5"><tabular vattach="middle"><tbody><tr><td align="center">Head</td><td align="center">Head</td></tr><tr><td align="center">111</td><td align="center">2.1</td></tr></tbody></tabular></para>"##,
+      r##"<para xml:id="p5"><tabular vattach="middle"><tbody><tr><td align="center" border="l r t">Head</td><td align="center" border="r t">Head</td></tr><tr><td align="center" border="b l r t">111</td><td align="center" border="b r t">2.1</td></tr></tbody></tabular></para>"##,
     ),
   ]);
 }
@@ -1627,7 +1643,7 @@ fn tabularray_table_placement() {
     (
       "para",
       "p1",
-      r##"<para xml:id="p1"><quote><p>Quote <inline-logical-block class="ltx_tblr_box"><table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>In quote</toccaption><caption><tag close=": ">Table 1</tag>In quote</caption><tabular vattach="middle"><tbody><tr><td align="left">A</td><td align="left">B</td></tr></tbody></tabular></table></inline-logical-block> end.</p></quote><p>Text<note mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>Note <inline-logical-block class="ltx_tblr_box"><table inlist="lot" xml:id="S0.T2"><tags><tag>Table 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><toccaption><tag close=" ">2</tag>In note</toccaption><caption><tag close=": ">Table 2</tag>In note</caption><tabular vattach="middle"><tbody><tr><td align="left">C</td><td align="left">D</td></tr></tbody></tabular></table></inline-logical-block> end.</note><inline-logical-block class="ltx_tblr_box" framed="rectangle"><table inlist="lot" xml:id="S0.T3"><tags><tag>Table 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Table 3</tag></tags><toccaption><tag close=" ">3</tag>In fbox</toccaption><caption><tag close=": ">Table 3</tag>In fbox</caption><tabular vattach="middle"><tbody><tr><td align="left">E</td><td align="left">F</td></tr></tbody></tabular></table></inline-logical-block><inline-block depth="210.4pt" height="30.4pt" width="172.5pt" xscale="4.38404272605046" xtranslate="66.6pt" yscale="4.38404272605046" ytranslate="-93.0pt"><inline-logical-block class="ltx_tblr_box"><table inlist="lot" xml:id="S0.T4"><tags><tag>Table 4</tag><tag role="refnum">4</tag><tag role="typerefnum">Table 4</tag></tags><toccaption><tag close=" ">4</tag>Scaled</toccaption><caption><tag close=": ">Table 4</tag>Scaled</caption><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="left">G</td><td align="left">H</td></tr></tbody></tabular><break class="ltx_break"/><p class="ltx_figure_panel"><sup><text font="sansserif">a</text></sup> Scaled note.</p></table></inline-logical-block></inline-block><tabular vattach="middle"><tbody><tr><td align="left"><inline-logical-block class="ltx_tblr_box"><table inlist="lot" xml:id="S0.T5"><tags><tag>Table 5</tag><tag role="refnum">5</tag><tag role="typerefnum">Table 5</tag></tags><toccaption><tag close=" ">5</tag>In cell</toccaption><caption><tag close=": ">Table 5</tag>In cell</caption><tabular vattach="middle"><tr><td align="left">I</td><td align="left">J</td></tr></tabular></table></inline-logical-block></td></tr></tbody></tabular><inline-logical-block class="ltx_tblr_box"><table inlist="lot" xml:id="S0.T6"><tags><tag>Table 6</tag><tag role="refnum">6</tag><tag role="typerefnum">Table 6</tag></tags><toccaption><tag close=" ">6</tag>In threeparttable</toccaption><caption><tag close=": ">Table 6</tag>In threeparttable</caption><tabular vattach="middle"><tbody><tr><td align="left">K</td><td align="left">L</td></tr></tbody></tabular></table></inline-logical-block></p></para>"##,
+      r##"<para xml:id="p1"><quote><p>Quote <inline-logical-block class="ltx_tblr_box"><table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>In quote</toccaption><caption><tag close=": ">Table 1</tag>In quote</caption><tabular vattach="middle"><tbody><tr><td align="left">A</td><td align="left">B</td></tr></tbody></tabular></table></inline-logical-block> end.</p></quote><p>Text<note mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>Note <inline-logical-block class="ltx_tblr_box"><table inlist="lot" xml:id="S0.T2"><tags><tag>Table 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><toccaption><tag close=" ">2</tag>In note</toccaption><caption><tag close=": ">Table 2</tag>In note</caption><tabular vattach="middle"><tbody><tr><td align="left">C</td><td align="left">D</td></tr></tbody></tabular></table></inline-logical-block> end.</note><inline-logical-block class="ltx_tblr_box" framed="rectangle"><table inlist="lot" xml:id="S0.T3"><tags><tag>Table 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Table 3</tag></tags><toccaption><tag close=" ">3</tag>In fbox</toccaption><caption><tag close=": ">Table 3</tag>In fbox</caption><tabular vattach="middle"><tbody><tr><td align="left">E</td><td align="left">F</td></tr></tbody></tabular></table></inline-logical-block><inline-block depth="210.4pt" height="30.4pt" width="172.5pt" xscale="4.38404272605046" xtranslate="66.6pt" yscale="4.38404272605046" ytranslate="-93.0pt"><inline-logical-block class="ltx_tblr_box"><table class="ltx_panels_gallery" inlist="lot" panelcols="1" panelrows="2" xml:id="S0.T4"><tags><tag>Table 4</tag><tag role="refnum">4</tag><tag role="typerefnum">Table 4</tag></tags><toccaption><tag close=" ">4</tag>Scaled</toccaption><caption><tag close=": ">Table 4</tag>Scaled</caption><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="left">G</td><td align="left">H</td></tr></tbody></tabular><break class="ltx_break"/><p class="ltx_figure_panel"><sup><text font="sansserif">a</text></sup> Scaled note.</p></table></inline-logical-block></inline-block><tabular vattach="middle"><tbody><tr><td align="left"><inline-logical-block class="ltx_tblr_box"><table inlist="lot" xml:id="S0.T5"><tags><tag>Table 5</tag><tag role="refnum">5</tag><tag role="typerefnum">Table 5</tag></tags><toccaption><tag close=" ">5</tag>In cell</toccaption><caption><tag close=": ">Table 5</tag>In cell</caption><tabular vattach="middle"><tr><td align="left">I</td><td align="left">J</td></tr></tabular></table></inline-logical-block></td></tr></tbody></tabular><inline-logical-block class="ltx_tblr_box"><table inlist="lot" xml:id="S0.T6"><tags><tag>Table 6</tag><tag role="refnum">6</tag><tag role="typerefnum">Table 6</tag></tags><toccaption><tag close=" ">6</tag>In threeparttable</toccaption><caption><tag close=": ">Table 6</tag>In threeparttable</caption><tabular vattach="middle"><tbody><tr><td align="left">K</td><td align="left">L</td></tr></tbody></tabular></table></inline-logical-block></p></para>"##,
     ),
     (
       "table",
@@ -1684,7 +1700,7 @@ fn tabularray_math_tables() {
     (
       "para",
       "p2",
-      r##"<para xml:id="p2"><p><Math mode="inline" tex="\begin{array}[]{*{2}{l}}6&amp;7\\&#10;8&amp;9\\&#10;\end{array}" text="Array[[6, 7], [8, 9]]" xml:id="p2.m1"><XMath><XMArray role="ARRAY" vattach="middle"><XMRow><XMCell align="left"><XMTok meaning="6" role="NUMBER">6</XMTok></XMCell><XMCell align="left"><XMTok meaning="7" role="NUMBER">7</XMTok></XMCell></XMRow><XMRow><XMCell align="left"><XMTok meaning="8" role="NUMBER">8</XMTok></XMCell><XMCell align="left"><XMTok meaning="9" role="NUMBER">9</XMTok></XMCell></XMRow></XMArray></XMath></Math></p></para>"##,
+      r##"<para xml:id="p2"><p><Math mode="inline" tex="\begin{array}[]{*{2}{l}}6&amp;7\\&#10;8&amp;9\\&#10;\end{array}" text="Array[[6, 7], [8, 9]]" xml:id="p2.m1"><XMath><XMArray role="ARRAY" vattach="middle"><XMRow><XMCell align="left" border="t"><XMTok meaning="6" role="NUMBER">6</XMTok></XMCell><XMCell align="left" border="t"><XMTok meaning="7" role="NUMBER">7</XMTok></XMCell></XMRow><XMRow><XMCell align="left" border="b t"><XMTok meaning="8" role="NUMBER">8</XMTok></XMCell><XMCell align="left" border="b t"><XMTok meaning="9" role="NUMBER">9</XMTok></XMCell></XMRow></XMArray></XMath></Math></p></para>"##,
     ),
     (
       "table",
@@ -1907,7 +1923,7 @@ fn tabularray_box_is_as_wide_as_its_table() {
     (
       "para",
       "p1",
-      r##"<para xml:id="p1"><p>Before.<inline-block depth="380.0pt" height="55.0pt" width="345.0pt" xscale="7.91585981911444" xtranslate="150.7pt" yscale="7.91585981911444" ytranslate="-190.0pt"><inline-logical-block class="ltx_tblr_box"><table inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Resized</toccaption><caption><tag close=": ">Table 1</tag>Resized</caption><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="left">A</td><td align="left">B<sup>a</sup></td></tr></tbody></tabular><break class="ltx_break"/><p class="ltx_figure_panel"><sup><text font="sansserif">a</text></sup> Resized note.</p></table></inline-logical-block></inline-block>After one.</p></para>"##,
+      r##"<para xml:id="p1"><p>Before.<inline-block depth="380.0pt" height="55.0pt" width="345.0pt" xscale="7.91585981911444" xtranslate="150.7pt" yscale="7.91585981911444" ytranslate="-190.0pt"><inline-logical-block class="ltx_tblr_box"><table class="ltx_panels_gallery" inlist="lot" panelcols="1" panelrows="2" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Resized</toccaption><caption><tag close=": ">Table 1</tag>Resized</caption><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="left">A</td><td align="left">B<sup>a</sup></td></tr></tbody></tabular><break class="ltx_break"/><p class="ltx_figure_panel"><sup><text font="sansserif">a</text></sup> Resized note.</p></table></inline-logical-block></inline-block>After one.</p></para>"##,
     ),
     (
       "table",
@@ -1940,7 +1956,7 @@ fn tabularray_template_names_and_environment_lists() {
       (
         "table",
         "S0.T1",
-        r##"<table class="ltx_tblr_box" inlist="lot" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Cap</toccaption><caption><tag close=": ">Table 1</tag>Cap</caption><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="left">a</td><td align="left">b</td></tr></tbody></tabular><break class="ltx_break"/><p class="ltx_figure_panel"><sup><text font="sansserif">a</text></sup> Note text</p></table>"##,
+        r##"<table class="ltx_panels_gallery ltx_tblr_box" inlist="lot" panelcols="1" panelrows="2" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Cap</toccaption><caption><tag close=": ">Table 1</tag>Cap</caption><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="left">a</td><td align="left">b</td></tr></tbody></tabular><break class="ltx_break"/><p class="ltx_figure_panel"><sup><text font="sansserif">a</text></sup> Note text</p></table>"##,
       ),
       (
         "para",
@@ -1955,7 +1971,8 @@ fn tabularray_template_names_and_environment_lists() {
 /// caption before or after it (both numbers kept, as pdflatex), and the float itself when the float
 /// has no caption (`collapse_float`, the table's id); the document float taking the table's caption
 /// put two captions in one float (KNOWN_PERL_ERRORS #396). Repro
-/// alignment-bindings/tabularray_tall_table_in_a_captioned_float.
+/// alignment-bindings/tabularray_tall_table_in_a_captioned_float. Two tall tables side by side are on rows of their own
+/// since 77k (the caption-width residual of `tabularray_tall_table_in_a_captionless_float`).
 #[test]
 fn tabularray_tall_table_in_a_captioned_float() {
   let tex = include_str!(
@@ -1970,7 +1987,7 @@ fn tabularray_tall_table_in_a_captioned_float() {
     (
       "table",
       "tab1",
-      r##"<table xml:id="tab1"><table align="center" class="ltx_figure_panel ltx_tblr_box" inlist="lot" labels="LABEL:t:i2" xml:id="S0.T3"><tags><tag>Table 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Table 3</tag></tags><toccaption><tag close=" ">3</tag>Inner two</toccaption><caption><tag close=": ">Table 3</tag>Inner two</caption><tabular vattach="middle"><tbody><tr><td align="left">C</td><td align="left">D</td></tr></tbody></tabular></table><table align="center" class="ltx_figure_panel ltx_tblr_box" inlist="lot" labels="LABEL:t:i3" xml:id="S0.T4"><tags><tag>Table 4</tag><tag role="refnum">4</tag><tag role="typerefnum">Table 4</tag></tags><toccaption><tag close=" ">4</tag>Inner three</toccaption><caption><tag close=": ">Table 4</tag>Inner three</caption><tabular vattach="middle"><tbody><tr><td align="left">E</td><td align="left">F</td></tr></tbody></tabular></table></table>"##,
+      r##"<table class="ltx_panels_gallery" panelcols="1" panelrows="2" xml:id="tab1"><table align="center" class="ltx_figure_panel ltx_tblr_box" inlist="lot" labels="LABEL:t:i2" xml:id="S0.T3"><tags><tag>Table 3</tag><tag role="refnum">3</tag><tag role="typerefnum">Table 3</tag></tags><toccaption><tag close=" ">3</tag>Inner two</toccaption><caption><tag close=": ">Table 3</tag>Inner two</caption><tabular vattach="middle"><tbody><tr><td align="left">C</td><td align="left">D</td></tr></tbody></tabular></table><break class="ltx_break"/><table align="center" class="ltx_figure_panel ltx_tblr_box" inlist="lot" labels="LABEL:t:i3" xml:id="S0.T4"><tags><tag>Table 4</tag><tag role="refnum">4</tag><tag role="typerefnum">Table 4</tag></tags><toccaption><tag close=" ">4</tag>Inner three</toccaption><caption><tag close=": ">Table 4</tag>Inner three</caption><tabular vattach="middle"><tbody><tr><td align="left">E</td><td align="left">F</td></tr></tbody></tabular></table></table>"##,
     ),
     (
       "table",
@@ -1985,17 +2002,17 @@ fn tabularray_tall_table_in_a_captioned_float() {
     (
       "table",
       "S0.T7",
-      r##"<table align="center" class="ltx_tblr_box" inlist="lot" labels="LABEL:t:oB" xml:id="S0.T7"><tags><tag>Table 7</tag><tag role="refnum">7</tag><tag role="typerefnum">Table 7</tag></tags><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="left">A<sup>a</sup></td><td align="left">B</td></tr></tbody></tabular><break class="ltx_break"/><p class="ltx_figure_panel"><sup><text font="sansserif">a</text></sup> First note.</p><toccaption class="ltx_centering"><tag close=" ">7</tag>Outer after</toccaption><caption class="ltx_centering"><tag close=": ">Table 7</tag>Outer after</caption></table>"##,
+      r##"<table align="center" class="ltx_panels_gallery ltx_tblr_box" inlist="lot" labels="LABEL:t:oB" panelcols="1" panelrows="2" xml:id="S0.T7"><tags><tag>Table 7</tag><tag role="refnum">7</tag><tag role="typerefnum">Table 7</tag></tags><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="left">A<sup>a</sup></td><td align="left">B</td></tr></tbody></tabular><break class="ltx_break"/><p class="ltx_figure_panel"><sup><text font="sansserif">a</text></sup> First note.</p><toccaption class="ltx_centering"><tag close=" ">7</tag>Outer after</toccaption><caption class="ltx_centering"><tag close=": ">Table 7</tag>Outer after</caption></table>"##,
     ),
     (
       "table",
       "S0.T8",
-      r##"<table align="center" class="ltx_tblr_box" inlist="lot" labels="LABEL:t:bB" xml:id="S0.T8"><tags><tag>Table 8</tag><tag role="refnum">8</tag><tag role="typerefnum">Table 8</tag></tags><toccaption class="ltx_centering"><tag close=" ">8</tag>Outer before</toccaption><caption class="ltx_centering"><tag close=": ">Table 8</tag>Outer before</caption><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="left">C<sup>a</sup></td><td align="left">D</td></tr></tbody></tabular><break class="ltx_break"/><p class="ltx_figure_panel"><sup><text font="sansserif">a</text></sup> Second note.</p></table>"##,
+      r##"<table align="center" class="ltx_panels_gallery ltx_tblr_box" inlist="lot" labels="LABEL:t:bB" panelcols="1" panelrows="2" xml:id="S0.T8"><tags><tag>Table 8</tag><tag role="refnum">8</tag><tag role="typerefnum">Table 8</tag></tags><toccaption class="ltx_centering"><tag close=" ">8</tag>Outer before</toccaption><caption class="ltx_centering"><tag close=": ">Table 8</tag>Outer before</caption><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="left">C<sup>a</sup></td><td align="left">D</td></tr></tbody></tabular><break class="ltx_break"/><p class="ltx_figure_panel"><sup><text font="sansserif">a</text></sup> Second note.</p></table>"##,
     ),
     (
       "table",
       "S0.T10",
-      r##"<table inlist="lot" labels="LABEL:t:3B" xml:id="S0.T10"><tags><tag>Table 10</tag><tag role="refnum">10</tag><tag role="typerefnum">Table 10</tag></tags><table align="center" class="ltx_tblr_box" inlist="lot" xml:id="S0.T9"><tags><tag>Table 9</tag><tag role="refnum">9</tag><tag role="typerefnum">Table 9</tag></tags><toccaption><tag close=" ">9</tag></toccaption><caption><tag close=": ">Table 9</tag></caption><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="left">E<sup>a</sup></td><td align="left">F</td></tr></tbody></tabular><break class="ltx_break"/><p class="ltx_figure_panel"><sup><text font="sansserif">a</text></sup> Third note.</p></table><toccaption class="ltx_centering"><tag close=" ">10</tag>Outer three</toccaption><caption class="ltx_centering"><tag close=": ">Table 10</tag>Outer three</caption></table>"##,
+      r##"<table inlist="lot" labels="LABEL:t:3B" xml:id="S0.T10"><tags><tag>Table 10</tag><tag role="refnum">10</tag><tag role="typerefnum">Table 10</tag></tags><table align="center" class="ltx_panels_gallery ltx_tblr_box" inlist="lot" panelcols="1" panelrows="2" xml:id="S0.T9"><tags><tag>Table 9</tag><tag role="refnum">9</tag><tag role="typerefnum">Table 9</tag></tags><toccaption><tag close=" ">9</tag></toccaption><caption><tag close=": ">Table 9</tag></caption><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="left">E<sup>a</sup></td><td align="left">F</td></tr></tbody></tabular><break class="ltx_break"/><p class="ltx_figure_panel"><sup><text font="sansserif">a</text></sup> Third note.</p></table><toccaption class="ltx_centering"><tag close=" ">10</tag>Outer three</toccaption><caption class="ltx_centering"><tag close=": ">Table 10</tag>Outer three</caption></table>"##,
     ),
     (
       "para",
@@ -2040,7 +2057,10 @@ fn tabularray_caption_library_lists_its_tables() {
 
 /// 57cp (review 5): a tall table in a caption-less `table` is that table — numbered by its tags alone
 /// too (a theme hiding the head: `S0.T1`, not `tab1`) — and beside a tabular it stays one panel of
-/// two. Repro alignment-bindings/tabularray_tall_table_in_a_captionless_float.
+/// two. Repro alignment-bindings/tabularray_tall_table_in_a_captionless_float. The two panels are on rows of their
+/// own since 77k: the talltblr's caption is a paragraph of the float's `\hsize`, as a kernel caption is (`PBoxContents`,
+/// OXIDIZED_DESIGN_DIVERGENCES #769), where tabularray sets it at the table's width and pdflatex puts the two side by
+/// side (residual, tabularray_sty.rs `\lx@tblr@caption`).
 #[test]
 fn tabularray_tall_table_in_a_captionless_float() {
   let tex = include_str!(
@@ -2055,7 +2075,7 @@ fn tabularray_tall_table_in_a_captionless_float() {
     (
       "table",
       "S0.T2",
-      r##"<table class="ltx_tblr_box" inlist="lot" labels="LABEL:t:s" xml:id="S0.T2"><tags><tag>Table 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><toccaption><tag close=" ">2</tag>Tall with tabular</toccaption><caption><tag close=": ">Table 2</tag>Tall with tabular</caption><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="center">a</td><td align="center">b</td></tr></tbody></tabular><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="center">x</td><td align="center">y</td></tr></tbody></tabular></table>"##,
+      r##"<table class="ltx_panels_gallery ltx_tblr_box" inlist="lot" labels="LABEL:t:s" panelcols="1" panelrows="2" xml:id="S0.T2"><tags><tag>Table 2</tag><tag role="refnum">2</tag><tag role="typerefnum">Table 2</tag></tags><toccaption><tag close=" ">2</tag>Tall with tabular</toccaption><caption><tag close=": ">Table 2</tag>Tall with tabular</caption><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="center">a</td><td align="center">b</td></tr></tbody></tabular><break class="ltx_break"/><tabular class="ltx_figure_panel" vattach="middle"><tbody><tr><td align="center">x</td><td align="center">y</td></tr></tbody></tabular></table>"##,
     ),
     (
       "table",
@@ -2095,7 +2115,7 @@ fn captionless_float_takes_the_inner_number() {
     (
       "figure",
       "S1.F1",
-      r##"<figure inlist="lof" labels="LABEL:lf" placement="h" xml:id="S1.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p align="center" class="ltx_figure_panel ltx_minipage" vattach="middle" width="155.3pt"><text cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle">L</text></p><p align="center" class="ltx_figure_panel"><text cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle">R</text></p><toccaption class="ltx_centering"><tag close=" ">1</tag>Right</toccaption><caption class="ltx_centering"><tag close=": ">Figure 1</tag>Right</caption></figure>"##,
+      r##"<figure class="ltx_panels_gallery" inlist="lof" labels="LABEL:lf" panelcols="2" panelrows="1" placement="h" xml:id="S1.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags><p align="center" class="ltx_figure_panel ltx_minipage" panelwidth="0.45" vattach="middle" width="155.3pt"><text cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle">L</text></p><p align="center" class="ltx_figure_panel"><text cssstyle="padding:3.0pt" framecolor="#000000" framed="rectangle">R</text></p><toccaption class="ltx_centering"><tag close=" ">1</tag>Right</toccaption><caption class="ltx_centering"><tag close=": ">Figure 1</tag>Right</caption></figure>"##,
     ),
     (
       "para",

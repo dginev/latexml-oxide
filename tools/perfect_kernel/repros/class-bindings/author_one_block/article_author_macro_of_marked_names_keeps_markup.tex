@@ -1,0 +1,20 @@
+% mechanism: reading.rs `unfold_held_names` (OD #1018): Frontiers' `\author{\Authors}` shape, a document macro holding the
+%   names, their formula marks and the comma and the word "and" between them: read with the expansion in its place, the
+%   block reader cuts at the comma and "and" events as for the inline list, `\textbf{Baker}` kept in the name and each
+%   mark a `<sup>`. Before, each name was written by its text, the bold lost and counted
+% witness: 2103.13804 (`\def\Authors{Jakub Sawicki\,$^{1,2,*}$ and Eckehard Sch\"oll\,$^{1,2}$}`), 1204.2576, 2206.01053,
+%   2112.09018 (AUT0's census: 30 of 35 Frontiers papers); synthetic (AUT0 c2)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able 1,∗ , Bob Baker 2 and Cy Cole 1", Baker in bold
+% engines: int167a: 0 errors, 3 warnings (each name by its text, "a name its events don't spell"), Baker's bold lost;
+%   the inline twin (the list written in `\author`): 0 errors, 0 warnings, Baker bold
+% expect:  0 errors, 0 warnings; creators Ann Able 1,∗; Bob **Baker** 2; Cy Cole 1 — the inline twin's elements
+% status:  RED (int167a) -> GREEN (AUT1; guard perfect_kernel_batchaut1)
+% preload: ar5iv.sty
+\documentclass{article}
+\def\Authors{Ann Able\,$^{1,*}$, Bob \textbf{Baker}\,$^{2}$ and Cy Cole\,$^{1}$}
+\begin{document}
+\title{T}
+\author{\Authors}
+\maketitle
+Text.
+\end{document}

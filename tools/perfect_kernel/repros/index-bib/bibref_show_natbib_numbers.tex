@@ -1,10 +1,12 @@
 % natbib numbers mode through Perl's `make_bibcite` show walk (CrossRef.pm
 % :564-643): `\citet`'s `Authors Phrase1NumberPhrase2` links each number
 % (:617-622) and absorbs the following same-author entries into one author
-% label, "Smith [2, 3]" (:620); an entry with no authors, full authors or key
-% (`anon`) demotes the whole citation to refnum (:542). The tip linked
-% "Smith [2]" per entry and repeated the author. Same-host Perl 0.8.8 renders
-% this paragraph byte-identically.
+% label, "Smith [2, 3]" (:620). An entry with no authors, full authors or key
+% (`anon`) keeps the brackets around its number, "Smith [2], [1]" (pdflatex
+% "Smith [2], ano [1]"); Perl demotes the whole citation to refnum (:542), "2, 1"
+% (OXIDIZED_DESIGN_DIVERGENCES #786, 78a r2). The tip linked "Smith [2]" per
+% entry and repeated the author. Same-host Perl 0.8.8 renders the rest of this
+% paragraph byte-identically.
 % status:  GREEN
 \documentclass{article}
 \usepackage[numbers]{natbib}

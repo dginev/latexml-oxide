@@ -1,0 +1,19 @@
+% mechanism: a second names row of one mark-led name (`$^2$Dan Dole`) under the first, in a `\parbox`: it answers a request
+%   above and sets each label once, as a one-line affiliation does (`$^{1}$Carnegie Mellon\\ $^{1}$School of …`,
+%   author_prefix_marked_company_affiliation_repeated_mark_line), so the marks cannot tell it from one: it is read as the
+%   first setter, Bob Baker's affiliation
+% witness: synthetic (MLN1's box sibling)
+% oracle:  pdflatex (-no-shell-escape, TL 2025) 0 errors: "1 Ann Able, 2 Bob Baker, 1 Cat Cole / 2 Dan Dole / 1 Inst A 2 Inst B"
+% engines: int169a (54ccc986ef) and MLN1: "Dan Dole" an affiliation of Bob Baker, 0 warnings
+% expect:  0 errors, 0 warnings; Ann Able: Inst A; Bob Baker: Inst B; Cat Cole: Inst A; Dan Dole: Inst B
+% status:  RED (int169a, MLN1): catalog only, no guard
+% moves:   post-merge (a names row by its layout, the box's rows, not its marks)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{\parbox{\textwidth}{\centering $^1$Ann Able, $^2$Bob Baker, $^1$Cat Cole\\ $^2$Dan Dole\\
+$^1$Inst A \quad $^2$Inst B}}
+\maketitle
+Text.
+\end{document}

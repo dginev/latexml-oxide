@@ -1,0 +1,41 @@
+% mechanism: imsart.sty's unlabelled `\address` blocks after the authors each reprint their authors' e-mails
+%   (`\printead{e1}\\ \printead{e2}`), which tells the reader of the PDF whose block it is. The binding gives each block
+%   to the authors whose `\ead` labels it cites (`label=author:N`, latexml_contrib imsart_cls.rs `citing_authors`),
+%   `annotate=run` only for a block that cites none (imsart_unlabelled_address_is_the_runs.tex). OD #986
+% witness: 1407.2451 (Nandy and Maathuis at ETH, Richardson at the University of Washington), 1409.0912, 1504.04814,
+%          1704.07606, 1810.08264; review revCR4 finding 2; here as a minimal stand-in of imsart.sty
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker and Carl Cole" / "A. Able" / "B. Baker" / "Univ AB" /
+%          "e-mail: ann@x.edu" / "e-mail: bob@y.org" / "C. Cole" / "Univ C" / "e-mail: carl@z.edu"
+% engines: CR4: every author holds both blocks (`annotate=run`); int154w: the last author held both
+% expect:  0 errors, 0 warnings; Ann Able and Bob Baker: email, then "A. Able / B. Baker / Univ AB"; Carl Cole: email,
+%          then "C. Cole / Univ C"
+% status:  RED (CR4) -> GREEN (CR4b; guard perfect_kernel_batchcr4b::imsart_address_block_goes_to_the_authors_it_cites)
+% preload: ar5iv.sty
+\begin{filecontents*}{imsart.sty}
+\NeedsTeXFormat{LaTeX2e}\ProvidesFile{imsart.sty}[2012/01/01 IMS article style, shortened and modified]
+\DeclareRobustCommand\ead[2][label= ,email]{\expandafter\gdef\csname ead@\detokenize{#1}\endcsname{#2}}
+\def\printead#1{e-mail: \texttt{\csname ead@label=#1\endcsname}}
+\newenvironment{aug}{}{\par}
+\newenvironment{frontmatter}{\begin{center}}{\end{center}}
+\def\and{\unskip~and~}
+\def\author{\@ifnextchar[{\author@fmt}{\author@fmt[]}}
+\def\author@fmt[#1]#2{\bgroup\def\fnms##1{##1}\def\snm##1{##1}#2\egroup}
+\def\address{\@ifnextchar[{\address@fmt}{\address@fmt[]}}
+\def\address@fmt[#1]#2{\par\begin{tabular}[t]{@{}l@{}}#2\end{tabular}\par}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{imsart}
+\begin{document}
+\begin{frontmatter}
+\title{A Title}
+\begin{aug}
+\author{\fnms{Ann} \snm{Able}\ead[label=e1]{ann@x.edu},}
+\author{\fnms{Bob} \snm{Baker}\ead[label=e2]{bob@y.org}}
+\and
+\author{\fnms{Carl} \snm{Cole}\ead[label=e3]{carl@z.edu}}
+\address{A. Able\\ B. Baker\\ Univ AB\\ \printead{e1}\\ \printead{e2}}
+\address{C. Cole\\ Univ C\\ \printead{e3}}
+\end{aug}
+\end{frontmatter}
+Body.
+\end{document}

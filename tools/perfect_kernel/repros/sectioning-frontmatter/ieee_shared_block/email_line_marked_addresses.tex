@@ -1,0 +1,18 @@
+% mechanism: an "Email:" line with a refmark before each address is one entry labelled by its first mark
+%   (defs/frontmatter_api/affiliations.rs `entry_calls`: `marker_leads` false behind the label); fix sketch: split a labelled
+%   e-mail line whose remainder is mark+address pieces
+% witness: 2209.10056, 2109.15322
+% oracle:  pdflatex 0 errors: "... / Email: 1ann@x.edu, 1bob@x.edu, 2cy@y.edu"
+% engines: rust int131a, 104a: "Email: ann@x.edu, 1bob@x.edu, 2cy@y.edu" an affiliation of Ann and Bob
+% expect:  0 errors, 0 warnings; each address its owner's e-mail, no affiliation holding an @
+% status:  RED (104a; below the early-stop floor, SYNC row 104a)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1}, Bob Baker\IEEEauthorrefmark{1}, Cy Cole\IEEEauthorrefmark{2}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ X, City\\ \IEEEauthorrefmark{2}Univ Y, Town\\
+Email: \IEEEauthorrefmark{1}ann@x.edu, \IEEEauthorrefmark{1}bob@x.edu, \IEEEauthorrefmark{2}cy@y.edu}}
+\maketitle
+Text.
+\end{document}

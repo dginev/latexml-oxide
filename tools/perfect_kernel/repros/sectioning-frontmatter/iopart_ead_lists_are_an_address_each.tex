@@ -1,0 +1,28 @@
+% mechanism: iopart.cls:362-364 `\ead{…}` prints "E-mail: \mailto{#1}", `\mailto` the typewriter font: an `\ead`
+%   listing several addresses — each in its own `\mailto`, or a shared domain `\{a, b\}@x` — is an address each, each
+%   placed as one `\ead` is (the author it spells, else the author block: four addresses for three authors are no list
+%   in author order); a `\mailto` inside an `\ead` is the font, not the binding's `\let\mailto\ead` contact nested in it
+% witness: 0811.0981 (`\ead{\mailto{edvard@physto.se}, \mailto{chris.clarkson@uct.ac.za}}`: both addresses and a ","
+%          contact on Chris Clarkson), 2607.04241 (`\ead{\{yangqq, yangjh\}@ipp.ac.cn}`), 2111.00753
+% oracle:  pdflatex (the shortened iopart.cls beside this repro, from 2311.12551) 0 errors: "E. Mortsell1, C.
+%          Clarkson2 and A. Able2",
+%          "E-mail: mortsell@s.se, chris.clarkson@c.za", "E-mail: {aable, xq9}@c.za"
+% engines: rust int47a = every address on A. Able, the last author, the first `\ead` as nested contacts beside a ","
+%          one; perl the same
+% expect:  0 errors, 0 warnings; mortsell@ E. Mortsell's, chris.clarkson@ C. Clarkson's, aable@c.za A. Able's, xq9@c.za
+%          the author block's
+% status:  RED (int47a) -> GREEN (78f)
+% preload: ar5iv.sty
+\documentclass[12pt]{iopart}
+\begin{document}
+\title{T}
+\author{E. Mortsell$^1$, C. Clarkson$^2$ and A. Able$^2$}
+\address{$^1$ Univ S}
+\address{$^2$ Univ C}
+\ead{\mailto{mortsell@s.se}, \mailto{chris.clarkson@c.za}}
+\ead{\{aable, xq9\}@c.za}
+\begin{abstract}
+Abs.
+\end{abstract}
+Text.
+\end{document}

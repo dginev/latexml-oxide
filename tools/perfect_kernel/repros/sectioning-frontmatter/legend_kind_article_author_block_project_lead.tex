@@ -1,0 +1,22 @@
+% The kernel's `\author` block holding marked affiliation lines and a line of legends, `$^{*}$Equal contribution.
+% \qquad $^{\dagger}$Project leader.`, under `Ann Able$^{1,*}$ \quad Bob Baker$^{1,*}$ \quad Cat Cole$^{2,\dagger}$`:
+% each legend is its carriers' note — "Project leader" a contribution (`classify_thanks`'s `project_role`), the
+% `ltx_thanks_contribution` kind — not an affiliation of the names showing its mark (SYNC row 97c (d)).
+% witness: 2609.19719, 2609.18514 (article)
+% oracle:  pdflatex 0 errors: "Ann Able1,∗ Bob Baker1,∗ Cat Cole2,†", "1Univ A, Town", "2Univ B, City", "∗Equal
+%          contribution. †Project leader."
+% engines: rust int130a = "Project leader." an affiliation of Cat Cole
+% expect:  0 errors, 0 warnings; Able and Baker: Univ A and the ltx_thanks_contribution note "Equal contribution."; Cole:
+%          Univ B and the ltx_thanks_contribution note "Project leader."
+% status:  RED (int130a) -> GREEN (103c)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1,*}$ \quad Bob Baker$^{1,*}$ \quad Cat Cole$^{2,\dagger}$ \\
+$^{1}$Univ A, Town \\
+$^{2}$Univ B, City \\
+$^{*}$Equal contribution. \qquad $^{\dagger}$Project leader.}
+\maketitle
+Text.
+\end{document}

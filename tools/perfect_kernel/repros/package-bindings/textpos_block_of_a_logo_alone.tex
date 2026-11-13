@@ -1,0 +1,26 @@
+% An absolute textpos block is dropped when it shows nothing (`typesets_content`, textpos_sty.rs): a constructor whose
+% template prints the text, with no argument or body, shows something: `\LaTeX`, `\TeX`, in a frame or alone. A strut or
+% a rule alone is still nothing.
+% witness: textpos/niepraschk-eso-pic (recall 100 % -> 66.7 %, "\LaTeX" in a framed minipage).
+% oracle:  pdflatex (TL 2025) 0 errors, all four blocks' text.
+% engines: perl loses every absolute block (KNOWN_PERL_ERRORS: textpos). int140a keeps only `Word`.
+% expect:  0 errors; four logos and Word; the strut's block adds no para.
+\documentclass{article}
+\usepackage[absolute]{textpos}
+\begin{document}
+\begin{textblock*}{60mm}(75mm,70mm)
+\noindent\fbox{\begin{minipage}{50mm}\centering\Huge\textbf{\LaTeX}\end{minipage}}
+\end{textblock*}
+\begin{textblock*}{60mm}(75mm,120mm)
+\noindent\fbox{\begin{minipage}{50mm}\centering\Huge\textbf{Word}\end{minipage}}
+\end{textblock*}
+\begin{textblock*}{60mm}(75mm,170mm)
+\LaTeX
+\end{textblock*}
+\begin{textblock*}{60mm}(75mm,190mm)
+\TeX
+\end{textblock*}
+\begin{textblock*}{60mm}(75mm,210mm)
+\strut\rule{1cm}{1pt}
+\end{textblock*}
+\end{document}

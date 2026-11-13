@@ -1,3 +1,5 @@
+use latexml::util::test::{check_requirements, loads};
+
 use super::perfect_kernel_batch46::{convert_with, error_count, warning_count};
 
 /// A kernel length is latex.ltx's allocated `\dimen<n>`, as the dump records it:
@@ -496,7 +498,7 @@ fn versonote_is_a_margin_note() {
 /// 196-203 `\gdef\@affiliation{Huygens-Kamerlingh Onnes Laboratory, …}`).
 #[test]
 fn k11_class_default_store() {
-  if !latexml::util::test::kpse_has("lion-msc.cls") {
+  if !check_requirements(&["lion-msc.cls"]) {
     return;
   }
   let tex = include_str!(
@@ -610,6 +612,7 @@ fn siunitx_v3_keys() {
 /// enumitem's `shortlabels`: a list's first key with no `=` that names no
 /// enumitem key is a label template (enumitem.sty:660-681 `\enit@first`), not
 /// an unknown key: `[(a)]` warned and kept arabic labels.
+/// As a `label=`, it is the reference too: "(a)" (77u, KNOWN_PERL_ERRORS #808).
 #[test]
 fn enumitem_shortlabels() {
   let tex =
@@ -626,11 +629,11 @@ fn enumitem_shortlabels() {
     tags,
     [
       "<tag>(a)</tag>",
-      r#"<tag role="refnum">a</tag>"#,
+      r#"<tag role="refnum">(a)</tag>"#,
       "<tag>(b)</tag>",
-      r#"<tag role="refnum">b</tag>"#,
+      r#"<tag role="refnum">(b)</tag>"#,
       "<tag>(i)</tag>",
-      r#"<tag role="refnum">i</tag>"#,
+      r#"<tag role="refnum">(i)</tag>"#,
     ],
     "{xml}"
   );
@@ -643,6 +646,9 @@ fn enumitem_shortlabels() {
 /// "Dual Connectivity"; Perl identical).
 #[test]
 fn glossaries_preamble_forward_reference() {
+  if !check_requirements(loads::GLOSSARIES) {
+    return;
+  }
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/index-bib/glossaries_preamble_forward_reference.tex"
   );
@@ -668,7 +674,8 @@ fn glossaries_preamble_forward_reference() {
 /// glossaries-user, mfirstuc-manual).
 #[test]
 fn nlctuserguide_entries_defined_in_run() {
-  if !latexml::util::test::kpse_has("nlctuserguide.sty") {
+  // The whole load set: a TeX Live can ship nlctuserguide without its tracklang (CI's apt set).
+  if !check_requirements(&["nlctuserguide.sty", "tracklang.sty"]) {
     return;
   }
   let tex = include_str!(
@@ -797,13 +804,10 @@ fn raw_class_normalsize_nominal() {
   let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses]latexml.sty"));
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(!stderr.contains("Bad type area settings"), "{stderr}");
-  // Only KOMA's two sectioning-identity warnings may remain (LEDGER 56ig).
-  let other_warnings = stderr
-    .lines()
-    .filter(|l| l.contains("Warning:"))
-    .filter(|l| !l.contains("has been") && !l.contains("Unexpected definition of"))
-    .count();
-  assert_eq!(other_warnings, 0, "{stderr}");
+  // (no warning at all: KOMA's two sectioning-identity warnings, LEDGER 56ig, are gone since 72a r10, koma_script.rs
+  // `koma_pre_load`)
+  let warnings = stderr.lines().filter(|l| l.contains("Warning:")).count();
+  assert_eq!(warnings, 0, "{stderr}");
   assert!(
     xml
       .contains(r#"<p>Body <text fontsize="110%">L</text> and <text fontsize="91%">s</text>.</p>"#),

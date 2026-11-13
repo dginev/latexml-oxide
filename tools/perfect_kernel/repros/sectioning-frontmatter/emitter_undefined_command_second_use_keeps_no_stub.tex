@@ -1,0 +1,15 @@
+% mechanism: the rehearsal records an author field's undefined command at its first use only, so a later use of the same
+%   command at the end of another name has no record for a piece to grow over (`content::Field::past_held_undefined`)
+%   and no scan takes it: the Error count is Perl's (TeX raises the second use too; Perl and we raise the command once),
+%   but the second name keeps no `ERROR` stub. OXIDIZED_DESIGN_DIVERGENCES #983 (known residual)
+% witness: review revDEL5b finding 3 (synthetic; no real paper known)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 2 "Undefined control sequence": "Ann Able* and Bob Baker"
+% engines: Perl 0.8.8: `Bob Baker<ERROR>\foo</ERROR>`; ERR2c, DEL5b: Bob Baker with no stub
+% expect:  1 Error (`\foo`); Ann Able with her footnotemark and one ERROR stub; Bob Baker with an ERROR stub after his name
+% status:  RED (DEL5b)
+\documentclass{article}
+\author{Ann Able\footnotemark\foo{} \and Bob Baker\foo}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

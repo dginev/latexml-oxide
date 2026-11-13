@@ -1,0 +1,26 @@
+% mechanism: a second llncs `\maketitle` after a first placed the frontmatter: its names are written as paragraph text
+%   ("Cat Cole1 Dan Dorn2", the `\and`'s "and" lost) and its institute's entries go to the first block's authors
+% witness: synthetic (found beside review revP4f S1's probe)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Supplement", "Cat Cole1 and Dan Dorn2", "1Univ C, Town C",
+%   "2Univ D, Town D" printed as a second title block
+% engines: P4fb: Ann Able 1 "1 Univ A, Town A", "Univ C, Town C"; Bob Baker 2 "2 Univ B, Town B", "Univ D, Town D";
+%   the paragraph "Text. Supplement Cat Cole1 Dan Dorn2" (0 warnings: the lost "and" uncounted); int164a the same
+%   with every entry's mark hidden
+% expect:  0 errors; Cat Cole and Dan Dorn creators of their own (or their text kept whole, "and" included, with a
+%   Warning), each with the institute's entry its mark names
+% status:  RED (P4fb)
+% moves:   post-merge (a second title block)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ \and Bob Baker$^{2}$}
+\institute{$^{1}$Univ A, Town A \\ $^{2}$Univ B, Town B}
+\maketitle
+Text.
+\title{Supplement}
+\author{Cat Cole$^{1}$ \and Dan Dorn$^{2}$}
+\institute{$^{1}$Univ C, Town C \\ $^{2}$Univ D, Town D}
+\maketitle
+More.
+\end{document}

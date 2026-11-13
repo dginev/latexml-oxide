@@ -1,0 +1,19 @@
+% RED (review rev106c2 S1, synthetic): 106c r2's give_back_grades decides document-wide whether a grade the reading
+% took out has its contact — a binding-made \IEEEmembership contact on one author keeps another author's identical grade
+% from being given back, so the re-part declines and two authors merge (writer/mod.rs; OD #967). pdflatex prints
+% "Ann Able*, Member, IEEE, Bob Baker*, Member, IEEE, Cat Cole, Member, IEEE".
+% witness: none (synthetic; the 2507.19818 line plus a standard \IEEEmembership on the first author)
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape)
+% engines: rust int135e = 3 creators; rust 106c r2 = 2 creators (Bob Baker and Cat Cole merged), silently
+% expect:  3 creators, each grade the author's membership contact or in the name, as on int135e
+% engines: int159a (ST1): 3 creators, each its "Member, IEEE" membership, the content right; still RED for a FALSE Warning: the content check says "2 words … missing … IEEE Member" while every printed Member/IEEE is in a membership contact (pdflatex: "Ann Able*, Member, IEEE, Bob Baker* Member, IEEE, Cat Cole, Member, IEEE"); green when that Warning goes (observer/emitter/mod.rs content_check)
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{Ann~Able*,~\IEEEmembership{Member,~IEEE},
+        Bob~Baker*\footnote,~\IEEEmembership{Member,~IEEE, Cat~Cole, Member,~IEEE}
+\thanks{Funded.}
+\thanks{$^*$Equal contribution.}}
+\maketitle
+Text.
+\end{document}

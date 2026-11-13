@@ -1,0 +1,29 @@
+% mechanism: the author blocks' cutter (`affiliations::entry_calls`, shared by `\lx@add@affiliation@marked` and the
+%   frontmatter API's Cut; OXIDIZED_DESIGN_DIVERGENCES #964) reads the rows of a one-column `tabular` that is the whole
+%   list as its lines (`relocate::tabular_rows`): each marked row an entry, the address row the list's addresses
+% witness: 2606.28962 (`\IEEEauthorblockA{\begin{tabular}{c} $^{1}$ School of Cyber Science … \\ $^{2}$ Suzhou Research
+%   Institute … \\ \{zhengaoying, 202200460139\}@mail.sdu.edu.cn, \{dengzz, chenyuxuan\}@sdu.edu.cn\\ \vspace{-0.3cm}
+%   \end{tabular}}`, census129 cluster 4)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1 , Bob Baker2 , Cat Cole1 / 1 Univ A, Town / 2 Univ B, City /
+%   {aable, ccole}@a.edu, bbaker@b.edu"
+% engines: rust int131a0: Ann and Cat "Univ A, Town 2 Univ B, City {aable, ccole}@a.edu, bbaker@b.edu", Bob nothing;
+%   perl: IEEEtran.cls.ltxml:145 one contact
+% expect:  0 errors, 0 warnings; Ann "Univ A, Town" + aable@a.edu, Bob "Univ B, City" + bbaker@b.edu, Cat "Univ A,
+%   Town" + ccole@a.edu
+% status:  RED (int131a0) -> GREEN (104c) — perfect_kernel_batch104c::tabular_rows_are_marked_entries
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able$^{1}$, Bob Baker$^{2}$, Cat Cole$^{1}$}
+\IEEEauthorblockA{%
+  \begin{tabular}{c}
+    $^{1}$ Univ A, Town \\
+    $^{2}$ Univ B, City \\
+    \{aable, ccole\}@a.edu, bbaker@b.edu\\
+    \vspace{-0.3cm}
+  \end{tabular}%
+}}
+\maketitle
+Text.
+\end{document}

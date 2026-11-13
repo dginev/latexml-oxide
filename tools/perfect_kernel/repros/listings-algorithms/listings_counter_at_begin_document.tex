@@ -1,0 +1,29 @@
+% witness: 2405.15073 (template.tex:6180-6187, `\newlistentry{lstlisting}{lol}{0}` under `\globaldefs\@ne`); listings.sty:1604-1609 declares the counter `\AtBeginDocument`, tocloft.sty:820-833 tests it in the preamble
+% oracle:  pdflatex (TL 2025) 0 errors: R1, R2 undefined; R0, then R3 (a hook of the document before the package, still after its), defined; "Listing 1.1: Code", the section's "Centered bold."
+% engines: M3: 1 error, tocloft's "lstlisting has been previously defined"; its display `\protect` stays global and `\normalfont`, `\ref`, `\end` print as text. Perl declares it at load too (listings.sty.ltxml:133), KPE #1217.
+% expect:  0 errors; R1 undefined, R2 undefined, R3 defined, R0 defined; the float whole, numbered 1.1 by a document's own hook
+% status:  GREEN
+\documentclass{article}
+\makeatletter
+\AtBeginDocument{\@ifundefined{c@lstlisting}{\typeout{R0 = undefined}}{\typeout{R0 = defined}}}
+\usepackage{listings}
+\usepackage[titles]{tocloft}
+\@ifundefined{c@lstlisting}{\typeout{R1 = undefined}}{\typeout{R1 = defined}}
+\@ifundefined{thelstlisting}{\typeout{R2 = undefined}}{\typeout{R2 = defined}}
+\begingroup
+  \let\newcounter\@gobble\let\setcounter\@gobbletwo
+  \globaldefs\@ne\let\c@loldepth\@ne
+  \newlistof{listings}{lol}{\lstlistlistingname}
+  \newlistentry{lstlisting}{lol}{0}
+\endgroup
+\AtBeginDocument{\@ifundefined{c@lstlisting}{\typeout{R3 = undefined}}{\typeout{R3 = defined}}%
+  \counterwithin{lstlisting}{section}}
+\makeatother
+\begin{document}
+\section{One}
+\begin{center}Centered \textbf{bold}.\end{center}
+\begin{lstlisting}[caption={Code},label=l1]
+x
+\end{lstlisting}
+See~\ref{l1} and \thelstlisting.
+\end{document}

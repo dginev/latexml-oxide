@@ -1,0 +1,34 @@
+% witness: w-art.cls:594 `\newcommand{\address}[2][]{\g@addto@macro\addresses{\address{#1}{#2}}}`, the paper's
+%          `\address[\inst{1}]{…}` under names marked `\inst{1,2}` (0910.5837, 1105.1753, quant-ph0606237); review
+%          rev94b r1-r2 B2 (a caption written for every optional argument wrote the mark "\hbox{\@textsuperscript{1}}"
+%          as a contact's name)
+% oracle:  pdflatex 0 errors: "A Title", "Bob Baker2" (the stand-in's `\@author` the last), the date, "Body.", then at
+%          the end "Ann Able1,2", "Bob Baker2", "1 Univ A, Town", "2 Lab B, City"
+% engines: rust 94b r2 = 0 errors, 0 warnings: the mark dropped, both addresses on both names (`annotate=run`), the
+%          names showing "1,2" and "2" unanswered
+% expect:  0 errors, 0 warnings; an optional argument that is a printed mark leads the line, read by its mark as any
+%          marked line: Ann Able "Univ A, Town" and "Lab B, City", Bob Baker "Lab B, City", no mark left in a name or
+%          an address, no caption; eager and --streaming the same
+% status:  RED (94b r2) -> GREEN (94b r3)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{wartstand.cls}
+\ProvidesClass{wartstand}
+\LoadClass{article}
+\let\addresses\@empty
+\renewcommand{\author}[2][]{\g@addto@macro\addresses{\@xauthor{#2}}\gdef\@author{#2}}
+\newcommand{\address}[2][]{\g@addto@macro\addresses{\@xaddress{#1}{#2}}}
+\def\inst#1{\unskip$^{#1}$}
+\def\@xauthor#1{\par\noindent #1\par}
+\def\@xaddress#1#2{\par\noindent #1 #2\par}
+\AtEndDocument{\addresses}
+\end{filecontents*}
+\documentclass{wartstand}
+\begin{document}
+\title{A Title}
+\author[A. Able]{Ann Able\inst{1,2}}
+\author[ ]{Bob Baker\inst{2}}
+\address[\inst{1}]{Univ A, Town}
+\address[\inst{2}]{Lab B, City}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,18 @@
+% mechanism: the list cutter (`classify::entry_starts` `line_at_starts`): a line opening with a declaration (`\small`)
+%   cut where its entries start, each piece with the declaration the line opens with, as a box body's (revP4b4a B2's
+%   unboxed sibling)
+% witness: synthetic (P4b4a3 sibling probe s8)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2" over "1 Univ A, 2 Univ B", small
+% engines: rust P4b4abase: 0 errors, 0 warnings, the line on a nameless creator; P4b4a: each name its entry, "2 Univ B"
+%   at the normal size
+% expect:  0 errors, 0 warnings; Ann Able "1 Univ A", Bob Baker "2 Univ B", both small
+% status:  RED (P4b4a) -> GREEN (P4b4a3; guard perfect_kernel_batchc1::queued_marks_read_as_digested)
+\documentclass{llncs}
+\newcommand{\affmark}[1]{\textsuperscript{#1}}
+\begin{document}
+\title{A Title}
+\author{Ann Able\affmark{1} \and Bob Baker\affmark{2}}
+\institute{\small \affmark{1} Univ A, \affmark{2} Univ B}
+\maketitle
+Body.
+\end{document}

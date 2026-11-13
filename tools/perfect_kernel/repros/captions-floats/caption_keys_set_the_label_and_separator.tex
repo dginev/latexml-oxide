@@ -1,0 +1,19 @@
+% witness: 68h: caption's `\captionsetup` keys and package options are its documented interface (caption3.sty:718-858,
+%          :1347-1350, :1661-1715): `labelsep`, `labelformat`, `name`, `figurename`, `textformat`, the fonts; the
+%          binding stored them and read none (Perl caption.sty.ltxml:62-68 alike, KNOWN_PERL_ERRORS #795)
+% oracle:  pdflatex 0 errors: "Figure 1. A figure" / "TABLE 1: A table" / "Fig. (2). Parens" / "Figure 3" /
+%          "Fig. 4 – Dash." / "Figure 5 Newline" (label, line break, text)
+% engines: rust 68h base (67int8) and perl: "Figure 1: A figure" for every caption, fonts dropped
+% expect:  0 errors; the labels, separators and fonts as pdflatex sets them (bold label, italic text)
+% status:  GREEN (68h)
+\documentclass{article}
+\usepackage[labelfont=bf,labelsep=period,textfont=it]{caption}
+\captionsetup[table]{name=TABLE,labelsep=colon}
+\begin{document}
+\begin{figure}\caption{A figure}\end{figure}
+\begin{table}\caption{A table}\end{table}
+\begin{figure}\captionsetup{labelformat=parens,name=Fig.}\caption{Parens}\end{figure}
+\begin{figure}\captionsetup{labelsep=endash}\caption{}\end{figure}
+\begin{figure}\captionsetup{labelsep=endash,name=Fig.,textformat=period}\caption{Dash}\end{figure}
+\begin{figure}\captionsetup{labelsep=newline,textfont=up}\caption{Newline}\end{figure}
+\end{document}

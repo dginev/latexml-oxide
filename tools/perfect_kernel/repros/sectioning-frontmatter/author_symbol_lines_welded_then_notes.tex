@@ -1,0 +1,14 @@
+% witness: the 77y review (finding 3, probes c3, x4)
+% oracle:  pdflatex 0 errors: Ann Able†, Bob Baker‡; "†Department of Physics,", "University A", "‡School of Law,",
+%          "University B", "Preprint. Under review.", "Corresponding author: Ann Able", each on a line of its own
+% engines: rust 77y r1 = 0 errors; both notes affiliations of Bob Baker (welded to ‡); int38b on the shared creator
+% expect:  0 errors, 0 warnings; Department of Physics and University A on Ann Able, School of Law and University B on
+%          Bob Baker; both notes on the shared creator
+% status:  RED (77y r1) -> GREEN (77y r2)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{\dagger}$, Bob Baker$^{\ddagger}$ \\ $^\dagger$Department of Physics, \\ University A \\ $^\ddagger$School of Law, \\ University B \\ Preprint. Under review. \\ Corresponding author: Ann Able}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,25 @@
+% RED (RB1d): a block repeated after `\maketitle` is switched off from its first `\author` on (revtex4_cls.rs
+%   `switch_off_author_block_after_maketitle`), also where its `\author` names someone the first block lacks (an
+%   erratum's). pdflatex prints none of it (revtex4-2.cls:2670-2684), but authored text is kept (FIDELITY_CHARTER §2).
+%   The loss is counted: the gobbled `\author` feeds the content check the words no earlier call holds. Keeping the name
+%   needs a second mechanism: match the repeat to the creators it repeats.
+% witness: synthetic (review revRB1c B1; the guard's second row is a supplement adding "Carl Cole")
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "T / Ann Able / Univ X, Town / Text. / 2 / More."
+% engines: rust int159b: "Text. Erratum Dan Doe More."; RB1c (round 2): the body "Text. Erratum More.", 0 warnings;
+%   RB1d: the same body, 1 Warning "Frontmatter content check: 2 words … missing …: Dan Doe."
+% expect:  "Dan Doe" kept as body text, as int159b ("Text. Erratum Dan Doe More.")
+% status:  RED
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\affiliation{Univ X, Town}
+\maketitle
+Text.
+\clearpage
+\title{Erratum}
+\author{Dan Doe}
+\affiliation{Univ X, Town}
+\maketitle
+More.
+\end{document}

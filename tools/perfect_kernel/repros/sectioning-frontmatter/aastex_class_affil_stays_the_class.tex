@@ -1,0 +1,20 @@
+% mechanism: the boundary of revtex4_support's \affil guess: AASTeX defines \affil itself (aastex701.cls:13186
+%   \let\affil\affiliation; emulateapj.cls:460), so under the AASTeX binding the REVTeX binding's \affil is the class's,
+%   and a document's \providecommand{\affil} leaves it (aastex_cls.rs).
+% witness: (construct)
+% oracle:  pdflatex 0 errors: "Ann Able / Univ. Y / Email: ann@y.edu"
+% engines: rust int116a = 86c = the creator's affiliation "Univ. Y"
+% expect:  0 errors, 0 warnings; the creator's affiliation is "Univ. Y", then the e-mail
+% status:  CONTROL (86c)
+% preload: ar5iv.sty
+\documentclass{aastex701}
+\providecommand{\affil}[1]{Dept. of Physics, #1}
+\begin{document}
+\title{Spontaneous emission}
+\author{Ann Able}
+\affil{Univ. Y}
+\email{ann@y.edu}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body.
+\end{document}

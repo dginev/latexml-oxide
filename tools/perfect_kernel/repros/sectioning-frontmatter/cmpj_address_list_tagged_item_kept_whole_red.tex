@@ -1,0 +1,21 @@
+% witness: synthetic (1212.6367's `\addresses` with its first item tagged by hand)
+% oracle:  pdflatex (TL 2025), second run, 0 errors: "A. One, B. Two1" (`\item[a]` steps no counter: `la` names
+%          nothing, A. One's mark prints empty); "a First Institute, Lviv, Ukraine", "1 Second Institute, Kyiv, Ukraine"
+% engines: CMPJ2: the whole list on both names, counted (1 Warning "places an entry holding 2 label targets (la, lb)
+%          whole"): a tagged item is no item the list's cut reads (`events::item_led_pieces`)
+% expect:  0 errors; the second item B. Two's alone; the first item — whose label names no step — on no name or on A.
+%          One's, as a reading of the empty mark decides
+% status:  RED (counted)
+% moves:   post-merge
+\documentclass{article}
+\usepackage[cm]{cmpj2}
+\title{A title}
+\author{A. One\refaddr{la}, B. Two\refaddr{lb}}
+\addresses{
+\item[a]\label{la} First Institute, Lviv, Ukraine
+\addr{lb} Second Institute, Kyiv, Ukraine
+}
+\begin{document}
+\maketitle
+Text.
+\end{document}

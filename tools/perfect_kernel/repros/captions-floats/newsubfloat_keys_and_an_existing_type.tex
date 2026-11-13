@@ -1,0 +1,29 @@
+% witness: 2411.16612 (`\newsubfloat[captionskip=10pt]{listing}`; the keys and the guard no corpus paper exercises)
+% oracle:  pdflatex 0 errors, 1 warning ("Package subfig Warning: The subfigure type is already defined.");
+%          "a One.", "b Two." (labelformat=simple); "subfigure,subtable,sublisting"; "See 1a, 1b, 1a."
+% engines: rust (78s r1) = 0 warnings, "(a) One." (the keys dropped), `\sf@counterlist` without sublisting, and
+%          `\newsubfloat{figure}` re-made the figure's sub-float counter; perl = the keys dropped too
+% expect:  1 warning (subfig's); sub-listing tags "a"/"b"; "subfigure,subtable,sublisting"
+% mechanism: subfig.sty:244-266: `\@ifundefined{c@sub#2}`, `\sf@counterlist`, `\captionsetup[sub#2]{#1}`
+%   (subfig_sty.rs `\newsubfloat`).
+% status:  GREEN (78s r2)
+\documentclass{article}
+\usepackage{float}
+\usepackage[caption=false]{subfig}
+\newfloat{listing}{tbp}{lol}
+\floatname{listing}{Listing}
+\newsubfloat[labelformat=simple]{listing}
+\newsubfloat{figure}
+\begin{document}
+\begin{figure}
+\subfloat[Panel.]{\label{p}P}
+\caption{F.}
+\end{figure}
+\begin{listing}
+\subfloat[One.]{\label{a}A}
+\subfloat[Two.]{\label{b}B}
+\caption{Both.}\label{l}
+\end{listing}
+\makeatletter\sf@counterlist\makeatother.
+See \ref{a}, \ref{b}, \ref{p}.
+\end{document}

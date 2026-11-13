@@ -1,0 +1,15 @@
+% mechanism: an undefined command past a name's mark, before the next separator, printing nothing: no event covers it
+%   and the name's run stops at the mark; the emitter writes it after the name (`block_names`), where its digestion
+%   raises its Error once, in the personname as Perl's. OXIDIZED_DESIGN_DIVERGENCES #983
+% witness: 2607.29185 (`Sanwoo Lee\textsuperscript{\rm 1,2,3}\internship,`), 2508.08170 (`\coo`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 1 "Undefined control sequence": "Ann Able1 , Bob Baker2", 1 Univ A, 2 Univ B
+% engines: Perl 0.8.8: 1 Error, Ann Able<ERROR>\undefinedprobecs</ERROR> (Univ A), Bob Baker (Univ B); DEL5 (=2): 0
+%   Errors, the same creators without the ERROR
+% expect:  1 Error, 0 Warnings; Ann Able<ERROR>\undefinedprobecs</ERROR> with Univ A, Bob Baker with Univ B
+% status:  RED (DEL5) -> GREEN (ERR2)
+\documentclass{article}
+\author{Ann Able\textsuperscript{1}\undefinedprobecs, Bob Baker\textsuperscript{2}\\ $^1$Univ A\\ $^2$Univ B}
+\title{T}
+\begin{document}
+\maketitle
+\end{document}

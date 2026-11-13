@@ -13,9 +13,9 @@
 #
 # Call this once after checkout, after any TeX Live upgrade, or before
 # running the test suite when matching a specific texlive is required
-# (e.g. in CI). The Rust build does NOT embed the dump — it is read
-# from disk at runtime (see latexml_package/build.rs), so regenerating
-# requires no rebuild.
+# (e.g. in CI). A binary run from the source tree reads the new dumps
+# from resources/dumps/ at once; `latexml_engine/build.rs` also embeds
+# them, so rebuild (`cargo build`) for a self-contained binary.
 #
 # Usage:
 #   tools/make_formats.sh                  # debug build (default)

@@ -1,0 +1,14 @@
+% A brace-less `\abstract` that no sectioning command ends runs to `\end{document}`: it ends there and keeps its text
+% (sect02.rs `\lx@end@open@frontmatter`), as an unclosed `{itemize}` keeps its list.
+% witness: 74a review finding 2's row (e); the silent-loss inventory (agent_reports/2026-10-18_silent_loss_inventory.md #1)
+% oracle:  pdflatex 0 errors: "Abstract / Abstract only text. / More abstract text."
+% engines: rust 67int26 = 0 errors, 2 warnings, an empty <document/>
+% expect:  0 errors, 0 warnings; one ltx:abstract holding both paragraphs
+% status:  RED (67int26) -> GREEN (int26)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\abstract Abstract only text.
+
+More abstract text.
+\end{document}

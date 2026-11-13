@@ -77,7 +77,7 @@ pub fn of_archive(archive: &Path, main: Option<&str>) -> Option<i64> {
       let Ok(entry) = zip.by_index_raw(i) else {
         continue;
       };
-      if entry.is_file() && counts(entry.name()) {
+      if entry.is_file() && entry.name().is_ok_and(|name| counts(&name)) {
         newest = newest.max(zip_entry_epoch(&entry));
       }
     }
@@ -205,7 +205,7 @@ mod tests {
     field.extend_from_slice(&ut.to_le_bytes());
     let mut options =
       zip::write::FullFileOptions::default().last_modified_time(dos(2018, 1, 19, 0, 30));
-    options.add_extra_data(0x5455, field, false).unwrap();
+    options.add_extra_field(0x5455, field, false).unwrap();
     zip.start_file("paper.tex", options).unwrap();
     zip.write_all(b"x").unwrap();
     zip.finish().unwrap();

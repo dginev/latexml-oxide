@@ -1,0 +1,26 @@
+% mechanism: CST2's marks gate (`argument_marks::may_mark`) reads past what prints no mark to the mark after it and
+%   keeps a name for the rehearsal: a body led by the kernel's `\relax` (`\ma`) or `\protect` (`\mb`), and a macro chain
+%   nested past the gate's 8 levels (`\zj` … `\za`, `MACRO_DEPTH`: a body left unread is a possible mark); each
+%   rehearsed mark requests its own line
+% witness: synthetic (review revCST2 finding 2, probes revm_relaxbody, revm_deep9)
+% oracle:  pdflatex (TL 2025, revtex4-2, -no-shell-escape) 0 errors: "A. Smith1, B. Jones2, and C. Cole3 / 1Uni One,
+%          Town / 2Uni Two, Town / 3Uni Three, Town"
+% engines: int165a and CST2: as expected (byte-identical); a gate stopping at `\relax`/`\protect` or skipping the
+%          unread depth reads no mark, every line on that author
+% expect:  0 errors, 0 warnings; A. Smith 1 "1 Uni One, Town", B. Jones 2 "2 Uni Two, Town", C. Cole 3 "3 Uni Three,
+%          Town"
+% status:  GREEN (guard perfect_kernel_batchc1::group_rule_reads_marks_as_digested)
+\documentclass[aps,prl]{revtex4-2}
+\newcommand\ma{\relax\textsuperscript{1}}
+\newcommand\mb{\protect\textsuperscript{2}}
+\def\za{$^{3}$}\def\zb{\za}\def\zc{\zb}\def\zd{\zc}\def\ze{\zd}\def\zf{\ze}\def\zg{\zf}\def\zh{\zg}\def\zi{\zh}\def\zj{\zi}
+\begin{document}
+\title{T}
+\author{A.~Smith\ma}
+\author{B.~Jones\mb}
+\author{C.~Cole\zj}
+\affiliation{$^1$Uni One, Town\\ $^2$Uni Two, Town\\ $^3$Uni Three, Town}
+\begin{abstract}x\end{abstract}
+\maketitle
+Text.
+\end{document}

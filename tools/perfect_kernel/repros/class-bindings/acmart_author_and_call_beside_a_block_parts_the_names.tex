@@ -1,0 +1,25 @@
+% mechanism: acmart's `\author{Ann Able \and Bob Baker}` beside an author block (`\author{Cy Cole, Dee Dunn}`, which the
+%   binding queues as a block by its comma): the emitter runs, and the API call the reading cut at its own `Sep(And)`
+%   (`resolver::api::creator_call_pieces`) gives two creators of one source, each written as the call's piece
+%   (`emit::creator_call_cut`, in the emission's per-creator loop), its own `author:N`; the `\email` after the call is
+%   the last piece's, Bob Baker's, as pdflatex prints it. The no-block form takes the queue route
+%   (`class-bindings/acmart_author_and_parts_the_names.tex`)
+% witness: OC1b's `scratch_OC1b/src/acm_mixblock.tex` (byte-identical to OC1-rel under OC1b's cut, which tested nest 0
+%   and never fired: review revOC1b S1, confirmed by OC1c's event print)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "CY COLE, DEE DUNN, ANN ABLE BOB BAKER, and EVE EGAN",
+%   "Authors' Contact Information: Cy Cole, Dee Dunn; Ann Able; Bob Baker, bob@y.org; Eve Egan, eve@z.org."
+% engines: Perl 0.8.8: "Ann Able and Bob Baker" one creator (acmart.cls.ltxml:89, not run); int156a (OC1b-rel): Cy Cole,
+%   Dee Dunn, "Ann Able and Bob Baker" (bob@y.org), Eve Egan (eve@z.org), 1 error (`merged_creators`), 0 warnings
+% expect:  0 errors, 0 warnings; creators Cy Cole, Dee Dunn, Ann Able, Bob Baker (bob@y.org), Eve Egan (eve@z.org)
+% status:  RED (int156a) -> GREEN (OC1c; guard perfect_kernel_batchoc1c::an_api_creator_call_parts_at_its_own_and)
+\documentclass{acmart}
+\title{T}
+\author{Cy Cole, Dee Dunn}
+\author{Ann Able \and Bob Baker}
+\email{bob@y.org}
+\author{Eve Egan}
+\email{eve@z.org}
+\begin{document}
+\maketitle
+Text.
+\end{document}

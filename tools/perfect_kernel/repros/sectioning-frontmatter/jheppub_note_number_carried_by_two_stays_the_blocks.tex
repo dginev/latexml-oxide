@@ -1,0 +1,27 @@
+% mechanism: jheppub.sty:84-89 a `\note{…}` steps the footnote counter and prints its text under that number, beside
+%   no name; the authors who write the number on their names (`\author[a,1]`) are the ones it is about. Ann Able's
+%   `\note{Corresponding author.}` is note 1, which Ann Able and Cat Cole both carry: two marked authors, so zq77@
+%   (ccole@ is Cat Cole's by its spelling) stays the author block's (`marked_corresponding_author`)
+% witness: 1802.03677 (`\author[a,1]{M.V. Smirnov,\note{Corresponding author.}}`, `\author[a,1]{{\rm and} J.J. Ling}`:
+%          gear8mike@ the block's); rev78f2 probe s4
+% oracle:  pdflatex (the shortened jheppub.sty beside this repro, v.1.1227 from 2305.01585) 0 errors: "Ann Able,a,1
+%          Bob Bakera and Cat Colea,1", "a Univ A", "E-mail: zq77@x.org, ccole@y.org", the footnote "1 Corresponding
+%          author."
+% engines: rust 78f r2 = zq77@ Ann Able's (the note's owner alone); int47a and perl: Ann Able's, ccole@ Bob Baker's
+% expect:  0 errors, 0 warnings; zq77@ the author block's, ccole@ Cat Cole's
+% status:  RED (78f r2) -> GREEN (78f r3)
+% preload: ar5iv.sty
+\documentclass[a4paper,11pt]{article}
+\usepackage{jheppub}
+\title{T}
+\author[a,1]{Ann Able,\note{Corresponding author.}}
+\author[a]{Bob Baker}
+\author[a,1]{and Cat Cole}
+\affiliation[a]{Univ A}
+\emailAdd{zq77@x.org}
+\emailAdd{ccole@y.org}
+\abstract{Abs.}
+\begin{document}
+\maketitle
+Text.
+\end{document}

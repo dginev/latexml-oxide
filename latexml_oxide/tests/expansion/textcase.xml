@@ -64,13 +64,13 @@
       </tags>
       <title><tag close=" ">1.2</tag>Refs and cites</title>
       <para xml:id="S1.SS2.p1">
-        <p>TEXT IN SECTION <ref labelref="LABEL:intro"/>, ABOUT <cite class="ltx_citemacro_cite">[<bibref bibrefs="bbb" separator="," yyseparator=","/>, PP 2–4]</cite></p>
+        <p>TEXT IN SECTION <ref labelref="LABEL:intro"/>, ABOUT <cite class="ltx_citemacro_cite">[<bibref bibrefs="bbb" class="ltx_cite_sort ltx_cite_compress ltx_cite_unsorted_first" separator="," yyseparator=","/>, PP 2–4]</cite></p>
       </para>
       <para xml:id="S1.SS2.p2">
-        <p>TEXT <cite class="ltx_citemacro_cite">[<bibref bibrefs="bbb" separator="," yyseparator=","/>]</cite> AND <cite class="ltx_citemacro_cite">[<bibref bibrefs="ccc" separator="," yyseparator=","/>]</cite></p>
+        <p>TEXT <cite class="ltx_citemacro_cite">[<bibref bibrefs="bbb" class="ltx_cite_sort ltx_cite_compress ltx_cite_unsorted_first" separator="," yyseparator=","/>]</cite> AND <cite class="ltx_citemacro_cite">[<bibref bibrefs="ccc" class="ltx_cite_sort ltx_cite_compress ltx_cite_unsorted_first" separator="," yyseparator=","/>]</cite></p>
       </para>
       <para xml:id="S1.SS2.p3">
-        <p>TEXT <cite class="ltx_citemacro_cite">[<bibref bibrefs="bbb" separator="," yyseparator=","/>]</cite> AND <cite class="ltx_citemacro_cite">[<bibref bibrefs="ccc" separator="," yyseparator=","/>]</cite></p>
+        <p>TEXT <cite class="ltx_citemacro_cite">[<bibref bibrefs="bbb" class="ltx_cite_sort ltx_cite_compress ltx_cite_unsorted_first" separator="," yyseparator=","/>]</cite> AND <cite class="ltx_citemacro_cite">[<bibref bibrefs="ccc" class="ltx_cite_sort ltx_cite_compress ltx_cite_unsorted_first" separator="," yyseparator=","/>]</cite></p>
       </para>
     </subsection>
     <subsection inlist="toc" xml:id="S1.SS3">

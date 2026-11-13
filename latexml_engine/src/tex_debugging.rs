@@ -13,6 +13,21 @@ static EXCEPTION_MACRO_NAMES_FOR_MEANING: Lazy<Regex> = Lazy::new(|| {
 /// macro). Perl prints `macro:#1#2->CODE(0x…)`, a heap address.
 static EXPANDABLE_PRIMITIVE_NAMES_FOR_MEANING: Lazy<Regex> =
   Lazy::new(|| Regex::new(r"^\\(?:expandafter|noexpand|string|meaning)$").unwrap());
+/// TeX primitives the kernel implements as macros of its own (tex_math.rs `\over` family, `\overline`,
+/// `\underline`): `\meaning` prints the primitive's name, as tex.web §296 `print_meaning` does for the primitive (and
+/// LaTeX leaves these primitive, but `\underline`, whose `\@@underline` copy is), while the definition is still
+/// LaTeXML's (its origin survives a `\let`, so `\let\@@over\over` reads `\over`; a document's or file's
+/// redefinition is a macro again). amsgen's `\@saveprimitive` (amsgen.sty:27, amsmath.sty:397, and the copies classes
+/// embed: asl.cls:327 — 1005.4193, 1803.03483, 1111.1504) compares `\meaning\over` with `\string\over`; a macro meaning
+/// failed it with "Unable to properly define \@@over; primitive \over no longer primitive", and the class's `\frac`
+/// built on the unsaved `\@@over` lost its fraction (KNOWN_PERL_ERRORS #985). Perl TeX_Debugging.pool.ltxml:125-127
+/// keeps this list for `\expanded`/`\unexpanded`/`\detokenize` ("could be extended further").
+static KERNEL_PRIMITIVE_STANDINS_FOR_MEANING: Lazy<Regex> = Lazy::new(|| {
+  Regex::new(
+    r"^\\(?:over|atop|above|overwithdelims|atopwithdelims|abovewithdelims|overline|underline)$",
+  )
+  .unwrap()
+});
 static LEAD_W_COLON_RE: Lazy<Regex> = Lazy::new(|| Regex::new(r"^(\w+):").unwrap());
 static UNTIL_SPEC: Lazy<Regex> = Lazy::new(|| Regex::new("^\\w?Until(\\w*):").unwrap());
 
@@ -40,6 +55,8 @@ static TRACE_MACROS: u8 = 0x1;
 static TRACE_COMMANDS: u8 = 0x2;
 static _TRACE_ALL: u8 = 0x3; // MACROS | COMMANDS
 static _TRACE_PROFILE: u8 = 0x4;
+
+use latexml_core::definition::closure_body_meaning;
 
 use crate::prelude::*;
 
@@ -118,9 +135,14 @@ LoadDefinitions!({
   // (`MAX_CONSECUTIVE_ERRORS`) end the loop with a partial document. Guard:
   // `perfect_kernel_batch56::errmessage_counts_toward_the_error_breaker`.
   // Its text is `\message`'s, `scan_toks(false, true)` (§1279 `issue_message`).
+  // The help is shown as it stands, tex.web §1283 `token_show(err_help)`, unexpanded: t4enc.def:36-39's `\m`
+  // keeps `\m #1` in it, which Perl's `Expand(\the\errhelp)` (TeX_Debugging.pool.ltxml:73) called again for ever
+  // (2405.01972, `\m{y}` in T4: Fatal PushbackLimit).
   DefPrimitive!("\\errmessage XGeneralText", sub[(message)] {
-    let help = Expand!(Tokens!(T_CS!("\\the"), T_CS!("\\errhelp")));
-    let help = help.to_string();
+    let help = match lookup_register("\\errhelp", Vec::new())? {
+      Some(RegisterValue::Tokens(help)) => help.to_string(),
+      _ => String::new(),
+    };
     let text = if help.trim().is_empty() { message.to_string() } else { s!("{message}: {help}") };
     Error!("errmessage", "\\errmessage", text);
   });
@@ -260,6 +282,14 @@ LoadDefinitions!({
             EXCEPTION_MACRO_NAMES_FOR_MEANING.is_match(name)
               || (kernel_closure && EXPANDABLE_PRIMITIVE_NAMES_FOR_MEANING.is_match(name))
           };
+          // (LaTeX's own `\underline` is a robust macro, latex.ltx:16369, and only its `\@@underline` copy, :16368, is
+          // the primitive: the name itself keeps its macro meaning)
+          if expandable.origin.is_latexml_owned()
+            && KERNEL_PRIMITIVE_STANDINS_FOR_MEANING.is_match(&cs)
+            && !(cs == "\\underline" && cs_token == "\\underline")
+          {
+            return Ok(Tokens::new(ExplodeChars!(cs)));
+          }
           // These exceptions could be extended further, as we add more .sty/.cls support
           if shown_as_primitive(&cs) || shown_as_primitive(&cs_token) {
             let mut canonical = if shown_as_primitive(&cs_token) {
@@ -293,9 +323,10 @@ LoadDefinitions!({
                 p_spec = pin!("{");
               },
               "UntilBrace" => {
+                // `\def\b#1#{…}`: TeX's `macro:#1{->…{` (tex.web §473-476), the brace after the parameter too
                 p_trailer = "{";
                 arg_index += 1;
-                p_spec = pin(with(p_spec, |p_str| format!("#{arg_index}{p_str}")));
+                p_spec = pin(s!("#{arg_index}{{"));
               },
               other if other.starts_with("Match:") => {
                 // just match, don't increment arg index
@@ -306,6 +337,15 @@ LoadDefinitions!({
                 let delim = delimiter_text(param, other);
                 arg_index += 1;
                 p_spec = pin(s!("#{arg_index}{delim}"));
+                // A `#{` delimiter's brace ends the replacement text too (tex.web §476; `parse_def_parameters`).
+                if param
+                  .extra
+                  .first()
+                  .and_then(|tks| tks.unlist_ref().last())
+                  .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+                {
+                  p_trailer = "{";
+                }
               },
               _other => {
                 // regular parameter, increment
@@ -350,26 +390,27 @@ LoadDefinitions!({
           spec = spec.replace("{}", "");
           spec = spec.replace("Token", "");
 
+          // The prefixes print through `print_esc`, so in `\escapechar` (tex.web §1295; `print_meaning` §296): ltcmdhooks
+          // reads them with `\escapechar` set to `/` (latex.ltx:7011-7016, `\__hook_make_prefixes:w`).
+          let esc = escapechar();
           let mut prefixes = String::new();
-          if expandable.is_protected {
-            prefixes.push_str("\\protected");
-          }
-          if expandable.is_long {
-            prefixes.push_str("\\long");
-          }
-          if expandable.is_outer {
-            prefixes.push_str("\\outer");
+          for (set, name) in [
+            (expandable.is_protected, "protected"),
+            (expandable.is_long, "long"),
+            (expandable.is_outer, "outer"),
+          ] {
+            if set {
+              prefixes.push_str(&esc);
+              prefixes.push_str(name);
+            }
           }
           if !prefixes.is_empty() {
             prefixes.push(' ');
           }
           let expansion = match expandable.get_expansion() {
             None => String::new(),
-            // Perl's `CODE(0x…)` for a macro coded in the host language: the address only
-            // (a `dyn` pointer's `{:p}` would print its metadata too; cnltx_en).
-            Some(ExpansionBody::Closure(exp)) => {
-              format!("CODE({:p})", Rc::as_ptr(exp) as *const ())
-            },
+            // Perl's `CODE(0x…)`, the name for the address (QA89; cnltx_en).
+            Some(ExpansionBody::Closure(_)) => closure_body_meaning(&expandable.get_cs_name()),
             Some(ExpansionBody::Tokens(tks)) => writable_tokens(tks),
           };
           meaning = format!("{prefixes}macro:{spec}->{expansion}{p_trailer}");

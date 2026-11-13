@@ -1,0 +1,22 @@
+% mechanism: names whose marks a document macro prints (`\newcommand\ua{$^{1}$}`) request affiliations as `$^{N}$`
+%   names do: AASTeX's `\affil` declares `annotate=new` (`relocate::run_names_show_a_mark`, read as digested since
+%   Option C P4b3, `queued_author_marks`), so the unlabelled lines are no group sharing every line
+% witness: synthetic (the census's author_user_mark_macro feature; the `$^{N}$` twin
+%   `aastex_sup_names_over_unlabelled_lines_are_no_group`, 1202.0629)
+% oracle:  pdflatex (TL 2025, emulateapj, -no-shell-escape) 0 errors: "Ann Able1, Bob Baker1 and Cat Cole1,2 / Uni One
+%          and / Uni Two"
+% engines: P4b3base: every author both lines (the token reader saw no mark); P4b3: as expected
+% expect:  0 errors, 0 warnings; Ann Able and Bob Baker Uni One, Cat Cole Uni One and Uni Two
+% status:  RED (P4b3base) -> GREEN (P4b3; guard perfect_kernel_batchc1::group_rule_reads_marks_as_digested)
+\documentclass{emulateapj}
+\newcommand\ua{$^{1}$}
+\newcommand\uab{$^{1,2}$}
+\begin{document}
+\title{T}
+\author{Ann Able\ua, Bob Baker\ua{} and Cat Cole\uab}
+\affil{Uni One}
+\affil{Uni Two}
+\begin{abstract}A.\end{abstract}
+\section{Intro}
+Text.
+\end{document}

@@ -1,0 +1,17 @@
+% ptptex.cls's `\abst{…}` stores the abstract (:617) for its title page, whose `[preprint]` `\maketitle`
+% (ptp-prep.clo:111-119, a `\renewcommand` the class's option file makes) runs as the class's: it prints `\@abst` and
+% clears it (ptp-prep.clo:27-34 `\gdef\@abst{}`) before the frontmatter fallback reads the stores. The abstract store,
+% read where LaTeX expands it (`labelled_api`, frontmatter_stores.rs: deferred, labelled or not), is handed on with the
+% value its setter stored (`lx_store_value_<name>`, `harvest_stores`) — an `ltx:abstract`, as before 77i r4.
+% witness: 0906.3938, 0907.2968 (ptptex `[preprint]`: the `ltx:abstract` lost in 77i r4's first build).
+% oracle:  pdflatex 0 errors: "Abstract", "An abstract text." on the title page.
+% engines: rust 77i r4 (first build): no `ltx:abstract`; rust 77i r3: `ltx:abstract` and the class's printed block.
+% expect:  0 errors, 0 warnings; `<abstract … name="Abstract">` "An abstract text.".
+% status:  RED (77i r4 wip) -> GREEN (77i r4)
+\documentclass[preprint]{ptptex}
+\title{T}\author{Anton}
+\abst{An abstract text.}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,14 @@
+% mechanism: a place right under an unmarked institution of the whole row goes with it (`row_line_calls`), with a mark on a name and a legend below
+% witness: 2609.30627, 2609.03842; review probe s1
+% oracle:  pdflatex: 0 errors; names, two lines, two addresses, "*Corresponding author"
+% engines: rust 108a r2: "Seoul, Republic of Korea" on the nameless block; int139c: on the last name alone
+% expect:  0 errors; each name both lines, its address by spelling or order; the legend the carrier's
+% status:  RED (108a r2) -> GREEN (108a r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{*}$ \qquad Bob Baker\\ Dept of Statistics, Univ X\\ Seoul, Republic of Korea\\ \texttt{able@x.edu} \qquad \texttt{bbaker@y.edu}\\ $^{*}$Corresponding author}
+\maketitle
+Text.
+\end{document}

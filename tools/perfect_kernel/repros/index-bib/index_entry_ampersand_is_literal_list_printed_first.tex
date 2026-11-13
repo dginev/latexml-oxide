@@ -1,0 +1,35 @@
+% witness: review 73a finding 8; 2506.02168 (a `\printnomenclature` ahead of its entries): the "list already printed"
+%   path, where an entry made after its list is printed is typeset at once (TeX's `.ind`/`.gls` of the earlier run holds
+%   every entry of the document) — robustsample's `\glossary{formula&explanation}` entries (robustsample.tex:45/:59)
+% oracle:  pdflatex 0 errors: the entries are written under `\@sanitize` (latex.ltx:17720-17740; :1778 makes `&` other)
+% engines: rust 73a1: the same marks as index_entry_ampersand_is_literal.tex, whose lists are printed after the entries
+% expect:  0 errors, 0 warnings; the marks of index_entry_ampersand_is_literal.tex, the paragraphs one later (the index
+%   and glossary printed first)
+% status:  GREEN (73a r2)
+% mechanism: latex_constructs `deferred_print_tokens`: a printed list's entry is its tokens, digested where it is made
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,array}
+\makeindex
+\makeglossary
+\begin{document}
+\begin{theindex}\end{theindex}
+\newenvironment{theglossary}{}{}\makeatletter\@input@{\jobname.gls}\makeatother
+G: Text.\glossary{$B$&Borel subgroup}
+
+I: Text.\index{$B$&Borel}
+
+Math $x\index{inmath}+y$ end.
+
+\textbf{Bold\index{plainword}} text.
+
+\begin{tabular}{>{\bfseries}c<{X}c}
+e\index{y&z} & f\\
+\end{tabular}
+
+\begin{align}
+a\index{x&y} &= b \\
+c &= d
+\end{align}
+After the alignment, T1: x\index{a<b>c}.
+\end{document}

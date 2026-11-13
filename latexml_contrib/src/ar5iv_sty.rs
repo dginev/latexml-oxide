@@ -91,16 +91,32 @@ LoadDefinitions!({
   // generous backstop posture (runaways are cut much earlier by the cycle
   // guards / pushbacklimit / byte budget; the tokenlimit only bounds
   // aperiodic grind).
-  // `localrawclasses` (latexml.sty's option; passing it here is Rust-only, OXIDIZED_DESIGN_DIVERGENCES #444): a class
-  // shipped with the paper and covered by no binding is interpreted raw, as TeX would, instead of falling to OmniBus's
-  // guesses (webofc 1301.7514, pasj00 0704.3654, raa 0802.3215, cms-tdr 1010.5994). Run 329: ~35% of the erroring
-  // papers ran on OmniBus over a class they ship (webofc, epl2, jpconf, iaus, pasj, raa, cms-tdr, …), not in TeX
-  // Live; their journal macros (`\pagerange`, `\Name`, `\ack`, `\KeyWords`, …) were undefined. A class in TeX Live
-  // without a binding stays on OmniBus.
+  // `rawclasses` (latexml.sty's option; passing it here is Rust-only, OXIDIZED_DESIGN_DIVERGENCES #444): a class
+  // covered by no binding is interpreted raw, as TeX would, instead of falling to OmniBus's guesses — a class shipped
+  // with the paper (62k, then `localrawclasses`: webofc 1301.7514, pasj00 0704.3654, raa 0802.3215, cms-tdr
+  // 1010.5994; run 329: ~35% of the erroring papers ran on OmniBus over a class they ship) and, since 67v, a class in
+  // TeX Live (paper, ptptex, nature, jpsj2, apa6, jacow, smfart, artikel1, …: 3,362 run-353 papers fell to OmniBus;
+  // raw, error-free 1,485 → 3,079). Every binding, exact or alternate, still comes first (`load_class`).
+  //
+  // RUST-ONLY (OXIDIZED_DESIGN_DIVERGENCES #884): the class caption fonts knob (caption_sty.rs `CLASS_CAPTION_FONTS`, off
+  // by default) as ar5iv.sty's own option, handed to latexml.sty with the options below, as a LaTeX package would
+  // (`\DeclareOption{classcaptionfonts}{\PassOptionsToPackage{\CurrentOption}{latexml}}`):
+  // `--preload=[classcaptionfonts]ar5iv.sty` sets the knob and keeps ar5iv's options. A second preload of latexml.sty
+  // cannot: a preload's options go to `opt@<name>.<ext>` only (core_interface.rs, the preload loop), so the repeat load
+  // has no new options to apply (content.rs `apply_repeat_options`) — `[classcaptionfonts]latexml.sty` after ar5iv.sty
+  // sets no knob, and before it latexml.sty takes its options alone and ar5iv's are lost (`rawclasses`: a class read
+  // raw under ar5iv falls to OmniBus, `Warning:missing_file`). Perl alike (Core.pm:333-335, Package.pm:2357,
+  // :2586-2590); docs/SYNC_STATUS.md. Guard `perfect_kernel_batch78z::ar5iv_classcaptionfonts_option_sets_the_knob`.
+  for option in ["classcaptionfonts", "noclasscaptionfonts"] {
+    DeclareOption!(option, {
+      pass_options("latexml", "sty", vec![option.to_string()])?;
+    });
+  }
+  ProcessOptions!();
   pass_options("latexml", "sty", vec![
     s!("ids"),
     s!("rawstyles"),
-    s!("localrawclasses"),
+    s!("rawclasses"),
     s!("bibconfig=bbl,bib"),
     s!("nobreakuntex"),
     s!("magnify=1.2"),
@@ -111,6 +127,37 @@ LoadDefinitions!({
     s!("pushbacklimit=5000000"),
   ])?;
   RequirePackage!("latexml");
+
+  // arXiv's build loads hyperref into every paper (a 00README `nohypertex` opts out), so a paper that uses `\url` or
+  // `\href` without loading url.sty or hyperref builds there, while pdflatex alone stops at "Undefined control
+  // sequence" (~1,300 papers in run 349: cond-mat0407333, cs0409028, hep-th0411273; 2101.07380's PDF says "LaTeX with
+  // hyperref" though its source never loads it). Provide-only (user ruling 2026-10-14): at `\begin{document}` the one of
+  // the two still undefined is defined as hyperref's, with url.sty's default `\UrlFont`/`\UrlLeft`/`\UrlRight` where
+  // missing; a paper that loads either package, or defines the command itself in its preamble, keeps its own.
+  // hyperref loads url.sty, so url.sty follows, provide-only too: its `\path`, `\urlstyle`, `\urldef`, `\Url` for the
+  // names still undefined. An elsarticle-num `.bbl` defines `\path` only when `\href` is undefined
+  // (`\expandafter\ifx\csname href\endcsname\relax \def\href#1#2{#2} \def\path#1{#1}\fi`); with `\href` supplied,
+  // its `{\path{doi:…}}` entries were undefined (2605.07373, 2605.08166, 2605.12003).
+  // OXIDIZED_DESIGN #588; guard `perfect_kernel_batch67a`.
+  DefPrimitive!("\\lx@arxiv@provide@hyper@urls", {
+    let href = !IsDefined!(&T_CS!("\\href"));
+    let url = !IsDefined!(&T_CS!("\\url"));
+    if href || url {
+      if !IsDefined!(&T_CS!("\\UrlFont")) {
+        DefMacro!("\\UrlFont", "\\lx@fontencoding{ASCII}\\ttfamily");
+      }
+      if !IsDefined!(&T_CS!("\\UrlLeft")) {
+        Let!("\\UrlLeft", "\\@empty");
+      }
+      if !IsDefined!(&T_CS!("\\UrlRight")) {
+        Let!("\\UrlRight", "\\@empty");
+      }
+      hyperref_sty::define_hyper_urls(href, url)?;
+      let _provide_only = definition::origin::ProvideOnlyGuard::new();
+      RequirePackage!("url");
+    }
+  });
+  at_begin_document(Tokens!(T_CS!("\\lx@arxiv@provide@hyper@urls")))?;
 
   // Practical maximum for warnings
   AssignValue!("MAX_WARNINGS" => 10000i64, Scope::Global);

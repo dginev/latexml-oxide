@@ -1,0 +1,12 @@
+% witness: typog/typog-example (:1816 `\setbaselineskip`, `\projectoutfontname##1-##2-##3` runs away on `cmr10`); `\fontname` in 2,027 census papers
+% oracle:  pdflatex (TL 2025): FN1, FN2 LinLibertineT-tlf-t1 (the font NFSS selected).
+% engines: int141a, M3: cmr10 (tex_fonts.rs:150; needs `\font@name` to its TFM through the `.fd`). Deferred: SYNC row 0a.
+% expect:  LinLibertineT-tlf-t1 at both
+% status:  RED
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\usepackage{libertine}
+\begin{document}
+\typeout{FN1=\fontname\font}
+\normalfont\typeout{FN2=\fontname\font}
+\end{document}

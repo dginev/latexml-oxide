@@ -1,0 +1,21 @@
+% GREEN (brief 107g, mechanism 3): a list of addresses is one per person, not every carrier's, where a sibling spells an
+%   author who does not answer the line's mark: spelling, then elimination, else the block (`link_entry_addresses`'
+%   `mark_lists`). `bmfu@` is Bob Fu's by elimination, not every carrier of `1`'s.
+% witness: 2412.13509 (`hmfu@`)
+% oracle:  pdflatex (TL 2025) unavailable: on this host every acmart document fails (a minimal `[sigconf,nonacm]` one reads
+%          back its log: 100 errors), the paper too; read against the witness's source
+% engines: int138a: the whole list in the affiliation's text; int139a: bmfu@ on Ann, Bob, Cat
+% expect:  0 errors; each name its entry by its number; every other address on the author it spells; bmfu@ the block's, as
+%          `\textsuperscript{1}` reads the same list on int139c (108a r2 parts `*1`, so the entry is cut by its marks and Bob Fu
+%          is none of its carriers: 2412.13509's `hmfu@`, whose list elimination is open, SYNC 108a)
+\documentclass[sigconf,nonacm]{acmart}
+\begin{document}
+\title{T}
+\author{Ann Able\textsuperscript{*1}, Dan Dorn\textsuperscript{*2}, Bob Fu\textsuperscript{1}, Cat Cole\textsuperscript{\dag 1}}
+\affiliation{%
+  \institution{\textsuperscript{1}Univ A, \textsuperscript{2}Univ B}
+  \country{\{aable, bmfu, ccole\}@a.edu, ddorn@b.edu}
+}
+\maketitle
+Body.
+\end{document}

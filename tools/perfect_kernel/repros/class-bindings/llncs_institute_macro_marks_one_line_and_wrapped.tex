@@ -1,0 +1,18 @@
+% mechanism: llncs's `\institute` holding two entries on one line, their marks printed by a document macro, each
+%   wrapped in one font group (`{\it \affmark{1} Univ A, \affmark{2} Univ B}`): the cutter cuts the line where its
+%   entries start (`list_marks`), inside the group too, the group closed and opened again on the next entry with its
+%   declarations, the separator between them none of either
+% witness: synthetic (P4b4a sibling probe s6b; the one-line sibling of 2608.21425)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2" over "1 Univ A, 2 Univ B" (italic)
+% engines: int165a: shape (b), the institute "1 Univ A, 2 Univ B" on a nameless creator, W=0
+% expect:  0 errors, 0 warnings; Ann Able "1 Univ A", Bob Baker "2 Univ B"
+% status:  RED (int165a) -> GREEN (P4b4a; guard perfect_kernel_batchc1::queued_marks_read_as_digested)
+\documentclass{llncs}
+\newcommand{\affmark}[1]{\textsuperscript{#1}}
+\begin{document}
+\title{A Title}
+\author{Ann Able\affmark{1} \and Bob Baker\affmark{2}}
+\institute{{\it \affmark{1} Univ A, \affmark{2} Univ B}}
+\maketitle
+Body.
+\end{document}

@@ -1,0 +1,18 @@
+% mechanism: an author block whose digestion moves the footnote counter where its names don't carry it (Bob Baker's
+%   `\stepcounter{footnote}` before his note) is declined by the emitter (`emitter::emit::counter_moved`) and written as
+%   Perl's `\lx@add@authors` splits it (Base_Utility.pool.ltxml:713-719, `fallback::perl_author_calls`), its pieces
+%   digested in order — not merged into one creator (Perl's tabular branch only)
+% witness: 1003.2281 (6→1), cs0404029 (6→1), 2410.22720 (4→1), 1302.3028, 1305.0854, 1510.04579, 1609.02993, 1609.03951,
+%          2004.03371, 2007.01340, 2605.00602 (CR5's footnote-counter decline: 13 of 17 merged)
+% oracle:  pdflatex 0 errors: "Ann Able∗  Bob Baker‡", notes "∗ First." "‡ Work done at X.", "Body1" with "1 Body note."
+% engines: rust int154u: 0 errors, 1 warning, one creator "Ann Able and Bob Baker" holding both notes; perl 0 errors,
+%          two creators (Ann Able: thanks First.; Bob Baker: note Work done at X.)
+% expect:  0 errors, 1 warning (the decline, naming Perl's split); two creators, Ann's thanks note, Bob's note contact
+% status:  RED (int154u) -> GREEN (perfect_kernel_batchcr7::a_counter_decline_writes_the_block_as_perl_splits_it)
+\documentclass{article}
+\title{T}
+\author{Ann Able\thanks{First.} \and Bob Baker\stepcounter{footnote}\footnote{Work done at X.}}
+\begin{document}
+\maketitle
+Body\footnote{Body note.}.
+\end{document}

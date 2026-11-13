@@ -1,0 +1,27 @@
+% floatrow `\floatfoot` in a `\DeclareNewFloatType` float and in a plain `table`: the new type ends with floatrow's own
+% `\float@end` (`\let` to `\endchart` when declared, floatrow.sty:126-127), whose layout sets the foot only beside a filled
+% caption box, which the kernel's caption leaves void; the plain `table` is the kernel's float. Both set the pending foot at
+% their end (floatrow_sty.rs `\lx@flrow@plainfoot`).
+% witness: silent-loss inventory #13 (SYNC 68q review side finding 5)
+% oracle:  pdflatex 0 errors: "Chart body text Chart 1: ChartCap Chart foot." / "Tab body Table 1: TabCap Tab foot."
+% engines: rust 67int28 = "Chart foot." lost (0 errors); "Tab foot." lost before the plain-float hook
+% expect:  0 errors, 0 warnings; each foot in its float, after its caption
+% status:  RED (67int28) -> GREEN (int27)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{floatrow}
+\DeclareNewFloatType{chart}{fileext=loc,name=Chart}
+\begin{document}
+Before.
+\begin{chart}
+\centering Chart body text
+\caption{ChartCap}
+\floatfoot{Chart foot.}
+\end{chart}
+\begin{table}
+\centering Tab body
+\caption{TabCap}
+\floatfoot{Tab foot.}
+\end{table}
+After all.
+\end{document}

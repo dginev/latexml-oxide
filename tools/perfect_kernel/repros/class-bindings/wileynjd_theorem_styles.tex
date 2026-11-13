@@ -1,0 +1,23 @@
+% witness: 1712.08341 (its WileyNJD-v2.cls:2902-2963 `plain` and the WB styles, :3005 `\theoremstyle{WBstylethree}`
+%          left current), 1806.09518, 1807.03475 (theorems of the class's set)
+% oracle:  pdflatex with 1712.08341's WileyNJD-v2.cls: 5 errors before and in \maketitle (etex's \reserveinserts,
+%          the class's \zz option parser: TL 2025 harness limits); "Thm 1. A paper theorem. PThm 1 A plain theorem.
+%          Lemma 1. A class lemma.", all three bodies t1-stixgeneral (upright), PThm's head italic on a line of its own
+% engines: rust 67w = the paper's theorems' bodies italic (the binding ended with an invented `\theoremstyle{plain}`,
+%          amsthm's own `plain`)
+% expect:  0 errors, 0 warnings; the three bodies upright; Thm and Lemma bold run-in heads, PThm an italic head
+% status:  RED (67w) -> GREEN (67w r2)
+% preload: ar5iv.sty
+\documentclass[AMA,STIX1COL]{WileyNJD-v2}
+\newtheorem{thm}{Thm}
+\theoremstyle{plain}
+\newtheorem{pthm}{PThm}
+\begin{document}
+\title{Theorem styles}
+\author{Ann Author}
+\maketitle
+\section{Intro}
+\begin{thm}A paper theorem.\end{thm}
+\begin{pthm}A plain theorem.\end{pthm}
+\begin{lemma}A class lemma.\end{lemma}
+\end{document}

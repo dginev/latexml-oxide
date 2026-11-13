@@ -1,0 +1,19 @@
+% witness: review of 68u (state.rs past_the_lock installed the stub globally); 2006.07968 (apa6, the top-level shape)
+% oracle: pdflatex 1 error ("Undefined control sequence" at the first \cite); "Xa Y[2]" typeset, the second
+%   citation resolved
+% engines: rust 68u r2: 1 error, but the second \cite an ERROR too (the global stub outlived the group); perl: 101
+%   errors + Fatal (KNOWN_PERL_ERRORS #841)
+% expect: 1 error; the second citation a <cite> with its bibref
+% status: RED (68u r2) -> GREEN (68u r3)
+% mechanism: a \let clearing a locked binding inside a group leaves the name undefined only in that group; the
+%   error stub for it (generate_error_stub, state.rs stub_scope) is installed at local scope, so it ends with the
+%   clearing and the binding is back after the group (Perl installs every stub globally, State.pm:553).
+\documentclass{article}
+\begin{document}
+{\let\cite\undefined X\cite{a}} Y\cite{b}
+
+\begin{thebibliography}{9}
+\bibitem{a} Alpha.
+\bibitem{b} Beta.
+\end{thebibliography}
+\end{document}

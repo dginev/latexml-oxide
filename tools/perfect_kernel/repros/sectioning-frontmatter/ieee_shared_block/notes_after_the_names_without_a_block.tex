@@ -1,0 +1,19 @@
+% mechanism: the control of thanks.tex: notes after the names that no `\IEEEauthorblockA` follows are still wrapped
+%   into a block (ieeetran_cls.rs `wrap_bare_author_block_text`), so the block reader reads them: the e-mails of an
+%   address note are its authors' (as a document note they stayed in its text)
+% witness: 0710.2705 (its old `\authorblockN{…}\thanks{…}\thanks{E-mail: \{lins, shahmohm, helgamal\}@ece.osu.edu.}`)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker and Cy Cole" (conference mode locks `\thanks` out: its notes print
+%   nothing; kept, as before and as Perl)
+% engines: rust int131a: each author their own e-mail
+% expect:  0 errors, 0 warnings; each author their own e-mail; the first note the document's thanks
+% status:  CONTROL (GREEN)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able, Bob Baker and Cy Cole}
+\thanks{S. Able is with the University of X.}
+\thanks{E-mail: \{ann, bob, cy\}@x.edu.}}
+\maketitle
+Text.
+\end{document}

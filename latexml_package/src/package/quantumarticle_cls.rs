@@ -5,7 +5,11 @@ LoadDefinitions!({
   // Perl: quantumarticle.cls.ltxml — Quantum Journal
   // See https://github.com/quantum-journal/quantum-journal
 
-  load_class("article", Vec::new(), Tokens!())?;
+  LoadClass!("article");
+  // quantumarticle.cls:282-284 `\RequirePackage[margin=…,bottom=3cm]{geometry}` (2cm or 3cm by column count; the page
+  // setup is not rendered), then `\@blacklistpackage{geometry}`: papers adjust it with `\geometry`/`\newgeometry`
+  // (30 of run 353 with them undefined: 1612.06828, 1701.03135, 1712.01826).
+  RequirePackage!("geometry");
   // quantumarticle.cls:197-205: a REVTeX journal option turns on its REVTeX compatibility. That provides the REVTeX
   // front-matter commands, which it does not print (:1462-1471, at `\begin{document}`, so a document's own stays its
   // own), and the journal abbreviations of REVTeX's `.rtx` files (:1429-1460). What `\pacs` and `\preprint` discard is
@@ -14,6 +18,14 @@ LoadDefinitions!({
   // 1709.01098 (`\pacs`), 2006.05524, 2212.01355 (`\preprint`).
   for option in ["aps", "pra", "prb", "pre", "prl", "prx", "aip"] {
     DeclareOption!(option, { AssignValue!("quantumarticle_revtex_compat" => true); });
+  }
+  // quantumarticle.cls:155-168 the `amsfonts`, `amssymb` (alias `amssymbol`) and `amsmath` options, which load those
+  // packages (:1416-1424); papers given them write `\lesssim`, `\geqslant`, `\varnothing` (31 of run 353 with amssymb's
+  // commands undefined: 1802.10344, 1907.05950, 1909.11817). Perl's binding declares none (KNOWN_PERL_ERRORS #698).
+  for (option, package) in [
+    ("amsfonts", "amsfonts"), ("amssymb", "amssymb"), ("amssymbol", "amssymb"), ("amsmath", "amsmath"),
+  ] {
+    DeclareOption!(option, { AssignValue!(&s!("quantumarticle_load_{package}") => true); });
   }
   ProcessOptions!();
   if lookup_bool("quantumarticle_revtex_compat") {
@@ -57,7 +69,7 @@ LoadDefinitions!({
     // `\bibliography` with no `\bibliographystyle` only names the `.bst` BibTeX runs.
     pass_options("natbib", "sty", vec!["numbers".to_string(), "sort&compress".to_string()])?;
     DefPrimitive!("\\lx@quantumarticle@natbib", {
-      if !lookup_bool("natbib.sty_loaded") && !lookup_bool("biblatex.sty_loaded") {
+      if !package_loaded("natbib") && !package_loaded("biblatex") {
         RequirePackage!("natbib");
       }
     });
@@ -65,13 +77,39 @@ LoadDefinitions!({
 \providecommand\textcite[1]{\citet{#1}}\providecommand\onlinecite[1]{\cite{#1}}}");
   }
 
+  for package in ["amsfonts", "amssymb", "amsmath"] {
+    if lookup_bool(&s!("quantumarticle_load_{package}")) {
+      RequirePackage!(package);
+    }
+  }
+  // quantumarticle.cls:1508-1512 `\PassOptionsToPackage{font={small,sf}}{caption}` and `\AtEndPreamble{\RequirePackage
+  // {caption}}`: `\captionof`, `\captionsetup` (29 of run 353 with them undefined: 1910.03969, 1711.07279,
+  // 1812.02144), loaded at the class's own hook, the end of the preamble: etoolbox's `\AtEndPreamble` is
+  // `\AddToHook{begindocument/before}` (etoolbox.sty:1743, etoolbox_sty.rs), which runs before the `\AtBeginDocument`
+  // code, the hyperref below among it; the caption font is not rendered. etoolbox is the class's own
+  // (quantumarticle.cls:27 `\RequirePackage{etoolbox}`).
+  RequirePackage!("etoolbox");
+  DefPrimitive!("\\lx@quantumarticle@caption", {
+    if !package_loaded("caption") {
+      RequirePackage!("caption");
+    }
+  });
+  RawTeX!(r"\AtEndPreamble{\lx@quantumarticle@caption}");
   // quantumarticle.cls:1392-1394: hyperref, loaded at `\begin{document}` (after the compatibility's natbib).
   DefPrimitive!("\\lx@quantumarticle@hyperref", {
-    if !lookup_bool("hyperref.sty_loaded") {
+    if !package_loaded("hyperref") {
       RequirePackage!("hyperref");
     }
   });
   RawTeX!(r"\AtBeginDocument{\lx@quantumarticle@hyperref}");
+  // :1396-1400, after it: with natbib (and no doi package) the class's `\doi` — a link to doi.org showing "DOI: <doi>",
+  // the DOI `\detokenize`d. Before, the `.bbl`'s fallback `\def\doi#1{\burlalt{doi:#1}…}` (its `\ifx\csname
+  // doi\endcsname\relax`) typeset `10.1007/978-3-540-27821-4_23`, a math error (1902.03164). The shown DOI is in the
+  // identity encoding (`\lx@address@textfont`): an address is the author's, not the accident of the OT1 font, which prints
+  // its `_` as a dot accent (user ruling 2026-10-11).
+  RawTeX!(
+    r"\AtBeginDocument{\@ifpackageloaded{natbib}{\@ifpackageloaded{doi}{}{\providecommand{\doi}[1]{}\renewcommand{\doi}[1]{\href{https://doi.org/\detokenize{#1}}{DOI: \lx@address@textfont{\detokenize{#1}}}}}}{}}"
+  );
   RequirePackage!("bbm");
   // Pre-load with [dvipsnames, table] so user xcolor calls don't
   // silently option-clash. Quantum papers commonly use \cellcolor.
@@ -91,13 +129,13 @@ LoadDefinitions!({
   // The optional arguments here are a sort of prefix to the footnote (NOT label!)
   // quantumarticle.cls:1220-1225 `\href{mailto:#2}{#2}`, `\href{#2}{#2}`: in the current font (no corpus `_`
   // witness)
-  DefMacro!("\\email[] Semiverbatim",    "\\lx@add@contact[role=email,name={#1}]{\\lx@address@textfont{#2}}");
-  DefMacro!("\\homepage[] Semiverbatim", "\\lx@add@contact[role=url,name={#1}]{\\lx@address@textfont{#2}}");
-  DefMacro!("\\thanks[]{}",              "\\lx@add@contact[role=thanks,name={#1}]{#2}");
+  DefMacro!("\\email[Default:\\lx@contact@email@name] Semiverbatim",    "\\lx@add@contact[role=email,name={#1}]{\\lx@address@textfont{#2}}");
+  DefMacro!("\\homepage[Default:\\lx@contact@url@name] Semiverbatim", "\\lx@add@contact[role=url,name={#1}]{\\lx@address@textfont{#2}}");
+  DefMacro!("\\thanks[Default:\\lx@contact@thanks@name]{}",              "\\lx@add@contact[role=thanks,name={#1}]{#2}");
   DefMacro!("\\orcid[]{}",               "\\lx@add@orcid[name={#1}]{#2}");
 
   DefMacro!("\\collaboration{}",    "\\author{#1}");
-  DefMacro!("\\altaffiliation[]{}", "\\lx@add@contact[annotate=new,role=affiliation,name={#1}]{#2}");
+  DefMacro!("\\altaffiliation[Default:\\lx@contact@affiliation@name]{}", "\\lx@add@contact[annotate=new,role=affiliation,name={#1}]{#2}");
 
   RawTeX!("\\DeclareRobustCommand\\openone{\\mathbbm{1}}");
   RawTeX!("\\definecolor{quantumviolet}{HTML}{53257F}");

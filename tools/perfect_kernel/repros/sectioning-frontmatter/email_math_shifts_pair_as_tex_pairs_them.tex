@@ -1,0 +1,27 @@
+% mechanism: the API's e-mail/URL reading prints a formula of glyphs as TeX prints it (`contacts::address_as_printed`,
+%   OXIDIZED_DESIGN_DIVERGENCES #972); its math shifts pair left to right, as TeX pairs them: a pair that is not glyphs
+%   (`$^a$`, a script) stays as read, whole, and the next pair opens after its closing shift (`math_glyphs_as_printed`,
+%   `math_braces_as_printed`). A character command in math prints its character (`$\{a,b\}$`, `$\_$`: `text_glyph`).
+% witness: 2508.20055 (`\email{Correspondence: ej$_$dresselhaus@berkeley.edu, s$_$g@berkeley.edu, …}`, revtex4-2);
+%          review revCR4 findings 1 and 4 (probe m1)
+% oracle:  pdflatex 0 errors: "Email address: a ann@x.edu, b bob@y.edu" / "∗ bob∼b@z.edu" / "p_r@w.edu"
+% engines: int154w: "$^*$bob$" ∼ "$b@z.edu" (the tilde's formula kept its dollars), "p$_$r@w.edu";
+%          CR4: "$^aann@x.edu,^b$bob@y.edu" (the second pair opened at the first's closing shift, 2 Warnings)
+% expect:  0 errors, 0 warnings; Ann Able "$^a$ann@x.edu, $^b$bob@y.edu" (marks kept as read); Bob Baker
+%          "$^*$bob∼b@z.edu"; Carl Cole p_r@w.edu. (`$\{a,b\}$@w.edu` prints "{a,b}@w.edu" too, the brace list, each
+%          address — unit test math_shifts_pair_left_to_right; amsart's list split warns on it as on `\{a,b\}@w.edu`,
+%          pre-existing)
+% status:  RED (CR4) -> GREEN (CR4b; guard perfect_kernel_batchcr4b::email_math_shifts_pair_as_tex_pairs_them)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\email{$^a$ann@x.edu, $^b$bob@y.edu}
+\author{Bob Baker}
+\email{$^*$bob$\sim$b@z.edu}
+\author{Carl Cole}
+\email{p$\_$r@w.edu}
+\maketitle
+Body.
+\end{document}

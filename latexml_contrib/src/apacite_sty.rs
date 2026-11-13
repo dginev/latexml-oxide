@@ -14,7 +14,31 @@
 //! Perl ships no apacite binding: its default run leaves every macro undefined, and
 //! `--includestyles` raw-loads apacite.sty, whose own `\cite`, `\@lbibitem` and
 //! `\thebibliography` (apacite.sty:259-470, 1152-1242) leave every citation unresolved.
-use latexml_package::prelude::*;
+use latexml_package::{package::natbib_sty::natbib_invocation, prelude::*};
+
+/// An apacite citation form `\<form> [pre] <pre> [post] {keys}` (the signature below) as the natbib command `cs` over the
+/// notes as read: a `[post]` given goes on with the pre-note before it (`[pre][post]`); a `<pre>` alone is the pre-note
+/// before an empty post-note (`[pre][]`); a lone `[note]` stays a lone one, which natbib reads as the post-note
+/// (apacite's `\@cite<>[note]`, apacite.sty:313-327). Both pre-note slots given (`[a]<b>`, no spelling of either
+/// package) are joined.
+fn apacite_delegate(cs: &str, args: Vec<ArgWrap>) -> Result<Tokens> {
+  let mut it = args.into_iter();
+  let bracket_pre: Option<Tokens> = it.next().unwrap().into();
+  let angled_pre: Option<Tokens> = it.next().unwrap().into();
+  let post: Option<Tokens> = it.next().unwrap().into();
+  let keys: Tokens = it.next().unwrap().into();
+  let angled = angled_pre.is_some();
+  let pre = match (bracket_pre, angled_pre) {
+    (Some(a), Some(b)) => Some(Tokens::new([a.unlist(), b.unlist()].concat())),
+    (a, b) => a.or(b),
+  };
+  let post = if angled {
+    Some(post.unwrap_or_default())
+  } else {
+    post
+  };
+  Ok(natbib_invocation(cs, None, pre, post, keys))
+}
 
 LoadDefinitions!({
   RequirePackage!("natbib");
@@ -96,9 +120,16 @@ LoadDefinitions!({
   }{}%
 }"
   );
-  // Options (apacite.sty:128-180, defaults :181-182 `\ExecuteOptions{…,doi,…}` above): `nodoi`
-  // (:134-135) drops the DOIs `{APACrefDOI}` holds; the others choose layout, the author index
-  // and cite forms this binding does not build.
+  // Options (apacite.sty:67-180, defaults :181-182 `\ExecuteOptions{apaciteclassic,…,doi,…}` above): `nodoi`
+  // (:134-135) drops the DOIs `{APACrefDOI}` holds; the citation mode — `apaciteclassic` (the default), `natbibemu`,
+  // `natbibapa`, `nocitation` (:71-110, each clearing the others' flags) — chooses which `\cite` the package defines
+  // (below); the others choose layout and the author index, which this binding does not build.
+  AssignValue!("apacite@citation" => "apaciteclassic");
+  for mode in ["apaciteclassic", "natbibemu", "natbibapa", "nocitation"] {
+    DeclareOption!(mode, {
+      AssignValue!("apacite@citation" => mode);
+    });
+  }
   DeclareOption!("doi", r"\@doitrue");
   DeclareOption!("nodoi", r"\@doifalse");
   DeclareOption!(None, {});
@@ -577,34 +608,45 @@ LoadDefinitions!({
   // both spellings with one prototype: natbib's `[pre][post]` can only ever
   // match `[pre1]…[post]` (the angled slot peeks, sees `[`, and yields nothing),
   // and apacite's `<pre>[post]` can only ever match `OptionalAngled [post]`
-  // (the `[pre1]` slot peeks, sees `<`, and yields nothing). The two pre-note
-  // slots are therefore mutually exclusive, so `[#1#2]` simply concatenates
-  // whichever one fired — no conditional needed. `\citeA[a][b]{k}` /
-  // `\citeA[a]{k}` keep emitting exactly what they did before this change.
-  DefMacro!(
-    "\\citeA [] OptionalAngled [] Semiverbatim",
-    "\\citet[#1#2][#3]{#4}"
-  );
-  DefMacro!(
-    "\\citeNP [] OptionalAngled [] Semiverbatim",
-    "\\citealp[#1#2][#3]{#4}"
-  );
-  DefMacro!(
-    "\\citeyearNP [] OptionalAngled [] Semiverbatim",
-    "\\citeyear[#1#2][#3]{#4}"
-  );
+  // (the `[pre1]` slot peeks, sees `<`, and yields nothing). The notes go on to
+  // natbib as read (`apacite_delegate`): an absent post-note stays absent, so
+  // `\cite[p.~5]{k}` is the post-note natbib's swap makes of a lone `[…]` (apacite's
+  // `\@cite<>[p.~5]`, apacite.sty:313-327, "(Smith, 2001, p. 5)"), and a `<pre>` alone
+  // is a pre-note before an empty post-note. 2002.00730, 2005.00039.
+  DefMacro!("\\citeA [] OptionalAngled [] Semiverbatim", sub[args] {
+    apacite_delegate("\\citet", args)
+  });
+  DefMacro!("\\citeNP [] OptionalAngled [] Semiverbatim", sub[args] {
+    apacite_delegate("\\citealp", args)
+  });
+  DefMacro!("\\citeyearNP [] OptionalAngled [] Semiverbatim", sub[args] {
+    apacite_delegate("\\citeyear", args)
+  });
 
-  // `\cite` keeps natbib's meaning on the no-`<` path (apacite's `\cite` is
-  // parenthetical, but re-pointing it at `\citep` would change rendering for
-  // every apacite paper — out of scope here); it only gains the pre-note form.
-  // Re-emitting `[#1#2][#3]` is behaviour-preserving for the bracket spellings:
-  // natbib's `swap_pre_post` keys off a NON-EMPTY post, so `\cite[a]{k}` →
-  // `[a][]` still swaps to post=a exactly as the bare `\cite[a]{k}` does.
-  Let!("\\lx@apac@core@cite", "\\cite");
-  DefMacro!(
-    "\\cite [] OptionalAngled [] Semiverbatim",
-    "\\lx@apac@core@cite[#1#2][#3]{#4}"
-  );
+  // apacite's `\cite` by citation mode (apacite.sty:71-110). The classic one (`\if@APAC@classic@cite`, :258-267
+  // `\def\@BBOP{\BBOP}`, its open parenthesis) is parenthetical with or without notes: natbib's `\cite` in its
+  // parenthetical form, which keeps the `cite` class of the macro the author wrote (natbib_sty.rs
+  // `\lx@natbib@cite@parenthetical`; natbib's own `\cite{k}` is textual in author-year mode).
+  // OXIDIZED_DESIGN_DIVERGENCES #655. `natbibemu` (:587, :883-892) sends `\cite` to `\citep` when a `[` follows and to
+  // `\citet` otherwise (starred alike); `natbibapa` (:995-1037) and `nocitation` define no `\cite`, so natbib's own
+  // stays (textual without notes, natbib.sty:694-701) — the `[natbibapa]{apacite}` of WileyASNA-v1.cls:2120, the
+  // Wiley NJD classes and sn-jnl.cls's `sn-apa` (L1683-1685). Witnesses 2307.11525, 2406.19732.
+  let mode = lookup_string("apacite@citation");
+  if mode == "apaciteclassic" {
+    DefMacro!("\\cite [] OptionalAngled [] Semiverbatim", sub[args] {
+      apacite_delegate("\\lx@natbib@cite@parenthetical", args)
+    });
+  } else if mode == "natbibemu" {
+    DefMacro!("\\cite OptionalMatch:* [][] Semiverbatim", sub[args] {
+      let mut it = args.into_iter();
+      let star: Option<Tokens> = it.next().unwrap().into();
+      let pre: Option<Tokens> = it.next().unwrap().into();
+      let post: Option<Tokens> = it.next().unwrap().into();
+      let keys: Tokens = it.next().unwrap().into();
+      let cs = if pre.is_some() { "\\citep" } else { "\\citet" };
+      Ok(natbib_invocation(cs, star, pre, post, keys))
+    });
+  }
   // apacite "short" cite family (apacite.sty L277-401, the CLASSIC block —
   // distinct from the `\citet`/`\citep` defined only under the `natbibemu`
   // option at L587+). These are abbreviated-author variants of
@@ -616,13 +658,21 @@ LoadDefinitions!({
   //   \shortciteNP     — no parentheses         → \citealp
   //   \shortciteauthor — author-only            → \citeauthor
   // Witness 1606.03620 (`\shortciteNP`, via apacdoc's `\DSMshortciteNP`).
-  DefMacro!("\\shortcite[][] Semiverbatim", "\\citep[#1][#2]{#3}");
-  DefMacro!("\\shortciteA[][] Semiverbatim", "\\citet[#1][#2]{#3}");
-  DefMacro!("\\shortciteNP[][] Semiverbatim", "\\citealp[#1][#2]{#3}");
-  DefMacro!(
-    "\\shortciteauthor[][] Semiverbatim",
-    "\\citeauthor[#1][#2]{#3}"
-  );
+  // They take the `<pre-note>` as every classic cite form does (apacite.sty:277-283, :304-310, :342-347, :380-401
+  // `\@ifnextchar<`), with `\cite`'s signature above: 1805.05444's `\let\cite\shortcite` then
+  // `\cite<e.g.>[]{Rigden_2017}` took `<` as the key and typeset `e.g.>[]{Rigden_2017}`, a math error.
+  DefMacro!("\\shortcite [] OptionalAngled [] Semiverbatim", sub[args] {
+    apacite_delegate("\\citep", args)
+  });
+  DefMacro!("\\shortciteA [] OptionalAngled [] Semiverbatim", sub[args] {
+    apacite_delegate("\\citet", args)
+  });
+  DefMacro!("\\shortciteNP [] OptionalAngled [] Semiverbatim", sub[args] {
+    apacite_delegate("\\citealp", args)
+  });
+  DefMacro!("\\shortciteauthor [] OptionalAngled [] Semiverbatim", sub[args] {
+    apacite_delegate("\\citeauthor", args)
+  });
 
   // Old-format compat macros (pre-2012 apacite.bst): the `\bibitem` label uses
   // `\BCAY{full}{short}{year}` and authors are separated with `\BBACOMMA`. Single binding, both

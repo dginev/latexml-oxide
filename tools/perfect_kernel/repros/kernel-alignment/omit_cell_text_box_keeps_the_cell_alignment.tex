@@ -1,0 +1,23 @@
+% witness: re-review of 68z round 2 (probes q2, q3); 2306.14299 (`\omit{\hfill $…$}` in aligned/split, carried)
+% oracle:  pdflatex 0 errors; y_2 and y_5 flush right in their column, y_3 and C4 centered (the \multispan over two
+%          columns), y_6 flush right and y_7 centered in the aligned
+% expect:  0 errors; the \omit cell's text box (tex.web §789) keeps the cell's fill glue outside it, so the cell's
+%          alignment is read from its \hfil/\hfill as from an unboxed cell: right, center, center, right; right, center
+% status:  GREEN (batch 68z round 3, perfect_kernel_batch68z::an_omit_cell_text_box_keeps_the_cell_alignment); 68z
+%          round 2 hid the fills in the box and set every such cell left
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\[\begin{array}{lll}
+aaaaaaaaaa1 & bbbbbbbbbbbbbbbbbb1 & c1 \\
+a2 & \omit\hfill $y_2$ R & c2 \\
+a3 & \omit\hfil $y_3$ C\hfil & c3 \\
+a4 & \multispan2\hfil $y_4$ C4\hfil \\
+a5 & \omit{\hfill $y_5$} & c5
+\end{array}\]
+\begin{equation}\begin{aligned}
+aaaaaaaa &= bbbbbbbbbbbbbbbbbbbbbbbbb \\
+a6 & \omit\hfill $=y_6$ R6 \\
+a7 & \omit\hfil $=y_7$ C7\hfil
+\end{aligned}\end{equation}
+\end{document}

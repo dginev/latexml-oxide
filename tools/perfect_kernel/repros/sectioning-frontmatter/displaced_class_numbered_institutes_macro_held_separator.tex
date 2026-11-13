@@ -1,0 +1,34 @@
+% mechanism: a raw class's displaced `\institute` store (`\gdef\@institute{\it #1}`, OD #955) whose title page numbers
+%   its `\and` entries (caosp.sty:519-527's `\institutename`) under an `\and` a document macro holds
+%   (`\newcommand\nx{\and}`): `displaced_entries` asks `class_numbered_institutes` with no spelled `\and` gate, which cuts
+%   the entries by the separator's meaning (Option C P4d), entry n labelled n. With the gate the store stayed the
+%   class's text: two body paragraphs, no author holding an institute.
+% witness: synthetic (P4d; the route of astro-ph9805069)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 , Bob Baker2 and Cy Cole1,2", "1Univ A, Town",
+%          "2Univ B, City"
+% engines: F0: the authors no contact, "Univ A, Town" and "Univ B, City" body paragraphs, 0 W; P4d: below;
+%          perl: no raw class load
+% expect:  0 errors, 0 warnings; Ann Able "1 Univ A, Town", Bob Baker "2 Univ B, City", Cy Cole both (as the written
+%          `\and`'s twin, displaced_class_numbered_and_institutes_go_by_their_numbers)
+% status:  RED (F0) -> GREEN (P4d; guard perfect_kernel_batchc1::class_numbered_institutes_read_by_meaning)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{cainst.cls}
+\ProvidesClass{cainst}\LoadClass{article}
+\newcounter{@inst}
+\def\inst#1{\unskip$^{#1}$}
+\def\institute#1{\gdef\@institute{\it #1}}
+\def\institutename{\par\begingroup\parindent=0pt\setcounter{@inst}{1}%
+  \def\and{\par\stepcounter{@inst}\noindent$^{\the@inst}$\enspace\ignorespaces}%
+  \noindent$^{1}$\enspace\ignorespaces\@institute\par\endgroup}
+\def\@maketitle{\begin{center}{\LARGE\@title\par}\vskip1em{\large\@author\par}\end{center}
+  {\small\institutename}\vskip1em}
+\end{filecontents*}
+\documentclass{cainst}
+\newcommand\nx{\and}
+\begin{document}
+\title{A Title}
+\author{Ann Able\inst{1}, Bob Baker\inst{2} and Cy Cole\inst{1,2}}
+\institute{Univ A, Town \nx Univ B, City}
+\maketitle
+Text.
+\end{document}

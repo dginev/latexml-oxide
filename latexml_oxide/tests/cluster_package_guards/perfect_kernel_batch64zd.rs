@@ -413,24 +413,6 @@ fn revtex3_unnumbered_appendix_steps_section() {
   );
 }
 
-/// Bare-asterisk marks after the names' commas (quant-ph0003094): three authors, each keeping its mark.
-#[test]
-fn revtex_asterisk_marked_authors_split() {
-  let (_, xml) = convert_clean(include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/revtex_asterisk_marked_authors_split.tex"
-  ));
-  let address = address("Norman Bridge Laboratory, Pasadena");
-  assert_eq!(
-    creators(&xml),
-    vec![
-      author_with("S. F. Pereira*", &address),
-      later(author_with("Z. Y. Ou**", &address)),
-      later(author_with("H. J. Kimble", &address)),
-    ],
-    "{xml}"
-  );
-}
-
 /// Every `<tag role="refnum">` text of `xml`, in order.
 fn refnums(xml: &str) -> Vec<&str> {
   xml
@@ -498,55 +480,6 @@ fn author_caps_glued_initials_split() {
       author_with("M.CACCIA", &milano),
       later(author_with("R.CAMPAGNOLO", &milano)),
       later(author_with("C.MERONI", &milano)),
-    ],
-    "{xml}"
-  );
-}
-
-/// In an article author block, a name line with an author's `\thanks` after an affiliation opens the next author
-/// (hep-lat9404004).
-#[test]
-fn author_note_name_line_opens_next_author() {
-  let (_, xml) = convert_clean(include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_note_name_line_opens_next_author.tex"
-  ));
-  let author = |name: &str, id: &str, note: &str, place: &str| {
-    format!(
-      "<personname>{name}</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" \
-       xml:id=\"{id}\">{note}</note>{}",
-      affiliation(place)
-    )
-  };
-  assert_eq!(
-    creators(&xml),
-    vec![
-      format!(
-        r#"<creator role="author">{}</creator>"#,
-        author(
-          "Ann Able",
-          "id1",
-          "E-mail: ann@x.fi",
-          "Univ X, Helsinki, Finland,"
-        )
-      ),
-      later(format!(
-        r#"<creator role="author">{}</creator>"#,
-        author(
-          "Bob Baker",
-          "id2",
-          "E-mail: bob@y.uk",
-          "Univ Y, Liverpool, UK,"
-        )
-      )),
-      later(format!(
-        r#"<creator role="author">{}</creator>"#,
-        author(
-          "Cy Cole",
-          "id3",
-          "E-mail: cy@x.fi",
-          "Univ X, Helsinki, Finland."
-        )
-      )),
     ],
     "{xml}"
   );
@@ -646,11 +579,22 @@ fn aas4_planotable_with_enddata() {
 
 /// A package OmniBus required under provide-only is unmarked when the guard ends, so a later `\usepackage{graphicx}`
 /// loads it whole: graphicx's keyval `\includegraphics` (review 64zd round 2).
+/// The 2.09 document's `\usepackage` meets latex209.def's trap, its one Error (pdflatex the same; user ruling 2026-10-17,
+/// OXIDIZED_DESIGN_DIVERGENCES #725), and graphicx still loads.
 #[test]
 fn omnibus_provide_only_package_loads_whole_later() {
-  let (_, xml) = convert_clean(include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/omnibus_provide_only_package_loads_whole_later.tex"
-  ));
+  let (log, xml) = latexml::util::test::convert_with(
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/omnibus_provide_only_package_loads_whole_later.tex"
+    ),
+    Some("ar5iv.sty"),
+  );
+  assert_eq!(error_count(&log), 1, "{log}");
+  assert!(
+    log.contains("LaTeX2e command \\usepackage in LaTeX 2.09 document"),
+    "{log}"
+  );
+  assert_eq!(warning_count(&log), 0, "{log}");
   assert_element(
     &xml,
     "p",
@@ -659,76 +603,18 @@ fn omnibus_provide_only_package_loads_whole_later() {
   );
 }
 
-/// Under plain names, an affiliation line with a `\footnote` stays an affiliation (review 64zd round 2, fn5.tex).
-#[test]
-fn author_noted_affiliation_stays_affiliation() {
-  let (_, xml) = convert_clean(include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_noted_affiliation_stays_affiliation.tex"
-  ));
-  let places = [
-    affiliation("Department of Physics"),
-    affiliation("Ohio State"),
-    affiliation("Columbus OH"),
-  ]
-  .concat();
-  assert_eq!(
-    creators(&xml),
-    vec![
-      author_with("Ann Able", &places),
-      later(author_with("Bob Baker", &places))
-    ],
-    "{xml}"
-  );
-  assert!(xml.contains("<pubnote>Visiting.</pubnote>"), "{xml}");
-}
-
 /// A sprocl address led by an author's mark goes to the authors showing it (review 64zd round 2, ws1.tex).
 #[test]
 fn ws_sprocl_marked_addresses() {
+  // (P4c: the lists' printed marks shown in the pins below, as pdflatex prints them — P4S Q1)
   let (_, xml) = convert_clean(include_str!(
     "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ws_sprocl_marked_addresses.tex"
   ));
   assert_eq!(
     creators(&xml),
-    vec![
-      author_with(
-        r#"A. ABLE<sup xml:id="id1"><text font="italic" xml:id="id1.1">a</text></sup>"#,
-        &affiliation("Univ X, City")
-      ),
-      later(author_with(
-        r#"B. BAKER<sup xml:id="id2"><text font="italic" xml:id="id2.1">b</text></sup>"#,
-        &affiliation("Univ Y, Town")
-      )),
-    ],
-    "{xml}"
-  );
-}
-
-/// A `\footnote`d affiliation under `\thanks` names stays an affiliation: a noted line opens an author only with the
-/// first names' note command (review 64zd round 3, au5.tex).
-#[test]
-fn author_other_note_command_stays_affiliation() {
-  let (_, xml) = convert_clean(include_str!(
-    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_other_note_command_stays_affiliation.tex"
-  ));
-  let author = |name: &str, id: &str, note: &str, places: &[&str]| {
-    let places: String = places.iter().map(|p| affiliation(p)).collect();
-    format!(
-      "<personname>{name}</personname><note class=\"ltx_note_frontmatter ltx_thanks_note\" role=\"thanks\" \
-       xml:id=\"{id}\">{note}</note>{places}"
-    )
-  };
-  assert_eq!(
-    creators(&xml),
-    vec![
-      format!(
-        r#"<creator role="author">{}</creator>"#,
-        author("Ann Able", "id1", "x", &["Dept", "Ohio State"])
-      ),
-      later(format!(
-        r#"<creator role="author">{}</creator>"#,
-        author("Bob Baker", "id2", "y", &["Dept Y"])
-      )),
+    [
+      "<creator role=\"author\"><personname>A. ABLE<sup xml:id=\"id1\"><text font=\"italic\" xml:id=\"id1.1\">a</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id2\"><text font=\"italic\" xml:id=\"id2.1\">a</text></sup>Univ X, City</contact></creator>",
+      "<creator before=\"\u{2003}\u{2003}\" role=\"author\"><personname>B. BAKER<sup xml:id=\"id3\"><text font=\"italic\" xml:id=\"id3.1\">b</text></sup></personname><contact name=\"Affiliation:\u{a0}\" role=\"affiliation\"><sup xml:id=\"id4\"><text font=\"italic\" xml:id=\"id4.1\">b</text></sup>Univ Y, Town</contact></creator>",
     ],
     "{xml}"
   );

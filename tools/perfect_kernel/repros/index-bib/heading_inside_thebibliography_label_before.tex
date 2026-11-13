@@ -1,0 +1,19 @@
+% mechanism: a `\label` before the heading inside `{thebibliography}` makes no box (the kernel's `alignmentSkippable`
+%   whatsit, latex_constructs.pool.ltxml:3782-3792): the bibliography interrupted by the heading still holds nothing
+%   (sect11.rs `carries_nothing`), so it is pruned and the one bibliography keeps `bib`/`bib.bibN`, with the label.
+% witness: re-review 68w r3 probe h2_label (the B1 shape of 1702.06834, 2402.15720 with a `\label`)
+% oracle:  pdflatex 0 errors: "See [1, 2]." and one list "References" holding [1], [2]
+% engines: rust 68w r3: `biba`/`biba.bib1` (the empty first bibliography counted the label as content)
+% expect:  0 errors, 0 warnings; one bibliography `bib` with `labels="LABEL:refs"`, entries `bib.bib1`, `bib.bib2`
+% status:  FIXED (int17)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+See \cite{a,b}.
+\begin{thebibliography}{99}
+\label{refs}
+\section*{References}
+\bibitem{a} A. Author, J. 1.
+\bibitem{b} B. Author, J. 2.
+\end{thebibliography}
+\end{document}

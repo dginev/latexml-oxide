@@ -1,0 +1,21 @@
+% mechanism: the emitter's key lists (`emitter::emit::key_tokens`) write what the reading wrote back into a key value — a
+%   label, a legend's mark, a name — as characters: `mark={#}` of `\textsuperscript{\#}Corresponding author.` was a
+%   parameter token in the digested value
+% witness: 2607.18332 (=2: 1 x misdefined:# after the KV 'mark' Info)
+% oracle:  pdflatex 0 errors; "Ann Able1,* , Bob Baker2,#", the legend "*Equal contribution. #Corresponding author."
+% engines: rust =2 (int153x): 1 error; rust off (int153x): 0
+% expect:  0 errors, 0 warnings, off and =2; the legend's note carries mark="#"
+% status:  RED (int153x) -> GREEN (perfect_kernel_batchne3::a_legends_mark_is_written_as_characters)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{
+Ann Able\textsuperscript{1,*},
+Bob Baker\textsuperscript{2,\#}\\[0.5em]
+\textsuperscript{1}Univ A, City A\\
+\textsuperscript{2}Univ B, City B\\[0.5em]
+\textsuperscript{*}Equal contribution. \textsuperscript{\#}Corresponding author.
+}
+\maketitle
+Text.
+\end{document}

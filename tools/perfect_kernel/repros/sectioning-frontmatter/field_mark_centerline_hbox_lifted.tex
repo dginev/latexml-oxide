@@ -1,0 +1,19 @@
+% 1605.00182's title print (npQuantIIIv3.tex:66-67, its own `\@makepapertitle`): `\centerline{\Large\bf{\noindent
+% \@title}}` in an `\hbox to\textwidth` inside `{center}`. The print fills its line but for the line's own break
+% (`\centerline`), which goes with it: the marks lift it (`\lx@field@mark`, OXIDIZED_DESIGN #715).
+% status:  RED (fms1 round 1: the trailing `<break>` counted as the line's content, the marks left the print to the
+%          text-matching dedup, Info `title_ink_dedup`) → GREEN (fms1: Info `field_ink`, no `title_ink_dedup`).
+% oracle:  pdflatex 0 errors: "Centerline Title", "1 Intro Text."
+% expect:  0 errors, 0 warnings; "Centerline Title" only in `<title>`; nothing left of the line.
+\documentclass{article}
+\makeatletter
+\title{Centerline Title}
+\begin{document}
+\begin{center}%
+{\hskip -0\textwidth \hbox to 1\textwidth%
+{\centerline{\Large\bf{\noindent\@title}}}}%
+\vskip 2em%
+\end{center}
+\section{Intro}
+Text.
+\end{document}

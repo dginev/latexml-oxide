@@ -1,0 +1,21 @@
+% mechanism: OSA's `\author` given a name through a document macro taking arguments (`\nm{Bob}{Smith}` = `#1 #2`): the
+%   creator's name is written "BobSmith", the space the expansion prints lost; the placed `\email` is Bob Smith's by
+%   spelling since P5c (the rehearsal reads "Bob Smith")
+% witness: synthetic (P5c sibling sweep)
+% oracle:  pdflatex (opex3.sty of 0901.2914 beside it) 0 errors: "Bob Smith" "Univ Y", "Ann Able" "Univ X" "smith@x.org"
+% engines: rust P5cbase = personname "BobSmith", smith@ Ann Able's; P5c = personname "BobSmith", smith@ his
+% expect:  0 errors, 0 warnings; personname "Bob Smith" with smith@x.org
+% status:  RED (P5cbase, P5c)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{opex3}
+\newcommand\nm[2]{#1 #2}
+\begin{document}
+\title{T}
+\author{\nm{Bob}{Smith}}\address{Univ Y}
+\author{Ann Able}\address{Univ X}
+\email{smith@x.org}
+\begin{abstract}A.\end{abstract}
+Text.
+\end{document}

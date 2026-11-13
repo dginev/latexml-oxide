@@ -1,0 +1,18 @@
+% mechanism: a piece that is a macro printing a link alone is no person: the argument stays one name, the merge counted (`holds_a_macro_printing_a_link`)
+% witness: 2601.07891 (`\githubrepo`)
+% oracle:  pdflatex: 0 errors; "Ann Able Bob Baker", a line with the link
+% engines: rust 108a r2: E0, the link a creator and an affiliation of both
+% expect:  1 Error (merged_creators), one creator, every word kept
+% status:  RED (108a r2) -> GREEN (108a r3)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\usepackage{xspace}
+\usepackage{hyperref}
+\newcommand{\repolink}{\href{https://github.com/x/press}{X/press}\xspace}
+\begin{document}
+\title{T}
+\author{Ann Able\textsuperscript{*} Bob Baker\\ \begin{center} \href{https://x.org/kv}{X/KV}\quad \repolink \end{center}}
+\maketitle
+Text.
+\end{document}

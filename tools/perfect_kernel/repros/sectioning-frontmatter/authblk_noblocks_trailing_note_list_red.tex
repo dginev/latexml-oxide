@@ -1,0 +1,20 @@
+% authblk[noblocks]: one `\author` list split at its `\qquad`s, the names' own marks requesting the `\affil` pieces, and
+% authblk's own note (`\AB@authnote{\AB@note}`, "1", authblk.sty:114-145) printed once, after the LAST name: ours gives
+% the "1" to every name of the list (Ann One's printed "2" lost, a "1" invented), and the `\affil`'s unmarked first piece
+% (labelled "1" by `\AB@affilnote`) goes to a nameless creator instead of the "1" carrier
+% witness: 2312.00656 (with flexisym; the same without); twin rows `queue_marks_authblk_noblocks_list`,
+%   `queue_marks_flexisym_authblk_noblocks_list`
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann One2 Bob Two1 / 1First Univ 2Second Univ"
+% engines: int162a and FMK1 alike: Ann One 1 (Second Univ) / Bob Two 1 (none) / a nameless creator (First Univ)
+% expect:  0 errors, 0 warnings; Ann One 2 (Second Univ) / Bob Two 1 (First Univ)
+% status: RED (pre-existing; the authblk list's trailing note, not the marks reading)
+% moves: post-merge (reach unmeasured; FMK1 report)
+\documentclass{article}
+\usepackage[noblocks]{authblk}
+\title{T}
+\author{Ann One$^{2}$ \qquad Bob Two}
+\affil{First Univ \qquad $^2$Second Univ}
+\begin{document}
+\maketitle
+Text.
+\end{document}

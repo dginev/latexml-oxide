@@ -3,6 +3,8 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
+  // optica-article.cls loads amsmath through newtxmath (:40 `\RequirePackage{newtxtext,newtxmath}`, every copy of a 1/20
+  // arXiv sample; newtxmath.sty requires amsmath).
   RequirePackage!("amsmath");
   RequirePackage!("amsthm");
   // No eager plain xcolor (Perl parity: a later document xcolor[table] would be a no-op, so colortbl/array never load;

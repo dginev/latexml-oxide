@@ -1,0 +1,15 @@
+% mechanism: a contact line holding an in-word mark (`NLP$^{3}$CT`) and formula prescripts the names request (`${\rm ^1Dept}$`): the labels 1 and 2 are lost, the line every author's (1 W)
+% witness: synthetic (revISO1c P2 probe g2)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2 / NLP3CT Lab, 1Dept X, 3He Center, 2Lab Y"
+% engines: rust 9d38af1d10 = P4c: 0 E, 1 W; both authors "NLP3CT Lab, Dept X, 3He Center, Lab Y"
+% expect:  0 errors; the line as printed, its 1 and 2 kept
+% status:  RED (9d38af1d10, P4c)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$\\ NLP$^{3}$CT Lab, ${\rm ^1Dept}$ X, ${\rm ^{3}He}$ Center, ${\rm ^2Lab}$ Y}
+\maketitle
+Text.
+\end{document}

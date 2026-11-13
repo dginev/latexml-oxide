@@ -1,0 +1,14 @@
+% witness: 2605.13185 (macros.tex:53,79; url loaded by orcidlink -> hyperref)
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; $\path v\in W$ is the user's \rho
+% mechanism: url.sty:204-205 declares \path only if undefined; ours (and Perl url.sty.ltxml:85, KPE #644) replaced the
+%   document's \path with the url command: "Missing $ inserted". Fixed: url_sty.rs defines \path only if undefined.
+% status:  GREEN
+\documentclass{article}
+\newcommand{\path}{\rho}
+\usepackage{url}
+\begin{document}
+A path $\path v\in W$ ends here.
+
+Next paragraph.
+\end{document}

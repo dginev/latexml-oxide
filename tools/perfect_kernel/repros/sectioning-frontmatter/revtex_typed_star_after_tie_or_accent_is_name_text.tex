@@ -1,0 +1,21 @@
+% mechanism: CST2: a mark character typed straight into a name (`A.~Smith*`, `Jos\'e Jones*`) is the name's text, read
+%   past the tie (`\lx@NBSP`) and the accent (`accent_inner_name`) as the untied twin `A. Smith*` always was; the marks
+%   gate (`argument_marks::may_mark`) rehearses no such name, so no name requests a line and REVTeX's group rule gives
+%   both lines to both authors
+% witness: synthetic (review revCST2 finding 1, probes revm_tiestar, revm_accstar; 1901.01540's tied names)
+% oracle:  pdflatex (TL 2025, revtex4-2, -no-shell-escape) 0 errors: "A. Smith* and José Jones* / 1Uni One, Town /
+%          2Uni Two, Town"
+% engines: int165a: the names bare, a nameless creator holding both lines (the old gate rehearsed a name holding a
+%          command and read its typed `*` as a mark); CST2: as expected
+% expect:  0 errors, 0 warnings; A. Smith* and José Jones*, each "1 Uni One, Town" and "2 Uni Two, Town"
+% status:  GREEN (guard perfect_kernel_batchc1::group_rule_reads_marks_as_digested)
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{A.~Smith*}
+\author{Jos\'e Jones*}
+\affiliation{$^1$Uni One, Town\\ $^2$Uni Two, Town}
+\begin{abstract}x\end{abstract}
+\maketitle
+Text.
+\end{document}

@@ -4,6 +4,9 @@ use crate::prelude::*;
 LoadDefinitions!({
   RequirePackage!("geometry");
   RequirePackage!("lineno");
+  // A copy of the style the paper edited to load the algorithm packages (2402.18905's neurips_2023.sty:1-2
+  // `\usepackage{algorithm}` `\usepackage{algpseudocode}`; the distributed styles load none) decides them.
+  crate::shipped_class::require_shipped_algorithm_packages("sty")?;
   // neurips_2025.sty L39 defines \newif\if@preprint. Our binding
   // intercepts \DeclareOption{preprint} and never actually creates
   // the conditional. Provide it defensively so user code that does
@@ -187,6 +190,20 @@ LoadDefinitions!({
   DefMacro!("\\answerNo[]",   "\\textcolor{orange}{[No] #1}");
   DefMacro!("\\answerNA[]",   "\\textcolor{gray}{[N/A] #1}");
   DefMacro!("\\answerTODO[]", "\\textcolor{red}{\\bf [TODO]}");
+  // A neurips_2026.sty copy's own setters (2605.09681's :410-411 `\projectpage`, `\emailaddress`; the distributed style
+  // has neither) store `\@projectpage`/`\@emailaddress`, which the end of the copy's `{abstract}` prints (:445-458) —
+  // an abstract the copy does not replace here. The abstract's end emits what they stored, non-empty, as the paper's
+  // contacts, "Project Page:" (url) and "Email Address:" (email). The binding defines neither setter (user 2026-10-18,
+  // option C): without such a copy `\projectpage` is undefined, as in TeX. Guard
+  // `perfect_kernel_batchint23::neurips_copy_setters_are_contacts`.
+  RawTeX!(r"\def\lx@neurips@contacts{\ifx\@projectpage\@undefined\else\ifx\@projectpage\@empty\else
+\expandafter\lx@neurips@contact\expandafter{\@projectpage}{url}{Project Page: }\fi\fi
+\ifx\@emailaddress\@undefined\else\ifx\@emailaddress\@empty\else
+\expandafter\lx@neurips@contact\expandafter{\@emailaddress}{email}{Email Address: }\fi\fi}
+\def\lx@neurips@contact#1#2#3{\lx@add@contact[role=#2,name={#3}]{#1}}");
+  // The abstract's end is the kernel's (sect05.rs `\end{abstract}`, Perl latex_constructs.pool.ltxml:1131), the
+  // contacts first.
+  DefMacro!(T_CS!("\\end{abstract}"), None, r"\lx@neurips@contacts\lx@end@abstract");
 
   // {ack} environment — Perl L51-52 unreads `\acksection` before the body
   // digests so the "Acknowledgments and Disclosure of Funding" title
@@ -227,20 +244,24 @@ LoadDefinitions!({
   // wins. Without deferral our unconditional defs run at .sty-load time,
   // pre-define `\lemma`, and silently suppress the user's `\newtheorem*
   // {lemma*}` branch. Witness 2305.11788 (neurips paper + mymath.sty).
+  // A guess run with the document's origin, so through `\lx@guess@newtheorem` (sect08.rs), which never claims a
+  // name: the author's `\newtheorem{remark}{Observation}` in the body replaces the guessed {remark} rather than being
+  // refused as a second declaration (2406.11672: "Definition 1", pdflatex's, not "Definition 0"). Guard
+  // `perfect_kernel_batch77v::neurips_guess_yields_to_document_newtheorem`.
   RawTeX!(
     r"\AtBeginDocument{%
-\@ifundefined{theorem}{\newtheorem{theorem}{Theorem}[section]}{}%
-\@ifundefined{lemma}{\newtheorem{lemma}[theorem]{Lemma}}{}%
-\@ifundefined{corollary}{\newtheorem{corollary}[theorem]{Corollary}}{}%
-\@ifundefined{proposition}{\newtheorem{proposition}[theorem]{Proposition}}{}%
-\@ifundefined{propo}{\newtheorem{propo}[theorem]{Proposition}}{}%
-\@ifundefined{definition}{\newtheorem{definition}[theorem]{Definition}}{}%
-\@ifundefined{remark}{\newtheorem{remark}[theorem]{Remark}}{}%
-\@ifundefined{example}{\newtheorem{example}[theorem]{Example}}{}%
-\@ifundefined{claim}{\newtheorem{claim}[theorem]{Claim}}{}%
-\@ifundefined{assumption}{\newtheorem{assumption}[theorem]{Assumption}}{}%
-\@ifundefined{question}{\newtheorem{question}[theorem]{Question}}{}%
-\@ifundefined{problem}{\newtheorem{problem}[theorem]{Problem}}{}%
-\@ifundefined{result}{\newtheorem{result}[theorem]{Result}}{}}"
+\@ifundefined{theorem}{\lx@guess@newtheorem{theorem}{Theorem}[section]}{}%
+\@ifundefined{lemma}{\lx@guess@newtheorem{lemma}[theorem]{Lemma}}{}%
+\@ifundefined{corollary}{\lx@guess@newtheorem{corollary}[theorem]{Corollary}}{}%
+\@ifundefined{proposition}{\lx@guess@newtheorem{proposition}[theorem]{Proposition}}{}%
+\@ifundefined{propo}{\lx@guess@newtheorem{propo}[theorem]{Proposition}}{}%
+\@ifundefined{definition}{\lx@guess@newtheorem{definition}[theorem]{Definition}}{}%
+\@ifundefined{remark}{\lx@guess@newtheorem{remark}[theorem]{Remark}}{}%
+\@ifundefined{example}{\lx@guess@newtheorem{example}[theorem]{Example}}{}%
+\@ifundefined{claim}{\lx@guess@newtheorem{claim}[theorem]{Claim}}{}%
+\@ifundefined{assumption}{\lx@guess@newtheorem{assumption}[theorem]{Assumption}}{}%
+\@ifundefined{question}{\lx@guess@newtheorem{question}[theorem]{Question}}{}%
+\@ifundefined{problem}{\lx@guess@newtheorem{problem}[theorem]{Problem}}{}%
+\@ifundefined{result}{\lx@guess@newtheorem{result}[theorem]{Result}}{}}"
   );
 });

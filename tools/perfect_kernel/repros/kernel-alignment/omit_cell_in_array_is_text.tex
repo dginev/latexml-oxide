@@ -1,0 +1,15 @@
+% witness: review of 68z (probe q1); 2306.14299 (the amsmath half, carried)
+% oracle:  pdflatex 0 errors; the \omit cell is text holding the inline formula y^2; the \multicolumn cell stays math;
+%          the \multispan rule and the spanned x^2 cell
+% expect:  0 errors; latex.ltx \@arrayclassz sets each array cell as $\relax\@sharp$, so \omit (tex.web §789) leaves
+%          the cell restricted horizontal: boxed as text (`math_cells_template`, sect10.rs math_array_bindings);
+%          \multicolumn re-inserts its $ and keeps the math; an \omit cell that ends at once (\omit\span, \multispan)
+%          is not boxed, so a spanned cell is one text box (the leader rule, the formula x^2)
+% status:  GREEN (batch 68z round 2, perfect_kernel_batch68z::an_omit_cell_of_an_array_is_text); before, 2 Errors
+%          "Script ^ can only appear in math mode" (the cell stayed math, its $ opened text)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\[\begin{array}{ccc} a & \omit $y^2$ text & c\\ p&\multicolumn{2}{l}{q^2+r}\\
+\multispan{3}\hrulefill \\ \omit\span\omit $x^2$ & d \end{array}\]
+\end{document}

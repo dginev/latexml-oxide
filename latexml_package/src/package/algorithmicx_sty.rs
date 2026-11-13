@@ -98,9 +98,13 @@ LoadDefinitions!({
       },
       None => out.push(T_CS!("\\lx@algorithmicx@@item")),
     }
+    out.push(T_CS!("\\lx@algorithmicx@item@hook"));
     out.push(T_END!());
     Ok(Tokens::new(out))
   });
+  // What a package adds to each line an `\item` opens, labelled or not (algpseudocodex: its pending boxes,
+  // latexml_contrib `algpseudocodex_sty.rs`); a package redefining `\lx@algorithmicx@item` itself lost the label (63j).
+  DefMacro!("\\lx@algorithmicx@item@hook", "");
   DefConstructor!(
     "\\lx@algorithmicx@labeltags{}",
     "<ltx:tags><ltx:tag>#1</ltx:tag></ltx:tags>"

@@ -1,0 +1,18 @@
+% witness: 77n r3 review — a name's mark list glued to the "and" before the next name (2605.00471 ieeeconf `\author{…,
+%          Hiroshi Ito$^{1,3}$and Tetsuya Ogata$^{1,4}$\thanks{$^{1}$…}…}`)
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker1,2and Cat Cole1" over the two legends
+% engines: rust int32a = three creators, Bob Baker with both legends; 77n r3 = "Bob Baker<sup>1,2</sup>" with no
+%          affiliation (`rewrite_in_word_superscripts` read the mark list between "Baker" and "and" as spelling)
+% expect:  0 errors, 0 warnings; 3 creators, every one with the legend of mark 1, Bob Baker also with mark 2's; no mark
+%          in a name
+% status:  RED (77n r3) -> GREEN (77n r4)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{1,2}$and Cat Cole$^{1}$%
+\thanks{$^{1}$Ann Able, Bob Baker and Cat Cole are with Univ X.}%
+\thanks{$^{2}$Bob Baker is with Univ Y.}}
+\maketitle
+x
+\end{document}

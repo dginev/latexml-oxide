@@ -84,6 +84,8 @@ Common.attributes =
 
   RDF.attributes,
 
+  Panel.attributes,
+
   ## Language attribute
   attribute xml:lang { text }?
 
@@ -177,6 +179,28 @@ Colorable.attributes =
 
   ## the opacity of foreground material; a number between 0 and 1.
   attribute opacity { xsd:float }?
+
+## (latexml-oxide) Attributes of a float's panel (any element a figure, table or float sets in rows),
+## OXIDIZED_DESIGN_DIVERGENCES #887.
+Panel.attributes =
+  ## the panel's width as a fraction of the line its row is set against (the width the source states for it).
+  attribute panelwidth { xsd:decimal }?,
+
+  ## the columns the panel spans in a matrix of panels, when 2 or more.
+  attribute panelspan { xsd:nonNegativeInteger }?
+
+## (latexml-oxide) Attributes of a float whose panels are set in rows (OXIDIZED_DESIGN_DIVERGENCES #887):
+## its rows, and the most columns a row takes.
+PanelGrid.attributes =
+  attribute panelrows { xsd:nonNegativeInteger }?,
+  attribute panelcols { xsd:nonNegativeInteger }?,
+
+  ## the line the float's rows are set against as a fraction of the running-text column at the float
+  ## (where every panel states its width).
+  attribute panelline { xsd:decimal }?,
+
+  ## the widest row's sum of its panels' panelwidth (where every panel states its width).
+  attribute panelfill { xsd:decimal }?
 
 ## Attributes for elements that take up space and make sense to have a background color.
 ## This is independent of the colors of any things that it may draw.

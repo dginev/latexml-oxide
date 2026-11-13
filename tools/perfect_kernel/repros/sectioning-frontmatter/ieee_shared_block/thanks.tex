@@ -1,0 +1,18 @@
+% mechanism: a `\thanks` between `\IEEEauthorblockN` and the shared `\IEEEauthorblockA` is a note, not an affiliation block
+%   (`notes_only_line`): wrapped, it claimed Ann and Bob, and the real block reached Cy only
+% witness: 1508.00691
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker and Cy Cole† / University of X, City" (conference mode locks `\thanks`
+%   out: the note prints nothing; kept as the document's, as before)
+% engines: rust int131a: Ann, Bob no affiliation; the note a pubnote
+% expect:  0 errors, 0 warnings; each author University of X, City; the note the document's thanks
+% status:  RED (int131a) -> GREEN (104a)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able, Bob Baker and Cy Cole$^\dagger$}
+\thanks{$^\dagger$Cy Cole is the corresponding author.}
+\IEEEauthorblockA{University of X, City}}
+\maketitle
+Text.
+\end{document}

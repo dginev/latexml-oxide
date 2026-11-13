@@ -1,6 +1,10 @@
 //! Stub for bmvc2k.cls (BMVC British Machine Vision Conference).
 use latexml_package::prelude::*;
 
+use crate::shipped_class::{
+  SUBFIGURE_PACKAGES, require_shipped_algorithm_packages, require_shipped_packages,
+};
+
 LoadDefinitions!({
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
@@ -11,10 +15,26 @@ LoadDefinitions!({
   RequirePackage!("xcolor");
   // bmvc2k.cls:118 loads xspace (`\xspace` was undefined, 2606.17384; Perl's scan of the class loads it).
   RequirePackage!("xspace");
+  // bmvc2k.cls:268-278, :716: the class's colours (the non-debug ones), which papers name in their caption options
+  // (`\usepackage[labelfont={color=bmv@captioncolor,bf}]{caption}`, 2210.10486) and their text
+  // (`\textcolor{bmv@sectioncolor}`): "Can't find color" otherwise.
+  RawTeX!(
+    r"\definecolor{bmv@PaleBlue}{rgb}{1,1,1}\definecolor{bmv@PalePink}{rgb}{1,1,1}%
+\definecolor{bmv@sectioncolor}{rgb}{0,.1,.4}\definecolor{bmv@captioncolor}{rgb}{0,0,.4}%
+\definecolor{bmv@CiteBoxColor}{rgb}{1,1,1}"
+  );
   RequirePackage!("hyperref");
   RequirePackage!("graphicx");
+  // bmvc2k.cls:121 `\RequirePackage{graphicx,subfigure}` in most copies, `subcaption` or `subfig` in edited ones: the
+  // paper's copy decides (shipped_class.rs SUBFIGURE_PACKAGES). `\subfigure` was undefined in 123 papers of run 353
+  // that rely on the class for it (1507.05726, 1510.01553, 1605.07146). Without a copy, none.
+  require_shipped_packages("cls", SUBFIGURE_PACKAGES)?;
   // bmvc2k.cls:222, 245 load geometry (a paper's own `\geometry{…}` was undefined, 2609.00981).
   RequirePackage!("geometry");
+  // bmvc2k.cls's algorithm packages differ by year: `algorithm` with `algorithmic` (2002.09958's copy:132-133,
+  // 2210.01640's:162-163) or with `algpseudocode` (2210.06270's:139-142). The paper's copy decides; `{algorithm}` and
+  // `\State` were undefined in papers that rely on the class for them. Without a copy, none.
+  require_shipped_algorithm_packages("cls")?;
   // bmvc2k.cls:516-521, 556-559: the unmarked footnote (a paper's equal-contribution note, 2609.08090) and the running
   // head's "et al." (2609.00981).
   RawTeX!(

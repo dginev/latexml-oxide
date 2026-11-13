@@ -1,0 +1,26 @@
+% sn-jnl's template `\abstract{…}` left above the paper's own `\abstract{…}`, both before `\maketitle`: one abstract,
+% the paper's. The class stores the argument (sn-jnl.cls:633 `\long\def\abstract#1{\def\@abstract{…}}`) and prints the
+% last; Perl's `\abstract{…}` is `\lx@add@abstract`, queued, which the second call's `\lx@clear@frontmatter` dequeues.
+% Ours reads the brace form as a group digested in place (sect05.rs `\abstract`), its entry marked as the command
+% form's (`_command_form`, queue_digest.rs `frontmatter_clear_command_form`) so the next abstract's clear removes it
+% until a flush would have digested Perl's queue (OXIDIZED_DESIGN #154).
+% witness: 2305.00493, 2609.14034 (sn-jnl; "XXX" above the abstract).
+% Guard: perfect_kernel_batch86i::abstract_command_form_twice_before_maketitle_keeps_the_last.
+% oracle:  pdflatex (with 2305.00493's sn-jnl.cls, not in TL): 7 errors, all the class's begin-document footnote hook
+%          (`\SetFootnoteHook`, `\DeclareNewFootnote` under TL 2025: a harness limit); prints "Abstract The paper's own
+%          abstract words. Keywords: alpha, beta" — no template text.
+% engines: perl: one abstract (the dequeue). rust int117a: one (the clearing). rust 86i before the command-form mark:
+%          both, the template first.
+% expect:  0 errors, 0 warnings; one `ltx:abstract`, "The paper's own abstract words."
+% status:  GREEN (int117a) -> RED (86i, abstracts no longer cleared) -> GREEN (86i)
+\documentclass{sn-jnl}
+\begin{document}
+\title{Probe}
+\author{Ann Author}
+\abstract{The abstract serves both as a general introduction to the topic.}
+\abstract{The paper's own abstract words.}
+\keywords{alpha, beta}
+\maketitle
+\section{Intro}
+Body.
+\end{document}

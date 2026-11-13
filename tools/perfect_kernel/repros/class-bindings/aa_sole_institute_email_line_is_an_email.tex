@@ -1,0 +1,19 @@
+% witness: astro-ph0007270 (A. Gil de Paz's `\institute{Dept. de Astrofísica …, Madrid\\ e-mail: gil@… (AGdP)}`);
+%          review rev92c r2 S-3
+% oracle:  pdflatex with 1707.06238's aa.cls: "Ann Able and Bob Baker", "Univ A, City A" / "e-mail: ann@a.org (AA)"
+%          unnumbered under the row
+% engines: perl 0.8.8 = 0 errors; rust 93a = the institute with the line on a nameless creator; 92c r2 (int 94a) = the
+%          institute every author's, the line a nameless `role="affiliation"`
+% expect:  0 errors, 0 warnings; the institute every author's; the line, which the address reader does not part (its
+%          remark), an e-mail of the block under its `e-mail:` label (`shared_row::row_email_calls`)
+% status:  RED (92c r2) -> GREEN (92c r3) — perfect_kernel_batch92c::aa_sole_institute_reads_as_llncss
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker}
+\institute{Univ A, City A\\ e-mail: ann@a.org (AA)}
+\abstract{A}{B}{C}{D}{E}
+\maketitle
+Text.
+\end{document}

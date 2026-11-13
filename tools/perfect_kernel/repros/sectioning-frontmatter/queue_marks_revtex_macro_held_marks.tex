@@ -1,0 +1,21 @@
+% mechanism: the queue's marks query (Option C F0/P4a): a document macro printing the name's mark
+%   (`\newcommand\ua{\textsuperscript{1}}`) is a mark the query reads as digested, so the names request 1 and 2; the
+%   binding's gate (`affiliation_is_marked`) stays on the token reading until P4c, which sees no mark in `\ua`, so the
+%   list is not the binding's cut and its entries keep their printed marks
+% witness: study P4S repro m1 (synthetic; the census's author_user_mark_macro feature, 148 papers)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2 / 1Univ A, Town A / 2Univ B, Town B"
+% engines: int160c and F0: Ann Able "1Univ A, Town A", Bob Baker "2Univ B, Town B"; perl: not compared
+% expect:  0 errors, 0 warnings; the creators above (byte-identical to int160c: main-session decision (b) on F0)
+% status:  GREEN (guard perfect_kernel_batchc1::queued_marks_read_as_digested)
+\documentclass[aps,prl]{revtex4-2}
+\newcommand\ua{\textsuperscript{1}}
+\newcommand\ub{\textsuperscript{2}}
+\begin{document}
+\title{T}
+\author{Ann Able\ua}
+\author{Bob Baker\ub}
+\affiliation{$^{1}$Univ A, Town A\\ $^{2}$Univ B, Town B}
+\begin{abstract}x\end{abstract}
+\maketitle
+Text.
+\end{document}

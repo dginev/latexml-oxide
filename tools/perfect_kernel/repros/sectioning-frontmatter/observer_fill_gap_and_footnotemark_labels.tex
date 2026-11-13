@@ -1,0 +1,21 @@
+% mechanism: the frontmatter observer's events (OXIDIZED_DESIGN_DIVERGENCES #837): `\hfill` between two names is a
+%   fill gap (fill glue always separates, natural width 0; tex_glue.rs `isFill`), `\hspace{3em}` a gap of its `width`
+%   (3 em of its font), a bare `\footnotemark` a mark labelled with what it prints (`\thefootnote` at the counter's
+%   next value, `\@fnsymbol` under the kernel `\maketitle`: ∗)
+% witness: the revfms2a1 review's probe `hfill` (r1: "Ann Able Bob Baker" one name, the gap width from the spaces
+%   printed, the mark's label empty)
+% oracle:  pdflatex 0 errors: "Ann AbleBob Baker" (the `\hfill` has no room to fill in the line's natural-width
+%   `tabular[t]{c}` cell, but marks the author's separation), "Cat Cole∗" and "Dan" on one line, "Univ A" below
+% engines: rust fms2a1 r2 shadow: N[0,8] S:fill[8,9] N[9,18] S:gap 3em[18,24] N[24,32] M:*[32,33] (a symbol) N[34,37] B[37,43]
+%   N[44,50] (guard perfect_kernel_batchfms2a1::spans_fill_gaps_and_widths)
+% expect:  0 errors, 0 warnings; four authors (stage S2b: Ann Able and Bob Baker two names)
+% status:  GREEN (shadow events, fms2a1 r2); output unchanged (S2b)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\hfill Bob Baker\hspace{3em}Cat Cole\footnotemark\ Dan\\[2ex] Univ A}
+\maketitle
+\footnotetext{Note.}
+Body.
+\end{document}

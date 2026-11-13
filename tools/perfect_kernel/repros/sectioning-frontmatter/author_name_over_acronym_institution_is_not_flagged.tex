@@ -1,0 +1,15 @@
+% Precision control for the detector's two-lines rule: a name over its institution, kept in one personname by a
+% `\shortstack` no splitter reads — `Ann Able` over `IST Austria`, a mixed-case line holding an acronym, names no
+% person, so it is not two names (`flag_merged_creators`, `holds_mixed_case_acronym`).
+% witness: 2504.20039 (`Vage Egiazarian <break/>IST Austria`, flagged by 107b's first build)
+% oracle:  pdflatex 0 errors: "Ann Able", "IST Austria" stacked
+% engines: rust int138a = one creator holding both lines, 0 errors; Perl one creator
+% expect:  0 errors, 0 warnings; one creator (its institution inside the personname: a reading gap, not a merge)
+% status:  GREEN (int138a, 107b)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{\shortstack{Ann Able\\ IST Austria}}
+\maketitle
+\end{document}

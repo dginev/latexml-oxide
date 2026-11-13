@@ -1,0 +1,20 @@
+% mechanism: the queue's `author:N` positions part an entry only at a separator that is its own tokens (`entry_names`:
+%   `ArgSeparator::span`); a document macro printing the names and the separator together has none, so the entry is
+%   one position while the reading unfolds the macro into two creators (`unfold_held_names`): the e-mail line is the
+%   block's (Option C P2-3b, OD #995)
+% witness: synthetic (`\author{\Authors}`, 2103.13804's shape, with an e-mail line)
+% oracle:  pdflatex (-no-shell-escape, TL 2025 has no svjour3.cls: 1107.3809's svjour3.cls and svglov3.clo) 0 errors: "Ann Able1 · Bob Baker2", "E-mail: {u1, u2}@x.org"
+% engines: int169a (632698e1d8) and P23b: u1@x.org and u2@x.org on a nameless creator, 0 errors, 0 warnings
+% expect:  0 errors, 0 warnings; Ann Able: 1 Univ A, u1@x.org; Bob Baker: 2 Univ B, u2@x.org
+% status:  RED (int169a, P23b): catalog only, no guard
+% moves:   post-merge (the queue would read the macro's expansion as the reading does)
+% preload: ar5iv.sty
+\documentclass{svjour3}
+\newcommand\aut{Ann Able$^{1}$ \and Bob Baker$^{2}$}
+\begin{document}
+\title{T}
+\author{\aut}
+\institute{$^1$ Univ A \\ $^2$ Univ B \\ \email{\{u1, u2\}@x.org}}
+\maketitle
+Text.
+\end{document}

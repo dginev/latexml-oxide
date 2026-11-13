@@ -1,0 +1,20 @@
+% mechanism: the frontmatter observer's reading of a names line leaves a membership grade written after a name's comma
+%   out of the name, the author's `membership` item (resolver/lines.rs, `is_membership_part`), as `\lx@add@author`
+%   takes it out (OXIDIZED_DESIGN_DIVERGENCES #967): the writer's re-part of names the kernel's split leaves together
+%   (`;`-separated) finds each reading name in today's names again. Without it the reading's "Cat Cole, Senior Member,
+%   IEEE" was printed by no name of today's, the re-part declined, and "Ann Able; Bob Baker" stayed one creator.
+% witness: 2009.02373 (vgtc: `\author{Stephen Kasica; Charles Berret; and Tamara Munzner, \textit{Senior Member},
+%   \textit{IEEE}}`); A/B r106c
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able; Bob Baker; and Cat Cole, Senior Member, IEEE"
+% engines: rust int134b: three creators, "Cat Cole, Senior Member, IEEE" one personname; 106c without the reading's
+%   grade: "Ann Able; Bob Baker" one creator; perl: one creator
+% expect:  0 errors, 0 warnings; three creators, Cat Cole's grade her membership contact
+% status:  RED (106c first build) -> GREEN (106c)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able; Bob Baker; and Cat Cole, \textit{Senior Member}, \textit{IEEE}}
+\maketitle
+Text.
+\end{document}

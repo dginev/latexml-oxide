@@ -1,0 +1,15 @@
+% witness: sel78i item 4 (234/30k papers set \creflabelformat or \crefformat themselves)
+% oracle:  pdflatex 0 errors: "eq. 1; item [i] 1." (cleveref.sty:1270-1272 \creflabelformat{<type>}, :1264
+%          \crefdefaultlabelformat)
+% engines: rust int50a = "eq. 1; item 1"; 78j before the override "eq. (1)"
+% expect:  0 errors; the document's own label formats
+% status:  RED (int50a) -> GREEN (78j)
+\documentclass{article}
+\usepackage{amsmath,cleveref}
+\creflabelformat{equation}{#2#1#3}
+\crefdefaultlabelformat{[i] #2#1#3}
+\begin{document}
+\begin{equation}a\label{e1}\end{equation}
+\begin{enumerate}\item\label{i1} one\end{enumerate}
+\cref{e1}; \cref{i1}.
+\end{document}

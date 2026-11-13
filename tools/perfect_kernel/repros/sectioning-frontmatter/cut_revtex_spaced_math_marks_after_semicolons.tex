@@ -1,0 +1,19 @@
+% mechanism: a space before `^` in math is no nucleus (math mode skips it, tex.web §1045): `$ ^1$` is `$^1$`
+%   (`relocate::spaced_mark_at`), so one revtex `\affiliation` of `;`-parted marked lines is cut at its marks
+% witness: 0902.3613 (`\affiliation{$ ^1$Instituto Superior Técnico…;  \ $ ^2$Dept…; $ ^3$Dept…}`)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1 , Bob Baker2 , Cy Cole3 / 1 Univ A, Lisbon, Portugal; 2 Dept B, Ghent …; 3 Dept C, …"
+% engines: rust int139a: Ann the whole list as one contact, Bob and Cy none
+% expect:  0 errors, 0 warnings; Ann "Univ A, Lisbon, Portugal", Bob "Dept B, …", Cy "Dept C, …"
+% status:  RED (int139a) -> GREEN (107e) — perfect_kernel_batch107e::a_revtex_call_is_cut_at_its_spaced_marks
+% preload: ar5iv.sty
+\documentclass[aps,prl]{revtex4}
+\begin{document}
+\title{T}
+\author{Ann Able$ ^1$, Bob Baker$ ^2$, Cy Cole$ ^3$}
+\affiliation{
+$ ^1$Univ A, Lisbon, Portugal;  \
+$ ^2$Dept B, Ghent University, Belgium;
+$ ^3$Dept C, Univ D, Madrid, Spain}
+\maketitle
+Text.
+\end{document}

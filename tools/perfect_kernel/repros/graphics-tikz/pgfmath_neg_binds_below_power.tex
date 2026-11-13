@@ -1,0 +1,16 @@
+% pgfmath's unary minus is `neg` at precedence 500 (pgfmathfunctions.basic.code.tex:46-49), below `^` (900): `-2^2` is
+% -4, and the Gaussian `exp(-(\y)^2)` stays below 1. Read as (-2)^2 it was `exp((\y)^2)`, up to e^7.29, and the
+% plot's x coordinates overflowed. Safe twin; the pure values are rows of `pgfmath_golden_tests`.
+% witness: 2311.02367 (CH06 single-slit intensity, `declare function={g(\y)=exp(-(\y)^2);}`).
+% status:  RED -> GREEN (DTL1b, guard perfect_kernel_batchdtl1::batchdtl1_pgfmath_rows). Base DTL1a and fix A alone:
+%          [4.0], 2 Warnings (Dimension too large), a 22606.82 wide picture.
+% oracle:  pdflatex 0 `!`, [-4.0]; Perl 0 errors, [-4.0] (its Perl-`eval` fast path; its grammar has the flaw, KPE).
+% expect:  0 errors, 0 warnings, [-4.0], the plot within 0..1.6cm of x.
+\documentclass{article}
+\usepackage{tikz}
+\begin{document}
+\pgfmathparse{-2^2}[\pgfmathresult]
+\begin{tikzpicture}[declare function={g(\y)=exp(-(\y)^2);}]
+\draw[domain=-2.7:2.7,samples=20] plot ({1.6*g(\x)},\x);
+\end{tikzpicture}
+\end{document}

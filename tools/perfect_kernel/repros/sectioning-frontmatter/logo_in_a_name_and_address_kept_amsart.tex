@@ -1,0 +1,15 @@
+% mechanism: amsart's author reader: a name led by `\LaTeX` lost the logo (util_text.rs `printed_own_text`); the
+%   `\address` holding `\TeX` was kept already.
+% witness: synthetic (QA75S au_amsart; LOGO1)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "LATEX PROJECT", address "The TEX Users Group, Portland"
+% engines: rust int171a base 0 E 1 W: <personname>Project</personname> and the content check's "excess" LaTeX
+% expect:  0 E, 0 W; the logo element and " Project", the address whole
+% status:  RED -> GREEN (LOGO1)
+\documentclass{amsart}
+\begin{document}
+\title{T}
+\author{\LaTeX\ Project}
+\address{The \TeX\ Users Group, Portland}
+\maketitle
+Body.
+\end{document}

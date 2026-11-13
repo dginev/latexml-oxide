@@ -1,0 +1,16 @@
+% mechanism: a lone line under a row of names before an `\affil` is read as a name (r2's rule) though it is an institution: 0 such in 3,190 authblk papers searched
+% witness: none real (review rev108a2 S4; `Physical Intelligence`, `Welo Data`, `World Agents`, `Tencent Cloud`, `Harvard Medical` shapes)
+% oracle:  pdflatex: 0 errors; "Ann Able Bob Baker", "Physical Intelligence", "Univ X"
+% engines: rust 108a r2: E0, the institution a person
+% expect:  2 creators, or a counted Error
+% status:  RED (unfixed, rare; review rev108a2 S4)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able\quad Bob Baker\\ Physical Intelligence}
+\affil{Univ X}
+\maketitle
+Text.
+\end{document}

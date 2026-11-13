@@ -22,7 +22,21 @@ LoadDefinitions!({
   // OmniBus outcome. Witness 2004.07524 (svproc proceedings with `\includegraphics`).
   RequirePackage!("graphicx");
   RequirePackage!("sv_support");
-  RequirePackage!("amsmath");
+  // svproc.cls:369-379 (every census copy, 1705.10638's) `\DeclareMathSymbol{\Gamma}{\mathalpha}{letters}{"00}`…: the
+  // capital Greek letters are the math italic's, italic as a Latin letter unless a math alphabet is in force (KNOWN_PERL_ERRORS
+  // #1147).
+  declare_capital_greek("", Some(LettersClass::Variable))?;
+  // svproc.cls:389-404 (every copy of the census's 17): `\vec` is the upright bold `\mbox{\boldmath$\mathbf{#1}$}`, not
+  // the kernel's arrow accent (KNOWN_PERL_ERRORS #1143). Its `vecphys` (bold italic) and `vecarrow` (the accent) options,
+  // :36-37, are not read: this binding declares no options, and no census paper passes them or uses `\vec`.
+  RawTeX!(r"\def\vec#1{\ensuremath{\lx@sv@vec@mathbf{#1}}}");
+  // svproc.cls loads no amsmath (103 copies in a 1/20 arXiv sample): amsmath's commands for papers that use them
+  // unloaded, its "Old form" error once the paper loads it; the paper's copy decides
+  // (`amsmath_sty::require_amsmath_beyond_original`, KNOWN_PERL_ERRORS #993).
+  amsmath_sty::require_amsmath_beyond_original(
+    latexml_package::shipped_class::shipped_copy_loads("cls", "amsmath")?,
+    &[],
+  )?;
   // Pre-load xcolor with [dvipsnames, table] so a paper's later
   // `\usepackage[table]{xcolor}` doesn't silently option-clash and
   // leave colortbl unloaded → `\cellcolor` undefined. svproc.cls
@@ -53,12 +67,11 @@ LoadDefinitions!({
     "\\toctitle{}",
     "\\@add@frontmatter{ltx:note}[role=toctitle]{#1}"
   );
-  DefMacro!(
-    "\\institute{}",
-    "\\@add@frontmatter{ltx:note}[role=institute]{#1}"
-  );
-  // \inst{N}, the superscript marker keyed to numbered affiliations, is the
-  // kernel's `\providecommand\inst[1]{\textsuperscript{#1}}` (sect05.rs).
+  // (no `\institute` of its own: sv_support's stands, splitting it at `\and` into numbered affiliations the `\inst{n}`
+  // marks answer, as Perl's — no svproc binding, OmniBus's inst_support `\institute`, inst_support.sty.ltxml:36-38; a
+  // document `<note role=institute>` here held them all in no author: dev20k 2101.04527, 2504.04157, 2206.03859,
+  // 1911.11805, 2409.01900, repro sectioning-frontmatter/svproc_institute_per_author)
+  // (`\inst{N}`, the superscript marker keyed to those affiliations, is sv_support's too)
   // svproc.cls L240-245 defines \frontmatter / \mainmatter / \backmatter as
   // page-numbering + \@mainmatter-flag toggles (`\pagenumbering{Roman}` etc.).
   // All three are pure page-layout — moot in our HTML paradigm — so Perl

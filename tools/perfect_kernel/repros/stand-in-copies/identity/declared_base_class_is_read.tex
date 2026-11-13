@@ -1,0 +1,10 @@
+% witness: 2011.13564 (IEEE's own IEEEtai.cls declares `\ProvidesClass{IEEEtran}`, the class its binding loads)
+% oracle:  pdflatex 0 errors ("EXTRA")
+% engines: rust 72a r2 = 1 Error (\taiextra undefined: the copy, sharing none of the binding's names, was not read)
+% expect:  0 errors, 0 warnings; "EXTRA"
+% status:  RED (72a r2) -> GREEN (72a r3)
+% preload: ar5iv.sty
+\documentclass{IEEEtai}
+\begin{document}
+\taiextra
+\end{document}

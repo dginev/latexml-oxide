@@ -8,12 +8,13 @@
 //! affiliation into the body before `\maketitle`, and the stored
 //! `<title>`/`<creator>` frontmatter landed after that paragraph — manptp's
 //! three jing lines (RUST-ONLY; Perl 0 errors, frontmatter first).
+use latexml::util::test::check_requirements;
 
 /// The frontmatter is the document's first content: no `<para>` precedes
 /// the `<title>`, and the title element is whole.
 #[test]
 fn ptptex_inst_store_keeps_the_frontmatter_first() {
-  if !latexml::util::test::kpse_has("ptptex.cls") {
+  if !check_requirements(&["ptptex.cls"]) {
     return;
   }
   let tex = std::fs::read_to_string("tests/cluster_regressions/ptptex_inst_store_frontmatter.tex")
@@ -36,19 +37,21 @@ fn ptptex_inst_store_keeps_the_frontmatter_first() {
     "the frontmatter is complete before any deposited paragraph:\n{xml}"
   );
   // The affiliations are frontmatter contacts linked from the authors'
-  // `$^{n,}$` superscripts, and the abstract, received date and
+  // `$^{n,}$` superscripts, which the names print (P4b2b; pdflatex
+  // "Tomonaga1,∗)"), each entry its mark as the names show theirs (P4f;
+  // pdflatex "1 Physics Dept, Tokyo"), and the abstract, received date and
   // publication note carry their kinds.
   latexml::util::test::assert_element(
     &xml,
     "creator",
     &[],
-    r##"<creator role="author"><personname>Shin-Ichiro <text font="smallcaps">Tomonaga</text></personname><contact name="Note: " role="note">Note A.</contact><contact name="Affiliation: " role="affiliation">Physics Dept, Tokyo</contact></creator>"##,
+    r##"<creator role="author"><personname>Shin-Ichiro <text font="smallcaps">Tomonaga<sup><text font="italic">1,</text></sup></text></personname><contact name="Note: " role="note">Note A.</contact><contact name="Affiliation: " role="affiliation"><sup>1</sup>Physics Dept, Tokyo</contact></creator>"##,
   );
   latexml::util::test::assert_element(
     &xml,
     "creator",
     &["before="],
-    r##"<creator before="  " role="author"><personname>Hideki <text font="smallcaps">Yukawa</text></personname><contact name="Note: " role="note">Note B.</contact><contact name="Affiliation: " role="affiliation">Yukawa Institute, Kyoto</contact></creator>"##,
+    r##"<creator before="  " role="author"><personname>Hideki <text font="smallcaps">Yukawa<sup><text font="italic">2,</text></sup></text></personname><contact name="Note: " role="note">Note B.</contact><contact name="Affiliation: " role="affiliation"><sup>2</sup>Yukawa Institute, Kyoto</contact></creator>"##,
   );
   latexml::util::test::assert_element(
     &xml,

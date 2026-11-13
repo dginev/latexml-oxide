@@ -1,0 +1,17 @@
+% mechanism: (RED, deferred: pathological) an address part after the list's wrapper is repeated on every entry
+%   (`affiliations::shared_closing_parts`), a reading of a shared part: "Univ A, Paris, Germany" is no text the PDF prints
+% witness: review rev99a2 S-d probe s3b
+% oracle:  pdflatex (TL 2025) 0 errors: "1Univ A, Paris 2Univ B, Berlin / Germany"
+% engines: rust int126b: both authors the whole call; 99a r2, r3: Ann "1 Univ A, Paris, Germany", Bob "2 Univ B, Berlin,
+%   Germany"
+% expect:  0 errors, 0 warnings; each author its entry, the shared "Germany" once under both (no composed text)
+% status:  RED (99a r2, r3) — deferred (SYNC row 99a); no guard
+% preload: ar5iv.sty
+\documentclass[sigconf]{acmart}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$}
+\affiliation{\institution{$^1$Univ A, Paris \quad $^2$Univ B, Berlin}\country{Germany}}
+\maketitle
+Text.
+\end{document}

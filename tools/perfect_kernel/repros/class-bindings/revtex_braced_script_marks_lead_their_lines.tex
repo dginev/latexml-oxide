@@ -1,0 +1,17 @@
+% mechanism: the shared reader of a line's leading printed label (`relocate::spaced_mark_at`): a mark whose whole
+%   script is braced in its formula (`${^1}$`) leads its line as `$^{1}$` does, so REVTeX's binding cuts the block.
+% witness: 2208.09667, 2308.02280 (`${^1}$ Department of Physics …`, the lines after their `&&` first)
+% oracle:  pdflatex (TL 2025, revtex4) 0 errors: "Ann Able1 and Bob Baker2 / 1 Univ A, Town / 2 Univ B, City"
+% engines: rust 98e: each author its line, the mark kept in its text (the observer's cut of the `_unsplit` block)
+% expect:  0 errors, 0 warnings; each author its line, the mark off it
+% status:  GREEN (98e r2)
+% preload: ar5iv.sty
+\documentclass[aps,prl]{revtex4}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$}
+\affiliation{${^1}$Univ A, Town\\ ${^2}$Univ B, City}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body.
+\end{document}

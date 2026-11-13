@@ -1,0 +1,21 @@
+% mechanism: a `\footnotemark[n]` in a name (a document's `\samethanks`, `\newcommand*\samethanks[1][\value{footnote}]
+%   {\footnotemark[#1]}`) repeats the mark of note n, which pdflatex prints once in the footer: the name's note is that
+%   note. Today the name holds a `<note role="footnotemark">` with the mark only (Perl the same); pairing it with the
+%   `\thanks` note of the same number is a Link step the kernel's reader does not make.
+% witness: 2110.07431 (acl.sty, article: `Hao Jiang\textsuperscript{1}\thanks{Equal contribution.},~ Ke
+%   Zhan\textsuperscript{1}\samethanks, …`), 2402.06922 (IEEEtran, a bare `\footnotemark` after each name, no text);
+%   2502.19103 (`\samethanks[1]`); census129 cluster 5 (S)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able∗, Bob Baker∗, Cat Cole", the footnote "∗ Equal contribution."
+% engines: rust int130a and 103b: Bob Baker's personname holds `<note mark="*" role="footnotemark">` (the mark only);
+%   perl: the same note, no mark
+% expect:  0 errors, 0 warnings; Bob Baker carries the note "Equal contribution." as Ann Able does
+% status:  RED (int130a, 103b)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand*\samethanks[1][\value{footnote}]{\footnotemark[#1]}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{Equal contribution.}, Bob Baker\samethanks, Cat Cole}
+\maketitle
+Text.
+\end{document}

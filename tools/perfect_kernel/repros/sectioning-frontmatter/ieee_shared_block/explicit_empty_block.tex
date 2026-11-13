@@ -1,0 +1,19 @@
+% mechanism: an explicit `\IEEEauthorblockA{}` is a contact printing nothing that claims the authors before it (`annotate=new`),
+%   so the real block reaches the last only; needs a binding-declared "a contact printing nothing claims no one" (the
+%   kernel rule stays: revtex `\noaffiliation`, aastex `\nocollaboration` rely on it)
+% witness: synthetic (the blank-line shape's sibling, 1401.2118)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker and Cy Cole / University of X, City / Email: {ann, bob, cy}@x.edu"
+% engines: rust int131a, 104a: Ann, Bob e-mail only, Cy the affiliation
+% expect:  0 errors, 0 warnings; each author University of X, City and their own e-mail
+% status:  RED (104a; SYNC row 104a)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able, Bob Baker and Cy Cole}
+\IEEEauthorblockA{}
+\IEEEauthorblockA{University of X, City\\
+Email: \{ann, bob, cy\}@x.edu}}
+\maketitle
+Text.
+\end{document}

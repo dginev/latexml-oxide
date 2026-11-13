@@ -1,0 +1,20 @@
+% mechanism: RED catalog (no guard). An address after a label phrase that opens with a name's possessive ("Ann's email:")
+%   comes out with the label word "email:" alone; the possessive stays the entry's, a fragment (`Univ A, City; Ann’s`).
+%   The label phrase is the label word only (brief 95c r2 S4); a name before it is no part of the reader's label.
+% witness: astro-ph0202139 (`1. Chester F. Carlson Center …; JHK's email: jhk@cis.rit.edu`);
+%   perfect_kernel_batchfms2a2::an_address_beside_an_institution_keeps_the_institution pins the fragment
+% oracle:  pdflatex 0 errors: "1 Univ A, City; Ann's email: ann@a.edu", "2 Univ B, Town"
+% engines: rust 95c-r2: Ann Able "Univ A, City; Ann’s", ann@a.edu (named "email: "); rust int123a: the line whole in the
+%   affiliation; perl: the same
+% expect:  0 errors, 0 warnings; Ann Able "Univ A, City", ann@a.edu (the possessive with the label, or the line whole)
+% status:  RED (95c-r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$ \\
+$^1$ Univ A, City; Ann's email: ann@a.edu \\
+$^2$ Univ B, Town}
+\maketitle
+Text.
+\end{document}

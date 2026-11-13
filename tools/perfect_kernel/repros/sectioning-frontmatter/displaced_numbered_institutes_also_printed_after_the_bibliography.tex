@@ -1,0 +1,43 @@
+% RED (batch 104b, not supported): a displaced class-numbered `\and` institute store (`\gdef\@institute{{\itshape{#1}}}`,
+% caosp.cls:815-841) whose printer `\institutename` the class's `thebibliography` end code calls too (caosp.cls:1453,
+% `\if@longauth…\institutename\fi`, the institutes after the references for a long author list): `\institutename` is
+% then no title-page code (`ClassReaders::survey`, every caller a title-page macro), so the store is read by other
+% code of the class and stays the class's text (`displaced_store_stays_the_classs`, `read_by_other_code`) before its
+% numbering is asked; the institutes are body paragraphs, no author holds one. One dev20k paper.
+% witness: 1401.6818 (caosp)
+% oracle:  pdflatex 0 errors: "Ann Able1 , Bob Baker2 and Cy Cole1,2", "1 Univ A, Town", "2 Univ B, City"
+% engines: rust 104b = 0 errors, 0 warnings, the two institutes body paragraphs
+% expect:  Ann Able "Univ A, Town", Bob Baker "Univ B, City", Cy Cole both
+% status:  RED (catalog, no guard)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{calongauth.cls}
+\ProvidesClass{calongauth}\LoadClass{article}
+\newcounter{@inst}
+\newif\if@longauth
+\def\institute#1{\gdef\@institute{{\itshape{#1}}}}
+\def\institutename{\par
+ \begingroup
+ \parindent=0pt
+ \parskip=0pt
+ \setcounter{@inst}{1}%
+ \def\and{\vskip .05cm\par\stepcounter{@inst}%
+          \noindent
+          \hbox{$^{\the@inst}$\enspace}\ignorespaces}%
+ \noindent\hbox{$^{1}$\enspace}\ignorespaces
+ \@institute\par
+ \endgroup}
+\def\inst#1{\unskip$^{#1}$}
+\def\@maketitle{\newpage\noindent{\Large\@title\par}\vskip6pt
+  {\large\noindent\ignorespaces\@author\par}\vskip6pt
+  \institutename}
+\renewenvironment{thebibliography}[1]{\section*{References}\list{}{}}%
+ {\endlist\if@longauth\kern6pt\hrule\kern6pt\institutename\@longauthfalse\fi}
+\end{filecontents*}
+\documentclass{calongauth}
+\begin{document}
+\title{A Title}
+\author{Ann Able\inst{1}, Bob Baker\inst{2} and Cy Cole\inst{1,2}}
+\institute{Univ A, Town \and Univ B, City}
+\maketitle
+Text.
+\end{document}

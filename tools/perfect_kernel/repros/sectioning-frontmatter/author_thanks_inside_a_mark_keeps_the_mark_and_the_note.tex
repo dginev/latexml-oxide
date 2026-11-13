@@ -1,0 +1,17 @@
+% mechanism: a `\thanks` written inside an author's mark (`\textsuperscript{\rm 1,\rm 2\thanks{…}}`) prints the labels
+%   and its own mark in the superscript and its text as a footnote (latex.ltx:17215). The author block read the whole
+%   operand `\rm 1,\rm 2\thanks{…}` as the mark's labels: the label `2\thanks{…}` answered nothing and printed nothing,
+%   so the mark `2` and the note were lost. `notes_out_of_marks` takes the note out after the mark.
+% witness: 2512.05464 (aaai2026 "Nataliia Babina1,2∗"); 1911.03118, 1912.00833, 2211.09622, 2306.17472, 2410.12564,
+%   2503.05905
+% oracle:  pdflatex 0 errors; "Ann Alpha1 , Bob Beta1,2∗ , Cy Gamma1", footnote "∗ Work done during an internship."
+% engines: perl: the marks dropped, no note; rust int59a: Bob Beta "1", no note
+% expect:  0 errors, 0 warnings; Bob Beta's mark "1,2" and his thanks note
+% status:  GREEN (78u)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Alpha\textsuperscript{\rm 1}, Bob Beta\textsuperscript{\rm 1,\rm 2\thanks{Work done during an internship.}}, Cy Gamma\textsuperscript{\rm 1}}
+\maketitle
+Body.
+\end{document}

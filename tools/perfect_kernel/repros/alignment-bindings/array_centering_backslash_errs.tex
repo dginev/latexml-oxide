@@ -1,0 +1,15 @@
+% witness: the 9 array-alone hits of ROW0A (TABU1 study, rep/a2)
+% oracle:  pdflatex 1 `!` (Extra alignment tab has been changed to \cr): array's `>{\centering}p` without
+%          `\arraybackslash` makes `\\` a line break, so the row's third `&` is extra
+% engines: rust TABU2base = 2 Error:unexpected:&; Perl 0.8.8 0 Errors
+% expect:  the Error stays: only tabu's own `\centering` ends with `\arraybackslash`
+% status:  GREEN (error side of tabu_centering_ends_the_row.tex)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{array}
+\begin{document}
+\begin{tabular}{l>{\centering}p{2cm}>{\centering}p{2cm}}
+a & b & c \\
+d & e & f \\
+\end{tabular}
+\end{document}

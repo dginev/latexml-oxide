@@ -1,0 +1,22 @@
+% mechanism: OSA's `\author` (osa_journal_sty.rs) given a name through `\csname bob\endcsname`: the name is lost
+%   ("_") and a false Error is raised, where pdflatex prints "Bob Smith"; the placed `\email` is Bob Smith's by spelling
+%   since P5c (the rehearsal reads the name), but no creator prints his name
+% witness: synthetic (P5c sibling sweep: the `\csname` spelling of a macro-held name)
+% oracle:  pdflatex (opex3.sty of 0901.2914 beside it) 0 errors: "Bob Smith" "Univ Y", "Ann Able" "Univ X" "smith@x.org"
+% engines: rust P5cbase and P5c = 1 Error (`\let` between `\csname` and `\endcsname`), 1 Warning (content check: "Bob
+%          Smith" missing), personname "_"; smith@ Ann Able's on P5cbase, the "_" creator's on P5c
+% expect:  0 errors, 0 warnings; Bob Smith with smith@x.org, Ann Able
+% status:  RED (P5cbase, P5c)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{opex3}
+\newcommand\bob{Bob Smith}
+\begin{document}
+\title{T}
+\author{\csname bob\endcsname}\address{Univ Y}
+\author{Ann Able}\address{Univ X}
+\email{smith@x.org}
+\begin{abstract}A.\end{abstract}
+Text.
+\end{document}

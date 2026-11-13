@@ -1,0 +1,29 @@
+% A binding's title page whose author reader loses the lines a macro inside `\author` holds: amsart's `\author`
+% keeps the name and the e-mail, the affiliation lines `\institution` expands to are lost. The title-page check
+% (title_page_check.rs) runs LaTeX's title page once more (`\@author` as the kernel's `\author` stored it) and counts
+% each word of the document's the output does not hold, one `Warning:frontmatter:unclaimed` in printed order ("lunar"
+% is the e-mail's, held). The loss itself is the reader's, unfixed (under 500 arXiv papers); the Warning counts it.
+% witness: amsart 2007.07526 (`\author{…\\{\footnotesize \institution\\email: …}}`, "Babeș-Bolyai University …")
+% oracle:  pdflatex 0 errors: "A TITLE", "ANN ABLE", "LUNAR UNIVERSITY", "FACULTY OF CRATERS", "EMAIL: ANN@LUNAR.ORG"
+% engines: rust int133a = 0 errors, 0 warnings, the two lines lost silently; perl = 0 errors, the lines kept in the
+%          contact
+% expect:  0 errors, 1 warning (frontmatter:unclaimed "university faculty craters"); the creator as before
+% engines: rust int160a (HG1) = 0 errors, 1 warning: the lines kept, Ann Able's affiliation "Lunar University Faculty of
+%          Craters" (the content no longer lost), its `\footnotesize` lost and counted ("its markup lost: a macro's span")
+% engines: rust AUT1 = 0 errors, 0 warnings: `\institution` read with its expansion in its place
+%          (`reading::unfold_held_names`), the affiliation written from its tokens, "Lunar University" and "Faculty of
+%          Craters" on two lines in `\footnotesize`
+% status:  RED (int133a) -> GREEN (106s) -> GREEN, the lines kept (HG1) -> GREEN, their markup kept (AUT1;
+%          perfect_kernel_batchhg1::hollow_guards_restored_read_as_printed)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\newcommand{\institution}{Lunar University\\
+Faculty of Craters}
+\author{Ann Able\\
+{\footnotesize \institution\\
+email: \texttt{ann@lunar.org}}}
+\begin{document}
+\title{A Title}
+\maketitle
+Text.
+\end{document}

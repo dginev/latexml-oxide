@@ -1,0 +1,17 @@
+% witness: the 70b align_error probes (scratch_70b/a1/tab_open, tv): a brace left open or closed once too often in a
+%   tabular cell
+% oracle:  pdflatex: `{a & b} \\` 2 errors ("Missing } inserted" at the `&`, align_state +1, tex.web §1127; then
+%   "Missing { inserted" at the `\\`, the cell's `}` having closed the template's `{` of latex.ltx:16666
+%   `\@tabclassz`); `a & b} \\` 1 error ("Missing { inserted"); every cell kept
+% engines: rust 67int19 = 0 errors and 1 error, the first cell lost (`<td colspan="2">b</td>`: the cell's `}` popped the
+%   cell frame and the column bookkeeping bound in it), perl = 1 ("\@end@tabular Attempt to close boxing group"), both
+%   first cells lost the same way (KNOWN_PERL_ERRORS #923)
+% expect:  2 errors and 1 error, TeX's messages; both rows, four cells each table
+% status:  RED (67int19) -> GREEN (70b: stomach.rs `align_error` + the cell frame as the template's brace pair,
+%   alignment.rs `start_column`/`end_column`)
+\documentclass{article}
+\begin{document}
+\begin{tabular}{ll} {a & b} \\ c & d \end{tabular}
+
+\begin{tabular}{ll} e & f} \\ g & h \end{tabular}
+\end{document}

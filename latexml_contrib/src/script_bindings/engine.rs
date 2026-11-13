@@ -1101,10 +1101,13 @@ pub(super) fn make_engine() -> Engine {
       .map_err(rhai_err)
     },
   );
+  // A script binding's `LoadClass` makes the "has chapters" step after the load, as a compiled binding's `LoadClass!`
+  // (OXIDIZED_DESIGN #179, `settle_chapter_after_class_load`).
   engine.register_fn(
     "LoadClass",
     |name: &str| -> std::result::Result<(), Box<EvalAltResult>> {
       latexml_core::binding::content::load_class(name, Vec::new(), Tokens::default())
+        .and_then(|()| latexml_engine::latex_constructs::settle_chapter_after_class_load())
         .map_err(rhai_err)
     },
   );
@@ -1116,6 +1119,7 @@ pub(super) fn make_engine() -> Engine {
         options.into_iter().map(dynamic_to_string).collect(),
         Tokens::default(),
       )
+      .and_then(|()| latexml_engine::latex_constructs::settle_chapter_after_class_load())
       .map_err(rhai_err)
     },
   );

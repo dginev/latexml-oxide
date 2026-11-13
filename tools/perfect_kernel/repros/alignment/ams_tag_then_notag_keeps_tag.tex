@@ -1,0 +1,14 @@
+% witness: none (review of 67j r1, finding 5; synthetic)
+% oracle: pdflatex prints (z) twice — amsmath keeps \tag@true through \notag
+% engines: rust 67j r1 and Perl 0.8.8 drop both tags (\nonumber's retract_equation replaces the stored tags)
+% expect: both rows tagged (z) / (w)
+% mechanism: retract_equation (\nonumber/\notag) resets EQUATIONROW_TAGS to {id, reset}, discarding an explicit \tag
+% status: RED
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\begin{align}
+a &= b \tag{z}\notag \\
+&\tag{w}\notag
+\end{align}
+\end{document}

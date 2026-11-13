@@ -1,0 +1,24 @@
+% mechanism: llncs_cls.rs `\institute` → `\lx@llncs@institute@dispatch`: the list cut first at the kernel's `\and` by
+%   meaning, then by spelling at `\and` (`split_at_kernel_separators`, Option C P2-3, OD #995), each piece a
+%   `labelseq=affiliation` contact call; the gate between the shapes (a) split, (b) sole and (c) superscript-labelled
+%   reads that cut, not the spelling (the old gate `has_and` saw no `\and` here and took the sole institute) — a document
+%   macro holding only `\and`, the authors unmarked: two numbered institutes no `\inst` picks, the block's, as the
+%   written `\and` gives them (`llncs_several_institutes_without_marks_stay_the_blocks.tex`)
+% witness: synthetic
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able and Bob Baker" over "1 Univ A, Town A" and
+%   "2 Univ B, Town B" (`\institutename`'s `\and` numbers both)
+% engines: Perl 0.8.8 splits by spelling (llncs.cls.ltxml:46-48) and misses it; int160a1 (1f3949ecad): the sole
+%   institute, both institutes on each author (a pairing TeX does not print), 0 errors, 0 warnings
+% expect:  0 errors, 0 warnings; Ann Able and Bob Baker with no contact; Univ A, Town A and Univ B, Town B on a nameless
+%   creator (the block's)
+% status:  RED (int160a1) -> GREEN (P23; guard perfect_kernel_batchp22b::an_institute_list_cut_at_the_kernel_and_by_meaning)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\newcommand\nextinst{\and}
+\begin{document}
+\title{T}
+\author{Ann Able \and Bob Baker}
+\institute{Univ A, Town A \nextinst Univ B, Town B}
+\maketitle
+Text.
+\end{document}

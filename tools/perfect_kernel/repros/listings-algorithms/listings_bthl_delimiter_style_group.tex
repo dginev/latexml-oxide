@@ -1,0 +1,43 @@
+% witness: 2006.16205 (macros.tex:52-71, the btHL idiom: `moredelim=**[is][\btHL]{`}{`}`), 2104.08012
+%          (`moredelim=**[is][{\btHL[fill=…]}]{`fs*}{`}`); ~10 census papers
+% oracle:  pdflatex 0 errors: listings.sty:579-585 `\lst@OutputToken` sets each output unit as
+%          `{\lst@thestyle{…}}`, so `\btHL`'s `\begin{btHighlight}\bgroup\aftergroup\bt@HL@endenv` is closed by the
+%          `}` after the style's argument, which ends the highlight box: "int x = highlighted + 1;", "After",
+%          "See Section 1."
+% engines: rust int93b = 10 errors ("Attempt to close a group that switched to mode restricted_horizontal",
+%          "\hbox Attempt to end mode"), the box left open past the listing; Perl's delimiter class prepends the
+%          bare style (listings.sty.ltxml:596-611) and its style classes give `<style>{` without the outer group
+% expect:  0 errors, 0 warnings; the listing's text, one highlight box, the section and its reference
+% status:  RED (int93b) -> GREEN (79z: listings_sty.rs `{<style>{` … `}}` for markup styles)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{listings,tikz}
+\makeatletter
+\newenvironment{btHighlight}[1][]
+{\begingroup\tikzset{bt@Highlight@par/.style={#1}}\begin{lrbox}{\@tempboxa}}
+{\end{lrbox}\bt@HL@box[bt@Highlight@par]{\@tempboxa}\endgroup}
+\newcommand\btHL[1][]{%
+  \begin{btHighlight}[#1]\bgroup\aftergroup\bt@HL@endenv%
+}
+\def\bt@HL@endenv{%
+  \end{btHighlight}%
+  \egroup
+}
+\newcommand{\bt@HL@box}[2][]{%
+  \tikz[#1]{%
+    \pgfpathrectangle{\pgfpoint{1pt}{0pt}}{\pgfpoint{\wd #2}{\ht #2}}%
+    \pgfusepath{use as bounding box}%
+    \node[anchor=base west, fill=orange!30,outer sep=0pt,inner xsep=1pt, inner ysep=0pt, rounded corners=3pt, minimum height=\ht\strutbox+1pt,#1]{\raisebox{1pt}{\strut}\strut\usebox{#2}};
+  }%
+}
+\makeatother
+\lstset{moredelim=**[is][\btHL]{`}{`}}
+\begin{document}
+Before.
+\begin{lstlisting}
+int x = `highlighted` + 1;
+return x;
+\end{lstlisting}
+\section{After}\label{sec:after}
+See Section~\ref{sec:after}.
+\end{document}

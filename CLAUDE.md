@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-> **This is a Perl-to-Rust translation project.** Every translated entry must follow tightly the original semantics and nuances of the Perl source. Read the Perl source first, translate precisely; do not invent new abstractions, rename concepts, or simplify behavior unless documented as an intentional divergence in `docs/parity/OXIDIZED_DESIGN.md`. The Perl code is the ground truth.
+> **This is a Perl-to-Rust translation project.** Every translated entry must follow tightly the original semantics and nuances of the Perl source. Read the Perl source first, translate precisely; do not invent new abstractions, rename concepts, or simplify behavior unless documented as an intentional divergence in `docs/parity/OXIDIZED_DESIGN.md`. The Perl code is the ground truth for the design, data model and interfaces; where Perl approximates TeX itself, real TeX (tex.web, latex.ltx, the package source, pdflatex) decides behaviour, recorded as a divergence and offered to Perl as a patch (DG 2026-08-31; BM — Bruce Miller, LaTeXML's author — 2026-11-05: fidelity is "seldom (if ever?) traded for speed" but "may more often be lost due to not understanding what TeX really is doing").
 
 ## Active priorities: faithful parity + beyond-Perl arXiv runs
 
@@ -42,6 +42,10 @@ Two traps when reading a test run:
 - The two `latexml_post` vector-SVG tests **self-skip silently and green** unless
   `mutool` or `pdftocairo` is on PATH, so a green local run does not by itself prove
   that branch ran. CI installs poppler/mupdf.
+
+Conversion decisions (what to keep, how to number, who owns a frontmatter item, when a copy may override a
+binding) follow [`docs/parity/FIDELITY_CHARTER.md`](docs/parity/FIDELITY_CHARTER.md) — the user's rulings as standing
+rules; ask only where it conflicts or is silent.
 
 Durable parity rules (the dump/format boundary):
 
@@ -139,7 +143,7 @@ only). **Subagents are narrow and bounded** (user directives 2026-10-01, 2026-10
 2026-10-12): one question or one mechanism, a fixed deliverable, then stop. Analysis
 agents are read-only. The only writers are `payload-writer` agents, whose fix rounds
 run targeted checks only; the main checkout's tree, integration, the bundle-level full
-suite + A/B, and every push stay in the main session. At most 4 subagents run at once. Definitions are discovered at session start; a new one needs a
+suite + A/B, and every push stay in the main session. At most 2 subagents run at once (user directive 2026-10-22). Definitions are discovered at session start; a new one needs a
 restart. Brief read-only agents with the main checkout, not a worktree: `LaTeXML/`
 (the Perl oracle) is gitignored and absent from every worktree, so a worktree agent
 greps nothing and reports "no gaps" — a payload writer reads the oracle from the main
@@ -164,7 +168,7 @@ specifically need a publish-grade canvas measurement or a Perl-parity baseline
 
 **Distribution build** ships `--profile maxperf --no-default-features --features
 runtime-bindings`: `--no-default-features` drops the `test-utils` feature (removing
-`phf` + `glob` and 4 transitive crates), while `runtime-bindings` keeps the runtime
+`glob`, `roxmltree` and `similar`), while `runtime-bindings` keeps the runtime
 contributed-bindings front-end (runtime opt-in, so default conversions are
 unaffected). This is the recipe `tools/make_release.sh` uses. `maxperf` sets
 `panic = "abort"` — production-only, since canvas sweeps depend on `catch_unwind` for
@@ -207,6 +211,8 @@ dead text on the deployed site, so the warning is the only signal there is.
 ## Code Style
 
 Formatting is configured in `rustfmt.toml` — run `cargo +nightly fmt --all`.
+
+**No `unsafe` in our main code** (user 2026-11-08): a performance need is met by a better algorithm or data design, never by `unsafe`. Existing `unsafe` sits only at FFI/OS boundaries (libxml/XSLT, signals, sockets, the arena) and is not grown.
 
 ```bash
 rustup component add rust-analyzer rustfmt clippy --toolchain nightly
@@ -279,7 +285,7 @@ kept it; check Core.
 
 Known residual: **`<m:menclose>` is still emitted** for `\cancel` / `\boxed`.
 Core removed it and there is no mechanical replacement, so it is a rendering +
-golden change needing its own branch — tracked as **`SYNC_STATUS.md` R3b**,
+golden change needing its own branch — tracked as the after-merge line **MENC** in `SYNC_STATUS.md` row R,
 deferred by user directive 2026-07-30. Don't "fix" it incidentally.
 
 ## Practical guidance

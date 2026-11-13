@@ -1,0 +1,23 @@
+% witness: 1610.04467, 1712.10197, 1901.07422, 1901.07434, 2009.06170, 2011.13396, 2405.17108, 2410.15995, 2605.09653
+%          (algorithm2e `\hspace{1.5mm}Compute`); review rev78x finding 4 (`\unskip` after an `\hspace` in a float)
+% oracle:  pdflatex 0 errors, 0 overfull; the listing line indented; "LeftRight"
+% engines: rust int67a = "\u2004\u200aCompute", "LeftRight"; 78x r1 = "Compute" (the `\lx@panel@glue` marker joined the line),
+%          "Left   Right" (the marker sat after the glue `\unskip` was to remove); Perl 0.8.8 8 listing-line
+%          Errors and "Left   Right"
+% expect:  0 errors, 0 warnings; the line "\u2004\u200aCompute the thing.;" (`\hspace{1.5mm}`'s spaces), the paragraph "LeftRight"
+% status:  RED (78x r1) -> GREEN (78x r2, OXIDIZED_DESIGN_DIVERGENCES #885: the glue is `\lx@panel@hskip`'s box, the
+%          separator noted as it is absorbed)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[ruled,vlined,linesnumbered]{algorithm2e}
+\begin{document}
+\begin{algorithm}[t]
+\KwIn{x}
+\hspace{1.5mm}Compute the thing.\;
+\caption{A}
+\end{algorithm}
+\begin{figure}
+Left\hspace{3em}\unskip Right
+\caption{U}
+\end{figure}
+\end{document}

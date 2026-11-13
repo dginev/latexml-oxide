@@ -1,0 +1,18 @@
+% witness: 77n S5 — amsppt's names with a `\footnotemark` and its `\footnotetext` after the last: `\author S.
+%          Ehbauer, A. Grishkov, D. Logachev\footnotemark \footnotetext{E-mail: …\phantom{***…}} \endauthor` (2209.04044)
+% oracle:  amstex/amsppt (the paper's format; pdflatex cannot run it): "ANN ABLE, BOB BAKER, CAT COLE1" with the note
+% engines: rust int31a = one creator "Ann Able, Bob Baker, Cat Cole" (+1 Error:frontmatter:merged_creators): the
+%          note's text read as name text; Perl merges alike
+% expect:  0 errors, 0 warnings; 3 creators, the note Cat Cole's
+% status:  RED (int31a) -> GREEN (77n)
+% preload: ar5iv.sty
+\input amsppt.sty
+\topmatter
+\title T\endtitle
+\author
+Ann Able, Bob Baker, Cat Cole\footnotemark \footnotetext{E-mail: cat@uni.edu \phantom{*****}}
+\endauthor
+\endtopmatter
+\document
+x
+\enddocument

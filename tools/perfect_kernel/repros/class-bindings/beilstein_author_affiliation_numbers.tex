@@ -1,0 +1,29 @@
+% mechanism: beilstein.cls:586-737's author block — `\author{name}`, `\author[marks]{name}`, the corresponding
+%   author's `\author*[marks]{name}{e-mail}`, and `\affiliation{…}`, numbered in order and given to the author just
+%   named — builds accumulators only its `\maketitle` reads; the kernel's locked `\author` refused the class's. The
+%   binding (latexml_contrib beilstein_cls.rs) loads the class raw and makes each author a creator carrying its marks
+%   and the numbers of the affiliations after it, the e-mail a contact, each affiliation a contact labelled by number.
+% witness: 2203.09951, 2604.06890 (and 2011.08032, 2506.23338, 2108.11247, 2112.09464)
+% oracle:  pdflatex: 0 errors; "Ann Able1, 2 , Bob Baker∗1 and Carl Cole3 / Address: 1 First University; 2 Second
+%   Institute and 3 Third Lab"
+% engines: rust 68u r1: an author named `*` with its name and e-mail as affiliations, every affiliation lost; perl: no
+%   binding, the class raw under its own `\author` (lost the same way)
+% expect:  0 errors; Ann Able with First University and Second Institute, Bob Baker with the e-mail and First
+%   University, Carl Cole with Third Lab
+% status:  RED (68u r1) -> GREEN (68u r2)
+% preload: ar5iv.sty
+\documentclass{beilstein}
+\begin{document}
+\title{The Title}
+\author{Ann Able}
+\affiliation{First University}
+\affiliation{Second Institute}
+\author*[1]{Bob Baker}{bob@example.org}
+\author{Carl Cole}
+\affiliation{Third Lab}
+\maketitle
+\begin{abstract}
+Abs.
+\end{abstract}
+Text.
+\end{document}

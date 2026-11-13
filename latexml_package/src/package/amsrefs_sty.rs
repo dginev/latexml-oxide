@@ -16,8 +16,13 @@ LoadDefinitions!({
   // where raw loading is on (as `--preload=ar5iv.sty` has it). Witnesses 1907.08888, 2602.02342, math0410226,
   // 1503.01599, 1102.5022.
   DeclareOption!("lite", { AssignValue!("amsrefs@lite" => true, Scope::Global); });
+  DeclareOption!("msc-links", { AssignValue!("amsrefs@msc-links" => true, Scope::Global); });
   DeclareOption!(None, {});
   ProcessOptions!();
+  // amsrefs.sty:198-205: `msc-links` loads hyperref, whose `\href` its `\MRhref` (below) links with.
+  if lookup_bool("amsrefs@msc-links") {
+    RequirePackage!("hyperref");
+  }
   RequirePackage!("url");
   if lookup_bool("INCLUDE_STYLES") {
     RequirePackage!("rkeyval");
@@ -186,7 +191,24 @@ LoadDefinitions!({
   // also defaults an absent title to `\refname`, matching `[\refname]`).
   // html_feedback #1393, witness arXiv 2405.18501 (`\documentclass{amsart}`,
   // `\usepackage[numeric]{amsrefs}`, 6 `\bib` entries).
+  // {bibchapter}[heading] — amsrefs.sty:1242-1250, the chapter-level heading `{bibdiv}` is under a class with chapters
+  // (:1265-1269), titled `\bibname`; a book that opens its references with it directly met `{bibchapter}` undefined
+  // (run 345's Fatal TooManyErrors in 1612.01009, 1706.05540). Both build the same bibliography.
   DefEnvironment!("{bibsection}[Default:\\refname]",
+    "<ltx:bibliography xml:id='#id' \
+     bibstyle='#bibstyle' citestyle='#citestyle' sort='#sort'>\
+     <ltx:title font='#titlefont' _force_font='true'>#1</ltx:title>\
+     #body\
+     </ltx:bibliography>",
+    before_digest => {
+      engine::latex_constructs::before_digest_bibliography()?;
+    },
+    after_digest_begin => sub[whatsit] {
+      engine::latex_constructs::begin_bibliography_clean(whatsit)?;
+      Let!("\\par", "\\relax");
+    });
+
+  DefEnvironment!("{bibchapter}[Default:\\bibname]",
     "<ltx:bibliography xml:id='#id' \
      bibstyle='#bibstyle' citestyle='#citestyle' sort='#sort'>\
      <ltx:title font='#titlefont' _force_font='true'>#1</ltx:title>\
@@ -202,8 +224,47 @@ LoadDefinitions!({
 
   // {biblist} environment. amsrefs.sty:532-569 `\@biblist[#1]` takes the list's settings (`[\resetbiblist{99}]`,
   // `[prefix=A]`), which are presentation; `{biblist*}` (:538) is the list that continues the numbering.
-  DefEnvironment!("{biblist}[]", "<ltx:biblist>#body</ltx:biblist>");
-  DefEnvironment!("{biblist*}[]", "<ltx:biblist>#body</ltx:biblist>");
+  // The list stands alone (:532-538 open no heading and need no `{bibdiv}`): an author's `\section*{References}` and
+  // `\begin{biblist}` is the document's bibliography as pdflatex prints it (the heading, then the list). Outside a
+  // bibliography (`\if@lx@inbibliography`, set by `{bibdiv}`/`{bibsection}`/`{bibchapter}`) it opens one where the
+  // backmatter goes, as a `\bibitem` outside one does (`\lx@mung@bibliography`): untitled, it takes the author's
+  // heading before it (`absorb_bibliography_heading`) or its heading line (`head_implicit_bibliography`). Perl binds
+  // `{biblist}` as a bare `ltx:biblist` (amsrefs.sty.ltxml:70), which is allowed in no section (KNOWN_PERL_ERRORS #939).
+  // Witnesses 1002.1686, 1112.3058, 2111.14165, 0808.1974; guard `perfect_kernel_batch71a::amsrefs_biblist_without_bibdiv`.
+  macro_rules! biblist {
+    ($proto:literal) => {
+    DefEnvironment!($proto,
+      "?#standalone(<ltx:bibliography xml:id='#id' bibstyle='#bibstyle' citestyle='#citestyle'>\
+       <ltx:title font='#titlefont' _force_font='true'>#title</ltx:title>\
+       <ltx:biblist>#body</ltx:biblist></ltx:bibliography>)(<ltx:biblist>#body</ltx:biblist>)",
+      before_digest => {
+        let standalone = !x_equals(&T_CS!("\\if@lx@inbibliography"), &T_CS!("\\iftrue"));
+        AssignValue!("amsrefs@biblist@standalone" => standalone);
+        if standalone {
+          engine::latex_constructs::before_digest_bibliography()?;
+          // the bibliography the list opens is its own (`\lx@mung@bibliography@pre`, sect11.rs): headed by the unit it
+          // opens in or the heading line before it, else untitled and out of the TOC (`head_implicit_bibliography`)
+          Digest!("\\lx@mung@bibliography@pre{implicit}")?
+        } else {
+          Digest!(Tokens::default())?
+        }
+      },
+      after_digest_begin => sub[whatsit] {
+        if lookup_bool("amsrefs@biblist@standalone") {
+          engine::latex_constructs::begin_bibliography_clean(whatsit)?;
+          whatsit.set_property("standalone", "true");
+          Let!("\\par", "\\relax");
+        }
+      },
+      before_construct => sub[document, whatsit] {
+        if whatsit.get_property("standalone").is_some() {
+          engine::latex_constructs::adjust_backmatter_element(document, whatsit)?;
+        }
+      });
+    };
+  }
+  biblist!("{biblist}[]");
+  biblist!("{biblist*}[]");
 
   // \MR{...} — MathReviews link. Perl amsrefs.sty.ltxml L75-82:
   // properties closure patches old-style "12345 \# 67" → "12345:67" and
@@ -220,6 +281,15 @@ LoadDefinitions!({
       let href = format!("http://www.ams.org/mathscinet-getitem?mr={}", mr);
       Ok(stored_map!("mr" => mr, "href" => href))
     });
+
+  // amsrefs.sty:2673-2690: the `\MR` internals a paper's own `\MR` re-dress calls (0806.1269:627-634, 1612.01009,
+  // 1706.05540 and 2 more run-345 papers: `\strip@MRprefix#1\@nil`, then `\MRhref`), and `\MRhref`'s plain default;
+  // with `msc-links` (which loads hyperref, above), :2933-2950's linking `\MRhref` and its `\parse@MR`.
+  RawTeX!(r"\def\strip@MRprefix#1#2#3#4\@nil{\def\@tempa{#1#2#3#4}\if#1M\if#2R\def\@tempa{#3#4}\fi\fi}
+\providecommand{\MRhref}[2]{#1}");
+  if lookup_bool("amsrefs@msc-links") {
+    RawTeX!(r"\@ifundefined{href}{}{\def\parse@MR#1 (#2)#3\@nil{\def\MR@url{http://www.ams.org/mathscinet-getitem?mr=#1}\def\@tempd{#1}\def\@tempe{#2}}\def\MRhref#1#2{\begingroup\parse@MR#1 ()\@empty\@nil\href{\MR@url}{\@tempd\vphantom{()}}\ifx\@tempe\@empty\else\ \href{\MR@url}{(\@tempe)}\fi\endgroup}}");
+  }
 
   // \ndash, \mdash
   DefConstructor!("\\ndash", "\u{2013}"); // EN DASH

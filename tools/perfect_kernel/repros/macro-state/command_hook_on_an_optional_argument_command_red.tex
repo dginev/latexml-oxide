@@ -1,0 +1,16 @@
+% mechanism: a document's `\newcommand` with an optional argument is LaTeXML's optional-argument macro, not LaTeX's
+%   `\@protected@testopt` pair, so `\__hook_patch_command:Nnn` (latex.ltx:6888) cannot patch it: one Warning, the
+%   hook code does not run (pdflatex runs it at each call). Needs the macro faces (BM Q3.8, QA51-QA53).
+% witness: synthetic (QA47A)
+% oracle:  pdflatex 0 `!`, "(d,a) (b,c) [oo]."
+% engines: rust QA47A: "(d,a) (b,c) []." 0 errors, 1 warning (`cmd/opt/before`); int161a: "[]." 0 warnings
+% expect:  0 errors, 0 warnings; (d,a) (b,c) [oo].
+% status:  RED (QA47A)
+% moves:   post-merge (the macro faces).
+\documentclass{article}
+\newcommand\hits{}
+\newcommand\opt[2][d]{(#1,#2)}
+\AddToHook{cmd/opt/before}{\xdef\hits{\hits o}}
+\begin{document}
+\opt{a} \opt[b]{c} [\hits].
+\end{document}

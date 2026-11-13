@@ -1,0 +1,16 @@
+% witness: 1511.04387, 1712.08220, 1802.09883 (\newmcodes@, 11 papers), 2005.13511 (\varlimsup@), 2101.09853 (\@declmathop)
+% oracle:  pdflatex 0 errors; "max-flow(G), lim-bar_n a_n, coim f"
+% engines: rust 67int9 = undefined \newmcodes@, \varlimsup@, \@declmathop; perl = the same (KNOWN_PERL_ERRORS #801)
+% expect:  0 errors, 0 warnings; \coim an upright operator, \Limsup an overlined lim
+% status:  RED (67int9) -> GREEN (68i); guard perfect_kernel_batch68i::amsopn_internals
+\documentclass{article}
+\usepackage{amsmath}
+\makeatletter
+\DeclareRobustCommand{\varname}[1]{\begingroup\newmcodes@\mathit{#1}\endgroup}
+\newcommand{\Limsup}{\mathop{\mathpalette\varlimsup@{\vphantom{p}}}\nmlimits@}
+\def\newmop#1{\expandafter\@declmathop\expandafter o\csname #1\endcsname{#1}}
+\newmop{coim}
+\makeatother
+\begin{document}
+$\varname{max-flow}(G)$, $\Limsup_{n} a_n$, $\coim f$.
+\end{document}

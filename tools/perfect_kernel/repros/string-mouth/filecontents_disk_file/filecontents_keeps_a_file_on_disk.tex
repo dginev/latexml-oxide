@@ -1,0 +1,24 @@
+% witness: KNOWN_PERL_ERRORS #279 residual (56jt naming `{filecontents}{democode}` democode.tex made the source's copy
+%          shadow the democode.tex beside the document)
+% oracle:  pdflatex 0 errors: "Disk version. Forced source. Fresh source." (latex.ltx:18990-19004: a file `\openin`
+%          finds is kept unless [force]/[overwrite]; a second {filecontents} of a written file is not generated)
+% engines: rust int34a = "Source version. Forced source. Second fresh."
+% expect:  0 errors, 0 warnings; "Disk version. Forced source. Fresh source."
+% status:  RED (int34a) -> GREEN (77s)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{filecontents}{democode}
+Source version.
+\end{filecontents}
+\begin{filecontents}[overwrite]{forced.tex}
+Forced source.
+\end{filecontents}
+\begin{filecontents*}{fresh.tex}
+Fresh source.
+\end{filecontents*}
+\begin{filecontents*}{fresh.tex}
+Second fresh.
+\end{filecontents*}
+\begin{document}
+\input{democode} \input{forced} \input{fresh}
+\end{document}

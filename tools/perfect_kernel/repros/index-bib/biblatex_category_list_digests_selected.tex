@@ -1,0 +1,16 @@
+% witness: 77a r3 review finding 2 (category lists digested every entry); arXiv 2405.19762, 2406.00136
+% oracle:  pdflatex + biber: 3 errors (boomB in Sel, boomA and boomB in All); Sel [2] knuth; All [1]-[4]
+% engines: rust 77a r3 6 errors (Sel digested all four entries before deciding, the hidden list all four again)
+% expect:  errors 3 (the .bbl titles' \PackageError, on purpose); the oracle's lists
+% status:  GREEN (77a r4: a category list's entries are deferred to the end and built only if selected)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[backend=biber]{biblatex}
+\addbibresource{refs.bib}
+\DeclareBibliographyCategory{sel}
+\addtocategory{sel}{knuth}
+\begin{document}
+Also \cite{lamport,knuth,goossens,mittelbach}.
+\printbibliography[category=sel,title={Sel}]
+\printbibliography[title={All}]
+\end{document}

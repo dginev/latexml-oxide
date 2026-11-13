@@ -242,14 +242,14 @@ struct Cli {
 #[allow(dead_code)] // Fields used when post-processing is enabled
 #[derive(Clone, Debug)]
 struct ConversionProfile {
-  preloads:           Vec<String>,
-  pmml:               bool,
-  mathtex:            bool,
-  noinvisibletimes:   bool,
-  nodefaultresources: bool,
-  timeout:            u64,
+  preloads:          Vec<String>,
+  pmml:              bool,
+  mathtex:           bool,
+  noinvisibletimes:  bool,
+  default_resources: bool,
+  timeout:           u64,
   /// Resident-memory ceiling in KiB for the shared `Watchdog` (0 = disabled).
-  max_rss_kb:         u64,
+  max_rss_kb:        u64,
 }
 
 impl ConversionProfile {
@@ -272,7 +272,7 @@ impl ConversionProfile {
       pmml: !no_pmml,
       mathtex: !no_mathtex,
       noinvisibletimes: true,
-      nodefaultresources: true,
+      default_resources: false,
       timeout,
       max_rss_kb: max_rss_mb * 1024,
     }
@@ -290,7 +290,7 @@ impl ConversionProfile {
       pmml: !no_pmml,
       mathtex: !no_mathtex,
       noinvisibletimes: false,
-      nodefaultresources: false,
+      default_resources: true,
       timeout,
       max_rss_kb: max_rss_mb * 1024,
     }
@@ -498,7 +498,7 @@ impl LatexmlWorker {
       source_directory:          Some(&source_dir),
       site_directory:            None,
       search_paths:              &[],
-      nodefaultresources:        self.profile.nodefaultresources,
+      default_resources:         self.profile.default_resources,
       css_files:                 &[],
       js_files:                  &[],
       noinvisibletimes:          self.profile.noinvisibletimes,
@@ -627,10 +627,38 @@ impl LatexmlWorker {
   }
 }
 
+/// The harness tests' way to make a child look reused: with `CORTEX_WORKER_TEST_GROW_MB` set, the
+/// first conversion first reserves that much address space (`PROT_NONE`, never touched), as a
+/// long-lived child's allocator reservations grow it. Debug-assertion builds only.
+#[cfg(debug_assertions)]
+fn grow_address_space_for_test() {
+  static GROWN: std::sync::Once = std::sync::Once::new();
+  GROWN.call_once(|| {
+    let Some(mb) = std::env::var("CORTEX_WORKER_TEST_GROW_MB")
+      .ok()
+      .and_then(|value| value.parse::<usize>().ok())
+    else {
+      return;
+    };
+    // SAFETY: an anonymous `PROT_NONE` mapping, never accessed and never unmapped.
+    unsafe {
+      libc::mmap(
+        std::ptr::null_mut(),
+        mb << 20,
+        libc::PROT_NONE,
+        libc::MAP_PRIVATE | libc::MAP_ANONYMOUS | libc::MAP_NORESERVE,
+        -1,
+        0,
+      );
+    }
+  });
+}
+
 /// The harness tests' way to make a child die mid-conversion, as production children do: with
 /// `CORTEX_WORKER_TEST_FAULT` set, a conversion (its watchdog armed) logs one warning (the
 /// partial log the harness returns), then sleeps until the watchdog ends it (`sleep`), allocates
-/// past any address-space limit (`alloc`), raises SIGSEGV (`segv`), overflows its stack
+/// past any address-space limit (`alloc`), exhausts the address space before one allocation fails
+/// (`alloc_exhausted`, so the hook's own allocations fail too), raises SIGSEGV (`segv`), overflows its stack
 /// (`stack`), or fails cleanly with an `Err` (`fail`, the worker's own Fatal result). Compiled into
 /// builds with debug assertions only — never a release worker.
 #[cfg(debug_assertions)]
@@ -651,6 +679,20 @@ fn inject_test_fault() -> Result<(), String> {
     "alloc" => {
       let huge: Vec<u8> = Vec::with_capacity(1 << 40);
       std::hint::black_box(huge);
+    },
+    "alloc_exhausted" => {
+      // Fill the address space under `RLIMIT_AS` through the raw allocator, which returns null
+      // rather than calling the allocation-failure hook, down to its smallest blocks; then fail
+      // one allocation through the hook, which now fails every allocation of its own too.
+      let mut size = 1usize << 26;
+      while size >= 16 {
+        let layout = Layout::from_size_align(size, 16).unwrap();
+        // SAFETY: a layout of non-zero size; the blocks are leaked on purpose.
+        while !unsafe { std::alloc::alloc(layout) }.is_null() {}
+        size /= 2;
+      }
+      let last: Vec<u8> = Vec::with_capacity(64);
+      std::hint::black_box(last);
     },
     "segv" => {
       // SAFETY: raising a signal; the recorder handler records it and the default action ends the
@@ -833,7 +875,21 @@ impl Worker for LatexmlWorker {
     // pericortex names the leased archive `<taskid>.zip`: claim that task, so a death from here on
     // still returns a result for it (a harness child only). The claim ends when `convert` returns,
     // on every path: the task then has its result (or pericortex's empty reply).
+    #[cfg(debug_assertions)]
+    grow_address_space_for_test();
     let _claimed = exit_report::claim_task(self.get_identity(), &arxiv_id);
+    // pericortex receives the archive into its own per-task `cortex_task*` directory, a `TempDir` that its loop drops
+    // after the reply. An exit that skips destructors (the watchdog's, the allocation-failure hook's) left it behind:
+    // 565,483 of them, 434 GB, in the fleet's scratch directory by 2026-10-14. Sweep it with the run's own trees.
+    let _input_on_exit = path
+      .parent()
+      .filter(|dir| {
+        dir
+          .file_name()
+          .and_then(|name| name.to_str())
+          .is_some_and(|name| name.starts_with("cortex_task"))
+      })
+      .map(latexml_core::watchdog::remove_on_exit);
 
     // `AssertUnwindSafe`: the engine state is a thread-local singleton rebuilt
     // per paper (`prepare_session`), so a caught unwind does not hand a logically
@@ -969,10 +1025,11 @@ impl Worker for LatexmlWorker {
     }
     if self.address_space_recycle
       && let Some((size_kb, limit_kb)) = address_space_kb()
-      && address_space_near_cap(size_kb, limit_kb)
+      && (address_space_near_cap(size_kb, limit_kb) || size_kb > RECYCLE_ADDRESS_SPACE_KB)
     {
       eprintln!(
-        "recycle: address space VmSize {size_kb} kB within the headroom of RLIMIT_AS {limit_kb} kB"
+        "recycle: address space VmSize {size_kb} kB past {RECYCLE_ADDRESS_SPACE_KB} kB or within the \
+         headroom of RLIMIT_AS {limit_kb} kB"
       );
       return true;
     }
@@ -988,6 +1045,14 @@ const FRESH_ADDRESS_SPACE_KB: u64 = 2_760_000;
 /// peaks at 3,612 MB of address space (`VmPeak`) in a fresh process, about 1 GB above a
 /// fresh worker's 2.7 GB.
 const ADDRESS_SPACE_HEADROOM_KB: u64 = 1536 * 1024;
+
+/// Address space past which a worker recycles whatever its cap (user ruling 2026-10-15, "recycle
+/// earlier"): a child the allocator's reservations had grown to 3-4 GB still took the next paper,
+/// and a paper that fits a fresh worker failed its allocations there — 53 of run 353's 59
+/// Error→Fatal `oom:alloc_failed` papers convert cleanly in a fresh process under the same
+/// `RLIMIT_AS` (hep-ph0006359, math0111204, math0305067). 3 GiB is a fresh worker's
+/// [`FRESH_ADDRESS_SPACE_KB`] plus about 0.5 GB.
+const RECYCLE_ADDRESS_SPACE_KB: u64 = 3 * 1024 * 1024;
 
 /// True when an address space of `size_kb` is within [`ADDRESS_SPACE_HEADROOM_KB`] of the
 /// `RLIMIT_AS` cap `limit_kb`. The harness caps each child's address space
@@ -1699,12 +1764,14 @@ fn write_exit_placeholder_zip(
 /// capacity past the 4 GiB / 8 GB ulimit boundary and fails.
 ///
 /// No overhead on the normal digestion path — fires only when the
-/// allocator returns null. The hook avoids any heap allocation in its
-/// body (no `format!`, no string concat) because the global allocator
-/// has just failed: `eprintln!` writes via a stack-allocated formatter.
+/// allocator returns null. The memory is spent, so the hook allocates nothing and takes no lock:
+/// its line is formatted on the stack and written straight to the descriptor, and it prints no
+/// backtrace (capturing one allocates under the standard library's backtrace lock). A re-entry —
+/// the sweep of the run's trees failing to allocate — ends the process at once
+/// (`watchdog::enter_alloc_failure_hook`, which records the fleet's re-entry deadlock).
 fn custom_alloc_error_hook(layout: Layout) {
-  // First, before anything that could allocate (and fail again): a harness child tells the
-  // harness why it is exiting (allocation-free).
+  latexml_core::watchdog::enter_alloc_failure_hook();
+  // A harness child tells the harness why it is exiting (allocation-free).
   exit_report::record_cause(b"alloc", Some(layout.size() as u64));
   // Single Fatal: line on its own — matches `log_fatal` output shape
   // (`Fatal:<Target>:<Category> <message>`) so aggregation grep keys
@@ -1719,26 +1786,19 @@ fn custom_alloc_error_hook(layout: Layout) {
   let site = if layout.align() == 4 {
     "likely runaway macro expansion (gullet pushback Vec<Token> growth)"
   } else {
-    "allocation site unknown for this alignment — rerun with RUST_BACKTRACE=1"
+    "allocation site unknown for this alignment — break on `__rust_alloc_error_handler` in a \
+     debugger to find it"
   };
-  eprintln!(
+  latexml_core::watchdog::write_stderr_unlocked(format_args!(
     "Fatal:oom:alloc_failed allocation of {} bytes (align {}) failed; {}. \
      Witness: paper 2305.16331 + `\\u\\i` under `mathtext + T2A`. \
-     Exiting with code 137.",
+     Exiting with code 137.\n",
     layout.size(),
     layout.align(),
     site
-  );
-  // When `RUST_BACKTRACE=1` is set, print the captured backtrace too.
-  // Helps localise the call site of the failing allocation. The
-  // backtrace API allocates internally; if that re-trips the OOM the
-  // worker still exits cleanly via the exit() below.
-  if std::env::var_os("RUST_BACKTRACE").is_some() {
-    let bt = std::backtrace::Backtrace::force_capture();
-    eprintln!("{bt}");
-  }
+  ));
   latexml_core::watchdog::try_remove_registered_paths();
-  process::exit(137);
+  latexml_core::watchdog::exit_now(137);
 }
 
 fn main() -> Result<(), Box<dyn Error>> {

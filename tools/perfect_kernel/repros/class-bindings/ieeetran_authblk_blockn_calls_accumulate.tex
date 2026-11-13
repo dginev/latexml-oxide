@@ -1,0 +1,22 @@
+% witness: none on arXiv (siblings of 2402.16140's `\IEEEauthorblockN` under authblk): two unlabelled calls with their
+%          `\IEEEauthorblockA` lines, then a labelled call of two names and authblk's `\affil` of that label
+% oracle:  pdflatex 0 errors: "Ann AbleUniv X1 , Bob BakerUniv Y1 , and Cy Coe, Dee Dale2", "2Univ Z" (authblk marks
+%          the unlabelled calls with its note 1)
+% engines: rust int154u = Ann Able and Bob Baker without their lines, a nameless creator holding Univ Z, 1 warning
+%          (authblk's one creator call held the nested `\IEEEauthorblockN` call); Perl 0.8.8 = 0 errors, one creator a
+%          call ("Cy Coe, Dee Dale" one), the block lines its affiliations
+% expect:  0 errors, 0 warnings; Ann Able (Univ X), Bob Baker (Univ Y): every authblk `\author` adds its authors after
+%          those before, where the class's own `\author` replaces them; Cy Coe and Dee Dale, each labelled 2, Univ Z
+% status:  RED (int154u) -> GREEN (CR6) — perfect_kernel_batchcr6::authblk_author_blocks_accumulate_and_take_labels
+% preload: ar5iv.sty
+\documentclass[journal]{IEEEtran}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able}\IEEEauthorblockA{Univ X}}
+\author{\IEEEauthorblockN{Bob Baker}\IEEEauthorblockA{Univ Y}}
+\author[2]{\IEEEauthorblockN{Cy Coe, Dee Dale}}
+\affil[2]{Univ Z}
+\maketitle
+Body.
+\end{document}

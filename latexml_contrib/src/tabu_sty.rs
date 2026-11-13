@@ -10,6 +10,34 @@ LoadDefinitions!({
   RequirePackage!("varwidth");
   RequirePackage!("longtable");
   RequirePackage!("tabularx"); // tabu's `X` columns (tabu.sty:6-8 grammar)
+  // tabu.sty:2376-2381 `\tabu@latextwoe` (run by `\tabu@AtBeginDocument`, :2517/:2553): the one-step expansion of each
+  // command plus `\arraybackslash`, so `\\` after it ends the row (2210.07016, 2403.07615, 2112.12027).
+  RawTeX!(
+    r"\def\tabu@latextwoe{%
+\def\tabu@temp##1##2##3{{\toks@\expandafter{##2##3}\xdef##1{\the\toks@}}}%
+\tabu@temp\tabu@centering\centering\arraybackslash
+\tabu@temp\tabu@raggedleft\raggedleft\arraybackslash
+\tabu@temp\tabu@raggedright\raggedright\arraybackslash}
+\AtBeginDocument{\tabu@latextwoe}"
+  );
+  // tabu.sty:2389-2391 `\tabu@trivlist` (`\tabu@init` :705): in a tabu, every list lets `\\` back to `\@normalcr`, so a
+  // list in a centred cell keeps its line breaks; it adds to the kernel's `\lx@trivlist@hook`, our `\@trivlist` being locked.
+  RawTeX!(
+    r"\def\tabu@normalcrbackslash{\let\\\@normalcr}
+\def\tabu@trivlist{\expandafter\def\expandafter\lx@trivlist@hook\expandafter{%
+\expandafter\tabu@normalcrbackslash\lx@trivlist@hook}}"
+  );
+  // tabu.sty:907-911 tabu's private `|` takes a line style, `|[1pt]` (`\tabu@rewritevline[#1]`); the rule is kept, its
+  // width, dash and colour not modelled (1907.07986, 1909.02301, 1810.00307, 2112.10477, 2002.01722, 2006.01316,
+  // 1705.07086).
+  Let!("\\lx@tabu@NC@vline", "\\NC@rewrite@|");
+  DefMacro!("\\lx@tabu@vline[]", "\\lx@tabu@NC@vline");
+  // tabu.sty:620/624, 630/634: `{tabu*}`/`{longtabu*}` (2112.12027); the rescan of their body (`\tabuscantokenstrue`) is
+  // not modelled.
+  DefMacro!(T_CS!("\\tabu*"), None, "\\tabu");
+  DefMacro!(T_CS!("\\endtabu*"), None, "\\endtabu");
+  DefMacro!(T_CS!("\\longtabu*"), None, "\\longtabu");
+  DefMacro!(T_CS!("\\endlongtabu*"), None, "\\endlongtabu");
   // tabu.sty:6-8: `\begin{tabu} to <dimen>{cols}` / `spread <dimen>{cols}` /
   // `{cols}`. Mapping straight to `\tabular` read the `t` of `to` as the
   // column spec and spilled `o 0.25\linewidth{X[1,$]rr}` into the body — the
@@ -17,8 +45,12 @@ LoadDefinitions!({
   // problemset example.tex:228, 41 errors; Perl raw-loads tabu.sty and dies).
   // `to <w>` is `\tabularx{<w>}`; the plain and `spread` forms target
   // `\linewidth` (spread's natural-width delta is not modeled).
+  // tabu.sty:616-618: in math mode `{tabu}` is an `array` (`\def\tabu@{\array}\def\endtabu{\endarray}`), its cells
+  // math: `$\begin{tabu}{c|c} (u,v) & \pi(u,v)\end{tabu}$` (2010.06598; the text tabular's cells erred "Script ^").
+  // A target is read and not modelled. Guard `perfect_kernel_batch68z::tabu_in_math_is_an_array`.
   DefMacro!("\\tabu", "\\lx@tabu@start");
   DefPrimitive!("\\lx@tabu@start", {
+    tabu_init()?;
     let target = match read_keyword(&["to", "spread"])? {
       Some(_) => {
         let dim = read_dimension()?;
@@ -26,10 +58,15 @@ LoadDefinitions!({
       },
       None => Tokens!(T_CS!("\\linewidth")),
     };
-    let mut toks = vec![T_CS!("\\tabularx"), T_BEGIN!()];
-    toks.extend(target.unlist());
-    toks.push(T_END!());
-    unread(Tokens::new(toks));
+    if lookup_string_from_sym(pin!("MODE")).ends_with("math") {
+      let_i(&T_CS!("\\endtabu"), &T_CS!("\\endarray"), None);
+      unread(Tokens!(T_CS!("\\array")));
+    } else {
+      let mut toks = vec![T_CS!("\\tabularx"), T_BEGIN!()];
+      toks.extend(target.unlist());
+      toks.push(T_END!());
+      unread(Tokens::new(toks));
+    }
   });
   DefMacro!("\\endtabu", "\\endtabularx");
   // tabu.sty:1058-1083 `X[<coef>,<align>,<$>,<p|m|b>]`: the bracket carries a
@@ -80,6 +117,7 @@ LoadDefinitions!({
   Let!("\\lx@tabularx@X", "\\NC@rewrite@X");
   DefMacro!("\\longtabu", "\\lx@longtabu@start");
   DefPrimitive!("\\lx@longtabu@start", {
+    tabu_init()?;
     if read_keyword(&["to", "spread"])?.is_some() {
       let _ = read_dimension()?;
     }
@@ -149,3 +187,18 @@ LoadDefinitions!({
   DefRegister!("\\abovetabulinesep" => Dimension::new(0));
   DefRegister!("\\belowtabulinesep" => Dimension::new(0));
 });
+
+/// The lets of tabu.sty:705-708 (`\tabu@init`, from `\tabu@setup` :687, for every tabu and longtabu) and :907's private
+/// `|` (`\tabu@privatecolumns`, :1132), local to the environment.
+fn tabu_init() -> Result<()> {
+  for (cs, to) in [
+    ("\\centering", "\\tabu@centering"),
+    ("\\raggedright", "\\tabu@raggedright"),
+    ("\\raggedleft", "\\tabu@raggedleft"),
+    ("\\NC@rewrite@|", "\\lx@tabu@vline"),
+  ] {
+    let_i(&T_CS!(cs), &T_CS!(to), None);
+  }
+  Digest!("\\tabu@trivlist")?;
+  Ok(())
+}

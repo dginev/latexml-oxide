@@ -1,0 +1,16 @@
+% witness: synthetic (revVARW S1, the shape of a tcolorbox title's colour)
+% oracle:  pdflatex 0 errors; [143.47256pt] [400.0pt] [143.47256pt]: a `\color` at the varwidth's start is a whatsit on
+%          the first line that varwidth.sty's `\@vwid@measure` cannot strip, so that line keeps the given width
+% engines: rust VARWb = 0 errors: [142.63924pt] each row (the colour not a line item; 0.83pt short in the text's own
+%          measure, as outside varwidth); rust int164a [400.0pt] each row; perl: varwidth = minipage
+% expect:  0 errors; the second row the given [400.0pt]
+% status:  RED (moves: post-merge)
+\documentclass{article}
+\usepackage{varwidth,xcolor}
+\begin{document}
+\setbox0\hbox{\begin{varwidth}{400pt}Definition 1.1: Boolean Function\end{varwidth}}[\the\wd0]
+
+\setbox0\hbox{\begin{varwidth}{400pt}\color{red}Definition 1.1: Boolean Function\end{varwidth}}[\the\wd0]
+
+\setbox0\hbox{\begin{varwidth}{400pt}\textcolor{red}{Definition 1.1: Boolean Function}\end{varwidth}}[\the\wd0]
+\end{document}

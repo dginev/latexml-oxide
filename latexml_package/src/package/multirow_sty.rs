@@ -24,9 +24,13 @@ LoadDefinitions!({
         let mut data_lock = data.borrow_mut();
         if let Some(colspec) = data_lock.current_column() {
           let rowspan_f = nrows.value_f64();
+          // A negative count spans the rows above (multirow.sty:172), done where the alignment is normalized
+          // (latexml_core alignment/normalize.rs `normalize_upward_spans`, which warns when the cells above are not
+          // empty); Perl's binding warns and spans one row (multirow.sty.ltxml:28, example arXiv:2210.15835
+          // `\multirow{-8.2}{*}{\includegraphics…}`; KNOWN_PERL_ERRORS #1074). Witness 1509.00049.
+          // (a fraction of a row is the box's raise, which spans the whole rows: one Warning at most, the span's)
           let rowspan = if rowspan_f < 0.0 {
-            Warn!("unsupported", "multirow",
-              "Negative row sizes for \\multirow are not yet supported.");
+            colspec.rowspan_up = Some(-rowspan_f as usize);
             1usize
           } else if rowspan_f != rowspan_f.floor() {
             Warn!("unsupported", "multirow",
@@ -90,8 +94,15 @@ LoadDefinitions!({
   // values are the document's, though `\\@array` zeroed them in the cell (KNOWN_PERL_ERRORS #445).
   DefMacro!("\\multirow[]{Float}[]{}[Glue]",
     "\\lx@multirow@setup{#2}[#1]{#4}\\@ifnextchar\\bgroup{\\lx@multirow@hbox{#4}}{}");
+  // The text is set between two struts, `\hbox{\strut#6\strut}` / `\strut#6\strut\par` (multirow.sty:174-177): a
+  // one-argument author macro as the whole text (`\multirow{5}{*}{\instructblip}`, 2507.07731) takes the closing
+  // `\strut`, not the box's `}` (Perl multirow.sty.ltxml `\hbox{\multirowsetup #6}` reads the brace: KNOWN_PERL_ERRORS
+  // #888). The closing strut is `\lx@multirow@strut`, which typesets nothing: the kernel's `\strut` is a `\vrule` in
+  // math, which the formula's `tex=` spelled out (`\vrule height=10.49995pt,…`, 2501.19081's `array`); the opening one
+  // delimits nothing and is left out. Guard `perfect_kernel_batch69a::multirow_text_is_strut_delimited`.
+  DefMacro!("\\lx@multirow@strut", None);
   DefMacro!("\\lx@multirow@hbox{}{}",
-    "\\hbox{\\let\\\\\\lx@newline\\if*#1\\else\\lx@restore@interline\\fi\\multirowsetup #2}");
+    "\\hbox{\\let\\\\\\lx@newline\\if*#1\\else\\lx@restore@interline\\fi\\multirowsetup #2\\lx@multirow@strut}");
 
   // multirow.sty L120: \newlength\multirow@dima (+ dimb / cntb /
   // prefixt). User code that touches these internals before our

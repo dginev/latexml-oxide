@@ -1,0 +1,19 @@
+% witness: review 66j #2 (latent: no arXiv paper isolated); revtex4-2 papers loading raw packages with `[draft]`
+% oracle: pdflatex (clean, "Option: draft."); engine: pdflatex
+% expect: 0 errors; "Option: draft."
+% mechanism: revtex4_support_sty.rs defines REVTeX 3's `\ds@draft` & co. after a revtex4 class has processed its options,
+%   so they were never consumed or let to `\relax` (latex.ltx:18593-18594); with `\@process@pti@ns` running a defined
+%   `\ds@<option>` (KPE #657), a later package's undeclared `draft` ran revtex's no-op instead of its `\DeclareOption*`.
+%   Fixed: the revtex4/4-1 class bindings retire them (`retire_option_handlers`).
+% status:  GREEN
+\begin{filecontents*}[overwrite]{optpkg.sty}
+\ProvidesPackage{optpkg}
+\def\optseen{none}
+\DeclareOption*{\edef\optseen{\CurrentOption}}
+\ProcessOptions
+\end{filecontents*}
+\documentclass{revtex4-2}
+\usepackage[draft]{optpkg}
+\begin{document}
+Option: \optseen.
+\end{document}

@@ -1,0 +1,29 @@
+% mechanism: the list cutter (`classify::entry_starts` `starts_inside_environment`): a list whose lines an environment
+%   it opens spans (`\begin{footnotesize}`) is read by its tokens, and no piece carries the environment's size; the
+%   declaration twin (`\affiliation{\footnotesize …}`) keeps 80 % on every entry
+% witness: 2506.05954 (`\affiliation{\begin{footnotesize} ${}^a$New Engineering…\\ ${}^b$…\\ ${}^c$…\\
+%   ${}^d$…\end{footnotesize}}`, an author marked `$^{b,c}$`); sibling llncs `\institute{\begin{footnotesize}\affmark{1}
+%   Univ A\\ \affmark{2} Univ B\end{footnotesize}}` (revP4b4a2 probe f2) the same
+% oracle:  pdflatex (TL 2025, revtex4-1, -no-shell-escape) 0 errors: "a Univ A, Town" over "b Univ B, City" over
+%   "c Univ C, Village", footnote size
+% engines: rust P4b4abase and P4b4a4: 0 errors, 0 warnings, Ann Able "a Univ A, Town", Bob Baker "b Univ B, City" and
+%   "c Univ C, Village", none sized
+% expect:  0 errors, 0 warnings; the same owners and words, every entry at 80 % (as the declaration twin)
+% status:  RED (P4b4abase, P4b4a4: the size; no word lost); owners and words pinned by the GREEN sibling
+%   revtex_affiliation_footnotesize_env_lines.tex
+% moves:   post-merge (P4ENV: an environment's declarations carried onto the pieces of the list it spans)
+% preload: ar5iv.sty
+\documentclass[aps,prd]{revtex4-1}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{a}$}
+\author{Bob Baker$^{b,c}$}
+\affiliation{\begin{footnotesize}
+  ${}^a$Univ A, Town\\
+  ${}^b$Univ B, City\\
+  ${}^c$Univ C, Village
+\end{footnotesize}}
+\begin{abstract}Abs.\end{abstract}
+\maketitle
+Body.
+\end{document}

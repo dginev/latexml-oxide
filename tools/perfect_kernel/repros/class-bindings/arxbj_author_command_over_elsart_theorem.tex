@@ -1,0 +1,14 @@
+% witness: 1601.03906 (arxbj: `\newcommand{\prob}{\mathrm{P}}`, then `$\prob_t(S)$`; 97 errors, 1,828 of 22,549 words)
+% oracle:  pdflatex (with the shipped arxbj.cls and an empty texsort.sty) 1 error (the class passes `dvips` to hyperref in
+%          PDF mode): "Theorem 1. A claim." "P_t(S) ≤ P(S)."
+% engines: rust 67int15 = 2 Error, 1 Warning (the binding's elsart `{prob}` theorem kept `\prob`; `\newcommand` refused, `$\prob_t$`
+%          began a theorem in math); Perl 0.8.8 has no arxbj binding (OmniBus), the ar5iv binding loads elsart_support too
+% expect:  0 errors; `\prob` the author's (an upright P in both formulas); the class's own `{thm}` a theorem
+% status:  FIXED (68w)
+% preload: ar5iv.sty
+\documentclass{arxbj}
+\newcommand{\prob}{\mathrm{P}}
+\begin{document}
+\begin{thm}A claim.\end{thm}
+$\prob_t(S)\leq\prob(S)$.
+\end{document}

@@ -1,0 +1,24 @@
+% witness: 2404.11739 (`\label[appendixtable]{…}` after `\caption`, `\crefname{appendixtable}{Appendix Table}{…}`),
+%          2605.13648 (`\label[lemma]`, `\label[corollary]`)
+% oracle:  pdflatex 0 errors: "See Appendix Table 1, table 2, Appendix Figure 1, Lemma 1 and Appendix Table 1."
+% engines: rust int34a = "table 1, table 2, figure 1, Lemma 1, equation 1" (the type read and dropped; Perl's
+%          cleveref.sty.ltxml:29 the same)
+% expect:  0 errors, 0 warnings; the labelled objects' creftype tags name the given type ("Appendix Table", …, the
+%          capitalised form derived from \crefname as cleveref.sty:1296-1325 derives it)
+% status:  RED (int34a) -> GREEN (77s)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsthm}
+\usepackage{cleveref}
+\crefname{appendixtable}{Appendix Table}{Appendix Tables}
+\crefname{appendixfigure}{Appendix Figure}{Appendix Figures}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}[theorem]{Lemma}
+\begin{document}
+See \cref{tab:a}, \cref{tab:b}, \Cref{fig:a}, \Cref{lem:a} and \cref{eq:a}.
+\begin{table}\caption{A}\label[appendixtable]{tab:a}\end{table}
+\begin{table}\caption{B}\label{tab:b}\end{table}
+\begin{figure}\caption{F}\label[appendixfigure]{fig:a}\end{figure}
+\begin{lemma}\label[lemma]{lem:a} L.\end{lemma}
+\begin{equation}\label[appendixtable]{eq:a} x=1\end{equation}
+\end{document}

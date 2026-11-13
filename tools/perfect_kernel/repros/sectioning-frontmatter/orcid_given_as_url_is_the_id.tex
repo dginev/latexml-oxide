@@ -1,0 +1,16 @@
+% witness: 68h: an ORCID iD given as its orcid.org address (2104.12510, 2304.13458, 2407.18715 `\orcidauthor{https://
+%          orcid.org/…}`) built the link `https://orcid.org/https://orcid.org/…` in the kernel's `\lx@add@orcid`
+% oracle:  pdflatex 0 errors (acmart prints no iD; the address names one person's page)
+% engines: rust 68h base (67int8): href="https://orcid.org/https://orcid.org/0000-0002-1825-0097"; perl: the contact
+%          text as written, no link
+% expect:  0 errors; every link is https://orcid.org/<iD>
+% status:  GREEN (68h)
+\documentclass{acmart}
+\begin{document}
+\title{T}
+\author{Ann One}\orcid{https://orcid.org/0000-0002-1825-0097}
+\author{Bob Two}\orcid{0000-0001-5109-3700}
+\author{Cy Three}\orcid{http://www.orcid.org/0000-0003-1415-9269/}
+\maketitle
+Text.
+\end{document}

@@ -856,7 +856,7 @@ pub fn decode_math_char(
 
   let glyph = if use_current_font {
     if let Some(ref data) = curfont.encoding {
-      crate::common::font::decode(n as u8, Some(data.to_string()), false)
+      crate::common::font::decode_in_font(n as u8, data, &f, false)
     } else {
       Some(c)
     }
@@ -902,7 +902,7 @@ pub fn decode_math_char(
       }
     }
     if let Some(data) = encoding_opt {
-      crate::common::font::decode(n as u8, Some(data), false)
+      crate::common::font::decode_in_font(n as u8, &data, &f, false)
     } else {
       Some(c)
     }

@@ -1,0 +1,23 @@
+% mechanism: a note after a labelled entry's last other ink is the author block's, no name's: Perl digests it inside the
+%   entry's contact, where `\thanks` is `\lx@add@pubnote@thanks` (Base_Utility.pool.ltxml:332), one `<pubnote>`
+%   (`Resolver::labelled_entries`: the entry's span ends before it, the note the block's; `emitter::emit::block_pubnote`
+%   writes it as the document's); `=2` only
+% witness: 2504.09745 (IEEEtran, `$^{\ddagger}$Ericsson Canada\thanks{This work was supported in part by Ericsson, …}`);
+%   review revLO2 1's shapes: `City \thanks{…}`, two notes, `\footnote{…}`, a note on the first entry's line
+% oracle:  pdflatex 0 errors; "Ann Able⋆, Bob Baker‡, Cy Cole‡"; ⋆Univ A, Town; ‡Ericsson Canada; the footnote "This work was
+%   supported by Ericsson."
+% engines: perl: the three creators (no marks), one `<pubnote role="thanks">` held by no author; rust off: two pubnotes, one per
+%   `‡` author's relocated entry; int146a `=2`: a nameless creator's note (two Warnings) and a pubnote from the entry's tokens;
+%   LO2 `=2`: each `‡` author holds the thanks
+% expect:  0 errors, 0 warnings; `=2`: one pubnote, no creator holds the note, no nameless creator
+% status:  RED (int146a, LO2) -> GREEN (perfect_kernel_batchlo2::a_note_after_the_entries_is_the_blocks)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{\star}$, Bob Baker$^{\ddagger}$, Cy Cole$^{\ddagger}$\\
+$^{\star}$Univ A, Town\\
+$^{\ddagger}$Ericsson Canada\thanks{This work was supported by Ericsson.}}
+\maketitle
+Text.
+\end{document}

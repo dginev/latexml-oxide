@@ -150,9 +150,10 @@ LoadDefinitions!({
       "\\label Semiverbatim",
       "\\lxRDF@original@label{#1}\\lxRDFa{property=dcterms:alternative,content=#1}"
     );
+    // (longtable's label reads cleveref's optional `[type]`, longtable_sty.rs; passed on)
     DefMacro!(
-      "\\lx@longtable@label Semiverbatim",
-      "\\lxRDF@originallx@longtable@label{#1}\\lxRDFa{property=dcterms:alternative,content=#1}"
+      "\\lx@longtable@label [] Semiverbatim",
+      "\\lxRDF@originallx@longtable@label[#1]{#2}\\lxRDFa{property=dcterms:alternative,content=#2}"
     );
   });
   ProcessOptions!();
@@ -250,7 +251,7 @@ LoadDefinitions!({
           attr: attrs,
           content: vec![document::tag::TagContent::Box(empty_content)],
         };
-        let f_entry = frontmatter.entry(tag).or_insert_with(Vec::new);
+        let f_entry = frontmatter.entry(tag).or_default();
         f_entry.push(entry);
         Ok(())
       })?;

@@ -1,0 +1,18 @@
+% mechanism: a lost lettered Name ink of a block that is no author's line by its addresses and is a name, on a line of the block's
+%   names or spelled by an address its line or its column prints (`resolver::words::LostInk::names_fail`), fails the block's
+%   names: the block is written whole, Perl's whole-block `\lx@add@author` (Base_Utility.pool.ltxml:692-694), not a name kept
+%   as a note; a column's name above its address too (a container's events are a column)
+% witness: 1109.6618 (JAIR `\name Shaul Markovitch \email shaulm@…\\`: one creator with the note "Shaul Markovitch"); 1312.0286,
+%   1111.6082, 1905.12960, 1807.03929; the columns row: 1805.08288, 2002.00084 (minipages, one author each)
+% oracle:  pdflatex 0 errors; "Ann Able ann@a.org", "Bob Baker bob@b.org", "Univ A", "Town, Country"
+% engines: rust N1, the switch on: Ann Able alone, the note "Baker bob" (an address's words taken for the name's), 2 warnings
+% expect:  0 errors, 1 warning (the lost words, the block written whole); the switch on: one creator, the block whole
+% status:  RED (N1) -> GREEN (perfect_kernel_batchn1::a_lost_name_writes_the_block_whole)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able ann@a.org\\ Bob Baker bob@b.org\\ Univ A\\ Town, Country}
+\maketitle
+Body.
+\end{document}

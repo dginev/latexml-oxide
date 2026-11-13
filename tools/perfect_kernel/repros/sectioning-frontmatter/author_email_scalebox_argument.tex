@@ -1,0 +1,13 @@
+% witness: the r6 re-review of batch 77p (finding 5, probe w14)
+% oracle:  pdflatex 0 errors: two names, the institution, the scaled address list
+% engines: rust 77p r9 = 0 errors; "0.9aable@x.edu" on Ann Able
+% expect:  0 errors, 0 warnings; each address the e-mail of the name it spells, no scale factor in it
+% status:  RED (77p r9) -> GREEN (77p r10)
+\documentclass{article}
+\usepackage{graphicx}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^1$ \\ $^1$Univ A \\ \scalebox{0.9}{\texttt{aable@x.edu, bbaker@x.edu}}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

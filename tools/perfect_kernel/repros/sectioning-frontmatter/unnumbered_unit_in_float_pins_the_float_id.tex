@@ -1,0 +1,14 @@
+% witness: reviewer probe for batch 66f (sbx341/review/p/app1.tex); 2605.02378, 2605.25534 shape
+% oracle: pdflatex (clean); engine: pdflatex
+% expect: 0 errors; the figure is A1.F1 (in appendix A1), as a numbered unit in a float leaves it
+% mechanism: pin_float_id_before_its_sectioning pins the float's id before a numbered unit inside it
+%   (OXIDIZED_DESIGN_DIVERGENCES #189 addendum); an unnumbered \section* is not pinned and the float becomes Ax1.F1.
+% status:  RED
+\documentclass{article}
+\begin{document}
+\section{Intro} Text.
+\appendix
+\section{First} A.
+\begin{figure}\section*{Strategy A} body \caption{Cap}\label{fig:x}\end{figure}
+\section{Second} See \ref{fig:x}.
+\end{document}

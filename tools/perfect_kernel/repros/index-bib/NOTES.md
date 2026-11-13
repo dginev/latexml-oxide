@@ -621,3 +621,36 @@ none), so it warns "Failed to patch" and prints no open-access mark (pinned 0/1 
 symbols themselves are empty boxes — xsavebox's `\xsbox`/`\xusebox` lose the saved content (RED
 boxes-groups/xsavebox_saved_box_prints_its_content). biblatex-ext 10 -> 1 errors (the last, a bibliography inside a
 tcolorbox, is out of scope, user 2026-10-02), 10,430 -> 16,825 words.
+
+`amsrefs_biblist_without_bibdiv` (71a, KNOWN_PERL_ERRORS #939): amsrefs.sty:532-538's `{biblist}` stands alone, so an
+author's `\section*{References}\begin{biblist}` is the document's bibliography; outside `{bibdiv}`/`{bibsection}`/
+`{bibchapter}` (`\if@lx@inbibliography`) amsrefs_sty.rs opens one through the kernel's implicit-bibliography marker
+`\lx@mung@bibliography@pre{implicit}`, so the heading before it (or its heading line) heads it, else it is untitled.
+
+`bibentry_prints_the_stored_entry`, `bibentry_nobibliography_keeps_the_list_its_citations_resolve_to`,
+`nobibliography_star_prints_nothing` (78k; SHARED: Perl has no binding, KNOWN_PERL_ERRORS #1059): bibentry.sty:44-66
+`\BR@nobib` stores each `.bbl` entry as `\BR@r@<key>` under a redefined `{thebibliography}`, which our locked kernel
+bibliography refuses when the package is read raw, so the list printed at `\nobibliography` and `\bibentry` printed
+nothing. Fix site latexml_contrib bibentry_sty.rs: `\lx@BR@store` reads the `<jobname>.bbl`, keeps each entry's tokens
+up to its blank line (OXIDIZED_DESIGN_DIVERGENCES #830); the starless form keeps the list as its citations' target (#831).
+
+`natbib_citetext_keeps_its_brackets` (78k; PERL-ORIGIN, KNOWN_PERL_ERRORS #1058): natbib.sty:739 wraps `\citetext`'s
+text in `\NAT@open`/`\NAT@close`; natbib_sty.rs now does.
+
+`unused_glossary_entry_raises_nothing` (78p; PERL-ORIGIN, KNOWN_PERL_ERRORS #1093): glossaries.sty:2341-2346 stores a
+field by `\def`, typeset only where the entry is used; glossaries_sty.rs digests every field into
+`<ltx:glossarydefinition>`. Fix: `\lx@glossaries@newentry` holds the digest's diagnostics and defers them to
+`glossary:<key>`, replayed for an entry referenced in a document that prints a glossary (OXIDIZED_DESIGN_DIVERGENCES #859).
+
+`natbib_sort_compress_numbers`, `natbib_super_sort_compress`, `cite_sty_sorts_and_compresses`,
+`cite_sty_nosort_keeps_the_order`, `revtex_citations_sort_and_compress`, `acmart_numeric_citations_sort_and_compress`
+(78j, KNOWN_PERL_ERRORS #1072, OXIDIZED_DESIGN_DIVERGENCES #844; PERL-ORIGIN): natbib's `sort`/`compress` options
+(natbib.sty:267-271, :377, :401-421) and cite.sty's default order (cite.sty:95, :272-297) were no-ops. The package's
+choice is a `class` on the `ltx:bibref` (`ltx_cite_sort`, `ltx_cite_compress`; sect11.rs `cite_order_class`), applied
+by latexml_post crossref.rs `make_bibcite`, where the numbers are known: by number, a run of three or more as an en
+dash range, a run of two kept. revtex4*, achemso, acmart (its own `\setcitestyle`), jheppub and quantumarticle ask for it.
+
+`cite_sty_prints_unsorted_labels_first` (78j r2; PERL-ORIGIN, KNOWN_PERL_ERRORS #1072): cite.sty prints a key it cannot
+sort (a label not a number, an undefined key) at once, before the sorted ones (cite.sty:205-230 `\@cite@dump@now`):
+the class `ltx_cite_unsorted_first`. `natbib_numbers_prints_a_label_given` (78j r2; PERL-ORIGIN, KNOWN_PERL_ERRORS
+#1075): in natbib's numbers mode a label with no `(year)` and no `, ` is the number (natbib.sty:811-817, :1005-1012).

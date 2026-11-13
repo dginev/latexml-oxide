@@ -8,6 +8,7 @@ LoadDefinitions!({
     let name = args.remove(0).owned_tokens().unwrap();
     let name_str = name.to_string();
     let begin_mark = format!("\\begin{{{name_str}}}");
+    let begin_mark_let = begin_mark.clone();
     let name_clone = name_str.clone();
     DefConstructor!(T_CS!(begin_mark), None, None,
     after_digest => {
@@ -53,7 +54,24 @@ LoadDefinitions!({
       Ok(Vec::new())
     });
     DefMacro!(T_CS!(format!("\\end{{{name_str}}}")), None, Tokens!());
-    DefMacro!(T_CS!(format!("\\end{name_str}")), None, Tokens!());
+    // (an empty name, `\excludecomment{}` or `\includecomment{}` written by mistake — 2508.09827:687 — names no command
+    // of the document, comment.sty's being `\csname\endcsname`: `\<name>` would be read as `\\`, every later line break
+    // reading the rest of its line raw, and `\end<name>` would be `\end`)
+    if !name_str.is_empty() {
+      DefMacro!(T_CS!(format!("\\end{name_str}")), None, Tokens!());
+    }
+    // comment.sty's own name for the environment (`\csarg\def{#1}`, comment.sty:241-248): a kernel-style `\begin`
+    // that looks up only `\<name>` — arabtex's alatex.sty:113 — finds it, where Perl's binding (only `\begin{<name>}`)
+    // left "Environment comment undefined" and typeset the comment (KNOWN_PERL_ERRORS #1148; 2104.08110's commented-out
+    // figure, 4 missing images).
+    // Guard: `perfect_kernel_batch79k::a_comment_under_a_kernel_begin_is_skipped`.
+    if !name_str.is_empty() {
+      let_i(
+        &T_CS!(format!("\\{name_str}")),
+        &T_CS!(begin_mark_let),
+        None,
+      );
+    }
     Ok(Vec::new())
   });
 
@@ -88,6 +106,20 @@ LoadDefinitions!({
       None,
       Tokens::new(after_tokens)
     );
+    // comment.sty's own names (`\csarg\def{#1}`, comment.sty:234-240), as for an excluded comment above, and none for
+    // an empty name
+    if !name.is_empty() {
+      let_i(
+        &T_CS!(s!("\\{name}")),
+        &T_CS!(s!("\\begin{{{name}}}")),
+        None,
+      );
+      let_i(
+        &T_CS!(s!("\\end{name}")),
+        &T_CS!(s!("\\end{{{name}}}")),
+        None,
+      );
+    }
     Ok(Vec::new())
   }));
 
@@ -99,6 +131,52 @@ LoadDefinitions!({
     Some(PrimitiveBody::Closure(define_excluded))
   );
   DefPrimitive!("\\specialcomment{}{}{}", Some(define_included));
-  DefPrimitive!("\\processcomment{}{}{}{}", None);
   DefMacro!("\\csarg{}{}", r"\expandafter#1\csname#2\endcsname");
+  // comment.sty's own machinery (:170-233, :283-289), for what builds a comment type of its own on it (lwarp.sty:1349-1363
+  // `\CommentEndDef`, `\ProcessComment`, `\SetUpCutFile`: tikz-trackschematic and its snippets), and the two types the
+  // binding leaves to it, as the file has them (:266-272 `\generalcomment`, `\processcomment`; Perl's binding has none of
+  // this, "\CommentEndDef undefined"). `\excludecomment`, `\includecomment`, `\specialcomment` stay the binding's.
+  RawTeX!(
+    r"\def\makeinnocent#1{\catcode`#1=12 }
+\newwrite\CommentStream
+\def\DefaultCutFileName{\def\CommentCutFile{comment.cut}}
+\DefaultCutFileName
+\def\ProcessComment#1{\def\CurrentComment{#1}%
+  \begingroup
+  \let\do\makeinnocent \dospecials
+  \makeinnocent\^^L%
+  \endlinechar`\^^M\relax \catcode`\^^M=12\relax \xComment}
+{\catcode`\^^M=12 \endlinechar=-1 %
+ \gdef\xComment#1^^M{\ProcessCommentLine}
+ \gdef\ProcessCommentLine#1^^M{\def\test{#1}
+      \csarg\ifx{End\CurrentComment Test}\test
+          \edef\next{\endgroup\noexpand\EndOfComment{\CurrentComment}}%
+      \else \ThisComment{#1}\let\next\ProcessCommentLine
+      \fi \next}
+}
+\def\SetUpCutFile{\immediate\openout\CommentStream=\CommentCutFile
+  \PrepareCutFile}
+\def\PrepareCutFile{}
+\long\def\WriteCommentLine#1{\immediate\write\CommentStream{\unexpanded{#1}}}
+\let\ThisComment\WriteCommentLine
+\def\ProcessCutFile{\message{Straight input of \CommentCutFile.}%
+  \input{\CommentCutFile}\relax}
+\def\CloseAndInputCutFile{\FinalizeCutFile
+  \immediate\closeout\CommentStream
+  \ProcessCutFile}
+\def\FinalizeCutFile{}
+\long\def\generalcomment#1#2#3{\message{General comment '#1'}%
+  \csarg\def{#1}{\endgroup #2 \relax \SetUpCutFile \ProcessComment{#1}}%
+  \csarg\def{After#1Comment}{\CloseAndInputCutFile #3}%
+  \CommentEndDef{#1}}
+\long\def\processcomment#1#2#3#4{\message{Lines-Processing comment '#1'}%
+  \csarg\def{#1}{\endgroup \SetUpCutFile #2\relax
+    \ProcessComment{#1}}%
+  \csarg\def{After#1Comment}{#3\CloseAndInputCutFile #4}%
+  \CommentEndDef{#1}}
+\def\EndOfComment#1{\csname After#1Comment\endcsname
+  \begingroup\def\@currenvir{#1}\end{#1}}
+\def\CommentEndDef#1{{\escapechar=-1\relax
+  \csarg\xdef{End#1Test}{\string\\end\string\{#1\string\}}}}"
+  );
 });

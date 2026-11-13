@@ -1,0 +1,18 @@
+% mechanism: an authblk `\author` call whose own `\\` line answers one of its names' marks, a separate `\affil` the other:
+%   `per_author_marks` keeps a call's marks printed only when none of its own lines answer them, so both names come out bare,
+%   and the line's printed "1" is dropped from its contact, uncounted (the authblk sibling of
+%   `kernel_author_lines_answered_marks_hidden_red`)
+% witness: synthetic (revP4b2b a2)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "Ann Able1 and Bob Baker2", "1 Univ A, Town A", "2 Univ B, Town B"
+% engines: P4b2 = P4b2b: both names bare; "Univ A, Town A" without its 1 (0 W)
+% expect:  0 errors, 0 warnings; Ann Able 1 "1 Univ A, Town A", Bob Baker 2 "2 Univ B, Town B"
+% status:  RED (P4b2, P4b2b) — moves: post-merge (with kernel_author_lines_answered_marks_hidden_red)
+\documentclass{article}
+\usepackage{authblk}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{2}$\\ $^{1}$Univ A, Town A}
+\affil{$^2$Univ B, Town B}
+\begin{document}
+\maketitle
+Text.
+\end{document}

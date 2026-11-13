@@ -1,0 +1,12 @@
+% witness: 2110.09723, 2201.10869, 2208.02596 (\DeclareMathOperator/\operatorname, libertinust1math.sty:75 loads amsmath), 2311.14681, 2405.05597 (\widebar), 2603.08217, 2605.03875 (\mathbfit, \mathbcal), 2408.05538, 2208.02596 (\gtrsim), 2412.05468, 2506.09249, 2512.09624, 2602.14897
+% oracle:  pdflatex 0 errors; tr A, rk B, bold 𝓐, bold-italic 𝒗, x̄, y̌, a ≲ b ≳ c, ■, ϰ, a ≝ b, a ⊍ b, ⨃, ∯
+% engines: rust 67int10 = undefined \DeclareMathOperator and every name below (the binding loaded nothing); perl = no binding, libertinust1math.sty not loaded
+% expect:  0 errors, 0 warnings; each its glyph or alphabet
+% status:  RED (67int10) -> GREEN (68j); guard perfect_kernel_batch68j::libertinust1math_loads_amsmath_and_its_names
+\documentclass{article}
+\usepackage{libertinust1math}
+\DeclareMathOperator{\tr}{tr}
+\begin{document}
+$\tr A$, $\operatorname{rk} B$, $\mathbcal{A}$, $\mathbfit{v}$, $\widebar{x}$, $\widecheck{y}$, $a\lesssim b\gtrsim c$, $\blacksquare$,
+$\varkappa$, $a\eqdef b$, $a\cupdot b$, $\bigcupdot_i A_i$, $\oiint f$.
+\end{document}

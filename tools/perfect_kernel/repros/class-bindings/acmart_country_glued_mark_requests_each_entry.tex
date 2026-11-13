@@ -1,0 +1,18 @@
+% mechanism: the entries' cut reads a name's mark as the Link step does (`events::names_requested`,
+%   `resolver::glued_request_parts`): `$^{12}$` under the list's marks 1 and 2 requests both, so `$^2$B Lab` after a comma
+%   starts an entry, not a prescript no name requests
+% witness: 2409.11440 (also 2511.20671: `$^{2,3*}$`, `$^{1,5\#}$`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann One1*, Bob Two12, Cy Three1" over "1A Univ, 2B Lab, *Equal
+%          contributions"
+% engines: int165a: as expected; int166a (P4b4a): Ann and Cy also hold the whole "1 A Univ, 2 B Lab", W=1
+% expect:  0 errors, 0 warnings; Ann One "1 A Univ" + the note "* Equal contributions", Bob Two "1 A Univ", "2 B Lab",
+%          Cy Three "1 A Univ"
+% status:  RED (int166a) -> GREEN (P4b4f; guard perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed)
+\documentclass[sigconf]{acmart}
+\begin{document}
+\title{T}
+\author{Ann One$^{1*}$, Bob Two$^{12}$, Cy Three$^{1}$}
+\affiliation{\country{$^1$A Univ, $^2$B Lab, $^*$Equal contributions}}
+\maketitle
+x
+\end{document}

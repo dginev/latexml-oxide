@@ -1,0 +1,16 @@
+% witness: 2008.08910, 2402.15720, 2206.06601 (revtex4-1, natbib's `\bibitem`)
+% oracle:  pdflatex 0 errors: REFERENCES heading, [1] A, [2] B
+% engines: rust 67int15 = 2 Error:malformed:ltx:bibitem (in <ltx:section>, <ltx:bibblock>); Perl 0.8.8 the
+%          same (KNOWN_PERL_ERRORS #855)
+% expect:  0 errors, no "Lonely \item" Error; one <bibliography> titled References holding both entries
+% status:  FIXED (68w)
+% preload: ar5iv.sty
+\documentclass[aps,prl]{revtex4-1}
+\begin{document}
+Text \cite{a,b}.
+\begin{thebibliography}{99}
+\section*{References}
+\bibitem{a} A. Author, J. 1 (2000).
+\bibitem{b} B. Author, J. 2 (2001).
+\end{thebibliography}
+\end{document}

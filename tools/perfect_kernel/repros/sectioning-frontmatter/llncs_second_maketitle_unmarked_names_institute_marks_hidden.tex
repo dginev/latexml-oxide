@@ -1,0 +1,25 @@
+% mechanism: the labels the names show are each flush's own (`emitter::NAMES_SHOWN_LABELS`, reset at each flush,
+%   OD #1009): a second `\maketitle` whose names print no mark reads none from the first flush's names, so its
+%   institute's entries hide their marks
+% witness: synthetic (review revP4f S1)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2", "1Univ A, Town A",
+%   "2Univ B, Town B", then "Supplement", "Cat Cole and Dan Dorn", "1Univ C, Town C", "2Univ D, Town D"
+% engines: P4f: "1 Univ C, Town C", "2 Univ D, Town D" (the first flush's value read stale); int164a: hidden
+% expect:  0 errors, 0 warnings; Ann Able 1 "1 Univ A, Town A", "Univ C, Town C"; Bob Baker 2 "2 Univ B, Town B",
+%   "Univ D, Town D" (the second block's entries on the first authors, its names text: the base's placement,
+%   llncs_second_maketitle_names_are_text_red)
+% status:  RED (P4f) -> GREEN (P4fb; guard perfect_kernel_batchc1::marked_list_cut_as_its_binding_declares)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$ \and Bob Baker$^{2}$}
+\institute{$^{1}$Univ A, Town A \\ $^{2}$Univ B, Town B}
+\maketitle
+Text.
+\title{Supplement}
+\author{Cat Cole \and Dan Dorn}
+\institute{$^{1}$Univ C, Town C \\ $^{2}$Univ D, Town D}
+\maketitle
+More.
+\end{document}

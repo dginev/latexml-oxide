@@ -3,6 +3,12 @@ use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: amsbook.cls.ltxml
+  // amsbook.cls:58-60 (amsart.cls alike): `\@classname` is the file that loaded this class, the top of
+  // `\@currnamestack` (`\@pushfilename` prepends the loader, latex.ltx); loaded by `\documentclass` that entry is
+  // empty and the class names itself. Read here, in the class's own load, not in a file it loads.
+  RawTeX!(r"\def\@tempa#1#2\@nil{\edef\@classname{#1}}
+\expandafter\@tempa\@currnamestack{}{}{}\@nil
+\ifx\@classname\@empty \edef\@classname{\@currname}\fi");
   // Ignorable options (Perl L22-30); `oneside`/`twoside` go on to book's (KNOWN_PERL_ERRORS #469:
   // two-sided by default, amsbook.cls:103-104/:329-330).
   for option in ["a4paper", "letterpaper", "landscape", "portrait",
@@ -44,6 +50,12 @@ LoadDefinitions!({
   RequirePackage!("ams_support");
   ams_support_sty::amsart_author_storage()?;
   ams_support_sty::amsart_uppercase_nonmath()?;
+  ams_support_sty::ams_class_caption_format()?;
+  // amsbook.cls carries amsart's internals line for line (:616 `\newbox\abstractbox`, :638-649 `\@setabstract`/
+  // `\@setabstracta`, :1090-1121 the contents lines, `\except`/`\for`, `\@keywords`, `\copyrightinfo`): memo-l.cls
+  // (`\LoadClass{amsbook}`, its `\tableofcontents` tests `\ifvoid\abstractbox`; 2412.15928, 2511.16188, 1512.07128)
+  // and the derived book classes call them. KNOWN_PERL_ERRORS #721.
+  ams_support_sty::amsart_class_internals()?;
 
   // Frontmatter/mainmatter/backmatter — Perl L46-56 (no-ops); amsbook.cls:944-948 switches the
   // page numbering, which `\thepage` shows (roman, then arabic).

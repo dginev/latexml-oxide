@@ -1,0 +1,10 @@
+\ProvidesFile{svepjc3.clo}[2011/08/26 v1.2 style option for the EPJC journal]
+\def\epj@maketitle{\par Address(es) of author(s) should be given\par}
+\AtEndOfClass{\let\maketitle=\epj@maketitle}
+\ifx\@epjcloaded\undefined
+  \gdef\@epjcloaded{}
+  \AtEndOfClass{\@input{svepjc3.clo}}
+  \expandafter\endinput
+\fi
+\def\maketitle{\par Noname\par}
+\newcommand\epjextra{EPJ EXTRA}

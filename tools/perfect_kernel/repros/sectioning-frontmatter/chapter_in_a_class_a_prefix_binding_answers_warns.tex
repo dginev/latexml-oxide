@@ -1,0 +1,30 @@
+% witness: 0909.2812 (mn_thesis.cls loads mnphd.cls, which loads report; our binding is the prefix alternate `mn`;
+%          pdflatex "CHAPTER 1" and no \chapter error; SVC raised `Error:undefined:\chapter` there, E 13 -> 14)
+% oracle:  pdflatex 0 errors, "Chapter 1 Intro"; Perl 0.8.8 0 errors, 1 warning (missing ar5iv.sty), "Chapter 1 Intro"
+% engines: with both classes on disk (the witness's shape; a pdflatex run leaves them, and filecontents* then writes
+%          nothing): rust int160a1 = 0 errors, 2 warnings (as expected); SVC = 1 error (undefined:\chapter "The binding answering
+%          class mn_lxthesis defines no \chapter"), 1 warning
+% expect:  0 errors, 2 warnings (missing_file:mn_lxthesis "Can't find binding for class mn_lxthesis (using mn)";
+%          undefined:\chapter "The binding answering class mn_lxthesis defines no \chapter; LaTeXML's \chapter is
+%          used"); a `chapter` "Chapter 1 Intro". The class TeX loads has \chapter, so never an Error (OXIDIZED_DESIGN
+%          #734). Two class levels, as the witness: with mn_lxthesis.cls loading report itself, the dependency scan
+%          loads report and \chapter is defined (0 errors, 1 warning on int160a1 and SVC); from filecontents* alone
+%          (a clean dir) the scan reads the cached lxphd.cls and loads report: 0 errors, 1 warning (int160a1), an
+%          asymmetry with the on-disk class, outside this batch (SVCb report)
+% status:  GREEN (int160a1; RED on SVC; SVCb pins it)
+% preload: ar5iv.sty
+\begin{filecontents*}{lxphd.cls}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{lxphd}
+\LoadClass{report}
+\end{filecontents*}
+\begin{filecontents*}{mn_lxthesis.cls}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesClass{mn_lxthesis}
+\LoadClass{lxphd}
+\end{filecontents*}
+\documentclass{mn_lxthesis}
+\begin{document}
+\chapter{Intro}
+Text.
+\end{document}

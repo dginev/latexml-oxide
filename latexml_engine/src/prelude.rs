@@ -17,7 +17,7 @@ pub use latexml_core::{
   alignment::{
     Alignment, AlignmentConfig,
     cell::Cell,
-    template::{Align, Template},
+    template::{Align, NUMBER_ROW_PROPERTY, TAGGED_ROW_ATTRIBUTE, Template},
   },
   binding::{
     counter::dialect::*,
@@ -31,7 +31,7 @@ pub use latexml_core::{
     dimension::Dimension,
     float::{Float, floatformat},
     font,
-    font::Font,
+    font::{Font, LettersClass},
     glue::Glue,
     locator::Locator,
     model,
@@ -115,9 +115,14 @@ pub use crate::tex::def_autoload;
 pub use crate::{
   base_parameter_types::{tex_file_name, with_unexpandable_protect},
   latex_constructs::{
-    begin_appendices, declare_bound_text_symbols, end_appendices, has_chapter_counter,
-    make_note_tags, note_size_in_line, only_preamble, out_of_line_size, relocate_footnote,
-    start_appendices, tabular_bindings,
+    EQUATIONROW_HOLDS, SUBEQUATION_ROLLBACK, begin_appendices, declare_bound_text_symbols,
+    declare_capital_greek, declare_capital_greek_named, declare_panel_floats_centred,
+    declare_panel_page, declare_panel_parbox_width, declare_panel_width,
+    declare_standard_class_page, end_appendices, given_class_options, has_chapter_counter,
+    is_document_class, keep_pending_next_numbers, kernel_chapter_with_warning, last_class_option,
+    last_declared_class_option, make_note_tags, note_size_in_line, only_preamble, out_of_line_size,
+    relocate_footnote, set_minipage_width, set_panel_page_twocolumn, standard_class_twocolumn_page,
+    start_appendices, tabular_bindings, withdraw_panel_floats_centred, withdraw_panel_page,
   },
   math_common::{augment_delimiter_properties, symbolic_font_size},
   tex_box::{FramedOptions, framed_properties},
@@ -184,8 +189,8 @@ pub fn def_macro_identity(proto: &str) -> Result<()> {
   Ok(())
 }
 
-/// Empty-body `DefPrimitive!("\\cs[opt-spec]", None);` stub —
-/// digestion-time no-op primitive (no Box emitted).
+/// Empty-body `DefPrimitive!("\\cs[opt-spec]", None);` stub — Perl's undef body: an empty box
+/// reverting to the call, its arguments included (Primitive.pm:74-76).
 pub fn def_primitive_noop(proto: &str) -> Result<()> {
   let (cs_tok, params) = parse_prototype(proto, true)?;
   def_primitive(cs_tok, params, None, PrimitiveOptions::default())?;

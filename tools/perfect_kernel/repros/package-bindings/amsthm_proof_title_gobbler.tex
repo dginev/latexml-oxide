@@ -1,0 +1,14 @@
+% witness: 2503.02416 (DLdef1.sty `\def\nopoint#1#2{}` in `\begin{proof}[Proof \nopoint]`); amsthm.sty:435-437
+%          `#1\@addpunct{.}`
+% oracle:  pdflatex 0 errors; "Proof of the lemma. Text." then the QED box, "After."
+% engines: Perl 1 error, rust 67int18b = 1 error (the gobbler eats the binding's `.` and `}`)
+% expect:  0 errors; the title "Proof" without its period, the body "of the lemma. Text."
+% status:  RED (67int18b) -> GREEN (70a)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\def\nopoint#1#2{}
+\begin{document}
+\begin{proof}[Proof \nopoint] of the lemma. Text.
+\end{proof}
+After.
+\end{document}

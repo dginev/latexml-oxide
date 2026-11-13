@@ -1,0 +1,26 @@
+% mechanism: a frontmatter setter run inside an API call: REVTeX 3's two-column idiom puts the abstract (and `\pacs`)
+%   in an `\address`'s minipage. The call's rehearsal notes the entries (the queued `\pacs`, the abstract digested where
+%   it stands, `rehearsal::note_frozen_digest`); the reading writes nothing of the call, so the emitter writes it as
+%   queued, as the old driver did, and its digestion at the flush makes both (`emitter::emit::recover_queued`;
+%   OXIDIZED_DESIGN_DIVERGENCES #985).
+% witness: cond-mat9801109, cond-mat9906335, cond-mat9809277, cond-mat9909213
+% oracle:  no pdflatex (TL 2025 has no revtex.sty); Perl is the oracle: the abstract and the PACS classification, 0 errors
+% engines: rust int154a: neither, 0 Warnings; old engine (int153m, LATEXML_FM_EMIT=0): both; perl: both
+% expect:  an <abstract> holding "zebraword" and a <classification scheme="pacs"> 71.25.Hc; 0 errors, 0 warnings
+% status:  RED (int154a) -> GREEN (CR2)
+% preload: ar5iv.sty
+\documentstyle[aps,prb,twocolumn]{revtex}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\address{Univ A, Oviedo, Spain}
+\date{\today}
+\address{\begin{minipage}[t]{6.0in}
+\begin{abstract}
+We study an extended Hubbard zebraword model.
+\end{abstract}
+\pacs{71.25.Hc}
+\end{minipage}}
+\maketitle
+Body.
+\end{document}

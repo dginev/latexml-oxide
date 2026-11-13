@@ -18,9 +18,9 @@ use crate::{
   pragmatics::ValidationPragmatics,
 };
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Operator(pub Box<XM>);
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Args(pub Vec<Option<XM>>);
 
 #[derive(Debug, Clone, Default)]
@@ -91,6 +91,25 @@ impl PartialEq for XProps {
   }
 }
 impl Eq for XProps {}
+/// Consistent with the `PartialEq` above: it hashes a subset of the compared fields (all but
+/// `font`, whose `Font` has no `Hash`), so equal properties hash equal. The parse-tree dedup's
+/// pre-filter (`parser.rs` `UniqueTrees`).
+impl std::hash::Hash for XProps {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    self.content.hash(state);
+    self.role.hash(state);
+    self.meaning.hash(state);
+    self.name.hash(state);
+    self.fontref.hash(state);
+    self.stretchy.hash(state);
+    self.possible_function.hash(state);
+    self.mathstyle.hash(state);
+    self.thickness.hash(state);
+    self.decl_id.hash(state);
+    self.lpadding.hash(state);
+    self.rpadding.hash(state);
+  }
+}
 
 impl Display for XProps {
   fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -168,7 +187,7 @@ impl XProps {
 ///
 /// The main structural variants are associated with
 /// a "parsing state::, via an attached `Meta` object.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum XM {
   /// Token-name lexeme (e.g. "RELOP:less-than:3", "letter:a",
   /// "delimited-open-paren"). The name is stored as `Rc<str>` so:

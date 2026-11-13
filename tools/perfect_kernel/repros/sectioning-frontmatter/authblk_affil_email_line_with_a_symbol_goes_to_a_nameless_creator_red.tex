@@ -1,0 +1,20 @@
+% mechanism: an authblk `\affil[n]{Univ \\ a@x … b@y}` whose second line holds two addresses split by a printed symbol
+%   (`$\diamond$`, `$\quad\cdot$`) puts the e-mails on a nameless creator instead of the authors the label names
+%   (revIV1 pre-existing finding; int159a = IV1)
+% witness: synthetic (revIV1 probe p3/ab)
+% expect:  each e-mail on the author its label names (or its spelled owner)
+% status:  RED (int159a, IV1)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author[1]{Ann A}
+\author[2]{Bob B}
+\author[3]{Cat C}
+\affil[1]{Univ A \\ a@x.edu $\diamond$ a2@x.edu}
+\affil[2]{Univ B \\ b@x.edu $\quad\cdot$ b2@x.edu}
+\affil[3]{Univ C \\ c@x.edu $\hspace{2em}$ c2@x.edu}
+\maketitle
+Text.
+\end{document}

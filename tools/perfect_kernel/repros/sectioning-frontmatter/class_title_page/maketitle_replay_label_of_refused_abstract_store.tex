@@ -1,0 +1,20 @@
+% The label a replayed class title page prints before a class abstract store the kernel's locked `\abstract` refused
+%   stays a line of its own: "Abstract." after the frontmatter's <abstract>, its store empty.
+% witness: 1902.07328 (zaa.cls:97-100 `\renewcommand{\abstract}[1]{\gdef\@abstract{#1}}`, :178 `\bf Abstract.\ \rm
+%          \@abstract`; replayed since 86d), pre-existing for any class of this shape
+% oracle:  pdflatex (tpabsstore.cls beside it) 0 errors: "On Stability / Elena Braverman / Abstract. We provide
+%          conditions. / Body."
+% engines: rust 86d-base and 86d = 0 errors, <abstract name="Abstract"> and a paragraph "Abstract." after it;
+%          perl (OmniBus, the class is not read) = the abstract only
+% expect:  0 errors, 0 warnings; the abstract once, named "Abstract.", and no "Abstract." paragraph
+% status:  RED (86d; a K11 store question, outside the replay gate: the refused setter `\lx@dropped@abstract` is a pure
+%          store the title page labels, but no table setter carries it, so its label is not taken out)
+% preload: ar5iv.sty
+\documentclass{tpabsstore}
+\begin{document}
+\title{On Stability}
+\author{Elena Braverman}
+\abstract{We provide conditions.}
+\maketitle
+Body.
+\end{document}

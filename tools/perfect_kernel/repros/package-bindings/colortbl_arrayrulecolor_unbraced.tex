@@ -1,0 +1,20 @@
+% mechanism: colortbl.sty:156-164 `\def\arrayrulecolor#1#{\CT@arc{#1}}`, `\def\CT@arc#1#2{…}`: the argument runs to the
+%   first `{` and then takes that group, so `\arrayrulecolor\hhline{---~~~}` swallows the `\hhline` and its spec; the
+%   binding's `[]{}` (Perl colortbl.sty.ltxml:85) took `\hhline` alone and left `{---~~~}` a cell between rows
+% witness: 1910.02206
+% oracle:  pdflatex 0 errors: rows "a b c d e f" and "g h i j k l", one rule (the second `\hhline`) between them
+% engines: rust 67int17b = Error:unexpected:\noalign (\noalign cannot be used here); Perl 0.8.8 the same
+%   (KNOWN_PERL_ERRORS #889)
+% expect:  0 errors; two rows of six cells
+% status:  RED (67int17b) -> GREEN (69a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{colortbl,hhline}
+\begin{document}
+\begin{tabular}{cccccc}
+a & b & c & d & e & f \\
+\arrayrulecolor\hhline{---~~~}\arrayrulecolor{blue}\hhline{~~~---}
+g & h & i & j & k & l \\
+\doublerulesepcolor[rgb]{1,0,0}\hline
+\end{tabular}
+\end{document}

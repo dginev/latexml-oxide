@@ -1,0 +1,17 @@
+% mechanism: a formula mark written inside a name's run (`Bob Baker\,$^{2}$` under a block keeping its marks: OmniBus,
+%   Frontiers' raw class) is digested in the personname as a formula turned text, `<sup><text font="italic">2</text></sup>`:
+%   TeX sets the digit upright (math digits are `\mathrm`-class, cmr); a mark shown as a request is `<sup>2</sup>`
+% witness: 2209.05831, 2112.09018, 2206.01053 (Frontiers `\Authors`, since AUT1 written from their tokens, as the inline
+%   twin); synthetic
+% oracle:  pdflatex (TL 2025, -no-shell-escape; article, the class missing here) 0 errors: "Ann Able 2", the 2 upright
+% engines: int167a and AUT1: `<personname>Ann Able <sup><text font="italic">2</text></sup></personname>`
+% expect:  `<personname>Ann Able<sup>2</sup></personname>` (no italic font)
+% status:  RED (int167a, AUT1); moves: post-merge
+% preload: ar5iv.sty
+\documentclass{nosuchclass}
+\begin{document}
+\title{T}
+\author{Ann Able\,$^{2}$}
+\maketitle
+Text.
+\end{document}

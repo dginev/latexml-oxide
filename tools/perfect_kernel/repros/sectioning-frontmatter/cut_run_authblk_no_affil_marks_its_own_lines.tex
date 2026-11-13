@@ -1,0 +1,18 @@
+% mechanism: authblk prints its notes only where an `\affil` was given (authblk.sty:168 `\ifx\AB@affillist\AB@empty\AB@author`):
+%   with `\setcounter{Maxaffil}{0}` and the marks written on the `\author` lines, no `\AB@thenote` "1" requests entry 1
+% witness: 2510.24320 (`$^1$Fudan University $^2$ByteDance Seed`), 2608.24199 (nvidiatechreport), 2609.35561 (Sci.cls)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able1 , Bob Baker2 , Cy Cole1 / 1 Univ A 2 Univ B" (no note mark)
+% engines: rust int139a: Bob Baker both Univ A and Univ B (the observer read a thenote request "1" on every author)
+% expect:  0 errors, 0 warnings; Ann "Univ A", Bob "Univ B", Cy "Univ A"
+% status:  RED (int139a) -> GREEN (107e) — perfect_kernel_batch107e::authblk_without_affil_prints_no_note
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\setcounter{Maxaffil}{0}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$, Cy Cole$^{1}$ \\
+$^1$Univ A $^2$Univ B}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,19 @@
+% mechanism: an `\and` group that is only a collaboration's name, before names of the call, is a heading over every
+%   name after it (`Collaborations`, author_block/collaborations.rs; OXIDIZED_DESIGN_DIVERGENCES #946): no creator of
+%   its own. A heading no name follows stays the author it was (`\author{The ATLAS Collaboration}`).
+% witness: 1912.05868 (aa, `\author{\small H.E.S.S. Collaboration \and H.~Abdalla \inst{\ref{NWU}} \and …}`: aa's
+%   own `\and` split, not this path — a residual); dev20k mining (97d)
+% oracle:  pdflatex (TL 2025) 0 errors: "XYZ Collaboration", "Ann Able / Univ A", "Bob Baker / Univ B" side by side
+% engines: rust 97b: three creators, "XYZ Collaboration" one; perl: not run
+% expect:  0 errors, 0 warnings; two creators, Ann Able (Univ A) and Bob Baker (Univ B), each with
+%   `<contact role="collaboration">XYZ Collaboration</contact>` before the affiliation, as the heading prints above
+% engines: rust int160a (HG1) = 0 errors, 0 warnings: "XYZ Collaboration" a creator of its own, Ann Able and Bob Baker without the collaboration contact; 97d's guard kept only the counts after DEL1
+% status:  RED (97b) -> GREEN (97d) -> RED (int160a, HG1)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{XYZ Collaboration \and Ann Able\\ Univ A \and Bob Baker\\ Univ B}
+\maketitle
+Body.
+\end{document}

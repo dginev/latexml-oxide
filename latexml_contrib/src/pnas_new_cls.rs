@@ -12,10 +12,24 @@
 //!
 //! Witness: 2305.01604 (significant 7-error gap on canvas, all from
 //! undefined pnas-new frontmatter macros).
-use latexml_package::prelude::*;
+use latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
+use latexml_package::{package::omnibus_cls::provide_over_base_class, prelude::*};
+
+use crate::shipped_class::{
+  class_code_contains, require_shipped_algorithm_packages, shipped_class_text,
+};
 
 LoadDefinitions!({
-  LoadClass!("OmniBus");
+  // pnas-new.cls (1703.05830's copy, v1.41): `lineno` its own, every other option passed to extarticle, then
+  // `\LoadClass{extarticle}` — the base class, so the paper's copy, read after the binding, finds it loaded
+  // (OXIDIZED_DESIGN_DIVERGENCES #736); OmniBus, the base this binding had before, provided over it.
+  DeclareOption!("lineno", None);
+  DeclareOption!(None, {
+    Digest!("\\PassOptionsToClass{\\CurrentOption}{extarticle}")?;
+  });
+  ProcessOptions!();
+  LoadClass!("extarticle");
+  provide_over_base_class()?;
   // pnas-new.cls:422 `\newcommand{\doi}[1]{\def\@doi{#1}}` stores the DOI for the page footer
   // (:268, :369-370): a setter taking a normal argument, often `\url{…}`, not OmniBus's `\doi`
   // that reads a DOI verbatim as a url (KNOWN_PERL_ERRORS #326), which printed "\urlwww.pnas…".
@@ -30,7 +44,9 @@ LoadDefinitions!({
     let mut tokens = if in_bibliography {
       vec![T_CS!("\\def"), T_CS!("\\@doi"), T_BEGIN!()]
     } else {
-      mouth::tokenize_internal(TeXString::assembled("\\lx@add@pubnote[role=doi]{".to_string())).unlist()
+      // (the footer prints the DOI alone, pnas-new.cls:268/:369-370 (2602.17158's copy): no label, FIDELITY_CHARTER §4,
+      // OXIDIZED_DESIGN_DIVERGENCES #921)
+      mouth::tokenize_internal(TeXString::assembled("\\lx@add@pubnote[role=doi,name={}]{".to_string())).unlist()
     };
     tokens.extend(doi.unlist());
     tokens.push(T_END!());
@@ -78,11 +94,26 @@ LoadDefinitions!({
   // Most of those are noop-loaded by OmniBus already; bring in the
   // critical ones explicitly so author content (booktabs rules, etc.) works.
   RequirePackage!("booktabs");
+  // pnas-new.cls:110-111 `\RequirePackage{algorithm}` `\RequirePackage[noend]{algpseudocode}` (2402.10236's copy):
+  // `\State` was undefined in a paper relying on the class for it. The paper's copy decides; without one, none.
+  require_shipped_algorithm_packages("cls")?;
   RequirePackage!("fancyhdr");
   RequirePackage!("etoolbox");
-  RequirePackage!("titlesec");
+  // pnas-new.cls:229 (v1.44, 1907.12289; :358 in 2509.24970's) `\RequirePackage[explicit]{titlesec}`: the class's
+  // `\titleformat`s (:244-268, :406) put the title in as `#1`, which titlesec reads only under `explicit` ("Illegal
+  // parameter number in definition of \ttlf@section" otherwise). The option where the paper's copy loads it so.
+  let explicit = shipped_class_text("pnas-new")?
+    .is_some_and(|text| class_code_contains(&text, "\\RequirePackage[explicit]{titlesec}"));
+  if explicit {
+    RequirePackage!("titlesec", options => vec![s!("explicit")]);
+  } else {
+    RequirePackage!("titlesec");
+  }
   RequirePackage!("caption");
-  RequirePackage!("enumitem");
+  // pnas-new.cls:433 `\RequirePackage[inline]{enumitem}` (2508.21277's copy): the inline lists (`{enumerate*}`). The
+  // older copies load enumitem without it (v1.44 :429, 1812.09361; v1.45 :414, 2311.05803); `inline` is the union
+  // with the newer ones.
+  RequirePackage!("enumitem", options => vec![s!("inline")]);
   // pnasresearcharticle.sty uses \afterpage and \mdfdefinestyle.
   RequirePackage!("afterpage");
   // pnas-new.cls:53-55 loads xcolor, tikz and `[framemethod=tikz]{mdframed}`; the option loads tikz (and xcolor)
@@ -174,4 +205,21 @@ LoadDefinitions!({
   );
   // pnas-new.cls:441-450 `{widetext}`, a double-column float in print: its content in place.
   DefEnvironment!("{widetext}", "#body");
+  // pnas-new.cls v1.46 (2023/05/03; 2208.11618's copy :559) `\bibsplit[n]`, the reference list's split between the
+  // columns of the last page (41 papers: 2208.11618, 2308.08421); v1.47 (2025/11/01; 2602.17158's copy) :487-492
+  // `\Firstpage`, :468-469 `\Parasplit`/`\Endparasplit`, the first page's narrower column and a paragraph continued
+  // across the column break (14, 4 and 8 papers: 2602.17158, 2603.21852, 2606.02411): page layout, so nothing here (a
+  // split paragraph stays one); and :688-691 `\dataavail{text}`, the "Data, Materials, and Software Availability"
+  // statement, a run-in heading over its text as `\showacknow`'s acknowledgments are set (11 papers: 2602.17158,
+  // 2607.15832, 2608.00025). A copy without one leaves it to the paper (`DefinitionOrigin::Fallback`).
+  {
+    let _class = OriginGuard::new(DefinitionOrigin::Fallback);
+    RawTeX!(
+      r"\newcommand\bibsplit[1][]{}
+\newcommand{\Firstpage}{}
+\newcommand{\Parasplit}{}
+\newcommand{\Endparasplit}{}
+\newcommand{\dataavail}[1]{\paragraph*{Data, Materials, and Software Availability.}#1}"
+    );
+  }
 });

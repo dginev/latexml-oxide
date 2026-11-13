@@ -1,0 +1,15 @@
+% pstricks sets a box's material in math when the box is called in math and `\ifpsmathbox` is true, the default
+% (pst-code-box.tex:4-17 `\pst@makenotverbbox`: `$\m@th\textstyle…$` inner, `\displaystyle` in a display), so the
+% body of an `\rput` or a `\pscirclebox` in a formula is a formula. Perl's `\put@end {}` is a text box everywhere
+% (pstricks_support.sty.ltxml:890; KNOWN_PERL_ERRORS #989).
+% witness: 2603.19804, 0707.0546, 1010.2311 (`\rput` in math), 1106.3964 (`\pscirclebox` in an eqnarray)
+% oracle:  latex (DVI) 0 errors
+% engines: rust int29c = 3 x `Error:unexpected:_ Script _ can only appear in math mode` + 1 `\mathcal` Warning; perl alike
+% expect:  0 errors, 0 warnings; each body is an `ltx:Math` inside the placed `ltx:g` / framed box
+% status:  RED (int29c) -> GREEN (77k)
+\documentclass{article}
+\usepackage{pstricks}
+\begin{document}
+$x \rput(1,1){V_1}$ and \[ \begin{array}{l} \rput[B](-0.5,0){x_1} \end{array} \]
+Text $a\pscirclebox[linewidth=0.3pt]{\mathcal{D}_t\kappa} b$ and \psframebox{text} end.
+\end{document}

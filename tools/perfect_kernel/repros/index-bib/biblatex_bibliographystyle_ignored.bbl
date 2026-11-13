@@ -1,0 +1,170 @@
+% $ biblatex auxiliary file $
+% $ biblatex bbl format version 3.3 $
+% Do not modify the above lines!
+%
+% This is an auxiliary file used by the 'biblatex' package.
+% This file may safely be deleted. It will be recreated by
+% biber as required.
+%
+\begingroup
+\makeatletter
+\@ifundefined{ver@biblatex.sty}
+  {\@latex@error
+     {Missing 'biblatex' package}
+     {The bibliography requires the 'biblatex' package.}
+      \aftergroup\endinput}
+  {}
+\endgroup
+
+
+\refsection{0}
+  \datalist[entry]{anyt/global//global/global/global}
+    \entry{balbes}{book}{}{}
+      \name{author}{2}{}{%
+        {{hash=89f521ffaae69d71f8ce6aef5f7514a9}{%
+           family={Balbes},
+           familyi={B\bibinitperiod},
+           given={Raymond},
+           giveni={R\bibinitperiod}}}%
+        {{hash=686588d1d61111e922b3c08778fa9386}{%
+           family={Dwinger},
+           familyi={D\bibinitperiod},
+           given={Philip},
+           giveni={P\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {UMP}%
+      }
+      \strng{namehash}{092711524aec77ef07b34f2dbbe732d3}
+      \strng{fullhash}{092711524aec77ef07b34f2dbbe732d3}
+      \strng{fullhashraw}{092711524aec77ef07b34f2dbbe732d3}
+      \strng{bibnamehash}{092711524aec77ef07b34f2dbbe732d3}
+      \strng{authorbibnamehash}{092711524aec77ef07b34f2dbbe732d3}
+      \strng{authornamehash}{092711524aec77ef07b34f2dbbe732d3}
+      \strng{authorfullhash}{092711524aec77ef07b34f2dbbe732d3}
+      \strng{authorfullhashraw}{092711524aec77ef07b34f2dbbe732d3}
+      \field{labelalpha}{Balbes \& Dwinger}
+      \field{sortinit}{B}
+      \field{sortinithash}{d7095fff47cda75ca2589920aae98399}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{shorthand}{Balbes \& Dwinger}
+      \field{title}{Distributive Lattices}
+      \field{year}{1974}
+    \endentry
+    \entry{boet}{book}{}{}
+      \name{author}{1}{}{%
+        {{hash=cf1028dcecb3b74b82cd297c880b8390}{%
+           family={Bötcher},
+           familyi={B\bibinitperiod},
+           given={Jörg},
+           giveni={J\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {X}%
+      }
+      \strng{namehash}{cf1028dcecb3b74b82cd297c880b8390}
+      \strng{fullhash}{cf1028dcecb3b74b82cd297c880b8390}
+      \strng{fullhashraw}{cf1028dcecb3b74b82cd297c880b8390}
+      \strng{bibnamehash}{cf1028dcecb3b74b82cd297c880b8390}
+      \strng{authorbibnamehash}{cf1028dcecb3b74b82cd297c880b8390}
+      \strng{authornamehash}{cf1028dcecb3b74b82cd297c880b8390}
+      \strng{authorfullhash}{cf1028dcecb3b74b82cd297c880b8390}
+      \strng{authorfullhashraw}{cf1028dcecb3b74b82cd297c880b8390}
+      \field{labelalpha}{Böt01}
+      \field{sortinit}{B}
+      \field{sortinithash}{d7095fff47cda75ca2589920aae98399}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{Zweites}
+      \field{year}{2001}
+    \endentry
+    \entry{goossens}{book}{}{}
+      \name{author}{1}{}{%
+        {{hash=0743efb276e9219ee664a9b3dbd60619}{%
+           family={Goossens},
+           familyi={G\bibinitperiod},
+           given={Michel},
+           giveni={M\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {AW}%
+      }
+      \strng{namehash}{0743efb276e9219ee664a9b3dbd60619}
+      \strng{fullhash}{0743efb276e9219ee664a9b3dbd60619}
+      \strng{fullhashraw}{0743efb276e9219ee664a9b3dbd60619}
+      \strng{bibnamehash}{0743efb276e9219ee664a9b3dbd60619}
+      \strng{authorbibnamehash}{0743efb276e9219ee664a9b3dbd60619}
+      \strng{authornamehash}{0743efb276e9219ee664a9b3dbd60619}
+      \strng{authorfullhash}{0743efb276e9219ee664a9b3dbd60619}
+      \strng{authorfullhashraw}{0743efb276e9219ee664a9b3dbd60619}
+      \field{extraname}{1}
+      \field{labelalpha}{Goo94}
+      \field{sortinit}{G}
+      \field{sortinithash}{32d67eca0634bf53703493fb1090a2e8}
+      \field{extraalpha}{1}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{The LaTeX Companion}
+      \field{year}{1994}
+    \endentry
+    \entry{goossens2}{book}{}{}
+      \name{author}{1}{}{%
+        {{hash=0743efb276e9219ee664a9b3dbd60619}{%
+           family={Goossens},
+           familyi={G\bibinitperiod},
+           given={Michel},
+           giveni={M\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {AW}%
+      }
+      \strng{namehash}{0743efb276e9219ee664a9b3dbd60619}
+      \strng{fullhash}{0743efb276e9219ee664a9b3dbd60619}
+      \strng{fullhashraw}{0743efb276e9219ee664a9b3dbd60619}
+      \strng{bibnamehash}{0743efb276e9219ee664a9b3dbd60619}
+      \strng{authorbibnamehash}{0743efb276e9219ee664a9b3dbd60619}
+      \strng{authornamehash}{0743efb276e9219ee664a9b3dbd60619}
+      \strng{authorfullhash}{0743efb276e9219ee664a9b3dbd60619}
+      \strng{authorfullhashraw}{0743efb276e9219ee664a9b3dbd60619}
+      \field{extraname}{2}
+      \field{labelalpha}{Goo94}
+      \field{sortinit}{G}
+      \field{sortinithash}{32d67eca0634bf53703493fb1090a2e8}
+      \field{extraalpha}{2}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{The LaTeX Graphics Companion}
+      \field{year}{1994}
+    \endentry
+    \entry{knuth}{book}{}{}
+      \name{author}{1}{}{%
+        {{hash=1dd533466eb3313074d496394d319407}{%
+           family={Knuth},
+           familyi={K\bibinitperiod},
+           given={Donald},
+           giveni={D\bibinitperiod}}}%
+      }
+      \list{publisher}{1}{%
+        {AW}%
+      }
+      \strng{namehash}{1dd533466eb3313074d496394d319407}
+      \strng{fullhash}{1dd533466eb3313074d496394d319407}
+      \strng{fullhashraw}{1dd533466eb3313074d496394d319407}
+      \strng{bibnamehash}{1dd533466eb3313074d496394d319407}
+      \strng{authorbibnamehash}{1dd533466eb3313074d496394d319407}
+      \strng{authornamehash}{1dd533466eb3313074d496394d319407}
+      \strng{authorfullhash}{1dd533466eb3313074d496394d319407}
+      \strng{authorfullhashraw}{1dd533466eb3313074d496394d319407}
+      \field{labelalpha}{Knu84}
+      \field{sortinit}{K}
+      \field{sortinithash}{c02bf6bff1c488450c352b40f5d853ab}
+      \field{labelnamesource}{author}
+      \field{labeltitlesource}{title}
+      \field{title}{The TeXbook}
+      \field{year}{1984}
+    \endentry
+  \enddatalist
+\endrefsection
+\endinput
+

@@ -1,0 +1,25 @@
+% mechanism: a bare `\footnotemark` after ptephy's `\fname{…} \surname{…}`: the reading puts the mark on no name, so
+%   the block is written whole with the mark's expansion and the `\footnotetext` body in the name (the
+%   whole-block route, a sibling of `ptephy_name_with_a_numbered_footnotemark_holds_the_note_red.tex` on
+%   another path; revBT1c)
+% witness: synthetic (revBT1c; 2104.12292 is the spconf sibling)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, 1304.2086's ptephy.cls, a stand-in PDF for its logo graphic `newlogo`)
+%   0 errors: "Ann Able†1", "1 Univ X", footnote "† Note A."
+% engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 1 warning ("writes a footnote mark of its author block on
+%   no name and no item; the block is written whole"); creator "Ann Able 1 footnote 1 1 footnote 1 Note A. 1"
+%   with a note "1 footnote 1 1 footnote 1 Note A." and Univ X; perl not run. FN1 (`latexml_oxide.FN1-rel`, OD
+%   #1001): 0 errors, 1 warning (the same); the note is the creator's, beside the name `Ann Able<sup>1</sup>`: still
+%   red on the warning (the block written whole)
+% expect:  0 errors, 0 warnings; creator Ann Able (Univ X) with the note "Note A."; no mark text in the name
+% status:  RED (int158a; RR1 gap 5b; FN1: the block written whole left)
+% preload: ar5iv.sty
+\documentclass{ptephy}
+\begin{document}
+\title{T}
+\author{\name{\fname{Ann} \surname{Able}\footnotemark}{1}
+}
+\address{\affil{1}{Univ X}}
+\maketitle
+\footnotetext{Note A.}
+Text.
+\end{document}

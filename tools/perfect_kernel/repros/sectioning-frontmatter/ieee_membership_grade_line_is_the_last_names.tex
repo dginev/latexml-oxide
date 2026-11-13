@@ -1,0 +1,13 @@
+% witness: 2202.10869 (`and~Jussi Haapola,\\~\IEEEmembership{Member,~IEEE,}\thanks{…}`)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker, and Cy Coe," then "Member, IEEE," on the next line
+% engines: rust P5abase = Cy Coe's grade (the token cut joined the line to the names); the reading alone read the
+%          line as the row's affiliation, the grade on all three
+% expect:  0 errors, 0 warnings; the grade Cy Coe's alone, the note his (`line:contact membership:name-above`)
+% status:  GREEN (P5abase, by spelling) -> GREEN (P5a, by the reading)
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{Ann~Able, Bob~Baker, and~Cy~Coe,\\~\IEEEmembership{Member,~IEEE,}\thanks{Funded.}}
+\maketitle
+Text.
+\end{document}

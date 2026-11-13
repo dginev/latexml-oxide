@@ -1,0 +1,17 @@
+% mechanism: a printing call nobody reads after a name's comma (`Ann Able$^\ast$,\footremember{c}{…} Bob Baker`) keeps
+%   the reading's owners: no decline (`emit::printing_read_later`)
+% witness: synthetic (review revFNR1 u02, s03)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "Ann Able∗ ,∗ Bob Baker, Carl Cole†", "Univ X"; ∗ Corresponding author.
+% engines: rust e6a6c93a18 as expected (1 warning: the note's plain text); FNR1 declined: the note on Bob Baker,
+%   "Univ X" in Carl Cole's name
+% expect:  0 errors, 1 warning; Ann Able∗ with the note, each author "Univ X"
+% status:  RED (FNR1) -> GREEN (perfect_kernel_batchcr7::a_definition_its_call_prints_takes_effect_in_order)
+\documentclass{article}
+\newcommand{\footremember}[2]{%
+    \footnote{#2}
+    \newcounter{#1}
+    \setcounter{#1}{\value{footnote}}
+}
+\title{T}
+\author{Ann Able$^\ast$,\footremember{c}{Corresponding author.} Bob Baker, Carl Cole$^\dag$\\ {\em Univ X}}
+\begin{document}\maketitle Body.\end{document}

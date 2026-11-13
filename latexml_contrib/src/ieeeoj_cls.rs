@@ -16,6 +16,15 @@ use latexml_package::prelude::*;
 
 LoadDefinitions!({
   LoadClass!("IEEEtran");
+  // IEEEoj.cls:3183-3186 (2309.03038's copy): `\IEEEauthorrefmark{n}` prints the number, IEEEtran's footnote symbols
+  // commented out — the kernel's arabic form of the reference mark (author_macros.rs, OXIDIZED_DESIGN_DIVERGENCES #968).
+  Let!("\\lx@author@refmark@symbol", "\\lx@author@refmark@arabic");
+  // ieeeoj.cls:1809-1827 (2608.19980's copy) `\@makecaption`: a table's caption "TABLE 1. text" on one line, as a
+  // figure's "FIGURE 1. text", in place of IEEEtran's label over the text (ieeetran_cls.rs); caption, when loaded,
+  // replaces it (caption_sty.rs). The names and numbers (:1667, 1867-1869): figures "FIGURE", tables arabic, in place of
+  // IEEEtran's "Fig." and Roman tables. Guard `perfect_kernel_batch78y::ieeeoj_caption_names`.
+  caption_sty::class_makecaption_label("", ". ", false)?;
+  RawTeX!(r"\def\thetable{\@arabic\c@table}\def\figurename{FIGURE}");
   RequirePackage!("authblk");
   // Mirror ieeeaerospace_cls: IEEE OJ/Aerospace templates define a no-arg
   // `\acknowledgments` opening an unnumbered "Acknowledgments" section.
@@ -38,10 +47,12 @@ LoadDefinitions!({
   DefMacro!("\\accepteddate{}", "\\lx@add@date[role=accepted]{#1}");
   DefMacro!("\\publisheddate{}", "\\lx@add@date[role=published]{#1}");
   DefMacro!("\\currentdate{}", "\\lx@add@date[role=current]{#1}");
+  // Labelled as the class prints it (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #915): IEEEoj.cls:3458 (2503.03013's copy) "Digital Object
+  // Identifier 10.1109/…" — not the role's "DOI: ".
   // An empty `\doiinfo{}` (the class's own default) prints no DOI line (IEEEoj.cls:3458 `\ifx\@doiinfo\@empty`; 2609.27083).
   DefMacro!(
     "\\doiinfo{}",
-    "\\lx@clear@frontmatter{ltx:pubnote}[role=doi]\\def\\lx@ieee@doi{#1}\\ifx\\lx@ieee@doi\\@empty\\else\\lx@add@pubnote[role=doi]{10.1109/#1}\\fi"
+    "\\lx@clear@frontmatter{ltx:pubnote}[role=doi]\\def\\lx@ieee@doi{#1}\\ifx\\lx@ieee@doi\\@empty\\else\\lx@add@pubnote[role=doi,name={Digital Object Identifier~}]{10.1109/#1}\\fi"
   );
   // The names the first page prints them with (IEEEoj.cls:3457; Perl looks a date's name up as `\lx@date@<role>@name`).
   DefMacro!("\\lx@date@published@name", "Date of publication~");

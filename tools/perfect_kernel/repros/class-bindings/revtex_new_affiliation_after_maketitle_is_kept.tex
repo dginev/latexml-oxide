@@ -1,0 +1,20 @@
+% mechanism: an `\affiliation` after `\maketitle` with no `\author` before it is not a repeated block and stays the live
+%   setter (revtex4_cls.rs `switch_off_author_block_after_maketitle`): the last author holds it, as int159b and Perl
+% witness: 2304.09163 (two institutes given after `\maketitle`); study WR160
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "T / Ann Able / Univ X, Town / Bob Baker / Univ Y, City /
+%   Text." (revtex4-2.cls:2675 `\let\affiliation\@gobble`: "Univ Z" not printed)
+% engines: rust int159b: 0 errors, Bob Baker holds Univ Y, City and Univ Z, Village; perl the same; int160b (RB1):
+%   Univ Z lost silently. RB1c: as expected
+% expect:  0 errors, 0 warnings; Ann Able (Univ X, Town); Bob Baker (Univ Y, City; Univ Z, Village); the body "Text."
+% status:  GREEN
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\affiliation{Univ X, Town}
+\author{Bob Baker}
+\affiliation{Univ Y, City}
+\maketitle
+\affiliation{Univ Z, Village}
+Text.
+\end{document}

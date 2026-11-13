@@ -1,0 +1,17 @@
+% mechanism: a marked address piece of a names line (`b.baker@two.edu$^{*}$`): since 100c the re-part makes it the
+%   e-mail item of the name it spells (OD #958), but the reading gave the address's mark to that name as a request
+%   (`mark:after-comma`), so the name prints "2,∗" — a comma TeX never prints — and the e-mail no mark. The mark would
+%   need to ride on the made e-mail item (resolver attribution + writer), not a one-place change (SYNC_STATUS 100c S3).
+% witness: synthetic (review rev97a S1; the 97b guard `marked_address_piece_is_no_person` pins today's output)
+% oracle:  pdflatex 0 errors; "A. Able1 , B. in der Baker2 , b.baker@two.edu∗"
+% engines: rust 100c: B. in der Baker<sup>2,∗</sup>, e-mail "b.baker@two.edu"; int127a one creator + merged_creators
+% expect:  0 errors; B. in der Baker<sup>2</sup>; the e-mail printed "b.baker@two.edu∗"
+% status:  RED
+\documentclass{revtex4-2}
+\begin{document}
+\title{A Title}
+\author{A.~Able$^{1}$, B.~in der Baker$^{2}$, b.baker@two.edu$^{*}$}
+\affiliation{$^{1}$Institute of One}
+\maketitle
+Body text.
+\end{document}

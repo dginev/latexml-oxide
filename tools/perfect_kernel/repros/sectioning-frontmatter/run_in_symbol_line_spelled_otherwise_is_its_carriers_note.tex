@@ -1,0 +1,32 @@
+% A raw class's run-in `\affil` line led by a footnote symbol spelled otherwise than on the name that carries it
+% (`\textsuperscript{\dag}Deceased` under `Ann Able$^{1,\dagger}$`): both print †, so the name requests the line. The
+% doubt reader asks by the printed text too, as the line is placed (frontmatter_stores.rs `requested_as_printed`:
+% `line_mark_label`, `names_request_label`), so counting a symbol as a mark (`is_a_mark`, review rev99b2 F2) leaves the
+% line its carrier's: Ann Able's deceased note, not the class's text.
+% witness: synthetic (F2's requested side)
+% oracle:  pdflatex 0 errors: "Ann Able1,†, Bob Baker2", "1Univ A, Town", "2Univ B, City", "†Deceased"
+% engines: rust int127a = "†Deceased" Ann Able's affiliation contact; rust 100a r1 (the symbol a mark, read by its
+%          operand only) = the class's text, "Ann Able†"; perl = no raw class load (OmniBus `\affil`)
+% expect:  0 errors, 0 warnings; Ann Able holds "1Univ A, Town" and <note class="ltx_note_frontmatter
+%          ltx_thanks_deceased" mark="†" role="thanks">†Deceased</note>; Bob Baker "2Univ B, City"
+% status:  GREEN (100a)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{ipdag.cls}
+\ProvidesClass{ipdag}\LoadClass{article}
+\renewcommand{\author}[1]{{\raggedright #1\par}}
+\newcommand{\affil}[1]{{\small\raggedright #1}}
+\end{filecontents*}
+\documentclass{ipdag}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1,\dagger}$, Bob Baker$^{2}$}
+
+\affil{$^1$Univ A, Town}
+
+\affil{$^2$Univ B, City}
+
+\affil{\textsuperscript{\dag}Deceased}
+
+\maketitle
+Text.
+\end{document}

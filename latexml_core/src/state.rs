@@ -266,9 +266,22 @@ pub type Table = HashMap<SymStr, VecDeque<Stored>>;
 /// assignment is the first time anything touches it, so the frames opened since hold none of it.
 #[derive(Debug, Default)]
 pub struct AssignmentJournal {
+  /// The meanings assigned since the log was last read, in order, each with whether globally ([`begin_meaning_log`]);
+  /// `None` while no one reads it.
+  meaning_log:    Option<Vec<MeaningAssigned>>,
   /// the ids of the frames open when it began, from the bottom of the stack
-  frames: Vec<u64>,
-  saved:  rustc_hash::FxHashMap<(TableName, SymStr), JournalEntry>,
+  frames:         Vec<u64>,
+  saved:          rustc_hash::FxHashMap<(TableName, SymStr), JournalEntry>,
+  /// each meaning's standing as a fallback guess, a kernel stub or a borrowed package's then (`fallback_meanings`),
+  /// which an assignment changes beside the meaning and no group end puts back: the meaning a rehearsal `\let`s and
+  /// rolls back keeps it (an OmniBus `\AND`, which algorithmic's `\newcommand{\AND}` may replace — siamart220329,
+  /// 2409.10200; FM S2a.2 r9)
+  fallback: rustc_hash::FxHashMap<SymStr, Option<crate::definition::origin::DefinitionOrigin>>,
+  /// each box whose `\\wd`, `\\ht` or `\\dp` was set, the property's value then, oldest first: a property of the box itself, which
+  /// a register's binding shares ([`journal_box_dimension`])
+  box_dimensions: Vec<(Digested, &'static str, Option<Stored>)>,
+  /// the watch held when it began ([`watch_state`]), which a rollback puts back
+  watch:          u64,
 }
 /// A key's values in its table (`None`: unbound) and its assignment counts by frame id.
 type JournalEntry = (Option<VecDeque<Stored>>, Vec<(u64, usize)>);
@@ -378,9 +391,10 @@ pub struct State {
   pub binding_names:           Vec<&'static [(&'static str, &'static str)]>,
   /// Perl: LABEL_MAPPING_HOOK — closure mapping (label, counter, norefnum) -> (refnum, id)
   pub label_mapping_hook:      Option<LabelMappingHook>,
-  /// The names whose current meaning a fallback class installed (`DefinitionOrigin::Fallback`, OmniBus), until
-  /// something else assigns them: a document's `\newcommand` may define them (`is_fallback_meaning`).
-  pub fallback_meanings:       rustc_hash::FxHashSet<SymStr>,
+  /// The names whose current meaning a fallback class installed (`DefinitionOrigin::Fallback`, OmniBus), a kernel stub
+  /// or a borrow, with that origin, until something else assigns them: a document's `\newcommand` may define them
+  /// (`is_fallback_meaning`, `fallback_meaning_origin`).
+  pub fallback_meanings: rustc_hash::FxHashMap<SymStr, crate::definition::origin::DefinitionOrigin>,
   /// The names assigned while a provide-only load lives ([`ProvideOnlyGuard`](crate::definition::origin::ProvideOnlyGuard)):
   /// the load's own definitions, which it may define again (`provide_only_declines`).
   pub provide_only_assigned:   rustc_hash::FxHashSet<SymStr>,
@@ -388,8 +402,109 @@ pub struct State {
   /// before were declined), so the guard unmarks them when it ends and a later request loads them whole
   /// (`end_provide_only`).
   pub provide_only_loaded:     Vec<String>,
+  /// The files first marked loaded while a binding borrows a package (`DefinitionOrigin::Borrowed`,
+  /// `binding::content::require_package_borrowed`): the borrowed package and what it loads (amsthm's amsgen), which the
+  /// borrow unmarks again, as LaTeX never loaded them.
+  pub borrowed_loaded:         Vec<String>,
+  /// The paper's copies of author files read after their stand-in bindings, by number less one
+  /// ([`crate::definition::origin::copy_provides`]; [`note_copy_provides_assignment`]).
+  pub copy_provides_copies:    Vec<CopyProvidesRecord>,
+  /// The frames of the stand-in copies' provides-mode in force, innermost last
+  /// ([`enter_copy_provides_frame`]).
+  pub copy_provides_frames:    Vec<CopyProvidesFrame>,
+  /// The names assigned while a stand-in binding loaded ([`crate::definition::origin::StandInLoadGuard`]): its own, which
+  /// the paper's copy read after it only provides ([`note_copy_provides_assignment`]).
+  pub stand_in_meanings:       rustc_hash::FxHashSet<SymStr>,
+  /// The names whose meaning a class the stand-in binding loads assigned last
+  /// ([`crate::definition::origin::stand_in_base_class`]): its base class's, whose text defaults are not the binding's
+  /// (`unowned_text_default`).
+  pub stand_in_base_defaults:  rustc_hash::FxHashSet<SymStr>,
+  /// The names each stand-in binding loading now has assigned in its own code, innermost last ([`begin_stand_in_load`]).
+  pub stand_in_loads:          Vec<Vec<SymStr>>,
+  /// The names the stand-in binding loaded last assigned in its own code ([`end_stand_in_load`]): the public ones are
+  /// the command set the paper's copy must define to be that binding's file (`binding::content` `read_stand_in_copy`).
+  pub stand_in_last_load:      Vec<SymStr>,
+  /// The files each stand-in binding loading now loads from its own code (its `LoadClass!`/`RequirePackage!`),
+  /// innermost last ([`note_stand_in_file`]).
+  pub stand_in_load_files:     Vec<Vec<String>>,
+  /// The files the stand-in binding loaded last loaded from its own code ([`end_stand_in_load`]): the files it is
+  /// built on, which the paper's copy may declare itself (`binding::content` `copy_is_the_stood_in_file`).
+  pub stand_in_last_files:     Vec<String>,
+  /// The names LaTeXML's own code (`Unknown`, `Pool`, `Binding` origins) `\let`, recorded as it makes them
+  /// ([`let_i`]): a `\let` copies another name's definition, so the name a binding gave it is no longer on the object
+  /// (`owned_by_the_semantic_layer`; aas_support_sty.rs's `\let\subjectheadings\keywords`).
+  pub binding_lets:            rustc_hash::FxHashSet<SymStr>,
+  /// The frontmatter setters whose calls are observed ([`crate::definition::origin::watch_setter_calls`]).
+  pub watched_setters:         rustc_hash::FxHashSet<SymStr>,
+  /// Which names [`watch_meanings`] watches; `None` once one has changed, or with no watch.
+  meaning_watch:               Option<MeaningWatch>,
+  /// The first of [`Self::meaning_watch`]'s names to change.
+  watched_meaning_changed:     Option<SymStr>,
+  /// Each class loaded, with the names its load frame assigned and the classes loaded inside it: what that class
+  /// defines, as its real file does ([`ClassLoadFrame`], `copy_base_class_defines`, `class_layer_definition`).
+  pub class_loads:             Vec<ClassLoadRecord>,
+  /// The class loads open now, as indices into [`State::class_loads`], innermost last ([`ClassLoadFrame`]).
+  pub class_load_frames:       Vec<usize>,
+  /// The stand-in copies whose own `\LoadClass` is open now, innermost last, each with the classes the class load
+  /// open when it began had loaded: a class loaded inside it is a base class of that copy too ([`ClassLoadFrame`]; the
+  /// reviewer's probe nc_chain, `\LoadClass{mybase}` over article), and a copy's first entry holds the classes its
+  /// binding's load loaded ([`open_class_load_classes`]).
+  pub copy_class_loads:        Vec<(u32, Vec<String>)>,
   /// The open assignment journal, if any ([`begin_assignment_journal`]).
   journal:                     Option<AssignmentJournal>,
+  /// The open meaning recorders, innermost last ([`begin_meaning_recorder`]): each the meanings assigned since it
+  /// began, with the value each had then.
+  meaning_recorders:           Vec<rustc_hash::FxHashMap<SymStr, Option<Stored>>>,
+}
+
+/// One class loaded ([`ClassLoadFrame`]): its file name (`article.cls`), the names its load frame assigned a macro (the
+/// macro itself, to tell it is still the meaning: compared by [`Rc::ptr_eq`]) or had a definition refused by a lock
+/// (`None`), and the classes loaded while its frame was open, innermost included (a binding's `LoadClass!` of its base
+/// class: ceurart_cls.rs → OmniBus → article).
+#[derive(Debug, Default)]
+pub struct ClassLoadRecord {
+  pub file:    String,
+  pub names:   rustc_hash::FxHashMap<SymStr, Option<Rc<Expandable>>>,
+  pub classes: Vec<String>,
+}
+
+/// What [`note_copy_provides_assignment`] keeps for one stand-in's copy: the copy's file, its own definitions of names
+/// the binding owns (in force only inside its code), and the names and deferring seams logged.
+#[derive(Debug, Default)]
+pub struct CopyProvidesRecord {
+  pub file:          String,
+  /// The stand-in binding the copy is read after (`binding::content::read_stand_in_copy`): a package that binding's
+  /// load loaded first is the copy's own load (`<file>:loaded_by_stand_in`).
+  pub binding:       String,
+  pub overlay:       rustc_hash::FxHashMap<SymStr, Stored>,
+  pub declined:      rustc_hash::FxHashSet<SymStr>,
+  /// The meaning each declined name took back when the copy's frame ended ([`leave_copy_provides_frame`]): the one its
+  /// overlay stands beside, while still in force ([`copy_kept_meaning`]).
+  pub restored:      rustc_hash::FxHashMap<SymStr, Stored>,
+  pub deferred:      rustc_hash::FxHashSet<SymStr>,
+  /// The copy's own `\maketitle`/`\@maketitle` bodies, refused or overlaid as they may be
+  /// ([`copy_provides_title_pages`]).
+  pub title_page:    Vec<Tokens>,
+  /// The classes the copy's own code loaded (`\LoadClass`, and the classes loaded inside it: [`ClassLoadFrame`]): the
+  /// real class has the names they define ([`copy_provides_text_default_clashes`]).
+  pub loads_classes: Vec<String>,
+  /// Whether the copy's `\Provides` line routed its request to the binding (OXIDIZED_DESIGN_DIVERGENCES #731 rule 12):
+  /// the declared text names it defines stand (rule 14, [`routed_copy_text_name_yields`]).
+  pub routed:        bool,
+}
+
+/// One frame of a stand-in copy's provides-mode ([`enter_copy_provides_frame`]): the copy (`0`: a suspension), whether
+/// it repeats the frame in force (a hook chunk wrapped twice), and the names whose meanings its code replaced, with
+/// the meanings kept aside.
+#[derive(Debug, Default)]
+pub struct CopyProvidesFrame {
+  pub id:        u32,
+  pub repeat:    bool,
+  pub kept:      Vec<(SymStr, Stored)>,
+  pub kept_keys: rustc_hash::FxHashSet<SymStr>,
+  /// The other names the copy's code assigned in this frame, which may be `\let` to its own version of a kept name
+  /// ([`leave_copy_provides_frame`]).
+  pub assigned:  rustc_hash::FxHashSet<SymStr>,
 }
 // SAFETY: `State` holds `Rc`/`RefCell`/`libxml::tree::Node` (!Send). Marked
 // Send so callers can build it on one thread and then transition to another
@@ -457,10 +572,27 @@ impl Default for State {
       extra_bindings_dispatch: None,
       binding_names:           Vec::new(),
       label_mapping_hook:      None,
-      fallback_meanings:       rustc_hash::FxHashSet::default(),
+      fallback_meanings:       rustc_hash::FxHashMap::default(),
       provide_only_assigned:   rustc_hash::FxHashSet::default(),
       provide_only_loaded:     Vec::new(),
+      borrowed_loaded:         Vec::new(),
+      copy_provides_copies:    Vec::new(),
+      copy_provides_frames:    Vec::new(),
+      stand_in_meanings:       rustc_hash::FxHashSet::default(),
+      stand_in_base_defaults:  rustc_hash::FxHashSet::default(),
+      stand_in_loads:          Vec::new(),
+      stand_in_last_load:      Vec::new(),
+      stand_in_load_files:     Vec::new(),
+      stand_in_last_files:     Vec::new(),
+      binding_lets:            rustc_hash::FxHashSet::default(),
+      watched_setters:         rustc_hash::FxHashSet::default(),
+      meaning_watch:           None,
+      watched_meaning_changed: None,
+      class_loads:             Vec::new(),
+      class_load_frames:       Vec::new(),
+      copy_class_loads:        Vec::new(),
       journal:                 None,
+      meaning_recorders:       Vec::new(),
     }
   }
 }
@@ -921,9 +1053,47 @@ impl State {
     }
   }
 
-  /// Record `key`'s bindings in the open assignment journal before its first assignment since the journal began.
+  /// Record `key`'s bindings in the open assignment journal before its first assignment since the journal began, and
+  /// end the watch held ([`watch_state`]).
   #[inline]
   fn journal_touch(&mut self, table_name: TableName, key: SymStr) {
+    if table_name == TableName::Meaning && !self.meaning_recorders.is_empty() {
+      self.record_meaning(key);
+    }
+    if WRITES_WATCHED.get() {
+      self.journal_save(table_name, key);
+    }
+  }
+
+  /// [`Self::journal_touch`], for an assignment whose scope is known: `global`, whether it is global, goes to the meaning
+  /// log ([`begin_meaning_log`]), when a field's token is being invoked. The log lives on the journal, a rehearsal's, so an
+  /// assignment outside one pays nothing for it: the test sits past the guard's.
+  #[inline]
+  fn journal_touch_assignment(&mut self, table_name: TableName, key: SymStr, global: bool) {
+    if table_name == TableName::Meaning && !self.meaning_recorders.is_empty() {
+      self.record_meaning(key);
+    }
+    if WRITES_WATCHED.get() {
+      if table_name == TableName::Meaning
+        && JOURNAL_GUARD_LIVE.get()
+        && let Some(log) = self
+          .journal
+          .as_mut()
+          .and_then(|journal| journal.meaning_log.as_mut())
+        && let Some(by) = get_current_token().filter(|t| t.prov != 0)
+      {
+        log.push(MeaningAssigned { key, global, by });
+      }
+      self.journal_save(table_name, key);
+    }
+  }
+
+  /// Save `key`'s bindings in the live journal, unless they are already, and end the watch held ([`watch_state`]): out
+  /// of line, a journal being open only for a rehearsal or a replay, a watch held only for a title-page reading.
+  #[cold]
+  #[inline(never)]
+  fn journal_save(&mut self, table_name: TableName, key: SymStr) {
+    note_state_change(table_name, key);
     // (a journal whose guard is gone is stale: nothing records into it until the next begin discards it)
     if !JOURNAL_GUARD_LIVE.get() {
       return;
@@ -934,15 +1104,42 @@ impl State {
     if journal.saved.contains_key(&(table_name, key)) {
       return;
     }
-    let values = self.table(table_name).get(&key).cloned();
+    let mut values = self.table(table_name).get(&key).cloned();
+    // (a font's parameter array is written in place, `set_font_parameter`: saved as a copy of its own)
+    if let Some(values) = values.as_mut().filter(|_| table_name == TableName::Value) {
+      for value in values {
+        if let Stored::FontDimens(params) = value {
+          let copy = params.borrow().clone();
+          *value = Stored::FontDimens(Rc::new(RefCell::new(copy)));
+        }
+      }
+    }
     let counts: Vec<(u64, usize)> = self
       .undo
       .iter()
       .filter(|frame| journal.frames.contains(&frame.id))
       .filter_map(|frame| frame.table(table_name).get(&key).map(|n| (frame.id, *n)))
       .collect();
+    let standing =
+      (table_name == TableName::Meaning).then(|| self.fallback_meanings.get(&key).copied());
     if let Some(journal) = self.journal.as_mut() {
       journal.saved.insert((table_name, key), (values, counts));
+      if let Some(standing) = standing {
+        journal.fallback.insert(key, standing);
+      }
+    }
+  }
+
+  /// Record `key`'s meaning in each open meaning recorder before its first assignment since that recorder began
+  /// ([`begin_meaning_recorder`]).
+  #[cold]
+  fn record_meaning(&mut self, key: SymStr) {
+    let then = self
+      .meaning
+      .get(&key)
+      .and_then(|values| values.front().cloned());
+    for recorder in &mut self.meaning_recorders {
+      recorder.entry(key).or_insert_with(|| then.clone());
     }
   }
 
@@ -991,6 +1188,27 @@ impl State {
     defs.push_front(value);
   }
 
+  /// [`watch_meanings`]' look at an assignment of `key`'s meaning. A scope move or a copy onto itself is no change
+  /// (`hoist_top_frame_delta`, under the lazy LaTeX.pool load); nor is a first definition: the name undefined, or, for a
+  /// name [`WatchedName::RelaxIsUnset`], the `\relax` a `\csname` made it (`\exp_args:NNc`).
+  #[inline]
+  fn watch_meaning(&mut self, watched: fn(&str) -> WatchedName, key: SymStr, value: &Stored) {
+    let kind = arena::with(key, watched);
+    if kind != WatchedName::No
+      && let Some(standing) = self.meaning.get(&key).and_then(|stack| stack.front())
+      && !same_meaning(standing, value)
+      && !(kind == WatchedName::RelaxIsUnset
+        && self
+          .meaning
+          .get(&pin!("\\relax"))
+          .and_then(|stack| stack.front())
+          .is_some_and(|relax| same_meaning(standing, relax)))
+    {
+      self.meaning_watch = None;
+      self.watched_meaning_changed = Some(key);
+    }
+  }
+
   pub(crate) fn assign_internal(
     &mut self,
     table_name: TableName,
@@ -998,34 +1216,89 @@ impl State {
     value: Stored,
     mut scope_opt: Option<Scope>,
   ) {
-    // (a meaning a fallback class or a kernel stub installs, until anything else assigns the name: `fallback_meanings`)
+    // (a meaning a fallback class, a kernel stub or a borrowed package installs, until anything else assigns the name:
+    // `fallback_meanings`; an open journal records the standing first)
     if table_name == TableName::Meaning {
+      self.journal_touch(table_name, key);
+      let origin = crate::definition::origin::current_origin();
+      // (not LaTeXML's own code, which every conversion's preload runs and which assigns no such name)
+      if let Some(watched) = self.meaning_watch
+        && matches!(
+          origin,
+          crate::definition::origin::DefinitionOrigin::File
+            | crate::definition::origin::DefinitionOrigin::Document
+            | crate::definition::origin::DefinitionOrigin::Format
+        )
+        && arena::first_bytes(key).is_some_and(|[_, second, third]| watched.may_take(second, third))
+      {
+        self.watch_meaning(watched.select, key, &value);
+      }
       if matches!(
-        crate::definition::origin::current_origin(),
+        origin,
         crate::definition::origin::DefinitionOrigin::Fallback
           | crate::definition::origin::DefinitionOrigin::Stub
+          | crate::definition::origin::DefinitionOrigin::Borrowed
       ) {
-        self.fallback_meanings.insert(key);
+        self.fallback_meanings.insert(key, origin);
       } else if !self.fallback_meanings.is_empty() {
         self.fallback_meanings.remove(&key);
       }
       if crate::definition::origin::provide_only() {
         self.provide_only_assigned.insert(key);
       }
-    } else if table_name == TableName::Value
-      && crate::definition::origin::provide_only()
-      && matches!(value, Stored::Bool(true))
-    {
-      // (`<file>_loaded`, `load_ltxml`: a file loaded under the guard)
-      arena::with(key, |name| {
-        if let Some(file) = name.strip_suffix("_loaded")
-          && !file.ends_with(".ltxml")
-          && !file.ends_with("_raw")
-          && !self.provide_only_loaded.iter().any(|f| f == file)
-        {
-          self.provide_only_loaded.push(file.to_string());
+      // (a macro a class's load frame defines — its binding's, its raw file's, a package's it loads — not LaTeXML's
+      // kernel layers: `ClassLoadFrame`)
+      if let Some(&class) = self.class_load_frames.last()
+        && matches!(value, Stored::Expandable(_))
+        && !matches!(
+          origin,
+          crate::definition::origin::DefinitionOrigin::Unknown
+            | crate::definition::origin::DefinitionOrigin::Plain
+            | crate::definition::origin::DefinitionOrigin::LatexDump
+            | crate::definition::origin::DefinitionOrigin::Pool
+            | crate::definition::origin::DefinitionOrigin::Format
+            | crate::definition::origin::DefinitionOrigin::Document
+        )
+        && let Stored::Expandable(defn) = &value
+        && let Some(record) = self.class_loads.get_mut(class)
+      {
+        record.names.insert(key, Some(Rc::clone(defn)));
+      }
+      if crate::definition::origin::stand_in_loading() {
+        self.stand_in_meanings.insert(key);
+        if crate::definition::origin::stand_in_base_class() {
+          self.stand_in_base_defaults.insert(key);
+        } else if !self.stand_in_base_defaults.is_empty() {
+          self.stand_in_base_defaults.remove(&key);
         }
-      });
+        if crate::definition::origin::stand_in_own_code()
+          && let Some(load) = self.stand_in_loads.last_mut()
+        {
+          load.push(key);
+        }
+      }
+    } else if table_name == TableName::Value && matches!(value, Stored::Bool(true)) {
+      // (`<file>_loaded`, `load_ltxml`: a file loaded under the provide-only guard, or by a borrow)
+      let provide_only = crate::definition::origin::provide_only();
+      let borrowed = crate::definition::origin::current_origin()
+        == crate::definition::origin::DefinitionOrigin::Borrowed;
+      if provide_only || borrowed {
+        arena::with(key, |name| {
+          if let Some(file) = name.strip_suffix("_loaded")
+            && !file.ends_with(".ltxml")
+            && !file.ends_with("_raw")
+          {
+            for (on, list) in [
+              (provide_only, &mut self.provide_only_loaded),
+              (borrowed, &mut self.borrowed_loaded),
+            ] {
+              if on && !list.iter().any(|f| f == file) {
+                list.push(file.to_string());
+              }
+            }
+          }
+        });
+      }
     }
     // hotcode lookupDefinition for \globaldefs,
     // since this is called extremely often and should be highly standardized.
@@ -1080,7 +1353,7 @@ impl State {
     if matches!(scope, Scope::Local) && BUILD_FLOOR.get() == Some(self.undo.len()) {
       scope = Scope::Global;
     }
-    self.journal_touch(table_name, key);
+    self.journal_touch_assignment(table_name, key, matches!(scope, Scope::Global));
     match scope {
       Scope::Global => {
         let mut undo_count = 0;
@@ -1366,6 +1639,75 @@ pub fn reset_thread_state() {
   STATE_IN_USE.set(RotateState::Main);
 }
 
+/// A refused redefinition of a locked `\<name>` that EXTENDS the meaning it read — the locked binding's replacement
+/// text with tokens appended or prepended, as etoolbox's `\appto`/`\preto` (`\edef#1{\expandonce#1…}`) and
+/// latex.ltx's `\g@addto@macro` (`\toks@\expandafter{#1#2}\xdef#1{\the\toks@}`) make it — extends what the
+/// class itself defined: in TeX the class's own definition is the meaning it extends, so the record of the class's
+/// definition (`\lx@dropped@<name>`, `dropped_key`) becomes that definition with the same tokens appended or
+/// prepended. wiley-article.cls:420-466 `\renewcommand{\maketitle}{…\@papertype…\@paperfield…}` then :576
+/// `\appto{\maketitle}{…}`: the record held the kernel's body and the append, and the class's title page, which
+/// the `\maketitle` deposit replays, was gone (1911.06213). `None` (the refused definition is recorded as it is)
+/// unless the class's record and the binding are parameterless token bodies and the refused one is the binding's body
+/// with tokens added at one end.
+fn extended_refused_definition(
+  token: &Token,
+  definition: &Stored,
+  dropped_key: SymStr,
+) -> Option<Stored> {
+  let parameterless = |d: &Expandable| {
+    d.get_parameters()
+      .is_none_or(|p| p.get_parameters().is_empty())
+  };
+  let Stored::Expandable(new) = definition else {
+    return None;
+  };
+  let Some(Stored::Expandable(binding)) = lookup_meaning(token) else {
+    return None;
+  };
+  let Some(Stored::Expandable(prior)) =
+    lookup_meaning(&T_CS!(arena::with(dropped_key, ToString::to_string)))
+  else {
+    return None;
+  };
+  if !parameterless(new) || !parameterless(&binding) || !parameterless(&prior) {
+    return None;
+  }
+  let (
+    Some(ExpansionBody::Tokens(new_body)),
+    Some(ExpansionBody::Tokens(kernel)),
+    Some(ExpansionBody::Tokens(own)),
+  ) = (
+    new.get_expansion(),
+    binding.get_expansion(),
+    prior.get_expansion(),
+  )
+  else {
+    return None;
+  };
+  let (new_body, kernel, own) = (new_body.unlist_ref(), kernel.unlist_ref(), own.unlist_ref());
+  if kernel.is_empty() || new_body.len() <= kernel.len() {
+    return None;
+  }
+  let extended: Vec<Token> = if new_body.starts_with(kernel) {
+    own
+      .iter()
+      .chain(&new_body[kernel.len()..])
+      .copied()
+      .collect()
+  } else if new_body.ends_with(kernel) {
+    new_body[..new_body.len() - kernel.len()]
+      .iter()
+      .chain(own)
+      .copied()
+      .collect()
+  } else {
+    return None;
+  };
+  let mut kept = (*prior).clone();
+  kept.expansion = Some(ExpansionBody::Tokens(Tokens::new(extended)));
+  Some(Stored::Expandable(Rc::new(kept)))
+}
+
 /// A shorthand for installing definitions
 pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) {
   let definition = definition.into();
@@ -1387,21 +1729,41 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
   // a name stubbed as `<ltx:ERROR/>` and later `\def`ed is a defined cs
   // again, so `\csname…\endcsname` takes tex.web's §373 path for it, not the
   // §370 discard. Probe-only, like the `:locked` check below.
-  let stub_key = token.with_cs_name(|cs| s!("{cs}:error@stub"));
-  if let Some(stub_sym) = arena::get(&stub_key)
+  if let Some(stub_sym) = token.with_cs_name(|cs| arena::get_suffixed(cs, ":error@stub"))
     && lookup_bool_sym(stub_sym)
   {
     assign_value_sym(stub_sym, false, Some(Scope::Global));
   }
-  if is_definition_locked(&token) {
+  // (read against this redefinition's own interface: a lock that holds only against copies, `files_lock_holds`; an
+  // unlocked state reads no lock and allocates nothing here)
+  let locked =
+    !state_is_unlocked() && token.with_cs_name(|cs| redefinition_locked(cs, &definition));
+  // (a stand-in's copy's own write to LaTeX's document hooks is document-time code, which it does not register, as it
+  // does not its `\AtBeginDocument` code: `copy_provides_defers`. ltxgrid's `\prepdef\@begindocumenthook{\open@column@one
+  // \@ne\set@colht…}` in qm2008_abs.cls and snp.cls, REVTeX 4 copies routed to the revtex4 binding, ran its page
+  // grid over the binding's names at `\begin{document}`: 7 "Missing number" Warnings, 0805.2253, 0806.0481, 0805.4759)
+  if !state_is_unlocked() && copy_provides_defers_hook_write(&token) {
+    return;
+  }
+  // (a stand-in's copy's own title page, whatever becomes of it: what it prints decides its setters' defaults,
+  // `copy_title_page_prints`)
+  if let Stored::Expandable(ref defn) = definition
+    && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
+  {
+    note_copy_provides_title_page(&token, body);
+  }
+  if locked && copy_provides_refuses_locked(&token) {
+    restore_cleared_binding(&token);
+  } else if locked {
     restore_cleared_binding(&token);
     // A LOCKED BINDING OWNS ITS CALLS. The lock keeps the semantic markup of a call (Perl acb3b27e: commands "that
     // lose semantics when redefined"), and a use without an argument cannot produce that markup: the binding would
     // read the next token as its argument (a pgffor `\foreach \i/\text` loop variable: 15 errors; `\@for\text:=`:
     // Fatal; `\def\title{On Widgets}` then `\section*{\title}`). So a VALUE the document defines — a definition
-    // without parameters — of a binding that takes a braced argument ([`owns_calls`]) becomes the meaning: what
+    // without parameters — of a binding that takes a braced argument ([`owns_calls`]; a robust binding by its inner
+    // `\cs␣`, the kernel `\cite`: eplain's btxmac scratch, SYNC_STATUS 67n) becomes the meaning: what
     // `\ifx`, `\meaning` and every use without an argument see, as in pdflatex; the binding stays the handler of
-    // its calls, as `\lx@locked@<cs>` ([`crate::definition::expandable::Expandable::yields_calls`]). A definition
+    // its calls, as `\lx@locked@<cs>` ([`crate::definition::expandable::SpecialCall::YieldsCalls`]). A definition
     // with parameters defines a command, not a value, so every use of it stays the binding's (`\renewcommand\mathbf
     // [1]{\boldsymbol{#1}}` with `\mathbf a`; 2006.08408's `\renewcommand{\sqrt}[2][\mkern8mu]{…}` with
     // `\sqrt k`). Raw class and package code stays refused, as in Perl (State.pm:502-517), and so does a binding
@@ -1435,7 +1797,7 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
     // every `\def`/`\gdef`/`\edef`/`\xdef <cs>` in the dropped body whose
     // `<cs>` is still undefined gets an EMPTY definition — the class's own
     // default convention, with no name enumerated. Guard:
-    // `perfect_kernel_batch54::locked_setter_internals_are_defined_empty`.
+    // `perfect_kernel_batch54::refused_setter_internals_take_the_replayed_value`.
     if let Stored::Expandable(ref defn) = definition
       && let Some(ExpansionBody::Tokens(body)) = defn.get_expansion()
     {
@@ -1473,16 +1835,16 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
     if matches!(definition, Stored::Expandable(_)) {
       let dropped_key =
         arena::pin(token.with_cs_name(|cs| s!("\\lx@dropped@{}", cs.trim_start_matches('\\'))));
-      state_mut!().assign_internal(
-        TableName::Meaning,
-        dropped_key,
-        definition.clone(),
-        Some(Scope::Global),
-      );
+      let kept = extended_refused_definition(&token, &definition, dropped_key)
+        .unwrap_or_else(|| definition.clone());
+      state_mut!().assign_internal(TableName::Meaning, dropped_key, kept, Some(Scope::Global));
     }
     // Record that a redefinition was dropped: a locked binding may consult
     // `<cs>:redefined` to yield the parts of its behaviour the class took
     // over (see `\lx@maketitle@cleanup`).
+    // (a class whose load defines the name the lock kept defines it all the same, as its real file does:
+    // `ClassLoadFrame`, `copy_base_class_defines`)
+    note_class_load_name(meaning_key(&token));
     let redefined_key = arena::pin(token.with_cs_name(|cs| s!("{cs}:redefined")));
     state_mut!().assign_internal(
       TableName::Value,
@@ -1507,9 +1869,15 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
         Some(Scope::Global),
       );
     }
+    // …and, against a lock that holds only against copies, the default of the optional argument the copy takes first
+    // (`[1][\thu@proof@name]`; a robust copy's by its inner `\cs␣`), which the binding titles its own use with
+    // (amsthm's proof, amsthm_sty.rs).
+    if let Some(default) = copy_default(&definition) {
+      record_redefined_default(&token, default);
+    }
     if let Some((defn, binding)) = call_owner {
       // The binding, kept on the first override (a later one, a loop's next iteration, overrides an override).
-      if !matches!(binding, Stored::Expandable(ref b) if b.yields_calls) {
+      if !matches!(binding, Stored::Expandable(ref b) if b.yields_calls()) {
         let owner = locked_binding_token(&token);
         state_mut!().assign_internal(
           TableName::Meaning,
@@ -1519,7 +1887,7 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
         );
       }
       let mut overriding = (*defn).clone();
-      overriding.yields_calls = true;
+      overriding.special_call = expandable::SpecialCall::YieldsCalls;
       state_mut!().assign_internal(
         TableName::Meaning,
         cs_sym,
@@ -1556,6 +1924,7 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
       }
     }
   } else {
+    note_copy_provides_assignment(&token);
     state_mut!().assign_internal(TableName::Meaning, cs_sym, definition, scope);
   }
 }
@@ -1564,30 +1933,13 @@ pub fn install_definition<T: Into<Stored>>(definition: T, scope: Option<Scope>) 
 /// along with appropriate error messge.
 pub fn generate_error_stub(token: &Token) -> Result<Token> {
   let cs = token.with_cs_name(ToString::to_string);
-  // Perl-faithful counter leniency. A `\c@<ctr>` control sequence is, by
-  // LaTeX convention, the count register backing counter `<ctr>`. When code
-  // reads an *undefined* one in a number/register context (e.g.
-  // `\setcounter{x}{\value{y}}` or `\algrestore`/`\ContinuedFloat` reading
-  // `\c@subalgorithm@save`), Perl does NOT raise a hard "undefined control
-  // sequence" error — its counter machinery warns "Counter '<ctr>' was not
-  // defined; assuming 0" (Package.pm L712) and treats it as 0. Without this,
-  // `read_x_token` expands the bare undefined `\c@<ctr>` through the generic
-  // <ltx:ERROR/> path below and the run gains a spurious error. Mirror Perl:
-  // warn and define the register as 0 so the reader sees a register value,
-  // not an undefined CS. Same category/message as `counter::dialect::
-  // counter_value`. Witness 1910.02851 (`\algrestore{RLZFactorization}` +
-  // `\ContinuedFloat` → `\c@subalgorithm@save`); Perl rc=0.
-  if let Some(ctr) = cs.strip_prefix("\\c@") {
-    if !lookup_bool("SUPPRESS_UNDEFINED_ERRORS") {
-      Warn!(
-        "undefined",
-        ctr,
-        s!("Counter '{}' was not defined; assuming 0", ctr)
-      );
-    }
-    crate::binding::def::dialect::def_register(*token, None, Number::new(0), None)?;
-    return Ok(*token);
-  }
+  // Perl `generateErrorStub` (State.pm L532-553) has no counter branch: an undefined `\c@<ctr>` read as a
+  // control sequence is the error TeX raises too (`! Undefined control sequence.`). The leniency Perl has is in
+  // its counter readers, `CounterValue` (Package.pm L712; ours `counter::dialect::counter_value`): `\arabic`,
+  // `\stepcounter`, `\addtocounter`. Witness 1910.02851 (`\ContinuedFloat` in an `algorithm` float reading
+  // `\c@subalgorithm@save`; Perl's subfig binding reads it through `CounterValue`) is served by subfig.sty:587's own
+  // guard in the subfig binding, which touches no sub-counter a float type lacks.
+  // Guard `perfect_kernel_batchga1::an_undefined_counter_register_is_the_error_tex_raises`.
   // Gate the undefined-CS summary tally by SUPPRESS_UNDEFINED_ERRORS so it
   // matches the `Error!` gate at L1021 below — during expl3-code.tex raw
   // load with thousands of forward-references we install the ERROR stub
@@ -1611,25 +1963,27 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
       s!("The token {} is not defined.", token.stringify()),
       "Defining it now as with \\newif"
     );
-    install_definition(
+    let setters = [
       Expandable::new(
         T_CS!(s!("\\{}true", name)),
         None,
         Some(s!("\\let{}\\iftrue", cs).into()),
         None,
       )?,
-      Some(Scope::Global),
-    );
-    install_definition(
       Expandable::new(
         T_CS!(s!("\\{}false", name)),
         None,
         Some(s!("\\let{}\\iffalse", cs).into()),
         None,
       )?,
-      Some(Scope::Global),
-    );
-    let_i(token, &T_CS!("\\iffalse"), Some(Scope::Global));
+    ];
+    let scope = stub_scope(&cs);
+    past_the_lock(|| {
+      for setter in setters {
+        install_definition(setter, Some(Scope::Global));
+      }
+      let_i(token, &T_CS!("\\iffalse"), Some(scope));
+    });
     crate::util::logger::note_held_stub(*token);
   } else {
     // Allow suppression of undefined errors during bulk loading (e.g., expl3-code.tex)
@@ -1642,30 +1996,60 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
         "Defining it now as <ltx:ERROR/>"
       );
     }
-    install_definition(
-      Constructor {
-        cs: *token,
-        replacement: Some(Rc::new(move |document, _args, _props| {
-          document.make_error("undefined", &cs)
-        })),
-        ..Constructor::default()
-      },
-      //TODO: sizer => "X"),
-      Some(Scope::Global),
-    );
+    let scope = stub_scope(&cs);
+    let stub = Constructor {
+      cs: *token,
+      replacement: Some(Rc::new(move |document, _args, _props| {
+        document.make_error("undefined", &cs)
+      })),
+      ..Constructor::default()
+    };
+    //TODO: sizer => "X"),
+    past_the_lock(|| install_definition(stub, Some(scope)));
     // The stub's provenance travels with the NAME (tex.web §370 discards an
     // undefined cs inside `\csname…\endcsname`; a defined non-expandable one
     // takes the §373 `back_error` path): `<cs>:error@stub`, read by
     // `gullet::read_cs_name_inner` — not a global "last stubbed token", which
     // went stale across interleaved stubs.
+    // (at the stub's own scope: a locked name's stub that ends with its group leaves the binding, which is no stub)
     assign_value_sym(
       arena::pin(token.with_cs_name(|c| s!("{c}:error@stub"))),
       true,
-      Some(Scope::Global),
+      Some(scope),
     );
     crate::util::logger::note_held_stub(*token);
   }
   Ok(*token)
+}
+
+/// The scope [`generate_error_stub`] installs a stub at: global, as Perl's `generateErrorStub` (State.pm:553
+/// `installDefinition(…, 'global')`), except for a name that carries a lock ([`name_carries_lock`]). Such a name is
+/// undefined only because a `\let` cleared its binding, and that `\let` may be local: the stub is the recovery for
+/// this clearing, so it is local too and ends where the clearing ends — `{\let\cite\undefined X\cite{a}} Y\cite{b}`
+/// typesets the second citation, as pdflatex does, and `\begingroup\let\section\nonexist\section{A}\endgroup
+/// \section{B}` keeps the section B. A clearing at the top level leaves the stub for the rest of the document, one
+/// Error per name as before. Guards `perfect_kernel_batch68u::a_locked_name_cleared_in_a_group_is_back_after_it`.
+fn stub_scope(cs: &str) -> Scope {
+  if name_carries_lock(cs) {
+    Scope::Local
+  } else {
+    Scope::Global
+  }
+}
+
+/// Run [`generate_error_stub`]'s installs with the state unlocked. The stub is the engine's recovery from an undefined
+/// control sequence, not a source redefinition, so a lock does not refuse it: a document's `\let` of a locked binding to
+/// an undefined name (`\let\cite\parencite` with `\parencite` undefined, 2006.07968's apa6 paper; pittetd.cls:313
+/// `\let\maketitle\HyOrg@maketitle`, 1509.06375) clears the binding, and a refused stub left the name undefined for the
+/// Stomach's retry (stomach.rs, Perl Stomach.pm:236-237 `invokeToken_undefined`), which raised the same Error until
+/// TooManyErrors. Installed, the name gives one Error and its `<ltx:ERROR/>`, as pdflatex gives one "Undefined control
+/// sequence" per use. Perl refuses its own locked names' stubs the same way (State.pm:509; `\let\section\nonexist`:
+/// 101 Errors and Fatal, KNOWN_PERL_ERRORS #841). OXIDIZED_DESIGN_DIVERGENCES #641; repro
+/// macro-state/locked_name_let_to_undefined_stub_loop; guard
+/// `perfect_kernel_batch68u::a_locked_name_let_to_an_undefined_one_errs_once`.
+fn past_the_lock(install: impl FnOnce()) {
+  let _unlocked = local_state_unlocked_guard(true);
+  install();
 }
 
 /// Undo [`generate_error_stub`]: `token` (and a stubbed `\ifX`'s `\Xtrue`/`\Xfalse`) is undefined
@@ -1673,18 +2057,24 @@ pub fn generate_error_stub(token: &Token) -> Result<Token> {
 /// stubs standing in for them, so the document's own later use of the command reports it.
 pub fn remove_error_stub(token: &Token) {
   let cs = token.with_cs_name(ToString::to_string);
+  // A locked name's stub was local ([`stub_scope`]): undone only while it still stands — not after the group it was
+  // made in has ended, which gave the binding back — and undone there, so the binding of the enclosing groups stands.
+  let scope = stub_scope(&cs);
+  let local = matches!(scope, Scope::Local);
   if let Some(name) = cs.strip_prefix("\\if") {
     for setter in [T_CS!(s!("\\{name}true")), T_CS!(s!("\\{name}false"))] {
       assign_meaning(&setter, Stored::None, Some(Scope::Global));
     }
+    if local && !x_equals(token, &T_CS!("\\iffalse")) {
+      return;
+    }
   } else {
-    assign_value_sym(
-      arena::pin(s!("{cs}:error@stub")),
-      false,
-      Some(Scope::Global),
-    );
+    if local && !is_error_stub(token) {
+      return;
+    }
+    assign_value_sym(arena::pin(s!("{cs}:error@stub")), false, Some(scope));
   }
-  assign_meaning(token, Stored::None, Some(Scope::Global));
+  assign_meaning(token, Stored::None, Some(scope));
 }
 
 /// Was `token` stubbed as `<ltx:ERROR/>` by [`generate_error_stub`]? Probe
@@ -1702,33 +2092,33 @@ pub fn is_error_stub(token: &Token) -> bool {
 /// `generate_error_stub` installs for undefined *commands*, so undefined
 /// *environments* (`\begin{undefinedenv}`) leave the same visible
 /// `<ltx:ERROR>` marker as Perl instead of silently vanishing from the output.
+/// Like that stub, it installs past a lock (`past_the_lock`, below).
 pub fn install_undefined_error_constructor(token: Token, content: &str) {
   let content = content.to_string();
-  install_definition(
-    Constructor {
-      cs: token,
-      replacement: Some(Rc::new(move |document, _args, _props| {
-        document.make_error("undefined", &content)
-      })),
-      ..Constructor::default()
-    },
-    Some(Scope::Global),
-  );
+  let stub = Constructor {
+    cs: token,
+    replacement: Some(Rc::new(move |document, _args, _props| {
+      document.make_error("undefined", &content)
+    })),
+    ..Constructor::default()
+  };
+  let scope = token.with_cs_name(stub_scope);
+  past_the_lock(|| install_definition(stub, Some(scope)));
 }
 
-/// Does a provide-only load ([`ProvideOnlyGuard`](crate::definition::origin::ProvideOnlyGuard)) decline this
-/// definition of `token`? While the guard lives, a binding's definition (`DefinitionOrigin::Binding` or `Fallback`:
-/// OmniBus and every binding it requires, inst_support's `\author[]{}` and epsf's `\epsfbox` among them) is declined when
-/// the name was defined before the guard: defined now in the `\providecommand` sense (latex.ltx `\@ifundefined`: a
-/// meaning other than `\relax`, `binding::def::dialect::is_defined_token`), not a fallback guess (`is_fallback_meaning`),
-/// and not assigned since the guard began (`provide_only_assigned`: the load's own names, which it may define again —
-/// OmniBus's `\keywords{}` before its `\keywords` that also opens `{keywords}`). An environment `\begin{X}`/`\end{X}`
-/// counts as defined when `\X` is (latex.ltx `\begin` runs `\X`), and `\end{X}` also when `\endX` is. The binding
-/// definers (`def_macro`, `def_primitive`, `def_constructor`, `def_register`, `def_conditional`, `def_environment`,
-/// `def_math`) and `Let!` consult it before they assign anything; TeX's own `\def`/`\let` do not, so TeX code run
-/// during the load keeps its usual effect (a hook appended to, a scratch macro), nor does the loader's bookkeeping, made
-/// at its caller's origin. A macro marked `extends` (it wraps and delegates to the name's current meaning) is not
-/// declined.
+/// Does a provide-only load ([`ProvideOnlyGuard`](crate::definition::origin::ProvideOnlyGuard)) decline this definition
+/// of `token`? While the guard lives, a binding's definition (`DefinitionOrigin::Binding`, `Fallback` or `Borrowed`:
+/// OmniBus and every binding it requires, inst_support's `\author[]{}` and epsf's `\epsfbox` among them) is declined
+/// when the name was defined before the guard: defined now in the `\providecommand` sense (latex.ltx `\@ifundefined`: a
+/// meaning other than `\relax`, `binding::def::dialect::is_defined_token`), not a fallback guess
+/// (`is_fallback_meaning`), and not assigned since the guard began (`provide_only_assigned`: the load's own names,
+/// which it may define again — OmniBus's `\keywords{}` before its `\keywords` that also opens `{keywords}`). An
+/// environment `\begin{X}`/`\end{X}` counts as defined when `\X` is (latex.ltx `\begin` runs `\X`), and `\end{X}` also
+/// when `\endX` is. The binding definers (`def_macro`, `def_primitive`, `def_constructor`, `def_register`,
+/// `def_conditional`, `def_environment`, `def_math`) and `Let!` consult it before they assign anything; TeX's own
+/// `\def`/`\let` do not, so TeX code run during the load keeps its usual effect (a hook appended to, a scratch macro),
+/// nor does the loader's bookkeeping, made at its caller's origin. A macro marked `extends` (it wraps and delegates to
+/// the name's current meaning) is not declined.
 pub fn provide_only_declines(token: &Token) -> bool {
   use crate::{
     binding::def::dialect::is_defined_token,
@@ -1737,7 +2127,7 @@ pub fn provide_only_declines(token: &Token) -> bool {
   if !provide_only()
     || !matches!(
       current_origin(),
-      DefinitionOrigin::Binding | DefinitionOrigin::Fallback
+      DefinitionOrigin::Binding | DefinitionOrigin::Fallback | DefinitionOrigin::Borrowed
     )
   {
     return false;
@@ -1766,6 +2156,1697 @@ pub fn provide_only_declines(token: &Token) -> bool {
   })
 }
 
+/// "A stand-in's copy provides" (OXIDIZED_DESIGN_DIVERGENCES #731): note this assignment of `token`'s meaning, made
+/// while the paper's copy of an author file is read after the binding that stands in for it
+/// (`binding::content::read_stand_in_copy`), or while the `\AtEndOfClass`/`\AtEndOfPackage` code it registered runs
+/// at the end of that load ([`copy_provides_wrap`]). Every assignment of a meaning goes through here — TeX's `\def`
+/// family, `\let`, `\futurelet`, `\chardef` and the `\countdef` family, and the LaTeX declarators (`\newcommand`,
+/// `\renewcommand`, `\DeclareRobustCommand`, `\newenvironment`, `\newcounter`, `\newif`, `\newtheorem`, `\newlength`…),
+/// at [`install_definition`] and [`assign_meaning`]. One of a name LaTeXML's semantic layer owns
+/// (`owned_by_the_semantic_layer`; an environment `{X}` is owned when `\begin{X}`, `\X` or `\endX` is) holds only
+/// inside the copy's own code: the binding's meaning is kept aside and put back when the copy's read ends
+/// ([`leave_copy_provides_frame`]), so for the document the definition acted as `\providecommand` does, while the
+/// copy's load-time logic sees what it defined, as in TeX: aipproc.cls:559 `\ifnum\pageref>0` after its option's
+/// `\chardef\pageref` (astro-ph0105128); epl2.cls:1317-1318's `\let\epl@org@bibitem\bibitem` before its `\def\bibitem`,
+/// which the epl binding makes too (a kept `\let` would take the binding's wrapper for the original, and `\bibitem`
+/// would call itself: 0906.2627, 1102.2776, 1203.4765). Every other assignment stands as TeX makes it: an undefined
+/// name (the copy's extras), a raw kernel name, an earlier raw file's or the document's, a stub or borrow. Not while
+/// the state is unlocked (a binding's `before`/`after` code, an `AddToMacro!` append), nor for a locked name, which
+/// `install_definition` refuses first ([`copy_provides_refuses_locked`]). Each name kept for the binding is logged
+/// once per copy, at Info.
+pub fn note_copy_provides_assignment(token: &Token) {
+  let id = crate::definition::origin::copy_provides();
+  if id == 0 || state_is_unlocked() || !matches!(token.get_catcode(), Catcode::CS | Catcode::ACTIVE)
+  {
+    return;
+  }
+  let key = meaning_key(token);
+  let Some(at) = state!()
+    .copy_provides_frames
+    .iter()
+    .rposition(|frame| frame.id == id && !frame.repeat)
+  else {
+    return;
+  };
+  if state!().copy_provides_frames[at].kept_keys.contains(&key) {
+    return;
+  }
+  // (a name whose earlier assignment in the copy's code stood is the copy's: `\let\refname\relax` then
+  // `\newcommand\refname{…}`, as LaTeX's `\newcommand` finds a `\relax` name definable)
+  if state!().copy_provides_frames[at].assigned.contains(&key) {
+    return;
+  }
+  // (a counter's representation and reset list are owned only when the stand-in binding's own load assigned them:
+  // `counter_part`)
+  // (an environment's names are provided or declined together: once the copy's code redefined one the binding owns —
+  // its `\begin{X}`, kept aside — the others it defines next are kept too, though the name it redefined now carries
+  // the copy's meaning; cimart.cls:295-315's `\newtheorem{theorem}[definition]` under OmniBus's `{theorem}` left the
+  // binding's `\begin{theorem}` with the copy's `\end{theorem}`, a group open at the document's end: 2412.00032,
+  // 2408.07575's `{example}`)
+  let pair_kept = token.with_cs_name(|name| {
+    environment_names(name).iter().any(|other| {
+      state!().copy_provides_frames[at]
+        .kept_keys
+        .contains(&meaning_key(&T_CS!(other.as_str())))
+    })
+  });
+  let owned = if token.with_cs_name(counter_part).is_some() {
+    state!().stand_in_meanings.contains(&key)
+  } else if unowned_text_default(token) || base_class_name_made_relax(token) {
+    false
+  } else {
+    // (not by its macro partner alone: plain's `\endgroup` does not make a copy's `\group` LaTeXML's)
+    let environment = |name: &str| name.starts_with("\\begin{") || name.starts_with("\\end{");
+    pair_kept
+      || owned_by_the_semantic_layer(token)
+      || token.with_cs_name(|name| {
+        environment_names(name)
+          .iter()
+          .filter(|other| environment(name) || environment(other))
+          .any(|other| owned_by_the_semantic_layer(&T_CS!(other.as_str())))
+      })
+  };
+  if !owned {
+    state_mut!().copy_provides_frames[at].assigned.insert(key);
+    return;
+  }
+  let binding = lookup_meaning(token).unwrap_or(Stored::None);
+  let mut state = state_mut!();
+  let frame = &mut state.copy_provides_frames[at];
+  frame.kept.push((key, binding));
+  frame.kept_keys.insert(key);
+}
+
+/// Is `token` a name the stand-in binding's base class assigned (`State::stand_in_base_defaults`) that a file since
+/// made `\relax` — a raw base class the copy loads: `\let\figurename\relax` before the copy's
+/// `\newcommand\figurename{Fig}`? LaTeX finds a `\relax` name undefined (`\newcommand`, `\@ifundefined`), so the copy's
+/// definition stands, as in TeX.
+fn base_class_name_made_relax(token: &Token) -> bool {
+  state!()
+    .stand_in_base_defaults
+    .contains(&meaning_key(token))
+    && lookup_meaning(token)
+      .is_some_and(|meaning| Some(meaning) == lookup_meaning(&crate::token::TOKEN_RELAX))
+}
+
+/// Does a stand-in's copy, read or running its hook now ([`note_copy_provides_assignment`]), redefine the locked
+/// `token`? Then the lock refuses it as for any file, but keeps no record of it — no `\lx@dropped@<name>` body for
+/// the binding to run in a gap, no `<cs>:redefined` for it to yield to, no default or signature (the records of a raw
+/// class taking over a locked command, OXIDIZED_DESIGN #265, #500): the binding stands in for this very file, so the
+/// copy takes nothing over. Logged once per copy, at Info, as a redefinition of an owned name is.
+pub fn copy_provides_refuses_locked(token: &Token) -> bool {
+  let id = crate::definition::origin::copy_provides();
+  if id == 0 {
+    return false;
+  }
+  let key = meaning_key(token);
+  let mut state = state_mut!();
+  if let Some(copy) = state.copy_provides_copies.get_mut(id as usize - 1)
+    && copy.declined.insert(key)
+  {
+    let file = copy.file.clone();
+    drop(state);
+    let name = token.with_cs_name(ToString::to_string);
+    Info!(
+      "provide",
+      name,
+      s!("{name} keeps LaTeXML's locked definition: the paper's {file} redefines it")
+    );
+  }
+  true
+}
+
+/// Does a stand-in's copy, read now ([`note_copy_provides_assignment`]), save `source` again into `token` — `\let
+/// \token\source` — where `token` already holds an earlier meaning of `source` (its definition is a `\let` copy made
+/// under `source`'s name, `definition_cs`) that the stand-in binding's load assigned, and `source` has been redefined
+/// since — by the binding, the copy's read not having assigned `source` itself — to a meaning that reaches `token`
+/// (`meaning_reaches`), so that the `\let` would make it call itself? Then the
+/// `\let` is declined, in the copy's code too: `token` keeps the meaning TeX gives it, `source` before the redefinition. The binding (or a file it read) made the very save-and-wrap the copy makes — `\let\org\X`, then
+/// `\X` redefined to call `\org` —, and saving the wrapper into `\org` makes `\X` call itself: myjmlr.cls and
+/// jmlr_mod.cls (renamed jmlr.cls copies routed to the jmlr binding, whose jmlrutils.sty made the same wrap) run
+/// `\let\jmlr@org@newtheorem\newtheorem` (jmlr.cls:753-754) before their own `\newtheorem{example}`, which looped to
+/// the timeout (1506.02582, 2304.14217; OXIDIZED_DESIGN_DIVERGENCES #731 rule 2, the epl2.cls `\let\epl@org@bibitem`
+/// case met in the copy's own code). Logged once per copy, at Info.
+pub fn copy_provides_keeps_saved_meaning(token: &Token, source: &Token, meaning: &Stored) -> bool {
+  let id = crate::definition::origin::copy_provides();
+  if id == 0
+    || state_is_unlocked()
+    || !matches!(token.get_catcode(), Catcode::CS | Catcode::ACTIVE)
+    || token == source
+  {
+    return false;
+  }
+  let key = meaning_key(token);
+  if !state!().stand_in_meanings.contains(&key) {
+    return false;
+  }
+  let Some(saved) = lookup_meaning(token) else {
+    return false;
+  };
+  if definition_cs(&saved) != Some(*source) || same_meaning(&saved, meaning) {
+    return false;
+  }
+  // (only while `source` still holds the binding's meaning — the copy's read has not assigned it — and only a `\let`
+  // that would make that wrapper call itself, `source`'s meaning reaching `token`: pgf's scratch
+  // `\let\pgfutil@reserved@c\pgfutil@reserved@b`, which `\usetikzlibrary` runs while the copy is read right after its
+  // own `\def\pgfutil@reserved@b`, is no save-and-wrap — declining it lost 2207.07492's sn-jnl.cls:303
+  // `\usetikzlibrary{snakes}`, and where `@b`'s loop body names `@c` it left pgf's recursion spinning to the timeout,
+  // 2101.08181's lmcs.cls copy)
+  let reassigned_by_the_copy = state!()
+    .copy_provides_frames
+    .iter()
+    .rev()
+    .find(|frame| frame.id == id && !frame.repeat)
+    .is_some_and(|frame| frame.assigned.contains(&meaning_key(source)));
+  if reassigned_by_the_copy || !meaning_reaches(meaning, key) {
+    return false;
+  }
+  let mut state = state_mut!();
+  if let Some(copy) = state.copy_provides_copies.get_mut(id as usize - 1)
+    && copy.declined.insert(key)
+  {
+    let file = copy.file.clone();
+    drop(state);
+    let name = token.with_cs_name(ToString::to_string);
+    let source_name = source.with_cs_name(ToString::to_string);
+    Info!(
+      "provide",
+      name,
+      s!(
+        "{name} keeps its saved {source_name}: the paper's {file} saves {source_name} again after its binding \
+         redefined it"
+      )
+    );
+  }
+  true
+}
+
+/// Does the macro `meaning` reach the name `key` — `key` in its body, or in the body of a macro its body names, and so
+/// on — so that `\let\<key>` to it would make it call itself? A breadth-first walk over macro bodies, each name visited
+/// once, up to [`MEANING_REACH_LIMIT`] names (beyond it, no: the wrapper the walk looks for calls its saved command
+/// within a step or two — jmlrutils.sty:466-494's `\newtheorem` → `\jmlr@newtheorem` → `\jmlr@org@newtheorem`,
+/// epl2.cls's `\bibitem` → `\epl@org@bibitem`).
+fn meaning_reaches(meaning: &Stored, key: SymStr) -> bool {
+  let mut seen: HashSet<SymStr> = HashSet::default();
+  let mut pending: VecDeque<Stored> = VecDeque::from([meaning.clone()]);
+  while let Some(current) = pending.pop_front() {
+    let Stored::Expandable(defn) = current else {
+      continue;
+    };
+    let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+      continue;
+    };
+    for t in body.unlist_ref().iter() {
+      if !matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE) {
+        continue;
+      }
+      let name = meaning_key(t);
+      if name == key {
+        return true;
+      }
+      if seen.len() >= MEANING_REACH_LIMIT {
+        return false;
+      }
+      if seen.insert(name)
+        && let Some(next) = lookup_meaning(t)
+      {
+        pending.push_back(next);
+      }
+    }
+  }
+  false
+}
+
+/// How many names [`meaning_reaches`] visits at most.
+const MEANING_REACH_LIMIT: usize = 256;
+
+/// Does a stand-in's copy, read now ([`note_copy_provides_assignment`]), (re)declare or renumber the counter `ctr` the
+/// stand-in binding's own load declared or numbered (its `\c@<ctr>` assigned while the binding loaded,
+/// `State::stand_in_meanings`, or the `\the<ctr>` of a counter that exists: `\newcounter`, `\numberwithin`,
+/// `\@addtoreset`, `\counterwithin`)? Then the counter keeps the binding's numbering: its reset list is the binding's, as
+/// its `\the<ctr>` is. Any other counter is the copy's, declared for real (`new_counter` suspends the copy's
+/// provides-mode for it): the kernel's `equation` with the pool's article `\theequation` — as article.cls's defaults
+/// yield to the real class's own: jheppub.sty:313-314
+/// `\renewcommand\theequation{\thesection.\arabic{equation}}` and `\numberwithin{equation}{section}` number (2.1) as its
+/// PDF does (2112.14648, 2607.20603) — and a counter the binding only has a `\the<ctr>` for, OmniBus's `\thechapter`
+/// autoload stub: WileyNJDv5.cls:5728 and MRM.cls:2160 `\newcounter{chapter}[part]`, ws-rv9x6.cls:399
+/// `\newcounter{chapter}` (2301.03442: declined, `\c@chapter` was "not a register"). Logged once per copy, at Info.
+pub fn copy_provides_keeps_counter(ctr: &str) -> bool {
+  let id = crate::definition::origin::copy_provides();
+  if id == 0 || state_is_unlocked() {
+    return false;
+  }
+  let counter = T_CS!(s!("\\c@{ctr}"));
+  let numbered = |token: &Token| state!().stand_in_meanings.contains(&meaning_key(token));
+  // (a `\the<ctr>` numbers a counter that exists — the kernel's `equation` — not one it only stands for: OmniBus's
+  // `\thechapter` autoload stub with no `\c@chapter`)
+  let exists = lookup_meaning(&counter).is_some_and(|meaning| !matches!(meaning, Stored::None));
+  if !numbered(&counter) && !(exists && numbered(&T_CS!(s!("\\the{ctr}")))) {
+    return false;
+  }
+  let key = meaning_key(&counter);
+  let mut state = state_mut!();
+  if let Some(copy) = state.copy_provides_copies.get_mut(id as usize - 1)
+    && copy.declined.insert(key)
+  {
+    let file = copy.file.clone();
+    drop(state);
+    Info!(
+      "provide",
+      ctr,
+      s!("Counter {ctr} keeps LaTeXML's numbering: the paper's {file} redeclares or renumbers it")
+    );
+  }
+  true
+}
+
+/// The counter whose representation or reset list `name` is — `\the<ctr>`, `\p@<ctr>`, `\cl@<ctr>` of a counter
+/// `\c@<ctr>` — for [`note_copy_provides_assignment`] and [`copy_provides_keeps_counter`].
+fn counter_part(name: &str) -> Option<String> {
+  let ctr = name
+    .strip_prefix("\\the")
+    .or_else(|| name.strip_prefix("\\p@"))
+    .or_else(|| name.strip_prefix("\\cl@"))?;
+  if ctr.is_empty() {
+    return None;
+  }
+  matches!(
+    lookup_meaning(&T_CS!(s!("\\c@{ctr}"))),
+    Some(Stored::Register(_))
+  )
+  .then(|| ctr.to_string())
+}
+
+/// Keep a stand-in copy's own title page (`\maketitle`, `\@maketitle`), defined while it is read
+/// ([`install_definition`], `\newcommand`'s refusal), whether the binding's lock refuses it or the overlay holds it:
+/// what it prints decides which of the copy's setter defaults the document shows (`frontmatter_stores::copy_title_page_prints`,
+/// latexml_engine).
+pub fn note_copy_provides_title_page(token: &Token, body: &Tokens) {
+  let id = crate::definition::origin::copy_provides();
+  if id == 0 || !matches!(token.get_catcode(), Catcode::CS) {
+    return;
+  }
+  if !token.with_cs_name(|name| matches!(name, "\\maketitle" | "\\@maketitle")) {
+    return;
+  }
+  if let Some(copy) = state_mut!().copy_provides_copies.get_mut(id as usize - 1) {
+    copy.title_page.push(body.clone());
+  }
+}
+
+/// What [`watch_meanings`]' selection says of a name.
+#[derive(Clone, Copy, PartialEq, Eq)]
+pub enum WatchedName {
+  No,
+  Yes,
+  /// Watched, its `\relax` being what a `\csname` leaves on a name not yet defined rather than a meaning of its own.
+  RelaxIsUnset,
+}
+
+/// A selection of names for [`watch_meanings`]. Asked of every assignment a document or a raw file makes, so the bytes after a
+/// name's backslash that `select` can take are the only cost of any other name: 1 of 3 at the second, one at the third.
+#[derive(Clone, Copy)]
+pub struct MeaningWatch {
+  pub second_byte: [u8; 3],
+  pub third_byte:  u8,
+  pub select:      fn(&str) -> WatchedName,
+}
+
+impl MeaningWatch {
+  #[inline]
+  fn may_take(&self, second: u8, third: u8) -> bool {
+    third == self.third_byte && self.second_byte.contains(&second)
+  }
+}
+
+/// Watch the meanings of the control sequences whose names `select` takes, from now on: any later assignment by a document,
+/// a raw file or a format file that changes the standing meaning of one, however local, is seen by
+/// [`watched_meaning_changed`] for the rest of the conversion; a new name has none to change. A native path that stands for a family of macros answers only while they are what it ports, at
+/// the cost of a test by two bytes per such assignment and none per use (latexml_engine `l3fp_native`).
+pub fn watch_meanings(select: MeaningWatch) {
+  let mut state = state_mut!();
+  state.meaning_watch = Some(select);
+  state.watched_meaning_changed = None;
+}
+
+/// Has a meaning [`watch_meanings`] watches changed? The first that did.
+pub fn watched_meaning_changed() -> Option<SymStr> { state!().watched_meaning_changed }
+
+/// Would [`note_setter_call`] observe a call of `cs`? Without the observation, for a native reader that declines such a
+/// call to whoever then makes it.
+pub fn setter_call_is_observed(cs: &Token) -> bool {
+  crate::definition::origin::copy_default_watch()
+    && crate::definition::origin::copy_provides() == 0
+    && state!().watched_setters.contains(&meaning_key(cs))
+}
+
+/// Observe the calls of the setters `names` ([`State::watched_setters`]).
+pub fn watch_setters(names: &[&str]) {
+  let keys: Vec<SymStr> = names.iter().map(|name| meaning_key(&T_CS!(name))).collect();
+  state_mut!().watched_setters.extend(keys);
+}
+
+/// A macro `cs` is called (`Expandable::invoke`, while [`crate::definition::origin::setter_watch`]): a watched setter
+/// called outside a stand-in copy's read is the document's (or its binding's) call, `<cs>:called`, whatever its
+/// arguments — `\author{}` as much as `\author{Jane Doe}`, which a binding's accumulating `\author` (inst_support's)
+/// does not queue nor clear.
+pub fn note_setter_call(cs: &Token) {
+  if setter_call_is_observed(cs) {
+    assign_value(
+      &cs.with_cs_name(|name| s!("{name}:called")),
+      true,
+      Some(Scope::Global),
+    );
+  }
+}
+
+/// A call of one of LaTeXML's own macros (a binding's or the kernel's) that read its arguments from the document's own
+/// text ([`note_document_call`]): the title-page check's second source.
+#[derive(Debug, Clone)]
+pub struct DocumentCall {
+  /// the macro called
+  pub cs:   Token,
+  /// its arguments as read, kept once: every entry made inside the call shares them ([`claim_open_document_calls`])
+  pub args: CallArguments,
+  /// the input after its arguments: its expansion is read before it (open while [`gullet::input_unread_since`])
+  mark:     gullet::InputMark,
+  /// the entry queued inside it first, by the title-page check's count ([`claim_open_document_calls`])
+  claimed:  Option<usize>,
+}
+
+/// The arguments a [`DocumentCall`] read, shared by the entries made inside it.
+pub type CallArguments = Rc<[DocumentArgument]>;
+
+/// An argument a [`DocumentCall`] read.
+#[derive(Debug, Clone)]
+pub struct DocumentArgument {
+  /// its parameter's number (`#n`)
+  pub number:   usize,
+  /// its parameter is optional
+  pub optional: bool,
+  /// the call's body names it (`#n`), or its use is unknown (a closure's): it is handed on; or the macro is the kernel's,
+  /// whose drop is TeX's own, or the binding declares it dropped by design (`Expandable::dropped_by_design`): no loss
+  pub used:     bool,
+  /// the tokens read
+  pub tokens:   Tokens,
+}
+
+thread_local! {
+  /// The document calls whose expansions are still being read ([`note_document_call`]), innermost last.
+  static DOCUMENT_CALLS: RefCell<Vec<DocumentCall>> = const { RefCell::new(Vec::new()) };
+}
+
+/// A macro of LaTeXML's own read its arguments `args` from the document's text (`Expandable::invoke`, while
+/// [`crate::definition::origin::document_call_watch`]): kept while its expansion is read, the calls whose expansions
+/// ended dropped. An argument-less call is not kept.
+pub fn note_document_call(cs: Token, args: Vec<DocumentArgument>) {
+  DOCUMENT_CALLS.with(|calls| {
+    let mut calls = calls.borrow_mut();
+    calls.retain(|call| gullet::input_unread_since(&call.mark));
+    if args.iter().any(|arg| !arg.tokens.is_empty()) {
+      calls.push(DocumentCall {
+        cs,
+        args: args.into(),
+        mark: gullet::input_mark(),
+        claimed: None,
+      });
+    }
+  });
+}
+
+/// The document calls whose expansions are being read now ([`note_document_call`]), for an entry `claimer` the
+/// frontmatter API queues inside them (latexml_engine `title_page_check::note_frontmatter_entry`): `None` when there are
+/// none, else the claimer of the outermost (the entry an earlier one inside the same call made, or `claimer`), those no
+/// entry claimed before, outermost first, now `claimer`'s, and the arguments of them all — shared, not copied: an
+/// `\author` of 3,000 names joined by `\and` makes 3,000 entries inside one call.
+pub fn claim_open_document_calls(
+  claimer: usize,
+) -> Option<(usize, Vec<DocumentCall>, Vec<CallArguments>)> {
+  DOCUMENT_CALLS.with(|calls| {
+    let mut calls = calls.borrow_mut();
+    calls.retain(|call| gullet::input_unread_since(&call.mark));
+    let outermost = calls.first()?.claimed.unwrap_or(claimer);
+    let arguments = calls.iter().map(|call| Rc::clone(&call.args)).collect();
+    let mut claimed = Vec::new();
+    for call in calls.iter_mut().filter(|call| call.claimed.is_none()) {
+      call.claimed = Some(claimer);
+      claimed.push(call.clone());
+    }
+    Some((outermost, claimed, arguments))
+  })
+}
+
+/// A call of a setter a raw class or a raw file of the document's own directory made ([`note_store_call`]).
+#[derive(Debug, Clone)]
+pub struct StoreCall {
+  /// the setter
+  pub cs:     Token,
+  /// a later call of it replaces this one, the stores it writes
+  /// ([`crate::definition::expandable::StoredParameters`])
+  pub stored: expandable::StoredParameters,
+  /// the arguments it writes into a store
+  pub args:   Vec<Tokens>,
+  /// those of them optional or in brackets: a store's key or label far more often than its text
+  pub keys:   Vec<Tokens>,
+}
+
+/// What [`take_store_calls`] gives: the setter calls kept, and what the bound left out.
+#[derive(Debug, Default)]
+pub struct StoreCalls {
+  /// the calls, in order
+  pub calls:           Vec<StoreCall>,
+  /// how many calls [`STORE_CALLS_KEPT`] left out
+  pub dropped:         usize,
+  /// the setters of those, the first few, each once
+  pub dropped_setters: Vec<Token>,
+}
+
+/// The most setter calls kept ([`note_store_call`]): a document whose own style's setter is called thousands of times
+/// before its title page keeps the first ones; what the check digests stays bounded.
+pub const STORE_CALLS_KEPT: usize = 512;
+
+/// How many setters of the calls left out [`StoreCalls::dropped_setters`] names.
+const DROPPED_SETTERS_NAMED: usize = 8;
+
+thread_local! {
+  /// The setter calls the document's text made before its title page ([`note_store_call`]).
+  static STORE_CALLS: RefCell<StoreCalls> = RefCell::new(StoreCalls::default());
+}
+
+/// A setter a raw class or a raw file of the document's own directory made was called while the document's text is read
+/// (`Expandable::invoke`, while [`crate::definition::origin::store_call_watch`]): its stored arguments `args`, and those
+/// `keys` optional or in brackets, kept for the title-page check's third source (latexml_engine
+/// `title_page_check::digest_raw_setter_calls`); a replacing setter's earlier call is superseded by this one, as its store is.
+pub fn note_store_call(
+  cs: Token,
+  stored: &expandable::StoredParameters,
+  args: Vec<Tokens>,
+  keys: Vec<Tokens>,
+) {
+  STORE_CALLS.with(|calls| {
+    let mut calls = calls.borrow_mut();
+    if stored.replaces {
+      calls.calls.retain(|call| call.cs != cs);
+    }
+    if args.is_empty() && keys.is_empty() {
+      return;
+    }
+    if calls.calls.len() < STORE_CALLS_KEPT {
+      calls.calls.push(StoreCall {
+        cs,
+        stored: stored.clone(),
+        args,
+        keys,
+      });
+    } else {
+      calls.dropped += 1;
+      if calls.dropped_setters.len() < DROPPED_SETTERS_NAMED && !calls.dropped_setters.contains(&cs)
+      {
+        calls.dropped_setters.push(cs);
+      }
+    }
+  });
+}
+
+/// The setter calls kept ([`note_store_call`]), taken: none are left, a new conversion's or after a title page's.
+pub fn take_store_calls() -> StoreCalls {
+  STORE_CALLS.with(|calls| std::mem::take(&mut *calls.borrow_mut()))
+}
+
+/// Does the control sequence `cs` mean a token register (`\newtoks`, `\toks@`)?
+pub fn is_token_register(cs: &Token) -> bool {
+  use crate::definition::register::RegisterType;
+  with_meaning(cs, |meaning| match meaning {
+    Some(Stored::Register(register)) => matches!(register.register_type, RegisterType::Tokens),
+    _ => false,
+  })
+}
+
+thread_local! {
+  /// The arguments binding macros dropped while the watch was on ([`note_dropped_argument`]).
+  static DROPPED_ARGUMENTS: RefCell<Vec<DroppedArgument>> = const { RefCell::new(Vec::new()) };
+}
+
+/// An argument a macro dropped, which the title-page check digests itself ([`note_dropped_argument`]; latexml_engine
+/// `title_page_check::never_digested`).
+#[derive(Debug, Clone)]
+pub struct DroppedArgument {
+  /// the macro that dropped it
+  pub cs:     Token,
+  /// its parameter's number (`#n`)
+  pub number: usize,
+  /// the tokens read
+  pub tokens: Tokens,
+}
+
+/// A binding's macro `cs` dropped its required argument `argument` — its token body never names it, nor does the
+/// binding declare it dropped by design (`Expandable::dropped_by_design`) — while a frontmatter entry the document gave
+/// is digested (`Expandable::invoke`, while [`crate::definition::origin::dropped_argument_watch`]): kept for the
+/// title-page check (latexml_engine `title_page_check`, jmlr's `\titletag`). A blank argument is not kept.
+pub fn note_dropped_argument(cs: Token, argument: &DocumentArgument) {
+  if argument.tokens.unlist_ref().iter().any(|token| {
+    !matches!(
+      token.get_catcode(),
+      Catcode::SPACE | Catcode::BEGIN | Catcode::END
+    )
+  }) {
+    DROPPED_ARGUMENTS.with(|dropped| {
+      dropped.borrow_mut().push(DroppedArgument {
+        cs,
+        number: argument.number,
+        tokens: argument.tokens.clone(),
+      })
+    });
+  }
+}
+
+/// The arguments binding macros dropped ([`note_dropped_argument`]) since the count `from`, taken; with `from` the
+/// count before them, for a nested watch.
+pub fn take_dropped_arguments(from: usize) -> Vec<DroppedArgument> {
+  DROPPED_ARGUMENTS.with(|dropped| {
+    let mut dropped = dropped.borrow_mut();
+    let from = from.min(dropped.len());
+    dropped.split_off(from)
+  })
+}
+
+/// How many arguments binding macros dropped so far ([`note_dropped_argument`]): a watch's start.
+pub fn dropped_argument_count() -> usize {
+  DROPPED_ARGUMENTS.with(|dropped| dropped.borrow().len())
+}
+
+/// Forget the document calls ([`note_document_call`]): a conversion's start.
+pub fn reset_document_calls() {
+  DOCUMENT_CALLS.with(|calls| calls.borrow_mut().clear());
+  DROPPED_ARGUMENTS.with(|dropped| dropped.borrow_mut().clear());
+}
+
+/// Was the watched setter `cs` called outside a stand-in copy's read ([`note_setter_call`])?
+pub fn setter_called(cs: &Token) -> bool {
+  lookup_bool(&cs.with_cs_name(|name| s!("{name}:called")))
+}
+
+/// The title pages stand-in copies defined ([`note_copy_provides_title_page`]), each with its copy's number, for
+/// `frontmatter_stores::copy_title_page_prints` (latexml_engine).
+pub fn copy_provides_title_pages() -> Vec<(u32, Tokens)> {
+  state!()
+    .copy_provides_copies
+    .iter()
+    .enumerate()
+    .flat_map(|(index, copy)| {
+      copy
+        .title_page
+        .iter()
+        .map(move |body| (index as u32 + 1, body.clone()))
+    })
+    .collect()
+}
+
+/// Copy `id`'s own version of the name `token` the binding owns, kept in its overlay while the binding's meaning is in
+/// force ([`note_copy_provides_assignment`]).
+pub fn copy_provides_overlaid_meaning(id: u32, token: &Token) -> Option<Stored> {
+  state!()
+    .copy_provides_copies
+    .get((id as usize).checked_sub(1)?)
+    .and_then(|copy| copy.overlay.get(&meaning_key(token)).cloned())
+}
+
+/// Begin a frame of copy `id`'s provides-mode ([`crate::definition::origin::enter_copy_provides`]; `0` suspends the mode for
+/// a file the copy loads, a repeat of the mode in force adds nothing): the copy's own definitions of names the binding
+/// owns, kept from its earlier read or hooks, are in force again for its code, the meanings they replace kept aside.
+pub fn enter_copy_provides_frame(id: u32, previous: u32) {
+  let mut kept = Vec::new();
+  let mut kept_keys = rustc_hash::FxHashSet::default();
+  if id != 0 && id != previous {
+    let overlay: Vec<(SymStr, Stored)> = state!()
+      .copy_provides_copies
+      .get(id as usize - 1)
+      .map(|copy| copy.overlay.iter().map(|(k, v)| (*k, v.clone())).collect())
+      .unwrap_or_default();
+    for (key, meaning) in overlay {
+      let current = meaning_by_key(key);
+      kept.push((key, current));
+      kept_keys.insert(key);
+      state_mut!().assign_internal(TableName::Meaning, key, meaning, Some(Scope::Global));
+    }
+  }
+  state_mut!().copy_provides_frames.push(CopyProvidesFrame {
+    id,
+    repeat: id == previous,
+    kept,
+    kept_keys,
+    assigned: rustc_hash::FxHashSet::default(),
+  });
+}
+
+/// End the frame [`enter_copy_provides_frame`] began: each name the copy's code redefined, and the binding owns, takes
+/// back the meaning kept aside, and the copy's own is kept for its next frame (a hook it registered).
+pub fn leave_copy_provides_frame() {
+  let Some(frame) = state_mut!().copy_provides_frames.pop() else {
+    return;
+  };
+  if frame.id == 0 || frame.repeat {
+    return;
+  }
+  let mut frame = frame;
+  copy_text_names_stand(&mut frame);
+  // A name the copy `\let` to its own version of a name the binding owns takes the binding's back with it:
+  // emulateapj5.sty:386 defines `\keywords`, :394 `\let\subjectheadings=\keywords`, and the document's
+  // `\subjectheadings` made the class's "Subject headings:" paragraph where the binding makes `<keywords>`
+  // (astro-ph0011001). Kept in the copy's overlay with the rest, for its hooks. Only a definition the copy made under
+  // the kept name itself: a kept flag the copy `\let` to `\iftrue` shares that object with every other true flag
+  // (elife.cls:336-337's `\ifstre@msuppinfoopen`, newfile.sty:91: 2303.08822).
+  let replaced: Vec<(Stored, Stored)> = frame
+    .kept
+    .iter()
+    .map(|(key, kept)| (*key, meaning_by_key(*key), kept.clone()))
+    .filter(|(key, copys, kept)| {
+      !same_meaning(copys, kept) && definition_cs(copys).is_some_and(|cs| meaning_key(&cs) == *key)
+    })
+    .map(|(_, copys, kept)| (copys, kept))
+    .collect();
+  if !replaced.is_empty() {
+    for key in &frame.assigned {
+      let current = meaning_by_key(*key);
+      if let Some((_, kept)) = replaced
+        .iter()
+        .find(|(copys, _)| same_meaning(copys, &current))
+      {
+        let mut state = state_mut!();
+        if let Some(copy) = state.copy_provides_copies.get_mut(frame.id as usize - 1) {
+          copy.overlay.insert(*key, current);
+        }
+        state.assign_internal(TableName::Meaning, *key, kept.clone(), Some(Scope::Global));
+      }
+    }
+  }
+  for (key, kept) in frame.kept.into_iter().rev() {
+    let copys = meaning_by_key(key);
+    // (a name the copy's code left as it found it — the kernel's `\protected@edef` lets `\protect` aside and back —
+    // was not redefined: nothing to log)
+    let redefined = !same_meaning(&copys, &kept);
+    let mut state = state_mut!();
+    let mut logged = None;
+    if let Some(copy) = state.copy_provides_copies.get_mut(frame.id as usize - 1) {
+      if redefined && copy.declined.insert(key) {
+        logged = Some(copy.file.clone());
+      }
+      if redefined {
+        copy.restored.insert(key, kept.clone());
+      }
+      copy.overlay.insert(key, copys);
+    }
+    state.assign_internal(TableName::Meaning, key, kept, Some(Scope::Global));
+    drop(state);
+    if let Some(file) = logged {
+      let name = arena::to_string(key);
+      Info!(
+        "provide",
+        name,
+        s!(
+          "{name} keeps LaTeXML's definition: the paper's {file} redefines it for its own code only"
+        )
+      );
+    }
+  }
+}
+
+/// Are `a` and `b` the same meaning: the same definition object (a `\let` copies the object), or equal otherwise?
+fn same_meaning(a: &Stored, b: &Stored) -> bool {
+  match (a, b) {
+    (Stored::Expandable(x), Stored::Expandable(y)) => Rc::ptr_eq(x, y),
+    (Stored::Constructor(x), Stored::Constructor(y)) => Rc::ptr_eq(x, y),
+    (Stored::Primitive(x), Stored::Primitive(y)) => Rc::ptr_eq(x, y),
+    (Stored::MathPrimitive(x), Stored::MathPrimitive(y)) => Rc::ptr_eq(x, y),
+    (Stored::Conditional(x), Stored::Conditional(y)) => Rc::ptr_eq(x, y),
+    (Stored::Register(x), Stored::Register(y)) => Rc::ptr_eq(x, y),
+    (Stored::Token(x), Stored::Token(y)) => x == y,
+    (Stored::None, Stored::None) => true,
+    _ => false,
+  }
+}
+
+/// The meaning bound to `key` (a [`meaning_key`]), `Stored::None` when there is none.
+fn meaning_by_key(key: SymStr) -> Stored {
+  state!()
+    .meaning
+    .get(&key)
+    .and_then(|entry| entry.front().cloned())
+    .unwrap_or(Stored::None)
+}
+
+/// A routed copy's definitions of the declared text names (OXIDIZED_DESIGN_DIVERGENCES #731 rule 14,
+/// [`copy_text_name_declared`]) that read as text ([`copy_text_refusal`]) stand for the document when its read ends,
+/// as the real class's: they leave `frame`'s kept names, which the binding's meanings replace. Decided on the copy's
+/// own meanings, before any is put back, so `\let\refname\relax` then `\newcommand\refname{…}` is the copy's last.
+/// Logged once per name, at Info.
+fn copy_text_names_stand(frame: &mut CopyProvidesFrame) {
+  let file = {
+    let state = state!();
+    match state.copy_provides_copies.get(frame.id as usize - 1) {
+      Some(copy) if copy.routed => copy.file.clone(),
+      _ => return,
+    }
+  };
+  let mut standing = Vec::new();
+  for (key, kept) in &frame.kept {
+    let name = arena::to_string(*key);
+    let copys = meaning_by_key(*key);
+    if same_meaning(&copys, kept) || !copy_text_name_declared_as(&name) {
+      continue;
+    }
+    match copy_text_refusal(&copys) {
+      None => {
+        standing.push(*key);
+        Info!(
+          "provide",
+          name,
+          s!("{name} takes the paper's {file} definition: a text name its binding declares")
+        );
+      },
+      Some(refused) => {
+        // (one Info per name, when it is first declined — the check runs again at each frame the copy's read leaves
+        // — and not the general one of `leave_copy_provides_frame`)
+        let first = state_mut!()
+          .copy_provides_copies
+          .get_mut(frame.id as usize - 1)
+          .is_some_and(|copy| copy.declined.insert(*key));
+        if first {
+          Info!(
+            "provide",
+            name,
+            s!(
+              "{name} keeps LaTeXML's definition: the paper's {file} defines this text name as more than text \
+               ({refused})"
+            )
+          );
+        }
+      },
+    }
+  }
+  frame.kept.retain(|(key, _)| !standing.contains(key));
+  for key in standing {
+    frame.kept_keys.remove(&key);
+  }
+}
+
+/// Number a new stand-in copy of `file` for [`note_copy_provides_assignment`] (1-based,
+/// [`crate::definition::origin::copy_provides`]); `routed`: its `\Provides` line routed it to `binding`
+/// (OXIDIZED_DESIGN_DIVERGENCES #731 rule 12).
+pub fn new_copy_provides_record(file: &str, binding: &str, routed: bool) -> u32 {
+  let mut state = state_mut!();
+  state.copy_provides_copies.push(CopyProvidesRecord {
+    file: file.to_string(),
+    binding: binding.to_string(),
+    routed,
+    ..CopyProvidesRecord::default()
+  });
+  state.copy_provides_copies.len() as u32
+}
+
+/// The other names of the environment a name `\X`, `\endX`, `\begin{X}` or `\end{X}` belongs to (latex.ltx `\begin{X}`
+/// runs `\X`, `\end{X}` runs `\endX`): for `\X` the binding's `\begin{X}`, `\end{X}` and the macro `\endX`, for `\endX`
+/// `\begin{X}`, `\end{X}` and `\X`; for `\begin{X}` the macros `\X`, `\endX` and `\end{X}`, for `\end{X}` `\X`, `\endX`
+/// and `\begin{X}`.
+fn environment_names(name: &str) -> Vec<String> {
+  if let Some(env) = name
+    .strip_prefix("\\begin{")
+    .and_then(|rest| rest.strip_suffix('}'))
+  {
+    return vec![s!("\\{env}"), s!("\\end{env}"), s!("\\end{{{env}}}")];
+  }
+  if let Some(env) = name
+    .strip_prefix("\\end{")
+    .and_then(|rest| rest.strip_suffix('}'))
+  {
+    return vec![s!("\\{env}"), s!("\\end{env}"), s!("\\begin{{{env}}}")];
+  }
+  match name.strip_prefix('\\') {
+    Some(macro_name) if !macro_name.is_empty() => {
+      match macro_name.strip_prefix("end").filter(|env| !env.is_empty()) {
+        Some(env) => vec![s!("\\begin{{{env}}}"), s!("\\end{{{env}}}"), s!("\\{env}")],
+        None => vec![
+          s!("\\begin{{{macro_name}}}"),
+          s!("\\end{{{macro_name}}}"),
+          s!("\\end{macro_name}"),
+        ],
+      }
+    },
+    _ => Vec::new(),
+  }
+}
+
+/// Is `token`'s meaning a text default: a public name (letters only) whose meaning is a macro without parameters
+/// expanding to text (characters, at least one letter: `\refname`'s "References")?
+fn text_default(token: &Token) -> bool {
+  let public = token.with_cs_name(|name| {
+    name.strip_prefix('\\').is_some_and(|letters| {
+      !letters.is_empty() && letters.chars().all(|c| c.is_ascii_alphabetic())
+    })
+  });
+  if !public {
+    return false;
+  }
+  let Some(Stored::Expandable(defn)) = lookup_meaning(token) else {
+    return false;
+  };
+  if defn
+    .paramlist
+    .as_ref()
+    .is_some_and(|params| !params.get_parameters().is_empty())
+  {
+    return false;
+  }
+  let Some(ExpansionBody::Tokens(body)) = &defn.expansion else {
+    return false;
+  };
+  body.unlist_ref().iter().all(|t| {
+    matches!(
+      t.get_catcode(),
+      Catcode::LETTER | Catcode::OTHER | Catcode::SPACE
+    )
+  }) && body
+    .unlist_ref()
+    .iter()
+    .any(|t| t.get_catcode() == Catcode::LETTER)
+}
+
+/// Is `token`'s meaning a text default ([`text_default`]) the stand-in binding does not own, for
+/// [`note_copy_provides_assignment`]: assigned last by the base class the binding loaded
+/// (`State::stand_in_base_defaults`: article, report or book, whose bindings assign their classes' names in their own
+/// load, the OmniBus guess) or by LaTeXML's kernel before it? Then the copy's definition of it stands, as the real
+/// class's does over article.cls's: MRM.cls:3191 `\def\refname{REFERENCES}` (2506.14995's PDF), ws-rv9x6.cls:91
+/// `\newcommand\bibname{References}` (2301.03442). One the binding's own code assigned, or a binding it required
+/// (natbib's), stays the binding's.
+fn unowned_text_default(token: &Token) -> bool {
+  use crate::definition::origin::DefinitionOrigin;
+  if !text_default(token) {
+    return false;
+  }
+  let key = meaning_key(token);
+  if state!().stand_in_meanings.contains(&key) {
+    return state!().stand_in_base_defaults.contains(&key);
+  }
+  let Some(Stored::Expandable(defn)) = lookup_meaning(token) else {
+    return false;
+  };
+  matches!(
+    defn.origin,
+    DefinitionOrigin::Unknown | DefinitionOrigin::Pool
+  ) || class_layer_definition(token)
+}
+
+/// Does a stand-in's copy, read now, `\newcommand` a text default its binding does not own (`unowned_text_default`),
+/// in a real class that lacks the name? Then the declaration defines it, as it does in TeX: LaTeXML's kernel or the
+/// binding's base class predefined it, and no base class the copy loads defines it — a standalone class (ws-rv9x6.cls:91
+/// `\newcommand\bibname{References}`, 2301.03442), or a name its base class lacks (article.cls has no `\bibname`). A
+/// name the base class the copy `\LoadClass`es defines is the real class's already, so its `\newcommand` is TeX's
+/// "already defined" ([`copy_provides_text_default_clashes`]).
+pub fn copy_provides_text_default_yields(token: &Token) -> bool {
+  crate::definition::origin::copy_provides() != 0
+    && !state_is_unlocked()
+    && unowned_text_default(token)
+    && !copy_base_class_defines(token)
+}
+
+/// Does a stand-in's copy, read now, `\newcommand` a text default its binding does not own that a base class it
+/// `\LoadClass`ed defines (`copy_base_class_defines`: article.cls:616 `\newcommand\refname`, :618 `\figurename`, which
+/// the article binding assigns in its own load; a raw base class's own definition)? The real class has the name, so
+/// LaTeX stops with "Command … already defined" and keeps the first definition: an Error here as there (sect08.rs
+/// `\newcommand`; the reviewer's probes newcmd_base and nc_chain, pdflatex 2 errors, "References"/"Figure 1";
+/// nc_namedef 1). A name the base class made `\relax` is definable, as LaTeX's `\newcommand` finds it.
+/// `\def`/`\renewcommand` redefine as before.
+pub fn copy_provides_text_default_clashes(token: &Token) -> bool {
+  crate::definition::origin::copy_provides() != 0
+    && !state_is_unlocked()
+    && text_default(token)
+    && !binding_owns(token)
+    && copy_base_class_defines(token)
+}
+
+/// The stand-in binding the copy read now (`copy_provides`) was read after, or the empty string when no copy is read.
+pub fn copy_provides_binding() -> String {
+  let id = crate::definition::origin::copy_provides();
+  if id == 0 {
+    return String::new();
+  }
+  state!()
+    .copy_provides_copies
+    .get(id as usize - 1)
+    .map(|copy| copy.binding.clone())
+    .unwrap_or_default()
+}
+
+/// The text names a stand-in's copy may supply over its binding, the kernel's default (OXIDIZED_DESIGN_DIVERGENCES
+/// #731 rules 13 and 14; user ruling 2026-10-21: "the bindings should always win in terms of semantic markup … the
+/// slight typographic variations in the raw .cls or .sty file … if we can preserve and reuse them that should be via
+/// a generic mechanism that is set in the binding with a reasonable default"): the standard classes' and LaTeX's
+/// `\…name` macros, the word a heading or a label prints — aip-cp.cls:875 `\newcommand\refname{REFERENCES}`
+/// (1506.04050, 1604.08112), the AASTeX 6+ copies' `\def\abstractname{ABSTRACT}` (2107.03400), proto.cls:798
+/// `\def\abstractname{~}` (1402.7103). A binding extends it with its own ([`declare_copy_text_names`]). Everything else
+/// a binding defines is its markup of the class, and the copy's version of it is declined: caption formats
+/// (`\fnum@<type>`, whose punctuation met the binding's caption separator, "Fig. 1.—.— " in 1106.2565), the caption
+/// separator, `\@thmcountersep` (1803.06644's "Theorem 51"), `\the<ctr>`, `\p@<ctr>`, `\the<ctr>@ID`, list labels
+/// (`\labelitemi`), `\today`, `\baselinestretch`, `\CurrentOption`, every `\lx@` name, structure.
+pub const COPY_TEXT_NAMES: [&str; 13] = [
+  "\\abstractname",
+  "\\appendixname",
+  "\\bibname",
+  "\\chaptername",
+  "\\contentsname",
+  "\\figurename",
+  "\\indexname",
+  "\\listfigurename",
+  "\\listtablename",
+  "\\partname",
+  "\\proofname",
+  "\\refname",
+  "\\tablename",
+];
+
+/// Declare `names` (`\apj`) text names of the binding loading now, besides the kernel's [`COPY_TEXT_NAMES`]: a copy
+/// routed to it or a derivative of its class may supply them (OXIDIZED_DESIGN_DIVERGENCES #731 rules 13 and 14). The
+/// one declaration point of the mechanism, a value `"<name>:copy@text"` as a lock is `"<name>:locked"`; a binding
+/// declares the names it defines, where it defines them (aas_macros_sty.rs: its journal abbreviations, which
+/// 1402.7103's proto.cls :1729-1790 spells out, "Astrophys. J.").
+pub fn declare_copy_text_names(names: &[&str]) {
+  for name in names {
+    assign_value(&s!("{name}:copy@text"), true, Some(Scope::Global));
+  }
+}
+
+/// Is `token` a declared text name ([`COPY_TEXT_NAMES`], [`declare_copy_text_names`])? Decided by its name; a routed
+/// copy's definition of it must read as text besides ([`copy_text_refusal`]).
+fn copy_text_name_declared(token: &Token) -> bool { token.with_cs_name(copy_text_name_declared_as) }
+
+/// [`copy_text_name_declared`] for the name `name` (`\refname`).
+fn copy_text_name_declared_as(name: &str) -> bool {
+  COPY_TEXT_NAMES.contains(&name) || arena::get(s!("{name}:copy@text")).is_some_and(lookup_bool_sym)
+}
+
+/// Is `token` a text name the standard class's binding assigned in its own load, which a derivative of that class read
+/// now defines itself (`binding::content::standard_class_binding_assigned`, OXIDIZED_DESIGN_DIVERGENCES #731 rule 13)?
+/// In TeX the derivative is read in the class's place, so its `\newcommand` of the name is the first: aip-cp.cls:875
+/// `\newcommand\refname{REFERENCES}` (1506.04050, 1604.08112). Only a declared text name yields
+/// (`copy_text_name_declared`: `\refname`, `\figurename`, `\abstractname`); every other name the binding defined
+/// stays its markup of the class — `\appendix` (`<ltx:appendix>`, article_cls.rs, book_cls.rs), book's
+/// `\frontmatter`/`\mainmatter`/`\backmatter` (unnumbered chapters), whose `\newcommand`s in a full class copy
+/// (hep-ex0405054's book_modified.cls:531, math0301023's khbook.cls:285; 0705.2210, hep-ph0008011, cond-mat0402505,
+/// quant-ph0409078) lost the appendices and numbered the preface; the caption formats (`\fnum@table`), `\@ptsize`,
+/// `\@pnumwidth`. Names a stand-in the derivative loads assigned are not the class's (guard
+/// `perfect_kernel_batch77w::standard_class_derivative_defines_only_its_class_names`).
+pub fn standard_class_binding_name(token: &Token) -> bool {
+  copy_text_name_declared(token)
+    && crate::binding::content::standard_class_binding_assigned(meaning_key(token))
+}
+
+/// Is a copy its `\Provides` line routed to its binding (OXIDIZED_DESIGN_DIVERGENCES #731 rule 12) read now, its own
+/// code locked as a raw read's is?
+fn reading_a_routed_copy() -> bool {
+  let id = crate::definition::origin::copy_provides();
+  id != 0
+    && !state_is_unlocked()
+    && state!()
+      .copy_provides_copies
+      .get(id as usize - 1)
+      .is_some_and(|copy| copy.routed)
+}
+
+/// Does a routed copy, read now, `\newcommand` (or `\providecommand`) a declared text name (`copy_text_name_declared`)
+/// that LaTeXML's code defined (owned as rule 1 tells, `owned_by_the_semantic_layer`) and no base class the copy
+/// `\LoadClass`es defines? Then the declaration defines it, as the real class's first definition (proto.cls:798's
+/// `\abstractname`, :1731 `\newcommand\apj{\ref@jnl{\it Astrophys.\ J.}}` over the aas_macros binding's "ApJ",
+/// 1402.7103; OXIDIZED_DESIGN_DIVERGENCES #731 rule 14); a name the copy's base class has is LaTeX's "already
+/// defined", as before. Whether its definition stands for the document is decided when the copy's read ends
+/// (`leave_copy_provides_frame`, `copy_text_refusal`).
+pub fn routed_copy_text_name_yields(token: &Token) -> bool {
+  copy_text_name_declared(token)
+    && reading_a_routed_copy()
+    && owned_by_the_semantic_layer(token)
+    && !copy_base_class_defines(token)
+}
+
+/// Why does the routed copy's meaning `meaning` of a declared text name not stand for the document, when the copy's
+/// read ends (`leave_copy_provides_frame`; OXIDIZED_DESIGN_DIVERGENCES #731 rule 14)? `None`: it stands — a macro
+/// without parameters whose body reads as text ([`text_body_refusal`]). The safety check reads the copy's own
+/// definition and fails closed: `\let\refname\relax`, a macro reading arguments, one whose expansion is LaTeXML's code
+/// or a `\refname` that sets a heading keeps the binding's; the reason names the first refused token.
+fn copy_text_refusal(meaning: &Stored) -> Option<String> {
+  let Stored::Expandable(defn) = meaning else {
+    return Some(s!("not a macro"));
+  };
+  if defn
+    .paramlist
+    .as_ref()
+    .is_some_and(|params| !params.get_parameters().is_empty())
+  {
+    return Some(s!("parameters"));
+  }
+  match &defn.expansion {
+    Some(ExpansionBody::Tokens(body)) => {
+      text_body_refusal(body.unlist_ref(), &mut Vec::new()).map(|refused| refused.to_string())
+    },
+    Some(ExpansionBody::Closure(_)) => Some(defn.cs.to_string()),
+    None => None,
+  }
+}
+
+/// Does `meaning` read arguments — a macro or primitive with parameters?
+fn reads_arguments(meaning: &Stored) -> bool {
+  let params = match meaning {
+    Stored::Expandable(defn) => defn.paramlist.as_ref(),
+    Stored::Primitive(defn) => defn.paramlist.as_ref(),
+    _ => None,
+  };
+  params.is_some_and(|params| !params.get_parameters().is_empty())
+}
+
+/// The most macros a copy's text name may go through ([`text_body_refusal`]): a journal name's `\ref@jnl`, a font
+/// switch's, a counter's representation; sectioning and title pages go through LaTeX's machinery of many more.
+const TEXT_NAME_MACROS: usize = 32;
+
+/// The primitives of LaTeXML's code a text name may call besides those printing a character or selecting a font by
+/// their definition ([`printing_primitive`]): the spaces a name prints, `\ ` (1402.7103's proto.cls:1731 `Astrophys.\
+/// J.`), `~`'s `\lx@NBSP` (proto.cls:798 `\def\abstractname{~}`, :1737 `Appl.~Opt.`) and `\nobreakspace`'s
+/// `\lx@nobreakspace`.
+const TEXT_NAME_SPACES: &[&str] = &["\\ ", "\\lx@NBSP", "\\lx@nobreakspace"];
+
+/// LaTeX's font selection interface (NFSS, latex.ltx's `\DeclareRobustCommand\fontseries` …), which a font switch's
+/// robust command reaches and LaTeXML defines (latex_constructs sect08.rs, sect13.rs): a text name may call them,
+/// unfollowed — `\fontfamily` reads its argument under a lock, `\not@math@alphabet@@` reads one to warn in math. The
+/// AASTeX 6+ and emulateapj copies' journal names reach them (`\let\jnl@style=\rm`, `\rm` → `\rmfamily` →
+/// `\fontfamily\rmdefault\selectfont`: 2007.00749, 2107.03400, 1905.12710), the PoS copies' `\bfseries\scshape`
+/// (1506.03731, 2504.20273).
+const TEXT_NAME_FONT_SELECTION: &[&str] = &[
+  "\\fontencoding",
+  "\\fontfamily",
+  "\\fontseries",
+  "\\fontshape",
+  "\\fontsize",
+  "\\selectfont",
+  "\\usefont",
+  "\\not@math@alphabet",
+  "\\not@math@alphabet@@",
+  "\\lx@normalfont@base",
+];
+
+/// Does the primitive `defn` print or select a font: a character (`\ss`), a font switch (`\it`, a `\font` selector)
+/// or one of [`TEXT_NAME_SPACES`]?
+fn printing_primitive(defn: &crate::definition::primitive::Primitive) -> bool {
+  defn.font.is_some()
+    || defn.font_id.is_some()
+    || matches!(
+      defn.replacement,
+      Some(crate::definition::PrimitiveBody::String(_))
+    )
+    || defn
+      .cs
+      .with_cs_name(|name| TEXT_NAME_SPACES.contains(&name))
+}
+
+/// The first token of `body`, a copy's definition of a declared text name, that does not read as text — the safety
+/// check, which fails closed. Every macro it calls is followed, and those theirs call (at most [`TEXT_NAME_MACROS`],
+/// `seen`); a robust command's `\protect\X` is followed through `\X` and LaTeX's inner `\X ` (`\DeclareRobustCommand`).
+/// Characters, a `\let` or `\chardef` character (`\bgroup`, `\&`), a conditional (both branches are read), a font, a
+/// primitive that prints or selects a font ([`printing_primitive`]), LaTeX's font selection commands
+/// ([`TEXT_NAME_FONT_SELECTION`], not followed) and macros composing them read as text, so does an empty body (the
+/// class prints no name). Refused: a constructor (an element), `\par` (a paragraph), `\csname`/`\endcsname` (a name
+/// made at run time), an undefined name (an error), a macro whose expansion is LaTeXML's code (`\begin`), any other
+/// primitive (`\noindent`, `\vskip`), a register, a locked command reading arguments (LaTeXML's markup interface:
+/// `\@startsection`, `\@lbibitem`; a binding owns its calls, OXIDIZED_DESIGN_DIVERGENCES #500).
+fn text_body_refusal(body: &[Token], seen: &mut Vec<SymStr>) -> Option<Token> {
+  let protect = T_CS!("\\protect");
+  for t in body {
+    if !matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE) || *t == protect {
+      continue;
+    }
+    if t.with_cs_name(|name| matches!(name, "\\par" | "\\csname" | "\\endcsname")) {
+      return Some(*t);
+    }
+    let key = meaning_key(t);
+    if seen.contains(&key) {
+      continue;
+    }
+    let meaning = lookup_meaning(t);
+    if meaning.is_some() && t.with_cs_name(|name| TEXT_NAME_FONT_SELECTION.contains(&name)) {
+      continue;
+    }
+    if t.with_cs_name(name_carries_lock) && meaning.as_ref().is_some_and(reads_arguments) {
+      return Some(*t);
+    }
+    let reads_as_text = match meaning {
+      Some(Stored::Expandable(defn)) => {
+        seen.push(key);
+        if seen.len() > TEXT_NAME_MACROS {
+          return Some(*t);
+        }
+        match &defn.expansion {
+          Some(ExpansionBody::Tokens(inner)) => {
+            if let Some(refused) = text_body_refusal(inner.unlist_ref(), seen) {
+              return Some(refused);
+            }
+            true
+          },
+          Some(ExpansionBody::Closure(_)) => false,
+          None => true,
+        }
+      },
+      Some(Stored::Primitive(defn)) => {
+        printing_primitive(&defn)
+          && defn
+            .paramlist
+            .as_ref()
+            .is_none_or(|params| params.get_parameters().is_empty())
+      },
+      // (a `\chardef` character prints it: `\&`, latex.ltx's chardef, in the AASTeX copies' `A\&A`)
+      Some(Stored::Register(register)) => {
+        matches!(
+          register.register_type,
+          crate::definition::register::RegisterType::CharDef
+        )
+      },
+      Some(
+        Stored::Token(_) | Stored::Conditional(_) | Stored::Font(_) | Stored::FontDirective(_),
+      ) => true,
+      _ => false,
+    };
+    if !reads_as_text {
+      return Some(*t);
+    }
+  }
+  None
+}
+
+/// Did the stand-in binding's own load assign `token` last (`State::stand_in_meanings`, not its base class's
+/// `State::stand_in_base_defaults`)? Then the copy's definition only provides it ([`note_copy_provides_assignment`]).
+fn binding_owns(token: &Token) -> bool {
+  let key = meaning_key(token);
+  let state = state!();
+  state.stand_in_meanings.contains(&key) && !state.stand_in_base_defaults.contains(&key)
+}
+
+/// The class file name a load request names (`article`, `dir/mybase.cls` → `article.cls`, `mybase.cls`).
+pub fn class_file_name(file: &str) -> String {
+  let name = file.trim();
+  let name = name.rsplit(['/', '\\']).next().unwrap_or(name);
+  if name.ends_with(".cls") {
+    name.to_string()
+  } else {
+    s!("{name}.cls")
+  }
+}
+
+/// RAII frame of one class load (`binding::content::input_definitions`, a `.cls` with its options handled: the
+/// `\documentclass`, a `\LoadClass`, a binding's `LoadClass!`). While it is open, the macros assigned outside LaTeXML's
+/// kernel layers — the class binding's own (article.cls's names, article_cls.rs), the raw file's, a package's it
+/// loads — and the names a lock kept from a definition it made are recorded as the class's (`State::class_loads`),
+/// as its real file defines them; a repeat load records nothing new. A load a stand-in's copy requests (`copy`: its own
+/// `\LoadClass`, or a class loaded while that one is open) also names the class among the copy's base classes
+/// (`CopyProvidesRecord::loads_classes`), whose names its `\newcommand` finds defined
+/// ([`copy_provides_text_default_clashes`]): chained `\LoadClass{mybase}` over article (the reviewer's probe nc_chain).
+pub struct ClassLoadFrame {
+  copy: bool,
+}
+
+impl ClassLoadFrame {
+  /// Open the frame of loading the class `file`, requested by the stand-in copy `copy` if any.
+  pub fn enter(file: &str, copy: Option<u32>) -> Self {
+    let name = class_file_name(file);
+    let mut state = state_mut!();
+    if let Some(id) = copy
+      && let Some(record) = state.copy_provides_copies.get_mut(id as usize - 1)
+      && !record.loads_classes.contains(&name)
+    {
+      record.loads_classes.push(name.clone());
+    }
+    // (a class loaded inside the frames open now is loaded inside each of them: the binding's `LoadClass!` of its
+    // base class, ceurart_cls.rs → OmniBus → article, is a class the binding's load loaded)
+    let state = &mut *state;
+    // (the classes the load open now had loaded before this one: for a copy's own load, its binding's base classes)
+    let outer_classes = copy
+      .and_then(|_| state.class_load_frames.last())
+      .and_then(|&open| state.class_loads.get(open))
+      .map(|record| record.classes.clone())
+      .unwrap_or_default();
+    for &open in &state.class_load_frames {
+      if let Some(outer) = state.class_loads.get_mut(open)
+        && outer.file != name
+        && !outer.classes.contains(&name)
+      {
+        outer.classes.push(name.clone());
+      }
+    }
+    let index = match state
+      .class_loads
+      .iter()
+      .position(|record| record.file == name)
+    {
+      Some(index) => index,
+      None => {
+        state.class_loads.push(ClassLoadRecord {
+          file: name,
+          ..ClassLoadRecord::default()
+        });
+        state.class_loads.len() - 1
+      },
+    };
+    state.class_load_frames.push(index);
+    if let Some(id) = copy {
+      state.copy_class_loads.push((id, outer_classes));
+    }
+    ClassLoadFrame { copy: copy.is_some() }
+  }
+}
+
+impl Drop for ClassLoadFrame {
+  fn drop(&mut self) {
+    let mut state = state_mut!();
+    state.class_load_frames.pop();
+    if self.copy {
+      state.copy_class_loads.pop();
+    }
+  }
+}
+
+/// The stand-in copy whose own `\LoadClass` is open now, if any ([`ClassLoadFrame`]).
+pub fn open_copy_class_load() -> Option<u32> { state!().copy_class_loads.last().map(|(id, _)| *id) }
+
+/// The classes the stand-in binding's load loaded — its base class — for the copy read now
+/// ([`ClassLoadRecord::classes`]). While the copy's own code runs, the classes of the class load open now; inside a
+/// class the copy's own `\LoadClass` loaded (a shipped mybase.cls between the copy and a TeX Live class), the classes
+/// loaded when the copy's first class load began ([`State::copy_class_loads`]), so a class mybase.cls `\LoadClass`es
+/// meets the binding's base class too, not the empty class load of mybase.cls (72a review r7 NIT 8; guard
+/// `perfect_kernel_batchint23::a_shipped_intermediate_class_meets_the_class_slot`).
+pub fn open_class_load_classes() -> Vec<String> {
+  let state = state!();
+  if crate::definition::origin::copy_provides() != 0 {
+    return state
+      .class_load_frames
+      .last()
+      .and_then(|&class| state.class_loads.get(class))
+      .map(|record| record.classes.clone())
+      .unwrap_or_default();
+  }
+  let Some((id, _)) = state.copy_class_loads.last() else {
+    return Vec::new();
+  };
+  state
+    .copy_class_loads
+    .iter()
+    .find(|(copy, _)| copy == id)
+    .map(|(_, classes)| classes.clone())
+    .unwrap_or_default()
+}
+
+/// Name `classes` among the base classes of the stand-in copy `id` (`CopyProvidesRecord::loads_classes`): the classes
+/// its binding loaded, which stand for the class the copy's own `\LoadClass` named (`binding::content`
+/// `binding_base_class_stands_for`).
+pub fn note_copy_base_classes(id: u32, classes: &[String]) {
+  let mut state = state_mut!();
+  if let Some(record) = state.copy_provides_copies.get_mut(id as usize - 1) {
+    for class in classes {
+      if !record.loads_classes.contains(class) {
+        record.loads_classes.push(class.clone());
+      }
+    }
+  }
+}
+
+/// Record `key` as a name the class load open now defines ([`ClassLoadFrame`]).
+fn note_class_load_name(key: SymStr) {
+  let mut state = state_mut!();
+  if let Some(&class) = state.class_load_frames.last()
+    && let Some(record) = state.class_loads.get_mut(class)
+  {
+    record.names.entry(key).or_insert(None);
+  }
+}
+
+/// Does a base class of the stand-in copy read now — a class its own `\LoadClass` requested, or one loaded while that
+/// was open ([`ClassLoadFrame`]) — define `token`: did that class's load frame assign it (article.cls:613-622's names,
+/// which article_cls.rs assigns in its own load; a raw base class's `\expandafter\def\csname bibname\endcsname`, the
+/// reviewer's probe nc_namedef) or a lock keep its definition? Its document-time code
+/// (`\AtBeginDocument{\def\bibname…}`, nc_cond) has not run, so defines nothing yet, as in TeX.
+fn copy_base_class_defines(token: &Token) -> bool {
+  let id = crate::definition::origin::copy_provides();
+  if id == 0 {
+    return false;
+  }
+  let key = meaning_key(token);
+  let state = state!();
+  let Some(copy) = state.copy_provides_copies.get(id as usize - 1) else {
+    return false;
+  };
+  copy.loads_classes.iter().any(|class| {
+    state
+      .class_loads
+      .iter()
+      .any(|record| record.file == *class && record.names.contains_key(&key))
+  })
+}
+
+/// Is `token`'s meaning the macro a class's load frame assigned it ([`ClassLoadFrame`]): the class layer's —
+/// article.cls's names, which its binding assigns, a raw class's own —, not LaTeXML's semantic layer? A text default of
+/// the class layer is the class's, as LaTeXML's kernel predefinitions of the same names are ([`unowned_text_default`]).
+fn class_layer_definition(token: &Token) -> bool {
+  let Some(Stored::Expandable(defn)) = lookup_meaning(token) else {
+    return false;
+  };
+  let key = meaning_key(token);
+  state!().class_loads.iter().any(
+    |record| matches!(record.names.get(&key), Some(Some(assigned)) if Rc::ptr_eq(assigned, &defn)),
+  )
+}
+
+/// The one "has chapters" test (OXIDIZED_DESIGN #179): does the class have chapters, as the real class's
+/// `\@ifundefined{chapter}` sees it? natbib's forks head the bibliography by it (NJDnatbib.sty:1050, ws-rv-har.sty:676),
+/// appendix.sty:38 and titlesec.sty:1526 number by it, and the kernel's `\appendix` numbers within chapters only then
+/// (`begin_appendices`). The answer the "has chapters" step stored after the document's class loaded
+/// (`settle_chapter_after_class_load`, latexml_engine sect01.rs, [`CLASS_HAS_CHAPTERS`]); while a class loads, the
+/// test made now ([`class_has_chapters_now`]), as a class's own `\@ifundefined{chapter}` is answered by what it has
+/// defined so far. Not a `chapter` counter alone: WileyNJDv5.cls:5728 and MRM.cls:2160 `\newcounter{chapter}[part]` with
+/// no `\chapter` (2609.08425, 2506.14995: "REFERENCES"; 2211.16474: "Appendix A"). A LaTeX 2.09 `\documentstyle`
+/// document never settles (only a `\documentclass` retracts and settles, `\chapter:settles`); its class's end stores
+/// the answer (`\chapter:stored`, `store_chapter_after_latex_ix_class_load`, latexml_engine sect01.rs), so
+/// `\documentstyle[appendix]{report}` numbers its appendix chapters "Appendix A" and `\documentstyle{article}` with the
+/// document's own `\newcounter{chapter}` + `\def\chapter` letters its appendix "A", as pdflatex. Before any class load
+/// (plain TeX), the test made now.
+pub fn class_defines_chapter() -> bool {
+  if crate::binding::content::class_loading()
+    || !(lookup_bool("\\chapter:settles") || lookup_bool("\\chapter:stored"))
+  {
+    class_has_chapters_now()
+  } else {
+    lookup_bool(CLASS_HAS_CHAPTERS)
+  }
+}
+
+/// The value [`class_defines_chapter`] reads once the document's class has loaded.
+pub const CLASS_HAS_CHAPTERS: &str = "\\chapter:class@has@chapters";
+
+/// The "has chapters" test made now (OXIDIZED_DESIGN #179), which `settle_chapter_after_class_load` stores after each
+/// class load: the class has chapters when
+/// - (a) its own code assigned `\chapter`: a meaning other than the kernel's (a raw class's `\providecommand\chapter`, a
+///   binding's own `\chapter`: ws-rv9x6, nic-series, jmlr, kluwer's `chapter` option; a `\let\chapter\artchapter`), a
+///   redefinition the kernel's lock refused (`\chapter:redefined`, state.rs `install_definition`, sect08.rs), or a
+///   stand-in copy's definition its binding's owned name kept aside or declined (pasj00.cls's `\def\chapter`;
+///   ws-rv9x6.cls:499 `\newcommand\chapter`, 2301.03442). A meaning that is undefined, `\relax`
+///   (`\let\chapter\@undefined`; `\csname chapter\endcsname`) or the undefined-error stub of a call is no definition;
+/// - (b) a compiled binding made the chapter counter (`\c@chapter` of LaTeXML's own origin: report, book, memoir…;
+///   Perl's own probe, latex_constructs.pool.ltxml:690). A raw or copy `\newcounter{chapter}` alone is not;
+/// - (c) the class is unknown and OmniBus guesses it (`OmniBus:fallback`: the class loader's fallback, and subfiles,
+///   whose subfiles.cls:38-40 loads the main file's class), as an unknown class may well have chapters: OmniBus
+///   autoloads book.cls on `\thechapter` (arXiv:2602.10407).
+pub fn class_has_chapters_now() -> bool {
+  let (assigned, kernel_kept) = class_chapter_sources();
+  assigned || kernel_kept
+}
+
+/// The two halves of [`class_has_chapters_now`]: whether the class's own code assigned `\chapter` (a), and whether the
+/// class keeps LaTeXML's kernel `\chapter` as a binding's chapters (b) or OmniBus's guess (c).
+pub fn class_chapter_sources() -> (bool, bool) {
+  use crate::definition::origin::DefinitionOrigin;
+  let chapter = T_CS!("\\chapter");
+  let relax = lookup_meaning(&T_CS!("\\relax"));
+  let meaningful =
+    |meaning: &Stored| !matches!(meaning, Stored::None) && relax.as_ref() != Some(meaning);
+  let key = meaning_key(&chapter);
+  let by_copy = state!()
+    .copy_provides_copies
+    .iter()
+    .any(|copy| copy.declined.contains(&key) || copy.overlay.get(&key).is_some_and(meaningful));
+  let meaning = lookup_meaning(&chapter);
+  let defined = meaning.as_ref().is_some_and(meaningful) && !lookup_bool("\\chapter:error@stub");
+  // the kernel's own meaning (the pool's, or `\lx@kernel@chapter` / `\lx@kernel@chapter@counted` put back): a class's
+  // same-bodied `\newcommand\chapter{\@startsection{chapter}…}` is the class's
+  let kernels = defined
+    && (x_equals(&chapter, &T_CS!("\\lx@kernel@chapter"))
+      || x_equals(&chapter, &T_CS!("\\lx@kernel@chapter@counted")))
+    && meaning
+      .as_ref()
+      .and_then(definition_origin)
+      .is_some_and(|origin| matches!(origin, DefinitionOrigin::Pool | DefinitionOrigin::Unknown));
+  let assigned = by_copy || lookup_bool("\\chapter:redefined") || (defined && !kernels);
+  let binding_counter = matches!(
+    lookup_meaning(&T_CS!("\\c@chapter")),
+    Some(Stored::Register(ref register)) if register.origin.is_latexml_owned()
+  );
+  (assigned, binding_counter || lookup_bool("OmniBus:fallback"))
+}
+
+/// The meaning the latest stand-in copy of `file` (a file name, `NJDnatbib.sty`) gave `token` in its own code: its
+/// overlaid version of a name its binding owns, if the copy redefined it ([`note_copy_provides_assignment`]). For a
+/// binding's code that runs after its copy (`\AtEndOfPackage`), to tell the copy's version by what it defined.
+pub fn stand_in_copy_meaning(file: &str, token: &Token) -> Option<Stored> {
+  let key = meaning_key(token);
+  state!()
+    .copy_provides_copies
+    .iter()
+    .rev()
+    .find(|copy| copy.file.rsplit(['/', '\\']).next() == Some(file))
+    .and_then(|copy| copy.overlay.get(&key).cloned())
+}
+
+/// The meaning the latest stand-in copy that redefined `token` for its own code only gave it (its overlay, the copy's
+/// `declined` name: "keeps LaTeXML's definition", [`note_copy_provides_assignment`]), while the meaning in force is still
+/// the binding's the copy's frame gave back ([`CopyProvidesRecord::restored`]; a later file's redefinition is no stale
+/// copy's to read, review revPB S4): what the paper's copy runs where the binding's version runs here. For the frontmatter's reading of a class's title code (latexml_engine `title_code_author_definitions`:
+/// neurips_2022.sty's `\@maketitle`, which defines `\NewAnd`, where the neurips binding keeps its own; 2205.14141,
+/// 2205.14539).
+pub fn copy_kept_meaning(token: &Token) -> Option<Stored> {
+  let key = meaning_key(token);
+  if !owned_by_the_semantic_layer(token) {
+    return None;
+  }
+  let current = meaning_by_key(key);
+  state!()
+    .copy_provides_copies
+    .iter()
+    .rev()
+    .find(|copy| copy.declined.contains(&key))
+    .filter(|copy| {
+      copy
+        .restored
+        .get(&key)
+        .is_some_and(|kept| same_meaning(kept, &current))
+    })
+    .and_then(|copy| copy.overlay.get(&key).cloned())
+}
+
+/// Is `token`'s current meaning owned by LaTeXML's semantic layer, for [`note_copy_provides_assignment`]? Either the
+/// name was assigned while a stand-in binding loaded ([`crate::definition::origin::StandInLoadGuard`]: its own definitions,
+/// `\let`s and `RawTeX`, and the bindings it required), at an origin of LaTeXML's own, or its meaning is a definition
+/// made under this very name (not a `\let` copy of another's, whose object carries the other name) at such an origin —
+/// `Unknown`, `Pool` or `Binding` (definition/origin.rs): a pool's (`\section`, `\maketitle`) or another binding's
+/// (natbib's `\citep`, xkeyval's `\usevalue`); a name the stand-in binding's load assigned is owned at `Fallback` too,
+/// the OmniBus base a class binding loads (`\received`, `\corres`). The format's own definitions (`Plain`,
+/// `LatexDump`, `Format`), the document's world (`File`, `Document`) and the other guesses that yield (`Fallback`,
+/// `Stub`, `Borrowed`) are not owned.
+/// A name a package the binding loaded defined stays owned: the narrower rule (only the binding's own code, so that a
+/// copy's redefinition of a package's macro stands as in TeX) gave the copy the class bindings' frontmatter and layout
+/// macros (`\title`, `\author`, `\thanks`, `\@makecaption`, `\the<counter>`, the NFSS size commands; aastex7's three
+/// Fatals again, 2504.00922, 2605.15371, 2607.03848); the case it was for, 2411.02780's equations.sty, is another file
+/// of that name (`binding::content` `copy_is_the_stood_in_file`).
+fn owned_by_the_semantic_layer(token: &Token) -> bool {
+  use crate::definition::origin::DefinitionOrigin;
+  let ours = |origin: DefinitionOrigin| {
+    matches!(
+      origin,
+      DefinitionOrigin::Unknown | DefinitionOrigin::Pool | DefinitionOrigin::Binding
+    )
+  };
+  lookup_meaning(token).is_some_and(|meaning| {
+    definition_origin(&meaning).is_some_and(|origin| {
+      let key = meaning_key(token);
+      if state!().binding_lets.contains(&key) && ours(origin) {
+        // (a `\let` LaTeXML's own code made: the object carries the source's name, `State::binding_lets`)
+        true
+      } else if state!().stand_in_meanings.contains(&key) {
+        // (the stand-in binding's guesses too: the OmniBus base a class binding loads, `Fallback` so that the
+        // document's own definition wins, OXIDIZED_DESIGN_DIVERGENCES #408 — the copy is not the document: WileyNJDv5's
+        // `\received` keeps OmniBus's dated frontmatter, 2609.19994)
+        ours(origin) || origin == DefinitionOrigin::Fallback
+      } else {
+        // (or a `\let` the pool made to one of the semantic layer's own internals, `\let\label\lx@label`
+        // (sect11.rs): no file defines an `\lx@` name, so the object is LaTeXML's construct — a copy's `\def\label`
+        // writing the `.aux` (aastex7.cls:635, aastex701.cls, siamltex.cls, emulateapj.cls) left every label of the
+        // document unrecorded: 2508.00291, 2510.05388, 2604.27071)
+        ours(origin)
+          && definition_cs(&meaning)
+            .is_some_and(|cs| cs == *token || cs.with_cs_name(|name| name.starts_with("\\lx@")))
+      }
+    })
+  })
+}
+
+/// The name a definition was made under (a `\let` copy keeps its source's).
+fn definition_cs(meaning: &Stored) -> Option<Token> {
+  match meaning {
+    Stored::Expandable(defn) => Some(defn.cs),
+    Stored::Constructor(defn) => Some(defn.cs),
+    Stored::Primitive(defn) => Some(defn.cs),
+    Stored::MathPrimitive(defn) => Some(defn.cs),
+    Stored::Conditional(defn) => Some(defn.cs),
+    Stored::Register(defn) => Some(defn.cs),
+    _ => None,
+  }
+}
+
+/// Who made the definition `meaning` (`None`: not a definition — a `\let` to a character, an undefined name).
+fn definition_origin(meaning: &Stored) -> Option<crate::definition::origin::DefinitionOrigin> {
+  match meaning {
+    Stored::Expandable(defn) => Some(defn.origin),
+    Stored::Constructor(defn) => Some(defn.origin),
+    Stored::Primitive(defn) => Some(defn.origin),
+    Stored::MathPrimitive(defn) => Some(defn.origin),
+    Stored::Conditional(defn) => Some(defn.origin),
+    Stored::Register(defn) => Some(defn.origin),
+    _ => None,
+  }
+}
+
+/// The code a stand-in's copy registers with `\AtEndOfClass`/`\AtEndOfPackage`, which runs at the end of its own
+/// load: wrapped in the copy's scope markers `\lx@copy@provides@begin{N}` … `\lx@copy@provides@end`, so it runs under
+/// the copy's provides-mode, with the copy's own definitions in force ([`enter_copy_provides_frame`]; aa.cls:71's
+/// `\AtEndOfClass` redefinition of `{abstract}` keeps the binding's). `tokens` unchanged when no copy is read or it is
+/// wrapped already.
+pub fn copy_provides_wrap(tokens: Tokens) -> Tokens {
+  let id = crate::definition::origin::copy_provides();
+  let begin = T_CS!("\\lx@copy@provides@begin");
+  if id == 0 || tokens.unlist_ref().first() == Some(&begin) {
+    return tokens;
+  }
+  let mut wrapped = vec![begin, T_BEGIN!()];
+  wrapped.extend(mouth::tokenize_internal(TeXString::assembled(id.to_string())).unlist());
+  wrapped.push(T_END!());
+  wrapped.extend(tokens.unlist());
+  wrapped.push(T_CS!("\\lx@copy@provides@end"));
+  Tokens::new(wrapped)
+}
+
+/// Does a stand-in's copy, read now, defer code to the document through `seam` (`\AtBeginDocument`,
+/// `\AtEndDocument`, etoolbox's `\AtEndPreamble`/`\AfterEndPreamble`/`\AfterEndDocument`, lthooks' `\AddToHook`)? Then
+/// the code is not registered: it is the class's or style's document-time machinery, which the binding has taken over
+/// — layout checks against the class's page dimensions (icml2024.sty's "The page layout violates the ICML style",
+/// 2407.02750), validations of the class's own setters the document called as the binding's (PoS.cls "\abstract{...}
+/// should appear before \begin{document}", 1001.3214; ieeeaccess.cls's `\EOD`, 2007.03025; aipproc.cls's
+/// `\layoutstyle`, astro-ph0105128), patches of the kernel's `\enddocument` (aastex7.cls:459, whose
+/// `\rvtx@enddocument@patch` reads up to `\@checkend` and ran off the file: 2504.00922, 2605.15371, 2607.03848). On the
+/// 2026-10-17 census sample no Error was fixed by such code. Logged once per copy and seam, at Info.
+pub fn copy_provides_defers(seam: &str) -> bool {
+  let id = crate::definition::origin::copy_provides();
+  if id == 0 {
+    return false;
+  }
+  let key = arena::pin(seam);
+  let mut state = state_mut!();
+  if let Some(copy) = state.copy_provides_copies.get_mut(id as usize - 1)
+    && copy.deferred.insert(key)
+  {
+    let file = copy.file.clone();
+    drop(state);
+    Info!(
+      "provide",
+      seam,
+      s!(
+        "The paper's {file} defers code to the document ({seam}); not registered: its binding stands in for that code"
+      )
+    );
+  }
+  true
+}
+
+/// Is `token` one of LaTeX's document hooks (`\@begindocumenthook`, `\@enddocumenthook`), which a stand-in's copy read
+/// now writes — `\g@addto@macro`, ltxgrid's `\prepdef`, a `\def` —, so that the write is document-time code, which the
+/// copy does not register, as it does not its `\AtBeginDocument` code ([`copy_provides_defers`], Info)? ltxgrid's
+/// `\prepdef\@begindocumenthook{\open@column@one\@ne\set@colht…}` (qm2008_abs.cls:3233, snp.cls; REVTeX 4 copies
+/// routed to the revtex4 binding) ran its page grid over the binding's names at `\begin{document}`: 7 "Missing number"
+/// Warnings in 0805.2253, 0806.0481, 0805.4759.
+pub fn copy_provides_defers_hook_write(token: &Token) -> bool {
+  crate::definition::origin::copy_provides() != 0
+    && token.with_cs_name(|cs| matches!(cs, "\\@begindocumenthook" | "\\@enddocumenthook"))
+    && token.with_cs_name(copy_provides_defers)
+}
+
+/// Put lthooks' code registration (`\AddToHook code`, the inner macro latex.ltx's `\AddToHook` hands the hook name,
+/// label and code: `\hook_gput_code:nnn{#1}{#2}{#3}`) under `\lx@copy@provides@AddToHook`, which registers nothing
+/// ([`copy_provides_defers`]), while `on` — a stand-in's copy is read — and back after. The kernel's
+/// own meaning is kept as `\lx@copy@provides@saved@AddToHook`. No-op where the format has no hooks or no seam is
+/// defined.
+pub fn swap_copy_provides_hook_seam(on: bool) {
+  let seam = T_CS!("\\AddToHook code");
+  let saved = T_CS!("\\lx@copy@provides@saved@AddToHook");
+  let wrapper = T_CS!("\\lx@copy@provides@AddToHook");
+  let set = |token: &Token, meaning: Stored| {
+    let key = token.pin_cs_name();
+    state_mut!().assign_internal(TableName::Meaning, key, meaning, Some(Scope::Global));
+  };
+  if on {
+    if let (Some(kernel), Some(wrap)) = (lookup_meaning(&seam), lookup_meaning(&wrapper)) {
+      set(&saved, kernel);
+      set(&seam, wrap);
+    }
+  } else if let Some(kernel) = lookup_meaning(&saved) {
+    set(&seam, kernel);
+    set(&saved, Stored::None);
+  }
+}
+
+/// Begin a stand-in binding's load ([`crate::definition::origin::StandInLoadGuard`]): no name of its own assigned yet
+/// ([`State::stand_in_loads`]); a stand-in it loads records its own apart.
+pub fn begin_stand_in_load() {
+  let mut state = state_mut!();
+  state.stand_in_loads.push(Vec::new());
+  state.stand_in_load_files.push(Vec::new());
+}
+
+/// A stand-in binding's own code loads `file` ([`State::stand_in_load_files`]).
+pub fn note_stand_in_file(file: &str) {
+  if let Some(files) = state_mut!().stand_in_load_files.last_mut() {
+    files.push(file.to_string());
+  }
+}
+
+/// The files the stand-in binding loaded last loaded from its own code ([`State::stand_in_last_files`]).
+pub fn stand_in_built_on() -> Vec<String> { state!().stand_in_last_files.clone() }
+
+/// End the stand-in binding's load [`begin_stand_in_load`] began: its names are the last load's
+/// ([`State::stand_in_last_load`]), and, when the stand-in binding loading it requested it in its own code
+/// (`into_outer`, `StandInLoadGuard::loaded_by`), that binding's too.
+pub fn end_stand_in_load(into_outer: bool) {
+  let mut state = state_mut!();
+  let files = state.stand_in_load_files.pop().unwrap_or_default();
+  if let Some(load) = state.stand_in_loads.pop() {
+    // (a stand-in its own code loads is part of its command set: the diagrams binding's `diagrams.tex`, whose names
+    // are Paul Taylor's package's, hep-ph9609379; not one a file it loads requests — OmniBus's aas_macros under
+    // asme2ej, 2309.12017, or nature-pre, 2102.01782, 2111.09589, swelled their sets from 22 and 3 names to 87 and 68)
+    if into_outer && let Some(outer) = state.stand_in_loads.last_mut() {
+      outer.extend(load.iter().copied());
+    }
+    state.stand_in_last_load = load;
+    state.stand_in_last_files = files;
+  }
+}
+
+/// Every name the latest stand-in binding's own code assigned ([`State::stand_in_last_load`]).
+pub fn stand_in_last_load_names() -> rustc_hash::FxHashSet<SymStr> {
+  state!().stand_in_last_load.iter().copied().collect()
+}
+
+/// The public names (letters only: no `@`) the latest stand-in binding's own code assigned ([`State::stand_in_last_load`]).
+pub fn stand_in_public_names() -> rustc_hash::FxHashSet<String> {
+  state!()
+    .stand_in_last_load
+    .iter()
+    .map(|key| arena::to_string(*key))
+    .filter(|name| {
+      name.strip_prefix('\\').is_some_and(|letters| {
+        !letters.is_empty() && letters.chars().all(|c| c.is_ascii_alphabetic())
+      })
+    })
+    .collect()
+}
+
 /// Begin a provide-only load: no name assigned in it yet.
 pub fn reset_provide_only_assigned() {
   let mut state = state_mut!();
@@ -1783,24 +3864,192 @@ pub fn end_provide_only() {
     if file == "OmniBus.cls" {
       continue;
     }
-    for flag in ["_loaded", ".ltxml_loaded", "_load_attempted"] {
-      if lookup_bool(&s!("{file}{flag}")) {
-        assign_value(&s!("{file}{flag}"), false, Some(Scope::Global));
-      }
+    mark_unloaded(&file);
+  }
+}
+
+/// Mark `file` (`amsthm.sty`) as not loaded, globally: its `<file>_loaded`, the `.ltxml_loaded` twin, the raw load's
+/// `_raw_loaded` and `_load_attempted` are cleared and the kernel's `\ver@<file>` and `\opt@<file>` are undefined, so
+/// `\@ifpackageloaded` is false, no option clash is checked, and a later `\usepackage`/`\RequirePackage` loads it
+/// again — the binding and the raw file it reads. The definitions it made stay in force. Used when a load provided
+/// only part of a file ([`end_provide_only`]) and for a binding's borrowed package and the files it loaded
+/// (`binding::content::require_package_borrowed`).
+pub fn mark_unloaded(file: &str) {
+  for flag in ["_loaded", ".ltxml_loaded", "_raw_loaded", "_load_attempted"] {
+    if lookup_bool(&s!("{file}{flag}")) {
+      assign_value(&s!("{file}{flag}"), false, Some(Scope::Global));
     }
+  }
+  for kernel in ["ver", "opt"] {
     assign_meaning(
-      &T_CS!(s!("\\ver@{file}")),
+      &T_CS!(s!("\\{kernel}@{file}")),
       Stored::None,
       Some(Scope::Global),
     );
   }
 }
 
-/// Is `token`'s current meaning a fallback class's guess (`DefinitionOrigin::Fallback`) or a kernel stub
-/// (`DefinitionOrigin::Stub`), which a document's own `\newcommand` may replace?
+/// Begin a borrow (`binding::content::require_package_borrowed`): no file loaded by it yet. Returns the list of an
+/// enclosing borrow, which [`end_borrow`] puts back.
+pub fn begin_borrow() -> Vec<String> { std::mem::take(&mut state_mut!().borrowed_loaded) }
+
+/// End a borrow: the files first marked loaded during it (`borrowed_loaded`) are marked unloaded ([`mark_unloaded`]),
+/// and the enclosing borrow's list is put back.
+pub fn end_borrow(outer: Vec<String>) {
+  let files = std::mem::replace(&mut state_mut!().borrowed_loaded, outer);
+  for file in files {
+    mark_unloaded(&file);
+  }
+}
+
+/// Has the document unloaded `file` (`amsthm.sty`), which a class binding marked loaded on its class's behalf, by
+/// letting its `\ver@<file>` to `\relax` or `\undefined`? LaTeX's loaded test is that macro (latex.ltx `\@ifl@aded`:
+/// `\expandafter\ifx\csname ver@#2.#1\endcsname\relax`, true for both), which a binding load defines (content.rs, Perl
+/// Package.pm:2326). The rule is narrow, as floatrow's marks are (user ruling 2026-10-14: no general loader `\ver@`
+/// rule; floatrow_sty.rs): only a file a binding recorded as `<file>:class_marked` — ams_support_sty.rs for amsart's
+/// `\@namedef{ver@amsthm.sty}` (amsart.cls:41-42; amsproc, amsbook alike) — is so taken back; every other file keeps
+/// the loader's own record. The amsart idiom is `\expandafter\let\csname ver@amsthm.sty\endcsname\relax` before
+/// `\usepackage{amsthm}` (1510.08833, 1704.05671, 1707.00258, 1611.00843, 2106.07418, 2304.10644). Perl's loader reads
+/// only `<file>_loaded` (Package.pm:2327-2329), KNOWN_PERL_ERRORS #720.
+pub fn unmarked_by_document(file: &str) -> bool {
+  if !lookup_bool(&s!("{file}:class_marked")) || !lookup_bool(&s!("{file}_loaded")) {
+    return false;
+  }
+  match lookup_meaning(&T_CS!(s!("\\ver@{file}"))) {
+    None => true,
+    Some(ver) => lookup_meaning(&T_CS!("\\relax")).is_some_and(|relax| ver == relax),
+  }
+}
+
+/// Is `file` (`amsmath.sty`, `memoir.cls`) loaded, as LaTeX asks it (`\@ifpackageloaded`, `\@ifclassloaded`: latex.ltx
+/// `\@ifl@aded`, `\ver@<file>` defined and not `\relax`)? One answer on every load path: a binding's load and a raw
+/// file's define the macro (Package.pm:2343, :2393), and so do a class's or a document's own marks (floatrow.sty:34,
+/// `\@namedef{ver@…}`) and their removals (fontenc.sty's tail, a document's `\let\ver@amsthm.sty\relax`). Perl's
+/// `\@ifl@aded` reads the loader's records (latex_constructs.pool.ltxml:946-953), which a binding may clear so that the
+/// next request runs it again ([`load_recorded`]; aa.cls.ltxml:57): OXIDIZED_DESIGN_DIVERGENCES #1015.
+pub fn file_loaded(file: &str) -> bool {
+  lookup_meaning(&T_CS!(s!("\\ver@{file}"))).is_some_and(|ver| {
+    !matches!(ver, Stored::None)
+      && Some(&ver) != lookup_meaning(&crate::token::TOKEN_RELAX).as_ref()
+  })
+}
+
+/// `\@ifpackageloaded{name}` ([`file_loaded`]).
+pub fn package_loaded(name: &str) -> bool { file_loaded(&s!("{name}.sty")) }
+
+/// `\@ifclassloaded{name}` ([`file_loaded`]).
+pub fn class_loaded(name: &str) -> bool { file_loaded(&s!("{name}.cls")) }
+
+/// Has the loader recorded a load of `file`: its binding's or a stand-in's (`<file>_loaded`) or its raw TeX's
+/// ([`raw_loaded`])? The loader's own question (Package.pm:2328-2330, :2363; `DefAutoload`, :1096), not LaTeX's
+/// ([`file_loaded`]): it says whether the definitions were read here, and a binding clears it to be read again.
+pub fn load_recorded(file: &str) -> bool { lookup_bool(&s!("{file}_loaded")) || raw_loaded(file) }
+
+/// Did the binding of this very name load `file` (`<file>.ltxml_loaded`, Package.pm:2332), not a stand-in's?
+pub fn binding_loaded(file: &str) -> bool { lookup_bool(&s!("{file}.ltxml_loaded")) }
+
+/// Was `file`'s raw TeX read (`<file>_raw_loaded`, OXIDIZED_DESIGN #23)?
+pub fn raw_loaded(file: &str) -> bool { lookup_bool(&s!("{file}_raw_loaded")) }
+
+/// Record `file` loaded for a binding that stands in for it (thmtools for thm-patch.sty, aipproc for aipxfm.sty), as
+/// the original's own load does: the loader's record, so a later request is a no-op, and `\ver@<file>` (`\fmtversion`,
+/// Package.pm:2343) unless the file is marked already.
+pub fn mark_loaded(file: &str) {
+  assign_value(&s!("{file}_loaded"), true, Some(Scope::Global));
+  if !file_loaded(file)
+    && let Some(fmtversion) = lookup_meaning(&T_CS!("\\fmtversion"))
+  {
+    assign_meaning(&T_CS!(s!("\\ver@{file}")), fmtversion, Some(Scope::Global));
+  }
+}
+
+/// Take back a binding's load of `file` that its original does not make (revtex4_support's hyperref, which revtex4-2.cls
+/// never loads): its record, so the document's own request runs the binding again, and `\ver@<file>`, so
+/// `\@ifpackageloaded` is false until then. The definitions stay; the binding's other records too ([`mark_unloaded`]
+/// clears them all).
+pub fn unmark_loaded(file: &str) {
+  assign_value(&s!("{file}_loaded"), Stored::None, Some(Scope::Global));
+  assign_meaning(
+    &T_CS!(s!("\\ver@{file}")),
+    Stored::None,
+    Some(Scope::Global),
+  );
+}
+
+/// Run `read` with `file` marked loaded in the current group, its record and `\ver@<file>`, where it is not loaded
+/// and not recorded (a recorded load the document unmarked keeps its record): cleveref's binding reads cleveref.sty as
+/// if amsmath were loaded (Perl cleveref.sty.ltxml:23-27).
+pub fn with_pretended_load<R>(file: &str, read: impl FnOnce() -> R) -> R {
+  if file_loaded(file) || load_recorded(file) {
+    return read();
+  }
+  let (record, ver) = (s!("{file}_loaded"), T_CS!(s!("\\ver@{file}")));
+  let was = lookup_meaning(&ver);
+  assign_value(&record, true, Some(Scope::Local));
+  if let Some(fmtversion) = lookup_meaning(&T_CS!("\\fmtversion")) {
+    assign_meaning(&ver, fmtversion, Some(Scope::Local));
+  }
+  let result = read();
+  assign_value(&record, Stored::None, Some(Scope::Local));
+  assign_meaning(&ver, was.unwrap_or(Stored::None), Some(Scope::Local));
+  result
+}
+
+/// Run `read`, a read of `file` that must not use it up (colordvi's of dvipsnam.def), and put `file`'s load records
+/// back as they were.
+pub fn keeping_load_records<R>(file: &str, read: impl FnOnce() -> R) -> R {
+  let flags = ["_raw_loaded", "_loaded", "_load_attempted"].map(|flag| s!("{file}{flag}"));
+  let was = flags.clone().map(|flag| lookup_bool(&flag));
+  let result = read();
+  for (flag, was) in flags.iter().zip(was) {
+    assign_value(flag, was, Some(Scope::Global));
+  }
+  result
+}
+
+/// Is `token`'s current meaning a fallback class's guess (`DefinitionOrigin::Fallback`), a kernel stub
+/// (`DefinitionOrigin::Stub`) or a borrowed package's (`DefinitionOrigin::Borrowed`), which a document's own
+/// `\newcommand` may replace?
 pub fn is_fallback_meaning(token: &Token) -> bool {
   let state = state!();
-  !state.fallback_meanings.is_empty() && state.fallback_meanings.contains(&meaning_key(token))
+  !state.fallback_meanings.is_empty() && state.fallback_meanings.contains_key(&meaning_key(token))
+}
+
+/// The origin of `token`'s current meaning when it is a fallback guess, a kernel stub or a borrowed package's
+/// ([`is_fallback_meaning`]): `Fallback`, `Stub` or `Borrowed`, whatever kind of definition it is (only macros record
+/// their own origin, `Definition::get_origin`; amsthm's proof is a constructor).
+pub fn fallback_meaning_origin(
+  token: &Token,
+) -> Option<crate::definition::origin::DefinitionOrigin> {
+  let state = state!();
+  if state.fallback_meanings.is_empty() {
+    return None;
+  }
+  state.fallback_meanings.get(&meaning_key(token)).copied()
+}
+
+/// A borrowing binding's claim on the borrowed names its real package defines too: their meanings no longer carry the
+/// borrowed mark (`DefinitionOrigin::Borrowed`, [`fallback_meaning_origin`]), so they are the binding's own, as if it
+/// had defined them again at its own origin, and a later file's `\newcommand`/`\newenvironment` of them is refused
+/// as LaTeX refuses it ("Command … already defined"), not honoured. ntheorem.sty's `[amsthm]` option defines
+/// `\proofname` and `{proof}` (ntheorem.sty:668-711), which its binding takes from the borrowed amsthm; theorem.sty's
+/// `\newskip\theorempreskipamount` (theorem.sty:122-123) likewise. A name whose meaning is not borrowed is left
+/// alone.
+pub fn claim_borrowed_meanings(names: &[&str]) {
+  use crate::definition::origin::DefinitionOrigin;
+  if state!().fallback_meanings.is_empty() {
+    return;
+  }
+  let keys: Vec<SymStr> = names
+    .iter()
+    .map(|name| meaning_key(&crate::T_CS!(*name)))
+    .collect();
+  let mut state = state_mut!();
+  for key in keys {
+    if state.fallback_meanings.get(&key) == Some(&DefinitionOrigin::Borrowed) {
+      state.fallback_meanings.remove(&key);
+    }
+  }
 }
 
 // SAFETY
@@ -1835,6 +4084,20 @@ pub fn assign_internal<T: Into<Stored>>(
 /// [`lookup_string`] / [`lookup_number`] / [`lookup_bool`] accessors.
 pub fn assign_value<T: Into<Stored>, S: Into<Option<Scope>>>(key: &str, value: T, scope: S) {
   state_mut!().assign_value(key, value, scope)
+}
+
+/// Assigns `value` to `key` globally and past the open assignment journal's rollback (Rust-only), as TeX never takes back
+/// what it wrote to a file: no speculative run's undoing (a frontmatter rehearsal, a label's ink run) takes it back. Only
+/// for a record TeX writes to a file and reads back on a later run — an aux-file label, imsart.sty's `\ead` `\safelabel`
+/// that its `\printead` reads —, never for a value a rehearsal's own reading decides: that one must roll back with it.
+/// OXIDIZED_DESIGN_DIVERGENCES #986.
+pub fn assign_value_past_rollback(key: &str, value: impl Into<Stored>) {
+  let mut state = state_mut!();
+  state.assign_value(key, value, Some(Scope::Global));
+  let key = arena::pin(key);
+  if let Some(journal) = state.journal.as_mut() {
+    journal.saved.remove(&(TableName::Value, key));
+  }
 }
 
 /// assigns a `Stored` value 'inplace': replaces the front value in whatever frame
@@ -2165,7 +4428,13 @@ pub fn set_font_parameter(key: &str, p: usize, value: i64) -> bool {
     _ => None,
   });
   match existing {
-    Some(params) => set(&mut params.borrow_mut()),
+    Some(params) => {
+      // (a font's parameter is written in loops: the key's pinned only for a journal or a watch)
+      if WRITES_WATCHED.get() {
+        state_mut!().journal_touch(TableName::Value, arena::pin(key));
+      }
+      set(&mut params.borrow_mut())
+    },
     None => {
       let mut params = Vec::new();
       set(&mut params);
@@ -2173,6 +4442,120 @@ pub fn set_font_parameter(key: &str, p: usize, value: i64) -> bool {
     },
   }
   true
+}
+
+/// A binding's document-wide state, one value of the Value table: bound globally, as the `\global` macros and registers
+/// of the package it stands for are, so a rollback (`begin_assignment_journal`: a rehearsal, a title-page check) puts it
+/// back, where a thread-local would keep what the discarded run did (`FRONTMATTER_SINGLE_ENGINE_PLAN.md` "What a rollback
+/// leaves"). It changes in place, unless an open journal holds it: the first change under a journal works on a copy, so a
+/// list a binding grows costs no more than a thread-local's outside one.
+pub struct DocumentState<T> {
+  key:   &'static str,
+  state: std::marker::PhantomData<fn() -> T>,
+}
+
+impl<T: Clone + Default + 'static> DocumentState<T> {
+  pub const fn new(key: &'static str) -> Self {
+    Self {
+      key,
+      state: std::marker::PhantomData,
+    }
+  }
+
+  /// Read the state; the default where nothing was changed yet.
+  pub fn read<R>(&self, read: impl FnOnce(&T) -> R) -> R {
+    let held = with_value(self.key, |stored| match stored {
+      Some(Stored::Opaque(held)) => Some(Rc::clone(held)),
+      _ => None,
+    });
+    match held.as_ref().and_then(|held| held.downcast_ref::<T>()) {
+      Some(state) => read(state),
+      None => read(&T::default()),
+    }
+  }
+
+  /// Change the state; `change` must not reach this same state again.
+  pub fn update<R>(&self, change: impl FnOnce(&mut T) -> R) -> R {
+    let key = arena::pin(self.key);
+    let held = {
+      let state = &mut *state_mut!();
+      state.journal_touch(TableName::Value, key);
+      state
+        .value
+        .get_mut(&key)
+        .and_then(VecDeque::front_mut)
+        .map(std::mem::take)
+    };
+    let bound = held.is_some();
+    let mut own: Rc<dyn std::any::Any> = match held {
+      Some(Stored::Opaque(held)) if held.is::<T>() => held,
+      _ => Rc::new(T::default()),
+    };
+    if Rc::get_mut(&mut own).is_none() {
+      let copy = own.downcast_ref::<T>().cloned().unwrap_or_default();
+      own = Rc::new(copy);
+    }
+    let result = Rc::get_mut(&mut own)
+      .and_then(|state| state.downcast_mut::<T>())
+      .map(change)
+      .expect("a state held once, of its type");
+    if bound {
+      assign_value_inplace_sym(key, Stored::Opaque(own));
+    } else {
+      assign_value_sym(key, Stored::Opaque(own), Some(Scope::Global));
+    }
+    result
+  }
+}
+
+/// Note for an open assignment journal that the box in the register `key` is about to have its dimension `property` set
+/// (`\\wd`, `\\ht`, `\\dp`): a property of the box itself, which no binding's value holds. Also ends the watch held
+/// ([`watch_state`]).
+pub fn journal_box_dimension(key: &str, property: &'static str) {
+  if !WRITES_WATCHED.get() {
+    return;
+  }
+  set_watch(0);
+  if !JOURNAL_GUARD_LIVE.get() {
+    return;
+  }
+  let a_box = with_value(key, |stored| match stored {
+    Some(Stored::Digested(a_box)) => Some(a_box.clone()),
+    _ => None,
+  });
+  if let Some(a_box) = a_box
+    && let Some(journal) = state_mut!().journal.as_mut()
+  {
+    let value = crate::BoxOps::get_property(&a_box, property)
+      .as_deref()
+      .cloned();
+    journal.box_dimensions.push((a_box, property, value));
+  }
+}
+
+/// The input stream stored under `key` (`\\openin`'s), to read it or close it: a mouth changes in place, so under an open
+/// assignment journal the first one to change it works on a copy of its own, in the stream's place, and a rollback gives the
+/// document's back where it stood. A `\\read` in a rehearsal (a frontmatter field, a title page) took the document's next line.
+pub fn input_stream_to_change(key: &str) -> Option<Rc<RefCell<mouth::Mouth>>> {
+  let mouth = with_value(key, |stored| match stored {
+    Some(Stored::Mouth(mouth)) => Some(Rc::clone(mouth)),
+    _ => None,
+  })?;
+  let key_sym = arena::pin(key);
+  let copying = {
+    let state = state!();
+    JOURNAL_GUARD_LIVE.get()
+      && state
+        .journal
+        .as_ref()
+        .is_some_and(|journal| !journal.saved.contains_key(&(TableName::Value, key_sym)))
+  };
+  if !copying {
+    return Some(mouth);
+  }
+  let copy = Rc::new(RefCell::new(mouth.borrow_mut().copy_for_a_rollback()));
+  assign_value_inplace_sym(key_sym, Stored::Mouth(Rc::clone(&copy)));
+  Some(copy)
 }
 
 /// Undo-stack depth (open TeX groups) — pass-1 streaming telemetry.
@@ -2273,11 +4656,44 @@ pub fn pop_if_frame() -> Option<Rc<RefCell<crate::definition::conditional::IfFra
 }
 /// The number of active conditionals.
 pub fn if_stack_depth() -> usize { state!().if_stack.len() }
+/// The active conditionals, each with its state as it is now, for [`restore_if_stack`] to put back.
+pub fn if_stack_snapshot() -> Vec<(
+  Rc<RefCell<crate::definition::conditional::IfFrame>>,
+  crate::definition::conditional::IfFrame,
+)> {
+  state!()
+    .if_stack
+    .iter()
+    .map(|frame| (Rc::clone(frame), frame.borrow().clone()))
+    .collect()
+}
+/// Put the active conditionals back as [`if_stack_snapshot`] took them: the frames it held, their state as it was —
+/// those a run opened dropped, those it closed (a `\fi` of its own matching one opened before it) open again.
+pub fn restore_if_stack(
+  snapshot: Vec<(
+    Rc<RefCell<crate::definition::conditional::IfFrame>>,
+    crate::definition::conditional::IfFrame,
+  )>,
+) {
+  let frames = snapshot
+    .into_iter()
+    .map(|(frame, saved)| {
+      *frame.borrow_mut() = saved;
+      frame
+    })
+    .collect();
+  state_mut!().if_stack = frames;
+}
 /// Perl `$LaTeXML::IF_LIMIT`: the runaway ceiling on conditional ids
 /// (`0` = unlimited), set by `latexml.sty`'s `iflimit` option.
 pub fn if_limit() -> i64 { state!().if_limit }
 /// Set [`if_limit`] (Perl `latexml.sty.ltxml:101`).
 pub fn set_if_limit(limit: i64) { state_mut!().if_limit = limit; }
+/// The conditionals counted so far ([`State::if_count`]).
+pub fn if_count() -> i64 { state!().if_count }
+/// Put [`if_count`] back: a discarded run the read budget ended counts against no limit (latexml_engine sect05.rs
+/// `speculative_run_read`).
+pub fn set_if_count(count: i64) { state_mut!().if_count = count; }
 /// Perl `Object.pm:163-168`: bump the global absorb counter and return it
 /// (see [`State::absorb_count`]).
 pub fn next_absorb_id() -> i64 {
@@ -2323,6 +4739,25 @@ pub fn try_lookup_int(key: &str) -> Option<i64> {
     Some(Stored::Number(n)) => n.value_of(),
     _ => 0,
   })
+}
+
+/// [`try_lookup_int`]'s string counterpart: the string at `key`, `None` when it holds none or the state is borrowed.
+pub fn try_lookup_string(key: &str) -> Option<String> {
+  let state = (*STATE).try_borrow().ok()?;
+  match state.lookup_value(key) {
+    Some(Stored::String(s)) => Some(arena::with(*s, str::to_owned)),
+    _ => None,
+  }
+}
+
+/// [`assign_value`] globally on the reporting path, where the state may be borrowed (as [`try_lookup_int`]): whether
+/// it was assigned.
+pub fn try_assign_value_global(key: &str, value: Stored) -> bool {
+  let Ok(mut state) = (*STATE).try_borrow_mut() else {
+    return false;
+  };
+  state.assign_value(key, value, Some(Scope::Global));
+  true
 }
 
 pub fn remove_vecdeque(key: &str) -> Option<VecDeque<Stored>> {
@@ -2877,6 +5312,74 @@ pub fn value_in_frame(key: &str, frame: usize) -> Option<Stored> {
   state.value.get(&key_sym).and_then(|v| v.get(p)).cloned()
 }
 
+/// The position in `key`'s value stack of the binding stack frame `frame` (0 = innermost) made, and how many it made
+/// there (0 when it made none).
+fn frame_binding_span(state: &State, key_sym: SymStr, frame: usize) -> (usize, usize) {
+  let count = |f: &UndoFrame| {
+    f.table(TableName::Value)
+      .get(&key_sym)
+      .copied()
+      .unwrap_or(0)
+  };
+  let offset = state.undo.iter().take(frame).map(count).sum();
+  (offset, state.undo.get(frame).map_or(0, count))
+}
+
+/// Undoes the bindings of `key` that stack frame `frame` (0 = innermost) made — what popping that frame would undo,
+/// for this key alone — and leaves the frames above it as they are.
+pub fn unbind_value_in_frame(key: &str, frame: usize) {
+  let key_sym = arena::pin(key);
+  let mut state = state_mut!();
+  let (offset, count) = frame_binding_span(&state, key_sym, frame);
+  if count == 0 {
+    return;
+  }
+  state.journal_touch(TableName::Value, key_sym);
+  if let Some(f) = state.undo.get_mut(frame) {
+    f.table_mut(TableName::Value).remove(&key_sym);
+  }
+  if let Some(values) = state.value.get_mut(&key_sym) {
+    let end = (offset + count).min(values.len());
+    values.drain(offset.min(end)..end);
+  }
+}
+
+/// Replaces the value `key` has in stack frame `frame` (0 = innermost), which must have bound it; returns the value
+/// it had there, `None` when the frame made no binding of `key` (and nothing is changed).
+pub fn replace_value_in_frame(key: &str, frame: usize, value: Stored) -> Option<Stored> {
+  let key_sym = arena::pin(key);
+  let mut state = state_mut!();
+  let (offset, count) = frame_binding_span(&state, key_sym, frame);
+  if count == 0 {
+    return None;
+  }
+  state.journal_touch(TableName::Value, key_sym);
+  let slot = state.value.get_mut(&key_sym)?.get_mut(offset)?;
+  Some(std::mem::replace(slot, value))
+}
+
+/// The stack frame (0 = innermost) that made the `n`-th newest binding of `key` (0 = the binding in force), for
+/// [`value_in_frame`]: which group a value was set in.
+pub fn frame_of_binding(key: &str, n: usize) -> Option<usize> {
+  let key_sym = arena::pin(key);
+  let state = state!();
+  let mut seen = 0;
+  for (frame, f) in state.undo.iter().enumerate() {
+    let bound = f
+      .table(TableName::Value)
+      .get(&key_sym)
+      .copied()
+      .unwrap_or(0);
+    if bound > 0 {
+      if seen + bound > n {
+        return Some(frame);
+      }
+      seen += bound;
+    }
+  }
+  None
+}
+
 //======================================================================
 /// Lookup & assign a character's Catcode
 pub fn lookup_catcode(c: char) -> Option<Catcode> {
@@ -3134,6 +5637,36 @@ pub fn lookup_meaning(token: &Token) -> Option<Stored> {
   }
 }
 
+/// Whether the current meaning of `token` was made inside a group open now, so it is gone once that group closes —
+/// whether or not a meaning stands outside it (a global assignment clears the counts of the open groups' frames). A
+/// binding that queues what it reads to digest later (the frontmatter API) loses such a meaning: aistats's
+/// `\aistatsaddress` prints in place inside `\twocolumn[…]`, where 1302.5348 defines `\newcommand{\UMDAddress}{…}`
+/// just before it, and where a paper may renew a macro it defined globally (77o review probe `g_globlocal`: pdflatex
+/// prints the local meaning).
+pub fn meaning_is_group_local(token: &Token) -> bool {
+  if !token.get_catcode().is_active_or_cs() {
+    return false;
+  }
+  let key = meaning_key(token);
+  let state = state!();
+  let Some(values) = state.meaning.get(&key) else {
+    return false;
+  };
+  if values
+    .front()
+    .is_none_or(|value| matches!(value, Stored::None))
+  {
+    return false;
+  }
+  // (the groups above the locked base frame, which holds the global binding: a global assignment is counted there,
+  // and clears the counts above it, state.rs `assign_internal`)
+  state
+    .undo
+    .iter()
+    .take_while(|frame| !frame.locked)
+    .any(|frame| frame.meaning.get(&key).is_some_and(|count| *count > 0))
+}
+
 /// Closure-based variant of `lookup_meaning` — avoids the per-call
 /// `Stored::clone()` when the caller only needs to *inspect* the
 /// meaning (e.g. extract a CS Token from an Expandable/Primitive
@@ -3188,7 +5721,7 @@ fn is_cleared_meaning(token: &Token) -> bool {
     || x_equals(token, &crate::T_CS!("\\relax"))
 }
 
-/// Puts back the binding of a files-locked name that a file's `\let` cleared ([`let_i`], `"{cs}:locked@cleared"`) when
+/// Puts back the binding of a locked name that a file's `\let` cleared ([`let_i`], `"{cs}:locked@cleared"`) when
 /// the file's new meaning for it is refused, so that the binding's other callers (a raw `\end` running `\csname
 /// end<env>\endcsname`, alatex.sty:105-109) still meet it rather than an undefined name.
 fn restore_cleared_binding(token: &Token) {
@@ -3220,15 +5753,176 @@ pub fn is_name_locked(cs: &str) -> bool { !state_is_unlocked() && name_carries_l
 /// unlocked (as Perl runs before/after-digest code, Primitive.pm:44/:52) still leaves the locked environment alone
 /// (wiley2sp's w2sp-pss.clo:444 in `\AtEndOfClass`: 100 of run 336's PushbackLimit papers, 0710.1676, 0809.3379;
 /// ptptex: 0706.0316).
-pub fn name_carries_lock(cs: &str) -> bool {
+pub fn name_carries_lock(cs: &str) -> bool { lock_holds_against(cs, || true) }
+
+/// [`name_carries_lock`] for a known redefinition: `copies_interface` tells whether it takes an optional argument first
+/// with a default ([`takes_optional_first`]), which a lock against the files that holds only against copies of the
+/// binding's interface ([`files_lock_holds`]) reads.
+pub fn lock_holds_against(cs: &str, copies_interface: impl FnOnce() -> bool) -> bool {
   // Probe-only: if "{cs}:locked" was never interned it cannot be bound, so
   // skip both the intern (which permanently grew the arena by one ":locked"
   // twin per defined cs) and the table lookup (2026-08-23 audit R6).
-  let locked = |key: String| arena::get(&key).is_some_and(lookup_bool_sym);
-  locked(s!("{cs}:locked"))
+  let locked = |suffix: &str| arena::get_suffixed(cs, suffix).is_some_and(lookup_bool_sym);
+  locked(":locked")
     || (crate::definition::origin::current_origin()
       != crate::definition::origin::DefinitionOrigin::Document
-      && locked(s!("{cs}:locked@files")))
+      && locked(":locked@files")
+      && files_lock_holds(cs, copies_interface))
+}
+
+/// Whether a lock against the class and package files on `cs` holds against this redefinition. Most such locks hold
+/// against every one. One that holds only against a COPY of the binding's interface (`"{cs}:locked@copies"`: amsthm's
+/// proof, amsthm_sty.rs) holds against a redefinition taking an optional argument with a default first
+/// ([`takes_optional_first`]) — amsthm.sty:431's own
+/// `{proof}[1][\proofname]`, which smfart.cls:1194, ijmart.cls:336 or thuthesis.cls:4052 re-implement over a
+/// `\trivlist` — and lets one with a head of its own through (fascicules.sty:142 `{\textbf{D\'emonstration:} \par}`,
+/// NotesTeX.sty:124, a paper's own `\renewenvironment{proof}{…Beweisskizze:…}{…$\blacksquare$}`), whose head text
+/// and end mark the binding would replace. The environment's end half (`\end<name>` of a qualified `\<name>`)
+/// follows its begin half: locked while that is still the binding's (not cleared, and LaTeXML's own,
+/// `DefinitionOrigin::is_latexml_owned`). OXIDIZED_DESIGN_DIVERGENCES #596.
+pub fn files_lock_holds(cs: &str, copies_interface: impl FnOnce() -> bool) -> bool {
+  // It keeps the binding's own meaning only while that is in force (or kept aside by a file's clearing `\let`,
+  // [`let_i`]): once the document, or a definition the lock let through, has replaced or undefined the name, the
+  // lock has lapsed and later definitions go through as in LaTeX (amsart, the document's `\let\proof\undefined`, then
+  // a package's copy `\newenvironment{proof}[1][Nachweis]`: `perfect_kernel_batch67ps::
+  // proof_lock_lapses_once_the_document_undefines_it`; 0705.0545's nccthm.sty:173 `\newcommand*{\proof}[1][]{…}` after
+  // the same `\let` goes through on the copy rule alone, its default being empty). The protected
+  // meaning is the one the lock names (`\proof:locked@copies` = `\@proof`), not any binding's: llncs's proof that
+  // apxproof.sty:46 puts back is not amsthm's (2311.01302).
+  if let Some(name) = cs.strip_prefix("\\end")
+    && !name.is_empty()
+  {
+    let begin = s!("\\{name}");
+    if let Some(protected) = copies_lock(&begin) {
+      return copies_lock_in_force(&begin, &protected) || copies_lock_kept_aside(&begin);
+    }
+  }
+  if let Some(protected) = copies_lock(cs) {
+    if !copies_lock_in_force(cs, &protected) && !copies_lock_kept_aside(cs) {
+      return false;
+    }
+    return copies_interface();
+  }
+  true
+}
+
+/// The meaning a lock that holds only against copies protects (`"{cs}:locked@copies"`, [`files_lock_holds`]).
+pub fn copies_lock(cs: &str) -> Option<Token> {
+  arena::get(s!("{cs}:locked@copies"))?;
+  match lookup_value(&s!("{cs}:locked@copies")) {
+    Some(Stored::Token(token)) => Some(token),
+    _ => None,
+  }
+}
+
+/// Whether `cs` still has the meaning its copies lock protects.
+fn copies_lock_in_force(cs: &str, protected: &Token) -> bool { x_equals(&T_CS!(cs), protected) }
+
+/// Whether a file's clearing `\let` has put the protected meaning of `cs` aside (`"{cs}:locked@cleared"`, [`let_i`]).
+fn copies_lock_kept_aside(cs: &str) -> bool {
+  lookup_value(&s!("{cs}:locked@cleared")).is_some_and(|b| !matches!(b, Stored::None))
+}
+
+/// [`install_definition`]'s verdict, in the locked state, on a redefinition of `cs`: [`lock_holds_against`] read
+/// against its own interface, and a redefinition the lock lets through drops what a copies lock kept aside
+/// ([`drop_copies_lock_aside`]) — probed only where a lock against the files is set, as every copies lock is one (so
+/// a name without one costs the two probes the lock test always made).
+fn redefinition_locked(cs: &str, definition: &Stored) -> bool {
+  let probe = |suffix: &str| arena::get_suffixed(cs, suffix).is_some_and(lookup_bool_sym);
+  if probe(":locked") {
+    return !another_interface(cs, definition);
+  }
+  if !probe(":locked@files") {
+    return false;
+  }
+  let holds = crate::definition::origin::current_origin()
+    != crate::definition::origin::DefinitionOrigin::Document
+    && files_lock_holds(cs, || takes_optional_first(definition));
+  if !holds {
+    drop_copies_lock_aside(cs);
+  }
+  holds
+}
+
+/// Whether `definition` declares parameters other than the interface the lock on `cs` protects
+/// (`"{cs}:locked@arity"`), so that it is a command of its own and no copy of the binding's: sltables.sty:193's
+/// `\def\multicolumn##1{\omit…\stmultispan…}`, its table's one-argument command, against latex.ltx's three, which
+/// agupp.sty:599, eqnarray.sty:45 and srdp-tables.sty:1218 copy. One declaring none may read any number and stays
+/// refused. This looks at a definition's parameters only; a `\let` never comes here, a plain `:locked` having never
+/// refused one (`let_i`, as Perl's `Let`): `\let\multicolumn\mymc` stands.
+fn another_interface(cs: &str, definition: &Stored) -> bool {
+  let Some(key) = arena::get(s!("{cs}:locked@arity")) else {
+    return false;
+  };
+  let arity = lookup_int_sym(key);
+  let count = definition_parameters(definition).map_or(0, |params| params.get_num_args()) as i64;
+  arity > 0 && count > 0 && count != arity
+}
+
+/// A definition the copies lock on `cs` let through replaces the protected meaning for good: nothing kept aside is
+/// put back, and the end half follows (`\endproof` after a file's own `\proof`).
+fn drop_copies_lock_aside(cs: &str) {
+  if copies_lock(cs).is_some() && copies_lock_kept_aside(cs) {
+    assign_value(
+      &s!("{cs}:locked@cleared"),
+      Stored::None,
+      Some(Scope::Global),
+    );
+  }
+}
+
+/// Record the default of the optional argument a refused redefinition of `token` takes first, as
+/// `"{cs}:redefined@default"` (`[1][\proofname]`), for the locked binding to title its own use with — only under a
+/// lock that holds only against copies ([`copies_lock`]), whose binding reads it.
+pub fn record_redefined_default(token: &Token, default: Tokens) {
+  if token.with_cs_name(copies_lock).is_none() {
+    return;
+  }
+  let key = arena::pin(token.with_cs_name(|cs| s!("{cs}:redefined@default")));
+  state_mut!().assign_internal(
+    TableName::Value,
+    key,
+    Stored::Tokens(default),
+    Some(Scope::Global),
+  );
+}
+
+/// Whether a definition takes an optional argument first whose default is not empty — `[1][\proofname]`
+/// (amsthm.sty:431), `[1][\thu@proof@name]` (thuthesis.cls:4052): the shape of a copy of amsthm's proof, whose
+/// optional argument is the head's text and whose default the name, which a lock that holds only against copies reads
+/// ([`files_lock_holds`]). An empty default (`[1][]`) adds to a head of the file's own (thmbox.sty:214
+/// `\proofname\ #1`) or makes a command, not a proof environment (nccthm.sty:173 `\newcommand*{\proof}[1][]`).
+///
+/// A robust definition is judged by what it wraps, as [`owns_calls`] judges a robust binding: its own meaning is the
+/// parameterless `\protect \cs␣` (`robust_wrapper_body`), defined after the inner `\cs␣` that takes the arguments
+/// (`\DeclareRobustCommand\proof[1][\proofname]{…}`).
+pub fn takes_optional_first(definition: &Stored) -> bool {
+  copy_default(definition).is_some_and(|default| !default.is_empty())
+}
+
+/// The parameters `definition` declares.
+fn definition_parameters(definition: &Stored) -> Option<&crate::parameter::Parameters> {
+  match definition {
+    Stored::Expandable(defn) => defn.get_parameters(),
+    Stored::Constructor(defn) => defn.get_parameters(),
+    Stored::Primitive(defn) => defn.get_parameters(),
+    Stored::MathPrimitive(defn) => defn.get_parameters(),
+    _ => None,
+  }
+}
+
+/// The default of the optional argument `definition` takes first, if it takes one first ([`takes_optional_first`];
+/// a robust definition's by its inner `\cs␣`).
+fn copy_default(definition: &Stored) -> Option<Tokens> {
+  if let Stored::Expandable(defn) = definition
+    && let Some(inner) = robust_wrapper_body(defn, &defn.get_cs())
+  {
+    return lookup_meaning(&inner).and_then(|inner| copy_default(&inner));
+  }
+  definition_parameters(definition)
+    .and_then(|params| params.get_parameters().into_iter().next())
+    .filter(|param| param.optional)
+    .and_then(|param| param.extra.first().cloned())
 }
 
 /// Whether the locked `binding` of `cs` owns its calls, so that the document's own definition of `cs` takes its other
@@ -3245,8 +5939,18 @@ pub fn owns_calls(cs: &Token, binding: &Stored) -> bool {
   if cs.with_cs_name(|name| name.contains('@')) {
     return false;
   }
+  // A robust binding is judged by what it wraps (user ruling 2026-10-15, D1 extends to robust bindings): its own
+  // meaning is the parameterless `\protect \cs␣` ([`robust_wrapper_body`]), its signature the inner `\cs␣`'s — the
+  // kernel `\cite` (sect11.rs) reads `[] Semiverbatim` there. Witnesses math0308041, math0612670, 0705.2148,
+  // 0802.3843, 1207.1752, 1401.4197 (eplain.tex:346 `\edef\cite{\the\catcode`@}`; SYNC_STATUS 67n).
+  if let Stored::Expandable(defn) = binding
+    && !defn.yields_calls()
+    && let Some(inner) = robust_wrapper_body(defn, cs)
+  {
+    return lookup_meaning(&inner).is_some_and(|inner_binding| owns_calls(&inner, &inner_binding));
+  }
   let params = match binding {
-    Stored::Expandable(defn) if defn.yields_calls => return true,
+    Stored::Expandable(defn) if defn.yields_calls() => return true,
     Stored::Expandable(defn) => defn.get_parameters(),
     Stored::Constructor(defn) => defn.get_parameters(),
     Stored::Primitive(defn) => defn.get_parameters(),
@@ -3319,8 +6023,10 @@ fn defines_value(cs: &Token, defn: &Expandable) -> bool {
 /// a binding whose first mandatory parameter is one of them takes a braced argument ([`owns_calls`]).
 pub const BRACED_ARGUMENT_TYPES: &[&str] = &[
   "Plain",
+  "Position",
   "Semiverbatim",
   "ExpandedSemiverbatim",
+  "UnexpandedSemiverbatim",
   "Undigested",
   "Digested",
   "Expanded",
@@ -3346,10 +6052,22 @@ pub fn locked_binding_token(cs: &Token) -> Token {
   T_CS!(cs.with_cs_name(|name| s!("\\lx@locked@{}", name.trim_start_matches('\\'))))
 }
 
+/// The inner `\cs␣` that the robust command `cs` wraps (its meaning the parameterless `\protect \cs␣`:
+/// `\DeclareRobustCommand`, a binding's `robust => true`, [`let_i`]'s copy of either), whose definition takes the
+/// arguments; `None` for any other meaning.
+pub fn robust_inner(cs: &Token) -> Option<Token> {
+  match lookup_meaning(cs) {
+    Some(Stored::Expandable(ref wrapper)) => robust_wrapper_body(wrapper, &wrapper.get_cs()),
+    _ => None,
+  }
+}
+
 /// The other tokens that open a call of `binding` (a [`locked_binding_token`]) besides an explicit `{`: the `[` of
-/// each optional argument its signature opens with, and the token of an `OptionalMatch:*`.
+/// each optional argument its signature opens with, and the token of an `OptionalMatch:*`. A robust binding's
+/// signature is its inner `\cs␣`'s, as in [`owns_calls`]: `\cite[p.~3]{x}` opens the kernel `\cite`.
 pub fn call_openers(binding: &Token) -> Vec<Token> {
-  let Ok(Some(defn)) = lookup_definition(binding) else {
+  let inner = robust_inner(binding);
+  let Ok(Some(defn)) = lookup_definition(inner.as_ref().unwrap_or(binding)) else {
     return Vec::new();
   };
   let mut openers = Vec::new();
@@ -3422,6 +6140,7 @@ pub fn assign_meaning<T: Into<Stored>>(token: &Token, meaning: T, scope: Option<
       }
     }
   }
+  note_copy_provides_assignment(token);
   let csname_sym = token.pin_cs_name();
   state_mut!().assign_internal(TableName::Meaning, csname_sym, meaning, scope);
 }
@@ -3449,8 +6168,8 @@ pub fn rebind_let_copies(cs: &Token, new: &Stored) -> usize {
   let own = meaning_key(cs);
   let mut rebound = 0;
   let mut state = state_mut!();
-  // (the keys holding a copy, journaled before they are rewritten in place)
-  if state.journal.is_some() {
+  // (the keys holding a copy, journaled — and recorded — before they are rewritten in place)
+  if state.journal.is_some() || !state.meaning_recorders.is_empty() {
     let copies: Vec<SymStr> = state
       .meaning
       .iter()
@@ -3502,8 +6221,11 @@ pub fn remove_meaning_global(token: &Token) {
 /// ([`AssignmentJournalGuard::keep`]; also on drop, so a panic leaves no journal open): a transaction over the binding
 /// tables, of every assignment however scoped and of the in-place edits of the tables (`push_value`,
 /// `assign_mapping`, `lookup_value_mut`, `checkout_value`/`checkin_value`, named-scope activation,
-/// `rebind_let_copies`, the graphics path list). Not of what lives outside the tables: a font's parameter array
-/// (`Stored::FontDimens`, edited in place) and the fallback/provide-only name sets. Made for the replay of a refused
+/// `rebind_let_copies`, the graphics path list), of a font's parameter array (`set_font_parameter`, saved as a copy), an input
+/// stream's mouth (`input_stream_to_change`) and a box register's dimensions (`journal_box_dimension`), each edited in place,
+/// and of a name's standing in the fallback-guess set
+/// (`AssignmentJournal::fallback`, FM S2a.2 r9: siamart's `\AND`, 2409.10200). Not of what lives outside the tables: the
+/// provide-only and stand-in name sets, which change only while a package or class loads. Made for the replay of a refused
 /// frontmatter setter (sect05.rs `replay_class_setter`), which a setter that errs half-way must not leave half-done
 /// (jsty3-author.sty:542's expl3 author list, which its printer then looped over: 2607.24171). `None`, recording
 /// nothing, while one is already open (journals do not nest); a journal its guard could not close (the state was
@@ -3515,17 +6237,151 @@ pub fn begin_assignment_journal() -> Option<AssignmentJournalGuard> {
   }
   let frames = state.undo.iter().rev().map(|frame| frame.id).collect();
   state.journal = Some(AssignmentJournal {
+    meaning_log: None,
     frames,
     saved: rustc_hash::FxHashMap::default(),
+    fallback: rustc_hash::FxHashMap::default(),
+    box_dimensions: Vec::new(),
+    watch: WATCH.get(),
   });
   JOURNAL_GUARD_LIVE.set(true);
+  WRITES_WATCHED.set(true);
   Some(AssignmentJournalGuard { open: true })
+}
+
+/// Begin recording which meanings are assigned, each with its value before its first assignment since
+/// ([`end_meaning_recorder`]): what [`AssignmentJournalGuard::assigned`] reads of [`TableName::Meaning`], without the
+/// journal — recorders nest, and a journal (a speculative run's, a replay's) may open and close inside one. Made for a
+/// displaced setter's call (frontmatter_stores.rs `\lx@displaced@begin`), whose own code may run a speculative label
+/// read (queue_digest.rs `speculative_label_ink`: utarticle.cls:125's `\address` prints its `\@makeadmark{\@tempb}`,
+/// 1209.6020). Kept in the state, so a document that stops inside a call leaves none to the next. Returns its depth:
+/// how many were open before it, which [`end_meaning_recorder_at`] closes it by.
+pub fn begin_meaning_recorder() -> usize {
+  let recorders = &mut state_mut!().meaning_recorders;
+  recorders.push(rustc_hash::FxHashMap::default());
+  recorders.len() - 1
+}
+
+/// Close the innermost meaning recorder ([`begin_meaning_recorder`]): the meanings assigned since it began, each with
+/// its value then (`None`: unbound). Empty when none is open.
+pub fn end_meaning_recorder() -> Vec<(SymStr, Option<Stored>)> {
+  state_mut!()
+    .meaning_recorders
+    .pop()
+    .map(|recorded| recorded.into_iter().collect())
+    .unwrap_or_default()
+}
+
+/// Close the meaning recorder [`begin_meaning_recorder`] opened at `depth`, and every one opened inside it and left open
+/// (an `Err` out of a displaced call between its begin and its end): the meanings it recorded, as
+/// [`end_meaning_recorder`]; empty when it is no longer open.
+pub fn end_meaning_recorder_at(depth: usize) -> Vec<(SymStr, Option<Stored>)> {
+  let recorders = &mut state_mut!().meaning_recorders;
+  if recorders.len() <= depth {
+    return Vec::new();
+  }
+  recorders.truncate(depth + 1);
+  recorders
+    .pop()
+    .map(|recorded| recorded.into_iter().collect())
+    .unwrap_or_default()
+}
+
+/// A meaning assigned in the meaning log ([`begin_meaning_log`]).
+#[derive(Debug, Clone, Copy)]
+pub struct MeaningAssigned {
+  /// the meaning's key
+  pub key:    SymStr,
+  /// whether globally
+  pub global: bool,
+  /// the token being invoked
+  pub by:     Token,
+}
+
+/// Begin logging the meanings assigned on the open journal by a token with a field provenance (`Token::prov`), in order:
+/// what a rehearsal reads a definition in its field by (the engine's `field_notes`), since a
+/// definition leaves no box. What a token of no provenance assigns is no invocation of the field's, wherever it stands:
+/// `\begin{minipage}`'s hooks, the `\size@update` that `\selectfont` puts back. One rehearsal at a time, journals not nesting
+/// ([`begin_assignment_journal`]); the log goes with the journal.
+pub fn begin_meaning_log() {
+  if let Some(journal) = state_mut!().journal.as_mut() {
+    journal.meaning_log = Some(Vec::new());
+  }
+}
+
+/// Whether the meaning log ([`begin_meaning_log`]) holds nothing since it was last read.
+pub fn meaning_log_is_empty() -> bool {
+  state!()
+    .journal
+    .as_ref()
+    .and_then(|journal| journal.meaning_log.as_ref())
+    .is_none_or(Vec::is_empty)
+}
+
+/// Exchange what the meaning log ([`begin_meaning_log`]) holds since it was last read with `buffer`, an empty one: a field
+/// token's read of the log, so it allocates nothing.
+pub fn swap_meaning_log(buffer: &mut Vec<MeaningAssigned>) {
+  if let Some(log) = state_mut!()
+    .journal
+    .as_mut()
+    .and_then(|journal| journal.meaning_log.as_mut())
+  {
+    std::mem::swap(log, buffer);
+  }
 }
 
 #[thread_local]
 /// Whether an [`AssignmentJournalGuard`] is live: one that dropped while the state was borrowed leaves its journal
 /// for the next [`begin_assignment_journal`] to discard.
 static JOURNAL_GUARD_LIVE: std::cell::Cell<bool> = std::cell::Cell::new(false);
+
+#[thread_local]
+/// The watch held on the state ([`watch_state`]): its number, 0 when none is or the state changed since.
+static WATCH: std::cell::Cell<u64> = std::cell::Cell::new(0);
+
+#[thread_local]
+/// Whether a write is noted: a journal's guard is live or a watch is held. The one test a write pays.
+static WRITES_WATCHED: std::cell::Cell<bool> = std::cell::Cell::new(false);
+
+/// Set the watch held ([`WATCH`]), 0 to end it.
+fn set_watch(watch: u64) {
+  WATCH.set(watch);
+  WRITES_WATCHED.set(watch != 0 || JOURNAL_GUARD_LIVE.get());
+}
+
+/// The journal's guard is gone ([`JOURNAL_GUARD_LIVE`]).
+fn end_journal_guard() {
+  JOURNAL_GUARD_LIVE.set(false);
+  WRITES_WATCHED.set(WATCH.get() != 0);
+}
+
+#[thread_local]
+/// The last watch begun: numbers only grow, so none is begun twice.
+static LAST_WATCH: std::cell::Cell<u64> = std::cell::Cell::new(0);
+
+/// A write to `key` of `table_name`, in place or not ([`State::journal_touch`]): it ends the watch held, but a
+/// LaTeXML-internal value's (a key `lx…` in the value table: a frontmatter flag, which no TeX code reads).
+#[inline]
+fn note_state_change(table_name: TableName, key: SymStr) {
+  if WATCH.get() != 0
+    && (table_name != TableName::Value || arena::first_bytes::<2>(key) != Some(*b"lx"))
+  {
+    set_watch(0);
+  }
+}
+
+/// Begin a watch on the state, ending the one held (the title-page reading's key, `latex_constructs::title_page_reading`).
+/// Every write ends it (an assignment, a write in place, a box's `\wd`, a group's end restoring a value) but an `lx…`
+/// value's; a rollback ([`AssignmentJournalGuard::rollback`]) puts back the watch it began with, with the state.
+pub fn watch_state() -> u64 {
+  let watch = LAST_WATCH.get() + 1;
+  LAST_WATCH.set(watch);
+  set_watch(watch);
+  watch
+}
+
+/// Is the state unchanged since `watch` began ([`watch_state`])?
+pub fn state_unchanged_since(watch: u64) -> bool { watch != 0 && WATCH.get() == watch }
 
 /// The open assignment journal ([`begin_assignment_journal`]).
 #[must_use = "an assignment journal is kept or rolled back"]
@@ -3534,10 +6390,25 @@ pub struct AssignmentJournalGuard {
 }
 
 impl AssignmentJournalGuard {
+  /// The keys of `table` the journal saw assigned since it began, each with its value then (the front of its stack;
+  /// `None`: unbound).
+  pub fn assigned(&self, table: TableName) -> Vec<(SymStr, Option<Stored>)> {
+    let state = state!();
+    let Some(journal) = state.journal.as_ref() else {
+      return Vec::new();
+    };
+    journal
+      .saved
+      .iter()
+      .filter(|((t, _), _)| *t == table)
+      .map(|((_, key), (values, _))| (*key, values.as_ref().and_then(|v| v.front().cloned())))
+      .collect()
+  }
+
   /// Close the journal, keeping every assignment made since it began.
   pub fn keep(mut self) {
     self.open = false;
-    JOURNAL_GUARD_LIVE.set(false);
+    end_journal_guard();
     state_mut!().journal = None;
   }
 
@@ -3546,7 +6417,7 @@ impl AssignmentJournalGuard {
   /// each one opened since closed and none of them closed: false, undoing nothing (the assignments stay), otherwise.
   pub fn rollback(mut self) -> bool {
     self.open = false;
-    JOURNAL_GUARD_LIVE.set(false);
+    end_journal_guard();
     let mut state = state_mut!();
     let Some(journal) = state.journal.take() else {
       return false;
@@ -3578,6 +6449,27 @@ impl AssignmentJournalGuard {
         }
       }
     }
+    for (key, standing) in journal.fallback {
+      match standing {
+        Some(origin) => {
+          state.fallback_meanings.insert(key, origin);
+        },
+        None => {
+          state.fallback_meanings.remove(&key);
+        },
+      }
+    }
+    for (a_box, property, value) in journal.box_dimensions.into_iter().rev() {
+      match value {
+        Some(value) => {
+          a_box.try_set_property(property, value);
+        },
+        None => {
+          a_box.try_remove_property(property);
+        },
+      }
+    }
+    set_watch(journal.watch);
     true
   }
 }
@@ -3585,13 +6477,31 @@ impl AssignmentJournalGuard {
 impl Drop for AssignmentJournalGuard {
   fn drop(&mut self) {
     if self.open {
-      JOURNAL_GUARD_LIVE.set(false);
+      end_journal_guard();
       if let Ok(mut state) = STATE.try_borrow_mut() {
         state.journal = None;
       }
     }
   }
 }
+
+/// Every control sequence whose current meaning satisfies `keep`, with that meaning: a whole-table scan, for a
+/// one-off survey of what a loaded file defined (K11's reader scan, `frontmatter_stores.rs`), never a hot path.
+pub fn current_meanings_where(keep: impl Fn(&Stored) -> bool) -> Vec<(SymStr, Stored)> {
+  state!()
+    .meaning
+    .iter()
+    .filter_map(|(key, entry)| match entry.front() {
+      Some(stored) if !matches!(stored, Stored::None) && keep(stored) => {
+        Some((*key, stored.clone()))
+      },
+      _ => None,
+    })
+    .collect()
+}
+
+/// Whether the meaning key `key` (a [`meaning_key`]) is bound now.
+pub fn has_meaning_key(key: SymStr) -> bool { !matches!(meaning_by_key(key), Stored::None) }
 
 // keep this in sync with `lookup_meaning`, it is copied over for optimization purposes
 pub fn has_meaning(token: &Token) -> bool {
@@ -3801,7 +6711,7 @@ pub fn dump_top_frame_keys() -> String {
 
 pub fn push_frame() {
   // Easy: just push a new undo frame.
-  if std::env::var_os("LXML_TRACE_FRAMES").is_some() {
+  if *crate::stomach::TRACE_FRAMES {
     eprintln!(
       "[state] push_frame depth {} -> {}",
       get_frame_depth(),
@@ -3825,6 +6735,64 @@ pub fn snapshot_top_frame_meaning_keys() -> Vec<SymStr> {
     .front()
     .map(|f| f.meaning.keys().copied().collect())
     .unwrap_or_default()
+}
+
+/// The meanings first made in the innermost group: the control sequences bound at the topmost frame and nowhere
+/// outside it (every binding they have is the frame's), with their current binding (a key bound there to nothing is
+/// left out).
+pub fn top_frame_new_meanings() -> Vec<(SymStr, Stored)> {
+  let state = state!();
+  let Some(frame) = state.undo.front() else {
+    return Vec::new();
+  };
+  frame
+    .meaning
+    .iter()
+    .filter_map(|(key, count)| {
+      let values = state.meaning.get(key)?;
+      if values.len() > *count {
+        return None;
+      }
+      values
+        .front()
+        .filter(|value| !matches!(value, Stored::None))
+        .map(|value| (*key, value.clone()))
+    })
+    .collect()
+}
+
+/// The meanings the topmost `n` frames bind — new ones and changes to what an outer frame defined — that are plain
+/// groups (`{…}`, `\begingroup`): a frame an environment or a mode opened (it binds `current_environment` or `MODE`)
+/// is skipped, its bindings being that construct's own machinery. Each key with the binding of the innermost such frame
+/// that binds it (a key bound there to nothing is left out). For a replayed environment begin code (sect05.rs
+/// `replay_class_setter`).
+pub fn top_group_frames_meanings(n: usize) -> Vec<(SymStr, Stored)> {
+  let state = state!();
+  let environment = crate::pin!("current_environment");
+  let mode = crate::pin!("MODE");
+  // how many bindings of a key the frames above the current one hold: the current frame's is at that position
+  let mut above: HashMap<SymStr, usize> = HashMap::default();
+  let mut chosen: Vec<(SymStr, Stored)> = Vec::new();
+  let mut seen: HashSet<SymStr> = HashSet::default();
+  for frame in state.undo.iter().take(n) {
+    let plain_group = !frame.value.contains_key(&environment) && !frame.value.contains_key(&mode);
+    for (key, count) in frame.meaning.iter() {
+      let offset = above.entry(*key).or_insert(0);
+      if plain_group
+        && *count > 0
+        && seen.insert(*key)
+        && let Some(value) = state
+          .meaning
+          .get(key)
+          .and_then(|values| values.get(*offset))
+        && !matches!(value, Stored::None)
+      {
+        chosen.push((*key, value.clone()));
+      }
+      *offset += *count;
+    }
+  }
+  chosen
 }
 
 /// The keys bound at the topmost frame for the Meaning and Value tables, taken
@@ -3915,12 +6883,16 @@ fn hoist_top_frame_delta(table: TableName, pre_snapshot: &[SymStr], conditionals
       // LaTeX.pool hoist had made a pool convenience ours and refused the
       // document's `\newcommand`). Guard:
       // `reentrancy_tests::package_load_hoist_keeps_fallback_standing`.
-      let fallback = table == TableName::Meaning && state!().fallback_meanings.contains(&key);
+      let fallback = if table == TableName::Meaning {
+        state!().fallback_meanings.get(&key).copied()
+      } else {
+        None
+      };
       let mut state = state_mut!();
       state.assign_internal(table, key, value, Some(Scope::Global));
       if table == TableName::Meaning {
-        if fallback {
-          state.fallback_meanings.insert(key);
+        if let Some(origin) = fallback {
+          state.fallback_meanings.insert(key, origin);
         } else {
           state.fallback_meanings.remove(&key);
         }
@@ -3931,7 +6903,7 @@ fn hoist_top_frame_delta(table: TableName, pre_snapshot: &[SymStr], conditionals
 /// Ends the current level of grouping.
 /// Note that this is lower level than `\egroup`;
 pub fn pop_frame() -> Result<()> {
-  if std::env::var_os("LXML_TRACE_FRAMES").is_some() {
+  if *crate::stomach::TRACE_FRAMES {
     eprintln!(
       "[state] pop_frame depth {} -> {}",
       get_frame_depth(),
@@ -3949,10 +6921,15 @@ pub fn pop_frame() -> Result<()> {
   // "Attempt to pop last locked stack frame"); }
   } else {
     let popped_frame = state.undo.pop_front().unwrap();
+    let watched = WATCH.get() != 0;
     for table_name in TableName::variants() {
       let undo_table = popped_frame.table(*table_name);
       let state_table = state.table_mut(*table_name);
       for (key, undo_count) in undo_table.iter() {
+        // (a value restored is a change of the state's: [`watch_state`])
+        if watched && *undo_count > 0 {
+          note_state_change(*table_name, *key);
+        }
         // Typically only 1 value to shift off the table, unless scopes have been activated.
         let named_table = state_table.get_mut(key).unwrap();
         for _ in 0..*undo_count {
@@ -4505,12 +7482,30 @@ pub fn let_definition(token1: &Token, token2: &Token, scope: Option<Scope>) {
 }
 
 pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
+  {
+    use crate::definition::origin::{DefinitionOrigin, current_origin, stand_in_loading};
+    // (only while a stand-in binding loads, whose `\let`s a copy may meet: not every `\newif` flag of the pool)
+    if stand_in_loading()
+      && matches!(
+        current_origin(),
+        DefinitionOrigin::Unknown | DefinitionOrigin::Pool | DefinitionOrigin::Binding
+      )
+      && matches!(token1.get_catcode(), Catcode::CS | Catcode::ACTIVE)
+    {
+      let key = meaning_key(token1);
+      state_mut!().binding_lets.insert(key);
+    }
+  }
   let meaning =// if token2.get_dont_expand().is_some() {
   //   Stored::Token(token2.clone())
   // } else {
     lookup_meaning(token2)
       .unwrap_or(Stored::None);
   // };
+  if copy_provides_keeps_saved_meaning(token1, token2, &meaning) {
+    after_assignment();
+    return;
+  }
   // A lock against the class and package files (`"{cs}:locked@files"`, [`name_carries_lock`]) holds for their `\let`
   // as for their `\def` ([`install_definition`]): arabtex's asect.sty:297 `\let\endabstract\endquotation`, which its
   // own raw `\end` (alatex.sty:105-109) then calls, closed the kernel abstract's body as a quotation (2401.14559). A
@@ -4524,23 +7519,60 @@ pub fn let_i(token1: &Token, token2: &Token, scope: Option<Scope>) {
   // `\csname` has made it `\relax` on the way. Read at the origins `install_definition` reads the lock at (every one
   // but the document's, [`name_carries_lock`]). OXIDIZED_DESIGN #569; guards `perfect_kernel_batch66b::file_let_*`,
   // `…::refused_*_restores_the_binding`.
+  // A lock that holds only against copies of the binding's interface ([`files_lock_holds`]) judges the `\let` by the
+  // meaning it copies: one taking an optional argument with a default first is refused as above; any other goes
+  // through, the binding kept aside as for a clearing `\let`, so that a copy defined next and refused puts it back
+  // (a package's `\let\proof\relax` … `\newenvironment{proof}[1][\proofname]`; guard
+  // `perfect_kernel_batch67s::package_redefined_proof_keeps_the_binding`). Not GT.cls (2503.05183): its `\let\proof
+  // \relax` (:1469-1470) is the class's, but its copy is defined inside `\AtBeginDocument` (:1488-1494), at the
+  // document's origin, and honoured (OXIDIZED_DESIGN_DIVERGENCES #596).
   if crate::definition::origin::current_origin()
     != crate::definition::origin::DefinitionOrigin::Document
     && !state_is_unlocked()
     && matches!(token1.get_catcode(), Catcode::CS | Catcode::ACTIVE)
     && token1.with_cs_name(|cs| arena::get(s!("{cs}:locked@files")).is_some_and(lookup_bool_sym))
   {
-    if !matches!(meaning, Stored::None) {
+    let cs = token1.with_cs_name(|cs| cs.to_string());
+    let holds = files_lock_holds(&cs, || takes_optional_first(&meaning));
+    if holds && !matches!(meaning, Stored::None) {
       restore_cleared_binding(token1);
       after_assignment();
       return;
     }
-    if !is_cleared_meaning(token1)
-      && let Some(binding) = lookup_meaning(token1)
-    {
-      let cleared_key = token1.with_cs_name(|cs| s!("{cs}:locked@cleared"));
-      assign_value(&cleared_key, binding, Some(Scope::Global));
+    let protected = copies_lock(&cs);
+    let clearing = matches!(meaning, Stored::None) || x_equals(token2, &crate::T_CS!("\\relax"));
+    if clearing {
+      if !is_cleared_meaning(token1)
+        && protected
+          .as_ref()
+          .is_none_or(|protected| copies_lock_in_force(&cs, protected))
+        && let Some(binding) = lookup_meaning(token1)
+      {
+        let cleared_key = token1.with_cs_name(|cs| s!("{cs}:locked@cleared"));
+        assign_value(&cleared_key, binding, Some(Scope::Global));
+      }
+    } else {
+      drop_copies_lock_aside(&cs);
     }
+  } else if !state_is_unlocked()
+    && matches!(token1.get_catcode(), Catcode::CS | Catcode::ACTIVE)
+    && (matches!(meaning, Stored::None) || x_equals(token2, &crate::T_CS!("\\relax")))
+    && !is_cleared_meaning(token1)
+    && token1.with_cs_name(|cs| arena::get(s!("{cs}:locked")).is_some_and(lookup_bool_sym))
+    && let Some(binding) = lookup_meaning(token1)
+  {
+    // A plain `:locked` binding a file's `\let` clears is kept aside too, the `\let` itself going through as in Perl,
+    // and back in place when the file's own new meaning is refused ([`restore_cleared_binding`]): eulerpx.sty:130-132
+    // `\let\mathscr=\undefined` then `\DeclareMathAlphabet\mathscr{U}{zeus}{m}{n}`, which the lock on the kernel's
+    // `\mathscr` (sect07.rs) refuses, left `\mathscr` undefined, an Error at every use (2311.14793, 2501.10505,
+    // 2510.26876; KNOWN_PERL_ERRORS #863). OXIDIZED_DESIGN #569. The document's own `\let` too, at every origin: the
+    // plain lock refuses the document's redefinition as it refuses a file's (`\let\mathcal\undefined
+    // \DeclareMathAlphabet{\mathcal}{OMS}{cmsy}{m}{n}` left `\mathcal` undefined; `\let\mathscr\relax` before
+    // `\DeclareMathAlphabet{\mathscr}{U}{rsfs}{m}{n}` lost its script font), and a stale binding a package's
+    // group-local clear set aside is replaced by the current one. A document value-definition after the restore still
+    // reaches the binding's call owner (OXIDIZED_DESIGN #500). The `:locked@files` branch above keeps its origin test.
+    let cleared_key = token1.with_cs_name(|cs| s!("{cs}:locked@cleared"));
+    assign_value(&cleared_key, binding, Some(Scope::Global));
   }
   // Deep-copy the robust-wrapper pair.
   //
@@ -5583,6 +8615,35 @@ mod let_copy_tests {
 #[cfg(test)]
 mod assignment_journal_tests {
   use super::*;
+
+  /// A rollback puts back a meaning's standing as a fallback guess with the meaning (`fallback_meanings`): a group-local
+  /// `\let` of it under the journal cleared the standing, which the group's end does not put back (FM S2a.2 r9: the
+  /// observer rehearsal's `\let\AND`, OmniBus's `\AND` under the siamart binding, 2409.10200); and a name the journal
+  /// saw become a guess is none after it.
+  #[test]
+  fn rollback_restores_a_fallback_standing() {
+    use crate::definition::origin::{DefinitionOrigin, with_origin};
+    let guess = T_CS!("\\r9_fallback_standing_probe");
+    let fresh = T_CS!("\\r9_fallback_fresh_probe");
+    with_origin(DefinitionOrigin::Fallback, || {
+      let_i(&guess, &T_LETTER!("x"), Some(Scope::Global))
+    });
+    assert!(is_fallback_meaning(&guess));
+    let journal = begin_assignment_journal().expect("no journal open");
+    push_frame();
+    let_i(&guess, &T_LETTER!("y"), None);
+    with_origin(DefinitionOrigin::Fallback, || {
+      let_i(&fresh, &T_LETTER!("z"), Some(Scope::Global))
+    });
+    assert!(pop_frame().is_ok());
+    assert!(
+      !is_fallback_meaning(&guess),
+      "the group's end leaves the standing cleared"
+    );
+    assert!(journal.rollback(), "the frames it began with are open");
+    assert!(is_fallback_meaning(&guess), "the rollback puts it back");
+    assert!(!is_fallback_meaning(&fresh) && lookup_meaning(&fresh).is_none());
+  }
 
   /// A rollback puts back a global and a local assignment made since the journal began; a kept journal keeps them.
   #[test]

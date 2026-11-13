@@ -1,0 +1,22 @@
+% mechanism: the queue's reading (frontmatter/queue_reading.rs) trusts the queue's length, so a removal must forget it:
+%   `\date{}` and `\keywords{}` dequeue two entries, `\author{Bob}` and `\affiliation` queue two, and the queue is back at
+%   4. A reading kept across that hides Bob, so that no name requests mark 2 and the Cut leaves the list whole.
+% witness: none; the review's probe (revC1 p34), the shape of a class's `\date{}` after names
+% oracle:  pdflatex 0 errors: "Ann Able1 / 1 Univ Z / Bob Baker2 / 1 Univ A / 2 Univ B"
+% engines: rust int142a and C1: Ann Able "1 Univ Z" and "1 Univ A", Bob Baker "2 Univ B"; perl: not compared, the Cut is Rust-only
+% expect:  0 errors, 0 warnings; the same creators as int142a's, and one "FRONT cut affiliation at its marks" in the debug log
+% status:  GREEN (the base's output, kept)
+\documentclass{revtex4-2}
+\begin{document}
+\title{T}
+\date{January}
+\keywords{Word}
+\author{Ann Able$^{1}$}
+\affiliation{$^{1}$Univ Z}
+\date{}
+\keywords{}
+\author{Bob Baker$^{2}$}
+\affiliation{$^{1}$Univ A\\ $^{2}$Univ B}
+\maketitle
+Body.
+\end{document}

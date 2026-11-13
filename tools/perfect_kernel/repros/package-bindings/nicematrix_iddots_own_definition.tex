@@ -1,0 +1,11 @@
+% witness: 2108.05847, 2210.04594 (nicematrix \Iddots); a paper's own \iddots before nicematrix (review 68j finding 3)
+% oracle:  pdflatex 0 errors; "aIDDb" inline (the paper's \iddots, nicematrix.sty:146 \ProvideDocumentCommand keeps it), the matrix cell's \Iddots its own inverse-diagonal dots (nicematrix.sty:1632 \__nicematrix_Iddots:)
+% engines: rust 68j r1 = the cell is "IDD" (\Iddots expanded the paper's \iddots); rust 67int10 = ⋱; perl = no binding
+% expect:  0 errors, 0 warnings; IDD inline, ⋰ (U+22F0) in the cell
+% status:  RED (68j r1) -> GREEN (68j r2); guard perfect_kernel_batch68j::nicematrix_iddots_keeps_a_paper_definition
+\documentclass{article}
+\newcommand\iddots{\mathrm{IDD}}
+\usepackage{nicematrix}
+\begin{document}
+$a\iddots b$ $\begin{pNiceMatrix}a & \Iddots\\ c & d\end{pNiceMatrix}$
+\end{document}

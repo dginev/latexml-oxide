@@ -1,0 +1,19 @@
+% mechanism: a mark a name prints past a separator a formula prints between its marks (`$^,$`) stays with the name at
+%   `=2`, the separator written with it: the past-marks scan of `emit.rs` `block_names` stopped at the Sep, so Bob
+%   Baker's second `\endnotemark` was dropped with no Warning; a mark whose span ends on its option's `[` (past a
+%   `\protect`) takes its option too
+% witness: 1703.08733 (`\protect\endnotemark[1]$^,$\protect\endnotemark[2]`, perfect_kernel_batchfms2a2's endnote guard);
+%   review revNE2r2 Q2's class
+% oracle:  pdflatex 0 errors; "ANN ABLE1 , BOB BAKER1,2" (pdftotext)
+% engines: rust off: 0 errors, Bob 1 , 2; rust =2 (NE2b): 0 errors, 0 warnings, Bob's 2 lost
+% expect:  =2 as off: 0 errors, 0 warnings, Bob's marks 1 , 2
+% status:  RED (NE2b) -> GREEN (perfect_kernel_batchne2::a_mark_after_its_names_note_stays_with_it)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\usepackage{endnotes}
+\begin{document}
+\author{Ann Able\protect\endnotemark[1], Bob Baker\protect\endnotemark[1]$^,$\protect\endnotemark[2]}
+\title{T}
+\maketitle
+Text.
+\end{document}

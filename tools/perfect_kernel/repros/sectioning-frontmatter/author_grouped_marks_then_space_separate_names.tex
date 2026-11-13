@@ -1,0 +1,16 @@
+% A name's marks in a group of their own (`{$^{2}$}`), then space, part it from the next name.
+% witness: 2406.09417 (`{David McAllister$^{1}$\thanks{…} ~ Songwei Ge$^{2*}$ ~ Jia-Bin Huang{$^{2}$} ~ David W.
+%          Jacobs{$^{2}$}}`)
+% oracle:  pdflatex 0 errors: "Ann Able1∗ Bob Baker2 Cat Cole2 Dan Dorn2" on one line
+% engines: rust int111d = one creator holding the four names (silent here; 2406.09417's flagged by its two `$^…$`
+%          marks); 84a r2 = "Cat Cole Dan Dorn" one creator (silent)
+% expect:  0 errors, 0 warnings; four creators
+% status:  RED (int111d) -> RED (84a r2) -> GREEN (84a)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{{Ann Able$^{1}$\thanks{Equal contribution.} ~ Bob Baker$^{2}$ ~ Cat Cole{$^{2}$} ~ Dan Dorn{$^{2}$}}}
+\maketitle
+x
+\end{document}

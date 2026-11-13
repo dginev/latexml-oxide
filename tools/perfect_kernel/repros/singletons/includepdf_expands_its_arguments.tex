@@ -1,0 +1,15 @@
+% witness: 2605.05847 (`\foreach \x in {1,...,7}{\includepdf[pages={\x},turn=false]{SM_arxiv.pdf}}`), 2406.13026
+%          (`\includepdf[pages={\x,{}}]{\supplementfilename}`)
+% oracle:  pdflatex 0 errors: 4 pages: before, the PDF's page 3, a blank page (`{}`), after (the list and name expanded)
+% engines: rust 78j r1 = "See pages 3 of ⟨link⟩" (the list read as `\pg`, the name as `\fname`)
+% expect:  0 errors; one graphics, options page=3 (the blank page places nothing)
+% status:  RED (78j r1 pre-release) -> GREEN (78j)
+\documentclass{article}
+\usepackage{pdfpages}
+\def\pg{3}
+\def\fname{example-image-a4-numbered.pdf}
+\begin{document}
+Before.
+\includepdf[pages={\pg,{}}]{\fname}
+After.
+\end{document}

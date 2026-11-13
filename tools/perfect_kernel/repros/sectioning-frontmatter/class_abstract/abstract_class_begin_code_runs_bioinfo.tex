@@ -1,0 +1,22 @@
+% A raw class's `\newenvironment{abstract}` (the kernel's `{abstract}` exists before any class: refused, its code kept
+% as `\lx@dropped@abstract`, sect08.rs) runs its begin code at the kernel abstract's head for its effects: `\section`
+% is the class's run-in label inside the abstract, the kernel's again after it.
+% witness: 1406.7114 (bioinfo.cls:495-500), 0901.4589, 2108.03515 (bioinfo), 1508.06756 (frontiersFPHY.cls:516-524)
+% oracle:  pdflatex (absbioinfo.cls beside it) 0 errors: "ABSTRACT / Motivation: First part. Results: Second part.",
+%          then "1 Introduction"
+% engines: rust 67int23b = 1 Error (malformed:ltx:section in ltx:section)
+% expect:  0 errors, 0 warnings; the abstract holds two paragraphs led by bold "Motivation:", "Results:"; one
+%          ltx:section ("Introduction"), numbered 1
+% status:  RED (67int23b) -> GREEN (74a)
+% preload: ar5iv.sty
+\documentclass{absbioinfo}
+\begin{document}
+\title{T}\author{A. Author}
+\maketitle
+\begin{abstract}
+\section{Motivation:} First part.
+\section{Results:} Second part.
+\end{abstract}
+\section{Introduction}
+Body.
+\end{document}

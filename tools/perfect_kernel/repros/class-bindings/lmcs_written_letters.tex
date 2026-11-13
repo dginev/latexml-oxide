@@ -1,0 +1,28 @@
+% mechanism: the earlier lmcs classes (1103.0510's LMCS.cls v0.8 keeps amsart's `\author`) have the papers write the
+%   letters themselves: `Name\rsuper a` after the name and `{\lsuper a}` or `\lsuper{b,c}` before the address, which
+%   mean the class's letters; an address of spacing alone (`\vskip-6 pt`, how those papers letter one address for two
+%   authors) is no address.
+% witness: 1103.0510 ("Derek Dreyer a" with the address "a MPI-SWS, Germany"), cs0701140, 1410.2022, 1307.4682 and
+%   1202.6352 (`{\lsuper{b,c}}`, `\address{\vskip-6 pt}`)
+% oracle:  pdflatex with 1103.0510's lmcs.cls (v0.8): 0 errors; "ANN ABLE^a, BOB BAKER^b, AND CARL COLE^c"; a Univ A
+%   "e-mail address: able@a.edu"; b,c Univ BC "e-mail address: baker@b.edu"
+% engines: rust int111d = the letters raised in each name and before each address, Univ BC on Bob Baker only, an empty
+%   address on Carl Cole; perl has no lmcs binding (OmniBus)
+% expect:  0 errors, 0 warnings; Ann Able: Univ A, able@a.edu; Bob Baker: Univ BC, baker@b.edu; Carl Cole: Univ BC
+% status:  RED (int111d) -> RED (84c r1: the two-letter address kept at the block) -> GREEN (84c)
+% preload: ar5iv.sty
+\documentclass{lmcs}
+\begin{document}
+\title{T}
+\author[A.~Able]{Ann Able\rsuper a}
+\address{{\lsuper a}Univ A}
+\email{able@a.edu}
+\author[B.~Baker]{Bob Baker\rsuper b}
+\address{{\lsuper{b,c}}Univ BC}
+\email{baker@b.edu}
+\author[C.~Cole]{Carl Cole\rsuper c}
+\address{\vskip-6 pt}
+\maketitle
+\section{S}
+Text.
+\end{document}

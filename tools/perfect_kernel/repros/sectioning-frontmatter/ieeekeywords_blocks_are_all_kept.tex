@@ -3,7 +3,7 @@
 % engines: rust (62zo) = 0 errors, one <keywords> holding "Zeta." only: "Eps." is lost — the frontmatter keeps the last
 %          `\lx@begin@keywords` block (ieeetran_cls.rs `\IEEEkeywords`)
 % expect:  0 errors; both "Eps." and "Zeta." kept as keywords
-% status:  RED
+% status:  RED (62zo) -> GREEN (77t; KNOWN_PERL_ERRORS #1020: Perl keeps the last block too)
 \documentclass{IEEEtran}
 \begin{document}
 \begin{IEEEkeywords}

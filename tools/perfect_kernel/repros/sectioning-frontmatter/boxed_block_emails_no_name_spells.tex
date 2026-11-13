@@ -1,0 +1,20 @@
+% mechanism: a boxed author block whose e-mails no name spells (`lab@a.edu`, `office@b.edu`): FIDELITY_CHARTER §4
+%   (2026-11-01) keeps such an address once at the block level and invents no nameless creator; the writer has no
+%   block-level contact form but #159's nameless creator, so the re-part declines ("a block e-mail no name spells") and
+%   the old reader's one creator stays. Deferred (SYNC_STATUS M1 3B).
+% witness: 2605.09461, 2609.36484 (one of seven addresses spells no name)
+% oracle:  pdflatex 0 errors
+% engines: rust 100c: one creator holding the tabular; perl the same
+% expect:  0 errors; Ann, Bob, Cat with their affiliations; the two addresses once, at the block level
+% status:  RED
+\documentclass{article}
+\title{T}
+\author{\begin{tabular}{c}
+Ann Able\textsuperscript{1} \quad Bob Baker\textsuperscript{2} \quad Cat Cole\textsuperscript{1} \\
+\textsuperscript{1}Univ A \quad \textsuperscript{2}Univ B \\
+\texttt{lab@a.edu} \quad \texttt{office@b.edu}
+\end{tabular}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

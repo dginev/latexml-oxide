@@ -52,13 +52,13 @@ LoadDefinitions!({
   // Token construction avoids the round-trip entirely.
   DefMacro!("\\braket{}", sub[args] {
     let arg = args[0].clone().into_tokens_result()?;
-    let (codes, parts) = split_braket_arg(arg, 2);
+    let (codes, parts) = split_braket_arg(arg, 2, true);
     let cs = s!("\\lx@braket@{codes}");
     Ok(build_invocation(&cs, &parts))
   });
   DefMacro!("\\Braket{}", sub[args] {
     let arg = args[0].clone().into_tokens_result()?;
-    let (codes, parts) = split_braket_arg(arg, 2);
+    let (codes, parts) = split_braket_arg(arg, 2, true);
     let cs = s!("\\lx@Braket@{codes}");
     Ok(build_invocation(&cs, &parts))
   });
@@ -72,17 +72,19 @@ LoadDefinitions!({
   DefMath!("\\lx@Set@V{}{}", "\\left\\{#1\\;\\middle|\\;#2\\right\\}", meaning => "set", alias => "\\Set");
   DefMath!("\\lx@Set@D{}{}", "\\left\\{#1\\;\\middle\\|\\;#2\\right\\}", meaning => "set", alias => "\\Set");
   // \set/\Set — Perl L117-126 also splits via splitBraketArg (maxbars=1).
-  // So `\set{x\|y}` dispatches to `\lx@set@D`, not `\lx@set@V`, preserving
-  // the double-bar meaning in the set-builder notation.
+  // `\Set{x\|y}` dispatches to `\lx@Set@D` (braket.sty:66-69 binds `\|` to `\SetDoubleVert` in `\Set`), but the
+  // lowercase `\set` makes only `|` special (braket.sty:61-64 `\let|\midvert`), so its `\|` is the operand's own:
+  // `\set{D\bz a\|b\jz|M}` with `\bz`/`\jz` = `\left(`/`\right)` split inside the hidden pair ("Extra \right",
+  // 2605.31379; Perl splits there too, KNOWN_PERL_ERRORS #645).
   DefMacro!("\\set{}", sub[args] {
     let arg = args[0].clone().into_tokens_result()?;
-    let (codes, parts) = split_braket_arg(arg, 1);
+    let (codes, parts) = split_braket_arg(arg, 1, false);
     let cs = s!("\\lx@set@{codes}");
     Ok(build_invocation(&cs, &parts))
   });
   DefMacro!("\\Set{}", sub[args] {
     let arg = args[0].clone().into_tokens_result()?;
-    let (codes, parts) = split_braket_arg(arg, 1);
+    let (codes, parts) = split_braket_arg(arg, 1, true);
     let cs = s!("\\lx@Set@{codes}");
     Ok(build_invocation(&cs, &parts))
   });
@@ -103,21 +105,35 @@ LoadDefinitions!({
 /// never activates — it takes the character's `\delcode`. Perl splits there too (KNOWN_PERL_ERRORS #607; 2107.02628,
 /// whose `\Set{ω:\begin{array}{l}\left|…\right|…\end{array}}` became `\left\;\middle|` in an array cell). Guard
 /// `perfect_kernel_batch65d::braket_set_keeps_fence_bars`.
-fn split_braket_arg(arg: Tokens, mut maxbars: usize) -> (String, Vec<Tokens>) {
+fn split_braket_arg(
+  arg: Tokens,
+  mut maxbars: usize,
+  double_bar_splits: bool,
+) -> (String, Vec<Tokens>) {
   let vbar = T_OTHER!("|");
   let dbar = T_CS!("\\|");
   let mut codes = String::new();
   let mut parts: Vec<Tokens> = Vec::new();
   let mut current: Vec<Token> = Vec::new();
   let mut depth: i32 = 0;
+  // Open `\left…\right` pairs: a bar between them is the formula's own (`\braket{\phi|\left[m|R|^2\right]|\psi}`,
+  // 2606.06185; braket.sty:33's `\braket` splits nowhere, the split is the binding's reading of the notation).
+  let mut fences: i32 = 0;
   let mut tokens: VecDeque<Token> = arg.unlist().into();
   while let Some(t) = tokens.pop_front() {
     if t.get_catcode() == Catcode::BEGIN {
       depth += 1;
     } else if t.get_catcode() == Catcode::END {
       depth -= 1;
+    } else if t.get_catcode() == Catcode::CS && t.defined_as(&T_CS!("\\left")) {
+      fences += 1;
+    } else if t.get_catcode() == Catcode::CS && t.defined_as(&T_CS!("\\right")) {
+      // A `\right` whose `\left` is outside the argument (hidden in a macro) leaves the count at zero. The other
+      // direction stays open: a visible `\left(` closed by a `\right)` hidden in a macro keeps the count at one, so no
+      // later `|` splits — the text is kept, the set-builder structure lost (review 66f r2; no witness).
+      fences = (fences - 1).max(0);
     }
-    if current.last().is_some_and(reads_a_delimiter) {
+    if current.last().is_some_and(reads_a_delimiter) || fences > 0 {
       current.push(t);
     } else if depth == 0 && maxbars > 0 && t == vbar {
       // `||` — single D split (Perl L38-40)
@@ -129,7 +145,7 @@ fn split_braket_arg(arg: Tokens, mut maxbars: usize) -> (String, Vec<Tokens>) {
       }
       maxbars -= 1;
       parts.push(Tokens::new(std::mem::take(&mut current)));
-    } else if depth == 0 && maxbars > 0 && t == dbar {
+    } else if double_bar_splits && depth == 0 && maxbars > 0 && t == dbar {
       codes.push('D');
       maxbars -= 1;
       parts.push(Tokens::new(std::mem::take(&mut current)));
@@ -184,7 +200,7 @@ mod tests {
   fn split_braket_arg_no_bar_empty_codes() {
     setup();
     let arg = toks(vec![T_LETTER!("a"), T_LETTER!("b")]);
-    let (codes, parts) = split_braket_arg(arg, 2);
+    let (codes, parts) = split_braket_arg(arg, 2, true);
     assert_eq!(codes, "");
     assert_eq!(parts.len(), 1);
     assert_eq!(parts[0].len(), 2);
@@ -194,7 +210,7 @@ mod tests {
   fn split_braket_arg_single_vbar_yields_v_code() {
     setup();
     let arg = toks(vec![T_LETTER!("a"), T_OTHER!("|"), T_LETTER!("b")]);
-    let (codes, parts) = split_braket_arg(arg, 2);
+    let (codes, parts) = split_braket_arg(arg, 2, true);
     assert_eq!(codes, "V");
     assert_eq!(parts.len(), 2);
   }
@@ -203,7 +219,7 @@ mod tests {
   fn split_braket_arg_dbar_cs_yields_d_code() {
     setup();
     let arg = toks(vec![T_LETTER!("a"), T_CS!("\\|"), T_LETTER!("b")]);
-    let (codes, parts) = split_braket_arg(arg, 2);
+    let (codes, parts) = split_braket_arg(arg, 2, true);
     assert_eq!(codes, "D");
     assert_eq!(parts.len(), 2);
   }
@@ -218,7 +234,7 @@ mod tests {
       T_OTHER!("|"),
       T_LETTER!("b"),
     ]);
-    let (codes, parts) = split_braket_arg(arg, 2);
+    let (codes, parts) = split_braket_arg(arg, 2, true);
     assert_eq!(codes, "D");
     assert_eq!(parts.len(), 2);
   }
@@ -233,7 +249,7 @@ mod tests {
       T_OTHER!("|"),
       T_LETTER!("c"),
     ]);
-    let (codes, parts) = split_braket_arg(arg, 2);
+    let (codes, parts) = split_braket_arg(arg, 2, true);
     assert_eq!(codes, "VV");
     assert_eq!(parts.len(), 3);
   }
@@ -248,7 +264,7 @@ mod tests {
       T_CS!("\\|"),
       T_LETTER!("c"),
     ]);
-    let (codes, parts) = split_braket_arg(arg, 2);
+    let (codes, parts) = split_braket_arg(arg, 2, true);
     assert_eq!(codes, "VD");
     assert_eq!(parts.len(), 3);
   }
@@ -264,7 +280,7 @@ mod tests {
       T_OTHER!("|"),
       T_LETTER!("c"),
     ]);
-    let (codes, parts) = split_braket_arg(arg, 1);
+    let (codes, parts) = split_braket_arg(arg, 1, true);
     assert_eq!(codes, "V");
     assert_eq!(parts.len(), 2);
     // Second part retains the second `|` as literal content
@@ -284,7 +300,7 @@ mod tests {
       T_END!(),
       T_LETTER!("d"),
     ]);
-    let (codes, parts) = split_braket_arg(arg, 2);
+    let (codes, parts) = split_braket_arg(arg, 2, true);
     assert_eq!(codes, "");
     assert_eq!(parts.len(), 1);
   }
@@ -292,7 +308,7 @@ mod tests {
   #[test]
   fn split_braket_arg_empty_input() {
     setup();
-    let (codes, parts) = split_braket_arg(toks(vec![]), 2);
+    let (codes, parts) = split_braket_arg(toks(vec![]), 2, true);
     assert_eq!(codes, "");
     assert_eq!(parts.len(), 1);
     assert_eq!(parts[0].len(), 0);

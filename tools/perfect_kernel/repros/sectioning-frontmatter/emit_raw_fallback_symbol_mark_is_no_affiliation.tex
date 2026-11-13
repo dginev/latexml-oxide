@@ -1,0 +1,20 @@
+% mechanism: `=2`'s queued whole-block call is Perl's raw `\lx@add@author{…}` (Base_Utility.pool.ltxml:693):
+%            no raw-token preparation, so no `\lx@frontmatter@symbolmark` of a symbol superscript feeds the reading
+% witness: 2608.19750 (IEEEtran `\IEEEauthorblockN{Ayong Ye\textsuperscript{*}}` over `\textsuperscript{*}Corresponding author`)
+% oracle:  pdflatex: 0 errors; "Bob Baker*", under it Univ B, bob@b.org, "*Corresponding author"
+% engines: rust MV1 `=2` and off: "*Corresponding author" glued into Bob Baker's affiliation ("Univ B * Corresponding
+%          author")
+% expect:  0 errors, 0 warnings; at `=2` Bob Baker's affiliation Univ B and his note "* Corresponding author"
+% status:  RED (MV1 =2) -> GREEN (FB2a)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able}
+\IEEEauthorblockA{Univ A\\ ann@a.org}
+\and
+\IEEEauthorblockN{Bob Baker\textsuperscript{*}}
+\IEEEauthorblockA{Univ B\\ bob@b.org\\ \textsuperscript{*}Corresponding author}}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,25 @@
+% mechanism: an `\email` inside an author's `\thanks` whose meaning is a binding's routes its address to the current
+%   author, the note's owner (Perl's `\lx@add@email`; OmniBus.cls.ltxml:78, which the siamart stub loads), so it is no
+%   guess for the reading's rule on a note's links (ruling 2026-10-20 #4: several links spelling no one stay in the
+%   note's text): it is the owner's e-mail, its address taken out of the note as the API takes it; kept in the text, the
+%   written note printed it nowhere, the `\email` call muted inside it. OmniBus's `\email` is a guess the fallback class
+%   locks (`\email:locked`, OD #408), read as the binding's (`ledger::email_meaning`); `=2` only
+% witness: 2511.14713 (siamart250211, `\thanks{Department of Mathematics, …, \email{wning@vt.edu},
+%   \email{amiedlar@vt.edu}.}`); also REVTeX's `\author{Bob Baker\thanks{Univ B, \email{cy@b.org}, \email{dy@b.org}.}}`
+% oracle:  pdflatex (2511.14713's siamart250211.cls; 2006.12120's siamart220329.cls the same) 0 errors: "ANN ABLE∗ ,
+%   BOB BAKER† , AND CY COLE‡", the footnotes "∗ Univ A, ann@a.org, corresponding author.", "† Univ B, cy@b.org,
+%   dy@b.org.", "‡ ey@c.org, fy@c.org"
+% engines: perl: each address its note's owner's e-mail, the notes "Univ A, , corresponding author.", "Univ B, , .",
+%   ","; rust off: the same; LO3 `=2`: cy@, dy@, ey@, fy@ printed nowhere (the content check's Warning)
+% expect:  0 errors, 0 warnings; `=2`: every address its note's owner's, Cy Cole's emptied note dropped (ruling 4)
+% status:  RED (LO3 `=2`) -> GREEN (perfect_kernel_batchlo4::an_email_call_in_a_note_is_its_owners)
+% preload: ar5iv.sty
+\documentclass{siamart250211}
+\title{T}
+\author{Ann Able\thanks{Univ A, \email{ann@a.org}, corresponding author.}
+\and Bob Baker\thanks{Univ B, \email{cy@b.org}, \email{dy@b.org}.}
+\and Cy Cole\thanks{\email{ey@c.org}, \email{fy@c.org}}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

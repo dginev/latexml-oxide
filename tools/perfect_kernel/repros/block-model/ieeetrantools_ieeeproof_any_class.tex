@@ -5,8 +5,8 @@
 % engines: rust 64ra = 2 errors ("The environment {IEEEproof} is not defined", "\IEEEQEDhere is not defined"); Perl 2
 %          errors, 1 warning (no IEEEtrantools binding, the raw file not loaded)
 % expect:  0 errors, 0 warnings; an `ltx:proof` titled "Proof:" with the ∎ inline, none at the end
-% status:  RED (64ra) — not fixed in 64ra (move the IEEEproof/QED block from ieeetran_cls.rs into the shared
-%          `define_ieeeeqnarray` family, or a sibling shared definer, called by both bindings)
+% status:  RED (64ra) -> GREEN (67x: the IEEEproof/QED block moved from ieeetran_cls.rs into the shared
+%          `define_ieeeproof`, called by both bindings)
 % preload: ar5iv.sty
 \documentclass{article}
 \usepackage{IEEEtrantools}

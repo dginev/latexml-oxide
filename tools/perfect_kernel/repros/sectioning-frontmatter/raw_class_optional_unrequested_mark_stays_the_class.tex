@@ -1,0 +1,30 @@
+% witness: w-art.cls's `\address[\inst{1}]{…}` (0910.5837, 1105.1753, quant-ph0606237); review rev94b r3 B2 (its probes
+%          `p/b2` orph3, orph4i) and B2b (`p/b2/kl_cd`)
+% oracle:  pdflatex 0 errors: "(1 ) Univ A, Town", "(2 ) Univ B, City", "(3 ) Lab C, Place", "(4 ) Lab D, Place",
+%          "(c, d) Lab E, Place" where they are called, then "A Title", "Ann Able1 and Bob Baker2", "Body."
+% engines: rust 94b r3 = 0 errors, 0 warnings: "Lab C, Place" a creator of no name's; "4Lab D, Place" both authors';
+%          "Lab E, Place" both authors', captioned "c, d"
+% expect:  0 errors, 0 warnings; an optional mark no name requests and a list of single-word keys no name requests are
+%          in doubt: the class's line where it is called (`optional_contact`); Ann Able "Univ A, Town", Bob Baker "Univ
+%          B, City", the three lines in the body; eager and --streaming the same
+% status:  RED (94b r3) -> GREEN (94b r4)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{optaddress.cls}
+\ProvidesClass{optaddress}
+\LoadClass{article}
+\renewcommand\author[2][]{\gdef\@author{#2\ifx\relax#1\relax\else\textsuperscript{#1}\fi}}
+\newcommand\address[2][]{\par{\small\ifx\relax#1\relax\else(#1) \fi #2}\par}
+\def\inst#1{\textsuperscript{#1}}
+\end{filecontents*}
+\documentclass{optaddress}
+\begin{document}
+\title{A Title}
+\author{Ann Able\inst{1} and Bob Baker\inst{2}}
+\address[\inst{1}]{Univ A, Town}
+\address[\inst{2}]{Univ B, City}
+\address[\inst{3}]{Lab C, Place}
+\address[$^{4}$]{Lab D, Place}
+\address[c, d]{Lab E, Place}
+\maketitle
+Body.
+\end{document}

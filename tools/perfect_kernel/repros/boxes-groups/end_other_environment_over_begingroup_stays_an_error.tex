@@ -1,0 +1,15 @@
+% Negative control: `\end{Y}` over a `\begingroup` inside `\begin{X}` is LaTeX's `\@badend` ("\begin{flushleft} …
+% ended by \end{center}"), and stays the error it is: only X's own `\end{X}` closes the inner group and X
+% (stomach.rs end_environment_over_plain_groups).
+% witness: synthetic (control for 1404.3644's raa.cls:322-349 shape)
+% oracle:  pdflatex 1 error (LaTeX Error: \begin{flushleft} on input line 3 ended by \end{center}): ill-formed on
+%          purpose; "Mismatched words." "After words."
+% engines: rust int132a1 = 2 errors, 1 warning; perl = 4 errors, 1 warning
+% expect:  2 errors, 1 warning, unchanged; the words kept
+% status:  GREEN (control; guard perfect_kernel_batch98d::end_over_begingroup_without_its_environment_stays_an_error)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\begin{flushleft}\begingroup Mismatched words.\par\end{center}\endgroup
+After words.
+\end{document}

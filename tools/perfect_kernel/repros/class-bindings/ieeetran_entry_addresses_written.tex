@@ -1,0 +1,20 @@
+% witness: 2202.02533 (`\IEEEauthorblockA{$^1$Dept…\\ $^2$…} Email: \{salman0335, ykyawtun7, cshong\}@khu.ac.kr, …`),
+%          2401.16729, 1303.4266, 2405.16358; the fm scorer's IEEEtran rows (18 creators `email_of_other`)
+% oracle:  pdflatex (TL 2025): "Ann Able1, Bob Baker1, and Cid Cole2", "1Univ X", "2Univ Y",
+%          "Email: {ann.able, bbaker}@x.org, cid@y.org"
+% engines: rust int124a = the shadow right (each address its speller's, entries cut), not written (IEEEtran's
+%          `written: false`): today's every creator holds the whole e-mail line as an affiliation
+% expect:  0 errors, 0 warnings; IEEEtran is written (brief 95b, OD #942): Ann Able Univ X ann.able@x.org, Bob Baker
+%          Univ X bbaker@x.org, Cid Cole Univ Y cid@y.org
+% status:  RED (int124a) -> GREEN (95b) — perfect_kernel_batch95b::ieeetran_is_written
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann Able$^1$, Bob Baker$^1$, and Cid Cole$^2$}
+\IEEEauthorblockA{$^1$Univ X\\
+$^2$Univ Y}
+Email: \{ann.able, bbaker\}@x.org, cid@y.org}
+\maketitle
+Text.
+\end{document}

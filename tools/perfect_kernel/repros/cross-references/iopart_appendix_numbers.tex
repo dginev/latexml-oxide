@@ -1,0 +1,17 @@
+% witness: arXiv 0712.1190, 1509.00381 (appendix equations 70, 72 where the PDF prints A.1, A.3; a figure 5 for B1; \ref "A" for "Appendix A")
+% oracle:  pdflatex 0 errors with iopart.cls (1509.00381's copy, :498-519; 0712.1190's :489-510); "See Appendix A, Appendix B, (1), (A.1), (B.1), figure B1."
+% engines: rust (int50a) = "See A, B, (1), (2), (3), figure 1."; Perl 0.8.8 the same (fidelity3 audit N3)
+% expect:  0 errors; appendix refnums "Appendix A"/"Appendix B" (tag not doubled), equations A.1, B.1, figure B1
+% status:  RED (int50a) -> GREEN (78n, KNOWN_PERL_ERRORS #1078)
+\documentclass[12pt]{iopart}
+\begin{document}
+\section{Intro}
+\begin{equation}a=b\label{e1}\end{equation}
+\appendix
+\section{Proof}\label{app}
+\begin{equation}c=d\label{e2}\end{equation}
+\section{More}\label{app2}
+\begin{equation}g=h\label{e3}\end{equation}
+\begin{figure}\caption{F.}\label{f}\end{figure}
+See \ref{app}, \ref{app2}, (\ref{e1}), (\ref{e2}), (\ref{e3}), figure \ref{f}.
+\end{document}

@@ -1,0 +1,21 @@
+% witness: 2404.06813 (chemist.sty:892-895 `\mathversion` tests `\csname mv@#1\endcsname` after :957
+%   `\DeclareMathVersion{chem}`) — the rc_struct4 M2 shape (agent_reports/2026-10-17_rc_struct4.md)
+% oracle:  pdflatex 0 errors: latex.ltx:13083-13090 `\DeclareMathVersion` defines `\mv@<name>` (and, for a new name,
+%   `\mv@<name>@reset`), so a package's own `\csname mv@chem\endcsname` test finds it: "Version chem defined, reset
+%   defined." and the formula
+% engines: rust 67int19 = 0 errors but "undefined" twice (chemist: "Math version `chem' is not defined"), perl = the same
+%   (latex_constructs.pool.ltxml:2658 defines nothing; KNOWN_PERL_ERRORS #927)
+% expect:  0 errors; "Version chem defined, reset defined."
+% status:  RED (70b held the fix back: with `\mv@chem` defined, chemist's `\mathversion{chem}` (:899-909) sets mathcodes
+%   for its version's OT1 `letters` (`\SetSymbolFont{letters}{chem}{OT1}{cmr}`, :958), which ours decodes as OML — in
+%   2404.06813, 1707.08434, 1807.01228, 1704.03424 commas became `;`, `(`/`)` `↼`/`↽`, a minus vanished; needs the
+%   symbol fonts of a math version modelled first; KNOWN_PERL_ERRORS #927)
+\documentclass{article}
+\makeatletter
+\@ifundefined{mv@chem}{\DeclareMathVersion{chem}}{}
+\edef\x{\expandafter\ifx\csname mv@chem\endcsname\relax undefined\else defined\fi}
+\edef\y{\expandafter\ifx\csname mv@chem@reset\endcsname\relax undefined\else defined\fi}
+\makeatother
+\begin{document}
+Version chem \x, reset \y. {\mathversion{chem}$x+1$}
+\end{document}

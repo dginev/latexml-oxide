@@ -1,0 +1,14 @@
+% witness: the 77p r4 re-review's probe w10: `$^1$Univ A~~and~~$^2$Univ B`, the word "and" in a run between two marked
+%          affiliation entries
+% oracle:  pdflatex 0 errors: "Ann Able1 and Bob Baker2 / 1Univ A and 2Univ B"
+% engines: rust 77p r4 = 0 errors; Ann Able's affiliation "Univ A and"; int34a "Univ A and 2Univ B" on Ann Able, a
+%          creator "Bob Baker2"
+% expect:  0 errors, 0 warnings; Ann Able with Univ A, Bob Baker with Univ B
+% status:  RED (77p r4) -> GREEN (77p r5)
+\documentclass{article}
+\title{T}
+\author{Ann Able$^1$~~and~~Bob Baker$^2$ \\ $^1$Univ A~~and~~$^2$Univ B}
+\begin{document}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,27 @@
+% wiley-article's stores: the paper type and journal section its `\maketitle` prints, and the correspondence block,
+% e-mail and funding line only its own abstract environment prints (refused by the kernel's locked abstract): each
+% is a K11 table setter, its value a frontmatter element, once.
+% witness: 1808.01384 (wiley-article.cls:206-209, :213-214, :416-433), 1911.06213, 2012.13110 (nbdt-article too)
+% oracle:  pdflatex (tpwiley.cls beside it) 0 errors: "ORIGINAL ARTICLE / Journal Section / On Widgets / A. Author /
+%          Correspondence / A. Author, Department of Statistics, … / Email: author@example.edu / Funding information /
+%          This study was supported by the Example Foundation. / Abstract. We study widgets. / Body text."
+% engines: rust 67int27 = 0 errors, the correspondence, e-mail and funding lost, type and section a body paragraph;
+%          perl (OmniBus, the class is not read) = 5 errors (each setter undefined)
+% expect:  0 errors, 0 warnings; ltx:pubnote[role=type], ltx:pubnote, ltx:note[role=correspondence|email|funding],
+%          each value once; the abstract
+% status:  RED (67int27) -> GREEN (75a)
+% preload: ar5iv.sty
+\documentclass{tpwiley}
+\papertype{Original Article}
+\paperfield{Journal Section}
+\corraddress{A. Author, Department of Statistics, University of California, Davis, USA}
+\corremail{author@example.edu}
+\fundinginfo{This study was supported by the Example Foundation.}
+\begin{document}
+\title{On Widgets}\author{A. Author}
+\maketitle
+\begin{abstract}
+We study widgets.
+\end{abstract}
+Body text.
+\end{document}

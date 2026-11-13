@@ -1,0 +1,19 @@
+% witness: 2412.14256, 2508.18808, 2608.12136 (`\cref` to labels of a shipped supplement `.aux`), 2402.05535 (`\autoref*`),
+%          IEEEtran `\mbox {IV-A.1}` section numbers in the other document's `.aux` (45 references in popint79g)
+% oracle:  pdflatex 0 errors, "See fig. S1, Equation (S2), subsection II-A, Figure S1 and Section II-A; also section 1."
+%          (cleveref reads `\r@<label>@cref`, hyperref's `\autoref` the anchor's type; the guard supplies `supp.aux`,
+%          written by pdflatex for a document with hyperref and cleveref)
+% engines: rust int79c = the `\cref`s and `\autoref`s `ltx_missing_label`, the `\ref` "\mbox II-A"; Perl: no xr binding
+% expect:  0 errors, 0 warnings; each reference prints what pdflatex prints, `\cref{sec:main}` stays a reference here
+% status:  RED (int79c) -> GREEN (79h)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{hyperref}
+\usepackage{cleveref}
+\usepackage{xr}
+\externaldocument[S-]{supp}
+\begin{document}
+\section{Main}\label{sec:main}
+See \cref{S-fig:s1}, \Cref{S-eq:s2}, \autoref{S-sec:sa}, \autoref*{S-fig:s1} and Section~\ref{S-sec:sa}; also \cref{sec:main}.
+\end{document}

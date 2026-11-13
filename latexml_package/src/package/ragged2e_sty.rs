@@ -24,10 +24,14 @@ LoadDefinitions!({
     \\let\\LaTeXflushleft\\flushleft \\let\\endLaTeXflushleft\\endflushleft
     \\let\\LaTeXflushright\\flushright \\let\\endLaTeXflushright\\endflushright
   \\fi")?;
-  // Just copy the basic defns from LaTeX
-  Let!("\\Centering",   "\\centering");
-  Let!("\\RaggedRight", "\\raggedright");
-  Let!("\\RaggedLeft",  "\\raggedleft");
+  // The kernel's commands, but `\\` is made the newline only where it is still the one ragged2e saved when it loaded
+  // (ragged2e.sty:189 `\let\@raggedtwoe@savedcr\\`, :216-218 `\ifx\\\@raggedtwoe@savedcr\let\\…\fi`): in a
+  // tabular cell (`>{\RaggedRight}p{…}` ending a row, 1606.01980) `\\` stays the row end, where the kernel's
+  // `\raggedright` makes it a line break (sect06.rs; pdflatex errs there).
+  RawTeX!(r"\let\@raggedtwoe@savedcr\\
+\def\Centering{\ifx\\\@raggedtwoe@savedcr\let\\\@normalcr\fi\lx@do@centering}
+\def\RaggedRight{\ifx\\\@raggedtwoe@savedcr\let\\\@normalcr\fi\lx@do@raggedright}
+\def\RaggedLeft{\ifx\\\@raggedtwoe@savedcr\let\\\@normalcr\fi\lx@do@raggedleft}");
   Let!("\\Center",      "\\center");
   Let!("\\endCenter",   "\\endcenter");
   Let!("\\FlushLeft",   "\\flushleft");

@@ -1,0 +1,18 @@
+% mechanism: a macro of no parameters printing two names (`\author{\small\myauthors \\ Univ Z}`): read with its expansion
+%   in its place (`reading::unfold_held_names`, AUT1, OD #993), each name has its own run, so the names no longer overlap
+%   and each is its creator, the `\thanks` note Ann Able's and Univ Z both authors' line. The overlap path this repro
+%   guarded before (`emit::names_overlap`, the block written whole) is `cl9_shared_parameter_macro_note`'s now
+% witness: cond-mat9310042, 1602.03850; review revX1 finding 1 (q4b)
+% oracle:  pdflatex 0 errors: "Ann Able*, Bob Baker / Univ Z"; footnote "* Univ X."
+% engines: off the block whole, the note kept (Error 1); int153w =2 "Univ X." lost (3 Warnings); CL9b to int167a the
+%   block whole, the note kept, Warning 1
+% expect:  0 errors, 0 warnings; creators Ann Able (note "Univ X.", Univ Z), Bob Baker (Univ Z)
+% status:  GREEN (AUT1; guard perfect_kernel_batchaut1)
+\documentclass{scrartcl}
+\newcommand{\myauthors}{Ann Able\thanks{Univ X.}, Bob Baker}
+\begin{document}
+\title{T}
+\author{\small\myauthors \\ Univ Z}
+\maketitle
+Text.
+\end{document}

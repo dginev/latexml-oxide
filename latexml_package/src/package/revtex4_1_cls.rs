@@ -1,13 +1,14 @@
+use super::revtex4_cls;
 use crate::prelude::*;
 #[rustfmt::skip]
 LoadDefinitions!({
   // Perl: revtex4-1.cls.ltxml
-  for option in ["overload", "preprint", "manuscript", "showpacs", "noshowpacs",
+  for option in ["overload", "showpacs", "noshowpacs",
     "showkeys", "noshowkeys", "balancelastpage", "nobalancelastpage",
-    "preprintnumbers", "nopreprintnumbers", "bibnotes", "nobibnotes",
-    "footinbib", "nofootinbib", "altaffilletter", "altaffilsymbol",
+    "bibnotes", "nobibnotes",
+    "footinbib", "nofootinbib",
     "superbib", "citeautoscript", "raggedbottom", "flushbottom",
-    "tightenlines", "lengthcheck", "eqsecnum", "secnumarabic",
+    "tightenlines", "lengthcheck",
     "fleqn", "floats", "endfloats",
     // Perl L29 also declares the starred `endfloats*`; Rust was missing it
     // so `\documentclass[endfloats*]{revtex4-1}` fell through to the article
@@ -17,14 +18,48 @@ LoadDefinitions!({
     "groupedaddress", "unsortedaddress", "runinaddress",
     "superscriptaddress", "byrevtex", "floatfix", "nofloatfix",
     "ltxgridinfo", "outputdebug", "raggedfooter",
-    "newabstract", "oldabstract", "checkin"].iter()
+    "newabstract", "oldabstract"].iter()
   {
     DeclareOption!(*option, None);
   }
+  // The front matter's footnote marks (revtex4_support_sty.rs `\frontmatter@thefootnote`): letters under
+  // `altaffilletter`, symbols by default and under `altaffilsymbol` (revtex4-1.cls:5955-5957, revtex4.cls:3934-3937,
+  // revtex4-2.cls:5976-5978).
+  DeclareOption!("altaffilletter", {
+    assign_value("revtex@altaffilletter", true, Some(Scope::Global));
+  });
+  DeclareOption!("altaffilsymbol", {
+    assign_value("revtex@altaffilletter", false, Some(Scope::Global));
+  });
+  // The options that decide whether the class prints the `\preprint` numbers (revtex4-1.cls:5856-5909, revtex4.cls
+  // :3847-3892, revtex4-2.cls alike): `preprint` (and `manuscript`, `checkin`) set the preprint style, which prints
+  // them unless `nopreprintnumbers`; `preprintnumbers` prints them in any style (revtex4_support_sty.rs
+  // `preprint_printed`).
+  for option in ["preprint", "manuscript", "checkin"] {
+    DeclareOption!(option, {
+      assign_value("revtex@preprintsty", true, Some(Scope::Global));
+    });
+  }
+  DeclareOption!("preprintnumbers", {
+    assign_value("revtex@preprintnumbers", Stored::Bool(true), Some(Scope::Global));
+  });
+  DeclareOption!("nopreprintnumbers", {
+    assign_value("revtex@preprintnumbers", Stored::Bool(false), Some(Scope::Global));
+  });
+  // The society and journal, which the section numbers depend on (the `rmp` journal, apsrmp4-1.rtx:115-139; PRL's
+  // `secnumdepth`, aps4-1.rtx:564), are read from the options as the class reads them
+  // (`revtex4_support_sty::selected_journal`).
   for substyle in ["aps", "pra", "prb", "prc", "prd", "pre", "prl",
     "prstab", "rmp", "osa", "osameet", "opex", "tops", "josa"].iter()
   {
     DeclareOption!(*substyle, None);
+  }
+  // The options that number the sections and equations (`revtex4_support_sty::define_section_numbers`): `eqsecnum`
+  // (revtex4-1.cls:6036-6043) and `secnumarabic` (:6047-6050).
+  for option in ["eqsecnum", "secnumarabic"] {
+    DeclareOption!(option, {
+      assign_value(&s!("revtex@opt@{option}"), true, Some(Scope::Global));
+    });
   }
   // Perl revtex4-1.cls.ltxml L40-45:
   //   my @revtex_toload = ();        # EMPTY by default
@@ -79,9 +114,34 @@ LoadDefinitions!({
   DeclareOption!("author-year", {
     assign_value("revtex_cite_style", pin("authoryear"), Some(Scope::Global));
   });
+  // revtex4-1.cls:6186-6193 `\DeclareOption{linenumbers}{\appdef\class@documenthook{\RequirePackage{lineno}…\linenumbers}}`:
+  // the option loads lineno at the document's start, and papers given it call `\nolinenumbers`, `{linenomath}`
+  // (revtex4-1 and revtex4-2 papers of run 353: 16 + 16 with the option and lineno's commands undefined; 1010.3732,
+  // 1209.2541, 2003.07846, 2010.12920). Without the option the class loads none: a paper calling them then errs in
+  // pdflatex too. Perl's binding lacks the option (KNOWN_PERL_ERRORS #697).
+  DeclareOption!("linenumbers", {
+    assign_value("revtex_linenumbers", true, Some(Scope::Global));
+  });
+  // revtex4-1.cls:6194-6198, revtex4-2.cls:6215-6219: `nomerge` turns natbib's entry merging off.
+  DeclareOption!("nomerge", {
+    assign_value("revtex_nomerge", true, Some(Scope::Global));
+  });
   assign_value("revtex_cite_style", pin("numbers"), Some(Scope::Global));
   ProcessOptions!();
   LoadClass!("article");
+  // The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`), as revtex4_cls.rs:
+  // 510pt in two 246pt columns under `twocolumn` or `reprint`, one column of 510pt otherwise; `preprint` sets 468pt,
+  // in two 229pt columns where `twocolumn` or a `reprint` given before it sets two (review rev78x2 finding 4).
+  // Witnesses 2005.13806 (`reprint`), 1104.5578 (`twocolumn`).
+  {
+    let preprint = matches!(last_class_option(&["preprint", "manuscript", "reprint"]), Some("preprint" | "manuscript"));
+    let twocolumn = matches!(last_class_option(&["twocolumn", "onecolumn", "reprint"]), Some("twocolumn" | "reprint"));
+    let (column, text) = if preprint { (229.0, 468.0) } else { (246.0, 510.0) };
+    declare_panel_page(column, text, twocolumn);
+  }
+  // REVTeX's floats are centred (revtex4-1.cls:6749-6751 `\appdef\@xfloat@prep{\appdef\@parboxrestore{\centering}}`):
+  // a `\\` in them is `\@centercr` (`declare_panel_floats_centred`).
+  declare_panel_floats_centred();
   // Queue the citation style onto natbib (numbers → numeric `[N]`; author-year →
   // natbib's default). `\PassOptionsToPackage` on purpose, not a direct
   // `RequirePackage("natbib", [numbers])`: pre-loading natbib here flips it ahead
@@ -91,8 +151,22 @@ LoadDefinitions!({
   if lookup_string("revtex_cite_style") == "numbers" {
     Digest!("\\PassOptionsToPackage{numbers}{natbib}")?;
   }
+  // revtex4-1.cls:7021 `\RequirePackage[sort&compress]{natbib}`: a citation's numbers sorted, a run of three or more
+  // joined with an en dash ("[1–3]"; natbib_sty.rs, KNOWN_PERL_ERRORS #1072). Guard
+  // `perfect_kernel_batch78j::revtex_citations_sort_and_compress`.
+  Digest!("\\PassOptionsToPackage{sort&compress}{natbib}")?;
   RequirePackage!("revtex4_support");
+  // revtex4-1.cls:2649-2662: an author block repeated after `\maketitle` switched off (`revtex4_cls.rs`).
+  revtex4_cls::switch_off_author_block_after_maketitle()?;
+  // revtex4-1.cls:7046, revtex4-2.cls:7067 `\let\NAT@merge\thr@@`: `\cite{a,*b}` merges b's entry into a's
+  // (`natbib_sty::natbib_merge_citations`; REVTeX 4.0 does not merge). 1808.00247.
+  if !lookup_bool("revtex_nomerge") {
+    natbib_sty::natbib_merge_citations("\\thr@@", false)?;
+  }
+  revtex4_support_sty::define_section_numbers("4-1")?;
   revtex4_support_sty::record_implicit_bibstyle("4-1");
+  revtex4_support_sty::retire_option_handlers();
+  revtex4_support_sty::define_float_repair()?;
 
   // Load the AMS packages requested via options BEFORE the `.rty` input.
   // Perl revtex4-1.cls.ltxml runs `map { RequirePackage($_) } @revtex_toload`
@@ -112,21 +186,13 @@ LoadDefinitions!({
   // Perl revtex4-1.cls.ltxml L60-63: auto-load `<jobname>.rty` if present.
   // Same convention as revtex4 — paper-local macros stashed in .rty file.
   Digest!("\\InputIfFileExists{\\jobname.rty}{}{}")?;
+  if lookup_bool("revtex_linenumbers") {
+    DefPrimitive!("\\lx@revtex@lineno", {
+      RequirePackage!("lineno");
+    });
+    RawTeX!(r"\AtBeginDocument{\lx@revtex@lineno}");
+  }
 
-  // revtex4-1.cls L1965: `\providecommand\doi[0]{\begingroup\@sanitize@url\@doi}`
-  // — `\@sanitize@url` makes URL special chars (incl. `%`) catcode-other
-  // BEFORE the argument is read. Used in bibliography entries (e.g.
-  // `\doi{10.1103/PhysRevLett.123.210602}`). For XML we just emit the DOI
-  // as a hyperlink.
-  //
-  // `Semiverbatim` neutralizes SPECIALS (`_ & # ^ ~ $ '`) but NOT `%`, so
-  // a DOI like `10.7567%2Fjjaps...` had its `%` treated as a comment —
-  // eating the closing `}`, leaving `\doi{` unclosed and sending
-  // `readBalanced` runaway-to-EOF then an infinite pushback loop (FATAL).
-  // `HyperVerbatim` does `begin_semiverbatim(['%'])` (the `\@sanitize@url`
-  // analogue) so `%`/`_`/`&`/`#` are all literal. Witnesses: 2006.12945
-  // (`\doi{...%2F...}` → PushbackLimit FATAL; Perl raw-loads the cls and is
-  // clean), 2403.08476, 2112.03925 (`_` in DOIs).
-  DefMacro!("\\doi HyperVerbatim", "doi:\\href{https://doi.org/#1}{#1}");
-  DefMacro!("\\doibase",   "https://doi.org/");
+  // The class internals documents call, `\doi` among them (`define_revtex41_internals`).
+  revtex4_support_sty::define_revtex41_internals()?;
 });

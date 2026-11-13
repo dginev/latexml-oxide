@@ -174,18 +174,44 @@ pub fn set_align_group_count(v: i32) {
   }
 }
 pub fn local_align_group_count(v: i32) { locals_mut!().align_group_count.push(v); }
+/// The alignment brace count as it stands (tex.web's `align_state`, with its stack of saved values), to be put back by
+/// [`restore_align_group_count`] after a digestion whose tokens are not the document's input.
+pub fn mark_align_group_count() -> (usize, Option<i32>) {
+  let locals = locals!();
+  (
+    locals.align_group_count.len(),
+    locals.align_group_count.last().copied(),
+  )
+}
+/// Puts back the alignment brace count [`mark_align_group_count`] read: the stack at its depth then, the current value
+/// as it was. A `{` the abandoned digestion scanned and never closed is no longer counted against the document's `&`s.
+pub fn restore_align_group_count(mark: (usize, Option<i32>)) {
+  let (depth, value) = mark;
+  trace_align_state("restore", align_group_count(), value.unwrap_or_default());
+  let mut locals = locals_mut!();
+  let stack = &mut locals.align_group_count;
+  stack.truncate(depth);
+  if let Some(value) = value {
+    if stack.len() < depth {
+      stack.resize(depth, value);
+    }
+    if let Some(top) = stack.last_mut() {
+      *top = value;
+    }
+  }
+}
 pub fn expire_align_group_count() -> Option<i32> { locals_mut!().align_group_count.pop() }
 
 /// Disables tab marks for the lifetime of the guard, restoring the previous
-/// count on drop — `tex.web` §394 `macro_call`:
-///
-/// ```text
-/// align_state:=1000000; {disable tab marks, etc.}
-/// ```
-///
-/// TeX suppresses `&` and `\cr` while it scans a macro's parameters, so a tab
-/// mark inside an argument is an ordinary token. Without that, a `&` in a
-/// **delimiter-fenced** argument reaches the alignment as a cell break: for
+/// count on drop — what ltcmd does around every argument it reads: latex.ltx:2103-2110
+/// (`\__cmd_start:nNNnnn`) opens `\group_align_safe_begin:` (closed at :2128), which raises `align_state`
+/// by the backquote-constant rule (tex.web §442), and physics.sty does it by hand around its fenced reads
+/// (`{\ifnum\z@=`}\fi`, physics.sty:35/74/141). TeX's own `macro_call` (§389-399) does NOT disable tab
+/// marks — the `{disable tab marks, etc.}` of `align_state:=1000000` is `read_toks`, behind `\read`
+/// (tex.web §482) — so a plain macro's delimited argument holding an `&` inside an alignment errs in TeX
+/// too ("Argument of \… has an extra }"); arming this in `Parameters::read_arguments` would be unfaithful.
+/// For an ltcmd/physics reader, without it a `&` in a **delimiter-fenced** argument reaches the alignment as a
+/// cell break: for
 /// `\mqty( b_0 &0 \\ 0 &b_1 )` (physics.sty, witness 2605.05903) the row splits
 /// mid-argument and the alignment then cannot close its own group —
 /// `Error:unexpected:\lx@begin@alignment Attempt to close a group that switched

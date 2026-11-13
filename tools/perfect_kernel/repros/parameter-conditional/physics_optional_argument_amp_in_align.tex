@@ -1,0 +1,19 @@
+% A physics operator's optional `[…]` argument is read align-safe, as ltcmd reads an `o` argument (latex.ltx:2103-2110
+% `\group_align_safe_begin:`): a matrix `&` inside it does not break the enclosing `align` row.
+% witness: 2606.03447 (main.tex:457-469 `\exp[ - \frac14 \begin{matrix} … & … \end{matrix} … ]` in an align)
+% oracle:  pdflatex 0 errors; both rows set, "TAILTEXT survives." after the display
+% engines: rust 67int26 = 11 Errors (`\lx@begin@alignment` attempt to close a group that switched to mode
+%          restricted_horizontal), TAILTEXT lost; Perl the same 11 (physics.sty.ltxml:283 `readOptional`)
+% expect:  0 errors, 0 warnings; one equation group with 2 rows, the 2x2 matrix inside the exp application; TAILTEXT
+% status:  RED (67int26) -> GREEN (int26)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{physics}
+\begin{document}
+\begin{align}
+  P &= \exp[ - \begin{matrix} a & b \\ c & d \end{matrix} ] \\
+  Q &= 1
+\end{align}
+TAILTEXT survives.
+\end{document}

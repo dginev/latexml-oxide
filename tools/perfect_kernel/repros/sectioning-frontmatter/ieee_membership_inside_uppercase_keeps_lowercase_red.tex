@@ -1,0 +1,16 @@
+% mechanism: `\uppercase{Cy Three, \IEEEmembership{Life Fellow, IEEE}}` — the last group's grade keeps its lowercase
+%   (pre-existing on int166a and int167a); since P5a an earlier group's grade prints "MEMBER, IEEE" as pdflatex does,
+%   with a counted Warning ("writes "MEMBER, IEEE" as its plain text, its markup lost: span no balanced run").
+% witness: 2402.07183 (Hitoshi Kiya "Life Fellow, IEEE" where pdflatex prints "LIFE FELLOW, IEEE"; CL167)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "ANN ONE, BOB TWO, MEMBER, IEEE, CY THREE, LIFE FELLOW, IEEE"
+% engines: rust int167a: Bob Two "MEMBER, IEEE" (1 W, markup lost), Cy Three "Life Fellow, IEEE" (lowercase)
+% expect:  both grades uppercase as printed, their markup kept, 0 W
+% status:  RED (CL167, int167a) — moves: post-merge (UPCS)
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\uppercase{Ann One}, \uppercase{Bob Two, \IEEEmembership{Member, IEEE}},
+\uppercase{Cy Three, \IEEEmembership{Life Fellow, IEEE}}}
+\maketitle
+Body.
+\end{document}

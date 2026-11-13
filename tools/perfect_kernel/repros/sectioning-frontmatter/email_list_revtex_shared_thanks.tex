@@ -1,0 +1,29 @@
+% REVTeX's `\thanks{Corresponding Authors (bbaker@x.org; zz9@y.org; q1@z.org)}` written under two authors: `bbaker@`
+%   Bob Baker's by its spelling; the two left spell no one and outnumber the one carrier left, so no order and no
+%   elimination places them — the block's own creator holds them (OD #159), once; "Corresponding Authors" stays each
+%   carrier's note (`distribute_address_lists`, OD #972; census138 ADDR-b).
+% witness: 2508.07950 (`\thanks{Corresponding Authors (chunfeng.lian@…; wzy218@…; cong6406@…; jhma@…)}` on four
+%   authors)
+% oracle:  pdflatex 0 errors: "Ann Able,1 Bob Baker,1, ∗ and Cat Cole2, ∗" (the footnotes endnotes after a BibTeX run)
+% engines: rust int139a3 = the whole note on Bob Baker and Cat Cole
+% expect:  0 errors, 0 warnings; Bob Baker: "Corresponding Authors", bbaker@x.org, Univ X; Cat Cole: "Corresponding
+%   Authors", Univ Y; the block creator: zz9@y.org, q1@z.org
+% status:  RED (int139a3) -> GREEN (107f)
+% preload: ar5iv.sty
+\documentclass[aps,prl,superscriptaddress]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\affiliation{Univ X, Town}
+\author{Bob Baker}
+\thanks{Corresponding Authors (bbaker@x.org; zz9@y.org; q1@z.org)}
+\affiliation{Univ X, Town}
+\author{Cat Cole}
+\thanks{Corresponding Authors (bbaker@x.org; zz9@y.org; q1@z.org)}
+\affiliation{Univ Y, City}
+\begin{abstract}
+A.
+\end{abstract}
+\maketitle
+Text.
+\end{document}

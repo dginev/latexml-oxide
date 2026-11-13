@@ -1,0 +1,30 @@
+% A raw class's run-in `\affil` line led by a control-sequence footnote symbol no name requests (`$^\dagger$Deceased`
+% under `Ann Able$^{1}$, Bob Baker$^{2}$`) is in doubt, as a line led by an unrequested letter or digit is: the class's
+% text where it prints, no author's contact (frontmatter_stores.rs `leads_with_unrequested_mark`, `is_a_mark`: the
+% symbol commands count as a mark; review rev99b2 F2, where it went to every author of the run).
+% witness: review rev99b2 probes q4c, q4g (the observer declining over ORCID links: same line); `$^*$` control q4i
+% oracle:  pdflatex 0 errors: "Ann Able1, Bob Baker2", "1Univ A, Town", "2Univ B, City", "†Deceased"
+% engines: rust int127a = "†Deceased" an affiliation of both authors; perl = no raw class load (OmniBus `\affil`)
+% expect:  0 errors, 0 warnings; Ann Able holds "1Univ A, Town", Bob Baker "2Univ B, City", nothing else; the body
+%          holds "†Deceased" and "Text."
+% status:  RED (int127a) -> GREEN (100a)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{ipunr.cls}
+\ProvidesClass{ipunr}\LoadClass{article}
+\renewcommand{\author}[1]{{\raggedright #1\par}}
+\newcommand{\affil}[1]{{\small\raggedright #1}}
+\end{filecontents*}
+\documentclass{ipunr}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$}
+
+\affil{$^1$Univ A, Town}
+
+\affil{$^2$Univ B, City}
+
+\affil{$^\dagger$Deceased}
+
+\maketitle
+Text.
+\end{document}

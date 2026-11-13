@@ -1,0 +1,13 @@
+% A figure printing `\@title`: a float's content is the author's, never the title block, so the print stays; and the
+% figure keeps the shape it has without marks (an empty-element mark before its paragraph added a `<break>`).
+% status:  GREEN at 67int19b → GREEN (fms1), guarding the scope and the shape.
+% oracle:  pdflatex 0 errors: "Float Store Title", "Figure 1: c", "1 Intro Text."
+% expect:  0 errors, 0 warnings; no `field_ink` Info; the figure holds the centered title line and its caption.
+\documentclass{article}
+\makeatletter
+\title{Float Store Title}
+\begin{document}
+\begin{figure}[h]\centering{\Large \@title\par}\caption{c}\end{figure}
+\section{Intro}
+Text.
+\end{document}

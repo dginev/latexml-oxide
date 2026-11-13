@@ -1,0 +1,21 @@
+% witness: 2602.12633 (`\author{Author Names Omitted for Anonymous Review}` then the real `\author{Tianyi Xiang$^{1}$,
+%          …}`): the IEEEtran census's one Fatal under the writer (95b r1)
+% oracle:  pdflatex (TL 2025): the second `\author` alone, "Ann Able1, Bob Baker1, and Cid Cole2", and the unmarked
+%          notes "1Ann Able and Bob Baker are with Univ X (e-mail: ann.able@x.org; bbaker@x.org).", "2Cid Cole is with
+%          Univ Y (e-mail: cid@y.org)."
+% engines: rust 95b r1 = Fatal `panic:caught` "index out of bounds: the len is 3 but the index is 3": the reading
+%          deletes the replaced call's creator at the end of `resolve`, and the take-out's holders kept the indices
+%          from before (the last holder past the end; any other one the creator after its own)
+% expect:  0 errors, 0 warnings; the second call's creators alone, each address its speller's, written
+% status:  RED (95b r1) -> GREEN (95b) — perfect_kernel_batch95b::entry_addresses_after_a_replaced_author_are_written
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\author{Author Names Omitted for Anonymous Review}
+\author{Ann Able$^{1}$, Bob Baker$^{1}$, and Cid Cole$^{2}$%
+\thanks{$^{1}$Ann Able and Bob Baker are with Univ X (e-mail: ann.able@x.org; bbaker@x.org).}
+\thanks{$^{2}$Cid Cole is with Univ Y (e-mail: cid@y.org).}}
+\begin{document}
+\title{T}
+\maketitle
+Text.
+\end{document}

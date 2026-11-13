@@ -1,0 +1,14 @@
+% mechanism: pgf reads a number opening with `0` as octal (pgfmathparser.code.tex:355-358, 486-497) and errs on an
+%   8 or 9 ("Digit `8' invalid for base 8"); ours (PGR1) reads valid octal (`010+1` is 9.0) and an 8 or 9 as decimal,
+%   silently.
+% witness: synthetic (found by PGR1's sibling sweep)
+% oracle:  pdflatex 23 `!` (Digit `8' invalid for base 8, then Missing number ×7 … Emergency stop), no PDF
+% engines: rust int162a (b7acabe304) and PGR1: [9.0], 0 errors, 0 warnings
+% expect:  a counted Error
+% status:  RED (PGR1)
+% moves:   post-merge (with the pgfparse Error of pgfmath_empty_operand_parses_silently_red)
+\documentclass{article}
+\usepackage{pgf}
+\begin{document}
+\pgfmathparse{08+1}[\pgfmathresult]
+\end{document}

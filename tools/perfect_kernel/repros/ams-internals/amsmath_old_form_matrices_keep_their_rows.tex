@@ -1,0 +1,21 @@
+% witness: run-367 E->F C1, the 7 papers that load amsmath (by ptptex.cls:362): hep-ph0110005, hep-ph9509392,
+%          hep-ph9511429, hep-ph9702336, hep-th9908038, nucl-th0305048, hep-th9910005; the other 4 load none in
+%          pdflatex (0805.4522, 1003.3524, nucl-th0206027, quant-ph0607049; repro
+%          old_form_matrix_is_plain_tex_where_amsmath_is_not_loaded)
+% oracle:  pdflatex 19 errors, the first of each call "Package amsmath Error: Old form `\pmatrix' should be
+%          \begin{pmatrix}" (amsmath.sty:1077-1090 `\matrix@check`), then its `&`/`\cr` misplaced; the environments clean
+% engines: rust int32a = 15 errors (the old form's `\cr`s in an amsmath alignment's cell, tex.web §1127), perl = 12
+%          (KNOWN_PERL_ERRORS #993)
+% expect:  3 errors, the amsmath "Old form" error once per old-form call; every matrix an XMArray with its rows
+%          (`matrix@(Array[[t, u], [b, c]])`, `cases@(z, [if z>0], -z, [otherwise])`), the environments 0 errors
+% status:  RED (int32a) -> GREEN (77q: amsmath_sty.rs `\lx@ams@matrix@check`)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\begin{equation} x=\pmatrix{t & u\cr b & c} \end{equation}
+\begin{equation} y=\matrix{1 & 2\cr 3 & 4} \end{equation}
+\begin{equation} |z|=\cases{z & if $z>0$\cr -z & otherwise} \end{equation}
+\begin{equation} w=\begin{pmatrix} p & q\\ r & s\end{pmatrix}+\begin{cases} 1 & a\\ 0 & b\end{cases} \end{equation}
+After.
+\end{document}

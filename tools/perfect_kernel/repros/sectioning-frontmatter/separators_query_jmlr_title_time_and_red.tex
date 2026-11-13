@@ -1,0 +1,28 @@
+% mechanism: the binding-callable separator query (`observer/separators.rs` `argument_separators`, `\lx@fm@separators`;
+%   OD #995, Option C P2-0) reads a separator's meaning where it is called, at the call site: a binding asks at
+%   `\author`/`\institute`, before `\maketitle`. jmlr.cls defines its word `\and` (`\def\and{\unskip\enspace{\normalfont
+%   and}\enspace}`, jmlr.cls:336) and its row `\AND` (:340) only inside `\jmlrpreauthor`, which its `\maketitle` runs, so
+%   at the call site `\and` is still the kernel's and the query answers `kernel`, as the gate it replaces
+%   (`frontmatter_stores.rs` `kernel_and_list`) does — while the class's title prints the word "and" between the names.
+%   The same holds for every class that defines or `\let`s `\and` only inside its title macro. Reading the meaning in
+%   force when the title prints is a separate mechanism (proposed as its own batch, not built)
+% witness: synthetic (revP20 B1, its probe `pr/jmlr.tex`; jmlr.cls:336-340)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: J0 prints "Ann Able" and "Bob Baker" in two columns (the
+%   kernel `\and` at that point, `\lx@fm@separators` provided as the kernel title's author tabular); the title block
+%   prints "Ann Able and Bob Baker" (the class's word)
+% engines: Perl 0.8.8: no such query (not run); P20 (93541f6f93) and P20b: J0[kernel]
+% expect:  (a title-time reading) J0 names the class's word, not `kernel`; 0 errors
+% status:  RED (Known: the query is the call site's by design; title-time reading proposed as its own batch, no guard)
+\documentclass{jmlr}
+\makeatletter
+\providecommand\lx@fm@separators[1]{\begin{tabular}[t]{c}#1\end{tabular}}
+\newcommand\sep[1]{[\lx@fm@separators{#1}]}
+\makeatother
+\title{T}
+\author{\Name{Ann Able} \and \Name{Bob Baker}}
+\begin{document}
+J0\sep{Ann Able \and Bob Baker}
+
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,15 @@
+% witness: synthetic (QA54); microtype.sty:189 `\RequirePackage{keyval}`
+% oracle:  pdflatex 0 errors ("Key: one")
+% engines: rust int160b = 3 errors (`\define@key`, `\setkeys`, `\myk` undefined), stray "myk" text; Perl the same
+%          (microtype.sty.ltxml loads etoolbox only, :27-28)
+% expect:  0 errors, 0 warnings; "Key: one"
+% status:  RED (int160b) -> GREEN (PI1)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{microtype}
+\makeatletter
+\define@key{my}{k}{\def\myk{#1}}
+\makeatother
+\begin{document}
+\setkeys{my}{k=one}Key: \myk
+\end{document}

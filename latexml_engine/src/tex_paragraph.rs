@@ -163,8 +163,18 @@ LoadDefinitions!({
 
   DefConstructor!("\\lx@normal@par",
     sub[document, _args, props] {
+      // (in a frontmatter item whose element holds only inline content, a line break: OXIDIZED_DESIGN_DIVERGENCES #766)
+      let item = prop_string!(props, "frontmatter_item");
+      if !item.is_empty() && frontmatter_paragraph_break(document, &item)? {
+        return Ok(());
+      }
       if !prop_bool!(props, "noop") {
         document.maybe_close_element("ltx:p")?;
+        // A source paragraph break between a float's panels ends their row (the panel grid rule,
+        // `note_panel_separator`); not the one leaving horizontal mode inserts (2605.00347, below).
+        if !prop_bool!(props, "internal_par") {
+          crate::latex_constructs::note_panel_separator(document, "par", None)?;
+        }
         let element = document.get_element();
         if let Some(mut node) = element {
           let qname = document::get_node_qname(&node);
@@ -211,11 +221,21 @@ LoadDefinitions!({
       }
     },
     before_digest => {
-      // tex.web §1046-1047 `mmode+par_end`: "Missing $ inserted", the inline formula ended and this `\par` read again
-      // after it; this whatsit, left in the formula, reverts as nothing (`lx@par@reread`). OXIDIZED_DESIGN #553.
+      // A `\par` in an inline formula the math after it continues (a formula split by a blank line, hep-th9402135):
+      // the formula goes on, as Perl's, and this whatsit reverts as nothing (`lx@par@void`). It still clears the
+      // paragraph shape, as every `\par` (below); the `next_para_class` and `\vadjust` work of its after-digest is
+      // left to the `\par` that ends the paragraph, which this one does not. Otherwise tex.web §1046-1047
+      // `mmode+par_end`: "Missing $ inserted", the inline formula ended and this `\par` read again after it; this
+      // whatsit, left in the formula, reverts as nothing. OXIDIZED_DESIGN #553.
+      if formula_continues_past_par() {
+        assign_value("parshape", Stored::None, None);
+        assign_value("interlinepenalties", Stored::None, None);
+        assign_value("lx@par@void", true, None);
+        return Ok(Vec::new());
+      }
       let again = get_current_token().unwrap_or_else(|| T_CS!("\\par"));
       if insert_dollar_sign(Tokens!(again))? {
-        assign_value("lx@par@reread", true, None);
+        assign_value("lx@par@void", true, None);
         return Ok(Vec::new());
       }
       // Perl: combine any digested horizontal material into a horizontal List
@@ -234,8 +254,8 @@ LoadDefinitions!({
       assign_value("interlinepenalties", Stored::None, None);
     },
     after_digest => sub[whatsit] {
-      if lookup_bool("lx@par@reread") {
-        assign_value("lx@par@reread", false, None);
+      if lookup_bool("lx@par@void") {
+        assign_value("lx@par@void", false, None);
         whatsit.set_property("noop", true);
         whatsit.set_property("reversion", Tokens!());
         return Ok(Vec::new());
@@ -245,6 +265,12 @@ LoadDefinitions!({
       if LookupBool!("INTERNAL_PAR") {
         whatsit.set_property("internal_par", true);
         whatsit.set_property("reversion", Tokens!());
+      } else {
+        // the frontmatter field whose own paragraph break this is (`frontmatter_paragraph_field`), whose element decides
+        // at construction what it makes (`frontmatter_paragraph_break`)
+        if let Some(item) = frontmatter_paragraph_field() {
+          whatsit.set_property("frontmatter_item", item);
+        }
       }
       // \par is a NOOP only in the RAW preamble — before `\begin{document}` opens the
       // document environment (package loading, stray `\str_lowercase` output in the

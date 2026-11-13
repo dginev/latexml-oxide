@@ -33,28 +33,240 @@ pub(crate) fn make_missing_float_counters() -> Result<()> {
   Ok(())
 }
 
-#[rustfmt::skip]
-/// OXIDIZED_DESIGN #179, the "has chapters" step: after a class has loaded,
-/// the kernel-level `\chapter` (Perl pool:557, locked) is retracted unless
-/// the class made a chapter counter (Perl's own probe, pool:690) or the class
-/// is the OmniBus fallback. Runs at `\documentclass` AND at `\LoadClass`
-/// return (sect05.rs): a class body's probe `\@ifundefined{chapter}` after
-/// its `\LoadClass{article}` (aguplus.cls:524 "figcaps may only be used with
-/// article-like classes") must already see article's answer, as in LaTeX
-/// where article never defines one. The lock is released with the
-/// definition so a class that builds its own chapters afterwards
-/// (source3body.tex:100-123 `\newcounter{chapter}` + `\newcommand\chapter`)
-/// is not "Ignoring redefinition of \chapter" (KNOWN_PERL_ERRORS #141).
-/// Guard: `perfect_kernel_batch56::loadclass_return_retracts_kernel_chapter`.
-pub(crate) fn retract_kernel_chapter_if_chapterless() -> Result<()> {
-  if lookup_definition(&T_CS!("\\c@chapter"))?.is_none()
-    && !lookup_bool("OmniBus.cls_loaded")
-    && !lookup_bool("OmniBus.cls.ltxml_loaded")
+/// OXIDIZED_DESIGN #179, before the document's class loads: the kernel-level `\chapter` (Perl pool:557, locked) is
+/// cleared, as latex.ltx defines none, so the class's own code meets `\chapter` undefined, as in TeX: a raw class's
+/// `\@ifundefined{chapter}` takes the undefined branch and its `\providecommand\chapter` defines. The lock stays, with
+/// the kernel's binding kept aside as for a file's clearing `\let` (`\chapter:locked@cleared`, state.rs `let_i`,
+/// OXIDIZED_DESIGN #569): the class's own definition is refused, the kernel's chapter put back in its place and the
+/// refusal recorded (`\chapter:redefined`, (a) of the "has chapters" test), so a raw class's chapters stay LaTeXML's
+/// `<chapter>` (scrbook.cls, read raw by scrbook_cls.rs). Where the class has chapters by a binding's counter or
+/// OmniBus's guess, [`settle_chapter_after_class_load`] puts the kernel's back (a binding that needs it during its own
+/// load reads `\lx@kernel@chapter`: amsart_cls.rs `\specialsection`). Only the document's first `\documentclass`: a
+/// second one (a merged file's) loads no class in TeX — in the preamble latex.ltx:18618 of TL 2025 has made it
+/// `\@twoclasseserror`, in the body :18621 `\@onlypreamble\documentclass` stops it ("Can be used only in preamble",
+/// a diagnostic we do not raise yet, SYNC_STATUS) — and keeps the first class's chapters (memoir with a second
+/// `\documentclass{memoir}` in the body: both chapters).
+pub(crate) fn retract_chapter_before_class_load() {
+  if lookup_bool("\\chapter:settles") {
+    return;
+  }
+  let chapter = T_CS!("\\chapter");
+  // (kept aside: LaTeXML's chapter, with a counter of its own at the first call where the class made none)
+  if lookup_bool("\\chapter:locked")
+    && let Some(binding) = lookup_meaning(&T_CS!("\\lx@kernel@chapter@counted"))
   {
-    let_i(&T_CS!("\\chapter"), &T_CS!("\\@undefined"), Some(Scope::Global));
+    assign_value("\\chapter:locked@cleared", binding, Some(Scope::Global));
+  }
+  assign_meaning(&chapter, Stored::None, Some(Scope::Global));
+  // (a refusal of the class's own `\chapter` by the lock is read after the load)
+  assign_value("\\chapter:redefined", false, Some(Scope::Global));
+  assign_value(CLASS_HAS_CHAPTERS, false, Some(Scope::Global));
+  // (the LaTeX 2.09 `\documentstyle` keeps the kernel's `\chapter` in every class: only a `\documentclass` settles)
+  assign_value("\\chapter:settles", true, Some(Scope::Global));
+}
+
+/// Set by the document's first `\documentclass` or `\documentstyle`: a second `\documentstyle` loads no class
+/// (latex.ltx:18617-18624 `\@twoclasseserror`; `tex_job.rs` `\lx@documentstyle@impl`). Cleared again when no
+/// binding and no file answered the class (the OmniBus fallback; main-session ruling 2026-10-19, astro-ph9812142).
+pub const CLASS_DECLARED: &str = "lx@class@declared";
+
+/// The document's class, named by its first `\documentclass` or `\documentstyle` before the class loads
+/// (`lx@document@class`, read by `is_document_class`).
+pub fn note_document_class(class_name: &str) {
+  if lookup_string("lx@document@class").is_empty() {
+    let base = class_name.rsplit('/').next().unwrap_or(class_name);
+    assign_value("lx@document@class", base.to_string(), Some(Scope::Global));
+  }
+}
+
+#[rustfmt::skip]
+/// OXIDIZED_DESIGN #179, the "has chapters" step, after each class load of a `\documentclass` document: the class's
+/// own (`\documentclass`), a raw class's `\LoadClass`/`\LoadClassWithOptions` (sect05.rs), a binding's `LoadClass!`
+/// (setup_binding_language.rs) and a runtime script binding's `LoadClass` (latexml_contrib script_bindings/engine.rs;
+/// guard `perfect_kernel_batch72b::a_script_binding_class_load_settles_the_chapters`). It makes the one "has chapters" test (`state::class_has_chapters_now`: (a) the class's
+/// own code assigned `\chapter`, (b) a compiled binding made `\c@chapter`, (c) OmniBus guesses an unknown class) and
+/// stores its answer for `state::class_defines_chapter` — natbib's forks, appendix.sty, titlesec.sty and the kernel's
+/// `\appendix` read it. Where the class has chapters by (b) or (c) and `\chapter` is undefined, the kernel's is put
+/// back, locked (a report-based binding's later code and packages see it); where it has none, `\chapter` is left
+/// undefined and unlocked, so every `\@ifundefined{chapter}` a class or package makes gets TeX's answer: the raw natbib
+/// forks under bmvc2k (bmvc2k_natbib.sty:779) and WileyNJD (NJDnatbib.sty:1050) took the `\chapter*{\bibname}` branch
+/// (2412.14509, 2212.00057, 2210.06270, 1501.07873, 2311.17607, 2406.08486; 2101.06297, 2211.16474, 2411.11493,
+/// 2206.08798, 2602.03829, 2408.07575, 2609.08425, 2506.14995), blindtext's `\blinddocument` made a chapter
+/// (blindtext.sty:243, hvfloat's test documents, coseoul, xassoccnt), and a class body's probe after its
+/// `\LoadClass{article}` (aguplus.cls:524 "figcaps may only be used with article-like classes") saw article's answer.
+/// A class that builds its own chapters afterwards (source3body.tex:100-123 `\newcounter{chapter}` +
+/// `\newcommand\chapter`) is not "Ignoring redefinition of \chapter" (KNOWN_PERL_ERRORS #141). A document that calls
+/// `\chapter` all the same gets LaTeXML's chapter with one Warning (OXIDIZED_DESIGN #734, `\lx@chapterless@chapter`).
+/// Its own removal is no assignment of a stand-in's copy: a copy's `\LoadClass` (tlp) settles outside the copy's
+/// provides-mode.
+/// Guards: `perfect_kernel_batch56::loadclass_return_retracts_kernel_chapter`,
+/// `perfect_kernel_batch72b::chapter_exists_where_the_class_has_chapters`,
+/// `perfect_kernel_batch72b::a_class_has_chapters_when_its_code_defines_chapter`.
+pub fn settle_chapter_after_class_load() -> Result<()> {
+  if !lookup_bool("\\chapter:settles") {
+    return Ok(());
+  }
+  let chapter = T_CS!("\\chapter");
+  let (assigned, kernel_kept) = class_chapter_sources();
+  assign_value(CLASS_HAS_CHAPTERS, assigned || kernel_kept, Some(Scope::Global));
+  if assigned {
+    return Ok(());
+  }
+  let defined = lookup_meaning(&chapter).is_some_and(|m| !matches!(m, Stored::None));
+  let _outside_copy = (definition::origin::copy_provides() != 0)
+    .then(|| definition::origin::CopyProvidesGuard::new(0));
+  if kernel_kept {
+    if !defined {
+      // (with a chapter counter of its own at the first call where the class made none: OmniBus's guess (c) and
+      // subfiles make none, so 1906.09200's chapters were "Counter 'chapter' was not defined")
+      let_i(&chapter, &T_CS!("\\lx@kernel@chapter@counted"), Some(Scope::Global));
+      assign_value("\\chapter:locked", true, Some(Scope::Global));
+    }
+  } else {
+    if defined {
+      let_i(&chapter, &T_CS!("\\@undefined"), Some(Scope::Global));
+    }
     assign_value("\\chapter:locked", false, Some(Scope::Global));
   }
+  // (the kernel's binding is in place or the name is free: nothing kept aside for a refusal to put back)
+  assign_value("\\chapter:locked@cleared", Stored::None, Some(Scope::Global));
   Ok(())
+}
+
+/// OXIDIZED_DESIGN #179, the LaTeX 2.09 `\documentstyle` document (tex_job.rs): its class keeps the kernel's `\chapter`
+/// (only a `\documentclass` retracts it, `\chapter:settles`), so nothing is put back or cleared, but the "has chapters"
+/// answer is stored where the class's load ends — at its end-of-class hook, after latex209.def's `\@documentclasshook`
+/// and before `\compat@loadpackages` loads the style options — and `\chapter:stored` makes
+/// `state::class_defines_chapter` read it from then on. A refusal the document's own `\def\chapter` meets later
+/// (`\chapter:redefined`) is no class's chapters: `\documentstyle{article}` + `\newcounter{chapter}` +
+/// `\def\chapter#1{…}` letters its appendix "A", as pdflatex, and `\documentstyle[appendix]{report}` still numbers its
+/// appendix chapters "Appendix A". `begin`: the refusals recorded before the class load are no class's either.
+/// Guard: `perfect_kernel_batch72b::appendices_follow_the_class_chapters`.
+pub fn store_chapter_after_latex_ix_class_load(begin: bool) {
+  if begin {
+    assign_value("\\chapter:redefined", false, Some(Scope::Global));
+    assign_value("\\chapter:stored", false, Some(Scope::Global));
+    return;
+  }
+  assign_value(
+    CLASS_HAS_CHAPTERS,
+    class_has_chapters_now(),
+    Some(Scope::Global),
+  );
+  assign_value("\\chapter:stored", true, Some(Scope::Global));
+}
+
+/// OXIDIZED_DESIGN #734: at `\begin{document}`, after the begin-document hooks have run (so a package's
+/// `\AtBeginDocument` test of `\chapter` still gets TeX's answer), a `\chapter` the class left undefined is given
+/// LaTeXML's chapter as its stand-in (`kernel_autoload::name_undefined_fallback`, read where the undefined token is
+/// met). The name stays undefined, so a test made in the body (blindtext.sty:243 `\blinddocument`, hvfloat's test
+/// documents) also gets TeX's answer, while a document that calls `\chapter` converts, with one Warning
+/// (`\lx@chapterless@chapter`). A call made in the preamble or a begin-document hook met the undefined name, as in TeX
+/// (one Error), and left its undefined-error stub: TeX's `\chapter` is still undefined after it, so the stub goes and the
+/// body's call reads the stand-in. Witnesses: 0802.3014, 0909.2812, 0907.3938, 1403.2269, 1507.01872, 1511.03874,
+/// 1606.03650, 2504.00704 (`Error:undefined:\chapter` before).
+/// Guards: `perfect_kernel_batch72b::chapter_in_a_chapterless_class_is_the_kernel_chapter_with_a_warning`,
+/// `perfect_kernel_batch72b::a_preamble_chapter_errs_and_the_body_chapter_reads_the_stand_in`.
+pub(crate) fn supply_chapter_fallback() {
+  let chapter = T_CS!("\\chapter");
+  if lookup_bool("\\chapter:error@stub") {
+    let_i(&chapter, &T_CS!("\\@undefined"), Some(Scope::Global));
+    assign_value("\\chapter:error@stub", false, Some(Scope::Global));
+  }
+  if lookup_meaning(&chapter).is_none_or(|m| matches!(m, Stored::None)) {
+    binding::kernel_autoload::name_undefined_fallback(&chapter, T_CS!("\\lx@chapterless@chapter"));
+  }
+}
+
+/// What `\end{<env>}` expands to, typesetting (latex.ltx:15382-15393 `\end `).
+fn end_environment_tokens(env: Tokens) -> Result<Tokens> {
+  let name = Expand!(env).to_string();
+  // (the document does not end in a speculative digestion, by an `\enddocument` a class wrapped neither)
+  if name == "document" && in_speculative_digestion() {
+    return Ok(Tokens::new(Vec::new()));
+  }
+  let before = lookup_tokens(&s!("@environment@{name}@atend"));
+  let after = lookup_tokens(&s!("@environment@{name}@afterend"));
+  let use_hook = |point: &str| env_hook_tokens(&name, point);
+  let t = T_CS!(s!("\\end{{{name}}}"));
+  let mut out_tokens = Vec::new();
+  // The `\end{document}` half of the indirection (see `\begin`): a
+  // user-redefined `\enddocument` runs in place of the constructor (no
+  // `\endgroup`: see `\begin` — the document environment opens no group);
+  // the binding's own definition keeps the constructor.
+  // … \endgroup`); the binding's alias keeps the constructor.
+  // Symmetric with `\begin`: the user's `\enddocument` runs when the
+  // user's `\document` ran, or when `\document` was left alone and only
+  // `\enddocument` was redefined (tools-overview.tex:65). standalone.cls
+  // wraps both; its begin wrapper is self-referential and skipped, so its
+  // end wrapper (`\endstandalone`, closing a minipage the skipped begin
+  // never opened) is skipped too.
+  let indirected = name == "document" && lookup_bool("document:indirected");
+  let user_enddocument = name == "document"
+    && is_user_document_macro(&T_CS!("\\enddocument"), &T_CS!("\\lx@orig@enddocument"))
+    && (indirected || x_equals(&T_CS!("\\document"), &T_CS!("\\lx@orig@document")));
+  let orig_end = x_equals(&T_CS!("\\enddocument"), &T_CS!("\\lx@orig@enddocument"));
+  if indirected && !user_enddocument && !orig_end {
+    // The begin opened the group and `\enddocument` is a closure, not a
+    // user macro — exam-n's `\let\enddocument\endinput`, whose `\endinput`
+    // stops the included file after this line while `\end`'s tokens are
+    // already expanded, as in TeX. LaTeX's `\end{document}` =
+    // `\enddocument\endgroup`: run it, then close the begin's group.
+    // With the ORIGINAL `\enddocument` (a package wrapped `\document`
+    // around the original — dblfnote, etoolbox's `\AtEndPreamble` — and
+    // left the end alone) the finalizer runs as on the constructor path:
+    // in TeX the original never returns, so `\end`'s `\endgroup` is never
+    // reached, and here an explicit one met the document constructor's
+    // mode frame above the begin's group ("\endgroup Attempt to close a
+    // group that switched to mode internal_vertical" at `\end{document}`,
+    // seven manuals in sweep 83: yafoot-man, guitartabs, zanabazr, …).
+    let mut tks = before.map(Tokens::unlist).unwrap_or_default();
+    tks.extend(use_hook("end"));
+    tks.push(T_CS!("\\enddocument"));
+    tks.push(T_CS!("\\par"));
+    tks.push(T_CS!("\\endgroup"));
+    tks.extend(use_hook("after"));
+    if let Some(afterend_toks) = after {
+      tks.extend(afterend_toks.unlist())
+    }
+    return Ok(Tokens::new(tks));
+  }
+  if user_enddocument {
+    let mut tks = before.map(Tokens::unlist).unwrap_or_default();
+    tks.extend(use_hook("end"));
+    tks.push(T_CS!("\\enddocument"));
+    // `\par` first: an issue's last paragraph is still open, and this
+    // engine's group bookkeeping refuses to close a group that switched
+    // mode ("Attempt to close a group that switched to mode horizontal");
+    // TeX ends that paragraph at the next page/vertical material anyway.
+    tks.push(T_CS!("\\par"));
+    tks.push(T_CS!("\\endgroup"));
+    tks.extend(use_hook("after"));
+    if let Some(afterend_toks) = after {
+      tks.extend(afterend_toks.unlist())
+    }
+    return Ok(Tokens::new(tks));
+  }
+  if name != "document" && lookup_bool(&s!("lx@env@indirected@{name}")) {
+    // the begin took LaTeX's indirection (see `\begin`): `\endX`, then the begin's group closes
+    out_tokens = end_environment_by_macro(&name);
+  } else if is_defined_token(&t) {
+    // Magic CS! (its constructor fires `env/NAME/end` inside the group)
+    out_tokens.push(t);
+    out_tokens.extend(use_hook("after"));
+    if let Some(afterend_toks) = after {
+      out_tokens.extend(afterend_toks.unlist())
+    }
+  } else {
+    out_tokens = end_environment_by_macro(&name);
+  }
+  out_tokens.extend([
+    T_CS!("\\if@ignore"),
+    T_CS!("\\@ignorefalse"),
+    T_CS!("\\ignorespaces"),
+    T_CS!("\\fi"),
+  ]);
+  Ok(Tokens::new(out_tokens))
 }
 
 pub(crate) fn load() -> Result<()> {
@@ -157,27 +369,35 @@ pub(crate) fn load() -> Result<()> {
       // registration and falls through to OmniBus — which lacks revtex4's
       // `\email [] Semiverbatim`, so an `\email{a_b@…}` with `_` then errors
       // "Script _ can only appear in math mode". Witness 1601.06734.
-      let class_name: String = whatsit
-        .get_arg(2)
-        .unwrap()
-        .to_string()
-        .chars()
-        .filter(|c| !c.is_ascii_whitespace())
-        .collect();
+      // A lone brace group goes too, as latex.ltx reads the name (`\documentclass{{article}}`;
+      // `sect05::requested_class_name`).
+      let requested = whatsit.get_arg(2).unwrap().to_string();
+      let class_name = sect05::requested_class_name(&requested);
+      sect05::respell_file_argument(whatsit, 2)?;
+      assign_value(CLASS_DECLARED, true, Some(Scope::Global));
+      retract_chapter_before_class_load();
+      let omnibus_before = load_recorded("OmniBus.cls");
+      note_document_class(&class_name);
       load_class(&class_name,
                 class_opts,
                 Tokens!(T_CS!("\\AtBeginDocument"), T_CS!("\\warn@unusedclassoptions")))?;
-      // OXIDIZED_DESIGN #179: `\chapter` exists only where the class made a
-      // chapter counter. latex.ltx defines no `\chapter`; article/scrartcl
-      // never do, so `\@ifundefined{chapter}` is how packages decide
-      // (blindtext.sty:243 `\blinddocument`, hvfloat's 50 test docs,
-      // coseoul, xassoccnt: the kernel-level `\chapter` — Perl pool:557,
-      // locked — took the chapter branch and every doc errored
-      // `undefined:\thechapter`). The `\c@chapter` probe is Perl's own
-      // "has chapters" test (pool:690). An unknown class (OmniBus fallback)
-      // may well have chapters — OmniBus autoloads book.cls on `\thechapter`
-      // (arXiv:2602.10407) — so it keeps the kernel `\chapter`.
-      retract_kernel_chapter_if_chapterless()?;
+      // A class no binding and no file answered (the OmniBus fallback) is no declaration a later `\documentstyle`
+      // meets as the second (`tex_job.rs` `\lx@documentstyle@impl`; astro-ph9812142).
+      let base = class_name.rsplit('/').next().unwrap_or(&class_name);
+      if !omnibus_before && load_recorded("OmniBus.cls") && base != "OmniBus"
+        && [class_name.as_str(), base].iter().all(|name| {
+          !load_recorded(&s!("{name}.cls"))
+        })
+      {
+        assign_value(CLASS_DECLARED, false, Some(Scope::Global));
+      }
+      // OXIDIZED_DESIGN #179: `\chapter` exists only where the class has chapters (`settle_chapter_after_class_load`);
+      // a class answered by a binding not its own (an alternate, a versioned fallback) says so in the chapterless
+      // Warning, as the real class may have chapters (0909.2812: mn_thesis.cls → mnphd.cls → report, bound as `mn`).
+      if !binding_loaded(&s!("{base}.cls")) && !raw_loaded(&s!("{base}.cls")) {
+        assign_value("\\chapter:class@stood@in", class_name.clone(), Some(Scope::Global));
+      }
+      settle_chapter_after_class_load()?;
       make_missing_float_counters()?;
       Ok(())
   });
@@ -189,6 +409,12 @@ pub(crate) fn load() -> Result<()> {
   // the constructor's group when the original `\document` ran.
   DefPrimitive!("\\lx@document@indirected", {
     assign_value("document:indirected", Stored::Bool(true), None);
+    Ok(Vec::new())
+  });
+  // `\begin{X}` took LaTeX's indirection for an environment the document declared and redefined (see `\begin`):
+  // recorded inside the group it opens, for `\end{X}` to follow.
+  DefPrimitive!("\\lx@env@indirected{}", sub[(name)] {
+    assign_value(&s!("lx@env@indirected@{}", name.to_string()), Stored::Bool(true), None);
     Ok(Vec::new())
   });
   DefPrimitive!("\\lx@document@direct", {
@@ -319,7 +545,7 @@ pub(crate) fn load() -> Result<()> {
     // still undefined, the frontmatter a 2.09 journal option may bring, and replaces none (user ruling
     // 2026-10-11). OmniBus as the class itself, for a class with no binding or file (`\documentstyle`'s third
     // branch, tex_job.rs), loads whole.
-    if had_missing && !lookup_bool("OmniBus.cls_loaded") {
+    if had_missing && !load_recorded("OmniBus.cls") {
       Info!(
         "note",
         "OmniBus",
@@ -389,6 +615,10 @@ pub(crate) fn load() -> Result<()> {
   // is the same), pdflatex clean. DefEnvironment-managed environments fire
   // `begin`/`end` from their constructors (dialect.rs). Guard:
   // `perfect_kernel_batch56::kernel_env_hooks_fire_around_environments`.
+  // `protected`, as latex.ltx:15346 `\protected\def\begin`: an `\edef` keeps it (yquant-doc's `\protected@edef` of a box
+  // text `$\begin{pmatrix}…`, whose `\matrix@check` ran at edef time, "Old form"; Perl's is not, KPE #1211), and
+  // the look-ahead for `\omit` at a cell's head stops at it, as TeX's does. Guard
+  // `perfect_kernel_batchm3::begin_is_protected_in_an_edef`.
   DefMacro!("\\begin{}", sub[(env)] {
     let name = Expand!(env.clone()).to_string();
     let begin_name = format!("\\begin{{{name}}}");
@@ -444,6 +674,25 @@ pub(crate) fn load() -> Result<()> {
       tks.push(T_CS!("\\document"));
       return Ok(Tokens::new(tks));
     }
+    // The same indirection for an environment the document declared with `\newtheorem` (`lx@newtheorem@document@X`)
+    // and then redefined at `\X`: `\renewenvironment` (environ's `\RenewEnviron`), or a wrapper around the saved
+    // start (`\let\@lem\lem \def\lem{\@lem\label{…}}`). LaTeX's `\begin{X}` is `\begingroup\csname X\endcsname`, so the
+    // redefinition runs; the constructor ran regardless (Perl's `\begin` looks up `\begin{X}` first), and 2509.20478's
+    // `\makerestatable` never stored its restatements (three "No restatable environment" errors, five theorem labels
+    // dangling), 1502.00944's `\label` in the wrapper was lost. A `\X` still the constructor — or restored to it, an
+    // etoolbox `\csletcs` — keeps the constructor. KNOWN_PERL_ERRORS #1187; guard
+    // `perfect_kernel_batch80a::newtheorem_follows_a_redefined_start`.
+    if name != "document"
+      && has_value(&s!("lx@newtheorem@document@{name}"))
+      && is_defined(&begin_name)
+      && is_user_document_macro(&T_CS!(s!("\\{name}")), &T_CS!(begin_name.clone()))
+    {
+      let mut tks = begin_environment_by_macro(&name, env.clone())?;
+      let start = tks.pop();
+      tks.extend(Invocation!(T_CS!("\\lx@env@indirected"), vec![env]).unlist());
+      tks.extend(start);
+      return Ok(Tokens::new(tks));
+    }
     if is_defined(&begin_name) {
       let mut tks = before_opt.map(Tokens::unlist).unwrap_or_default();
       tks.extend(use_hook("before"));
@@ -484,7 +733,7 @@ pub(crate) fn load() -> Result<()> {
       }
       Ok(Tokens::new(begin_environment_by_macro(&name, env)?))
     }
-  });
+  }, protected => true);
 
   // latex.ltx:15384-15393 `\end` ends with the epilogue
   // `\if@ignore\@ignorefalse\ignorespaces\fi` AFTER the `env/#1/after` hook.
@@ -496,88 +745,22 @@ pub(crate) fn load() -> Result<()> {
   // `\DocInput` macrocode, 72 `misdefined:#` + Fatal; Perl fails the same
   // way). `\if@ignore` is false except after display math, so the group is
   // normally skipped whole.
+  // `\end ` is its body and `\end` latex.ltx:15365-15380's front: anywhere but typesetting, `\protect\end `, so that a
+  // `\protected@edef` keeps `\end{…}` as it keeps the `\protected` `\begin`, not their halves apart (yquant-doc;
+  // `perfect_kernel_batchm3::begin_is_protected_in_an_edef`), and a display `\string` prints it (KPE #1211). Typesetting,
+  // one expansion is the body's, as the front's `\romannumeral` makes it: siunitx's `f`-expanding collection of an `S` cell
+  // meets `\endtabular` (2505.21533, 2105.06936, where a `\end ` left behind read `{tabular}` as a group).
   DefMacro!("\\end {}", sub[(env)]{
-    let name = Expand!(env).to_string();
-    let before = lookup_tokens(&s!("@environment@{name}@atend"));
-    let after = lookup_tokens(&s!("@environment@{name}@afterend"));
-    let use_hook = |point: &str| env_hook_tokens(&name, point);
-    let t = T_CS!(s!("\\end{{{name}}}"));
-    let mut out_tokens = Vec::new();
-    // The `\end{document}` half of the indirection (see `\begin`): a
-    // user-redefined `\enddocument` runs in place of the constructor (no
-    // `\endgroup`: see `\begin` — the document environment opens no group);
-    // the binding's own definition keeps the constructor.
-    // … \endgroup`); the binding's alias keeps the constructor.
-    // Symmetric with `\begin`: the user's `\enddocument` runs when the
-    // user's `\document` ran, or when `\document` was left alone and only
-    // `\enddocument` was redefined (tools-overview.tex:65). standalone.cls
-    // wraps both; its begin wrapper is self-referential and skipped, so its
-    // end wrapper (`\endstandalone`, closing a minipage the skipped begin
-    // never opened) is skipped too.
-    let indirected = name == "document" && lookup_bool("document:indirected");
-    let user_enddocument = name == "document"
-      && is_user_document_macro(&T_CS!("\\enddocument"), &T_CS!("\\lx@orig@enddocument"))
-      && (indirected || x_equals(&T_CS!("\\document"), &T_CS!("\\lx@orig@document")));
-    let orig_end = x_equals(&T_CS!("\\enddocument"), &T_CS!("\\lx@orig@enddocument"));
-    if indirected && !user_enddocument && !orig_end {
-      // The begin opened the group and `\enddocument` is a closure, not a
-      // user macro — exam-n's `\let\enddocument\endinput`, whose `\endinput`
-      // stops the included file after this line while `\end`'s tokens are
-      // already expanded, as in TeX. LaTeX's `\end{document}` =
-      // `\enddocument\endgroup`: run it, then close the begin's group.
-      // With the ORIGINAL `\enddocument` (a package wrapped `\document`
-      // around the original — dblfnote, etoolbox's `\AtEndPreamble` — and
-      // left the end alone) the finalizer runs as on the constructor path:
-      // in TeX the original never returns, so `\end`'s `\endgroup` is never
-      // reached, and here an explicit one met the document constructor's
-      // mode frame above the begin's group ("\endgroup Attempt to close a
-      // group that switched to mode internal_vertical" at `\end{document}`,
-      // seven manuals in sweep 83: yafoot-man, guitartabs, zanabazr, …).
-      let mut tks = before.map(Tokens::unlist).unwrap_or_default();
-      tks.extend(use_hook("end"));
-      tks.push(T_CS!("\\enddocument"));
-      tks.push(T_CS!("\\par"));
-      tks.push(T_CS!("\\endgroup"));
-      tks.extend(use_hook("after"));
-      if let Some(afterend_toks) = after {
-        tks.extend(afterend_toks.unlist())
-      }
-      return Ok(Tokens::new(tks));
+    if x_equals(&T_CS!("\\protect"), &T_CS!("\\@typeset@protect")) {
+      return end_environment_tokens(env);
     }
-    if user_enddocument {
-      let mut tks = before.map(Tokens::unlist).unwrap_or_default();
-      tks.extend(use_hook("end"));
-      tks.push(T_CS!("\\enddocument"));
-      // `\par` first: an issue's last paragraph is still open, and this
-      // engine's group bookkeeping refuses to close a group that switched
-      // mode ("Attempt to close a group that switched to mode horizontal");
-      // TeX ends that paragraph at the next page/vertical material anyway.
-      tks.push(T_CS!("\\par"));
-      tks.push(T_CS!("\\endgroup"));
-      tks.extend(use_hook("after"));
-      if let Some(afterend_toks) = after {
-        tks.extend(afterend_toks.unlist())
-      }
-      return Ok(Tokens::new(tks));
-    }
-    if is_defined_token(&t) {
-      // Magic CS! (its constructor fires `env/NAME/end` inside the group)
-      out_tokens.push(t);
-      out_tokens.extend(use_hook("after"));
-      if let Some(afterend_toks) = after {
-        out_tokens.extend(afterend_toks.unlist())
-      }
-    } else {
-      out_tokens = end_environment_by_macro(&name);
-    }
-    out_tokens.extend([
-      T_CS!("\\if@ignore"),
-      T_CS!("\\@ignorefalse"),
-      T_CS!("\\ignorespaces"),
-      T_CS!("\\fi"),
-    ]);
-    Ok(Tokens::new(out_tokens))
+    let mut kept = vec![T_CS!("\\protect"), T_CS!("\\end "), T_BEGIN!()];
+    kept.extend(env.unlist());
+    kept.push(T_END!());
+    Ok(Tokens::new(kept))
   });
+  DefMacro!("\\lx@end@body {}", sub[(env)]{ end_environment_tokens(env) });
+  Let!("\\end ", "\\lx@end@body");
 
   TeX!(
     r"
@@ -587,6 +770,7 @@ pub(crate) fn load() -> Result<()> {
   #1%
   \ifx#2\@empty\else\expandafter\zap@space\fi
   #2}
+\let\lx@kernel@zap@space\zap@space
 \def\@unexpandable@protect{\noexpand\protect\noexpand}
 \def\x@protect#1{%
    \ifx\protect\@typeset@protect\else
@@ -685,7 +869,10 @@ pub(crate) fn load() -> Result<()> {
         let tag = document::get_node_qname(&context);
         let capture_block = pin!("ltx:_CaptureBlock_");
         if tag == capture_block {
-          // skip, if in insertBlock
+          // skip, if in insertBlock — except between a float's panels in a `{center}`, where it ends their row (the
+          // panel grid rule, `note_panel_separator`; 0912.4528 Fig 4, 1206.5015 Fig 3): `\@centercr`, whose `\par`
+          // ends the paragraph (`cr`)
+          note_panel_separator(document, "cr", None)?;
         } else if tag == pin!("ltx:p") {
           // Close <p> if parent is _CaptureBlock_
           if let Some(parent) = context.get_parent() {
@@ -707,7 +894,11 @@ pub(crate) fn load() -> Result<()> {
   );
   Let!("\\\\", "\\lx@newline");
 
-  DefConstructor!("\\newline", "?#isMath(<ltx:XMHint name='newline'/>)(<ltx:break/>)",
+  // latex.ltx:9256 `\DeclareRobustCommand\newline{\@normalcr\relax}`: `\newline` stays the justified break where
+  // `\centering`, `\raggedright` and `{center}` let `\\` to `\@centercr`, so an `\hspace` after it is a line's start,
+  // discarded at the break, never a paragraph's (the panel grid rule's `arrange_panels`, `PANEL_NORMALCR`; review
+  // rev78x4 finding 1: n3 F4, n7 F1). The internal attribute is gone from the markup at the document's end.
+  DefConstructor!("\\newline", "?#isMath(<ltx:XMHint name='newline'/>)(<ltx:break _normalcr='1'/>)",
     reversion  => Tokens!(T_CS!("\\newline"), T_CR!()),
     properties => { Ok(stored_map!("isBreak" => true)) },
   );

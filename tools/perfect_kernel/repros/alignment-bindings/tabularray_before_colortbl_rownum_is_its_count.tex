@@ -1,0 +1,17 @@
+% witness: synthetic (colortbl without xcolor, after tabularray)
+% oracle:  pdflatex 0 errors; cells "b1.1", "d2" (colortbl.sty:272 `\let\rownum\c@rownum`: tabularray's per-cell count
+%          read through `\rownum`)
+% engines: rust GA1b cells "b0.1", "d0" (colortbl's own `\newcount\rownum` beside tabularray's `\c@rownum`); rust GA1c
+%          as pdflatex
+% expect:  0 errors, 0 warnings; the cells as pdflatex
+% status:  GREEN (GA1c)
+\documentclass{article}
+\usepackage{tabularray}
+\usepackage{colortbl}
+\begin{document}
+\begin{tblr}{ll}
+a & b\the\rownum.\therownum \\
+c & d\number\rownum \\
+\end{tblr}
+
+\end{document}

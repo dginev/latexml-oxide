@@ -23,6 +23,32 @@ LoadDefinitions!({
       "label" => clean_label(&label_arg, None)))
   });
 
+  // nameref.sty:361-372 `\T@nameref` and `\@namerefstar`, the two branches `\nameref` dispatches to on its star
+  // (:376-384); a document that redefines `\nameref` calls them (2404.09236 `\DeclareRobustCommand*{\nameref}{…
+  // \@ifstar\T@nameref\T@nameref}`; 2503.18999, 2511.11546). Each is the reference `\nameref` builds. Perl's binding
+  // lacks them (KNOWN_PERL_ERRORS #821). Guard: `perfect_kernel_batch68j::nameref_internals_defined`.
+  DefConstructor!("\\T@nameref Semiverbatim",
+  "<ltx:ref class='ltx_refmacro_nameref' show='title' labelref='#label' _force_font='true'/>",
+  enter_horizontal => true,
+  properties => sub[args] {
+    let label_arg = args[0].as_ref().map(ToString::to_string).unwrap_or_default();
+    Ok(stored_map!(
+      "label" => clean_label(&label_arg, None)))
+  });
+  DefConstructor!("\\@namerefstar Semiverbatim",
+  "<ltx:ref class='ltx_refmacro_nameref ltx_nolink' show='title' labelref='#label' _force_font='true'/>",
+  enter_horizontal => true,
+  properties => sub[args] {
+    let label_arg = args[0].as_ref().map(ToString::to_string).unwrap_or_default();
+    Ok(stored_map!(
+      "label" => clean_label(&label_arg, None)))
+  });
+  // nameref.sty:70 `\strip@period`, which drops a title's final period (`\expandafter\strip@period\@currentlabelname
+  // \relax.\relax\@@@`, 1310.1737, 1805.08920, 1910.09092, 2109.09505 — 17 papers), and :88 `\label@hook`, the
+  // hook `\label` runs (empty here: the binding records the title itself; a document's own `\label` copy calls it,
+  // 2511.17271).
+  RawTeX!(r"\def\strip@period#1.\relax#2\@@@{#1}\providecommand*{\label@hook}{}");
+
   DefMacro!("\\Nameref", "\\nameref"); //\def\Nameref#1{‘\nameref{#1}’ on page~\pageref{#1}}
   DefMacro!("\\Sectionformat{}{}", "#1");
   DefMacro!("\\Ref", "\\ref"); // can be improved if "varioref.sty" is loaded?

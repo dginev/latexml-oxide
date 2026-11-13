@@ -1,0 +1,16 @@
+% Each multibib list reads its own style (multibib.sty:234 writes it to `<suffix>.aux`), keyed by the suffix `\newcites`
+% declares. The review's order: both declared before both lists.
+% witness: the review of M2 (int140a `alpha` on both, M2 `plain` on both).
+% oracle:  pdflatex + bibtex (TL 2025) 0 errors: main list [Zet01], web list [1].
+% engines: int140a bibstyle="alpha" on both; M2 bibstyle="plain" on both.
+% expect:  0 errors, 0 warnings; bibstyle="alpha" citestyle="AY" on the main list, bibstyle="plain" citestyle="numbers" on web.
+\documentclass{article}
+\usepackage{multibib}
+\newcites{web}{Web}
+\begin{document}
+Text \cite{zet} and \citeweb{wik}.
+\bibliographystyle{alpha}
+\bibliographystyleweb{plain}
+\bibliographyweb{multibib_each_list_reads_its_own_style}
+\bibliography{multibib_each_list_reads_its_own_style}
+\end{document}

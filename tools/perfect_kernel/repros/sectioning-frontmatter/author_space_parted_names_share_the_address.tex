@@ -1,0 +1,25 @@
+% witness: names parted by horizontal space on one line share the address lines under it, as comma-parted names do
+%          (user ruling 2026-10-19, batch 77p r2): `Yuxi Fu \ \ \  Han Zhu \\ BASICS, …` (1508.00093), `A. C. Cem Say
+%          ~~~~~~ Abuzer Yakary{\i}lmaz \\ … \\ \texttt{\{say,abuzer\}@…}` (1009.3124), `\alignauthor Ke Wang \ \ … Chao
+%          Han \\ \affaddr{…}` (1202.3179), `Arthur Szlam \:\:\:\:\:\: Jason Weston … \\ Facebook AI Research`
+%          (1503.08895), ACL's `~~`-parted rows (2304.13998), a `\quad` before the line break (`Zhiyuan Zhu\quad \\
+%          \textbf{Ruiqi Li} \quad … \\ Zhejiang University`, 2507.06670)
+% oracle:  pdflatex 0 errors: "Ann Able Bob Baker / Univ A", "Cat Cole Dan Dorn Eve Eads / Univ B / {cole,eads}@b.edu",
+%          "Fay Fox Gil Gray / Hal Hunt Ian Ives / Univ C" — each address under its whole row
+% engines: rust 77p r1 = the address on each row's last name only (Bob Baker, Eve Eads, Ian Ives); Perl merges
+%          "Ann Able Bob Baker" over a `\ ` run, the address on the last name of each `\quad`-parted row, the
+%          e-mails as an affiliation, "Hal Hunt Ian Ives" an affiliation of an empty creator
+% expect:  0 errors, 0 warnings; nine creators, Univ A on Ann Able and Bob Baker, Univ B on Cat Cole, Dan Dorn and Eve
+%          Eads (cole@ on Cat Cole, eads@ on Eve Eads), Univ C on Fay Fox, Gil Gray, Hal Hunt and Ian Ives
+% status:  RED (77p r1) -> GREEN (77p r2)
+\documentclass{article}
+\title{T}
+\author{Ann Able \ \ \ Bob Baker \\ Univ A
+\and
+Cat Cole \quad Dan Dorn \hspace{1em} Eve Eads \\ Univ B \\ \texttt{\{cole,eads\}@b.edu}
+\and
+Fay Fox~~~~Gil Gray\quad \\ Hal Hunt \hfill Ian Ives \\ Univ C}
+\begin{document}
+\maketitle
+Body.
+\end{document}

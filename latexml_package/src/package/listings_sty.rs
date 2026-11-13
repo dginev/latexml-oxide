@@ -279,26 +279,33 @@ fn read_balanced_group(tokens: &[Token], pos: &mut usize) -> Vec<Token> {
   result
 }
 
-/// Perl: TokenizeBalanced — tokenize a string with current catcodes, then balance groups.
+/// Perl: TokenizeBalanced — the TeX an escape holds (`escapechar`, `escapeinside`, `mathescape`, `texcl`), its groups
+/// balanced. listings executes it as TeX where it stands (lstmisc.sty `\lst@DefEsc`), reading it then, so a command
+/// in it may change the catcodes of what follows (`%B(col\verb._.idx(j))%`, 1106.5908: tokenized at once, the `_` was a
+/// subscript, "Script _ can only appear in math mode"). So the text is kept and read by a mouth of its own when the
+/// listing is digested (`\lx@lst@escape`), the balancing braces Perl adds put around it. Guard
+/// `perfect_kernel_batch73b::listings_escape_is_read_where_it_runs`.
 fn tokenize_balanced(text: &str) -> Vec<Token> {
-  let tokens = mouth::tokenize(TeXString::assembled(text.to_string()));
-  let mut toks: Vec<Token> = tokens.unlist();
   let mut level: i32 = 0;
-  for t in &toks {
+  let mut opened: i32 = 0;
+  for t in mouth::tokenize(TeXString::assembled(text.to_string())).unlist() {
     match t.get_catcode() {
       Catcode::BEGIN => level += 1,
       Catcode::END => level -= 1,
       _ => {},
     }
+    opened = opened.min(level);
   }
-  while level > 0 {
-    toks.push(T_END!());
-    level -= 1;
-  }
-  while level < 0 {
-    toks.insert(0, T_BEGIN!());
-    level += 1;
-  }
+  let open = usize::try_from(-opened).unwrap_or(0);
+  let close = usize::try_from(level - opened).unwrap_or(0);
+  let balanced = s!("{}{text}{}", "{".repeat(open), "}".repeat(close));
+  // The conversion's count (a State value, as the escapes it names).
+  let id = lookup_int("lx@lst@escapes") + 1;
+  assign_value("lx@lst@escapes", Stored::Int(id), Some(Scope::Global));
+  assign_value(&s!("lx@lst@escape@{id}"), balanced, Some(Scope::Global));
+  let mut toks = vec![T_CS!("\\lx@lst@escape"), T_BEGIN!()];
+  toks.extend(Explode!(id));
+  toks.push(T_END!());
   toks
 }
 
@@ -428,7 +435,10 @@ pub fn settle_verbatim_brace_ledger(init: Option<&Token>, close_counted: bool) {
 /// `labelstuff.tex`, `addcontentslineforlistoflabels.tex`, which the package
 /// does not ship). Guard: `package_leads_56::missing_listing_file_is_an_io_error`.
 pub fn listings_read_raw_file(file: &str) -> Result<Option<String>> {
-  let filename = file.to_string();
+  // TeX's file name skips the blanks before it and ends at the first one after it (tex.web §526), so
+  // `\lstinputlisting{⏎ examples/simple-correct.c⏎ }` reads `examples/simple-correct.c` (2511.21509; pdflatex
+  // finds it). Perl keeps the end-of-line spaces in the name and cannot find the file.
+  let filename = file.trim().to_string();
   // A file that exists only in the session's virtual file store — written by
   // `\write` emulations such as tcolorbox's `\tcbverbatimwrite` (the
   // `tcblisting` body goes to `\jobname.listing`, tcblistingscore.code.tex
@@ -439,7 +449,7 @@ pub fn listings_read_raw_file(file: &str) -> Result<Option<String>> {
   // `listing only` box (sim-os-menus' terminal windows; ~33 low-recall
   // manuals round-trip a listing file) rendered an EMPTY listing at 0
   // errors — Perl, with no virtual store, reports "Can't read listings file".
-  if let Some(text) = vfs_read(filename.trim()) {
+  if let Some(text) = vfs_read(&filename) {
     return Ok(Some(if text.contains('\r') {
       text.replace("\r\n", "\n").replace('\r', "\n")
     } else {
@@ -571,7 +581,9 @@ fn lst_split(stuff: &Option<Tokens>) -> Vec<String> {
         .map(|t| t.to_string())
         .unwrap_or_default();
       // Strip TeX comments: %...\n
-      let comment_re = Regex::new(r"%.*?\n\s*").unwrap();
+      static COMMENT_RE: std::sync::LazyLock<Regex> =
+        std::sync::LazyLock::new(|| Regex::new(r"%.*?\n\s*").unwrap());
+      let comment_re = &*COMMENT_RE;
       s = comment_re.replace_all(&s, "").to_string();
       // Strip whitespace
       s = s.replace(char::is_whitespace, "");
@@ -873,36 +885,48 @@ fn lst_set_class_style(class: &str, style: Option<Tokens>, props: Vec<(&str, &st
   // Get or create the class entry
   if let Some(style_toks) = &style {
     let stylestring = style_toks.to_string().trim().to_string();
-    if stylestring.ends_with("style") || {
-      let re = Regex::new(r"style\d*$").unwrap();
-      re.is_match(&stylestring)
-    } {
+    // A style names another class's style only as a bare word, as listings' families do
+    // (lstmisc.sty:667 `\lst@InstallFamily k{keywords}{keywordstyle}\bfseries{keywordstyle}`); a control
+    // sequence is markup that runs, whatever its name ends in: `identifierstyle=\idstyle` (1907.13012) was taken
+    // for a class `\ids` and never ran (KPE #1169).
+    if !stylestring.contains('\\') && Regex::new(r"style\d*$").unwrap().is_match(&stylestring) {
       // If names a style, convert into indirect class reference
       let classref = Regex::new(r"style(\d*)$")
         .unwrap()
         .replace(&stylestring, "s$1")
         .to_string();
-      // remove explicit styling (begin)
+      // remove explicit styling, both ends: an `end` left from an earlier markup style closed groups no `begin`
+      // opened ("Attempt to close boxing group" after every token; KPE #1169)
       let begin_key = s!("{map_key}@{class}@begin");
       assign_value(&begin_key, Stored::None, None);
+      let end_key = s!("{map_key}@{class}@end");
+      assign_value(&end_key, Stored::None, None);
       // add indirect to class
       let class_key = s!("{map_key}@{class}@class");
       assign_value(&class_key, Stored::String(pin(&classref)), None);
     } else {
-      // Otherwise, it's presumably TeX styling.
-      // Perl #2819: wrap the styling in a brace group —
-      //   begin => Tokens($style, T_BEGIN); end => T_END
-      // so a multi-token style (e.g. `\bfseries\underbar`) applies to the whole
-      // class content as a group, not just the first token. The matching T_END
-      // is collected by `lst_class_end` (which now walks the full class chain).
+      // Otherwise, it's presumably TeX styling, applied as listings.sty:579-585
+      // `\lst@OutputToken` does: `{\lst@thestyle{…output…}}`. The inner brace
+      // group is the argument of a style whose last macro takes one
+      // (`\bfseries\underbar`, Perl #2819 `Tokens($style, T_BEGIN)`); the outer
+      // one closes a group the style itself opens: the btHL idiom
+      // `\begin{btHighlight}\bgroup\aftergroup\bt@HL@endenv` is closed by the
+      // `}` after the argument, which ends the highlight box (2006.16205,
+      // 2104.08012; Perl's `begin` lacks the outer `{`, KPE #1166). The matching
+      // `}}` is collected by `lst_class_end` (which walks the full class chain).
       let class_key = s!("{map_key}@{class}@class");
       assign_value(&class_key, Stored::None, None);
       let begin_key = s!("{map_key}@{class}@begin");
-      let mut begin_toks = style_toks.unlist_ref().clone();
+      let mut begin_toks = vec![T_BEGIN!()];
+      begin_toks.extend(style_toks.unlist_ref().iter().copied());
       begin_toks.push(T_BEGIN!());
       assign_value(&begin_key, Stored::Tokens(Tokens::new(begin_toks)), None);
       let end_key = s!("{map_key}@{class}@end");
-      assign_value(&end_key, Stored::Tokens(Tokens::new(vec![T_END!()])), None);
+      assign_value(
+        &end_key,
+        Stored::Tokens(Tokens::new(vec![T_END!(), T_END!()])),
+        None,
+      );
     }
   }
   // Set cssclass based on class name
@@ -1163,7 +1187,9 @@ fn lst_add_delimiter(
 
     // Perl: process $style parameter to determine base class name
     // "commentstyle" → "comments", "stringstyle" → "strings", etc.
-    let style_re = Regex::new(r"style(\d*)$").unwrap();
+    static STYLE_RE: std::sync::LazyLock<Regex> =
+      std::sync::LazyLock::new(|| Regex::new(r"style(\d*)$").unwrap());
+    let style_re = &*STYLE_RE;
     let base_class = if style_re.is_match(style) {
       style_re.replace(style, "s$1").to_string()
     } else {
@@ -1203,34 +1229,32 @@ fn lst_add_delimiter(
     // Register this delimiter in the delimiter list
     lst_push_value_locally("LST_DELIM_KEYS", vec![T_OTHER!(&open_str)]);
 
-    // Perl L593-607: lstSetClassStyle with openTeX/closeTeX.
-    // If style is TeX markup (not a style name), prepend it to open tokens.
+    // Perl listings.sty.ltxml:596-611: lstSetClassStyle with openTeX/closeTeX.
+    // If style is TeX markup (not a style name), it opens the class as listings.sty:579-585 applies a style,
+    // `{\lst@thestyle{…}}` (`lst_set_class_style`): `{<style>{` before the open delimiter, `}}` after the close one,
+    // so the style's last macro may take the delimited text as its argument and a group the style opens is closed
+    // after it (the btHL idiom, `moredelim=**[is][\btHL]{`}{`}`; 2006.16205, 2104.08012). Perl prepends the bare style
+    // (`Tokens($styleTeX->unlist, $open)`), KPE #1166.
     let style_is_markup =
       !style_re.is_match(style) && !style.is_empty() && style != "None" && style.contains('\\'); // TeX markup contains backslash
-    let style_tokens = if style_is_markup {
-      mouth::tokenize_internal(TeXString::assembled(style.to_string()))
-    } else {
-      Tokens!()
-    };
-    let open_tex = if invisible {
-      if style_is_markup {
-        style_tokens
-      } else {
-        Tokens!()
-      }
-    } else if style_is_markup {
-      // Perl: Tokens($styleTeX->unlist, $open)
-      let mut toks = style_tokens.unlist();
-      toks.push(T_OTHER!(&open_str));
-      Tokens::new(toks)
-    } else {
-      Tokens::new(vec![T_OTHER!(&open_str)])
-    };
-    let close_tex = if invisible || close_str.is_empty() {
-      Tokens!()
-    } else {
-      Tokens::new(vec![T_OTHER!(&close_str)])
-    };
+    let mut open_toks = Vec::new();
+    if style_is_markup {
+      open_toks.push(T_BEGIN!());
+      open_toks.extend(mouth::tokenize_internal(TeXString::assembled(style.to_string())).unlist());
+      open_toks.push(T_BEGIN!());
+    }
+    if !invisible {
+      open_toks.push(T_OTHER!(&open_str));
+    }
+    let open_tex = Tokens::new(open_toks);
+    let mut close_toks = Vec::new();
+    if !invisible && !close_str.is_empty() {
+      close_toks.push(T_OTHER!(&close_str));
+    }
+    if style_is_markup {
+      close_toks.extend([T_END!(), T_END!()]);
+    }
+    let close_tex = Tokens::new(close_toks);
 
     // Set parent class (Perl: class => $oldclass)
     let class_key = s!("LST_CLASSES@{class}@class");
@@ -1604,7 +1628,7 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
   {
     all_delim_keys.push("$".to_string());
   }
-  // Perl listings.sty.ltxml:1283
+  // Perl listings.sty.ltxml:1288
   //   local $LaTeXML::DELIM_RE = join('|', map { $$delimiters{$_}{open} } sort keys %$delimiters);
   // The lexical sort matters: leftmost-first regex alternation means short
   // prefixes that sort before longer ones win, e.g. `<` (XML tag) is matched
@@ -1617,13 +1641,19 @@ fn lst_process(mode: &str, text: &str) -> Tokens {
     let open_key = s!("LST_DELIM@{key}@open");
     if let Some(Stored::String(open_sym)) = lookup_value(&open_key) {
       let open_re = with(open_sym, |s| s.to_string());
-      delim_opens.push(open_re.clone());
       let escape_key = s!("LST_DELIM@{key}@escape");
       if matches!(lookup_value(&escape_key), Some(Stored::Bool(true))) {
         escape_opens.push(open_re);
+      } else {
+        delim_opens.push(open_re);
       }
     }
   }
+  // An escape is tried before the other delimiters: listings chains each delimiter onto the meaning its first character
+  // had (lstmisc.sty `\lst@DefDelimB`), and the escape (`\lst@DefEsc`, installed last) is tested first, so
+  // `escapeinside={\#*}{*}` under Python's `#` comments escapes `#*\label{line:degree}*` (2104.08012; pdflatex resolves
+  // `line \ref{line:degree}`), where the lexical order took `#` for a comment and printed the `\label` (KPE #1167).
+  let delim_opens: Vec<String> = escape_opens.iter().cloned().chain(delim_opens).collect();
   let delim_re = if delim_opens.is_empty() {
     None
   } else {
@@ -1842,8 +1872,12 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>, outer_clas
   let _ = outer_class;
   let mut prev_listing = String::new();
   // Precompile static regexes
-  let newline_re = Regex::new(r"^\s*?\n").unwrap();
-  let space_re = Regex::new(r"^[\t ]+").unwrap();
+  static NEWLINE_RE: std::sync::LazyLock<Regex> =
+    std::sync::LazyLock::new(|| Regex::new(r"^\s*?\n").unwrap());
+  let newline_re = &*NEWLINE_RE;
+  static SPACE_RE: std::sync::LazyLock<Regex> =
+    std::sync::LazyLock::new(|| Regex::new(r"^[\t ]+").unwrap());
+  let space_re = &*SPACE_RE;
 
   while !ctx.listing.is_empty() {
     // Loop guard — must make progress on every step
@@ -2142,9 +2176,38 @@ fn lst_process_internal(ctx: &mut LstContext, end_re: Option<&Regex>, outer_clas
 
       ctx.lsttokens.extend(pre_tokens);
       if let Some(cname) = classname {
+        // listings.sty:481 and :579-585: the token being output is in `\lst@token` (its length in `\lst@length`)
+        // while its style runs, and `\lst@ResetToken` empties both after it. A style that reads the token
+        // (`\expandafter\id@style\the\lst@token\relax`, 1907.13012's identifier colours) found it empty, so its
+        // `\relax`-delimited argument ran past the token's group ("Attempt to close boxing group").
+        let length = word.chars().count().to_string();
+        ctx.lsttokens.push(T_CS!("\\lst@token"));
+        ctx.lsttokens.push(T_BEGIN!());
+        ctx.lsttokens.extend(word.chars().map(|c| {
+          let s = c.to_string();
+          if c.is_alphabetic() {
+            T_LETTER!(&s)
+          } else {
+            T_OTHER!(&s)
+          }
+        }));
+        ctx.lsttokens.push(T_END!());
+        ctx.lsttokens.push(T_CS!("\\lst@length"));
+        ctx
+          .lsttokens
+          .extend(length.chars().map(|c| T_OTHER!(&c.to_string())));
+        ctx.lsttokens.push(T_CS!("\\relax"));
         ctx.lsttokens.extend(lst_class_begin(&cname));
         ctx.lsttokens.extend(styled_tokens);
         ctx.lsttokens.extend(lst_class_end(&cname));
+        ctx.lsttokens.extend([
+          T_CS!("\\lst@token"),
+          T_BEGIN!(),
+          T_END!(),
+          T_CS!("\\lst@length"),
+          T_OTHER!("0"),
+          T_CS!("\\relax"),
+        ]);
       } else {
         // Perl: outerclass branch — emit identifier tokens without their own
         // class wrap; they live inside the enclosing delim's wrapper.
@@ -2332,14 +2395,10 @@ pub fn lst_process_block_with(
 /// Eagerly `Tokenize!`-ing the body froze the outer regime (csvsimple-l3:
 /// `\tl_new:N` split at a subscript `_`). Returns the `\input{…}` tokens.
 pub fn lst_run_body_via_input(env: &str, text: &str) -> Result<Tokens> {
-  thread_local! {
-    static BODY_SEQ: std::cell::Cell<u32> = const { std::cell::Cell::new(0) };
-  }
-  let n = BODY_SEQ.with(|c| {
-    let v = c.get() + 1;
-    c.set(v);
-    v
-  });
+  // The conversion's count (a State value): the name reaches the log ("Processing content lx-LTXexample-1.tmp"), and a
+  // worker's next paper counted on from the last's (revST3b).
+  let n = lookup_int("lx@lst@bodies") + 1;
+  assign_value("lx@lst@bodies", Stored::Int(n), Some(Scope::Global));
   let name = format!("lx-{env}-{n}.tmp");
   ::latexml_core::binding::virtual_files::vfs_store(&name, text);
   // Built by hand: `Invocation!` consults `\input`'s parameter list, which
@@ -2402,6 +2461,12 @@ fn with_tcb_phantom(mut processed: Vec<Token>) -> Vec<Token> {
     return processed;
   };
   AssignValue!("tcb_pending_phantom" => Stored::None, Scope::Global);
+  // (its `label` names the box's step, which the listing's start forgot: `\lx@lst@renote@raw@refstep`)
+  let phantom = Tokens::new(
+    std::iter::once(T_CS!("\\lx@lst@renote@raw@refstep"))
+      .chain(phantom.unlist())
+      .collect(),
+  );
   let Some(start) = processed
     .iter()
     .position(|t| *t == T_CS!("\\@lst@startline"))
@@ -2462,17 +2527,63 @@ pub fn lst_process_display_with(
   let processed = with_tcb_phantom(processed);
   let (mut body, trailer) = lst_process_block_with(name.clone(), text, processed);
 
+  // `nolol` (listings.sty:1409-1411; `\lstKV@SetIf` reads the value's first letter) keeps the listing
+  // out of the list of listings: `\lst@MakeCaption` (:1644-1656) writes the `lol` entry — the caption,
+  // or the bare name of a named listing — only without it. Perl ignores the key
+  // (listings.sty.ltxml:889 `# Ignorable`), so every named listing is a `lol` float whose toc caption
+  // is its name: tcolorbox's read-back of its box body, `\lstinputlisting[nolol]{\jobname.listing}`
+  // (tcblistings.code.tex:39/:45), put a `<toccaption>` "<job>.listing" in every raw `{tcblisting}`
+  // box (2512.18601, 2606.05464, 2606.27251, 2607.12625; KNOWN_PERL_ERRORS #988). Guard
+  // `perfect_kernel_batch77m::raw_tcblisting_read_back_is_not_listed`.
+  let nolol = lst_get_literal("nolol").trim().starts_with(['t', 'T']);
+  // A gobbled `\lst@MakeCaption` (listings.sty:1635-1663) makes no caption, title or `lol` entry at
+  // all: tcolorbox's `listing remove caption` (tcblistings.code.tex:31-33, on by default) around its
+  // read-back of a raw box, or — for the binding's listing environments, which run no such group — the
+  // box's resolved setting (`tcolorbox_sty::tcb_store_pending_title`). Its box title is then the only
+  // one: 2409.11413's `\lstset{title=\lstname}` emptied every box's "Listing N: …" title.
+  // Guard `perfect_kernel_batch77m::tcb_box_title_replaces_the_listings_title`.
+  let gobbled = matches!(
+    (lookup_meaning(&T_CS!("\\lst@MakeCaption")), lookup_meaning(&T_CS!("\\@gobble"))),
+    (Some(a), Some(b)) if a == b
+  );
+  let tcb_remove_caption = lookup_bool("tcb_pending_remove_caption");
+  AssignValue!("tcb_pending_remove_caption" => false, Scope::Global);
+  let no_caption = gobbled || tcb_remove_caption;
+  let nolol = nolol || no_caption;
   // Perl: AssignValue('LST@toctitle', $name) — so it shows up in list of listings
   if let Some(ref n) = name
     && !n.is_empty()
+    && !nolol
   {
     assign_value("LST@toctitle", Stored::from(n.clone()), None);
   }
 
   // Check for caption/title/toctitle — Perl lines 183-193
-  let caption_tokens = lst_get_tokens("caption");
-  let title_tokens = lst_get_tokens("title");
-  let toctitle_tokens = lst_get_tokens("toctitle");
+  let (caption_tokens, mut title_tokens) = if no_caption {
+    (Tokens!(), Tokens!())
+  } else {
+    (lst_get_tokens("caption"), lst_get_tokens("title"))
+  };
+  // A tcolorbox listing box's title (`tcolorbox_sty::tcb_store_pending_title`), the listing's own when
+  // it has none: the box prints it above the listing, in its title bar (tcolorbox.sty:162-163
+  // `\tcbtitle`), whatever listings' `captionpos` says — the box gobbles `\lst@MakeCaption`, so
+  // `captionpos` never reaches it (2409.11413 setup.tex:86 `\lstset{captionpos=b}`: its 13 box titles
+  // went below the code; 2402.13846 headers/lqa/listing.tex:35; 2508.16690 and 2301.07825 set it for
+  // plain listings only, which keep it). Guard
+  // `perfect_kernel_batch77m::tcb_box_title_stays_above_under_captionpos_b`.
+  let mut title_from_tcb = false;
+  if let Some(Stored::Tokens(tcb_title)) = lookup_value("tcb_pending_title") {
+    AssignValue!("tcb_pending_title" => Stored::None, Scope::Global);
+    if title_tokens.is_empty() {
+      title_tokens = tcb_title;
+      title_from_tcb = true;
+    }
+  }
+  let toctitle_tokens = if no_caption {
+    Tokens!()
+  } else {
+    lst_get_tokens("toctitle")
+  };
   let label_tokens = lst_get_tokens("label");
 
   let mut numbered = false;
@@ -2504,15 +2615,30 @@ pub fn lst_process_display_with(
     } else {
       body.extend(caption);
     }
-  } else if !title_tokens.is_empty() {
-    has_caption = true;
-    let title_inv = invoke(T_CS!("\\lstlisting@maketitle"), vec![title_tokens]);
-    body.extend(title_inv);
-  } else if !toctitle_tokens.is_empty() {
-    // Perl line 192-193: toctitle without caption/title
-    has_caption = true;
-    let toctitle_inv = invoke(T_CS!("\\lstlisting@maketoctitle"), vec![toctitle_tokens]);
-    body.extend(toctitle_inv);
+  } else {
+    // A title (or a bare toc title) goes where `captionpos` puts it, as the caption does (Perl
+    // listings.sty.ltxml:199-203 places whichever of the three it made; listings.sty:1658
+    // `\lst@IfSubstring #1\lst@captionpos` prints the title at the top by default).
+    let made = if !title_tokens.is_empty() {
+      Some(invoke(T_CS!("\\lstlisting@maketitle"), vec![title_tokens]))
+    } else if !toctitle_tokens.is_empty() {
+      // Perl line 192-193: toctitle without caption/title
+      Some(invoke(T_CS!("\\lstlisting@maketoctitle"), vec![
+        toctitle_tokens,
+      ]))
+    } else {
+      None
+    };
+    if let Some(made) = made {
+      has_caption = true;
+      if title_from_tcb || lst_get_literal("captionpos") == "t" {
+        let mut new_body = made;
+        new_body.extend(body);
+        body = new_body;
+      } else {
+        body.extend(made);
+      }
+    }
   }
 
   // listings.sty:1641 writes a literal `\label{\lst@label}`. Perl builds
@@ -2557,7 +2683,11 @@ pub fn lst_process_display_with(
 
   let name_nonempty = name.as_ref().is_some_and(|n| !n.is_empty());
 
-  if numbered || name_nonempty {
+  if numbered && nolol {
+    result.extend(invoke(T_CS!("\\lx@listings@unlisted"), vec![Tokens::new(
+      body,
+    )]));
+  } else if numbered || (name_nonempty && !nolol) {
     result.extend(invoke(T_CS!("\\@listings"), vec![Tokens::new(body)]));
   } else if has_caption {
     result.extend(invoke(T_CS!("\\@@listings"), vec![Tokens::new(body)]));
@@ -2715,8 +2845,13 @@ LoadDefinitions!({
     lst_activate(Some(&kv));
   });
 
-  // \lstinline — inline listing
-  DefMacro!("\\lstinline", "\\leavevmode\\lx@lstinline");
+  // \lstinline — inline listing. Robust, as listings.sty:1941 `\newcommand\lstinline[1][]` is
+  // (`\@protected@testopt`): an `\edef`/`\xdef` under `\@unexpandable@protect` keeps it unexpanded —
+  // ifthen's `\ifthenelse{\equal{\lstinline|N|}{}}` evaluates its test in one (ifthen.sty:101-110),
+  // where expanding it opened the inline listing's group inside the `\xdef` and the `\endgroup`
+  // after it met that group (witnesses 1406.5453, 1605.05104). Perl's is an expandable macro
+  // (listings.sty.ltxml:54).
+  DefMacro!("\\lstinline", "\\leavevmode\\lx@lstinline", protected => true);
   DefMacro!("\\lx@lstinline OptionalKeyVals:LST", sub[(kv)] {
     bgroup();
     lst_activate(kv.as_ref());
@@ -2949,11 +3084,20 @@ LoadDefinitions!({
   });
 
   // Counters
-  NewCounter!("lstlisting", "document", idprefix => "LST");
+  // listings.sty:1604-1609 declares `lstlisting` `\AtBeginDocument`, in its hook's place (label `listings`, before a
+  // document's own hooks): until then `\@ifundefined{c@lstlisting}` is true, so a preamble's tocloft
+  // `\newlistentry{lstlisting}{lol}{0}` has no "previously defined" error to raise (tocloft.sty:820-833). Under a
+  // `\globaldefs\@ne`, that error's display `\protect` stayed for good and `\end`, `\normalfont`, `\ref` printed as text:
+  // 2405.15073. Perl's binding declares it at load (listings.sty.ltxml:133), KPE #1217.
+  // Guard: `perfect_kernel_batchm3::the_lstlisting_counter_waits_for_begin_document`.
+  DefPrimitive!("\\lx@lst@declare@counter", sub[_args] {
+    NewCounter!("lstlisting", "document", idprefix => "LST");
+    Ok(())
+  });
+  RawTeX!(r"\AtBeginDocument[listings]{\lx@lst@declare@counter\gdef\thelstlisting{\arabic{lstlisting}}}");
   DefMacro!("\\ext@lstlisting", "lol");
   NewCounter!("lstnumber");
   DefMacro!("\\thelstnumber", "\\arabic{lstnumber}");
-  DefMacro!("\\thelstlisting", "\\arabic{lstlisting}");
   // lstmisc.sty:1236-1239 (`labels` aspect): a listing line's hyperref anchor
   // name, set `\AtBeginDocument` — `\lst@neglisting` (listings.sty:1693, the
   // count of uncaptioned listings) or, for a captioned listing, `\theHlstlisting`,
@@ -3007,6 +3151,31 @@ LoadDefinitions!({
 \newcount\lst@mode \chardef\lst@nomode=0 \chardef\lst@Pmode=1 \chardef\lst@GPmode=2 \lst@mode=\lst@nomode
 \newtoks\lst@token \newcount\lst@length
 \def\lst@SaveOutputDef#1#2{\begingroup\lccode`\~=#1\relax\lowercase{\endgroup\edef#2{\string~}}}");
+  // More of listings' internals that literate replacements, styles and add-on packages call (G3 binding gaps, run 340
+  // inventory), each as the binding's model makes it — no mode stack, no output boxes, every token output by the
+  // binding itself:
+  // - :431-449 `\lst@InterruptModes`/`\lst@ReenterModes`, which leave and re-enter the current modes around an escape:
+  //   no mode is ever entered here (`\lst@mode` stays `\lst@nomode`, above), so there is nothing to leave or re-enter;
+  // - :770-772 `\lst@PrintToken` and :561-570 `\lst@CalcLostSpaceAndOutput`, which output the pending token or box:
+  //   nothing is pending (`\lst@token` is empty, above);
+  // - :793-794 `\lst@whitespacetrue`/`false` (a literate `{->}{{$\to$\lst@whitespacefalse}}1`, 2012.14984,
+  //   2206.00658) and :1697-1698 `\lst@boxtrue`/`false` (2504.10323), their switches;
+  // - :1599 `\lst@label` (`\@empty` outside a listing, as the PreSet hook leaves it: the binding keeps the `label`
+  //   key itself; 2505.04744's fancyvrb `formatcom` tests it), :1735 `\lst@aboveskip` (the key's default
+  //   `\medskipamount`; 2608.14263), lstmisc.sty:1755 `\lst@frametextsep` (3pt) and :532 `\lst@width` (a dimen, zero
+  //   outside a listing; 1704.06338's dbk_verbatim.sty reads both);
+  // - lstmisc.sty:1880-1907 `\lst@FVConvert<text>\@nil`, which appends a fancyvrb line to `\lst@arg` as listings
+  //   input, and :1743/:1802 `\lst@Init`/`\lst@DeInit`, which open and close a listing's group: here the line is
+  //   appended as it is and the listing is that group. mmacells.sty:619-636 builds its inline cells from them and the
+  //   hooks below (`\lsthk@PreSet\lstset{…}\lsthk@TextStyle\lst@Init\relax…\lst@DeInit`, as `\lstinline`,
+  //   :1944-1945; 1705.02863, 1712.09863, 1806.04503, 2012.00279, 2012.07851 — 9 errors per paper).
+  RawTeX!(r"\def\lst@InterruptModes{}\def\lst@ReenterModes{}\def\lst@PrintToken{}\def\lst@CalcLostSpaceAndOutput{}
+\def\lst@whitespacetrue{\global\let\lst@ifwhitespace\iftrue}\def\lst@whitespacefalse{\global\let\lst@ifwhitespace\iffalse}
+\lst@whitespacetrue
+\def\lst@boxtrue{\let\lst@ifbox\iftrue}\def\lst@boxfalse{\let\lst@ifbox\iffalse}\lst@boxfalse
+\let\lst@label\@empty \def\lst@aboveskip{\medskipamount}\def\lst@frametextsep{3pt}\newdimen\lst@width
+\def\lst@FVConvert#1\@nil{\expandafter\def\expandafter\lst@arg\expandafter{\lst@arg#1}}\let\lst@arg\@empty
+\def\lst@Init#1{\begingroup}\def\lst@DeInit{\endgroup}");
 
   // \lstnewenvironment — define new listing environments
   // Perl: DefPrimitive('\lstnewenvironment {}[Number][] DefPlain DefPlain', sub { ... })
@@ -3176,6 +3345,15 @@ LoadDefinitions!({
     // Perl escapes only because it never writes the round-trip file).
     // Guard: `perfect_kernel_batch56::lstnewenvironment_end_code_with_a_listing_does_not_recurse`.
     let text = listings_read_raw_lines_with_outer(&env_name, outer_opt);
+    // The flag is the environment's own: `\lxtcblistingmode` sets it in a tcolorbox box's start code,
+    // and it is taken here — before a diverted body returns below — so a later plain
+    // `\lstnewenvironment` (no tcolorbox mode) does not execute its body as well
+    // (`\newtcblisting{demo}{}` then `\lstnewenvironment{plain}{}{}`: the plain body was typeset a
+    // second time as text). Guards
+    // `perfect_kernel_batch77m::{plain_lstnewenvironment_after_a_tcb_box_does_not_run_its_body,
+    // plain_lstnewenvironment_after_a_diverted_tcb_box_does_not_run_its_body}`.
+    let execute = lookup_bool("LISTINGS_EXECUTE_BODY");
+    AssignValue!("LISTINGS_EXECUTE_BODY" => false, Scope::Global);
     if !lst_writefile_tee(&text) {
       // A body diverted to a file (`\lst@BeginWriteFile`, lstmisc.sty:30-70)
       // is not displayed, but the environment still owes its END code: the
@@ -3184,7 +3362,14 @@ LoadDefinitions!({
       // \SX@put@code@result` in the end code (pst-exa.sty:163-170). Dropping
       // it left the `\hbox` open and lost the read-back result (pst-exa-doc).
       // Guard: `perfect_kernel_batch56::lstnewenvironment_writefile_runs_the_end_code`.
-      let mut out = post;
+      // A tcolorbox box still runs its text part (`listing and text`): only the listing is diverted
+      // (pdflatex prints the box's text, no code).
+      let mut out = if execute {
+        lst_run_body_via_input(&env_name, &text)?.unlist()
+      } else {
+        Vec::new()
+      };
+      out.extend(post);
       out.push(T_CS!("\\endgroup"));
       return Ok(Tokens::new(out));
     }
@@ -3208,7 +3393,8 @@ LoadDefinitions!({
     // `\tcbuselistingtext` inside its box: local definitions stay local,
     // `\global` ones (pgf's `remember picture` node registrations, postit)
     // escape as in TeX.
-    if lookup_bool("LISTINGS_EXECUTE_BODY") {
+    // (the execute flag, taken above)
+    if execute {
       let closer = out.pop();
       // tcolorbox's resolved `before lower*`/`after lower*` wrapper around the
       // executed part (`tikz lower`, tcolorbox.sty:712); empty for every other
@@ -3238,15 +3424,21 @@ LoadDefinitions!({
 
   // Caption macros. The list entry is the `[short]`, or the caption without one, chosen as the kernel's
   // `\@caption@@@` does (a `[short]` opening with a conditional, KNOWN_PERL_ERRORS #468).
+  // listings.sty:1675 `\def\lst@makecaption{\def\@captype{lstlisting}\@makecaption}`: the caption is the class's
+  // `\@makecaption`'s (`\lx@makecaption`, latex_constructs_rust_only.rs: "Listing 1: text", amsart's and IEEEtran's
+  // "Listing 1. text"), and caption's when caption is loaded, which formats listings' captions as a float's
+  // (`\lx@format@caption@@`, caption_sty.rs; caption.sty supports listings), where Perl's binding keeps
+  // "Listing 1: text" for every class (listings.sty.ltxml:221-227). Guards
+  // `perfect_kernel_batch78y::{ieeetran_listings_caption_takes_the_figure_format, caption_settings_reach_a_listing}`.
   DefMacro!("\\lstlisting@makecaption[]{}",
     "\\def\\@captype{lstlisting}\
      \\@@add@caption@counters\
-     \\@@toccaption{\\lx@format@toctitle@@{lstlisting}{\\if\\relax\\detokenize{#1}\\relax\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi{#2}{#1}}}\
-     \\lx@@caption{\\lx@format@title@@{lstlisting}{#2}}");
+     \\@@toccaption{\\lx@format@toctitle@@{lstlisting}{\\lx@toc@copy@text{#1}{#2}}}\
+     \\lx@@caption{\\lx@format@caption@@{lstlisting}{#2}}");
   DefMacro!("\\fnum@lstlisting", "\\lstlistingname\\nobreakspace\\thelstlisting");
-  DefMacro!("\\format@title@lstlisting{}", "\\lx@tag[][: ]{\\fnum@lstlisting}#1");
+  DefMacro!("\\format@title@lstlisting{}", "\\lx@makecaption{lstlisting}{#1}");
   // The toc copy is digested with notes and `\label` neutralized (DIVERGENCES #399; 2605.15775).
-  DefMacro!("\\lstlisting@maketitle{}", "\\@@toccaption{{\\lx@toc@copy@neutralize#1}}\\lx@@caption{#1}");
+  DefMacro!("\\lstlisting@maketitle{}", "\\@@toccaption{{\\lx@toc@copy@neutralize\\lx@reread@copy#1}}\\lx@@caption{#1}");
   DefMacro!("\\lstlisting@maketoctitle{}", "\\@@toccaption{{\\lx@toc@copy@neutralize#1}}");
   DefMacro!("\\lstlistingname", "Listing");
   DefMacro!("\\lstlistlistingname", "Listings");
@@ -3286,6 +3478,20 @@ LoadDefinitions!({
     after_digest => sub[whatsit] {
       engine::latex_constructs::after_float(whatsit);
     });
+  // The numbered form of a `nolol` listing: numbered, in no list (`lst_process_display_with`
+  // chooses it while the listing's keys are in force; KNOWN_PERL_ERRORS #988).
+  DefConstructor!("\\lx@listings@unlisted {}",
+    "^^<ltx:float xml:id='#id' class='ltx_lstlisting'>\
+     #tags\
+     #1\
+     </ltx:float>",
+    mode => "internal_vertical",
+    before_digest => {
+      engine::latex_constructs::before_untyped_float("lstlisting")?;
+    },
+    after_digest => sub[whatsit] {
+      engine::latex_constructs::after_float(whatsit);
+    });
 
   // Unnumbered float form (with caption)
   DefConstructor!("\\@@listings {}",
@@ -3314,10 +3520,19 @@ LoadDefinitions!({
   // observable XML identical. Intentional afterDigest → properties
   // kind-translation so the count-diff audit (Perl 3 vs Rust 2
   // `after_digest`) is a documented false positive.
+  // A listing starts: listings makes `\@currentlabel` its line number's (lstmisc.sty:1228 `\lst@Init`, and
+  // `\refstepcounter{lstnumber}` per line, :1225), so a `\label` in it names no raw step made before it
+  // (`forget_raw_refstep`; a `\refstepcounter{problem}` then an unnumbered `lstlisting` with `(*\label{ln1}*)`
+  // named the problem, 41; pdflatex the line's 2, which an unnumbered `ltx:listingline` does not carry —
+  // OXIDIZED_DESIGN_DIVERGENCES #813). A tcolorbox listing box notes its own step again where its phantom code runs
+  // (`with_tcb_phantom`, `\lx@lst@renote@raw@refstep`; 2609.20563).
   DefConstructor!("\\@@listings@block {} {} {}",
     "<ltx:listing class='ltx_lstlisting' data='#lstdata' datamimetype='#lstmime' \
      dataencoding='#lstenc' dataname='#3'>#2</ltx:listing>",
     mode => "internal_vertical",
+    before_digest => {
+      forget_raw_refstep();
+    },
     properties => sub[args] {
       // Try multiple indices to find the counter
       let c = args.iter()
@@ -3343,6 +3558,13 @@ LoadDefinitions!({
       Ok(props)
     },
     sizer => sub[whatsit] { lst_block_size(whatsit) });
+
+  // The box's step, which the listing's start forgot (`forget_raw_refstep`), named by the label of a tcolorbox listing
+  // box's phantom code (`with_tcb_phantom`): tcolorbox runs that code in the box before the listing
+  // (tcolorbox.sty:1154-1161, :1925).
+  DefPrimitive!("\\lx@lst@renote@raw@refstep", {
+    renote_forgotten_raw_refstep();
+  });
 
   // List of listings
   DefConstructor!("\\lstlistoflistings",
@@ -4092,10 +4314,13 @@ LoadDefinitions!({
     Tokens!()
   });
 
-  // texcl handler
+  // texcl handler; Perl listings.sty.ltxml:1047-1056 sets the comment classes' `eval` on `true` and deletes it
+  // otherwise, so `texcl=false` turns an inherited `texcl` off (minted's bodies, minted_sty.rs).
   DefMacro!("\\lst@@texcl Until:\\end", sub [args] {
     if args[0].eq_text("true") {
       assign_value("LST_CLASSES@comments@eval", Stored::Bool(true), None);
+    } else {
+      assign_value("LST_CLASSES@comments@eval", Stored::None, None);
     }
     Tokens!()
   });
@@ -4125,6 +4350,23 @@ LoadDefinitions!({
   });
 
   // escapechar handler
+  // An escape's TeX, read where the listing digests it (`tokenize_balanced`).
+  DefPrimitive!("\\lx@lst@escape{}", sub[(id)] {
+    if let Some(text) = lookup_value(&s!("lx@lst@escape@{}", id.to_string())) {
+      let text = text.to_string();
+      if !text.is_empty() {
+        // The text is one input of its own, not a line of the file: no `\endlinechar` after it, the current one
+        // restored once it is read (the restore waits in the enclosing mouth).
+        let endline = lookup_register("\\endlinechar", Vec::new())?.map_or(13, |value| value.value_of());
+        let mut restore = vec![T_CS!("\\endlinechar")];
+        restore.extend(Explode!(endline));
+        restore.push(T_CS!("\\relax"));
+        unread_vec(restore);
+        assign_register("\\endlinechar", Number::new(-1).into(), Some(Scope::Local), Vec::new())?;
+        open_mouth_with(Mouth::new(&text, None)?, true, BalancedBoundary::Opaque);
+      }
+    }
+  });
   DefMacro!("\\lst@@escapechar Until:\\end", sub [args] {
     let esc = lst_deslash(&args[0].to_string());
     // `escapechar={}` CLEARS an inherited escape (listings' `\lst@@escapechar`
@@ -4323,8 +4565,22 @@ LoadDefinitions!({
   // loop so the raw .sty files don't error on undefined `\lst@AddToHook`.
   // Driver: 2001.11875 (lstlang3.sty raw-load `\lst@AddToHook` undefined).
   DefMacro!("\\lst@UseHook{}", "\\csname\\@lst hk@#1\\endcsname");
-  def_macro_noop("\\lst@AddToHook{}{}")?;
-  def_macro_noop("\\lst@AddToHookExe{}{}")?;
+  // listings.sty:354-363 `\lst@AddToHook{<name>}{<code>}` (and `…Exe`, `…AtTop`, :356 — 1904.01009) adds `<code>` to the
+  // hook macro `\lsthk@<name>`, creating it first. The binding runs none of listings' hooks, so the code is dropped,
+  // but the hook is created as listings creates it, and the hooks listings.sty itself creates (its `\lst@AddToHook{…}`
+  // inits) exist: `\lstinline`'s `\lsthk@PreSet\lstset{…}\lsthk@TextStyle` (:1944-1945), which mmacells.sty:634-636
+  // calls directly (1705.02863).
+  DefMacro!("\\lst@AddToHook{}{}", "\\@ifundefined{lsthk@#1}{\\expandafter\\gdef\\csname lsthk@#1\\endcsname{}}{}");
+  // listings.sty:355-362 `\lst@AddToHookExe` also runs `<code>` at once (`\begingroup\globaldefs\@ne\lst@temp
+  // \endgroup`); here it is not executed, only dropped like the hook's (unchanged from 67int10).
+  Let!("\\lst@AddToHookExe", "\\lst@AddToHook");
+  Let!("\\lst@AddToHookAtTop", "\\lst@AddToHook");
+  for hook in ["InitVars", "Init", "TextStyle", "InitVarsBOL", "SelectCharTable", "PreSet", "SetLanguage", "EndGroup",
+    "PreInit", "PostOutput", "OutputBox", "EveryLine", "EmptyStyle", "EOL", "DeInit", "OutputOther", "Output",
+    "OnNewLine", "OnEmptyLine", "ModeTrue", "InitVarsEOL", "InitBOL", "FontAdjust", "ExitVars", "EveryPar",
+    "DisplayStyle"] {
+    def_macro_noop(&format!("\\lsthk@{hook}"))?;
+  }
   DefMacro!("\\lst@AddTo {}{}", "\\expandafter\\gdef\\expandafter#1\\expandafter{#1#2}");
   DefMacro!("\\@lst", "lst");
 

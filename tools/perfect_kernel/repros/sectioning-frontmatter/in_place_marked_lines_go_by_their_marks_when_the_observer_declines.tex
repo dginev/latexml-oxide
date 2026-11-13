@@ -1,0 +1,31 @@
+% A raw class's in-place `\affil` that breaks its own line (`{\small\raggedright #1\par}`, OD #936) under names whose
+% comma-list marks request lettered lines, the frontmatter observer declining to re-part the authors over the ORCID
+% links: the sibling of run_in_marked_lines_go_by_their_marks_when_the_observer_declines on the in-place route
+% (`\lx@class@contact`). Each line went to the API as `\lx@add@affiliation[annotate=run]`, every author of the run
+% holding every line (the 99b0 base too); the line led by a printed label a name requests is now that label's
+% (frontmatter_stores.rs `by_its_label`, `contact_line_call`; review rev99b B1).
+% witness: 2512.20289 (its run-in sibling; iopjournal)
+% oracle:  pdflatex 0 errors: "Ann Able1,a (iD), Bob Baker2,b (iD) and Cy Cole3,a (iD)", "aUniv A, Town", "bUniv B, City"
+% engines: rust 99b0 = 0 errors, 0 warnings, every author holds both lines; perl = no raw class load (OmniBus `\affil`)
+% expect:  0 errors, 0 warnings; Ann Able and Cy Cole hold <contact role="affiliation">a Univ A, Town</contact>, Bob
+%          Baker <contact role="affiliation">b Univ B, City</contact>; the body holds only "Text."
+% status:  RED (99b0, 99b r1) -> GREEN (99b r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{ipin.cls}
+\ProvidesClass{ipin}\LoadClass{article}
+\RequirePackage{hyperref}
+\renewcommand{\author}[1]{{\raggedright #1\par}}
+\newcommand{\affil}[1]{{\small\raggedright #1\par}}
+\newcommand{\orcid}[1]{\href{https://orcid.org/#1}{(iD)}}
+\end{filecontents*}
+\documentclass{ipin}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1,a}$\orcid{https://orcid.org/0009-0009-1414-288X}, Bob Baker$^{2,b}$\orcid{https://orcid.org/0000-0003-1431-2884} and Cy Cole$^{3,a}$\orcid{https://orcid.org/0000-0002-6069-9031}}
+
+\affil{$^a$ Univ A, Town}
+\affil{$^b$ Univ B, City}
+
+\maketitle
+Text.
+\end{document}

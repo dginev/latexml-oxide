@@ -1,0 +1,19 @@
+% mechanism: the list cutter's carried lead (`classify::notes` `lead_declarations` -> `sets_font`): a cut piece carries
+%   a declaration by its meaning (LaTeX's set, `frontmatter_stores::FONT_DECLARATIONS`); a document macro of
+%   declarations (`\newcommand\affilfont{\small\itshape}`) means none of them, so it stays on the first piece
+% witness: synthetic (P4b4f's sibling sweep; revP4b4a3 should-fix 1's `l_affilfont`, P4b4aR's P4DEC sibling)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "1 Univ Alpha, 2 Univ Beta" in small italic
+% engines: int165a: both entries `font="italic" fontsize="90%"`; int166a, P4b4f: Ann Able's at 90 % italic, Bob Baker's
+%          "Univ Beta" plain; 0 errors, 0 warnings, no word lost
+% expect:  0 errors, 0 warnings; Ann Able "1 Univ Alpha", Bob Baker "2 Univ Beta", each `font="italic" fontsize="90%"`
+% status:  RED (int166a, P4b4f: the second entry's font lost)
+% moves:   post-merge (P4DEC: a macro of declarations by its reading)
+\documentclass{llncs}
+\newcommand\affilfont{\small\itshape}
+\begin{document}
+\title{A Title}
+\author{Ann Able$^{1}$ \and Bob Baker$^{2}$}
+\institute{{\affilfont $^{1}$Univ Alpha, $^{2}$Univ Beta}}
+\maketitle
+Body.
+\end{document}

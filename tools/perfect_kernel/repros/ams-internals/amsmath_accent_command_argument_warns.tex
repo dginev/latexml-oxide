@@ -1,0 +1,17 @@
+% witness: 2210.10207 (`\hat\mathbf{…}` and breqn's `x_\text{…}` throughout; braced, 11,424 words lost) (71a review F1-F3)
+% oracle:  pdflatex 6 errors for `\hat\mathbf{x}` ("Argument of \select@group has an extra }"), 8 for the robust
+%          `\hat\vv{x}`, 0 for the rest; `\showlists`: `\hat\relax x` the hat over {} and x outside, `\hat\vec x` the
+%          hat over the vec over an empty box
+% engines: rust 71a r1 = 0 Warnings (`\hat\vv{x}` as `\hat{\mathbf{}}{x}`, `\Hat\muu_a` 1 double-subscript Error,
+%          `\hat\relax x` the hat over x); 67int19b the kernel accents
+% expect:  0 errors; 2 Warning:malformed:\hat (for \mathbf and \vv), the bold x and y accented; \Hat\muu_a as
+%          \hat\muu_a; \hat\relax x and \hat\vec x as TeX braces them (OXIDIZED_DESIGN_DIVERGENCES #721)
+% status:  RED (71a r1) -> GREEN (71a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\newcommand{\muu}{m_{\gamma}}
+\DeclareRobustCommand\vv[1]{\mathbf{#1}}
+\begin{document}
+$\hat x$ $\vec\nabla$ $\dot\gamma_1$ $\Hat\muu_a$ $\hat\relax x$ $\hat\vec x$ $\hat\mathbf{x}$ $\hat\vv{y}$
+\end{document}

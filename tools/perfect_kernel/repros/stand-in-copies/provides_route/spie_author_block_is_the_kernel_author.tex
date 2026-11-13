@@ -1,0 +1,21 @@
+% spie.cls defines no `\author` (it only `\LoadClassWithOptions{article}`, :74): its documented author block — names with
+% `\supit` marks, `\skiplinehalf`, `\\`-separated affiliation lines (spie.cls:58-64) — is the kernel's `\author`, whose
+% splitter reads the names and the marked affiliation lines.
+% witness: 2210.16202 (CHRONOS_s.cls, `\ProvidesClass{spie}`, routed to the spie binding at int40a: 9 → 39 creators,
+%          81 → 0 contacts; the PDF prints 5 authors over 10 affiliation lines)
+% oracle:  pdflatex 0 errors; "Ann One^{a,b}, Bob Two^{b}", then the two marked affiliation lines
+% engines: rust int39a/int40b = 7 personnames ("Bob Two b a Dept. of Physics", "Univ. X", …), no contact: OmniBus's
+%          `\author` (inst_support) splits only at `\and`
+% expect:  0 errors; two creators, Ann with both affiliations, Bob with the second
+% status:  RED (int40b) -> GREEN (int40 follow-up: spie_cls.rs keeps the kernel's `\author` for a class without one)
+% preload: ar5iv.sty
+\documentclass{spie}
+\title{T}
+\author{Ann One\supit{a,b}, Bob Two\supit{b}
+\skiplinehalf
+\supit{a}Dept. of Physics, Univ. X, Taipei, Taiwan; \\
+\supit{b}Inst. Y, Tsukuba, Japan.}
+\begin{document}
+\maketitle
+Text.
+\end{document}

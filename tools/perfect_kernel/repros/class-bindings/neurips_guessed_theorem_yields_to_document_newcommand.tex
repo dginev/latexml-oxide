@@ -1,0 +1,19 @@
+% witness: 2606.17122 (neurips_2026; `\newcommand{\result}[2]{#1{\(\pm\,#2\)}}` in the body, `\result{99.54}{0.04}` in
+%          table cells: "Ignoring redefinition (\newcommand) of \result", 87 alignment errors, Fatal)
+% oracle:  pdflatex: neurips_2026.sty declares no {result} theorem, so the document's `\newcommand{\result}` defines it
+%          — "99.54±0.04"
+% engines: rust int98a = the neurips binding's `\AtBeginDocument` guess `\lx@guess@newtheorem{result}` claimed the name
+%          for `\newcommand`: only a later `\newtheorem` replaced a guess
+% expect:  0 errors, 0 warnings; the cell reads "99.54±0.04"; the guessed {lemma} still a theorem
+% status:  RED (int98a) -> GREEN (80k: a guessed theorem is a fallback guess, sect08.rs `\lx@guess@newtheorem`)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[preprint]{neurips_2026}
+\begin{document}
+\newcommand{\result}[2]{#1{\(\pm\,#2\)}}
+\begin{tabular}{lc}
+X & \result{99.54}{0.04} \\
+\end{tabular}
+
+\begin{lemma}A lemma.\end{lemma}
+\end{document}

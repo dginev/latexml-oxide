@@ -1,0 +1,14 @@
+% witness: review 73a finding 10; latex.ltx:17737-17741 `\@wrglossary` writes the entry raw to the `.glo`, typeset only
+%          from the `.gls`
+% oracle:  pdflatex (clean): "Text one. Text two." — the entry `a_b` never typeset (no glossary printed)
+% engines: rust 73a1 = 1 error (the entry digested at once: `_`); Perl = the entry dropped with a Warning
+%          (KNOWN_PERL_ERRORS #281)
+% expect:  0 errors, 0 warnings; no indexmark (main-session call 2026-10-18 under user ruling 1,
+%          OXIDIZED_DESIGN_DIVERGENCES #738); printed (the `.gls` stand-in), the entry is a glo mark where it was made
+% status:  RED (73a1) -> GREEN (73a r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\makeglossary
+\begin{document}
+Text one\glossary{a_b}. Text two.
+\end{document}

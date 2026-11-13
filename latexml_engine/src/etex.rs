@@ -7,6 +7,7 @@
 //! Section numbering in comments below references that manual.
 
 use latexml_core::common::{
+  error::approximated_measure,
   glue::FillCode,
   numeric_ops::{MAX_DIMEN, MAX_INTEGER},
 };
@@ -95,19 +96,20 @@ LoadDefinitions!({
     // etex.ch `scan_expr`: a result past `infinity` (2^31 − 1, an integer) or
     // `max_dimen` (any other type) is "Arithmetic overflow", and the
     // expression's value is zero (pdfTeX: `\dimexpr-16383pt*3\relax` = 0.0pt).
-    // A Warning: the value is TeX's own (the severity of `number_too_big`; OXIDIZED_DESIGN #519).
+    // An Error, as TeX's: the zero is not the author's value (OXIDIZED_DESIGN #519); a Warning in a box measured by
+    // our approximation (`approximated_measure`).
     let ceiling = if matches!(rtype, RegisterType::Number) {
       MAX_INTEGER
     } else {
       MAX_DIMEN
     };
     if value.clone().value_of().abs() > ceiling {
-      Warn!(
-        "expected",
-        "<number>",
-        "Arithmetic overflow.",
-        "the expression's value is out of range, so it is zero (etex.ch scan_expr)"
-      );
+      let detail = "the expression's value is out of range, so it is zero (etex.ch scan_expr)";
+      match approximated_measure() {
+        Some((ours, true)) => Warn!("expected", "<number>", "Arithmetic overflow.", detail, ours),
+        Some((ours, false)) => Info!("expected", "<number>", "Arithmetic overflow.", detail, ours),
+        None => Error!("expected", "<number>", "Arithmetic overflow.", detail),
+      }
       return Ok(RegisterValue::default().coerce_to(rtype));
     }
     Ok(value)
@@ -479,12 +481,7 @@ LoadDefinitions!({
   // was set, with a trailing `^^M` (KNOWN_PERL_ERRORS #286). Guard:
   // `sweep125_roots::readline_is_an_assignment`.
   DefPrimitive!("\\readline Number SkipKeyword:to RedefinableToken", sub[(port, token)] {
-    let file_key = format!("input_file:{port}");
-    let mouth_opt = with_value(&file_key, |v| match v {
-      Some(Stored::Mouth(mouth)) => Some(Rc::clone(mouth)),
-      _ => None,
-    });
-    if let Some(mouth) = mouth_opt {
+    if let Some(mouth) = input_stream_to_change(&format!("input_file:{port}")) {
       let mut raw_line = mouth.borrow_mut().read_raw_line(false).unwrap_or_default();
       match lookup_definition(&T_CS!("\\endlinechar"))? { Some(eol) => {
         let eolv   = eol.value_of(Vec::new()).unwrap_or_default().value_of();
@@ -592,6 +589,12 @@ LoadDefinitions!({
   DefConditional!("\\ifdefined NormalToken", sub[(t)] {
     has_meaning(&t)
   });
+  // The kernel's own `\ifdefined`, for the tests LaTeXML's macros make (`\lx@latin@name`, the frontmatter stores'
+  // nulls, `\makeindex`, `\makeglossary`): a document may redefine `\ifdefined` (amams.sty:1099
+  // `\def\ifdefined#1#2#3`, a three-argument test), which left those tests reading `\latinencoding` as its argument and
+  // their `\else`, `\fi` extra. `\loggingall` and `\tracingnone` keep the public `\ifdefined`, as latex.ltx:662/:679
+  // and Perl plain_base.pool.ltxml:40/:56 do. Witness math0402285.
+  Let!("\\lx@ifdefined", "\\ifdefined");
 
   // \ifcsname stuff \endcsname.
   // Uses CSNameQuiet — unlike \csname, \ifcsname does NOT emit errors

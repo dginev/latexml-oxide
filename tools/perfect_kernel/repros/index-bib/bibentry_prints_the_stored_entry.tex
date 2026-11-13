@@ -1,0 +1,18 @@
+% witness: 2505.07606 (`\nobibliography*` then `\bibliography{references}`: 29 empty `\bibentry`s, two lists);
+%          2210.16098 (48 `\bibentry` lines printing ".")
+% oracle:  pdflatex 0 errors: "Paper: A. Able. First paper. 2001. Also Baker [2002]." and one References list —
+%          bibentry.sty:44-62 `\BR@nobib` stores each entry as `\BR@r@<key>`, :63-66 `\bibentry` prints it
+%          without its final period (`\BR@nodot`)
+% engines: rust int49a = 0 errors, 1 warning, "Paper: ." and two `ltx:bibliography`; perl = 2 errors
+%          (`\nobibliography`, `\bibentry` undefined: no binding)
+% expect:  0 errors, 0 warnings; the paragraph reads "Paper: A. Able. First paper. 2001. Also Baker (2002)."; one list
+% status:  RED (int49a) -> GREEN (78k: latexml_contrib bibentry_sty.rs, the `.bbl` read in store mode)
+\documentclass{article}
+\usepackage{natbib}
+\usepackage{bibentry}
+\begin{document}
+\nobibliography*
+Paper: \bibentry{k1}. Also \citet{k2}.
+\bibliographystyle{plainnat}
+\bibliography{refs}
+\end{document}

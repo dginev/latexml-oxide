@@ -1,0 +1,12 @@
+% witness: the cond-mat0605195 shape under llncs (an `\institute` in a name's group, which `take_institutes` leaves in the block)
+% oracle:  pdflatex (llncs.cls, TL 2025) 0 errors: "Ann Able1 and Bob Baker2"; "1 Univ X, Town · 2 Lab Y, City"
+% engines: rust base (=2) = the emitter stays out, whole blocks plus the S2b writer; DEL3 = the emitter
+% expect:  Ann Able holds Univ X, Town; Bob Baker holds Lab Y, City; no mark in a name; 0 errors, 0 warnings
+% status:  RED (base: the emitter's Warning) -> GREEN (DEL3)
+\documentclass{llncs}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and {Bob Baker\inst{2}\institute{Univ X, Town \and Lab Y, City}}}
+\maketitle
+Text.
+\end{document}

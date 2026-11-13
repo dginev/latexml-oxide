@@ -1,0 +1,29 @@
+% authblk's unkeyed entries whose line ends in addresses after a `;`, a comma or a full stop, with no label:
+% `\affil{Dept A, Univ A; aable@a.edu}`, `\affil{Univ B, City, bbaker@b.edu}` and `\affil{Univ C\authorcr Street 1,
+% Town. \textup{\small\{ccole,\,dd\}@c.edu}}`: each tail of addresses leaves its affiliation and is its spelled author's
+% e-mail (`dd@` spells no one: the block's), never glued into the affiliation every author holds (OD #966's cut, a
+% tail after a boundary: 107c).
+% witness: 1903.04089 (`\affil{…, University of Maryland, jda@…}`), 1204.4622 (`…Canada.}
+%          \textup{\small \{hoyer,\,jrashid\}@ucalgary.ca}`), 2602.07392 (aastex631 `…, China; lha@…, xuey@…`),
+%          1701.07541 (emulateapj `…, USA; yalinwu@…`)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker, and Cat Cole", "Dept A, Univ A; aable@a.edu",
+%          "Univ B, City, bbaker@b.edu", "Univ C", "Street 1, Town. {ccole, dd}@c.edu"
+% engines: rust int139a0 = the addresses inside each affiliation, all three on every author
+% expect:  0 errors, 0 warnings; each author: Dept A, Univ A / Univ B, City / Univ C + Street 1, Town. and their own
+%          e-mail; the block creator dd@c.edu
+% status:  RED (int139a0) -> GREEN (107c)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\title{T}
+\author{Ann Able}
+\author{Bob Baker}
+\author{Cat Cole}
+\affil{Dept A, Univ A; aable@a.edu}
+\affil{Univ B, City, bbaker@b.edu}
+\affil{Univ C\authorcr Street 1, Town. \textup{\small\{ccole,\,dd\}@c.edu}}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

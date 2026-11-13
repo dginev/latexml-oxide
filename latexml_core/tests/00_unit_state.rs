@@ -1,7 +1,7 @@
 use std::collections::VecDeque;
 
 use latexml_core::{
-  CharToken, Explode, T_CS, T_SPACE,
+  CharToken, Explode, T_CS, T_LETTER, T_SPACE,
   common::{arena, arena::SymHashMap, locator::Locator},
   definition::expandable::Expandable,
   s,
@@ -394,4 +394,183 @@ fn semiverbatim() {
 
   begin_semiverbatim(None);
   assert!(end_semiverbatim().is_ok());
+}
+
+// (a mark taken now, and whether the state is unchanged since it)
+fn mark() -> u64 { watch_state() }
+fn unchanged(mark: u64) -> bool { state_unchanged_since(mark) }
+// (a row: its name, the write after a mark returning whether the state is unchanged since, and the answer expected)
+type Row = (&'static str, fn() -> bool, bool);
+
+/// Whether the state changed since a mark, the title-page reading's key (review revTP1 S1): every write counts — in
+/// place, in a frame, a mapping's entry, a box's dimension, a font's parameter, a group's end — but a LaTeXML-internal
+/// `lx…` value's; a rollback puts back the journal's start, never a mark taken inside it (no ABA).
+#[test]
+fn a_state_watch_ends_with_every_change_of_the_state() {
+  set_state(State::new(StateOptions::default()));
+  let rows: [Row; 16] = [
+    ("nothing", || unchanged(mark()), true),
+    (
+      "a value",
+      || {
+        let m = mark();
+        assign_value("rk1_v", "x", Some(Scope::Global));
+        unchanged(m)
+      },
+      false,
+    ),
+    (
+      "an lx value",
+      || {
+        let m = mark();
+        assign_value("lx_rk1_v", "x", Some(Scope::Global));
+        unchanged(m)
+      },
+      true,
+    ),
+    (
+      "in place",
+      || {
+        assign_value("rk1_v", "x", Some(Scope::Global));
+        let m = mark();
+        assign_value_inplace("rk1_v", "y");
+        unchanged(m)
+      },
+      false,
+    ),
+    (
+      "a frame's value replaced",
+      || {
+        push_frame();
+        assign_value("rk1_f", "a", None);
+        let m = mark();
+        replace_value_in_frame("rk1_f", 0, Stored::from("b"));
+        let kept = unchanged(m);
+        pop_frame().expect("its frame");
+        kept
+      },
+      false,
+    ),
+    (
+      "a frame's value unbound",
+      || {
+        push_frame();
+        assign_value("rk1_f", "a", None);
+        let m = mark();
+        unbind_value_in_frame("rk1_f", 0);
+        let kept = unchanged(m);
+        pop_frame().expect("its frame");
+        kept
+      },
+      false,
+    ),
+    (
+      "a mapping's entry",
+      || {
+        let m = mark();
+        assign_mapping("rk1_map", "k", Some("v"));
+        unchanged(m)
+      },
+      false,
+    ),
+    (
+      "a box's dimension",
+      || {
+        let m = mark();
+        journal_box_dimension("rk1_box", "width");
+        unchanged(m)
+      },
+      false,
+    ),
+    (
+      "a font's parameter in place",
+      || {
+        set_font_parameter("rk1_font", 1, 5);
+        let m = mark();
+        set_font_parameter("rk1_font", 2, 7);
+        unchanged(m)
+      },
+      false,
+    ),
+    (
+      "a meaning",
+      || {
+        let m = mark();
+        let_i(&T_CS!("\\rk1_probe"), &T_LETTER!("x"), Some(Scope::Global));
+        unchanged(m)
+      },
+      false,
+    ),
+    (
+      "a group's end restoring a value",
+      || {
+        push_frame();
+        assign_value("rk1_g", "in", None);
+        let m = mark();
+        pop_frame().expect("its frame");
+        unchanged(m)
+      },
+      false,
+    ),
+    (
+      "a group's end restoring an lx value",
+      || {
+        push_frame();
+        assign_value("lx_rk1_g", "in", None);
+        let m = mark();
+        pop_frame().expect("its frame");
+        unchanged(m)
+      },
+      true,
+    ),
+    (
+      "a rollback to the mark",
+      || {
+        let m = mark();
+        let journal = begin_assignment_journal().expect("no journal open");
+        assign_value("rk1_r", "x", Some(Scope::Global));
+        assert!(journal.rollback());
+        unchanged(m)
+      },
+      true,
+    ),
+    (
+      "a kept journal",
+      || {
+        let m = mark();
+        let journal = begin_assignment_journal().expect("no journal open");
+        assign_value("rk1_r", "k", Some(Scope::Global));
+        journal.keep();
+        unchanged(m)
+      },
+      false,
+    ),
+    (
+      "a mark inside a rolled-back journal",
+      || {
+        let journal = begin_assignment_journal().expect("no journal open");
+        assign_value("rk1_r", "y", Some(Scope::Global));
+        let m = mark();
+        assert!(journal.rollback());
+        unchanged(m)
+      },
+      false,
+    ),
+    (
+      "a write after the rollback (no ABA)",
+      || {
+        let journal = begin_assignment_journal().expect("no journal open");
+        assign_value("rk1_r", "y", Some(Scope::Global));
+        let m = mark();
+        assign_value("rk1_r", "z", Some(Scope::Global));
+        assert!(journal.rollback());
+        assign_value("rk1_r", "w", Some(Scope::Global));
+        unchanged(m)
+      },
+      false,
+    ),
+  ];
+  for (name, row, expected) in rows {
+    assert_eq!(row(), expected, "{name}");
+  }
 }

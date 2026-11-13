@@ -1,0 +1,16 @@
+% mechanism: the file a captured example body is `\input` back from (listings_sty.rs `lst_run_body_via_input`, showexpl's
+%   `\SX@put@code@result`) is numbered per conversion: `lx-LTXexample-1.tmp`, named in the log's "Processing content"
+%   line; the count was the thread's, so a persistent cortex_worker's next paper read `lx-LTXexample-2.tmp` (revST3b).
+% witness: synthetic
+% oracle:  pdflatex 0 `!`: "Some text.", "Some \textbf{text}." (the result and the code)
+% engines: rust ST3b e2f4fe7e79: alone `lx-LTXexample-1.tmp`, after the same document on one thread `lx-LTXexample-2.tmp`
+% expect:  0 errors, 0 warnings, `lx-LTXexample-1.tmp` once in each conversion's log, the XML the same alone or after
+%   another document
+% status:  GREEN (ST3c; guard perfect_kernel_batchst3::a_document_after_another_on_one_thread_is_the_document_alone)
+\documentclass{article}
+\usepackage{showexpl}
+\begin{document}
+\begin{LTXexample}
+Some \textbf{text}.
+\end{LTXexample}
+\end{document}

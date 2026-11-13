@@ -1,0 +1,11 @@
+% witness: synthetic (the class sibling of 1411.7188's shape): \documentclass{outercl}, whose \LoadClass{basecl} requires
+%          innercl.sty, which asks \@ifclassloaded of both classes before either declares itself
+% oracle:  pdflatex 0 errors: "outercl loaded. basecl loaded." (latex.ltx:18840, \documentclass and \LoadClass alike)
+% engines: rust int166a (GA2) = see the guard row
+% expect:  0 errors, 0 warnings; both "loaded."
+% status:  RED (int166a) -> GREEN (GA2c)
+% preload: ar5iv.sty
+\documentclass{outercl}
+\begin{document}
+\clans
+\end{document}

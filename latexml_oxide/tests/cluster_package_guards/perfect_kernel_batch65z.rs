@@ -2,6 +2,8 @@
 //! and arXiv papers call (run 340's first-error "undefined" cluster, row 7: caption/subcaption, bigstrut, natbib,
 //! titlesec/titling, array, authblk, IEEEtrantools, accents, acronym, crop, enumitem, ulem, footmisc, listings,
 //! amsthm, feynmf). Repros `tools/perfect_kernel/repros/package-bindings/*`.
+use latexml::util::test::{check_requirements, loads};
+
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
 fn convert(tex: &str) -> String {
@@ -24,10 +26,10 @@ fn caption_subcaption_setup_list_entry_and_text() {
     "../../../tools/perfect_kernel/repros/package-bindings/caption_subcaptionsetup_listentry_text.tex"
   ));
   assert_contains(&xml, &[
-    r#"<p xml:id="S0.F1.2"><text fontsize="90%" xml:id="S0.F1.2.1">(a)</text></p>"#,
+    r#"<p xml:id="S0.F1.1"><text fontsize="90%" xml:id="S0.F1.1.1">(a)</text></p>"#,
     r#"<figure inlist="lof" labels="LABEL:fig:entry" xml:id="S0.F2">"#,
     r#"<tag role="refnum">2</tag>"#,
-    ">Figure 2</text>: Text only</p>",
+    r#"<p xml:id="fig1.1">Figure 2: Text only</p>"#,
   ]);
 }
 
@@ -285,6 +287,9 @@ fn amsthm_internals_and_display_qed() {
 /// feynmf.sty:182 `\fmfkeep` in a graph, :239 `\fmfreuse` sets it again. Witnesses hep-lat0210017, hep-th9805098.
 #[test]
 fn feynmf_keep_and_reuse() {
+  if !check_requirements(loads::FEYNMF) {
+    return;
+  }
   let xml = convert(include_str!(
     "../../../tools/perfect_kernel/repros/package-bindings/feynmf_keep_reuse.tex"
   ));

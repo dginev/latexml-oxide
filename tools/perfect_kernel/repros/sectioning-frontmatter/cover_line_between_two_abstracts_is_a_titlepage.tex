@@ -1,0 +1,26 @@
+% The cover line between two late abstracts is a `<titlepage>` of its own, continued (`place_later_abstract`,
+% cover_order.rs): a `<para>` is no frontmatter, so the `<abstract>` and `<pubnote>` after it were invalid. What follows
+% the last abstract is body. `\noindent\hrulefill` lines, as the manuals have them.
+% witness: simples-matrices/simples-matrices-eng, -fra; annee-scolaire/annee-scolaire-eng, -fra; paresse/paresse-eng,
+%          -fra (2 jing lines each at sweep #150); 1006.5288's shape.
+% oracle:  pdflatex (TL 2025) 0 errors: T / A / rule / Abstract First. / rule / Abstract Second. / rule / 1 One / Body. /
+%          the note.
+% engines: perl 0 errors, valid: abstracts ahead, three paras. int140a: 2 jing errors.
+% expect:  0 errors, 0 warnings; title, creator, titlepage, abstract, titlepage, abstract, pubnote, para, section; valid.
+\documentclass{article}
+\begin{document}
+\title{T\thanks{Note on the title.}}
+\author{A}
+\maketitle
+\noindent\hrulefill
+\begin{abstract}
+First.
+\end{abstract}
+\noindent\hrulefill
+\begin{abstract}
+Second.
+\end{abstract}
+\noindent\hrulefill
+\section{One}
+Body.
+\end{document}

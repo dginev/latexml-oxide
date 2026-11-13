@@ -167,6 +167,20 @@ pub fn pin<S: AsRef<str>>(text: S) -> SymStr { with_arena_mut(|arena| arena.get_
 /// with one probe-key twin per defined control sequence (2026-08-23 audit R6).
 pub fn get<S: AsRef<str>>(text: S) -> Option<SymStr> { with_arena_mut(|arena| arena.get(text)) }
 
+/// The buffer [`get_suffixed`] spells its key in. Freed by [`reset`], as a `#[thread_local]` has no destructor.
+#[thread_local]
+static SUFFIXED_KEY: RefCell<String> = RefCell::new(String::new());
+
+/// [`get`] of `name` with `suffix` appended, without formatting a string: every definition asks this of its side keys
+/// (`"{cs}:locked"`, `"{cs}:error@stub"`), and almost none of them exists.
+pub fn get_suffixed(name: &str, suffix: &str) -> Option<SymStr> {
+  let mut key = SUFFIXED_KEY.borrow_mut();
+  key.clear();
+  key.push_str(name);
+  key.push_str(suffix);
+  get(key.as_str())
+}
+
 /// ASCII char-pin cache: every unique ASCII byte resolves to a single
 /// SymStr for the lifetime of the thread's arena (append-only between
 /// [`reset`]s, which clears the cache with it). Cache entries use `u32::MAX` as the "not yet pinned"
@@ -224,6 +238,16 @@ where FnR: FnOnce(&str) -> R {
     let s = unsafe { arena.resolve_unchecked(sym) };
     caller(s)
   })
+}
+
+/// The first `N` bytes of `sym`'s text, if it has as many: a read only, so without the borrow and guard of [`with`], for
+/// a test by name on a hot path.
+#[inline]
+pub fn first_bytes<const N: usize>(sym: SymStr) -> Option<[u8; N]> {
+  // SAFETY: as [`with`]'s on the text. The pointer is this thread's interner, whose borrower, if any, is further up this
+  // stack (as [`with_arena_mut`]'s re-entrant call), and nothing here writes.
+  let text = unsafe { (*ARENA.as_ptr()).resolve_unchecked(sym) };
+  text.as_bytes().first_chunk().copied()
 }
 
 pub fn with2<R, FnR>(sym1: SymStr, sym2: SymStr, caller: FnR) -> R
@@ -303,6 +327,7 @@ pub fn reset() {
   for site in PINNED_SITES.borrow_mut().drain(..) {
     site.with(|c| c.set(None));
   }
+  *SUFFIXED_KEY.borrow_mut() = String::new();
 }
 
 /// Eagerly initialize this thread's `#[thread_local]` `ARENA` Lazy.

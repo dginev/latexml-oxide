@@ -1,0 +1,18 @@
+% witness: 1811.04370 1609.05867 1910.09976 (floatrow, then algorithm2e), 1807.05059 (algorithm2e, then floatrow):
+%          algorithm2e.sty loads no float package; Perl's binding (algorithm2e.sty.ltxml:37) and ours required float
+% oracle:  pdflatex 0 errors; one figure with the caption
+% engines: rust 66l = 1 error (\endgroup: float_sty.rs's no-op \float@end kept, floatrow's \newcommand refused); Perl 0
+%          (no floatrow raw-load)
+% expect:  0 errors; one float holding the caption
+% status:  RED (66l) -> GREEN (66m)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{algorithm2e}
+\usepackage{floatrow}
+\newenvironment{myfig}{\figure}{\endfigure}
+\begin{document}
+\begin{myfig}
+X
+\caption{A caption.}
+\end{myfig}
+\end{document}

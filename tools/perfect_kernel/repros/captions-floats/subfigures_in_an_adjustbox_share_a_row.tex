@@ -1,0 +1,24 @@
+% witness: 2311.18531 A7.F5/F6 (subcaption sub-figures in an adjustbox, one `\hbox` in TeX); review rev78x
+%          findings 5
+% oracle:  pdflatex 0 errors, 0 overfull; one row of four
+% engines: rust int67a = one row of four; 78x r1 = 3+1 (the sub-figures at the geometry's width); Perl 0.8.8 1+1+3
+% expect:  0 errors, 0 warnings; four `ltx_figure_panel` sub-figures in one row after the adjustbox's own paragraph
+% status:  RED (78x r1) -> GREEN (78x r2, OXIDIZED_DESIGN_DIVERGENCES #885: the sub-floats of one `\hbox` are one row)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage{graphicx}
+\usepackage{adjustbox}
+\usepackage{subcaption}
+\begin{document}
+\begin{figure}
+\centering
+\begin{adjustbox}{width=\linewidth,center}
+\begin{subfigure}[b]{0.3\linewidth}\centering\includegraphics[width=\linewidth]{example-image}\caption*{x}\end{subfigure}\hfill
+\begin{subfigure}[b]{0.3\linewidth}\centering\includegraphics[width=\linewidth]{example-image}\caption*{y}\end{subfigure}\hfill
+\begin{subfigure}[b]{0.3\linewidth}\centering\includegraphics[width=\linewidth]{example-image}\caption*{z}\end{subfigure}\hfill
+\begin{subfigure}[b]{0.3\linewidth}\centering\includegraphics[width=\linewidth]{example-image}\caption*{w}\end{subfigure}
+\end{adjustbox}
+\caption{Four sub-figures in one box.}
+\end{figure}
+\end{document}

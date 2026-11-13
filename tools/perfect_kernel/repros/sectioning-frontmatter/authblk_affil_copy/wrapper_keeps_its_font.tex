@@ -1,0 +1,19 @@
+% RED (review rev102a finding 1, synthetic; introduced by 102a's lock; no wrapper in any .tex/.sty/.cls of the 1,215
+% authblk papers of the 30k census): a document's wrapper round the binding's `\affil`
+% (`\let\oldaffil\affil \renewcommand\affil[1]{\oldaffil{\textit{#1}}}`) is refused by the lock (OD #959), so its
+% typography goes: the contact is plain `Univ X`, where int129a kept `<text font="italic">Univ X</text>`.
+% (The `[2][]` form with `\let` loops in pdflatex itself; a `\NewCommandCopy` save behaves as this one.)
+% fix:     when a refused body calls the binding through a `\let`/`\NewCommandCopy` alias, run the document's
+%          definition as the call and keep its output; never re-open the copy path (JOSS, 2504.08081).
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able", "Univ X" in italics
+% engines: rust int129a = Ann Able with <text font="italic">Univ X</text>; rust 102a = plain "Univ X"
+% expect:  0 errors, 0 warnings; Ann Able's affiliation contact holds <text font="italic">Univ X</text>
+% status:  RED
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\let\oldaffil\affil
+\renewcommand\affil[1]{\oldaffil{\textit{#1}}}
+\title{A Title}\author{Ann Able}
+\affil{Univ X}
+\begin{document}\maketitle Body text.\end{document}

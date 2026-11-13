@@ -175,7 +175,26 @@ LoadDefinitions!({
 
   // Expandable Commands
   DefMacro!("\\pdftexrevision", "19");
-  def_macro_noop("\\pdftexbanner")?;
+  // pdfTeX's banner, of the runtime tree's TeX Live year (Perl's is empty, pdfTeX.pool.ltxml:93): documents parse it
+  // for that year — 2309.17381's `\def\gettexliveversion#1(#2 #3 #4#5#6#7#8)#9\relax{#4#5#6#7}` chose a command's
+  // arity by it, and an empty banner ran its argument off the paragraph (the error-limit Fatal). The pdfTeX and kpathsea
+  // versions are each year's TeX Live release's.
+  DefMacro!("\\pdftexbanner", sub[_args] {
+    let year = crate::dump_paths::detect_ambient_texlive_year().unwrap_or(2025);
+    let (revision, kpathsea) = match year {
+      ..=2018 => ("19", "6.3.0"),
+      2019 => ("20", "6.3.1"),
+      2020 => ("21", "6.3.2"),
+      2021 => ("22", "6.3.3"),
+      2022 => ("24", "6.3.4"),
+      2023 => ("25", "6.3.5"),
+      2024 => ("26", "6.4.0"),
+      _ => ("28", "6.4.1"),
+    };
+    ExplodeText!(s!(
+      "This is pdfTeX, Version 3.141592653-2.6-1.40.{revision} (TeX Live {year}) kpathsea version {kpathsea}"
+    ))
+  });
   // pdfTeX manual §8.11: `\pdfcreationdate` expands to the PDF date string
   // `D:YYYYMMDDhhmmss±hh'mm'` of the job start. datetime2.sty:46-48 seeds
   // `\dtm@pdfcreationdate` from it and its `\@dtm@parsepdfdate` splits the
@@ -442,12 +461,23 @@ LoadDefinitions!({
   // packages that declare-then-reference pdf objects (e.g. zref-savepos
   // path on certain papers). Witness cluster: arXiv:2506.21632 / .08091.
   def_primitive_noop("\\pdfrefobj Number")?;
-  def_primitive_noop("\\pdfrefxform Number")?;
+  // \pdfrefxform <form number> places the form XObject `\pdfxform` made of a box (pdfTeX manual §`\pdfrefxform`), as
+  // often as it is referenced: here the box `\pdfxform` kept, as `\copy` sets one. xsavebox's `\xsbox`/`\xusebox`
+  // (xsavebox.sty:120-122, :298, :325, through pdfbase's `\pbs_pdfxform:nnnnn`/`\pbs_pdfrefxform:n`) saved a box this way
+  // and printed an empty one of its size (biblatex-ext's open-access symbols, biblatex-ext.tex:3938-4022). Perl defines
+  // neither (pdfTeX.pool.ltxml:96 `\pdfxformname` only; OXIDIZED_DESIGN_DIVERGENCES #788). Guard `perfect_kernel_batch78a::xsavebox_saved_box_prints_its_content`.
+  DefPrimitive!("\\pdfrefxform Number", sub[(number)] {
+    match lookup_value(&s!("pdfxform@{}", number.value_of())) {
+      Some(Stored::Digested(form)) => Ok(vec![form]),
+      _ => Ok(Vec::new()),
+    }
+  });
   // \pdfxform [attr <general text>] [resources <general text>] <box number>
   // makes a form XObject of the box and numbers it in `\pdflastxform`. Nothing
   // is written here; the number is what the caller keeps (media9's pdfbase
   // `\pbs_pdfxform:nnnnn`, pdfbase.sty:426, in PDF output: arXiv 2605.10543).
-  // The box is made void, "as `\box` does" (pdftex manual §`\pdfxform`).
+  // The box is made void, "as `\box` does" (pdftex manual §`\pdfxform`); its content is the form's, which
+  // `\pdfrefxform` places.
   DefPrimitive!("\\pdfxform", sub[_args] {
     for keyword in ["attr", "resources"] {
       if read_keyword(&[keyword])?.is_some() {
@@ -456,11 +486,14 @@ LoadDefinitions!({
       }
     }
     let number = read_number()?;
-    remove_value(&format!("box{}", number.value_of()));
+    let form = remove_value(&format!("box{}", number.value_of()));
     let next = match lookup_register("\\pdflastxform", Vec::new())? {
       Some(RegisterValue::Number(n)) => n.0 + 1,
       _ => 1,
     };
+    if let Some(form @ Stored::Digested(_)) = form {
+      assign_value(&s!("pdfxform@{next}"), form, Some(Scope::Global));
+    }
     assign_register("\\pdflastxform", RegisterValue::Number(Number::new(next)), Some(Scope::Global), Vec::new())?;
   });
   // \pdfannot annot type spec (h, v, m)
@@ -635,6 +668,12 @@ LoadDefinitions!({
   // \pdfstartthread / \pdfendthread — thread spec; no-op stubs
   def_primitive_noop("\\pdfstartthread")?;
   def_primitive_noop("\\pdfendthread")?;
+  // \pdfinterwordspaceon / \pdfinterwordspaceoff / \pdffakespace (pdfTeX 1.40.15): fake interword spaces in the PDF's
+  // text layer, for copy and paste; nothing to do in XML. dgruyter.sty:1226 `\pdfinterwordspaceon` (2205.10368; Perl's
+  // pdfTeX.pool has none either).
+  def_primitive_noop("\\pdfinterwordspaceon")?;
+  def_primitive_noop("\\pdfinterwordspaceoff")?;
+  def_primitive_noop("\\pdffakespace")?;
   // Per-font extension codes (match \lpcode / \rpcode pattern)
   DefRegister!("\\lpfcode Token Number", Number::new(0));
   DefRegister!("\\rpfcode Token Number", Number::new(0));
@@ -742,8 +781,15 @@ LoadDefinitions!({
 
   DefMacro!("\\expanded XGeneralText", "#1");
 
+  // pdftex.web `compare_strings`: each text is fully expanded and made a string by `tokens_to_string`, i.e. by
+  // `show_token_list` (tex.web §292): a control word is written with `\escapechar` and a trailing space (§262
+  // print_cs), a parameter character doubled. With the plain token text, `\relax` and `\string\relax\space` differed,
+  // so expl3's `\str_if_eq:nn` failed l3regex's test for a compiled regex variable (`\__regex_compile_use_aux:w`
+  // compares its meaning with `macro:->\__regex_branch:n`), and `\regex_replace_case_once:nN { \c_..._regex {…} }`
+  // compiled the variable's name as a pattern ("Invalid character '_' following '\c' escape": datatool's numeric
+  // parser, 2006.14937). Perl compares `ToString` (pdfTeX.pool.ltxml:277; KNOWN_PERL_ERRORS #1178).
   DefMacro!("\\pdfstrcmp XGeneralText XGeneralText", sub[(first,second)] {
-    match first.to_string().cmp(&second.to_string()) {
+    match writable_tokens(&first).cmp(&writable_tokens(&second)) {
      Ordering::Greater => Tokens!(T_OTHER!("1")),
      Ordering::Equal => Tokens!(T_OTHER!("0")),
      Ordering::Less => Tokens!(T_OTHER!("-"), T_OTHER!("1"))
@@ -936,10 +982,29 @@ mod md5_tests {
 }
 
 thread_local! {
-  /// pdfTeX random-number state (xorshift64*), reset per conversion by the
-  /// engine's thread-state reset through [`pdftex_random_seed`].
+  /// pdfTeX random-number state (xorshift64*), reset per conversion ([`reset_pdftex_random`]).
   static PDFTEX_RANDOM: std::cell::Cell<u64> =
     const { std::cell::Cell::new(0x9E37_79B9_7F4A_7C15) };
+  /// The generator of a speculative digestion (`gullet::speculative_digestion`), whose draws and seeds the document's never see:
+  /// it draws what it may loop on, and the document's next draw is the one it would have been with no run before it.
+  static PDFTEX_RANDOM_SPECULATIVE: std::cell::Cell<u64> =
+    const { std::cell::Cell::new(0x9E37_79B9_7F4A_7C15) };
+}
+
+/// A conversion's start: both generators at the default fixed seed, so a document converts as it does alone on a thread that
+/// converted another. A rehearsal's draw decides what a block reads (`\ifnum\pdfuniformdeviate 2=0 Ann\else Bob\fi`).
+pub fn reset_pdftex_random() {
+  PDFTEX_RANDOM.with(|c| c.set(0x9E37_79B9_7F4A_7C15));
+  PDFTEX_RANDOM_SPECULATIVE.with(|c| c.set(0x9E37_79B9_7F4A_7C15));
+}
+
+/// The generator in use ([`PDFTEX_RANDOM_SPECULATIVE`]).
+fn with_pdftex_random<R>(use_it: impl FnOnce(&std::cell::Cell<u64>) -> R) -> R {
+  if in_speculative_digestion() {
+    PDFTEX_RANDOM_SPECULATIVE.with(use_it)
+  } else {
+    PDFTEX_RANDOM.with(use_it)
+  }
 }
 
 /// Re-seed the pdfTeX generator (`\pdfsetrandomseed`; 0 selects the default
@@ -950,12 +1015,12 @@ pub fn pdftex_random_seed(seed: i64) {
   } else {
     (seed as u64).wrapping_mul(0x9E37_79B9_7F4A_7C15) | 1
   };
-  PDFTEX_RANDOM.with(|c| c.set(s));
+  with_pdftex_random(|c| c.set(s));
 }
 
 /// Next 63-bit pseudo-random value (xorshift64*).
 fn pdftex_random_next() -> u64 {
-  PDFTEX_RANDOM.with(|c| {
+  with_pdftex_random(|c| {
     let mut x = c.get();
     x ^= x >> 12;
     x ^= x << 25;

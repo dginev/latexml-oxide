@@ -16,7 +16,37 @@ LoadDefinitions!({
   // of it. Guards `perfect_kernel_batch56::{declaremathoperator_keeps_protected_macros,
   // declaremathoperator_body_stays_lazy, declaremathoperator_keeps_the_following_letters_italic}`;
   // golden tests/parse/declared_operators.tex.
-  DefPrimitive!("\\DeclareMathOperator OptionalMatch:* {Token} {}", sub[(star, cs, text)] {
+  // The name is the argument's first token; what follows it is the parameter text TeX gives the command
+  // (amsopn.sty:50-53 `\@declmathop` → `\DeclareRobustCommand{#2}`, whose `\def` reads it: `\DeclareMathOperator{\N^1}{…}`
+  // makes `\N^1` the operator, 2301.04262), not text after the command (Perl `{Token}`: a Warning, and its `^` a script
+  // outside math; KNOWN_PERL_ERRORS #891). Guard `perfect_kernel_batch69a::declaremathoperator_parameter_text`.
+  DefPrimitive!("\\DeclareMathOperator OptionalMatch:* {} {}", sub[(star, name, text)] {
+    let mut name: Vec<Token> =
+      name.unlist().into_iter().skip_while(|t| t.get_catcode() == Catcode::SPACE).collect();
+    if name.is_empty() {
+      return Ok(Vec::new());
+    }
+    let cs = name.remove(0);
+    // …but only for a command already defined (and not `\relax`): `\declare@robustcommand`'s
+    // `\ifx\@undefined#1\else\ifx\relax#1\else … \fi\fi` (latex.ltx:1386-1389) typesets the parameter text of an
+    // undefined one (`\DeclareMathOperator{\dash_exp}{-exp}`, math0312019; pdflatex errs and leaves the command
+    // undefined), so there it is read after the command, as Perl's `{Token}` reads it: the Warning, then the script's
+    // Error (KNOWN_PERL_ERRORS #891). Guard `perfect_kernel_batch69a::declaremathoperator_undefined_parameter_text`.
+    if !name.is_empty()
+      && (lookup_meaning(&cs).is_none() || x_equals(&cs, &T_CS!("\\relax")))
+    {
+      if let Some(first) = name.iter().find(|t| t.get_catcode() != Catcode::SPACE) {
+        Warn!(
+          "unexpected",
+          first.stringify(),
+          s!(
+            "Unexpected text after the value in an argument of \\DeclareMathOperator ('{}'); it is read after \\DeclareMathOperator",
+            Tokens::new(name.clone())
+          )
+        );
+      }
+      unread_vec(std::mem::take(&mut name));
+    }
     let has_star = star.is_some();
     let mut presentation = vec![T_CS!("\\operatorname")];
     if has_star {
@@ -36,6 +66,14 @@ LoadDefinitions!({
       revert_as: Some(Cow::Borrowed("context")),
       ..Default::default()};
     def_math(cs, None, Tokens::new(presentation), opts)?;
+    if !name.is_empty() {
+      let operator = T_CS!(s!("\\lx@amsopn@{}", cs.to_string().trim_start_matches('\\')));
+      let_i(&operator, &cs, None);
+      let mut definition = vec![T_CS!("\\def"), cs];
+      definition.extend(name);
+      definition.extend([T_BEGIN!(), operator, T_END!()]);
+      digest(Tokens::new(definition))?;
+    }
   });
 
   // \operatorname*{text}
@@ -126,6 +164,41 @@ LoadDefinitions!({
   DefMath!("\\varprojlim", "\\underleftarrow{\\operatorname{lim}}",
     role => "LIMITOP", meaning => "projective-limit");
 
+  // amsopn.sty:92-97 `\varlim@{<style>}{<fill>\<style>}`, the builder of `\varinjlim`/`\varprojlim` (an
+  // `\operator@font lim` over an arrow fill), which papers call to define their own direct and inverse limits
+  // (`\mathop{\mathpalette\varlim@{\leftarrowfill@\scriptstyle}}\nmlimits@`, 23 amsart papers in run 353 with it
+  // undefined: 1608.08273, 1807.11932, 1909.11399). It renders as those two do, the arrow chosen from the fill macro as
+  // amsmath's `\underarrow@` chooses it (amsmath_sty.rs). Perl's binding lacks it (KNOWN_PERL_ERRORS #696).
+  RawTeX!(
+    r"\def\varlim@#1#2{\lx@varlim@#2\relax}
+\def\lx@varlim@#1#2\relax{\ifx#1\leftarrowfill@\underleftarrow{\operatorname{lim}}\else\underrightarrow{\operatorname{lim}}\fi}"
+  );
+  // amsopn.sty:105-108, `\varliminf@`/`\varlimsup@{<style>}` (an `\operator@font lim` under or over a
+  // rule), the builders of `\varliminf`/`\varlimsup` that papers call to define their own (`\renewcommand{\limsup}{
+  // \mathop{\mathpalette\varlimsup@{\vphantom{p}}}\nmlimits@}`, 2005.13511). They render as those two do, as `\varlim@`
+  // does above. Perl's binding lacks them (KNOWN_PERL_ERRORS #801).
+  RawTeX!(
+    r"\def\varliminf@#1{\underline{\operatorname{lim}}}
+\def\varlimsup@#1{\overline{\operatorname{lim}}}"
+  );
+  // amsopn.sty:28-42 `\newmcodes@`, the math codes an operator name is set with (`'`, `*`, `.`, `-`, `/`, `:` as
+  // ordinary characters, the minus kept in `\std@minus`); the pdfTeX branch, as LaTeXML is pdfTeX (`\Umathcode`
+  // undefined), its hexadecimal `"613A`/`"603A` written in decimal (the file reads them under `\catcode`\"=12`, :27).
+  // Papers set variable names with it, `\begingroup\newmcodes@\mathit{#1}\endgroup` (11 papers: 1511.04387,
+  // 1712.08220, 1802.09883). amsopn.sty:51-53 `\@declmathop{<m|o>}{<cs>}{<text>}`, `\DeclareMathOperator`'s worker
+  // after its star test, which papers call to declare operators in bulk (`\expandafter\@declmathop\expandafter
+  // #1\csname #2\endcsname{#2}`, 2101.09853): `\@ifdefinable` as there, then the declaration `\DeclareMathOperator`
+  // (`m`: starred, limits) makes. Perl's binding lacks both (KNOWN_PERL_ERRORS #801).
+  RawTeX!(
+    r#"\gdef\newmcodes@{\mathcode`\'39\mathcode`\*42\mathcode`\.24890 %
+  \ifnum\mathcode`\-=45 \else
+    \mathchardef\std@minus\mathcode`\-\relax
+  \fi
+  \mathcode`\-45\mathcode`\/47\mathcode`\:24634\relax}
+\long\def\@declmathop#1#2#3{\@ifdefinable{#2}{\csname lx@amsopn@declmathop@#1\endcsname#2{#3}}}
+\def\lx@amsopn@declmathop@m{\DeclareMathOperator*}
+\def\lx@amsopn@declmathop@o{\DeclareMathOperator}"#
+  );
   DefMacro!("\\nolimits@", "\\nolimits");
   // amsopn.sty:90 `\def\operatorfont{\operator@font}` — the user-level name
   // (glosmathtools.sty:54 `\sbu` uses it ~54× per manual). Perl's binding

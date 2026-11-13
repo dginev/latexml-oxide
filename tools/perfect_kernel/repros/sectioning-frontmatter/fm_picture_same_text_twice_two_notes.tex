@@ -1,0 +1,15 @@
+% witness: review revCR8 finding 3: two pictures printing the same text beside one name
+% oracle:  pdflatex 0 errors: "Ann Able Zebraword Zebraword"
+% engines: rust int154r (CR8) = one picture kept, 1 warning ("Zebraword" missing): the notes keyed by their text,
+%          and the relocation's one copy per label
+% expect:  0 errors, 0 warnings; one creator "Ann Able" with two notes, each holding its picture
+% status:  RED (int154r) -> GREEN (CR8b) — perfect_kernel_batchcr8::two_same_text_pictures_are_two_notes
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{tikz}
+\title{T}
+\author{Ann Able \tikz\node{Zebraword}; \tikz\node{Zebraword};}
+\begin{document}
+\maketitle
+Body.
+\end{document}

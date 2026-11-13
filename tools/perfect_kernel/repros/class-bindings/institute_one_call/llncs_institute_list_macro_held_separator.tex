@@ -1,0 +1,20 @@
+% mechanism: llncs_cls.rs `\institute` → `\lx@llncs@institute@dispatch`: the list cut first at the kernel's `\and` by
+%   meaning, then by spelling at `\and` (`split_at_kernel_separators`, Option C P2-3, OD #995), each piece a
+%   `labelseq=affiliation` contact call `\inst{n}` picks — a document macro holding only `\and`, the authors marked
+% witness: synthetic
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2" over "1 Univ A, Town A" and
+%   "2 Univ B, Town B"
+% engines: Perl 0.8.8 splits by spelling (llncs.cls.ltxml:46-48) and misses it; int160a1 (1f3949ecad): the same XML as
+%   P23 (the sole institute, cut at its `\and` by the reading), 0 errors, 0 warnings
+% expect:  0 errors, 0 warnings; Ann Able: Univ A, Town A; Bob Baker: Univ B, Town B
+% status:  GREEN (int160a1 and P23; guard perfect_kernel_batchp22b::an_institute_list_cut_at_the_kernel_and_by_meaning)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\newcommand\nextinst{\and}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2}}
+\institute{Univ A, Town A \nextinst Univ B, Town B}
+\maketitle
+Text.
+\end{document}

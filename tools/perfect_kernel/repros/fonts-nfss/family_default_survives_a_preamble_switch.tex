@@ -1,0 +1,12 @@
+% witness: none (77u r1 question 1; user ruling 2026-10-20; DIVERGENCES #779, #315 addendum)
+% oracle:  pdflatex 0 errors; "Body text." CMSS10 medium (`\init@series@setup`'s `\reset@font` drops the preamble
+%          `\bfseries` but selects `\familydefault`), "rm" CMR10, "normal" CMSS10
+% engines: rust 77u r1 = "Body text." serif (reset to `\rmdefault`); 77s/Perl = `<text font="sansserif bold">`
+% expect:  0 errors, 0 warnings; "Body text." and "normal" `font="sansserif"` (medium), "rm" serif
+% status:  GREEN (77u r2)
+\documentclass{article}
+\renewcommand{\familydefault}{\sfdefault}
+\sffamily\bfseries
+\begin{document}
+Body text. \textrm{rm} \textnormal{normal}
+\end{document}

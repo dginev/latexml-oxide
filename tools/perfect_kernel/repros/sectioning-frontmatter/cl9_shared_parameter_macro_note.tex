@@ -1,0 +1,17 @@
+% mechanism: two names written from overlapping runs of the block's tokens (a macro of one parameter prints both, which
+%   the reading does not unfold: `reading::unfold_held_names`) write the author block whole at =2 (`emit::names_overlap`,
+%   Perl's whole-block creator, counted), never each name as its text: the macro's `\thanks` note is kept. The
+%   parameterless `cl9_shared_macro_note` was this path's repro until AUT1 read it unfolded
+% witness: cond-mat9310042, 1602.03850 (their macros take none; this one takes an empty argument); review revX1 finding 1
+% oracle:  pdflatex 0 errors: "Ann Able*, Bob Baker / Univ Z"; footnote "* Univ X."
+% engines: CL9b to AUT1 the block whole, the note kept, Warning 1
+% expect:  0 errors, 1 warning (the overlap); one creator holding "Univ X."
+% status:  GREEN (CL9b; guard perfect_kernel_batchcl9)
+\documentclass{scrartcl}
+\newcommand{\myauthors}[1]{Ann Able\thanks{Univ X.}, Bob Baker#1}
+\begin{document}
+\title{T}
+\author{\small\myauthors{}\\ Univ Z}
+\maketitle
+Text.
+\end{document}

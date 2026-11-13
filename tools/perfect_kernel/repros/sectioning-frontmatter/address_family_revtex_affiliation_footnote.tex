@@ -1,0 +1,18 @@
+% An "Electronic address" footnote inside REVTeX's `\affiliation` (shape F; beyond Perl, which keeps a document
+% `<pubnote>`, Base_Utility.pool.ltxml:331): the entry's e-mail, named by the note's label.
+% witness: 1002.3223
+% oracle:  pdflatex 0 errors: "Univ A, Town*", "* Electronic address: aable@a.edu"
+% engines: rust int127a = 0 errors; two `<pubnote>`s; perl = the same
+% expect:  0 errors, 0 warnings; Ann: Univ A, Town + e-mail aable@ (name "Electronic address: "); Bob likewise; no pubnote
+% status:  RED (int127a) -> GREEN (100b)
+% preload: ar5iv.sty
+\documentclass[aps,prd]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\affiliation{Univ A, Town\footnote{Electronic address: aable@a.edu}}
+\author{Bob Baker}
+\affiliation{Univ B, City\footnote{Electronic address: bbaker@b.edu}}
+\maketitle
+Text.
+\end{document}

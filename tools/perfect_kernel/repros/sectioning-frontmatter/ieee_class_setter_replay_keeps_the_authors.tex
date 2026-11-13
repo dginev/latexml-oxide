@@ -1,0 +1,18 @@
+% witness: revZ2r2's nit (synthetic): a class's refused `\title`, replayed for its side effects, runs IEEEtran's `\author` and restores `\@author`
+% oracle:  pdflatex 0 errors: "Ann Able / Univ A"
+% engines: int140a Ann Able, Univ A; Z2r2 no creator: the replay's `\lx@IEEE@author@begin` took back what the last body queued,
+%          the frontmatter being frozen for the replay's own calls
+% expect:  0 errors; Ann Able, Univ A; a later `\author` still replaces her (perfect_kernel_batchz2::a_class_setters_replay_leaves_the_author_body)
+% status:  RED (Z2r2) -> GREEN (Z2r3)
+\begin{filecontents*}[overwrite]{ieeereplay.cls}
+\ProvidesClass{ieeereplay}
+\LoadClass{IEEEtran}
+\renewcommand\title[1]{\gdef\@title{#1}\let\my@author\@author\author{\IEEEauthorblockN{Zed Zane}}\global\let\@author\my@author}
+\end{filecontents*}
+\documentclass{ieeereplay}
+\begin{document}
+\author{\IEEEauthorblockN{Ann Able}\IEEEauthorblockA{Univ A}}
+\title{T}
+\maketitle
+Body.
+\end{document}

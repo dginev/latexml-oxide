@@ -1,0 +1,18 @@
+% witness: 1212.6367 (`\usepackage[eqsecnum]{cmpj2}`), 1207.2995, 1310.0277, 1510.06562, 1601.01592 (cmpj2)
+% oracle:  pdflatex (TL 2025), second run, 0 errors: "A. One1 , B. Two1", "1 First Institute, Lviv, Ukraine", "(1.1)"
+% engines: int164a: both names "?", 2 Warnings, the address on a nameless creator
+% expect:  0 errors, 0 warnings; both names `labelref="LABEL:la"`, each holding the address; the equation numbered 1.1
+%          (the document's options reach the real package: `cm` keeps the droid fonts' txfonts load out, `eqsecnum`)
+% status:  GREEN (CMPJ1: cmpj2_sty.rs; perfect_kernel_batchcmpj1::cmpj_address_marks_print_the_second_run)
+\documentclass{article}
+\usepackage[cm,eqsecnum]{cmpj2}
+\title{A title}
+\author{A. One\refaddr{la}, B. Two\refaddr{la}}
+\addresses{
+\addr{la} First Institute, Lviv, Ukraine
+}
+\begin{document}
+\maketitle
+\section{S}
+\begin{equation}x=1\end{equation}
+\end{document}

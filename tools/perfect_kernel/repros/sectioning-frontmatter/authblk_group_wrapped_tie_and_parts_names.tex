@@ -1,0 +1,17 @@
+% authblk: a group around the whole names list, `A\textsuperscript{a}\thanks{…} ~and B\textsuperscript{a}`: the
+% group is transparent, its "and" the list's.
+% witness: 2506.23337 (`\author{{Nikolai N. Leonenko\textsuperscript{a}\thanks{CONTACT …} ~and Andrey
+%          Pepelyshev\textsuperscript{a}} }`)
+% oracle:  pdflatex 0 errors: "Ann Ablea∗ and Bob Bakera", "a University of Alpha, Alphaville", the note
+% engines: rust int138a = one creator "Ann Able and Bob Baker", Error:frontmatter:merged_creators; Perl one creator
+% expect:  0 errors, 0 warnings; two creators with the affiliation, Ann Able's note
+% status:  RED (int138a) -> GREEN (107b)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{{Ann Able\textsuperscript{a}\thanks{Corresponding author. Email: ann@alpha.edu} ~and Bob Baker\textsuperscript{a}} }
+\affil{ \textsuperscript{a}University of Alpha, Alphaville}
+\maketitle
+\end{document}

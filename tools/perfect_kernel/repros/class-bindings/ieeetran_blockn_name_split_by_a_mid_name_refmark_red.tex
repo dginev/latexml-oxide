@@ -1,0 +1,19 @@
+% mechanism: an `\IEEEauthorrefmark` between a first and a last name in `\IEEEauthorblockN` cuts the name: the mark is
+%   read as the end of a name, not as a mark inside one (the reading's mark handling, ieeetran_cls.rs;
+%   revBT1b's sibling, BT1c report SYNC note)
+% witness: synthetic (BT1c report; no census paper puts a refmark between the parts of a name)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann∗ Able† and Bob Baker†", "∗ Univ A † Univ B"
+% engines: int158a (`latexml_oxide.int158a-rel`): 0 errors, 0 warnings; creators "Ann *" (Univ A), "Able †" (Univ B),
+%   "Bob Baker †" (Univ B): one creator invented, the marks' glyphs in the names, and no Warning; perl not run
+% expect:  0 errors, 0 warnings; creators Ann Able (Univ A, Univ B), Bob Baker (Univ B); no mark glyph in a name
+% status:  RED (int158a; RR1 gap 1)
+% preload: ar5iv.sty
+\documentclass{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann\IEEEauthorrefmark{1} Able\IEEEauthorrefmark{2} and Bob Baker\IEEEauthorrefmark{2}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ A}
+\IEEEauthorblockA{\IEEEauthorrefmark{2}Univ B}}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,19 @@
+% An empty `{titlepage}` (a blank cover) before `\maketitle`: the HTML stylesheet hid the document title beside any
+% titlepage, so the HTML showed no title (LaTeXML-structure-xhtml.xsl; OXIDIZED_DESIGN #761).
+% witness: 68t title study (empty cover + `\maketitle`)
+% oracle:  pdflatex 0 errors: a blank page, then "The Real Title / Ann Author / <date> / Body text."
+% engines: rust 67int28 = 0 errors, `<titlepage/>`, the HTML body without the title; Perl the same stylesheet rule
+% expect:  0 errors, 0 warnings; the HTML shows the title as the document's `<h1 class="ltx_title ltx_title_document">`
+% status:  RED (67int28) -> GREEN (int27)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{The Real Title}
+\author{Ann Author}
+\begin{document}
+\begin{titlepage}
+\thispagestyle{empty}
+\vspace*{2cm}
+\end{titlepage}
+\maketitle
+Body text.
+\end{document}

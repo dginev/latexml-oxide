@@ -1,0 +1,15 @@
+% mechanism: a bare run before the block's `\IEEEauthorblockA` of `\\`-separated lines, each an ordinal-led name, is a
+%   names block per line (ieeetran_cls.rs `wrap_bare_author_block_text`, `ordinal_name_line`), the template's name lines
+% witness: synthetic (review revP4cR2 S2, probe o5); the one-line shape 1806.11431
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "1st Ann Able", "2nd Bob Baker", "3rd Cy Cole", "Univ A", "Town"
+% engines: P4b2: both lines Ann's affiliation; P4cR2 ea6a435433: "3 rd Cy Cole" Bob's affiliation, 2 W
+% expect:  0 errors, 0 warnings; three creators, "Univ A Town" each's
+% status:  RED (P4cR2 ea6a435433) -> GREEN (P4cR2b)
+% preload: ar5iv.sty
+\documentclass[conference]{IEEEtran}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{1\textsuperscript{st} Ann Able} 2\textsuperscript{nd} Bob Baker\\ 3\textsuperscript{rd} Cy Cole \IEEEauthorblockA{Univ A\\ Town}}
+\maketitle
+Body.
+\end{document}

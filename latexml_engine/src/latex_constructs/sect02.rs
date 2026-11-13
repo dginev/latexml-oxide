@@ -89,6 +89,16 @@ pub(crate) fn load() -> Result<()> {
     Let!("\\@nodocument", "\\relax", Scope::Global);
     // A misplaced alignment command in the preamble starts no cascade in the body (OXIDIZED_DESIGN_DIVERGENCES #540).
     crate::tex_tables::end_misplaced_alignment_cascade();
+    // latex.ltx `\document` (:9491-9494): the `.aux` is opened under the job's name and starts with `\relax`, so a
+    // class `\enddocument` that `\input`s `\jobname.aux` (jpsj3.cls:90-96, bio.cls, lamuphys.sty:1240-1247,
+    // caosp.sty:916) finds it. Perl's `\begin{document}` opens none; its only open, `latex_base`'s
+    // `\openout\@mainaux\jobname.aux` (latex_base.pool.ltxml:722), runs when LaTeX.pool loads: at `\documentclass`
+    // without a preload, after `\jobname` (Core.pm:152), so plain Perl finds the `.aux`; with the format preloaded
+    // (`ar5iv.sty`) at state initialization (Core.pm:143), before `\jobname`. Ours (latex_base.rs:743) ran at that early
+    // point or, under a dump, at the dump's build, whose streams the dump does not keep, and the `.aux` was missing:
+    // `Error:missing_file:<jobname>.aux` (witnesses 2605.24927, 2605.04825, 2605.28673, 2605.20125, cond-mat9607109, astro-ph9805185).
+    // Repro loader/jobname_aux_exists_after_begin_document.
+    TeX!(r"\if@filesw\immediate\openout\@mainaux\jobname.aux \immediate\write\@mainaux{\relax}\fi");
     // Clear \everypar at document start (Perl `AssignRegister('\everypar', Tokens(), 'global')`,
     // latex_constructs.pool L319) through its current meaning, as latex.ltx:9498 `\everypar{}`
     // does. A package that re-pointed `\everypar` in the preamble at a register chained from the
@@ -184,15 +194,12 @@ pub(crate) fn load() -> Result<()> {
     let first_begin = lookup_bool("inPreamble");
     if first_begin
       && let Some(ops) = lookup_tokens("@document@preamble@atend") {
-      local_state_unlocked(false);
-      let r = digest(ops);
-      expire_state_unlocked();
-      boxes.push(r?);
+      boxes.push(digest_relocked(ops)?);
     }
     // Fire the L3 hook system for begindocument/before, then begindocument.
     // Modern LaTeX (with expl3) fires these in order at \begin{document}:
-    //   1. \hook_use:n {begindocument/before}  — pre-init hook, STILL preamble
-    //   2. @at@begin@document + \hook_use:n {begindocument}  — \AtBeginDocument,
+    //   1. \hook_use_once:n {begindocument/before}  — pre-init hook, STILL preamble
+    //   2. @at@begin@document + \hook_use_once:n {begindocument}  — \AtBeginDocument,
     //      STILL preamble (latex.ltx disables \@onlypreamble only afterwards)
     //   3. leave the preamble  (inPreamble=0, AFTER the hooks — see below)
     // begindocument/before therefore fires while inPreamble=1: it carries
@@ -208,7 +215,7 @@ pub(crate) fn load() -> Result<()> {
     //
     // NOTE: this is a Rust-only deviation from Perl (Perl does not fire a
     // begindocument hook dispatch), but it's load-bearing because our raw
-    // expl3-code.tex load path *does* define `\hook_use:n` and enqueues
+    // expl3-code.tex load path *does* define `\hook_use_once:n` and enqueues
     // real hook code against it. Keep until the kernel-parity direction
     // either (a) stops loading raw expl3-code.tex, or (b) ports l3hooks
     // natively with storage. See SYNC_STATUS.md "l3hooks parity".
@@ -219,44 +226,25 @@ pub(crate) fn load() -> Result<()> {
     // polyglossia.sty:1442-1456 `\cs_set:Npn \@caption #1 [#2] #3` in the
     // `begindocument` hook overrode our locked `\@caption` and its `[`-scan
     // overshot every figure (beamerdarkthemes guide, 101 caption errors).
-    if first_begin && lookup_definition(&T_CS!("\\hook_use:n"))?.is_some() {
-      local_state_unlocked(false);
-      let r = digest(Tokens!(
-        T_CS!("\\hook_use:n"),
-        T_BEGIN!(),
-        T_LETTER!("b"),
-        T_LETTER!("e"),
-        T_LETTER!("g"),
-        T_LETTER!("i"),
-        T_LETTER!("n"),
-        T_LETTER!("d"),
-        T_LETTER!("o"),
-        T_LETTER!("c"),
-        T_LETTER!("u"),
-        T_LETTER!("m"),
-        T_LETTER!("e"),
-        T_LETTER!("n"),
-        T_LETTER!("t"),
-        T_OTHER!("/"),
-        T_LETTER!("b"),
-        T_LETTER!("e"),
-        T_LETTER!("f"),
-        T_LETTER!("o"),
-        T_LETTER!("r"),
-        T_LETTER!("e"),
-        T_END!()
-      ));
-      expire_state_unlocked();
-      boxes.push(r?);
+    if first_begin && lookup_definition(&T_CS!("\\hook_use_once:n"))?.is_some() {
+      boxes.push(digest_relocked(hook_use_once_tokens("begindocument/before"))?);
     }
     // latex.ltx `\document` L9471: `\@kernel@after@begindocument@before`, whose
     // `\reinstall@nfss@defs` (:12513-12514) makes the shape switches
     // `\protected` for the body (latex_constructs_rust_only.rs).
     if first_begin && lookup_definition(&T_CS!("\\reinstall@nfss@defs"))?.is_some() {
-      local_state_unlocked(false); // see the begindocument/before block
-      let r = digest(Tokens!(T_CS!("\\reinstall@nfss@defs")));
-      expire_state_unlocked();
-      boxes.push(r?);
+      boxes.push(digest_relocked(Tokens!(T_CS!("\\reinstall@nfss@defs")))?);
+    }
+    // The hook's other half (latex.ltx:12513-12514), `\init@series@setup` (:13902-13920): `\reset@font`, then
+    // `\mdseries` and `\let\seriesdefault\f@series` while `\seriesdefault` is the kernel's. A font switch of the
+    // preamble or the class body (`\itshape\bfseries`, a class's `\usefont`) does not reach the body: pdflatex
+    // sets it upright medium in the document's `\familydefault` (`\reset@font` is `\normalfont`, sect13.rs; a
+    // `\renewcommand\familydefault{\sfdefault}` body is sans). Perl runs neither half (its body kept the preamble's
+    // font, `<text font="bold italic">`). OXIDIZED_DESIGN_DIVERGENCES #315 addendum, #779; guards
+    // `perfect_kernel_batch77u::{preamble_font_switch_does_not_reach_the_body,
+    // class_body_font_does_not_reach_the_body, family_default_survives_a_preamble_switch}`.
+    if first_begin && lookup_definition(&T_CS!("\\init@series@setup"))?.is_some() {
+      boxes.push(digest_relocked(Tokens!(T_CS!("\\init@series@setup")))?);
     }
     // latex.ltx `\document` L9472: right after begindocument/before, the
     // kernel loads the expl3 BACKEND — `\@expl@sys@load@backend@@` →
@@ -287,6 +275,11 @@ pub(crate) fn load() -> Result<()> {
     } else if first_begin && lookup_definition(&T_CS!("\\@expl@sys@load@backend@@"))?.is_some() {
       boxes.push(digest(Tokens!(T_CS!("\\@expl@sys@load@backend@@")))?);
     }
+    // latex.ltx:9511 `\@kernel@before@begindocument` (since 2020-10, :1076-1081), before the `begindocument` hook; its
+    // sibling after it, below.
+    if first_begin && lookup_definition(&T_CS!("\\@kernel@before@begindocument"))?.is_some() {
+      boxes.push(digest_relocked(Tokens!(T_CS!("\\@kernel@before@begindocument")))?);
+    }
     // @at@begin@document (\AtBeginDocument) + the begindocument hook. `inPreamble`
     // is STILL 1 here (we leave the preamble only after this block), so a deferred
     // `\RequirePackage`/`\usepackage` remains legal (corpus witnesses
@@ -298,11 +291,13 @@ pub(crate) fn load() -> Result<()> {
     // `inPreamble` (tex_paragraph.rs).
     // Raw `#`-bearing `\AtBeginDocument` chunks (see `at_document_hook`) run
     // first — before the L3 hook that holds the later, `#`-free raw chunks.
+    // (what the hooks below define is a class default for the unclaimed-text net, frontmatter_stores.rs
+    // `note_document_hooks`)
+    if first_begin {
+      crate::frontmatter_stores::note_document_hooks(true);
+    }
     if first_begin && let Some(ops) = lookup_tokens("@at@begin@document@rawparam") {
-      local_state_unlocked(false);
-      let r = digest(ops);
-      expire_state_unlocked();
-      boxes.push(r?);
+      boxes.push(digest_relocked(ops)?);
     }
     // Order: the L3 `begindocument` hook (raw packages' `\AtBeginDocument`,
     // routed there since batch 56i) fires FIRST, then the bindings' private
@@ -312,38 +307,22 @@ pub(crate) fn load() -> Result<()> {
     // shadow it (its `\cref@override@label@type` `[#1][#2]` scan ran to EOF:
     // crossreftools_driver, test-autonum fatal; RUST-ONLY, Perl has no raw
     // cleveref). Guard: `perfect_kernel_batch56::binding_begin_document_code_outranks_raw_hook`.
-    if first_begin && lookup_definition(&T_CS!("\\hook_use:n"))?.is_some() {
-      // Build the Tokens explicitly: `Tokenize!` runs at the runtime
-      // catcode regime where `:` is OTHER (not LETTER), which would
-      // truncate the CS to `\hook_use` and emit `:n` as plain text.
-      // That leaks `_use:n` + arg-text into the document body.
-      local_state_unlocked(false); // see the begindocument/before block
-      let r = digest(Tokens!(
-        T_CS!("\\hook_use:n"),
-        T_BEGIN!(),
-        T_LETTER!("b"),
-        T_LETTER!("e"),
-        T_LETTER!("g"),
-        T_LETTER!("i"),
-        T_LETTER!("n"),
-        T_LETTER!("d"),
-        T_LETTER!("o"),
-        T_LETTER!("c"),
-        T_LETTER!("u"),
-        T_LETTER!("m"),
-        T_LETTER!("e"),
-        T_LETTER!("n"),
-        T_LETTER!("t"),
-        T_END!()
-      ));
-      expire_state_unlocked();
-      boxes.push(r?);
+    if first_begin && lookup_definition(&T_CS!("\\hook_use_once:n"))?.is_some() {
+      boxes.push(digest_relocked(hook_use_once_tokens("begindocument"))?);
     }
     if first_begin && let Some(ops) = lookup_tokens("@at@begin@document") {
-      local_state_unlocked(false);
-      let r = digest(ops);
-      expire_state_unlocked();
-      boxes.push(r?);
+      boxes.push(digest_relocked(ops)?);
+    }
+    // latex.ltx:9513 `\@kernel@after@begindocument`: its `\__hook_cmd_begindocument_code:` (:6865-6873) applies the
+    // preamble's `cmd/<name>/<hook>` hooks (a binding's are counted, `\__hook_patch_command:Nnn`) and patches later
+    // ones at once. Witnesses 2602.09577, 2510.06714, 2411.13565, 2511.21986, 2603.08400.
+    if first_begin && lookup_definition(&T_CS!("\\@kernel@after@begindocument"))?.is_some() {
+      boxes.push(digest_relocked(Tokens!(T_CS!("\\@kernel@after@begindocument")))?);
+    }
+    // The begin-document hooks have run (their tests of `\chapter` got TeX's answer): a `\chapter` the class left
+    // undefined reads LaTeXML's chapter from here, with one Warning (OXIDIZED_DESIGN #734).
+    if first_begin {
+      sect01::supply_chapter_fallback();
     }
     // Leave the preamble now — AFTER the begindocument hooks (the `\@preamblecmds`
     // point, latex.ltx L9522). This single transition both (a) disables the
@@ -371,15 +350,15 @@ pub(crate) fn load() -> Result<()> {
     // document file, not from the hook's own (empty) mouth.
     // Collected with the other inline hook below and unread once, in order.
     let mut inline_hooks: Vec<Token> = Vec::new();
-    if first_begin && lookup_definition(&T_CS!("\\hook_use:n"))?.is_some() {
-      inline_hooks.extend(hook_use_tokens("begindocument/end").unlist());
+    if first_begin && lookup_definition(&T_CS!("\\hook_use_once:n"))?.is_some() {
+      inline_hooks.extend(hook_use_once_tokens("begindocument/end").unlist());
     }
     // Preamble cleanup: force `\ExplSyntaxOff` if `_` is still LETTER at
-    // document start. Mirrors LaTeX2e kernel's preamble cleanup (latex.ltx
-    // L7122 `\bool_if:NTF \l__kernel_expl_bool { \ExplSyntaxOff } ...`) —
-    // packages like mhchem.sty end with an unmatched final `\ExplSyntaxOn`
-    // (see mhchem.sty tail, "legacy" block), and LaTeX's kernel relies on
-    // this scheduled cleanup to restore catcodes before the document body.
+    // document start. LaTeX restores expl3 syntax per file (the kernel's
+    // `\@expl@push@filename@@`/`\@expl@pop@filename@@`), so a package's
+    // unmatched `\ExplSyntaxOn` never reaches the document; packages like
+    // mhchem.sty end with one (its tail, "legacy" block), and this cleanup
+    // restores the catcodes before the document body where ours did not.
     // Without this, `\sum_{...}` tokenizes as the CS `\sum_` (letter `_`)
     // rather than `\sum` + `_` + `{...}`.
     if lookup_catcode('_') == Some(Catcode::LETTER)
@@ -412,8 +391,26 @@ pub(crate) fn load() -> Result<()> {
     if first_begin {
       assign_value("@document@preamble@afterend@done", true, Some(Scope::Global));
     }
+    // (what the hooks made, `begindocument/end`'s too, is a class default for the unclaimed-text net: read after them,
+    // frontmatter_stores.rs `note_document_hooks`)
+    // (and a `\maketitle` a raw class appended to `\document`, which latex.ltx runs at its very end, after
+    // `begindocument/end`: its print noted for the title-page check, `\lx@note@title@page`; cup-journal 2207.13252)
+    let title_page = first_begin && lookup_bool("lx_title_page_at_begin_document");
     if !inline_hooks.is_empty() {
+      if first_begin {
+        inline_hooks.push(T_CS!("\\lx@net@document@hooks@done"));
+      }
+      if title_page {
+        inline_hooks.push(T_CS!("\\lx@note@title@page"));
+      }
       unread(Tokens::new(inline_hooks));
+    } else {
+      if first_begin {
+        crate::frontmatter_stores::note_document_hooks(false);
+      }
+      if title_page {
+        unread(Tokens!(T_CS!("\\lx@note@title@page")));
+      }
     }
     whatsit.set_font(lookup_font().unwrap()); // Start w/ whatever font was last selected.
     leave_horizontal_internal();
@@ -428,11 +425,18 @@ pub(crate) fn load() -> Result<()> {
   // be read off that CS.
   Let!("\\lx@orig@document", "\\begin{document}", Scope::Global);
 
-  /// `\hook_use:n {name}` as explicit tokens: `Tokenize!` runs under the
+  /// `\hook_use_once:n {name}` as explicit tokens: `Tokenize!` runs under the
   /// runtime catcodes, where `:` is OTHER and `/` must stay OTHER inside the
-  /// name.
-  fn hook_use_tokens(name: &str) -> Tokens {
-    let mut toks = vec![T_CS!("\\hook_use:n"), T_BEGIN!()];
+  /// name. latex.ltx runs each document hook with `\UseOneTimeHook` (=
+  /// `\hook_use_once:n`, :6729): `begindocument/before` (:9470), `begindocument`
+  /// (:9512), `begindocument/end` (:9525), `enddocument` (:15257). Code added to
+  /// such a hook once it has run executes at once (lthooks), so an
+  /// `\AtBeginDocument` issued from the begin-document hook itself — a package
+  /// loaded there, `\AtBeginDocument{\usepackage{underscore}}` — still runs; under
+  /// `\hook_use:n` it was appended to a hook never used again, and dropped. Guard:
+  /// `perfect_kernel_batch77j::begin_document_code_added_by_the_hook_runs`.
+  fn hook_use_once_tokens(name: &str) -> Tokens {
+    let mut toks = vec![T_CS!("\\hook_use_once:n"), T_BEGIN!()];
     for c in name.chars() {
       toks.push(if c.is_ascii_alphabetic() {
         T_LETTER!(c.to_string())
@@ -471,9 +475,54 @@ pub(crate) fn load() -> Result<()> {
   // dump): that one does `\tex_shipout:D\vbox to\textheight{…}` with the
   // "Temporary page!" text (latex.ltx:20261-20269), which the `\shipout`
   // primitive would now emit in place (DIVERGENCES #314).
-  DefMacro!(T_CS!("\\end{document}"), None, "\\lx@enddocument@hooks\\lx@finalize@document\\@@end");
+  DefMacro!(T_CS!("\\end{document}"), None, "\\lx@end@open@frontmatter\\lx@enddocument@hooks\\lx@finalize@document\\@@end");
+  // A frontmatter body still open at `\end{document}` — an unclosed `\begin{abstract}`, `\abstract{`, or a brace-less
+  // `\abstract` no sectioning command ended (`\lx@add@frontmatter@until`, base_utilities.rs) — ends first: its terminal
+  // is read before the end-document code, which then runs at the document's level, so the abstract keeps its text as an
+  // unclosed `{itemize}` keeps its list (65c; the open environment's Warning stays). Read inside the body, the finalizer
+  // closed the document within the abstract's box, which nothing placed: an empty `<document/>` with 0 errors.
+  // (none of the document's end runs in a speculative digestion: `gullet::speculative_digestion`)
+  DefPrimitive!("\\lx@end@open@frontmatter", {
+    if in_speculative_digestion() {
+      return Ok(Vec::new());
+    }
+    if let Some(terminal) = lookup_token("lx@until@terminal")
+      && (terminal == T_CS!("\\lx@end@abstract") || terminal == T_CS!("\\lx@end@keywords"))
+    {
+      // One body per pass, re-read after its terminal, so keywords left open inside an abstract end both (int26
+      // review p8); a body its terminal did not end (the same depth again) stops the passes.
+      let depth = match lookup_value("lx@until@depth") {
+        Some(Stored::Number(n)) => n.0 + 1,
+        _ => 0,
+      };
+      let last = lookup_int("lx_end_open_frontmatter_depth");
+      if last != 0 && depth >= last {
+        return Ok(Vec::new());
+      }
+      assign_value("lx_end_open_frontmatter_depth", Stored::Int(depth), Some(Scope::Global));
+      // An environment's body left open is LaTeX's error (latex.ltx `\@checkend`: "\begin{abstract} on input line …
+      // ended by \end{document}"; Perl errs too), raised once, for the innermost open environment (`\@currenvir`), on
+      // the first pass. A begin code called as a command opens no environment LaTeX checks (`begun_environment`): the
+      // brace-less `\abstract`, mn2e's `\keywords{…}` (1004.2791), spconf's `\keywords …` (2309.07195) — no
+      // diagnostic in pdflatex; an unbalanced `\abstract{` reports its open group (`until_terminal_inside_group`).
+      if last == 0
+        && let Some(name) = begun_environment()
+      {
+        Error!(
+          "unexpected",
+          "\\end{document}",
+          s!("\\begin{{{name}}} ended by \\end{{document}}: the {name} ends here")
+        );
+      }
+      unread(Tokens!(terminal, T_CS!("\\lx@end@open@frontmatter")));
+    } else if lookup_bool("lx_abstract_owes_end") {
+      // a `\begin{abstract}` a heading ended (`\lx@heading@ends@frontmatter`, sect05.rs) whose `\end{abstract}` never came
+      assign_value("lx_abstract_owes_end", false, Some(Scope::Global));
+      Error!("unexpected", "\\end{document}", "\\begin{abstract} ended by \\end{document}");
+    }
+  });
   DefPrimitive!("\\lx@enddocument@hooks", sub[_args] {
-    if lookup_bool("lx@enddocument@hooks@fired") {
+    if in_speculative_digestion() || lookup_bool("lx@enddocument@hooks@fired") {
       return Ok(Vec::new());
     }
     AssignValue!("lx@enddocument@hooks@fired" => true, Some(Scope::Global));
@@ -483,8 +532,8 @@ pub(crate) fn load() -> Result<()> {
     }
     // latex.ltx:15257 `\UseOneTimeHook{enddocument}` (the lthooks slot; the
     // legacy `\AtEndDocument` list above is `@at@end@document`).
-    if lookup_definition(&T_CS!("\\hook_use:n"))?.is_some() {
-      toks.extend(hook_use_tokens("enddocument").unlist());
+    if lookup_definition(&T_CS!("\\hook_use_once:n"))?.is_some() {
+      toks.extend(hook_use_once_tokens("enddocument").unlist());
     }
     // Rust-only: a binding's code that must see what every end-document hook did (prelude.rs
     // `after_end_document_hooks`; biblatex's hidden bibliography, built only when no hook printed one).
@@ -509,6 +558,10 @@ pub(crate) fn load() -> Result<()> {
       // #246/#247 position markers never reach the output (the core finalize
       // sweeps stragglers too).
       remove_frontmatter_marks(document);
+      // A class's `\title` print on a cover stays only beside a top-level `ltx:titlepage` (OXIDIZED_DESIGN #629).
+      settle_cover_title_ink(document);
+      // A field print no placement settled keeps its ink (`\lx@field@mark`, OXIDIZED_DESIGN #715).
+      settle_field_marks(document);
       // When groups or environments were abandoned (before_digest below),
       // this whatsit may sit inside the innermost one's body, built before the
       // constructors around it close their elements: the `ltx:document` close
@@ -523,6 +576,9 @@ pub(crate) fn load() -> Result<()> {
     },
     before_digest => {
       let mut boxes : Vec<Digested> = Vec::new();
+      if in_speculative_digestion() {
+        return Ok(boxes);
+      }
       // Should we try to indent the last paragraph? If so, it goes like this:
       boxes.push(digest(T_CS!("\\lx@normal@par"))?);
       // Pop unclosed groups and environments back to the document frame
@@ -644,6 +700,15 @@ pub(crate) fn load() -> Result<()> {
   Ok(())
 }
 
+/// Digest begin-document code with the state RE-LOCKED (see `\begin{document}`): a binding-locked macro is never
+/// redefined from it.
+fn digest_relocked(tokens: Tokens) -> Result<Digested> {
+  local_state_unlocked(false);
+  let r = digest(tokens);
+  expire_state_unlocked();
+  r
+}
+
 /// `\AtBeginDocument[label]{code}` / `\AtEndDocument`: `\AddToHook{hook}
 /// [label]{code}` when the L3 hook system is loaded, else the private store.
 fn at_document_hook(
@@ -652,6 +717,29 @@ fn at_document_hook(
   label: Option<Tokens>,
   rules: Tokens,
 ) -> Result<Tokens> {
+  // (a stand-in's copy registers no document-time code: `state::copy_provides_defers`)
+  if copy_provides_defers(if hook == "begindocument" {
+    "\\AtBeginDocument"
+  } else {
+    "\\AtEndDocument"
+  }) {
+    return Ok(Tokens!());
+  }
+  // A standalone sub-file's preamble runs inside the main document only for its definitions (standalone_sty.rs
+  // `\@standalone@documentclass`; real standalone.sty:602-646 gobbles it, OXIDIZED_DESIGN_DIVERGENCES #63, #65): its
+  // begin-document code is not run, as before the document hooks were one-time hooks and as in Perl (its
+  // `\AtBeginDocument` list has already run). The main one-time `begindocument` hook would execute it at once, in the
+  // middle of the package that adds it — babel.sty:1140-1162 before babel's own internals are defined (2405.01743,
+  // six undefined `\bbl@…`); run later, at the sub-file's `\begin{document}`, its `\selectlanguage` leaves an
+  // `\aftergroup\bbl@pop@language` the binding does not define.
+  if hook == "begindocument"
+    && matches!(
+      lookup_value("lx@subpreamble@begindocument"),
+      Some(Stored::Bool(true))
+    )
+  {
+    return Ok(Tokens!());
+  }
   // INTERIM (K3 correctness item, KERNEL_CAPABILITIES.md): a parameter-
   // bearing chunk under a package label (pm-isomath.sty's
   // `\AtBeginDocument{…\NewDocumentCommand\vectorsymbol{s m}{…#2…}}`)

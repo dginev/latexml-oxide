@@ -7,7 +7,7 @@
 //! (`Pair`, `{Float}`, :4992-5078; pstricks_support.sty.ltxml:879-891), so they
 //! measure nothing. Every expected size is same-host Perl `latexmlc`'s.
 //! Repros `tools/perfect_kernel/repros/graphics-tikz/picture_autoopen_*.tex`.
-use latexml::util::test::assert_element;
+use latexml::util::test::{assert_element, check_requirements, loads};
 
 use super::perfect_kernel_batch46::{convert, error_count, warning_count};
 
@@ -70,6 +70,9 @@ fn line_takes_box_free_arguments() {
 /// is measured (Perl 23.45×12.3).
 #[test]
 fn rput_places_without_measuring_its_body() {
+  if !check_requirements(loads::PSTRICKS) {
+    return;
+  }
   let xml = convert_clean(include_str!(
     "../../../tools/perfect_kernel/repros/graphics-tikz/picture_autoopen_rput_box_free.tex"
   ));
@@ -321,7 +324,7 @@ fn a_standalone_panel_row_starts_the_next_row_empty() {
   let line = r#"<p align="center" class="ltx_figure_panel"><text align="center" fontsize="90%" width="169.1pt">Left</text><text fontsize="90%">  <text align="center" width="169.1pt">Right</text></text></p>"#;
   let brk = r#"<break class="ltx_break"/>"#;
   let expected = format!(
-    r#"<figure inlist="lof" xml:id="S0.F1"><tags><tag><text fontsize="90%">Figure 1</text></tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags>{}{brk}{line}{brk}{}{brk}{line}<toccaption class="ltx_centering"><tag close=" ">1</tag>C</toccaption><caption class="ltx_centering"><tag close=": "><text fontsize="90%">Figure 1</text></tag><text fontsize="90%">C</text></caption></figure>"#,
+    r#"<figure class="ltx_panels_gallery" inlist="lof" panelcols="4" panelrows="4" xml:id="S0.F1"><tags><tag>Figure 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Figure 1</tag></tags>{}{brk}{line}{brk}{}{brk}{line}<toccaption class="ltx_centering"><tag close=" ">1</tag>C</toccaption><caption class="ltx_centering"><tag close=": ">Figure 1</tag>C</caption></figure>"#,
     (1..=4).map(panel).collect::<String>(),
     (5..=8).map(panel).collect::<String>(),
   );
@@ -372,14 +375,18 @@ fn a_panel_merged_into_a_block_keeps_its_place() {
   ));
   let line = r#"<p class="ltx_figure_panel">A long line of text that spans most of the line width in the figure, filling it up.</p><break class="ltx_break"/>"#;
   let figure = |n: usize, lead: &str, class: &str, body: &str, cap: &str| {
-    // A figure of one panel marks none (Perl L3346-3348).
-    let panel = if lead.is_empty() {
-      ""
+    // A figure of one panel marks none (Perl L3346-3348), and states no grid (batch 79c: two rows, the text's and
+    // the merged block's, its stated width 0.514 of the line, the text's none).
+    let (grid, panel) = if lead.is_empty() {
+      ("", "")
     } else {
-      r#" class="ltx_figure_panel""#
+      (
+        r#" class="ltx_panels_gallery" panelcols="1" panelrows="2""#,
+        r#" class="ltx_figure_panel" panelwidth="0.514""#,
+      )
     };
     format!(
-      r#"<figure inlist="lof" xml:id="S0.F{n}"><tags><tag>Figure {n}</tag><tag role="refnum">{n}</tag><tag role="typerefnum">Figure {n}</tag></tags>{lead}<block{panel}><graphics graphic="none.png" options="width=5.0pt,keepaspectratio=true" xml:id="S0.F{n}.g1"/><block class="{class}" vattach="middle" width="172.5pt">{body}</block></block><toccaption><tag close=" ">{n}</tag>{cap}</toccaption><caption><tag close=": ">Figure {n}</tag>{cap}</caption></figure>"#
+      r#"<figure{grid} inlist="lof" xml:id="S0.F{n}"><tags><tag>Figure {n}</tag><tag role="refnum">{n}</tag><tag role="typerefnum">Figure {n}</tag></tags>{lead}<block{panel}><graphics graphic="none.png" options="width=5.0pt,keepaspectratio=true" xml:id="S0.F{n}.g1"/><block class="{class}" vattach="middle" width="172.5pt">{body}</block></block><toccaption><tag close=" ">{n}</tag>{cap}</toccaption><caption><tag close=": ">Figure {n}</tag>{cap}</caption></figure>"#
     )
   };
   let one_two = "<p>ONE</p><p>TWO</p>";

@@ -1,0 +1,28 @@
+% A raw class's displaced `\institute` store whose entries are parted by `\csname and\endcsname`, which the class's
+% title page prints as its own `\and` (`\def\and{\par\noindent}`): read by meaning (`argument_separators`, OD #995,
+% P2-6) it is an `\and` list the title page does not number, as the written one is
+% (`displaced_and_institutes_the_class_does_not_number_stay_the_classs`), so the call is in doubt and stays the class's
+% text (`frontmatter_stores.rs` `unnumbered_and_list`, `displaced_argument_in_doubt`). By spelling it held no `\and`:
+% one contact "Univ A, Town and Univ B, City" under both authors, the word invented.
+% witness: synthetic (the P2 plan's `\csname` separator; the written shape's witnesses astro-ph9805069, 1704.03333)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able and Bob Baker", "Univ A, Town", "Univ B, City"
+% engines: rust int158a = 0 errors, 0 warnings, both authors "Univ A, Town and Univ B, City"; P26 = 0 errors, 0
+%          warnings, the entries body paragraphs; perl = no raw class load (OmniBus `\institute`)
+% expect:  0 errors, 0 warnings; no contact; "Univ A, Town" and "Univ B, City" body paragraphs, no " and "
+% status:  RED (int158a) -> GREEN (P26; guard perfect_kernel_batchp26::a_displaced_and_list_is_read_by_meaning)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{cauinst.cls}
+\ProvidesClass{cauinst}\LoadClass{article}
+\def\institute#1{\gdef\@institute{\it #1}}
+\def\@maketitle{\begin{center}{\LARGE\@title\par}\vskip1em{\large\@author\par}\end{center}
+  {\small\begingroup\def\and{\par\noindent}\noindent\@institute\par\endgroup}\vskip1em}
+\end{filecontents*}
+\documentclass{cauinst}
+
+\begin{document}
+\title{A Title}
+\author{Ann Able and Bob Baker}
+\institute{Univ A, Town \csname and\endcsname\space Univ B, City}
+\maketitle
+Text.
+\end{document}

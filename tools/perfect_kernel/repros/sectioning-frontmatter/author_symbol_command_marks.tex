@@ -1,0 +1,15 @@
+% witness: 2601.02680 (`Dinghong Song$^{\dagger}$ \ \ \ \ Zhiwei Xu$^\mathsection$ \ \ \ \ Hai Wan$^\mathsection$ …`;
+%          the 77p r5 re-review's probes r3, r5, r8, r9)
+% oracle:  pdflatex 0 errors: §, † after the names, the institution under them
+% engines: rust 77p r5 = 0 errors; `$^\mathsection$` read as an affiliation mark answered by nothing: the § dropped and
+%          the run after it parting nothing ("Dan Dorn Eve Eads†Univ A"); int34a one creator
+% expect:  0 errors, 0 warnings; `\mathsection`, a command `\@fnsymbol` prints, is a symbol mark as `\S` is: three
+%          authors, each § or † shown, Univ A on each
+% status:  RED (77p r5) -> GREEN (77p r6)
+\documentclass{article}
+\title{T}
+\author{Cat Cole$^\mathsection$\ \ \ \ Dan Dorn$^{\mathsection}$\ \ \ \ Eve Eads$^{\dagger}$ \\ Univ A}
+\begin{document}
+\maketitle
+Text.
+\end{document}

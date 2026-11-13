@@ -1,0 +1,11 @@
+% witness: 2308.11432 (fcs.cls:150 `\LoadClass [ twoside, \g__fcs_article_fontsize_tl ] { article }` under
+%          `\ExplSyntaxOn`; the reviewer's probe expl_opts)
+% oracle:  pdflatex 0 errors ("EXTRA")
+% engines: rust 72a r2 = 1 Error (`\g` undefined: the option list made `_` other)
+% expect:  0 errors, 0 warnings; "EXTRA"
+% status:  RED (72a r2) -> GREEN (72a r3; guarded 72a r4)
+% preload: ar5iv.sty
+\documentclass{fcs}
+\begin{document}
+\fcsextra
+\end{document}

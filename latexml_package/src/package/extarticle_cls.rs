@@ -22,5 +22,7 @@ LoadDefinitions!({
   });
   ProcessOptions!();
   LoadClass!("article");
+  // extsizes' copy of article.cls's title block (`declare_fnsymbol_title_block`), when extarticle is the document's class.
+  engine::latex_constructs::declare_fnsymbol_title_block("extarticle", Some(false))?;
   Let!("\\@ptsize", "\\lx@extsizes@ptsize");
 });

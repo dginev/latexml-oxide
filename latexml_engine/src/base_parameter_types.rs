@@ -254,6 +254,32 @@ LoadDefinitions!({
     optional_arg_reversion(arg, inner, T_OTHER!("["), T_OTHER!("]"))
   });
 
+  // Rust-only: a position or alignment keyword LaTeX only tests and never typesets — the `[t]` of
+  // `\begin{tabular}[t]`, `\parbox[t]`, `{minipage}[t][h][s]` (latex.ltx:16565-16566 `\@array[#1]` `\if #1t\vtop…`,
+  // `\@iiiparbox` :16258-16259), the `[l]` of `\makebox[w][l]` and `\shortstack[l]`, wrapfig's `{r}` placement. Read,
+  // digested and reverted exactly as `Optional` (`[]`) and `Plain` (`{}`) are, so the whatsit holds the letter for
+  // `translate_attachment` and the reversions; only its type says it is no text on the page (base_utilities.rs
+  // `shown_arguments`, as it says a `KeyVals` or a verbatim key is not): a class's emptied `\@maketitle` deposit that
+  // holds only `\begin{tabular}[t]{l}\bf\rule{\z@}{24pt}\@author\end{tabular}` prints nothing (iclr*_conference.sty:83-93,
+  // arxiv.sty, colm, corl, nips; HF14, 2610.20409, 2310.10873, 2209.14855). Not `OptionalSemiverbatim`: its catcode
+  // change moved 2212.05358's `\captionof` (babel) into its `\quad~\begin{minipage}[b]`.
+  DefParameterType!(OptionalPosition, sub[inner, default] {
+    optional_arg_value(read_optional(None)?, inner, default)?
+  },
+  optional => true,
+  reversion => sub[arg, inner, _extra] {
+    optional_arg_reversion(arg, inner, T_OTHER!("["), T_OTHER!("]"))
+  });
+  DefParameterType!(Position, sub[_inner, _extra] {
+    ArgWrap::Tokens(read_arg(ExpansionLevel::Off)?)
+  },
+  reversion => sub[arg, _inner, _extra] {
+    let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
+    read_tokens.extend(arg.iter().map(|t| t.revert()));
+    read_tokens.push(T_END!());
+    Ok(Tokens::new(read_tokens))
+  });
+
   // The angle-bracket twin of `Optional`, mirroring Perl beamer.cls.ltxml
   // L46-57 (`OptionalBeamerAngled` / `readBeamerAngled`). Not beamer-specific:
   // apacite spells its citation pre-note this way — `\cite<see>[p.5]{key}`,
@@ -320,7 +346,15 @@ LoadDefinitions!({
     // re-misses until the error cap; same Fatal outcome, one report instead
     // of hundreds. Guard: `perfect_kernel_batch52::until_miss_at_eof_is_fatal_once`.
     match read_until(&until_extra[0])? {
-      Some(tokens) => Ok(ArgWrap::Tokens(tokens)),
+      Some(tokens) => {
+        // A delimiter ending in `{` comes only from a parameter text's closing `#{`, whose brace TeX also appends to
+        // the replacement text (tex.web §476, `parse_def_parameters`): it goes back to the input, after the call.
+        let last = until_extra[0].unlist_ref().last();
+        if let Some(brace) = last.filter(|t| t.get_catcode() == Catcode::BEGIN) {
+          unread_one(*brace);
+        }
+        Ok(ArgWrap::Tokens(tokens))
+      },
       None => {
         if at_end_of_all_input() {
           let caller = get_current_token()
@@ -621,7 +655,7 @@ LoadDefinitions!({
     read_token()?.inspect(|&tok| {
       unread_one(tok);
       if tok.get_catcode() != Catcode::BEGIN {
-        let err = || {Error!("expected","{","Expected a {{ here."); Ok(())};
+        let err = || {Error!("expected","{","Expected a { here."); Ok(())};
         err().ok();
       }
     })
@@ -753,6 +787,51 @@ LoadDefinitions!({
     Ok(Tokens::new(tks))
   });
 
+  // xparse's `!O{}`: the optional argument only when its `[` is the very next token — no space skipped (ltcmd's `!`
+  // prefix). Peeked (`peek_token`), not read, as ltcmd's expl3 peek runs inside `\group_align_safe_begin:`
+  // (expl3-code.tex:9730), so a row's leading `&` after a newline stays the matrix's own and never ends the enclosing
+  // alignment's cell: nicematrix.sty:1953 `\NewDocumentEnvironment{NiceArrayWithDelims}{m m O{} m !O{} …}`,
+  // :3715/:3729 the NiceMatrix family's `!O{}`, :3747-3801 NiceTabular's. `OptionalBalanced` skips spaces and reads
+  // the next token: a `\begin{pNiceMatrix}` with no options + newline + `& x \\` inside `align` gave the `&` to the
+  // align (11 errors, the matrix lost; pdflatex 0). Guard
+  // `perfect_kernel_batch79o::a_matrix_row_that_starts_with_a_tab_is_the_matrixs`.
+  DefParameterType!(OptionalBalancedNoSkip, sub[_inner, _extra] {
+    let open = T_OTHER!("[");
+    match ::latexml_core::gullet::peek_token()? {
+      Some(t) if t == open => {
+        let _ = read_token()?;
+        let close = T_OTHER!("]");
+        let mut depth = 0i32;
+        let mut toks: Vec<Token> = Vec::new();
+        while let Some(tok) = read_token()? {
+          if tok == close {
+            if depth == 0 {
+              break;
+            }
+            depth -= 1;
+          } else if tok == open {
+            depth += 1;
+          } else if tok.get_catcode() == Catcode::BEGIN {
+            toks.push(tok);
+            toks.extend(read_balanced(ExpansionLevel::Off, false, false)?.unlist());
+            toks.push(T_END!());
+            continue;
+          }
+          toks.push(tok);
+        }
+        Ok(ArgWrap::Tokens(Tokens::new(toks)))
+      },
+      _ => Ok(ArgWrap::None),
+    }
+  },
+  optional => true,
+  reversion => sub[arg, _inner, _extra] {
+    let mut tks = vec![T_OTHER!("[")];
+    tks.extend(arg.into_iter().map(Token::revert));
+    tks.push(T_OTHER!("]"));
+    Ok(Tokens::new(tks))
+  });
+
   //  This reads a braced tokens list, expanding as it goes,
   // but expanding \the-like commands only once.
   DefParameterType!(Expanded, sub[_inner, _untils] {
@@ -785,8 +864,18 @@ LoadDefinitions!({
   // a braced tokens list, expanding as it goes,
   // but expanding \the-like commands only once,
   // and also packing # parameters
+  // No assignment ends while an `\edef` reads its body, and in TeX none can begin: a binding's macro that assigns as it
+  // expands (a math dual's id counter, `\ket{x}`) would take a pending `\afterassignment`, the `\restore@protect` of
+  // `\protected@edef` written into the body and `\protect` stuck for the rest of the document (yquant-doc's
+  // `\protected@csxappto` of a node `$\ket\psi$`; Perl's the same). Guard
+  // `perfect_kernel_batchm3::a_binding_macro_in_an_edef_leaves_afterassignment_pending`.
   DefParameterType!(DefExpanded, sub[_inner, _extra] {
-      read_definition_body(ExpansionLevel::Partial)
+      let held = remove_value("afterAssignment");
+      let body = read_definition_body(ExpansionLevel::Partial);
+      if let Some(after) = held {
+        assign_value("afterAssignment", after, Some(Scope::Global));
+      }
+      body
     },
     reversion => sub[arg, _inner, _extra] {
       Ok(Tokens!(T_BEGIN!(), Tokens!(arg).revert(), T_END!())) }
@@ -832,6 +921,36 @@ LoadDefinitions!({
       } else {
         arg.iter().map(|t| t.revert()).collect()
       });
+      read_tokens.push(T_END!());
+      Ok(Tokens::new(read_tokens))
+    },
+    semiverbatim => Some(Vec::new()));
+
+  // Rust-only: a Semiverbatim whose `%` is other too, for an address a class reads under its own sanitizer —
+  // revtex4.cls:4476-4490 `\begingroup\sanitize@url\@email{#1}` (`\@makeother\%`, `\~`, `\_`): an
+  // `\homepage{http://x.org/%7Ea}` is that address, where Semiverbatim's SPECIALS (no `%`) made the `%` a comment
+  // that took the line's `}` and the argument ran on through the document (KNOWN_PERL_ERRORS #1149; 0712.3811).
+  DefParameterType!(UrlSemiverbatim,
+    sub[_inner, _extra] { read_arg(ExpansionLevel::Off) },
+    reversion => sub[arg, _inner, _extra] {
+      let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
+      read_tokens.extend(arg.iter().map(|t| t.revert()));
+      read_tokens.push(T_END!());
+      Ok(Tokens::new(read_tokens))
+    },
+    semiverbatim => Some(vec!['%']));
+
+  // Rust-only: a Semiverbatim whose argument is not expanded before it is digested (Parameter.pm:124-132's pre-expansion
+  // left out, `Parameter::digest`): its tokens neutralized as read and digested in order, as a class's own macro reads its
+  // `#1`. For the frontmatter rehearsal's reading of a class's own e-mail command (`\lx@fm@obs@email@own`): sig-alternate.cls:462
+  // `\def\email#1{{{\eaddfnt{\par #1}}}}` on `\email{\fontsize{11pt}{12pt}\selectfont …}` — the kernel `\fontsize`'s
+  // `\@defaultunits` (`\afterassignment\remove@to@nnil`, latex.ltx:10537, :12678) expanded ahead of its assignment missed
+  // its `\@nnil` delimiter and `\@nil` ran undefined, an Error pdflatex never raises (1802.01191).
+  DefParameterType!(UnexpandedSemiverbatim,
+    sub[_inner, _extra] { read_arg(ExpansionLevel::Off) },
+    reversion => sub[arg, _inner, _extra] {
+      let mut read_tokens: Vec<Token> = vec![T_BEGIN!()];
+      read_tokens.extend(arg.iter().map(|t| t.revert()));
       read_tokens.push(T_END!());
       Ok(Tokens::new(read_tokens))
     },
@@ -904,7 +1023,22 @@ LoadDefinitions!({
   // expand-and-neutralize, Perl Parameter.pm:124-132) never runs on the list.
   DefParameterType!(PackageOptions,
     sub[_inner, _extra] {
+      // (a letter stays a letter: latex.ltx reads the list with the catcodes in force, so under `\ExplSyntaxOn` a
+      // class's `\LoadClass [ twoside, \g__fcs_article_fontsize_tl ] { article }` names its token list, fcs.cls:150;
+      // 2308.11432): every special whose catcode is LETTER keeps it. Guard
+      // `perfect_kernel_batch72a::package_options_keep_expl_letters`.
+      let letters: Vec<char> = match lookup_value("SPECIALS") {
+        Some(Stored::Chars(specials)) => specials
+          .iter()
+          .copied()
+          .filter(|c| lookup_catcode(*c) == Some(Catcode::LETTER))
+          .collect(),
+        _ => Vec::new(),
+      };
       begin_semiverbatim(None);
+      for letter in letters {
+        assign_catcode(letter, Catcode::LETTER, Some(Scope::Local));
+      }
       let opts = read_optional(None);
       end_semiverbatim()?;
       opts
@@ -1085,6 +1219,61 @@ LoadDefinitions!({
   DefParameterType!(UndigestedDefKey, sub[_inner, _extra] {
     read_arg(ExpansionLevel::Off)?.pack_parameters() },
   predigest => sub[arg]{ Ok(arg.undigested()) });
+
+  // The token `\newcommand` defines: DefToken, and when its
+  // braces held more after the token (`\newcommand{\two[5]}{…}`), latex.ltx:1156 `\new@command#1{\@testopt
+  // {\@newcommand#1}0}` hands that rest to `\@newcommand` and `\@testopt` (:1735, `\kernel@ifnextchar[`) inserts
+  // `[{0}]` unless a `[` follows the braces — so `[5]` then `[0]` read as five arguments, the first optional with default
+  // 0, which the author's body takes as `#2`-`#5` (1312.5793's `\smalltwomatrix`: 90 errors, the error-limit Fatal).
+  // Not `\renewcommand`/`\providecommand`: `\renew@command#1` and `\provide@command#1` hand `\new@command` their
+  // argument unbraced, so it takes the command alone and `\@testopt` meets the `[n]` — plain arguments, as DefToken
+  // reads them (pdflatex: `\providecommand{\com[2]}{[#1: #2]}` then `\com{RJ}{x}` prints "[RJ: x]", 1504.03761).
+  DefParameterType!(LaTeXDefToken, sub[_inner, _extra] {
+    let mut token_opt = read_token()?;
+    while let Some(token) = token_opt
+      && token.get_catcode() == Catcode::SPACE
+    {
+      token_opt = read_token()?;
+    }
+    // (brace layers stripped one by one, as DefToken does — `\newcommand{{\datanum}}{…}`, 2407.13761 — the
+    // `\@testopt` step on the outermost layer's rest only)
+    let mut outermost = true;
+    while let Some(token) = token_opt {
+      if token.get_catcode() != Catcode::BEGIN {
+        break;
+      }
+      let mut toks: Vec<Token> = read_balanced(ExpansionLevel::Off, false, false)?
+        .unlist()
+        .into_iter()
+        .filter(|t| !matches!(t.get_catcode(), Catcode::SPACE | Catcode::COMMENT))
+        .collect();
+      if toks.is_empty() {
+        token_opt = None;
+        break;
+      }
+      let head = toks.remove(0);
+      if !toks.is_empty() {
+        let bracket = |t: &Token| t.get_catcode() == Catcode::OTHER && t.to_string() == "[";
+        if outermost && toks.first().is_some_and(bracket) {
+          skip_spaces()?;
+          let follows_bracket = peek_token()?.as_ref().is_some_and(bracket);
+          if !follows_bracket {
+            toks.extend([T_OTHER!("["), T_BEGIN!(), T_OTHER!("0"), T_END!(), T_OTHER!("]")]);
+          }
+        }
+        unread_vec(toks);
+      }
+      outermost = false;
+      token_opt = Some(head);
+    }
+    match token_opt {
+      Some(t) => Ok(ArgWrap::Token(t)),
+      None => {
+        Error!("expected", "DefToken", "Expected a DefToken parameter, found nothing.");
+        Ok(ArgWrap::None)
+      }
+    }
+  });
 
   // Read a token as used when defining it, ie. it may be enclosed in braces.
   // tex.web §1215 `get_r_token` skips blanks before the token being defined

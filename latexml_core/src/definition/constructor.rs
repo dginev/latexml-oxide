@@ -167,6 +167,10 @@ pub struct ConstructorOptions {
   pub locked:             bool,
   /// alternative (command sequence) name, used for reversion
   pub alias:              Option<String>,
+  /// The constructor is TeX's `\halign` primitive or a binding's stand-in for it ([`Constructor::halign_primitive`]).
+  pub halign_primitive:   bool,
+  /// The XML template its replacement was compiled from, when it is a literal one ([`Constructor::template`]).
+  pub template:           Option<&'static str>,
 }
 impl Default for ConstructorOptions {
   fn default() -> Self {
@@ -196,6 +200,8 @@ impl Default for ConstructorOptions {
       alias:              None,
       reversion:          None,
       sizer:              None,
+      halign_primitive:   false,
+      template:           None,
     }
   }
 }
@@ -247,6 +253,16 @@ pub struct Constructor {
   pub origin:            crate::definition::origin::DefinitionOrigin,
   /// The mode options `def_constructor` compiled into `before_digest` (K13).
   pub declared_mode:     Option<crate::definition::DeclaredMode>,
+  /// The `font` option `def_constructor` compiled into `before_digest` ([`Definition::declared_font`]).
+  pub font:              Option<FontDirective>,
+  /// TeX's `\halign` primitive (tex_tables.rs) or a binding's stand-in that takes its place (pgfsys-latexml's SVG
+  /// matrix `\lxSVG@halign`): what a document's `\halign` macro ends with when it is run before an alignment the
+  /// bindings build (latexml_engine tex_tables.rs `run_halign_redefinition_prelude`), under whatever name it was saved.
+  pub halign_primitive:  bool,
+  /// The XML template its replacement was compiled from, when it is a literal one (`DefConstructor!` with a string
+  /// replacement); none for a closure replacement or a constructor made at run time. Read by
+  /// [`Definition::replacement_template`].
+  pub template:          Option<&'static str>,
 }
 impl Default for Constructor {
   fn default() -> Self {
@@ -267,6 +283,9 @@ impl Default for Constructor {
       alias:             None,
       sizer:             None,
       declared_mode:     None,
+      font:              None,
+      halign_primitive:  false,
+      template:          None,
     }
   }
 }
@@ -378,9 +397,12 @@ impl Constructor {
     let ismath = lookup_bool_sym(crate::pin!("IN_MATH"));
     // info!(target: "constructor", "invoke for {:?} ({:?})", self.get_cs(), ismath);
     // Parse AND digest the arguments to the Constructor
+    // (and the tokens its length arguments state, where they are kept: `parameter::KEEP_STATED_LENGTHS`)
+    let mut stated: Vec<(usize, Tokens)> = Vec::new();
+    let mut withheld = false;
     let mut args: Vec<Option<Digested>> = match self.get_parameters() {
       None => Vec::new(),
-      Some(params) => params.read_arguments_and_digest(self)?,
+      Some(params) => params.read_arguments_and_digest(self, &mut stated, &mut withheld)?,
     };
     // info!($self->tracingArgs(@args) . "\n" if $tracing && @args;
     let nargs = self.get_num_args();
@@ -416,6 +438,34 @@ impl Constructor {
     });
     if in_paragraph {
       properties.insert("in_paragraph", Stored::Bool(true));
+    }
+    if !stated.is_empty() {
+      let mut lengths: std::collections::VecDeque<Stored> = std::iter::repeat_with(|| Stored::None)
+        .take(args.len())
+        .collect();
+      for (index, tokens) in stated {
+        if let Some(slot) = lengths.get_mut(index) {
+          *slot = Stored::Tokens(tokens);
+        }
+      }
+      properties.insert(
+        crate::parameter::STATED_LENGTHS,
+        Stored::VecDequeStored(lengths),
+      );
+    }
+    if withheld {
+      properties.insert(
+        crate::parameter::STATED_LENGTHS_WITHHELD,
+        Stored::Bool(true),
+      );
+    }
+    // A TeX box's constructor outside math (a declared `restricted_horizontal`): the element it opens is marked for a
+    // frontmatter field's print (core `document::FIELD_BOX_PROPERTY`, OXIDIZED_DESIGN #715).
+    if self.declared_mode.is_some_and(|mode| mode.restricted_box)
+      && !ismath
+      && crate::document::field_box_marks_live()
+    {
+      properties.insert(crate::document::FIELD_BOX_PROPERTY, Stored::Bool(true));
     }
     // $properties{level}   = $stomach->getBoxingLevel;
 
@@ -505,13 +555,12 @@ impl Constructor {
           });
         }
       }
-      whatsit.set_body(post);
+      whatsit.set_body(std::mem::take(&mut post));
       if let Some(Stored::Digested(body)) = whatsit.properties.get_mut("body") {
         for (key, value) in interline {
           body.set_property(key, Stored::Dimension(value));
         }
       }
-      post = vec![];
       //info!(target: "constructor:capture", "whatsit: {:?}", whatsit);
       // info!(target: "constructor:capture", "constructor: {:?}", self.get_cs_name());
     }
@@ -535,6 +584,12 @@ impl Constructor {
 
 impl Definition for Constructor {
   fn declared_mode(&self) -> Option<crate::definition::DeclaredMode> { self.declared_mode }
+  fn declared_font(&self) -> Option<&FontDirective> { self.font.as_ref() }
+  fn replacement_template(&self) -> Option<&'static str> {
+    self
+      .template
+      .filter(|_| self.before_construct.is_empty() && self.after_construct.is_empty())
+  }
   fn before_digest(&self) -> Option<&Vec<BeforeDigestClosure>> { Some(&self.before_digest) }
   fn after_digest(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.after_digest) }
   fn after_digest_body(&self) -> Option<&Vec<DigestionClosure>> { Some(&self.after_digest_body) }

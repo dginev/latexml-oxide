@@ -1,0 +1,16 @@
+% mechanism: the content check counts the words the author blocks print from the rehearsal's note text, which missed the `\LaTeX`
+%   logo's letters (now its template's text, util_text.rs `printed_own_text`); the note kept whole, the "excess" Warning was false.
+% witness: synthetic (UNC writer's sibling; revUNC p1_hello_latex)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "Ann Able∗ and Bob Baker†", notes "∗Hello LaTeX" "†B"
+% engines: rust UNCbase and UNC (byte-identical XML): 0 E, 1 W ("Frontmatter content check: 1 words or addresses appear in the placed
+%          frontmatter more often than the author blocks print them: LaTeX.")
+% expect:  0 E, 0 W; the note "Hello LaTeX" kept as now
+% engines: rust LOGO1 0 E, 0 W; the note "Hello LaTeX" kept
+% status:  RED (revUNC, int168a) -> GREEN (LOGO1)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{Hello \LaTeX} \and Bob Baker\thanks{B}}
+\maketitle
+x
+\end{document}

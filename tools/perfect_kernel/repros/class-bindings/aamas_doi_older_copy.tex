@@ -1,0 +1,22 @@
+% witness: 2510.21200, 2602.05888 (aamas.cls 2021 v1.78: no `\doi`), 2608.28553 (its copy's `\doi` commented out,
+%          :1720); a reference list's `\providecommand{\doi}[1]{doi: #1}` (reviewer repro rev68a/t/am/d1)
+% oracle:  pdflatex with 2510.21200's aamas.cls and with this cut of it: "A. Author. Title. doi: 10.1145/12345."; 0 errors
+% engines: rust 68a (eec29ca69f) = 0 errors, 0 warnings, "Title. ." (the binding's `\doi` of the 2026 copy took the
+%          reference's DOI); rust 67int6 = "doi: 10.1145/12345"
+% expect:  0 errors, 0 warnings; the reference prints "doi: 10.1145/12345"
+% status:  RED (68a r1) -> GREEN (68a r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{aamas.cls}
+\ProvidesClass{aamas}[2021/02/03 v1.78 cut]
+\LoadClassWithOptions{acmart}
+\end{filecontents*}
+\documentclass[sigconf]{aamas}
+\begin{document}
+\title{T}
+\maketitle
+Text \cite{a}.
+\providecommand{\doi}[1]{doi: #1}
+\begin{thebibliography}{1}
+\bibitem{a} A. Author. Title. \doi{10.1145/12345}.
+\end{thebibliography}
+\end{document}

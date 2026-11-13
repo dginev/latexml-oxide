@@ -1,0 +1,13 @@
+% witness: synthetic (RG1b's sibling sweep of the in-group paragraph start's readers: `take_implicit_indent`)
+% oracle:  pdflatex 0 errors: "[other] [other]" (`\lastbox` takes the indent box `\leavevmode` put first, tex.web §1080,
+%          inside a group as outside: a group is no list in TeX)
+% engines: rust int162a = RG1b = "[void] [void]" (the implicit indent is no box: `take_implicit_indent` makes the
+%          paragraph null but gives `\lastbox` nothing); perl not run
+% expect:  0 errors; [other] [other]
+% status:  RED: LaTeXML lists no implicit indent box. moves: post-merge
+\documentclass{article}
+\begin{document}
+\setbox0\vbox{\leavevmode{\global\setbox1\lastbox}\par}[\ifvoid1 void\else other\fi]
+
+\setbox0\vbox{\leavevmode\global\setbox1\lastbox\par}[\ifvoid1 void\else other\fi]
+\end{document}

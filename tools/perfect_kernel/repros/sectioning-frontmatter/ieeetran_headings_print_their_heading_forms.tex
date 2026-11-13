@@ -1,0 +1,17 @@
+% witness: sel78c item 2 (1,815/30k IEEEtran papers have a \subsection); IEEEtran.cls:5397/:5402 \@seccntformat prints
+%          \the<level>dis (:2570-2587), Perl's IEEEtran.cls.ltxml has no heading forms (KPE)
+% oracle:  pdflatex 0 errors: "I. INTRO", "A. Sub", "1) Deep:", "Text I-A."; "APPENDIX A PROOFS", "A. First", "Body A-A."
+% engines: rust int43a = heading tags "I", "I-A", "I-A1", appendix subsection "A-A"
+% expect:  0 errors; heading tags "I.", "A.", "1)", refnum "I-A"; "Appendix A", its subsection "A." (refnum "A-A")
+% status:  RED (int43a) -> GREEN (78c)
+\documentclass{IEEEtran}
+\begin{document}
+\section{Intro}
+\subsection{Sub}\label{s}
+\subsubsection{Deep}
+Text \ref{s}.
+\appendices
+\section{Proofs}
+\subsection{First}\label{a}
+Body \ref{a}.
+\end{document}

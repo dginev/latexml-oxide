@@ -1,0 +1,20 @@
+% A copy's class default author prints and the output places it once: no content-check Warning. atlasdoc.cls:189
+% `\author{The ATLAS Collaboration}` is the class's default, which its title page prints when the document gives no
+% `\author`; the output places it once as the creator, but the content check counts its words placed more often than
+% the author blocks print them (the class default is no author block of the document's) — a false Warning.
+% witness: 1805.01649, 1806.07355, 1807.02012, 1902.05892, 1904.03536 (atlasdoc); 72a
+%          `copy_setters_store_class_defaults` pins it as a known residual (its red at DEL1: "a false content-check
+%          Warning")
+% oracle:  pdflatex 0 errors (TL 2025, -no-shell-escape): "T", "The ATLAS Collaboration"
+% engines: rust int160a (HG1) = 0 errors, 1 warning ("Frontmatter content check: 3 words or addresses appear in the
+%          placed frontmatter more often than the author blocks print them: ATLAS Collaboration The."); the creator
+%          "The ATLAS Collaboration", the title "T"
+% expect:  0 errors, 0 warnings; the same creator and title
+% status:  RED (int160a, HG1)
+% preload: ar5iv.sty
+\documentclass[nodatetop]{atlasdoc}
+\title{T}
+\begin{document}
+\maketitle
+Text.
+\end{document}

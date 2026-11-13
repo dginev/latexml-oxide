@@ -1,0 +1,22 @@
+% A label-only `{keywords}` (kwpaper.cls, paper.cls:621-622) used bare, `\keywords alpha, beta \endkeywords`: outside
+% the environment `\endkeywords` is the class's own end code (`\par\bigskip`), so the next text is a paragraph of its
+% own, as in pdflatex.
+% witness: none (the review's probe t7)
+% oracle:  pdflatex (kwpaper.cls beside it) 0 errors: "Abstract Abstract text. Keywords: alpha, beta After text.
+%          1 Intro Body." ("After text." a new paragraph)
+% expect:  0 errors, 0 warnings; no <keywords>; "alpha, beta" and "After text." two paragraphs
+% status:  RED (68n round 1: `\endkeywords` ended frontmatter keywords that were never begun, "After text." merged into
+%          the keywords' paragraph) -> GREEN (68n round 2)
+% preload: ar5iv.sty
+\documentclass{kwpaper}
+\begin{document}
+\title{T}\author{A. Author}
+\maketitle
+\begin{abstract}
+Abstract text.
+\end{abstract}
+\keywords alpha, beta \endkeywords
+After text.
+\section{Intro}
+Body.
+\end{document}

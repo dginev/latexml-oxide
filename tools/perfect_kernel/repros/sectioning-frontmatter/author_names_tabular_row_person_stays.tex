@@ -1,0 +1,17 @@
+% mechanism: the writer's re-part (OD #928, review rev94a r4): a row of a `tabular` in `\author` under a name that
+%   may name a person (or a team, or a name speaking for one) is made an item only on structural evidence (a mark it
+%   answers, an API call), as a line of today's creators is; by its place alone it stays where today's has it: today's
+%   one creator. 94a r1-r4 made "Bob Baker" Ann Able's affiliation.
+% witness: review rev94a r4 n/b01_tab_two (b02_tab_three, b03_tab_team, b07_tab_pierre, a23_tab its siblings)
+% oracle:  pdflatex 0 errors: "Ann Able / Bob Baker"
+% engines: rust 93a: one creator, the tabular its name; rust 94a r4: Ann Able, affiliation "Bob Baker"; perl: not run
+% expect:  0 errors, 0 warnings; today's one creator (93a's)
+% status:  RED (94a r4) -> GREEN (94a r5)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{A Title}
+\author{\begin{tabular}{c}Ann Able\\ Bob Baker\end{tabular}}
+\maketitle
+Body.
+\end{document}

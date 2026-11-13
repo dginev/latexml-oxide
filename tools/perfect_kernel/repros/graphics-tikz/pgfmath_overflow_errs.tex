@@ -1,0 +1,13 @@
+% A pgfmath result past ±16383.99998 is clamped (`format_parse_result`, pgfmath_code_tex.rs) with Perl's
+% Error:pgfmath:overflow (pgfmath.code.tex.ltxml:391-393), where pgf stops on "Dimension too large" (tex.web §460).
+% witness: synthetic (reachable once `\wd\box` reads the box, DTL1).
+% status:  GREEN (DTL1d; was pgfmath_overflow_clamped_silently_red: DTL1 [16383.99998pt], 0 errors, 0 warnings).
+% oracle:  pdflatex 1 `!` (Dimension too large), [16383.99998pt]; Perl 1 error (pgfmath overflow), [16383.99998pt].
+% expect:  1 error (pgfmath overflow), 0 warnings, [16383.99998pt].
+\documentclass{article}
+\usepackage{pgf}
+\newsavebox{\mb}
+\newdimen\D
+\begin{document}
+\sbox{\mb}{\rule{100pt}{10pt}}\pgfmathsetlength{\D}{\wd\mb*200}[\the\D]
+\end{document}

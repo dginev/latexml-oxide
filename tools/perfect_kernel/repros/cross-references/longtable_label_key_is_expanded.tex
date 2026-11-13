@@ -1,0 +1,25 @@
+% witness: 1703.09144 (each chapter's longtables `\caption{…\label{\FloatPre t:\ltbcp}}` with `\renewcommand{\ltbcp}{…}`
+%          per table: 17 dangling `\ref{MCSt:WBS}`, `\ref{MASt:MaterialsTable}`, …)
+% oracle:  pdflatex: `\label` writes its key expanded (`\protected@write\@auxout{}{\string\newlabel{#1}…}`), so each table
+%          is `MCSt:A`, `MCSt:B` — "See 1, 2 and 3."
+% engines: rust int99a = the longtable binding cleaned the unexpanded key (Perl longtable.sty.ltxml:135 `ToString`,
+%          KNOWN_PERL_ERRORS #1179): both tables labelled `\FloatPret:\ltbcp`
+% expect:  0 errors, 0 warnings; the tables labelled MCSt:A and MCSt:B, the float MCSt:BC
+% status:  RED (int99a) -> GREEN (80k: longtable_sty.rs `\lx@longtable@label` expands the key)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{longtable}
+\def\FloatPre{MCS}\newcommand{\ltbcp}{A}
+\begin{document}
+\begin{longtable}{l}
+\caption{Cap one\label{\FloatPre t:\ltbcp}}\\
+x\\
+\end{longtable}
+\renewcommand{\ltbcp}{B}
+\begin{longtable}{l}
+\caption{Cap two\label{\FloatPre t:\ltbcp}}\\
+y\\
+\end{longtable}
+\begin{table}\caption{Cap three\label{\FloatPre t:\ltbcp C}}\end{table}
+See \ref{MCSt:A}, \ref{MCSt:B} and \ref{MCSt:BC}.
+\end{document}

@@ -1,0 +1,25 @@
+% mechanism: an eptcs `\author` opening with a two-column `tabular` of names over their e-mails, then a `\let`
+%   copy of `\and` (`\let\nx\and`) glued to its `\end{tabular}`; the binding cuts its cells at a separator's own tokens
+%   (`eptcs_cls.rs` `cells`, `argument_separators`' `ArgSeparator::span`, OXIDIZED_DESIGN_DIVERGENCES #991, #995),
+%   which leave out the `\end{tabular}` closing the table right before it (the rehearsal's environment steps)
+% witness: revP24's `\let` row of B1; the table shape 1407.7928
+% oracle:  pdflatex with eptcs.cls beside it (TL 2025, -no-shell-escape) 0 errors: "Ann Able" over "ann@a.edu", "Bob
+%   Baker" over "bob@b.edu", "Cy Cole" over "Univ C" in a column beside them
+% engines: perl has no eptcs binding (OmniBus); int157a: Ann Able (ann@a.edu), Bob Baker (bob@b.edu), Cy Cole (Univ C)
+%   (the split by spelling matched the alias); P24: Univ C on all three authors, 0 warnings
+% expect:  0 errors, 0 warnings; Ann Able (ann@a.edu), Bob Baker (bob@b.edu), Cy Cole (Univ C)
+% status:  RED (P24) -> GREEN (P24b; guard perfect_kernel_batchp24b)
+% preload: ar5iv.sty
+\documentclass{eptcs}
+\let\nx\and
+\title{T}
+\author{\begin{tabular}{c@{\qquad}c}
+Ann Able & Bob Baker\\
+\texttt{ann@a.edu} & \texttt{bob@b.edu}
+\end{tabular}\nx
+Cy Cole
+\institute{Univ C}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

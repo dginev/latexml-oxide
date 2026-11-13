@@ -586,6 +586,13 @@ fn address_lines(tokens: &[Token]) -> Result<Tokens> {
 }
 
 LoadDefinitions!({
+  // (the class this binding answers for: ptephy_v1 or ptephy_v2, each loading authblk-TI (ptephy_v1.cls:485,
+  // ptephy_v2.cls:485 `\usepackage{authblk-TI}`), whose `\author` stacks one call per author — 2511.03250's six
+  // `\author[1]{R.~Miyata}` calls —, or ptephy)
+  let stacks = matches!(
+    Expand!(Tokens!(T_CS!("\\@currname"))).to_string().as_str(),
+    "ptephy_v1" | "ptephy_v2"
+  );
   LoadClass!("OmniBus");
   RequirePackage!("amsmath");
   RequirePackage!("amsthm");
@@ -638,8 +645,23 @@ LoadDefinitions!({
     Ok(Tokens::new(out))
   });
   // The kernel's `\author`, given the line `author_line` reads: its splitter reads a name's own marks as names when
-  // they are macros (a "12" person, a `\thanks` folded into the name, 2209.07273, 1801.03251).
-  Let!("\\lx@ptephy@kernel@author", "\\author");
+  // they are macros (a "12" person, a `\thanks` folded into the name, 2209.07273, 1801.03251). Each class's own: a
+  // later call replaces the earlier under ptephy.cls:427 (`\def\author#1{\gdef\@author{#1}}`, 1412.6580), and stacks
+  // under ptephy_v1.cls:485's and ptephy_v2.cls:485's authblk-TI (authblk-TI.sty:70, `\renewcommand\author[2][]`
+  // appending to `\AB@authlist`: `\author{…}\affil{…}` pairs, 2311.07297, 1606.03167; ptephy_v2's 2511.03250, as
+  // inst_support's `\author` does) — OXIDIZED_DESIGN #920. The whole list is one `\lx@add@author@split` call the
+  // reading cuts at its `\and`s, no split by spelling before it (P2-1, OD #993). The last name's marks followed by a
+  // space or newline before the closing brace are dropped as every other name's are (1703.03737's "M. Yokoyama",
+  // 1904.07398's); glued to the brace, the emitter writes the call whole as well (P3, OD #993; repro
+  // `author_one_block/ptephy_author_list_glued_trailing_mark_leaves_the_name`).
+  if stacks {
+    Let!("\\lx@ptephy@kernel@author", "\\author");
+  } else {
+    DefMacro!(
+      "\\lx@ptephy@kernel@author[]{}",
+      "\\lx@clear@creators[role=author]\\lx@add@author@split{#2}\\lx@author@trailing"
+    );
+  }
   // Names marked with superscripts of their own instead (`\author{R.~Abbott$^{1}$, H.~Abe$^{2}$, …}` over authblk-TI's
   // `\affil{$^{1}$LIGO Laboratory, … \\ $^{2}$…}`, 2203.01270) are a name list whose marks request the affiliations
   // so labelled (`\lx@add@authors@list`, as l-aa's).

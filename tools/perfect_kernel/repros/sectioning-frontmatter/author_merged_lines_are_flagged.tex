@@ -1,0 +1,15 @@
+% Names a `\\` parts inside a box no splitter reads (`\shortstack{…}`): two lines each a name, kept in one personname —
+% the merge is flagged. (Its sibling, a line of several names above a line naming no one, is
+% input_names_block/author_input_file_refused_names_block_is_flagged.tex.)
+% witness: 2306.04988 (before 107b: "Botian Shi <break/>Chiyu Wang", silent)
+% oracle:  pdflatex 0 errors: "Ann Able", "Bob Baker" stacked
+% engines: rust int138a = one creator, the two names in an inline-block, 0 errors (silent); Perl one creator, silent
+% expect:  1 error (Error:frontmatter:merged_creators, 2 names), 0 warnings; one creator
+% status:  RED (int138a) -> GREEN (107b)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{\shortstack{Ann Able\\ Bob Baker}}
+\maketitle
+\end{document}

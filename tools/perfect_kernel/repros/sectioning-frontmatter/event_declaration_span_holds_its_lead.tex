@@ -1,0 +1,24 @@
+% witness: revz0z1 finding 6 (no corpus witness: what the emitter of Z4 would read back from a Declaration's span)
+% oracle:  pdflatex 0 errors: "Mia Moe"; "Eve Ely Q"; "Ann Able R"; "Bob Baker ST"; "Cat Cole U" ("Cat" bold); "Dan Dow V"; "Fay Fox 2"; "Gil Gray Z"; "Hal Hill 1"; "Ian Ives Y"
+% engines: Perl has no events; ours before this fix started the span at the definer, past `\expandafter`, `\global`, `\long`
+% expect:  0 errors; each Declaration's span starts at what leads to its definer, and no earlier: not at an earlier
+%          declaration, a font switch or a conditional; definees once each; none for what a box it is in holds
+%          (perfect_kernel_batchz1::a_declarations_span_holds_what_leads_to_it)
+% status:  GREEN (Z01)
+\documentclass{article}
+\newcommand\twiceq{\def\y{1}\def\y{2}}
+\begin{document}
+\title{T}
+\author{\expandafter\def\csname ww\endcsname{1}Mia Moe
+\and \long\global\def\q{Q}Eve Ely \q
+\and \itshape\global\def\r{R}Ann Able \r
+\and \def\s{S}\global\def\t{T}Bob Baker \s\t
+\and \def\u{U}\textbf{Cat} Cole \u
+\and \iftrue\def\v{V}\fi Dan Dow \v
+\and \twiceq Fay Fox \y
+\and Gil Gray \fbox{\global\def\z{Z}\z}
+\and Hal Hill $\long\def\zz{1}\zz$
+\and Ian Ives \mbox{\expandafter\def\csname zy\endcsname{Y}\zy}}
+\maketitle
+Body.
+\end{document}

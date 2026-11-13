@@ -1,0 +1,17 @@
+% witness: control for {eqnarray,amsmath}_cell_braces_balance_across_the_template (69c): the author's `$` inside a
+%   cell whose template now braces it
+% oracle:  pdflatex 4 errors and a fatal end ("Missing } inserted": the `$` meets the template's `{` group, tex.web
+%   §1193 → §1064 `off_save`; then "Extra }" for the v-part's `}`), the text printed between two formulas
+% engines: rust 67int18b = 0, perl = 0 (no braces: the `$` ends the cell's formula, the text and a formula follow)
+% expect:  0 errors, as before the braces: each cell "b" (or "=b"), then " for all ", then the formula "x"
+% status:  CONTROL (69c: tex_math.rs `end_math_or_defer` closes the template's group with the formula)
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+\begin{align*}
+a &= b $ for all $ x
+\end{align*}
+\begin{eqnarray}
+a &=& b $ for all $ x
+\end{eqnarray}
+\end{document}

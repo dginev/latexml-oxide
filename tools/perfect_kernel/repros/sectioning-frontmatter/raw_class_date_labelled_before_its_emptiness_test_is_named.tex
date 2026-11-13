@@ -1,0 +1,27 @@
+% A raw class prints a date's label before the store's emptiness test, the store alone in its `\else` branch —
+% `Received: \ifx\@received\@empty--\else\@received\fi` —: the label is the one before the test (frontmatter_stores.rs
+% `line_label_before`), and the whole test leaves the title page with it, so no "Received: --" is left in the body.
+% Where no label is read, a role's default name stands only when its word is what the class prints right before the
+% store (wiley2sp.cls:296-302's `\receivedname`, "Received:", a macro the line reader takes for a value; 1211.4450,
+% 1306.2559): `ClassReaders::prints_default_name_before`.
+% witness: none for the test's shape (review rev95d-r2's sibling of 2311.02753); 1211.4450, 1306.2559 (wiley2sp.cls) for
+%          the default
+% oracle:  pdflatex 0 errors: "T", "Ann Able", "Received: 1 May 2020", "Text."
+% engines: rust 95d-r2base = 0 errors, "Received " (the default) and "Received: –" left in the body; rust 95d-r2 = 0
+%          errors, unnamed, "Received: –" left
+% expect:  0 errors, 0 warnings; <ltx:date name="Received:" role="received">1 May 2020</ltx:date>; the body only "Text."
+% status:  RED (95d-r2base, 95d-r2) -> GREEN (95d-r3)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{histif.cls}
+\LoadClass{article}
+\let\@received\@empty
+\def\received#1{\gdef\@received{#1}}
+\def\@maketitle{\begin{center}{\Large\bfseries \@title\par}{\large\bfseries \@author\par}%
+  \par\vskip 2.5mm{\footnotesize Received: \ifx\@received\@empty--\else\@received\fi}\end{center}}
+\end{filecontents*}
+\documentclass{histif}
+\title{T}\author{Ann Able}
+\received{1 May 2020}
+\begin{document}\maketitle
+Text.
+\end{document}

@@ -1,0 +1,15 @@
+% witness: 2604.06890 (beilstein.cls:264, from bpchem.sty, in \AtBeginDocument; 7k words -> 0)
+% oracle: pdflatex 0 errors, "‖x‖ and ‖y‖"
+% engines: rust=Fatal:Timeout:Recursion perl=same (2026-10-16; Perl math_common.pool.ltxml:84, KNOWN_PERL_ERRORS #842)
+% expect: 0 errors; both Math are norm@(x)/norm@(y) with OPEN/CLOSE XMTok ‖
+% status: GREEN (batch 68u)
+% mechanism: LaTeX's \| is a protected macro (fontmath.ltx:467 \DeclareMathDelimiter{\|}, latex.ltx:13641-13645
+%   \set@mathdelimiter: \protected\xdef\|{\delimiter"026B30D }), so the \expandafter step gives its body and
+%   \| becomes a robust command over it. Ours was the unexpandable DefMath (math_common.rs), so the line made
+%   \| call itself. Now \| is a protected macro over the internal atom \lx@math@Vert (alias \|), as \{ is over
+%   \lx@math@lbrace (OXIDIZED_DESIGN #642).
+\documentclass{article}
+\expandafter\DeclareRobustCommand\expandafter\|\expandafter{\|}
+\begin{document}
+$\left\| x\right\|$ and $\|y\|$
+\end{document}

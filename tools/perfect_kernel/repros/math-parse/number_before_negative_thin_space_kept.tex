@@ -1,0 +1,14 @@
+% witness: 2609.36534 (`$+5.9\!\cdot\!10^{-7}$`, 91 numbers lost), 2608.02769 (`\mathbf 1\!\left(`), 2603.03017
+%          (found by 77x r2: tipa then amsmath makes `\!` the spacing command again, where int36a had it `\relax`)
+% oracle:  pdflatex 0 errors; "2x", "2·3", "5.9·10⁻⁷": the number before a negative thin space is set
+% engines: rust int36a, 77x r2 before the fix = the number dropped from the parsed formula (`$2\!x$` text "x",
+%          `$2\!\cdot 3$` "absent cdot 3": the number ligature took the `\!` hint as a separator, Perl's empty
+%          `$space_chars{negthinspace}` is false); Perl 0.8.8 = "2 * x", "2 cdot 3"
+% expect:  0 errors, 0 warnings; text "2 * x", "2 cdot 3", "+ 5.9 cdot 10 ^ (- 7)", "1 * x"
+% status:  RED (int36a) -> GREEN (77x r2, base_xmath.rs number ligature)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{amsmath}
+\begin{document}
+A $2\!x$, $2\!\cdot 3$, $+5.9\!\cdot\!10^{-7}$ and $\mathbf 1\!\left(x\right)$.
+\end{document}

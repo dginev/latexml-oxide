@@ -1,0 +1,13 @@
+% witness: 2402.04829 (14 `\includeinkscape{./figures/…/x.pdf_tex}`), 2310.03515 (6, svg-inkscape/…_svg-tex.pdf_tex);
+%          svg.sty:876-935, :1018-1060 `\svg@@input` inputs `<file>_tex`, :1348-1394 the patched `\includegraphics`
+% oracle:  pdflatex 0 errors; the box and "Overlay label" (twice: by the `_tex` name and by the `.pdf` name)
+% engines: rust 67int18b = 2 errors (HTML: inkscape/box.pdf_tex handed to the image converter, "failed to convert")
+% expect:  0 errors; each figure a picture with the label text and the graphic inkscape/box.pdf
+% status:  RED (67int18b) -> GREEN (70a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{svg}
+\begin{document}
+\begin{figure}\includeinkscape[width=4cm]{inkscape/box.pdf_tex}\caption{A}\end{figure}
+\begin{figure}\includeinkscape{inkscape/box.pdf}\caption{B}\end{figure}
+\end{document}

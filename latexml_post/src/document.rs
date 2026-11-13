@@ -10,16 +10,40 @@
 
 use std::path::Path;
 
+use latexml_core::common::xml::compiled_xpath;
 use libxml::{
   parser::Parser as XmlParser,
   tree::{Document, Namespace, Node, NodeType},
-  xpath::Context as XPathContext,
+  xpath::{Context as XPathContext, Expression, XPathError},
 };
-use regex::Regex;
 use rustc_hash::{FxHashMap as HashMap, FxHashSet};
 use unicode_normalization::UnicodeNormalization;
 
 use crate::radix::radix_alpha;
+
+/// libxml2's `XML_ERR_NO_MEMORY` (`xmlParserErrors`).
+const XML_ERR_NO_MEMORY: i32 = 2;
+
+/// Whether an XPath evaluation failed because libxml2 could not allocate: `XML_ERR_NO_MEMORY` with no message, where a
+/// malformed expression always carries one ("Invalid expression", code 1207). It is glibc's malloc spent in a reused
+/// cortex child whose Rust heap still serves (libxml2 2.9.14 and 2.15 alike; 68m step 1,
+/// `scratch_356a0c47/68m_step1/RESULTS.md`).
+fn is_libxml_oom(e: &XPathError) -> bool { e.message.is_none() && e.code == XML_ERR_NO_MEMORY }
+
+/// An XPath evaluation libxml2 could not allocate for ([`is_libxml_oom`]) is the process's allocation failure, not a
+/// failure of this node's lookup: it ends through the binary's allocation-failure hook — one `Fatal:oom`, the child
+/// recycled and the paper retried (ruling 2026-10-15) — where an Error per node ran on to `TooManyErrors` (runs
+/// 362/363: 87-501 per paper; 1008.4986, 1712.03782, 1910.13564, 2101.04438, 2208.07188, 2305.17269, 2401.10096,
+/// 2609.06115). The context line goes out allocation-free before the hook's own.
+fn end_on_libxml_oom(xpath: &str, e: &XPathError) {
+  if is_libxml_oom(e) {
+    latexml_core::watchdog::write_stderr_unlocked(format_args!(
+      "Warning:post:xpath libxml2 could not allocate evaluating `{xpath}` (XML_ERR_NO_MEMORY): ending as an \
+       allocation failure\n"
+    ));
+    std::alloc::handle_alloc_error(std::alloc::Layout::new::<u8>());
+  }
+}
 
 const XML_NS: &str = "http://www.w3.org/XML/1998/namespace";
 
@@ -434,6 +458,10 @@ pub struct PostDocument {
   /// children, which is what `//ltx:navigation/ltx:ref` selects given the single
   /// navigation element Perl's own `findnode` assumes.
   nav_memo:                    Option<NavigationMemo>,
+  /// Each XPath expression compiled once, for every evaluation of this document's queries — compiled expressions
+  /// hold no context, so the per-call contexts share them (`latexml_core::common::xml::compiled_xpath`;
+  /// docs/performance/PERFORMANCE.md P10).
+  compiled_xpath:              std::cell::RefCell<HashMap<Box<str>, Expression>>,
 }
 
 /// Memoized navigation state for one document — see [`PostDocument::nav_memo`].
@@ -545,6 +573,7 @@ impl PostDocument {
       nocache: options.nocache,
       pending_xmath_unlinks: Vec::new(),
       nav_memo: None,
+      compiled_xpath: std::cell::RefCell::default(),
     }
   }
 
@@ -581,7 +610,10 @@ impl PostDocument {
     }
 
     // Extract search paths from PIs
-    let sp_re = Regex::new(r#"^\s*searchpaths\s*=\s*[\"'](.*?)[\"']\s*$"#).unwrap();
+    static SP_RE: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+      regex::Regex::new(r#"^\s*searchpaths\s*=\s*[\"'](.*?)[\"']\s*$"#).unwrap()
+    });
+    let sp_re = &*SP_RE;
     let mut paths = self.searchpaths.clone();
     for pi_text in &self.processing_instructions {
       if let Some(cap) = sp_re.captures(pi_text) {
@@ -922,32 +954,45 @@ impl PostDocument {
       return out;
     }
 
-    let result = if let Some(node) = context_node {
-      ctx.node_evaluate_checked(xpath, node)
-    } else {
-      // Perl `$doc->findnodes($xpath)` (no ref node) evaluates from the DOCUMENT
-      // NODE, so RELATIVE location paths (`descendant::…`, `.//…`, `child::…`)
-      // resolve against the whole tree. rust-libxml's bare `evaluate_checked`
-      // leaves the XPath context node UNSET, so relative axes silently matched
-      // NOTHING (only absolute `//…`/`/…` worked) — which broke, among others,
-      // `new_document`'s split-page resource/PI copy (#341), `Split`'s
-      // `descendant::ltx:navigation`, and CrossRef's `descendant::ltx:glossaryref`.
-      // We cannot bind the document node itself: rust-libxml's `node_evaluate`
-      // SIGSEGVs on a document-node context (an unguarded FFI path in the fork).
-      // The root ELEMENT is a safe context and makes relative axes resolve for
-      // everything inside the tree. NOTE: nodes OUTSIDE the root element — i.e.
-      // `<?latexml …?>` PIs that precede it — are not descendants of the root, so
-      // a relative PI query still needs the absolute `//processing-instruction()`
-      // form; absolute paths are unaffected by the context node either way.
-      match self.document.get_root_element() {
-        Some(root) => ctx.node_evaluate_checked(xpath, &root),
-        None => ctx.evaluate_checked(xpath),
+    // (the borrow of the compiled table ends with the evaluation, before any diagnostic below)
+    let result = {
+      let mut compiled = self.compiled_xpath.borrow_mut();
+      let expression = compiled_xpath(&mut compiled, xpath);
+      let at_node = |node: &Node| match expression {
+        Some(expression) => ctx.node_evaluate_compiled(expression, node),
+        None => ctx.node_evaluate_checked(xpath, node),
+      };
+      if let Some(node) = context_node {
+        at_node(node)
+      } else {
+        // Perl `$doc->findnodes($xpath)` (no ref node) evaluates from the DOCUMENT
+        // NODE, so RELATIVE location paths (`descendant::…`, `.//…`, `child::…`)
+        // resolve against the whole tree. rust-libxml's bare `evaluate_checked`
+        // leaves the XPath context node UNSET, so relative axes silently matched
+        // NOTHING (only absolute `//…`/`/…` worked) — which broke, among others,
+        // `new_document`'s split-page resource/PI copy (#341), `Split`'s
+        // `descendant::ltx:navigation`, and CrossRef's `descendant::ltx:glossaryref`.
+        // We cannot bind the document node itself: rust-libxml's `node_evaluate`
+        // SIGSEGVs on a document-node context (an unguarded FFI path in the fork).
+        // The root ELEMENT is a safe context and makes relative axes resolve for
+        // everything inside the tree. NOTE: nodes OUTSIDE the root element — i.e.
+        // `<?latexml …?>` PIs that precede it — are not descendants of the root, so
+        // a relative PI query still needs the absolute `//processing-instruction()`
+        // form; absolute paths are unaffected by the context node either way.
+        match self.document.get_root_element() {
+          Some(root) => at_node(&root),
+          None => match expression {
+            Some(expression) => ctx.evaluate_compiled(expression),
+            None => ctx.evaluate_checked(xpath),
+          },
+        }
       }
     };
 
     match result {
       Ok(obj) => obj.get_nodes_as_vec(),
       Err(e) => {
+        end_on_libxml_oom(xpath, &e);
         // NOT a warning, and NOT "no matches": an evaluation that could not be
         // answered is a failure to know, and downstream passes that treat it as
         // an empty set silently drop content (CLAUDE.md: fail toward flagging
@@ -1005,7 +1050,12 @@ impl PostDocument {
     for (prefix, uri) in &self.namespaces {
       let _ = ctx.register_namespace(prefix, uri);
     }
-    ctx.evaluate(xpath).ok().map(|obj| obj.to_string())
+    let mut compiled = self.compiled_xpath.borrow_mut();
+    match compiled_xpath(&mut compiled, xpath) {
+      Some(expression) => ctx.evaluate_compiled(expression).ok(),
+      None => ctx.evaluate(xpath).ok(),
+    }
+    .map(|obj| obj.to_string())
   }
 
   /// XPath query relative to a node of any document — Perl's
@@ -1025,6 +1075,7 @@ impl PostDocument {
     match ctx.node_evaluate_checked(xpath, node) {
       Ok(obj) => obj.get_nodes_as_vec(),
       Err(e) => {
+        end_on_libxml_oom(xpath, &e);
         Error!(
           "post",
           "xpath",
@@ -1672,6 +1723,19 @@ impl PostDocument {
     }
   }
 
+  /// Replace `node` by its children, which keep their ids (moved, not copied), and remove it as [`remove_nodes`]
+  /// does.
+  ///
+  /// [`remove_nodes`]: Self::remove_nodes
+  pub fn unwrap_node(&mut self, node: &Node) {
+    let mut wrapper = node.clone();
+    for mut child in wrapper.get_child_nodes() {
+      child.unlink_node();
+      wrapper.add_prev_sibling(&mut child).ok();
+    }
+    self.remove_nodes(&[wrapper]);
+  }
+
   /// Prepend `nodes` as the first children of `parent`.
   ///
   /// Port of `Post::Document::prependNodes`.
@@ -2090,7 +2154,10 @@ impl PostDocument {
   ///
   /// Port of `Post::Document::validate`.
   pub fn validate(&self) -> Result<(), String> {
-    let rng_re = Regex::new(r#"^\s*RelaxNGSchema\s*=\s*[\"'](.*?)[\"']\s*$"#).unwrap();
+    static RNG_RE: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
+      regex::Regex::new(r#"^\s*RelaxNGSchema\s*=\s*[\"'](.*?)[\"']\s*$"#).unwrap()
+    });
+    let rng_re = &*RNG_RE;
     for pi_text in &self.processing_instructions {
       if let Some(cap) = rng_re.captures(pi_text) {
         let schema = &cap[1];
@@ -2131,12 +2198,15 @@ impl PostDocument {
       }
     }
 
+    // The cached ids the document lacks, sorted: Perl Post.pm:1006-1014 lists them in hash `keys` order, random
+    // from run to run (det354 C4).
     let mut missing = Vec::new();
     for id in self.idcache.keys() {
       if !doc_ids.contains_key(id) {
         missing.push(id.clone());
       }
     }
+    missing.sort_unstable();
 
     if !dups.is_empty() {
       Warn!(
@@ -2548,6 +2618,30 @@ mod tests {
     );
     let sections = doc.findnodes("//ltx:section");
     assert_eq!(sections.len(), 2);
+  }
+
+  /// SYNC row XP: a detail-less `XML_ERR_NO_MEMORY` is libxml2's allocation failure; a failure with a message (a
+  /// malformed expression) or another code is not.
+  #[test]
+  fn libxml_oom_is_told_from_an_xpath_error() {
+    let oom = XPathError {
+      message: None,
+      code:    2,
+      domain:  12,
+    };
+    let syntax = XPathError {
+      message: Some("Invalid expression".into()),
+      code:    1207,
+      domain:  12,
+    };
+    let unknown = XPathError {
+      message: None,
+      code:    0,
+      domain:  0,
+    };
+    assert!(is_libxml_oom(&oom));
+    assert!(!is_libxml_oom(&syntax));
+    assert!(!is_libxml_oom(&unknown));
   }
 
   /// `findnodes` with no context node must resolve RELATIVE location paths

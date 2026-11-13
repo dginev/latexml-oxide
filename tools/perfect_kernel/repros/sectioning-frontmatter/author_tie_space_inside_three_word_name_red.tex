@@ -1,0 +1,11 @@
+% RED (rev107g finding 6, synthetic): a tie and a space inside a name of three words (`Maria de~ la~ Cruz`) splits, as on base
+%   (`lexer.rs` ~291 `ties_the_gap`). Census of `\author` arguments in 35.9k zips: 12 papers with a tie gap, none of this shape.
+% witness: none (synthetic)
+% expect:  0 errors; one name
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Marie~ Jones, B. Jones}
+\maketitle
+Body.
+\end{document}

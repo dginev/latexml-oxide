@@ -1,0 +1,21 @@
+% mechanism: REVTeX's group rule (`group_or_marked_affiliation`): names marked `$^{(1,2)}$`, `$^{(2,3)}$` over an unmarked
+%   head and lines led by `$^{(2)}$`, `$^{(3)}$`: the unmarked-head rule (2109.01501's, `unmarked_head_over_marked_lines`)
+%   does not answer the parenthesized shape, so the whole block goes to a nameless creator (the bare `$^{1,2}$` shape and
+%   `$^{*,1,2}$` go by it: `revtex_symbol_first_mark_head_over_lines`)
+% witness: synthetic (review revP4b3 probe p13)
+% oracle:  pdflatex (TL 2025, revtex4-2, -no-shell-escape) 0 errors: "Ann Able(1,2) and Bob Baker(2,3) / Univ A, Town A /
+%          (2) Univ B, Town B / (3) Univ C, Town C"
+% engines: P4b3base, P4b3c: both names bare, a nameless creator holding the whole block (0 errors, 0 warnings); P4b3b: the
+%          whole block copied onto both names
+% expect:  Ann Able "Univ A, Town A", "(2) Univ B, Town B"; Bob Baker "(2) Univ B, Town B", "(3) Univ C, Town C"
+% status:  RED (pre-existing; reach unmeasured, post-merge)
+\documentclass[aps,prl]{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able$^{(1,2)}$}
+\author{Bob Baker$^{(2,3)}$}
+\affiliation{Univ A, Town A\\ $^{(2)}$Univ B, Town B\\ $^{(3)}$Univ C, Town C}
+\begin{abstract}x\end{abstract}
+\maketitle
+Text.
+\end{document}

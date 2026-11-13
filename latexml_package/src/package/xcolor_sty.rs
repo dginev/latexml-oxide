@@ -3,7 +3,9 @@ use latexml_core::common::color::{
 };
 
 use crate::{
-  package::color_sty::{lookup_color_obj, report_unrecognized_model, trim_color_spec},
+  package::color_sty::{
+    lookup_color_obj, report_unconverted_model, report_unrecognized_model, trim_color_spec,
+  },
   prelude::*,
 };
 
@@ -97,6 +99,15 @@ fn convert_ext_model(model: &str, spec: &str) -> Color {
         delta(comps.get(2).copied().unwrap_or(0.0), m),
       )
     },
+    // xcolor.sty.ltxml:131-142: `\rangetHsb`'s tuned hue to hsb's.
+    "tHsb" => {
+      let h_range = 360.0; // default \rangeHsb
+      Color::Hsb(
+        thsb_to_hsb(comps.first().copied().unwrap_or(0.0), h_range) / h_range,
+        comps.get(1).copied().unwrap_or(0.0),
+        comps.get(2).copied().unwrap_or(0.0),
+      )
+    },
     "Gray" => {
       let n = 15.0;
       Color::Gray(delta(comps.first().copied().unwrap_or(0.0), n))
@@ -126,9 +137,17 @@ fn convert_ext_model(model: &str, spec: &str) -> Color {
       Color::Hsb(h / 6.0, 1.0, bb).to_rgb()
     },
     _ => {
-      // A model neither core nor one of xcolor.sty.ltxml's `DefColorModel`s
-      // (:85-168: RGB HTML Hsb HSB tHsb Gray wave) is Perl's Color.pm:61 Error.
-      if !matches!(model, "tHsb") {
+      // A model neither core nor one of xcolor.sty.ltxml's `DefColorModel`s (:85-168: RGB HTML Hsb HSB tHsb Gray wave) is
+      // Perl's Color.pm:61 Error, unless raw code defined it, as xcolor.sty:565 tests a model
+      // (`\@ifundefined{XC@mod@<model>}`): colorspace.sty's `\spc@mix@*` set `\XC@mod@<name>` for its
+      // `\definecolorspace` models and :59 `\XC@mod@&spot` (the colorspace manual; Perl errs, KNOWN_PERL_ERRORS #958).
+      // That one is known, and its colour is lost: a counted Warning, the recovery black. xcolor.sty's own `natural`,
+      // `ignore` and `ps` (:140, :564, :1131) are its internals, on which pdflatex errs too: they stay the Error.
+      if !matches!(model, "natural" | "ignore" | "ps")
+        && is_defined_token(&T_CS!(s!("\\XC@mod@{model}")))
+      {
+        report_unconverted_model(model);
+      } else {
         report_unrecognized_model(model);
       }
       color_from_model_spec(model, spec)
@@ -652,13 +671,38 @@ LoadDefinitions!({
   // Witnesses 2405.19976, 2406.12553.
   DefMacro!("\\@ifundefinedcolor{}", "\\@firstoftwo");
 
-  // xcolor.sty L815: `\InputIfFileExists{mathcolor.ltx}` — pulls in
-  // `\mathcolor[<model>]{<color>}{<expr>}`, a math-mode color wrap.
-  // The raw .ltx isn't on Rust's load path, so authors writing
-  // `\mathcolor{red}{x+y}` hit Error:undefined. Stub directly as the
-  // group form `{\color{<color>} <expr>}` (semantically identical in
-  // math). Witness 2402.00349.
-  DefMacro!("\\mathcolor[]{}{}", "{\\color[#1]{#2}#3}");
+  // xcolor.sty:819 `\InputIfFileExists{mathcolor.ltx}` — pulls in
+  // `\mathcolor[<model>]{<color>}{<expr>}`, a math-mode color wrap
+  // (witness 2402.00349: Error:undefined without it). mathcolor.ltx:20-29
+  // pushes the current color (`\g__mathcolor_seq`), sets the new one,
+  // typesets #3 with NO group around it, and restores the color it found
+  // (`\seq_gpop:NN … \current@color` + `\reset@color`), so a `\left` in #3
+  // pairs with a `\right` in another call (nlo-shower.sty:802
+  // `\mathcolor{red}{\left[}…\mathcolor{red}{\right]}`, 2605.11792: a group
+  // here made it "Attempt to close boxing group"). The scripts that follow
+  // take the surrounding color, as `\__mathcolor_handle_scripts:Nw` sets the
+  // pushed one on them (mathcolor.ltx:71-72). The restore is by TeX group,
+  // LaTeX's by the driver's color stack: a `\left` in one call and its
+  // `\right` outside one leave the text after `\right` in the new color.
+  DefMacro!(
+    "\\mathcolor[]{}{}",
+    "\\lx@mathcolor@push\\color[#1]{#2}#3\\lx@mathcolor@pop"
+  );
+  DefPrimitive!("\\lx@mathcolor@push", {
+    let current = lookup_font()
+      .and_then(|font| font.get_color().map(Color::to_stored))
+      .unwrap_or_default();
+    push_value("lx@mathcolor@stack", Stored::String(pin(current)))?;
+  });
+  DefPrimitive!("\\lx@mathcolor@pop", {
+    let saved = match pop_value("lx@mathcolor@stack")? {
+      Some(Stored::String(sym)) => with(sym, Color::from_stored),
+      _ => None,
+    };
+    let color = saved.unwrap_or(BLACK);
+    def_color(".", &color, None)?;
+    merge_font(fontmap!(color => color));
+  });
 
   // Target-model options — xcolor.sty:149-153 declares one option per core /
   // extended model whose code is `\selectcolormodel{<model>}` (below).
@@ -675,23 +719,27 @@ LoadDefinitions!({
     DeclareOption!(option, None);
   }
 
-  // Loading sets of names
+  // Loading sets of names. xcolor reads the names file whether or not it was read before (xcolor.sty:193
+  // `\XC@declarenames`, an `\input`, not a package load): a `color` loaded first by the paper or its class
+  // (lipics-v2021's `\RequirePackage{color}`, then xcolor at `\begin{document}`) has read `dvipsnam.def` for a global
+  // `dvipsnames` into its own names, and the load-dedup left xcolor without them ("Can't find color named
+  // 'RoyalBlue'", 2407.14159; pdflatex 0 errors).
   for option in &["dvipsnames", "dvipsnames*"] {
     DeclareOption!(*option, {
-      InputDefinitions!("dvipsnam", extension => Some(Cow::Borrowed("def")));
+      InputDefinitions!("dvipsnam", extension => Some(Cow::Borrowed("def")), reloadable => true);
     });
   }
   DeclareOption!("svgnames", {
-    InputDefinitions!("svgnam", extension => Some(Cow::Borrowed("def")));
+    InputDefinitions!("svgnam", extension => Some(Cow::Borrowed("def")), reloadable => true);
   });
   DeclareOption!("svgnames*", {
-    InputDefinitions!("svgnam", extension => Some(Cow::Borrowed("def")));
+    InputDefinitions!("svgnam", extension => Some(Cow::Borrowed("def")), reloadable => true);
   });
   DeclareOption!("x11names", {
-    InputDefinitions!("x11nam", extension => Some(Cow::Borrowed("def")));
+    InputDefinitions!("x11nam", extension => Some(Cow::Borrowed("def")), reloadable => true);
   });
   DeclareOption!("x11names*", {
-    InputDefinitions!("x11nam", extension => Some(Cow::Borrowed("def")));
+    InputDefinitions!("x11nam", extension => Some(Cow::Borrowed("def")), reloadable => true);
   });
   // table option — loads colortbl
   DeclareOption!("table", {
@@ -1489,16 +1537,26 @@ LoadDefinitions!({
       }
     },
     after_digest => sub[whatsit] {
+      // Read row number from state (set by start_row before digest) instead of
+      // borrowing the alignment, which is already mutably borrowed during start_row.
+      let n = lookup_value("alignmentRowNumber")
+        .and_then(|v| match v {
+          Stored::Int(i) => Some(i as usize),
+          Stored::Number(num) => Some(num.value_of() as usize),
+          _ => None,
+        })
+        .unwrap_or(0);
+      // colortbl.sty:261 `\@rowc@lors`: under a `\rowcolors` every row steps colortbl's count `\rownum`
+      // (`\global\advance\rownum\@ne`, from the `\global\rownum=\z@` of :238), so a row reads its own number
+      // (`\number\rownum`, `\therownum`), as the binding's macro gives it where `\rownum` is no count.
+      if lookup_value("tabular_row_color_first").is_some()
+        && let Some(rownum) = lookup_definition(&T_CS!("\\rownum"))?
+        && rownum.is_register()
+      {
+        let n = i64::try_from(n).unwrap_or(i64::MAX);
+        rownum.set_value(RegisterValue::Number(Number::new(n)), Some(Scope::Global), Vec::new());
+      }
       if if_condition(&T_CS!("\\if@rowcolors"))?.unwrap_or(false) {
-        // Read row number from state (set by start_row before digest) instead of
-        // borrowing the alignment, which is already mutably borrowed during start_row.
-        let n = lookup_value("alignmentRowNumber")
-          .and_then(|v| match v {
-            Stored::Int(i) => Some(i as usize),
-            Stored::Number(num) => Some(num.value_of() as usize),
-            _ => None,
-          })
-          .unwrap_or(0);
         let first = match lookup_value("tabular_row_color_first") {
           Some(Stored::Number(num)) => num.value_of() as usize,
           _ => 1,
@@ -1543,9 +1601,12 @@ LoadDefinitions!({
     properties => { Ok(stored_map!("alignmentSkippable" => true)) });
   RawTeX!(r"\let\@tabular@row@before@xcolor\lx@tabular@row@before@xcolor");
 
-  // Perl xcolor L744-748: \rownum returns current row number from alignment
+  // Perl xcolor L744-748: \rownum returns current row number from alignment. Kept as `\lx@xcolor@rownum`, which
+  // `\rownum` is let to unless colortbl's count is already there: xcolor.sty defines no `\rownum` (colortbl.sty:269-274
+  // does), so the colortbl binding knows this macro for the binding's own and allocates its count in its place
+  // (`[table]`, any load order).
   def_macro(
-    T_CS!("\\rownum"),
+    T_CS!("\\lx@xcolor@rownum"),
     None,
     Some(ExpansionBody::Closure(Rc::new(|_args: Vec<ArgWrap>| {
       match lookup_alignment() { Some(alignment) => {
@@ -1565,6 +1626,9 @@ LoadDefinitions!({
     }))),
     None,
   )?;
+  if !has_meaning(&T_CS!("\\rownum")) {
+    Let!("\\rownum", "\\lx@xcolor@rownum");
+  }
 
   // \rowcolor — only define stub if colortbl not loaded
   if !has_meaning(&T_CS!("\\rowcolor")) {
@@ -1755,12 +1819,14 @@ LoadDefinitions!({
   // `\usepackage{xcolor}` followed by `\usepackage[table]{xcolor}` raises no
   // option clash — the repeat load processes the new `table` key and loads
   // colortbl (`table .code = {\AddToHook{package/xcolor/after}
-  // {\RequirePackage{colortbl}}}`). Classic `\ds@table` is cleared to \relax
-  // by ProcessOptions, so re-assert a durable handler: the loader's
-  // repeat-load recovery (input_definitions, OXIDIZED_DESIGN #43) digests
-  // surviving `\ds@<opt>` handlers for options the first load didn't have.
+  // {\RequirePackage{colortbl}}}`). The keys are xcolor's alone, so the handler keeps
+  // a name of its own, `\lx@repeat@xcolor@<opt>`, which the loader's repeat-load recovery
+  // (`apply_repeat_options`, OXIDIZED_DESIGN #43) digests for options the first load
+  // didn't have; a `\ds@table` would be any later package's option `table`, its
+  // `\DeclareOption*` never run (ndsu-thesis-2022's `\usepackage[figure,table]{totalcount}`,
+  // `\iftotaltables` undefined; guard `perfect_kernel_batchm3::a_repeat_option_of_xcolor_is_xcolors_alone`).
   // Witness 2605.00310 (\cellcolor via `[table]` on a second \usepackage).
-  DefMacro!("\\ds@table", "\\RequirePackage{colortbl}");
+  DefMacro!("\\lx@repeat@xcolor@table", "\\RequirePackage{colortbl}");
   // Likewise the colour-name sets (xcolor.sty:171-193 `\XC@declarenames`: each
   // is a key whose code inputs its `.def` after the load, first or repeated).
   // `\usepackage[dvipsnames]{xcolor}` after tcolorbox had loaded xcolor dropped
@@ -1778,7 +1844,7 @@ LoadDefinitions!({
     let mut body = vec![T_CS!("\\lx@xcolor@names"), T_BEGIN!()];
     body.extend(ExplodeText!(file));
     body.push(T_END!());
-    def_macro(T_CS!(s!("\\ds@{option}")), None, Tokens::new(body), None)?;
+    def_macro(T_CS!(s!("\\lx@repeat@xcolor@{option}")), None, Tokens::new(body), None)?;
   }
 });
 

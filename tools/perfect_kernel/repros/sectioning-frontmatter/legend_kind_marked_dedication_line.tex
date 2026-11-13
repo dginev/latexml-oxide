@@ -1,0 +1,21 @@
+% A legend line `$^\dagger$In memory of Bob Baker, who passed away during this work` whose symbol Bob Baker's name
+% requests (`Bob Baker$^{1,\dagger}$`): a line led by a mark a name requests is no dedication of the paper; it is its
+% carriers' note, as "Deceased" is (the frontmatter observer's legend reading, `is_legend_text`; review rev107c S1: 107c
+% r2).
+% witness: none on arXiv yet (the reviewer's d1); the unmarked form is 0910.1386's dedication
+% oracle:  pdflatex 0 errors: "Ann Able1 and Bob Baker1,†", "1Univ A, Town", "†In memory of Bob Baker, who passed away
+%          during this work"
+% engines: rust 107c r1 = the paper's dedication pubnote
+% expect:  0 errors, 0 warnings; Able, Baker: Univ A, Town; Baker: the † note
+% status:  RED (107c r1) -> GREEN (107c r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{1}$ and Bob Baker$^{1,\dagger}$\\
+$^1$Univ A, Town\\
+$^\dagger$In memory of Bob Baker, who passed away during this work}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

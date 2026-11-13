@@ -1,0 +1,19 @@
+% mechanism: an author call whose `\and` is held in a macro (`\author{\aut}`): OmniBus's `\author`
+%   (inst_support_sty.rs `\lx@splitting{\lx@add@author@split}{\and\And}`) sees no `\and` token and queues the piece
+%   whole; the rehearsal digests `\aut` and the reading cuts the block at its own `Sep(And)` event, as TeX parts it
+%   (FRONTMATTER_SINGLE_ENGINE_PLAN.md "Segmentation is digested", P1)
+% witness: bindsplit probe om1 (agent_reports/2026-11-07_bindsplit_report.md; int143b: one merged creator, E=1)
+% oracle:  pdflatex (TL 2025, -no-shell-escape, `article` for the missing class) 0 errors: "Ann Able" and "Bob Baker"
+%   side by side
+% engines: Perl 0.8.8 splits by spelling (inst_support.sty.ltxml:33-38): one creator; int156a (MB1): two creators
+% expect:  0 errors, 3 warnings (the missing class binding; the emitter writes each name as plain text, "a name its
+%   events don't spell" — P3, the emitter cutting inside a macro's expansion); creators Ann Able, Bob Baker
+% status:  GREEN (int156a, before OC1; guard perfect_kernel_batchoc1)
+\documentclass{nosuchclass}
+\newcommand\aut{Ann Able \and Bob Baker}
+\title{T}
+\author{\aut}
+\begin{document}
+\maketitle
+Text.
+\end{document}

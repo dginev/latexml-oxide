@@ -1,0 +1,19 @@
+% mechanism: a later line of llncs's `\author` whose name carries an ORCID is a names line (`later_line_is_names`'s
+%   `marked`: an ORCID is a person's), as the old split read each `\\` line.
+% witness: 2501.11774 (seven `Name\orcidID{…} \\` lines)
+% oracle:  pdflatex 0 errors; three names, one a line, over "Univ X"
+% engines: rust Z18b3 = Bob Baker and Cat Cole affiliations of Ann Able
+% expect:  0 errors, 0 warnings; three authors, each Univ X and an ORCID
+% status:  RED (Z18b3) -> GREEN (Z18c)
+% preload: ar5iv.sty
+\documentclass{llncs}
+\begin{document}
+\title{A Title}
+\author{Ann Able\orcidID{0000-0001-0000-0001} \\
+Bob Baker\orcidID{0000-0001-0000-0002} \\
+Cat Cole\orcidID{0000-0001-0000-0003}}
+\institute{Univ X}
+\maketitle
+\begin{abstract}Text.\end{abstract}
+Body.
+\end{document}

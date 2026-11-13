@@ -1,0 +1,26 @@
+% mechanism: a block the emitter writes whole under `=2` (`emitter::emit::whole_block`, here a block no
+%   rehearsal read, `SkipReason::OverBudget`) has its tabular juggles and columns written as the line breaks they print
+%   (`fallback::tabular_juggles_in_a_whole_block`): vldb.cls's `\alignauthor` closes the tabular its `\@maketitle` opens
+%   around `\@author` and opens another, which digested inside the whole creator's `\lx@personname` closed a tabular the
+%   block never opened. The class beside it, `vldbjuggle.cls`, is vldb.cls's title page cut down
+% witness: 1511.05911 (vldb.cls, `\author{\alignauthor Bo Zong$^{1}$ \hspace{4ex} … \\ \affaddr{…} \\ \email{…}}`, its
+%   rehearsal over the conversion's read budget): 4 Errors, 8 names lost, 14 words unclaimed (w56 report, SYNC (33))
+% oracle:  pdflatex 0 errors; "Ann Able1", "Bob Baker2", "1 Univ Alpha", "2 Univ Beta", "ann@alpha.edu", "bob@beta.edu"
+% engines: rust =2 under `LATEXML_REHEARSAL_READ_BUDGET=20000` (int152a): 4 errors (`\@end@tabular`, `\endgroup`,
+%   `\@@tabular`, `\lx@personname` mode errors), the creator's personname empty; off: 0 errors, 2 creators
+% expect:  =2 under that budget: 0 errors, 2 warnings (the emitter's whole block, the budget's), one whole creator holding
+%   every word: "Ann Able1 Bob Baker2 / 1Univ Alpha 2Univ Beta", its two e-mails; off unchanged
+% status:  RED (int152a) -> GREEN (perfect_kernel_batchcl3::a_whole_blocks_tabular_juggle_is_a_line_break)
+% preload: ar5iv.sty
+\documentclass{vldbjuggle}
+\newcommand\slow{\count255=0 \loop\ifnum\count255<3000 \advance\count255 by 1 \repeat}
+\begin{document}
+\title{T}
+\numberofauthors{1}
+\author{\alignauthor Ann Able$^{1}$ \hspace{4ex} Bob Baker$^{2}$\slow \\
+\affaddr{$^{1}$Univ Alpha \hspace{4ex} $^{2}$Univ Beta} \\
+\email{ann@alpha.edu \hspace{1ex} bob@beta.edu}
+}
+\maketitle
+Text.
+\end{document}

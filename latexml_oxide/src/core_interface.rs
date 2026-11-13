@@ -319,6 +319,11 @@ thread_local! {
 fn hard_yank_processing(boxes: Vec<Digested>) {
   RESCUED_BOXES.with(|r| *r.borrow_mut() = boxes);
   gullet::flush();
+  // (Perl's `hardYankProcessing` empties the token stack too, Common/Error.pm:329: a re-raised resource Fatal —
+  // `Timeout:Convert`, the RSS fuse, `TokenLimit`, `PushbackLimit` — is salvaged and built, and a stale stack would
+  // fail that build's first push as a ghost recursion Fatal, as the recovery arms' clear guards against (2410.07647,
+  // 2105.02599; review rev131fix finding 1). The recursion Fatal's message already holds its stack, stomach.rs.)
+  stomach::clear_token_stack();
 }
 
 fn digest_step_guarded(boxes: &mut Vec<Digested>) -> Result<bool> {
@@ -399,6 +404,9 @@ fn digest_step_guarded(boxes: &mut Vec<Digested>) -> Result<bool> {
         "digest_internal",
         &format!("digest_internal: error during recovery digestion: {:?}", e),
       );
+      // (the tokens the failed invocations left on the stack go, as Perl's `hardYankProcessing` empties it for every
+      // Fatal: left there, the next digestion — the build's — failed its first push, 2410.07647, 2105.02599)
+      stomach::clear_token_stack();
       // Recover what the failed body already digested. Without this the
       // "still produce partial output" intent above only worked when the
       // failure landed in a LATER body — a Fatal inside the FIRST one left
@@ -429,11 +437,31 @@ fn digest_step_guarded(boxes: &mut Vec<Digested>) -> Result<bool> {
       // in an `<ERROR>` box — so there is no loop to re-enter, and the
       // current level is honest content (the paragraph in progress). Input
       // after the Fatal stays unread, as in Perl.
-      let drop_innermost = match e.target {
-        ErrorTarget::Stomach => Some(true),
-        ErrorTarget::TooManyErrors => Some(false),
+      //
+      //
+      // The conditional guard (`Timeout:IfLimit`) keeps everything too: a run of conditionals adds no boxes of its own,
+      // so the current level is the document's (for a loop in the body's own paragraph, the whole body), and the
+      // salvage's own ceiling still refuses a loop that piles up boxes. A finite figure-heavy paper reaches the limit as
+      // surely as a loop: 2006.14937's 24 matplotlib `.pgf` figures (5.3 MB) trip it at the ninth, and the whole paper
+      // was a 39-byte stub.
+      let drop_innermost = match (&e.target, &e.category) {
+        (ErrorTarget::Stomach, _) => Some(true),
+        (ErrorTarget::TooManyErrors, _) | (ErrorTarget::Timeout, ErrorCategory::IfLimit) => {
+          Some(false)
+        },
         _ => None,
       };
+      // What is kept still has to be built. The Fatal is announced and its document kept, so it leaves the latch the math
+      // parser reads a resource Fatal from (`take_last_resource_fatal`): left there, the first formula a semantic action
+      // rejects took it for its own and dropped the document; `resource_fatal_latched` stays set. A conditional of the
+      // build (a rewrite's, a constructor's) would trip the spent guard again, so the phases after digestion get its
+      // budget afresh, and a loop the build re-enters still ends at the limit.
+      if matches!(e.category, ErrorCategory::IfLimit) {
+        error::take_last_resource_fatal();
+        if state::if_limit() > 0 {
+          state::set_if_limit(state::if_count() + state::if_limit());
+        }
+      }
       if let Some(drop_innermost) = drop_innermost {
         let salvaged = stomach::salvage_pending_box_lists(drop_innermost);
         if !salvaged.is_empty() {
@@ -588,6 +616,11 @@ fn load_source_latexml_rules() {
 fn finish_document(document: &mut Document) -> Result<()> {
   // Every reference is built (forward ones too, the eager and streaming paths alike): the diagnostics a held tag
   // deferred (an `\autoref` name, ruling 7e) are raised for the tags a reference prints.
+  // (an empty held tag no target settled is tied to its owner's labels first, `settle_empty_held_tags`)
+  if let Some(root) = document.get_document().get_root_element() {
+    latexml_engine::latex_constructs::settle_empty_held_tags(document, &root);
+  }
+  latexml_core::util::logger::settled_empty_held_tags();
   latexml_core::util::logger::replay_shown_deferred();
   // Lines of nothing but float-boxes give way to their floats (57g), once the document is built;
   // spilled streaming segments get the same pass in `streaming_pass2`.
@@ -830,10 +863,12 @@ fn streaming_pass2(
   store: &mut latexml_core::sxml::SegmentStore,
   node_fonts: &rustc_hash::FxHashMap<u64, latexml_core::common::font::Font>,
   counters: &mut Vec<(String, String)>,
+  anchors: &mut rustc_hash::FxHashMap<String, Vec<(String, String)>>,
+  index: &latexml_core::sxml::FragmentIndex,
   shared_labels: Option<Rc<rustc_hash::FxHashMap<String, String>>>,
   root_id: Option<String>,
 ) -> Result<()> {
-  use latexml_core::common::error::{ErrorCategory, ErrorTarget};
+  use latexml_core::common::error::{ErrorCategory, ErrorData, ErrorTarget};
   // A non-consuming snapshot of the rules: `finish_document` will consume the
   // live entry for the spine afterwards.
   let rules_opt = match state::lookup_value("DOCUMENT_REWRITE_RULES") {
@@ -841,6 +876,13 @@ fn streaming_pass2(
     _ => None,
   };
   let nomath = state::get_nomathparse_flag();
+  // The segment each spilled anchor is in: its counters there continue what earlier segments minted under it.
+  let mut anchors_in: rustc_hash::FxHashMap<u32, Vec<String>> = rustc_hash::FxHashMap::default();
+  for id in anchors.keys() {
+    if let Some(seg) = index.id_segment(id) {
+      anchors_in.entry(seg.0).or_default().push(id.clone());
+    }
+  }
   let segments: Vec<_> = store.ids().collect();
   // Rate-limited exactly like the pass-1 telemetry next door (see the
   // `is_power_of_two() || is_multiple_of(65536)` gate in `convert_streaming`):
@@ -868,10 +910,12 @@ fn streaming_pass2(
     // half's pass A over the whole core XML).
     let frag_xml = libxml::parser::Parser::default()
       .parse_string(&store.wrapped_segment(seg)?)
-      .map_err(|e| Error {
-        target:   ErrorTarget::Internal,
-        category: ErrorCategory::Libxml,
-        message:  s!("cannot re-parse staged segment {seg}: {e}"),
+      .map_err(|e| {
+        Error::from(ErrorData {
+          target:   ErrorTarget::Internal,
+          category: ErrorCategory::Libxml,
+          message:  s!("cannot re-parse staged segment {seg}: {e}"),
+        })
       })?;
     let mut out = String::new();
     {
@@ -900,11 +944,21 @@ fn streaming_pass2(
       // Judge the parse wrapper as the segment's REAL parent in schema
       // decisions (empty-`ltx:text` collapse etc.) — see the field docs.
       frag.fragment_parent_qname = meta.parent.as_deref().map(arena::pin);
-      // Seed the wrapper root with the carried root-level id counters, so
-      // fragment id minting continues the document-wide sequence.
+      // Seed the wrapper root with the carried id counters of the element its top nodes are minted under (the root's
+      // when no element below it has an id), so fragment id minting continues the document-wide sequence.
+      frag.fragment_anchor_id = meta.anchor.clone();
+      let seed = match &meta.anchor {
+        Some(id) => anchors.get(id).map(Vec::as_slice).unwrap_or_default(),
+        None => counters.as_slice(),
+      };
       if let Some(mut root) = frag.get_document().get_root_element() {
-        for (key, value) in counters.iter() {
+        for (key, value) in seed {
           let _ = root.set_attribute(key, value);
+        }
+      }
+      for id in anchors_in.get(&seg.0).into_iter().flatten() {
+        if let Some(carried) = anchors.get(id) {
+          frag.set_id_counters(id, carried);
         }
       }
       // No strip needed: pass 1 serializes segments FLAT (`spill_flat`), so
@@ -925,8 +979,9 @@ fn streaming_pass2(
           }
         }
       }
-      // The segment's share of `finish_document`'s float-box pass (57g).
+      // The segment's share of `finish_document`'s float-box pass (57g) and of its held-tag settling.
       if let Some(root) = frag.get_document().get_root_element() {
+        latexml_engine::latex_constructs::settle_empty_held_tags(&mut frag, &root);
         latexml_engine::latex_constructs::settle_float_paragraphs(&mut frag, &root)?;
       }
       if let Some(rules) = &rules_opt {
@@ -998,7 +1053,13 @@ fn streaming_pass2(
       frag.prune_dangling_split_xmrefs()?;
       frag.prune_xmduals()?;
       if let Some(mut root) = frag.get_document().get_root_element() {
-        frag.finalize_subtree(&mut root)?;
+        let context = meta
+          .font
+          .as_deref()
+          .and_then(|key| frag.decode_font(key))
+          .cloned()
+          .unwrap_or_else(latexml_core::common::font::Font::text_default);
+        frag.finalize_subtree_in(&mut root, context)?;
       }
       frag.cleanup_unreferenced_xmtok_ids();
       // The parsed root is the `_lxfragment` wrapper; the spilled subtrees are
@@ -1008,14 +1069,15 @@ fn streaming_pass2(
         for child in root.get_child_nodes() {
           out.push_str(&frag.serialize_aux(&child, meta.depth, meta.noindent, false));
         }
-        // Carry the wrapper's root-level id counters to the next fragment
+        // Carry the wrapper's id counters to the next fragment under the same element
         // (finalize deliberately leaves the wrapper's bookkeeping attrs in
         // place — see finalize_rec's PostWork).
-        counters.clear();
-        for (key, value) in root.get_attributes() {
-          if key.starts_with("_ID_counter") {
-            counters.push((key, value));
-          }
+        let carried = latexml_core::document::id_counters(&root);
+        match &meta.anchor {
+          Some(id) => {
+            anchors.insert(id.clone(), carried);
+          },
+          None => *counters = carried,
         }
       }
     }
@@ -1143,6 +1205,7 @@ impl DigestionAPI for Core {
     mode: Option<DigestionMode>,
   ) -> Result<String> {
     DIGEST_SETUP_COUNT.with(|c| c.set(c.get() + 1));
+    stomach::mark_conversion_rss_baseline();
     let mut _ext = match &mode {
       Some(m) => Some(m.extension()),
       None => Some(DigestionMode::TeX.extension()),
@@ -1326,7 +1389,7 @@ impl DigestionAPI for Core {
     // Fatal that NAMES the shortfall and the requirement, so the user can
     // free space (or point --dest at a roomier volume) with numbers in hand.
     {
-      use latexml_core::common::error::{ErrorCategory, ErrorTarget};
+      use latexml_core::common::error::{ErrorCategory, ErrorData, ErrorTarget};
       const SPILL_BYTES_PER_SOURCE_BYTE: u64 = 16; // ~12x measured + slack
       let src_bytes = match state::lookup_value("SOURCEFILE") {
         Some(Stored::String(f)) => {
@@ -1339,7 +1402,7 @@ impl DigestionAPI for Core {
         && avail < need
       {
         stomach::set_fragment_yield_budget(None);
-        return Err(Error {
+        return Err(Error::from(ErrorData {
           target:   ErrorTarget::Timeout,
           category: ErrorCategory::MemoryBudget,
           message:  s!(
@@ -1348,7 +1411,7 @@ impl DigestionAPI for Core {
             store.dir().display(),
             avail / (1024 * 1024)
           ),
-        });
+        }));
       }
     }
     document.set_spill_store(store);
@@ -1358,9 +1421,13 @@ impl DigestionAPI for Core {
     document.literal_placeholders = true;
     // The math parser's `d`-token evidence is the whole document's, read before its rewrites (as the eager path
     // reads it): each subtree's as it spills, the spine's before pass 2.
-    if !state::get_nomathparse_flag() {
-      document.spill_observer = Some(latexml_math_parser::read_differential_evidence);
-    }
+    // So are the output's words the title-page check looks for (latexml_engine `title_page_check`): each subtree's
+    // as it spills, the spine's when the document closes.
+    document.spill_observer = Some(if state::get_nomathparse_flag() {
+      observe_spilled_words
+    } else {
+      observe_spilled_evidence_and_words
+    });
     // Spill segments are an intermediate that pass 2 re-serializes; the
     // indentation pass 1 used to emit was generated, written, read back,
     // parsed into ~40M text nodes and then deleted again. See `spill_flat`.
@@ -1372,8 +1439,8 @@ impl DigestionAPI for Core {
     // content blows past it (witness: fuse at 18.8 GB with the box budget
     // untouched). `spill_watermark_bytes` owns the policy, including the
     // `--max-memory=0` case where there is no fuse to divide.
-    if let Some(watermark) = stomach::spill_watermark_bytes() {
-      stomach::set_fragment_yield_rss_soft_kb(Some(watermark / 1024));
+    if let Some(mark_kb) = stomach::spill_mark_kb() {
+      stomach::set_fragment_yield_rss_soft_kb(Some(mark_kb));
     }
 
     Ok(index)
@@ -1437,6 +1504,8 @@ impl DigestionAPI for Core {
           // Safe because everything salvaged is absorbed, spilled and freed
           // immediately below.
           boxes.extend(stomach::salvage_pending_box_lists(false));
+          // (and the stack of tokens being invoked, which the build's digestion pushes onto again: 2410.07647)
+          stomach::clear_token_stack();
           fatal_stop = true;
           true
         },
@@ -1493,6 +1562,7 @@ impl DigestionAPI for Core {
       let bounded_mode = stomach::fragment_yield_count() > 0;
       if !finishing || bounded_mode {
         let t_spill = std::time::Instant::now();
+        #[cfg(target_os = "linux")]
         let trace_spill = std::env::var_os("LXML_TRACE_NODE_BOXES").is_some();
         #[cfg(target_os = "linux")]
         let c_live_before = if trace_spill {
@@ -1690,14 +1760,10 @@ impl DigestionAPI for Core {
     let mut counters: Vec<(String, String)> = document
       .get_document()
       .get_root_element()
-      .map(|root| {
-        root
-          .get_attributes()
-          .into_iter()
-          .filter(|(k, _)| k.starts_with("_ID_counter"))
-          .collect()
-      })
+      .map(|root| latexml_core::document::id_counters(&root))
       .unwrap_or_default();
+    // So do those of each element a spilled run's top nodes are minted under (SegmentMeta::anchor).
+    let mut anchors = document.take_spill_anchor_counters();
     // The document's labels, for scope resolution in every fragment and on the
     // spine (Document::rewrite_labels_shared, consulted on a local miss): the
     // spilled content's, from the pass-1 index, and those on nodes that stay on
@@ -1747,6 +1813,8 @@ impl DigestionAPI for Core {
       &mut store,
       &node_fonts,
       &mut counters,
+      &mut anchors,
+      &index,
       shared_labels.clone(),
       root_id,
     )?;
@@ -1765,6 +1833,9 @@ impl DigestionAPI for Core {
       for (key, value) in &counters {
         let _ = root.set_attribute(key, value);
       }
+    }
+    for (id, carried) in &anchors {
+      document.set_id_counters(id, carried);
     }
     // The spine resolves scope labels against the whole document, as the
     // fragments do: a label on a spilled node is not missing (its scope selects
@@ -1853,8 +1924,8 @@ impl DigestionAPI for Core {
     // transition.
     let armed_here =
       stomach::fragment_yield_budget().is_none() && stomach::fragment_yield_rss_soft_kb().is_none();
-    if armed_here && let Some(watermark) = stomach::spill_watermark_bytes() {
-      stomach::set_fragment_yield_rss_soft_kb(Some(watermark / 1024));
+    if armed_here && let Some(mark_kb) = stomach::spill_mark_kb() {
+      stomach::set_fragment_yield_rss_soft_kb(Some(mark_kb));
       // The growth floor measures the DOCUMENT's accumulation: baseline on
       // the resident set now, after the engine/dump load.
       stomach::rebaseline_soft_yield_growth();
@@ -2719,6 +2790,18 @@ fn renumber_collect_dfs(
     }
     renumber_collect_dfs(&child, xml_ns, id_entries, idref_entries);
   }
+}
+
+/// The spill observer of a `--streaming` run with no math parsing: the spilled subtree's words, for the title-page
+/// check (latexml_engine `base_utilities::frontmatter::title_page_check`).
+fn observe_spilled_words(_document: &Document, node: &libxml::tree::Node) {
+  latexml_engine::base_utilities::note_spilled_words(node);
+}
+
+/// The spill observer of a `--streaming` run: the math parser's `d`-token evidence, then the spilled subtree's words.
+fn observe_spilled_evidence_and_words(document: &Document, node: &libxml::tree::Node) {
+  latexml_math_parser::read_differential_evidence(document, node);
+  observe_spilled_words(document, node);
 }
 
 #[cfg(test)]

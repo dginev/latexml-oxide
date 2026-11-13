@@ -1822,7 +1822,7 @@ or `//` are unaffected.
 **Witness:** PR-2767 port, `\lx@frontmatter@fallback` — frontmatter
 (title/creator) landed at the *end* of `<ltx:document>` instead of
 after the `ltx:resource` block; caught by `the `20_digestion` `rebox` fixture (`tests/digestion/rebox.{tex,xml}`)`.
-Fixed in `base_utilities.rs` by using
+Fixed in `base_utilities/frontmatter/titlepage_layout.rs` by using
 `/ltx:document/ltx:resource[last()]`.
 
 ## #60 libxml string accessors silently fail on namespaced `xml:id`/`xml:lang` — and a *masked* broken accessor is not automatically a bug
@@ -1928,7 +1928,7 @@ emulateapj).
 
 ## 41. Frontmatter fallback DOM surgery: three construction-time traps
 
-Context: `base_utilities.rs` `\lx@frontmatter@fallback` + `maybe_promote_leading_title`
+Context: `base_utilities/defs/author_macros.rs` `\lx@frontmatter@fallback` + `maybe_promote_leading_title` (`base_utilities/frontmatter/titlepage_layout.rs`)
 (the beyond-Perl "keep abstract below a hand-formatted title block" ordering fix
 and the "promote a leading centered display block to `<ltx:title>`" heuristic for
 `\title`-less papers, e.g. arXiv 1609.07638). Three traps bite any code that
@@ -2739,7 +2739,7 @@ it agrees with the bug. Compare glyphs against Perl, or read the rendered page.
 Witness 2503.04421. Guards: `latexml_oxide/tests/fonts/bbding.{tex,xml}` and
 `tests/116_bbding_family_fontmap.rs`. The same primitive also lacked Perl's
 `reported_unrecognized_font_*` report-once guards (`already_reported` in
-`latexml_engine/src/base_utilities.rs`), which had turned one unrecognized
+`latexml_engine/src/base_utilities/util_text.rs`), which had turned one unrecognized
 family into 28 identical `Info` lines.
 
 Settled dead end: Perl's `DeclareFontMap` `(uppercase|lowercase|digit)_mathstyle`
@@ -3034,7 +3034,7 @@ type-evidence cue took every single Latin letter as upright, so `\cos\omega T` s
 `\sin u\mathcal S` did not split (the plan it followed was written against the finished XML). Decode it:
 `document.decode_font(&node.get_attribute("_font")?)` gives the `Font` (`get_family`, `get_series`, `get_shape`) —
 `token_font_mark` (semantics.rs); the same holds for any attribute the post-parse finalizer writes. Check a cue on
-the live DOM (`--debug=math_parser`, whose `close_element` lines show the XMath as the parser sees it), not on any
+the live DOM (`--verbose`, whose `close_element` lines show the XMath as the parser sees it), not on any
 finished output — `--nomathparse` output is finalized too and carries `font=`. Golden `tests/parse/rust_parse_additions.tex` ("A symbol of another type ends a trig function's bare
 argument").
 
@@ -3072,3 +3072,105 @@ partner outside the formula (a plain `{…}` group included) looks more general 
 wherever the author's `$` follows (`{\bf $x} y$ after.` — "after." became math); the frame stack cannot tell a
 forgotten `$` from a stray `}` inside a plain group, only `$`-parity in the rest of the paragraph could. OXIDIZED_DESIGN
 #553.
+
+## 98. A parked fleet child is read with gdb and the shipped binary's exact twin, built with symbols
+
+The fleet's `maxperf-cortex` worker is stripped, so a stuck child's `thread apply all bt` is a column of `?? ()`. Rebuild
+the deployed commit in a separate worktree and target directory with `CARGO_PROFILE_MAXPERF_CORTEX_STRIP=none`, after
+copying the main checkout's `resources/dumps/` into it: latexml_engine's build.rs generates code for the embedded dumps,
+so a worktree without them builds a `.text` 17 KB off (with them, 192 bytes, from the paths' lengths). Then map each
+frame by its call site, not by a fixed shift: take the 20 bytes before the return address in the fleet binary's
+`.text` (`objcopy -O binary --only-section=.text`), find them near the same offset in the twin's, and name the twin's
+function there (`nm -C`, sorted). Frames inside the standard library whose call bytes hold a relocated address do not
+match; a naive shift names those. Two process facts make a parked child stand out: all of its threads sleep in a futex
+(`/proc/<pid>/task/*/wchan`), and its CPU time stops growing between two `ps -o times` samples while its age runs past
+the timeout (a harness child converts many papers, so its age alone means nothing). This found the 67m
+allocation-failure-hook deadlock (SYNC_STATUS 67m).
+
+## 99. A binding that reads a file raw is a `RawRead` declaration, not a hand-rolled load
+
+A class or package binding that reads the TeX Live file, or the copy an author's class the paper ships, raw and then
+adjusts it declares a `latexml_package::shipped_class::RawRead` and calls `read_raw`, which owns the order and the
+no-copy path: the paper's copy for a `shipped` class (`requested_shipped_class`, a renamed or path-prefixed request
+included), else OmniBus with the loader's missing-file Warning (`omnibus_without_copy`, silent when the prefix
+fallback already warned); `held` definitions locked against the file's own while it is read and restored after
+(pasa.cls's era `\@popfilename`); `restored` meanings the file overrides with an older kernel's copy, restored after
+(pasa.cls's `\@pushfilename`); `setters` — a store the file defines turned into a frontmatter API body with `#1` its
+argument, the grammar of K11's `STORE_SETTERS`, only when the file defines it (an.cls `\aaabstract`, cclayout's
+`\for@cc@subject`, asmejour's `\keywords`); then `after` TeX. `read_raw` returns `false` when the class fell to
+OmniBus, so version-dependent Rust (an.cls v1.03's labelled store, a family's "only named like it" checks) runs only
+after a real read. Hand-rolled copies of this sequence drifted before it existed: some no-copy branches warned and
+some did not, and a forgotten `AUTHOR_FILE_STAND_INS` entry failed the gates (deepseek, pasa). A new author-file
+binding still needs its name in `AUTHOR_FILE_STAND_INS`; `perfect_kernel_batch68d::every_binding_outside_tex_live_is_listed`
+names any it misses.
+
+## 100. The schema model is not loaded at digest time — decide model questions in a constructor
+
+`document::can_contain_qname` at digest time returns false for every pair but the `_Capture_`/`#Comment`/`_WildCard_` fast paths (latexml_core/src/common/model.rs): the model is loaded with the document head
+(latexml_oxide `core_interface.rs` `build_document_head`, as Perl's `convertDocument` loads it after digestion, since
+a binding may still change the schema while digesting). A digest-time rule keyed on "can this element hold X" silently
+never fires. Record what the rule needs on the whatsit at digest (an `after_digest` property, e.g. the frontmatter
+field the `\par` was digested in) and ask the model in the constructor (`frontmatter_paragraph_break`, OD #766).
+
+---
+
+## 101. A recovered Fatal must reset every stack the unwinding left — a stale entry turns the next digestion into a ghost Fatal
+
+`invoke_token` (latexml_core/src/stomach.rs) pushes each invoked token onto `token_stack` and pops it only on a normal
+exit; every `?` between push and pop leaves its entry. A `Stomach:Recursion` Fatal leaves the whole `MAXSTACK`. The
+recovery arms that keep the document (`core_interface.rs` `digest_step_guarded`'s Err arm, the streaming loop's
+resource stop, `streaming_restart::release_before_rerun`) reset the box lists (`salvage_pending_box_lists`) but kept the
+stack, so the first digestion after them — the build's own (a frontmatter name read at insert time,
+`get_frontmatter_name`) — failed its first push with a second Fatal naming the same stack, and the build stopped early
+(2410.07647 kept 96 of int130a's 886 words in the Bundle 1 A/B; 2105.02599 0 words). Perl's `hardYankProcessing` (Common/Error.pm:329) empties
+`token_stack` for every Fatal; `stomach::clear_token_stack` now does in each arm. **Method:** a second Fatal whose
+message repeats the first one's stack is a stale-state ghost, not a new failure — list what the failing frame pushes
+(token stack, boxing, frames, mode, `CURRENT_TOKEN`) and check that each recovery arm resets it, against
+`hardYankProcessing`'s list. Guard `perfect_kernel_batch131fix::a_recovered_fatal_leaves_no_token_stack_behind`. Open:
+an RAII pop in `invoke_token` (as `local_current_token_guard`) would cover a caught error that never reaches a recovery
+arm (SYNC "token-stack RAII" row). **A speculative run is such a catcher**, and its stale state need not be an error's:
+the frontmatter's title-page runs, rehearsals and label reads discard their output and undo their assignments (the
+journal), but the token stack and the conditional stack are no assignments. 2502.10606: a run's discarded
+`Stomach:Recursion` left `MAXSTACK` tokens and the real `\maketitle` died of the ghost; 2003.03814: a run that ended
+*normally* had closed, with a `\fi` of its own, a conditional the document opened before it (CUP-JNL-DCE.cls:505
+`\keywords` leaves its `\ifx` open), and the document's own `\fi` then had none. `stomach::StomachMark` (the token-stack
+depth and every conditional frame with its state) is taken before each such run and put back on every exit, `Ok` too
+— around the whole sequence where runs read one text in pieces: the observer rehearses an author list block by block,
+and a conditional opened in one block's run is closed in the next's (2606.17718), as TeX reads the list in one pass.
+The mark restores on drop as well: a run's propagated Fatal (`?`) must not skip it.
+Guards `perfect_kernel_batch106s::{a_runaway_run_leaves_no_ghost_fatal, a_run_keeps_the_documents_open_conditional}`.
+
+
+## 102. An environment's mode frame under plain groups ends by frame surgery, not by popping
+
+LaTeXML's environment frame is TeX's `\begin` group and LaTeXML's mode frame at once; TeX's groups are untyped, so
+`\begin{X}\begingroup … \end{X}\endgroup` (raa.cls:322-349) is legal and Perl's `endMode` errs on it (KNOWN_PERL_ERRORS
+#1207). To end X without breaking the group count: pop only the innermost group (the one `\end`'s `\endgroup` closes),
+then unbind X's mode keys in X's own frame wherever it sits (`state.rs` `unbind_value_in_frame`: a frame's values sit
+in the key's value stack after the counts the frames above it made — Perl State.pm:280-286 `valueInFrame`'s offset),
+flip its `groupNonBoxing` in place (`replace_value_in_frame`) and drop its boxing level. Popping all the inner groups at
+once (the obvious reading) is wrong past one group: pdflatex's `\begin{center}\begingroup\begingroup … \end{center}
+\endgroup\endgroup` keeps the outer inner group's values after `\end{center}` (`Kept [yes][yes][no]`), until the next
+`\endgroup`. Guard
+`perfect_kernel_batch98d::end_over_begingroups_keeps_tex_scoping`; OXIDIZED_DESIGN_DIVERGENCES #965.
+
+
+## 103. A name's spelling by an address is decided where the name's text is read, not by folding its text afterwards
+
+An address spells a name by its base letters (`Martínez` "martinez") and by the conventional transliteration of its
+letters (`Schäffler` "schaeffler": ä ae, ö oe, ü ue, ß ss, å aa, ø oe, æ ae, œ oe). Both are folds of the letter as it
+prints, so both must be taken from that letter: two readings lose it first. The author block's text reader
+(`visible_name_text`) drops an accent command and keeps its base letter (`Sch\"affler` "Schaffler", `{\ss}` "s"), and
+the frontmatter observer's callers folded the digested name with `base_letters` before building its keys — after
+either, "schaeffler" is unrecoverable, and the two readers disagreed (`\"a` in the source vs `ä` in the digested
+name). The fix is one reader of the printed letter (`spelling_name_text`: an accent or letter command whose letter has
+a transliteration read as that letter) and one place that folds it both ways (`NameKeys::of` over
+`resolver::base_letters` and `resolver::transliterated`), every caller passing the name unfolded. Whom an author's own
+e-mail moves to is the name as printed or transliterated, never base-folded (`NameKeys::as_printed`; user ruling
+2026-11-05, FIDELITY_CHARTER §4 #420). A second
+spelling is a second chance to match, so it must not also change the rules a match is judged by: the transliteration
+lengthens words ("lu" "lue"), so every length threshold reads the base spelling (`SpelledWord`); and a match through
+it weighs the same as a literal one — an address carries no umlaut, so `mueller@` beside Hans Mueller and Jörg Müller
+is a genuine tie (user ruling 2026-11-05). Guards
+`base_utilities::author_split_tests::a_name_spells_by_its_base_letters_and_its_transliteration`,
+`perfect_kernel_batch107a`; OXIDIZED_DESIGN_DIVERGENCES #970.

@@ -1,0 +1,28 @@
+% witness: 1510.08833, 1704.05671, 1707.00258, 1611.00843, 2106.07418, 2304.10644 (the `\relax` form of the same
+%          idiom: loader/amsart_reloads_amsthm_after_unmarking_it); latex.ltx `\@ifl@aded`
+%          (`\expandafter\ifx\csname ver@#2.#1\endcsname\relax`) takes an undefined `\ver@` for not loaded too
+% oracle:  pdflatex 0 errors ("amsthm loaded."; "Proof. A proof." and a QED box)
+% engines: rust 67y round 1 = 1 error ({proof} undefined: only a `\relax` `\ver@` unmarked the file)
+% expect:  0 errors, 0 warnings; one <ltx:proof>
+% status:  RED (67y round 1) -> GREEN (67y round 2)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\expandafter\let\csname ver@amsthm.sty\endcsname\undefined
+\let\theoremstyle\relax
+\let\newtheoremstyle\relax
+\let\pushQED\relax
+\let\popQED\relax
+\let\qedhere\relax
+\let\mathqed\relax
+\let\openbox\relax
+\let\proof\relax\let\endproof\relax
+\usepackage{amsthm}
+\makeatletter
+\newcommand\amsthmstate{\@ifpackageloaded{amsthm}{loaded}{unloaded}}
+\makeatother
+\begin{document}
+amsthm \amsthmstate.
+\begin{proof}
+A proof.
+\end{proof}
+\end{document}

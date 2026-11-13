@@ -1,0 +1,24 @@
+% mechanism: an author call printing "on behalf of the XYZ and ABC Collaborations" after the names is one collaboration
+%   contact of theirs: the line's own "and" no separator where the whole line reads as a framed collaboration
+%   (`resolver::lines::framed_collaboration` reads the line's names and separators as printed); the same through a
+%   macro printing "on behalf of" is the guard's row. After names on their own line it is the RED
+%   author_names_for_two_collaborations_is_one_contact_red (1311.7305). OXIDIZED_DESIGN_DIVERGENCES #967.
+% witness: synthetic (1311.7305's `for the ATLAS, CDF, CMS and D0 Collaborations`, in a call of its own)
+% oracle:  pdflatex (TL 2025) 0 errors: "Ann Able, Bob Baker", "Univ X", "on behalf of the XYZ and ABC Collaborations"
+% engines: rust P5bbase: a third creator "on behalf of the XYZ" with the collaboration "ABC Collaborations"; perl: a
+%   third creator "on behalf of the XYZ and ABC Collaborations"
+% expect:  0 errors, 0 warnings; two creators, each with the address and the collaboration "on behalf of the XYZ and ABC
+%   Collaborations" (perfect_kernel_batchp5b::a_framed_collaboration_call_is_the_names_contact)
+% status:  RED (P5bbase) -> GREEN (P5b)
+% preload: ar5iv.sty
+\documentclass{elsarticle}
+\begin{document}
+\begin{frontmatter}
+\title{T}
+\author{Ann Able}
+\author{Bob Baker}
+\address{Univ X}
+\author{on behalf of the XYZ and ABC Collaborations}
+\end{frontmatter}
+Text.
+\end{document}

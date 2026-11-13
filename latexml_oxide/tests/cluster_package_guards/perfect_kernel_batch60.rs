@@ -2,7 +2,7 @@
 //! values) and the §403 `scan_left_brace` of the alignment and box primitives (60j).
 use std::process::Command;
 
-use latexml::util::test::assert_element;
+use latexml::util::test::{assert_element, check_requirements, loads};
 
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
@@ -166,7 +166,7 @@ fn alignment_brace_is_scanned() {
 
 /// 60j: the box primitives find their `{` after the box specification as tex.web §645 `scan_spec`'s §403
 /// `scan_left_brace` — `\hbox\relax\mac` with `\def\mac{{bravo}}` is a box of "bravo"; skipping to the next `{`
-/// unexpanded dropped the rest of the document. `\valign` swallows its alignment after the same scan. Repro
+/// unexpanded dropped the rest of the document. `\valign` finds its `{` the same way and, since 79w, sets its column. Repro
 /// boxes-groups/box_brace_is_scanned.
 #[test]
 fn box_brace_is_scanned() {
@@ -203,7 +203,7 @@ fn box_brace_is_scanned() {
       (
         "para",
         "p6",
-        r##"<para class="ltx_noindent" xml:id="p6"><p>Hotel  juliet.</p></para>"##,
+        r##"<para class="ltx_noindent" xml:id="p6"><p>Hotel <tabular><tr><td align="left" class="ltx_nopad_l ltx_nopad_r"><inline-block vattach="bottom"><p>india</p></inline-block></td></tr></tabular> juliet.</p></para>"##,
       ),
     ],
   );
@@ -277,9 +277,9 @@ fn amsart_end_matter_is_set() {
 
 /// 60m: ltxdockit's `\rcsid` sets the revision's date (`\ltd@setdate`, ltxdockit.cls:129-137, the aux read-back the
 /// binding replays in the same run), which `\rcstoday` prints: pdflatex "January 3, 2011", where the title page had
-/// the conversion day. Repro sectioning-frontmatter/ltxdockit_rcsid_sets_the_date. (The two KOMA warnings are every
-/// scrartcl document's: KOMA's check of the kernel sectioning macros, which are LaTeXML's; CONTROL
-/// sectioning-frontmatter/koma_sectioning_check_warns.)
+/// the conversion day. Repro sectioning-frontmatter/ltxdockit_rcsid_sets_the_date. (No KOMA warning: KOMA's check of
+/// the kernel sectioning macros passes, as under pdflatex, since 72a r10; sectioning-frontmatter/
+/// koma_sectioning_check_warns.)
 #[test]
 fn ltxdockit_rcsid_sets_the_date() {
   let xml = assert_elements_with(
@@ -287,11 +287,8 @@ fn ltxdockit_rcsid_sets_the_date() {
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/ltxdockit_rcsid_sets_the_date.tex"
     ),
     RAW,
-    (0, 2),
-    &[
-      "`\\@startsection' has been changed",
-      "Unexpected definition of \\@sect",
-    ],
+    (0, 0),
+    &[],
     &[],
   );
   assert_element(
@@ -703,6 +700,9 @@ fn identifiers_are_not_font_decoded() {
 /// fonts-nfss/text_ligatures_follow_the_encoding.
 #[test]
 fn text_ligatures_follow_the_encoding() {
+  if !check_requirements(loads::LY1) {
+    return;
+  }
   let (stderr, xml) = latexml::util::test::convert_with(
     include_str!(
       "../../../tools/perfect_kernel/repros/fonts-nfss/text_ligatures_follow_the_encoding.tex"

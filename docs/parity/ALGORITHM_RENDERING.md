@@ -73,10 +73,11 @@ filing is a manual step (cannot be done from the conversion tooling).
   algorithm. Leader-content discriminator in `tex_box.rs`; text/fixed-width boxes untouched
   (fancyvrb 345pt parity preserved). Surpass OXIDIZED_DESIGN #152, witness 1510.02728
   ("Modified ellipsoid method" separators); guard `cluster_hbox_to_hsize_leader_fills_width`.
-- **Repeated frontmatter no longer duplicates** — replaceable tags (title/abstract/…) keep
-  one entry, creators still accumulate (`REPLACEABLE_FRONTMATTER_TAGS`, forward-port of
-  upstream `%ReplaceableFrontmatterTags`). Surpass OXIDIZED_DESIGN #154, witnesses 2002.09766
-  (appendix `\icmltitle`), 2511.21969 (nested `{abstract}`); guard
+- **Repeated frontmatter no longer duplicates** — a re-added title (date, keywords) keeps
+  one entry, creators still accumulate, and so does a second abstract printed where it stands
+  (`REPLACEABLE_FRONTMATTER_TAGS`, from upstream's `%ReplaceableFrontmatterTags`, which
+  upstream removed in #2767). OXIDIZED_DESIGN #154, witnesses 2002.09766 (appendix
+  `\icmltitle`), 2511.21969 (nested `{abstract}`), 1006.5288 (two abstracts); guard
   `cluster_frontmatter_replaceable_dedup`.
 - **wrapfigure/minted overlap** (2605.03143) — CSS only: a float-scoped min-width override
   stops the wrapfig flex cell forcing the code box over the body text (ar5iv.css).

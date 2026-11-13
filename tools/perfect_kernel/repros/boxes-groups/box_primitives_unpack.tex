@@ -12,10 +12,11 @@
 %            space is glue in TeX, a space character here — Perl removes only `isSkip` items, TeX_Glue.pool.ltxml:105-115)
 %          c2 [10.55559pt] GREEN 59y (`\unhcopy` puts back the list at its natural width, not the box's `to` width, §1110;
 %            KPE #434)
-%          c3 [ab] GREEN · c4 [3] RED R1 (`\unvbox` splices the lines, a `\lastbox` loop counts 3) · c5 [1] GREEN
+%          c3 [ab] GREEN · c4 [3] GREEN 68q (`\unvbox` splices the lines, a `\lastbox` loop counts 3) · c5 [1] GREEN
 %          c6 [50.0pt,6.83331pt,full] GREEN 59w (R5: `\vbox to` sets the height, §1083; Perl setHeight)
-%          c7 one block of L1 L2 L1 L2 RED R1 · c8-c9 C1 C2 then After. — the shape without a logical-block needs R1+R6
-%            and a ruling
+%          c7 one block of L1 L2 L1 L2 GREEN 68q (R1 vertical, in a vertical box's list) · c8-c9 C1 C2 then After. —
+%            `\unvbox` on the main vertical list puts the box back whole: the shape without a logical-block needs R6 and
+%            a ruling (OXIDIZED_DESIGN_DIVERGENCES #637)
 %          c10-c11 GREEN 59w (R5: a `\vtop to`/`spread` keeps its first box's height, the rest goes into its depth,
 %            §1087 `d := x + d - h`; Perl set the height, DIVERGENCES #420) · c12 GREEN (`\vbox spread`)
 %          c13-c14 GREEN 59w (§1087: a `\vtop` whose first item is glue or a kern is 0pt high, `\kern0pt` included)

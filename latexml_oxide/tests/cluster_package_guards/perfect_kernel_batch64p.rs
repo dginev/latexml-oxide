@@ -82,7 +82,9 @@ fn amsmath_tag_reaches_theequation_indirectly() {
 }
 
 /// 64p: mathfixs' autobold `\let\bfseries=\mafx@bfseries` (2205.10090, 2211.07279) leaves `\bfseries<space>` alone.
-/// Repro fonts-nfss/mathfixs_autobold_let_of_robust_switch.
+/// Its `\boldmath` makes the formula bold (pdflatex CMMIB10): written against the text default since 77u r3, the token
+/// says so, `bold italic` (OXIDIZED_DESIGN_DIVERGENCES #780; against the bold text it was `italic`, and MathML lost
+/// the bold). Repro fonts-nfss/mathfixs_autobold_let_of_robust_switch.
 #[test]
 fn mathfixs_autobold_let_of_robust_switch() {
   let tex = include_str!(
@@ -93,7 +95,7 @@ fn mathfixs_autobold_let_of_robust_switch() {
     &xml,
     "p",
     &[],
-    r#"<p xml:id="p1.1">Plain <text font="bold" xml:id="p1.1.1">Bold <Math mode="inline" tex="x" text="x" xml:id="p1.m1"><XMath xml:id="p1.m1.1"><XMTok font="italic" role="UNKNOWN">x</XMTok></XMath></Math></text> text.</p>"#,
+    r#"<p xml:id="p1.1">Plain <text font="bold" xml:id="p1.1.1">Bold <Math mode="inline" tex="x" text="x" xml:id="p1.m1"><XMath xml:id="p1.m1.1"><XMTok font="bold italic" role="UNKNOWN">x</XMTok></XMath></Math></text> text.</p>"#,
   );
 }
 

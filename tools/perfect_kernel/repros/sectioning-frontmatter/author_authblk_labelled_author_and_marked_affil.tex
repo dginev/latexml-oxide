@@ -1,0 +1,20 @@
+% witness: 77n r6 review — an `\author[1]` and another author's mark picking the same mark-led `\affil` (review probe f2)
+% oracle:  pdflatex 0 errors: "Ann Able11 and Bob Baker1 / 11Univ X / 1Univ Y" (authblk prints `\author[1]` as a
+%          superscript 1, authblk.sty:98, :142)
+% engines: rust int32a = Bob Baker with Univ X and Univ Y; 77n r3-r6 = Bob Baker with Univ Y only (the mark's label
+%          `affiliation:1` reached the author showing it, not the one labelled `1`)
+% expect:  0 errors, 0 warnings; Ann Able with Univ X, Bob Baker with Univ Y and Univ X (Ann's Univ Y: the SYNC row of
+%          authblk's `\AB@thenote`)
+% status:  RED (77n r3) -> GREEN (77n r7)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$}
+\author[1]{Bob Baker}
+\affil{$^1$Univ X}
+\affil{Univ Y}
+\maketitle
+x
+\end{document}

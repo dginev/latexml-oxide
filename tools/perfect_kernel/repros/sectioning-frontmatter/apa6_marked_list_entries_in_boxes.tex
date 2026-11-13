@@ -1,0 +1,23 @@
+% mechanism: a marked list whose entries' words each stand in a box (`$^{1}$\mbox{Univ A, Town}`, apa6's
+%   `\affiliation`): every word sits one level deeper than the marks; the marks query counts a mark at or above its
+%   words' level (`argument_marks::at_own_level`), so the list is marked (`affiliation_is_marked`) and cut at its marks,
+%   the `$^{*}$` entry the starred names' note
+% witness: 2508.05776 (Main.tex:60-65)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1∗ , Bob Baker2∗ , Cy Cole3∗", "1 Univ A, Town,
+%   2 Univ B, City, 3 Univ C, Ville, ∗ Equal contribution"
+% engines: int162a: each name its entry and the note; P4b2b (= int163a's P4c): the list read unmarked, Ann Able the
+%   whole list as an affiliation, the whole list a thanks note on every name (1 Warning)
+% expect:  0 errors, 0 warnings; Ann Able "Univ A, Town", Bob Baker "Univ B, City", Cy Cole "Univ C, Ville", each the
+%   note "∗ Equal contribution" once
+% status:  RED (P4b2b) -> GREEN (P4cR1; guard perfect_kernel_batchc1::marked_list_cut_as_its_binding_declares)
+% preload: ar5iv.sty
+\documentclass[doc]{apa6}
+\title{T}
+\shorttitle{T}
+\author{Ann Able$^{1*}$, Bob Baker$^{2*}$, Cy Cole$^{3*}$}
+\affiliation{$^{1}$\mbox{Univ A, Town}, $^{2}$\mbox{Univ B, City}, $^{3}$\mbox{Univ C, Ville}, $^{*}$\mbox{Equal contribution}}
+\abstract{Abs.}
+\begin{document}
+\maketitle
+Body.
+\end{document}

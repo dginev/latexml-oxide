@@ -164,7 +164,12 @@ LoadDefinitions!({
     reversion => "#1#2#4#3");
 
   // These are the expansions of \DeclareUrlCommand
-  DefMacro!("\\path", r"\begingroup\urlstyle{tt}\lx@url@url\path", protected => true);
+  // Only when undefined, as url.sty:204-205 (`\@ifundefined{path}{\DeclareUrlCommand\path…}{}`: picTeX's, or a
+  // document's own `\path`, stays; Perl url.sty.ltxml:85 redefines it, KNOWN_PERL_ERRORS #644). Witness 2605.13185:
+  // its `\newcommand{\path}{\rho}` was replaced when orcidlink loaded hyperref and so url ("Missing $").
+  if !IsDefined!(&T_CS!("\\path")) {
+    DefMacro!("\\path", r"\begingroup\urlstyle{tt}\lx@url@url\path", protected => true);
+  }
   // `protected`: a `\url` in a moving argument must reach the typeset text
   // whole, as url.sty's own `\Url@unmove` (url.sty:166) writes `\protect\Url`
   // (and hyperref's `\url` is `\DeclareRobustCommand*`, hyperref.sty:4801).
@@ -178,6 +183,17 @@ LoadDefinitions!({
   // Kinda tricky, since we need to get the expansion of \cmd as the value of \newcmd
   // Along with the annoying \endgroup that must balance the one always preceding \Url!
   DefRegister!("\\Urlmuskip", MuGlue::default());
+  // 68b (binding gaps G3): url.sty internals documents call. `\UrlTildeSpecial` (:63; 0907.0729 writes it for a
+  // `~` in a bibliography URL, pdflatex prints "∼"). `\Url@FormatString` (:127-133) typesets the url string a
+  // `\Url` has read into `\Url@String`; a document that sets `\Url@String` and calls it formats its own text as a
+  // url (the JOSS/pandoc template's `\href@Urllike`, 1902.08702, 1905.04294, 1905.04768, 1908.01711, 1908.10377,
+  // 1910.08562). url.sty sets the string in math with the url font so that it may break at its `\Url…Breaks`
+  // characters; here, as this binding's `\url` does, it is the url font's text.
+  RawTeX!(
+    r"\def\UrlTildeSpecial{\do\~{\raise.45ex\hbox{\m@th$\scriptstyle\sim$}}}\let\Url@force@Tilde\relax
+\let\Url@String\@empty
+\def\Url@FormatString{\UrlFont\expandafter\UrlLeft\Url@String\UrlRight}"
+  );
 
   // Perl L91-99: \urldef{newcmd}{arg} — takes TWO brace args. The second
   // `{}` lets TeX parse a balanced brace group without expansion, then
@@ -188,7 +204,42 @@ LoadDefinitions!({
     let cmd = cmd.to_string();
     unread(start);
     let expansion : Vec<Digested> = digest_next_body(Some(T_CS!("\\endgroup")))?;
+    // Rust-only (OXIDIZED_DESIGN_DIVERGENCES #901): what the command prints, as text, kept beside it — a primitive's
+    // boxes are no expansion a reader of the frontmatter can look into. A `\urldef`'d address in llncs's shared
+    // `\institute` (`\urldef{\mailsa}\path|{mkelly, …}@cs.odu.edu|`, 1307.8067; `\mailk, \mailt`, 1408.0384) is an
+    // e-mail line of the row (the reading's, OD #901), not every author's affiliation.
+    let text: String = expansion.iter().map(ToString::to_string).collect();
+    assign_value(&s!("lx@urldef@text@{cmd}"), url_printed_text(&text), None);
     DefPrimitive!(&cmd, { Ok(expansion.clone()) });
     Ok(vec![])
   });
 });
+
+/// The string a `\url`/`\path` call as written prints (`\path|{a,b}@x.edu|`, `\url{a@x.edu}`): what stands between its
+/// delimiters, or the whole of `written` when it is no such call.
+fn url_printed_text(written: &str) -> String {
+  let Some(rest) = written.strip_prefix('\\') else {
+    return written.to_string();
+  };
+  let rest = rest
+    .trim_start_matches(|c: char| c.is_ascii_alphabetic())
+    .trim_start();
+  let mut chars = rest.chars();
+  let Some(open) = chars.next() else {
+    return written.to_string();
+  };
+  let close = if open == '{' { '}' } else { open };
+  let inner: &str = chars.as_str();
+  let mut depth = 0usize;
+  for (at, c) in inner.char_indices() {
+    if open == '{' && c == '{' {
+      depth += 1;
+    } else if c == close {
+      if depth == 0 {
+        return inner[..at].to_string();
+      }
+      depth -= 1;
+    }
+  }
+  written.to_string()
+}

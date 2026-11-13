@@ -1,4 +1,9 @@
-use crate::prelude::*;
+use latexml_core::util::image::image_candidates;
+
+use crate::{
+  package::standalone_sty::{top_level_items, unbraced},
+  prelude::*,
+};
 
 #[rustfmt::skip]
 LoadDefinitions!({
@@ -125,9 +130,78 @@ LoadDefinitions!({
   DefMacro!("\\includesvg[]{}",
     "\\expandafter\\lx@svg@includegraphics\\expandafter{\\lx@svg@options}{#1}{#2}");
   DefMacro!("\\lx@svg@includegraphics{}{}{}", "\\includegraphics[#1,#2]{#3}");
-  // svg.sty:876 `\includeinkscape`: an Inkscape export included as `\includesvg` includes it.
-  DefMacro!("\\includeinkscape[]{}",
-    "\\expandafter\\lx@svg@includegraphics\\expandafter{\\lx@svg@options}{#1}{#2}");
+  // svg.sty:876-935 `\includeinkscape[opts]{file}`: an Inkscape export, `x.pdf_tex` or `x.pdf` (`.eps`, `.ps`,
+  // `.png`; `.pdf` when none is named). Under `inkscapelatex` (the default, svg.sty:542) svg.sty:1018-1060
+  // `\svg@@input` inputs the export's LaTeX overlay `<x.pdf>_tex` — the picture of the export's text, which places
+  // the graphic itself by `\includegraphics`, patched (:1348-1394) to include svg's own file whatever the overlay names
+  // — at the requested `width` (:1355-1370 sets `\unitlength`; here the overlay's `\svgwidth`) or `scale` (the picture
+  // scaled: the overlay's own `\svgscale` branch needs calc's `\real`, which svg.sty never reaches).
+  // Otherwise, or with no overlay, the export as `\includesvg` includes it. Handing `x.pdf_tex` to the image
+  // converter lost the figure with "failed to convert" (2402.04829 ×14, 2310.03515 ×6). Guard:
+  // `perfect_kernel_batch70a::includeinkscape_inputs_the_overlay`.
+  DefMacro!("\\includeinkscape[]{}", sub[(opts, file)] {
+    let name = file.to_string();
+    let name = name.trim();
+    let keys = s!("{},{}", Expand!(T_CS!("\\lx@svg@options")), opts.as_ref().map(|o| o.to_string()).unwrap_or_default());
+    let value = |key: &str| {
+      top_level_items(&keys)
+        .iter()
+        .filter_map(|item| item.split_once('='))
+        .filter(|(k, _)| k.trim() == key)
+        .map(|(_, v)| unbraced(v).to_string())
+        .next_back()
+    };
+    let latex = value("inkscapelatex").is_none_or(|v| v.trim() != "false");
+    let file_name = name.rsplit('/').next().unwrap_or(name);
+    let extension = file_name.rfind('.').map(|at| file_name[at + 1..].to_ascii_lowercase());
+    let export = match extension.as_deref() {
+      Some(ext) if ext.ends_with("_tex") => Some(name.trim_end_matches("_tex").to_string()),
+      Some("pdf" | "eps" | "ps" | "png") => latex.then(|| name.to_string()),
+      None => latex.then(|| s!("{name}.pdf")),
+      Some(_) => None,
+    };
+    let overlay = export.as_ref().and_then(|export| {
+      let overlay = s!("{export}_tex");
+      let overlay_name = overlay.rsplit('/').next().unwrap_or(&overlay).to_string();
+      image_candidates(&overlay)
+        .split(',')
+        .find(|found| !found.is_empty() && found.rsplit('/').next() == Some(overlay_name.as_str()))
+        .map(str::to_string)
+        .or_else(|| find_file(&overlay, None).map(|_| overlay.clone()))
+    });
+    let (Some(export), Some(overlay)) = (export, overlay) else {
+      let mut out = TokenizeInternal!(r"\expandafter\lx@svg@includegraphics\expandafter{\lx@svg@options}").unlist();
+      out.push(T_BEGIN!());
+      out.extend(opts.map(|o| o.unlist()).unwrap_or_default());
+      out.push(T_END!());
+      out.push(T_BEGIN!());
+      out.extend(file.unlist());
+      out.push(T_END!());
+      return Ok(Tokens::new(out));
+    };
+    let mut out = TokenizeInternal!(r"\begingroup").unlist();
+    let width = value("width").filter(|w| !w.trim().is_empty());
+    let scale = value("scale").filter(|s| !s.trim().is_empty() && width.is_none());
+    if let Some(width) = width {
+      out.extend(mouth::tokenize_internal(TeXString::assembled(s!(r"\def\svgwidth{{{width}}}"))).unlist());
+    } else if let Some(scale) = &scale {
+      out.extend(mouth::tokenize_internal(TeXString::assembled(s!(r"\scalebox{{{scale}}}"))).unlist());
+      out.push(T_BEGIN!());
+    }
+    out.extend(TokenizeInternal!(r"\let\lx@svg@inkscape@graphic\includegraphics\def\includegraphics").unlist());
+    out.extend([T_BEGIN!(), T_CS!("\\lx@svg@inkscape@include"), T_BEGIN!()]);
+    out.extend(ExplodeText!(export));
+    out.extend([T_END!(), T_END!(), T_CS!("\\input"), T_BEGIN!()]);
+    out.extend(ExplodeText!(overlay));
+    out.push(T_END!());
+    if scale.is_some() {
+      out.push(T_END!());
+    }
+    out.extend(TokenizeInternal!(r"\endgroup").unlist());
+    Ok(Tokens::new(out))
+  });
+  // svg.sty:1383-1394 `\svg@includegraphics@patched[opts]{name}`: the overlay's graphic is svg's own export file.
+  DefMacro!("\\lx@svg@inkscape@include{}[]{}", "\\lx@svg@inkscape@graphic[#2]{#1}");
 });
 
 /// Where a path of the svg package's search path is: relative to the paper's source directory, as `\graphicspath`'s

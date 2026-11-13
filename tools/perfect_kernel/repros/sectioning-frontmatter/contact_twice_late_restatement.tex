@@ -1,0 +1,20 @@
+% A supplement writes `\author{…}\affiliation{…}` again after `\maketitle` placed the frontmatter: no title prints it,
+% and its affiliation, restating the one the author holds, is that one, held once.
+% witness: 2311.16348, 1407.0849
+% oracle:  pdflatex 0 errors: "Ann Able", "Univ A, City A" once, "Supplement."
+% engines: rust int134b = 0 errors, Ann holds Univ A twice; perl = each call's contact
+% expect:  0 errors, 0 warnings; Ann holds Univ A once (residual, int134b alike: the late `\author` prints "Ann Able" in the body)
+% status:  RED (int134b) -> GREEN (106b r2)
+% preload: ar5iv.sty
+\documentclass{revtex4-2}
+\begin{document}
+\title{Late restatement}
+\author{Ann Able}
+\affiliation{Univ A, City A}
+\maketitle
+Text.
+\clearpage
+\author{Ann Able}
+\affiliation{Univ A, City A}
+Supplement.
+\end{document}

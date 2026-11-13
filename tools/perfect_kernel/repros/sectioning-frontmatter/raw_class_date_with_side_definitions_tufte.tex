@@ -1,0 +1,20 @@
+% mechanism: K11 — a raw class's redefinition of the kernel's `\date` that stores its argument in `\@date` among
+%   side definitions only is still the date's setter (frontmatter_stores.rs `reroute_kernel_field_setters`):
+%   tufte-common.def:608-614 `\renewcommand{\date}[1]{\gdef\@date{#1}\begingroup\renewcommand{\thanks}[1]{}
+%   \protected@xdef\thedate{#1}\endgroup}` keeps its definitions and the date reaches the frontmatter as the
+%   kernel's `\date` hands it. Under the rawclasses lever the date was lost (OmniBus kept it).
+% witness: 2603.01440 (tufte-handout; 25 tufte papers set a `\date`)
+% oracle:  pdflatex: 0 errors, one bibentry Warning ("\nobibliography* without a following \bibliography", the class's);
+%   "The Title / Ann Author / 27 February 2026 / Text."
+% engines: rust 68u r1: no date; perl: the same loss (raw tufte, `\date` replaced)
+% expect:  0 errors; the creation date "27 February 2026"
+% status:  RED (68u r1) -> GREEN (68u r2)
+% preload: ar5iv.sty
+\documentclass{tufte-handout}
+\title{The Title}
+\author{Ann Author}
+\date{27 February 2026}
+\begin{document}
+\maketitle
+Text.
+\end{document}

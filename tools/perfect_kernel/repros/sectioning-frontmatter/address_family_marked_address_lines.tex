@@ -1,0 +1,18 @@
+% The green control of the mark-led address lines (no link line): the same reading as the frontmatter observer's writer
+% gave before, now the author block's own.
+% witness: 1901.09107 (control)
+% oracle:  pdflatex 0 errors: as the link-line repro, without "x.org"
+% engines: rust int127a = 0 errors, right through the writer; perl = the address lines affiliations
+% expect:  0 errors, 0 warnings; Ann: Univ A + aable@; Bob: Univ B + bbaker@; Cat: Univ A + ccole@
+% status:  GREEN (int127a, by the writer) -> GREEN (100b)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able$^1$, Bob Baker$^2$, Cat Cole$^1$ \\
+$^1$Univ A \quad $^2$Univ B \\
+{\tt $^1$\{aable, ccole\}@a.edu} \\
+{\tt $^2$bbaker@b.edu}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

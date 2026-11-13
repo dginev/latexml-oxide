@@ -1,0 +1,19 @@
+% mechanism: a tabular juggle the title code defines where it reads `\@author` is read by its meaning (a separator,
+%   `title_code_juggle`, `fallback::tabular_juggle_between`), never replayed for the author content
+% witness: neurips_2022.sty:285 `\def\NewAnd{\end{tabular}\hfil\linebreak[0]\hfil\begin{tabular}[t]{c}…}` in the copy's
+%   `\@maketitle`, which the neurips binding keeps its own beside (`state::copy_kept_meaning`): 2205.14141
+% oracle:  pdflatex 0 errors: "Ann Able1", "Bob Baker1", "Carl Cole2", "1 Univ X", "2 Univ Y"
+% engines: rust int155a0: Error:undefined:\NewAnd, `<ERROR>\NewAnd</ERROR>` in Bob's name; perl not run (on 2205.14141 it raises the same Error)
+% expect:  0 errors, 0 warnings; three creators, each with its affiliation
+% status:  RED (int155a0) -> GREEN (perfect_kernel_batchpb::a_title_code_juggle_parts_two_authors)
+\documentclass{article}
+\makeatletter
+\def\@maketitle{\def\NewAnd{\end{tabular}\hfil\linebreak[0]\hfil\begin{tabular}[t]{c}\ignorespaces}%
+  \begin{tabular}[t]{c}\@author\end{tabular}}
+\makeatother
+\title{T}
+\author{Ann Able\textsuperscript{1} \quad Bob Baker\textsuperscript{1} \NewAnd Carl Cole\textsuperscript{2}\\ $^1$Univ X \quad $^2$Univ Y}
+\begin{document}
+\maketitle
+Body.
+\end{document}

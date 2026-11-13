@@ -31,6 +31,53 @@ use crate::{
   util::{filter_hints, node_to_grammar_lexemes_from},
 };
 
+/// A formula's distinct parse trees in arrival order — what `Vec::contains` then `push` keeps,
+/// with each tree's hash (`XM: Hash`, consistent with its `Eq`) indexing the trees that may equal
+/// it, so a new tree is compared deeply only against those. The scans compared every new tree with
+/// every kept one: 1509.06364's 29,183 parses spent most of its 149 s in `XM`'s `eq`.
+#[derive(Default)]
+struct UniqueTrees {
+  trees:   Vec<XM>,
+  by_hash: HashMap<u64, Vec<usize>>,
+}
+
+impl UniqueTrees {
+  fn hash_of(tree: &XM) -> u64 {
+    let mut hasher = rustc_hash::FxHasher::default();
+    tree.hash(&mut hasher);
+    hasher.finish()
+  }
+
+  /// Keeps `tree` unless an equal one is kept; true when it was kept.
+  fn insert(&mut self, tree: XM) -> bool {
+    let bucket = self.by_hash.entry(Self::hash_of(&tree)).or_default();
+    if bucket.iter().any(|&i| self.trees[i] == tree) {
+      return false;
+    }
+    bucket.push(self.trees.len());
+    self.trees.push(tree);
+    true
+  }
+
+  /// Keeps `tree` whether or not an equal one is kept (`Vec::push`).
+  fn push(&mut self, tree: XM) {
+    self
+      .by_hash
+      .entry(Self::hash_of(&tree))
+      .or_default()
+      .push(self.trees.len());
+    self.trees.push(tree);
+  }
+
+  fn into_vec(self) -> Vec<XM> { self.trees }
+}
+
+impl std::ops::Deref for UniqueTrees {
+  type Target = [XM];
+
+  fn deref(&self) -> &[XM] { &self.trees }
+}
+
 thread_local! {
   /// Conversion-wide ordinal behind the `[N]` math-progress markers.
   /// Deliberately NOT a `MathParser` field: streaming pass 2 builds a fresh
@@ -259,6 +306,26 @@ fn asf_second_chance_alternatives() -> usize {
     .unwrap_or(ASF_SECOND_CHANCE_ALTERNATIVES)
 }
 const ASF_SECOND_CHANCE_TIME: std::time::Duration = std::time::Duration::from_secs(5);
+
+thread_local! {
+  /// In-process override of every wall-clock limit of a formula's parse (the tree sample's 30 s and
+  /// 2 s pruned-only budget, the second chance's 5 s), for a test whose outcome must follow the
+  /// count budgets alone, whatever the machine's load (set in the conversion's thread).
+  static PARSE_DEADLINES_OVERRIDE: std::cell::Cell<Option<std::time::Duration>> =
+    const { std::cell::Cell::new(None) };
+}
+
+/// See `PARSE_DEADLINES_OVERRIDE`; `None` restores the defaults.
+pub fn set_parse_deadlines_override(limit: Option<std::time::Duration>) {
+  PARSE_DEADLINES_OVERRIDE.with(|c| c.set(limit));
+}
+
+/// A wall-clock limit of the parse: `default`, unless a test overrides them all.
+fn parse_deadline(default: std::time::Duration) -> std::time::Duration {
+  PARSE_DEADLINES_OVERRIDE
+    .with(|c| c.get())
+    .unwrap_or(default)
+}
 
 // Maximum number of grammar lexemes in a single formula before we skip the
 // full Marpa grammar parse and fall through to the kludge parser (the same
@@ -659,11 +726,11 @@ fn resource_fatal_from_message(msg: &str) -> Option<Error> {
   } else {
     return None;
   };
-  Some(Error {
+  Some(Error::from(latexml_core::common::error::ErrorData {
     target: ErrorTarget::Timeout,
     category,
     message: msg.to_string(),
-  })
+  }))
 }
 
 impl MathParser {
@@ -2282,7 +2349,7 @@ impl MathParser {
     if *PARSE_LEXEMES_DBG {
       eprintln!("PARSE_LEXEMES_BEGIN: {}", input.trim());
     }
-    let mut parses: Vec<XM> = Vec::new();
+    let mut parses = UniqueTrees::default();
     let mut ok_trees = 0;
     let mut pruned_trees = 0;
     let mut deduped = 0usize;
@@ -2407,11 +2474,10 @@ impl MathParser {
           }
           let alts_vec = std::rc::Rc::try_unwrap(alts).unwrap_or_else(|rc| (*rc).clone());
           for tree in alts_vec.into_iter().flatten() {
-            if parses.contains(&tree) {
-              deduped += 1;
-            } else {
+            if parses.insert(tree) {
               ok_trees += 1;
-              parses.push(tree);
+            } else {
+              deduped += 1;
             }
           }
         },
@@ -2437,8 +2503,8 @@ impl MathParser {
             );
           }
           let max_trees = 5000;
-          let max_time = std::time::Duration::from_secs(30);
-          let pruned_only_time_budget = std::time::Duration::from_secs(2);
+          let max_time = parse_deadline(std::time::Duration::from_secs(30));
+          let pruned_only_time_budget = parse_deadline(std::time::Duration::from_secs(2));
           let pruned_only_count_threshold: usize = 200;
           let max_unique = 10;
           let max_since_unique = 256;
@@ -2469,12 +2535,11 @@ impl MathParser {
             ) {
               Ok(Some(tree)) => {
                 ok_trees += 1;
-                if parses.contains(&tree) {
+                if parses.insert(tree) {
+                  since_unique = 0;
+                } else {
                   deduped += 1;
                   since_unique += 1;
-                } else {
-                  parses.push(tree);
-                  since_unique = 0;
                 }
               },
               Ok(None) => {},
@@ -2538,7 +2603,7 @@ impl MathParser {
       } else if second_chance_due {
         // The counts carry over from an earlier attempt; the deadline, a safety net, is the
         // attempt's own, so the tree samples between attempts do not spend it (review round 8).
-        let deadline = std::time::Instant::now() + ASF_SECOND_CHANCE_TIME;
+        let deadline = std::time::Instant::now() + parse_deadline(ASF_SECOND_CHANCE_TIME);
         let budget = match self.second_chance_budget.take() {
           Some(budget) => crate::asf_traverser::AsfBudget { deadline, ..budget },
           None => crate::asf_traverser::AsfBudget {
@@ -2606,27 +2671,23 @@ impl MathParser {
               ok_trees = 0;
               deduped = 0;
               pruned_trees = second_pruned;
-              let mut readings: Vec<XM> = Vec::new();
+              let mut readings = UniqueTrees::default();
               for tree in alts_vec.into_iter().flatten() {
-                if readings.contains(&tree) {
-                  deduped += 1;
-                } else {
+                if readings.insert(tree) {
                   ok_trees += 1;
-                  readings.push(tree);
+                } else {
+                  deduped += 1;
                 }
               }
-              for tree in readings {
-                if !parses.contains(&tree) {
-                  parses.push(tree);
-                }
+              for tree in readings.into_vec() {
+                parses.insert(tree);
               }
             } else {
               for tree in alts_vec.into_iter().flatten() {
-                if parses.contains(&tree) {
-                  deduped += 1;
-                } else {
+                if parses.insert(tree) {
                   ok_trees += 1;
-                  parses.push(tree);
+                } else {
+                  deduped += 1;
                 }
               }
             }
@@ -2713,11 +2774,10 @@ impl MathParser {
           // deep clone on the cold path.
           let alts_vec = std::rc::Rc::try_unwrap(alts).unwrap_or_else(|rc| (*rc).clone());
           for tree in alts_vec.into_iter().flatten() {
-            if parses.contains(&tree) {
-              deduped += 1;
-            } else {
+            if parses.insert(tree) {
               ok_trees += 1;
-              parses.push(tree);
+            } else {
+              deduped += 1;
             }
           }
         },
@@ -2748,10 +2808,12 @@ impl MathParser {
       let parse_result = self
         .engine
         .run_recognizer(ByteScanner::new(Cursor::new(input)))
-        .map_err(|e| Error {
-          target:   latexml_core::ErrorTarget::MathParser,
-          category: latexml_core::ErrorCategory::FailedParse,
-          message:  e.to_string(),
+        .map_err(|e| {
+          Error::from(latexml_core::common::error::ErrorData {
+            target:   latexml_core::ErrorTarget::MathParser,
+            category: latexml_core::ErrorCategory::FailedParse,
+            message:  e.to_string(),
+          })
         })?;
       if *PARSE_LEXEMES_DBG {
         eprintln!("PARSE_LEXEMES_RECOGNIZED");
@@ -2776,7 +2838,7 @@ impl MathParser {
       // sidesteps these caps via per-glade memoization. See
       // docs/math/MATH_PARSER_AND_ASF.md.
       let max_trees = 5000; // Hard limit on parse tree enumeration
-      let max_time = std::time::Duration::from_secs(30); // 30 second timeout
+      let max_time = parse_deadline(std::time::Duration::from_secs(30)); // 30 second timeout
       // A short run of repeats is no convergence: the iterator varies the root
       // choice last, so a new top-level reading can follow many repeats (#146,
       // see HYBRID_AND_NODE_LIMIT); `max_since_unique` trees without a new
@@ -2790,7 +2852,7 @@ impl MathParser {
       // exhausting `max_time` (30s). Empirical: 0804.1730 case had 4536
       // pruned trees over 28s before timeout. After 2s with >200 prunes
       // the marginal probability of finding a unique drops sharply.
-      let pruned_only_time_budget = std::time::Duration::from_secs(2);
+      let pruned_only_time_budget = parse_deadline(std::time::Duration::from_secs(2));
       let pruned_only_count_threshold: usize = 200;
       // Unique-tree cap: the pragmatics/selection step only needs a handful
       // of distinct parses. Beyond this, additional unique trees are almost
@@ -2836,12 +2898,11 @@ impl MathParser {
             if let Some(tree) = tree_opt {
               ok_trees += 1;
               // Online deduplication: check if this tree is already in our unique set
-              if parses.contains(&tree) {
+              if parses.insert(tree) {
+                since_unique = 0;
+              } else {
                 deduped += 1;
                 since_unique += 1;
-              } else {
-                parses.push(tree);
-                since_unique = 0;
               }
             }
           },
@@ -2945,14 +3006,14 @@ impl MathParser {
 
     match parses.len() {
       0 => Err("Failed to find any parse".into()),
-      1 => Ok(parses.into_iter().next().unwrap()),
+      1 => Ok(parses.into_vec().into_iter().next().unwrap()),
       _more => {
         // An expectation reads as a letter only where no reading takes it as an operator (M3,
         // `ExpectationLettersAreFallbacks`), before any other ranking — which makes the letter retry above
         // exact: moved after another pragma, or softened, a letter reading could beat a typed one that a typed
         // stream would have given alone. Then Perl's rule (divergence #350): the fewest evaluation bars
         // inside single-bar pairs.
-        let mut reduced_forest = XM::Choices(parses)
+        let mut reduced_forest = XM::Choices(parses.into_vec())
           .soft_prune_choices(ValidationPragmatics::ExpectationLettersAreFallbacks)
           .prefer_fewest_evaluation_bars_inside();
         // A specific Dirac reading beats a fence around the same bars before the student pragmas

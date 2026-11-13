@@ -70,13 +70,25 @@ impl ExpansionBody {
   }
 }
 
+/// What a body coded in the host language prints where Perl prints `CODE(0x…)`: no address, so the same on every run
+/// (QA89), and still `CODE(`, etoolbox_sty's `\lx@ifnativecmd` sentinel.
+pub const CLOSURE_BODY_TEXT: &str = "CODE(native)";
+
+/// `\meaning`'s text for a closure body of `cs`: its name, letters only, keeps two natives' meanings apart as Perl's
+/// addresses did (`\value` vs `\arabic`); any other name prints [`CLOSURE_BODY_TEXT`].
+pub fn closure_body_meaning(cs: &str) -> String {
+  let name = cs.strip_prefix('\\').unwrap_or(cs);
+  if !name.is_empty() && name.chars().all(|c| c.is_ascii_alphabetic() || c == '@') {
+    format!("CODE({name})")
+  } else {
+    CLOSURE_BODY_TEXT.to_string()
+  }
+}
+
 impl fmt::Debug for ExpansionBody {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
-      // Perl's `CODE(0x…)`: the address only. `{:p}` of the `dyn` pointer itself prints
-      // its metadata too (`Pointer { addr: …, metadata: DynMetadata(…) }`, into cnltx_en's
-      // text).
-      ExpansionBody::Closure(code) => write!(f, "CODE({:p})", Rc::as_ptr(code) as *const ()),
+      ExpansionBody::Closure(_) => f.write_str(CLOSURE_BODY_TEXT),
       ExpansionBody::Tokens(ts) => write!(f, "{ts:?}"),
     }
   }
@@ -273,6 +285,10 @@ pub struct DeclaredMode {
   pub bounded:          bool,
   pub require_math:     bool,
   pub forbid_math:      bool,
+  /// Declared `mode => "restricted_horizontal"` itself (not `text`, not an environment's default): the constructor
+  /// builds a TeX box (`\hbox`, `\mbox`, `\fcolorbox`, `\scalebox`), the first element it opens outside math marked
+  /// for a frontmatter field's print (core `document::FIELD_BOX_PROPERTY`, OXIDIZED_DESIGN #715).
+  pub restricted_box:   bool,
 }
 
 pub trait Definition: Object {
@@ -284,6 +300,9 @@ pub trait Definition: Object {
     crate::gullet::unread_expansion(self.invoke(once_only)?);
     Ok(())
   }
+  /// [`expandable::SpecialCall::Native`], for a call the gullet expands in full: only there, so a one-step
+  /// `\expandafter` and every other reader of the expansion get the macro's own body.
+  fn native_expansion(&self) -> Result<Option<Tokens>> { Ok(None) }
   fn invoke_primitive(&self) -> Result<Vec<Digested>>;
 
   /// We can almost always return the CS by reference, except in a Register's RefCell, where we are
@@ -302,6 +321,17 @@ pub trait Definition: Object {
   /// a primitive built by hand). The audit reads `None` on a primitive or constructor as
   /// declaring nothing.
   fn declared_mode(&self) -> Option<DeclaredMode> { None }
+  /// The font a primitive or constructor was declared with (its `font => {…}` option), which its
+  /// digestion merges into the current font; `None` for every other definition. latex.ltx's
+  /// `\@fontswitch` reads a math alphabet as a switch to the group's end (`\mathrm\relax` with
+  /// `\math@bgroup` let to `\relax`, latex.ltx:14312-14321): the binding's switch merges this font
+  /// (`\lx@math@alphabet@switch`, latex_constructs/sect13.rs).
+  fn declared_font(&self) -> Option<&FontDirective> { None }
+  /// The literal XML template that is a constructor's whole construction: its replacement's source (`DefConstructor!`
+  /// with a string replacement), when no construction hook (`before_construct`, `after_construct`) adds to it. `None`
+  /// for a closure replacement, a constructor made at run time and every other definition: what it builds cannot be
+  /// read off it (the frontmatter's no-ink test, latexml_engine util_text.rs `first_ink`, counts such a whatsit as ink).
+  fn replacement_template(&self) -> Option<&'static str> { None }
   fn get_alias(&self) -> Option<&String>;
   fn is_protected(&self) -> bool { false }
   /// Whether this macro peeks at the next token the way latex.ltx's
@@ -452,13 +482,7 @@ impl fmt::Display for ExpansionBody {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     match self {
       ExpansionBody::Tokens(t) => write!(f, "{t}"),
-      ExpansionBody::Closure(code) => {
-        write!(
-          f,
-          "ExpansionBody::Closure({:p})",
-          Rc::as_ptr(code) as *const ()
-        )
-      }, // what is the right way to serialize this, e.g. for the \meaning macro
+      ExpansionBody::Closure(_) => f.write_str(CLOSURE_BODY_TEXT),
     }
   }
 }

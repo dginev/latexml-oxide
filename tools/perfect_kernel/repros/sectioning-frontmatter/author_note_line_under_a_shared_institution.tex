@@ -1,0 +1,12 @@
+% witness: the rev77t2 re-review (finding 1, probe s4)
+% oracle:  pdflatex 0 errors: "Ann Able†, Bob Baker‡" over "University of Somewhere" over "Equal Contribution"
+% engines: rust 77t r2 = 0 errors; a creator "Equal Contribution"; 77t r1 the institution's second line on both names
+% expect:  0 errors, 0 warnings; two authors, no creator "Equal Contribution"
+% status:  RED (77t r2) -> GREEN (int44 follow-up)
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Ann Able$^{\dag}$, Bob Baker$^{\ddag}$\\ University of Somewhere\\ Equal Contribution}
+\maketitle
+Text.
+\end{document}

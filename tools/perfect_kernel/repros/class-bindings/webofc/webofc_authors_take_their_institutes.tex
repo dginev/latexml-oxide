@@ -1,0 +1,19 @@
+% witness: 2301.07438 ("Andrea Shindler,1"), 1411.7792 (every institute on every author, e-mails as thanks notes),
+%          2610.23498 (webofc.cls:217 `\fnsep`, :434 `\institute`, :438 `\inst`, :440 `\email`)
+% oracle:  pdflatex 0 errors; "Ann Able^{1,1}, Bob Baker^2" (the second mark the footnote's), the institutes "Univ A",
+%          "Univ B" (the full class numbers them), the footnote "e-mail: ann@x.org"
+% engines: rust int45b = personname "Ann Able<sup>,</sup><sup>1</sup>", both institutes on both authors, the e-mail
+%          "e-mail: ann@x.org" in a thanks note; perl has no webofc binding (OmniBus)
+% expect:  0 errors, 0 warnings; personname "Ann Able" with Univ A and the e-mail as contacts; "Bob Baker" with Univ B
+% status:  RED (int45b) -> GREEN (78e)
+% preload: ar5iv.sty
+\documentclass{webofc}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1}\fnsep\thanks{\email{ann@x.org}} \and Bob Baker\inst{2}}
+\institute{Univ A \and Univ B}
+\abstract{Abs.}
+\maketitle
+\section{S}
+Text.
+\end{document}

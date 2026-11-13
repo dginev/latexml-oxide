@@ -1,0 +1,19 @@
+% witness: 77n S4 — IEEEtran bold names in one outer group, the grade at its end, notes after it:
+%          `\author{{\textbf{Rui Sun}, \textbf{Ran Tao}, \textbf{Jingke Xu}, and \textbf{Yiwei Zhang},~\IEEEmembership{Member,~IEEE}}
+%          \thanks{…}\thanks{…}}` (2603.10769)
+% oracle:  pdflatex 0 errors: "Ann Able, Bob Baker, and Cat Cole, Member, IEEE" (names bold)
+% engines: rust int31a = one creator "Ann Able , Bob Baker , and Cat Cole", the grade dropped (+1
+%          Error:frontmatter:merged_creators); Perl merges alike
+% expect:  0 errors, 0 warnings; 3 creators, Cat Cole with the membership and both notes
+% status:  RED (int31a) -> GREEN (77n)
+% preload: ar5iv.sty
+\documentclass[journal]{IEEEtran}
+\begin{document}
+\title{T}
+\author{{\textbf{Ann Able}, \textbf{Bob Baker}, and \textbf{Cat Cole},~\IEEEmembership{Member,~IEEE}}
+\thanks{Ann Able is with Univ A.}
+\thanks{Funded by X.}
+}
+\maketitle
+x
+\end{document}

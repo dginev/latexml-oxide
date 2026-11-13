@@ -1,0 +1,17 @@
+% AASTeX's `\figcaption[file]{text}` outside a figure sets a numbered figure caption (aastex701.cls:8111-8114:
+% `\caption` under `\def\@captype{figure}`; AASTeX 4's end-of-paper list prints "Fig. N.—"). The binding wrapped the
+% bare text in a figure (Perl aas_support.sty.ltxml:332): a `<p>`, no caption, no number, the `\label` on the document.
+% witness: astro-ph9806172 (`\documentstyle[12pt,aasms4]{article}`, 3 `\figcaption[figN.ps]{…}`)
+% oracle:  pdflatex 0 errors: "Body text. / Figure 1. The first figure's caption. / See Figure 1."
+% engines: rust 67int28 = 0 errors, `<figure><p>…</p></figure>`, `labels="LABEL:f1"` on the document; perl the same wrap
+% expect:  0 errors, 0 warnings; a figure numbered 1 with the caption, labelled f1, the reference to it
+% status:  RED (67int28) -> GREEN (int27)
+% preload: ar5iv.sty
+\documentclass{aastex701}
+\begin{document}
+\title{T}
+\author{A}
+Body text.
+\figcaption[fig1.ps]{The first figure's caption.\label{f1}}
+See Figure~\ref{f1}.
+\end{document}

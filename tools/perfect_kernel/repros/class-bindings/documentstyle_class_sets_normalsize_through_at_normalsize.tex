@@ -1,0 +1,19 @@
+% witness: hep-ex0107077 (dp_delphi.cls:21,48), 0802.1120 (klu.cls), astro-ph0009372 (cupconf.cls:51,121) — the
+%   rc_struct4 S1 shape (agent_reports/2026-10-17_rc_struct4.md): a raw LaTeX 2.09 class sets the body size through
+%   `\@normalsize`
+% oracle:  pdflatex 0 errors: latex.ltx:18623 `\documentstyle` inputs latex209.def, whose :138-139
+%   `\def\normalsize{\@normalsize}` makes the class's `\normalsize` its `\@normalsize`
+%   (`\@setsize\normalsize{12pt}\xpt\@xpt`); "Text."
+% engines: rust 67int19 = 1 ("The font size command \normalsize is not defined"), perl = 0 (no raw class: OmniBus,
+%   KNOWN_PERL_ERRORS #925)
+% expect:  0 errors; the paragraph "Text."
+% status:  RED (67int19) -> GREEN (70b: tex_job.rs `\lx@latex@ix@definitions` + latex209.def's `\@documentclasshook`)
+\begin{filecontents*}[overwrite]{oldsty.cls}
+\def\@normalsize{\@setsize\normalsize{12pt}\xpt\@xpt}
+\normalsize
+\input{article.cls}
+\end{filecontents*}
+\documentstyle{oldsty}
+\begin{document}
+Text.
+\end{document}

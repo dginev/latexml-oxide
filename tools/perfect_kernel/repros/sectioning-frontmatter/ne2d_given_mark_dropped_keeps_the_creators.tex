@@ -1,0 +1,21 @@
+% mechanism: a `\footnotemark` given its number (`\footnotemark[1]`, a document's `\samethanks[1]`: latex.ltx's
+%   `\@xfootnotemark`, which steps no counter) that no name the `=2` reading writes and no item holds re-references a
+%   note written already and moves no later mark: the names are written as read and its loss is counted by a Warning
+%   naming it (`emit.rs` `mark_dropped`, `Event::given_number`), where NE2c wrote the block whole
+% witness: 1912.01737 (mnras, `D. R. G. Schleicher,$^{1}$\samethanks[1]`); 1811.08622 (`Cheng
+%   Xu\textsuperscript{1},\footnotemark[1]`) — user ruling 2026-11-09 (a decline never throws away a right reading)
+% oracle:  pdflatex 0 errors; "Ann Able,1∗Bob Baker,1∗Carl Cole2 ,∗Dan Dory2" (pdftotext)
+% engines: rust off: 0 errors, 0 warnings; rust =2 (int153c-rel): 0 errors, the block written whole, 1 Warning
+% expect:  =2: Ann, Bob, Carl, Dan written as read (Ann's note, their affiliations), the two given marks' loss in 1
+%   Warning
+% status:  RED (int153c-rel) -> GREEN (perfect_kernel_batchne2::a_given_mark_on_no_name_keeps_the_creators)
+% preload: ar5iv.sty
+\documentclass{article}
+\newcommand*\samethanks[1][\value{footnote}]{\footnotemark[#1]}
+\begin{document}
+\title{T}
+\author{Ann Able,$^{1}$\thanks{Univ X.} Bob Baker,$^{1}$\samethanks[1] Carl Cole\textsuperscript{2},\footnotemark[1] Dan Dory$^{2}$\\
+$^{1}$Univ A\\ $^{2}$Univ B}
+\maketitle
+Text.
+\end{document}

@@ -3,7 +3,7 @@
 //! imsart.cls loads `article` + requires `imsart.sty` (support file with
 //! \startlocaldefs, \endlocaldefs, etc.). We fall back to OmniBus and raw-
 //! load imsart.sty so most user macros become available.
-use latexml_package::prelude::*;
+use latexml_package::{package::ims_support_sty::vtex_keyword_markup, prelude::*};
 
 LoadDefinitions!({
   LoadClass!("OmniBus");
@@ -16,11 +16,13 @@ LoadDefinitions!({
         .any(|o| ["aap", "aop", "aos", "aoas", "sts", "aihp"].contains(&o.to_string().as_str()))
     })
     .unwrap_or(false);
-  if journal_leqno {
-    RequirePackage!("amsmath", options => vec!["leqno".to_string()]);
-  } else {
-    RequirePackage!("amsmath");
-  }
+  // imsart.cls loads no amsmath itself (244 copies in a 1/20 arXiv sample): amsmath's commands for papers that use them
+  // unloaded, its "Old form" error once the paper loads it; the paper's copy decides
+  // (`amsmath_sty::require_amsmath_beyond_original`, KNOWN_PERL_ERRORS #993).
+  amsmath_sty::require_amsmath_beyond_original(
+    latexml_package::shipped_class::shipped_copy_loads("cls", "amsmath")?,
+    if journal_leqno { &["leqno"] } else { &[] },
+  )?;
   // NOTE: do NOT eagerly `RequirePackage!("amsthm")` here. OmniBus already
   // provides lazy amsthm autoload (theorem-env stubs), and pre-loading it
   // broke the common `\let\proof\relax` + `\usepackage{amsthm}` idiom: the
@@ -29,61 +31,19 @@ LoadDefinitions!({
   // `\proof` → `Error:undefined:{proof}`. Letting the paper's
   // \usepackage{amsthm} be the first real load matches Perl (clean).
   // Witness 1612.03054 (`\let\proof\relax` L5 + amsthm L22).
-  // imsart.sty's frontmatter, defined here so its raw definitions are refused. `\ead[label=e1]{addr}`
-  // (imsart.sty:944 `\DeclareRobustCommand\ead[2][label= ,email]`) is the author's email, or URL with the `url` key
-  // or a `://` address (`\checkead@prefix`, :955); OmniBus's `\ead{}[]` (elsarticle's order) read `[` as the address
-  // and left `label=e1]{…}` in the author's name (2201.11773, 2507.12447). `\printead[presep=…]{e1,u1}` (:965)
-  // reprints, in an address, the addresses `\ead` gave the authors, each already their contact. `\author[A,B]{…}`
-  // and `\address[A]{…}` (:2003, :2088) link an author to the addresses its marks label, as revtex's and elsarticle's
-  // do (revtex4_support_sty.rs, elsart_support_core_sty.rs). The address prints in typewriter type (imsart.sty:1162
-  // `\setattribute{ead}{size}{\upshape\ttfamily}`; 1601.00202's `\ead[url]`).
-  DefMacro!("\\ead[] Semiverbatim", sub[(keys, address)] {
-    let url = keys.as_ref().is_some_and(|keys| {
-      keys.to_string().split(',').any(|key| key.split('=').next().is_some_and(|k| k.trim() == "url"))
-    }) || address.to_string().contains("://");
-    let address = Invocation!(T_CS!("\\lx@address@urlfont"), vec![Some(address)]);
-    Ok(if url {
-      Invocation!(T_CS!("\\lx@add@url"), vec![None, Some(address)])
-    } else {
-      Invocation!(T_CS!("\\lx@add@email"), vec![None, Some(address)])
-    })
-  }, locked => true);
-  DefMacro!("\\printead OptionalMatch:* []{}", "", locked => true);
-  // (a name list in one `\author{A and B}` is an author each, every one with the marks: 2401.00578, 2505.07640)
-  DefMacro!(
-    "\\author OptionalSemiverbatim {}",
-    "\\lx@add@authors@append[annotations={#1}]{#2}",
-    locked => true
-  );
-  DefMacro!(
-    "\\address OptionalSemiverbatim {}",
-    "\\lx@add@contact[label={#1},role=address]{#2}",
-    locked => true
-  );
-  // `\thanksref[mark]{addr1,t1}` (imsart.sty:746) marks the author with the addresses and notes those labels name, and
-  // `\thankstext{t1}{text}` (:789) is such a note: as elsarticle's `\thanksref`/`\thanks` (elsart_support_core_sty.rs).
-  // Read raw, the note went to `\@thanks`, which nothing typesets, and its text was lost (2201.08502).
-  // The `thanks:` prefix on both sides, as elsarticle's, matches a title's `\thanksref{T1}` to its note exactly (the
-  // prefix-stripped match serves creators only, OXIDIZED_DESIGN_DIVERGENCES #461), and an author's to an `\address`.
-  DefMacro!(
-    "\\thanksref[]{}",
-    "\\lx@request@frontmatter@annotation[thanks]{#2}",
-    locked => true
-  );
-  DefMacro!(
-    "\\thankstext[]{}{}",
-    "\\lx@add@contact[label={thanks:#2},role=thanks]{#3}",
-    locked => true
-  );
+  imsart_sty_markup()?;
+  for cs in KEYWORD_MARKUP {
+    AssignValue!(&s!("{cs}:locked") => true, Some(Scope::Global));
+  }
   // imsart.cls L149: \RequirePackage{imsart}.
   InputDefinitions!("imsart", noltxml => true, extension => Some(Cow::Borrowed("sty")));
-  // `\arxiv{id}` (imsart.sty:1186-1189) prints the paper's arXiv identifier as an unmarked title note: the paper's
-  // arXiv pubnote, as jheppub's `\arxivnumber` (jheppub_sty.rs), not an author's note (2201.08502). Defined over the
-  // raw one and not locked: a paper citing with its own `\renewcommand\arxiv` keeps it.
-  DefMacro!(
-    "\\arxiv{}",
-    "\\gdef\\@arxiv{#1}\\lx@add@pubnote[role=arxiv]{#1}"
-  );
+  DefPrimitive!("\\lx@ims@keyword@unlock", {
+    for cs in KEYWORD_MARKUP {
+      AssignValue!(&s!("{cs}:locked") => false, Some(Scope::Global));
+    }
+  });
+  RawTeX!(r"\AtEndOfClass{\lx@ims@keyword@unlock}");
+  imsart_arxiv()?;
 
   // imsart.sty (L3015) redefines `\bibliography#1` to only
   // `\@input@{\jobname.bbl}` — it inputs a pre-built `.bbl` and NEVER reads the
@@ -134,17 +94,26 @@ LoadDefinitions!({
   // \def commands but they're used as environments in some .bbl files.
   // Provide as no-op envs (the actual bibliography rendering is handled
   // by biblatex/natbib elsewhere). Witness 2406.15844 (+4 imsart papers).
-  DefEnvironment!("{barticle}", "#body");
-  DefEnvironment!("{bbook}", "#body");
-  DefEnvironment!("{bbooklet}", "#body");
-  DefEnvironment!("{binbook}", "#body");
-  DefEnvironment!("{bincollection}", "#body");
-  DefEnvironment!("{bunpublished}", "#body");
-  DefEnvironment!("{bmisc}", "#body");
-  DefEnvironment!("{bproceedings}", "#body");
-  DefEnvironment!("{bphdthesis}", "#body");
-  DefEnvironment!("{bmastersthesis}", "#body");
-  DefEnvironment!("{btechreport}", "#body");
+  // Each reads an optional argument and drops it (imsart.sty 2012/08/16 :2585-2769, `\def\barticle{\@ifnextchar[
+  // {\@barticle}{\@barticle[]}}` `\def\@barticle[#1]{…}`), which the `.bbl`s fill with the entry's key list,
+  // `\begin{barticle}[author]`: read as text it printed "[author]" before every structured entry (0906.4329,
+  // 1010.4313, 1202.6182). `{binproceedings}` and `{bmanual}` (:2633, :2706) were missing.
+  DefEnvironment!("{barticle}[]", "#body");
+  DefEnvironment!("{bbook}[]", "#body");
+  DefEnvironment!("{bbooklet}[]", "#body");
+  DefEnvironment!("{binbook}[]", "#body");
+  DefEnvironment!("{bincollection}[]", "#body");
+  DefEnvironment!("{binproceedings}[]", "#body");
+  DefEnvironment!("{bmanual}[]", "#body");
+  DefEnvironment!("{bunpublished}[]", "#body");
+  DefEnvironment!("{bmisc}[]", "#body");
+  DefEnvironment!("{bproceedings}[]", "#body");
+  DefEnvironment!("{bphdthesis}[]", "#body");
+  DefEnvironment!("{bmastersthesis}[]", "#body");
+  DefEnvironment!("{btechreport}[]", "#body");
+  // imsart.sty :2514 `\let\endbibitem\relax`: the `.bbl`s close every `\bibitem` with `\endbibitem`
+  // (0906.4329, 1010.4313, 1202.6182).
+  Let!("\\endbibitem", "\\relax");
 
   // IMS bibliography field-tagging macros — imsart.sty defines these
   // as NLM/JATS-style 1-arg setters inside `{barticle}` etc. envs:
@@ -211,3 +180,355 @@ LoadDefinitions!({
   def_macro_identity("\\bschool{}")?;
   def_macro_identity("\\bsuffix{}")?;
 });
+
+/// imsart.sty's commands the binding owns: its frontmatter and its keyword blocks, defined before the class reads
+/// imsart.sty raw (so its raw definitions are refused) and by the imsart.sty binding (`imsart_sty.rs`), which a shipped
+/// copy declaring itself imsart.sty reaches (OXIDIZED_DESIGN_DIVERGENCES #986).
+#[rustfmt::skip]
+pub fn imsart_sty_markup() -> Result<()> {
+  // imsart.sty's frontmatter, defined before its raw definitions so they are refused. `\ead[label=e1]{addr}`
+  // (imsart.sty:944 `\DeclareRobustCommand\ead[2][label= ,email]`) is the author's email, or URL with the `url` key
+  // or a `://` address (`\checkead@prefix`, :955); OmniBus's `\ead{}[]` (elsarticle's order) read `[` as the address
+  // and left `label=e1]{…}` in the author's name (2201.11773, 2507.12447). `\printead[presep=…]{e1,u1}` (:965)
+  // reprints, in an address, the addresses `\ead` gave the authors, each already their contact. `\author[A,B]{…}`
+  // and `\address[A]{…}` (:2003, :2088) link an author to the addresses its marks label, as revtex's and elsarticle's
+  // do (revtex4_support_sty.rs, elsart_support_core_sty.rs). The address prints in typewriter type (imsart.sty:1162
+  // `\setattribute{ead}{size}{\upshape\ttfamily}`; 1601.00202's `\ead[url]`).
+  DefMacro!("\\ead[] Semiverbatim", sub[(keys, address)] {
+    // (stored under its label for a `\printead{e1}` in an address printed in place, below)
+    let url = record_ead(keys.as_ref(), &address);
+    let address = Invocation!(T_CS!("\\lx@address@urlfont"), vec![Some(address)]);
+    Ok(if url {
+      Invocation!(T_CS!("\\lx@add@url"), vec![None, Some(address)])
+    } else {
+      Invocation!(T_CS!("\\lx@add@email"), vec![None, Some(address)])
+    })
+  }, locked => true);
+  // In an address printed in place (below), no author's contact, `\printead{e1,u1}` prints what imsart.sty's
+  // `\@@printead` (:506-519 of 1301.1466's copy) prints: each labelled address `\ead` stored, "e-mail: " or "url: " before
+  // it (`\email@text`, `\url@text`; none under `*`), `;~` between, in typewriter type; `\printead[text]{…}` the text alone
+  // (review revCR3b finding 1: 1301.1466's end blocks, `\printead{e1}\\ \printead{u1}`). A label no `\ead` gave prints
+  // "??", as `\saferef`. Inside the frontmatter it prints nothing: the address it stands in is the author's contact.
+  DefMacro!("\\printead OptionalMatch:* []{}", sub[(star, text, labels)] {
+    if !lookup_bool("lx_imsart_address_inplace") {
+      return Ok(Tokens!());
+    }
+    if let Some(text) = text {
+      return Ok(Invocation!(T_CS!("\\lx@address@urlfont"), vec![Some(text)]));
+    }
+    let mut printed: Vec<Token> = Vec::new();
+    for (at, label) in labels.to_string().split(',').map(str::trim).filter(|l| !l.is_empty()).enumerate() {
+      if at > 0 {
+        printed.extend(mouth::tokenize_internal(";~").unlist());
+      }
+      let kind = match lookup_value(&format!("lx_imsart_ead_{label}")) {
+        Some(Stored::Tokens(kind)) => kind.to_string(),
+        _ => String::from("email"),
+      };
+      if star.is_none() {
+        printed.extend(mouth::tokenize_internal(if kind == "url" { "url:" } else { "e-mail:" }).unlist());
+        printed.push(T_SPACE!());
+      }
+      let address = match lookup_value(&format!("lx_imsart_ead_{kind}_{label}")) {
+        Some(Stored::Tokens(address)) => Invocation!(T_CS!("\\lx@address@printed"), vec![Some(address)]),
+        _ => mouth::tokenize_internal("??"),
+      };
+      printed.extend(Invocation!(T_CS!("\\lx@address@urlfont"), vec![Some(address)]).unlist());
+    }
+    Ok(Tokens::new(printed))
+  }, locked => true);
+  // (a name list in one `\author{A and B}` is an author each, every one with the marks: 2401.00578, 2505.07640)
+  // (each `\ead` in it recorded at the call, as imsart.sty's `\safelabel` writes the aux file that a `\printead` reads on
+  // the next run, wherever it stands: an address printed in place before the frontmatter's flush digests the author)
+  DefMacro!("\\author OptionalSemiverbatim {}", sub[(annotations, name)] {
+    record_eads(&name);
+    Ok(Invocation!(T_CS!("\\lx@add@authors@append"), vec![
+      Some(Tokens::new(
+        [mouth::tokenize_internal("annotations=").unlist(), vec![T_BEGIN!()],
+         annotations.map(Tokens::unlist).unwrap_or_default(), vec![T_END!()]].concat()
+      )),
+      Some(name)
+    ]))
+  }, locked => true);
+  // An unlabelled `\address` after `\end{frontmatter}` is no author's: under the journal options that set
+  // `\@addressatendtrue` (`aap`, imsart.sty:150 of 1301.1466's copy) `\address` stores each block (:1242-1252) and the
+  // end of the document prints them all (`\printaddresses`, :1269-1290), each tied to no author; the API's default
+  // owner, the last author, would take every one (1301.1466's three after its `\bibliography`). It is set as
+  // `\printaddressnum` sets a block (`\address@size`, `{tabular}[t]{@{}l@{}}`, :1255-1264), at the end of the document under
+  // `\@addressatendtrue` (`\AtEndDocument`, as imsart.sty's `\enddocument` runs `\printaddresses`; review revCR3b NIT 4),
+  // else where it is called. Inside `{frontmatter}`, or labelled (`\address[A]`, the authors marked A), it is a contact;
+  // unlabelled, of the authors whose `\ead` labels its `\printead{e1}` cites (`citing_authors`: 1407.2451's ETH block
+  // Nandy's and Maathuis's, its Washington block Richardson's; review revCR4 finding 2), else of every author since the
+  // last `\address` (`annotate=run`, as the sty binding's `\affiliation`): imsart.sty:1021 resets `\author@fmt@init`
+  // there, so `\author{A}\and\author{B}\address{Univ AB}` prints the address under both (review revCR3b finding 3).
+  RawTeX!(
+    r"\AddToHook{env/frontmatter/after}{\lx@imsart@frontmatter@closed}
+\def\lx@imsart@address@contact#1#2{\lx@add@contact[label={#1},role=address]{#2}}
+\def\lx@imsart@address@run#1#2{\lx@add@contact[label={#1},role=address,annotate=run]{#2}}
+\def\lx@imsart@address@inplace#1#2{\@ifundefined{if@addressatend}{\lx@imsart@address@print{#2}}{\csname if@addressatend\endcsname\expandafter\g@addto@macro\expandafter\lx@imsart@addresses@end\else\expandafter\@firstofone\fi{\lx@imsart@address@print{#2}}}}
+\def\lx@imsart@address@print#1{\par\begingroup\lx@imsart@address@inplace@on\csname address@size\endcsname\noindent\begin{tabular}[t]{@{}l@{}}#1\end{tabular}\par\endgroup}
+\def\lx@imsart@addresses@end{}
+\AtEndDocument{\lx@imsart@addresses@end}"
+  );
+  DefPrimitive!("\\lx@imsart@address@inplace@on", sub[_args] {
+    assign_value("lx_imsart_address_inplace", true, Some(Scope::Local));
+    Ok(())
+  });
+  DefPrimitive!("\\lx@imsart@frontmatter@closed", sub[_args] {
+    assign_value("lx_imsart_frontmatter_closed", true, Some(Scope::Global));
+    Ok(())
+  });
+  DefMacro!("\\address OptionalSemiverbatim {}", sub[(label, address)] {
+    let label = label.unwrap_or_default();
+    Ok(if label.is_empty() && lookup_bool("lx_imsart_frontmatter_closed") {
+      Invocation!(T_CS!("\\lx@imsart@address@inplace"), vec![Some(label), Some(address)])
+    } else if label.is_empty() {
+      // (the authors whose `\ead` labels its `\printead{e1,e2}` cites, each its owner — `author:N`, the N-th author's
+      // own label —, else, or when they are the run, the run's)
+      let (owners, run) = citing_authors(&printead_labels(&address));
+      if owners.is_empty() || owners == run {
+        Invocation!(T_CS!("\\lx@imsart@address@run"), vec![Some(label), Some(address)])
+      } else {
+        let mut contacts: Vec<Token> = Vec::new();
+        for owner in owners {
+          contacts.extend(
+            Invocation!(T_CS!("\\lx@imsart@address@contact"), vec![
+              Some(mouth::tokenize_internal(TeXString::assembled(format!("author:{owner}")))),
+              Some(address.clone())
+            ])
+            .unlist(),
+          );
+        }
+        Tokens::new(contacts)
+      }
+    } else {
+      Invocation!(T_CS!("\\lx@imsart@address@contact"), vec![Some(label), Some(address)])
+    })
+  }, locked => true);
+  // `\thanksref[mark]{addr1,t1}` (imsart.sty:746) marks the author with the addresses and notes those labels name, and
+  // `\thankstext{t1}{text}` (:789) is such a note: as elsarticle's `\thanksref`/`\thanks` (elsart_support_core_sty.rs).
+  // Read raw, the note went to `\@thanks`, which nothing typesets, and its text was lost (2201.08502).
+  // The `thanks:` prefix on both sides, as elsarticle's, matches a title's `\thanksref{T1}` to its note exactly (the
+  // prefix-stripped match serves creators only, OXIDIZED_DESIGN_DIVERGENCES #461), and an author's to an `\address`.
+  DefMacro!(
+    "\\thanksref[]{}",
+    "\\lx@request@frontmatter@annotation[thanks]{#2}",
+    locked => true
+  );
+  DefMacro!(
+    "\\thankstext[]{}{}",
+    "\\lx@add@contact[label={thanks:#2},role=thanks]{#3}",
+    locked => true
+  );
+  // `\thanksmark[mark]{m1}` (imsart.sty:640-645) prints, in an `\affiliation`, the mark the authors' `\thanksref{m1}`
+  // point at; the authors' marks are not printed here (the `\thanksref` annotation links them), so the address's
+  // mark is dropped too (1202.6182, 1306.1438). Locked as `\thanksref`/`\thankstext` are, so a paper that ships
+  // imsart.sty does not get its `\thanksmark`, which prints `<sup>??</sup>` here.
+  DefMacro!("\\thanksmark[]{}", "", locked => true);
+  // imsart.sty's author markup, defined only inside its `\author@fmt` (:2010-2028 of 2201.11773's copy: `\degs`,
+  // `\fnms`, `\inits`, `\snm`, `\roles`, each printing its argument), which the `\author` above replaces: in force for
+  // the author content (`\lx@author@markup@class`, frontmatter_fields.rs), as a refused class `\author` gives them —
+  // and where no lock records that refusal, a stand-in copy's (`imsart_sty.rs`): "\snm undefined" there (1905.11425,
+  // 2101.10506, 1301.1466, math0608476).
+  RawTeX!(
+    r"\def\lx@author@markup@class{\lx@author@markup@provide\degs\@firstofone\lx@author@markup@provide\fnms\@firstofone\lx@author@markup@provide\inits\@firstofone\lx@author@markup@provide\snm\@firstofone\lx@author@markup@provide\roles\@firstofone}"
+  );
+  // imsart.sty:464-466: `\setattribute[…]{journal}{name}{…}` stores `\journal@name` (`\getattribute` reads it back);
+  // papers blank the journal name with it (1306.0113, 1706.08519).
+  RawTeX!(
+    r"\def\setattribute{\@ifnextchar[\@setattribute{\@setattribute[]}}
+\def\@setattribute[#1]#2#3#4{\expandafter\gdef\csname #2@#3\endcsname{#4}}
+\def\getattribute#1#2{\csname #1@#2\endcsname}"
+  );
+  // imsart.sty's `{keyword}[class=…]` and `\kwd` (:1518-1567 of 1410.4462's copy) are the VTeX classes' shared markup
+  // (`vtex_keyword_markup`, ims_support_sty.rs): every `\kwd` of a block in one list, and a `class=MSC` (`AMS`,
+  // `MSC2010`, `MSC2020`) block the paper's subject classification. Locked, so the raw definitions are refused: imsart.sty
+  // sets its blocks in `\keyword@box` (or, under the journal options' `keywordsasfootnote`, collects them in
+  // `\keyword@toks` through its `\pseudo@keyword`, :1609, which `\begin` reads first), and OmniBus's `\kwd` kept only
+  // the last keyword (KNOWN_PERL_ERRORS #1196): 1410.4462, 2407.13970, 2605.27137 lost every keyword but one and their
+  // MSC codes. The headings are imsart.sty's (:1521-1525), which its own `\setattribute`/`\setpkgattr` lines set again.
+  // Locked only while the class loads — imsart.sty read raw, and a renamed copy of the class read after this binding
+  // with the imsart.sty copy it loads (1401.3408's myimsart.cls, myimsart.sty) — and unlocked at the class's end, as
+  // `\arxiv` below is defined over the raw one: a document's own `\renewcommand{\kwd}` is the document's.
+  RequirePackage!("keyval");
+  vtex_keyword_markup()?;
+  RawTeX!(
+    r"\@namedef{keyword@KWD}{Keywords and phrases:}
+\@namedef{keyword@AMS}{AMS 2000 subject classifications:}
+\@namedef{keyword@MSC}{MSC 2010 subject classifications:}
+\@namedef{keyword@MSC2010}{MSC 2010 subject classifications:}
+\@namedef{keyword@MSC2020}{MSC2020 subject classifications:}"
+  );
+  Ok(())
+}
+
+/// Records imsart.sty's `\ead[keys]{address}` under its label, as its `\safelabel` writes the aux file (`\ead` :493-498 of
+/// 1301.1466's copy), for `\printead{label}` in an address printed in place ([`imsart_sty_markup`]): the address and
+/// whether it is a URL (the `url` key, or a `://` address, `\checkead@prefix`), which it returns. Past any speculative
+/// run's rollback (`assign_value_past_rollback`), as TeX never takes back what it wrote to a file.
+fn record_ead(keys: Option<&Tokens>, address: &Tokens) -> bool {
+  let keys = keys.map(ToString::to_string).unwrap_or_default();
+  let url = keys
+    .split(',')
+    .any(|key| key.split('=').next().is_some_and(|k| k.trim() == "url"))
+    || address.to_string().contains("://");
+  if let Some(label) = ead_label(&keys) {
+    let kind = if url { "url" } else { "email" };
+    assign_value_past_rollback(
+      &format!("lx_imsart_ead_{kind}_{label}"),
+      Stored::Tokens(address.clone()),
+    );
+    assign_value_past_rollback(
+      &format!("lx_imsart_ead_{label}"),
+      Stored::Tokens(mouth::tokenize_internal(kind)),
+    );
+  }
+  url
+}
+
+/// Records each `\ead[keys]{address}` written in an `\author`'s argument ([`record_ead`]), at the call.
+fn record_eads(name: &Tokens) {
+  for (keys, address) in ead_calls(name) {
+    record_ead(keys.as_ref(), &address);
+  }
+}
+
+/// The `label=` of an `\ead`'s keys (`\ead[label=e1]{…}`), when they give one.
+fn ead_label(keys: &str) -> Option<String> {
+  keys.split(',').find_map(|key| {
+    let (k, v) = key.split_once('=')?;
+    (k.trim() == "label" && !v.trim().is_empty()).then(|| v.trim().to_string())
+  })
+}
+
+/// The group opened at `v[open]` by `open_t` and closed by `close_t` outside braces: its inner tokens and the index after
+/// it.
+fn token_group(v: &[Token], open: usize, open_t: Token, close_t: Token) -> Option<(Tokens, usize)> {
+  if v.get(open) != Some(&open_t) {
+    return None;
+  }
+  let mut braces = usize::from(open_t == T_BEGIN!());
+  for (at, t) in v.iter().enumerate().skip(open + 1) {
+    if *t == T_BEGIN!() {
+      braces += 1;
+    } else if *t == T_END!() {
+      braces = braces.checked_sub(1)?;
+    }
+    if *t == close_t && braces == 0 {
+      return Some((Tokens::new(v[open + 1..at].to_vec()), at + 1));
+    }
+  }
+  None
+}
+
+/// Each call of `cs` written in `tokens` — an optional `*`, an optional `[…]`, an argument —: its `[…]` and its argument.
+fn calls_of(tokens: &Tokens, cs: Token) -> Vec<(Option<Tokens>, Tokens)> {
+  let v = tokens.unlist_ref();
+  let spaces = |mut at: usize| {
+    while v.get(at) == Some(&T_SPACE!()) {
+      at += 1;
+    }
+    at
+  };
+  let mut calls = Vec::new();
+  let mut at = 0;
+  while at < v.len() {
+    if v[at] == cs {
+      let mut next = spaces(at + 1);
+      if v.get(next) == Some(&T_OTHER!("*")) {
+        next = spaces(next + 1);
+      }
+      let keys = token_group(v, next, T_OTHER!("["), T_OTHER!("]"));
+      if let Some((_, after)) = &keys {
+        next = spaces(*after);
+      }
+      if let Some((argument, after)) = token_group(v, next, T_BEGIN!(), T_END!()) {
+        calls.push((keys.map(|(keys, _)| keys), argument));
+        at = after;
+        continue;
+      }
+    }
+    at += 1;
+  }
+  calls
+}
+
+/// Each `\ead[keys]{address}` written in `tokens`: its keys and its address.
+fn ead_calls(tokens: &Tokens) -> Vec<(Option<Tokens>, Tokens)> { calls_of(tokens, T_CS!("\\ead")) }
+
+/// The labels an address's `\printead{e1,e2}` calls cite.
+fn printead_labels(address: &Tokens) -> Vec<String> {
+  calls_of(address, T_CS!("\\printead"))
+    .into_iter()
+    .flat_map(|(_, labels)| {
+      labels
+        .to_string()
+        .split(',')
+        .map(|label| label.trim().to_string())
+        .filter(|label| !label.is_empty())
+        .collect::<Vec<_>>()
+    })
+    .collect()
+}
+
+/// The places (from 1) among the queued authors of those an `\ead` in whose argument gives one of the labels `cited`:
+/// the authors an address block names by printing their e-mails — `\printead{e1}\\ \printead{e2}`, as imsart.sty's
+/// `\printead` reprints the address `\ead` labelled, which the reader of the PDF takes as theirs (1407.2451's two
+/// blocks, Nandy and Maathuis at ETH, Richardson at the University of Washington; 1409.0912, 1504.04814, 1704.07606,
+/// 1810.08264). None when it cites no queued author's label. With them, the places of the authors queued since the last
+/// queued address, the run `annotate=run` gives the block to.
+fn citing_authors(cited: &[String]) -> (Vec<usize>, Vec<usize>) {
+  if cited.is_empty() {
+    return (Vec::new(), Vec::new());
+  }
+  with_value("frontmatter_raw", |queue| {
+    let mut owners = Vec::new();
+    let mut run = Vec::new();
+    if let Some(Stored::FrontmatterRaw(queue)) = queue {
+      let mut place = 0;
+      for entry in queue {
+        let role = entry.1.get("role").map(String::as_str);
+        if entry.0 == "ltx:creator" && role == Some("author") {
+          place += 1;
+          run.push(place);
+          if ead_calls(&entry.2)
+            .iter()
+            .filter_map(|(keys, _)| {
+              ead_label(&keys.as_ref().map(ToString::to_string).unwrap_or_default())
+            })
+            .any(|label| cited.contains(&label))
+          {
+            owners.push(place);
+          }
+        } else if entry.0 == "ltx:contact" && role == Some("address") {
+          run.clear();
+        }
+      }
+    }
+    (owners, run)
+  })
+}
+
+/// imsart.sty's keyword markup ([`imsart_sty_markup`]), locked while the class loads.
+pub const KEYWORD_MARKUP: [&str; 7] = [
+  "\\keyword",
+  "\\endkeyword",
+  "\\begin{keyword}",
+  "\\end{keyword}",
+  "\\kwd",
+  "\\@kwd",
+  "\\pseudo@keyword",
+];
+
+/// imsart.sty's `\arxiv`, defined over the raw one ([`imsart_sty_markup`]'s note).
+pub fn imsart_arxiv() -> Result<()> {
+  // `\arxiv{id}` (imsart.sty:1186-1189) prints the paper's arXiv identifier as an unmarked title note: the paper's
+  // arXiv pubnote, as jheppub's `\arxivnumber` (jheppub_sty.rs), not an author's note (2201.08502). Defined over the
+  // raw one and not locked: a paper citing with its own `\renewcommand\arxiv` keeps it.
+  DefMacro!(
+    "\\arxiv{}",
+    "\\gdef\\@arxiv{#1}\\lx@add@pubnote[role=arxiv]{#1}"
+  );
+
+  Ok(())
+}

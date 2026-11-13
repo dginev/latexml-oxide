@@ -5,7 +5,7 @@
 //! picture is drawn by a browser as a 300×150 box, flipped. Batch 56iy; repro
 //! `tools/perfect_kernel/repros/graphics-tikz/pspicture_inner_box_picture_size.tex`
 //! (pst-flags-doc: 517 unsized pictures; egameps: 162).
-use latexml::util::test::assert_element;
+use latexml::util::test::{assert_element, check_requirements, loads};
 
 use super::perfect_kernel_batch46::{convert, error_count, warning_count};
 
@@ -15,6 +15,9 @@ use super::perfect_kernel_batch46::{convert, error_count, warning_count};
 /// (31.13×9.61 px).
 #[test]
 fn auto_opened_picture_is_sized_from_its_box() {
+  if !check_requirements(loads::PSTRICKS) {
+    return;
+  }
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/graphics-tikz/pspicture_inner_box_picture_size.tex"
   );
@@ -184,7 +187,7 @@ fn foreignobject_anchor_is_the_content_font() {
     &xml,
     "figure",
     &[r#"xml:id="fig1""#],
-    r##"<figure xml:id="fig1"><picture class="ltx_figure_panel" height="7.56" width="24.01" xml:id="pic1"><svg:svg height="7.56" overflow="visible" version="1.1" viewBox="0 0 24.01 7.56" width="24.01"><svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,7.56) matrix(1 0 0 -1 0 0) translate(12,0) translate(0,3.78) matrix(1.0 0.0 0.0 1.0 -12 -3.78)"><svg:foreignObject height="7.56" overflow="visible" style="--ltx-fo-width:2.17em;--ltx-fo-height:0.68em;--ltx-fo-depth:0em;font-size:8pt;" transform="matrix(1 0 0 -1 0 7.56)" width="24.01">Foot</svg:foreignObject></svg:g></svg:svg></picture><picture class="ltx_figure_panel" height="6.05" width="19.31" xml:id="pic2"><svg:svg height="6.05" overflow="visible" version="1.1" viewBox="0 0 19.31 6.05" width="19.31"><svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,6.05) matrix(1 0 0 -1 0 0) translate(9.66,0) translate(0,3.02) matrix(1.0 0.0 0.0 1.0 -9.66 -1.68)"><svg:foreignObject height="6.05" overflow="visible" style="--ltx-fo-width:1.77em;--ltx-fo-height:0.42em;--ltx-fo-depth:0.12em;font-size:8pt;" transform="matrix(1 0 0 -1 0 4.7)" width="19.55"><text fontsize="63%">Tiny</text></svg:foreignObject></svg:g></svg:svg></picture></figure>"##,
+    r##"<figure class="ltx_panels_gallery" panelcols="2" panelfill="0.09" panelline="1" panelrows="1" xml:id="fig1"><picture class="ltx_figure_panel" height="7.56" panelwidth="0.05" width="24.01" xml:id="pic1"><svg:svg height="7.56" overflow="visible" version="1.1" viewBox="0 0 24.01 7.56" width="24.01"><svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,7.56) matrix(1 0 0 -1 0 0) translate(12,0) translate(0,3.78) matrix(1.0 0.0 0.0 1.0 -12 -3.78)"><svg:foreignObject height="7.56" overflow="visible" style="--ltx-fo-width:2.17em;--ltx-fo-height:0.68em;--ltx-fo-depth:0em;font-size:8pt;" transform="matrix(1 0 0 -1 0 7.56)" width="24.01">Foot</svg:foreignObject></svg:g></svg:svg></picture><picture class="ltx_figure_panel" height="6.05" panelwidth="0.04" width="19.31" xml:id="pic2"><svg:svg height="6.05" overflow="visible" version="1.1" viewBox="0 0 19.31 6.05" width="19.31"><svg:g fill="#000000" stroke="#000000" stroke-width="0.4pt" transform="translate(0,6.05) matrix(1 0 0 -1 0 0) translate(9.66,0) translate(0,3.02) matrix(1.0 0.0 0.0 1.0 -9.66 -1.68)"><svg:foreignObject height="6.05" overflow="visible" style="--ltx-fo-width:1.77em;--ltx-fo-height:0.42em;--ltx-fo-depth:0.12em;font-size:8pt;" transform="matrix(1 0 0 -1 0 4.7)" width="19.55"><text fontsize="63%">Tiny</text></svg:foreignObject></svg:g></svg:svg></picture></figure>"##,
   );
   assert_element(
     &xml,

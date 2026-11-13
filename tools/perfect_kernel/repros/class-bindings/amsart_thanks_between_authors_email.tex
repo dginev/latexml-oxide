@@ -1,0 +1,25 @@
+% witness: 92a r3 sibling of review rev92a_r2 B1 (amsart's `\thanks{Correspondence: \email{…}}` between two authors)
+% oracle:  pdflatex: amsart runs the `\thanks` at `\maketitle`, so "Email address: carl@z.org" prints last, after Bob
+%          Baker's own address under University Y, City
+% engines: perl 0.8.8 = 0 errors, carl@z.org on Ann Able; rust 90a = 0 errors, the same (the binding's `\lx@add@email`
+%          on the creator before the note); rust 92a r3 = the same, the shadow agreeing (api:annotate:last
+%          owner:own-call, the author current at the call)
+% expect:  carl@z.org on Bob Baker, as the page prints it
+% status:  RED (catalog, no guard): the current author is the one before the note's call, as the binding routes it;
+%          amsart's `\maketitle`-time order is not read (OD #913). A routed amsart note belongs to the last live
+%          author at `\maketitle` (amsart.cls:508, 516; review rev92a_r3 s1), which needs a change tag and a ruling
+%          (SYNC row; deferred to the ams written-family work; sibling `amsart_thanks_before_every_author_email`)
+% preload: ar5iv.sty
+\documentclass{amsart}
+\usepackage{hyperref}
+\begin{document}
+\title{A title}
+\author{Ann Able}
+\address{University X, Town}
+\thanks{Correspondence: \email{carl@z.org}}
+\author{Bob Baker}
+\address{University Y, City}
+\email{bob@y.org}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,21 @@
+% mechanism: a marked `\IEEEauthorblockA` list's e-mail line one of whose addresses a document macro prints
+%   (`\IEEEauthorrefmark{1}\annmail`, `\newcommand\annmail{ann@x.org}`): the line's reading prints only addresses
+%   (`resolver::prints_only_addresses` on its events' text, P6d), which its tokens do not spell, and each address goes to
+%   the author its mark names
+% witness: synthetic (P6d's sibling sweep; the literal twin is 1506.02349, `ieeetran_authorblocka_marked_email_list_read_whole`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann One*, Bob Two† / *Univ A / †Univ B / Emails: *ann@x.org,
+%          †bob@y.org"
+% engines: P6dbase (int168a) and P6d alike: as expected
+% expect:  0 errors, 0 warnings; Ann One "* Univ A" + ann@x.org, Bob Two "† Univ B" + bob@y.org
+% status:  GREEN (guard perfect_kernel_batchhg1::marked_blocks_restored_read_as_printed)
+\documentclass{IEEEtran}
+\newcommand\annmail{ann@x.org}
+\begin{document}
+\title{T}
+\author{\IEEEauthorblockN{Ann One\IEEEauthorrefmark{1}, Bob Two\IEEEauthorrefmark{2}}
+\IEEEauthorblockA{\IEEEauthorrefmark{1}Univ A\\
+\IEEEauthorrefmark{2}Univ B\\
+Emails: \IEEEauthorrefmark{1}\annmail, \IEEEauthorrefmark{2}bob@y.org}}
+\maketitle
+x
+\end{document}

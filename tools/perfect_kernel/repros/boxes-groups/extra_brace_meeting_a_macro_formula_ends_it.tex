@@ -1,0 +1,21 @@
+% A `}` that meets a formula a macro opened inside a unit ends that formula in our recovery, where TeX deletes the
+% brace (tex.web §1069 `extra_right_brace`: "Extra }, or forgotten $", the `}` dropped) and the macro's own closing `$`
+% then ends the formula. pstricks' `\psframebox` sets its argument as `{$#1$}` in math (pst-code-box.tex:10-17; our
+% `\lx@ps@mathbox`, pstricks_support_sty.rs ~:1160); with an author's `$q$` inside, TeX reports "Missing } inserted"
+% and the `}` above, and the text after the box stays text. Our kernel rule (OD #553, stomach.rs ~:3542-3565
+% `formula_ends_with_its_unit`) ends the formula at the unit's `}` and reads the brace again, so every later group is
+% off by one: " after text." becomes math. Reach: none found in 115,456 zips (77k r2 review scan, 0003-1903).
+% oracle:  pdflatex 2 errors; "D: [q] after text." with "after text." as text, section/equation/ref normal
+% engines: rust 77k r2: 7 errors, 1 warning, " after text." inside <Math tex="aftertext.">; perl: not measured
+% expect:  2 errors (TeX's), "after text." as text, nothing after the box changed
+% status:  RED (77k review r2 finding 1)
+\documentclass{article}
+\usepackage{pstricks}
+\begin{document}
+D: $\psframebox{$q$}$ after text.
+
+\section{Next}
+More $y_1$ and \textbf{bold}.
+\begin{equation} a=b \label{eq:x}\end{equation}
+See \ref{eq:x}.
+\end{document}

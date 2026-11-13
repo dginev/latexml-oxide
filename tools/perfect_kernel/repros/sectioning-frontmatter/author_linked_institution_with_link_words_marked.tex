@@ -1,0 +1,15 @@
+% witness: the r7 re-review of batch 77p (finding 4, probe n7)
+% oracle:  pdflatex 0 errors: the row of marked names, the two symbol-labelled institutions, a linked "Data Science Lab"
+%          centred under them
+% engines: rust 77p r10 = 0 errors; "Data Science Lab" a URL contact of the shared creator
+% expect:  0 errors, 0 warnings; Univ A on Ann Able, Univ B on Bob Baker, the linked Data Science Lab (unmarked, under
+%          the row) on both (R12)
+% status:  RED (77p r10) -> GREEN (77p r11)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able$^{\dagger}$ \ \ \ \ Bob Baker$^{\ddagger}$ \\ $^\dagger$ Univ A \ \ \ \ $^\ddagger$ Univ B \\ \href{https://www.ds.org}{Data Science Lab}}
+\begin{document}
+\maketitle
+Text.
+\end{document}

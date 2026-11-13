@@ -1,0 +1,15 @@
+% mechanism: a legend an API call holds is its carriers' note, its mark printed (`mark=`, the Kind step's shape) (`note_call_marked`)
+% witness: 2607.02294, 1611.06354
+% oracle:  pdflatex 0 errors; "Ann Able1,*", "* These authors contributed equally."
+% engines: rust S0: mark lost, plain text; perl: no such step
+% expect:  0 errors, 0 warnings; a `note` with `mark="∗"` on Ann; the kept mark stays shown (the writer's cut of it is left: OD #980)
+% status:  GREEN (perfect_kernel_batchz4)
+% preload: ar5iv.sty
+\documentclass{revtex4-1}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1,*}$, Bob Baker$^{1}$}
+\affiliation{$^{1}$ Univ A\\ $^{*}$ These authors contributed equally.}
+\maketitle
+Body.
+\end{document}

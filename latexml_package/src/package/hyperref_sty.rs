@@ -1,6 +1,11 @@
 use latexml_core::{
+  binding::counter::dialect::is_counter_alias,
   common::error::Result as CoreResult,
   document::{Document, can_contain_qsym, get_node_qname},
+};
+use latexml_engine::{
+  latex_constructs::{external_label_field, external_label_tex, external_ref_properties_with},
+  setup_binding_language::{accent_composite, accent_inner_name},
 };
 use libxml::tree::NodeType;
 
@@ -9,6 +14,14 @@ use crate::{package::url_sty::LEADING_BACKSLASH_RE, prelude::*};
 LoadDefinitions!({
   // hyperref.sty:4066 reads its options with `\ProcessKeyvalOptions`, which marks them processed: `\@curroptions` stays as it was.
   key_options_processed()?;
+  // hyperref.sty:2472-2475 `psdextra` loads psdextra.def (:767-776), whose `\psdmapshortnames` (psdextra.def:75) and
+  // `\psdaliasnames` hyperref runs in every PDF string (:488-491). Their `\let`s map names to PU-encoded text
+  // commands for bookmarks, which an XML document has none of; a document adds its own maps to them (1801.02767,
+  // 1710.02246, 1809.07440, 1908.10510, 1908.03268: `\addtomacro\psdmapshortnames{\let#1#2}`), so they start empty.
+  // Run for the option and for the `\hypersetup` key.
+  RawTeX!(
+    r"\def\lx@hyperref@psdextra{\providecommand*\psdmapshortnames{}\providecommand*\psdaliasnames{}}"
+  );
   // hyperref.sty:2234-2248: an option that can no longer take effect is
   // redefined to warn (novel-pdfx.sty:487-488 `\Hy@DisableOption{pdfauthor}`;
   // TeX Live class census 2026-09-24).
@@ -155,6 +168,8 @@ LoadDefinitions!({
     "citecolor",
     "filecolor",
     "menucolor",
+    // hyperref.sty:3312 `\Hy@temp{run}{\@filecolor}` (phfnote.sty:822-828's link options; 2207.13707)
+    "runcolor",
     "pagecolor",
     "urlcolor",
     "frenchlinks",
@@ -250,6 +265,10 @@ LoadDefinitions!({
     "setpagesize",
   ] {
     DeclareOption!(option, None);
+    // hyperref reads its options as keys (kvoptions), never as `\ds@<option>`; the binding processes none, so each
+    // handler is let to `\relax` at once, as a processed one is: left defined, a later package's undeclared `pdftex`
+    // or `draft` ran it instead of its own `\DeclareOption*` (content.rs `process_options_by`).
+    let_i(&T_CS!(&s!("\\ds@{option}")), &T_RELAX!(), None);
     // Rust-only divergence (paired with `21e730e71e` Info→Warn promotion):
     // also register each hyperref option as a Hyp keyval so `\hypersetup{
     // colorlinks=true,citecolor=…}` doesn't trip the unknown-key Warn path.
@@ -346,6 +365,47 @@ LoadDefinitions!({
   // The options of a later `\usepackage[…]{hyperref}` are keys `\hypersetup` takes (the repeat load after a
   // class binding's own hyperref load; binding/content.rs `apply_new_options_on_reload`).
   AssignValue!("hyperref.sty_keyval_setter" => "\\hypersetup", Scope::Global);
+  // `\lx@pdfstringdef\cs{<text>}`: hyperref's `\pdfstringdef` (hyperref.sty:386-560) in brief — `<text>` expanded in full
+  // (the digit commands stay the PDF escapes they spell, :388-396, `pdfauthor={Uwe L\374ck}`, fnlineno:44; a character is
+  // `\string`'d, this text being read while a latin `inputenc` may make ß active with the meaning `\ss`: bibleref-german)
+  // with the document's markup made harmless: `\protect` empty, font and size commands their argument or nothing, `\\`
+  // a space, `~` and the other spaces a space (`\HyPsd@LetUnexpandableSpace`), `\texorpdfstring` its PDF branch,
+  // labels, index entries and error messages gobbled (:550-552), the text glyphs and symbols their characters (puenc.def's
+  // `\DeclareTextCommand{\ss}{PU}{\80\337}` …, latex.ltx:564 `\aa`; `\textendash` :1082, `\textsection` :184, … with
+  // the kernel's names for them, `\S`, `\dag`, `\copyright`, `\pounds`, and hyperref.sty:416-418's `\P`, `\ldots`,
+  // `\dots`), and (as for `pdfusetitle`'s title, hyperref.sty
+  // `\Hy@UseMaketitleString`) `\thanks` and the note commands gobbled, so that no note is made twice; then the
+  // document's own `\pdfstringdefPreHook` (`\pdfstringdefDisableCommands`). [`pdf_string`] keeps the characters of the
+  // result.
+  RawTeX!(
+    r#"\long\def\lx@pdfstringdef#1#2{\begingroup
+\escapechar`\\\edef\0{\string\0}\edef\1{\string\1}\edef\2{\string\2}\edef\3{\string\3}\edef\8{\string\8}\edef\9{\string\9}%
+\let\protect\@empty\let\thanks\@gobble\let\footnote\@gobble\let\footnotemark\@empty\let\footnotetext\@gobble
+\let\label\@gobble\let\index\@gobble\let\glossary\@gobble\long\def\texorpdfstring##1##2{##2}%
+\def\\{ }\def\newline{ }\def~{ }\def\nobreakspace{ }\def\ { }\def\,{ }\def\quad{ }%
+\let\emph\@firstofone\let\textnormal\@firstofone\let\textrm\@firstofone\let\textsf\@firstofone
+\let\texttt\@firstofone\let\textbf\@firstofone\let\textmd\@firstofone\let\textit\@firstofone
+\let\textsc\@firstofone\let\textsl\@firstofone\let\textup\@firstofone\let\mbox\@firstofone
+\let\ensuremath\@firstofone\let\normalfont\@empty\let\rmfamily\@empty\let\sffamily\@empty
+\let\ttfamily\@empty\let\bfseries\@empty\let\mdseries\@empty\let\itshape\@empty\let\scshape\@empty
+\let\slshape\@empty\let\upshape\@empty\let\em\@empty\let\rm\@empty\let\bf\@empty\let\it\@empty
+\let\Huge\@empty\let\huge\@empty\let\LARGE\@empty\let\Large\@empty\let\large\@empty
+\let\normalsize\@empty\let\small\@empty\let\footnotesize\@empty\let\scriptsize\@empty\let\tiny\@empty
+\let\phantom\@gobble\let\hphantom\@gobble\let\vphantom\@gobble\let\leavevmode\@empty
+\let\GenericError\@gobblefour\let\GenericWarning\@gobbletwo\let\GenericInfo\@gobbletwo
+\def\ss{\string ß}\def\SS{SS}\def\i{\string ı}\def\j{\string ȷ}\def\o{\string ø}\def\O{\string Ø}\def\ae{\string æ}\def\AE{\string Æ}\def\oe{\string œ}\def\OE{\string Œ}\def\aa{\string å}\def\AA{\string Å}%
+\def\l{\string ł}\def\L{\string Ł}\def\dh{\string ð}\def\DH{\string Ð}\def\dj{\string đ}\def\DJ{\string Đ}\def\th{\string þ}\def\TH{\string Þ}\def\ng{\string ŋ}\def\NG{\string Ŋ}\def\ij{\string ĳ}\def\IJ{\string Ĳ}%
+\def\textendash{\string–}\def\textemdash{\string—}\def\textsection{\string§}\let\S\textsection\def\textparagraph{\string¶}\let\P\textparagraph
+\def\textdagger{\string†}\let\dag\textdagger\def\textdaggerdbl{\string‡}\let\ddag\textdaggerdbl\def\textcopyright{\string©}%
+\let\copyright\textcopyright\def\textregistered{\string®}\def\texttrademark{\string™}\def\textsterling{\string£}\let\pounds\textsterling
+\def\textellipsis{\string…}\let\ldots\textellipsis\let\dots\textellipsis\def\textquoteleft{\string‘}\def\textquoteright{\string’}%
+\def\textquotedblleft{\string“}\def\textquotedblright{\string”}\def\quotesinglbase{\string‚}\def\quotedblbase{\string„}\def\textquotedbl{\string"}%
+\def\guillemotleft{\string«}\let\guillemetleft\guillemotleft\def\guillemotright{\string»}\let\guillemetright\guillemotright
+\def\guilsinglleft{\string‹}\def\guilsinglright{\string›}\def\textdegree{\string°}\def\textbullet{\string•}\def\textexclamdown{\string¡}%
+\def\textquestiondown{\string¿}%
+\csname pdfstringdefPreHook\endcsname
+\xdef#1{#2}\endgroup}"#
+  );
   // Digest & store the options
   // Perl: DefPrimitive('\hypersetup RequiredKeyVals:Hyp', sub {
   //   hyperref_setoption($key, Digest($value)); });
@@ -360,11 +420,26 @@ LoadDefinitions!({
       if key == "colorlinks" && (value_str == "true" || value_str.is_empty()) {
         RequirePackage!("color");
       }
+      if key == "psdextra" && value_str != "false" {
+        TeX!(r"\lx@hyperref@psdextra");
+      }
       // Perl (PR #2767): don't digest \hypersetup keyvals, since they are
       // restricted to plain text(?) — `hyperref_setoption($key, ToString($value))`.
       // (This actually needs some sort of "safe" digestion, recognizing
       // unicode, but no macros.)
-      assign_mapping("Hyperref_options", key, Some(value_str.clone()));
+      // The PDF information strings hyperref expands as it sets them (`\pdfstringdef\@pdf<key>{#1}`,
+      // hyperref.sty:3543-3600): the metadata `\@add@PDF@RDFa@triples` records is their text, not the source
+      // (`pdftitle={\mytitle}` was `content="\mytitle"`; 1210.7805 `\OfficialTitle`). Perl records `ToString`
+      // (hyperref.sty.ltxml:133; KNOWN_PERL_ERRORS #1050). Guard `perfect_kernel_batch78i::hyperref_metadata_is_expanded`.
+      let recorded = if matches!(
+        key.as_str(),
+        "pdftitle" | "pdfauthor" | "pdfsubject" | "pdfkeywords" | "pdfcopyright"
+      ) {
+        pdf_string(value.revert()?)?
+      } else {
+        value_str.clone()
+      };
+      assign_mapping("Hyperref_options", key, Some(recorded));
       if key == "baseurl" {
         AssignValue!("BASE_URL" => value_str);
       }
@@ -392,7 +467,12 @@ LoadDefinitions!({
     }
   });
 
-  push_value("@at@end@document", T_CS!("\\@add@PDF@RDFa@triples"))?;
+  // (once: a second load — the document's own after the revtex classes' preload, revtex4_support_sty.rs — wrote
+  // every triple twice; 1105.3660, 1511.07709)
+  if !lookup_bool("hyperref:rdfa@scheduled") {
+    push_value("@at@end@document", T_CS!("\\@add@PDF@RDFa@triples"))?;
+    AssignValue!("hyperref:rdfa@scheduled" => true, Some(Scope::Global));
+  }
 
   // \@add@PDF@RDFa@triples — emit <ltx:rdf> elements for PDF metadata
   {
@@ -447,78 +527,7 @@ LoadDefinitions!({
   // #%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
   // # Additional User Macros
 
-  // \href{url}{text}
-  //
-  // `protected => true`: in real hyperref `\href` is a *robust* command
-  // (`\DeclareRobustCommand`/`\protected`), so an `\edef`/`\xdef` over it
-  // leaves the literal `\href{url}{text}` in the macro body rather than
-  // expanding it. LaTeXML's expansion re-emits `\href` itself (for the
-  // `\lx@hyper@url@` reversion `#1`), so WITHOUT the protected flag a
-  // partial-expansion context re-expands that re-emitted `\href` forever:
-  // `\href` → `\lx@hyper@url@\href{}{}…` → (constructor kept) → `\href` →
-  // … an unbounded expansion loop. Perl LaTeXML omits the flag and so
-  // *hangs* on `\xdef\x{\href{u}{t}}` (rc=124); marking it protected is
-  // both faithful to real-TeX robustness and fixes the loop. At top-level
-  // digestion `fully_expand` is true, so normal `\href{…}{…}` still
-  // expands exactly as before — only edef-family contexts defer it.
-  // Witness 2110.10227 (ems-journal.sty `\Emsaffil`→`\build@ffil`'s
-  // `\xdef\ems@temp{…\href{mailto:…}{\mbox{…}}…}`).
-  //
-  // The `protected` flag alone is NOT enough, because one seam legitimately
-  // expands protected macros: `Parameter::digest`'s semiverbatim
-  // pre-expansion (`parameter.rs`, Perl `Core/Parameter.pm` L123-132 —
-  // "If semiverbatim, Expand (before digest), so tokens can be neutralized")
-  // calls `readXToken` with `$toplevel=1`, hence `fully_expand=1`, hence
-  // protected macros DO expand there (Perl `Core/Gullet.pm` L408-409). That
-  // pass linearizes tokens one at a time and never reaches
-  // `\lx@hyper@url@`'s parameter list — `\lx@hyper@url@` is a Constructor, so
-  // it is kept as-is and the next token read is the re-emitted `\href`, which
-  // expands again. Rust matches Perl at that seam, so the flag cannot be the
-  // fix.
-  //
-  // So the reversion slot carries the command NAME rather than the live
-  // command: an OTHER-catcode `\href` is inert to every expansion regime
-  // while stringifying and reverting exactly as the control sequence did.
-  // This is what the sibling `\url` path (`\lx@hyper@url` below) has always
-  // done — `Tokens!(cmd.as_other())` — so the two now agree, and the
-  // self-reference is structurally impossible rather than flag-dependent.
-  //
-  // Witnesses: `doi = {\href{https://doi.org/…}{…}}` in a `.bib` reaches
-  // `\bib@field@default@doi Semiverbatim` and looped until the gullet cycle
-  // guard fired — 2605.00181, 2605.19650, 2606.06645 (all
-  // `Fatal:Timeout:Recursion`, bibliography lost, document aborted). Perl
-  // `latexmlc` HANGS on the same input, so this is a shared upstream bug
-  // (`KNOWN_PERL_ERRORS.md`). Guard:
-  // `latexml_oxide/tests/59_href_semiverbatim_loop.rs`.
-  //
-  // Kept as a Token body (not a closure) so the definition still serializes
-  // into a dump (CLAUDE.md strict-LoadFormat rule 3); `T_OTHER!` is the only
-  // thing a `DefMacro!` string literal cannot spell.
-  {
-    let (href_cs, href_params) = parse_prototype("\\href HyperVerbatim {}", true)?;
-    def_macro(
-      href_cs,
-      href_params,
-      ExpansionBody::Tokens(Tokens!(
-        T_CS!("\\lx@hyper@url@"),
-        T_OTHER!("\\href"),
-        T_BEGIN!(),
-        T_END!(),
-        T_BEGIN!(),
-        T_END!(),
-        T_BEGIN!(),
-        T_ARG!(1),
-        T_END!(),
-        T_BEGIN!(),
-        T_ARG!(2),
-        T_END!()
-      )),
-      Some(ExpandableOptions {
-        protected: true,
-        ..ExpandableOptions::default()
-      }),
-    )?;
-  }
+  define_hyper_urls(true, true)?;
 
   // \XeTeXLinkBox{content} — hyperref.sty L4915/4947 wraps content in
   // a XeTeX hyperlink target box. We don't model XeTeX-specific link
@@ -526,103 +535,6 @@ LoadDefinitions!({
   // Witness 2408.00362 (orcidlink-using paper).
   DefMacro!("\\XeTeXLinkBox{}", "#1");
 
-  // Redefine \url{url} from url.sty...
-  // It's slightly different in that it expands the argument
-  // Redefine \@url to sanitize the argument less
-  DefMacro!("\\lx@hyper@url Token", sub[(cmd)] {
-    // `\url` requires a following delimiter/argument token; on input-exhaustion
-    // `read_token_required` emits the parity "file ended while scanning use of
-    // \url" error (real TeX "Emergency stop"). Don't panic — close the
-    // `\begingroup` `\url` opened (see the `\url` def below) and emit nothing.
-    let Some(open) = read_token_required(&cmd.to_string())? else {
-      return Ok(Tokens::new(vec![T_CS!("\\endgroup")]));
-    };
-    begin_semiverbatim(Some(&['%']));
-    let_i(&T_ACTIVE!('~'), &T_OTHER!("~"), None); // Needs special protection?
-    // URLs are verbatim: any character a shorthand package made ACTIVE must
-    // appear literally, not expand. We read the arg with partial expansion
-    // ("expand as we go", below) to allow `\macro`s in URLs, but that also
-    // expands active chars — and an active char whose meaning is a `\newif`
-    // conditional (e.g. `"` made active by bosisio quotes.sty →
-    // `\@VIRGOLETTE` = `\if@virgolette…\else…\fi`) leaks its `\fi` through
-    // `read_balanced`, so the conditional "falls off end". Neutralise the
-    // common shorthand-active chars to OTHER (same `\let`-to-literal trick as
-    // `~` above). `:` is doubly important — French babel makes it active and
-    // it is ubiquitous in `http://…` URLs. Witness 1910.09629 (revtex4 →
-    // hyperref `\url`, quotes.sty active `"`, `.bbl` `\url{"http://…"}`).
-    for ch in ['"', ':', ';', '!', '?', '\'', '`'] {
-      if lookup_catcode(ch) == Some(Catcode::ACTIVE) {
-        assign_catcode(ch, Catcode::OTHER, Some(Scope::Local));
-      }
-    }
-    // url.sty's defined escapes expand to their character DURING the read (its
-    // first pass, `\edef`), so `\%`/`\_`/… resolve here rather than by later
-    // digestion. This mirrors the `HyperVerbatim` parameter type
-    // (base_parameter_types.rs) so `\url` and `\href` agree, and it leaves ONLY
-    // genuinely-leftover control sequences (e.g. `\def`) as CS tokens, which the
-    // filter below stringifies.
-    DefMacro!(T_CS!("\\%"),              None, T_OTHER!("%"), scope => Some(Scope::Local));
-    DefMacro!(T_CS!("\\#"),              None, T_OTHER!("#"), scope => Some(Scope::Local));
-    DefMacro!(T_CS!("\\&"),              None, T_OTHER!("&"), scope => Some(Scope::Local));
-    DefMacro!(T_CS!("\\textunderscore"), None, T_OTHER!("_"), scope => Some(Scope::Local));
-    let_i(&T_CS!("\\_"), &T_CS!("\\textunderscore"), None);
-    DefMacro!(T_CS!("\\hyper@tilde"),    None, T_OTHER!("~"), scope => Some(Scope::Local));
-    let_i(&T_CS!("\\~"), &T_CS!("\\hyper@tilde"), None);
-    let_i(&T_CS!("\\textasciitilde"), &T_CS!("\\hyper@tilde"), None);
-    DefMacro!(T_CS!("\\^"), None, T_OTHER!("^"), scope => Some(Scope::Local));
-    let_i(&T_CS!("\\textasciicircum"), &T_CS!("\\^"), None);
-    let_i(&T_CS!("\\\\"), &T_CS!("\\@backslashchar"), None);
-    DefMacro!(T_CS!("\\textbackslash"), None, T_OTHER!("\\"), scope => Some(Scope::Local));
-    let (open,close,url) = if open.get_catcode() == Catcode::BEGIN {
-      ( T_OTHER!("{"), T_OTHER!("}"),
-        read_balanced(ExpansionLevel::Partial,false,false)?.unwrap_or_default()) // Expand as we go!
-    } else {
-      ( T_OTHER!("{"), T_OTHER!("}"),
-        Tokens!(open.as_other()) )
-    };
-    end_semiverbatim()?;
-    let toks : Vec<Token> = url.unlist().into_iter()
-      .filter(|t| t.get_catcode() != Catcode::SPACE)
-      // url.sty `\meaning`-stringifies leftover control sequences: recatcode any
-      // surviving CS (e.g. `\def`) to `other` so it is LITERAL href text, not
-      // digested/executed (#723). The escapes above already resolved during the
-      // read. (Perl "let CS's through!" to digestion — the divergence we surpass.)
-      .map(|t| t.as_other())
-      .collect();
-    let mut url_wrapped = vec![T_CS!("\\UrlFont"), T_CS!("\\UrlLeft")];
-    url_wrapped.extend(toks.clone());
-    url_wrapped.push(T_CS!("\\UrlRight"));
-    let mut invocation_tokens = Invocation!(T_CS!("\\lx@hyper@url@"),vec![
-        Tokens!(cmd.as_other()),
-        Tokens!(open),
-        Tokens!(close),
-        Tokens::new(toks),
-        Tokens::new(url_wrapped)]).unlist();
-    invocation_tokens.push(T_CS!("\\endgroup"));
-    Tokens::new(invocation_tokens)
-  });
-
-  // RE-define from url w. Robust, as hyperref.sty:4801
-  // `\DeclareRobustCommand*{\url}` (see url_sty.rs).
-  DefMacro!("\\url", "\\begingroup\\lx@hyper@url\\url", locked => true, protected => true);
-
-  // Perl hyperref.sty.ltxml L187-194: bounded + enterHorizontal both
-  // present. enter_horizontal => true was missing in the Rust port —
-  // a `\url{...}` between paragraphs at top level opened <ltx:ref>
-  // outside any <ltx:p>, producing invalid block-level structure.
-  DefConstructor!("\\lx@hyper@url@ Undigested {}{} Semiverbatim {}",// Allow this to work in Math!
-    "?#isMath(<ltx:XMWrap class='#class' href='#href'>#5</ltx:XMWrap>)(<ltx:ref href='#href' class='#class'>#5</ltx:ref>)",
-    bounded   => true, enter_horizontal => true,
-    properties => sub[args] {
-      unref!(args => cmd, _open, _close, url, _formattedurl);
-      let ltx_cmd = s!("ltx_{}", LEADING_BACKSLASH_RE.replace(&cmd.to_string(),""));
-      Ok(stored_map!(
-        "href" => compose_url(&lookup_string("BASE_URL"), &url.to_string(), None),
-        "class"=> ltx_cmd
-      ))
-    },
-    sizer     => "#5",
-    reversion => "#1#2#4#3");
   // hyperref's low-level URL chain, reached by raw packages and manual
   // definitions (biblatex.tex:170-171 `\DeclareRobustCommand\fnurl
   // {\hyper@normalise\fnurl@}` → `\footnote{\url@{#1}}`; btxdockit `\href`):
@@ -646,11 +558,19 @@ LoadDefinitions!({
   });
   DefMacro!("\\Hurl Semiverbatim", "\\texttt{#1}");
 
-  // Internals raw hyperref-dependent packages test or call: hyperref.sty:2555
-  // sets `\Hy@driver` to `hpdftex` under pdfTeX (hrefhide.sty:154 compares it
-  // against `\hrefhide@driver`); :1788 `\HyPsd@UTFviii` is the PDF-string
-  // UTF-8 octet setup — no pdfstrings here (dvdcoll/pdfnotiz.sty:263, ucalgmthesis).
-  DefMacro!("\\Hy@driver", "hpdftex");
+  // Internals raw hyperref-dependent packages test or call. `\Hy@driver` is the driver file hyperref.sty's
+  // `\Hy@AtEndOfPackage` (:4246-4407) settles on, from the output mode the persona gives (`\pdfoutput`, K6) — not a
+  // constant `hpdftex`: a shipped siamart copy (siamart251216.cls:1302-1336) loads hypdvips.sty under `\ifpdf…\else`,
+  // and hypdvips.sty:27-36 errs unless the driver is `hdvips` (2605.04427, 2606.08053, 1703.08345, 14 papers of the
+  // arXiv 2605/2606 reruns). hrefhide.sty:154 compares it against `hpdftex`; scrartcl.cls:1018-1027, hyperxmp.sty:2118
+  // and ctex-engine-pdftex.def:503 test it too. `\Hy@PutCatalog` is the driver's catalog writer, called at
+  // `\AtEndDocument` by hypdvips.sty:3091-3108: every driver's writes a PDF object (hpdftex.def:40-42
+  // `\pdfcatalog`, pdfmark.def:57 `\pdfmark`), none of which we make, so it is hpdftex.def's draft-mode `\@gobble`.
+  // :1788 `\HyPsd@UTFviii` is the PDF-string UTF-8 octet setup — no pdfstrings here (dvdcoll/pdfnotiz.sty:263,
+  // ucalgmthesis). Guards: `perfect_kernel_batch101a::{hyperref_driver_follows_the_output_mode,
+  // siamart_copy_loads_hypdvips_in_dvi_mode}`.
+  RawTeX!(&hyperref_driver_tex());
+  RawTeX!(r"\let\Hy@PutCatalog\@gobble");
   def_macro_noop("\\HyPsd@UTFviii")?;
   // hyperref.sty:1185 `\let\HyPsd@AMSclassfix\relax` and the PDF-string
   // conversion routines pdfnotiz.sty:251-351 calls raw (dvdcoll).
@@ -729,6 +649,68 @@ LoadDefinitions!({
 \def\hyper@natlinkend{\hyper@linkend}
 \def\hyper@natlinkbreak#1#2{\hyper@linkend#1\hyper@linkstart{cite}{cite.#2}}
 \def\hyper@natanchorstart#1{}\def\hyper@natanchorend{}"
+  );
+  // 68b: hyperref internals papers call directly (binding gaps G3), each as hyperref.sty (TL 2025) defines it.
+  // - :130-135 the message shorthands (derksen.sty:628 `\Hy@Info{…}`, 1310.6851, 1712.03838, 1901.10472);
+  // - :357-361 the conditional-return helpers the index parser below uses;
+  // - :2078-2090 the raised-link hooks and the space-factor pair a document's copy of `\Hy@raisedlink` uses
+  //   (2403.10429, 2501.18381, 2501.18773, 2507.16055, 2510.01943, 2602.21138: `\Hy@raisedlink@left`);
+  // - :6655-6658 `\if@hyper@item`/`\if@skiphyperref` (1806.02596 `\@skiphyperreftrue` around an algorithm float);
+  // - :6312-6314 `\thispdfpagelabel` (pdfpagelabels, on by default; 1810.05756, 2002.05778);
+  // - :6727-6733 `\hyper@refstepcounter` (2102.05485 witharrows' `{DispWithArrows}`, 2303.09820, 2405.07080,
+  //   2505.07323): the anchor it makes is the kernel's (`\hyper@anchorstart` is gobbled here), so it sets
+  //   `\@currentHref` through `\hyper@makecurrent` and typesets nothing. Omitted: `\HyCnt@ProvideTheHCounter{#1}`
+  //   (:6735, a `\theH<counter>` for a counter without one; the `\hyper@makecurrent` above falls back to
+  //   `\the<counter>`) and the `\Hy@ifnotmeasuring` test (amsmath's measuring pass, which the conversion does not
+  //   make);
+  // - hpdftex.def:396 `\hyper@link{category}{name}{text}`, the driver link `\hyperlink` (:4793-4796) reaches through
+  //   `\hyper@@link` (1403.6472, 1502.05411, 1509.00838, 1612.08986, 1907.10062: `\hyperlinkcite`); the
+  //   category picks only the border colour;
+  // - :7443 `\@extra@b@citeb`, which hyperref provides when natbib is absent (natbib.sty:1104 otherwise;
+  //   hep-ph0412159, hep-ph0703293, 2202.05188);
+  // - :7886-7901 and :8019-8068 the index page-number links of a makeindex `.ind` (`hyperindex`, on by default):
+  //   `\hyperpage{95}`, `\hyperpage{3--5}`, `\hyperpage{3, 5}`, `\hyperindexformat{\textbf}{42}`
+  //   (0712.1142, 0804.2154, 0907.3749, 1011.1558, 1310.3213, 1707.07140). The page number stays text:
+  //   `\HyInd@pagelink` links it to the PDF page anchor `page.<n>` (:8062), which an XML document has none of.
+  // - :8126-8134 the starred references (2204.02601 `\let\ref\@refstar`), the kernel's unlinked `\ref*` forms
+  //   as they stand when hyperref loads, so a document that lets `\ref` to one of them does not call itself.
+  RawTeX!(
+    r"\def\Hy@Error{\PackageError{hyperref}}\def\Hy@Warning{\PackageWarning{hyperref}}
+\def\Hy@WarningNoLine{\PackageWarningNoLine{hyperref}}\def\Hy@Info{\PackageInfo{hyperref}}
+\def\Hy@InfoNoLine#1{\PackageInfo{hyperref}{#1\@gobble}}
+\let\Hy@ReturnEnd\@empty
+\long\def\Hy@ReturnAfterFi#1\fi{\fi#1}
+\long\def\Hy@ReturnAfterElseFi#1\else#2\fi{\fi#1}
+\long\def\Hy@ReturnAfterFiFiEnd#1\fi#2\Hy@ReturnEnd{\fi\fi#1}
+\long\def\Hy@ReturnAfterElseFiFiEnd#1\else#2\Hy@ReturnEnd{\fi\fi#1}
+\let\HyperRaiseLinkHook\@empty
+\def\HyperRaiseLinkDefault{\baselineskip}
+\newcount\Hy@SavedSpaceFactor
+\def\Hy@SaveSpaceFactor{\global\Hy@SavedSpaceFactor=\ifhmode\spacefactor\else\z@\fi}
+\def\Hy@RestoreSpaceFactor{\relax\ifhmode\ifnum\Hy@SavedSpaceFactor>\z@\spacefactor=\Hy@SavedSpaceFactor\fi\fi}
+\newif\if@hyper@item \newif\if@skiphyperref \@hyper@itemfalse \@skiphyperreffalse
+\def\thispdfpagelabel#1{\gdef\HyPL@thisLabel{#1}}\global\let\HyPL@thisLabel\relax
+\def\hyper@refstepcounter#1{\hyper@makecurrent{#1}\Hy@raisedlink{\hyper@anchorstart{\@currentHref}\hyper@anchorend}}
+\def\hyper@link#1#2#3{\begingroup\edef\x{\endgroup\noexpand\hyperlink{#2}}\x{#3}}
+\providecommand*\@extra@b@citeb{}
+\def\HyInd@ParenLeft{(}\def\HyInd@ParenRight{)}
+\def\hyperxindexformat#1#2{\let\HyOrg@hyperpage\hyperpage\let\hyperpage\@firstofone
+  #1{\HyOrg@hyperpage{#2}}\let\hyperpage\HyOrg@hyperpage}
+\let\hyperindexformat\hyperxindexformat
+\def\nohyperpage#1{#1}
+\def\hyperpage#1{\HyInd@hyperpage#1\nohyperpage{}\@nil}
+\def\HyInd@hyperpage#1\nohyperpage#2#3\@nil{\HyInd@@hyperpage{#1}#2\def\Hy@temp{#3}%
+  \ifx\Hy@temp\@empty\else\Hy@ReturnAfterFi{\HyInd@hyperpage#3\@nil}\fi}
+\def\HyInd@@hyperpage#1{\@hyperpage#1----\\}
+\def\@hyperpage#1--#2--#3\\{\ifx\\#2\\\@commahyperpage{#1}\else\HyInd@pagelink{#1}--\HyInd@pagelink{#2}\fi}
+\def\@commahyperpage#1{\@@commahyperpage#1, ,\\}
+\def\@@commahyperpage#1, #2,#3\\{\ifx\\#2\\\HyInd@pagelink{#1}\else\HyInd@pagelink{#1}, \HyInd@pagelink{#2}\fi}
+\def\HyInd@pagelink#1{\begingroup\toks@={}\HyInd@removespaces#1 \@nil\endgroup}
+\def\HyInd@removespaces#1 #2\@nil{\toks@=\expandafter{\the\toks@#1}%
+  \ifx\\#2\\\edef\x{\the\toks@}\ifx\x\@empty\else\the\toks@\fi
+  \else\Hy@ReturnAfterFi{\HyInd@removespaces#2\@nil}\fi}
+\let\lx@HyRef@ref\ref\let\lx@HyRef@nameref\nameref
+\def\@refstar#1{\lx@HyRef@ref*{#1}}\def\@pagerefstar#1{\lx@HyRef@ref*{#1}}\def\@namerefstar#1{\lx@HyRef@nameref*{#1}}"
   );
   // \hyperbaseurl{url}
   DefPrimitive!("\\hyperbaseurl Semiverbatim", sub[(url)] {
@@ -854,14 +836,33 @@ LoadDefinitions!({
   // `\hbox{\hypertarget{averylongtargetname}{}}` was 91.2pt wide where pdflatex gives 0pt, and each
   // glossaries-extra target grew its tcolorbox by 10pt. Perl L266 has no sizer either
   // (KNOWN_PERL_ERRORS #393).
-  DefConstructor!("\\hypertarget Semiverbatim {}",
+  // hyperref.sty:4805-4811 is not math-specific: with nesting off (its default, :323) it sets the
+  // anchor and puts #2 after it in the current list (`\hyper@@anchor{#1}{\relax}#2`) in every mode.
+  // The mode split is ours. In text, the anchor still holds its text (Perl's shape, above). In math,
+  // #2 follows an empty anchor, because the anchor holds no math. So a brace-less call takes one
+  // token there (`\hypertarget{e1}` before `\left( \frac{n}{p}\right)`, 2606.15438: its `\left(`
+  // read as the target's own text was closed at that argument's end, and the real `\right)` was
+  // "Extra").
+  // #2 is placed after the conditional, not inside it. hyperref's own #2 sits before `\fi`, so a
+  // brace-less `\hypertarget{e1}\frac{n}{p}` has `\frac` read `\fi` as its numerator (pdflatex:
+  // an empty-over-n fraction, then p).
+  // `\ifmmode` is tested when the macro expands, so inside an `\edef` the expansion-time mode decides. `\relax` comes
+  // first, as amstex.tex:72's `\RIfM@`: at an alignment cell's start TeX is still expanding in search of `\omit`, before
+  // the cell's math begins, so without it a row-initial call in `align`/`aligned`/`array` took the text branch and
+  // its brace-less `\left(` was closed at the argument's end ("Extra \right.").
+  DefMacro!(
+    "\\hypertarget Semiverbatim {}",
+    "\\relax\\ifmmode\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi\
+     {\\lx@hypertarget{#1}{}#2}{\\lx@hypertarget{#1}{#2}}"
+  );
+  DefConstructor!("\\lx@hypertarget Semiverbatim {}",
   sub[document, args, props] {
     anchor_own_text(document, &prop_string!(props, "id"), args[1].as_ref())?;
   },
   properties => sub[args] {
     let name = args[0].as_ref().map(|a| a.to_string()).unwrap_or_default();
     Ok(stored_map!("id" => clean_id(&name)))
-  }, sizer => "#2");
+  }, sizer => "#2", reversion => "\\hypertarget{#1}{#2}");
 
   // # Should create an anchor with automatically chosen name;
   // # But it's to be used where LaTeXML already would have created an anchor & link...
@@ -982,13 +983,28 @@ LoadDefinitions!({
   // `\NewDocumentCommand\autoref{s}{\leavevmode…}`): a paragraph-initial `\autoref` starts the
   // paragraph, so the space after it is an inter-word space, not skipped in vertical mode
   // (tex.web §1045; 33 papers of the 3,003-paper A/B, witness 2605.02640).
+  // A label only another document holds prints what hyperref prints there from the text and anchor xr imported for it
+  // (`external_autoref_text`).
   DefConstructor!("\\autoref OptionalMatch:* Semiverbatim",
-  "<ltx:ref ?#1(class='ltx_refmacro_autoref ltx_nolink')(class='ltx_refmacro_autoref')
-    show='autoref' labelref='#label' _force_font='true'/>",
+  "?#reftext(<ltx:ref class='#refclass' show='autoref' labelref='#label' ?#refhref(href='#refhref')() _force_font='true'>\
+   #reftext</ltx:ref>)(<ltx:ref ?#1(class='ltx_refmacro_autoref ltx_nolink')(class='ltx_refmacro_autoref')
+    show='autoref' labelref='#label' _force_font='true'/>)",
   enter_horizontal => true,
   properties => sub[args] {
     let refarg = &args[1];
-    Ok(stored_map!("label" => clean_label(&refarg.as_ref().unwrap().to_string(), None).to_string()))
+    let label = clean_label(&refarg.as_ref().unwrap().to_string(), None).to_string();
+    let mut props = stored_map!("label" => label.clone());
+    if let Some(text) = external_autoref_text(&label)? {
+      let star = args[0].is_some();
+      external_ref_properties_with(&label, star, text, &mut props);
+      let class = if star {
+        "ltx_refmacro_autoref ltx_nolink ltx_ref_external"
+      } else {
+        "ltx_refmacro_autoref ltx_ref_external"
+      };
+      props.insert("refclass", Stored::String(pin(class)));
+    }
+    Ok(props)
   });
 
   // hyperref.sty:8183-8203 `\autopageref{label}` = `\hyperref[{label}]
@@ -1027,12 +1043,18 @@ LoadDefinitions!({
   // with `[theorem]` is a "Theorem" (2605.01034, 2605.28533, 2605.30447) and `\newtheorem{lemma}{\lemmaname}` a
   // "Lemma". The environment's own `\<type>autorefname` comes first: the target is named when it is numbered (user
   // ruling 2026-10-02), so an author's `\claimautorefname` names a claim that shares the theorem counter, where
-  // pdflatex says "Theorem".
+  // pdflatex says "Theorem". An alias counter (aliascnt's `\newaliascnt`, llncs.cls v2.16+'s `\@spothm`:
+  // `register_counter_alias`) is the counter `\refstepcounter` is passed, so hyperref's type is the alias and the
+  // names are its own: "Lemma 2" under llncs's envcountsame (2202.10090), and no name for an aliascnt lemma without a
+  // `\lemmaautorefname`/`\lemmaname`, as pdflatex prints it; the root's "Theorem" never.
+  // plain.tex's `\null`, which the autoref tag runs whatever the document made of `\null` (below)
+  DefMacro!("\\lx@autoref@null", "\\hbox{}");
   DefMacro!("\\lx@autorefnum@@{}", sub[(ttype)] {
     let type_s  = ttype.unwrap().to_string();
     let counter_str = with_mapping("counter_for_type",&type_s, |mapping_opt|
       mapping_opt.map(ToString::to_string)).unwrap_or_else(|| type_s.clone());
-    let unstarred = counter_str.strip_suffix('*').unwrap_or(&counter_str);
+    let name_type = if is_counter_alias(&type_s) { &type_s } else { &counter_str };
+    let unstarred = name_type.strip_suffix('*').unwrap_or(name_type);
     // A `\<ctr>name` that is no name noun — a drawing command sharing the spelling, argumentation.sty:403 `\afname`
     // — is not run, as for the other tags (`\iflx@namenoun`, KNOWN_PERL_ERRORS #194): at every target it drew a
     // `\node` outside a picture (argumentation-doc, sweep #136). The `*autorefname`s are hyperref's own and may
@@ -1040,14 +1062,27 @@ LoadDefinitions!({
     // are taken as they are.
     let name = [
       s!("\\{type_s}autorefname"),
-      s!("\\{counter_str}autorefname"),
-      s!("\\{counter_str}name"),
+      s!("\\{name_type}autorefname"),
+      s!("\\{name_type}name"),
       s!("\\{unstarred}autorefname"),
       s!("\\{unstarred}name"),
     ]
     .into_iter()
     .find(|cs| is_defined(cs));
-    let mut tokens = match name {
+    // The trailing `\null` is the kernel's empty box whatever the author made of it (`\lx@autoref@null`): this text is
+    // built at every target, where pdflatex runs `\null` only where an `\autoref` prints, so `\def\null0{…}` hiding a
+    // subsection (1501.00090) ran its `\subsection` in every `\section`'s tag, a Fatal recursion. The token still ends
+    // a name's `~#1\null` argument, a delimiter being matched by the token. The document's `\null` is saved and put
+    // back by `\let`, with no group, which a name opening a `\bgroup` would meet (78j).
+    let mut tokens = vec![
+      T_CS!("\\let"),
+      T_CS!("\\lx@autoref@savednull"),
+      T_CS!("\\null"),
+      T_CS!("\\let"),
+      T_CS!("\\null"),
+      T_CS!("\\lx@autoref@null"),
+    ];
+    tokens.extend(match name {
       Some(cs) if cs.ends_with("autorefname") || is_name_noun_cs(&cs) => vec![T_CS!(cs), T_ACTIVE!('~')],
       // hyperref sets the first defined name before the `~` whatever it is: amsthm's `\let\thmname\@iden`
       // (amsthm.sty:152) takes the `~` and prints it back, "~1.1", as here; the name itself is not run, since it is
@@ -1055,7 +1090,7 @@ LoadDefinitions!({
       // in pdflatex ("Hh1") and " 1" here, traded for never running a drawing command.
       Some(_) => vec![T_ACTIVE!('~')],
       None => Vec::new(),
-    };
+    });
 
     let pcounter = T_CS!(s!("\\p@{counter_str}",));
     let thecounter = T_CS!(s!("\\the{counter_str}"));
@@ -1063,11 +1098,20 @@ LoadDefinitions!({
       tokens.push(pcounter);
     }
     tokens.push(thecounter);
-    tokens.push(T_CS!("\\null"));
+    tokens.extend([
+      T_CS!("\\null"),
+      T_CS!("\\let"),
+      T_CS!("\\null"),
+      T_CS!("\\lx@autoref@savednull"),
+    ]);
     Tokens::new(tokens)
   });
 
   Let!("\\HyOrg@addtoreset", "\\@addtoreset");
+  // hyperref.sty:7302 keeps the original `\maketitle` as `\HyOrg@maketitle` before wrapping it for its footnotes; a class
+  // that undoes the wrapping relies on it: pittetd.cls `\AtBeginDocument{\let\maketitle\HyOrg@maketitle}` left
+  // `\maketitle` undefined (1509.06375: 101 errors then Fatal; Perl's binding saves none either).
+  Let!("\\HyOrg@maketitle", "\\maketitle");
   // Perl `hyperref.sty.ltxml:383` only does `Let('\H@refstepcounter',
   // '\refstepcounter')`. We go one step further and mirror the real
   // `hyperref.sty:6631+6638-6657`: redefine `\refstepcounter` to
@@ -1087,7 +1131,13 @@ LoadDefinitions!({
   // `\Hy@raisedlink` carries is kept (below, 57cn); `\hyper@anchorstart`/
   // `\hyper@anchorend` are still skipped (SYNC_STATUS) — only the dispatch
   // matters here.
-  Let!("\\H@refstepcounter", "\\refstepcounter");
+  // The kernel's own, whatever `\refstepcounter` is now, as hyperref.sty:6651 `\let\H@refstepcounter
+  // \@kernel@refstepcounter`: our kernel's is `\lx@kernel@refstepcounter` (latex_constructs/sect08.rs; the dump's
+  // `\@kernel@refstepcounter` is latex.ltx:14969's raw macro, which bypasses the binding's counter and ID handling).
+  // Loaded again — a document's own `\usepackage{hyperref}` after the revtex classes' preload, revtex4_support_sty.rs
+  // — `\refstepcounter` is this one, and `\H@refstepcounter` saved as it called itself, a PushbackLimit Fatal under
+  // cleveref (2207.13707).
+  Let!("\\H@refstepcounter", "\\lx@kernel@refstepcounter");
   DefMacro!("\\refstepcounter{}", "\\H@refstepcounter{#1}");
 
   AssignMapping!("type_tag_formatter", "autoref" => "\\lx@autorefnum@@");
@@ -1224,7 +1274,9 @@ LoadDefinitions!({
   // 4.1 Replacement macros
 
   // \texorpdfstring{TeXString}{PDFstring}
-  DefMacro!("\\texorpdfstring{}{}", "#1");
+  // The PDF string (#2) goes to the bookmarks only; nothing of it is printed: the binding's declared drop, which the
+  // title-page check wants none of (OXIDIZED_DESIGN_DIVERGENCES #953 "106t"; 2306.06741's `{$Y(4230)…$}{Lg}`, 2306.06006).
+  DefMacro!("\\texorpdfstring{}{}", "#1", drops => [2]);
 
   // Perl hyperref.sty.ltxml L413-416: guard against redefinition, then Let
   // the pdfstringdef hooks to sensible no-ops. The guard matters: dhucs /
@@ -1477,6 +1529,8 @@ LoadDefinitions!({
         }
         if option == "colorlinks" {
           RequirePackage!("color");
+        } else if option == "psdextra" || option == "psdextra=true" {
+          TeX!(r"\lx@hyperref@psdextra");
         } else if let Some(eq_pos) = option.find('=') {
           let key = option[..eq_pos].trim();
           let mut value = option[eq_pos + 1..].trim();
@@ -1953,6 +2007,228 @@ LoadDefinitions!({
   );
 });
 
+/// hyperref's DVI-mode driver options and the driver file each selects (hyperref.sty:2578-2718: `nativepdf`,
+/// `pdfmark`, `ps2pdf` are `hdvips`; `dvipdfm` is `hdvipdfm`). The PDF-mode and engine options (`pdftex`, `luatex`,
+/// `xetex`, `vtex`, `hitex`) are absent: in DVI mode they select no driver (an Error in hyperref, which we do not raise)
+/// and leave the default.
+const HYPERREF_DVI_DRIVER_OPTIONS: [(&str, &str); 11] = [
+  ("dvips", "hdvips"),
+  ("nativepdf", "hdvips"),
+  ("pdfmark", "hdvips"),
+  ("ps2pdf", "hdvips"),
+  ("dvipdfm", "hdvipdfm"),
+  ("dvipdfmx", "hdvipdfm"),
+  ("hypertex", "hypertex"),
+  ("dviwindo", "hdviwind"),
+  ("dvipsone", "hdvipson"),
+  ("textures", "htexture"),
+  ("tex4ht", "htex4ht"),
+];
+
+/// The TeX that sets `\Hy@driver` as hyperref.sty's `\Hy@AtEndOfPackage` (:4246-4407) leaves it. In PDF mode (`\ifpdf`,
+/// which follows `\pdfoutput`) the driver is forced to `hpdftex` (`hluatex` under the `luatex` profile, hyperref's
+/// `\pdfextension` test; :4251-4265), whatever option was given; under XeTeX to `hxetex` (:4280-4292). In DVI mode the
+/// last driver option given wins, kvoptions' `\ProcessKeyvalOptions{Hyp}` (:4066) reading the class's global options
+/// before the package's own; with none, `\Hy@defaultdriver` = `hdvips` (:4339, :4371).
+fn hyperref_driver_tex() -> String {
+  let mut given: Vec<String> = Vec::new();
+  for key in ["class_options", "opt@hyperref.sty"] {
+    for item in lookup_vecdeque(key).unwrap_or_default() {
+      match item {
+        Stored::String(s) => given.push(with(s, |s| s.trim().to_string())),
+        Stored::Strings(ss) => given.extend(ss.iter().map(|s| with(*s, |s| s.trim().to_string()))),
+        _ => {},
+      }
+    }
+  }
+  let dvi_driver = given
+    .iter()
+    .rev()
+    .find_map(|option| {
+      HYPERREF_DVI_DRIVER_OPTIONS
+        .iter()
+        .find(|(name, _)| name == option)
+        .map(|(_, driver)| *driver)
+    })
+    .unwrap_or("hdvips");
+  s!(
+    "\\ifpdf\\ifluatex\\def\\Hy@driver{{hluatex}}\\else\\def\\Hy@driver{{hpdftex}}\\fi\\else\\ifxetex\\def\\Hy@driver{{hxetex}}\\else\\def\\Hy@driver{{{dvi_driver}}}\\fi\\fi"
+  )
+}
+
+/// The text accents of a PDF string and their combining characters (puenc.def's `\DeclareTextAccent`s).
+const PDF_ACCENTS: &[(&str, char)] = &[
+  ("`", '\u{0300}'),
+  ("'", '\u{0301}'),
+  ("^", '\u{0302}'),
+  ("~", '\u{0303}'),
+  ("=", '\u{0304}'),
+  ("u", '\u{0306}'),
+  (".", '\u{0307}'),
+  ("\"", '\u{0308}'),
+  ("r", '\u{030A}'),
+  ("H", '\u{030B}'),
+  ("v", '\u{030C}'),
+  ("d", '\u{0323}'),
+  ("c", '\u{0327}'),
+  ("k", '\u{0328}'),
+  ("b", '\u{0331}'),
+];
+
+/// The control sequences a PDF string spells out (hyperref.sty:423-434 for the logos, `\and` as in its
+/// `pdfusetitle` author, :6255) that stay unexpanded here (locked definitions, character definitions); puenc.def's
+/// letters (`\ss`, `\i`, …) are defined as their characters in `\lx@pdfstringdef`'s group.
+const PDF_GLYPHS: &[(&str, &str)] = &[
+  ("TeX", "TeX"),
+  ("LaTeX", "LaTeX"),
+  ("LaTeXe", "LaTeX2e"),
+  ("and", "; "),
+  ("&", "&"),
+  ("%", "%"),
+  ("$", "$"),
+  ("#", "#"),
+  ("_", "_"),
+];
+
+/// The text of a PDF information string: `tokens` expanded by `\lx@pdfstringdef`, its characters kept (a control
+/// sequence left unexpanded, a brace, a math shift, a script mark dropped, hyperref.sty `\HyPsd@RemoveBraces`,
+/// `\HyPsd@CheckCatcodes`) and its spaces collapsed.
+fn pdf_string(tokens: Tokens) -> Result<String> {
+  let target = T_CS!("\\lx@hyp@pdfstring");
+  let mut call = vec![T_CS!("\\lx@pdfstringdef"), target, T_BEGIN!()];
+  call.extend(tokens.unlist());
+  call.push(T_END!());
+  digest(Tokens::new(call))?;
+  let expansion = match lookup_definition(&target)? {
+    Some(defn) => match defn.get_expansion() {
+      Some(ExpansionBody::Tokens(body)) => body.clone(),
+      _ => Tokens!(),
+    },
+    None => Tokens!(),
+  };
+  let mut text = String::new();
+  let tokens = expansion.unlist();
+  let mut i = 0;
+  while i < tokens.len() {
+    let token = tokens[i];
+    i += 1;
+    match token.get_catcode() {
+      Catcode::LETTER | Catcode::OTHER => text.push_str(&token.to_string()),
+      Catcode::SPACE => text.push(' '),
+      Catcode::CS => {
+        let name = token.to_string();
+        let name = name.strip_prefix('\\').unwrap_or(&name);
+        // the text accents, on the next character (`\"o`, `\"{o}`), as the PU encoding composes them
+        // (an accent expands to its inner control sequence, `\"` to `\lxaccentumlaut`: `accent_inner_name`)
+        let accent = PDF_ACCENTS.iter().find(|(accent, _)| {
+          *accent == name || accent_inner_name(&s!("\\{accent}")) == token.to_string()
+        });
+        if let Some(&(_, combiner)) = accent {
+          while i < tokens.len()
+            && matches!(tokens[i].get_catcode(), Catcode::BEGIN | Catcode::SPACE)
+          {
+            i += 1;
+          }
+          if let Some(&letter) = tokens
+            .get(i)
+            .filter(|t| matches!(t.get_catcode(), Catcode::LETTER | Catcode::OTHER))
+          {
+            i += 1;
+            // an accent on the dotless `\i`, `\j` is on i, j (puenc.def:172-264 `\DeclareTextCompositeCommand{\'}{PU}
+            // {\i}{\80\355}`, í); `\.{\i}` is a plain i (:172)
+            let letter = match letter.to_string().as_str() {
+              "ı" if combiner == '\u{0307}' => {
+                text.push('i');
+                continue;
+              },
+              "ı" => T_LETTER!("i"),
+              "ȷ" => T_LETTER!("j"),
+              _ => letter,
+            };
+            match accent_composite(&[letter], combiner) {
+              Some(composed) => text.push_str(&composed.to_string()),
+              None => {
+                text.push_str(&letter.to_string());
+                text.push(combiner);
+              },
+            }
+          }
+        } else if let Some(&(cs, glyph)) = PDF_GLYPHS.iter().find(|(cs, _)| *cs == name) {
+          if cs == "and" {
+            text.truncate(text.trim_end().len());
+          }
+          text.push_str(glyph);
+        }
+      },
+      _ => {},
+    }
+  }
+  let text = decode_pdf_escapes(&text);
+  // the ligatures hyperref substitutes in the expanded string (hyperref.sty:620-623 `\HyPsd@Subst{---}\textemdash`,
+  // `{--}\textendash`, ``{!`}\textexclamdown``, ``{?`}\textquestiondown``)
+  let text = text
+    .replace("---", "\u{2014}")
+    .replace("--", "\u{2013}")
+    .replace("!`", "\u{00A1}")
+    .replace("?`", "\u{00BF}");
+  Ok(text.split_whitespace().collect::<Vec<_>>().join(" "))
+}
+
+/// PDFDocEncoding's codes 0x80-0xA0 (PDF 32000-1 Annex D.2); from 0xA1 it is Latin-1. 0x9F is unassigned.
+const PDF_DOC_0X80: [char; 33] = [
+  '\u{2022}', '\u{2020}', '\u{2021}', '\u{2026}', '\u{2014}', '\u{2013}', '\u{0192}', '\u{2044}',
+  '\u{2039}', '\u{203A}', '\u{2212}', '\u{2030}', '\u{201E}', '\u{201C}', '\u{201D}', '\u{2018}',
+  '\u{2019}', '\u{201A}', '\u{2122}', '\u{FB01}', '\u{FB02}', '\u{0141}', '\u{0152}', '\u{0160}',
+  '\u{0178}', '\u{017D}', '\u{0131}', '\u{0142}', '\u{0153}', '\u{0161}', '\u{017E}', '\u{FFFD}',
+  '\u{20AC}',
+];
+
+/// The PDF string escapes a document writes in its text: `\ddd` the PDFDocEncoding code (`\374` ü), and hyperref's
+/// UTF-16 forms, `\8d\ddd` and `\9ddd\ddd` (puenc.def `\81\122` Œ). Anything else stays as it is written.
+fn decode_pdf_escapes(text: &str) -> String {
+  if !text.contains('\\') {
+    return text.to_string();
+  }
+  let chars: Vec<char> = text.chars().collect();
+  let octal = |from: usize, count: usize| -> Option<u32> {
+    let digits = chars.get(from..from + count)?;
+    digits
+      .iter()
+      .try_fold(0, |value, digit| Some(value * 8 + digit.to_digit(8)?))
+  };
+  let low_byte =
+    |from: usize| -> Option<u32> { (chars.get(from) == Some(&'\\')).then(|| octal(from + 1, 3))? };
+  let mut out = String::with_capacity(text.len());
+  let mut i = 0;
+  while i < chars.len() {
+    if chars[i] == '\\' {
+      let decoded = match chars.get(i + 1) {
+        Some('8') => octal(i + 2, 1)
+          .zip(low_byte(i + 3))
+          .map(|(high, low)| (char::from_u32(high << 8 | low), 7)),
+        Some('9') => octal(i + 2, 3)
+          .zip(low_byte(i + 5))
+          .map(|(high, low)| (char::from_u32(high << 8 | low), 9)),
+        _ => octal(i + 1, 3).filter(|code| *code <= 0o377).map(|code| {
+          let glyph = match code {
+            0x80..=0xA0 => Some(PDF_DOC_0X80[code as usize - 0x80]),
+            _ => char::from_u32(code),
+          };
+          (glyph, 4)
+        }),
+      };
+      if let Some((Some(glyph), width)) = decoded {
+        out.push(glyph);
+        i += width;
+        continue;
+      }
+    }
+    out.push(chars[i]);
+    i += 1;
+  }
+  out
+}
+
 /// Emit a bare, self-closed `<ltx:anchor xml:id=id/>` destination at the current
 /// insertion point — for a `\hypertarget`/`\hyperdef` with no content to localize
 /// onto. See [`localized_anchor`].
@@ -2113,4 +2389,230 @@ fn localized_anchor(document: &mut Document, id: &str) -> CoreResult<()> {
     None => insert_bare_anchor(document, id)?,
   }
   Ok(())
+}
+
+/// hyperref's `\href` and its `\url` (hyperref.sty:4801 `\DeclareRobustCommand*{\url}`), with the reader and the
+/// constructor they share; `href`/`url` choose which of the two user commands are defined. The ar5iv preload gives a
+/// document that never loaded hyperref the ones it lacks at `\begin{document}`, as arXiv's build, which loads hyperref
+/// into every paper, does (`ar5iv_sty.rs`, OXIDIZED_DESIGN #588).
+pub fn define_hyper_urls(href: bool, url: bool) -> Result<()> {
+  if href {
+    // \href{url}{text}
+    //
+    // `protected => true`: in real hyperref `\href` is a *robust* command
+    // (`\DeclareRobustCommand`/`\protected`), so an `\edef`/`\xdef` over it
+    // leaves the literal `\href{url}{text}` in the macro body rather than
+    // expanding it. LaTeXML's expansion re-emits `\href` itself (for the
+    // `\lx@hyper@url@` reversion `#1`), so WITHOUT the protected flag a
+    // partial-expansion context re-expands that re-emitted `\href` forever:
+    // `\href` → `\lx@hyper@url@\href{}{}…` → (constructor kept) → `\href` →
+    // … an unbounded expansion loop. Perl LaTeXML omits the flag and so
+    // *hangs* on `\xdef\x{\href{u}{t}}` (rc=124); marking it protected is
+    // both faithful to real-TeX robustness and fixes the loop. At top-level
+    // digestion `fully_expand` is true, so normal `\href{…}{…}` still
+    // expands exactly as before — only edef-family contexts defer it.
+    // Witness 2110.10227 (ems-journal.sty `\Emsaffil`→`\build@ffil`'s
+    // `\xdef\ems@temp{…\href{mailto:…}{\mbox{…}}…}`).
+    //
+    // The `protected` flag alone is NOT enough, because one seam legitimately
+    // expands protected macros: `Parameter::digest`'s semiverbatim
+    // pre-expansion (`parameter.rs`, Perl `Core/Parameter.pm` L123-132 —
+    // "If semiverbatim, Expand (before digest), so tokens can be neutralized")
+    // calls `readXToken` with `$toplevel=1`, hence `fully_expand=1`, hence
+    // protected macros DO expand there (Perl `Core/Gullet.pm` L408-409). That
+    // pass linearizes tokens one at a time and never reaches
+    // `\lx@hyper@url@`'s parameter list — `\lx@hyper@url@` is a Constructor, so
+    // it is kept as-is and the next token read is the re-emitted `\href`, which
+    // expands again. Rust matches Perl at that seam, so the flag cannot be the
+    // fix.
+    //
+    // So the reversion slot carries the command NAME rather than the live
+    // command: an OTHER-catcode `\href` is inert to every expansion regime
+    // while stringifying and reverting exactly as the control sequence did.
+    // This is what the sibling `\url` path (`\lx@hyper@url` below) has always
+    // done — `Tokens!(cmd.as_other())` — so the two now agree, and the
+    // self-reference is structurally impossible rather than flag-dependent.
+    //
+    // Witnesses: `doi = {\href{https://doi.org/…}{…}}` in a `.bib` reaches
+    // `\bib@field@default@doi Semiverbatim` and looped until the gullet cycle
+    // guard fired — 2605.00181, 2605.19650, 2606.06645 (all
+    // `Fatal:Timeout:Recursion`, bibliography lost, document aborted). Perl
+    // `latexmlc` HANGS on the same input, so this is a shared upstream bug
+    // (`KNOWN_PERL_ERRORS.md`). Guard:
+    // `latexml_oxide/tests/59_href_semiverbatim_loop.rs`.
+    //
+    // Kept as a Token body (not a closure) so the definition still serializes
+    // into a dump (CLAUDE.md strict-LoadFormat rule 3); `T_OTHER!` is the only
+    // thing a `DefMacro!` string literal cannot spell.
+    {
+      let (href_cs, href_params) = parse_prototype("\\href HyperVerbatim {}", true)?;
+      def_macro(
+        href_cs,
+        href_params,
+        ExpansionBody::Tokens(Tokens!(
+          T_CS!("\\lx@hyper@url@"),
+          T_OTHER!("\\href"),
+          T_BEGIN!(),
+          T_END!(),
+          T_BEGIN!(),
+          T_END!(),
+          T_BEGIN!(),
+          T_ARG!(1),
+          T_END!(),
+          T_BEGIN!(),
+          T_ARG!(2),
+          T_END!()
+        )),
+        Some(ExpandableOptions {
+          protected: true,
+          ..ExpandableOptions::default()
+        }),
+      )?;
+    }
+  }
+
+  // Redefine \url{url} from url.sty...
+  // It's slightly different in that it expands the argument
+  // Redefine \@url to sanitize the argument less
+  DefMacro!("\\lx@hyper@url Token", sub[(cmd)] {
+    // `\url` requires a following delimiter/argument token; on input-exhaustion
+    // `read_token_required` emits the parity "file ended while scanning use of
+    // \url" error (real TeX "Emergency stop"). Don't panic — close the
+    // `\begingroup` `\url` opened (see the `\url` def below) and emit nothing.
+    let Some(open) = read_token_required(&cmd.to_string())? else {
+      return Ok(Tokens::new(vec![T_CS!("\\endgroup")]));
+    };
+    begin_semiverbatim(Some(&['%']));
+    let_i(&T_ACTIVE!('~'), &T_OTHER!("~"), None); // Needs special protection?
+    // URLs are verbatim: any character a shorthand package made ACTIVE must
+    // appear literally, not expand. We read the arg with partial expansion
+    // ("expand as we go", below) to allow `\macro`s in URLs, but that also
+    // expands active chars — and an active char whose meaning is a `\newif`
+    // conditional (e.g. `"` made active by bosisio quotes.sty →
+    // `\@VIRGOLETTE` = `\if@virgolette…\else…\fi`) leaks its `\fi` through
+    // `read_balanced`, so the conditional "falls off end". Neutralise the
+    // common shorthand-active chars to OTHER (same `\let`-to-literal trick as
+    // `~` above). `:` is doubly important — French babel makes it active and
+    // it is ubiquitous in `http://…` URLs. Witness 1910.09629 (revtex4 →
+    // hyperref `\url`, quotes.sty active `"`, `.bbl` `\url{"http://…"}`).
+    for ch in ['"', ':', ';', '!', '?', '\'', '`'] {
+      if lookup_catcode(ch) == Some(Catcode::ACTIVE) {
+        assign_catcode(ch, Catcode::OTHER, Some(Scope::Local));
+      }
+    }
+    // url.sty's defined escapes expand to their character DURING the read (its
+    // first pass, `\edef`), so `\%`/`\_`/… resolve here rather than by later
+    // digestion. This mirrors the `HyperVerbatim` parameter type
+    // (base_parameter_types.rs) so `\url` and `\href` agree, and it leaves ONLY
+    // genuinely-leftover control sequences (e.g. `\def`) as CS tokens, which the
+    // filter below stringifies.
+    DefMacro!(T_CS!("\\%"),              None, T_OTHER!("%"), scope => Some(Scope::Local));
+    DefMacro!(T_CS!("\\#"),              None, T_OTHER!("#"), scope => Some(Scope::Local));
+    DefMacro!(T_CS!("\\&"),              None, T_OTHER!("&"), scope => Some(Scope::Local));
+    DefMacro!(T_CS!("\\textunderscore"), None, T_OTHER!("_"), scope => Some(Scope::Local));
+    let_i(&T_CS!("\\_"), &T_CS!("\\textunderscore"), None);
+    DefMacro!(T_CS!("\\hyper@tilde"),    None, T_OTHER!("~"), scope => Some(Scope::Local));
+    let_i(&T_CS!("\\~"), &T_CS!("\\hyper@tilde"), None);
+    let_i(&T_CS!("\\textasciitilde"), &T_CS!("\\hyper@tilde"), None);
+    DefMacro!(T_CS!("\\^"), None, T_OTHER!("^"), scope => Some(Scope::Local));
+    let_i(&T_CS!("\\textasciicircum"), &T_CS!("\\^"), None);
+    let_i(&T_CS!("\\\\"), &T_CS!("\\@backslashchar"), None);
+    DefMacro!(T_CS!("\\textbackslash"), None, T_OTHER!("\\"), scope => Some(Scope::Local));
+    let (open,close,url) = if open.get_catcode() == Catcode::BEGIN {
+      ( T_OTHER!("{"), T_OTHER!("}"),
+        read_balanced(ExpansionLevel::Partial,false,false)?.unwrap_or_default()) // Expand as we go!
+    } else {
+      ( T_OTHER!("{"), T_OTHER!("}"),
+        Tokens!(open.as_other()) )
+    };
+    end_semiverbatim()?;
+    let toks : Vec<Token> = url.unlist().into_iter()
+      .filter(|t| t.get_catcode() != Catcode::SPACE)
+      // url.sty `\meaning`-stringifies leftover control sequences: recatcode any
+      // surviving CS (e.g. `\def`) to `other` so it is LITERAL href text, not
+      // digested/executed (#723). The escapes above already resolved during the
+      // read. (Perl "let CS's through!" to digestion — the divergence we surpass.)
+      .map(|t| t.as_other())
+      .collect();
+    let mut url_wrapped = vec![T_CS!("\\UrlFont"), T_CS!("\\UrlLeft")];
+    url_wrapped.extend(toks.clone());
+    url_wrapped.push(T_CS!("\\UrlRight"));
+    let mut invocation_tokens = Invocation!(T_CS!("\\lx@hyper@url@"),vec![
+        Tokens!(cmd.as_other()),
+        Tokens!(open),
+        Tokens!(close),
+        Tokens::new(toks),
+        Tokens::new(url_wrapped)]).unlist();
+    invocation_tokens.push(T_CS!("\\endgroup"));
+    Tokens::new(invocation_tokens)
+  });
+
+  // RE-define from url w. Robust, as hyperref.sty:4801
+  // `\DeclareRobustCommand*{\url}` (see url_sty.rs).
+  if url {
+    DefMacro!("\\url", "\\begingroup\\lx@hyper@url\\url", locked => true, protected => true);
+  }
+
+  // Perl hyperref.sty.ltxml L187-194: bounded + enterHorizontal both
+  // present. enter_horizontal => true was missing in the Rust port —
+  // a `\url{...}` between paragraphs at top level opened <ltx:ref>
+  // outside any <ltx:p>, producing invalid block-level structure.
+  DefConstructor!("\\lx@hyper@url@ Undigested {}{} Semiverbatim {}",// Allow this to work in Math!
+    "?#isMath(<ltx:XMWrap class='#class' href='#href'>#5</ltx:XMWrap>)(<ltx:ref href='#href' class='#class'>#5</ltx:ref>)",
+    bounded   => true, enter_horizontal => true,
+    properties => sub[args] {
+      unref!(args => cmd, _open, _close, url, _formattedurl);
+      let ltx_cmd = s!("ltx_{}", LEADING_BACKSLASH_RE.replace(&cmd.to_string(),""));
+      Ok(stored_map!(
+        "href" => compose_url(&lookup_string("BASE_URL"), &url.to_string(), None),
+        "class"=> ltx_cmd
+      ))
+    },
+    sizer     => "#5",
+    reversion => "#1#2#4#3");
+  Ok(())
+}
+
+/// What `\autoref` prints for a label only another document holds, from the `\r@<label>` xr imported
+/// (`record_external_label`): hyperref's name of the anchor's type, `\<type>autorefname` or `\<type>name` (a trailing
+/// `*` stripped next), before an active `~`, then the label's text and `\null` (hyperref.sty:8211-8278
+/// `\HyRef@autosetref`, `\HyRef@testreftype`, the type being the anchor up to its first `.`: `theorem.3`, `figure.caption.1`).
+/// A name that is no name noun is not run, as at a target of this document (`\lx@autorefnum@@`); a label with no anchor
+/// (the other document without hyperref) prints its text alone, as pdflatex does with "No autoref name". Witness
+/// 2402.05535 (`\autoref*` to its `srds-` labels).
+fn external_autoref_text(label: &str) -> Result<Option<Digested>> {
+  let Some(text) = external_label_tex(label, "label") else {
+    return Ok(None);
+  };
+  // (`\null`, the empty box after the number, prints nothing: `\relax` here, so it leaves no empty element, and it still
+  // ends a name's `~#1\null` argument, a delimiter being matched by the token)
+  let mut tokens = vec![
+    T_CS!("\\begingroup"),
+    T_CS!("\\let"),
+    T_CS!("\\null"),
+    T_CS!("\\relax"),
+  ];
+  let anchor = external_label_field(label, "anchor").unwrap_or_default();
+  let ty = anchor.split('.').next().unwrap_or_default();
+  if !ty.is_empty() {
+    let unstarred = ty.strip_suffix('*').unwrap_or(ty);
+    let name = [
+      s!("\\{ty}autorefname"),
+      s!("\\{ty}name"),
+      s!("\\{unstarred}autorefname"),
+      s!("\\{unstarred}name"),
+    ]
+    .into_iter()
+    .find(|cs| is_defined(cs));
+    match name {
+      Some(cs) if cs.ends_with("autorefname") || is_name_noun_cs(&cs) => {
+        tokens.extend([T_CS!(cs), T_ACTIVE!('~')])
+      },
+      Some(_) => tokens.push(T_ACTIVE!('~')),
+      None => {},
+    }
+  }
+  tokens.extend(text.unlist());
+  tokens.extend([T_CS!("\\null"), T_CS!("\\endgroup")]);
+  Ok(Some(digest(Tokens::new(tokens))?))
 }

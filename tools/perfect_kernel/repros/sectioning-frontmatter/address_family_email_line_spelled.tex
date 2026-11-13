@@ -1,0 +1,15 @@
+% A sibling of the e-mail line under a marked entry, every address spelled (catalog only).
+% witness: astro-ph0512555 (control)
+% oracle:  pdflatex 0 errors: as the in-order control
+% engines: rust int127a = right
+% expect:  0 errors, 0 warnings; each address its author's
+% status:  GREEN (int127a) -> GREEN (100b), catalog only
+% preload: ar5iv.sty
+\documentclass{emulateapj}
+\begin{document}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{1}$, Cat Cole$^{2}$}
+\affil{$^1$Univ A, Town; \\ Email:aable@a.edu, bbaker@a.edu \\ $^2$Univ B, City}
+\maketitle
+Text.
+\end{document}

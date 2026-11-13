@@ -1,0 +1,18 @@
+% mechanism: the names a `\quad` parts are authblk's run: an unlabelled `\affil` under them all
+% witness: 2610.23936
+% oracle:  pdflatex: 0 errors; Univ X under Ann and Bob, Univ Y under Cat
+% engines: rust int139a: Ann and Bob one creator; perl (authblk.sty.ltxml:52-55, read): one creator a call
+% expect:  0 errors; three creators, each with the affiliation printed for it
+% status:  RED (int139a) -> GREEN (108a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{authblk}
+\begin{document}
+\title{T}
+\author{Ann Able\thanks{Note one.} \quad Bob Baker}
+\affil{Univ X}
+\author{Cat Cole}
+\affil{Univ Y}
+\maketitle
+Text.
+\end{document}

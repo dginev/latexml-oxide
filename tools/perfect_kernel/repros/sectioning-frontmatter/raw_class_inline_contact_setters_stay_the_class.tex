@@ -1,0 +1,27 @@
+% witness: agujournal2019.cls, agutexsi2019.cls (94 census papers: `\def\affil#1{$^{#1}$\ignorespaces}`, a mark);
+%          fairmeta.cls, siamart*.cls, epl2.cls (`\email` an inline `\href`/`\texttt` of its argument, inside notes);
+%          ecai.cls (`\newcommand{\institute}[1]{\thanks{#1}}`); dmtcs-episciences.cls (`\address` a `\message`, its
+%          argument not printed)
+% oracle:  pdflatex 0 errors: "A Title", "Ann Able1∗ and Bob Baker2†", the date, "Body.", the footnotes "∗ Visiting;
+%          ann@a.edu" and "† Univ X"; "Old Lab" not printed
+% engines: rust 94a = as expected (the class's own definitions run)
+% expect:  0 errors, 0 warnings; the class's definitions run, as before: the marks in the names, the e-mail in the
+%          thanks note, the institute a note, the address not printed (no line of the class sets its argument)
+% status:  GREEN (94a) -> GREEN (94b), the fail-safe
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{inlinesetters.cls}
+\ProvidesClass{inlinesetters}
+\LoadClass{article}
+\def\affil#1{$^{#1}$\ignorespaces}
+\newcommand{\email}[1]{\texttt{#1}}
+\newcommand{\institute}[1]{\thanks{#1}}
+\newcommand\address[1]{\message{address command no longer supported}}
+\end{filecontents*}
+\documentclass{inlinesetters}
+\begin{document}
+\title{A Title}
+\author{Ann Able\affil{1}\thanks{Visiting; \email{ann@a.edu}} and Bob Baker\affil{2}\institute{Univ X}}
+\address{Old Lab}
+\maketitle
+Body.
+\end{document}

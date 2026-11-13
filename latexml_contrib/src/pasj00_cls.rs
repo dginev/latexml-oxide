@@ -4,6 +4,8 @@
 //! typesets.
 use latexml_package::prelude::*;
 
+use crate::and_by_meaning::and_runs;
+
 /// Interpret the shipped class `name` raw, then restore the semantic definitions over it:
 /// - the kernel `\caption` (`\lx@caption`): PASJ's own (pasj00.cls:814-835, pasj01.cls:898-919, pasj02.cls:887-908)
 ///   steps the counter and calls the class's `\@makecaption` directly, bypassing `\@caption`, the one path that builds
@@ -29,6 +31,15 @@ pub(crate) fn pasj_class(name: &str) -> Result<()> {
     InputDefinitions!(name, noltxml => true, extension => Some(Cow::Borrowed("cls")));
     Let!("\\caption", "\\lx@caption");
     Let!("\\@maketitle", "\\@empty");
+    // pasj00.cls:4025-4035, pasj01.cls:4098-4110 ("%%% fleqn"): `\equation` is fleqn.clo's flush-left `\hbox to
+    // \linewidth\bgroup $\m@th\displaystyle`, which the raw class cannot give the kernel's `{equation}`, so its hook is
+    // set here (latexml_package fleqn_sty.rs `math_displays_in_hbox`): an author's `$` in it is text in the math
+    // (2311.01721; KNOWN_PERL_ERRORS #907). pasj02.cls:4070-4083 leaves `\equation` commented out.
+    if crate::shipped_class::shipped_class_text(name)?
+      .is_some_and(|text| crate::shipped_class::class_code_contains(&text, "\\def\\equation{"))
+    {
+      fleqn_sty::math_displays_in_hbox()?;
+    }
   } else {
     LoadClass!("OmniBus");
     pasj_unshipped_longtable()?;
@@ -101,7 +112,7 @@ fn pasj_frontmatter() -> Result<()> {
       call.push(T_OTHER!("]"));
     }
     call.push(T_BEGIN!());
-    call.extend(pasj_author_list(&author.unlist()));
+    call.extend(pasj_author_list(&author.unlist())?);
     call.push(T_END!());
     Ok(Tokens::new(call))
   });
@@ -142,12 +153,20 @@ const PASJ_AUTHOR_MARKS: [(&str, bool, usize); 5] = [
 
 /// A PASJ author list as `\and`-separated names: it splits at depth-0 `,`, `\&`, `\and` and `\\` (with the `*` and a
 /// closed `[<skip>]` that follow it), gives a piece's leading marks (and math superscripts) back to the name before it,
-/// drops a piece's leading "and", and keeps no empty piece.
-fn pasj_author_list(toks: &[Token]) -> Vec<Token> {
+/// drops a piece's leading "and", and keeps no empty piece. The `\and`s: each written, as before (pasj00.cls:1878
+/// prints its own), and each held in a macro of the document's, which the separator query reads as the kernel's
+/// (`and_by_meaning`, Option C P2-5).
+fn pasj_author_list(toks: &[Token]) -> Result<Vec<Token>> {
+  let ands = and_runs(toks, &[T_CS!("\\and")])?.top_level(toks);
   let mut pieces: Vec<Vec<Token>> = vec![Vec::new()];
   let mut depth = 0usize;
   let mut i = 0;
   while i < toks.len() {
+    if let Some(end) = ands.get(&i) {
+      i = *end;
+      pieces.push(Vec::new());
+      continue;
+    }
     let t = toks[i];
     i += 1;
     match t.get_catcode() {
@@ -155,8 +174,7 @@ fn pasj_author_list(toks: &[Token]) -> Vec<Token> {
       Catcode::END => depth = depth.saturating_sub(1),
       _ => {},
     }
-    let separator = depth == 0
-      && (t == T_OTHER!(",") || t == T_CS!("\\&") || t == T_CS!("\\and") || t == T_CS!("\\\\"));
+    let separator = depth == 0 && (t == T_OTHER!(",") || t == T_CS!("\\&") || t == T_CS!("\\\\"));
     if !separator {
       pieces.last_mut().unwrap().push(t);
       continue;
@@ -199,7 +217,7 @@ fn pasj_author_list(toks: &[Token]) -> Vec<Token> {
     }
     list.extend(name);
   }
-  list
+  Ok(list)
 }
 
 /// The length of a piece's leading run of author marks (with their arguments), math superscripts (`$^{1}$`) and

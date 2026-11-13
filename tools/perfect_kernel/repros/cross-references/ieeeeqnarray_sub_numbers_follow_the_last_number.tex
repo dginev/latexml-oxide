@@ -1,0 +1,35 @@
+% witness: 2012.02697 (`\IEEEnonumber\IEEEyessubnumber*` rows: `eq:XHp`, `eq:Q2` PDF 11a, 11b; int72a a raw id and
+%          "13a", 79d r1 "13a" both); review rev79d finding 6 (probe rev79d/eq/p6)
+% oracle:  pdflatex 0 errors; "See 1, 1a, 1b, 2; 3a, 3b, 4, 4a; 5, 6, 5a, 6." (IEEEtrantools.sty:1408-1424
+%          `\@IEEEyessubnumber`: on a pre-advanced equation number it backs the number out, so the row is the last
+%          printed number's next sub-equation; :1426-1437 `\IEEEnosubnumber` makes a sub-equation row the next
+%          equation; a `\label` in an `\IEEEnonumber` row names the pre-advanced number, :2086-2112)
+% engines: rust int72a = "1, 2a, 3a, 4; 5a, 5b, 5, 5d; 6, the raw id S0.Ex1, 7a, 8"; 79d r1 the same but z1 "7a";
+%          Perl 0.8.8 29 errors (no IEEEtrantools binding; its IEEEtran.cls.ltxml:269-287 is the model int72a ported)
+% expect:  0 errors, 0 warnings; the equations' tags and labels as pdflatex's
+% status:  RED (79d r1) -> GREEN (79d r2)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{IEEEtrantools}
+\begin{document}
+\begin{IEEEeqnarray}{rCl}
+a &=& b \label{s1a}\\
+c &=& d \IEEEyessubnumber\label{s1b}\\
+e &=& f \IEEEyessubnumber\label{s1c}\\
+g &=& h \label{s1d}
+\end{IEEEeqnarray}
+\begin{IEEEeqnarray}{rCl}
+a &=& b \IEEEyesnumber\IEEEyessubnumber*\label{s2a}\\
+c &=& d \label{s2b}\\
+e &=& f \IEEEnosubnumber\label{s2c}\\
+g &=& h \label{s2d}
+\end{IEEEeqnarray}
+\begin{IEEEeqnarray}{rCl}
+a &=& b \label{s3a}\\
+c &=& d \label{z1}\IEEEnonumber\\
+e &=& f \IEEEyessubnumber\label{z2}\\
+g &=& h \label{s3d}
+\end{IEEEeqnarray}
+See \ref{s1a}, \ref{s1b}, \ref{s1c}, \ref{s1d}; \ref{s2a}, \ref{s2b}, \ref{s2c}, \ref{s2d}; \ref{s3a}, \ref{z1},
+\ref{z2}, \ref{s3d}.
+\end{document}

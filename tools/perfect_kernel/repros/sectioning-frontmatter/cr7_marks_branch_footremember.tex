@@ -1,0 +1,17 @@
+% mechanism: a declined block holding superscript marks takes Perl's marks branch (Base_Utility.pool.ltxml:694-712):
+%   lines cut at `@authoraffilsplits` (the kernel's, no " and ": `author_affil_splits`), a names line cut at its commas
+%   and " and ", a line led by a mark an affiliation (`\lx@affiliation@withsup`) the names' marks request
+% witness: 1404.5602 (`A. Arakelyan$^{1}$, … F. Robicheaux$^{2}$\footremember{*}{…}, and T.F. Gallagher$^{1}$`), 0809.5152
+% oracle:  pdflatex 0 errors: "Ann Able1 , Bob Baker2∗, and Cat Cole1", "1 Univ X, Dept Y", "2 Univ Z", "∗ Zebra note."
+% engines: rust int154u: 0 errors, 1 warning, one creator; perl 0 errors: the three below
+% expect:  0 errors, 1 warning; Ann (Univ X, Dept Y), Bob (his note, Univ Z), Cat (Univ X, Dept Y)
+% status:  RED (int154u) -> GREEN (perfect_kernel_batchcr7::a_declined_block_with_marks_takes_perls_marks_branch)
+\documentclass{article}
+\newcommand{\footremember}[2]{\footnote{#2}\newcounter{#1}\setcounter{#1}{\value{footnote}}}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$\footremember{zz}{Zebra note.}, and Cat Cole$^{1}$\\
+$^{1}$Univ X, Dept Y\\ $^{2}$Univ Z}
+\begin{document}
+\maketitle
+Body.
+\end{document}

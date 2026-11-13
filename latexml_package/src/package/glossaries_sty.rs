@@ -15,6 +15,25 @@ use crate::{
   prelude::*,
 };
 
+/// The State key of the glossary entries referenced so far (`\gls`, `\glsadd`; global).
+const GLO_REFERENCED: &str = "lx@glossaries@referenced";
+/// The State key set once a glossary is printed (`\printglossary`; global).
+const GLO_PRINTED: &str = "lx@glossaries@printed";
+
+/// The label an entry's held definition diagnostics answer to (logger.rs `defer_to_label`).
+fn glossary_entry_label(key: &str) -> String { s!("glossary:{key}") }
+
+/// An entry referenced (`\gls`, `\glsadd`): a glossary printed or yet to be prints its definition, whose held
+/// diagnostics are then raised (`\lx@glossaries@newentry`).
+fn glossary_entry_referenced(key: &str) -> Result<()> {
+  if lookup_bool(GLO_PRINTED) {
+    util::logger::note_label_use(&glossary_entry_label(key), "glossary");
+  } else {
+    push_value(GLO_REFERENCED, Stored::from(key.to_string()))?;
+  }
+  Ok(())
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Pre-define \@gls@removedoption BEFORE glossaries.sty raw-loads.
@@ -79,6 +98,11 @@ LoadDefinitions!({
   DefConstructor!("\\lx@glossaries@gls@link{} ExpandedSemiverbatim {}",
     "<ltx:glossaryref inlist='#list' key='#2'>#3</ltx:glossaryref>",
     enter_horizontal => true,
+    after_digest => sub[whatsit] {
+      if let Some(key) = whatsit.get_arg(2) {
+        glossary_entry_referenced(&key.to_string())?;
+      }
+    },
     properties => sub[args] {
       // Perl: $list = ToString($_[1]); $list = 'main' unless $_[1];
       let list = args[0].as_ref().map(|t| t.to_string()).unwrap_or_default();
@@ -126,10 +150,11 @@ LoadDefinitions!({
   // The location-only reference. Digested in math (a `\gls` or `\glsadd` in a
   // formula), it goes where a `^` float puts an element: the nearest enclosing
   // level that admits it, after the formula (the `p` of inline math). A display
-  // formula has no such level (`ltx:equation` admits no inline element), so there
-  // none is made, rather than an `XMText` in the formula: an entry named only in
-  // display math is not listed (SYNC_STATUS). It reverts to nothing, so the
-  // formula's `tex=` is the term's.
+  // formula's `ltx:equation` admits no bare inline element but admits `ltx:text`,
+  // so there the reference goes in a `ltx:text` of the equation, after the formula,
+  // rather than an `XMText` in it; an entry named only in display math was not
+  // listed (silent-loss inventory #20). It reverts to nothing, so the formula's
+  // `tex=` is the term's.
   DefConstructor!("\\lx@glossaries@glsadd{} ExpandedSemiverbatim",
     sub[document, args, props] {
       let key = args[1].as_ref().map(|d| d.to_string()).unwrap_or_default();
@@ -139,6 +164,11 @@ LoadDefinitions!({
         if let Some(save) = document.float_to_element("ltx:glossaryref", false)? {
           document.insert_element("ltx:glossaryref", Vec::new(), Some(attrs))?;
           document.set_node(&save);
+        } else if let Some(save) = document.float_to_element("ltx:text", false)? {
+          document.open_element("ltx:text", None, None)?;
+          document.insert_element("ltx:glossaryref", Vec::new(), Some(attrs))?;
+          document.close_element("ltx:text")?;
+          document.set_node(&save);
         }
       } else {
         document.insert_element("ltx:glossaryref", Vec::new(), Some(attrs))?;
@@ -146,6 +176,11 @@ LoadDefinitions!({
     },
     enter_horizontal => true,
     reversion => "",
+    after_digest => sub[whatsit] {
+      if let Some(key) = whatsit.get_arg(2) {
+        glossary_entry_referenced(&key.to_string())?;
+      }
+    },
     properties => sub[args] {
       let list = args[0].as_ref().map(|t| t.to_string()).unwrap_or_default();
       let list = if list.is_empty() { "main".to_string() } else { list };
@@ -280,7 +315,34 @@ LoadDefinitions!({
   // `<ltx:glossaryphrase>` per non-empty value (matches Perl's
   // `if ToString($value)` guard).
   // Arg 2, the label `\glslabel`, is ExpandedSemiverbatim (see `\lx@glossaries@gls@link`).
-  DefConstructor!("\\lx@glossaries@newentry{} ExpandedSemiverbatim RequiredKeyVals",
+  // An entry's fields are its stored data, which LaTeX typesets only where the entry is used — in a glossary
+  // `\printglossary` prints, at a `\gls` (glossaries.sty:2341-2346 stores them by `\def`). The
+  // definition is digested here for the glossary list the post-processor builds from it, so the diagnostics of that
+  // digest are held (logger.rs `DiagnosticsHold::defer`) and raised only once a printed glossary holds the entry: a
+  // referenced entry (`glossary_entry_referenced`) and a `\printglossary` (`\lx@printglossary`). An entry never used
+  // raises nothing, as in pdflatex (2104.09252: `name={$J_p_p$}` unused, a "Double subscript" Error; Perl shares it,
+  // KNOWN_PERL_ERRORS #1093; OXIDIZED_DESIGN_DIVERGENCES #859). A use itself typesets the field from its macros and errs there, as pdflatex does.
+  // Repro index-bib/unused_glossary_entry_raises_nothing.
+  DefPrimitive!("\\lx@glossaries@newentry{}{}{}", sub[(list, key, keyvals)] {
+    let key_text = Expand!(key.clone()).to_string();
+    let mut call = vec![T_CS!("\\lx@glossaries@newentry@"), T_BEGIN!()];
+    call.extend(list.unlist());
+    call.extend([T_END!(), T_BEGIN!()]);
+    call.extend(key.unlist());
+    call.extend([T_END!(), T_BEGIN!()]);
+    call.extend(keyvals.unlist());
+    call.push(T_END!());
+    let hold = util::logger::DiagnosticsHold::begin();
+    let digested = digest(Tokens::new(call));
+    if hold.errors_raised() + hold.warnings_raised() == 0 {
+      hold.commit();
+    } else if let Some(deferred) = hold.defer() {
+      let id = util::logger::keep_deferred(deferred);
+      util::logger::defer_to_label(&glossary_entry_label(&key_text), "glossary", id);
+    }
+    Ok(vec![digested?])
+  });
+  DefConstructor!("\\lx@glossaries@newentry@{} ExpandedSemiverbatim RequiredKeyVals",
     sub[document, args, _props] {
       let list = args[0].as_ref().map(|d| d.to_string()).unwrap_or_else(|| "main".to_string());
       let key  = args[1].as_ref().map(|d| d.to_string()).unwrap_or_default();
@@ -325,7 +387,21 @@ LoadDefinitions!({
           }
         }
       document.close_element("ltx:glossarydefinition")?;
-    }
+    },
+    // The fields are the entry's stored data, which LaTeX typesets only where the entry is used (`\gls`, the glossary
+    // `\printglossary` prints): an `&` in one (`\newacronym{cisa}{CISA}{Cybersecurity & Infrastructure Security
+    // Agency}`, never used, 2602.09131) is no alignment tab here but the character, as in an index entry
+    // (sect11.rs `\@index`; ruling 2026-10-10 on stored metadata, OXIDIZED_DESIGN_DIVERGENCES #679). A use still
+    // typesets the field from its macros: `\gls{cisa}` errs as pdflatex does. Perl digests them as text (KNOWN_PERL_ERRORS
+    // #892). Guard `perfect_kernel_batch69a::glossary_entry_ampersand_is_stored_text`.
+    before_digest => {
+      Let!(T_ALIGN!(), T_CS!("\\&"));
+      increment_align_group_count();
+    },
+    after_digest => {
+      decrement_align_group_count();
+    },
+    bounded => true
   );
 
   //======================================================================
@@ -371,6 +447,13 @@ LoadDefinitions!({
     after_digest => sub[whatsit] {
       // Perl L114: noteBackmatterElement(<whatsit>, 'ltx:glossary');
       note_backmatter_element(whatsit, "ltx:glossary");
+      // the entries referenced so far (and every later one) are printed: their definitions' held diagnostics are raised
+      if !lookup_bool(GLO_PRINTED) {
+        assign_value(GLO_PRINTED, true, Some(Scope::Global));
+        for key in lookup_vecdeque(GLO_REFERENCED).unwrap_or_default() {
+          util::logger::note_label_use(&glossary_entry_label(&key.to_string()), "glossary");
+        }
+      }
     },
     before_construct => sub[doc, whatsit] {
       // Perl L117: adjustBackmatterElement($_[0], $_[1]);

@@ -1,0 +1,22 @@
+% mechanism: an unknown class (OmniBus, the fallback's guess, `OmniBus:fallback`): the real class's title page is
+%   unknown, so a lost word only a tail a document appends to `\@author` prints is reported as annotated, an Info, beside
+%   the missing class's Warning (brief FX27; FX27b keeps it: `ledger::author_tail_unprinted`). `\subjclass` autoloads
+%   ams_support.sty, whose `\author` then owns the block (FX26b's lesson): the keying is the document class, not the
+%   binding
+% witness: synthetic (revFX26's p5)
+% oracle:  none: the class does not exist (pdflatex stops at the missing nosuchclass.cls)
+% engines: int159a (`latexml_oxide.int159a-rel`): 0 errors, 2 warnings (the missing class, "bob"); Alice A. FX27,
+%   FX27b: 0 errors, 1 warning (the missing class), Info "The title page annotates 1 word(s) that its output does not
+%   hold: bob"; Alice A; perl not run
+% expect:  0 errors, 1 warning (missing_file); one creator Alice A; "bob" an Info (annotated)
+% status:  GREEN (FX27b; guard perfect_kernel_batchfx24::an_author_tail_the_title_page_does_not_print_is_not_read)
+% preload: ar5iv.sty
+\documentclass{nosuchclass}
+\subjclass{11A01}
+\title{A Title}
+\author{Alice A}
+\makeatletter\g@addto@macro\@author{\and Bob B}\makeatother
+\begin{document}
+\maketitle
+Body.
+\end{document}

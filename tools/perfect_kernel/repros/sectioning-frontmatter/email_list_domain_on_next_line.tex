@@ -1,0 +1,32 @@
+% Sibling of email_list_split_unspelled_entry_glued.tex: the `\{…\}@domain` list's domain set on the line after its
+%   closing brace (`\texttt{\{ann.able,xq.zz,cy.coe\}}\\ \texttt{@alpha.edu}`), the break inside the one typewriter wrapper
+%   between the brace and the `@`. Read as the one list, its domain going on with no space (`insert::domain_goes_on`):
+%   each spelled address its author's, `xq.zz@` Bo Baker's by the authors' order (three addresses for three authors, the
+%   spelled ones at their places: OXIDIZED_DESIGN_DIVERGENCES #805, #970).
+% witness: 1902.04228 (`{majid,alistair.shilton,santu.rana,sunil.gupta,svetha.venkatesh}` / `@deakin.edu.au`, glued into
+%   every author's Deakin affiliation)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "{ann.able,xq.zz,cy.coe}" / "@alpha.edu" under the two
+%   affiliations
+% engines: rust int138a: both lines glued into Cy Coe's affiliation, 0 warnings
+% expect:  0 errors, 0 warnings; ann.able@ on Ann Able, xq.zz@ on Bo Baker, cy.coe@ on Cy Coe
+% status:  RED (int138a) -> GREEN (107a)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[T1]{fontenc}
+\title{A Title}
+\author{%
+  Ann Able$^{1}$ \\
+  \and
+  Bo Baker$^{1}$ \\
+  \and
+  Cy Coe$^{2}$ \\
+  \and
+ {\normalfont $^1$University of Alpha} \\
+ {\normalfont $^2$Department of Physics, University of Beta} \\
+ \texttt{\{ann.able,xq.zz,cy.coe\}}\\
+ \texttt{@alpha.edu}
+}
+\begin{document}
+\maketitle
+Text.
+\end{document}

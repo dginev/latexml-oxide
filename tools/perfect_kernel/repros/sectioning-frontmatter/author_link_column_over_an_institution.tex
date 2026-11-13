@@ -1,0 +1,14 @@
+% witness: the rev77y2 re-review (finding 3, probes l1, l3)
+% oracle:  pdflatex 0 errors: two \and columns: Ann Able over Univ A; a "Hugging Face Demo" link over Univ B
+% engines: rust 77y r2 = 0 errors; a creator "Hugging Face Demo" with Univ B (int38b the same)
+% expect:  0 errors, 0 warnings; one author, Ann Able with Univ A; the link a URL contact and Univ B an affiliation of
+%          the shared creator
+% status:  RED (77y r2) -> GREEN (77y r3)
+\documentclass{article}
+\usepackage{hyperref}
+\title{T}
+\author{Ann Able \\ Univ A \and \href{https://x.org/hf}{Hugging Face Demo} \\ Univ B}
+\begin{document}
+\maketitle
+Text.
+\end{document}

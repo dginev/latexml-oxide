@@ -1,0 +1,34 @@
+% witness: none in the census (no paper of the 610 cpc-hepnp and 12 just users calls `\emails`); just.cls:107-109
+%          (`\emails{x}`, the "n) E-mail: x" footnote set where it is called, here after `\maketitle`)
+% oracle:  pdflatex 0 errors: "Ann Able", "Center for Theory, Univ A, Town, Country" under it, the footnote
+%          "1)0 E-mail: ann@x.org" at the foot of the page (0 the stand-in's footnote mark); inside `\author`
+%          pdflatex loses it (a `\footnotetext` in the title tabular is an insert in an inner box)
+% engines: rust int119a = 0 errors, 0 warnings: the e-mail a body footnote, the address a body paragraph
+% expect:  0 errors, 0 warnings; the one creator with the address and the e-mail, labelled as the class prints it
+% status:  RED (int119a) -> GREEN (91a r2)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{just.cls}
+\ProvidesClass{cpc-hepnp}
+\LoadClass{article}
+\newcounter{email}
+\setcounter{email}{1}
+\newcommand{\email}[1]{\protected@xdef\@thanks{\@thanks
+  \protect\footnotetext[0]{\hspace*{-8pt}\arabic{email})\,{E-mail:\,}#1}}\stepcounter{email}}
+\newcommand{\emails}[1]{\footnotetext[0]{\hspace*{-8pt}\arabic{email})\,{E-mail:\,}#1}\stepcounter{email}}
+\renewcommand\maketitle{\par\begingroup\newpage\@maketitle\@thanks\endgroup
+  \setcounter{footnote}{0}\global\let\thanks\relax\global\let\maketitle\relax
+  \global\let\@maketitle\relax\global\let\@thanks\@empty\global\let\@author\@empty\global\let\@title\@empty}
+\renewcommand\@maketitle{\begin{center}\let\footnote\thanks{\Large\bf\@title\par}%
+  {\normalsize\lineskip .5em\vskip 4mm\begin{tabular}[t]{c}\normalsize\@author\end{tabular}}\end{center}}
+\newcommand{\address}[1]{\vspace*{0mm}
+  \begin{center}\vskip -5mm\begin{center}{\footnotesize #1}\end{center}\end{center}}
+\end{filecontents*}
+\documentclass{just}
+\begin{document}
+\title{A Title}
+\author{Ann Able}
+\maketitle
+\address{Center for Theory, Univ A, Town, Country}
+\emails{ann@x.org}
+Body.
+\end{document}

@@ -58,12 +58,23 @@ pub(crate) fn load() -> Result<()> {
   // `\par` (tex.web §392): `tex_declared` for the starred forms with arguments — here and in `\DeclareRobustCommand`,
   // `\newenvironment`, `\renewenvironment` below. The unstarred ones stay unchecked (their `\long`, latex.ltx:1281, is
   // not recorded, as in Perl). Witness 1001.1670; guards `scanner_status::a_starred_*`.
-  DefPrimitive!("\\newcommand OptionalMatch:* SkipSpaces DefToken [Number][]{}",
+  DefPrimitive!("\\newcommand OptionalMatch:* SkipSpaces LaTeXDefToken [Number][]{}",
   sub[(star,cs_token,nargs,opt,body)] {
     let nargs = nargs.value_of() as usize;
     let (definable, plain_origin) = is_definable_latex(&cs_token)?;
+    // (a stand-in's copy declares a text default LaTeXML predefined, which the real class defines itself:
+    // `state::copy_provides_text_default_yields`)
+    let definable = definable || copy_provides_text_default_yields(&cs_token);
     if !definable {
-      if !has_value(&s!("{}:locked", cs_token.to_string())) { // not locked, inform.
+      note_copy_provides_title_page(&cs_token, &body);
+      if has_value(&s!("{}:locked", cs_token.to_string())) && copy_provides_refuses_locked(&cs_token) {
+        // (a stand-in's copy takes nothing over: `state::copy_provides_refuses_locked`)
+      } else if copy_provides_text_default_clashes(&cs_token) {
+        // (a stand-in's copy declares a name its base class has: LaTeX's error, the definition kept —
+        // `state::copy_provides_text_default_clashes`)
+        let message = s!("Command {} already defined", cs_token.to_string());
+        Error!("latex", "already_defined", message);
+      } else if !has_value(&s!("{}:locked", cs_token.to_string())) { // not locked, inform.
         let message = s!("Ignoring redefinition (\\newcommand) of {}", cs_token.stringify());
         Info!("ignore", cs_token, message);
       } else {
@@ -163,6 +174,9 @@ pub(crate) fn load() -> Result<()> {
       define_optional_internal(&inner, nargs, &body, star.is_some())?;
     }
     let cs_args = convert_latex_args(nargs, opt)?;
+    // (a stand-in's copy's `\DeclareRobustCommand\maketitle`, as its `\renewcommand`: its title page's body, not the
+    // robust wrapper's `\protect\maketitle␣`, `copy_title_page_prints`)
+    note_copy_provides_title_page(&cs, &body);
     // latex.ltx `\DeclareRobustCommand` → `\@star@or@long`: starred, the inner `\cs␣` is not `\long`.
     DefMacro!(cs, cs_args, body, robust => true, tex_declared => { star.is_some() && nargs > 0 });
   });
@@ -282,6 +296,19 @@ pub(crate) fn load() -> Result<()> {
 
   // #------------------------------------------------------------
 
+  // The body of a text symbol declared in an encoding that has no font map (below): the glyph is unknown, so the
+  // symbol prints nothing, and says so once per symbol, naming the encoding.
+  // An encoding with a map whose slot holds no character (tipa's T3 `\texthooktop`, slot 35: t3_fontmap.rs) says that.
+  DefMacro!("\\lx@unmapped@text@symbol{}{}", sub[(encoding, cs)] {
+    let encoding = encoding.to_string();
+    let cs = cs.to_string();
+    if !already_reported(&s!("unmapped_text_symbol_{encoding}{cs}")) {
+      let reason = if load_font_map(&encoding).is_none() { "has no font map" } else { "has no Unicode glyph for it" };
+      Warn!("missing_font_encoding", encoding,
+        s!("Font encoding {encoding} {reason}: the text symbol {cs} has no glyph and is dropped"));
+    }
+    Tokens!()
+  });
   DefPrimitive!("\\DeclareTextSymbol DefToken {}{Number}", sub[(cs, encoding, code)] {
     // Perl `latex_constructs.pool.ltxml:2671-2682`:
     //   if (isDefinableLaTeX($cs)) {
@@ -323,7 +350,9 @@ pub(crate) fn load() -> Result<()> {
     // with `decode` silently dropped the second character: T2B slot 128 came
     // out as `Ӷ` (U+04F6) instead of `Ӷ̶` (U+04F6 U+0336), i.e. a DIFFERENT
     // letter with its stroke removed, where Perl keeps the pair.
-    if let Some(replacement_value) = decode_slot(code.value_of(), &encoding_str) {
+    if let Some(replacement_value) = decode_slot(code.value_of(), &encoding_str)
+      .map(|decoded| cyrillic_letter_in_latin_slot(&cs_str, decoded))
+    {
       // Encoding-specific carries the actual glyph.
       def_primitive(ecs, None, Some(PrimitiveBody::String(replacement_value)),
         PrimitiveOptions::default())?;
@@ -333,7 +362,17 @@ pub(crate) fn load() -> Result<()> {
     } else if IsDefinable!(&ecs) {
       // Can't decode: install no-op fallback so downstream chains find
       // *something* to resolve to. Witness arXiv:1802.05444 / tipa T3.
-      DefMacro!(ecs, None, Tokens!());
+      // The symbol is lost where it is used — in an encoding with no font map
+      // at all, or at a slot its map has no character for (tipa's T3 hooktop,
+      // slot 35) — and says so, naming the encoding (`\lx@unmapped@text@symbol`;
+      // X2's `\cyrje` vanished silently before the X2 map, 77s). A Token body,
+      // not a closure, so a format dump keeps it.
+      let mut body = vec![T_CS!("\\lx@unmapped@text@symbol"), T_BEGIN!()];
+      body.extend(Explode!(&encoding_str));
+      body.extend([T_END!(), T_BEGIN!()]);
+      body.extend(Explode!(&cs_str));
+      body.push(T_END!());
+      DefMacro!(ecs, None, Tokens::new(body));
     }
     // Bare `\cs` always becomes a dispatch chain (matches Perl).
     if IsDefinable!(&cs) {
@@ -387,8 +426,12 @@ pub(crate) fn load() -> Result<()> {
   // each use: its slot is read here only to find the combining mark, and
   // nothing of it comes back as input (pd1supp.def:5-6 `{\texthookabove}`,
   // `{\textdotbelow}`: amsldoc-vi, OXIDIZED_DESIGN #317).
+  // A bare command that is already an encoding dispatcher — this handler's own, from another encoding's file — still
+  // gets this encoding's command, as latex.ltx's `\DeclareTextCommand` always defines it: x2enc.def's `\U` came first,
+  // so ot2enc.def:47 `\DeclareTextAccent{\U}{OT2}{36}` defined nothing and `\U{i}` (й, its composite at :156) printed
+  // и. Guard `perfect_kernel_batch77u::second_encoding_accent_composes`.
   DefPrimitive!("\\DeclareTextAccent DefToken {}{}", sub[(cs, encoding, code)] {
-    if IsDefined!(&cs) {
+    if IsDefined!(&cs) && !is_encoding_dispatcher(&cs)? {
       return Ok(vec![]);
     }
     let (code, _stored_with_the_command) = read_braced(Tokens::new(code.revert()), read_number)?;
@@ -417,9 +460,15 @@ pub(crate) fn load() -> Result<()> {
       "\u{1FC1}" => Some("\u{0308}\u{0342}"), // dialytika perispomeni
       "\u{02D8}" => Some("\u{0306}"),          // vrachy (breve)
       "\u{00AF}" => Some("\u{0304}"),          // macron
+      "\u{2036}" => Some("\u{030F}"),          // double grave (T2A/X2 `\C`, slot 19: t2aenc.def, x2enc.def)
       _ => None,
     };
-    let combining: Option<String> = combining.map(str::to_owned).or_else(|| {
+    // A slot whose glyph is itself a combining mark (T4's `\G` 159, `\U` 188, `\I` 191: fc.rme Appendix D) decodes
+    // as the mark on a no-break space (`decode_str`): the mark is the accent.
+    let marked = standalone
+      .strip_prefix('\u{00A0}')
+      .filter(|marks| !marks.is_empty() && marks.chars().all(font::is_combining_mark));
+    let combining: Option<String> = combining.or(marked).map(str::to_owned).or_else(|| {
       lookup_mapping("accent_combiner_above", &standalone)
         .or_else(|| lookup_mapping("accent_combiner_below", &standalone))
         .map(|v| v.to_string())
@@ -436,7 +485,13 @@ pub(crate) fn load() -> Result<()> {
     def_macro(ecs, parse_parameters("{}", &ecs, true)?, ExpansionBody::Tokens(body), None)?;
     def_text_command_dispatcher(&cs, &cs_str, false)?;
   }, locked => true);
-  DefPrimitive!("\\DeclareTextAccentDefault{}{}", None, locked => true);
+  // latex.ltx:9985-9986: the default of a text accent is the accent of its encoding, `\?\cs` →
+  // `\UseTextAccent{<enc>}\cs` (Perl latex_base.pool.ltxml:361-362 ignores it, so `\?\cs` stayed undefined and an
+  // encoding's accent used in another — tipa.sty:289 `\DeclareTextAccentDefault\textsubring{T3}`, `\textsubring{n}` in
+  // T1 text — printed the bare letter: n where pdflatex sets n̥). OXIDIZED_DESIGN_DIVERGENCES #781; guard
+  // `perfect_kernel_batch77x::t3_accent_outside_t3_text`.
+  DefMacro!("\\DeclareTextAccentDefault{}{}", "\\DeclareTextCommandDefault#1{\\UseTextAccent{#2}#1}",
+    locked => true);
 
   // TL2023+ kernel per-codepoint case-mapping declarations (ltmiscen:
   // `\DeclareUppercaseMapping{"0390}{\accdialytikatonos{\textiota}}` etc.)
@@ -458,10 +513,10 @@ pub(crate) fn load() -> Result<()> {
   // read as two arguments, polyglossia's `\DeclareUppercaseMapping[la-x-classic]
   // {`u}{V}` (gloss-latin.ldf:41-50; babel-latin latin.ldf:110-123) typeset
   // "a-x-classic]‘uV" eight times before the text (RUST-ONLY; Perl runs the
-  // dumped kernel definition).
-  DefPrimitive!("\\DeclareUppercaseMapping[]{}{}", None, locked => true);
-  DefPrimitive!("\\DeclareLowercaseMapping[]{}{}", None, locked => true);
-  DefPrimitive!("\\DeclareTitlecaseMapping[]{}{}", None, locked => true);
+  // dumped kernel definition). No box, as the kernel's macros leave none.
+  DefPrimitive!("\\DeclareUppercaseMapping[]{}{}", {}, locked => true);
+  DefPrimitive!("\\DeclareLowercaseMapping[]{}{}", {}, locked => true);
+  DefPrimitive!("\\DeclareTitlecaseMapping[]{}{}", {}, locked => true);
 
   // Robust as latex.ltx:10490 declares it (Perl latex_constructs.pool.ltxml:2637
   // a plain macro); see the NFSS switches in sect13.
@@ -493,15 +548,19 @@ pub(crate) fn load() -> Result<()> {
   // `beginSemiverbatim`), not None, so the OT1 fallback never triggers; that
   // loop reproduces in Perl too (see docs/parity/KNOWN_PERL_ERRORS.md, "text-symbol
   // CS in a Semiverbatim option").
+  // After `\fontencoding` of an encoding without a map, which the font decodes as OT1 (`\lx@fontencoding`,
+  // tex_fonts.rs), the encoding named: latex.ltx:10490 `\fontencoding` sets `\f@encoding` to its argument, and
+  // `\try@load@fontshape` reads it (`\fontencoding{U}\fontfamily{msa}`, amsart.cls:380; OXIDIZED_DESIGN_DIVERGENCES
+  // #645). Only while the font is still OT1: a later switch to a mapped encoding says that one.
   DefMacro!("\\f@encoding", {
-    ExplodeText!(
-      LookupFont!()
-        .map(|f| f
-          .get_encoding()
-          .map(|e| e.to_string())
-          .unwrap_or_else(|| "OT1".to_string()))
-        .unwrap_or_default()
-    )
+    let encoding = LookupFont!()
+      .map(|f| f
+        .get_encoding()
+        .map(|e| e.to_string())
+        .unwrap_or_else(|| "OT1".to_string()))
+      .unwrap_or_default();
+    let unmapped = lookup_string_from_sym(pin!("lx@fontencoding@unmapped"));
+    ExplodeText!(if encoding == "OT1" && !unmapped.is_empty() { unmapped } else { encoding })
   });
   DefMacro!("\\cf@encoding", {
     ExplodeText!(
@@ -669,7 +728,56 @@ pub(crate) fn load() -> Result<()> {
       },
     }
   });
-  DefMacro!("\\UseTextAccent{}{}", "{\\fontencoding{#1}#2{#3}}");
+  // latex.ltx:9958-9965 `\DeclareRobustCommand*\UseTextAccent[3]`: the accent is set in its encoding and its argument
+  // back in the one it was called in (`\@curr@enc`), so a T3 accent on a T1 letter keeps the letter (`g` is ɡ in T3).
+  // Robust as there: an alignment's look-ahead for `\omit` stops at it, so `\!` at the start of an align cell after
+  // tipa.sty:429-458 (amsmath loaded before tipa) is read in the cell's formula. The encoding's own command is called
+  // directly, as `\UseTextSymbol` above does: an encoding without it (`\DeclareTextAccentDefault{\figurecircled}
+  // {MDB}`, mathdesign.sty:214, with no MDB command) would re-enter the dispatcher, so the argument is set alone. In
+  // math the argument is set alone too: tipa's `\;` `\!` `\:` in a formula (`$a\;b\!c\:d$` with tipa.sty and no
+  // amsmath: pdflatex "abcd", no retroflex ɖ); an accent proper in a formula loses its mark (`$\textsubring{n}$` is n,
+  // pdflatex n̥ with "invalid in math mode"). The argument (#3) is undelimited: an `&`, `$`, `}`, `\end` or, in an
+  // alignment, a row end after the accent would be read as it — pdflatex errs, and the cell, formula or group it ends
+  // is lost (tipa's `\!\! &` with amsmath loaded before tipa) — so the accent takes no argument there, sets the accent
+  // alone (`\T3\!{}` nothing) and says so. Perl latex_constructs.pool.ltxml:2643 reads two arguments and substitutes a
+  // third (KNOWN_PERL_ERRORS #1004). Guards `perfect_kernel_batch77x::t3_accent_outside_t3_text`,
+  // `t3_tipa_after_amsmath_accent_at_boundary`.
+  DefMacro!("\\UseTextAccent{}{}", sub[(enc, cs)] {
+    let enc_str = Expand!(enc).to_string();
+    let cs_str = cs.to_string();
+    let ecs = T_CS!(s!("\\{enc_str}{cs_str}"));
+    let arg = match read_non_space()? {
+      Some(token) if ends_accent_argument(&token) => {
+        // Once per accent and token: a binding's own group can close after a name (2609.13770's `\crefname{section}
+        // {\S\!}{…}`, 76 times).
+        if !already_reported(&s!("accent_without_argument_{enc_str}{cs_str}{token}")) {
+          Warn!("expected", "argument",
+            s!("The text accent {cs_str} of encoding {enc_str} has no argument before {token}: it is set alone \
+                (latex.ltx \\UseTextAccent would read the {token} as its argument)"));
+        }
+        unread_one(token);
+        Tokens!()
+      },
+      Some(token) => {
+        unread_one(token);
+        read_arg(ExpansionLevel::Off)?
+      },
+      None => Tokens!(),
+    };
+    if lookup_bool("IN_MATH") || lookup_definition(&ecs)?.is_none() {
+      return Ok(arg);
+    }
+    let mut toks = vec![
+      T_BEGIN!(), T_CS!("\\edef"), T_CS!("\\@curr@enc"), T_BEGIN!(), T_CS!("\\cf@encoding"), T_END!(),
+      T_CS!("\\fontencoding"), T_BEGIN!(),
+    ];
+    toks.extend(Explode!(enc_str));
+    toks.extend([T_END!(), T_CS!("\\selectfont"), ecs, T_BEGIN!(), T_CS!("\\fontencoding"), T_BEGIN!(),
+      T_CS!("\\@curr@enc"), T_END!(), T_CS!("\\selectfont")]);
+    toks.extend(arg.unlist());
+    toks.extend([T_END!(), T_END!()]);
+    Ok(Tokens::new(toks))
+  }, robust => true);
 
   // Perl: DefPrimitive('\DeclareMathAccent DefToken {}{} {Number}', ...)
   // latex_constructs.pool.ltxml:2702-2709. Perl always calls DefMathI even
@@ -678,25 +786,57 @@ pub(crate) fn load() -> Result<()> {
   // is None — that left the CS undefined for unknown encodings (e.g.
   // `\DeclareMathAccent{\widecheck}{\mathalpha}{mathx}{"71}` with no
   // mathx font map → \widecheck undefined → 1806.02506-style 1-error
-  // cluster). Mirror Perl: always install, fall back to empty presentation.
-  DefPrimitive!("\\DeclareMathAccent DefToken {}{} {Number}",
+  // cluster). Mirror Perl: always install; an undecodable accent is U+FFFD where Perl's is empty (#27), but a kernel
+  // accent's name, or an accent name LaTeXML's own package bindings agree on, in a declared font, gives LaTeXML's own
+  // token for it at any slot (`reference_accent`; newtxsf's `\hat` in `U/ntxsfmia` at 223, 2106.08363; mathabx.dcl's
+  // `\widecheck` in `U/mathx` "71, 2607.15091). Guards `perfect_kernel_batch89c::kernel_accent_decodes_by_its_name`,
+  // `perfect_kernel_batch89d::package_accent_decodes_by_its_name`.
+  // The symbol font is read `Expanded`, as latex.ltx:13430 resolves it through `\csname sym#3\endcsname`
+  // (`symbol_font_name_expands`, below).
+  DefPrimitive!("\\DeclareMathAccent DefToken {} Expanded {Number}",
   sub[(cs, kind, class, code)] {
-    let class_str = class.to_string();
-    let encoding = lookup_value(&s!("fontdeclaration@{}", class_str))
-      .and_then(|v| {
-        if let Stored::Font(ref f) = v {
-          f.get_encoding().map(|e| e.to_string())
-        } else {
-          None
-        }
-      })
-      .unwrap_or(class_str);
-    let (glyph, _font) = font_decode(code.value_of() as i32, Some(&encoding), None);
-    let presentation = glyph.map(|c| c.to_string()).unwrap_or_default();
+    let class_str = nfss_name(&class);
+    let decl_font = match lookup_value(&s!("fontdeclaration@{}", class_str)) {
+      Some(Stored::Font(font)) => Some(font),
+      _ => None,
+    };
+    let encoding = decl_font
+      .as_ref()
+      .and_then(|font| font.get_encoding().map(|e| e.to_string()))
+      .unwrap_or_else(|| class_str.clone());
+    // Decoded with the declared font, as `\DeclareMathSymbol` is: its family selects a per-family map (`U_msa`).
+    let (glyph, _font) = font_decode(code.value_of() as i32, Some(&encoding), decl_font.clone());
+    // Undecoded in a declared font with no font map, a kernel or package accent is the token LaTeXML's own binding
+    // makes of its name, at whatever slot (`reference_accent`). A mapped font says what its slots hold, an accent or not, so its
+    // empty slot stays U+FFFD with the font's Warning (`U/eur`'s "7E, a slot eurm10 lacks: pdflatex "Missing
+    // character").
+    let reference = if glyph.is_none()
+      && decl_font.is_some()
+      && !symbol_font_has_map(&encoding, decl_font.as_ref())
+    {
+      reference_accent(&cs)
+    } else {
+      None
+    };
+    // Undecodable, the accent is U+FFFD (Perl: empty), and printed, its symbol font says so once
+    // (`undecodable_math_slot`, OXIDIZED_DESIGN_DIVERGENCES #27).
+    let (presentation, report) = match (glyph, &reference) {
+      (Some(glyph), _) => (glyph.to_string(), None),
+      (None, Some(reference)) => (reference.glyph.to_string(), None),
+      (None, None) =>
+        undecodable_math_slot(&class_str, &encoding, decl_font.as_ref(), &cs, code.value_of(), "accent"),
+    };
     let paramlist = parse_parameters("Digested", &cs, true)?;
-    let opts = MathPrimitiveOptions{
+    let mut opts = MathPrimitiveOptions{
       operator_role: Some("OVERACCENT".to_string()),
+      absorb_warning: report,
       ..Default::default()};
+    if let Some(reference) = reference {
+      opts.operator_role = reference.role.map(String::from).or(opts.operator_role);
+      opts.meaning = reference.meaning.map(String::from);
+      opts.name = Some(reference.name.to_string());
+      opts.operator_stretchy = reference.stretchy;
+    }
     def_math(cs, paramlist, presentation, opts)?;
     // Perl: return AddToPreamble('\DeclareMathAccent', $cs, $kind, $class, $code);
     // AddToPreamble returns Digest(Invocation(\lx@add@Preamble@PI, Invocation(\DeclareMathAccent, ...)))
@@ -714,9 +854,21 @@ pub(crate) fn load() -> Result<()> {
   // my $symboltype_roles = { '\mathord' => 'ID', '\mathop' => 'BIGOP', '\mathbin' => 'BINOP',
   //   '\mathrel' => 'RELOP', '\mathopen' => 'OPEN', '\mathclose' => 'CLOSE', '\mathpunct' => 'PUNCT' };
   // locked: prevents raw TeX dump from overriding with version that errors on redefinition
-  DefPrimitive!("\\DeclareMathSymbol DefToken SkipSpaces DefToken {}{Number}",
+  //
+  // The symbol font is read `Expanded`: latex.ltx:13480 resolves it through `\csname sym#3\endcsname`, and so do
+  // `\DeclareMathAccent` (:13430), `\DeclareSymbolFont` (:13138, with `\csname#2/#3/#4/#5\endcsname`) and
+  // `\DeclareSymbolFontAlphabet@` (:13725). mathdesign declares `{\MD@greek@family upright}` (mdbch.sty:157/261,
+  // `\MD@greek@family` = `letters`, mathdesign.sty:135): read as written, the name found no declaration and its
+  // glyphs were lost (witnesses 1808.08390, 1910.04228, 1108.1913). Perl reads it unexpanded (pool:2699,
+  // KNOWN_PERL_ERRORS #1201). When the declared font decodes nothing, a symbol declared at its reference slot is the
+  // token LaTeXML's own binding makes of the name (`reference_symbol`, `reference_glyph`).
+  // OXIDIZED_DESIGN_DIVERGENCES #910. Guards `perfect_kernel_batch89a::symbol_font_name_expands`,
+  // `kernel_and_ams_names_at_their_reference_slots`, `font_packages_get_the_bindings_symbols`,
+  // `kernel_name_at_another_slot_stays_undecoded`.
+  DefPrimitive!("\\DeclareMathSymbol DefToken SkipSpaces DefToken Expanded {Number}",
   sub[(cs, sym_type, fontkind, code)] {
-    let mut encoding = fontkind.to_string();
+    let font_name = nfss_name(&fontkind);
+    let mut encoding = font_name.clone();
     // Decode with the DECLARED symbol font (Perl FontDecode takes the font):
     // its family selects the per-family map (`U_msa_fontmap`, u_fontmap.rs).
     let mut decl_font: Option<Rc<Font>> = None;
@@ -726,7 +878,23 @@ pub(crate) fn load() -> Result<()> {
       }
       decl_font = Some(decl.clone());
     }
-    let (glyph, _font) = font_decode(code.value_of() as i32, Some(&encoding), decl_font);
+    let math_italic = encoding == "OML"
+      && decl_font
+        .as_ref()
+        .and_then(|font| font.get_shape())
+        .is_some_and(|shape| matches!(shape.as_ref(), "it" | "sl" | "italic" | "slanted"));
+    let (glyph, _font) = font_decode(code.value_of() as i32, Some(&encoding), decl_font.clone());
+    // Undecoded, a symbol at its reference slot is the token LaTeXML's own binding makes of the name: its glyph, and
+    // its role, meaning, name and stretchiness where the binding gives them (`reference_symbol`) — but at a slot the
+    // font lacks (pdflatex: "Missing character"; `U/eur`'s "3F, where `\star` would be), U+FFFD and the font's
+    // Warning (`symbol_font_lacks_slot`).
+    let reference = if glyph.is_none() && !symbol_font_lacks_slot(&encoding, decl_font.as_ref(), code.value_of()) {
+      reference_symbol(&cs, code.value_of())
+    } else {
+      None
+    };
+    let binding = reference.as_ref().and_then(|reference| reference.binding.as_ref());
+    let glyph = glyph.map(String::from).or_else(|| reference.as_ref().and_then(reference_glyph));
     // latex.ltx `\mathchar@type`: the class is a `\math…` cs OR its number
     // 0-7 (oz.sty:261 `\DeclareMathDelimiter\ulcorner{4}{AMSa}{"70}…`).
     let role = match sym_type.to_string().trim() {
@@ -739,54 +907,34 @@ pub(crate) fn load() -> Result<()> {
       "\\mathpunct" | "6" => Some("PUNCT"),
       _ => None,
     };
-    // Perl Package.pm L2761: `DefMathI($cs, undef, $glyph, role => $role)` —
-    // called unconditionally, even when FontDecode returns `undef` (e.g. the
-    // encoding's `.fontmap.ltxml` isn't shipped with LaTeXML, like "U").
-    // Fall back to the raw codepoint so the CS is defined; better to render
-    // an ASCII stand-in than to cascade into Error:undefined for the
-    // command itself. arxiv 1011.1955 hits this with
-    //   \DeclareSymbolFont{AMSb}{U}{msb}{m}{n}
-    //   \DeclareMathSymbol{\Z}{\mathalpha}{AMSb}{"5A}
-    // where no u.fontmap exists.
-    //
-    // XML-validity guard: slots in the C0 control range (0x00-0x1F, minus
-    // tab/LF/CR) are NOT valid XML 1.0 characters and break downstream
-    // libxml2 parsing of the serialized document (XPath aborts mid-tree
-    // when it encounters one, so post-processor `find_node_by_id` returns
-    // None for any id past the bad byte — manifested as the
-    // `Error:expected:id Cannot find a node` cluster on 1501.05180,
-    // where `\DeclareMathSymbol\onto\mathrel{latex-font msa}{"10}`
-    // emits `<XMTok>\x10</XMTok>` with no msa fontmap installed).
-    // Render U+FFFD (REPLACEMENT CHARACTER) for forbidden control chars
-    // when no fontmap mapping is available — visually surfaces the
-    // missing-fontmap case without poisoning the XML.
-    fn xml_safe_char(codepoint: u32) -> String {
-      if let Some(c) = char::from_u32(codepoint) {
-        // XML 1.0 §2.2 valid Char: #x9 | #xA | #xD | [#x20-#xD7FF] |
-        // [#xE000-#xFFFD] | [#x10000-#x10FFFF]
-        let cp = c as u32;
-        let valid = cp == 0x09
-          || cp == 0x0A
-          || cp == 0x0D
-          || (0x20..=0xD7FF).contains(&cp)
-          || (0xE000..=0xFFFD).contains(&cp)
-          || (0x10000..=0x10FFFF).contains(&cp);
-        if valid {
-          c.to_string()
-        } else {
-          "\u{FFFD}".to_string()
-        }
-      } else {
-        String::new()
-      }
-    }
-    let presentation = match glyph {
-      Some(ch) => ch.to_string(),
-      None => xml_safe_char(code.value_of() as u32),
+    let role = binding.and_then(|binding| binding.role).or(role);
+    // Perl Package.pm L2761: `DefMathI($cs, undef, $glyph, role => $role)` — called unconditionally, even when
+    // FontDecode returns `undef` (no map for the encoding, as for "U"), so the CS is defined. Perl's token is then
+    // empty; ours is U+FFFD, and printed, its symbol font says once that it cannot decode (`undecodable_math_slot`,
+    // OXIDIZED_DESIGN_DIVERGENCES #27: the raw slot it printed before was no font's glyph — kpfonts' `\neq` as `,`,
+    // Ω at "0A as a line break — and a control slot no XML character, 1501.05180; the stand-in it was kept for,
+    // 1011.1955's `\Z` at `U/msb` "5A, now decodes through the msb map).
+    let (presentation, report) = match glyph {
+      Some(glyph) => (glyph, None),
+      None => undecodable_math_slot(&font_name, &encoding, decl_font.as_ref(), &cs, code.value_of(), "symbol"),
     };
-    let mut opts = MathPrimitiveOptions::default();
+    let mut opts = MathPrimitiveOptions { absorb_warning: report, ..Default::default() };
     if let Some(r) = role {
       opts.role = Some(r.to_string());
+    }
+    if let Some(binding) = binding {
+      opts.meaning = binding.meaning.map(String::from);
+      // An empty name is none (`def_math`), as the binding's token has none.
+      opts.name = Some(binding.name.to_string());
+      opts.stretchy = binding.stretchy;
+    }
+    // A glyph of a math italic symbol font — OML-encoded, italic or slanted, as fontmath.ltx:60 declares `letters`
+    // (`{OML}{cmm}{m}{it}`), not newtxmath's upright-Greek `lettersA` (`{U}{ntxmia}`) — takes its class's shape
+    // (`Font::specialize_letters`): llncs.cls:379-389 `\DeclareMathSymbol{\Gamma}{\mathalpha}{letters}{"00}` makes a
+    // capital Greek letter italic as a Latin letter is, as a raw copy of the class or of fixmath.sty does here
+    // (witness 1002.2350, fixmath raw).
+    if math_italic {
+      opts.letters_class = letters_class(sym_type.to_string().trim());
     }
     def_math(cs, None, presentation, opts)?;
   });
@@ -838,13 +986,17 @@ pub(crate) fn load() -> Result<()> {
   // `\DeclareSymbolFont{operators}{\encodingdefault}{\rmdefault}{m}{n}`. Read
   // unexpanded, the literal string `\encodingdefault` lands in
   // `fontdeclaration@operators`, and every dependent `\DeclareMathSymbol` /
-  // `\DeclareMathAccent` then looks up a fontmap by that name and finds none.
-  DefPrimitive!("\\DeclareSymbolFont{} ExpandedPartially {}{}{}",
+  // `\DeclareMathAccent` then looks up a fontmap by that name and finds none. The name, family, series and shape are
+  // read `Expanded`, as latex.ltx:13138 makes `\csname sym#1\endcsname` and `\csname#2/#3/#4/#5\endcsname` of them
+  // (mathdesign's `\DeclareSymbolFont{\MD@greek@family upright}{OML}{\MD@greek@family}{m}{n}`, mdbch.sty:157;
+  // OXIDIZED_DESIGN_DIVERGENCES #910).
+  DefPrimitive!("\\DeclareSymbolFont Expanded ExpandedPartially Expanded Expanded Expanded",
   sub[(name, enc, family, series, shape)] {
+    let name = nfss_name(&name);
     AssignValue!(&s!("fontdeclaration@{}", name),
-      fontmap!(family => family.to_string(),
-        series   => series.to_string(),
-        shape    => shape.to_string(),
+      fontmap!(family => nfss_name(&family),
+        series   => nfss_name(&series),
+        shape    => nfss_name(&shape),
         encoding => enc.to_string()
       )
     );
@@ -861,8 +1013,9 @@ pub(crate) fn load() -> Result<()> {
       Let!(&sym_cs, "\\z@");
     }
   });
-  DefPrimitive!("\\DeclareSymbolFontAlphabet {Token} {}", sub[(cs, name)] {
-    let fontkey = s!("fontdeclarations@{}", name.to_string());
+  // The name is read `Expanded` (latex.ltx:13725 `\csname sym#2\endcsname`; OXIDIZED_DESIGN_DIVERGENCES #910).
+  DefPrimitive!("\\DeclareSymbolFontAlphabet {Token} Expanded", sub[(cs, name)] {
+    let fontkey = s!("fontdeclarations@{}", nfss_name(&name));
     let font : Option<Font> = match lookup_value(&fontkey) { Some(Stored::Font(value)) => {
       Some((*value).clone())
     } _ => {
@@ -879,8 +1032,20 @@ pub(crate) fn load() -> Result<()> {
     def_macro(cs_tok, None, Tokens!(T_CS!("\\relax")), None)?;
   });
   def_primitive_noop("\\DeclareErrorFont{}{}{}{}{}")?;
-  // Font declaration stubs (Perl latex_constructs.pool.ltxml)
-  def_primitive_noop("\\DeclareFontShape{}{}{}{}{}{}")?;
+  // Perl makes `\DeclareFontShape` a no-op (latex_constructs.pool.ltxml:2690). Ours is latex.ltx:10279-10305: the
+  // arguments read under `\nfss@catcodes`, and `\<enc>/<family>/<series>/<shape>` records the shape — the name
+  // classes test for font info (`\@ifundefined{U/msa/m/n}` after `\try@load@fontshape`, latex_bootstrap.rs;
+  // OXIDIZED_DESIGN_DIVERGENCES #645). Left out, as in `\DeclareFontFamily` below: the unknown-family error (it guards
+  // font loading, which LaTeXML does not do; an undeclared family declares nothing) and `\series@maybe@drop@one@m`
+  // (:10288) with its note: the shape is recorded under the series as written.
+  RawTeX!(
+    r"\def\DeclareFontShape{\begingroup\nfss@catcodes\expandafter\endgroup\DeclareFontShape@}%
+      \def\DeclareFontShape@#1#2#3#4#5#6{\expandafter\ifx\csname #1+#2\endcsname\relax\else
+        \expandafter\xdef\csname#1/#2/#3/#4\endcsname{\expandafter\noexpand\csname #5\endcsname}%
+        \def\reserved@a{#6}%
+        \global\expandafter\let\csname#5\expandafter\endcsname
+          \ifx\reserved@a\@empty\@empty\else\reserved@a\fi\fi}"
+  );
   // latex.ltx:10325-10339: `\<enc>+<family>` holds the family's loading code, and its existence is what tells
   // `\selectfont` that LaTeX knows the family (`\try@load@fontshape`, sect13.rs). The kernel's unknown-encoding error
   // is left out: it guards font loading, which LaTeXML does not do.
@@ -945,7 +1110,15 @@ pub(crate) fn load() -> Result<()> {
     } else {
       let font : Option<Font> = Some(font::lookup_tex_font(
         &family.to_string(), &series.to_string(), &shape.to_string()));
-      DefPrimitive!(cs_tok, None, None, font => font);
+      // latex.ltx's `\DeclareMathAlphabet` makes a one-argument alphabet (`\select@group`, latex.ltx:12903-12922, `#1{#4}` through `\use@mathgroup` at :12914:
+      // `\mathbb{W}` sets W alone), bound as the stock alphabets are (`\mathrm{}`, sect07.rs; amsfonts' `\mathbb{}`).
+      // Perl's parameterless switch (latex_constructs.pool.ltxml:2686) set the rest of the group in the alphabet:
+      // `\frac{\mathbb{W}_c}{w}` under mathalfa's `bb=ams` (mathalpha.sty:116 `\DeclareMathAlphabet{\mathbb}{U}{msb}
+      // {m}{n}`) read `c` in msbm, where it sets nothing, "Missing sub/superscript argument" (1810.09080;
+      // OXIDIZED_DESIGN #747). The `\@fontswitch` path reads the font from the definition (sect13.rs
+      // `math_alphabet_font`). Guard `perfect_kernel_batch73b::declared_math_alphabet_takes_one_argument`.
+      DefConstructor!(s!("{}{{}}", cs_tok.with_str(str::to_string)).as_str(), "#1",
+        bounded => true, require_math => true, font => font);
     }
   });
 
@@ -1212,11 +1385,25 @@ pub(crate) fn load() -> Result<()> {
     // is the author's eqnarray wrapper).
     let (definable, _plain_origin) = is_definable_latex(&name_cs)?;
     if !definable {
-      let is_locked = name_carries_lock(&s!("\\{name}")) ||
+      let is_locked = lock_holds_against(&s!("\\{name}"), || opt.as_ref().is_some_and(|d| !d.is_empty())) ||
        lookup_bool(&s!("\\begin{{{}}}:locked",name));
       if !is_locked {
         let message = s!("Ignoring redefinition (\\newenvironment) of Environment {:?}", name);
         Info!("ignore", name, message);
+      } else if !copy_provides_refuses_locked(&name_cs) {
+        // A locked environment the class defines anew (the kernel's `{abstract}` exists before any class does: in
+        // LaTeX a class not built on article defines it here, frontiersFPHY.cls:519, bioinfo.cls:497 — 1508.06756,
+        // 1406.7114): the refused code kept as `\renewenvironment` keeps it (below), for the locked binding to read
+        // and replay (`replay_class_begin_code`, sect05.rs). Nothing else runs it.
+        let dropped = T_CS!(s!("\\lx@dropped@{name}"));
+        let dropped_end = T_CS!(s!("\\lx@dropped@end{name}"));
+        let converted_args = convert_latex_args(nargs.value_of() as usize, opt.clone())?;
+        DefMacro!(dropped, converted_args, begin.clone(), scope => Some(Scope::Global));
+        DefMacro!(dropped_end, None, end.clone(), scope => Some(Scope::Global));
+        if let Some(default) = opt {
+          record_redefined_default(&name_cs, default);
+        }
+        record_dropped_environment_stores(&name, &[&begin, &end])?;
       }
     } else {
       // TODO: can we convince DefMacro! this is not a second mutable borrow of state::
@@ -1234,11 +1421,14 @@ pub(crate) fn load() -> Result<()> {
   });
 
   // The lock is read as a value, also in a binding's hook that runs unlocked (`name_carries_lock`; Perl
-  // latex_constructs.pool.ltxml:2796-2803; wiley2sp 0710.1676).
+  // latex_constructs.pool.ltxml:2796-2803; wiley2sp 0710.1676), and against the redefinition's own interface: one
+  // that holds only against copies (amsthm's proof, `files_lock_holds`) holds against an environment taking an
+  // optional argument with a default (`takes_optional_first`), whose default the refusal records for the binding
+  // (`record_redefined_default`; smfart.cls:1194 `[1][\proofname]`, thuthesis.cls:4052 `[1][\thu@proof@name]`).
   DefPrimitive!("\\renewenvironment OptionalMatch:* {}[Number][]{}{}",
   sub[(star, name, nargs, opt, begin, end)] {
     let name = Expand!(name).to_string();
-    let is_locked = name_carries_lock(&s!("\\{name}")) ||
+    let is_locked = lock_holds_against(&s!("\\{name}"), || opt.as_ref().is_some_and(|d| !d.is_empty())) ||
        lookup_bool(&s!("\\begin{{{}}}:locked",name));
     if !is_locked {
       let name_cs = T_CS!(s!("\\{}",name));
@@ -1251,7 +1441,22 @@ pub(crate) fn load() -> Result<()> {
 
       DefMacro!(name_cs, converted_args, begin, tex_declared => { star.is_some() && nargs > 0 });
       DefMacro!(end_name_cs, None, end);
+    } else if copy_provides_refuses_locked(&T_CS!(s!("\\{name}"))) {
+      // (a stand-in's copy takes nothing over: `state::copy_provides_refuses_locked`)
     } else {
+      // The refused begin and end code, kept as `\lx@dropped@<name>` and `\lx@dropped@end<name>` (the record
+      // `install_definition` keeps for a refused `\def`, state.rs; `\newcommand`'s above), for a locked binding to read
+      // what the class wrote: the keywords setter mtt.cls:176-181's `{abstract}` defines for its body
+      // (frontmatter_stores.rs `abstract_setter_definitions`; 1310.0585), and a begin code the kernel `{abstract}`
+      // replays for its effects (sect05.rs `replay_class_begin_code`; 1508.06756). Nothing else runs them.
+      let dropped = T_CS!(s!("\\lx@dropped@{name}"));
+      let dropped_end = T_CS!(s!("\\lx@dropped@end{name}"));
+      let converted_args = convert_latex_args(nargs.value_of() as usize, opt.clone())?;
+      DefMacro!(dropped, converted_args, begin.clone(), scope => Some(Scope::Global));
+      DefMacro!(dropped_end, None, end.clone(), scope => Some(Scope::Global));
+      if let Some(default) = opt {
+        record_redefined_default(&T_CS!(s!("\\{name}")), default);
+      }
       record_dropped_environment_stores(&name, &[&begin, &end])?;
     }
     Ok(Vec::new())
@@ -1320,7 +1525,40 @@ pub(crate) fn load() -> Result<()> {
   // handler discards the optional (`\@aom@newthm@[#1]{\@xnthm\relax}`),
   // so discarding is the ground truth. Standard forms start with `{` and
   // never match the optional. KNOWN_PERL_ERRORS #82.
+  //
+  // latex.ltx `\@nthm` (`\expandafter\@ifdefinable\csname #1\endcsname`, amsthm.sty's alike) refuses a theorem whose
+  // `\<name>` is defined: "Command \<name> already defined", the first declaration kept. The refusal is kept to a
+  // theorem the document's world (the document, a raw file it loaded) declared — a `\let\<name>\relax` before declaring
+  // it again makes it definable, as in LaTeX. `\newtheorem{prop}[theorem]{Prop}` then `\newtheorem{prop}{Prop}` gave
+  // prop a counter of its own and renumbered every theorem (pdflatex "Theorem 1, Prop 2, Theorem 3"). Guard
+  // `perfect_kernel_batch77v::newtheorem_twice_keeps_the_first`.
+  // A binding's declaration does not claim the name, so the document's own replaces it: where the binding declares
+  // more than its class does (2407.21129, 1205.2947), the document's declaration gives the theorem the title pdflatex
+  // prints (tac's numbering on its one `\subsection` sequence is not modelled); where the real class declares it too,
+  // LaTeX refuses the document's (llncs `{theorem}`: OXIDIZED_DESIGN_DIVERGENCES #783).
+  // Nor does a binding's guess made while the document is read (OmniBus's set at the first undeclared `\begin{proof}`,
+  // a binding's `\AtBeginDocument` set: neurips, tac), which declares through `\lx@guess@newtheorem` below: the
+  // author's later `\newtheorem{note}{Notation}` is the theorem. Guards
+  // `perfect_kernel_batch77v::{omnibus,neurips}_guess_yields_to_document_newtheorem`.
   DefPrimitive!("\\newtheorem OptionalMatch:* [] {}[]{}[]", sub[(flag, _style_opt, thmset, otherthmset, typ, reset)] {
+    use definition::origin::{current_origin, DefinitionOrigin};
+    let document_world = matches!(current_origin(), DefinitionOrigin::Document | DefinitionOrigin::File)
+      && !lookup_bool(GUESSING_NEWTHEOREM);
+    let name = Expand!(thmset.clone()).to_string();
+    let declared_key = s!("lx@newtheorem@document@{name}");
+    if document_world
+      && has_value(&declared_key)
+      && !is_definable_latex(&T_CS!(s!("\\{name}")))?.0
+    {
+      let mut refusal = vec![T_CS!("\\expandafter"), T_CS!("\\@ifdefinable"), T_CS!("\\csname")];
+      refusal.extend(ExplodeText!(name));
+      refusal.extend([T_CS!("\\endcsname"), T_BEGIN!(), T_END!()]);
+      Digest!(Tokens::new(refusal))?;
+      return Ok(Vec::new());
+    }
+    if document_world {
+      assign_value(&declared_key, true, Some(Scope::Global));
+    }
     define_new_theorem(
       flag.filter(|f| !f.is_empty()),
       thmset,
@@ -1334,6 +1572,44 @@ pub(crate) fn load() -> Result<()> {
       RegisterValue::Tokens(Tokens!()), None, vec![])?;
     assign_register("\\thm@postwork",
       RegisterValue::Tokens(Tokens!()), None, vec![])?;
+  });
+  // `\lx@guess@newtheorem`, the arguments of `\newtheorem`: a binding's guess at a theorem the document may declare
+  // itself. It runs the `\newtheorem` in force (the kernel's, or amsthm's, ntheorem's, theorem.sty's, a class's), whose
+  // declarations do not claim their names while it runs (`GUESSING_NEWTHEOREM`), so the document's own later
+  // `\newtheorem` of the name replaces the guess rather than being refused. Callers: OmniBus `theorem_preload`,
+  // neurips_sty.rs and tac_cls.rs `\AtBeginDocument` sets.
+  // The guess is a fallback's (`DefinitionOrigin::Fallback`): what it defines yields to the document's own
+  // `\newcommand`/`\newenvironment` too (`state::is_fallback_meaning`), as in LaTeX, where the class never defined the
+  // name — 2606.17122's `\newcommand{\result}[2]{#1{\(\pm\,#2\)}}` after the neurips binding's guessed `{result}`
+  // was refused, and its table cells became theorems (87 errors, Fatal).
+  DefPrimitive!("\\lx@guess@newtheorem OptionalMatch:* [] {}[]{}[]", sub[(flag, style_opt, thmset, otherthmset, typ, reset)] {
+    let optional = |tokens: &mut Vec<Token>, arg: Option<Tokens>| {
+      if let Some(arg) = arg.filter(|a| !a.is_empty()) {
+        tokens.push(T_OTHER!("["));
+        tokens.extend(arg.unlist());
+        tokens.push(T_OTHER!("]"));
+      }
+    };
+    let mut call = vec![T_CS!("\\newtheorem")];
+    if let Some(flag) = flag.filter(|f| !f.is_empty()) {
+      call.extend(flag.unlist());
+    }
+    optional(&mut call, style_opt);
+    call.push(T_BEGIN!());
+    call.extend(thmset.unlist());
+    call.push(T_END!());
+    optional(&mut call, otherthmset);
+    call.push(T_BEGIN!());
+    call.extend(typ.unlist());
+    call.push(T_END!());
+    optional(&mut call, reset);
+    let outer = lookup_bool(GUESSING_NEWTHEOREM);
+    assign_value(GUESSING_NEWTHEOREM, true, Some(Scope::Global));
+    let declared = definition::origin::with_origin(definition::origin::DefinitionOrigin::Fallback, || {
+      Digest!(Tokens::new(call))
+    });
+    assign_value(GUESSING_NEWTHEOREM, outer, Some(Scope::Global));
+    Ok(vec![declared?])
   });
 
   //======================================================================
@@ -1441,9 +1717,14 @@ pub(crate) fn load() -> Result<()> {
     tokens.push(T_END!());
     tokens
   });
+  // A step no constructor takes (a raw `\refstepcounter`) is recorded for the labels made after it, whose number
+  // it is (`note_raw_refstep`; the `\lx@label` in sect11.rs). Witnesses: 2506.01072 (`\newtcbtheorem`), 2505.20088
+  // (`\newtcolorbox[auto counter]`), 2402.06608 (`[blend into=figures]`), 2609.20563 (`\newtcblisting`).
   DefPrimitive!("\\lx@refstepcounter@label{}", sub[(ctype)] {
     let ctype = Expand!(ctype).to_string();
-    label_stepped_counter(&ctype, &counter_for_type(&ctype))?;
+    let ctr = counter_for_type(&ctype);
+    let props = label_stepped_counter(&ctype, &ctr)?;
+    note_raw_refstep(&ctr, &props);
   });
   DefPrimitive!("\\lx@refstepcounter@label@planned{}", sub[(ctype)] {
     let ctype = Expand!(ctype).to_string();
@@ -1565,7 +1846,15 @@ pub(crate) fn load() -> Result<()> {
       Some(Stored::String(s)) => with(s, |s| s.to_string()),
       _ => name,
     };
-    T_CS!(s!("\\c@{resolved}"))
+    // latex.ltx:10127 `\def\value#1{\csname c@#1\endcsname}`: an undefined counter is `\relax`, with no error
+    // (tex.web §372; KNOWN_PERL_ERRORS #1231: tikz-timing's `\edef` before its `\newcounter`, 2102.06643, 2409.18120)
+    let counter = T_CS!(s!("\\c@{resolved}"));
+    if !has_meaning(&counter)
+      && let Some(relax) = lookup_meaning(&T_RELAX!())
+    {
+      assign_meaning(&counter, relax, None);
+    }
+    counter
   });
 
   // latex.ltx:10206-10224: `\@arabic`, `\@roman`, `\@Roman`, `\@alph`,
@@ -1669,7 +1958,8 @@ pub(crate) fn load() -> Result<()> {
 /// `\\cs␣`). A starred
 /// declarator's internal is not `\long` either (`\l@ngrel@x`, :1229-1233). It reads `[…]` as `\@yargdef` does here (an
 /// optional argument, where LaTeX's requires the brackets). Not for an active character, whose `\string` names another
-/// control sequence (`~`'s would be `\~`). A `\renewcommand`, `\DeclareRobustCommand` or `\newenvironment` the lock
+/// control sequence (`~`'s would be `\~`). The null control sequence's is `\\csname\endcsname`, as `\string` prints it
+/// (tex.web §263), never `\\` (2410.07647; guard `perfect_kernel_batch131fix::null_cs_optional_internal_keeps_the_line_break`). A `\renewcommand`, `\DeclareRobustCommand` or `\newenvironment` the lock
 /// refuses still defines its internal, as `\@xargdef` does: only `\csname\string\cs\endcsname` reaches it, the class's own
 /// code, and that is how the class's refused setter is replayed (cmfne.cls:462-483 `\renewcommand{\author}[2][]` then
 /// the `\@dblarg` `\edef`, whose `\firstshortauthor` its `\enddoc@text` prints; 2210.02246). No binding defines or calls
@@ -1681,7 +1971,16 @@ fn define_optional_internal(cs: &Token, nargs: usize, body: &Tokens, star: bool)
   if cs.get_catcode() != Catcode::CS {
     return Ok(());
   }
-  let internal = T_CS!(s!("\\{}", cs.to_string()));
+  // (named as `\string` prints the command: the null control sequence's `\csname\endcsname` (tex.web §263), whose
+  // internal is `\\csname\endcsname` — `"\\" + "\"` named `\\` itself, so `\expandafter\newcommand\expandafter
+  // {\csname\endcsname}[1][x]{…}` replaced the line break: 2410.07647, changes' `\csname\Changes@commandname\endcsname`)
+  let name = cs.to_string();
+  let printed = if name == "\\" {
+    "\\csname\\endcsname"
+  } else {
+    name.as_str()
+  };
+  let internal = T_CS!(s!("\\{}", printed));
   DefMacro!(
     internal,
     convert_latex_args(nargs, Some(Tokens!()))?,
@@ -1689,6 +1988,37 @@ fn define_optional_internal(cs: &Token, nargs: usize, body: &Tokens, star: bool)
     tex_declared => { star && nargs > 0 }
   );
   Ok(())
+}
+
+/// Is `cs` an encoding dispatcher (`def_text_command_dispatcher`, the `\DeclareTextSymbol` chain): a macro whose body
+/// begins `\expandafter\ifx\csname\cf@encoding\string`.
+fn is_encoding_dispatcher(cs: &Token) -> Result<bool> {
+  let head = [
+    T_CS!("\\expandafter"),
+    T_CS!("\\ifx"),
+    T_CS!("\\csname"),
+    T_CS!("\\cf@encoding"),
+    T_CS!("\\string"),
+  ];
+  Ok(match lookup_definition(cs)? {
+    Some(defn) => matches!(defn.get_expansion(),
+      Some(ExpansionBody::Tokens(body)) if body.unlist_ref().starts_with(&head)),
+    None => false,
+  })
+}
+
+/// A token `\UseTextAccent` does not read as its undelimited argument: an alignment tab, a math shift, a closing brace,
+/// `\end`, or a row end in an alignment — where pdflatex's reading it breaks the cell, formula, group or environment
+/// it ends (latex.ltx:9958; tipa.sty:429-458 `\!` before `&`). Witness 2609.13770 (`\crefname{section}{\S\!}`).
+fn ends_accent_argument(token: &Token) -> bool {
+  matches!(
+    token.get_catcode(),
+    Catcode::END | Catcode::MATH | Catcode::ALIGN
+  ) || *token == T_CS!("\\end")
+    || (lookup_alignment().is_some()
+      && ["\\\\", "\\cr", "\\crcr", "\\tabularnewline"]
+        .iter()
+        .any(|row_end| *token == T_CS!(*row_end)))
 }
 
 /// The encoding dispatcher a declared text command becomes (latex.ltx `\@changed@cmd`, :9871-9888): the encoding's
@@ -1775,6 +2105,10 @@ pub fn declare_bound_text_symbols(encoding: &str, names: &[&str]) -> Result<()> 
   Ok(())
 }
 
+/// Set while `\lx@guess@newtheorem` runs a binding's guessed declaration: `\newtheorem` then claims no name (its
+/// `lx@newtheorem@document@<name>` key), so the document's own declaration replaces the guess.
+const GUESSING_NEWTHEOREM: &str = "lx@newtheorem@guessing";
+
 /// The state key, by command, of the encoding whose `\<enc>\cs` holds a bound symbol's glyph
 /// (`declare_bound_text_symbols`).
 const BOUND_TEXT_SYMBOL: &str = "lx@text@bound@";
@@ -1812,6 +2146,14 @@ fn reading_encoding_file(encoding: &str) -> bool {
 /// `\@title` is) empty. Appended to `\lx@dropped@env@stores`, which the
 /// deposit runs in its group. Guard:
 /// `perfect_kernel_batch56::class_maketitle_reads_a_dropped_environment_store_as_given`.
+///
+/// The target is the name TeX reads after the `\def`-family or `\setbox` token: an `\expandafter` chain between them
+/// (rmmcart.cls:418 `\expandafter\gdef\expandafter\abstracts@ve\expandafter{\@grabstract}`) has run before the
+/// assignment, so it is skipped; a name built by `\csname` is not known until then, so none is recorded. A target that
+/// is not a store — a primitive, an unexpandable or Rust-bodied kernel command, a locked definition — is never nulled
+/// (`nullable_store`): read as the `\gdef`'s target, the `\expandafter` of 2104.09383 became `\let\expandafter\@empty`,
+/// which escaped the deposit's group and looped the paper's tikz-cd. Guard:
+/// `perfect_kernel_batch68f::dropped_store_skips_the_expandafter_chain_to_the_defined_name`.
 fn record_dropped_environment_stores(name: &str, bodies: &[&Tokens]) -> Result<()> {
   let mut nulls: Vec<Token> = Vec::new();
   for body in bodies {
@@ -1820,34 +2162,35 @@ fn record_dropped_environment_stores(name: &str, bodies: &[&Tokens]) -> Result<(
       if t.get_catcode() != Catcode::CS {
         continue;
       }
-      let target = toks[i + 1..]
-        .iter()
-        .find(|n| n.get_catcode() != Catcode::SPACE);
-      let Some(target) = target.filter(|n| n.get_catcode() == Catcode::CS) else {
+      let is_setbox = t.with_str(|s| s == "\\setbox");
+      if !is_setbox && !t.with_str(|s| matches!(s, "\\def" | "\\gdef" | "\\edef" | "\\xdef")) {
+        continue;
+      }
+      let Some(target) = dropped_store_target(&toks[i + 1..]) else {
         continue;
       };
-      if t.with_str(|s| s == "\\setbox") {
+      if is_setbox {
         // Only a store that exists when the deposit runs: resphilosophica's
         // renewal writes amsart's `\abstractbox`, which our amsart binding
         // never allocates.
         nulls.extend([
-          T_CS!("\\ifdefined"),
-          *target,
+          T_CS!("\\lx@ifdefined"),
+          target,
           T_CS!("\\setbox"),
-          *target,
+          target,
           T_CS!("\\hbox"),
           T_BEGIN!(),
           T_END!(),
           T_CS!("\\fi"),
         ]);
-      } else if t.with_str(|s| matches!(s, "\\def" | "\\gdef" | "\\edef" | "\\xdef")) {
-        nulls.extend([T_CS!("\\let"), *target, T_CS!("\\@empty")]);
+      } else if nullable_store(&target) {
+        nulls.extend([T_CS!("\\let"), target, T_CS!("\\@empty")]);
       }
     }
   }
   let store = T_CS!(s!("\\@{name}"));
   nulls.extend([
-    T_CS!("\\ifdefined"),
+    T_CS!("\\lx@ifdefined"),
     store,
     T_CS!("\\else"),
     T_CS!("\\let"),
@@ -1872,6 +2215,68 @@ fn record_dropped_environment_stores(name: &str, bodies: &[&Tokens]) -> Result<(
   )
 }
 
+/// The name a `\def`-family or `\setbox` token assigns, read from the tokens after it: spaces and `\expandafter`s
+/// skipped, `None` for a `\csname`-built name or a non-CS (an active character's store is not a frontmatter field).
+/// TeX does not expand after `\def`, so an `\expandafter` behind a `\gdef` is used up only when another one precedes
+/// the `\gdef` (rmmcart.cls:418 `\expandafter\gdef\expandafter\abstracts@ve\expandafter{…}`, 2104.09383). Behind a
+/// bare `\gdef` TeX's target is that `\expandafter` itself, which the deposit could not null anyway (`nullable_store`
+/// refuses a primitive); the name after it is recorded instead, at most a store the class never fills. Used by
+/// `record_dropped_environment_stores`.
+fn dropped_store_target(after: &[Token]) -> Option<Token> {
+  let target = after.iter().find(|n| {
+    n.get_catcode() != Catcode::SPACE
+      && !(n.get_catcode() == Catcode::CS && n.with_str(|s| s == "\\expandafter"))
+  })?;
+  (target.get_catcode() == Catcode::CS && !target.with_str(|s| s == "\\csname")).then_some(*target)
+}
+
+/// May the deposit null this `\def`-family target? Only a store: undefined, `\let` to `\relax`, or a macro with a
+/// token body. A primitive, a register, a Rust-bodied (kernel) expandable or a locked definition is a command, not a
+/// field the class fills.
+fn nullable_store(target: &Token) -> bool {
+  if target.with_str(name_carries_lock) {
+    return false;
+  }
+  match lookup_meaning(target) {
+    None => true,
+    Some(Stored::Expandable(ref m)) => matches!(m.get_expansion(), Some(ExpansionBody::Tokens(_))),
+    Some(_) => !is_defined_token(target) && !target.with_str(|s| s == "\\relax"),
+  }
+}
+
+/// The Cyrillic letter a text symbol names, where its encoding sets it in a Latin letter's slot. T2A, T2B and T2C
+/// (t2aenc.def:230-237; t2benc.def:230-239, t2cenc.def alike) put І і Ј ј Ԛ ԛ Ԝ ԝ, and T2B/T2C also Ѕ ѕ, in the
+/// slots of I i J j Q q W w S s, whose glyphs they share; X2 the same ten (x2enc.def:244-273), OT2 Ј ј at J j
+/// (ot2enc.def:96,124). Any encoding whose slot decodes to an ASCII letter: X2 and OT2 have no fontmap yet, so their
+/// slots decode to nothing and the symbols are still dropped (the SYNC silent-loss row). The fontmap reads such a
+/// slot as the Latin letter — a Latin `i` typed in T2A text is that slot, and pdftotext reads the PDF's `і` as `i`
+/// too — so the symbol `\cyrii` (which a UTF-8 `і` becomes, t2aenc.dfu) decoded as Latin `i`: Ukrainian "Іван",
+/// Serbian "ј" spelled with Latin letters (Perl the same, latex_constructs.pool.ltxml:2614-2625;
+/// OXIDIZED_DESIGN_DIVERGENCES #776). The named symbol is its letter; a slot that is no Latin letter keeps its
+/// decoding. Guard `perfect_kernel_batch77s::t2a_cyrillic_i_and_je_are_cyrillic`.
+fn cyrillic_letter_in_latin_slot(cs: &str, decoded: SymStr) -> SymStr {
+  let letter = match cs {
+    "\\CYRII" => '\u{0406}',
+    "\\cyrii" => '\u{0456}',
+    "\\CYRJE" => '\u{0408}',
+    "\\cyrje" => '\u{0458}',
+    "\\CYRQ" => '\u{051A}',
+    "\\cyrq" => '\u{051B}',
+    "\\CYRW" => '\u{051C}',
+    "\\cyrw" => '\u{051D}',
+    "\\CYRDZE" => '\u{0405}',
+    "\\cyrdze" => '\u{0455}',
+    _ => return decoded,
+  };
+  if with(decoded, |text| {
+    text.len() == 1 && text.bytes().all(|b| b.is_ascii_alphabetic())
+  }) {
+    pin_char(letter)
+  } else {
+    decoded
+  }
+}
+
 /// The glyph at `code` in `encoding`'s fontmap, for the text-command
 /// declarations. Perl hands the Number straight to `CharDef->new` and the
 /// decode indexes the map, so an out-of-range code yields no glyph
@@ -1892,4 +2297,258 @@ fn decode_slot(code: i64, encoding: &str) -> Option<SymStr> {
       .map(pin_char),
     Err(_) => None,
   }
+}
+
+/// A symbol-font name, or a font's family, series or shape, as latex.ltx's `\csname sym#1\endcsname` and
+/// `\csname#2/#3/#4/#5\endcsname` read it: every space token is a space, the end of a line inside the argument too —
+/// 1501.05180 declares `\DeclareSymbolFont{latex-font⏎msa}` and uses `{latex-font msa}` (OXIDIZED_DESIGN_DIVERGENCES
+/// #910).
+fn nfss_name(name: &Tokens) -> String {
+  let spaced = name
+    .unlist_ref()
+    .iter()
+    .map(|token| {
+      if token.get_catcode() == Catcode::SPACE {
+        T_SPACE!()
+      } else {
+        *token
+      }
+    })
+    .collect();
+  Tokens::new(spaced).to_string()
+}
+
+/// The reference of a math symbol its symbol font cannot decode, unless the slot is a recorded gap of the font
+/// ([`symbol_font_lacks_slot`]: `U/eur`'s "3F, `U/msb`'s "65), when it is declared at its reference slot: the slot
+/// fontmath.ltx or amsfonts/amssymb give the same name ([`reference_math_slot`]). Slot-matched means the name and the
+/// slot, not the font: `\Cap` at `AMSb` "65 matches amssymb's `AMSa` "65, so only the gap record keeps it U+FFFD
+/// where msbm draws nothing. The equal slot is the layout evidence the match rests on, so, unlike an accent's
+/// ([`reference_accent`]), it holds in a mapped font too, at an empty slot that is no gap (msbm's negated pairs,
+/// msam's `\dabar@`, glyphs the maps have no single character for). A font package that
+/// redeclares a kernel or AMS name at that slot of its own font keeps the reference layout there: kpfonts' `\Delta` in
+/// `U/jkpmia` at 1 (fontmath.ltx:205 `operators` "01; kpfonts.sty:679-681 `\let`s the name away first), `\Cap` in an
+/// `AMSa` redeclared as `U/jkpsya` at "65 (amssymb.sty:146), raw newtxsf's `\lfloor` in `LMS/ntxsy` at 98
+/// (fontmath.ltx:499). Another slot is another glyph — a variant swap (`\epsilon` at "22, `\varepsilon`'s), or
+/// jkpsyb's `\precapprox` at 118, where msbm has `\succapprox` — and stays undecoded, as does a name no reference
+/// declares (shuffle's `\shuffle`, OXIDIZED_DESIGN_DIVERGENCES #645). Witnesses 1604.04618, 2008.13643 (kpfonts),
+/// 2506.22450 (newtxsf via wiley-article.cls), 2501.18458 (eulerpx's `\jmath`, `\partial`). OXIDIZED_DESIGN_DIVERGENCES
+/// #910.
+fn reference_symbol(cs: &Token, code: i64) -> Option<ReferenceSymbol> {
+  cs.with_str(reference_math_slot)
+    .filter(|reference| code == i64::from(reference.slot))
+}
+
+/// The reference of a math accent whose declared symbol font has no font map ([`symbol_font_has_map`]; a mapped font's
+/// empty slot stays U+FFFD, `U/eur`'s "7E a gap of the font), when its name is one fontmath.ltx declares (`\acute`
+/// `\grave` `\ddot` `\tilde` `\bar` `\breve` `\check` `\hat` `\vec` `\dot` `\widetilde` `\widehat` `\mathring`;
+/// [`reference_math_accent`]): the token LaTeXML's own kernel binding makes of the name — its glyph, spacing or
+/// combining, its `name` and stretchiness — whatever the slot. So is an over accent LaTeXML's own package bindings
+/// define, where every binding defining it makes the same token (mathabx's and libertinust1math's `\widecheck` ˇ,
+/// `\widebar` ¯ with newtxmath's, `\wideparen` ⏜ with fourier's, `\dddot`/`\ddddot` with amsmath's, accents' and
+/// mathdots'; `\overleftrightarrow`, stretchy in amsmath and not in mathabx, is left out): mathabx.dcl's seven in
+/// `U/mathx`/`U/mathb` (:191-199, :945-949; 2607.15091's `\widecheck`), newtxsf's `\dddot` `\ddddot` `\widearc` in
+/// `LMS/ntxsy` 168/200/175 (newtxsf.sty:312-313, :592) and randexam.cls:1317's `\widebar`, each rendered drawing the
+/// accent its name says. An accent's name is its meaning: unlike a symbol
+/// (`\epsilon` at `\varepsilon`'s slot, [`reference_symbol`]), no package draws another accent under a kernel accent's
+/// name, so the slot is no part of the match — and, matching no slot, the name is no layout evidence, so it is confined
+/// to fonts with no map: in a mapped font an empty slot names nothing the map vouches for. Checked by rendering every
+/// redeclaration in a font we cannot decode: newtxsf's `\grave` `\acute` `\check` `\breve` `\bar` `\mathring` `\hat`
+/// `\dot` `\tilde` in `lettersA` (`U/ntxsfmia` 254/255/186/187/221/222/223/224/219; newtxsf.sty:301-309,
+/// asmeconf.cls:2399-2407's `lettersAB` alike) and `\dot` `\ddot` `\vec` in `symbols` (`LMS/ntxsy` 164/165/174;
+/// :310-311, :1332), mdsymbol's `\vec` in `U/MdSymbolE` "84 (mdsymbol.sty:1959; rendered; not reached while
+/// `\SetSymbolFont{…}{normal}` is unmodelled, the font in force staying OMX/cmex), mathabx's `\widehat` in `U/mathx`
+/// "70 (mathabx.dcl:944, as papers copy it, 2607.15091) and `\dot` `\ddot` in `U/mathb` "39/"3A (mathabx.dcl:193,195).
+/// Witnesses 2106.08363 (296 hats), 1808.01384, 2406.11942, 1902.03183 (eq. 9's `\bar{u}`), 2607.15091.
+/// A name no binding defines as an accent (`\myhat`) and a symbol font never declared (pdflatex: "Symbol font … is not
+/// defined") stay U+FFFD with the font's Warning ([`undecodable_math_slot`]). OXIDIZED_DESIGN_DIVERGENCES #27.
+fn reference_accent(cs: &Token) -> Option<BindingToken> { cs.with_str(reference_math_accent) }
+
+/// The glyph of a symbol at its reference slot: the one LaTeXML's own kernel/amssymb binding gives the name, so a
+/// paper using kpfonts gets the symbols a paper without it gets (`\Cap` ⋒, `\mid` ∣, `\lgroup` ⟮, `\jmath` ȷ); a name
+/// no binding defines (the kernel's raw `\varbigtriangleup`), the slot decoded through the reference font's own map
+/// (OT1, OML, OMS, OMX, msam's `AMSa`, msbm's `AMSb`).
+fn reference_glyph(reference: &ReferenceSymbol) -> Option<String> {
+  match reference.binding {
+    Some(ref binding) => Some(binding.glyph.to_string()),
+    None => load_font_map(reference.encoding)
+      .and_then(|map| map.get(usize::from(reference.slot)).copied().flatten())
+      .map(String::from),
+  }
+}
+
+/// The presentation of a math symbol or accent its symbol font cannot decode — no glyph at its slot in the
+/// declared font's map, or no map at all, and no reference slot ([`reference_symbol`]) — and what it does when printed.
+/// The presentation is U+FFFD, the unrepresentable character, never the raw slot as a character: that was the glyph of
+/// no font, kpfonts' `\neq` (`U/jkpsyc` 44) as `,`, a slot "0A Ω as a line break, newtx's `\lbrace` at 215 as `×`, and
+/// a control slot is no XML character (1501.05180). Printed, the symbol says so once per symbol font, under
+/// `missing_font_encoding` as a text symbol does (`\lx@unmapped@text@symbol`), naming the font, its encoding and family
+/// (`<encoding>/<family>`; an undeclared symbol font, which has neither, by LaTeX's own name for it, `\sym<font>`), and
+/// the symbol or accent and its slot; the font's further undecodable symbols say nothing more. The Warning is the box's
+/// ([`latexml_core::document::absorb_warning`]), raised when the document absorbs it: a symbol declared and never used,
+/// or digested only into a box never printed — program.sty's `\powersetsymbol` in a savebox (program.sty:836-837,
+/// sn-jnl.cls copies), a `\settowidth`, a counter's `\the…` digested under a discarded hold — says nothing, and leaves
+/// the once-per-font key unset for the symbol the document prints. A character symbol (`\DeclareMathSymbol{-}…`)
+/// prints its own character (`def_math`'s rewrite), so it loses nothing and says nothing; its `name` is kept, as before, unless it sits at its own code (2307.16667's `-`; newtxsf's digits keep
+/// `name="2"`). Witnesses 1604.04618, 2008.13643 (kpfonts), 1502.03923 (esvect `\fldr`), 2402.09138 (cmll
+/// `\invamp`), 2307.11186 (heppennames2). OXIDIZED_DESIGN_DIVERGENCES #27; guards `perfect_kernel_batch89b::*`.
+fn undecodable_math_slot(
+  font_name: &str,
+  encoding: &str,
+  decl: Option<&Rc<Font>>,
+  cs: &Token,
+  code: i64,
+  kind: &str,
+) -> (String, Option<Stored>) {
+  // A character symbol prints itself; its presentation only decides whether `def_math` keeps a `name`, which it keeps
+  // unless the character sits at its own code — as when the raw slot was the presentation.
+  if let Some(character) = cs.with_str(|name| (name.len() == 1).then(|| name.to_string())) {
+    let at_own_code = character
+      .chars()
+      .next()
+      .is_some_and(|c| i64::from(u32::from(c)) == code);
+    return (
+      if at_own_code {
+        character
+      } else {
+        "\u{FFFD}".to_string()
+      },
+      None,
+    );
+  }
+  // The Warning's object: the font's layout, or for an undeclared symbol font (no encoding, no family), its name as
+  // LaTeX keys it, `\sym<font>` (latex.ltx's `\DeclareMathSymbol` raises "Symbol font `<font>' is not defined").
+  let layout = match decl.and_then(|font| font.get_family()) {
+    Some(family) => s!("{encoding}/{family}"),
+    None if decl.is_none() => s!("\\sym{font_name}"),
+    None => encoding.to_string(),
+  };
+  let font = if decl.is_none() {
+    s!("Symbol font {font_name} is not declared")
+  } else if !symbol_font_has_map(encoding, decl) {
+    s!("Symbol font {font_name} ({layout}) has no font map")
+  } else if symbol_font_lacks_slot(encoding, decl, code) {
+    s!("Symbol font {font_name} ({layout}) has no character at slot \"{code:02X}")
+  } else {
+    s!("Symbol font {font_name} ({layout}) has no Unicode glyph at slot \"{code:02X}")
+  };
+  let cs_name = cs.with_str(ToString::to_string);
+  let message = s!(
+    "{font}: the math {kind} {cs_name} (slot \"{code:02X}) prints U+FFFD, as will any other symbol of this font it \
+     cannot decode"
+  );
+  let warning = document::absorb_warning(
+    &s!("unmapped_math_symbol_font_{font_name}"),
+    "missing_font_encoding",
+    &layout,
+    &message,
+  );
+  ("\u{FFFD}".to_string(), Some(warning))
+}
+
+/// Whether a symbol font has a font map: its encoding's ([`load_font_map`]) or its family's (`U_msa`, `U_eur`, bbold's
+/// `U_bbold`), as [`font_decode`] chooses them; `U` itself has none, bbold loaded or not (bbold_sty.rs). Without one,
+/// nothing the font draws is known, and a kernel or package accent's name decodes it
+/// ([`reference_accent`]); with one, the map says what each slot holds, and an empty slot stays U+FFFD with the
+/// font's Warning ([`undecodable_math_slot`]). OXIDIZED_DESIGN_DIVERGENCES #27.
+fn symbol_font_has_map(encoding: &str, decl: Option<&Rc<Font>>) -> bool {
+  load_font_map(encoding).is_some()
+    || decl
+      .and_then(|font| font.get_family())
+      .is_some_and(|family| lookup_value(&s!("{encoding}_{family}_fontmap")).is_some())
+}
+
+/// Whether a symbol font is known to lack a character at `code` — its family's map records the slot as a gap of the
+/// font (`U_<family>_fontmap_lacks`, generated by tftopl over every size: eurm/eurb's 17, msbm's "5F and "62-"65,
+/// msam none; u_fontmap.rs `U_FONT_GAPS`), where pdflatex says "Missing character" and prints nothing — so no
+/// reference name decodes it ([`reference_symbol`]): U+FFFD and the font's Warning ([`undecodable_math_slot`]). A
+/// map's other empty slots hold glyphs it has no single character for: msam's dash
+/// `\dabar@` at "39 (amsfonts.sty:89, amstex.sty:1939) and msbm's six negated relations at "0A/"0B/"14/"15/"22/"23
+/// (oz.sty:289-310, zed-csp.sty:231-232, amsfonts' `\newsymbol`), which a reference name still decodes.
+/// OXIDIZED_DESIGN_DIVERGENCES #27, #910.
+fn symbol_font_lacks_slot(encoding: &str, decl: Option<&Rc<Font>>, code: i64) -> bool {
+  let slot = code.to_string();
+  let family = decl.and_then(|font| font.get_family());
+  family
+    .map(|family| s!("{encoding}_{family}_fontmap_lacks"))
+    .into_iter()
+    .chain([s!("{encoding}_fontmap_lacks")])
+    .any(|key| matches!(lookup_value(&key), Some(Stored::HashString(lacks)) if lacks.contains_key(&slot)))
+}
+
+/// The math-italic class of a `\DeclareMathSymbol` math class (`\mathchar@type`: a `\math…` name or its number):
+/// `\mathalpha` (7) follows a math alphabet, `\mathord` (0) does not; the other classes are no letters.
+fn letters_class(sym_type: &str) -> Option<LettersClass> {
+  match sym_type {
+    "\\mathalpha" | "7" => Some(LettersClass::Variable),
+    "\\mathord" | "0" => Some(LettersClass::Fixed),
+    _ => None,
+  }
+}
+
+/// The capital Greek letters of the math italic symbol font, `letters` (OML slots "00-"0A), by name.
+const LETTERS_CAPITAL_GREEK: [(&str, &str); 11] = [
+  ("Gamma", "\u{0393}"),
+  ("Delta", "\u{0394}"),
+  ("Theta", "\u{0398}"),
+  ("Lambda", "\u{039B}"),
+  ("Xi", "\u{039E}"),
+  ("Pi", "\u{03A0}"),
+  ("Sigma", "\u{03A3}"),
+  ("Upsilon", "\u{03A5}"),
+  ("Phi", "\u{03A6}"),
+  ("Psi", "\u{03A8}"),
+  ("Omega", "\u{03A9}"),
+];
+
+/// A binding's `\DeclareMathSymbol{\<prefix><Letter>}{<class>}{<font>}{"00…"0A}` of the eleven capital Greek letters,
+/// where its original declares them. From `letters` (`Some(class)`): a `\mathalpha` letter (`LettersClass::Variable`)
+/// is italic unless a math alphabet is in force, as a Latin letter (llncs.cls:379-389, svmult.cls:971-981,
+/// svjour3.cls:147-157, fixmath.sty:27-37, the `slantedGreek` option of mathptmx.sty:80-92, newtxmath.sty:1015-1026
+/// and cmbright.sty:66-78), a `\mathord` one (`LettersClass::Fixed`) italic whatever the alphabet (amsmath.sty:384-395
+/// `\varGamma`). From an upright font (`None`: fontmath.ltx:204-214 `operators`, newtxmath.sty:1028-1038 `lettersA`,
+/// stix.sty:117-127, libertinust1math.sty:484-497 `\upGamma`), the kernel's upright letter, over a class's italic one.
+/// Each is the kernel's `DefMath` of `\Gamma` (math_common), not `\DeclareMathSymbol`'s, which would give it an ID role.
+/// Witnesses 2606.09074 (llncs), 2101.03721 (svjour3), 0812.2480 (svmult), 2508.05134 (newpxmath `slantedGreek`),
+/// 1701.03426, 2407.01655 (amsmath `\var…`). Guards: `perfect_kernel_batch79e`.
+pub fn declare_capital_greek(prefix: &str, class: Option<LettersClass>) -> Result<()> {
+  declare_capital_greek_by(prefix, class, None, false)
+}
+
+/// A package's own capital Greek glyphs, `\DeclareMathSymbol{\<prefix><Letter>}{\mathord}{<font>}{…}` from an upright
+/// font (`None`) — mathptmx.sty:93-103 `\upGamma`… (`operators`), mathpazo.sty:134-144 (`upright`), eulervm.sty:97-98
+/// `\upDelta`, `\upOmega` (`letters`, the upright Euler font): each keeps the letter's name (`name => "Gamma"`) and its
+/// own control sequence, so `tex=` reads the source's `\upGamma`, and its shape does not follow the `\Gamma` a class
+/// declares italic (llncs.cls:379-389), as a `\let\upGamma\Gamma` (Perl's mathptmx.sty.ltxml) does. `letters`
+/// names the subset a package declares (all eleven when `None`). Guards: `perfect_kernel_batch79e`.
+pub fn declare_capital_greek_named(
+  prefix: &str,
+  class: Option<LettersClass>,
+  letters: Option<&[&str]>,
+) -> Result<()> {
+  declare_capital_greek_by(prefix, class, letters, true)
+}
+
+fn declare_capital_greek_by(
+  prefix: &str,
+  class: Option<LettersClass>,
+  letters: Option<&[&str]>,
+  keep_name: bool,
+) -> Result<()> {
+  for (letter, glyph) in LETTERS_CAPITAL_GREEK {
+    if letters.is_some_and(|only| !only.contains(&letter)) {
+      continue;
+    }
+    let opts = MathPrimitiveOptions {
+      letters_class: class,
+      name: keep_name.then(|| letter.to_string()),
+      ..MathPrimitiveOptions::default()
+    };
+    def_math(
+      T_CS!(&format!("\\{prefix}{letter}")),
+      None,
+      glyph.to_string(),
+      opts,
+    )?;
+  }
+  Ok(())
 }

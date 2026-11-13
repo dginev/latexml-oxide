@@ -1,0 +1,23 @@
+% mechanism: a name's collaboration remark that a note, a box or a command's own spacing parts into several pieces is
+%   read whole and is the name's collaboration contact, no part of the name (rows C2-C4 of the old reader's names split,
+%   `name_and_remark`, `name_takes_annotations`; the reading's `lines::remark_pieces_joined`): the remark after the
+%   footnote, its `\babar` a box of kerned letters
+% witness: 0711.1544 (`Kalanand Mishra\footnote{…} (for the \babar\ collaboration)`)
+% oracle:  pdflatex 0 errors: "Kalanand Mishra∗ (for the BABAR collaboration)", "Univ A"
+% engines: rust MV1, the switch on: personname "Kalanand Mishra (for the B A B AR collaboration)"; NL1: the contact's
+%   text "(for the B A B A R collaboration)", its markup lost, a Warning (review revNL1 B1: the name joined with the
+%   remark, its kerns read as spaces); off: the remark a collaboration contact in its markup
+% expect:  0 errors, 0 warnings; one creator both ways, Kalanand Mishra with the note, the collaboration (its text
+%   "(for the BABAR collaboration)", the box's slant and sizes) and Univ A
+% status:  RED (MV1, the switch on) -> GREEN
+%   (perfect_kernel_batchnl1::a_collaboration_remark_is_the_names_contact)
+% preload: ar5iv.sty
+\documentclass{revtex4}
+\def\babar{\mbox{\slshape B\kern-0.1em{\small A}\kern-0.1em B\kern-0.05em{\small A\kern-0.05em R}}}
+\begin{document}
+\title{T}
+\author{Kalanand Mishra\footnote{Email: k@x.edu} (for the \babar\ collaboration)}
+\affiliation{Univ A}
+\maketitle
+x
+\end{document}
