@@ -598,6 +598,14 @@ pub fn set_pushback_limit(limit: Option<usize>) { gullet_mut!().pushback_limit =
 /// (`stomach.rs` `cycle_guard_record`).
 pub fn token_progress() -> usize { gullet!().progress }
 
+/// Count `reads` tokens as read, where a run's reading is known without making it (the frontmatter's rehearsal of a
+/// text it rehearsed before): [`progress`](Gullet::progress) stands where the run would leave it, its limits read again.
+pub fn count_reads(reads: usize) {
+  let mut g = gullet_mut!();
+  g.progress = g.progress.saturating_add(reads);
+  g.full_read_at = 0;
+}
+
 /// A run of digestion's limit on the tokens it reads, until [`ReadBudget::end`]: the read past it fails, and so does
 /// each one after, with an [`ErrorCategory::ReadBudget`](crate::common::error::ErrorCategory) error that is logged
 /// nowhere and latches nothing, so whoever made the run ends it and the document goes on. The title-page check's runs

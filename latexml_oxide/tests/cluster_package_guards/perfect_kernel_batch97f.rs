@@ -12,7 +12,10 @@
 //! XML both ways, no Error and no Warning, and every creator (name and contacts in order). One guard per path: a
 //! declaration environment, a declaration group (and bare declarations, and what stays wrapped), spacing after the
 //! close (both unwrapping sites), the AASTeX group rule, its marked lines, line labels, unlabelled lines under marked
-//! names, e-mail lines, and REVTeX address lines led by a macro mark (hep-ph0301204).
+//! names, e-mail lines, and REVTeX address lines led by a macro mark (hep-ph0301204). Batch AAS1's guard converts in-process
+//! once: repeated affiliation contents the reading rehearses once (`rehearsal::rehearse_call`).
+use latexml::util::test::convert_files_with;
+
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
   perfect_kernel_batch84b::creators,
@@ -285,4 +288,27 @@ fn revtex_macro_marked_address_lines_are_no_group() {
     "{all:?}"
   );
   both_ways(repro!("revtex_macro_marked_addresses_go_by_their_marks"));
+}
+
+/// aastex631's affiliations repeated across authors, an accented one and a document macro's (`\affiliation{\Uni}`): the
+/// reading rehearses each content once and gives its events to every repeat (batch AAS1, `rehearsal::rehearse_call`;
+/// 1901.01540's 1,427 calls over 228 contents, 2103.04797's macros), each author's affiliations as pdflatex prints them.
+#[test]
+fn aastex6_repeated_affiliations_are_each_authors() {
+  let (log, xml) = convert_files_with(
+    repro!("aastex6_repeated_affiliations_read_once"),
+    &[],
+    Some("ar5iv.sty"),
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(creators(&xml), [
+    vec!["Ann Able", "affiliation=Leibniz Universität Hannover"],
+    vec!["Bob Baker", "affiliation=Uni Two, Town"],
+    vec![
+      "Cat Cole",
+      "affiliation=Leibniz Universität Hannover",
+      "affiliation=Uni Two, Town"
+    ],
+    vec!["Dan Dorn", "affiliation=Uni Three"],
+  ]);
 }

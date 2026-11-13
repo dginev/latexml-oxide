@@ -344,6 +344,30 @@ code on AMD (skid), so the figures are counts × stepped instructions.
 
 ## Audit log (periodic passes; newest first)
 
+### 2026-11-13 — the AASTeX many-author regression (batch AAS1)
+
+Basis: FMPERF (2026-11-13) measured 1710.09320 (aastex61, 1,108 authors) +13.3 % and 1901.01540 (aastex62, 1,202) +14.4 %
+`instructions:u` against the 2026-10-31 audit tip (82adbc1802), the frontmatter alone +1.9 / +2.2 G. Frame-pointer
+profiles of both binaries (`kit/perf_profile.sh`, `EVENT=instructions:u PERIOD=3000017`; the default period throttles on
+this host) put the growth in `digest_front_matter`: the reading's rehearsals (`read_at_flush`, 0.96 G on 1901.01540, of
+it the API calls' 0.67 G, 1,427 `\affiliation` calls over 228 contents), the emitter (`emit_commands`, 0.53 G, diffuse) and
+the entries' digestion (+0.33 G over the audit's, `begin_frontmatter_entry_digestion`'s scan the one frame that grew).
+Median of 3 interleaved, release, `--preload=ar5iv.sty --nocomments`; each lever against the step before; XML
+byte-identical on all five at every step.
+
+| Lever | 1710.09320 | 1901.01540 | 2103.04797 | 2005.08745 | 1507.02068 |
+|---|---|---|---|---|---|
+| L1 an API call's character-only content rehearsed once per reading (`rehearsal.rs` `rehearse_call`) | −4.36 % | −3.58 % | 0.00 % | +0.02 % | 0.00 % |
+| L2 any content whose first run left nothing behind (no diagnostic, conditional, footnote step, definition, environment, queued entry, open group) | −1.15 % | −1.30 % | −6.41 % | +0.03 % | −0.01 % |
+| L3 the title-page check's queued records indexed by content (length and hash), not length (`title_page_check.rs` `content_keys`) | +0.01 % | −0.44 % | −0.70 % | −0.11 % | 0.00 % |
+| **cumulative** (int169b → AAS1, G) | 10.986 → 10.390 | 13.555 → 12.842 | 7.694 → 7.153 | 12.429 → 12.422 | 5.492 → 5.493 |
+
+Against the audit tip the two AASTeX papers stand at +7.3 % (9.686 → 10.390 G) and +8.3 % (11.859 → 12.842 G). The rest
+of the gap, by the profile after L2 (1901.01540): the author blocks' rehearsals (≈0.33 G, every name distinct; of a
+rehearsal's fixed cost `install_event_bindings` ≈63 K instructions), `emit_commands` (≈0.53 G, no frame above 0.3 %),
+and the entries' digestion (+0.3 G over the audit's, diffuse). Dead end: hashing every candidate content of an invocation
+apart (one slice per `{`) was quadratic in a long `\author` command (1507.02068 +0.93 %); the keys fold from the end.
+
 ### 2026-11-06 — a native answer for l3fp's doors (pk/P2)
 
 Basis: `perf stat -e instructions:u`, release, `[rawstyles,rawclasses,luatex]latexml.sty` for the `b*` rows (`kit/probe.sh`, `PERF=1`), `run_doc.sh` for the manuals (`kit/perf_docs.sh`), XML byte-identical to base P1 on every row.
