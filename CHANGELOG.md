@@ -7,8 +7,10 @@
     drops are now tallied (`IgnoreDiagnosticsScope::dropped`) and reported: a Warning
     naming the muted error and fatal counts, or an Error when the reload stopped early,
     which leaves the expl3 functions it had yet to define missing (mhchem's `\ce` on
-    TL 2026). Guards `common::error::tests::an_ignoring_scope_tallies_what_it_drops`,
-    `expl3_sty::tests::a_muted_expl3_reload_is_counted`.
+    TL 2026). On TL 2025 a `LATEXML_NODUMP=1` run now warns of the 5015 records
+    the reload mutes. Guards `common::error::tests::an_ignoring_scope_tallies_what_it_drops`,
+    `expl3_sty::tests::a_muted_expl3_reload_is_counted`,
+    `dump_gate_init::nodump_latex_branch_converts_healthily`.
 
   - **`page=` on an SVG, PNG or JPEG no longer re-encodes it** (#791). A single-page
     format has no page to select (pdfTeX ignores `page=` on a PNG), so
