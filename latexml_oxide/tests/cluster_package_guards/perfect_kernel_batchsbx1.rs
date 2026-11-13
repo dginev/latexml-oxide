@@ -93,6 +93,16 @@ const ROWS: &[(Source, (usize, usize), Expect)] = &[
       "note=See the appendix for the list of collaboration members",
     ]]),
   ),
+  // the Error side: "for " opening a legend's text, no group's name after it (review revSBX1)
+  (
+    Source::Repro("sectioning-frontmatter/speaks_for_prefix_before_no_group_is_flagged.tex"),
+    (1, 0),
+    Expect::Creators(&[
+      &["Ann Able", "affiliation=MIT"],
+      &["Bob Baker", "affiliation=Duke University"],
+      &["for correspondence: Physics Department", "affiliation=MIT"],
+    ]),
+  ),
   // the Error side: a legend's text named as the author, its team word no group's name (pdflatex 0 `!`, the output the same)
   (
     Source::Inline(

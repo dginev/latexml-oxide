@@ -62,6 +62,8 @@ const TCB_ARITHMETIC: &str = "Error:expected:<number> Arithmetic overflow.";
 
 const TCB_DIMENSION: &str = "Error:expected:<dimen> Dimension too large.";
 
+const AFTER_OVERFLOW: &str = r#"<p xml:id="p2.1">After: 0.0pt.</p>"#;
+
 const BOUNDARY: &[Row] = &[
   // --- `\chapter` (SVC, OD #734, #735). TeX errs (and Perl, where named): one Warning (user 2026-11-11) ---
   (
@@ -314,6 +316,46 @@ const BOUNDARY: &[Row] = &[
       "p1.pic1.p1.pic1.2.40",
       r#"<p xml:id="p1.pic1.p1.pic1.2.40">Line <rule height="450.0pt" width="1.0pt"/></p>"#,
     )],
+  ),
+  // tcolorbox's command form opens no group (tcolorbox.sty:1150): the measure's flag ends with the measure, so the
+  // author's overflow after the box keeps TeX's Error (review revSBX1 B1)
+  (
+    "an overflow after a breakable tcolorbox's command form (repro \
+     package-bindings/tcolorbox_command_form_box_then_overflow_errs)",
+    "pdflatex 1 `!` (Arithmetic overflow, the \\dimexpr after the box); Perl 0 errors",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/package-bindings/tcolorbox_command_form_box_then_overflow_errs.tex"
+    ),
+    &[],
+    (1, 0),
+    &[TCB_ARITHMETIC],
+    &[
+      (
+        "p",
+        "p1.pic1.2.1",
+        r##"<p xml:id="p1.pic1.2.1"><text color="#000000" xml:id="p1.pic1.2.1.1">A short note.</text></p>"##,
+      ),
+      ("p", "p2.1", AFTER_OVERFLOW),
+    ],
+  ),
+  (
+    "breakable tcolorbox's command form past \\maxdimen, then an overflow after it (repro \
+     package-bindings/tcolorbox_command_form_breakable_box_overflow_then_overflow)",
+    "pdflatex 1 `!` (Arithmetic overflow, the \\dimexpr after the box; the box broken over pages); Perl 0 errors",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/package-bindings/tcolorbox_command_form_breakable_box_overflow_then_overflow.tex"
+    ),
+    &[],
+    (1, 1),
+    &[
+      "Warning:expected:<number> Arithmetic overflow.",
+      TCB_ARITHMETIC,
+    ],
+    &[
+      ("p", "p1.pic1.1.1", TCB_TITLE),
+      ("p", "p1.pic1.2.40", TCB_LINE_40),
+      ("p", "p2.1", AFTER_OVERFLOW),
+    ],
   ),
   (
     "TeX's bounds as constants and e-TeX results (repro expansion-primitives/out_of_range_bounds_are_clean)",

@@ -887,13 +887,23 @@ pub(in crate::base_utilities) fn flag_merged_creators(document: &mut Document) -
 /// affiliation's (`at the University of X`). A collaboration or a team named as an author opens with a capital or an
 /// article (`The ATLAS Collaboration`, `the ATLAS Collaboration`, `the PE11 team of Kepler WG#1`) and is not read; nor
 /// is a group named as an author in lower case (`sPHENIX Collaboration`, 2606.17184; `openJiuwen Team`, 2605.10052: a
-/// creator, [`reads_as_collaboration`]) or whom the authors speak for (`for the PAROS Clinical Research Network`,
-/// 2605.24212: [`SPEAKS_FOR`]).
+/// creator, [`reads_as_collaboration`]) or whom the authors speak for, a group's name read so after [`SPEAKS_FOR`]
+/// (`for the PAROS Clinical Research Network`, 2605.24212; not `for correspondence: Physics Department`).
 fn reads_as_a_line_under_names(text: &str) -> bool {
   let Some(first) = text.split_whitespace().next() else {
     return false;
   };
-  let lower = text.to_lowercase();
+  let speaks_for_a_group = || {
+    SPEAKS_FOR.iter().any(|p| {
+      text
+        .get(..p.len())
+        .is_some_and(|q| q.eq_ignore_ascii_case(p))
+        && {
+          let rest = text[p.len()..].trim_start();
+          !rest.is_empty() && !reads_as_a_line_under_names(rest)
+        }
+    })
+  };
   first.chars().next().is_some_and(char::is_lowercase)
     && !NAME_PARTICLES.contains(&first)
     && !["the", "a", "an", "and"].contains(&first)
@@ -901,5 +911,5 @@ fn reads_as_a_line_under_names(text: &str) -> bool {
     && name_count(text) == 0
     && text.split_whitespace().any(non_name_word)
     && !reads_as_collaboration(text, true)
-    && !SPEAKS_FOR.iter().any(|p| lower.starts_with(p))
+    && !speaks_for_a_group()
 }

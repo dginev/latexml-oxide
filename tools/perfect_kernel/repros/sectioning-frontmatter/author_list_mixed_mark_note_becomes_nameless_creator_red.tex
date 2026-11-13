@@ -1,11 +1,13 @@
-% witness: 2509.15733 (fairmeta, `Ran Xu$^{1,2\correspond}$` and `\contribution[\correspond]{Corresponding author}`);
-%          authblk's list the same (`\affil[\dagger]{…}`)
+% witness: 2509.15733 (fairmeta, `Ran Xu$^{1,2\correspond}$` and `\contribution[\correspond]{Corresponding author}`),
+%          2606.27251; authblk's list the same (`\affil[\dagger]{…}`; its `\author[1,2\dag]` form:
+%          authblk_author_mark_list_mixed_symbol_note_becomes_nameless_creator_red)
 % oracle:  pdflatex 0 errors; "Ann Able1,2†, Bob Baker1", "Corresponding author" under them
 % engines: rust (SBX1, CAU1 the same) the mark `1,2†` stays in the name, unread, and the note becomes a creator of its
 %          own with no name ("(nameless)"); 0 errors 0 warnings
 % expect:  0 errors; Ann Able (marks 1, 2, †) holding the note, no nameless creator
-% status:  RED (SBX1, pre-existing on CAU1)
-% moves:   proposed batch (a mark list mixing digits and a symbol command, read as one unread label)
+% status:  RED (SBX1, pre-existing on CAU1); id LEGB: the mark item `2\dagger` not split into `2` + `\dagger` before
+%          label matching
+% moves:   post-merge (LEG0's census: low reach)
 \documentclass{article}
 \usepackage{authblk}
 \title{T}
