@@ -437,14 +437,16 @@ fn entry_names(name: &Tokens) -> Result<Vec<Tokens>> {
   Ok(names)
 }
 
-/// The names a queued author entry's `name` holds ([`entry_names`]) where a binding's whole-list call queued it, at
-/// `queue_position` (`\lx@add@author@split`: sv_support's, aa's, OmniBus's, webofc's, ptephy's, llncs's `\author`) — not
-/// the kernel `\author`'s block, whose addresses a raw class's numbered store places (`class_numbered_institutes`; RED
-/// `raw_class_numbered_institute_email_under_its_entry_lost_red`); several are recorded for its block, whose positions
+/// The names a queued author entry's `name` holds ([`entry_names`]) where a whole-list call queued it, at
+/// `queue_position`: a binding's (`\lx@add@author@split`: sv_support's, aa's, OmniBus's, webofc's, ptephy's, llncs's
+/// `\author`) or the kernel `\author`'s (`\lx@add@authors@adaptive`); several are recorded for its block, whose positions
 /// the resolver counts so.
 fn entry_pieces(name: &Tokens, queue_position: usize) -> Result<Vec<Tokens>> {
   // (one name: the entry's name whole, as it was read before its names were known)
-  let names = if ledger::queuing_hook(queue_position) == Some("\\lx@add@author@split") {
+  let hook = ledger::queuing_hook(queue_position);
+  let whole_list =
+    hook == Some("\\lx@add@author@split") || hook == Some("\\lx@add@authors@adaptive");
+  let names = if whole_list {
     entry_names(name)?
   } else {
     Vec::new()

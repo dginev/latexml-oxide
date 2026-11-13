@@ -34697,7 +34697,7 @@ authors' list (the gate's count stays at most one; both addresses on Bob Baker, 
 `sv_support_sty.rs` `\lx@sv@institute@`); unchanged, `queued_author_name_prints` (it reads all the names' words together,
 so a part changes nothing), `queued_author_marks`, `queued_requesters` and `queued_name_marks` (one entry per position;
 the kernel `\author`'s block is one entry too, so parting their positions is the plan's P4 row: P2-3b, #995, parts a
-binding's whole-list entry, a position a name; the kernel's not yet). aa kept its split here:
+binding's whole-list entry, a position a name; P2-3c the kernel's). aa kept its split here:
 without it, `\corrauth`'s contact lost `name="Corresponding author: "` when a later name held a `CJK*` environment
 (2608.21138), the emitter writing the contact as its item (`\lx@frontmatter@itemonly{…}`), not as the `\corrauth` call —
 the events' walker's, a mechanism of its own (P2-1c, below).
@@ -35207,7 +35207,7 @@ the n-th position the block's n-th creator where the reading made one a name, el
 decides an e-mail, as for one name's entry). A whole-list `\author` with an e-mail line of one address a name now gives
 one address to each author (int169a: the block's); 1308.2757's llncs list (`\and\\`, five addresses for five names,
 "mehrabi@" spelling two Mehrabis) gives Saeed Mehrabi his by order, as the PDF lists them. The kernel `\author`'s block
-stays one position: parted, two names requesting a raw class's numbered institute (`class_numbered_institutes`) send its
+stayed one position (until P2-3c, below): parted, two names requesting a raw class's numbered institute (`class_numbered_institutes`) send its
 one e-mail line back into the store's entry, whose call the emitter cannot cut, and the address is lost (astro-ph0508574's
 cjaa.cls, 0911.3853's mem.cls; lost on int169a too with two addresses: fixed by P2-3c, below). llncs's marked list stays
 cut at the call: one block (tried, by rows and whole) reads `\inst{1,2}*` beside another name's `\inst{1*}` as a shown
@@ -35234,8 +35234,17 @@ and its Link step gives each the author it spells (#956); left wrapped, cjaa.cls
 `\@thanks`) printed nowhere and the addresses were lost, counted. A raw command printing its label in place (mem.cls's
 `{e-mail: \tt#1}`) loses that label and font to the contacts' default name (RED
 `raw_class_in_place_email_label_under_numbered_institute_red`). A/B against P23b (`49b1490df2`) on P23b's 2,630 papers
-and 164 raw classes with `\institute` and `\inst`: 0 changed (both readings matter once a list holds several names: the
-kernel's below). Guards `perfect_kernel_batchp23b::{a_star_after_an_inst_mark_is_the_names_text,
+and 164 raw classes with `\institute` and `\inst`: 0 changed (both readings matter once a list holds several names).
+(3) *The kernel `\author`'s list holds a position a name* (`entry_pieces` reads `\lx@add@authors@adaptive`'s entries as
+`\lx@add@author@split`'s): a raw class's numbered store with an e-mail line of one address a name after its last entry
+gives each author one, in order (the block's before). Two readers follow: `author_creator_total` (the `\lx@author@keys`
+ranges an `\author[key]` records) counts positions (`queued_author_positions`), and `ledger::record_entry_names` records
+whenever the reading reads (a replayed class setter's read is kept by the queue's reading; a replay or a rehearsal queues
+no block, so none is found for its entries) — review revP23b's two findings. A/B against D1+D2 (`5096ce95c6`) on P23b's
+2,630 papers, 448 kernel `\author` lists (article, amsart, revtex, report, amsproc; `\and`, an e-mail, `\thanks` or
+marks) and 141 raw classes alike: 1 changed, astro-ph0508574 better (W.H. Gao's e-mail after the institute it is printed
+under), 2210.01917 a 180 s timeout on both alone (noise). Guard row `kernel list, raw class store` of
+`a_whole_list_entry_holds_a_position_a_name` (repro `class-bindings/author_one_block/kernel_raw_class_email_line_one_address_a_name.tex`). Guards `perfect_kernel_batchp23b::{a_star_after_an_inst_mark_is_the_names_text,
 a_raw_class_store_email_line_goes_to_the_authors_it_spells}` (repros `class-bindings/author_one_block/{aa,omnibus}_star_after_inst_mark_stays_the_names_text.tex`,
 `sectioning-frontmatter/raw_class_numbered_institute_email_each_address_its_author.tex`).
 

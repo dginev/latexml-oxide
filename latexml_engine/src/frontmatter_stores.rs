@@ -8341,14 +8341,14 @@ LoadDefinitions!({
     }
     assign_value(
       "lx_author_keys_from",
-      Stored::Int(author_creator_total() as i64),
+      Stored::Int(author_creator_total()? as i64),
       Some(Scope::Global),
     );
   });
   DefPrimitive!("\\lx@author@keys{}", sub[(keys)] {
     let keys = keys.to_string();
     let keys = keys.trim();
-    let to = author_creator_total();
+    let to = author_creator_total()?;
     let from = usize::try_from(lookup_int("lx_author_keys_from")).unwrap_or(to).min(to);
     if !keys.is_empty() && to > from {
       let mut records = lookup_string(AUTHOR_KEYS);

@@ -1004,10 +1004,10 @@ pub fn author_creators_placed() -> bool {
     && !frontmatter_entry_in_progress()
 }
 
-/// How many author creators stand, digested or queued: the role number (`author:N`, `num_ltx:creator`) the next one
-/// will be given is one more.
-pub fn author_creator_total() -> usize {
-  queued_author_count() + usize::try_from(digested_author_count()).unwrap_or(0)
+/// How many author creators stand, digested or queued (their `author:N` positions, `queued_author_positions`: a
+/// whole-list entry one a name): the role number (`author:N`, `num_ltx:creator`) the next one will be given is one more.
+pub fn author_creator_total() -> Result<usize> {
+  Ok(queued_author_positions()? + usize::try_from(digested_author_count()).unwrap_or(0))
 }
 
 /// The queued author creators (their queue positions) whose names' marks request the label a mark's `operand` sets

@@ -881,11 +881,10 @@ pub(in crate::base_utilities) fn queuing_hook(queue_position: usize) -> Option<&
 }
 
 /// The names the queue's reading parts the author entry at `queue_position` into (`queue_reading::entry_pieces`), for
-/// the block that queued it: the `author:N` positions the resolver counts by (`Resolver::author_entries`).
+/// the block that queued it: the `author:N` positions the resolver counts by (`Resolver::author_entries`). Recorded
+/// whenever read, a replayed class setter's read too, as the queue's reading keeps it (revP23b): the count is the
+/// entry's, and a replay or a rehearsal queues no block (`queuing_block`: none).
 pub(in crate::base_utilities) fn record_entry_names(queue_position: usize, names: usize) {
-  if !records_now() {
-    return;
-  }
   with_ledger(|ledger| {
     let Some(at) = queuing_block(ledger, queue_position) else {
       return;

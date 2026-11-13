@@ -32,7 +32,8 @@ fn rows(rows: &[&[&str]]) -> Vec<Vec<String>> {
 /// (a nameless creator). Rows, each a distinct path: the three bindings' whole-list `\author` (sv_support, aa, OmniBus);
 /// marks inside a note and a box beside three names (the per-name marks reading); one address under the affiliation one
 /// name requests (`queued_requesters` → `AddressPlacement::Authors`); a document macro holding only the separator (its
-/// own tokens, `ArgSeparator::span`). OmniBus's Warning: the missing class binding. Distinct from
+/// own tokens, `ArgSeparator::span`); the kernel `\author`'s list under a raw class's numbered store (P2-3c; red on
+/// 5096ce95c6, the block's). OmniBus's Warning: the missing class binding. Distinct from
 /// `perfect_kernel_batchp21::an_author_list_is_one_block_the_reading_cuts` (the reading's creators): the positions the queue
 /// reads before the flush.
 #[test]
@@ -88,6 +89,16 @@ fn a_whole_list_entry_holds_a_position_a_name() {
       repro!("svjour3_marked_list_macro_holding_only_the_separator"),
       (0, 0),
       pair("Ann Able 1", "Bob Baker 2"),
+    ),
+    (
+      "kernel list, raw class store",
+      repro!("kernel_raw_class_email_line_one_address_a_name"),
+      (0, 0),
+      rows(&[&["Ann Able", "affiliation=Univ A", "email=u1@x.org"], &[
+        "Bob Baker",
+        "affiliation=Univ B",
+        "email=u2@x.org",
+      ]]),
     ),
   ] {
     let (log, xml) = latexml::util::test::convert_files_with(tex, &[], Some("ar5iv.sty"));
