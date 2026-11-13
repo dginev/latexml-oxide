@@ -1,3 +1,5 @@
+use latexml_core::common::error::{IgnoreDiagnosticsScope, IgnoredRecords};
+
 use crate::prelude::*;
 
 /// Run a chunk of our own expl3-syntax TeX under the expl3 catcode regime.
@@ -71,6 +73,34 @@ pub(crate) fn with_expl_syntax_restored<T>(load: impl FnOnce() -> Result<T>) -> 
   result
 }
 
+/// What the no-dump expl3-code.tex reload muted is counted, never silent (#825): a Warning, an Error when the reload
+/// stopped early, leaving every expl3 function after that point undefined (TL 2026 stopped in l3unicode, breaking
+/// mhchem's `\ce`).
+fn report_muted_reload(muted: IgnoredRecords, stopped: Option<Error>) -> Result<()> {
+  let counts = s!(
+    "{} errors and {} fatal errors muted",
+    muted.errors,
+    muted.fatals
+  );
+  match stopped {
+    Some(e) => Error!(
+      "expl3",
+      "raw-load",
+      s!(
+        "The raw expl3-code.tex reload (no kernel dump) stopped early ({counts}): {e}; the expl3 functions it had yet \
+          to define are missing"
+      )
+    ),
+    None if muted.errors + muted.fatals > 0 => Warn!(
+      "expl3",
+      "raw-load",
+      s!("The raw expl3-code.tex reload (no kernel dump) completed with {counts}")
+    ),
+    None => {},
+  }
+  Ok(())
+}
+
 #[rustfmt::skip]
 LoadDefinitions!({
   // Strict-Perl translation of LaTeXML/lib/LaTeXML/Package/expl3.sty.ltxml:
@@ -118,7 +148,6 @@ LoadDefinitions!({
   // so those ride along: a summary naming an undefined macro with no
   // `Error:undefined:` line is the very inconsistency this scope exists to
   // prevent.
-  use latexml_core::common::error::IgnoreDiagnosticsScope;
   let ignore_scope = raw_load_will_run.then(IgnoreDiagnosticsScope::new);
   if raw_load_will_run {
     assign_value("SUPPRESS_UNDEFINED_ERRORS", true, None);
@@ -134,19 +163,11 @@ LoadDefinitions!({
   }
   let muted = ignore_scope.as_ref().map(IgnoreDiagnosticsScope::dropped).unwrap_or_default();
   drop(ignore_scope);
-  // What the scope muted is counted, never silent (#825): a Warning, an Error when the load stopped early, leaving
-  // every expl3 function after that point undefined (TL 2026 stopped in l3unicode, breaking mhchem's `\ce`).
-  let stopped = match loaded {
-    Ok(Err(e)) | Err(e) => Some(e),
-    Ok(Ok(_)) => None,
-  };
-  let counts = s!("{} errors and {} fatal errors muted", muted.errors, muted.fatals);
-  match stopped.filter(|_| raw_load_will_run) {
-    Some(e) => Error!("expl3", "raw-load", s!("The raw expl3-code.tex reload (no kernel dump) stopped early ({counts}): \
-      {e}; the expl3 functions it had yet to define are missing")),
-    None if muted.errors + muted.fatals > 0 => Warn!("expl3", "raw-load",
-      s!("The raw expl3-code.tex reload (no kernel dump) completed with {counts}")),
-    None => {},
+  if raw_load_will_run {
+    report_muted_reload(muted, match loaded {
+      Ok(Err(e)) | Err(e) => Some(e),
+      Ok(Ok(_)) => None,
+    })?;
   }
 
   // Post-load fixup for `\__kernel_msg_info:nnxx`. xparse-2018-04-12.sty
@@ -272,3 +293,36 @@ LoadDefinitions!({
   // back from its SPACE: a later `\usepackage[english]{babel}` ran `\initiate@active@char{~}` with `~` at catcode
   // 10, an `expected:<relationaltoken>` cascade; minimal repro `\usepackage{expl3}\usepackage[english]{babel}`).
 });
+
+#[cfg(test)]
+mod tests {
+  use latexml_core::{
+    common::error::{LogStatus, get_status, initialize_report},
+    state::{State, StateOptions, set_state},
+  };
+
+  use super::*;
+
+  /// #825: the muted reload says what it muted — a Warning when it completed, an Error when it stopped early, nothing
+  /// when it muted nothing.
+  #[test]
+  fn a_muted_expl3_reload_is_counted() {
+    set_state(State::new(StateOptions::default()));
+    let rows = [
+      (IgnoredRecords { errors: 3, fatals: 1 }, false, (1, 0)),
+      (IgnoredRecords { errors: 0, fatals: 0 }, false, (0, 0)),
+      (IgnoredRecords { errors: 2, fatals: 1 }, true, (0, 1)),
+    ];
+    for (muted, stopped, (warnings, errors)) in rows {
+      initialize_report();
+      let stopped = stopped.then(|| Error::from("Excessive recursion (synthetic)"));
+      report_muted_reload(muted, stopped).expect("below MAX_ERRORS");
+      assert_eq!(
+        (get_status(LogStatus::Warning), get_status(LogStatus::Error)),
+        (warnings, errors),
+        "{muted:?}"
+      );
+    }
+    initialize_report();
+  }
+}
