@@ -725,7 +725,7 @@ fn label_ink(d: &Digested, out: &mut PrintedLabel, in_picture: bool) {
         label_ink(&body, out, in_picture);
       }
       if out.text.len() == start
-        && let Some(glyph) = printed_glyph(&w)
+        && let Some(glyph) = printed_own_text(&w)
       {
         for c in glyph.chars() {
           if keeps_label_char(c, out.text.chars().next_back()) {

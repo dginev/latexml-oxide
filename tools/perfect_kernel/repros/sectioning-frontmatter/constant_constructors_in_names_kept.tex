@@ -1,0 +1,16 @@
+% mechanism: what other commands print inside names: `\LaTeXe` (a constructor, its template's text), a user's kerned
+%   `\BibTeX`, amsmath's `\AmS` (a macro), `\copyright` (a character), `\ensuremath{\alpha}` (a formula).
+% witness: synthetic (LOGO1)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: "The LATEX 2ε Team | BibTEX Users | AMS Staff | Ann © Smith | Bob α Jones"
+% engines: rust int171a base 0 E 1 W (the content check's "excess" LaTeX: `\LaTeXe` read as no ink); names as now
+% expect:  0 E, 0 W; five creators, each whole
+% status:  RED -> GREEN (LOGO1)
+\documentclass{article}
+\usepackage{amsmath}
+\def\BibTeX{{\rm B\kern-.05em{\sc i\kern-.025em b}\kern-.08em T\kern-.1667em\lower.7ex\hbox{E}\kern-.125emX}}
+\begin{document}
+\title{T}
+\author{The \LaTeXe\ Team \and \BibTeX\ Users \and \AmS\ Staff \and Ann \copyright\ Smith \and Bob \ensuremath{\alpha} Jones}
+\maketitle
+Body.
+\end{document}

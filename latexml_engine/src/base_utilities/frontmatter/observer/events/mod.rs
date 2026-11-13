@@ -897,7 +897,7 @@ fn script_ink(d: &Digested, refs: bool) -> String {
           ink(&body, refs, out);
         }
         if out.len() == start
-          && let Some(glyph) = printed_glyph(&w)
+          && let Some(glyph) = printed_own_text(&w)
         {
           out.push_str(&glyph);
         }

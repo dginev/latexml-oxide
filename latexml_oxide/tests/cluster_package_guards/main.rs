@@ -483,6 +483,8 @@ mod perfect_kernel_batchlo1;
 mod perfect_kernel_batchlo2;
 mod perfect_kernel_batchlo3;
 mod perfect_kernel_batchlo4;
+/// LOGO1: what a constructor prints of its own (`\LaTeX`, `\TeX`) is ink of the name or line it is in (amsldoc).
+mod perfect_kernel_batchlogo1;
 mod perfect_kernel_batchm1;
 mod perfect_kernel_batchm3;
 /// MB1: the one label rule of the Kind step's lines — a labelled line named after the class's name of the entry, a

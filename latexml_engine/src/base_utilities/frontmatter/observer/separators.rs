@@ -90,8 +90,9 @@ fn made_by(origin: DefinitionOrigin) -> SepMeaning {
 }
 
 /// The kernel layer's separator, `latex_constructs/sect05.rs`'s `\and` constructor: the definition a kernel meaning must be
-/// (`\And` and `\AND` are `\let` to it), the one `frontmatter_stores::kernel_and_list` asks for (P2-6).
-const KERNEL_SEPARATOR: &str = "\\and";
+/// (`\And` and `\AND` are `\let` to it), the one `frontmatter_stores::kernel_and_list` asks for (P2-6); a whatsit of it
+/// prints no text (`util_text::printed_own_text`).
+pub(in crate::base_utilities) const KERNEL_SEPARATOR: &str = "\\and";
 
 /// What `token` means now ([`SepMeaning`]): the kernel separator is the [`KERNEL_SEPARATOR`] constructor a kernel layer
 /// made (a pool, a dump, a format: `is_latexml_owned` and not `is_binding_made`).

@@ -1,7 +1,7 @@
 //! Small token/text utilities and the front matter debug and ink helpers (`unitlength_sp`, `already_reported`,
 //! `digested_to_text`, `ink_text`, `shown_arguments`).
 
-use super::*;
+use super::{frontmatter::observer::separators::KERNEL_SEPARATOR, *};
 
 /// `\unitlength` in sp, exact (65536, 1pt, when it is undefined): the picture
 /// unit every `{picture}` and pict2e coordinate is multiplied by (Perl
@@ -260,7 +260,7 @@ pub fn typesets_content(d: &Digested) -> bool {
         // that is only a table typesets it (simplecv's header, brandeis-problemset's title table; dropped since 59p).
         || printed_properties(&w).iter().any(typesets_content)
         // (a math character, its `glyph`: `\mathchar`)
-        || printed_glyph(&w).is_some()
+        || printed_own_text(&w).is_some()
         || w
           .get_args()
           .iter()
@@ -660,6 +660,22 @@ fn template_prints_text(template: &str) -> bool {
   parse_replacement(template).is_ok_and(|ops| prints(&ops))
 }
 
+/// The text a constructor's template prints when it is constant (no value absorbed, no branch), its elements' too:
+/// `\LaTeX`'s `L<ltx:text …>a</ltx:text>T…X` is "LaTeX". None for white space alone or a template that does not parse.
+fn template_text(template: &str) -> Option<String> {
+  use latexml_core::binding::def::replacement::{ReplacementOp, parse_replacement};
+  let ops = parse_replacement(template).ok()?;
+  let mut text = String::new();
+  for op in &ops {
+    match op {
+      ReplacementOp::Text { text: piece } => text.push_str(piece),
+      ReplacementOp::OpenElement { .. } | ReplacementOp::CloseElement { .. } => {},
+      _ => return None,
+    }
+  }
+  Some(text).filter(|text| !text.trim().is_empty())
+}
+
 /// The attributes a transparent wrapper's element may carry ([`prints_only_arguments`]): its font, and how it closes.
 const FONT_ONLY_ATTRIBUTES: &[&str] = &["font", "_font", "_force_font", "_noautoclose"];
 
@@ -719,7 +735,7 @@ fn fills_generated_text(w: &Whatsit) -> bool {
 }
 
 /// The text digested material typesets, as [`typesets_content`] walks it — characters of its boxes and math characters
-/// (`printed_glyph`), through lists, whatsit arguments and bodies, alignment rows and cells; never a whatsit's reversion
+/// (`printed_own_text`), through lists, whatsit arguments and bodies, alignment rows and cells; never a whatsit's reversion
 /// (its source), and only the arguments it shows (`shown_arguments`): an image's file name and options are not text on
 /// the page (`\includegraphics{\@logo}`), nor is a link's target (`\href{\@url}{Home}` prints "Home"). What a speculative
 /// title-page run printed (sect05.rs `title_page_probe_run`; review probe `logo`).
@@ -765,7 +781,7 @@ fn ink_text_with(d: &Digested, pictures: bool, out: &mut String) {
         ink_text_with(&body, pictures, out);
       }
       if out.len() == start
-        && let Some(glyph) = printed_glyph(&w)
+        && let Some(glyph) = printed_own_text(&w)
       {
         out.push_str(&glyph);
       }
@@ -875,7 +891,7 @@ pub fn ink_word_text(d: &Digested, out: &mut String) {
           ink_word_text(&body, &mut inner);
         }
         if inner.chars().all(|c| c.is_whitespace() || c == INK_SEAM)
-          && let Some(glyph) = printed_glyph(&w)
+          && let Some(glyph) = printed_own_text(&w)
         {
           inner.push_str(&glyph);
         }
@@ -920,13 +936,22 @@ const VERBATIM_PRINTERS: &[(&str, &[bool])] = &[
   ("\\harvardurl", &[true]),
 ];
 
-/// The character a math-character whatsit prints, its `glyph` (`\mathchar`, `\delimiter`, `\mathaccent`: tex_math.rs;
-/// `\Udelimiter`), as Perl's `\mathchar` is a Box of it (TeX_Math.pool.ltxml:576-580): the text walkers print it where
-/// the whatsit shows nothing else. flexisym's digits and letters are `\mathchar`s (2312.00656's `$^{2,3}$`, no mark).
-pub(crate) fn printed_glyph(w: &Whatsit) -> Option<String> {
+/// What a whatsit prints of its own, which the text walkers print where it shows nothing else: a math character's
+/// `glyph` (`\mathchar`, `\delimiter`, `\mathaccent`: tex_math.rs; `\Udelimiter`), as Perl's `\mathchar` is a Box of it
+/// (TeX_Math.pool.ltxml:576-580; flexisym's digits, 2312.00656's `$^{2,3}$`), else a constant template's text
+/// ([`template_text`]: `\LaTeX`, `\TeX` — amsldoc's `\author{…, \LaTeX\ Project}` printed "Project").
+pub(crate) fn printed_own_text(w: &Whatsit) -> Option<String> {
   match w.get_property("glyph").as_deref() {
     Some(Stored::String(glyph)) => Some(to_string(*glyph)).filter(|g| !g.trim().is_empty()),
-    _ => None,
+    _ => {
+      let definition = w.get_definition();
+      // (the kernel's `\and` is latex.ltx's column break, no text: its " and " is the XML's, Perl's
+      // `DefConstructor('\and', ' and ')` (LaTeX.pool), never the page's — fx25's title page print)
+      if *definition.get_cs() == T_CS!(KERNEL_SEPARATOR) {
+        return None;
+      }
+      definition.replacement_template().and_then(template_text)
+    },
   }
 }
 
