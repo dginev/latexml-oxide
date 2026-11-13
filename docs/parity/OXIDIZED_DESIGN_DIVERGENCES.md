@@ -1029,7 +1029,10 @@ or `\\`, its ends in different `\lx@personname`s (Perl errs alike); kept whole
 when the matching `\end{name}` follows (`environment_closes_ahead`) — an alignment
 environment (`center`, `flushleft`, `flushright`) wrapping the whole block or a whole
 `\and` group is unwrapped first (`unwrap_alignment_environment`), its lines split as
-written, so only an environment inside a piece is one unit. A superscript
+written, so only an environment inside a piece is one unit. An affiliation list's cut by the
+kernel's `\and` by meaning (#48, `classify::affiliation_lines`) keeps the parentheses rule
+(`tokens::inside_balanced_parens`): beamer's `\inst{1}Univ A (North \and South) \and \inst{2}Univ B`
+is one entry (P6f2); the binding routes' cut (`split_at_kernel_separators`, #995) still cuts inside them. A superscript
 whose one-token argument is a separator (`Bob Baker\textsuperscript, Carl Cole`,
 2609.15009) is a split there, the superscript dropped. Guard
 `perfect_kernel_batch61::frontmatter_digest_cluster_2609`.
@@ -1392,7 +1395,16 @@ in the "author" arm (`split_author_line`):
    Authors written "Alice and Bob" still split, because " and " is a
    name separator inside `split_author_line`. (An affiliation list's
    lines are cut by the same list since P6d, which folded the former
-   `affil_splits` into `author_affil_splits`.)
+   `affil_splits` into `author_affil_splits`, and first at the kernel's
+   `\and` by meaning since P6f, `classify::affiliation_lines`: a
+   document's macro holding it or a `\csname and\endcsname` cuts as the
+   spelled `\and`, the line after it an entry of its own. The cut by
+   meaning keeps #36's parentheses rule (`tokens::inside_balanced_parens`),
+   and runs its rehearsal only where the list holds a `\csname`, a
+   kernel-`\and` copy no spelling matches or a macro no binding made
+   (`observer::may_hold_kernel_separator`; P6f2, revP6f S1/S2). A `\let`
+   copy of the current `\and` is cut by spelling (`delimiter_token_matches`)
+   and, since P6f, starts an entry (`classify::parts_entries`).)
 
 **Why:** arXiv 2605.00347 (colm2026 class) lists 13 authors across three
 `\textbf{…}` lines with `$^{1,2,3,*}$` affiliation markers. Perl and the

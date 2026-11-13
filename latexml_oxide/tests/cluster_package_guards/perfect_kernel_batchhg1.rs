@@ -630,6 +630,63 @@ fn marked_blocks_restored_read_as_printed() {
         r#"<creator before="  " role="author"><personname>Bob Two<sup>†</sup></personname><contact name="Affiliation: " role="affiliation"><sup>†</sup>Univ B</contact><contact name="Emails: " role="email">bob@y.org</contact></creator>"#,
       ]),
     },
+    // (P6f: a list's lines cut at the kernel's `\and` by meaning, `classify::affiliation_lines` — a document macro holding
+    // it, a `\csname and\endcsname`; base: "Univ Alpha and Univ Beta" one entry, 1 warning)
+    Row {
+      repro:    repro!("sectioning-frontmatter/beamer_institute_macro_held_and_parts_entries"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">Univ Alpha</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation">Univ Beta</contact></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("sectioning-frontmatter/beamer_institute_csname_and_parts_entries"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">Univ Alpha</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation">Univ Beta</contact></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!("sectioning-frontmatter/beamer_institute_macro_held_and_marked_entries"),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">Univ Alpha, Town A</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation">Univ Beta</contact></creator>"#,
+      ]),
+    },
+    // (P6f2, revP6f S1: the cut by meaning keeps the spelled split's parentheses rule, OD #36 — a written `\and`, which
+    // needs no rehearsal, and a macro-held one, which the rehearsal cuts; P6f: Ann "Univ A (North", Bob "South)" and
+    // "Univ B", 0 warnings. The "and" for the column break is counted, post-merge)
+    Row {
+      repro:    repro!("sectioning-frontmatter/beamer_institute_and_inside_parentheses_one_line"),
+      files:    &[],
+      counts:   (0, 1),
+      lines:    &["more often than the author blocks print them: and."],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">Univ A (North  and South)</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation">Univ B</contact></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!(
+        "sectioning-frontmatter/beamer_institute_macro_held_and_inside_parentheses_one_line"
+      ),
+      files:    &[],
+      counts:   (0, 1),
+      lines:    &["more often than the author blocks print them: and."],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">Univ A (North  and South)</contact></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation">Univ B</contact></creator>"#,
+      ]),
+    },
     Row {
       repro:    repro!("class-bindings/acmart_country_glued_mark_requests_each_entry"),
       files:    &[],

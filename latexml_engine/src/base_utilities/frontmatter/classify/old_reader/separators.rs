@@ -59,22 +59,9 @@ fn line_parts(v: &[Token]) -> Vec<LinePart> {
     } else if t == T_CS!("\\&") {
       (LinePart::Ampersand(i), i + 1)
     } else if t == T_OTHER!("(")
-      && paren_closes_ahead(&v[i + 1..].iter().copied().collect::<VecDeque<Token>>())
+      && let Some(close) = paren_close_offset(&v[i + 1..])
     {
-      let mut level = 0i32;
-      let mut end = i;
-      while end < v.len() {
-        if v[end] == T_OTHER!("(") {
-          level += 1;
-        } else if v[end] == T_OTHER!(")") {
-          level -= 1;
-        }
-        end += 1;
-        if level == 0 {
-          break;
-        }
-      }
-      (LinePart::Span(i, end), end)
+      (LinePart::Span(i, i + close + 2), i + close + 2)
     } else if t == T_CS!("\\begin")
       && let Some(span) =
         environment_closes_ahead(&v[i + 1..].iter().copied().collect::<VecDeque<Token>>())

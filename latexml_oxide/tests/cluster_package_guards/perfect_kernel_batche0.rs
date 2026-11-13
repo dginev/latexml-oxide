@@ -279,8 +279,9 @@ const OLD_READER_EMISSIONS: &[(&str, usize)] = &[
 /// declarations and re-exports) — no line of an item added.
 /// P5a lowered it to 1,544: `names_split.rs` and `names_continue`, `names_list_continues`, `notes_only_line` deleted, their
 /// last caller IEEEtran's `name_memberships` gone (OD #1016). P6c to 1,541: its `LAYOUT` and name-text reads call the one
-/// font-declaration reader (`frontmatter_stores::layout`, `rows::name_text_command`).
-const OLD_READER_CODE_LINES: usize = 1_541;
+/// font-declaration reader (`frontmatter_stores::layout`, `rows::name_text_command`). P6f2 to 1,528: `old_reader::separators`'
+/// parenthesis span is the split's rule (`tokens::paren_close_offset`).
+const OLD_READER_CODE_LINES: usize = 1_528;
 
 /// What the fence counts in the old reader's code: its ways into the API's queue, and a convention's mode.
 const OLD_READER_NEEDLES: [&str; 4] = [
@@ -408,8 +409,9 @@ const MOVED_CUT_KIND_EMISSIONS: &[(&str, usize)] = &[
 /// `name_and_remark` and their helpers) deleted, the reading's. P6's compaction lowers it: P6a to 1,884, `cut_list` and
 /// `CUT_COPY_PLACE` moved unchanged to `defs/frontmatter_api.rs`, `kind.rs`' `balanced` deleted (core's `Tokens::is_balanced`);
 /// P6c to 1,878, `email_lines.rs`' and `kind.rs`' font reads the one reader's (`rows::name_text_command`, `mark_switch`);
-/// P6d to 1,867, `line_marks.rs`' `affil_splits` deleted (`classify::author_affil_splits` spelled again).
-const MOVED_CUT_KIND_CODE_LINES: usize = 1_867;
+/// P6d to 1,867, `line_marks.rs`' `affil_splits` deleted (`classify::author_affil_splits` spelled again); P6f to 1,863,
+/// the cutter's `\and` test the line cut's (`classify::parts_entries`).
+const MOVED_CUT_KIND_CODE_LINES: usize = 1_863;
 
 /// The fence on the moved Cut and Kind: they take no new decision either (review revZ18a check 3).
 #[test]
@@ -1535,8 +1537,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("classify", 462),
   // (E0h: the rest of `author_block/` Z18m moved unchanged to `classify/old_reader/`, split off from `classify`'s row;
   // P5a, 131 -> 113: `names_continue`, `names_list_continues`, `notes_only_line`, `hoist_wrapped_separators` deleted with
-  // their last caller, IEEEtran's `name_memberships`)
-  ("old_reader", 109),
+  // their last caller, IEEEtran's `name_memberships`; P6f2, 109 -> 107: `line_parts`' parenthesis span, the split's rule
+  // `tokens::paren_close_offset`)
+  ("old_reader", 107),
   ("defs/author_macros", 20),
   // (Z18m, a new directory: the IJCAI chain moved from `author_block` with its code, as that row says)
   ("defs/author_macros/", 64),
@@ -1612,7 +1615,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // token keys it replaces, `contacts.rs` `queued_author_name_keys`, read every name's spelling)
   // (P6e, 43 -> 35: those three gates are one walk, `argument_marks::walk`, its catcodes read once, each gate a predicate
   // on what it meets)
-  ("frontmatter (rest)", 35),
+  // (P6f2, 35 -> 37: `observer::may_hold_kernel_separator`, the affiliation lines' cost gate before the separator query's
+  // rehearsal — a command or active character no spelled separator matches, by meaning: a macro no binding made or a copy
+  // of the kernel's `\and`; c1_cost's 200 `\affil`s +2.0 % on P6f without it, revP6f S2)
+  ("frontmatter (rest)", 37),
   // (P26, 527 -> 526: the stores' `\and` gates ask the separator query by meaning, `and_separators`, OD #995 P2-6; the
   // spelling read only where the query answers `None`: one spelled read fewer)
   // (FX24b, 526 -> 527: `title_page_prints_author` walks the title page a raw file or the document defined for a read of
@@ -1737,8 +1743,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // `kernel_separator_runs` keeps the query's cuts at whole units, for eptcs's cells and the `\institute` lists of
   // inst_support and aa (Option C P2-2, OD #995); 28 + 26 = 18 + 36, none added)
   // (P6a, 36 -> 40: `tokens_group_end`, `frontmatter_stores`' `group_end` moved here, which `name_text::skip_group`
-  // calls too)
-  ("rest /tokens.rs", 40),
+  // calls too; P6f2, 40 -> 39: the split's parentheses rule one function, `paren_close_offset`, which
+  // `inside_balanced_parens` and `old_reader::separators` share)
+  ("rest /tokens.rs", 39),
   // (TP1, 25 -> 26: `ink_word_text` read the title-page reading's own marks by their constructors' names; TP1b, 26 -> 25:
   // by definition identity, sect05.rs `title_page_mark`, review revTP1 N2)
   ("rest /util_text.rs", 25),

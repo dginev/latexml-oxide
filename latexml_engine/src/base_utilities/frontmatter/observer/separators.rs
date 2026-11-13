@@ -315,10 +315,19 @@ pub fn split_at_kernel_separators(
   arg: Tokens,
   delims: Vec<SplitDelim>,
 ) -> Result<(DelimitedPieces, usize)> {
-  let runs = match kernel_separator_runs(&arg)? {
-    Some(runs) if !runs.is_empty() => runs,
-    _ => return Ok((split_tokens_delimited(arg, delims), 0)),
-  };
+  let runs = kernel_separator_runs(&arg)?.unwrap_or_default();
+  Ok(split_at_runs(arg, delims, runs))
+}
+
+/// [`split_at_kernel_separators`] at the kernel separator runs `runs` a caller kept.
+pub(in crate::base_utilities) fn split_at_runs(
+  arg: Tokens,
+  delims: Vec<SplitDelim>,
+  runs: Vec<(usize, usize)>,
+) -> (DelimitedPieces, usize) {
+  if runs.is_empty() {
+    return (split_tokens_delimited(arg, delims), 0);
+  }
   let spelled = |t: &Token| {
     delims
       .iter()
@@ -346,5 +355,24 @@ pub fn split_at_kernel_separators(
       from = end;
     }
   }
-  Ok((pieces, by_meaning))
+  (pieces, by_meaning)
+}
+
+/// Whether `arg` holds a token its spelled `delims` do not match that could mean the kernel's `\and` here: a copy of it
+/// ([`SepMeaning::Kernel`]) or a macro no binding made (the kernel's `\csname` too). Without one,
+/// [`kernel_separator_runs`] finds no run the spelling does not cut, and no rehearsal is needed.
+pub(in crate::base_utilities) fn may_hold_kernel_separator(
+  arg: &Tokens,
+  delims: &[SplitDelim],
+) -> bool {
+  arg.unlist_ref().iter().any(|t| {
+    matches!(t.get_catcode(), Catcode::CS | Catcode::ACTIVE)
+      && !delims
+        .iter()
+        .any(|d| matches!(d, SplitDelim::Token(d) if delimiter_token_matches(d, t)))
+      && match lookup_meaning(t) {
+        Some(Stored::Expandable(defn)) => !defn.get_origin().is_binding_made(),
+        _ => meaning_of(t) == SepMeaning::Kernel,
+      }
+  })
 }

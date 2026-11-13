@@ -88,7 +88,7 @@ pub(in crate::base_utilities) fn kind_entry_addresses(
   let mut first = true;
   // (whether the entry prints anything but addresses, its mark aside)
   let mut prints_else = false;
-  for (delimiter, line) in split_tokens_delimited(inner, author_affil_splits()) {
+  for (delimiter, line) in affiliation_lines(&inner)? {
     let printed = !line.is_empty() && !prints_nothing(&line);
     // (an address line read as it prints: a formula of spacing alone a space, no text of an address —
     // `$~\quad~~$ cbray@mines.edu`, 2205.14113; `a@x $\quad$ b@y`, 2302.05182; a line that is no address line
@@ -365,7 +365,8 @@ const ADDRESS_LINE_COMMANDS: &[&str] = &[
 /// Whether `line` holds no command but those a line of addresses alone prints them with ([`ADDRESS_LINE_COMMANDS`], the
 /// font, size and spacing commands; a command whose arguments print no letter, `\color{…}`, `\hspace{…}`, aside:
 /// [`without_non_printing_arguments`]). Any other — `\orcidID{…}` (2308.02269), `\thanks{…}`, `$^\dagger$` — prints
-/// more than the addresses, and the line stays in its entry as it prints (review rev100b B1).
+/// more than the addresses, and the line stays in its entry as it prints (review rev100b B1). On the tokens the line is
+/// taken out of, as [`line_addresses`] reads its addresses (`resolver::prints_only_addresses` reads printed text; P6f).
 fn prints_addresses_only(line: &Tokens) -> bool {
   without_non_printing_arguments(line.unlist_ref())
     .iter()

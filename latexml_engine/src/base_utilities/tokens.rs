@@ -33,21 +33,38 @@ impl From<Tokens> for SplitDelim {
   fn from(t: Tokens) -> Self { SplitDelim::Tokens(t) }
 }
 
-/// Does the remaining `stream` contain a `)` that balances the `(` just
-/// popped? Used by `split_tokens` to protect delimiters inside *balanced*
-/// parens only — an unbalanced `(` must NOT trigger paren-protection (else it
-/// would greedily swallow the rest of the author block, including `\\`
-/// name/affiliation separators).
-pub(super) fn paren_closes_ahead(stream: &VecDeque<Token>) -> bool {
+/// Where the `)` balancing a `(` just read stands in the tokens after it, `rest`: the split's parentheses rule
+/// (OXIDIZED_DESIGN_DIVERGENCES #36). `None` for an unbalanced `(`, an ordinary token, which must not swallow a later
+/// `\\` name/affiliation separator.
+pub fn paren_close_offset<'a>(rest: impl IntoIterator<Item = &'a Token>) -> Option<usize> {
   let mut level = 1usize;
-  for t in stream {
+  for (offset, t) in rest.into_iter().enumerate() {
     if *t == T_OTHER!("(") {
       level += 1;
     } else if *t == T_OTHER!(")") {
       level -= 1;
       if level == 0 {
+        return Some(offset);
+      }
+    }
+  }
+  None
+}
+
+/// Whether the token at `at` stands inside balanced parentheses of `tokens`' top level, which [`split_tokens`] does
+/// not cut in ([`paren_close_offset`]): the rule a cut by meaning keeps (`classify::affiliation_lines`).
+pub fn inside_balanced_parens(tokens: &[Token], at: usize) -> bool {
+  let mut i = 0;
+  while i < at {
+    if tokens[i] == T_OTHER!("(")
+      && let Some(close) = paren_close_offset(&tokens[i + 1..])
+    {
+      if i + 1 + close > at {
         return true;
       }
+      i += close + 2;
+    } else {
+      i = tokens_unit_end(tokens, i);
     }
   }
   false
@@ -217,33 +234,23 @@ pub fn split_tokens_segment(
           toks.push(t);
           toks.extend(stream.pop_front());
         }
-      } else if t == T_OTHER!("(") && paren_closes_ahead(&stream) {
+      } else if t == T_OTHER!("(")
+        && let Some(close) = paren_close_offset(&stream)
+      {
         // INTENTIONAL DIVERGENCE FROM PERL: also protect delimiters inside
         // BALANCED parentheses (mirroring the brace/math skipping above), so a
         // parenthesized affiliation like "(Scuola Normale Superiore, Pisa)" is
         // NOT split at its internal comma into a spurious second author. Perl's
         // SplitTokens has no paren-awareness and makes exactly this mistake
         // (witness arXiv 0804.0870 — "Pisa)" became a second <personname>).
-        // The `paren_closes_ahead` guard means an UNBALANCED `(` (rare/
-        // malformed) is treated as an ordinary token, so it never swallows a
-        // later `\\` name/affiliation separator. See OXIDIZED_DESIGN
+        // An UNBALANCED `(` (rare/malformed) is an ordinary token, so it never
+        // swallows a later `\\` name/affiliation separator. See OXIDIZED_DESIGN
         // "Intentional divergences". NOTE: bare (unparenthesized) commas in an
         // affiliation ("MIT, Cambridge") remain genuinely ambiguous — the same
         // tokens read as either one comma-affiliation or two authors — so we
         // match Perl's recall-oriented over-split there rather than guess.
         toks.push(t);
-        let mut level = 1;
-        while let Some(t) = stream.pop_front() {
-          if t == T_OTHER!("(") {
-            level += 1;
-          } else if t == T_OTHER!(")") {
-            level -= 1;
-          }
-          toks.push(t);
-          if level < 1 {
-            break;
-          }
-        }
+        toks.extend(stream.drain(..=close));
       } else {
         toks.push(t);
       }

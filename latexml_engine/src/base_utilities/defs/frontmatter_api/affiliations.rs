@@ -82,7 +82,7 @@ pub(in crate::base_utilities) fn entry_calls(
   let with_sup = marks.as_ref().is_some_and(|marks| marks.prints);
   let (lines, line_starts) = lines_starts(
     &stuff,
-    split_tokens_delimited(stuff.clone(), author_affil_splits()),
+    affiliation_lines(&stuff)?,
     marks.as_ref().filter(|_| with_sup),
   );
   // In a marked list, the affiliations it names, each a mark-led line (or a piece of one) with the unmarked lines
@@ -106,11 +106,7 @@ pub(in crate::base_utilities) fn entry_calls(
       continue;
     }
     if with_sup {
-      let across_and = delimiter.iter().any(|t| {
-        author_and_splits()
-          .iter()
-          .any(|d| matches!(d, SplitDelim::Token(a) if a == t))
-      });
+      let across_and = parts_entries(&delimiter);
       // (in a list the frontmatter API cuts, an address line behind an e-mail label is one too, its addresses the run's:
       // `email: agupta@…, orion@…` closing an aa `\institute`, astro-ph0405186 — its label the contacts' own name,
       // `email_line_calls`; a binding's own list keeps such a line in the entry above it, which the observer's writer
@@ -497,6 +493,8 @@ pub(in crate::base_utilities) fn shared_affiliation_calls(
 
 /// The addresses of an address line of a marked list: a line of addresses only (`email_addresses`), or one behind an
 /// e-mail label (`email: a@x, b@y`: `split_email_label`), whose label `email_line_calls` keeps as the contacts' name.
+/// Read on the tokens the e-mail calls are cut from, at the binding's call: `resolver::prints_only_addresses` on a reading
+/// says only whether (P6f).
 pub(in crate::base_utilities) fn line_addresses(line: &Tokens) -> Option<Vec<String>> {
   email_addresses(line).or_else(|| match split_email_label(line) {
     (Some(_), rest) => email_addresses(&rest),
