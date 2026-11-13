@@ -1,0 +1,26 @@
+% mechanism: P6e2's queue respell (`place::shared_block_email_labels`) reads a run of names that only notes keep going;
+%   acmart's `\orcid` between two `\author` calls is an entry of its own and ends the run, so the shared block's first
+%   e-mail stays on the last name
+% witness: synthetic (revP6e2 finding 1, probe a5; the 470 acmart sources hold one candidate, 2402.05312, converted alike
+%   on int168a and P6e2)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: one shared block, "Ann Able, Bob Baker", X Univ, both
+%   addresses
+% engines: int168a: able@x.org on Ann Able, baker@x.org on Bob Baker; int169a (P6e2): both on Bob Baker; 0 errors
+% expect:  0 errors; able@x.org on Ann Able, baker@x.org on Bob Baker (a contact annotating the name before it — an
+%   `\orcid`, any role but affiliation/address/e-mail — keeps the run going, as `\authornote` does)
+% status:  RED (int169a): catalog only, no guard
+% moves:   post-merge (id ORCR)
+\documentclass[sigconf]{acmart}
+\begin{document}
+\title{T}
+\author{Ann Able}
+\orcid{0000-0001-0000-0001}
+\author{Bob Baker}
+\orcid{0000-0001-0000-0002}
+\affiliation{\institution{X Univ}\city{C}\country{D}}
+\email{able@x.org}
+\email{baker@x.org}
+\begin{abstract}A.\end{abstract}
+\maketitle
+Text.
+\end{document}
