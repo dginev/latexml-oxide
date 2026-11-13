@@ -1,0 +1,20 @@
+% mechanism: booktabs_sty.rs:44-48 binds \toprule/\midrule/\bottomrule as \hline (a 0.4pt border, alignment/normalize.rs:964-966)
+%   and :71 \addlinespace as nothing, so the alignment's height lacks booktabs' rule spacing (booktabs.sty:62-117: \abovetopsep,
+%   \aboverulesep, \belowrulesep, \belowbottomsep, \heavyrulewidth, \lightrulewidth, \defaultaddspace); a \resizebox around it
+%   gets a short box (RBX0: 62 % of matched resized tables > 10 % short; median ratio 0.84)
+% witness: 2606.15594 Table 1 (natural height ours 57.1pt, Perl 62.0pt, pdflatex 75.7pt)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "RBX ht=… " — the tabular's natural height + depth 35.14pt
+% engines: int170a, Perl 0.8.8: 0 errors; <inline-block … yscale="9.98…"> = 25.2pt natural (Perl's booktabs.sty.ltxml:23-39 the same)
+% expect:  0 errors; the resized box's (height + depth) / yscale = 35.1pt within 0.1pt
+% status:  RED (int170a, Perl)
+% moves:   post-merge
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage{graphicx,booktabs}
+\begin{document}
+\begin{table}\centering\caption{Caption.}
+\resizebox{\linewidth}{!}{\begin{tabular}{lc}\toprule a&b\\\midrule c&d\\\bottomrule\end{tabular}}
+\end{table}
+\newsavebox\qb\sbox\qb{\begin{tabular}{lc}\toprule a&b\\\midrule c&d\\\bottomrule\end{tabular}}
+\typeout{RBX ht=\the\ht\qb\space dp=\the\dp\qb\space wd=\the\wd\qb}
+\end{document}
