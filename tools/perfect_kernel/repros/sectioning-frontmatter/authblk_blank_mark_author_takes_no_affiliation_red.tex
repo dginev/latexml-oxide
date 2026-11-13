@@ -1,0 +1,20 @@
+% witness: 2605.24212 (`\author[ ]{for~the~PAROS~Clinical~Research~Network}`): authblk prints a blank mark, so the
+%          entry cites no affiliation
+% oracle:  pdflatex 0 errors; "Siqi Li1, Chuan Hong2, and for the PAROS Clinical Research Network" (no mark)
+% engines: rust (SBX1) the third creator holds affiliation "Duke-NUS Medical School, Singapore", which the PDF does not
+%          give it (an invented association); 0 errors 0 warnings
+% expect:  0 errors; the third creator without an affiliation
+% status:  RED (SBX1, pre-existing on CAU1)
+% moves:   post-merge (authblk's blank mark, a mechanism of its own)
+\documentclass{article}
+\usepackage{authblk}
+\title{T}
+\author[1]{Siqi Li}
+\author[2]{Chuan Hong}
+\author[ ]{for~the~PAROS~Clinical~Research~Network}
+\affil[1]{Duke-NUS Medical School, Singapore}
+\affil[2]{Duke University, Durham, NC, USA}
+\begin{document}
+\maketitle
+Text.
+\end{document}

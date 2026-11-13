@@ -26285,8 +26285,11 @@ changed dev papers: right creators 11 → 452 of 450 → 452 decided.
   holds a mark): `{\small{\it \vspace{0.2cm} $^{a}$ also at …}}`, a legend line once `wrapper_over_lines_as_lines`
   gives each line its wrappers, read past one wrapper only, had the spacing's letters before its mark and was an
   author. And a creator whose name reads as a line under the names — lower case first (no particle, no article: `the
-  ATLAS Collaboration` is an author), an institution word, no address, no name — is a
-  `frontmatter:creator_not_a_name` Error (`flag_merged_creators`), never silent (1309.4007's creator "e-mail").
+  ATLAS Collaboration` is an author), an institution word, no address, no name, no group's name (SBX1: a collaboration
+  or a team named in lower case, `sPHENIX Collaboration` 2606.17184, `openJiuwen Team` 2605.10052, by
+  `reads_as_collaboration`; whom the authors speak for, `for the PAROS Clinical Research Network` 2605.24212, by
+  `SPEAKS_FOR`) — is a `frontmatter:creator_not_a_name` Error (`flag_merged_creators`), never silent (1309.4007's
+  creator "e-mail").
   1202.2048: 342 → 340 creators, every one named, each sub-lettered name its institute and its legend.
 - `perfect_kernel_batch94a::an_entry_of_several_pieces_is_written_whole` re-pinned: `and~ Bob Baker` is parted by the
   word "and" (`sep:word`), its tie and space one word space, no longer a gap (`sep:gap`); the XML is the same.

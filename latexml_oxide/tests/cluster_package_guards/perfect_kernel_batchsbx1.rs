@@ -46,6 +46,40 @@ const ROWS: &[(Source, (usize, usize), Expect)] = &[
       &["Carl Cole", "affiliation=MIT"],
     ]),
   ),
+  (
+    Source::Repro("sectioning-frontmatter/group_author_in_lower_case_is_a_creator.tex"),
+    (0, 0),
+    Expect::Creators(&[&[
+      "openJiuwen Team",
+      "affiliation=Gaoling School of Artificial Intelligence",
+      "affiliation=Renmin University of China",
+      "email=research@openjiuwen.com",
+    ]]),
+  ),
+  (
+    Source::Repro("sectioning-frontmatter/speaks_for_author_is_a_creator.tex"),
+    (0, 0),
+    Expect::Creators(&[
+      &["Siqi Li", "affiliation=Duke-NUS Medical School, Singapore"],
+      &["Chuan Hong", "affiliation=Duke University, Durham, NC, USA"],
+      &[
+        "for the PAROS Clinical Research Network",
+        "affiliation=Duke-NUS Medical School, Singapore",
+      ],
+    ]),
+  ),
+  // 2606.17184's shape: a collaboration named as the author in lower case, its footnote a note
+  (
+    Source::Inline(
+      "\\documentclass{article}\n\\title{T}\n\\author{sPHENIX Collaboration\\footnote{See the appendix for the \
+       list of collaboration members}}\n\\begin{document}\n\\maketitle\nText.\n\\end{document}\n",
+    ),
+    (0, 0),
+    Expect::Creators(&[&[
+      "sPHENIX Collaboration",
+      "note=See the appendix for the list of collaboration members",
+    ]]),
+  ),
 ];
 
 #[test]
