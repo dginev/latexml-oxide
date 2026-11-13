@@ -2561,6 +2561,53 @@ LoadDefinitions!({
   SetCounter!("minitems", Number::new(1));
   SetCounter!("maxparens", Number::new(3));
   SetCounter!("smartand", Number::new(1));
+  // biblatex.sty:7660-7680: every name list (`\abx@donames`, blx-dm.def:566-588; `\abx@dornames`, `labelname`, :992) and
+  // literal list (`\abx@dolists`, blx-dm.def:552-563 and `pageref`) is a bare counter, `\newcounter{<f>}` and
+  // `\newcounter{saved<f>}`; the `\the<f>` there was before (memoir's, titling's, KOMA's `\theauthor`) comes back at the
+  // end of the package. A document's own `\stepcounter{author}` then counts, as in pdflatex (2606.16762, 2606.26281:
+  // `\c@author` undefined, 1,000 errors and a Fatal; the 2606 sandbox rerun).
+  for name in [
+    "afterword",
+    "annotator",
+    "author",
+    "bookauthor",
+    "commentator",
+    "editor",
+    "editora",
+    "editorb",
+    "editorc",
+    "foreword",
+    "holder",
+    "introduction",
+    "namea",
+    "nameb",
+    "namec",
+    "translator",
+    "shortauthor",
+    "shorteditor",
+    "sortname",
+    "labelname",
+    "institution",
+    "lista",
+    "listb",
+    "listc",
+    "listd",
+    "liste",
+    "listf",
+    "location",
+    "organization",
+    "origlocation",
+    "origpublisher",
+    "publisher",
+    "pageref",
+  ] {
+    let the = T_CS!(s!("\\the{name}"));
+    let compat = T_CS!(s!("\\blx@compat@the{name}"));
+    let_i(&compat, &the, None);
+    NewCounter!(name);
+    NewCounter!(&s!("saved{name}"));
+    let_i(&the, &compat, None);
+  }
 
   // Perl L69-72
   DefMacro!("\\addslash", "/\\hskip\\z@skip");
