@@ -81,7 +81,8 @@
     undefined-macro error; a nested `\import` empties it, as import.sty does. Also
     drops a stray space the import commands typeset before the imported file.
   - **colortbl's `\arrayrulecolor` colours the table rules** (#773). Each rule
-    takes the colour current when it is drawn, as colortbl draws it: `\hline`,
+    takes the colour colortbl draws it in (a `|` the one set as its table or
+    `\multicolumn` starts, else the one current when it is drawn): `\hline`,
     `\cline`, the `|` rules, `\multicolumn`'s, `\hhline`'s and booktabs' rules.
     A cell carries it per side as `cssstyle="border-top-color:#BFBFBF"`, and a
     colour set inside a tabular or array ends with it. Black, and a table without

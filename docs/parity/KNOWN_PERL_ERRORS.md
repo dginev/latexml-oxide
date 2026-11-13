@@ -14881,7 +14881,7 @@ Trigger: `\usepackage{colortbl,hhline}`, a row, then `\arrayrulecolor\hhline{---
 pdflatex 0 errors; Perl and Rust before 69a `\noalign cannot be used here`.
 
 Rust (69a, colortbl_sty.rs): both are the package's brace-delimited macros; since W4 (#773, OXIDIZED_DESIGN_DIVERGENCES
-#1025) `\arrayrulecolor`'s colour is rendered on the rules drawn after it, `\doublerulesepcolor`'s stored, unrendered. Witness 1910.02206. Repro package-bindings/colortbl_arrayrulecolor_unbraced; guard
+#1025) `\arrayrulecolor`'s colour is rendered on the rules as colortbl draws them, `\doublerulesepcolor`'s stored, unrendered. Witness 1910.02206. Repro package-bindings/colortbl_arrayrulecolor_unbraced; guard
 `perfect_kernel_batch69a::arrayrulecolor_reads_to_the_brace`.
 
 ## 890. cases.sty's options are not declared: `amsstyle` leaves the explanation column text

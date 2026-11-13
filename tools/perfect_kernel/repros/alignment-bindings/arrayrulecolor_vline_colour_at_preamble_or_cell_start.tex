@@ -1,0 +1,17 @@
+% issue #773: a template's `|` is `{\CT@arc@\vline}` `\xdef`ed into the preamble (colortbl.sty:166, array.sty:54): a
+% colour unset as the preamble is built is read as each rule is drawn, a cell's left `|` as the cell starts; a set one
+% is frozen, and a `\multicolumn` builds its own preamble then.
+% witness: synthetic (the review of fix/arrayrulecolor 820dd03806: probe pcell)
+% oracle:  pdflatex 0 errors: row 1's left rule black, its other `|` red; row 2's multicolumn `|` both red (frozen
+%   as it starts, the blue set inside it notwithstanding), d's right rule blue
+% engines: rust 820dd03806 = 0 errors, row 1's left rule red, the multicolumn's right one blue; Perl = no colour
+% expect:  0 errors; the colours as the oracle
+% status:  RED (820dd03806) -> GREEN (fix/arrayrulecolor); guard perfect_kernel_batchw4::arrayrulecolor_colours_the_rules_drawn_under_it
+\documentclass{article}
+\usepackage{colortbl}
+\begin{document}
+\begin{tabular}{|p{2cm}|l|}\hline
+a \arrayrulecolor{red} & b\\\hline
+\multicolumn{1}{|p{2cm}|}{c \arrayrulecolor{blue}} & d\\
+\end{tabular}
+\end{document}

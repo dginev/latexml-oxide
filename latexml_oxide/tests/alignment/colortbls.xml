@@ -313,7 +313,7 @@ or by adding some negative space (in a ”“noalign” between rows.</text></p>
       <tabular vattach="middle">
         <tbody>
           <tr>
-            <td align="center" backgroundcolor="#E6E6E6" border="ll tt" cssstyle="border-top-color:#FF0000;border-left-color:#661AFF"><text backgroundcolor="#E6E6E6">Richard</text></td>
+            <td align="center" backgroundcolor="#E6E6E6" border="ll tt" cssstyle="border-top-color:#FF0000;border-left-color:#FF0000"><text backgroundcolor="#E6E6E6">Richard</text></td>
             <td align="center" backgroundcolor="#E6E6E6" border="tt" cssstyle="border-top-color:#FF0000"><text backgroundcolor="#E6E6E6">of</text></td>
             <td align="center" backgroundcolor="#E6E6E6" border="tt" cssstyle="border-top-color:#FF0000"><text backgroundcolor="#E6E6E6">York</text></td>
             <td align="center" backgroundcolor="#E6E6E6" border="tt" cssstyle="border-top-color:#FF0000"><text backgroundcolor="#E6E6E6">gave</text></td>
@@ -322,7 +322,7 @@ or by adding some negative space (in a ”“noalign” between rows.</text></p>
             <td align="center" backgroundcolor="#E6E6E6" border="rr tt" cssstyle="border-top-color:#FF0000;border-right-color:#661AFF"><text backgroundcolor="#E6E6E6">vain</text></td>
           </tr>
           <tr>
-            <td align="center" backgroundcolor="#E6E6E6" border="bb ll tt" cssstyle="border-top-color:#661AFF;border-bottom-color:#661AFF;border-left-color:#661AFF"><text backgroundcolor="#E6E6E6">1</text></td>
+            <td align="center" backgroundcolor="#E6E6E6" border="bb ll tt" cssstyle="border-top-color:#661AFF;border-bottom-color:#661AFF;border-left-color:#FF0000"><text backgroundcolor="#E6E6E6">1</text></td>
             <td align="center" backgroundcolor="#E6E6E6" border="bb tt" cssstyle="border-top-color:#661AFF;border-bottom-color:#661AFF"><text backgroundcolor="#E6E6E6">2</text></td>
             <td align="center" backgroundcolor="#E6E6E6" border="bb tt" cssstyle="border-top-color:#661AFF;border-bottom-color:#661AFF"><text backgroundcolor="#E6E6E6">3</text></td>
             <td align="center" backgroundcolor="#E6E6E6" border="bb tt" cssstyle="border-top-color:#661AFF;border-bottom-color:#661AFF"><text backgroundcolor="#E6E6E6">4</text></td>

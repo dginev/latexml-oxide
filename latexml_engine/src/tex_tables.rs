@@ -1905,6 +1905,7 @@ pub fn extract_alignment_column(
   // --- Write phase: apply to current column ---
   let in_thead = alignment.is_in_tabular_head();
   let rule_color = alignment::take_rule_color();
+  let left_rule_color = alignment::take_left_rule_color();
   {
     let colspec = alignment.get_column(n0).unwrap();
     let is_justify = align == Align::Justify;
@@ -1913,7 +1914,9 @@ pub fn extract_alignment_column(
       colspec.width = None;
     }
     colspec.border = old_border;
-    colspec.add_border(&border, rule_color.as_deref());
+    let (left, right): (String, String) = border.chars().partition(|c| matches!(c, 'l' | 'L'));
+    colspec.add_border(&left, left_rule_color.as_deref());
+    colspec.add_border(&right, rule_color.as_deref());
     colspec.boxes = Some(digested_out.clone());
     // Perl L526-527: store lspaces/rspaces
     if !lspaces.is_empty() {

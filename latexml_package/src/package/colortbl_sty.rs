@@ -218,29 +218,22 @@ LoadDefinitions!({
 \let\CT@LT@sep\relax
 \def\CT@extract#1#2#3#4{}"
   );
-  // colortbl.sty:119-135: the rule colours are saved as a tabular or array starts and restored, globally, as it ends
-  // (there `\@tabarray`, `\endarray`), so an `\arrayrulecolor` inside a table holds to its end. A tabular's hooks are
-  // between its rows, where a save is no cell's local: a stack, one level per open table.
+  // colortbl.sty:119-135: `\CT@start` saves the rule colours as a `\@tabarray` table (our `\@tabular@bindings`,
+  // `\@array@bindings`) starts, `\CT@end` restores them after the alignment closes, its last row included; a longtable
+  // or IEEEeqnarraybox keeps the change, as in pdflatex. A `|` is `\xdef`ed into the preamble (colortbl.sty:166,
+  // array.sty:54): a colour set then is frozen (`\lx@CT@pre@arc`), an unset one read as the rule is drawn. OD #1025.
   RawTeX!(
-    r"\newcount\lx@CT@depth
-\def\lx@CT@push{\global\advance\lx@CT@depth\@ne
-  \expandafter\global\expandafter\let\csname lx@CT@arc@\the\lx@CT@depth\endcsname\CT@arc@
-  \expandafter\global\expandafter\let\csname lx@CT@drsc@\the\lx@CT@depth\endcsname\CT@drsc@}
-\def\lx@CT@pop{\ifnum\lx@CT@depth>\z@
-  \expandafter\global\expandafter\let\expandafter\CT@arc@\csname lx@CT@arc@\the\lx@CT@depth\endcsname
-  \expandafter\global\expandafter\let\expandafter\CT@drsc@\csname lx@CT@drsc@\the\lx@CT@depth\endcsname
-  \global\advance\lx@CT@depth\m@ne\fi}
-\def\CT@start{\lx@hidden@noalign{\lx@CT@push}}\def\CT@end{\lx@hidden@noalign{\lx@CT@pop}}
-\let\lx@CT@array@bindings\@array@bindings \def\@array@bindings{\lx@CT@push\lx@CT@array@bindings}
-\let\lx@CT@end@array\@end@array \def\@end@array{\lx@CT@end@array\lx@CT@pop}"
+    r"\def\CT@start{\let\CT@arc@save\CT@arc@ \let\CT@drsc@save\CT@drsc@}
+\def\CT@end{\global\let\CT@arc@\CT@arc@save \global\let\CT@drsc@\CT@drsc@save}
+\def\lx@CT@begin@plain{\let\lx@CT@pre@arc\CT@arc@ \let\lx@CT@restore\@empty}
+\def\lx@CT@begin@save{\lx@CT@begin@plain\CT@start\let\lx@CT@restore\CT@end\global\let\lx@CT@begin\lx@CT@begin@plain}
+\let\lx@CT@begin\lx@CT@begin@plain \let\lx@CT@restore\@empty \let\lx@CT@pre@arc\relax
+\def\lx@CT@tabarray{\global\let\lx@CT@begin\lx@CT@begin@save}
+\let\lx@CT@tabular@bindings\@tabular@bindings \def\@tabular@bindings{\lx@CT@tabarray\lx@CT@tabular@bindings}
+\let\lx@CT@array@bindings\@array@bindings \def\@array@bindings{\lx@CT@tabarray\lx@CT@array@bindings}
+\let\lx@CT@begin@alignment\lx@begin@alignment \def\lx@begin@alignment{\lx@CT@begin\lx@CT@begin@alignment}
+\let\lx@CT@end@alignment\lx@end@alignment \def\lx@end@alignment{\lx@CT@end@alignment\lx@CT@restore}"
   );
-  for (hook, cs) in [
-    ("\\@tabular@before", "\\CT@start"),
-    ("\\@tabular@after", "\\CT@end"),
-  ] {
-    let (hook, tokens) = (T_CS!(hook), Tokens!(T_CS!(cs)));
-    AddToMacro!(hook, tokens);
-  }
   // colortbl.sty:156-164: `\arrayrulecolor` stores `\color[model]{colour}` in `\CT@arc@`, evaluated as each rule is
   // drawn; its argument runs to the first `{` and takes that group, so `\arrayrulecolor\hhline{---~~~}` takes the
   // `\hhline` and its spec, as pdflatex does (1910.02206; Perl's `[]{}` left the spec a cell, KNOWN_PERL_ERRORS #889;
@@ -251,35 +244,31 @@ LoadDefinitions!({
 \def\doublerulesepcolor#1#{\CT@drs{#1}}\def\CT@drs#1#2{\lx@hidden@noalign{\gdef\CT@drsc@{\color#1{#2}}}}"
   );
   // colortbl.sty:166-192 draws `\hline`, `\cline` and `|` as `{\CT@arc@ <rule>}`: here the colour `\CT@arc@` gives
-  // is the next rule's border colour (`alignment::RULE_COLOR`), the default black none. A `|` is drawn at its cell's
-  // end, after the cell's template (a `\multicolumn`'s, its own). Beyond Perl (a no-op, colortbl.sty.ltxml:85): OD #1025 (#773).
+  // is the next rule's border colour (`alignment::RULE_COLOR`), the default black none. A cell's left `|` is drawn as
+  // the cell starts (`alignment::LEFT_RULE_COLOR`), its right one as it ends, after the cell's template; a
+  // `\multicolumn` builds its own preamble, freezing the colour then. Beyond Perl (a no-op, colortbl.sty.ltxml:85):
+  // OD #1025 (#773).
   DefPrimitive!("\\lx@CT@arc@draw", {
-    let arc = T_CS!("\\CT@arc@");
-    let mut color = None;
-    if !arc.defined_as(&T_CS!("\\relax")) {
-      bgroup();
-      digest(Tokens!(arc))?;
-      color = lookup_font()
-        .and_then(|font| font.color)
-        .map(|color| color.to_attribute())
-        .filter(|color| *color != common::color::BLACK.to_attribute());
-      egroup()?;
-    }
-    if color.is_some() || lookup_value(alignment::RULE_COLOR).is_some() {
-      let value = color.map_or(Stored::None, |color| Stored::String(pin(&color)));
-      assign_value(alignment::RULE_COLOR, value, Some(Scope::Global));
-    }
+    arc_draw(alignment::RULE_COLOR, "\\CT@arc@")?;
+  });
+  DefPrimitive!("\\lx@CT@vline@draw", {
+    arc_draw(alignment::RULE_COLOR, "\\lx@CT@pre@arc")?;
+  });
+  DefPrimitive!("\\lx@CT@vline@draw@left", {
+    arc_draw(alignment::LEFT_RULE_COLOR, "\\lx@CT@pre@arc")?;
   });
   RawTeX!(
     r"\let\lx@CT@hline\@@alignment@hline \def\@@alignment@hline{\lx@CT@arc@draw\lx@CT@hline}
 \let\lx@CT@cline\lx@cline \def\lx@cline{\lx@CT@arc@draw\lx@CT@cline}
-\let\lx@CT@multicolumn\multicolumn \long\def\multicolumn#1#2#3{\lx@CT@multicolumn{#1}{#2}{#3\lx@CT@arc@draw}}"
+\let\lx@CT@multicolumn\multicolumn
+\long\def\multicolumn#1#2#3{\lx@CT@multicolumn{#1}{#2}{\let\lx@CT@pre@arc\CT@arc@
+  \lx@CT@vline@draw@left#3\lx@CT@vline@draw}}"
   );
-  {
-    let (hook, tokens) = (
-      T_CS!("\\lx@alignment@column@after"),
-      Tokens!(T_CS!("\\lx@CT@arc@draw")),
-    );
+  for (hook, cs) in [
+    ("\\lx@alignment@column@before", "\\lx@CT@vline@draw@left"),
+    ("\\lx@alignment@column@after", "\\lx@CT@vline@draw"),
+  ] {
+    let (hook, tokens) = (T_CS!(hook), Tokens!(T_CS!(cs)));
     AddToMacro!(hook, tokens);
   }
 
@@ -303,3 +292,28 @@ LoadDefinitions!({
 \providecommand\therownum{\arabic{rownum}}"
   );
 });
+
+/// Stores the colour `arc` gives (colortbl.sty:161-192 `\CT@arc@`, or the preamble's frozen copy) under `key`, for
+/// the rule drawn next; black is none. A frozen copy that is `\relax` reads the live `\CT@arc@`.
+fn arc_draw(key: &str, arc: &str) -> Result<()> {
+  let relax = T_CS!("\\relax");
+  let mut arc = T_CS!(arc);
+  if arc.defined_as(&relax) {
+    arc = T_CS!("\\CT@arc@");
+  }
+  let mut color = None;
+  if !arc.defined_as(&relax) {
+    bgroup();
+    digest(Tokens!(arc))?;
+    color = lookup_font()
+      .and_then(|font| font.color)
+      .map(|color| color.to_attribute())
+      .filter(|color| *color != common::color::BLACK.to_attribute());
+    egroup()?;
+  }
+  if color.is_some() || lookup_value(key).is_some() {
+    let value = color.map_or(Stored::None, |color| Stored::String(pin(&color)));
+    assign_value(key, value, Some(Scope::Global));
+  }
+  Ok(())
+}
