@@ -1,6 +1,6 @@
 % A `$^n$`-marked affiliation list in an author's `\thanks`, its last entry ending in a braced command: the note's span
 % ends at the last box, inside `\textbf{…}`, so the cut piece lost its closing brace (emit.rs `note_piece`, grown by
-% `past_unprinted_tail`; a raw slice made whole by `notes::whole_run`).
+% `past_unprinted_tail`; a raw slice made whole by `content::Field::whole`).
 % witness: 2605.00634 (ieeeconf `\texttt{…}`), 2606.00313, 2606.07062
 % oracle:  pdflatex 0 `!`: "Ann Able1 , Bob Baker2∗" / footnote "∗1 Univ A 2 Univ B"; Perl 0 errors 0 warnings
 % engines: rust CAU1: 1 error (expected:} Gullet->readBalanced ran out of input); output already right

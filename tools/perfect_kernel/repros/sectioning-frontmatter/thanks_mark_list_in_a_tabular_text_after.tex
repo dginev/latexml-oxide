@@ -1,0 +1,13 @@
+% A table of `$^n$` lines in an author's `\thanks`, text after it: the last mark's piece holds the table's `\end{tabular}`,
+% which it doesn't open, so no balanced run holds it and the piece is written as its text, counted (one Warning). The first
+% piece is its own line (`content::Field::past_open_environment`).
+% witness: synthetic (revSBX2 p/f5_tab_more.tex)
+% oracle:  pdflatex 0 `!`: footnote "1 Univ A" "2 Univ B" "more"; Perl not run
+% engines: rust CAU1: 1 error, 1 warning, Ann Able "Univ A 2 Univ B" (the table whole); SBX2 65c16dff38: 0 E 2 W, the same
+% expect:  0 errors, 1 warning (Bob Baker's "Univ B more" as plain text); Univ A on Ann Able, Univ B more on Bob Baker
+% status:  RED (CAU1, SBX2 65c16dff38) -> GREEN (SBX2F; perfect_kernel_error_boundary)
+% preload: ar5iv.sty
+\documentclass{article}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$\thanks{\begin{tabular}{l}$^{1}$Univ A\\ $^{2}$Univ B\\ \end{tabular} more}}
+\begin{document}\maketitle Hi.\end{document}

@@ -93,7 +93,7 @@ pub(in crate::base_utilities) fn split_mark_notes(
 }
 
 /// The index after the `[…]` arguments from `k` (spaces before each skipped).
-fn optional_arguments_end(tokens: &[Token], mut k: usize) -> usize {
+pub(in crate::base_utilities) fn optional_arguments_end(tokens: &[Token], mut k: usize) -> usize {
   loop {
     let open = k
       + tokens[k.min(tokens.len())..]

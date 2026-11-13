@@ -14,6 +14,7 @@ use super::{
     events::{EventKind, HeldError},
     field_notes::EnvironmentStep,
   },
+  emit::leading_spaces,
   plan::reads_as_alignment,
   *,
 };
@@ -614,7 +615,7 @@ impl Field<'_> {
   /// opens.
   pub(super) fn balanced(&self, start: usize, end: usize, floor: usize) -> Option<(usize, usize)> {
     let content = self.tokens;
-    let (mut start, mut end) = (start, end);
+    let mut start = start;
     let mut before = self.open_groups(floor, start);
     let from = start;
     let mut depth = 0;
@@ -631,11 +632,30 @@ impl Field<'_> {
         depth = 0;
       }
     }
-    while depth > 0 {
-      (content.get(end)?.group_step() == -1).then_some(())?;
-      end += 1;
-      depth -= 1;
+    let end = past_closers(content, end, depth)?;
+    let mut end = self.environments_closed(start, end)?;
+    // (a formula the digested list did not say, its shifts in pairs all the same)
+    let run = &content[start..end];
+    let spelled = |name| run.iter().filter(|t| is_cs(t, name)).count();
+    let shifts = run
+      .iter()
+      .filter(|t| t.get_catcode() == Catcode::MATH)
+      .count();
+    if spelled("\\(") != spelled("\\)") {
+      return None;
     }
+    if shifts % 2 == 1 {
+      (content.get(end)?.get_catcode() == Catcode::MATH).then_some(())?;
+      end += 1;
+    }
+    Some((start, end))
+  }
+
+  /// `end`, grown past the `\end` of each environment the run `start..end` opens, as the digestion's frames pair them;
+  /// `None` where the run closes one it doesn't open.
+  fn environments_closed(&self, start: usize, end: usize) -> Option<usize> {
+    let content = self.tokens;
+    let mut end = end;
     // (its environments in pairs, as the digestion's frames say them: what `\end{ee}` prints or closes holds a position no box stops at, its
     // body's `E` written in `\newenvironment{ee}{B}{E}`, an alignment's last cell, and a run with no `\end` lost them, in an Error; a `\let` copy
     // and a macro pair count, a `\begin` under `\detokenize` doesn't)
@@ -675,20 +695,93 @@ impl Field<'_> {
       }
     }
     (environments == 0).then_some(())?;
-    // (a formula the digested list did not say, its shifts in pairs all the same)
-    let run = &content[start..end];
-    let spelled = |name| run.iter().filter(|t| is_cs(t, name)).count();
-    let shifts = run
-      .iter()
-      .filter(|t| t.get_catcode() == Catcode::MATH)
-      .count();
-    if spelled("\\(") != spelled("\\)") {
-      return None;
-    }
-    if shifts % 2 == 1 {
-      (content.get(end)?.get_catcode() == Catcode::MATH).then_some(())?;
-      end += 1;
-    }
-    Some((start, end))
+    Some(end)
   }
+
+  /// `start`, or past the environment a span opens and doesn't close: its first box takes the cover of what opened it
+  /// (1507.02068's `\\begin{center}M. Ablikim`; a `\thanks{\begin{tabular}{l}$^{1}$Univ A\\ $^{2}$Univ B\end{tabular}}`
+  /// line's piece), a column spec with it, as the digestion's frames say it; and past the spaces after each such opening,
+  /// which print nothing (1507.02068, 2609.17357).
+  pub(super) fn past_open_environment(&self, start: usize, end: usize) -> usize {
+    let at = |p: u16| usize::from(p).saturating_sub(self.base);
+    let environments = self.environments;
+    let mut from = start;
+    for (n, step) in environments.iter().enumerate() {
+      if step.opens && at(step.start) == from && at(step.end) < end {
+        let closed = environments[n + 1..]
+          .iter()
+          .any(|later| !later.opens && at(later.start) < end);
+        if !closed {
+          from = at(step.end);
+          from += self.tokens.get(from..end).map_or(0, leading_spaces);
+        }
+      }
+    }
+    from
+  }
+
+  /// `all[start..end]`, a piece cut from the field, made whole as TeX reads it: an `\end{…}` it opens with is the piece
+  /// before's (2606.27043's `\end{CJK}\yangchar`), an environment it opens and doesn't close is the pieces' around it
+  /// ([`Self::past_open_environment`]); a command it ends on takes its arguments (`notes::takes_arguments`; 2606.14188);
+  /// a group it closes but does not open is opened again (`notes::reopened`; 2605.27539, 2605.00634); one it opens is
+  /// closed by the closers after it. `None` where a group or an environment stays unpaired.
+  pub(super) fn whole(&self, start: usize, end: usize) -> Option<Vec<Token>> {
+    let all = self.tokens;
+    let past_spaces = |i: usize| i + all.get(i..).map_or(0, leading_spaces);
+    let (mut start, mut end) = (start.min(all.len()), end.min(all.len()));
+    let first = past_spaces(start);
+    if first < end && all[first] == T_CS!("\\end") {
+      start = past_spaces(skip_group(all, past_spaces(first + 1)));
+    }
+    start = self.past_open_environment(start.min(end), end);
+    if let Some(last) = all[start..end].iter().rposition(|t| *t != T_SPACE!())
+      && takes_arguments(&all[start + last])
+    {
+      loop {
+        let past = optional_arguments_end(all, end);
+        let open = past_spaces(past);
+        if !all
+          .get(open)
+          .is_some_and(|t| t.get_catcode() == Catcode::BEGIN)
+        {
+          end = past;
+          break;
+        }
+        end = skip_group(all, open);
+      }
+    }
+    // (the groups it closes but does not open, innermost first)
+    let mut reopen = Vec::new();
+    let mut depth = 0i32;
+    let mut before = (0..start).rev();
+    for t in &all[start..end] {
+      depth += t.group_step();
+      if depth < 0 {
+        let mut inner = 0i32;
+        let open = before.by_ref().find(|&k| {
+          inner += all[k].group_step();
+          inner > 0
+        })?;
+        reopen.push(reopened(all, open, start));
+        depth = 0;
+      }
+    }
+    // (a group it leaves open closes only where the field closes it: what lies between is no piece's to drop, a picture's
+    // `;` in `\tikz\draw (0,0)--(1,0);}`, perfect_kernel_batchcr8)
+    let end = past_closers(all, end, depth)?;
+    (self.environments_closed(start, end)? == end).then_some(())?;
+    let mut out: Vec<Token> = reopen.into_iter().rev().flatten().collect();
+    out.extend_from_slice(&all[start..end]);
+    Some(out)
+  }
+}
+
+/// `end`, past the closing braces right after it of the `depth` groups a run leaves open; `None` where another token comes
+/// first.
+fn past_closers(tokens: &[Token], mut end: usize, depth: i32) -> Option<usize> {
+  for _ in 0..depth.max(0) {
+    (tokens.get(end)?.group_step() == -1).then_some(())?;
+    end += 1;
+  }
+  Some(end)
 }

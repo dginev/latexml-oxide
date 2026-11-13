@@ -57,6 +57,10 @@ const SBX2_THANKS_BOLD: &str = r#"<document xmlns="http://dlmf.nist.gov/LaTeXML"
 
 const SBX2_THANKS_GROUP: &str = r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" class="ltx_authors_1line"><title>T</title><creator role="author"><personname>Ann Lee</personname><contact name="Affiliation: " role="affiliation">Ann Lee <text font="typewriter" fontsize="90%" xml:id="id1">al@itu.dk</text></contact></creator><creator before="  " role="author"><personname>Bob Roe</personname><contact name="Affiliation: " role="affiliation">Bob Roe <text font="typewriter" fontsize="90%" xml:id="id2">br@itu.dk</text> are with the IT-University.</contact></creator><para xml:id="p1"><p xml:id="p1.1">Hi.</p></para></document>"#;
 
+const SBX2_THANKS_TABLE: &str = r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" class="ltx_authors_1line"><title>T</title><creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">Univ A</contact></creator><creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation">Univ B</contact></creator><para xml:id="p1"><p xml:id="p1.1">Hi.</p></para></document>"#;
+
+const SBX2_THANKS_TABLE_MORE: &str = r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" class="ltx_authors_1line"><title>T</title><creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">Univ A</contact></creator><creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation">Univ B more</contact></creator><para xml:id="p1"><p xml:id="p1.1">Hi.</p></para></document>"#;
+
 const SBX2_ANN_UNIV_A: &str = r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" class="ltx_authors_1line"><title>T</title><creator role="author"><personname>Ann Lee</personname><contact name="Affiliation: " role="affiliation">Univ A</contact></creator><para xml:id="p1"><p xml:id="p1.1">Hi.</p></para></document>"#;
 
 const SBX2_LLNCS: &str = r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" class="ltx_authors_1line"><title>T</title><creator role="author"><personname>Ann Lee</personname><contact name="Affiliation: " role="affiliation">Amazon</contact></creator><creator before="  " role="author"><personname>Bob Roe</personname><contact name="Affiliation: " role="affiliation">UW</contact></creator><para xml:id="p1"><p xml:id="p1.1">Hi.</p></para></document>"#;
@@ -458,7 +462,7 @@ const BOUNDARY: &[Row] = &[
       ("p", "p2.1", r#"<p xml:id="p2.1">[21.1112pt]</p>"#),
     ],
   ),
-  // --- SBX2: frontmatter pieces cut whole (`notes::whole_run`), a replaced author never digested
+  // --- SBX2: frontmatter pieces cut whole (`content::Field::whole`; a table's line, `Field::past_open_environment`), a replaced author never digested
   // (`reading::superseded`), float.sty's `float@type` counter. A row's element by `xml:id`, an attribute, or "" the
   // first of its tag ---
   (
@@ -507,6 +511,53 @@ const BOUNDARY: &[Row] = &[
         r##"<ref class="ltx_href" color="#000000" href="https://b.org/">Code</ref>"##,
       ),
     ],
+  ),
+  (
+    "a `$^n$` list in `\\thanks` as a table's lines: each piece its line (revSBX2 B1) (repro sectioning-frontmatter/thanks_mark_list_in_a_tabular_one_line_each)",
+    "pdflatex 0 `!`; Perl not run",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/thanks_mark_list_in_a_tabular_one_line_each.tex"
+    ),
+    &[],
+    (0, 0),
+    &[],
+    &[("document", "", SBX2_THANKS_TABLE)],
+  ),
+  (
+    "the table's opening frame covers an `@{}` column spec (repro sectioning-frontmatter/thanks_mark_list_in_a_tabular_column_spec_at)",
+    "pdflatex 0 `!`; Perl not run",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/thanks_mark_list_in_a_tabular_column_spec_at.tex"
+    ),
+    &[],
+    (0, 0),
+    &[],
+    &[("document", "", SBX2_THANKS_TABLE)],
+  ),
+  (
+    "both entries on one table line: the last piece ends before `\\end{tabular}` (repro sectioning-frontmatter/thanks_mark_list_in_a_tabular_one_line)",
+    "pdflatex 0 `!`; Perl not run",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/thanks_mark_list_in_a_tabular_one_line.tex"
+    ),
+    &[],
+    (0, 0),
+    &[],
+    &[("document", "", SBX2_THANKS_TABLE)],
+  ),
+  (
+    "a piece holding the table's `\\end` and text after it: the counted text path (repro sectioning-frontmatter/thanks_mark_list_in_a_tabular_text_after)",
+    "pdflatex 0 `!`; Perl not run",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/thanks_mark_list_in_a_tabular_text_after.tex"
+    ),
+    &[],
+    (0, 1),
+    &[
+      "Warning:unexpected:frontmatter The frontmatter emitter writes \"Univ B more\" as its plain text, its markup lost: \
+       span letters differ",
+    ],
+    &[("document", "", SBX2_THANKS_TABLE_MORE)],
   ),
   (
     "a replaced `\\author` with undefined `\\name`, `\\email` (repro sectioning-frontmatter/author_replaced_template_never_digested)",

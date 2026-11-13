@@ -287,7 +287,7 @@ fn box_body(v: &[Token]) -> Option<std::ops::Range<usize>> {
 }
 
 /// `v` cut before each of `at` (positions in it, ascending): a cut inside a group closes it and opens it again, with
-/// its wrapper command and the declarations it opens with (`notes::lead_declarations`) before the mark opening the first
+/// its wrapper and the declarations it opens with (`notes::reopened`) before the mark opening the first
 /// entry (`first`: a macro printing it, `\tsec` with `\newcommand\tsec{\textsuperscript{\S}}`, is none; 2410.03583),
 /// in the next piece.
 fn cut_at_starts(v: &[Token], at: &[usize], first: usize) -> Vec<Vec<Token>> {
@@ -301,12 +301,7 @@ fn cut_at_starts(v: &[Token], at: &[usize], first: usize) -> Vec<Vec<Token>> {
     .map_or(0, |i| i + 1);
   // (and from the command whose argument that group is: `\institution{$^\dagger$Univ B}`, 2605.07722)
   let cut = match cut.checked_sub(1) {
-    Some(cmd)
-      if v[cut].get_catcode() == Catcode::BEGIN
-        && (takes_arguments(&v[cmd]) || is_text_font_command(&v[cmd])) =>
-    {
-      cmd
-    },
+    Some(cmd) if v[cut].get_catcode() == Catcode::BEGIN && wraps_group(&v[cmd]) => cmd,
     _ => cut,
   };
   // (the groups open at the cut, outermost first)
@@ -340,16 +335,8 @@ fn cut_at_starts(v: &[Token], at: &[usize], first: usize) -> Vec<Vec<Token>> {
   head.extend(std::iter::repeat_n(T_END!(), open.len()));
   let mut rest: Vec<Token> = Vec::new();
   for &group in &open {
-    if let Some(cmd) = group
-      .checked_sub(1)
-      .map(|c| v[c])
-      .filter(|t| t.get_catcode() == Catcode::CS)
-    {
-      rest.push(cmd);
-    }
-    rest.push(v[group]);
     let end = if first > group { first.min(cut) } else { cut };
-    rest.extend(lead_declarations(&v[group + 1..end]));
+    rest.extend(reopened(v, group, end));
   }
   rest.extend(formula.map(|shift| v[shift]));
   let reopened = rest.len();

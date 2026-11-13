@@ -853,106 +853,30 @@ pub(in crate::base_utilities) fn takes_arguments(cs: &Token) -> bool {
   }
 }
 
-/// `all[start..end]`, a piece cut from a field's tokens, made whole as TeX reads it: an `\end{…}` it opens with is the
-/// piece's before (2606.27043's `\end{CJK}\yangchar`); a command it ends on takes its arguments ([`takes_arguments`];
-/// 2606.14188); a group it closes but does not open is opened again, with its font declarations and text font command
-/// (2605.27539, 2605.00634); one it opens is closed by the closers after it. `None` where a group or an environment stays
-/// unpaired.
-pub(in crate::base_utilities) fn whole_run(
-  all: &[Token],
-  start: usize,
-  end: usize,
-) -> Option<Vec<Token>> {
-  let past_spaces = |mut i: usize| {
-    while all.get(i) == Some(&T_SPACE!()) {
-      i += 1;
-    }
-    i
-  };
-  let (mut start, mut end) = (start.min(all.len()), end.min(all.len()));
-  let first = past_spaces(start);
-  if first < end && all[first] == T_CS!("\\end") {
-    start = past_spaces(skip_group(all, past_spaces(first + 1)));
-  }
-  if let Some(last) = all[start..end].iter().rposition(|t| *t != T_SPACE!())
-    && takes_arguments(&all[start + last])
-  {
-    let mut at = past_spaces(end);
-    loop {
-      match all.get(at) {
-        Some(t) if *t == T_OTHER!("[") => {
-          at = all[at..]
-            .iter()
-            .position(|t| *t == T_OTHER!("]"))
-            .map(|i| at + i + 1)?;
-        },
-        Some(t) if t.get_catcode() == Catcode::BEGIN => at = skip_group(all, at),
-        _ => break,
-      }
-      end = at;
-      at = past_spaces(at);
-    }
-  }
-  start = start.min(end);
-  // (the groups it closes but does not open: their openers, innermost first)
-  let mut reopen = Vec::new();
-  let mut depth = 0i32;
-  let mut before = (0..start).rev();
-  for t in &all[start..end] {
-    depth += t.group_step();
-    if depth < 0 {
-      let mut inner = 0i32;
-      let open = before.by_ref().find(|&k| {
-        inner += all[k].group_step();
-        inner > 0
-      })?;
-      let mut opener = Vec::new();
-      if let Some(cmd) = open
-        .checked_sub(1)
-        .map(|c| all[c])
-        .filter(is_text_font_command)
-      {
-        opener.push(cmd);
-      }
-      opener.push(all[open]);
-      opener.extend(lead_declarations(&all[open + 1..start]));
-      reopen.push(opener);
-      depth = 0;
-    }
-  }
-  while depth > 0
-    && all
-      .get(end)
-      .is_some_and(|t| t.get_catcode() == Catcode::END)
-  {
-    end += 1;
-    depth -= 1;
-  }
-  // (a group it leaves open closes only where the field closes it: what lies between is no piece's to drop, a picture's
-  // `;` in `\tikz\draw (0,0)--(1,0);}`, perfect_kernel_batchcr8)
-  if depth > 0 {
-    return None;
-  }
-  let mut out: Vec<Token> = reopen.into_iter().rev().flatten().collect();
-  out.extend_from_slice(&all[start..end]);
-  // (its environments paired, by name)
-  let mut open: Vec<Vec<Token>> = Vec::new();
-  let mut i = 0;
-  while i < out.len() {
-    let begins = out[i] == T_CS!("\\begin");
-    if begins || out[i] == T_CS!("\\end") {
-      let at = (i + 1..out.len()).find(|&k| out[k] != T_SPACE!())?;
-      let close = skip_group(&out, at);
-      let name = out[at..close].to_vec();
-      if begins {
-        open.push(name);
-      } else if open.pop() != Some(name) {
-        return None;
-      }
-      i = close;
-    } else {
-      i += 1;
-    }
-  }
-  open.is_empty().then_some(out)
+/// Whether `cs` before a brace is the group's wrapper, which a piece cut inside the group takes again: the command reading
+/// it as its argument ([`takes_arguments`], a text font command) or a declaration setting its font ([`sets_font`]) —
+/// never a note, made twice, nor a macro printing text (`\univ{…}` with `\newcommand\univ{Univ}`).
+pub(in crate::base_utilities) fn wraps_group(cs: &Token) -> bool {
+  cs.get_catcode() == Catcode::CS
+    && (is_text_font_command(cs)
+      || sets_font(cs)
+      || (takes_arguments(cs)
+        && !is_note_macro(cs)
+        && !["\\thanks", "\\footnote", "\\footnotetext"]
+          .iter()
+          .any(|n| *cs == T_CS!(*n))))
+}
+
+/// The tokens opening the group `v[open]` again for a piece cut inside it: its wrapper ([`wraps_group`]), the brace and
+/// the declarations it opens with up to `upto` ([`lead_declarations`]; 2605.27539, 2605.00634, 2407.15815).
+pub(in crate::base_utilities) fn reopened(v: &[Token], open: usize, upto: usize) -> Vec<Token> {
+  let mut tokens: Vec<Token> = open
+    .checked_sub(1)
+    .map(|c| v[c])
+    .filter(wraps_group)
+    .into_iter()
+    .collect();
+  tokens.push(v[open]);
+  tokens.extend(lead_declarations(&v[open + 1..upto.max(open + 1)]));
+  tokens
 }

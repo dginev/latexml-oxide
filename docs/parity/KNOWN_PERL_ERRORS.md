@@ -19611,3 +19611,25 @@ showpage
 \psfig{file=pfy.eps}
 \end{document}
 ```
+
+## 1238. float.sty.ltxml omits float.sty's `float@type` counter and `\ftype@<type>`
+
+float.sty.ltxml's `\newfloat` (float.sty.ltxml:39) defines the float without float.sty's `\newcounter{float@type}` (1, or
+4 under a class with figures; float.sty:24-27) and the type bit `\ftype@<type>` it assigns and doubles (float.sty:60-61),
+so a document reading them (algorithm.sty's own float, a paper's `\edef\ftype@algorithm{\the\c@float@type}`) gets
+undefined-control-sequence Errors where pdflatex is clean (2605.14637: 3). Rust defines both as float.sty does (the
+float binding, `perfect_kernel_error_boundary`'s float rows). Minimal trigger (Perl 3 Errors: `\c@float@type` undefined,
+`\the` of it, `\ftype@aa` undefined; pdflatex 0 `!`, "Types 8."; Rust 0):
+
+```latex
+\documentclass{article}
+\usepackage{float}
+\newfloat{aa}{h}{loa}
+\makeatletter
+\edef\ftype@algorithm{\the\c@float@type}
+\edef\X{\number\ftype@aa}
+\makeatother
+\begin{document}
+Types \X.
+\end{document}
+```
