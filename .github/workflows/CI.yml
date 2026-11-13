@@ -263,7 +263,7 @@ jobs:
         run: cargo nextest run --cargo-profile ci --profile ci --target x86_64-unknown-linux-gnu -p latexml --test 06_cluster_math
 
   test:
-    # Sharded across 4 runners. The suite's cost is ~398 s of in-binary
+    # Sharded across runners (8 since 2026-11-13, below). The suite's cost is ~398 s of in-binary
     # execution spread over the test targets (consolidated 2026-08 into fewer,
     # concern-grouped `cluster_*` binaries), and `cargo test` runs those
     # targets SEQUENTIALLY — so the test step was 18.7 min on Linux / 29.4 min
