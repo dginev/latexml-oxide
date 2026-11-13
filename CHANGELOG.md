@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+  - **A Rhai `Fatal()` is logged once** (#792). The script's caller now returns the
+    Fatal the binding raised instead of wrapping it in a second `Fatal:Document:Generic`
+    line; this holds at a binding's top level, in a binding another binding loads, and
+    for `Error()` past MAX_ERRORS. A `Fatal()` inside a body (macro, constructor, hook)
+    now ends the conversion, as Perl's `Fatal` dies, instead of being contained as an
+    `Error:script:` line. Guard `30_script_bindings::a_rhai_fatal_is_logged_once`.
+
   - **Rhai `Let(a, b, scope)`** (#796). A binding can now write a global `\let`
     (`Let("\\alias", "\\target", "global")`), as Perl's `Let($t1, $t2, $scope)`;
     the 2-arg form stays local. Guard `script_bindings::tests::let_takes_a_scope`.

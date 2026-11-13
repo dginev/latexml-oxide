@@ -126,6 +126,17 @@ thread_local! {
   /// (`before/afterConstruct`, `reversion`, `sizer`) publish READ-ONLY ones —
   /// `setProperty` errors there instead of mutating through a shared ref.
   static WHATSIT_CTX: RefCell<Vec<(*mut Whatsit, bool)>> = const { RefCell::new(Vec::new()) };
+
+  /// The already-logged Fatal a registered function returned into Rhai, which can only carry its text: the
+  /// script's caller returns it as raised, so it prints once (#792).
+  static RAISED_FATAL: RefCell<Option<Error>> = const { RefCell::new(None) };
+}
+
+/// The logged Fatal a registered function raised into the failing script, if any (see `RAISED_FATAL`).
+pub(super) fn take_raised_fatal() -> Option<Error> {
+  RAISED_FATAL
+    .with(|r| r.borrow_mut().take())
+    .filter(Error::is_logged_fatal)
 }
 
 #[derive(Clone, Copy)]
@@ -510,10 +521,9 @@ pub fn load_script(src: &str) -> Result<usize> {
   let before = WIRED_COUNT.with(|c| *c.borrow());
   let run = {
     let _script_guard = ScriptCtxGuard::new((cached.engine.clone(), cached.ast.clone()));
-    cached
-      .engine
-      .run_ast(&cached.ast)
-      .map_err(|e| Error::from(format!("script-binding run error: {e}")))
+    cached.engine.run_ast(&cached.ast).map_err(|e| {
+      take_raised_fatal().unwrap_or_else(|| Error::from(format!("script-binding run error: {e}")))
+    })
   };
   run?;
   Ok(WIRED_COUNT.with(|c| *c.borrow()) - before)
@@ -585,8 +595,15 @@ fn props_to_map(props: SymHashMap<Stored>) -> Map {
 /// a Rhai error — the SINGLE boundary-conversion source. Review m4: the inline
 /// `Box::<EvalAltResult>::from(e.to_string())` spelling scattered across the
 /// proxy ops is routed through here so error formatting has one definition.
-fn rhai_err(e: impl std::fmt::Display) -> Box<EvalAltResult> {
-  Box::<EvalAltResult>::from(e.to_string())
+/// A latexml `Err` that is a logged Fatal is kept for the script's caller (`take_raised_fatal`).
+fn rhai_err<E: std::fmt::Display + 'static>(e: E) -> Box<EvalAltResult> {
+  let text = e.to_string();
+  if let Ok(err) = (Box::new(e) as Box<dyn std::any::Any>).downcast::<Error>()
+    && err.is_logged_fatal()
+  {
+    RAISED_FATAL.with(|r| *r.borrow_mut() = Some(*err));
+  }
+  Box::<EvalAltResult>::from(text)
 }
 
 /// Parse a scope string ("local"/"global", anything else = None → TeX default).

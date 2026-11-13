@@ -1623,3 +1623,74 @@ fn a_rewrite_scope_names_its_unit() {
   drop(latexml);
   latexml_core::reset_thread_engine();
 }
+
+/// #792: a Rhai `Fatal()` prints ONE `Fatal:` line (Perl `Fatal` logs once, then dies), wherever it is
+/// raised: at a binding's top level, inside a body, by `Error()` past MAX_ERRORS, or in a binding another
+/// binding loads. Each row: the `.sty.rhai` files, the document body, the message the one line carries.
+#[test]
+fn a_rhai_fatal_is_logged_once() {
+  let rows: &[(&str, &[(&str, &str)], &str, &str)] = &[
+    (
+      "top level",
+      &[(
+        "wftop.sty.rhai",
+        r#"Fatal("unexpected", "Internal", "wftop requires something"); DefMacro("\\wftopmacro", "OK");"#,
+      )],
+      "Before \\wftopmacro\\ after.",
+      "unexpected:Internal wftop requires something",
+    ),
+    (
+      "macro body",
+      &[(
+        "wftop.sty.rhai",
+        r#"DefMacro("\\wftopmacro", || { Fatal("unexpected", "Internal", "wfbody gives up"); "X" });"#,
+      )],
+      "Before \\wftopmacro\\ after.",
+      "unexpected:Internal wfbody gives up",
+    ),
+    (
+      "Error() past MAX_ERRORS",
+      &[(
+        "wftop.sty.rhai",
+        r#"for i in 0..120 { Error("wf", "many", "wfmany " + i); }"#,
+      )],
+      "Body.",
+      "Too many errors (> 100)!",
+    ),
+    (
+      "a binding another binding loads",
+      &[
+        (
+          "wftop.sty.rhai",
+          r#"RequirePackage("wfinner"); DefMacro("\\wftopmacro", "OK");"#,
+        ),
+        (
+          "wfinner.sty.rhai",
+          r#"Fatal("unexpected", "Internal", "wfinner requires something");"#,
+        ),
+      ],
+      "Before \\wftopmacro\\ after.",
+      "unexpected:Internal wfinner requires something",
+    ),
+  ];
+  let mut failures = Vec::new();
+  for (name, files, body, message) in rows {
+    let tex = format!(
+      "\\documentclass{{article}}\\usepackage{{wftop}}\\begin{{document}}{body}\\end{{document}}"
+    );
+    let (log, _, _, code) = latexml::util::test::convert_files_with_status(&tex, files, None);
+    let fatals: Vec<&str> = log.lines().filter(|l| l.starts_with("Fatal:")).collect();
+    let contained = log
+      .lines()
+      .filter(|l| l.starts_with("Error:script:"))
+      .count();
+    if fatals.len() != 1 || !fatals[0].contains(message) || code != 3 || contained != 0 {
+      failures.push(format!(
+        "{name}: {} Fatal: lines (want 1, naming {message:?}), status {code}, {contained} contained \
+         Error:script: lines (a body's Fatal is not demoted); fatals={fatals:#?}",
+        fatals.len()
+      ));
+    }
+  }
+  assert!(failures.is_empty(), "{failures:#?}");
+}

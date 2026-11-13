@@ -28,13 +28,17 @@ use super::*;
 /// as an undefined control sequence, which LaTeXML already survives.
 ///
 /// Runaway failures still terminate: `Error!` escalates to `Fatal` past
-/// MAX_ERRORS and THAT `Err` propagates from here. Containment bounds the blast
+/// MAX_ERRORS, and a body's own `Fatal()`; THAT `Err` propagates from here. Containment bounds the blast
 /// radius of one binding; it does not make a broken binding free.
 ///
 /// A body that fails PART-WAY may leave elements it opened unclosed; the document
 /// builder's auto-close handles that, so the result is structurally odd rather
 /// than malformed.
 fn contain<T>(what: &str, e: Box<EvalAltResult>, neutral: T) -> Result<T> {
+  // (a Fatal the body raised is not contained: it ends the conversion, as Perl's `Fatal` dies, #792)
+  if let Some(fatal) = take_raised_fatal() {
+    return Err(fatal);
+  }
   latexml_core::Error!("script", what, format!("{e}"));
   Ok(neutral)
 }

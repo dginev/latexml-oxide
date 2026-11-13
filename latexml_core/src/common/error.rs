@@ -1377,17 +1377,22 @@ impl Error {
     // converter/post sinks call this again on the propagated `Err`; the
     // same `target:category:message` prints once. A fatal built by hand
     // (`Error { .. }` literals) is logged here for the first time.
-    let key = s!("{:?}:{:?}:{}", self.target, self.category, self.message);
-    let already = LAST_FATAL_LOGGED.with(|c| c.borrow().as_deref() == Some(key.as_str()));
-    if already {
+    if self.is_logged_fatal() {
       return;
     }
+    let key = self.fatal_key();
     emit_record(
       LogStatus::Fatal,
       &s!("Fatal:{:?}:{:?} ", self.target, self.category),
       &self.message,
     );
     LAST_FATAL_LOGGED.with(|c| *c.borrow_mut() = Some(key));
+  }
+  fn fatal_key(&self) -> String { s!("{:?}:{:?}:{}", self.target, self.category, self.message) }
+  /// Whether this is the Fatal `log_fatal` printed last: an `Err` carrying an already-reported Fatal.
+  pub fn is_logged_fatal(&self) -> bool {
+    let key = self.fatal_key();
+    LAST_FATAL_LOGGED.with(|c| c.borrow().as_deref() == Some(key.as_str()))
   }
   pub fn todo() -> Self {
     Error::from(ErrorData {
