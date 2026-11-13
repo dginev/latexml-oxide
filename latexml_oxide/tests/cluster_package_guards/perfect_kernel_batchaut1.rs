@@ -165,7 +165,7 @@ fn a_declaration_is_replayed_as_far_as_its_call_read() {
       lines:    &[],
       creators: Creators::Hold(&[
         r#"Ann Fodor<sup>1</sup></text></personname><contact name="Email: " role="email">ann@ubb.ro</contact></creator>"#,
-        r#"<contact name="Email: " role="email"><Math mode="inline""#,
+        r#"<personname><text fontsize="120%">Bob Minuta<sup>2</sup></text></personname>"#,
         r#"href="mailto:bob@ubb.ro">bob@ubb.ro</ref></XMText></XMApp></XMCell></XMRow></XMArray></XMath></Math></contact></creator>"#,
       ]),
     },
@@ -187,9 +187,9 @@ fn a_declaration_is_replayed_as_far_as_its_call_read() {
       files:    &[],
       counts:   (0, 1),
       lines:    &["a name its events don't spell"],
-      // (fragments: the name's plain text keeps a space after "(", as on CAU1)
-      creators: Creators::Hold(&[
-        r#"汪玥)<sup>1</sup></personname></creator>"#,
+      // (the space after "(" is CAU1's too: a residual of the CJK name's plain text)
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Bonny Y. Wang ( 汪玥)<sup>1</sup></personname></creator>"#,
         r#"<creator before="  " role="author"><personname>Leander Thiele<sup>2</sup></personname></creator>"#,
       ]),
     },

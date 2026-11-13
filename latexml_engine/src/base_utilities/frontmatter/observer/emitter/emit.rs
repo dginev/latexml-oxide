@@ -3110,7 +3110,8 @@ fn declarations<'a>(sources: impl Iterator<Item = &'a usize>) -> Vec<Token> {
 }
 
 /// Each declaration of `block` cut from the tokens its events were read from (AUT1's unfolded names, 2605.24599); `None` for
-/// one they can't give whole, out of them or its groups unbalanced, which [`declaration_reads_past`] declines.
+/// one they can't give whole, out of them or its groups unbalanced, which [`declaration_reads_past`] declines (defensive: no
+/// input is known to reach it — by the code, only a span starting before the block).
 fn declaration_cuts<'a>(
   block: &'a AuthorBlock,
   declarations: &[Event],

@@ -34901,7 +34901,8 @@ while the call's own invocation still runs (`stomach::field_position_encloses`: 
 `{CJK*}`, openjournal.cls's atbeginend copy) is inside it too (2606.12938). A declaration made after a token of its call's
 arguments printed keeps its span as noted (`FieldDeclaration::read` 0), as before: NE5's `\footremember` declined by
 `declaration_reads_past`, a robust `\mbox{#1}\gdef\lastnm{#1}` replayed for a later name. A span the read tokens cannot give whole (out of them, its
-groups unbalanced) is not replayed: `declaration_reads_past` declines the block with its counted Warning. Guard
+groups unbalanced) is not replayed: `declaration_reads_past` declines the block with its counted Warning — a defensive branch,
+reached by no known input (revGRP1's 12 probes; by the code, only a span starting before the block). Guard
 `perfect_kernel_batchaut1::a_declaration_is_replayed_as_far_as_its_call_read`; RED
 `amsart_author_macro_lines_with_email_array_split_red`.
 
