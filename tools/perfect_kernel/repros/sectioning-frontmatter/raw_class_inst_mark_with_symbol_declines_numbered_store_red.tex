@@ -1,0 +1,65 @@
+% mechanism: a raw class's numbered `\institute` store (`class_numbered_institutes`) is read only where every queued
+%   mark is a number list (`numbered_marks_requested`); a symbol glued to a number (`\inst{1*}`) declines it, so every
+%   author is given every institute (Dan Wei: Univ B, which the PDF does not mark) and the store's raw `\email` line,
+%   never cut, prints nowhere: the addresses are lost, counted by the content check's Warning
+% witness: synthetic (astro-ph0508574's cjaa.cls with 2407.13764's `\inst{1*}`); the class below is cjaa.cls:295-365 cut down
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Wei Gao1,2 *, Dan Wei1∗", "1 Univ A, Town", "2 Univ B", the
+%   footnote "⋆ E-mail: whgao@x.org, dwei@x.org"
+% engines: P23b (49b1490df2) and P23c (2a9b0199f4): both authors Univ A, Town and Univ B, no e-mail; 2 warnings
+% expect:  0 errors, 0 warnings; Wei Gao: Univ A, Town, Univ B, whgao@x.org; Dan Wei: Univ A, Town, dwei@x.org
+% status:  RED (P23b, P23c): catalog only, no guard
+% moves:   post-merge
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{cjaainst.cls}
+\ProvidesClass{cjaainst}\LoadClass{article}
+\newcounter{inst}
+\newdimen\instindent
+\def\institute#1{\gdef\@institute{#1}}
+\def\institutename{\par
+ \begin{flushleft}
+ \begingroup
+ \parindent=0pt
+ \parskip=0pt
+ \setcounter{inst}{1}%
+ \def\and{\par\stepcounter{inst}%
+ \hangindent\instindent
+ \noindent
+ \hbox to\instindent{\hss$^{\theinst}$\enspace}\ignorespaces}%
+ \setbox0=\vbox{\def\thanks##1{}\@institute}
+ \ifnum\value{inst}>9\relax\setbox0=\hbox{$^{88}$\enspace}%
+                 \else\setbox0=\hbox{$^{8}$\enspace}\fi
+ \instindent=\wd0\relax
+ \ifnum\value{inst}=1\relax
+ \else
+   \parindent=0pt
+   \setcounter{inst}{1}%
+   \hangindent\instindent
+   \noindent
+   \hbox to\instindent{\hss$^{\theinst}$\enspace}\ignorespaces
+ \fi
+ \normalsize
+ \ignorespaces
+ \@institute\par
+ \end{flushleft}
+ \endgroup}
+\def\email#1{ \begingroup
+    \def\protect{\noexpand\protect\noexpand}
+    \xdef\@thanks {
+    \protect\footnotetext[0]{\unskip\hskip-1.5em{ $\star$ E-mail: \tt#1} }
+                  }
+    \endgroup\ignorespaces
+                }
+\def\@thanks{}
+\def\inst#1{\unskip$^{#1}$}
+\def\@maketitle{\newpage\noindent{\Large\@title\par}\vskip6pt
+  {\large\noindent\def\and{\unskip, }\ignorespaces\@author\par}\vskip6pt
+  \institutename}
+\end{filecontents*}
+\documentclass{cjaainst}
+\begin{document}
+\title{T}
+\author{Wei Gao\inst{1,2}* \and Dan Wei\inst{1*}}
+\institute{Univ A, Town\\ \email{whgao@x.org, dwei@x.org} \and Univ B}
+\maketitle
+Text.
+\end{document}

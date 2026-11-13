@@ -35244,7 +35244,12 @@ no block, so none is found for its entries) — review revP23b's two findings. A
 2,630 papers, 448 kernel `\author` lists (article, amsart, revtex, report, amsproc; `\and`, an e-mail, `\thanks` or
 marks) and 141 raw classes alike: 1 changed, astro-ph0508574 better (W.H. Gao's e-mail after the institute it is printed
 under), 2210.01917 a 180 s timeout on both alone (noise). Guard row `kernel list, raw class store` of
-`a_whole_list_entry_holds_a_position_a_name` (repro `class-bindings/author_one_block/kernel_raw_class_email_line_one_address_a_name.tex`). Guards `perfect_kernel_batchp23b::{a_star_after_an_inst_mark_is_the_names_text,
+`a_whole_list_entry_holds_a_position_a_name` (repro `class-bindings/author_one_block/kernel_raw_class_email_line_one_address_a_name.tex`). llncs's marked list stays
+cut at the call: as one block a row (cut at its `\\`s only, its `\and`s the reading's) a row of names each led by its
+`\inst` mark is read as affiliation entries (`\inst{1}Ann Able \and \inst{2}Bob Baker \and \inst{3}Cat Cole`: no author,
+the guarded `llncs_inst_leading_marks_keep_their_names` lost) — the same reading as aa's and OmniBus's whole list on the
+base (RED `class-bindings/author_one_block/aa_leading_inst_marks_names_read_as_affiliations_red.tex`, int169a too) and as
+the whole list's names row after `\and \\` (1902.08498, 2605.10631). Guards `perfect_kernel_batchp23b::{a_star_after_an_inst_mark_is_the_names_text,
 a_raw_class_store_email_line_goes_to_the_authors_it_spells}` (repros `class-bindings/author_one_block/{aa,omnibus}_star_after_inst_mark_stays_the_names_text.tex`,
 `sectioning-frontmatter/raw_class_numbered_institute_email_each_address_its_author.tex`).
 
