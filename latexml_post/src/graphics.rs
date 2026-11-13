@@ -3568,6 +3568,7 @@ endobj
   /// #791: `page=` on a single-page format (SVG, PNG, JPEG) selects nothing, as pdfTeX ignores it on a PNG:
   /// the source is copied as it is, with its size, exactly as without `page=` — never re-encoded by `convert`.
   #[test]
+  #[cfg(unix)]
   fn a_single_page_source_ignores_page() {
     use std::os::unix::fs::PermissionsExt;
 
