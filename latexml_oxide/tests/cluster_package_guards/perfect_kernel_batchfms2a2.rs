@@ -843,7 +843,8 @@ fn orcid_links_cites_environments_and_title_notes() {
 /// Item 2: revtex names with their marks before them on the block's only line, the affiliations its calls
 /// (1805.08625, 1405.2400, 2001.00788, 0710.4115: no creator was made); a sole author's orphans are that author's, as
 /// today's (OD #159: amsart's `\address` and `\dedicatory` before the `\author`, 0911.5235, 0712.4133) — in source order
-/// (FM S2a.2 r8, review revfms2a2_7 finding 1: the `\dedicatory` before the `\email`).
+/// (FM S2a.2 r8, review revfms2a2_7 finding 1: the `\dedicatory` before the `\email`). Since MLN1 the line is read as
+/// a names line, its rule naming the separator before each name.
 #[test]
 fn prefix_marks_on_a_sole_line_and_a_sole_authors_orphans() {
   assert_eq!(
@@ -855,7 +856,7 @@ fn prefix_marks_on_a_sole_line_and_a_sole_authors_orphans() {
     [
       "C Ann Able [1] | line:names mark:prefix",
       "  a Univ A | api:leading-mark",
-      "C Bob Baker [2,3] | line:names mark:prefix",
+      "C Bob Baker [2,3] | line:names sep:word mark:prefix",
       "  a Univ B | api:leading-mark",
       "  a Univ C | api:leading-mark",
     ]

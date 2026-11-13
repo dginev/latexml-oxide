@@ -1,0 +1,19 @@
+% mechanism: two comma rows of names led by their marks, the second repeating the first's labels (`$^1$Dan Dole, $^2$Eve
+%   Eads, $^1$Fay Ford`): a setter sets each label once, so the second row is names, the affiliation row under them
+%   the setter
+% witness: 2507.23021
+% oracle:  pdflatex (-no-shell-escape, TL 2025) 0 errors: "1 Ann Able, 1 Bob Baker, 2 Cat Cole, / 1 Dan Dole, 2 Eve Eads, 1
+%   Fay Ford / 1 Inst A, Italy 2 Inst B, Italy"
+% engines: int169a (54ccc986ef): three creators, "Dan Dole", "Eve Eads", "Fay Ford" affiliations of the first row
+% expect:  0 errors, 0 warnings; six creators, each with the Inst its mark requests
+% status:  RED (int169a (54ccc986ef)) -> GREEN (MLN1)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{$^1$Ann Able, $^1$Bob Baker, $^2$Cat Cole, \\$^1$Dan Dole, $^2$Eve Eads, $^1$Fay Ford
+\\
+$^1$Inst A, Italy \quad $^2$Inst B, Italy}
+\maketitle
+Text.
+\end{document}

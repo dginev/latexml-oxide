@@ -1,0 +1,15 @@
+% mechanism: aa_leading_inst_marks_lead_their_names on the unknown-class route (OmniBus, `nosuchclass`)
+% witness: synthetic (MLN omni_inst)
+% oracle:  pdflatex (-no-shell-escape, TL 2025) none (no such class); the aa and llncs prints are the oracle
+% engines: int169a (54ccc986ef): one nameless creator holding the names and institutes; 1 warning (the missing class)
+% expect:  0 errors, 1 warning (the missing class); Ann Able: Inst A; Bob Baker: Inst B; Cat Cole: Inst C
+% status:  RED (int169a (54ccc986ef)) -> GREEN (MLN1)
+% preload: ar5iv.sty
+\documentclass{nosuchclass}
+\begin{document}
+\title{T}
+\author{\inst{1}Ann Able, \inst{2}Bob Baker \and \inst{3}Cat Cole}
+\institute{Inst A \and Inst B \and Inst C}
+\maketitle
+Text.
+\end{document}

@@ -1,0 +1,16 @@
+% mechanism: as article_mark_led_names_over_an_affiliation_row, the marks `\textsuperscript` (a text superscript, not a math
+%   one)
+% witness: synthetic (MLN v3; 2505.14984, 1105.2204)
+% oracle:  pdflatex (-no-shell-escape, TL 2025) 0 errors: "1 2 / Ann Able Bob Baker / 1 Inst A 2 Inst B"
+% engines: int169a (54ccc986ef): Ann Able with Inst A, a nameless creator holding "Bob Baker" and Inst B
+% expect:  0 errors, 0 warnings; Ann Able: Inst A; Bob Baker: Inst B
+% status:  RED (int169a (54ccc986ef)) -> GREEN (MLN1)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{\textsuperscript{1}Ann Able \and \textsuperscript{2}Bob Baker\\
+\textsuperscript{1}Inst A \quad \textsuperscript{2}Inst B}
+\maketitle
+Text.
+\end{document}

@@ -103,17 +103,18 @@ const ORCID_NAMES: &str = "\\documentclass{revtex4-2}\n\\usepackage{orcidlink}\n
 const FM_MARK: &str = "\\documentclass{revtex4}\n\\begin{document}\n\\title{T}\n\\author{Ann Able}\n\\address{Univ A, City}\n\\address{\n\\begin{minipage}[t]{5.0in}\n\\begin{abstract}\nAn abstract.\n\\end{abstract}\n\\end{minipage}}\n\\maketitle\nText.\n\\end{document}\n";
 
 /// Item 1: a prefix-marked name's notes are its own, as a names line attaches a note to the name before (0710.4115,
-/// gr-qc0606119: `$^{1}$José Edgar Madriz Aguilar\thanks{E-mail address: …}`, the notes were lost).
+/// gr-qc0606119: `$^{1}$José Edgar Madriz Aguilar\thanks{E-mail address: …}`, the notes were lost). Since MLN1 the line
+/// is read as a names line, its rule naming the separator before each name.
 #[test]
 fn prefix_marked_names_keep_their_notes() {
   assert_eq!(tuples(&revtex(PREFIX_NOTES)), [
     "C Ann Able [1] | line:names mark:prefix",
     "  a Univ A, City | api:leading-mark",
     "  n E-mail address: ann@example.org | note:adjacent",
-    "C Bob Baker [2] | line:names mark:prefix",
+    "C Bob Baker [2] | line:names sep:comma mark:prefix",
     "  a Univ B, Town | api:leading-mark",
     "  n E-mail address: bob@example.org | note:adjacent",
-    "C Cat Cole [1] | line:names mark:prefix",
+    "C Cat Cole [1] | line:names sep:word mark:prefix",
     "  a Univ A, City | api:leading-mark",
   ]);
 }

@@ -605,12 +605,14 @@ fn marked_list_cut_as_its_binding_declares() {
     (
       repro!("ieee_marked_list_star_legend_tail"),
       0,
-      &[&["Ann Able"], &["Bob Baker"], &["Cy Cole"], &[
-        "affiliation=† Univ A (A*STAR), Town A",
-        "affiliation=‡ Univ B, Town B",
-      ]],
+      // (since MLN1 the names line its `*` marks lead is names, each entry on the name its mark requests and the legend
+      // on the two names showing `*`, as pdflatex prints it — the base's nameless fourth creator gone)
       &[
-        "note:thanks=*equally contributed",
+        &["Ann Able", "affiliation=† Univ A (A*STAR), Town A"],
+        &["Bob Baker", "affiliation=‡ Univ B, Town B"],
+        &["Cy Cole", "affiliation=† Univ A (A*STAR), Town A"],
+      ],
+      &[
         "note:thanks=*equally contributed",
         "note:thanks=*equally contributed",
       ],

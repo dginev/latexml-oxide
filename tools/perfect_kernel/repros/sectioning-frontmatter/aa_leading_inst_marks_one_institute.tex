@@ -1,0 +1,16 @@
+% mechanism: `\inst{1}Ann Able \and \inst{1}Bob Baker` under `\institute{Inst A}`: label 1 set outside the block, so Bob's
+%   line is a request, no setter
+% witness: synthetic
+% oracle:  pdflatex (-no-shell-escape, TL 2025) (0805.1001's aa.cls) "1 Ann Able and1 Bob Baker", "Inst A"
+% engines: int169a (54ccc986ef): Ann Able alone, with the affiliations "Bob Baker" and Inst A
+% expect:  0 errors, 0 warnings; Ann Able: Inst A; Bob Baker: Inst A
+% status:  RED (int169a (54ccc986ef)) -> GREEN (MLN1)
+% preload: ar5iv.sty
+\documentclass{aa}
+\begin{document}
+\title{T}
+\author{\inst{1}Ann Able \and \inst{1}Bob Baker}
+\institute{Inst A}
+\maketitle
+Text.
+\end{document}

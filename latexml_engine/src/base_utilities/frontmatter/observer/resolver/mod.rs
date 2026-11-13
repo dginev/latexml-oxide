@@ -270,6 +270,7 @@ mod placed;
 mod post;
 mod words;
 
+use api::affiliation_set_labels;
 pub(in crate::base_utilities::frontmatter::observer) use api::{
   creator_call_level, creator_call_pieces, hand_marked_share, labelseq_pieces, split_pieces,
   split_pieces_as,
@@ -621,6 +622,11 @@ struct Resolver {
   /// by hand (`$^{1}$`, `\textsuperscript{1}`, a paper's mark macro), which [`Resolver::by_hand`] reads off the rest
   /// (`answer_pending`: a `_share=authors` entry only the class's `\inst{n}` picks)
   class_requests:     Vec<(usize, String)>,
+  /// the labels the affiliation calls made apart from the blocks set ([`affiliation_set_labels`]): what a block's
+  /// mark-led names request (`names_led_by_marks`)
+  outside_labels:     Vec<String>,
+  /// while a names line its marks lead is read (`names_led_by_marks`): each mark after a separator the next name's
+  marks_lead:         bool,
   /// the pending entries (their place in `pending`) a `_share=authors` call made (llncs's one `\institute`, no `\and`
   /// in it: every author's unless the class's `\inst{n}` picks it), whether the entry holds a mark of its own, and
   /// whether it is a piece its institute's marks split it into (`_markpiece=true`: the numbers shown by hand label the
@@ -741,6 +747,8 @@ impl Resolver {
       role_reads:         HashMap::default(),
       fn_requests:        Vec::new(),
       class_requests:     Vec::new(),
+      outside_labels:     Vec::new(),
+      marks_lead:         false,
       shared:             Vec::new(),
       row_units:          Vec::new(),
       keyed:              Vec::new(),
@@ -1228,6 +1236,7 @@ pub fn resolve_with(
   conventions: &dyn Fn(&str, &str) -> &'static Policy,
 ) -> Resolved {
   let mut resolver = Resolver::new();
+  resolver.outside_labels = affiliation_set_labels(inputs, conventions);
   let mut policy: &'static Policy = &policy::KERNEL;
   // (the blocks a later clear removed, a nameless one too: none of their items is kept)
   let mut cleared_blocks: Vec<usize> = Vec::new();

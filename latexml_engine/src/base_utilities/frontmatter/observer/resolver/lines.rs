@@ -675,6 +675,113 @@ pub(super) fn entries_of<'a>(line: &[&'a Event]) -> Vec<Entry<'a>> {
   entries
 }
 
+/// A line's first ink: no name of punctuation alone (`($^1$) LSIIT …`, 1004.4809).
+pub(super) fn line_first_ink<'a>(events: &[&'a Event]) -> Option<&'a Event> {
+  events
+    .iter()
+    .copied()
+    .find(|e| inked(e) && !events::unprinted_piece(e))
+}
+
+/// Per line of a block, whether the marks leading it are its names' requests, not the labels of affiliation entries: a
+/// line whose first ink is a mark and whose every entry reads as names, above the block's first line setting labels, and
+/// whose marks are requests — answered by a later line, set by an affiliation call outside the block (`outside`), or,
+/// no line setting any, every line of the block such a line. TeX prints the mark before the name it labels: `$^1$Ann
+/// Able \and $^2$Bob Baker` "¹Ann Able ²Bob Baker" (2507.23021, 2605.06126, 2505.14984, 1105.2204, 2205.03535).
+/// The second vector: the mark-led lines whose entries read as names, whatever the reading.
+pub(super) fn names_led_by_marks(lines: &[Line<'_>], outside: &[String]) -> (Vec<bool>, Vec<bool>) {
+  let led: Vec<Option<Vec<Entry<'_>>>> = lines
+    .iter()
+    .map(|line| {
+      line_first_ink(&line.events)
+        .filter(|e| e.kind == EventKind::Mark)
+        .map(|_| {
+          // (an entry of no ink is a mark shown on the name before it: `Adarsh Singh$^{1}$ \quad`, 2505.14984)
+          let mut entries = entries_of(&line.events);
+          entries.retain(|e| e.events.iter().any(|e| inked(e)));
+          entries
+        })
+    })
+    .collect();
+  if led.iter().all(Option::is_none) {
+    return (vec![false; lines.len()], vec![false; lines.len()]);
+  }
+  // (the labels each mark-led line's entries set, were it affiliations; the marks each line shows, requests above a setter)
+  let sets: Vec<Vec<String>> = led
+    .iter()
+    .map(|entries| {
+      entries
+        .iter()
+        .flatten()
+        .flat_map(|e| e.labels.clone())
+        .collect()
+    })
+    .collect();
+  let shown: Vec<Vec<String>> = lines
+    .iter()
+    .map(|line| {
+      line
+        .events
+        .iter()
+        .filter(|e| e.kind == EventKind::Mark)
+        .flat_map(|e| event_labels(e))
+        .collect()
+    })
+    .collect();
+  let matched = |labels: &[String], label: &str| labels.iter().any(|l| label_matches(l, label));
+  // (the first setter: a mark-led line under the first of its column (an `\and` opens an author's box, its first line
+  // the names'), setting each label once, every one requested by a mark above it, the lines from it on setting no
+  // number no mark above requests, and every number requested above set from it on or outside — the affiliations under
+  // `$^1$Ann, $^1$Bob, $^2$Cat \\ $^1$Dan, $^2$Eve` start at `$^1$Univ A \quad $^2$Univ B`, not at the second names row,
+  // which sets label 1 twice, 2507.23021; nor at `$^3$Dan, $^1$Fay`, which sets a 3 no one requested, 2605.06126)
+  let mut requested: Vec<String> = Vec::new();
+  let setter = (1..lines.len()).find(|&k| {
+    requested.extend(shown[k - 1].iter().cloned());
+    let line_sets = &sets[k];
+    if led[k].is_none()
+      || line_sets.is_empty()
+      || lines[..k].iter().all(|l| l.column != lines[k].column)
+    {
+      return false;
+    }
+    line_sets.iter().enumerate().all(|(i, l)| !line_sets[..i].contains(l))
+      && line_sets.iter().all(|l| matched(&requested, l))
+      // (labels an affiliation call outside the block sets are requests: `\inst{1}Ann \and \inst{1}Bob` under aa's
+      // `\institute{Univ A}`)
+      && !line_sets.iter().all(|l| matched(outside, l))
+      && sets[k + 1..]
+        .iter()
+        .flatten()
+        .filter(|l| !is_symbol_label(l))
+        .all(|l| matched(&requested, l))
+      && requested
+        .iter()
+        .filter(|l| !is_symbol_label(l))
+        .all(|l| sets[k..].iter().any(|set| matched(set, l)) || matched(outside, l))
+  });
+  let names = |entries: &Option<Vec<Entry<'_>>>| {
+    entries.as_ref().is_some_and(|entries| {
+      !entries.is_empty()
+        && entries
+          .iter()
+          .all(|e| reads_as_names(&events_text(&e.events)))
+    })
+  };
+  let shaped: Vec<bool> = led.iter().map(names).collect();
+  let whole_block = setter.is_none() && shaped.iter().all(|s| *s);
+  let led_names = (0..lines.len())
+    .map(|n| {
+      shaped[n]
+        && setter.is_none_or(|k| n < k)
+        && (whole_block
+          || shown[n]
+            .iter()
+            .any(|l| sets[n + 1..].iter().any(|set| matched(set, l)) || matched(outside, l)))
+    })
+    .collect();
+  (led_names, shaped)
+}
+
 /// Whether a text reads as names (the classify helpers: name-shaped parts, no institution word, no address).
 pub(in crate::base_utilities) fn reads_as_names(text: &str) -> bool {
   !text.contains('@') && name_count(text) > 0 && !is_institution(text)
@@ -1284,15 +1391,6 @@ pub(super) fn is_placement_letter(events: &[&Event], i: usize) -> bool {
         .is_some_and(|e| e.kind == EventKind::Layout))
 }
 
-/// The names of a run of events (an entry of a prefix-marked line): its Name events' texts.
-pub(super) fn names_of(events: &[&Event]) -> Vec<String> {
-  events
-    .iter()
-    .filter(|e| e.kind == EventKind::Name)
-    .map(|e| e.text.clone())
-    .collect()
-}
-
 /// Whether the Mark at `i`, after a separator (`last_sep`) and a name before it, goes to the next name: it stands
 /// between the separator and the next name nearer to that name.
 fn mark_goes_next(events: &[&Event], i: usize, last_sep: Option<&Event>, policy: &Policy) -> bool {
@@ -1807,8 +1905,12 @@ impl Resolver {
             },
             _ => None,
           };
-          let to_next =
-            glued.unwrap_or_else(|| made.is_empty() || mark_goes_next(events, i, last_sep, policy));
+          // (on a line its marks lead, a mark after a separator leads the next name, an `\inst` after a comma too, glued
+          // to the mark before it or not: `\inst{1}Ann Able, \inst{2}Bob Baker`; IEEEtran's `*Ann
+          // Able\IEEEauthorrefmark{2},\n*Bob Baker`, 2609.16600 — `names_led_by_marks`)
+          let to_next = (self.marks_lead && last_sep.is_some())
+            || glued
+              .unwrap_or_else(|| made.is_empty() || mark_goes_next(events, i, last_sep, policy));
           last_mark = event.span.map(|(_, end)| (end, to_next));
           let footnote = event
             .role

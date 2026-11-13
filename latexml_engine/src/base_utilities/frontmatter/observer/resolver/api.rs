@@ -711,11 +711,7 @@ impl Resolver {
       // (Perl's label is `CleanLabel($n, $labelseq)`, Base_Utility.pool.ltxml:489: a sequence of the authors, ijcai's
       // `\lx@add@affiliations[labelseq=author]` (ijcai.sty.ltxml:45), is the N-th author's own `author:N`
       // ([`label_owners`]), not a mark's number — kr.sty's `\affiliations` under its names, 2202.05511)
-      labels = vec![if seq == "author" {
-        s!("author:{at}")
-      } else {
-        at.to_string()
-      }];
+      labels = vec![sequence_label(seq, at)];
       labels.extend(keys.iter().cloned());
       label_rule = "api:labelseq";
     } else if !lead.is_empty() {
@@ -1306,6 +1302,72 @@ pub(super) fn note_owned_contacts(events: &[Event]) -> Vec<&Event> {
         && (born || (e.role.as_deref() == Some("email") && e.meaning != EmailMeaning::Own))
     })
     .collect()
+}
+
+/// The label the `at`-th call of a label sequence `seq` sets (`Resolver::api`'s `labelseq=` reading).
+fn sequence_label(seq: &str, at: usize) -> String {
+  if seq == "author" {
+    s!("author:{at}")
+  } else {
+    at.to_string()
+  }
+}
+
+/// The labels the affiliation calls made apart from the blocks set, read as [`Resolver::api`] labels them: a `label=`,
+/// the n-th of a `labelseq=` (aa's and llncs's `\institute{A \and B}`, entry n labelled n), each mark leading a piece
+/// (`\affiliation{$^1$Univ A}`, an `\address` line).
+pub(super) fn affiliation_set_labels(
+  inputs: &[Input],
+  conventions: &dyn Fn(&str, &str) -> &'static Policy,
+) -> Vec<String> {
+  let mut policy: &'static Policy = &policy::KERNEL;
+  let mut sequence: Vec<(&str, usize)> = Vec::new();
+  let mut labels = Vec::new();
+  for input in inputs {
+    match input {
+      Input::Block { binding, hook, .. } => policy = conventions(binding, hook),
+      Input::Api { tag, role, attrs, events, .. }
+        if tag == "ltx:contact"
+          && matches!(role.as_str(), "affiliation" | "address" | "altaffiliation") =>
+      {
+        if let Some(label) = attr_value(attrs, "label").filter(|l| !l.is_empty()) {
+          labels.extend(mark_labels(label));
+        } else if let Some(seq) =
+          attr_value(attrs, "labelseq").filter(|s| !s.is_empty() && policy.label_sequence)
+        {
+          let at = match sequence.iter_mut().find(|(r, _)| *r == seq) {
+            Some((_, n)) => {
+              *n += 1;
+              *n
+            },
+            None => {
+              sequence.push((seq, 1));
+              1
+            },
+          };
+          labels.push(sequence_label(seq, at));
+        } else {
+          let pieces = mark_led_pieces(events);
+          let pieces = if pieces.is_empty() {
+            vec![events.clone()]
+          } else {
+            pieces
+          };
+          for piece in &pieces {
+            let (start, end) = events::leading_marks(piece);
+            labels.extend(
+              piece[start..end]
+                .iter()
+                .filter(|e| e.kind == EventKind::Mark)
+                .flat_map(|e| mark_labels(e.label.as_deref().unwrap_or(""))),
+            );
+          }
+        }
+      },
+      _ => {},
+    }
+  }
+  labels
 }
 
 /// The State mapping of the entries [`warn_whole_entry_of_keyed_parts`] counted: once each, whatever flush reads it again.

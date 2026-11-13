@@ -35854,3 +35854,34 @@ a tabu cell, where TeX errs (TABUN, `tabu_vline_style_in_a_nested_tabular_red`);
 `\\` to `\@normalcr` themselves, so in a tabu cell they keep line breaks where TeX ends the row (TABUF,
 `tabu_center_env_backslash_red`). **Guards**: `perfect_kernel_batch54::tabu_init_lets_rule_styles_and_starred_environments`
 (repros `alignment-bindings/tabu_*`, `array_centering_backslash_errs`).
+
+### 1019. Names led by their marks are names: a mark-led line is a names line above the block's first setter (MLN1)
+
+**TeX.** A mark printed before a name is the name's superscript: `\author{$^{1}$Ann Able \and $^{2}$Bob Baker}` prints
+"¹Ann Able ²Bob Baker" (pdflatex, 0 errors). **Perl.** `Base_Utility.pool.ltxml:706-707` ("Close to front? assume
+affiliation", `$p < 8`): every mark-led piece is an affiliation, so such a block makes no creator and 2 "Orphaned
+frontmatter annotation" Warnings. **Rust.** The resolver read a mark-led line as labelled affiliation entries unless it
+was the block's first line answered by a later mark-led line of the block (`prefix`); `lines_of` cuts at every
+`\and`, so each `\and` column's names, a second names row and names answered by `\institute` were one nameless
+creator's affiliations, silently. Now `resolver::lines::names_led_by_marks` reads, per block, the marks each line shows
+and the labels each mark-led line sets: the first **setter** is a mark-led line that is not its `\and` column's first
+line (the column's first line is its author's name, as `column_first` reads it), setting each label once, every one
+requested by a mark above it (not all set outside the block), the lines from it on setting no number no mark above
+requests, every number requested above set from it on or by an affiliation call outside the block. A mark-led line whose every entry (an inkless one aside: a mark shown on the name before it) reads as names is a
+**names line** when it lies above the first setter and some mark of it is answered by a later line, set outside the
+block (`api::affiliation_set_labels`: a `label=`, the n-th `labelseq=` entry, each piece's leading marks — aa's and
+llncs's numbered `\institute`, `\affiliation[..]`, a mark-led `\address`), or, no setter, every line of the block is
+such a line. A names line is read by `names_line`, each mark after a separator the next name's (`marks_lead`, an
+`\inst` after a comma and a mark glued to the one before too); the old `prefix` path and its entry reader (`names_of`)
+are gone. A block making no name whose mark-led lines read as names is counted by a Warning. Decided by marks, requests
+and set labels; the word shape (`reads_as_names`) is a necessary condition only. Unanswered marks keep their text in the
+name, counted by the safety net (the post-merge mark-text batch; PoS keeps a first name's leading mark:
+`pos_leading_mark_kept_in_the_first_name_red`); an isotope line's mark is consumed as a label
+(`article_unrequested_isotope_line_loses_its_mark_red`). Ambiguous by marks and left as affiliations: a row of
+name-shaped text answering every request (`$^1$Zhipu AI \quad $^2$Deep Seek`), and a second names row of one name
+answering one request (`article_mark_led_second_row_of_one_name_read_as_affiliation_red`), which reads as a one-line
+affiliation does (batch63's `$^{1}$Carnegie Mellon`). **Witnesses**: 2507.23021, 2605.06126,
+2505.14984, 1105.2204, 2205.03535 (PoS), 2606.07481 (oscmjournal), 2609.16600 (IEEEtran); 1805.08625, 1405.2400,
+2001.00788, 0710.4115, gr-qc0606119 (the old prefix shapes). **Guards**: `perfect_kernel_batchmln1::{batchmln1_mark_led_names_read_as_names,
+batchmln1_marked_affiliations_stay_affiliations}`, `perfect_kernel_batchfms2a2r4::prefix_marked_names_keep_their_notes`,
+`perfect_kernel_batch78f::llncs_inst_leading_marks_keep_their_names`.

@@ -1,0 +1,16 @@
+% mechanism: risk: mark-led names in `\and` columns over a name-shaped affiliation row (`$^1$Zhipu AI \quad $^2$Deep Seek`):
+%   the row answers every request, the setter, never names
+% witness: synthetic (the MLN study's risk row)
+% oracle:  pdflatex (-no-shell-escape, TL 2025) 0 errors: "1 2 / Ann Able Bob Baker / 1 Zhipu AI 2 Deep Seek"
+% engines: int169a (54ccc986ef): Ann Able with Zhipu AI, a nameless creator holding "Bob Baker" and Deep Seek
+% expect:  0 errors, 0 warnings; Ann Able: Zhipu AI; Bob Baker: Deep Seek
+% status:  RED (int169a (54ccc986ef), Bob lost) -> GREEN (MLN1)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{$^1$Ann Able \and $^2$Bob Baker\\
+$^1$Zhipu AI \quad $^2$Deep Seek}
+\maketitle
+Text.
+\end{document}
