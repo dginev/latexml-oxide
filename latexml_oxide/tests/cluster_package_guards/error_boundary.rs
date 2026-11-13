@@ -9,7 +9,7 @@ use super::perfect_kernel_batch46::{error_count, warning_count};
 
 /// One boundary row: name, oracle, document, the files on disk beside it (name, content), (errors, warnings), the
 /// first lines of the diagnostics that make the count (each as often as it occurs), and the whole elements (tag,
-/// `xml:id`, element).
+/// `xml:id` — or an attribute `name="value"`, or "" for the first of the tag —, element).
 type Row = (
   &'static str,
   &'static str,
@@ -52,6 +52,10 @@ const REFS: &str =
 
 const CALC_WIDTHOF: &str = "Warning:unexpected:\\widthof pgf's parser errs on calc's \\widthof in an expression; \
                             calc's value is used";
+
+const SBX2_ANN_UNIV_A: &str = r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" class="ltx_authors_1line"><title>T</title><creator role="author"><personname>Ann Lee</personname><contact name="Affiliation: " role="affiliation">Univ A</contact></creator><para xml:id="p1"><p xml:id="p1.1">Hi.</p></para></document>"#;
+
+const SBX2_LLNCS: &str = r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" class="ltx_authors_1line"><title>T</title><creator role="author"><personname>Ann Lee</personname><contact name="Affiliation: " role="affiliation">Amazon</contact></creator><creator before="  " role="author"><personname>Bob Roe</personname><contact name="Affiliation: " role="affiliation">UW</contact></creator><para xml:id="p1"><p xml:id="p1.1">Hi.</p></para></document>"#;
 
 const BOUNDARY: &[Row] = &[
   // --- `\chapter` (SVC, OD #734, #735). TeX errs (and Perl, where named): one Warning (user 2026-11-11) ---
@@ -450,7 +454,40 @@ const BOUNDARY: &[Row] = &[
       ("p", "p2.1", r#"<p xml:id="p2.1">[21.1112pt]</p>"#),
     ],
   ),
-  // --- SBX2: float.sty's `float@type` counter (float.sty:24-27) ---
+  // --- SBX2: a replaced author never digested (`reading::superseded`), float.sty's `float@type` counter. A row's
+  // element by `xml:id`, an attribute, or "" the first of its tag ---
+  (
+    "a replaced `\\author` with undefined `\\name`, `\\email` (repro sectioning-frontmatter/author_replaced_template_never_digested)",
+    "pdflatex 0 `!`; Perl 0 errors",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_replaced_template_never_digested.tex"
+    ),
+    &[],
+    (0, 0),
+    &[],
+    &[("document", "", SBX2_ANN_UNIV_A)],
+  ),
+  (
+    "llncs: a template `\\author` of `\\IEEEauthorblockN`s replaced (2605.25890)",
+    "pdflatex 0 `!`; Perl 0 errors",
+    "\\documentclass{llncs}\n\\title{T}\n\\author{\\IEEEauthorblockN{}\\IEEEauthorblockA{\\textit{Amazon}\\\\ a@b.com} \
+     \\and \\IEEEauthorblockN{}\\IEEEauthorblockA{\\textit{UW}\\\\ c@d.edu}}\n\\author{Ann Lee\\inst{1} \\and Bob \
+     Roe\\inst{2}}\n\\institute{Amazon \\and UW}\n\\begin{document}\n\\maketitle\nHi.\n\\end{document}\n",
+    &[],
+    (0, 0),
+    &[],
+    &[("document", "", SBX2_LLNCS)],
+  ),
+  (
+    "the replacing `\\author`'s own undefined `\\foo` still errs",
+    "pdflatex 1 `!` (Undefined control sequence); Perl 1 error (undefined:\\foo)",
+    "\\documentclass{article}\n\\title{T}\n\\author{\\name Ann Lee \\email a@b.edu}\n\\author{Ann Lee \\\\ Univ A \
+     \\foo}\n\\begin{document}\n\\maketitle\nHi.\n\\end{document}\n",
+    &[],
+    (1, 0),
+    &["Error:undefined:\\foo The token T_CS[\\foo] is not defined."],
+    &[("document", "", SBX2_ANN_UNIV_A)],
+  ),
   (
     "float.sty's `\\c@float@type` read by a document (repro package-bindings/float_type_counter)",
     "pdflatex 0 `!`, \"Type 8.\"; Perl 3 errors (undefined:\\c@float@type, \\the\\c@float@type, \\thefloat@type)",
@@ -479,7 +516,22 @@ fn perfect_kernel_error_boundary() {
       assert_eq!(lines, 0, "{name}: schema:\n{xml}");
     }
     for (tag, id, element) in *elements {
-      assert_element(&xml, tag, &[&format!("xml:id=\"{id}\"")], element);
+      let attr = match *id {
+        "" => None,
+        id if id.contains('=') => Some(id.to_string()),
+        id => Some(format!("xml:id=\"{id}\"")),
+      };
+      assert_element(
+        &xml,
+        tag,
+        attr
+          .as_slice()
+          .iter()
+          .map(String::as_str)
+          .collect::<Vec<_>>()
+          .as_slice(),
+        element,
+      );
     }
   }
 }

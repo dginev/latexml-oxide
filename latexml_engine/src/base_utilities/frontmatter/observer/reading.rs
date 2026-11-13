@@ -145,6 +145,22 @@ impl HeldUndefined {
   }
 }
 
+/// Whether the author block at ledger index `i` was replaced before any flush digested it: cleared by a later clear, or
+/// before a later call of its queue that replaces the authors (`\def\@author`; Perl's `dequeueFrontMatter`,
+/// Base_Utility.pool.ltxml:691). Its commands are never digested, so they raise nothing (2605.25890, 2605.26243).
+fn superseded(i: usize) -> bool {
+  with_ledger(|ledger| {
+    let entries = ledger.entries();
+    let Some(Entry::Author(block)) = entries.get(i) else {
+      return false;
+    };
+    block.cleared
+      || entries[i + 1..].iter().any(|entry| {
+        matches!(entry, Entry::Author(later) if later.replace && later.epoch == block.epoch)
+      })
+  })
+}
+
 /// How many times the conversion raised `name` undefined (the summary's tally, `LogState::undefined`).
 fn undefined_tally(name: &str) -> usize {
   latexml_core::report!()
@@ -293,7 +309,7 @@ fn read_pending() -> Result<HeldUndefined> {
           expansions: _,
         } => {
           queued_tags = queued;
-          if !block.sectioned {
+          if !block.sectioned && !superseded(i) {
             for token in held
               .iter()
               .filter_map(|error| held_undefined(&error.message))
