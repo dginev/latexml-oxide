@@ -702,7 +702,7 @@ fn render_manifest_pages(m: RenderManifest) -> usize {
       // Already reported inside the pipeline; mirror the serial driver's
       // abort-on-page-failure (the parent flags the shortfall through the
       // folded error + the fatal-bearing status this worker will report).
-      Err(()) => break,
+      Err(_) => break,
     }
   }
   pages_written

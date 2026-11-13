@@ -374,6 +374,121 @@ mod xslt_custom_stylesheet {
   }
 }
 
+mod xslt_failure_is_fatal {
+  //! #782: a stylesheet that fails (a bad XPath, `xsl:message terminate`, a missing import) stops
+  //! post-processing with a Fatal, exit 1 and no output, as Perl's die inside ProcessChain does
+  //! (LaTeXML.pm L605-614) — not an Error with the raw XML written under `.html`.
+
+  use std::{path::Path, process::Command};
+
+  const XML: &str = "<?xml version=\"1.0\"?><document xmlns=\"http://dlmf.nist.gov/LaTeXML\"><para><p>Hi</p></para></document>";
+
+  fn stylesheet(dir: &Path, name: &str, body: &str) -> String {
+    let path = dir.join(name);
+    std::fs::write(
+      &path,
+      format!(
+        "<xsl:stylesheet version=\"1.0\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\">{body}</xsl:stylesheet>"
+      ),
+    )
+    .unwrap();
+    path.to_string_lossy().into_owned()
+  }
+
+  fn rows(dir: &Path) -> [String; 3] {
+    [
+      stylesheet(
+        dir,
+        "bad_xpath.xsl",
+        "<xsl:template match=\"/\"><x><xsl:value-of select=\"//*[[bad\"/></x></xsl:template>",
+      ),
+      stylesheet(
+        dir,
+        "terminate.xsl",
+        "<xsl:template match=\"/\"><xsl:message terminate=\"yes\">STOP</xsl:message></xsl:template>",
+      ),
+      stylesheet(
+        dir,
+        "badimport.xsl",
+        "<xsl:import href=\"does-not-exist.xsl\"/><xsl:template match=\"/\"><x/></xsl:template>",
+      ),
+    ]
+  }
+
+  fn post_options(xsl: &str) -> latexml::post::PostOptions<'_> {
+    latexml::post::PostOptions {
+      pmml:                      false,
+      cmml:                      false,
+      keep_xmath:                false,
+      stylesheet:                Some(xsl),
+      destination:               None,
+      source_directory:          None,
+      site_directory:            None,
+      search_paths:              &[],
+      default_resources:         false,
+      css_files:                 &[],
+      js_files:                  &[],
+      noinvisibletimes:          false,
+      plane1:                    true,
+      hackplane1:                false,
+      mathtex:                   false,
+      url_style:                 latexml_post::crossref::UrlStyle::File,
+      navigationtoc:             None,
+      schemadocs:                false,
+      split:                     false,
+      split_xpath:               None,
+      split_naming:              None,
+      xslt_parameters:           &[],
+      graphics_svg_threshold_kb: 0,
+      graphicimages:             true,
+      timestamp:                 None,
+      icon:                      None,
+      whatsout:                  latexml_post::extract::Whatsout::default(),
+    }
+  }
+
+  #[test]
+  fn a_failing_stylesheet_is_fatal_with_no_output() {
+    let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
+    let dir = tempfile::tempdir().expect("tempdir");
+    for xsl in rows(dir.path()) {
+      latexml_core::common::error::initialize_report();
+      let out = latexml::post::run_post_processing_logged(XML, &post_options(&xsl));
+      assert_eq!(out.status_code, 3, "{xsl}: {}", out.log);
+      assert_eq!(out.html, "", "{xsl}");
+      assert_eq!(
+        out.log.matches("Fatal:post:convert").count(),
+        1,
+        "{xsl}: {}",
+        out.log
+      );
+      assert_eq!(out.log.matches("Error:").count(), 0, "{xsl}: {}", out.log);
+    }
+    latexml_core::common::error::initialize_report();
+  }
+
+  /// The CLI exits 1 and writes no `.html`.
+  #[test]
+  fn the_cli_exits_nonzero_and_writes_nothing() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let xsl = &rows(dir.path())[1];
+    std::fs::write(
+      dir.path().join("a.tex"),
+      "\\documentclass{article}\n\\begin{document}\nHello.\n\\end{document}\n",
+    )
+    .unwrap();
+    let out = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args([&format!("--stylesheet={xsl}"), "--dest=a.html", "a.tex"])
+      .current_dir(dir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert_eq!(out.status.code(), Some(1), "{stderr}");
+    assert_eq!(stderr.matches("Fatal:post:convert").count(), 1, "{stderr}");
+    assert!(!dir.path().join("a.html").exists(), "{stderr}");
+  }
+}
+
 mod split_page_title {
   //! Split-page `<head><title>` regression guard (full pipeline, runs CrossRef + XSLT).
   //!

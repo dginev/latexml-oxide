@@ -1620,7 +1620,8 @@ fn real_main() -> Result<(), Box<dyn Error>> {
             source_date_epoch,
           })?;
           eprintln!("Output written to {}", zip_dest);
-        } else {
+        } else if !(output.is_empty() && post.status_code >= 3) {
+          // A post-processing Fatal leaves no output, and nothing is written (#782).
           latexml_post::writer::write_output(&output, target.as_deref())?;
         }
         // resource_tempdir is dropped here (after pack_archive has copied

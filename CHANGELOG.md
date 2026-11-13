@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+  - **A failing stylesheet is a Fatal, exits 1 and writes no output** (#782). A bad
+    XPath, an `xsl:message terminate="yes"` or a missing `xsl:import` logged
+    `Error:post:convert`, exited 0 and wrote the untransformed XML under the `.html`
+    name. A MathML or XSLT step that fails now stops post-processing with
+    `Fatal:post:convert` and nothing is written, as a die in Perl's ProcessChain does.
+    A stylesheet that cannot be found stays an Error, as in Perl. Guards
+    `xslt_failure_is_fatal` (in `cluster_xslt_split`).
+
   - **Split pages keep the document's processing instructions** (#795). With `--split`,
     only the main page carried the `<?latexml …?>` PIs; the other pages lost them, so a
     custom stylesheet reading them saw nothing there. Each page now gets a copy before its

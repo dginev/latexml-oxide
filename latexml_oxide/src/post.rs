@@ -6,7 +6,7 @@
 
 use latexml_core::{
   Info, Warn,
-  common::error::{emit_error, note_progress},
+  common::error::{emit_error, emit_fatal, note_progress},
   s,
   telemetry::{self, Phase},
 };
@@ -1329,7 +1329,8 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
     }
     let outputs = match render_spilled_page(&path, &mut procs, &ctx, dest, dest_dir) {
       Ok(o) => o,
-      Err(()) => return fallback(),
+      Err(PageFailure::Fatal) => return String::new(),
+      Err(PageFailure::Error) => return fallback(),
     };
     for (dest, output) in outputs {
       if let Some(path) = dest.as_deref() {
@@ -1406,7 +1407,7 @@ pub(crate) fn render_spilled_page(
   ctx: &PageRenderCtx,
   destination: Option<String>,
   destination_directory: Option<String>,
-) -> Result<Vec<(Option<String>, String)>, ()> {
+) -> Result<Vec<(Option<String>, String)>, PageFailure> {
   let path_str = path.to_string_lossy().into_owned();
   let page = match PostDocument::new_from_file(&path_str, ctx.page_opts.clone()) {
     Ok(mut d) => {
@@ -1416,7 +1417,7 @@ pub(crate) fn render_spilled_page(
     },
     Err(e) => {
       post_error("post", &format!("cannot re-read a disk-staged page: {e}"));
-      return Err(());
+      return Err(PageFailure::Error);
     },
   };
   // Free the spill as soon as it is parsed: for a 40k-page document the
@@ -1431,7 +1432,7 @@ pub(crate) fn render_spilled_page(
   let xref = run_page_phase(page, &mut procs.crossref, "CrossRef");
   audit_end(t_xref);
   telemetry::phase_exit();
-  let mut staged = xref?;
+  let mut staged = xref.map_err(|()| PageFailure::Error)?;
   if let Some(gfx) = procs.graphics.as_mut() {
     telemetry::phase_enter(Phase::Graphics);
     let t_gfx = audit_start("Graphics");
@@ -1449,7 +1450,7 @@ pub(crate) fn render_spilled_page(
     audit_end(t_gfx);
     telemetry::phase_exit();
     if failed {
-      return Err(());
+      return Err(PageFailure::Error);
     }
     staged = next;
   }
@@ -1457,8 +1458,8 @@ pub(crate) fn render_spilled_page(
   let rendered = match procs.post.process_chain(staged, &mut procs.processors) {
     Ok(r) => r,
     Err(e) => {
-      post_error("convert", &format!("Post-processing failed: {e}"));
-      return Err(());
+      emit_fatal("post", "convert", &format!("Post-processing failed: {e}"));
+      return Err(PageFailure::Fatal);
     },
   };
 
@@ -1480,6 +1481,14 @@ pub(crate) fn render_spilled_page(
     // `doc` drops here — the whole point.
   }
   Ok(outputs)
+}
+
+/// Why a page did not render (already reported). `Fatal`: a MathML/XSLT step failed, which stops
+/// post-processing with no output, as a die in Perl's ProcessChain does (LaTeXML.pm L605-614, #782).
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum PageFailure {
+  Error,
+  Fatal,
 }
 
 /// One page spilled between the post pipeline's two passes: where its XML
