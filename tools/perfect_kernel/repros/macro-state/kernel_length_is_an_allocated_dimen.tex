@@ -1,6 +1,6 @@
 % witness: TL class census 2026-09-24 — tudscrartcl, tudscrbook, tudscrposter, tudscrreprt
 %          (tudscrbase: "`\columnsep' is not a defined length")
-% oracle:  pdflatex: \meaning\columnsep = \dimen124; etoolbox \ifdefdimen true
+% oracle:  pdflatex: \meaning\columnsep = \dimen124 (2025 kernels; \dimen126 on the 2026-11 kernel); etoolbox \ifdefdimen true
 % engines: rust (56hw) = \meaning\columnsep = \columnsep, so \ifdefdimen says no (the tudscr error)
 % expect:  0 errors; "\dimen… yes yes 345.0pt"
 % status:  RED (56hw) -> GREEN (56hx, OXIDIZED_DESIGN #284)
