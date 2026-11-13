@@ -450,6 +450,16 @@ const BOUNDARY: &[Row] = &[
       ("p", "p2.1", r#"<p xml:id="p2.1">[21.1112pt]</p>"#),
     ],
   ),
+  // --- SBX2: float.sty's `float@type` counter (float.sty:24-27) ---
+  (
+    "float.sty's `\\c@float@type` read by a document (repro package-bindings/float_type_counter)",
+    "pdflatex 0 `!`, \"Type 8.\"; Perl 3 errors (undefined:\\c@float@type, \\the\\c@float@type, \\thefloat@type)",
+    include_str!("../../../tools/perfect_kernel/repros/package-bindings/float_type_counter.tex"),
+    &[],
+    (0, 0),
+    &[],
+    &[("p", "p1.1", r#"<p xml:id="p1.1">Type 8.</p>"#)],
+  ),
 ];
 
 /// Every row converted once, in-process: the exact counts, each named diagnostic as often as listed, a schema-valid

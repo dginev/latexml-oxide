@@ -4,6 +4,10 @@ use super::wrapfig_sty;
 use crate::prelude::*;
 
 LoadDefinitions!({
+  // float.sty:24-27: the float type counter, which `\newfloat` doubles for each type (`\ftype@<type>`, :60-61); a
+  // document may read it, `\edef\ftype@algorithm{\the\c@float@type}` (2605.14637)
+  NewCounter!("float@type");
+  RawTeX!(r"\@ifundefined{c@figure}{\setcounter{float@type}{1}}{\setcounter{float@type}{4}}");
   // Choose the current float style (plain, plaintop, boxed, ruled)
   DefMacro!("\\float@style", None, "plain");
   DefMacro!("\\floatstyle{}", "\\def\\float@style{#1}");
@@ -51,7 +55,8 @@ LoadDefinitions!({
   // Perl's `\newfloat` is the primitive below (float.sty.ltxml:39), which etoolbox cannot patch.
   DefMacro!(
     "\\newfloat{}{}{}",
-    "\\@ifnextchar[{\\lx@float@newfloat{#1}{#2}{#3}}{\\lx@float@newfloat{#1}{#2}{#3}[]}"
+    "\\expandafter\\edef\\csname ftype@#1\\endcsname{\\value{float@type}}\\addtocounter{float@type}{\\value{float@type}}\
+     \\@ifnextchar[{\\lx@float@newfloat{#1}{#2}{#3}}{\\lx@float@newfloat{#1}{#2}{#3}[]}"
   );
   // Perl: DefPrimitive('\newfloat{}{}{}[]', sub { ... })
   // Creates a new float environment with counter, title format, etc.
