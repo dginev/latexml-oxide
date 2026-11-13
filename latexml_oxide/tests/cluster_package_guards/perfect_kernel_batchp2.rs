@@ -346,19 +346,20 @@ fn the_doors_stay_the_formats_macros() {
   assert_eq!(warning_count(&log), 0, "{log}");
   assert_answered(answered, 25, "the fixture");
   let marks = r"\s__fp_expr_mark \__fp_parse_infix_end:N \s__fp_expr_stop";
-  // the door is the format's own text: l3kernel 2026-01-19 (expl3-code.tex:17317) opens it with
-  // `\group_align_safe_begin: \exp_after:wN \group_align_safe_end:`, 2025-11-06 does not
+  // the door is one of the two l3kernel texts of `\__fp_parse:n`: 2026-01-19 (expl3-code.tex:17317) opens it with
+  // `\group_align_safe_begin: \exp_after:wN \group_align_safe_end:`, 2025-11-06 (TL 2025, :17313) does not
   let meaning = r"Meaning: \long macro:#1-&gt;";
   let door = xml
     .split(meaning)
     .nth(1)
     .and_then(|rest| rest.split(" #1").next())
     .unwrap_or_else(|| panic!("no {meaning}\n{xml}"));
-  assert!(
-    door.starts_with(r"\exp:w ")
-      && door.ends_with(r"\exp_after:wN \__fp_parse_after:ww \exp:w \__fp_parse_operand:Nw \c__fp_prec_end_int \__fp_parse_expand:w"),
-    "{door}"
-  );
+  let tail = r"\exp_after:wN \__fp_parse_after:ww \exp:w \__fp_parse_operand:Nw \c__fp_prec_end_int \__fp_parse_expand:w";
+  let doors = [
+    format!(r"\exp:w {tail}"),
+    format!(r"\exp:w \group_align_safe_begin: \exp_after:wN \group_align_safe_end: {tail}"),
+  ];
+  assert!(doors.iter().any(|d| d == door), "{door}");
   let two = r"\s__fp \__fp_chk:w 10{1}{2000}{0000}{0000}{0000}\__fp_sep:";
   for row in [
     format!(r"Meaning: \long macro:#1-&gt;{door} #1{marks} \exp_end:"),

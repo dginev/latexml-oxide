@@ -207,18 +207,14 @@ fn cjs_rcs_abstracts_and_keywords_are_frontmatter() {
 #[test]
 fn projlib_author_lines_are_the_authors_contacts() {
   // (colorist-fancy's `\setlist`, as before; the packages' five hooks on bound commands do not run (QA47A): Infos for
-  // colorist-fancy's `cmd/printindex/before`, `cmd/maketitle/after` and projlib-author's `cmd/maketitle/before`; its
-  // author lines in `cmd/@author/before`/`after`, added in the body, stay Warnings until the label is read there (RED
-  // `macro-state/command_hook_a_package_adds_in_the_body_red`) — the binding carries them as the authors' contacts)
+  // colorist-fancy's `cmd/printindex/before`, `cmd/maketitle/after` and projlib-author's `cmd/maketitle/before`, and
+  // for its author lines in `cmd/@author/before`/`after`, added in the body and decided when stored (KOMA1F, QAHK;
+  // Warnings before) — the binding carries them as the authors' contacts)
   let xml = assert_elements_with(
     include_str!("../../../tools/perfect_kernel/repros/class-bindings/projlib_author_address.tex"),
     RAW,
-    (0, 3),
-    &[
-      "Missing number (Dimension)",
-      r"Warning:hook:cmd/@author/before LaTeXML's binding of \@author takes no generic hook",
-      r"Warning:hook:cmd/@author/after LaTeXML's binding of \@author takes no generic hook",
-    ],
+    (0, 1),
+    &["Missing number (Dimension)"],
     &[],
   );
   assert_element(
