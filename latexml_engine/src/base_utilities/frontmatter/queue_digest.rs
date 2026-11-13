@@ -707,7 +707,11 @@ fn label_ink(d: &Digested, out: &mut PrintedLabel, in_picture: bool) {
         return;
       }
       let start = out.text.len();
-      let note = cs.starts_with("\\lx@note");
+      // (the note constructors by name: a prefix also matched `\lx@notextattachfile`; revP23e)
+      let note = matches!(
+        cs.as_str(),
+        "\\lx@note" | "\\lx@note@live" | "\\lx@notemark" | "\\lx@notetext" | "\\lx@notetext@live"
+      );
       out.notes += usize::from(note);
       for a in &printed_properties(&w) {
         label_ink(a, out, in_picture);
