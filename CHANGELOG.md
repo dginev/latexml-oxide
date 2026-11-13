@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+  - **A `--stylesheet` on disk is used, even when it is named like a built-in one** (#806).
+    `--stylesheet=./LaTeXML-html5.xsl` loaded the embedded copy instead of the local file,
+    because the embedded stylesheets were matched by file name alone. A path that names an
+    existing file now loads that file, and so does an engine-named stylesheet it imports from
+    beside it; `urn:x-LaTeXML:XSLT:` imports and the default stylesheet still come from the
+    binary. Guard `xslt::local_stylesheet_tests`.
+
   - **`post::PostOptions::nodefaultresources` is now `default_resources`, with the
     meaning inverted.** The double negative (`nodefaultresources: false`) is gone.
     The positive name is Perl's option name (`Config.pm:120` `defaultresources!`),

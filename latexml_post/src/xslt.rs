@@ -192,6 +192,60 @@ mod max_depth_tests {
   fn with_fd2_captured<T>(f: impl FnOnce() -> T) -> (T, Option<String>) { (f(), None) }
 }
 
+#[cfg(test)]
+mod local_stylesheet_tests {
+  use crate::{
+    document::{PostDocument, PostDocumentOptions},
+    processor::Processor,
+  };
+
+  fn marker_xsl(marker: &str) -> String {
+    format!(
+      r#"<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+  <xsl:template match="/"><out>{marker}</out></xsl:template>
+</xsl:stylesheet>
+"#
+    )
+  }
+
+  fn apply(xsl: &std::path::Path) -> String {
+    let mut xslt = super::XSLT::new(
+      xsl.to_str().unwrap(),
+      Default::default(),
+      true,
+      None,
+      vec![],
+    )
+    .expect("XSLT");
+    let doc = PostDocument::new_from_string("<a/>", PostDocumentOptions::default()).expect("<a/>");
+    let out = xslt.process(doc, vec![]).expect("transform");
+    out[0].to_xml_string()
+  }
+
+  /// #806: a `--stylesheet` path naming a file on disk is that file, even when its basename is
+  /// one of the embedded engine sheets; so is an engine-named sibling a user sheet imports.
+  #[test]
+  fn a_stylesheet_on_disk_wins_over_the_embedded_copy() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let html5 = dir.path().join("LaTeXML-html5.xsl");
+    std::fs::write(&html5, marker_xsl("LOCAL-HTML5")).unwrap();
+    assert!(apply(&html5).contains("<out>LOCAL-HTML5</out>"));
+
+    let common = dir.path().join("LaTeXML-common.xsl");
+    std::fs::write(&common, marker_xsl("LOCAL-COMMON")).unwrap();
+    let mine = dir.path().join("mine.xsl");
+    std::fs::write(
+      &mine,
+      r#"<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+  <xsl:import href="LaTeXML-common.xsl"/>
+</xsl:stylesheet>
+"#,
+    )
+    .unwrap();
+    assert!(apply(&mine).contains("<out>LOCAL-COMMON</out>"));
+  }
+}
+
 /// Resource type information.
 struct ResourceInfo {
   extension: &'static str,
@@ -1053,7 +1107,16 @@ mod embedded_xslt {
   /// `urn:x-LaTeXML:XSLT:X`, `urn:X`, and bare `X` uniformly. Only our
   /// distinctive `LaTeXML-*.xsl` names are in [`FILES`], so a user's own
   /// relative import (a different basename) still loads from disk.
+  ///
+  /// A URL naming a file on disk is that file (#806): a `--stylesheet=./LaTeXML-html5.xsl`, or an
+  /// engine-named sibling a user sheet imports, loads from disk as in Perl.
   pub fn resolve(url: &str) -> Option<&'static [u8]> {
+    if !url.starts_with(URL_PREFIX)
+      && !url.starts_with("urn:")
+      && std::path::Path::new(url.strip_prefix("file://").unwrap_or(url)).is_file()
+    {
+      return None;
+    }
     let name = url.rsplit(['/', ':']).next().unwrap_or(url);
     lookup(name)
   }
@@ -1072,8 +1135,8 @@ mod embedded_xslt {
         // Serve any URL whose basename is one of our embedded engine files —
         // `embed:///X`, a user stylesheet's `urn:x-LaTeXML:XSLT:X`, and the
         // relative child imports libxml2 composes from it (`urn:X` on Linux, a
-        // bare `X` on macOS). A non-engine basename resolves to None, so the
-        // callback declines it and libxml2 loads it from disk as before (#292).
+        // bare `X` on macOS). A non-engine basename, or a file on disk (#806), resolves
+        // to None, so the callback declines it and libxml2 loads it from disk (#292).
         |url| resolve(url).is_some(),
         |url| resolve(url).map(|s| s.to_vec()),
       );
