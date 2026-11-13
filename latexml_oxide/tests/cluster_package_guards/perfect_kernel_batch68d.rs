@@ -219,7 +219,7 @@ fn author_file_stand_ins_are_bindings_outside_tex_live() {
 fn every_binding_outside_tex_live_is_listed() {
   use latexml_core::binding::author_files::{AUTHOR_FILE_STAND_INS, FORMER_TEX_LIVE, LATEXML_OWN};
   let tlpdb = tex_live_runfiles();
-  if tlpdb.is_none() && !latexml::util::test::requires(FULL_TEX_LIVE) {
+  if tlpdb.is_none() && !latexml::util::test::check_requirements(FULL_TEX_LIVE) {
     return;
   }
   let distributed = |file: &str| match &tlpdb {

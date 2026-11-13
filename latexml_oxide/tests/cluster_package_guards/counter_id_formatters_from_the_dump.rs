@@ -9,13 +9,13 @@
 //! binding loaded raw (ptptex, the manptp manual) `\theequation@ID` was
 //! undefined at runtime and `subequations` children got the degenerate ids
 //! `.1`/`X.1`, colliding across groups; Perl gives `equation1`/`equation1.1`.
-use latexml::util::test::requires;
+use latexml::util::test::check_requirements;
 
 /// The formatter is a macro (never `CODE`), the group and its equations
 /// carry Perl's ids, and no id degenerates to the `X.` prefix.
 #[test]
 fn rawclass_subequations_carry_counter_ids() {
-  if !requires(&["ptptex.cls"]) {
+  if !check_requirements(&["ptptex.cls"]) {
     return;
   }
   let tex = std::fs::read_to_string("tests/cluster_regressions/subequations_rawclass_ids.tex")

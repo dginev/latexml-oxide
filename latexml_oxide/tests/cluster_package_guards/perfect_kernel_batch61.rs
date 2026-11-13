@@ -1,7 +1,7 @@
 //! Red/green guards for perfect-kernel phase-61 batches: G3 residual slices 7a/7b (T1/T2 ASCII slots, the Unicode
 //! profiles' OpenType flag, `\pdfsetmatrix`'s matrix, copyright lines a class prints only in a page foot).
 use latexml::util::test::{
-  assert_element, convert_files_with, convert_with, loads, requires, xml_element,
+  assert_element, check_requirements, convert_files_with, convert_with, loads, xml_element,
 };
 
 use super::{
@@ -230,7 +230,7 @@ fn keyval_unknown_keys_follow_kv_errx() {
 /// sectioning-frontmatter/bfh_title_footer_is_frontmatter.
 #[test]
 fn bfh_title_footer_is_frontmatter() {
-  if !requires(BFH) {
+  if !check_requirements(BFH) {
     return;
   }
   let xml = super::perfect_kernel_batch57::assert_elements_with(
@@ -264,7 +264,7 @@ fn bfh_title_footer_is_frontmatter() {
 /// sectioning-frontmatter/bfh_thesis_stores_stay_affiliations.
 #[test]
 fn bfh_thesis_stores_stay_affiliations() {
-  if !requires(BFH) {
+  if !check_requirements(BFH) {
     return;
   }
   let xml = super::perfect_kernel_batch57::assert_elements_with(
@@ -3591,7 +3591,7 @@ See \ref{fb} and \ref{lr}.
 /// there and nowhere else. pdflatex, each case.
 #[test]
 fn textcomp_symbols_follow_the_encoding() {
-  if !requires(loads::LY1) {
+  if !check_requirements(loads::LY1) {
     return;
   }
   for (preamble, body, result) in [
@@ -6191,7 +6191,7 @@ fn marked_affiliation_continuation_lines_stay_with_it() {
 /// pdflatex: "Ann Able1, 2 and Bob Baker2", "1Univ A", "2Univ B", "Author Note", "Correspondence to Ann.".
 #[test]
 fn apa7_author_block_maps_onto_the_frontmatter() {
-  if !requires(&["apa7.cls"]) {
+  if !check_requirements(&["apa7.cls"]) {
     return;
   }
   let body = r"\title{A Title}

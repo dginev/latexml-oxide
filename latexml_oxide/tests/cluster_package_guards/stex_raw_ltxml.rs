@@ -15,7 +15,7 @@
 //!      `\RequirePackage{xkeyval}` / `\RequirePackage{currfile}` (→ filehook), so
 //!      `\AtEndOfPackageFile` / `\define@key` were undefined.
 
-use latexml::util::test::requires;
+use latexml::util::test::check_requirements;
 
 use crate::common::strip_ansi;
 
@@ -56,7 +56,7 @@ fn standalone_under_includestyles_provides_filehook_hooks() {
 /// — and convert cleanly. Skipped where TeX Live lacks stex.
 #[test]
 fn raw_stex_sty_loads_not_the_perl_ltxml() {
-  if !requires(&["stex.sty", "stex.sty.ltxml"]) {
+  if !check_requirements(&["stex.sty", "stex.sty.ltxml"]) {
     return;
   }
   let log = convert(

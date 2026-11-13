@@ -17,7 +17,7 @@
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
 use latexml::util::test::{
-  assert_element, convert_files_with, error_count, requires, warning_count,
+  assert_element, check_requirements, convert_files_with, error_count, warning_count,
 };
 
 use super::perfect_kernel_batch57::{RAW, assert_elements, assert_elements_with};
@@ -27,7 +27,7 @@ use super::perfect_kernel_batch57::{RAW, assert_elements, assert_elements_with};
 /// Subtitle"). Before 68u r3 a bold paragraph; 68u r3 by an explicit call in the binding, 68x by the one rule.
 #[test]
 fn a_class_a_binding_reads_raw_reroutes_its_stores() {
-  if !requires(&["lni.cls", "newtxtt.sty"]) {
+  if !check_requirements(&["lni.cls", "newtxtt.sty"]) {
     return;
   }
   let xml = assert_elements(
@@ -164,7 +164,7 @@ fn babel_iflanguage_expands_in_an_edef() {
 /// 68x all three were lost (2608.13762); the "." and the classification since 68x r2.
 #[test]
 fn cjs_rcs_abstracts_and_keywords_are_frontmatter() {
-  if !requires(&[
+  if !check_requirements(&[
     "cjs-rcs-article.cls",
     "FiraMono.sty",
     "FiraSans.sty",
@@ -219,7 +219,7 @@ fn cjs_rcs_abstracts_and_keywords_are_frontmatter() {
 /// Before 68x both authors without them (2609.02711).
 #[test]
 fn projlib_author_lines_are_the_authors_contacts() {
-  if !requires(&["ProjLib.sty", "newpxtext.sty"]) {
+  if !check_requirements(&["ProjLib.sty", "newpxtext.sty"]) {
     return;
   }
   // (colorist-fancy's `\setlist`, as before; the packages' five hooks on bound commands do not run (QA47A): Infos for

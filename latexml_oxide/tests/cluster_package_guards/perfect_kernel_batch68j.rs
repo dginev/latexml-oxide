@@ -5,7 +5,7 @@
 //! own names.
 //!
 //! Every repro (`tools/perfect_kernel/repros/package-bindings/`) is checked against pdflatex.
-use latexml::util::test::{assert_element, requires};
+use latexml::util::test::{assert_element, check_requirements};
 
 use super::perfect_kernel_batch46::{convert_with, error_count, warning_count};
 
@@ -228,7 +228,7 @@ fn tabls_line_separations_are_dimens() {
 /// errors; 67int10 `\varleftarrow`, `\varlongleftarrow` undefined at the load). 2006.11831, 2102.02198, 2406.00395.
 #[test]
 fn stmaryrd_if_defines_its_cs() {
-  if !requires(&["stmaryrd.sty", "old-arrows.sty"]) {
+  if !check_requirements(&["stmaryrd.sty", "old-arrows.sty"]) {
     return;
   }
   let xml = convert_checked(repro!("stmaryrd_if_old_arrows.tex"), 0);

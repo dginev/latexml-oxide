@@ -7,7 +7,7 @@
 //! (`Pair`, `{Float}`, :4992-5078; pstricks_support.sty.ltxml:879-891), so they
 //! measure nothing. Every expected size is same-host Perl `latexmlc`'s.
 //! Repros `tools/perfect_kernel/repros/graphics-tikz/picture_autoopen_*.tex`.
-use latexml::util::test::{assert_element, loads, requires};
+use latexml::util::test::{assert_element, check_requirements, loads};
 
 use super::perfect_kernel_batch46::{convert, error_count, warning_count};
 
@@ -70,7 +70,7 @@ fn line_takes_box_free_arguments() {
 /// is measured (Perl 23.45×12.3).
 #[test]
 fn rput_places_without_measuring_its_body() {
-  if !requires(loads::PSTRICKS) {
+  if !check_requirements(loads::PSTRICKS) {
     return;
   }
   let xml = convert_clean(include_str!(

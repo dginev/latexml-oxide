@@ -2,7 +2,7 @@
 //! Cyrillic), the `\p@<counter>` reference form applied to the expanded number as `\refstepcounter` stores it (and
 //! enumitem's reference forms), and the font reset at `\begin{document}`. Each guard asserts the diagnostics by count
 //! and the authored content in its element.
-use latexml::util::test::{convert_files_with, loads, requires};
+use latexml::util::test::{check_requirements, convert_files_with, loads};
 
 use super::{
   perfect_kernel_batch46::{convert_html, error_count, warning_count},
@@ -15,7 +15,7 @@ use super::{
 /// fonts-nfss/t4_modified_letter_help_is_not_expanded.
 #[test]
 fn t4_modified_letter_prints() {
-  if !requires(loads::T4) {
+  if !check_requirements(loads::T4) {
     return;
   }
   let tex = include_str!(
@@ -33,7 +33,7 @@ fn t4_modified_letter_prints() {
 /// `\m{y}`). Repro fonts-nfss/t4_african_letters_print.
 #[test]
 fn t4_african_letters_print() {
-  if !requires(loads::T4) {
+  if !check_requirements(loads::T4) {
     return;
   }
   let tex =
@@ -124,7 +124,7 @@ fn second_encoding_accent_composes() {
 /// the schwa now prints). Repro fonts-nfss/text_symbol_of_an_unmapped_encoding_warns.
 #[test]
 fn text_symbol_of_an_unmapped_encoding_warns() {
-  if !requires(loads::TIPA) {
+  if !check_requirements(loads::TIPA) {
     return;
   }
   let tex = include_str!(

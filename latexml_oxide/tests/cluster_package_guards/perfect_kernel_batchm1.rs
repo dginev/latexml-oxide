@@ -9,7 +9,7 @@
 //! test of a known xcolor model (`xcolor_sty.rs`), a `<titlepage>` for a later late abstract's cover line
 //! (`cover_order.rs`), `\selectfont` out of `\nullfont` (`sect13.rs`), a template's own text in `typesets_content`
 //! (`util_text.rs`), multibib's style (`multibib_sty.rs`), and ijsra's slots and abstract (`ijsra_cls.rs`).
-use latexml::util::test::{convert_with, requires, rng_error_count};
+use latexml::util::test::{check_requirements, convert_with, rng_error_count};
 
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
@@ -409,7 +409,7 @@ fn the_ijsra_abstract_is_semantic() {
   assert_eq!(error_count(&log), 1, "{log}");
   assert!(log.contains(r"\endlx@list"), "{log}");
   assert!(!xml.contains("the abstract text"), "{xml}");
-  if !requires(&["ijsra.cls"]) {
+  if !check_requirements(&["ijsra.cls"]) {
     return;
   }
   let (log, xml) = cli_conversion(

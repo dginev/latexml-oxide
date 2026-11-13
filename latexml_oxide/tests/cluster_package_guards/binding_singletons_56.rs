@@ -2,7 +2,7 @@
 //! the package it stands in for — a `\RequirePackage`, a definition, a
 //! parameter shape or a routing — and one corpus manual errored on it. The
 //! repros live in `tools/perfect_kernel/repros/singletons/`.
-use latexml::util::test::{assert_element, loads, requires};
+use latexml::util::test::{assert_element, check_requirements, loads};
 
 use super::perfect_kernel_batch46::{convert, convert_files, error_count, warning_count};
 
@@ -157,7 +157,7 @@ fn biblatex_mkbibacro_and_standard_toggles() {
     ("backend=biber", "[doi][isbn]"),
     ("style=ext-authoryear", "[doi][isbn]"),
   ] {
-    if options.contains("ext-") && !requires(&["ext-authoryear.bbx"]) {
+    if options.contains("ext-") && !check_requirements(&["ext-authoryear.bbx"]) {
       continue;
     }
     let control = tex
@@ -367,7 +367,7 @@ fn qverb_quotes_share_the_verbatim_font() {
 /// 2309.07343 loads feynmp).
 #[test]
 fn fmfgraph_reads_its_size_pair() {
-  if !requires(loads::FEYNMF) {
+  if !check_requirements(loads::FEYNMF) {
     return;
   }
   let tex = include_str!("../../../tools/perfect_kernel/repros/singletons/feynmf_graph_pair.tex");

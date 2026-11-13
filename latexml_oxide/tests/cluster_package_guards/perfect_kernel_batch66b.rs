@@ -1,7 +1,7 @@
 //! Red/green guards for batch 66b: run 340's Fatal origins still Fatal at the int8 head (cortex `Stomach:Recursion`,
 //! `Timeout:PushbackLimit`, `Mouth:EoF`, `Document:Malformed`; sample `~/data/pk_agents/main/run340/fatal/`).
 //! Repros `tools/perfect_kernel/repros/*`.
-use latexml::util::test::requires;
+use latexml::util::test::check_requirements;
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -145,7 +145,7 @@ Body text.
 /// as a quotation (2 errors). Witness 2401.14559.
 #[test]
 fn file_let_of_a_files_locked_end_half_is_refused() {
-  if !requires(&["arabtex.sty"]) {
+  if !check_requirements(&["arabtex.sty"]) {
     return;
   }
   let xml = convert(include_str!(

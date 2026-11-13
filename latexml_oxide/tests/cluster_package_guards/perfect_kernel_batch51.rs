@@ -4,7 +4,7 @@
 //! ORIGINAL corpus witness (TeX Live doc corpus) whose larger conversion
 //! was vetted separately.
 
-use latexml::util::test::requires;
+use latexml::util::test::check_requirements;
 
 use super::perfect_kernel_batch46::{convert, error_count};
 
@@ -64,7 +64,7 @@ Tail.
 fn new_ifnextchar_keeps_space() {
   // Host-portability: skip when the exercised package is absent from this
   // TeX Live tree (the behavior under test needs the real file).
-  if !requires(&["bibleref.sty"]) {
+  if !check_requirements(&["bibleref.sty"]) {
     return;
   }
   let (stderr, xml) = convert(

@@ -5,7 +5,7 @@
 //! picture is drawn by a browser as a 300×150 box, flipped. Batch 56iy; repro
 //! `tools/perfect_kernel/repros/graphics-tikz/pspicture_inner_box_picture_size.tex`
 //! (pst-flags-doc: 517 unsized pictures; egameps: 162).
-use latexml::util::test::{assert_element, loads, requires};
+use latexml::util::test::{assert_element, check_requirements, loads};
 
 use super::perfect_kernel_batch46::{convert, error_count, warning_count};
 
@@ -15,7 +15,7 @@ use super::perfect_kernel_batch46::{convert, error_count, warning_count};
 /// (31.13×9.61 px).
 #[test]
 fn auto_opened_picture_is_sized_from_its_box() {
-  if !requires(loads::PSTRICKS) {
+  if !check_requirements(loads::PSTRICKS) {
     return;
   }
   let tex = include_str!(

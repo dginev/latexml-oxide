@@ -2,7 +2,7 @@
 //! and arXiv papers call (run 340's first-error "undefined" cluster, row 7: caption/subcaption, bigstrut, natbib,
 //! titlesec/titling, array, authblk, IEEEtrantools, accents, acronym, crop, enumitem, ulem, footmisc, listings,
 //! amsthm, feynmf). Repros `tools/perfect_kernel/repros/package-bindings/*`.
-use latexml::util::test::{loads, requires};
+use latexml::util::test::{check_requirements, loads};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -287,7 +287,7 @@ fn amsthm_internals_and_display_qed() {
 /// feynmf.sty:182 `\fmfkeep` in a graph, :239 `\fmfreuse` sets it again. Witnesses hep-lat0210017, hep-th9805098.
 #[test]
 fn feynmf_keep_and_reuse() {
-  if !requires(loads::FEYNMF) {
+  if !check_requirements(loads::FEYNMF) {
     return;
   }
   let xml = convert(include_str!(

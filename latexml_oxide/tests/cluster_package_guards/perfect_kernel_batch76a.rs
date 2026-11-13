@@ -9,7 +9,7 @@
 //! The cryptocode guards need cryptocode.sty: CI installs it with `texlive-science`, and every TeX Live since 2021
 //! ships the same v0.44 (2021/08/15) — the `\pcln` padding pinned below is that file's (`\hspace{1ex}`,
 //! `\pclnspace` = 1em at `\scriptsize`).
-use latexml::util::test::{assert_element, convert_with, requires};
+use latexml::util::test::{assert_element, check_requirements, convert_with};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -67,7 +67,7 @@ fn text_statement_td(row: u32, text: &str) -> String {
 /// line", 0 errors. Every row keeps its number and its statement, one row each.
 #[test]
 fn cryptocode_halign_redefinition_numbers_every_line() {
-  if !requires(&["cryptocode.sty"]) {
+  if !check_requirements(&["cryptocode.sty"]) {
     return;
   }
   let tex = r"\documentclass{article}
@@ -111,7 +111,7 @@ third line
 /// `halign_redefinition_runs_for_a_tabular_not_for_a_tabbing`.)
 #[test]
 fn alignments_after_a_pseudocode_block_are_unaffected() {
-  if !requires(&["cryptocode.sty"]) {
+  if !check_requirements(&["cryptocode.sty"]) {
     return;
   }
   let tex = r"\documentclass{article}
@@ -312,7 +312,7 @@ fn halign_redefinition_material_before_a_tabular_is_kept() {
 /// 2107.05054, 11 errors → 0). pdflatex: "1: first line 2: second line", 0 errors.
 #[test]
 fn cryptocode_pseudocode_in_a_tikz_node_numbers_every_line() {
-  if !requires(&["cryptocode.sty"]) {
+  if !check_requirements(&["cryptocode.sty"]) {
     return;
   }
   let tex = r"\documentclass{article}

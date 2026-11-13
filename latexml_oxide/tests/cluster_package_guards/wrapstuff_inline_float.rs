@@ -3,7 +3,7 @@
 //! neither engine models, so the raw package built the box and never
 //! emitted it — caption and content lost at 0 errors. The binding models
 //! the environment as wrapfig's inline float (`wrapstuff_sty.rs`).
-use latexml::util::test::requires;
+use latexml::util::test::check_requirements;
 
 /// `type=table` → a captioned `<table>` floated right (the default side)
 /// with the wrap width; an untyped box → a plain `<float>`; the
@@ -11,7 +11,7 @@ use latexml::util::test::requires;
 /// and `\wrapstuffclear` (wrapstuff.sty:2516-2521) are defined.
 #[test]
 fn wrapped_box_is_an_inline_float() {
-  if !requires(&["wrapstuff.sty"]) {
+  if !check_requirements(&["wrapstuff.sty"]) {
     return;
   }
   let tex = "\\documentclass{article}\n\\usepackage{caption}\n\\usepackage{wrapstuff}\n\\wrapstuffset{ratio=0.6,leftsep=2em}\n\\begin{document}\n\\begin{wrapstuff}[type=table,width=3cm]\n\\caption{X}\n\\begin{tabular}{lr}a & 1\\end{tabular}\n\\end{wrapstuff}\nSome text here.\\wrapstuffclear\n\\begin{wrapstuff}[l]\\fbox{plain}\\end{wrapstuff}\nLast text.\n\\end{document}\n";

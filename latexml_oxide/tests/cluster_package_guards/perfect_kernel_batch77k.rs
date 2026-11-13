@@ -3,7 +3,7 @@
 //! math, a blkarray block's preamble formats its rows, an AASTeX table's `$` is active from its start, and a revtex
 //! preprint number is an identifier. The guards assert the three measures: no Error, the authored text present, its
 //! element.
-use latexml::util::test::{convert_with, loads, requires};
+use latexml::util::test::{check_requirements, convert_with, loads};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -62,7 +62,7 @@ fn caption_without_display_is_one_text_run() {
 /// an `\rput` body (2603.19804, 0707.0546, 1010.2311) and a `\pscirclebox` (1106.3964); in text it stays text.
 #[test]
 fn pstricks_box_in_math_is_math() {
-  if !requires(loads::PSTRICKS) {
+  if !check_requirements(loads::PSTRICKS) {
     return;
   }
   let (log, xml) = convert_with(
@@ -107,7 +107,7 @@ fn pstricks_box_in_math_is_math() {
 /// `boxes-groups/extra_brace_meeting_a_macro_formula_ends_it`, SYNC "A `}` meeting a formula a macro opened").
 #[test]
 fn pstricks_math_box_keeps_its_group() {
-  if !requires(loads::PSTRICKS) {
+  if !check_requirements(loads::PSTRICKS) {
     return;
   }
   let (log, xml) = convert_with(

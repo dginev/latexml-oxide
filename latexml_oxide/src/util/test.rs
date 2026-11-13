@@ -8,8 +8,8 @@ use crate::core_interface::DigestionAPI;
 
 mod requirements;
 pub use requirements::{
-  JING, RequirementTable, Requirements, check_table, current_test_name, file_available, fixtures,
-  loads, requires, requires_all, skip, skip_log_path, texlive_version,
+  JING, RequirementTable, Requirements, check_all_requirements, check_requirements, check_table,
+  current_test_name, file_available, fixtures, loads, skip, skip_log_path, texlive_version,
 };
 
 // Process-once cached env vars (see WISDOM #56 — getenv hot-path race).
@@ -922,7 +922,7 @@ pub fn dump_available() -> bool { latexml_engine::dump_paths::format_dump_on_dis
 pub fn kpse_path(file: &str) -> Option<String> { latexml_core::util::pathname::kpsewhich(&[file]) }
 
 /// True iff the engine's kpathsea lookup resolves the named file in the host TeX tree. For an expectation that
-/// depends on the tree; a test that cannot run without the file declares it with [`requires`] instead.
+/// depends on the tree; a test that cannot run without the file declares it with [`check_requirements`] instead.
 pub fn kpse_has(file: &str) -> bool { kpse_path(file).is_some() }
 
 /// The text of the host TeX tree's copy of `file` (a class's version decides a guard's expectation), if any.

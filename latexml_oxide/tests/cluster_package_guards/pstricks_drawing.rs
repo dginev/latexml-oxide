@@ -3,7 +3,9 @@
 //! `ltx:line`/`ltx:rect`/`ltx:circle`/… into the `{pspicture}`, with the line
 //! and fill parameters the raw `\psset` keeps. They were gobbled as no-ops
 //! ("DVI-only"), leaving every picture empty (Gemini round 12 P1).
-use latexml::util::test::{assert_element, loads, requires, requires_all, rng_error_count};
+use latexml::util::test::{
+  assert_element, check_all_requirements, check_requirements, loads, rng_error_count,
+};
 
 use super::perfect_kernel_batch46::{convert, error_count, warning_count};
 
@@ -17,7 +19,7 @@ use super::perfect_kernel_batch46::{convert, error_count, warning_count};
 /// Witnesses: egpeirce-doc, srdp-mathematik, egameps, lsc, dspTricksManual.
 #[test]
 fn pstricks_objects_draw_into_the_picture() {
-  if !requires(loads::PSTRICKS) {
+  if !check_requirements(loads::PSTRICKS) {
     return;
   }
   let tex =
@@ -54,7 +56,7 @@ fn pstricks_objects_draw_into_the_picture() {
 /// 56is. `latex` prints the same 1.42271pt, 5.69046pt and -41.67911pt.
 #[test]
 fn psset_lengths_read_bare_numbers_in_psunit() {
-  if !requires(loads::PSTRICKS) {
+  if !check_requirements(loads::PSTRICKS) {
     return;
   }
   let tex = "\\documentclass{article}\n\\usepackage{pstricks}\n\\begin{document}\n\\psset{linewidth=0.05,linearc=0.2}\n\\newdimen\\y \\y=1pt \\psaddtolength{\\y}{-0.75}\\psaddtolength{\\y}{-0.75}\nW=\\the\\pslinewidth;A=\\the\\pslinearc;Y=\\the\\y.\n\\end{document}\n";
@@ -80,7 +82,7 @@ fn psset_lengths_read_bare_numbers_in_psunit() {
 /// of the picture into that text).
 #[test]
 fn pstricks_objects_follow_the_parameter_state() {
-  if !requires(loads::PSTRICKS) {
+  if !check_requirements(loads::PSTRICKS) {
     return;
   }
   let tex = r"\documentclass{article}
@@ -143,7 +145,7 @@ fn pstricks_objects_follow_the_parameter_state() {
 /// Perl: 1 error and 7 warnings, the polar pair leaked as text.
 #[test]
 fn pstricks_coordinates_that_cannot_be_placed_draw_nothing() {
-  if !requires(loads::PSTRICKS) {
+  if !check_requirements(loads::PSTRICKS) {
     return;
   }
   let tex = include_str!(
@@ -181,7 +183,7 @@ fn pstricks_coordinates_that_cannot_be_placed_draw_nothing() {
 /// swallowed " here.").
 #[test]
 fn plain_input_pstricks_sizes_its_pictures() {
-  if !requires(&["pstricks.tex", "pst-xkey.tex"]) {
+  if !check_requirements(&["pstricks.tex", "pst-xkey.tex"]) {
     return;
   }
   let tex =
@@ -215,7 +217,7 @@ fn plain_input_pstricks_sizes_its_pictures() {
 /// errors), inside a `{pspicture}` it draws, bare it draws nothing.
 #[test]
 fn pstricks_objects_read_macro_keys_colour_models_and_cells() {
-  if !requires(loads::PSTRICKS) {
+  if !check_requirements(loads::PSTRICKS) {
     return;
   }
   let tex = include_str!(
@@ -271,7 +273,7 @@ fn pstricks_objects_read_macro_keys_colour_models_and_cells() {
 /// angle, are read from the argument tokens: 0.5cm at 44.5 and 30 degrees.
 #[test]
 fn pstricks_coordinate_modes_are_the_raw_ones() {
-  if !requires(loads::PSTRICKS) {
+  if !check_requirements(loads::PSTRICKS) {
     return;
   }
   let tex = include_str!(
@@ -302,7 +304,7 @@ fn pstricks_coordinate_modes_are_the_raw_ones() {
 /// until batch 56jr (`braced_quantity_tail`, OXIDIZED_DESIGN #317).
 #[test]
 fn hexgame_board_converts() {
-  if !requires_all(&[loads::PSTRICKS, &["hexgame.sty"]]) {
+  if !check_all_requirements(&[loads::PSTRICKS, &["hexgame.sty"]]) {
     return;
   }
   let tex = "\\documentclass{article}\n\\usepackage{hexgame}\n\\begin{document}\n\\begin{hexgame}{3}\n\\colorhex{2}{playerone}\n\\labelhex{5}{7}\n\\end{hexgame}\n\\end{document}\n";
@@ -327,7 +329,7 @@ fn hexgame_board_converts() {
 /// (`\rput@start`'s `[]`, pstricks_support.sty.ltxml:884-888).
 #[test]
 fn pstricks_macro_colour_keys_in_tabularx_cells() {
-  if !requires(loads::PSTRICKS) {
+  if !check_requirements(loads::PSTRICKS) {
     return;
   }
   let tex = include_str!(

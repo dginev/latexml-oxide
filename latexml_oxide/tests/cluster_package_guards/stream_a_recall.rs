@@ -3,7 +3,7 @@
 //! the artifact whose words the recall audit counts.
 use std::process::Command;
 
-use latexml::util::test::{assert_element, loads, requires};
+use latexml::util::test::{assert_element, check_requirements, loads};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -57,7 +57,7 @@ const GLSADD_EXTRA: &str =
 /// The location-only reference it leaves in the paragraph prints nothing.
 #[test]
 fn glsaddall_lists_every_entry() {
-  if !requires(loads::GLOSSARIES) {
+  if !check_requirements(loads::GLOSSARIES) {
     return;
   }
   let (stderr, html) = convert_html(GLSADD, &[]);
@@ -103,7 +103,7 @@ fn glsaddall_lists_every_entry() {
 /// entry, the `\glsaddeach`-added one and the preamble `\glsadd` are listed.
 #[test]
 fn glossaries_extra_lists_used_and_added_entries() {
-  if !requires(loads::GLOSSARIES_EXTRA) {
+  if !check_requirements(loads::GLOSSARIES_EXTRA) {
     return;
   }
   let (stderr, html) = convert_html(GLSADD_EXTRA, &[]);
@@ -145,7 +145,7 @@ const GLSADD_PREAMBLE: &str =
 /// "Opening words." became p2. Both entries are still listed.
 #[test]
 fn preamble_glsadd_opens_no_paragraph() {
-  if !requires(loads::GLOSSARIES) {
+  if !check_requirements(loads::GLOSSARIES) {
     return;
   }
   let (stderr, html) = convert_html(GLSADD_PREAMBLE, &[]);
@@ -215,7 +215,7 @@ const GLS_MATH_EXTRA: &str =
 /// The location-only reference after the inline formula lists the entry.
 #[test]
 fn gls_in_math_typesets_the_term_alone() {
-  if !requires(loads::GLOSSARIES) {
+  if !check_requirements(loads::GLOSSARIES) {
     return;
   }
   // (document, glossary type, glossary title, inline alttext, display alttext)
@@ -307,7 +307,7 @@ fn gls_in_math_typesets_the_term_alone() {
 /// element), so each entry is listed (glossaries_sty.rs; silent-loss inventory #20).
 #[test]
 fn gls_in_an_alignment_leaves_the_formulae_alone() {
-  if !requires(loads::GLOSSARIES) {
+  if !check_requirements(loads::GLOSSARIES) {
     return;
   }
   let tex = r"\documentclass{article}

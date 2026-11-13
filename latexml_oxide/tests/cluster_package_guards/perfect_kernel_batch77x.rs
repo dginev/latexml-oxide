@@ -3,7 +3,7 @@
 //! `\upper@accent`/`\lower@accent`), its tone letters (tone_sty.rs), its accents outside T3 text (latex.ltx's
 //! `\DeclareTextAccentDefault`/`\UseTextAccent`), and the glyphs Unicode lacks warn. Each guard asserts the diagnostics
 //! by count and the authored content in its element. Witnesses 2405.01972, 1802.05444.
-use latexml::util::test::{loads, requires, requires_all};
+use latexml::util::test::{check_all_requirements, check_requirements, loads};
 
 use super::perfect_kernel_batch57::{RAW, assert_elements, assert_elements_with};
 
@@ -13,7 +13,7 @@ use super::perfect_kernel_batch57::{RAW, assert_elements, assert_elements_with};
 /// Repro fonts-nfss/t3_tipa_input_letters_print.
 #[test]
 fn t3_tipa_input_letters_print() {
-  if !requires(loads::TIPA) {
+  if !check_requirements(loads::TIPA) {
     return;
   }
   let tex =
@@ -36,7 +36,7 @@ fn t3_tipa_input_letters_print() {
 /// fonts-nfss/t3_tipa_symbols_print.
 #[test]
 fn t3_tipa_symbols_print() {
-  if !requires(loads::TIPA) {
+  if !check_requirements(loads::TIPA) {
     return;
   }
   let tex =
@@ -66,7 +66,7 @@ fn t3_tipa_symbols_print() {
 /// fonts-nfss/t3_tipa_diacritics_compose.
 #[test]
 fn t3_tipa_diacritics_compose() {
-  if !requires(loads::TIPA) {
+  if !check_requirements(loads::TIPA) {
     return;
   }
   let tex =
@@ -91,7 +91,7 @@ fn t3_tipa_diacritics_compose() {
 /// Red (int36a): empty raised boxes. Repro fonts-nfss/t3_tone_letters.
 #[test]
 fn t3_tone_letters() {
-  if !requires(loads::TIPA) {
+  if !check_requirements(loads::TIPA) {
     return;
   }
   let tex = include_str!("../../../tools/perfect_kernel/repros/fonts-nfss/t3_tone_letters.tex");
@@ -108,7 +108,7 @@ fn t3_tone_letters() {
 /// fonts-nfss/t3_accent_outside_t3_text.
 #[test]
 fn t3_accent_outside_t3_text() {
-  if !requires(loads::TIPA) {
+  if !check_requirements(loads::TIPA) {
     return;
   }
   let tex =
@@ -129,7 +129,7 @@ fn t3_accent_outside_t3_text() {
 /// fonts-nfss/t3_slot_without_unicode_warns.
 #[test]
 fn t3_slot_without_unicode_warns() {
-  if !requires(loads::TIPA) {
+  if !check_requirements(loads::TIPA) {
     return;
   }
   let tex = include_str!(
@@ -159,7 +159,7 @@ fn t3_slot_without_unicode_warns() {
 /// its argument. Witness 2603.03017. Repro fonts-nfss/t3_tipa_then_amsmath_align_negspace.
 #[test]
 fn t3_tipa_then_amsmath_align_negspace() {
-  if !requires(loads::TIPA) {
+  if !check_requirements(loads::TIPA) {
     return;
   }
   let tex = include_str!(
@@ -177,7 +177,7 @@ fn t3_tipa_then_amsmath_align_negspace() {
 /// 2605.00529. Repro fonts-nfss/t3_tipa_then_amsmath_tabular_negspace.
 #[test]
 fn t3_tipa_then_amsmath_tabular_negspace() {
-  if !requires(loads::TIPA) {
+  if !check_requirements(loads::TIPA) {
     return;
   }
   let tex = include_str!(
@@ -203,7 +203,7 @@ fn t3_tipa_then_amsmath_tabular_negspace() {
 /// an accent argument. Witness 2608.02769. Repro fonts-nfss/t3_tipa_then_amsmath_thickspace_before_math.
 #[test]
 fn t3_tipa_then_amsmath_thickspace_before_math() {
-  if !requires(loads::TIPA) {
+  if !check_requirements(loads::TIPA) {
     return;
   }
   let tex = include_str!(
@@ -225,7 +225,7 @@ fn t3_tipa_then_amsmath_thickspace_before_math() {
 /// `\UseTextAccent` and its math path. Repro fonts-nfss/t3_tipa_after_amsmath_accent_at_boundary.
 #[test]
 fn t3_tipa_after_amsmath_accent_at_boundary() {
-  if !requires(loads::TIPA) {
+  if !check_requirements(loads::TIPA) {
     return;
   }
   let tex = include_str!(
@@ -263,7 +263,7 @@ fn t3_tipa_after_amsmath_accent_at_boundary() {
 /// Fatal:Timeout. Repro fonts-nfss/t3enc_def_loaded_twice.
 #[test]
 fn t3enc_def_loaded_twice() {
-  if !requires(loads::TIPA) {
+  if !check_requirements(loads::TIPA) {
     return;
   }
   let tex =
@@ -283,7 +283,7 @@ fn t3enc_def_loaded_twice() {
 /// Witnesses 2606.11542, 2601.02906, 2609.04232. Repro fonts-nfss/t3_ipa_meaning_slots.
 #[test]
 fn t3_ipa_meaning_slots() {
-  if !requires(loads::TIPA) {
+  if !check_requirements(loads::TIPA) {
     return;
   }
   let tex =
@@ -303,7 +303,7 @@ fn t3_ipa_meaning_slots() {
 /// bars as rules beneath ʃ, a SYNC_STATUS 77x residual), which a whole-element pin would freeze.
 #[test]
 fn t3_ipabar_built_symbols() {
-  if !requires(loads::TIPA) {
+  if !check_requirements(loads::TIPA) {
     return;
   }
   let tex =
@@ -337,7 +337,7 @@ fn use_text_accent_font_assignments() {
 /// Repro fonts-nfss/ot4_ly1_dotless_j.
 #[test]
 fn ot4_ly1_dotless_j() {
-  if !requires(loads::LY1) {
+  if !check_requirements(loads::LY1) {
     return;
   }
   let tex = include_str!("../../../tools/perfect_kernel/repros/fonts-nfss/ot4_ly1_dotless_j.tex");
@@ -352,7 +352,7 @@ fn ot4_ly1_dotless_j() {
 /// draws them and the LFE map's 0xC6-0xCB. Red (77x r1): dropped, 6 Warnings. Repro fonts-nfss/lae_shadda_vowels.
 #[test]
 fn lae_shadda_vowels() {
-  if !requires(loads::LAE) {
+  if !check_requirements(loads::LAE) {
     return;
   }
   let tex = include_str!("../../../tools/perfect_kernel/repros/fonts-nfss/lae_shadda_vowels.tex");
@@ -370,7 +370,7 @@ fn lae_shadda_vowels() {
 /// box construction for the level with no tone letter, the dropped content its Warning reports.
 #[test]
 fn t3_tone_level_outside_range_warns() {
-  if !requires_all(&[loads::TIPA, &["tone.sty"]]) {
+  if !check_all_requirements(&[loads::TIPA, &["tone.sty"]]) {
     return;
   }
   let tex = include_str!(

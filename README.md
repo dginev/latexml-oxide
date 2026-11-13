@@ -283,7 +283,7 @@ TeX Live installs lack (a distro's partial package set, an older year), a minima
 year, a program such as `jing` — declares it, and is skipped where it is not met. This is
 Perl LaTeXML's `requires` (`LaTeXML/Util/Test.pm`, `check_requirements`): a fixture
 directory's `tex_tests!` takes a table of `(test, Requirements)` rows (`"*"` for every
-test), and a guard starts with `if !requires(&["tcolorbox.sty"]) { return; }`, listing
+test), and a guard starts with `if !check_requirements(&["tcolorbox.sty"]) { return; }`, listing
 every file of its load set a TeX Live may lack (or with
 `Requirements::packages(…).texlive_min(2021).programs(&["jing"]).met()`). Files are looked
 up the way the conversion finds them. A skip prints `Skip: <reason>` and appends

@@ -92,14 +92,14 @@ impl<'a> Requirements<'a> {
   pub fn met(&self) -> bool { self.check(&current_test_name()) }
 }
 
-/// The guard form: `if !requires(&["tcolorbox.sty"]) { return; }` skips the running test, visibly, when a file
+/// The guard form: `if !check_requirements(&["tcolorbox.sty"]) { return; }` skips the running test, visibly, when a file
 /// is missing from the host TeX tree.
-pub fn requires(files: &[&str]) -> bool { Requirements::packages(files).met() }
+pub fn check_requirements(files: &[&str]) -> bool { Requirements::packages(files).met() }
 
-/// [`requires`] for a test that needs several load sets ([`loads`]): `requires_all(&[loads::PSTRICKS, &["x.sty"]])`.
-pub fn requires_all(sets: &[&[&str]]) -> bool {
+/// [`check_requirements`] for a test that needs several load sets ([`loads`]): `check_all_requirements(&[loads::PSTRICKS, &["x.sty"]])`.
+pub fn check_all_requirements(sets: &[&[&str]]) -> bool {
   let files: Vec<&str> = sets.iter().flat_map(|set| set.iter().copied()).collect();
-  requires(&files)
+  check_requirements(&files)
 }
 
 /// The jing program the schema guards validate with ([`super::rng_error_count`]).

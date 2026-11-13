@@ -1,7 +1,7 @@
 //! Red/green guards for batch 69a: bibliographies and headings inside a `\list`-based container (`{quote}`,
 //! `{quotation}`, `{verse}`, a class's bibliography list), and small package shapes from the rc_struct2 study
 //! (2026-10-16). Each repro's pdflatex reference text is in its header.
-use latexml::util::test::{convert_with, loads, requires};
+use latexml::util::test::{check_requirements, convert_with, loads};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -237,7 +237,7 @@ fn nicematrix_guard_column_takes_a_span() {
 /// A never-used `\newacronym` whose long form holds `&` (2602.09131): the stored definition reads the character.
 #[test]
 fn glossary_entry_ampersand_is_stored_text() {
-  if !requires(loads::GLOSSARIES) {
+  if !check_requirements(loads::GLOSSARIES) {
     return;
   }
   let xml = clean!("package-bindings/glossaries_untypeset_ampersand.tex");

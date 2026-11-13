@@ -5,7 +5,7 @@
 //! it (KNOWN_PERL_ERRORS #275). Assignments scan by the register's type, and
 //! with calc a length is evaluated whole (calc.sty:51-56, 86). OXIDIZED_DESIGN
 //! #317. Repros in `tools/perfect_kernel/repros/expansion-primitives/`.
-use latexml::util::test::{assert_element, requires};
+use latexml::util::test::{assert_element, check_requirements};
 
 use super::perfect_kernel_batch46::{convert, error_count, warning_count};
 
@@ -567,7 +567,7 @@ fn multido_number_variable_starts_as_written() {
 /// `\pstMarkAngle`: `(F)(A_1)` and a "Script _" error in 56jr).
 #[test]
 fn pstricks_angle_argument_is_read_whole() {
-  if !requires(&["pstricks.sty"]) {
+  if !check_requirements(&["pstricks.sty"]) {
     return;
   }
   let tex = include_str!(

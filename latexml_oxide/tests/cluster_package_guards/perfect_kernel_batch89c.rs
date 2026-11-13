@@ -9,7 +9,7 @@
 //! empty slot that is no gap (msam/msbm glyphs the maps have no single character for), where a reference name still
 //! decodes (`reference_symbol`, OXIDIZED_DESIGN_DIVERGENCES #910). Each runs in process and from the binary, eager
 //! and `--streaming`; each repro is under `tools/perfect_kernel/repros/fonts-nfss/`, pdflatex-checked.
-use latexml::util::test::{loads, requires};
+use latexml::util::test::{check_requirements, loads};
 
 use super::{
   perfect_kernel_batch46::{convert_with, error_count, warning_count},
@@ -100,7 +100,7 @@ pub(super) fn check_everywhere(
 /// "Symbol font `mathx' is not defined", an in-process input) stays U+FFFD and is said so.
 #[test]
 fn kernel_accent_decodes_by_its_name() {
-  if !requires(loads::NEWTXSF) {
+  if !check_requirements(loads::NEWTXSF) {
     return;
   }
   let tex = repro!("kernel_accent_decodes_by_its_name.tex");

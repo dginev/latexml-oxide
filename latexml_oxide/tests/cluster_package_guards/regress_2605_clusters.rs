@@ -1,4 +1,4 @@
-use latexml::util::test::{loads, requires};
+use latexml::util::test::{check_requirements, loads};
 
 use super::perfect_kernel_batch46::{convert_with, error_count, warning_count};
 
@@ -475,7 +475,7 @@ fn text_font_command_ends_with_egroup() {
 /// labels, Fatal; Perl the same).
 #[test]
 fn glossaries_underscore_label_is_a_key() {
-  if !requires(loads::GLOSSARIES) {
+  if !check_requirements(loads::GLOSSARIES) {
     return;
   }
   let tex =
@@ -503,7 +503,7 @@ fn mathcode_reads_the_whole_code() {
   let (stderr, xml) = convert_with(tex, None);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("<p>32768yes32768.</p>"), "{xml}");
-  if requires(&["slovak.ldf"]) {
+  if check_requirements(&["slovak.ldf"]) {
     let tex = include_str!(
       "../../../tools/perfect_kernel/repros/expansion-primitives/mathcode_reads_the_whole_code.tex"
     );

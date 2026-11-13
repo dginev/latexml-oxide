@@ -5,13 +5,13 @@
 //! reader went to disk only, so every `listing only` box rendered an empty
 //! listing at 0 errors (sim-os-menus' terminal windows; ~33 manuals
 //! round-trip a listing file). Perl reports "Can't read listings file".
-use latexml::util::test::requires;
+use latexml::util::test::check_requirements;
 
 /// The whole `<listing>` — its base64 `data` is the body, and the lines
 /// are typeset.
 #[test]
 fn tcblisting_listing_only_reads_the_virtual_listing_file() {
-  if !requires(&["tcolorbox.sty"]) {
+  if !check_requirements(&["tcolorbox.sty"]) {
     return;
   }
   let tex = "\\documentclass{article}\n\\usepackage{tcolorbox}\\tcbuselibrary{listings,skins}\n\\begin{document}\n\\begin{tcblisting}{listing only,listing engine=listings}\ntest@DESKTOP:~$ ping -c 2 ctan.org\nPING ctan.org 56 bytes of data.\n\\end{tcblisting}\n\\end{document}\n";

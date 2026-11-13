@@ -8,7 +8,7 @@
 //! single-character `<mi>` carries no `mathvariant`, an upright one `normal`, a bold italic one its Plane 1 letter (𝜴).
 //! Each guard converts its pdflatex-checked repro under `tools/perfect_kernel/repros/` (its header holds the `\showbox`
 //! oracle) or a probe whose pdflatex fonts it states, and asserts every identifier element and exact diagnostic counts.
-use latexml::util::test::{assert_element, convert_with, loads, requires};
+use latexml::util::test::{assert_element, check_requirements, convert_with, loads};
 use regex::Regex;
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
@@ -165,7 +165,7 @@ fn amsmath_var_capital_greek_is_italic() {
 /// fonts-nfss/newtxmath_greek_options_follow_the_package.
 #[test]
 fn packages_capital_greek_follow_their_options() {
-  if !requires(loads::FOURIER) {
+  if !check_requirements(loads::FOURIER) {
     return;
   }
   let cases: [(&str, &str, &str, [&str; 3]); 17] = [

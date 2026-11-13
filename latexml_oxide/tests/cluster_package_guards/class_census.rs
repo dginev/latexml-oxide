@@ -1,4 +1,4 @@
-use latexml::util::test::{loads, requires};
+use latexml::util::test::{check_requirements, loads};
 
 use super::perfect_kernel_batch46::{convert_with, error_count, warning_count};
 
@@ -498,7 +498,7 @@ fn versonote_is_a_margin_note() {
 /// 196-203 `\gdef\@affiliation{Huygens-Kamerlingh Onnes Laboratory, …}`).
 #[test]
 fn k11_class_default_store() {
-  if !requires(&["lion-msc.cls"]) {
+  if !check_requirements(&["lion-msc.cls"]) {
     return;
   }
   let tex = include_str!(
@@ -646,7 +646,7 @@ fn enumitem_shortlabels() {
 /// "Dual Connectivity"; Perl identical).
 #[test]
 fn glossaries_preamble_forward_reference() {
-  if !requires(loads::GLOSSARIES) {
+  if !check_requirements(loads::GLOSSARIES) {
     return;
   }
   let tex = include_str!(
@@ -675,7 +675,7 @@ fn glossaries_preamble_forward_reference() {
 #[test]
 fn nlctuserguide_entries_defined_in_run() {
   // The whole load set: a TeX Live can ship nlctuserguide without its tracklang (CI's apt set).
-  if !requires(&["nlctuserguide.sty", "tracklang.sty"]) {
+  if !check_requirements(&["nlctuserguide.sty", "tracklang.sty"]) {
     return;
   }
   let tex = include_str!(

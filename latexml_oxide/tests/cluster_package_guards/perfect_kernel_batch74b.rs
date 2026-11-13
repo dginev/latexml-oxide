@@ -3,7 +3,7 @@
 //! (sect02.rs `\lx@end@open@frontmatter`; was an empty `<document/>` with 0 errors), and a refused `\title` replays for
 //! its side effects as `\author`'s does (sect05.rs `\title`, the support bindings' `\title`; OXIDIZED_DESIGN #482). Each
 //! green asserts the three targets: the log's tally, the authored text, and the element that carries it.
-use latexml::util::test::{convert_files_with, convert_with, loads, requires};
+use latexml::util::test::{check_requirements, convert_files_with, convert_with, loads};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -386,7 +386,7 @@ fn aastex_figcaption_outside_a_figure_is_its_caption() {
 /// equation after the formula (glossaries_sty.rs `\lx@glossaries@glsadd`; silent-loss inventory #20).
 #[test]
 fn gls_only_in_display_math_is_listed() {
-  if !requires(loads::GLOSSARIES) {
+  if !check_requirements(loads::GLOSSARIES) {
     return;
   }
   let (log, xml, (html, post_log)) = latexml::util::test::convert_bytes_files_then(
@@ -416,7 +416,7 @@ fn gls_only_in_display_math_is_listed() {
 /// pdflatex's 2 `!` "Socket 'caption/label' undeclared", ours the same 2 Errors, the only ones.
 #[test]
 fn asmejour_keywords_are_kept() {
-  if !requires(&["asmejour.cls", "inconsolata.sty"]) {
+  if !check_requirements(&["asmejour.cls", "inconsolata.sty"]) {
     return;
   }
   let cls = latexml::util::test::kpse_text("asmejour.cls").unwrap_or_default();
@@ -576,7 +576,7 @@ fn an_without_its_class_warns() {
 /// title page's `\note` (apa6_cls.rs `define_notes`). The one warning is the class's, as pdflatex's.
 #[test]
 fn apa_acknowledgements_are_kept_in_every_mode() {
-  if !requires(&["apa.cls"]) {
+  if !check_requirements(&["apa.cls"]) {
     return;
   }
   let tex = include_str!(
@@ -621,7 +621,7 @@ fn apa_acknowledgements_are_kept_in_every_mode() {
 /// three warnings are cc's two and a "has changed" one, as pdflatex's three.
 #[test]
 fn cclayout_abstract_and_subject_are_kept() {
-  if !requires(&["cc.cls"]) {
+  if !check_requirements(&["cc.cls"]) {
     return;
   }
   let (log, xml) = convert_with(

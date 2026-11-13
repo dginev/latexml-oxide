@@ -22,7 +22,7 @@
 //! (1203.0762); beilstein's `\author[marks][e-mail]{name}` (beilstein.cls:627).
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
-use latexml::util::test::{assert_element, normalize_markup, requires, xml_element};
+use latexml::util::test::{assert_element, check_requirements, normalize_markup, xml_element};
 
 use super::{
   perfect_kernel_batch46::{convert_files_with, error_count, warning_count},
@@ -305,7 +305,7 @@ fn a_raw_class_keywords_environment_collecting_its_body_sets_the_keywords() {
 /// Before 68u r2: an author named `*`, and no affiliation.
 #[test]
 fn beilstein_authors_carry_their_numbered_affiliations() {
-  if !requires(BEILSTEIN) {
+  if !check_requirements(BEILSTEIN) {
     return;
   }
   let xml = assert_elements(
@@ -330,7 +330,7 @@ fn beilstein_authors_carry_their_numbered_affiliations() {
 /// ann@example.org, …" and "2 Second Institute, Town, bob@example.org"). Before 68u r2 no affiliation, e-mail or ORCID.
 #[test]
 fn lni_authors_carry_email_orcid_and_affiliation() {
-  if !requires(&["lni.cls", "newtxtt.sty"]) {
+  if !check_requirements(&["lni.cls", "newtxtt.sty"]) {
     return;
   }
   let xml = assert_elements(
@@ -517,7 +517,7 @@ fn a_class_for_another_format_is_not_read_raw() {
 /// `[` and the e-mail and name stray text.
 #[test]
 fn beilstein_author_with_marks_and_email_options() {
-  if !requires(BEILSTEIN) {
+  if !check_requirements(BEILSTEIN) {
     return;
   }
   let xml = assert_elements(

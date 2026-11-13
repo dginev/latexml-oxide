@@ -668,7 +668,7 @@ fn cluster_pair_tolerant_trailing() {
 /// arXiv:physics/9710028 (10 errors → 0 with this fix).
 #[test]
 fn cluster_newpsobject_forward() {
-  if !latexml::util::test::requires(latexml::util::test::loads::PSTRICKS) {
+  if !latexml::util::test::check_requirements(latexml::util::test::loads::PSTRICKS) {
     return;
   }
   convert_clean("tests/cluster_regressions/newpsobject_forward.tex");

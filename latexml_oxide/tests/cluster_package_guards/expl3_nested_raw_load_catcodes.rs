@@ -14,7 +14,7 @@
 #[test]
 fn nested_expl3_raw_load_preserves_catcodes() {
   // Without derivative.sty (a trimmed TeX Live) there is no raw double-load to guard.
-  if !latexml::util::test::requires(&["derivative.sty"]) {
+  if !latexml::util::test::check_requirements(&["derivative.sty"]) {
     return;
   }
   let (stderr, _) = super::convert_files(

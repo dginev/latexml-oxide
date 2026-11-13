@@ -3,7 +3,7 @@
 //! Each test is the minimal reproduction distilled during triage; the
 //! doc-comment names the ORIGINAL corpus witness (TeX Live doc corpus)
 //! whose larger conversion was vetted separately.
-use latexml::util::test::{loads, requires};
+use latexml::util::test::{check_requirements, loads};
 
 use super::perfect_kernel_batch46::{convert, error_count};
 
@@ -342,7 +342,7 @@ After.
 /// `\ekv@set@was@blank` (expkv.tex L709-712).
 #[test]
 fn expkv_blank_entry_does_not_leak_markers() {
-  if !requires(loads::EXPKV) {
+  if !check_requirements(loads::EXPKV) {
     return;
   }
   let (stderr, xml) = convert(

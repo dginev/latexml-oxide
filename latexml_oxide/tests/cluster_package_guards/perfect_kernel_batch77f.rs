@@ -2,7 +2,7 @@
 //! is a line break of the item (user ruling 2026-10-18, OXIDIZED_DESIGN_DIVERGENCES #766; base_utilities.rs
 //! `frontmatter_paragraph_break`, decided at construction by the schema). The guards assert the three measures: no
 //! Error, the authored text present once, each paragraph its own line.
-use latexml::util::test::{convert_with, requires};
+use latexml::util::test::{check_requirements, convert_with};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -53,7 +53,7 @@ fn inline_item_paragraphs_are_line_breaks() {
 /// apa.cls's two-paragraph `\acknowledgements` is two lines of its "Author Note" acknowledgements, in every mode.
 #[test]
 fn apa_acknowledgements_paragraphs_are_lines() {
-  if !requires(&["apa.cls"]) {
+  if !check_requirements(&["apa.cls"]) {
     return;
   }
   let tex = include_str!(

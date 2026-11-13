@@ -1,6 +1,6 @@
 //! Red/green guards for batch 66k: wrong-mode roots of K1's word losses (root-causer report
 //! `agent_reports/2026-10-14_k1_wordloss_triggers.md`): a `_`/`^` our engine read in text where pdflatex reads it in math.
-use latexml::util::test::{loads, requires, requires_all};
+use latexml::util::test::{check_all_requirements, check_requirements, loads};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -26,7 +26,7 @@ fn cancel_at_aligned_cell_start() {
 /// pstricks keeps graphics' boxing `\scalebox`: an inner `$…$` is a formula in the box (2104.00361).
 #[test]
 fn pstricks_keeps_graphics_scalebox() {
-  if !requires(loads::PSTRICKS) {
+  if !check_requirements(loads::PSTRICKS) {
     return;
   }
   let (log, xml) = convert_counted(include_str!(
@@ -40,7 +40,7 @@ fn pstricks_keeps_graphics_scalebox() {
 /// scalerel's `\scaleobj` over graphics' `\scalebox` with pstricks loaded, in a tabular cell (2504.03865).
 #[test]
 fn pstricks_scalerel_scaleobj_in_tabular() {
-  if !requires_all(&[loads::PSTRICKS, &["scalerel.sty"]]) {
+  if !check_all_requirements(&[loads::PSTRICKS, &["scalerel.sty"]]) {
     return;
   }
   let (log, xml) = convert_counted(include_str!(

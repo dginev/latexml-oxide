@@ -3,7 +3,7 @@
 //! (`setup_binding_language::accent_composite`), so an expand-until-not-a-cs
 //! loop over a passage terminates as it does under T1 pdflatex; other
 //! shapes keep the `\lx@applyaccent` primitive.
-use latexml::util::test::requires;
+use latexml::util::test::check_requirements;
 
 /// bibleref-parse.sty:495-507 `\brp@@expandcs` re-expands a control
 /// sequence with `\expandafter` until a character comes back; the inert
@@ -11,7 +11,7 @@ use latexml::util::test::requires;
 /// names) loop for the whole 420 s cap. Under T1 the composite ends it.
 #[test]
 fn expand_until_character_loop_over_an_accent_terminates() {
-  if !requires(&["bibleref-parse.sty"]) {
+  if !check_requirements(&["bibleref-parse.sty"]) {
     return;
   }
   let tex = "\\documentclass{article}\n\\usepackage[T1]{fontenc}\n\\usepackage{bibleref-parse}\n\\makeatletter\n\\begin{document}\n\\def\\brp@range#1#2#3#4#5{RANGE[#1|#2]}%\n\\brp@parse{IK\\\"onige}%\n\\brp@result\n\\brp@parse{IKings}\\brp@result\n\\end{document}\n";

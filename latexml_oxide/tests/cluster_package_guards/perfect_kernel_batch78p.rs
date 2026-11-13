@@ -4,7 +4,7 @@
 //! makes no pagination the listing cannot hold. Each guard converts its repro under `tools/perfect_kernel/repros/`
 //! and asserts no Error or Warning and the authored content in whole elements, against pdflatex (fidelity3 audit
 //! N12, N14, N16-N19; the SYNC tabularray row).
-use latexml::util::test::{assert_element, convert_with, loads, requires};
+use latexml::util::test::{assert_element, check_requirements, convert_with, loads};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -203,7 +203,7 @@ fn mathabx_curvearrowbotleftright() {
 /// index-bib/unused_glossary_entry_raises_nothing.
 #[test]
 fn unused_glossary_entry_raises_nothing() {
-  if !requires(loads::GLOSSARIES) {
+  if !check_requirements(loads::GLOSSARIES) {
     return;
   }
   let (log, xml) = convert_with(
@@ -224,7 +224,7 @@ fn unused_glossary_entry_raises_nothing() {
 /// with the same fault raises nothing.
 #[test]
 fn printed_glossary_entry_raises_its_definition_errors() {
-  if !requires(loads::GLOSSARIES) {
+  if !check_requirements(loads::GLOSSARIES) {
     return;
   }
   let (log, _xml) = convert_with(
