@@ -16974,10 +16974,11 @@ expansion-primitives/dimension_overflow_max_dimen. The one exception (DG 2026-11
 `breakable` tcolorbox, which we set as one box where TeX breaks it (Perl tcolorbox.sty.ltxml:21), is a Warning naming the
 box, the overflows it cascades into an Info (`common::error::approximated_measure`, read by the box's own
 `\iftcb@isbreakable` when tcolorbox.sty:2006 `\tcb@draw@color@box` measures it; 2605.05949 2605.19136 2605.24941
-2605.28003 2605.30434 2606.07718: 4 Errors each → 1 Warning), cleared at the measure's end (`\lx@tcb@measure@done`:
+2605.28003 2605.30434 2606.07718: 4 Errors each → 1 Warning; a tcolorbox before 3.x has no such flag, so its boxes are
+not breakable: 1606.02242 ships 2.80), cleared at the measure's end (`\lx@tcb@measure@done`:
 the command form `\tcolorbox…\endtcolorbox`, tcolorbox.sty:1150, opens no group); a box of its own unbreakable, also
 one inside the breakable one, and an overflow after the box keep the Error (`error_boundary::perfect_kernel_error_boundary`,
-five rows). Open (BRKC, post-merge): a breakable box in a minipage or a float, which TeX does not break, is downgraded
+five rows; the 2.80 shape a sixth, 0 Errors). Open (BRKC, post-merge): a breakable box in a minipage or a float, which TeX does not break, is downgraded
 too (`tcolorbox_breakable_box_in_{minipage,float}_overflow_red`).
 
 ### 520. setspace's `\onehalfspace`/`\doublespace` switches are checked no-ops (Perl: an environment frame)
@@ -21514,7 +21515,8 @@ report.cls and amsart.cls (`\chapter*` in book.cls) does: a paragraph ends, and 
 an unclosed `\abstract{` the TOC ends the abstract as a `\section` does (sect05.rs `\abstract`), the hook's other
 members running as at any heading (the frontmatter fallback of a document without `\maketitle`, a bibliography's end).
 A raw class's own `\tableofcontents` replaces the kernel's, as before (memoir's and oblivoir's lists, which read
-a `.toc` LaTeXML never writes, are `\lx@kernel@listof` again: memoir_cls.rs, MEM1). The rule for a TOC differs from a `\section*`
+a `.toc` LaTeXML never writes, are `\lx@kernel@listof` again: memoir_cls.rs, MEM1; the list's name is read
+`Undigested`, as Perl's literal `'toc'`, since a Greek font typeset it "τος": 0712.0401). The rule for a TOC differs from a `\section*`
 inside a balanced abstract, which document.rs's sectioning leniency still keeps in place without an Error (Perl errs
 there, `<ltx:section> isn't allowed in <ltx:abstract>`; a nested second one errs in both): the TOC follows the schema
 and Perl's own placement of an element its context refuses.

@@ -1,0 +1,16 @@
+% witness: 0712.0401 (memoir + Greek): the list's name `{toc}` was typeset, so an LGR font read it "τος" and the TOC
+%          lost its `select`; the name is read as tokens (Perl latex_constructs.pool.ltxml:725-743 writes 'toc')
+% oracle:  pdflatex 0 `!` (the contents and the list of figures, Greek headings); Perl lists="toc" (with select),
+%          "lof", 4 errors elsewhere (3 stray `\fi`, `\theςεςτιον` undefined: its section name typeset Greek)
+% engines: rust int170a lists="toc"; rust int171a lists="τος" (no select) and "λοφ"
+% expect:  0 errors, 0 warnings; <TOC lists="toc" select=…> and <TOC lists="lof">
+% status:  RED (int171a) -> GREEN (FIX171; perfect_kernel_batchmem1::batchmem1_memoir_list_rows)
+\documentclass{article}
+\usepackage[greek,english]{babel}
+\begin{document}
+\selectlanguage{greek}
+\tableofcontents
+\listoffigures
+\section{Alpha}
+Text.
+\end{document}

@@ -60,6 +60,14 @@ const ROWS: &[Row] = &[
     1,
     "\n  <section xml:id=\"chapter0.sectionx1\">\n    <title>Table of Contents</title>\n    <TOC lists=\"toc\" scope=\"global\" select=\"ltx:part | ltx:chapter | ltx:section | ltx:appendix | ltx:index | ltx:bibliography\"/>\n  </section>\n  <chapter xml:id=\"chapterx1\">\n    <title>List of Figures</title>\n    <TOC lists=\"lof\" scope=\"global\"/>\n  </chapter>\n  ",
   ),
+  // The kernel's own lists under a Greek font: the list's name is read as tokens, not typeset ("τος", 0712.0401;
+  // memoir's and tocbibind's lists reach the same constructor). No `\@iffirstamp` Warning: article.
+  (
+    repro!("kernel_lists_under_a_greek_font_keep_their_names"),
+    0,
+    0,
+    "\n  <TOC xml:lang=\"el\" lists=\"toc\" scope=\"global\" select=\"ltx:part | ltx:chapter | ltx:section | ltx:subsection | ltx:subsubsection | ltx:appendix | ltx:index | ltx:bibliography\">\n    <title>\u{3a0}\u{3b5}\u{3c1}\u{3b9}\u{3b5}\u{3c7}\u{1f79}\u{3bc}\u{3b5}\u{3bd}\u{3b1}</title>\n  </TOC>\n  <TOC xml:lang=\"el\" lists=\"lof\" scope=\"global\">\n    <title>\u{39a}\u{3b1}\u{3c4}\u{1f71}\u{3bb}\u{3bf}\u{3b3}\u{3bf}\u{3c2}\n\u{3a3}\u{3c7}\u{3b7}\u{3bc}\u{1f71}\u{3c4}\u{3c9}\u{3bd}</title>\n  </TOC>\n  ",
+  ),
 ];
 
 /// The body of `<document>` from its start tag's end to its first numbered chapter or section.

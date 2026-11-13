@@ -3,7 +3,10 @@
 use latexml_core::keyval::split_keyval_source;
 
 use crate::{
-  package::listings_sty::{listings_read_raw_lines, lst_process_display, lst_run_body_via_input},
+  package::{
+    listings_sty::{listings_read_raw_lines, lst_process_display, lst_run_body_via_input},
+    pgfkeys_code_tex::newif_true,
+  },
   prelude::*,
 };
 
@@ -317,14 +320,16 @@ LoadDefinitions!({
   // its drawing measures (:2006) is ours: an overflow there is a Warning naming the box (`APPROXIMATED_MEASURE`, DG
   // 2026-11-13: 2605.05949 2605.19136 2605.24941 2605.28003 2605.30434 2606.07718); elsewhere TeX's Error. Cleared
   // at the measure's end: the command form `\tcolorbox…\endtcolorbox` (tcolorbox.sty:1150) opens no group.
+  // A tcolorbox before 3.x has no such flag (2.80, shipped by 1606.02242): its boxes are not breakable.
   Let!("\\lx@tcb@draw@color@box", "\\tcb@draw@color@box");
-  DefMacro!("\\tcb@draw@color@box",
-    "\\iftcb@isbreakable\\lx@tcb@measure@ours\\fi\\lx@tcb@draw@color@box\\lx@tcb@measure@done");
+  DefMacro!("\\tcb@draw@color@box", "\\lx@tcb@measure@ours\\lx@tcb@draw@color@box\\lx@tcb@measure@done");
   DefPrimitive!("\\lx@tcb@measure@ours", {
-    let env = Expand!(T_CS!("\\@currenvir")).to_string();
-    let number = Expand!(T_CS!("\\thetcolorboxnumber")).to_string();
-    let name = Stored::from(s!("the breakable box {{{env}}} (box {number})"));
-    assign_value(APPROXIMATED_MEASURE, name, Some(Scope::Local));
+    if newif_true("\\iftcb@isbreakable") {
+      let env = Expand!(T_CS!("\\@currenvir")).to_string();
+      let number = Expand!(T_CS!("\\thetcolorboxnumber")).to_string();
+      let name = Stored::from(s!("the breakable box {{{env}}} (box {number})"));
+      assign_value(APPROXIMATED_MEASURE, name, Some(Scope::Local));
+    }
   });
   DefPrimitive!("\\lx@tcb@measure@done", {
     assign_value(APPROXIMATED_MEASURE, Stored::None, Some(Scope::Local));
