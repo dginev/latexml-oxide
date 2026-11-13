@@ -39,7 +39,9 @@ fn xslt_parameter_arg(param: &str) -> Result<String, String> {
 
 /// LaTeXML-oxide: convert TeX/LaTeX documents to XML/HTML/MathML
 #[derive(Parser, Debug)]
+// `args_override_self`: an option given twice keeps its last value, as GetOpt::Long does (#530).
 #[command(name = "latexml_oxide", version = latexml::identity::VERSION_WITH_REVISION, about)]
+#[command(args_override_self = true)]
 struct Cli {
   /// The TeX/LaTeX source file(s) to convert (overridden by --source). A `.bib`,
   /// a `.zip`/`.tar.gz` archive, or a directory is auto-detected. Several files
@@ -2432,6 +2434,19 @@ mod boolean_flag_last_wins_tests {
 
     // --hackplane1 forces plane1 on even against a later --noplane1 (Perl MathML.pm L70).
     assert!(ResolvedOptions::from_cli(&cli(&["--noplane1", "--hackplane1"])).plane1);
+  }
+
+  /// #530: a value option or flag given twice keeps its last value (GetOpt::Long), and is not a
+  /// usage error; a repeatable option still accumulates.
+  #[test]
+  fn repeated_options_are_last_wins() {
+    let c = cli(&["--urlstyle=file", "--urlstyle=server"]);
+    assert_eq!(c.urlstyle.as_deref(), Some("server"));
+    let c = cli(&["--dest", "a.html", "--dest=b.html", "--split", "--split"]);
+    assert_eq!(c.dest.as_deref(), Some("b.html"));
+    assert!(c.split);
+    let c = cli(&["--css", "a.css", "--css", "b.css"]);
+    assert_eq!(c.css_files, ["a.css", "b.css"]);
   }
 }
 

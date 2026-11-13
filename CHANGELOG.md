@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+  - **An option given twice keeps its last value** (#530). `--urlstyle=file
+    --urlstyle=server` (and any other single-valued option or flag repeated) stopped
+    with "cannot be used multiple times"; the last one now wins, as with Perl's
+    GetOpt::Long, so a base option list can be overridden by appending to it. Repeatable
+    options (`--css`, `--path`, `--preload`, ...) still accumulate. Guard
+    `boolean_flag_last_wins_tests::repeated_options_are_last_wins`.
+
   - **`--xsltparameter` takes Perl's `name:value`, and a malformed one is an error** (#803).
     `--xsltparameter=FOO:bar` was silently ignored; it now sets `$FOO`, as in Perl's
     `latexmlc`/`latexmlpost` (a `\w+` name, then `:`). `name=value` keeps working (it also
