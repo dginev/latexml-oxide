@@ -137,13 +137,10 @@ impl Locator {
         let (base, ext) = pathname::url_split(source);
         s!("{}.{}", base, ext)
       } else {
-        // Perl Locator.pm L59-60: "$base.$ext", the file named with its extension (#794).
+        // Perl Locator.pm L59-60: "$base.$ext", the file named with its extension (#794);
+        // `README.` for an extension-less one, as Perl prints it.
         let (_path, base, ext) = pathname::split(source);
-        if ext.is_empty() {
-          base
-        } else {
-          s!("{base}.{ext}")
-        }
+        s!("{base}.{ext}")
       }
     })
   }
@@ -334,7 +331,7 @@ mod tests {
     );
     assert_eq!(
       format!("{}", Locator::new("dir/README", 1, 2, 0, 0)),
-      "README; line 1 col 2"
+      "README.; line 1 col 2"
     );
   }
 

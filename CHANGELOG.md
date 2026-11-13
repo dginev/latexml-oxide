@@ -6,7 +6,8 @@
     location line read `at t; line 10 col 21 - …`, the file stem only; it now reads
     `at t.tex; line 10 col 21 - …`, as Perl's `getShortSource` prints it, so a problem
     matcher written for Perl's logs can find the file (a `.bib`'s own diagnostics name
-    `refs.bib` likewise when the reader has its path). The message layout is Perl's
+    `refs.bib` likewise when the reader has its path; an extension-less file reads `README.`,
+    as in Perl). The message layout is Perl's
     (the message, then `at …`, then detail lines). Guard
     `locator::tests::display_names_the_file_with_its_extension`; eleven guards that
     pinned the stem now pin the file name.
@@ -15,9 +16,12 @@
     XPath, an `xsl:message terminate="yes"` or a missing `xsl:import` logged
     `Error:post:convert`, exited 0 and wrote the untransformed XML under the `.html`
     name. A MathML or XSLT step that fails now stops post-processing with
-    `Fatal:post:convert` and nothing is written, as a die in Perl's ProcessChain does.
-    A stylesheet that cannot be found stays an Error, as in Perl. Guards
-    `xslt_failure_is_fatal` (in `cluster_xslt_split`).
+    `Fatal:post:convert` and nothing is written, as a die in Perl's ProcessChain does:
+    with `--split`, the pages rendered before the failing one are removed, serially and
+    under `LATEXML_RENDER_JOBS`; `api::convert_to_html` returns `Err` with the log, and the
+    editor server reports the Fatal with its status. A stylesheet that cannot be found
+    stays an Error, as in Perl. Guards `xslt_failure_is_fatal` (in `cluster_xslt_split`)
+    and `api::tests::a_post_fatal_is_an_err`.
 
   - **Split pages keep the document's processing instructions** (#795). With `--split`,
     only the main page carried the `<?latexml …?>` PIs; the other pages lost them, so a
@@ -36,15 +40,17 @@
     `--xsltparameter=FOO:bar` was silently ignored; it now sets `$FOO`, as in Perl's
     `latexmlc`/`latexmlpost` (a `\w+` name, then `:`). `name=value` keeps working (it also
     carries `{uri}name` names). A value with neither form stops the run with a usage error
-    (exit 2), as `latexmlpost` does; the library entry point logs an Error. Guard
+    (exit 2), as `latexmlpost` does (Perl's `latexmlc` only warns, LaTeXML.pm L574-578);
+    the library entry point logs an Error. Guard
     `xsltparameter_tests` (in the binary's unit tests).
 
   - **A `--stylesheet` on disk is used, even when it is named like a built-in one** (#806).
     `--stylesheet=./LaTeXML-html5.xsl` loaded the embedded copy instead of the local file,
     because the embedded stylesheets were matched by file name alone. A path that names an
     existing file now loads that file, and so does an engine-named stylesheet it imports from
-    beside it; `urn:x-LaTeXML:XSLT:` imports and the default stylesheet still come from the
-    binary. Guard `xslt::local_stylesheet_tests`.
+    beside it; `urn:x-LaTeXML:XSLT:` imports and the default stylesheet always come from the
+    binary, whatever `resources/XSLT/` or `LaTeXML-*.xsl` files sit in the working or source
+    directory. Guards `xslt::local_stylesheet_tests`, `xslt_custom_stylesheet::stray_engine_sheets_do_not_replace_the_default`.
 
   - **`post::PostOptions::nodefaultresources` is now `default_resources`, with the
     meaning inverted.** The double negative (`nodefaultresources: false`) is gone.

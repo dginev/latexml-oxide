@@ -244,6 +244,47 @@ mod local_stylesheet_tests {
     .unwrap();
     assert!(apply(&mine).contains("<out>LOCAL-COMMON</out>"));
   }
+
+  /// #806: a user's sheet in a directory whose name needs escaping still imports its sibling from
+  /// disk; an absolute or `file:` URL names the file, a relative or bare engine name never does
+  /// (the default stylesheet's imports cannot be replaced by a copy in the cwd).
+  #[test]
+  fn only_a_named_file_is_read_from_disk() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let spaced = dir.path().join("a b");
+    std::fs::create_dir(&spaced).unwrap();
+    let common = spaced.join("LaTeXML-common.xsl");
+    std::fs::write(&common, marker_xsl("SPACED-COMMON")).unwrap();
+    let mine = spaced.join("mine.xsl");
+    std::fs::write(
+      &mine,
+      r#"<xsl:stylesheet version="1.0" xmlns:xsl="http://www.w3.org/1999/XSL/Transform">
+  <xsl:import href="LaTeXML-common.xsl"/>
+</xsl:stylesheet>
+"#,
+    )
+    .unwrap();
+    assert!(apply(&mine).contains("<out>SPACED-COMMON</out>"));
+
+    let abs = common.to_str().unwrap();
+    let escaped = abs.replace(' ', "%20");
+    for url in [
+      abs.to_string(),
+      format!("file://{escaped}"),
+      format!("file://localhost{escaped}"),
+      format!("file:{escaped}"),
+    ] {
+      assert!(super::embedded_xslt::resolve(&url).is_none(), "{url}");
+    }
+    // Relative to this crate's directory, where the engine's own sources sit.
+    for url in [
+      "resources/XSLT/LaTeXML-all-xhtml.xsl",
+      "embed:///LaTeXML-html5.xsl",
+      "urn:x-LaTeXML:XSLT:LaTeXML-html5.xsl",
+    ] {
+      assert!(super::embedded_xslt::resolve(url).is_some(), "{url}");
+    }
+  }
 }
 
 /// Resource type information.
@@ -312,7 +353,12 @@ impl XSLT {
     };
 
     Ok(XSLT {
-      name: format!("XSLT[using {}]", stylesheet),
+      name: format!(
+        "XSLT[using {}]",
+        stylesheet
+          .strip_prefix(embedded_xslt::URL_PREFIX)
+          .unwrap_or(stylesheet)
+      ),
       stylesheet_path: Some(stylesheet_path),
       parameters,
       no_resources,
@@ -1108,17 +1154,49 @@ mod embedded_xslt {
   /// distinctive `LaTeXML-*.xsl` names are in [`FILES`], so a user's own
   /// relative import (a different basename) still loads from disk.
   ///
-  /// A URL naming a file on disk is that file (#806): a `--stylesheet=./LaTeXML-html5.xsl`, or an
-  /// engine-named sibling a user sheet imports, loads from disk as in Perl.
+  /// An absolute path or `file:` URL naming a file on disk is that file (#806): only a stylesheet
+  /// the user named is made absolute (`find_stylesheet`), so it and an engine-named sibling it
+  /// imports load from disk as in Perl, while a relative or bare engine name never reads the cwd.
   pub fn resolve(url: &str) -> Option<&'static [u8]> {
-    if !url.starts_with(URL_PREFIX)
-      && !url.starts_with("urn:")
-      && std::path::Path::new(url.strip_prefix("file://").unwrap_or(url)).is_file()
-    {
+    if disk_path(url).is_some() {
       return None;
     }
     let name = url.rsplit(['/', ':']).next().unwrap_or(url);
     lookup(name)
+  }
+
+  /// The file an absolute path or a `file:` URL (`file:///p`, `file://localhost/p`, `file:/p`,
+  /// percent-encoded) names, when it exists.
+  pub fn disk_path(url: &str) -> Option<std::path::PathBuf> {
+    let path = match url.strip_prefix("file://") {
+      Some(rest) => rest.strip_prefix("localhost").unwrap_or(rest),
+      None => url.strip_prefix("file:").unwrap_or(url),
+    };
+    let path = percent_decode(path)?;
+    // `file:///C:/x` names `C:/x`.
+    let path = match path.strip_prefix('/') {
+      Some(rest) if cfg!(windows) && rest.as_bytes().get(1) == Some(&b':') => rest.to_string(),
+      _ => path,
+    };
+    let path = std::path::PathBuf::from(path);
+    (path.is_absolute() && path.is_file()).then_some(path)
+  }
+
+  fn percent_decode(s: &str) -> Option<String> {
+    if !s.contains('%') {
+      return Some(s.to_string());
+    }
+    let mut bytes = Vec::with_capacity(s.len());
+    let mut it = s.bytes();
+    while let Some(b) = it.next() {
+      if b == b'%' {
+        let hex = [it.next()?, it.next()?];
+        bytes.push(u8::from_str_radix(std::str::from_utf8(&hex).ok()?, 16).ok()?);
+      } else {
+        bytes.push(b);
+      }
+    }
+    String::from_utf8(bytes).ok()
   }
 
   /// Install the libxml2 input callback that serves `embed:///`
@@ -1135,8 +1213,8 @@ mod embedded_xslt {
         // Serve any URL whose basename is one of our embedded engine files —
         // `embed:///X`, a user stylesheet's `urn:x-LaTeXML:XSLT:X`, and the
         // relative child imports libxml2 composes from it (`urn:X` on Linux, a
-        // bare `X` on macOS). A non-engine basename, or a file on disk (#806), resolves
-        // to None, so the callback declines it and libxml2 loads it from disk (#292).
+        // bare `X` on macOS). A non-engine basename, or a user-named file on disk (#806),
+        // resolves to None, so the callback declines it and libxml2 loads it from disk (#292).
         |url| resolve(url).is_some(),
         |url| resolve(url).map(|s| s.to_vec()),
       );
@@ -1236,16 +1314,25 @@ mod embedded_resources {
 // ======================================================================
 // File search helpers
 
+/// The stylesheet a name resolves to: an `embed:///` name (the default for a format) is served from
+/// the binary; a file the user named, found as given or under a search path, is made absolute, the
+/// form [`embedded_xslt::resolve`] reads from disk with its imports (#806).
 fn find_stylesheet(stylesheet: &str, searchpaths: &[String]) -> Result<String, PostError> {
-  // 1. Check if the stylesheet exists as an absolute/relative path
-  if Path::new(stylesheet).is_file() {
+  if let Some(name) = stylesheet.strip_prefix(embedded_xslt::URL_PREFIX)
+    && embedded_xslt::lookup(name).is_some()
+  {
+    embedded_xslt::install_callback_once();
     return Ok(stylesheet.to_string());
   }
-  // 2. Check each search path
-  for sp in searchpaths {
-    let p = format!("{}/{}", sp, stylesheet);
-    if Path::new(&p).is_file() {
-      return Ok(p);
+  if let Some(path) = embedded_xslt::disk_path(stylesheet) {
+    return Ok(path.to_string_lossy().into_owned());
+  }
+  let candidates = std::iter::once(PathBuf::from(stylesheet))
+    .chain(searchpaths.iter().map(|sp| Path::new(sp).join(stylesheet)));
+  for candidate in candidates {
+    if candidate.is_file() {
+      let path = std::path::absolute(&candidate).unwrap_or(candidate);
+      return Ok(path.to_string_lossy().into_owned());
     }
   }
   // 3. Fallback: serve from the embedded table via the libxml2 input callback. We return an

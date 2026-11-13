@@ -116,17 +116,19 @@ pub(crate) fn collect_sources(uri: &str) -> Vec<String> {
 /// presentation MathML on and rewrites the source-map `data:sourcepos`
 /// (foreign-namespaced, colon) attributes into the HTML `data-sourcepos`
 /// (dash) the client decodes. Without this the server returned raw core XML.
-pub(crate) fn post_process_html(core_xml: &str, uri: &str) -> String {
+/// The outcome carries post's own log and status: a post Fatal (#782) leaves no HTML, and the
+/// caller folds its `Fatal:post:convert` into the diagnostics instead of a blank preview.
+pub(crate) fn post_process_html(core_xml: &str, uri: &str) -> crate::post::PostOutcome {
   let file_path = get_file_path(uri);
   let source_dir = std::path::Path::new(&file_path)
     .parent()
     .and_then(|p| p.to_str())
     .map(String::from);
-  crate::post::run_post_processing(core_xml, &crate::post::PostOptions {
+  crate::post::run_post_processing_logged(core_xml, &crate::post::PostOptions {
     pmml:                      true,
     cmml:                      false,
     keep_xmath:                false,
-    stylesheet:                Some("resources/XSLT/LaTeXML-html5.xsl"),
+    stylesheet:                crate::post::default_stylesheet(Some("html5")),
     destination:               None,
     source_directory:          source_dir.as_deref(),
     site_directory:            None,

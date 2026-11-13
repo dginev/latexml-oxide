@@ -113,9 +113,9 @@ pub struct PostOptions<'a> {
   pub whatsout:                  latexml_post::extract::Whatsout,
 }
 
-/// The built-in XSLT stylesheet for an output format (logical embedded-resource
-/// name; Perl `Config.pm` L543-551). Returns `None` for a format with no
-/// default (e.g. `xml`), so a caller keeps `--stylesheet` / no post.
+/// The built-in XSLT stylesheet for an output format (Perl `Config.pm` L543-551), as the
+/// `embed:///` name served from the binary, never a copy on disk (#806). Returns `None` for a
+/// format with no default (e.g. `xml`), so a caller keeps `--stylesheet` / no post.
 ///
 /// SINGLE SOURCE OF TRUTH shared by the CLI (`bin/latexml_oxide.rs` picks
 /// `effective_stylesheet` when `--stylesheet` is unset) and the library
@@ -123,9 +123,9 @@ pub struct PostOptions<'a> {
 /// sheet an `html5`/`xhtml`/`epub` job gets.
 pub fn default_stylesheet(format: Option<&str>) -> Option<&'static str> {
   match format {
-    Some("html5") => Some("resources/XSLT/LaTeXML-html5.xsl"),
-    Some("html") | Some("xhtml") => Some("resources/XSLT/LaTeXML-all-xhtml.xsl"),
-    Some("epub") | Some("epub3") => Some("resources/XSLT/LaTeXML-epub3.xsl"),
+    Some("html5") => Some("embed:///LaTeXML-html5.xsl"),
+    Some("html") | Some("xhtml") => Some("embed:///LaTeXML-all-xhtml.xsl"),
+    Some("epub") | Some("epub3") => Some("embed:///LaTeXML-epub3.xsl"),
     _ => None,
   }
 }
@@ -1231,6 +1231,10 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
         )
       );
       drop(page_spill);
+      // A worker's Fatal leaves no output, as the serial render's does (#782).
+      if latexml_core::common::error::get_status_code() >= 3 {
+        return String::new();
+      }
       return result.main_output.unwrap_or_else(fallback);
     }
     // Setup failed BEFORE any worker spawned (already reported): fall through
@@ -1254,6 +1258,7 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
   let mut main_output: Option<String> = None;
   let t_pages = audit_start("render_pages");
   let mut pages_rendered = 0usize;
+  let mut written: Vec<String> = Vec::new();
   for SpilledPage {
     path,
     destination: dest,
@@ -1329,7 +1334,10 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
     }
     let outputs = match render_spilled_page(&path, &mut procs, &ctx, dest, dest_dir) {
       Ok(o) => o,
-      Err(PageFailure::Fatal) => return String::new(),
+      Err(PageFailure::Fatal) => {
+        remove_pages(&written);
+        return String::new();
+      },
       Err(PageFailure::Error) => return fallback(),
     };
     for (dest, output) in outputs {
@@ -1343,6 +1351,7 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
         if let Err(e) = std::fs::write(path, &output) {
           post_error("write", &format!("failed to write page {path}: {e}"));
         }
+        written.push(path.to_string());
       }
       if main_output.is_none() {
         main_output = Some(output);
@@ -1481,6 +1490,14 @@ pub(crate) fn render_spilled_page(
     // `doc` drops here — the whole point.
   }
   Ok(outputs)
+}
+
+/// Remove the pages a render wrote before a Fatal: Perl runs each processor over every page
+/// before its writer, so a die in ProcessChain leaves none (LaTeXML.pm L605-614, #782).
+pub(crate) fn remove_pages<S: AsRef<str>>(pages: &[S]) {
+  for page in pages {
+    let _ = std::fs::remove_file(page.as_ref());
+  }
 }
 
 /// Why a page did not render (already reported). `Fatal`: a MathML/XSLT step failed, which stops

@@ -193,10 +193,12 @@ fn strip_ansi(s: &str) -> String {
 /// A worker's stderr, parsed: the trailing `Status:` lines are consumed into
 /// structured fields and everything else is the log text to forward + fold.
 struct ChildReport {
-  log:    String,
-  counts: Option<ReportCounts>,
-  status: Option<usize>,
-  pages:  usize,
+  log:     String,
+  counts:  Option<ReportCounts>,
+  status:  Option<usize>,
+  pages:   usize,
+  /// `Status:discard:1`: a MathML/XSLT step died, so no page of the run is kept (#782).
+  discard: bool,
 }
 
 fn parse_child_report(stderr_text: &str) -> ChildReport {
@@ -204,6 +206,7 @@ fn parse_child_report(stderr_text: &str) -> ChildReport {
   let mut counts = None;
   let mut status = None;
   let mut pages = 0usize;
+  let mut discard = false;
   for line in stderr_text.lines() {
     if let Some(rest) = line.strip_prefix("Status:counts:") {
       let mut it = rest.split(',').map(|v| v.trim().parse::<usize>().ok());
@@ -227,12 +230,20 @@ fn parse_child_report(stderr_text: &str) -> ChildReport {
       status = rest.trim().parse::<usize>().ok();
     } else if let Some(rest) = line.strip_prefix("Status:pages:") {
       pages = rest.trim().parse::<usize>().unwrap_or(0);
+    } else if let Some(rest) = line.strip_prefix("Status:discard:") {
+      discard = rest.trim() == "1";
     } else {
       log.push_str(line);
       log.push('\n');
     }
   }
-  ChildReport { log, counts, status, pages }
+  ChildReport {
+    log,
+    counts,
+    status,
+    pages,
+    discard,
+  }
 }
 
 /// One spawned (or spawn-failed) worker awaiting its fold.
@@ -437,6 +448,7 @@ pub(crate) fn parallel_render(
   // worker fold): forward each child's stderr, replay its log + counts into
   // the parent LOG_BUFFER/REPORT, and flag anything that did not report.
   let mut pages_rendered = 0usize;
+  let mut discard = false;
   for (i, p) in pending.into_iter().enumerate() {
     match p {
       Pending::Failed(e) => {
@@ -474,6 +486,7 @@ pub(crate) fn parallel_render(
             counts: report.counts.unwrap_or_default(),
           });
           pages_rendered += report.pages;
+          discard |= report.discard;
           match report.status {
             None => {
               // No status line = the child died before its final report (or
@@ -505,6 +518,18 @@ pub(crate) fn parallel_render(
   // `main_output`; here that page is already on disk (written by worker 0),
   // so read it back. A missing/unreadable file leaves `None` and the caller's
   // fallback applies — the diagnostics above already flagged the failure.
+  if discard {
+    let all: Vec<&String> = pages
+      .iter()
+      .filter_map(|p| p.destination.as_ref())
+      .collect();
+    crate::post::remove_pages(&all);
+    cleanup_handoff(&dbfile, &manifest_paths);
+    return Some(ParallelResult {
+      main_output:    None,
+      pages_rendered: 0,
+    });
+  }
   let main_output = first_destination.and_then(|d| std::fs::read_to_string(&d).ok());
   cleanup_handoff(&dbfile, &manifest_paths);
   Some(ParallelResult { main_output, pages_rendered })
@@ -514,10 +539,13 @@ pub(crate) fn parallel_render(
 /// stderr): `Status:pages:`, then `Status:counts:`, then `Status:conversion:`
 /// — the parent parses them positionally-independently by prefix. Returns the
 /// process exit code (0 below fatal, 1 at fatal).
-fn print_status_report(pages: usize) -> i32 {
+fn print_status_report(pages: usize, discard: bool) -> i32 {
   let c = snapshot_report_counts();
   let status = get_status_code();
   eprintln!("Status:pages:{pages}");
+  if discard {
+    eprintln!("Status:discard:1");
+  }
   eprintln!(
     "Status:counts:{},{},{},{},{}",
     c.debug,
@@ -548,7 +576,7 @@ pub fn worker_main(manifest_path: &str) -> i32 {
         "render_worker",
         &format!("cannot read the render manifest {manifest_path}: {e}"),
       );
-      return print_status_report(0);
+      return print_status_report(0, false);
     },
   };
   // Mirror `api.rs::on_worker`: a 256 MiB-stack thread for deeply nested
@@ -557,8 +585,8 @@ pub fn worker_main(manifest_path: &str) -> i32 {
   std::thread::Builder::new()
     .stack_size(256 * 1024 * 1024)
     .spawn(move || {
-      let pages = render_manifest_pages(manifest);
-      let code = print_status_report(pages);
+      let (pages, discard) = render_manifest_pages(manifest);
+      let code = print_status_report(pages, discard);
       latexml_core::reset_thread_engine();
       code
     })
@@ -572,7 +600,7 @@ pub fn worker_main(manifest_path: &str) -> i32 {
 /// primary/secondary parallel model, same XSLT wiring, same error paths) —
 /// then render every page in the manifest's range through the shared
 /// [`crate::post::render_spilled_page`]. Returns the number of pages written.
-fn render_manifest_pages(m: RenderManifest) -> usize {
+fn render_manifest_pages(m: RenderManifest) -> (usize, bool) {
   use latexml_post::{
     crossref::{CrossRef, UrlStyle},
     processor::Processor,
@@ -588,7 +616,7 @@ fn render_manifest_pages(m: RenderManifest) -> usize {
         "render_worker",
         &format!("cannot attach the render db {}: {e}", m.dbfile.display()),
       );
-      return 0;
+      return (0, false);
     },
   };
   let url_style = UrlStyle::from_cli(&m.url_style).unwrap_or(UrlStyle::File);
@@ -702,10 +730,12 @@ fn render_manifest_pages(m: RenderManifest) -> usize {
       // Already reported inside the pipeline; mirror the serial driver's
       // abort-on-page-failure (the parent flags the shortfall through the
       // folded error + the fatal-bearing status this worker will report).
-      Err(_) => break,
+      Err(crate::post::PageFailure::Error) => break,
+      // The parent removes every page of the run (#782).
+      Err(crate::post::PageFailure::Fatal) => return (pages_written, true),
     }
   }
-  pages_written
+  (pages_written, false)
 }
 
 #[cfg(test)]

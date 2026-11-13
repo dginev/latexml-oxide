@@ -753,6 +753,7 @@ impl PostDocument {
     // axis (see `findnodes_at`) — a `.//processing-instruction(...)` here matched
     // nothing and split children lost the `<?latexml …?>` PIs (#341). Made afresh, not
     // `import_node`d: that refuses a linked node, so every page lost them again (#795).
+    // Before the root, as on the main page; Perl appends them after it (`appendChild`).
     if let Some(mut root) = subdoc.document.get_root_element() {
       for pi in self.findnodes("//processing-instruction('latexml')") {
         if let Ok(mut copy) = subdoc

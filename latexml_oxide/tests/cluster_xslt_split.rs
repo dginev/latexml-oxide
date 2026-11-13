@@ -372,6 +372,39 @@ mod xslt_custom_stylesheet {
       "#292: the custom head-resources override was not applied:\n{html}"
     );
   }
+
+  /// #806: with no `--stylesheet`, the default is the embedded sheet, whatever engine-named
+  /// copies sit in the working (and source) directory — probe revW1 p806.
+  #[test]
+  fn stray_engine_sheets_do_not_replace_the_default() {
+    let work = tempfile::tempdir().expect("tempdir");
+    let marker = |m: &str| {
+      format!(
+        "<xsl:stylesheet version=\"1.0\" xmlns:xsl=\"http://www.w3.org/1999/XSL/Transform\">\
+         <xsl:template match=\"/\"><out>{m}</out></xsl:template></xsl:stylesheet>"
+      )
+    };
+    std::fs::create_dir_all(work.path().join("resources/XSLT")).unwrap();
+    for (path, m) in [
+      ("resources/XSLT/LaTeXML-html5.xsl", "STRAY-HTML5"),
+      ("LaTeXML-html5.xsl", "STRAY-BARE-HTML5"),
+      ("LaTeXML-all-xhtml.xsl", "STRAY-ALL-XHTML"),
+    ] {
+      std::fs::write(work.path().join(path), marker(m)).unwrap();
+    }
+    std::fs::write(
+      work.path().join("B.tex"),
+      "\\documentclass{article}\n\\begin{document}\nHello stray world.\n\\end{document}\n",
+    )
+    .unwrap();
+    let out = run(work.path(), &["B.tex", "--dest", "B.html"]);
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(out.status.success(), "{stderr}");
+    let html = std::fs::read_to_string(work.path().join("B.html")).expect("read B.html");
+    assert!(!html.contains("STRAY"), "{html}");
+    assert!(html.contains("<article class=\"ltx_document\">"), "{html}");
+    assert!(html.contains("Hello stray world."), "{html}");
+  }
 }
 
 mod xslt_failure_is_fatal {
@@ -465,6 +498,90 @@ mod xslt_failure_is_fatal {
       assert_eq!(out.log.matches("Error:").count(), 0, "{xsl}: {}", out.log);
     }
     latexml_core::common::error::initialize_report();
+  }
+
+  /// A sheet that dies only on the page carrying the paragraph `BOOM`.
+  fn boom(dir: &Path) -> String {
+    stylesheet(
+      dir,
+      "boom.xsl",
+      "<xsl:template match=\"/\"><xsl:if test=\"//*[local-name()='p' and .='BOOM']\">\
+       <xsl:message terminate=\"yes\">STOP</xsl:message></xsl:if><out/></xsl:template>",
+    )
+  }
+
+  fn html_files(dir: &Path) -> Vec<String> {
+    let mut found: Vec<String> = std::fs::read_dir(dir)
+      .unwrap()
+      .filter_map(|e| e.ok()?.file_name().into_string().ok())
+      .filter(|n| n.ends_with(".html"))
+      .collect();
+    found.sort();
+    found
+  }
+
+  /// `--split`: the pages rendered before the failing one are removed, as Perl writes none.
+  #[test]
+  fn a_split_render_that_dies_keeps_no_page() {
+    let _ = latexml_core::util::logger::init(log::LevelFilter::Warn);
+    let dir = tempfile::tempdir().expect("tempdir");
+    let xsl = boom(dir.path());
+    let dest = dir.path().join("index.html").to_string_lossy().into_owned();
+    let xml = "<?xml version=\"1.0\"?><document xmlns=\"http://dlmf.nist.gov/LaTeXML\">\
+               <section xml:id=\"S1\"><title>One</title><para><p>fine</p></para></section>\
+               <section xml:id=\"S2\"><title>Two</title><para><p>BOOM</p></para></section>\
+               </document>";
+    latexml_core::common::error::initialize_report();
+    let out = latexml::post::run_post_processing_logged(xml, &latexml::post::PostOptions {
+      destination: Some(&dest),
+      split: true,
+      split_xpath: Some("//ltx:section".to_string()),
+      ..post_options(&xsl)
+    });
+    latexml_core::common::error::initialize_report();
+    assert_eq!(out.status_code, 3, "{}", out.log);
+    assert_eq!(out.html, "");
+    assert_eq!(
+      out.log.matches("Fatal:post:convert").count(),
+      1,
+      "{}",
+      out.log
+    );
+    assert_eq!(html_files(dir.path()), Vec::<String>::new(), "{}", out.log);
+  }
+
+  /// The parallel page render (`LATEXML_RENDER_JOBS`, 64+ pages): a worker's Fatal removes every
+  /// page the other workers wrote, and the CLI exits 1.
+  #[test]
+  fn a_parallel_split_render_that_dies_keeps_no_page() {
+    let dir = tempfile::tempdir().expect("tempdir");
+    let xsl = boom(dir.path());
+    let mut tex = String::from("\\documentclass{article}\n\\begin{document}\n");
+    for i in 1..=70 {
+      let body = if i == 60 { "BOOM" } else { "fine" };
+      tex.push_str(&format!("\\section{{S{i}}}\n{body}\n\n"));
+    }
+    tex.push_str("\\end{document}\n");
+    std::fs::write(dir.path().join("a.tex"), tex).unwrap();
+    let out = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
+      .args([
+        &format!("--stylesheet={xsl}"),
+        "--splitat=section",
+        "--dest=a.html",
+        "a.tex",
+      ])
+      .env("LATEXML_RENDER_JOBS", "2")
+      .current_dir(dir.path())
+      .output()
+      .expect("spawn latexml_oxide");
+    let stderr = String::from_utf8_lossy(&out.stderr);
+    assert!(
+      stderr.contains("parallel page render engaged: 2 worker(s)"),
+      "{stderr}"
+    );
+    assert_eq!(out.status.code(), Some(1), "{stderr}");
+    assert_eq!(stderr.matches("Fatal:post:convert").count(), 1, "{stderr}");
+    assert_eq!(html_files(dir.path()), Vec::<String>::new(), "{stderr}");
   }
 
   /// The CLI exits 1 and writes no `.html`.
