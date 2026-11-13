@@ -357,7 +357,7 @@ byte-identical on all five at every step.
 
 | Lever | 1710.09320 | 1901.01540 | 2103.04797 | 2005.08745 | 1507.02068 |
 |---|---|---|---|---|---|
-| L1 an API call's character-only content rehearsed once per reading (`rehearsal.rs` `rehearse_call`) | −4.36 % | −3.58 % | 0.00 % | +0.02 % | 0.00 % |
+| L1 an API call's character-only content rehearsed once per reading (`rehearsal.rs` `rehearse_call`; L2 widens the rule, today's) | −4.36 % | −3.58 % | 0.00 % | +0.02 % | 0.00 % |
 | L2 any content whose first run left nothing behind (no diagnostic, conditional, footnote step, definition, environment, queued entry, open group) | −1.15 % | −1.30 % | −6.41 % | +0.03 % | −0.01 % |
 | L3 the title-page check's queued records indexed by content (length and hash), not length (`title_page_check.rs` `content_keys`) | +0.01 % | −0.44 % | −0.70 % | −0.11 % | 0.00 % |
 | **cumulative** (int169b → AAS1, G) | 10.986 → 10.390 | 13.555 → 12.842 | 7.694 → 7.153 | 12.429 → 12.422 | 5.492 → 5.493 |
