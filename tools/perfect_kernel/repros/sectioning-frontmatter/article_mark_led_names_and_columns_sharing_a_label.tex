@@ -1,0 +1,17 @@
+% mechanism: `$^1$Ann Able \and $^1$Bob Baker \and $^2$Cat Cole \\ $^1$Inst A \quad $^2$Inst B`: a column's first line is its
+%   author's name, never a setter, so Bob Baker is no affiliation of Ann Able
+% witness: synthetic
+% oracle:  pdflatex (-no-shell-escape, TL 2025) 0 errors: "1 1 2 / Ann Able Bob Baker Cat Cole / 1 Inst A 2 Inst B"
+% engines: int169a (54ccc986ef): Ann Able with "Bob Baker" and Inst A as affiliations; a nameless creator holding "Cat
+%   Cole" and Inst B
+% expect:  0 errors, 0 warnings; Ann Able: Inst A; Bob Baker: Inst A; Cat Cole: Inst B
+% status:  RED (int169a (54ccc986ef)) -> GREEN (MLN1)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{$^1$Ann Able \and $^1$Bob Baker \and $^2$Cat Cole\\
+$^1$Inst A \quad $^2$Inst B}
+\maketitle
+Text.
+\end{document}

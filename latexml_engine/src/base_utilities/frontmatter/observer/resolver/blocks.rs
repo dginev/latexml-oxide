@@ -215,21 +215,10 @@ impl Resolver {
       .iter()
       .flat_map(|line| addresses_in(&events_text(&line.events)))
       .collect();
-    // the labels the block's later mark-led lines answer (for the prefix convention)
-    let answered_below: Vec<String> = lines
-      .iter()
-      .skip(1)
-      .filter(|line| {
-        line
-          .events
-          .iter()
-          .find(|e| {
-            inked(e) && !(e.kind == EventKind::Name && !e.text.chars().any(char::is_alphanumeric))
-          })
-          .is_some_and(|e| e.kind == EventKind::Mark)
-      })
-      .flat_map(|line| entries_of(&line.events).into_iter().flat_map(|e| e.labels))
-      .collect();
+    // (the lines whose leading marks are their names' requests, read as a names line, their notes the names' (revtex's
+    // `\author{$^{1}$Masashi Kimura and $^{2,3}$Takahiro Tanaka}`, 1805.08625; 1405.2400, 2001.00788; `$^{1}$José Edgar
+    // Madriz Aguilar\thanks{…}`, 0710.4115, gr-qc0606119), not labelled affiliations (`names_led_by_marks`)
+    let (led_names, name_shaped) = names_led_by_marks(&lines, &self.outside_labels);
     // per column: the creators of its last names row
     let mut row_above: Vec<(usize, Vec<usize>)> = Vec::new();
     // per column: the creators of its run of names rows, each directly under the one before with no line answering it
@@ -299,13 +288,7 @@ impl Resolver {
         answered_rows.push(line.column);
       }
       // (punctuation before a mark does not lead the line: `($^1$) LSIIT …`, 1004.4809)
-      let first_ink = line
-        .events
-        .iter()
-        .find(|e| {
-          inked(e) && !(e.kind == EventKind::Name && !e.text.chars().any(char::is_alphanumeric))
-        })
-        .copied();
+      let first_ink = line_first_ink(&line.events);
       let column_first = !first_in_column.contains(&line.column);
       if column_first {
         first_in_column.push(line.column);
@@ -397,52 +380,8 @@ impl Resolver {
         continue;
       }
       match first_ink.map(|e| &e.kind) {
-        Some(EventKind::Mark) => {
+        Some(EventKind::Mark) if !led_names[n] => {
           let entries = entries_of(&line.events);
-          // (or the block is that one line, its affiliations the calls after it: revtex's `\author{$^{1}$Masashi Kimura
-          // and $^{2,3}$Takahiro Tanaka}`, 1805.08625; 1405.2400, 2001.00788, 0710.4115, gr-qc0606119 — its names lost)
-          let prefix = n == 0
-            && !entries.is_empty()
-            && entries.iter().all(|e| {
-              reads_as_names(&events_text(&e.events))
-                && (lines.len() == 1 || e.labels.iter().any(|l| answered_below.contains(l)))
-            });
-          if prefix {
-            let mut row = Vec::new();
-            for entry in entries {
-              let start = row.len();
-              for name in names_of(&entry.events) {
-                let c = self.new_creator(
-                  name,
-                  "line:names mark:prefix",
-                  index,
-                  [entry.labels.clone(), block_requests.clone()].concat(),
-                  group,
-                );
-                row.push(c);
-              }
-              // (the entry's notes and contacts are its name's, as a names line attaches them to the name before:
-              // `$^{1}$José Edgar Madriz Aguilar\thanks{E-mail address: …}`, 0710.4115, gr-qc0606119 — the notes were
-              // lost)
-              let owner = row[start..].last().copied();
-              for event in &entry.events {
-                match event.kind {
-                  EventKind::Note => self.note(index, event, owner, "note:adjacent"),
-                  EventKind::Contact => self.contact_event(
-                    index,
-                    event,
-                    &owner.into_iter().collect::<Vec<_>>(),
-                    "owner:adjacent",
-                  ),
-                  _ => {},
-                }
-              }
-            }
-            answered_rows.retain(|c| *c != line.column);
-            run_above.push((line.column, row.clone()));
-            row_above.push((line.column, row));
-            continue;
-          }
           labelled_last.push((line.column, entries.len()));
           continues = self.labelled_entries(index, entries, "");
         },
@@ -514,9 +453,10 @@ impl Resolver {
           // before's e-mail; an undefined command never changes the segmentation, `Event::glued_undef`)
           let address_line =
             prints_only_addresses(&text) && !line.events.iter().any(|e| e.glued_undef);
-          let names_line = !only_contacts
-            && !address_line
-            && ((column_first && !shared_column)
+          let names_line = led_names[n]
+            || !only_contacts
+              && !address_line
+              && ((column_first && !shared_column)
               // (every line of a class whose `\\` parts names, `Policy::break_parts_names`: webofc's)
               || policy.break_parts_names
               || later_line_is_names(
@@ -573,7 +513,14 @@ impl Resolver {
             {
               open_rows.push(line.column);
             }
+            self.marks_lead = led_names[n];
             let made = self.names_line(index, policy, cautious, line, &block_requests, group);
+            self.marks_lead = false;
+            if led_names[n] {
+              for &c in &made.creators {
+                self.out.creators[c].rule.push_str(" mark:prefix");
+              }
+            }
             // (a later column's first name is parted from the name before by the `\and` (or `&`) that opened the
             // column: `Chris Kapulkin \arxivortac{\and}{and} Peter LeFanu Lumsdaine`, 2006.13694)
             if line.column > 0
@@ -1025,6 +972,13 @@ impl Resolver {
         },
         None => {},
       }
+    }
+    // (a block making no name whose mark-led lines read as names: they are an unnamed creator's affiliations, counted)
+    let unread = (0..lines.len())
+      .filter(|&n| name_shaped[n] && !led_names[n])
+      .count();
+    if unread > 0 && self.out.creators.len() == block_creators_start {
+      warn_mark_led_names_unread(index, unread);
     }
     for (contact, above) in block_links {
       let names = block_creators_start..self.out.creators.len();
@@ -1668,4 +1622,25 @@ fn address_section(markers: &[u16], events: &[Event]) -> Option<usize> {
     let section: Vec<&Event> = events[from..to.max(from)].iter().collect();
     events_text(&section).contains('@').then_some(from)
   })
+}
+
+/// The State mapping of the blocks [`warn_mark_led_names_unread`] counted: once each, whatever flush reads it again.
+const COUNTED_BLOCKS: &str = "lx_fm_mark_led_names_counted";
+
+/// Count a block whose lines its marks lead read as names but as no names row (`names_led_by_marks`): the names its
+/// lines print are affiliations of an unnamed creator.
+fn warn_mark_led_names_unread(index: usize, lines: usize) {
+  let once = s!("{index}");
+  if lookup_mapping(COUNTED_BLOCKS, &once).is_some() {
+    return;
+  }
+  assign_mapping(COUNTED_BLOCKS, &once, Some(Stored::Bool(true)));
+  Warn!(
+    "unexpected",
+    "frontmatter",
+    s!(
+      "The frontmatter reading makes no name of an author block whose {lines} line(s) led by marks read as names: they \
+       are read as labelled affiliations"
+    )
+  );
 }

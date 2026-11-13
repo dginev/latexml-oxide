@@ -1,0 +1,17 @@
+% mechanism: names led by their marks, each its own `\and` column, no affiliation anywhere (`$^{1}$Ann Able \and $^{2}$Bob
+%   Baker`): no line sets a label, so the whole block is its names (`names_led_by_marks`)
+% witness: synthetic (the study MLN v4; the kernel shape of 2507.23021, 2605.06126)
+% oracle:  pdflatex (-no-shell-escape, TL 2025) 0 errors: "1 2 / Ann Able Bob Baker" (each mark above its name)
+% engines: int169a (54ccc986ef): one nameless creator, affiliations "Ann Able", "Bob Baker", 0 warnings (silent); Perl: no
+%   creator, 2 warnings
+% expect:  0 errors, 1 warning (the safety net: marks no contact answers, their text kept in the names "Ann Able 1", "Bob
+%   Baker 2" — the post-merge mark-text batch); two creators
+% status:  RED (int169a (54ccc986ef)) -> GREEN (MLN1)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{$^{1}$Ann Able \and $^{2}$Bob Baker}
+\maketitle
+Text.
+\end{document}

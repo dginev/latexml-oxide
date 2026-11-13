@@ -1,0 +1,16 @@
+% mechanism: a mark-led name carrying a `\thanks` (a note body inside the names line): the note stays its name's
+% witness: synthetic (0710.4115, gr-qc0606119's notes on prefix-marked names)
+% oracle:  pdflatex (-no-shell-escape, TL 2025) 0 errors: "1 Ann Able* 2 / Bob Baker / 1 Inst A 2 Inst B", the note "Funded
+%   by X."
+% engines: int169a (54ccc986ef): Bob Baker an affiliation of a nameless creator
+% expect:  0 errors, 0 warnings; Ann Able: the note, Inst A; Bob Baker: Inst B
+% status:  RED (int169a (54ccc986ef)) -> GREEN (MLN1)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{$^1$Ann Able\thanks{Funded by X.} \and $^2$Bob Baker\\
+$^1$Inst A \quad $^2$Inst B}
+\maketitle
+Text.
+\end{document}

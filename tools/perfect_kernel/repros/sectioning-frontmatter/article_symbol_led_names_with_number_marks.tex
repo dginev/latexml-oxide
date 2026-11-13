@@ -1,0 +1,19 @@
+% mechanism: names led by a symbol and followed by their numbers (`$^{\dagger}$Ann Able$^{1}$ \quad …`), a legend line
+%   `$^\dagger$Equal contribution` under the affiliations: the trailing numbers request, the leading symbol the
+%   legend
+% witness: 2505.14984
+% oracle:  pdflatex (-no-shell-escape, TL 2025) 0 errors: "† † / Ann Able1 Bob Baker2 Cat Cole2 / 1 Inst A 2 Inst B / †
+%   Equal contribution"
+% engines: int169a (54ccc986ef): one nameless creator holding the names, the institutes and the legend
+% expect:  0 errors, 0 warnings; Ann Able: Inst A, the legend; Bob Baker: Inst B, the legend; Cat Cole: Inst B
+% status:  RED (int169a (54ccc986ef)) -> GREEN (MLN1)
+% preload: ar5iv.sty
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{$^{\dagger}$Ann Able$^{1}$ \quad $^{\dagger}$Bob Baker$^{2}$ \quad Cat Cole$^{2}$\\
+$^1$Inst A $^2$Inst B\\
+$^\dagger$Equal contribution}
+\maketitle
+Text.
+\end{document}

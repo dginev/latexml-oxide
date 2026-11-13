@@ -1,0 +1,19 @@
+% mechanism: PoS keeps the first name's leading mark in its personname (`$^{(a)}$Ann Able and $^{(b)}$Bob Baker`): "(a) Ann
+%   Able", the second name's mark dropped — a mark's text kept in a name, the MLN study's second mechanism
+% witness: synthetic (2205.03535's class)
+% oracle:  pdflatex (-no-shell-escape, TL 2025) (2205.03535's PoS.cls; 3 `!` from that old class, none in the author block)
+%   "(a) Ann Able and (b) Bob Baker"
+% engines: int169a (54ccc986ef) and MLN1: "(a) Ann Able", "Bob Baker", 1 warning (the safety net)
+% expect:  0 errors; "Ann Able" and "Bob Baker", each showing its mark as a mark, not as text of the name
+% status:  RED (int169a (54ccc986ef), MLN1): catalog only, no guard
+% moves:   post-merge (the mark-text batch the MLN study proposes)
+% preload: ar5iv.sty
+\documentclass{PoS}
+\title{T}
+\ShortTitle{T}
+\author{$^{(a)}$Ann Able and $^{(b)}$Bob Baker}
+\abstract{An abstract.}
+\FullConference{A Conference}
+\begin{document}
+Text.
+\end{document}

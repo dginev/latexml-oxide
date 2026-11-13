@@ -1,0 +1,22 @@
+% mechanism: PoS's `\author{$^{(a)(b)}$ Ann Able, $^{(a)}$Bob Baker and $^{(c)}$Cat Cole \\ $^{(a)}$ Inst A \\ …}`: the names
+%   row over its address lines
+% witness: 2205.03535
+% oracle:  pdflatex (-no-shell-escape, TL 2025) (2205.03535's PoS.cls; 3 `!` from that old class, `\@pdfcolorstack` and
+%   PoSlogo, none in the author block) "(a)(b) Ann Able, (a) Bob Baker and (c) Cat Cole", "(a) Inst A", "(b) Inst
+%   B", "(c) Inst C"
+% engines: int169a (54ccc986ef): one nameless creator holding the names and institutes, 0 warnings
+% expect:  0 errors, 0 warnings; Ann Able: Inst A, Inst B; Bob Baker: Inst A; Cat Cole: Inst C (the first name keeps its
+%   mark "(a)(b)", as PoS does today on a lone line: pos_leading_mark_kept_in_the_first_name_red)
+% status:  RED (int169a (54ccc986ef)) -> GREEN (MLN1)
+% preload: ar5iv.sty
+\documentclass{PoS}
+\title{T}
+\ShortTitle{T}
+\author{$^{(a)(b)}$ Ann Able, $^{(a)}$Bob Baker and $^{(c)}$Cat Cole \\
+$^{(a)}$ Inst A \\ $^{(b)}$ Inst B \\
+$^{(c)}$ Inst C}
+\abstract{An abstract.}
+\FullConference{A Conference}
+\begin{document}
+Text.
+\end{document}
