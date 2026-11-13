@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+  - **`page=` on an SVG, PNG or JPEG no longer re-encodes it** (#791). A single-page
+    format has no page to select (pdfTeX ignores `page=` on a PNG), so
+    `\includegraphics[page=1]{fig.svg}` now copies `fig.svg` as it is, with its
+    `width`/`height`, exactly as without `page=`. Before, it went through ImageMagick
+    into a rewritten `x1.svg` without its size attributes. Guard
+    `graphics::tests::a_single_page_source_ignores_page`.
+
   - **A Rhai `Fatal()` is logged once** (#792). The script's caller now returns the
     Fatal the binding raised instead of wrapping it in a second `Fatal:Document:Generic`
     line; this holds at a binding's top level, in a binding another binding loads, and
