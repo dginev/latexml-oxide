@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+  - **Split pages keep the document's processing instructions** (#795). With `--split`,
+    only the main page carried the `<?latexml …?>` PIs; the other pages lost them, so a
+    custom stylesheet reading them saw nothing there. Each page now gets a copy before its
+    root, as Perl's `newDocument` does (the streaming split already did). Guard
+    `document::tests::split_pages_carry_the_document_pis`.
+
   - **An option given twice keeps its last value** (#530). `--urlstyle=file
     --urlstyle=server` (and any other single-valued option or flag repeated) stopped
     with "cannot be used multiple times"; the last one now wins, as with Perl's
