@@ -178,8 +178,14 @@ the merge (below). Basis per bar, latest first:
   error, 3 new fatals. One new Fatal cluster — `\c@author`, biblatex's name-list counters (2606.16762, 2606.26281) —
   fixed by CAU1 (`4af92450cd`); the error regressions (DG 2026-11-13 "Fix all 12 now") by SBX1, SBX2, GRP1 in int171a,
   every witness 0 E. The reruns on the pushed final head (CORTEX2, DG 2026-11-13: "ideally they do not have obvious
-  degradation by the time we merge to main"): {{FINAL: CORTEX2 — 2605/2606 rerun on the pushed head vs 373/374 and
-  368/369: runs N/N, error →, fatal →, no new Fatal cluster, every worse classified}}.
+  degradation by the time we merge to main"): runs 375 (2605) / 376 (2606) on `2a1fa68d95`
+  (2026-11-13, the fleet rebuilt, dumps from the distro TL): 2605 error 893 → 875, fatal 8 → 9; 2606 error 881 → 863,
+  fatal 19 → 15 (against October's 368/369: 923 → 875, 16 → 9; 897 → 863, 22 → 15). Against 373/374, 42 papers better
+  and two worse, both noise: 2605.17422 Fatal:oom at the worker's address-space limit (4.04 GB RSS on int170a and the
+  final tree alike), 2606.10946 Fatal:timeout under fleet load (48 s alone, `instructions:u` equal). Against October,
+  24 papers newly in Error (CX171): 20 the widened author check on unchanged or better output (18 acmart one-block
+  author lists, citations now acmart's numeric `[n]`), 2 TeX-correct (2605.10816, 2606.20173), 2 DTLX false overflow
+  Errors (2606.14412, 2605.31088; post-merge). No new Fatal cluster; no obvious degradation.
 - **Frontmatter bars (per bundle, DG 2026-11-12):** every printed word kept or counted by a Warning, no paper worse on
   any A/B, stage2's creator changes classified at every bundle (int163a 115, 5 keep-better; since int166a 0-2, each
   keep-better or better; int171a 0). The 98/98 claim (truth set, holdout v4) is post-merge: TRUTH, HOLD4.
@@ -189,10 +195,13 @@ the merge (below). Basis per bar, latest first:
   ±0.33 % (1507.02068 −0.164, 1710.09320 +0.058, 1901.01540 −0.000, 2005.08745 −0.106, 2103.04797 −0.003, b5_fill1000
   −0.327, hello +0.002 %).
 - **L1 on the final tree:** `gates_pk.sh` int171b on `ad465256df`: nextest 8103/8103 (4 skipped, the `#[ignore]` RED
-  rows), cortex 10/10, clippy 0, rustdoc 0, dump inits plain 0 / latex 0, dump diff vs int170a 0; the merge PR's CI
-  green after CIPERF: at MPR.
-Verdict: G1-G5, G6's A/B, coverage and cost bars and L1 met on the final tree; {{FINAL: CORTEX2 — the cortex reruns'
-reading, then goal met on <head>, <date>; DG's confirmation before MPR}}.
+  rows), cortex 10/10, clippy 0, rustdoc 0, dump inits plain 0 / latex 0, dump diff vs int170a 0; CI on the push to main
+  validates CIPERF (8 Linux shards, macOS) with a Windows CI dispatch (its guards optional to pass): at MPR. After
+  CORTEX2, CORE0's cached frame-trace flag and the ieeeaccess test's TeX-tree path: gates on `803ce550a6` 8103/8103 again.
+Verdict: G1-G5, G6's A/B, coverage and cost bars and L1 met on the final tree; the cortex reruns show no new
+Fatal cluster and no obvious degradation — goal met on the final tree (`803ce550a6` and this fold), 2026-11-13, up to
+and except the deferred rows below; DG's confirmation before the merge (MPR: a regular command-line merge into main,
+DG 2026-11-13).
 
 **Deferred to after the merge, with the ruling.** Moved from before the merge by DG (2026-11-12, "having deferred as
 much work as we have already, what else can be deferred", unless dated otherwise):
