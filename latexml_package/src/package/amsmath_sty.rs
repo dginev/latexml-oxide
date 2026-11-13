@@ -1632,6 +1632,19 @@ LoadDefinitions!({
     "\\csname endmultline*\\endcsname",
     "\\lx@hidden@cr{}\\lx@end@alignment\\@end@multline\\lx@hidden@egroup"
   );
+  // amsmath.sty:2535 `\start@multline#1` starts `{multline}` (`\st@rredfalse`) or `{multline*}` (`\st@rredtrue`) and
+  // :2623/:2630 `\lendmultline@`/`\rendmultline@` end it, which a package's own environment calls (aa.cls v9's
+  // linenoaa.sty:45-50; 2606.12741 2605.25644 2606.23815 2606.30286): the binding's, kept before any redefinition.
+  Let!("\\lx@ams@multline", "\\multline");
+  Let!("\\lx@ams@multline@star", "\\multline*");
+  Let!("\\rendmultline@", "\\endmultline");
+  Let!("\\lendmultline@", "\\endmultline");
+  DefMacro!("\\start@multline{}", sub[(starred)] {
+    let mut out = starred.unlist();
+    let star = out.first().is_some_and(|t| *t == T_CS!("\\st@rredtrue"));
+    out.push(T_CS!(if star { "\\lx@ams@multline@star" } else { "\\lx@ams@multline" }));
+    Ok(Tokens::new(out))
+  });
   // AmSTeX version (inside math)
   DefConstructor!("\\@@AmS@multline DigestedBody",
   "#body",

@@ -16970,7 +16970,15 @@ yet TeX's: an e-TeX expression checks only its final value, so an intermediate o
 and a product past the i64 range keeps the bound (`clamp_arith_overflow`, one report per multiply) where etex.ch's
 `scan_expr` latches one error and returns 0 (`etex_expression_overflow_latched_once_red`). Guards `perfect_kernel_batch64zf::{number_and_dimension_overflow_clamp_and_err,
 integer_constant_overflow_is_infinity}`, `error_boundary::perfect_kernel_error_boundary` (both sides); repro
-expansion-primitives/dimension_overflow_max_dimen.
+expansion-primitives/dimension_overflow_max_dimen. The one exception (DG 2026-11-13, SBX1): an overflow in the measure of a
+`breakable` tcolorbox, which we set as one box where TeX breaks it (Perl tcolorbox.sty.ltxml:21), is a Warning naming the
+box, the overflows it cascades into an Info (`common::error::approximated_measure`, read by the box's own
+`\iftcb@isbreakable` when tcolorbox.sty:2006 `\tcb@draw@color@box` measures it; 2605.05949 2605.19136 2605.24941
+2605.28003 2605.30434 2606.07718: 4 Errors each → 1 Warning), cleared at the measure's end (`\lx@tcb@measure@done`:
+the command form `\tcolorbox…\endtcolorbox`, tcolorbox.sty:1150, opens no group); a box of its own unbreakable, also
+one inside the breakable one, and an overflow after the box keep the Error (`error_boundary::perfect_kernel_error_boundary`,
+five rows). Open (BRKC, post-merge): a breakable box in a minipage or a float, which TeX does not break, is downgraded
+too (`tcolorbox_breakable_box_in_{minipage,float}_overflow_red`).
 
 ### 520. setspace's `\onehalfspace`/`\doublespace` switches are checked no-ops (Perl: an environment frame)
 
@@ -26280,8 +26288,12 @@ changed dev papers: right creators 11 → 452 of 450 → 452 decided.
   holds a mark): `{\small{\it \vspace{0.2cm} $^{a}$ also at …}}`, a legend line once `wrapper_over_lines_as_lines`
   gives each line its wrappers, read past one wrapper only, had the spacing's letters before its mark and was an
   author. And a creator whose name reads as a line under the names — lower case first (no particle, no article: `the
-  ATLAS Collaboration` is an author), an institution word, no address, no name — is a
-  `frontmatter:creator_not_a_name` Error (`flag_merged_creators`), never silent (1309.4007's creator "e-mail").
+  ATLAS Collaboration` is an author), an institution word, no address, no name, no group's name (SBX1: a collaboration
+  or a team named in lower case, `sPHENIX Collaboration` 2606.17184, `openJiuwen Team` 2605.10052, by
+  `reads_as_collaboration`; whom the authors speak for, `for the PAROS Clinical Research Network` 2605.24212: a
+  `SPEAKS_FOR` prefix, then a group's name the same reading does not flag — `for correspondence: Physics Department` is
+  flagged) — is a `frontmatter:creator_not_a_name` Error (`flag_merged_creators`), never silent (1309.4007's
+  creator "e-mail").
   1202.2048: 342 → 340 creators, every one named, each sub-lettered name its institute and its legend.
 - `perfect_kernel_batch94a::an_entry_of_several_pieces_is_written_whole` re-pinned: `and~ Bob Baker` is parted by the
   word "and" (`sep:word`), its tie and space one word space, no longer a gap (`sep:gap`); the XML is the same.

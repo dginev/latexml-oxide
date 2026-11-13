@@ -7,6 +7,7 @@
 //! Section numbering in comments below references that manual.
 
 use latexml_core::common::{
+  error::approximated_measure,
   glue::FillCode,
   numeric_ops::{MAX_DIMEN, MAX_INTEGER},
 };
@@ -95,19 +96,20 @@ LoadDefinitions!({
     // etex.ch `scan_expr`: a result past `infinity` (2^31 − 1, an integer) or
     // `max_dimen` (any other type) is "Arithmetic overflow", and the
     // expression's value is zero (pdfTeX: `\dimexpr-16383pt*3\relax` = 0.0pt).
-    // An Error, as TeX's: the zero is not the author's value (OXIDIZED_DESIGN #519).
+    // An Error, as TeX's: the zero is not the author's value (OXIDIZED_DESIGN #519); a Warning in a box measured by
+    // our approximation (`approximated_measure`).
     let ceiling = if matches!(rtype, RegisterType::Number) {
       MAX_INTEGER
     } else {
       MAX_DIMEN
     };
     if value.clone().value_of().abs() > ceiling {
-      Error!(
-        "expected",
-        "<number>",
-        "Arithmetic overflow.",
-        "the expression's value is out of range, so it is zero (etex.ch scan_expr)"
-      );
+      let detail = "the expression's value is out of range, so it is zero (etex.ch scan_expr)";
+      match approximated_measure() {
+        Some((ours, true)) => Warn!("expected", "<number>", "Arithmetic overflow.", detail, ours),
+        Some((ours, false)) => Info!("expected", "<number>", "Arithmetic overflow.", detail, ours),
+        None => Error!("expected", "<number>", "Arithmetic overflow.", detail),
+      }
       return Ok(RegisterValue::default().coerce_to(rtype));
     }
     Ok(value)

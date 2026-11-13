@@ -136,10 +136,7 @@ fn author_call(label: Option<Tokens>, author: Tokens) -> Result<Tokens> {
     Ok(Invocation!(T_CS!("\\lx@add@authors@list"), vec![Some(
       rows
     )]))
-  } else if holds_a_comma(&author)
-    || has_top_level_and_word(&author)
-    || separated(&author)?
-    || has_separated_names(&author)
+  } else if names_a_list(&author, &mut separated)?
     || author_marks_end_name(&author, &[T_CS!("\\affil")])
   {
     // A comma anywhere in the names (a comma inside a group too: `\textbf{Ann Able, Bob Baker}`, whose split reads into
@@ -192,6 +189,25 @@ fn author_call(label: Option<Tokens>, author: Tokens) -> Result<Tokens> {
       Some(Tokens::new(name))
     ]))
   }
+}
+
+/// Whether a per-author class's author argument names several authors (`author_call`'s list branch, the marks
+/// aside): a comma, the word "and" or a kernel `\and` between names, a separator the kernel's author read parts at.
+/// Shared with the meta-class binding (latexml_contrib `meta_class.rs`, 2605.17829).
+pub fn author_names_a_list(author: &Tokens) -> Result<bool> {
+  names_a_list(author, &mut separated_by_and)
+}
+
+fn names_a_list(
+  author: &Tokens,
+  separated: &mut impl FnMut(&Tokens) -> Result<bool>,
+) -> Result<bool> {
+  Ok(
+    holds_a_comma(author)
+      || has_top_level_and_word(author)
+      || separated(author)?
+      || has_separated_names(author),
+  )
 }
 
 /// Whether `author` parts its names or lines with a separator the kernel's author read splits at

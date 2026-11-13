@@ -1,0 +1,13 @@
+% witness: synthetic (review revSBX1 B1); tcolorbox's command form `\tcolorbox[…]…\endtcolorbox` (tcolorbox.sty:1150)
+%          opens no group, so a breakable box's measure flag set locally outlived the box
+% oracle:  pdflatex 1 `!` (Arithmetic overflow, l.6: the author's own \dimexpr after the box); Perl 0 errors
+% engines: rust CAU1 1 error; SBX1 (7dcc1681f8) 0 errors 1 warning ("in the breakable box {document}")
+% expect:  1 error (Arithmetic overflow), 0 warnings; the box and "After:" kept
+% status:  RED (SBX1 7dcc1681f8) -> GREEN (SBX1F; error_boundary::perfect_kernel_error_boundary)
+\documentclass{article}
+\usepackage[most]{tcolorbox}
+\newcommand\mybox[1]{\tcolorbox[breakable,title=Note]#1\endtcolorbox}
+\begin{document}
+\mybox{A short note.}
+After: \the\dimexpr 16000pt*3\relax.
+\end{document}

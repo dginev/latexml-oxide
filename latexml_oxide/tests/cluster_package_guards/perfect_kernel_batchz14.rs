@@ -124,7 +124,7 @@ fn a_speakers_name_prints_in_its_block() {
 }
 
 /// A call of its own naming a collaboration is no name, as the PDF prints it under the names: a contact on the names since the last one (1201.5726, 1301.6619; an honest
-/// `creator_not_a_name` under the emitter).
+/// `creator_not_a_name` under the emitter); alone, it is the creator (SBX1).
 #[test]
 fn a_collaboration_in_a_call_of_its_own_covers_the_names_before() {
   let (xml, json) = dump(repro!("z14_collaboration_in_a_call_of_its_own"));
@@ -150,11 +150,12 @@ fn a_collaboration_in_a_call_of_its_own_covers_the_names_before() {
       "address=Univ A, Town A",
     ],
   ]);
-  // (a replaced call's names print nothing: the kernel's second `\\author` is the only one printed, so it is no one's collaboration; the Error on it the honest one)
+  // (a replaced call's names print nothing: the kernel's second `\\author` is the only one printed, so it is no one's collaboration;
+  // its creator the group the PDF prints as the author, no Error: SBX1, as 2605.24212's `for the PAROS … Network`)
   let (log, _, json) = run(
     "\\documentclass{article}\n\\begin{document}\n\\title{T}\n\\author{Ann Able}\n\\author{on behalf of the KM3NeT consortium}\n\\maketitle\nBody.\n\\end{document}\n",
   );
-  assert_eq!(error_count(&log), 1, "{log}");
+  assert_eq!(error_count(&log), 0, "{log}");
   assert_eq!(reading(&json), ["C on behalf of the KM3NeT consortium []"]);
 }
 

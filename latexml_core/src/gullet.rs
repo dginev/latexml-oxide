@@ -4506,17 +4506,18 @@ fn number_too_big(n: i64) -> Result<i64> {
 /// the scan's own `<optional signs>` (`negative`) — a negative internal unit
 /// (`2000000000\dimen0` with `\dimen0` < 0) gives +max_dimen, as pdfTeX
 /// prints it. `scaled` is the fixed-point product, `Err(_)` when it left the
-/// i64 range. An Error, as for [`number_too_big`].
+/// i64 range. An Error, as for [`number_too_big`], a Warning in a box measured by our approximation
+/// ([`approximated_measure`]).
 fn dimension_too_large(scaled: std::result::Result<i64, i64>, negative: bool) -> Result<i64> {
   match scaled {
     Ok(v) if v.abs() <= MAX_DIMEN => Ok(v),
     _ => {
-      Error!(
-        "expected",
-        "<dimen>",
-        "Dimension too large.",
-        "clamped to max_dimen (tex.web §460)"
-      );
+      let detail = "clamped to max_dimen (tex.web §460)";
+      match approximated_measure() {
+        Some((ours, true)) => Warn!("expected", "<dimen>", "Dimension too large.", detail, ours),
+        Some((ours, false)) => Info!("expected", "<dimen>", "Dimension too large.", detail, ours),
+        None => Error!("expected", "<dimen>", "Dimension too large.", detail),
+      }
       Ok(if negative { -MAX_DIMEN } else { MAX_DIMEN })
     },
   }

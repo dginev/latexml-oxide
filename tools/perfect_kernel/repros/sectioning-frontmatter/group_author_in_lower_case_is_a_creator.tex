@@ -1,0 +1,18 @@
+% witness: 2605.10052 ("openJiuwen Team & Gaoling School of …"), 2606.17184 (`\author{sPHENIX Collaboration\footnote{…}}`):
+%          a group named as the author, its name opening in lower case
+% oracle:  pdflatex 0 errors; "openJiuwen Team & Gaoling School of Artificial Intelligence, Renmin University of China",
+%          "research@openjiuwen.com"
+% engines: rust (CAU1) the same creator and Error:frontmatter:creator_not_a_name ("a line under the names")
+% expect:  0 errors 0 warnings; 1 creator "openJiuwen Team", its two affiliations and e-mail
+% status:  RED (CAU1) -> GREEN (SBX1; perfect_kernel_batchsbx1::sandbox_2605_rows)
+\documentclass{article}
+\title{T}
+\author{%
+  openJiuwen Team \& Gaoling School of Artificial Intelligence, Renmin University of China \\
+  \texttt{research@openjiuwen.com}
+}
+\date{}
+\begin{document}
+\maketitle
+Text.
+\end{document}

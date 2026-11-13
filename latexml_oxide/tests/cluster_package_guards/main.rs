@@ -595,6 +595,8 @@ mod perfect_kernel_batchrc1;
 mod perfect_kernel_batchrg1;
 mod perfect_kernel_batchrv1;
 mod perfect_kernel_batchs5;
+/// SBX1: the 2605/2606 sandbox reruns' regressions — linenoaa's `{multline}`, fairmeta's one `\author{}`, group authors.
+mod perfect_kernel_batchsbx1;
 /// SEP1: the rehearsal binds a `\let` copy of `\and`, `\\`, `\thanks` or `\footnote` by its meaning, as the command it
 /// copies (`\let\nx\and` parts the names; OD #994).
 mod perfect_kernel_batchsep1;

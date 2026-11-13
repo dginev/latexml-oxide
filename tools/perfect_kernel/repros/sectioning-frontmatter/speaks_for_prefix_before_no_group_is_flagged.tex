@@ -1,0 +1,18 @@
+% witness: synthetic (review revSBX1 finding 2); a legend's text opening with "for " but naming no group, read as an
+%          author; the group a "for"/"on behalf of"/"representing" line names stays a creator (2605.24212's PAROS)
+% oracle:  pdflatex 0 `!`: "Ann Able1, Bob Baker2, and for correspondence: Physics Department1"; Perl 0 errors (no such check)
+% engines: rust CAU1 1 error (creator_not_a_name); SBX1 (7dcc1681f8) 0 errors: any "for " line exempt
+% expect:  1 error (frontmatter:creator_not_a_name), 0 warnings; the three creators as written
+% status:  RED (SBX1 7dcc1681f8) -> GREEN (SBX1F; perfect_kernel_batchsbx1::sandbox_2605_rows)
+\documentclass{article}
+\usepackage{authblk}
+\title{T}
+\author[1]{Ann Able}
+\author[2]{Bob Baker}
+\author{for correspondence: Physics Department}
+\affil[1]{MIT}
+\affil[2]{Duke University}
+\begin{document}
+\maketitle
+Text.
+\end{document}

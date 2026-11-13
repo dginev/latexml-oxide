@@ -1,0 +1,16 @@
+% witness: 2605.17829 (paper.cls = fairmeta.cls, whose `\author[#1]{#2}` appends to a list, one call per author;
+%          the paper names all 13 authors and their affiliation legend in one `\author{}`)
+% oracle:  pdflatex 0 errors (with a fairmeta.cls that loads article): "Ann Able1, Bob Baker2, Carl Cole1", then
+%          "1 MIT 2 Stanford University"
+% engines: rust (CAU1) 1 creator "Ann Able 1 , Bob Baker 2 , Carl Cole 1 1 MIT 2 Stanford University" and
+%          Error:frontmatter:merged_creators; Perl no fairmeta binding
+% expect:  0 errors 0 warnings; 3 creators, Ann Able (MIT), Bob Baker (Stanford University), Carl Cole (MIT)
+% status:  RED (CAU1) -> GREEN (SBX1; perfect_kernel_batchsbx1::sandbox_2605_rows)
+\documentclass{fairmeta}
+\title{T}
+\author{Ann Able$^{1}$, Bob Baker$^{2}$,\\ Carl Cole$^{1}$
+\\[1em] $^1$MIT \quad $^2$Stanford University}
+\begin{document}
+\maketitle
+Text.
+\end{document}
