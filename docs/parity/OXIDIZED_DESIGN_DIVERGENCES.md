@@ -35957,7 +35957,9 @@ such a line. A names line is read by `names_line`, each mark after a separator t
 `\inst` after a comma and a mark glued to the one before too); the old `prefix` path and its entry reader (`names_of`)
 are gone. A block making no name whose mark-led lines read as names is counted by a Warning. Decided by marks, requests
 and set labels; the word shape (`reads_as_names`) is a necessary condition only. Unanswered marks keep their text in the
-name, counted by the safety net (the post-merge mark-text batch; PoS keeps a first name's leading mark:
+name, counted by the safety net where it sees the name's words change — not a trailing unanswered mark kept as the
+name's `<sup>` (`$^3$Cat Cole` with only 1 and 2 set: 0 Warnings, no word lost;
+`article_mark_led_unanswered_trailing_mark_uncounted_red`, revMLN1) — (the post-merge mark-text batch; PoS keeps a first name's leading mark:
 `pos_leading_mark_kept_in_the_first_name_red`); an isotope line's mark is consumed as a label
 (`article_unrequested_isotope_line_loses_its_mark_red`). Ambiguous by marks and left as affiliations: a row of
 name-shaped text answering every request (`$^1$Zhipu AI \quad $^2$Deep Seek`), and a second names row of one name
