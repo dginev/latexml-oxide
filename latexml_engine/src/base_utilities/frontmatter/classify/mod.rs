@@ -21,6 +21,8 @@ pub(in crate::base_utilities) use entry_emails::{
 // (`classify::email_lines`, the text rules on an e-mail's printed ink; not `frontmatter_api::email_lines`, the API's line
 // readers)
 mod email_lines;
+// (the numbered `\institute` store's call reads its e-mail lines by it: frontmatter_stores.rs `\lx@add@store@affiliations`)
+pub use email_lines::store_unprinted_emails_unwrapped;
 pub(in crate::base_utilities) use email_lines::*;
 mod email_owners;
 // (the IEEEtran binding reads a bare run between its blocks by it: ieeetran_cls.rs `wrap_bare_author_block_text`)

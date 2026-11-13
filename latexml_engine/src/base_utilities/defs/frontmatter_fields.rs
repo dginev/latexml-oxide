@@ -583,7 +583,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
       // `\lx@frontmatter@group@start`), and those requesting the mark of the address it is printed under (`_marks`,
       // read where the document writes an e-mail between its addresses); rev78f2 probes i1, i2)
       if lookup_value("lx_frontmatter_group_first").is_some() {
-        let group: Vec<String> = (frontmatter_group_first()..=queued_author_count())
+        let group: Vec<String> = (frontmatter_group_first()..=queued_author_positions()?)
           .map(|at| at.to_string())
           .collect();
         keyvals.extend(mouth::tokenize_internal(",_group=").unlist());
@@ -663,7 +663,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // (`\author{D. L. Boiko}\address{…}\email{…}\author{N. J. Gunther}…`, 0906.4563; guard
   // `perfect_kernel_batch64u::osa_group_only_author_owns_the_email`).
   DefPrimitive!("\\lx@frontmatter@group@start", {
-    let first = queued_author_count() + 1;
+    let first = queued_author_positions()? + 1;
     assign_value(
       "lx_frontmatter_group_first",
       Stored::Number(Number::new(first as i64)),

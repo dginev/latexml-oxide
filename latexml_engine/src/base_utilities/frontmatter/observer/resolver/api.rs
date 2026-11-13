@@ -513,10 +513,8 @@ impl Resolver {
               .flat_map(|e| mark_labels(e.label.as_deref().unwrap_or(""))),
           )
           .collect();
-        self
-          .class_requests
-          .extend(class.into_iter().map(|l| (start, l)));
         let made = self.new_creator(text, "api:creator", index, requests, index);
+        self.out.creators[made].class_requests = class;
         // (the call's nested notes are its creator's: Perl's `\lx@add@author[]{}` digests the whole call into its
         // `ltx:creator`, `{\lx@personname{#2}}` — "the name can contain much more than just the name"
         // (Base_Utility.pool.ltxml:585-589) —, so a `\thanks` there is a note of that creator; the reading attaches

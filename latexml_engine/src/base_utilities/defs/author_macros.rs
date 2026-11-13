@@ -173,7 +173,7 @@ pub(in crate::base_utilities) fn load() -> Result<()> {
   // name list): appended like `\lx@add@authors@append`, but split at every separator as the article `\author` is.
   // (where the list starts in the queue: the row an address shared by its authors falls back to, `queued_row_start`)
   DefMacro!("\\lx@add@authors@list{}", sub[(stuff)] {
-    assign_value("lx_authors_list_start", queued_author_count() as i64, Some(Scope::Global));
+    assign_value("lx_authors_list_start", queued_author_positions()? as i64, Some(Scope::Global));
     let ijcai = ijcai_block(&stuff)?;
     let late = record_author_call("\\lx@add@authors@list", &stuff, false, ijcai, None, false);
     if ijcai {

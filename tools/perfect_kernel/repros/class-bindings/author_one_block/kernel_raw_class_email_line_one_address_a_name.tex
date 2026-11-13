@@ -1,0 +1,66 @@
+% mechanism: the frontmatter queue's `author:N` positions count names for the kernel `\author`'s whole list too
+%   (`\lx@add@authors@adaptive`, `queue_reading.rs` `entry_pieces`; P2-3c): a raw class's numbered `\institute` store
+%   (`class_numbered_institutes`) with an e-mail line of one address a name after its last entry gives one address to
+%   each author in order (`place_address_runs`), as a binding's whole list does (2403.04183's line)
+% witness: synthetic (astro-ph0508574's cjaa.cls cut down; 2403.04183's line); the class below is cjaa.cls:295-365 cut
+%   down (its `\email` a footnote of `\@thanks`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 , Bob Baker2", "1 Univ A", "2 Univ B", the footnote
+%   "⋆ E-mail: u1@x.org, u2@x.org"
+% engines: P23b and P23c's D2 (5096ce95c6): u1@x.org and u2@x.org on a nameless creator (the block's: the kernel list one
+%   position); P23c: one address a name
+% expect:  0 errors, 0 warnings; Ann Able: Univ A, u1@x.org; Bob Baker: Univ B, u2@x.org
+% status:  GREEN (P23c; guard perfect_kernel_batchp23b::a_whole_list_entry_holds_a_position_a_name)
+% preload: ar5iv.sty
+\begin{filecontents*}[overwrite]{cjaainst.cls}
+\ProvidesClass{cjaainst}\LoadClass{article}
+\newcounter{inst}
+\newdimen\instindent
+\def\institute#1{\gdef\@institute{#1}}
+\def\institutename{\par
+ \begin{flushleft}
+ \begingroup
+ \parindent=0pt
+ \parskip=0pt
+ \setcounter{inst}{1}%
+ \def\and{\par\stepcounter{inst}%
+ \hangindent\instindent
+ \noindent
+ \hbox to\instindent{\hss$^{\theinst}$\enspace}\ignorespaces}%
+ \setbox0=\vbox{\def\thanks##1{}\@institute}
+ \ifnum\value{inst}>9\relax\setbox0=\hbox{$^{88}$\enspace}%
+                 \else\setbox0=\hbox{$^{8}$\enspace}\fi
+ \instindent=\wd0\relax
+ \ifnum\value{inst}=1\relax
+ \else
+   \parindent=0pt
+   \setcounter{inst}{1}%
+   \hangindent\instindent
+   \noindent
+   \hbox to\instindent{\hss$^{\theinst}$\enspace}\ignorespaces
+ \fi
+ \normalsize
+ \ignorespaces
+ \@institute\par
+ \end{flushleft}
+ \endgroup}
+\def\email#1{ \begingroup
+    \def\protect{\noexpand\protect\noexpand}
+    \xdef\@thanks {
+    \protect\footnotetext[0]{\unskip\hskip-1.5em{ $\star$ E-mail: \tt#1} }
+                  }
+    \endgroup\ignorespaces
+                }
+\def\@thanks{}
+\def\inst#1{\unskip$^{#1}$}
+\def\@maketitle{\newpage\noindent{\Large\@title\par}\vskip6pt
+  {\large\noindent\def\and{\unskip, }\ignorespaces\@author\par}\vskip6pt
+  \institutename}
+\end{filecontents*}
+\documentclass{cjaainst}
+\begin{document}
+\title{T}
+\author{Ann Able\inst{1} \and Bob Baker\inst{2}}
+\institute{Univ A \and Univ B\\ \email{u1@x.org, u2@x.org}}
+\maketitle
+Text.
+\end{document}

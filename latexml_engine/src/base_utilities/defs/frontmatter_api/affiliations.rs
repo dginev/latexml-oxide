@@ -486,7 +486,7 @@ pub(in crate::base_utilities) fn shared_affiliation_calls(
     );
   }
   if !run.lines.is_empty() {
-    calls.extend(place_address_runs(vec![run], &mut [], queued_row_start())?);
+    calls.extend(place_address_runs(vec![run], &mut [], queued_row_start()?)?);
   }
   Ok(calls)
 }
@@ -529,7 +529,7 @@ fn place_address_runs(
   entries: &mut [Vec<Token>],
   row_start: usize,
 ) -> Result<Vec<Token>> {
-  let authors = queued_author_count();
+  let authors = queued_author_positions()?;
   let row_start = row_start.min(authors);
   // (a legend line, `* Equal contribution`, is an entry with no mark; nor does a footnote-symbol mark after a run,
   // `$^\dagger$ Corresponding author`, show the run sits under an affiliation — as an iopart `\address`'s one mark it

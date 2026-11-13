@@ -5634,7 +5634,11 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
     let c = &resolved.creators[i];
     // (a name written as its text keeps no mark of its own: its requests show them, as they would unkept — 2509.08362)
     let keeps = keeps(c.source) && names.get(&i).is_some_and(|(name, _)| name.is_some());
+    // (its own `\\inst`'s, of a block of several names: a `*` printed after Ann's `\\inst{1,2}` is no request of hers
+    // where Bob's `\\inst{1*}` requests `*`, 2407.13764)
     let inst_marks = inst_marks.get(&c.source).map_or(&[][..], Vec::as_slice);
+    let own_inst =
+      |request: &String| inst_marks.contains(request) && c.class_requests.contains(request);
     // (a creator call's own labels, which its keys write, print nothing: `creator_keys`)
     let own = creator_call_of(c)
       .map(|call| call.labels())
@@ -5668,7 +5672,7 @@ pub(in crate::base_utilities) fn emit_commands(commands: &mut Vec<RawFrontmatter
           .contains(request)
     };
     for request in c.requests.iter().filter(|request| {
-      (!keeps || inst_marks.contains(request) || unprinted(request)) && !own.contains(request)
+      (!keeps || own_inst(request) || unprinted(request)) && !own.contains(request)
     }) {
       // (a key's value is tokenized: a request spelled with a command, `\\author[a,b\\thanks{…}]`'s, 2207.11842, is no label)
       if !answered.contains(request) && !no_label(request) {

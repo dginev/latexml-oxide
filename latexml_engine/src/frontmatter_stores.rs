@@ -7923,8 +7923,10 @@ LoadDefinitions!({
     let name = name.to_string();
     // (an llncs-style `\institute{A \and B}` the class numbers 1, 2 on its title page: the entries labelled by their
     // numbers, which the authors' numeric marks — `$^{1}$`, `\inst{1}` — request, `class_numbered_institutes`)
+    // (its e-mail lines whose command prints nothing in place unwrapped, each address the entry's: cjaa.cls's `\email`
+    // setting `\@thanks`, astro-ph0508574, 0911.3853, 0706.3426)
     let (stuff, numbered) = match class_numbered_institutes(&stuff, Some(&s!("\\{}", store_of(&name))))? {
-      Some(numbered) => (numbered, true),
+      Some(numbered) => (store_unprinted_emails_unwrapped(numbered)?, true),
       None => (stuff, false),
     };
     let attr = mouth::tokenize_internal(TeXString::assembled(s!("_store={name},annotate=all")));
@@ -8341,14 +8343,14 @@ LoadDefinitions!({
     }
     assign_value(
       "lx_author_keys_from",
-      Stored::Int(author_creator_total() as i64),
+      Stored::Int(author_creator_total()? as i64),
       Some(Scope::Global),
     );
   });
   DefPrimitive!("\\lx@author@keys{}", sub[(keys)] {
     let keys = keys.to_string();
     let keys = keys.trim();
-    let to = author_creator_total();
+    let to = author_creator_total()?;
     let from = usize::try_from(lookup_int("lx_author_keys_from")).unwrap_or(to).min(to);
     if !keys.is_empty() && to > from {
       let mut records = lookup_string(AUTHOR_KEYS);

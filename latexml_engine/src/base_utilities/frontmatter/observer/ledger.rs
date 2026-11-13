@@ -3,7 +3,11 @@
 //! is frozen (a replayed class setter, a speculative title-page run, the observer's own rehearsal: those calls are not
 //! the document's).
 
-use std::{cell::RefCell, collections::BTreeSet, rc::Rc};
+use std::{
+  cell::RefCell,
+  collections::{BTreeMap, BTreeSet},
+  rc::Rc,
+};
 
 use latexml_core::{
   definition::{Definition, origin::DefinitionOrigin},
@@ -206,6 +210,9 @@ pub(in crate::base_utilities) struct AuthorBlock {
   /// for the marks to point to, which the rehearsal reads as one in-block affiliation (`rehearsal::install_event_bindings`);
   /// the emitter writes the call as it is, after the block's names (`emitter::emit::list_setter_runs`, 2502.07804)
   pub list_setter:    Option<&'static str>,
+  /// the names the queue's reading parts its entry into, each an `author:N` position (`queue_reading::entry_pieces`);
+  /// 0 where the queue was not read past it: one
+  pub names:          usize,
 }
 
 impl AuthorBlock {
@@ -364,6 +371,8 @@ pub(in crate::base_utilities) struct Ledger {
   author_body:    (usize, usize),
   /// the words and addresses the entries before `.0` hold and the switched-off calls fed ([`record_switched_off_call`])
   held:           (usize, (BTreeSet<String>, BTreeSet<String>)),
+  /// each block's entry index by its flush and queue position (`AuthorBlock::epoch`, `queue_position`), the latest's
+  queued_blocks:  BTreeMap<(usize, usize), usize>,
 }
 
 impl Ledger {
@@ -829,6 +838,7 @@ pub(in crate::base_utilities) fn record_author_call(
     outcome: Outcome::Pending,
     list_setter: list_setter_called(stuff),
     queued: Vec::new(),
+    names: 0,
   };
   with_ledger(|ledger| {
     let mut block = block;
@@ -838,6 +848,9 @@ pub(in crate::base_utilities) fn record_author_call(
       block.stamp = Stamp::Overflow;
       block.range = (0, 0);
     }
+    ledger
+      .queued_blocks
+      .insert((block.epoch, block.queue_position), block.index);
     let entries = ledger.entries_mut();
     for entry in entries.iter_mut() {
       if let Entry::Author(earlier) = entry {
@@ -847,6 +860,45 @@ pub(in crate::base_utilities) fn record_author_call(
     entries.push(Entry::Author(Box::new(block)));
   });
   late
+}
+
+/// The latest block of this flush's queue whose call queued at `queue_position` (`AuthorBlock::queue_position`).
+fn queuing_block(ledger: &Ledger, queue_position: usize) -> Option<usize> {
+  ledger
+    .queued_blocks
+    .get(&(ledger.flushes, queue_position))
+    .copied()
+}
+
+/// The hook of the call that queued the author entry at `queue_position` (`AuthorBlock::hook`), if a block's.
+pub(in crate::base_utilities) fn queuing_hook(queue_position: usize) -> Option<&'static str> {
+  with_ledger(|ledger| {
+    queuing_block(ledger, queue_position).and_then(|at| match ledger.entries().get(at)? {
+      Entry::Author(block) => Some(block.hook),
+      _ => None,
+    })
+  })
+}
+
+/// The names the queue's reading parts the author entry at `queue_position` into (`queue_reading::entry_pieces`), for
+/// the block that queued it: the `author:N` positions the resolver counts by (`Resolver::author_entries`). Recorded
+/// whenever read, a replayed class setter's read too, as the queue's reading keeps it (revP23b): the count is the
+/// entry's, and a replay or a rehearsal queues no block (`queuing_block`: none).
+pub(in crate::base_utilities) fn record_entry_names(queue_position: usize, names: usize) {
+  with_ledger(|ledger| {
+    let Some(at) = queuing_block(ledger, queue_position) else {
+      return;
+    };
+    ledger.change_each(
+      at..at + 1,
+      |entry| matches!(entry, Entry::Author(block) if block.names != names),
+      |entry| {
+        if let Entry::Author(block) = entry {
+          block.names = names;
+        }
+      },
+    );
+  });
 }
 
 /// `\lx@field@mark` stamped field `field_id`'s value (`len` tokens) from `base` — `None`: out of positions, unstamped.

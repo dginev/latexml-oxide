@@ -1541,7 +1541,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (P6c: LaTeX's no-argument font declarations one table read by meaning, `frontmatter_stores::font_declaration`,
   // `means_one_of`, `layout`; `rows::name_text_command`, `relocate::mark_switch`: classify 468 -> 462, old_reader
   // 113 -> 109, defs/frontmatter_api/ 106 -> 105, events 61 -> 60, fallback 159 -> 157, relocate 135 -> 133)
-  ("classify", 462),
+  // (P23e, 462 -> 464, the main session's ruling: `email_lines::unprinted_email_unwrapped` names the reroute's key and the
+  // class's own setter (`\lx@class@contact@rerouted@<name>`, `\lx@class@contact@<name>`, OD #936) to digest the meaning TeX
+  // runs, as `\lx@class@contact@dispatch` does — a meaning asked, no spelling decides)
+  ("classify", 464),
   // (E0h: the rest of `author_block/` Z18m moved unchanged to `classify/old_reader/`, split off from `classify`'s row;
   // P5a, 131 -> 113: `names_continue`, `names_list_continues`, `notes_only_line`, `hoist_wrapped_separators` deleted with
   // their last caller, IEEEtran's `name_memberships`; P6f2, 109 -> 107: `line_parts`' parenthesis span, the split's rule
@@ -1690,7 +1693,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   ("place", 6),
   ("ptephy_cls.rs", 115),
   ("queue", 1),
-  ("queue_digest", 16),
+  // (P23e, 16 -> 17, the main session's ruling: `label_ink` tells a note's ink (`\lx@note…`, set at the page's foot) from
+  // what prints in place, `printed_ink`'s `outside_notes`; cjaa.cls's `\email` sibling, OD #995)
+  ("queue_digest", 17),
   // (raised by one at Z14: the rehearsal's `BOUND_IN_A_BLOCK` table, `\lx@add@affiliation@marked`, `\lx@add@creator` read as digested instead of cut by spelling at
   // the frozen API: the kind of table `FRONTMATTER_SINGLE_ENGINE_PLAN.md` "What already exists" keeps, as Perl's `@authorsplits`;
   // FB2b4 6 -> 13: `inline_juggles_as_columns`, the tabular juggle written inline, `\end{tabular}\begin{tabular}[t]{…}` — written

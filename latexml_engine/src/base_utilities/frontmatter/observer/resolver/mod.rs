@@ -69,33 +69,38 @@ pub struct Assoc {
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct RCreator {
   /// the name without its marks (ruling 1's fuzzy label)
-  pub name:          String,
+  pub name:           String,
   /// the marks shown on it, its requests
-  pub requests:      Vec<String>,
+  pub requests:       Vec<String>,
   /// how the name was split out
-  pub rule:          String,
+  pub rule:           String,
   /// the reading's joins of runs a separator parts into this one name, as `rule` tags them ([`NameJoin`]; the separator
   /// check reads them, `net::merged_names`)
-  pub joins:         Vec<NameJoin>,
+  pub joins:          Vec<NameJoin>,
   /// the ledger index of its block (or API call)
-  pub source:        usize,
+  pub source:         usize,
   /// the role of the creator call in its block that printed it, its Name's (`Event::role`: PoS's `\speaker`, `speaker`);
   /// none for a name the block itself printed (an author's)
-  pub role:          Option<String>,
+  pub role:           Option<String>,
   /// that call, its place among its block's (`Event::creator_call`): the keyvals the emitter writes on it
-  pub call:          Option<u16>,
-  pub affiliations:  Vec<Assoc>,
-  pub contacts:      Vec<Assoc>,
-  pub notes:         Vec<Assoc>,
+  pub call:           Option<u16>,
+  pub affiliations:   Vec<Assoc>,
+  pub contacts:       Vec<Assoc>,
+  pub notes:          Vec<Assoc>,
   /// each request a glued mark of letters and digits was parted into, with that mark as printed (`part_glued_labels`):
   /// a piece no entry answers shows the whole mark, never the piece alone — BESIII's `$^{50A,50C}$` under entries
   /// numbered 1 to 54 requests entry 50 and prints "50A,50C", not "A,C" (1705.11109, 1507.02068, 2204.09614)
-  pub whole_marks:   Vec<(String, String)>,
+  pub whole_marks:    Vec<(String, String)>,
+  /// the requests the class's own request command made: a Mark of llncs's and aa's `\inst` (role `inst`), a binding's
+  /// `\lx@request@frontmatter@annotation` (`request`), an `annotations=` list — not a mark printed by hand (`$^{1}$`,
+  /// `\textsuperscript{1}`, a paper's mark macro, a `*` after the `\inst`), which `answer_pending`'s `by_hand` reads off
+  /// the rest (a `_share=authors` entry only the class's `\inst{n}` picks; the emitter's kept `\inst` marks)
+  pub class_requests: Vec<String>,
   /// whether the reading marks them the corresponding author, by a note or a legend ([`Resolver::corresponding`]'s one
   /// fact): the emitter writes it on their creator as the transient `_corresponding`, which the Link step of an entry's
   /// addresses reads for the one address left of several carriers (`insert::link_entry_addresses`; dropped at output,
   /// as every `_` attribute is; repro llncs_legend_corresponding_author_takes_the_left_address)
-  pub corresponding: bool,
+  pub corresponding:  bool,
 }
 
 /// A rule of the reading joining runs a separator parts into one name (`lines.rs`, `blocks.rs`), each its tag in the
@@ -239,6 +244,9 @@ pub enum Input {
     /// a section marker a class defines only inside its `\author` (ijcai19.sty:127, a raw `\@maketitle`), the one before
     /// the addresses its `\emails` (`Resolver::block`, where the reading ends); none for any other block. Not in a dump
     markers: Vec<u16>,
+    /// the `author:N` positions its queued entry holds, one a name the queue's reading parts it into
+    /// (`ledger::AuthorBlock::names`; 0 unread, one)
+    names:   usize,
   },
   Api {
     index:  usize,
@@ -554,8 +562,8 @@ struct Resolver {
   epoch_of:           Vec<Option<usize>>,
   replaced:           Vec<usize>,
   /// the creators each queued author entry made (`start..end`), in queue order: a block's or a creator call's, each call
-  /// queuing one entry, a block whole (`author_entries`)
-  entries:            Vec<(usize, usize)>,
+  /// queuing one entry, a block whole; and the `author:N` positions it holds (`Input::Block::names`, `author_entries`)
+  entries:            Vec<(usize, usize, usize)>,
   /// the block being read's creator calls' labels (`Input::Block::calls`)
   call_labels:        Vec<Vec<String>>,
   /// whether the block being read replaces the authors queued before it (the document's `\\author`, `Input::Block`'s
@@ -619,11 +627,6 @@ struct Resolver {
   /// the requests a `\footnotemark` made (creator, label): a footnote's mark, answered by a note, never by a labelled
   /// affiliation (`Kui Wu\inst{3\footnotemark[1]}` under `\institute{A \and B …}`, 2404.09857)
   fn_requests:        Vec<(usize, String)>,
-  /// the requests the class's own request command made (creator, label): a Mark of llncs's and aa's `\inst` (role
-  /// `inst`), a binding's `\lx@request@frontmatter@annotation` (`request`), an `annotations=` list — not a mark printed
-  /// by hand (`$^{1}$`, `\textsuperscript{1}`, a paper's mark macro), which [`Resolver::by_hand`] reads off the rest
-  /// (`answer_pending`: a `_share=authors` entry only the class's `\inst{n}` picks)
-  class_requests:     Vec<(usize, String)>,
   /// the pending entries (their place in `pending`) a `_share=authors` call made (llncs's one `\institute`, no `\and`
   /// in it: every author's unless the class's `\inst{n}` picks it), whether the entry holds a mark of its own, and
   /// whether it is a piece its institute's marks split it into (`_markpiece=true`: the numbers shown by hand label the
@@ -744,7 +747,6 @@ impl Resolver {
       stopgap:            Vec::new(),
       role_reads:         HashMap::default(),
       fn_requests:        Vec::new(),
-      class_requests:     Vec::new(),
       shared:             Vec::new(),
       row_units:          Vec::new(),
       keyed:              Vec::new(),
@@ -905,20 +907,26 @@ impl Resolver {
       .collect()
   }
 
-  /// The queue's author entries, each the live creators it made, in queue order, as an `author:N` label names the N-th
-  /// (`queued_author_marks`' positions at the call, the N-th digested author's label): one a call, a block's whole entry
-  /// its names (`whole_block_call`), an entry a later call dequeued none.
+  /// The queue's author positions, each the live creators it names, in queue order, as an `author:N` label names the N-th
+  /// (`queued_author_marks`' positions at the call): an entry the queue's reading parts into names holds one a name, the
+  /// n-th its n-th creator where the reading made one a name, else each its whole entry (`whole_block_call`), as one name's
+  /// entry is; an entry a later call dequeued none.
   fn author_entries(&self) -> Vec<Vec<usize>> {
-    self
-      .entries
-      .iter()
-      .filter(|&&(start, end)| start == end || (start..end).any(|c| !self.replaced.contains(&c)))
-      .map(|&(start, end)| {
-        (start..end)
-          .filter(|c| !self.replaced.contains(c))
-          .collect()
-      })
-      .collect()
+    let mut positions = Vec::new();
+    for &(start, end, names) in &self.entries {
+      if start != end && (start..end).all(|c| self.replaced.contains(&c)) {
+        continue;
+      }
+      let live: Vec<usize> = (start..end)
+        .filter(|c| !self.replaced.contains(c))
+        .collect();
+      if names > 1 && live.len() == names {
+        positions.extend(live.into_iter().map(|c| vec![c]));
+      } else {
+        positions.extend(std::iter::repeat_n(live, names));
+      }
+    }
+    positions
   }
 
   /// The creators an `author:N` label names (`author_entries`): the N-th entry's; an address among several, the one of them it
@@ -1272,6 +1280,7 @@ pub fn resolve_with(
         events,
         calls,
         markers,
+        names,
       } => {
         policy = conventions(binding, hook);
         resolver.read_note_legends(events, None);
@@ -1294,7 +1303,9 @@ pub fn resolve_with(
         // `\lx@add@authors@append` hook, `split_author_line_cautious`)
         let cautious = hook == "\\lx@add@authors@append";
         resolver.block(*index, policy, cautious, keyvals.as_deref(), events);
-        resolver.entries.push((start, resolver.out.creators.len()));
+        resolver
+          .entries
+          .push((start, resolver.out.creators.len(), (*names).max(1)));
         // (a block whose authors a later clear removed, as a replacing call's: `ledger::record_clear`)
         if *cleared {
           resolver.replaced.extend(start..resolver.out.creators.len());
@@ -1328,7 +1339,9 @@ pub fn resolve_with(
         }
         resolver.api(*index, tag, role, attrs, events, policy);
         if tag == "ltx:creator" && role == "author" {
-          resolver.entries.push((start, resolver.out.creators.len()));
+          resolver
+            .entries
+            .push((start, resolver.out.creators.len(), 1));
         }
       },
       Input::NoteText { index, epoch, mark, events } => {
@@ -1510,6 +1523,7 @@ pub(in crate::base_utilities) fn ledger_inputs(ledger: &ledger::Ledger) -> Vec<I
             } else {
               Vec::new()
             },
+            names:   block.names,
           });
         }
       },

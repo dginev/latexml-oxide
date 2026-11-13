@@ -1167,10 +1167,10 @@ impl Resolver {
       // perfect_kernel_batch92c))
       if self.shared.iter().any(|(p, ..)| *p == at) {
         owners.retain(|&c| {
-          self
+          self.out.creators[c]
             .class_requests
             .iter()
-            .any(|(o, q)| *o == c && labels.iter().any(|l| label_matches(q, l)))
+            .any(|q| labels.iter().any(|l| label_matches(q, l)))
         });
       }
       // (an entry a `\footnotemark` leads answers the same print on a name: a footnote's mark, `\footnotemark[1]` or the
@@ -1543,10 +1543,7 @@ impl Resolver {
           && !self.marked_entries.contains(&at)
           && self.out.creators[owner].requests.iter().any(|r| {
             labels.iter().any(|l| label_matches(r, l))
-              && !self
-                .class_requests
-                .iter()
-                .any(|(c, q)| *c == owner && q == r)
+              && !self.out.creators[owner].class_requests.contains(r)
               && !self.fn_requests.iter().any(|(c, q)| *c == owner && q == r)
           });
         // (a `\ref` key's owner says so already, `api:ref-label`)
@@ -1617,7 +1614,7 @@ impl Resolver {
 
   /// Whether no mark picks a `_share=authors` entry (llncs.cls:868-886: one institute, no `\and` in it, printed
   /// unnumbered under the names, every author's — OD #901, the old split's `share_row_contacts`/`marks_pick`, deleted at P27b): no live name
-  /// shows the class's own request of a number (`\inst{1}`, `\inst{2}`: [`Resolver::class_requests`]; `\inst{*}`, an
+  /// shows the class's own request of a number (`\inst{1}`, `\inst{2}`: [`RCreator::class_requests`]; `\inst{*}`, an
   /// empty `\inst{}`, a hand-typed `$^{1}$` and a paper's mark macro pick nothing: 2207.04574, 2604.20229, 2607.02596,
   /// 1804.05870), and no name shows a number other than 1 by hand (`Ann Able$^{1,2}$`: the one institute is several,
   /// numbered by hand) — unless `piece`, the entry one piece of an institute its marks split (llncs's
@@ -1629,15 +1626,11 @@ impl Resolver {
       !bare.is_empty() && bare.bytes().all(|b| b.is_ascii_digit())
     };
     !live.iter().any(|&c| {
-      self
-        .class_requests
-        .iter()
-        .any(|(o, l)| *o == c && number(l))
+      let creator = &self.out.creators[c];
+      creator.class_requests.iter().any(|l| number(l))
         || !piece
-          && self.out.creators[c].requests.iter().any(|r| {
-            number(r)
-              && unprefixed(r).unwrap_or(r) != "1"
-              && !self.class_requests.iter().any(|(o, l)| *o == c && l == r)
+          && creator.requests.iter().any(|r| {
+            number(r) && unprefixed(r).unwrap_or(r) != "1" && !creator.class_requests.contains(r)
           })
     })
   }
