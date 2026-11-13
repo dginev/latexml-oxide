@@ -10,11 +10,10 @@
 //! only: the XML is the one the base wrote. Each guard converts
 //! its repro under `tools/perfect_kernel/repros/sectioning-frontmatter/` from the binary, eager and `--streaming`
 //! (`perfect_kernel_batch98c::converted`), and asserts the frontmatter whole and the check's lines.
-use super::{
-  perfect_kernel_batch46::{error_count, warning_count},
-  perfect_kernel_batch89a::cli_conversion,
-  perfect_kernel_batch98c::converted,
-};
+// Only the Linux-gated peak-RSS guard (`wait4`) counts the log's lines.
+#[cfg(target_os = "linux")]
+use super::perfect_kernel_batch46::{error_count, warning_count};
+use super::{perfect_kernel_batch89a::cli_conversion, perfect_kernel_batch98c::converted};
 
 macro_rules! repro {
   ($name:literal) => {
