@@ -145,6 +145,6 @@ pub fn unsupported_option(operation: &str, key: &str) {
   crate::Warn!(
     "unsupported",
     operation,
-    format!("{operation}: option {key} is not supported yet; ignored")
+    format!("option {key} is not supported yet; ignored")
   );
 }

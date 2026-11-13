@@ -51,8 +51,9 @@
     a key outside it is one `Error:misdefined` ("… does not accept options:bogusopt"),
     where it was ignored. `DefPrimitive`'s `nargs`, `DefMath`'s `mode`, `bounded`,
     `requireMath`, `forbidMath`, `isPrefix`, `DefMacro`'s `alias` and the
-    environment-only hooks on `DefConstructor` are now such keys, as in Perl. Newly
-    honoured: `locked`, `scope`, `robust` and `nargs` on `DefConstructor`/`DefEnvironment`,
+    environment-only hooks on `DefConstructor` and the Rust-only `texGroup` are now such
+    keys, as in Perl. Newly honoured: `locked`, `scope` and `nargs` on
+    `DefConstructor`/`DefEnvironment`, `robust` on `DefConstructor` only,
     `font` and `alias` on `DefPrimitive`, `font`, `reversion`, `sizer`, `decl_id`,
     `operator_scriptpos` and `scope` on `DefMath`, `nopackParameters` on `DefMacro`.
     A Perl key the core cannot carry yet (`outer`/`long` on `DefPrimitive`/`DefConstructor`,

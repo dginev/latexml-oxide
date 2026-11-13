@@ -53,7 +53,7 @@ fn rhai_option_bags_follow_perls_tables() {
   assert_eq!(warning_count(&log), 1, "{log}");
   assert!(
     log.lines().any(|line| line
-      == "Warning:unsupported:DefConstructor (\\fooO) DefConstructor (\\fooO): option outer is not supported yet; ignored"),
+      == "Warning:unsupported:DefConstructor (\\fooO) option outer is not supported yet; ignored"),
     "{log}"
   );
   for (id, para) in [
