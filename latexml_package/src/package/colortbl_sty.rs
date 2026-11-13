@@ -324,6 +324,7 @@ fn frozen_arc(arc: &Token) -> Token {
 }
 
 /// Gives the rule just drawn, the current list's last box, the colour `arc` gives as its `border_color`.
+/// Relies on the `|` template putting this token right after its own `\vrule` (`\vrule\lx@CT@paint…`): it reads only the last box.
 fn paint_rule(arc: &Token) -> Result<Vec<Digested>> {
   if let Some(color) = arc_color(arc)?
     && let Some(mut rule) = pop_box_list()
