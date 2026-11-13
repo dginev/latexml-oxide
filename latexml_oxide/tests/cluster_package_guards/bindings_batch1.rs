@@ -2,7 +2,7 @@
 //! binding's own mechanism, its repro converted once in-process and checked whole, with exact Error/Warning counts.
 
 use latexml::util::test::{
-  assert_element, convert_files_with, convert_with, error_count, kpse_has, warning_count,
+  assert_element, check_requirements, convert_files_with, convert_with, error_count, warning_count,
 };
 
 macro_rules! repro {
@@ -29,7 +29,7 @@ fn clean(tex: &str) -> String {
 /// a nested one restores it to empty. Red: `Error:undefined:\import@path`; the nested rows `[n/]` (revW2).
 #[test]
 fn import_path_is_the_package_macro() {
-  if !kpse_has("import.sty") {
+  if !check_requirements(&["import.sty"]) {
     return;
   }
   for (tex, paragraphs) in [
@@ -130,7 +130,7 @@ fn verbatim_lines(xml: &str) -> Vec<&str> {
 /// quotes, as pdflatex prints them (`\verb` keeps its ASCII, OXIDIZED_DESIGN #144). Red: the last two curly.
 #[test]
 fn verbatim_quotes_follow_upquote() {
-  if !kpse_has("upquote.sty") || !kpse_has("fancyvrb.sty") {
+  if !check_requirements(&["upquote.sty", "fancyvrb.sty"]) {
     return;
   }
   let tex = repro!("package-bindings", "verbatim_quotes_follow_upquote.tex");
@@ -158,7 +158,7 @@ fn verbatim_quotes_follow_upquote() {
 /// Red: 2 Errors (both commands undefined), one table.
 #[test]
 fn etoc_local_table_lists_the_unit() {
-  if !kpse_has("etoc.sty") {
+  if !check_requirements(&["etoc.sty"]) {
     return;
   }
   let tex = repro!("package-bindings", "etoc_local_table_lists_the_unit.tex");
