@@ -369,6 +369,18 @@ const BOUNDARY: &[Row] = &[
       ("p", "p2.1", AFTER_OVERFLOW),
     ],
   ),
+  // A tcolorbox before 3.x has no breakable flag (2.80, shipped by 1606.02242): its boxes are not breakable, no Error.
+  (
+    "tcolorbox 2.80's box, no \\iftcb@isbreakable (repro package-bindings/tcolorbox_before_3_has_no_breakable_flag)",
+    "pdflatex 0 `!`; Perl 0 errors",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/package-bindings/tcolorbox_before_3_has_no_breakable_flag.tex"
+    ),
+    &[],
+    (0, 0),
+    &[],
+    &[("p", "p1.1.1.1", r#"<p xml:id="p1.1.1.1">Boxed text.</p>"#)],
+  ),
   (
     "TeX's bounds as constants and e-TeX results (repro expansion-primitives/out_of_range_bounds_are_clean)",
     "pdflatex 0 `!`; Perl 0 errors",

@@ -1,0 +1,20 @@
+% witness: 1606.02242 ships tcolorbox 2.80 (2014), whose `\tcb@draw@color@box` (its :916) our binding wraps, but which
+%          has no `\iftcb@isbreakable` (TL 2025 tcolorbox.sty:48): a cut-down copy of that shape
+% oracle:  pdflatex 0 `!`, "Boxed text." framed; Perl 0 errors
+% engines: rust int171a 1 error (Error:undefined:\iftcb@isbreakable)
+% expect:  0 errors, 0 warnings; "Boxed text." in a <p>
+% status:  RED (int171a) -> GREEN (FIX171; error_boundary::perfect_kernel_error_boundary)
+\begin{filecontents*}[overwrite]{tcolorbox.sty}
+\ProvidesPackage{tcolorbox}[2014/03/31 version 2.80 text color boxes (cut down)]
+\newsavebox\tcb@box
+\def\tcb@draw@color@box{\fbox{\usebox\tcb@box}}
+\newenvironment{tcolorbox}{\begin{lrbox}{\tcb@box}\begin{minipage}{0.9\linewidth}}%
+  {\end{minipage}\end{lrbox}\par\noindent\tcb@draw@color@box\par}
+\end{filecontents*}
+\documentclass{article}
+\usepackage{tcolorbox}
+\begin{document}
+\begin{tcolorbox}
+Boxed text.
+\end{tcolorbox}
+\end{document}

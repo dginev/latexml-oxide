@@ -539,8 +539,9 @@ pub(crate) fn load() -> Result<()> {
   DefMacro!("\\listoftables", "\\lx@kernel@listoftables\\lx@kernel@listbody{\\@starttoc{lot}}");
   // Perl latex_constructs.pool.ltxml:725-743 "<ltx:TOC lists='toc' scope='global' select='#select'><ltx:title>#name
   // </ltx:title></ltx:TOC>" (no `select` for lof/lot), placed by `insert_toc` (a TOC inside an abstract goes after it);
-  // untitled without `[<title>]` (tocbibind_sty.rs `\tocfile` under a numbered heading).
-  DefConstructor!("\\lx@kernel@listof@element[]{}", sub[document, args, props] {
+  // untitled without `[<title>]` (tocbibind_sty.rs `\tocfile` under a numbered heading). `<ext>` is a name, read
+  // `Undigested`: typeset under a Greek font it read "τος" (0712.0401).
+  DefConstructor!("\\lx@kernel@listof@element[] Undigested", sub[document, args, props] {
       let title = args[0].as_ref().map(|title| vec![title]);
       insert_toc(document, &prop_string!(props, "lists"), Some(prop_string!(props, "select")), title)?;
     },
