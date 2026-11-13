@@ -411,8 +411,9 @@ const MOVED_CUT_KIND_EMISSIONS: &[(&str, usize)] = &[
 /// P6c to 1,878, `email_lines.rs`' and `kind.rs`' font reads the one reader's (`rows::name_text_command`, `mark_switch`);
 /// P6d to 1,867, `line_marks.rs`' `affil_splits` deleted (`classify::author_affil_splits` spelled again); P6f to 1,863,
 /// the cutter's `\and` test the line cut's (`classify::parts_entries`). P28m3 to 1,862: `place_address_runs` reads the mark's
-/// label once (`queue_reading::mark_set_label`), its address calls carrying it, the resolver deciding (`entry_owners`).
-const MOVED_CUT_KIND_CODE_LINES: usize = 1_862;
+/// label once (`queue_reading::mark_set_label`), its address calls carrying it, the resolver deciding (`entry_owners`);
+/// back to 1,863 by rustfmt alone: its key renamed `_placedbymark` (revP28m3), the line wraps (int169a's push).
+const MOVED_CUT_KIND_CODE_LINES: usize = 1_863;
 
 /// The fence on the moved Cut and Kind: they take no new decision either (review revZ18a check 3).
 #[test]
