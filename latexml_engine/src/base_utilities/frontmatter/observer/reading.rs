@@ -11,15 +11,18 @@ use latexml_core::{state::if_stack_depth, token::AUTHOR_PROV_POS_MASK};
 
 use super::{
   events::{
-    EmailMeaning, Event, EventKind, HeldError, SepKind, creator_roles, lex_events, lex_with_inks,
-    mark_held, with_block_content,
+    EmailMeaning, Event, EventKind, HeldError, SepKind, creator_roles, lex_with_inks, mark_held,
+    with_block_content,
   },
   field_notes::HeldExpansion,
   ledger::{
     Entry, Outcome, SkipReason, Stamp, content_text, field_stamped, reset_ledger, with_ledger,
   },
   policy::{TitleMarks, policy_for},
-  rehearsal::{Rehearsal, footnotes_carried, for_the_check, rehearse, set_footnotes_carried},
+  rehearsal::{
+    Rehearsal, TextRehearsals, footnotes_carried, for_the_check, rehearse, rehearse_text,
+    set_footnotes_carried,
+  },
   resolver::{Assoc, Resolved, ledger_inputs, resolve},
   *,
 };
@@ -352,12 +355,14 @@ fn read_pending() -> Result<HeldUndefined> {
       .collect()
   });
   let calls_mark = StomachMark::take();
+  // (a text the calls repeat is rehearsed once: AASTeX's 1,427 `\affiliation`s, 228 texts, 1901.01540)
+  let mut texts = TextRehearsals::default();
   for (i, content, inside) in calls {
     let read = if content.is_empty() {
       Some((Vec::new(), 0, None, Vec::new()))
     } else {
       // (an inside call's, for the check alone, from the check's own allowance: `rehearsal::for_the_check`)
-      let rehearsal = || rehearse(content.clone(), TitleMarks::Fnsymbol, &[], lex_events);
+      let mut rehearsal = || rehearse_text(&mut texts, content.clone(), TitleMarks::Fnsymbol);
       let rehearsed = if inside {
         for_the_check(rehearsal)
       } else {

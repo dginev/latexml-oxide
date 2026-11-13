@@ -25,6 +25,7 @@ use latexml_core::{
 use super::{
   events::{
     BreakKind, EmailMeaning, Event, HeldError, break_events, declaration_events, in_block_content,
+    lex_events,
   },
   field_notes::{
     EnvironmentStep, FieldCreator, FieldNotesHookGuard, HeldExpansion, PrintingCall,
@@ -1217,6 +1218,125 @@ pub(in crate::base_utilities) fn set_footnotes_carried((seen, carried): (i64, i6
   );
 }
 
+/// What a rehearsal reads before anything is changed: whether the format has a footnote counter (and `\thefootnote`),
+/// the counter the bare `\footnotemark`s print from, and the steps the blocks rehearsed before made, while the conversion
+/// has not stepped the counter since: notes a binding keeps as contacts — revtex's `\author{Ann\footnote{…}}`, one
+/// `\author` a block — print `\thefootnote` at the counter TeX stepped for each, ∗, †, ‡ across the authors, 1608.06509;
+/// a counter the conversion moved itself, stepped for the notes it made, starts the count afresh.
+fn footnote_start() -> Result<(bool, i64, i64)> {
+  let footnotes = footnote_counter().is_some() && lookup_definition(&T_CS!(THEFOOTNOTE))?.is_some();
+  let counter = if footnotes {
+    counter_value("footnote")?.value_of()
+  } else {
+    0
+  };
+  let carried = if footnotes && lookup_int("lx_fm_obs_counter_seen") == counter {
+    lookup_int("lx_fm_obs_steps_carried")
+  } else {
+    0
+  };
+  Ok((footnotes, counter, carried))
+}
+
+/// The footnote base a rehearsal's marks print from ([`footnote_start`]).
+fn set_footnote_base(footnotes: bool, base: i64) {
+  FOOTNOTE_BASE_DEFINED.with(|defined| defined.set(footnotes));
+  FOOTNOTE_BASE.with(|cell| cell.set(base));
+}
+
+/// The rehearsals of text alone one reading made ([`rehearse_text`]): by the content's tokens as they are (a space's
+/// text and a field stamp too), the events lexed and the tokens read.
+#[derive(Default)]
+pub(in crate::base_utilities) struct TextRehearsals(
+  std::collections::HashMap<Vec<(SymStr, Catcode, u16)>, (Vec<Event>, usize)>,
+);
+
+/// [`rehearse`] of an API call's `content`, lexed by [`lex_events`]: the events of the same
+/// text rehearsed before in this reading (`seen`) when it is text alone — characters and braces, which call no command,
+/// so only the state each run's rollback leaves decides them — and that run left nothing behind (no diagnostic, no
+/// conditional, no footnote step, nothing queued); its reads counted again as a run's, from the same budget
+/// (1901.01540's 1,427 `\affiliation`s, 228 texts; 1710.09320's 1,257, 160).
+pub(in crate::base_utilities) fn rehearse_text(
+  seen: &mut TextRehearsals,
+  content: Tokens,
+  title_marks: TitleMarks,
+) -> Result<Rehearsal<Vec<Event>>> {
+  let key: Option<Vec<_>> = content
+    .unlist_ref()
+    .iter()
+    .map(|t| {
+      matches!(
+        t.code,
+        Catcode::LETTER | Catcode::OTHER | Catcode::SPACE | Catcode::BEGIN | Catcode::END
+      )
+      .then_some((t.text, t.code, t.prov))
+    })
+    .collect();
+  if let Some((events, reads)) = key.as_ref().and_then(|key| seen.0.get(key))
+    && rehearsal_budget().is_some_and(|budget| budget >= *reads)
+  {
+    let (footnotes, counter, carried) = footnote_start()?;
+    set_footnote_base(footnotes, counter + carried);
+    READS_LEFT.set(READS_LEFT.get() - reads);
+    count_reads(*reads);
+    if footnotes {
+      set_footnotes_carried((counter, carried));
+    }
+    DebugFeature!("frontmatter", "FRONT a rehearsal read {reads} tokens");
+    return Ok(Rehearsal::Done {
+      value:        events.clone(),
+      errors:       0,
+      warnings:     0,
+      declarations: Vec::new(),
+      breaks:       Vec::new(),
+      held:         Vec::new(),
+      environments: Vec::new(),
+      creators:     Vec::new(),
+      left_open:    false,
+      unsaid:       None,
+      queued:       Vec::new(),
+      expansions:   Vec::new(),
+    });
+  }
+  let Some(key) = key else {
+    return rehearse(content, title_marks, &[], lex_events);
+  };
+  let left = READS_LEFT.get();
+  let progress = token_progress();
+  let conditionals = (if_count(), if_stack_depth());
+  let rehearsal = rehearse(content, title_marks, &[], lex_events)?;
+  if let Rehearsal::Done {
+    value,
+    errors: 0,
+    warnings: 0,
+    declarations,
+    breaks,
+    held,
+    environments,
+    creators,
+    left_open: false,
+    unsaid: None,
+    queued,
+    expansions,
+  } = &rehearsal
+    && declarations.is_empty()
+    && breaks.is_empty()
+    && held.is_empty()
+    && environments.is_empty()
+    && creators.is_empty()
+    && queued.is_empty()
+    && expansions.is_empty()
+    && (if_count(), if_stack_depth()) == conditionals
+    && FOOTNOTE_STEPS.with(Cell::get) == 0
+  {
+    let reads = left - READS_LEFT.get();
+    if token_progress() == progress + reads {
+      seen.0.insert(key, (value.clone(), reads));
+    }
+  }
+  Ok(rehearsal)
+}
+
 /// Digest `tokens` (a block's stamped tokens, `ledger::field_stamped`) under the event bindings and hand the
 /// digested list to `inspect` before discarding it; nothing of it stays. A resource Fatal (the deadline, the memory
 /// budget, a runaway limit) propagates, as does one whose run could not be undone (Fatal stays Fatal); any other Fatal
@@ -1227,22 +1347,7 @@ pub(in crate::base_utilities) fn rehearse<R>(
   block_breaks: &[(&str, BreakKind)],
   inspect: impl FnOnce(&Digested) -> R,
 ) -> Result<Rehearsal<R>> {
-  // (read before anything is changed: the counter the bare `\footnotemark`s print from)
-  let footnotes = footnote_counter().is_some() && lookup_definition(&T_CS!(THEFOOTNOTE))?.is_some();
-  let counter = if footnotes {
-    counter_value("footnote")?.value_of()
-  } else {
-    0
-  };
-  // (and the steps the blocks rehearsed before made, while the conversion has not stepped the counter since: notes a
-  // binding keeps as contacts — revtex's `\author{Ann\footnote{…}}`, one `\author` a block — print `\thefootnote` at
-  // the counter TeX stepped for each, ∗, †, ‡ across the authors, 1608.06509; a counter the conversion moved itself,
-  // stepped for the notes it made, starts the count afresh)
-  let carried = if footnotes && lookup_int("lx_fm_obs_counter_seen") == counter {
-    lookup_int("lx_fm_obs_steps_carried")
-  } else {
-    0
-  };
+  let (footnotes, counter, carried) = footnote_start()?;
   let base = counter + carried;
   let Some(journal) = begin_assignment_journal() else {
     return Ok(Rehearsal::Skipped(SkipReason::JournalUnavailable));
@@ -1253,8 +1358,7 @@ pub(in crate::base_utilities) fn rehearse<R>(
     return Ok(Rehearsal::Skipped(SkipReason::OverBudget));
   };
   let _speculative = speculative_digestion();
-  FOOTNOTE_BASE_DEFINED.with(|defined| defined.set(footnotes));
-  FOOTNOTE_BASE.with(|cell| cell.set(base));
+  set_footnote_base(footnotes, base);
   const FLAGS: [&str; 3] = [
     "lx_replaying_class_setter",
     "lx_depositing_frontmatter_fields",
@@ -1367,17 +1471,7 @@ pub(in crate::base_utilities) fn rehearse<R>(
   // (past the hold's end: `hold` keeps it otherwise)
   let reads = budget.reads;
   if footnotes {
-    let steps = carried + FOOTNOTE_STEPS.with(Cell::get);
-    assign_value(
-      "lx_fm_obs_counter_seen",
-      Stored::from(counter),
-      Some(Scope::Global),
-    );
-    assign_value(
-      "lx_fm_obs_steps_carried",
-      Stored::from(steps),
-      Some(Scope::Global),
-    );
+    set_footnotes_carried((counter, carried + FOOTNOTE_STEPS.with(Cell::get)));
   }
   // (a block's own, never a Fatal, even when its assignments could not be undone: its diagnostics and those stay, as a failed
   // run's: `sect05.rs` `speculative_run_read`)
