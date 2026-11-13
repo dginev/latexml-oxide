@@ -19633,3 +19633,21 @@ float binding, `perfect_kernel_error_boundary`'s float rows). Minimal trigger (P
 Types \X.
 \end{document}
 ```
+
+## 1241. `page=` on a single-page graphic is a transform: an SVG warns, a PNG or JPEG is re-encoded
+
+`image_graphicx_is_trivial` (Util/Image.pm:281-284) counts `page` beside rotate/clip/trim, so `Post/Graphics.pm:262-271`
+treats `page=` as a complex transform even on a format with one page, which pdfTeX ignores it on (pdflatex, 0 `!`). An
+SVG (`raster => 0`) gets a false `Warning:limitation` ("Cannot (yet) apply complex transforms to non-raster images")
+before it is copied; a PNG or JPEG is read and rewritten by ImageMagick under a generated `xN` name (a JPEG re-encoded
+lossily). Rust ignores `page=` on these formats (OXIDIZED_DESIGN_DIVERGENCES #1026). Minimal trigger (with any
+`nice.svg` and `a.jpg` beside it):
+
+```latex
+\documentclass{article}
+\usepackage{graphicx}
+\begin{document}
+\includegraphics[page=1]{nice.svg}
+\includegraphics[page=1]{a.jpg}
+\end{document}
+```

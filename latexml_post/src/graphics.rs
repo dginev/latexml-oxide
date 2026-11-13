@@ -2238,7 +2238,7 @@ impl Processor for Graphics {
         .and_then(|e| e.to_str())
         .unwrap_or("")
         .to_lowercase();
-      // A single-page format has no page to select, as pdfTeX ignores `page=` on a PNG: copied as it is (#791).
+      // A single-page format has no page to select, as pdfTeX ignores `page=` on a PNG: copied as it is (#791, OD #1026).
       const SINGLE_PAGE: &[&str] = &["svg", "png", "jpg", "jpeg"];
       let page =
         Self::parse_page_option(&options).filter(|_| !SINGLE_PAGE.contains(&src_ext.as_str()));

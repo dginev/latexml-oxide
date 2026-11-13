@@ -36011,3 +36011,27 @@ affiliation does (batch63's `$^{1}$Carnegie Mellon`). **Witnesses**: 2507.23021,
 2001.00788, 0710.4115, gr-qc0606119 (the old prefix shapes). **Guards**: `perfect_kernel_batchmln1::{batchmln1_mark_led_names_read_as_names,
 batchmln1_marked_affiliations_stay_affiliations}`, `perfect_kernel_batchfms2a2r4::prefix_marked_names_keep_their_notes`,
 `perfect_kernel_batch78f::llncs_inst_leading_marks_keep_their_names`.
+
+### 1026. `page=` on a single-page format (SVG, PNG, JPEG) selects nothing: the source is copied as it is (#791)
+
+**TeX.** pdfTeX ignores `page=` on a single-image file: `\includegraphics[page=2,width=2cm]{a.png}` typesets the PNG
+(pdflatex, 0 `!` lines). **Perl.** `image_graphicx_parse` pushes `page` as a transform (Util/Image.pm:179) and
+`image_graphicx_is_trivial` counts it non-trivial (:284), so `Post/Graphics.pm:262-271` re-encodes a PNG or JPEG through
+ImageMagick under a generated `xN` name, and refuses it on an SVG with a `limitation` Warning before copying
+(KNOWN_PERL_ERRORS #1241). **Rust.** `Graphics::process` drops `page=` for `svg`/`png`/`jpg`/`jpeg` before planning, so
+such a graphic takes the path it takes without `page=`: the source copied byte for byte, its `imagewidth`/`imageheight`
+kept, no Warning. Before, every `page=` went through `convert` (an SVG became a re-encoded `x1.svg` without its size).
+Multi-page or multi-frame sources (PDF, PS, TIFF, GIF) keep `page=`. **Guard**:
+`graphics::tests::a_single_page_source_ignores_page`.
+
+### 1027. The no-dump expl3-code.tex reload counts what it mutes (#825)
+
+**Perl.** Perl's raw expl3 load raises none of these records, so it has no such scope. **Rust.** Without a kernel dump
+(`LATEXML_NODUMP=1`, or no dump for the tree) `expl3.sty` re-reads expl3-code.tex raw, and `expl3_sty.rs` drops that
+load's raw-load-only cascade whole (Perl `IGNORE_ERRORS`, issue #651; 5015 Error records on TL 2025). The scope now
+tallies what it drops (`IgnoreDiagnosticsScope::dropped`), and `expl3_sty::report_muted_reload` reports it: one
+`Warning:expl3:raw-load` naming the Error and Fatal counts when the reload completed, an `Error:expl3:raw-load` when it
+stopped early (the expl3 functions after the stop are undefined: on TL 2026 it stopped in l3unicode, leaving
+`\regex_match:NnTF`, `\text_lowercase:n`, `\sys_if_shell:TF` undefined and mhchem's `\ce` broken). The dump path never
+reloads and is unchanged. **Guards**: `common::error::tests::an_ignoring_scope_tallies_what_it_drops`,
+`expl3_sty::tests::a_muted_expl3_reload_is_counted`, `dump_gate_init::nodump_latex_branch_converts_healthily`.

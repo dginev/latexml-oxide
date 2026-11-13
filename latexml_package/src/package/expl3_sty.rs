@@ -75,7 +75,7 @@ pub(crate) fn with_expl_syntax_restored<T>(load: impl FnOnce() -> Result<T>) -> 
 
 /// What the no-dump expl3-code.tex reload muted is counted, never silent (#825): a Warning, an Error when the reload
 /// stopped early, leaving every expl3 function after that point undefined (TL 2026 stopped in l3unicode, breaking
-/// mhchem's `\ce`).
+/// mhchem's `\ce`; OD #1027).
 fn report_muted_reload(muted: IgnoredRecords, stopped: Option<Error>) -> Result<()> {
   let counts = s!(
     "{} Error and {} Fatal records muted",
