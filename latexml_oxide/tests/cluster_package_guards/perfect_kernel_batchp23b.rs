@@ -148,3 +148,35 @@ fn a_star_after_an_inst_mark_is_the_names_text() {
     );
   }
 }
+
+/// An e-mail line under a raw class's numbered `\institute` entry that two names request goes back into the entry
+/// without the class's own e-mail command (`classify::raw_email_unwrapped`), whose Kind step takes its addresses out and
+/// whose Link step gives each the author it spells (OD #956): cjaa.cls's `\email` sets its address in `\@thanks` and
+/// prints nowhere in the entry (astro-ph0508574, 0911.3853's shape). Red on P23b (49b1490df2): no e-mail, three
+/// Warnings. Distinct from the rows above: the raw store route (`class_numbered_institutes`), no binding's list.
+#[test]
+fn a_raw_class_store_email_line_goes_to_the_authors_it_spells() {
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/sectioning-frontmatter/raw_class_numbered_institute_email_each_address_its_author.tex"
+  );
+  let (log, xml) = latexml::util::test::convert_files_with(tex, &[], Some("ar5iv.sty"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  assert_eq!(
+    creators(&xml),
+    rows(&[
+      &[
+        "Wei Gao",
+        "affiliation=Univ A, Town",
+        "email=whgao@x.org",
+        "affiliation=Univ B",
+      ],
+      &[
+        "Dan Wei",
+        "affiliation=Univ A, Town",
+        "email=dwei@x.org",
+        "affiliation=Univ B",
+      ],
+    ]),
+    "{xml}"
+  );
+}

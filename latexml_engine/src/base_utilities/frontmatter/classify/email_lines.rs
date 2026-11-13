@@ -8,6 +8,25 @@ pub(in crate::base_utilities) fn is_email_wrapper(cmd: &Token) -> bool {
   cmd.with_str(|name| name.to_lowercase().contains("mail"))
 }
 
+/// `line` without the e-mail command it is wrapped in where the command is a raw file's or the document's (cjaa.cls's
+/// `\email`, which sets its address in `\@thanks`, printed nowhere in the entry): the addresses it prints, which a
+/// marked list's entry takes out by its Kind step (`kind_entry_addresses`, OD #956); a binding's makes its contacts in
+/// place. astro-ph0508574, 0911.3853.
+pub(in crate::base_utilities) fn raw_email_unwrapped(line: Tokens) -> Tokens {
+  match whole_line_cs_wrapper(&line) {
+    Some((cmd, inner))
+      if is_email_wrapper(&cmd)
+        && lookup_definition(&cmd)
+          .ok()
+          .flatten()
+          .is_some_and(|d| !d.get_origin().is_latexml_owned()) =>
+    {
+      inner
+    },
+    _ => line,
+  }
+}
+
 /// The end of `tokens` before the line break and spacing they end with, which print nothing: spaces, `\\`, `\hfill`,
 /// `\smallskip`…, `\protect`, `\vspace{…}`, `\hspace*{…}` (2409.06765's `\email vye@berkeley.edu\\ \vspace{-0.6cm}`,
 /// read as one line; 2609.08102's `\author[Mech]{\protect\\Johann Guilleminot}`); 0 for a line of only those.

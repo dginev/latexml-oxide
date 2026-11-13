@@ -35209,10 +35209,9 @@ one address to each author (int169a: the block's); 1308.2757's llncs list (`\and
 "mehrabi@" spelling two Mehrabis) gives Saeed Mehrabi his by order, as the PDF lists them. The kernel `\author`'s block
 stays one position: parted, two names requesting a raw class's numbered institute (`class_numbered_institutes`) send its
 one e-mail line back into the store's entry, whose call the emitter cannot cut, and the address is lost (astro-ph0508574's
-cjaa.cls, 0911.3853's mem.cls; RED `sectioning-frontmatter/raw_class_numbered_institute_email_under_its_entry_lost_red.tex`,
-lost on int169a too with two addresses). llncs's marked list stays cut at the call: one block (tried, by rows and whole)
-reads `\inst{1,2}*` beside another name's `\inst{1*}` as a shown "∗" too (2407.13764; the same on int169a under
-aa/sv/OmniBus, RED `class-bindings/author_one_block/aa_glued_star_after_inst_mark_shown_twice_red.tex`), and whole, a names
+cjaa.cls, 0911.3853's mem.cls; lost on int169a too with two addresses: fixed by P2-3c, below). llncs's marked list stays
+cut at the call: one block (tried, by rows and whole) reads `\inst{1,2}*` beside another name's `\inst{1*}` as a shown
+"∗" too (2407.13764; the same on int169a under aa/OmniBus: fixed by P2-3c, below), and whole, a names
 row after `\and \\` as an affiliation (1902.08498, 2605.10631). A comma-parted marked list stays one position (the
 reading's comma cut is not readable at the call: RED `llncs_comma_parted_marked_list_email_line_is_the_blocks_red`), as
 does a macro printing names and the separator together (RED `svjour3_marked_list_macro_holding_names_and_separator_red`).
@@ -35222,6 +35221,23 @@ against int169a) +0.38 % (2103.04797), +0.14 % (1901.01540), XML identical. Guar
 `perfect_kernel_batchp23b::a_whole_list_entry_holds_a_position_a_name` (repros
 `class-bindings/author_one_block/{svjour3,aa,omnibus}_marked_list_email_line_one_address_a_name.tex`,
 `svjour3_marked_list_{marks_in_a_note_and_a_box,address_under_one_names_affiliation,macro_holding_only_the_separator}.tex`).
+
+**P2-3c (P23c, 2026-11-12): two readings a whole-list block needs.** (1) *A name's `\inst` marks are its own.* The
+emitter keeps a kept name's `\inst` request only where the reading made it this name's (`RCreator::class_requests`, the
+resolver's `class_requests` moved onto the creator, read by `answer_pending`, `share_unpicked` and the emitter alike);
+read per block, a `*` printed after Ann's `\inst{1,2}` matched Bob's `\inst{1*}` and was shown again as "∗" beside the
+"*" her name keeps (2407.13764's shape under aa and OmniBus). (2) *A raw class's e-mail command in a store's run.* An
+e-mail line under a numbered store entry (`class_numbered_institutes`) that is not one address of the one author
+requesting it goes back into the entry without the class's own e-mail command (`classify::raw_email_unwrapped`: a
+whole-line wrapper whose meaning is a raw file's or the document's), so the entry's Kind step takes its addresses out
+and its Link step gives each the author it spells (#956); left wrapped, cjaa.cls's `\email` (its address set in
+`\@thanks`) printed nowhere and the addresses were lost, counted. A raw command printing its label in place (mem.cls's
+`{e-mail: \tt#1}`) loses that label and font to the contacts' default name (RED
+`raw_class_in_place_email_label_under_numbered_institute_red`). A/B against P23b (`49b1490df2`) on P23b's 2,630 papers
+and 164 raw classes with `\institute` and `\inst`: 0 changed (both readings matter once a list holds several names: the
+kernel's below). Guards `perfect_kernel_batchp23b::{a_star_after_an_inst_mark_is_the_names_text,
+a_raw_class_store_email_line_goes_to_the_authors_it_spells}` (repros `class-bindings/author_one_block/{aa,omnibus}_star_after_inst_mark_stays_the_names_text.tex`,
+`sectioning-frontmatter/raw_class_numbered_institute_email_each_address_its_author.tex`).
 
 ### 996. What is appended to `\@author` after the author setter stored it is the author block's continuation: rows before its first `\and`, more authors after it, also under a binding whose `\author` stores nothing in `\@author` (FX24; RR1 gap 24)
 
