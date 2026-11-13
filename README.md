@@ -3,10 +3,14 @@
 [![CI](https://github.com/dginev/latexml-oxide/actions/workflows/CI.yml/badge.svg)](https://github.com/dginev/latexml-oxide/actions/workflows/CI.yml)
 [![release](https://img.shields.io/github/v/release/dginev/latexml-oxide?color=orange)](https://github.com/dginev/latexml-oxide/releases)
 [![license: CC0-1.0](https://img.shields.io/badge/license-CC0--1.0-blue.svg)](LICENSE)
+[![arXiv: 98%](https://img.shields.io/badge/arXiv-98%25-brightgreen.svg)](https://ar5iv.labs.arxiv.org)
 ![ported tests](https://img.shields.io/badge/ported%20tests-2177-32a852?style=flat)
 [![arXiv](https://img.shields.io/badge/arXiv-2605.16562-b31b1b.svg)](https://arxiv.org/abs/2605.16562)
 
 latexml-oxide turns LaTeX sources into accessible web documents.
+It is used in the [ar5iv Lab](https://ar5iv.labs.arxiv.org) and in the production
+[arXiv HTML Papers](https://info.arxiv.org/about/accessible_HTML.html) pages, converting
+98% of arXiv's articles without an error.
 The project is in active public **beta** as of July 2026, approaching mainline LaTeXML parity.
 
 ### Why?
