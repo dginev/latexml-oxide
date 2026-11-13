@@ -3,8 +3,7 @@
 [![CI](https://github.com/dginev/latexml-oxide/actions/workflows/CI.yml/badge.svg)](https://github.com/dginev/latexml-oxide/actions/workflows/CI.yml)
 [![release](https://img.shields.io/github/v/release/dginev/latexml-oxide?color=orange)](https://github.com/dginev/latexml-oxide/releases)
 [![license: CC0-1.0](https://img.shields.io/badge/license-CC0--1.0-blue.svg)](LICENSE)
-[![arXiv: 98%](https://img.shields.io/badge/arXiv-98%25-brightgreen.svg)](https://ar5iv.labs.arxiv.org)
-![ported tests](https://img.shields.io/badge/ported%20tests-2177-32a852?style=flat)
+[![ar5iv: 98%](https://img.shields.io/badge/ar5iv-98%25-brightgreen.svg)](https://ar5iv.labs.arxiv.org)
 [![arXiv](https://img.shields.io/badge/arXiv-2605.16562-b31b1b.svg)](https://arxiv.org/abs/2605.16562)
 
 latexml-oxide turns LaTeX sources into accessible web documents.

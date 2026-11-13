@@ -68,9 +68,8 @@ land the subcrate bumps. PR → green CI (validates the pin resolves) → merge 
 Verify the draft has all 15 assets: `gh release view X.Y.Z-rcN --json assets`.
 
 ### 3. Promotion PR → final tag (public)
-Tiny commit: `Cargo.toml` `-rcN → X.Y.Z`; refresh the README (`VERSION=` install samples,
-the hardcoded `ported tests-N` badge → current `nextest` count). The dynamic `release`
-badge auto-flips; don't touch CI/license/arXiv badges. PR → green → merge. Then tag bare:
+Tiny commit: `Cargo.toml` `-rcN → X.Y.Z`; refresh the README's `VERSION=` install samples.
+The dynamic `release` badge auto-flips; don't touch the CI/license/ar5iv/arXiv badges. PR → green → merge. Then tag bare:
 ```bash
 git tag -a X.Y.Z -m "…" <merged-sha> && git push origin X.Y.Z
 ```
