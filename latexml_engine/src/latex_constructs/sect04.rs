@@ -525,19 +525,29 @@ pub(crate) fn load() -> Result<()> {
   // `\DeclareNewTOC{lof}`, scrbook.cls:7341) expands `\listoffigures` there: with a second token the `\newcommand`
   // named the first, and its body group was typeset in the preamble, a starred chapter
   // (`perfect_kernel_batchint23::scrbook_front_matter_chapters_are_unnumbered`).
+  // `\lx@kernel@listof{<ext>}{<title>}`: the list of `<ext>` headed `<title>` (untitled when empty), for the kernel's
+  // three and a binding whose class runs `\@starttoc` (memoir_cls.rs `\newlistof`), the title in a group of its own
+  // (`perfect_kernel_batch65a::contents_name_font_stays_in_the_toc_title`). The names: `latex_constructs_rust_only.rs` §8.
   RawTeX!(r"\long\def\lx@kernel@listbody#1{}");
-  RawTeX!(r"\protected\def\lx@kernel@tableofcontents{\par\@startsection@hook\lx@kernel@toc@element}");
-  RawTeX!(r"\protected\def\lx@kernel@listoffigures{\par\@startsection@hook\lx@kernel@lof@element}");
-  RawTeX!(r"\protected\def\lx@kernel@listoftables{\par\@startsection@hook\lx@kernel@lot@element}");
+  RawTeX!(r"\protected\long\def\lx@kernel@listof#1#2{\par\@startsection@hook
+    \if\relax\detokenize{#2}\relax\lx@kernel@listof@element{#1}\else\lx@kernel@listof@element[{{#2}}]{#1}\fi}");
+  RawTeX!(r"\protected\def\lx@kernel@tableofcontents{\lx@kernel@listof{toc}{\contentsname}}");
+  RawTeX!(r"\protected\def\lx@kernel@listoffigures{\lx@kernel@listof{lof}{\listfigurename}}");
+  RawTeX!(r"\protected\def\lx@kernel@listoftables{\lx@kernel@listof{lot}{\listtablename}}");
   DefMacro!("\\tableofcontents", "\\lx@kernel@tableofcontents\\lx@kernel@listbody{\\@starttoc{toc}}");
-  // Perl latex_constructs.pool.ltxml:725 "<ltx:TOC lists='toc' scope='global' select='#select'><ltx:title>#name
-  // </ltx:title></ltx:TOC>", placed by `insert_toc` (a TOC inside an abstract goes after it).
-  DefConstructor!("\\lx@kernel@toc@element", sub[document, _args, props] {
-      insert_toc(document, "toc", Some(prop_string!(props, "select")), prop_digested!(props, "name"))?;
+  DefMacro!("\\listoffigures", "\\lx@kernel@listoffigures\\lx@kernel@listbody{\\@starttoc{lof}}");
+  DefMacro!("\\listoftables", "\\lx@kernel@listoftables\\lx@kernel@listbody{\\@starttoc{lot}}");
+  // Perl latex_constructs.pool.ltxml:725-743 "<ltx:TOC lists='toc' scope='global' select='#select'><ltx:title>#name
+  // </ltx:title></ltx:TOC>" (no `select` for lof/lot), placed by `insert_toc` (a TOC inside an abstract goes after it);
+  // untitled without `[<title>]` (tocbibind_sty.rs `\tocfile` under a numbered heading).
+  DefConstructor!("\\lx@kernel@listof@element[]{}", sub[document, args, props] {
+      let title = args[0].as_ref().map(|title| vec![title]);
+      insert_toc(document, &prop_string!(props, "lists"), Some(prop_string!(props, "select")), title)?;
     },
-    properties => {
-      Ok(stored_map!("select" => toc_select()?,
-        "name" => digest_in_group(T_CS!("\\contentsname"))?))
+    properties => sub[args] {
+      let lists = args[1].as_ref().map(|ext| ext.to_string()).unwrap_or_default();
+      let select = if lists == "toc" { toc_select()? } else { String::new() };
+      Ok(stored_map!("lists" => lists, "select" => select))
     }
   );
 
@@ -551,17 +561,6 @@ pub(crate) fn load() -> Result<()> {
   });
 
   // \listfigurename / \listtablename live in `latex_constructs_rust_only.rs` section 8.
-  DefMacro!("\\listoffigures", "\\lx@kernel@listoffigures\\lx@kernel@listbody{\\@starttoc{lof}}");
-  DefConstructor!("\\lx@kernel@lof@element", sub[document, _args, props] {
-      insert_toc(document, "lof", None, prop_digested!(props, "name"))?;
-    },
-    properties => { Ok(stored_map!("name" => digest_in_group(T_CS!("\\listfigurename"))?)) });
-
-  DefMacro!("\\listoftables", "\\lx@kernel@listoftables\\lx@kernel@listbody{\\@starttoc{lot}}");
-  DefConstructor!("\\lx@kernel@lot@element", sub[document, _args, props] {
-      insert_toc(document, "lot", None, prop_digested!(props, "name"))?;
-    },
-    properties => { Ok(stored_map!("name" => digest_in_group(T_CS!("\\listtablename"))?)) });
 
   // The three under names of their own, for a binding that interprets a package raw and puts them back (tocloft_sty.rs:
   // tocloft's own run `\@starttoc`, which reads a `.toc` LaTeXML never writes; 1811.09408).
@@ -710,8 +709,8 @@ fn after_heading_hook(whatsit: &mut Whatsit) -> Result<()> {
 /// then take `s[0 .. $td]`. Perl's `0 .. $td` is an EMPTY range when `$td < 0`, so `\setcounter{tocdepth}{-1}` (parts
 /// only) yields `[part]` and `{-2}` or lower yields `select=''` (an empty ToC). Computed in SIGNED space: `tocdepth` is a
 /// signed counter, so the old `value_of() as usize` wrapped on negatives — a debug overflow panic, and in release a
-/// silently over-full ToC (`{-2}` listed everything). Shared with tocbibind's `\tocfile{…}{toc}` (tocbibind_sty.rs).
-pub fn toc_select() -> Result<String> {
+/// silently over-full ToC (`{-2}` listed everything).
+fn toc_select() -> Result<String> {
   let s = [
     "ltx:part",
     "ltx:chapter",
@@ -765,7 +764,7 @@ fn insert_toc(
   document: &mut Document,
   lists: &str,
   select: Option<String>,
-  name: Vec<&Digested>,
+  title: Option<Vec<&Digested>>,
 ) -> Result<()> {
   let save = document.float_out_of_frontmatter("ltx:TOC")?;
   let mut attrs = string_map!("lists" => lists.to_string(), "scope" => "global".to_string());
@@ -773,7 +772,9 @@ fn insert_toc(
     attrs.insert("select".to_string(), select);
   }
   document.open_element("ltx:TOC", Some(attrs), None)?;
-  document.insert_element("ltx:title", name, None)?;
+  if let Some(title) = title {
+    document.insert_element("ltx:title", title, None)?;
+  }
   document.close_element("ltx:TOC")?;
   if let Some(save) = save {
     document.set_node(&save);
