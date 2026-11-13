@@ -1,0 +1,59 @@
+% mechanism: D2 (P23c/P23e) reads a raw class's numbered `\institute` store without the e-mail command of a line of
+%   addresses when its digested meaning prints nothing in place (`classify::store_unprinted_emails_unwrapped`); the
+%   command is then never run, so its other effects (a counter step, a `\global` assignment, a footnote number) are lost
+% witness: synthetic (revP23e finding 3, probe s2; the real cjaa.cls `\email` only `\xdef`s `\@thanks`)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Probe 2; count 2"
+% engines: base 632698e1d8 and P23b: "Probe 2; count 2"; P23c, P23e: "Probe 0; count 0", 0 warnings (a kept-whole
+%   line already loses such effects on the base: revP23e probe s3)
+% expect:  0 errors; "Probe 2; count 2"; each address on the author it spells
+% status:  RED (P23e): catalog only, no guard
+% moves:   post-merge (id UNWE; run the command for its effects and discard what it prints, or unwrap only when its
+%   speculative run records no assignment outside the class's own store)
+\begin{filecontents*}[overwrite]{cjaaprobeB.cls}
+\ProvidesClass{cjaaprobeB}\LoadClass{article}
+\newcounter{inst}
+\newdimen\instindent
+\def\institute#1{\gdef\@institute{#1}}
+\def\institutename{\par
+ \begin{flushleft}
+ \begingroup
+ \parindent=0pt
+ \parskip=0pt
+ \setcounter{inst}{1}%
+ \def\and{\par\stepcounter{inst}%
+ \hangindent\instindent
+ \noindent
+ \hbox to\instindent{\hss$^{\theinst}$\enspace}\ignorespaces}%
+ \setbox0=\vbox{\def\thanks##1{}\@institute}
+ \ifnum\value{inst}>9\relax\setbox0=\hbox{$^{88}$\enspace}%
+                 \else\setbox0=\hbox{$^{8}$\enspace}\fi
+ \instindent=\wd0\relax
+ \ifnum\value{inst}=1\relax
+ \else
+   \parindent=0pt
+   \setcounter{inst}{1}%
+   \hangindent\instindent
+   \noindent
+   \hbox to\instindent{\hss$^{\theinst}$\enspace}\ignorespaces
+ \fi
+ \normalsize
+ \ignorespaces
+ \@institute\par
+ \end{flushleft}
+ \endgroup}
+\newcounter{probe}\newcount\mycnt
+\def\email#1{\stepcounter{probe}\global\advance\mycnt by 1\relax\footnote{#1}}
+\def\@thanks{}
+\def\inst#1{\unskip$^{#1}$}
+\def\@maketitle{\newpage\noindent{\Large\@title\par}\vskip6pt
+  {\large\noindent\def\and{\unskip, }\ignorespaces\@author\par}\vskip6pt
+  \institutename}
+\end{filecontents*}
+\documentclass{cjaaprobeB}
+\begin{document}
+\title{T}
+\author{Wei Gao\inst{1,2} \and Dan Wei\inst{1,2}}
+\institute{Univ A, Town\\ \email{whgao@x.org, dwei@x.org} \and Univ B}
+\maketitle
+Probe \theprobe; count \the\mycnt; fn \thefootnote.\footnote{Body note.}
+\end{document}
