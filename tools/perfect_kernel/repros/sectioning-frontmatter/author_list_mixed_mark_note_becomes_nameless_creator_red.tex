@@ -1,0 +1,17 @@
+% witness: 2509.15733 (fairmeta, `Ran Xu$^{1,2\correspond}$` and `\contribution[\correspond]{Corresponding author}`);
+%          authblk's list the same (`\affil[\dagger]{…}`)
+% oracle:  pdflatex 0 errors; "Ann Able1,2†, Bob Baker1", "Corresponding author" under them
+% engines: rust (SBX1, CAU1 the same) the mark `1,2†` stays in the name, unread, and the note becomes a creator of its
+%          own with no name ("(nameless)"); 0 errors 0 warnings
+% expect:  0 errors; Ann Able (marks 1, 2, †) holding the note, no nameless creator
+% status:  RED (SBX1, pre-existing on CAU1)
+% moves:   proposed batch (a mark list mixing digits and a symbol command, read as one unread label)
+\documentclass{article}
+\usepackage{authblk}
+\title{T}
+\author{Ann Able$^{1,2\dagger}$, Bob Baker$^{1}$}
+\affil[\dagger]{Corresponding author}
+\begin{document}
+\maketitle
+Text.
+\end{document}

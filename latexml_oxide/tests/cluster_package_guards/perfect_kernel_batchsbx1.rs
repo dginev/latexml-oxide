@@ -46,6 +46,19 @@ const ROWS: &[(Source, (usize, usize), Expect)] = &[
       &["Carl Cole", "affiliation=MIT"],
     ]),
   ),
+  // the list's authors are the new ones an unmarked `\affiliation` after it reaches, each of them (the queue's reading
+  // reads `annotate=new` written out, no conditional; pdflatex 0 `!` with a stand-in fairmeta.cls)
+  (
+    Source::Inline(
+      "\\documentclass{fairmeta}\n\\title{T}\n\\author{Ann Able, Bob Baker}\n\\affiliation{MIT}\n\
+       \\begin{document}\n\\maketitle\nText.\n\\end{document}\n",
+    ),
+    (0, 0),
+    Expect::Creators(&[&["Ann Able", "affiliation=MIT"], &[
+      "Bob Baker",
+      "affiliation=MIT",
+    ]]),
+  ),
   (
     Source::Repro("sectioning-frontmatter/group_author_in_lower_case_is_a_creator.tex"),
     (0, 0),
@@ -79,6 +92,15 @@ const ROWS: &[(Source, (usize, usize), Expect)] = &[
       "sPHENIX Collaboration",
       "note=See the appendix for the list of collaboration members",
     ]]),
+  ),
+  // the Error side: a legend's text named as the author, its team word no group's name (pdflatex 0 `!`, the output the same)
+  (
+    Source::Inline(
+      "\\documentclass{article}\n\\begin{document}\n\\title{T}\n\\author{now at the Theory Group}\n\\maketitle\n\
+       Body.\n\\end{document}\n",
+    ),
+    (1, 0),
+    Expect::Creators(&[&["now at the Theory Group"]]),
   ),
 ];
 
