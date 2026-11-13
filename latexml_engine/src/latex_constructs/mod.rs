@@ -1905,7 +1905,7 @@ fn after_digest_verbatim(starred: bool, whatsit: &mut Whatsit) -> Result<()> {
   } else {
     ("\\end{verbatim}", ' ')
   };
-  // latex.ltx `\@verbatim` runs `\@noligs`, whose active `'`/`` ` `` print as it says: upquote.sty:17-27 appends
+  // latex.ltx `\@verbatim` runs `\@noligs`, whose active `'`/`` ` `` print as it says: upquote.sty:26-37 appends
   // `\let'\textquotesingle` (or `\def'{\char13 }` in OT1 cmtt), upright, where the font's own are curly (issue #801).
   let mut upquotes: Vec<(char, String)> = Vec::new();
   for c in ['\'', '`'] {
@@ -4466,28 +4466,47 @@ pub fn declare_panel_page(column_pt: f64, text_pt: f64, twocolumn: bool) {
 pub fn withdraw_panel_page() { assign_value(PANEL_PAGE, Stored::None, Some(Scope::Global)); }
 
 /// The two-column page of LaTeX's standard classes (`declare_panel_page`), as `size10.clo`/`size11.clo`/`size12.clo`
-/// (and `bk1x.clo`) set it for the document's class options: in two columns `\textwidth` is the paper's width less
-/// 2in, at most twice the size's one-column 345/360/390pt, `\@settopoint`ed; `\columnwidth` is half of it less the
-/// classes' 10pt `\columnsep` (article.cls:627, latex.ltx `\twocolumn`). The paper is the last declared of the
-/// classes' paper options (article.cls:53-77, `landscape` swapping its sides), the size the last of `10pt`/`11pt`/
-/// `12pt` (`\ProcessOptions` runs them in their declaration order); under 2.09 compatibility (`\documentstyle`) the
-/// size files set 410pt (size10.clo `\if@compatibility\if@twocolumn\setlength\textwidth{410\p@}`). Returns (column,
-/// text) in points; pdflatex gives 229.5/469pt on letter paper, 221/452pt on A4, 200/410pt for `\documentstyle`.
-pub fn standard_class_twocolumn_page() -> (f64, f64) {
+/// (and `bk1x.clo`) set it for the options `class` was given (`standard_class_options`): in two columns `\textwidth`
+/// is the paper's width less 2in, at most twice the size's one-column 345/360/390pt, `\@settopoint`ed; `\columnwidth`
+/// is half of it less the classes' 10pt `\columnsep` (article.cls:627, latex.ltx `\twocolumn`). The paper is the last
+/// declared of the classes' paper options (article.cls:53-77, `landscape` swapping its sides), the size the last of
+/// `10pt`/`11pt`/`12pt` (`\ProcessOptions` runs them in their declaration order); under 2.09 compatibility
+/// (`\documentstyle`) the size files set 410pt (size10.clo `\if@compatibility\if@twocolumn\setlength\textwidth{410\p@}`).
+/// Returns (column, text) in points; pdflatex gives 229.5/469pt on letter paper, 221/452pt on A4, 200/410pt for
+/// `\documentstyle`.
+pub fn standard_class_twocolumn_page(class: &str) -> (f64, f64) {
   if lookup_bool("2.09_COMPATIBILITY") {
     return (200.0, 410.0);
   }
-  let (paper_width, one_column) = standard_class_size_file();
+  let (paper_width, one_column) = standard_class_size_file(class);
   let text = (paper_width - 144.54_f64).min(2.0 * one_column).floor();
   ((text - 10.0) / 2.0, text)
+}
+
+/// The options a standard class was given: latex.ltx's `\ProcessOptions` in a class reads its `\opt@<class>.cls`
+/// alone (`\@process@ptions`, no `\@classoptionslist`), which is the document's options when it is the document's class
+/// and what a class passes it otherwise (`\PassOptionsToClass`, `\LoadClass[…]`: elsarticle.cls:113, llncs.cls:47).
+fn standard_class_options(class: &str) -> Vec<String> {
+  match lookup_definition(&T_CS!(s!("\\opt@{class}.cls"))) {
+    Ok(Some(defn)) => match defn.get_expansion() {
+      Some(ExpansionBody::Tokens(body)) => body
+        .to_string()
+        .split(',')
+        .map(|o| o.trim().to_string())
+        .collect(),
+      _ => Vec::new(),
+    },
+    _ => Vec::new(),
+  }
 }
 
 /// The size file's facts the standard classes' `\textwidth` is computed from: the paper's width (the last declared of
 /// the paper options, article.cls:53-77, `landscape` swapping its sides) and the size's one-column width (size10.clo,
 /// size11.clo, size12.clo and bk1x.clo `\@tempdimb`: 345/360/390pt for the last of `10pt`/`11pt`/`12pt`), in points;
 /// under 2.09 compatibility bk1x.clo:105's one column is 4.5in/5in/5in instead (`declare_standard_class_page`).
-fn standard_class_size_file() -> (f64, f64) {
-  let (width, height) = match last_declared_class_option(&[
+fn standard_class_size_file(class: &str) -> (f64, f64) {
+  let given = standard_class_options(class);
+  let (width, height) = match last_declared_option(&given, &[
     "a4paper",
     "a5paper",
     "b5paper",
@@ -4502,31 +4521,25 @@ fn standard_class_size_file() -> (f64, f64) {
     Some("executivepaper") => (523.9575, 758.835),
     _ => (614.295, 794.97),
   };
-  let width = if given_class_options().iter().any(|o| o == "landscape") {
+  let width = if given.iter().any(|o| o == "landscape") {
     height
   } else {
     width
   };
-  (width, standard_class_one_column(declared_ptsize()))
+  (
+    width,
+    standard_class_one_column(standard_class_ptsize(class)),
+  )
 }
 
-/// The size the document's options declare: 0, 1 or 2 for the last declared of `10pt`/`11pt`/`12pt`.
-fn declared_ptsize() -> u8 {
-  match last_declared_class_option(&["10pt", "11pt", "12pt"]) {
+/// The standard classes' `\@ptsize` (article.cls:45-49 `\DeclareOption{11pt}{\renewcommand\@ptsize{1}}`): 0, 1 or 2
+/// for the last declared of `10pt`/`11pt`/`12pt` among the options `class` was given (`standard_class_options`; a raw
+/// class's bare `\LoadClass{article}` gives it none).
+pub fn standard_class_ptsize(class: &str) -> u8 {
+  match last_declared_option(&standard_class_options(class), &["10pt", "11pt", "12pt"]) {
     Some("11pt") => 1,
     Some("12pt") => 2,
     _ => 0,
-  }
-}
-
-/// The standard classes' `\@ptsize` (article.cls:45-49 `\DeclareOption{11pt}{\renewcommand\@ptsize{1}}`): the
-/// declared size when `class` is the document's; 0 for a class another loads, which the document's options do not
-/// reach (a raw class's `\LoadClass{article}`).
-pub fn standard_class_ptsize(class: &str) -> u8 {
-  if is_document_class(class) {
-    declared_ptsize()
-  } else {
-    0
   }
 }
 
@@ -4538,23 +4551,25 @@ fn standard_class_one_column(ptsize: u8) -> f64 {
   }
 }
 
-/// A standard class (article, report, book) that is the document's (`is_document_class`) declares its page in two
-/// columns (`standard_class_twocolumn_page`) under `twocolumn` (the last declared of `onecolumn`/`twocolumn`): its
+/// A standard class (article, report, book) given `twocolumn` (the last declared of `onecolumn`/`twocolumn`) that is
+/// the document's (`is_document_class`) declares its page in two columns (`standard_class_twocolumn_page`): its
 /// `figure` is set against the 229.5pt column, its `figure*` against the 469pt text on letter paper, where the
 /// registers' 345pt read as the column and twice it as the text (`panel_page`; rev79c2: `figure*` `panelline` 2 for
-/// the PDF's 2.044). A class loading it (OmniBus, elsarticle, REVTeX) is not it: its page is its own. One column is
-/// the registers' page.
+/// the PDF's 2.044). A class loading it (OmniBus, elsarticle, REVTeX) declares its own page. In one column it sets
+/// `\textwidth` from the options it was given, a loading class's own setting after it standing (llncs.cls:55).
 pub fn declare_standard_class_page(class: &str) -> Result<()> {
-  if is_document_class(class)
-    && last_declared_class_option(&["onecolumn", "twocolumn"]) == Some("twocolumn")
+  if last_declared_option(&standard_class_options(class), &["onecolumn", "twocolumn"])
+    == Some("twocolumn")
   {
-    let (column, text) = standard_class_twocolumn_page();
-    declare_panel_page(column, text, true);
-  } else if is_document_class(class) {
+    if is_document_class(class) {
+      let (column, text) = standard_class_twocolumn_page(class);
+      declare_panel_page(column, text, true);
+    }
+  } else {
     // size1x.clo:101-126 in one column: the paper's width less 2in, at most the size's width, `\@settopoint`ed (issue
     // #779: 12pt's 390pt, where the kernel's register is 10pt's 345pt). Under 2.09 compatibility size1x.clo's
     // 345/360/390pt and bk1x.clo:105's 4.5in/5in/5in, unrounded (pdflatex 325.215pt, 361.34999pt).
-    let (paper_width, one_column) = standard_class_size_file();
+    let (paper_width, one_column) = standard_class_size_file(class);
     let sp = match (
       lookup_bool("2.09_COMPATIBILITY"),
       class,
@@ -4615,7 +4630,11 @@ pub fn last_class_option<'a>(options: &[&'a str]) -> Option<&'a str> {
 /// the one that stands where `\ProcessOptions` runs the options in their declaration order (latex.ltx's
 /// `\ProcessOptions`, as IEEEtran.cls's :376), for a binding's `declare_panel_page`.
 pub fn last_declared_class_option<'a>(options: &[&'a str]) -> Option<&'a str> {
-  let given = given_class_options();
+  last_declared_option(&given_class_options(), options)
+}
+
+/// Which of `options` (in their declaration order) `given` holds, the last declared.
+fn last_declared_option<'a>(given: &[String], options: &[&'a str]) -> Option<&'a str> {
   options
     .iter()
     .rev()

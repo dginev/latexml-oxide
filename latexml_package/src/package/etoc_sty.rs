@@ -13,11 +13,28 @@ LoadDefinitions!({
   // table prints nothing (:957-960, `\invisibletableofcontents`). Issue #760.
   InputDefinitions!("etoc", noltxml => true, extension => Some(Cow::Borrowed("sty")));
   RawTeX!(r"\def\etoctableofcontents{\Etoc@tocdepthset\@ifstar\lx@etoc@toc\lx@etoc@toc}
-\def\lx@etoc@toc{\ifnum\c@tocdepth>\Etoc@minf\lx@tableofcontents\fi\Etoc@tocdepthreset}
+\def\lx@etoc@toc{\ifnum\c@tocdepth>\Etoc@minf\ifEtoc@classstyle\else\lx@etoc@style@lost\fi
+  \lx@tableofcontents\fi\Etoc@tocdepthreset}
 \let\tableofcontents\etoctableofcontents
 \def\localtableofcontents{\Etoc@tocdepthset\@ifstar\lx@etoc@localtoc\lx@etoc@localtoc}
-\def\lx@etoc@localtoc{\ifnum\c@tocdepth>\Etoc@minf\par\lx@etoc@localtoc@element{\contentsname}\fi
-  \Etoc@tocdepthreset}");
+\def\lx@etoc@localtoc{\ifnum\c@tocdepth>\Etoc@minf\ifEtoc@classstyle\else\ifEtoc@etocstyle\else
+  \lx@etoc@style@lost\fi\fi\par\lx@etoc@localtoc@element{\contentsname}\fi\Etoc@tocdepthreset}");
+  // The table is titled `\contentsname`; a user style's <before> (`\etocsettocstyle`, typeset unless a local table
+  // keeps etoc's style: etoc.sty:946-955) is not typeset, its heading lost: counted until it is (RED
+  // `etoc_settocstyle_heading_red.tex`).
+  DefPrimitive!("\\lx@etoc@style@lost", {
+    let before = match lookup_definition(&T_CS!("\\Etoc@tableofcontents@user@before"))? {
+      Some(defn) => match defn.get_expansion() {
+        Some(ExpansionBody::Tokens(body)) => body.to_string(),
+        _ => String::new(),
+      },
+      None => String::new(),
+    };
+    if !before.trim().is_empty() {
+      Warn!("unexpected", "\\etocsettocstyle",
+        s!("The table of contents' style is not typeset; its heading is lost: {}", before.trim()));
+    }
+  });
 
   // The local table lists the enclosing unit's children: its `scope` is that unit's id (the schema's "otherwise an
   // xml:id", crossref.rs `fill_in_tocs`), the whole document's outside any unit.

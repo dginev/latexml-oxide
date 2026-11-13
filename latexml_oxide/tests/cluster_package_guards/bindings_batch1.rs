@@ -55,14 +55,29 @@ fn import_path_is_the_package_macro() {
 
 /// Issue #779: a standard class's size and paper options set `\textwidth` as its size file does in one column
 /// (size1x.clo:108-126) and `\@ptsize`; pdflatex's values. Red: 345.0pt and 0 for every row. Under 2.09 compatibility
-/// bk1x.clo:105's 4.5in/5in (revW2; red 345.0pt, 390.0pt); a raw class's `\LoadClass{article}` is not reached by the
-/// document's `12pt` (revW2; red `PTSIZE = 2`).
+/// bk1x.clo:105's 4.5in/5in (revW2; red 345.0pt, 390.0pt). The options are those the class was given (`\opt@article.cls`):
+/// a class passing its options to article reaches them, its own `\textwidth` after it standing (llncs.cls:55); a raw
+/// class's bare `\LoadClass{article}` does not (revW2b; red 345.0pt and 0 for elsarticle, llncs, `myc`, `wo`).
 #[test]
 fn standard_class_size_option_sets_textwidth() {
   let tex = repro!(
     "class-bindings",
     "standard_class_size_option_sets_textwidth.tex"
   );
+  let classes = [
+    (
+      "mycls.cls",
+      "\\ProvidesClass{mycls}\n\\LoadClass{article}\n",
+    ),
+    (
+      "myc.cls",
+      "\\ProvidesClass{myc}\n\\DeclareOption*{\\PassOptionsToClass{\\CurrentOption}{article}}\n\\ProcessOptions\n\\LoadClass{article}\n",
+    ),
+    (
+      "wo.cls",
+      "\\ProvidesClass{wo}\n\\LoadClassWithOptions{article}\n",
+    ),
+  ];
   for (class, width, ptsize) in [
     (r"\documentclass[12pt]{article}", "390.0pt", "2"),
     (r"\documentclass{article}", "345.0pt", "0"),
@@ -71,19 +86,28 @@ fn standard_class_size_option_sets_textwidth() {
     (r"\documentstyle{book}", "325.215pt", "0"),
     (r"\documentstyle[12pt]{book}", "361.34999pt", "2"),
     (r"\documentclass[12pt]{mycls}", "345.0pt", "0"),
+    (r"\documentclass[12pt]{myc}", "390.0pt", "2"),
+    (r"\documentclass[11pt,a5paper]{myc}", "276.0pt", "1"),
+    (r"\documentclass[12pt]{wo}", "390.0pt", "2"),
+    (r"\documentclass[12pt]{elsarticle}", "390.0pt", "2"),
+    (r"\documentclass[12pt]{llncs}", "347.12354pt", "2"),
   ] {
-    // A raw class is read raw under ar5iv.sty (otherwise OmniBus), which also gives the paragraphs ids.
-    let raw = class.contains("mycls");
+    // A class that is not a standard one is read under ar5iv.sty (a raw class otherwise OmniBus), which also gives the
+    // paragraphs ids.
+    let preload = !["{article}", "{report}", "{book}"]
+      .iter()
+      .any(|c| class.ends_with(c));
     let (log, xml) = convert_files_with(
       &tex.replace(r"\documentclass[12pt]{article}", class),
-      &[(
-        "mycls.cls",
-        "\\ProvidesClass{mycls}\n\\LoadClass{article}\n",
-      )],
-      raw.then_some("ar5iv.sty"),
+      &classes,
+      preload.then_some("ar5iv.sty"),
     );
-    assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
-    let id = if raw { " xml:id=\"p1.1\"" } else { "" };
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      (0, 0),
+      "{class}: {log}"
+    );
+    let id = if preload { " xml:id=\"p1.1\"" } else { "" };
     assert_element(
       &xml,
       "ltx:p",
@@ -177,4 +201,17 @@ fn etoc_local_table_lists_the_unit() {
     ],
     "{html}"
   );
+  // `\etocsettocstyle`'s heading is not typeset (RED `etoc_settocstyle_heading_red.tex`): each table's loss is counted
+  // by a Warning naming it (revW2b; red: 0 Warnings).
+  let (log, _) = convert_with(
+    repro!("package-bindings", "etoc_settocstyle_heading_red.tex"),
+    None,
+  );
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 2), "{log}");
+  for heading in [r"\section*{Overview}", r"\subsection*{In this section}"] {
+    assert!(
+      log.contains(&format!("its heading is lost: {heading}")),
+      "{log}"
+    );
+  }
 }

@@ -1,4 +1,4 @@
-% issue #801: latex.ltx `\@verbatim` runs `\@noligs`, and upquote.sty:17-27 appends upright quotes to it, so
+% issue #801: latex.ltx `\@verbatim` runs `\@noligs`, and upquote.sty:26-37 appends upright quotes to it, so
 % `{verbatim}` prints ' and ` upright as fancyvrb's Verbatim and `\verb` do; the kernel's line reader decoded them
 % through the typewriter font (curly). Without upquote they stay the font's (pdflatex: cmtt's curly quote).
 % witness: synthetic (issue #801: `x='this is string'` in Verbatim, \verb and verbatim)

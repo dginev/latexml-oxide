@@ -36018,17 +36018,21 @@ batchmln1_marked_affiliations_stay_affiliations}`, `perfect_kernel_batchfms2a2r4
 the paper's width less 2in, at most 345/360/390pt for 10/11/12pt, `\@settopoint`ed (size12.clo:101-126); under 2.09
 compatibility size1x.clo's 345/360/390pt and bk1x.clo:105's 4.5in/5in/5in (pdflatex 325.215pt, 361.34999pt).
 **Perl.** The kernel's `\textwidth` is 345pt (latex_constructs.pool.ltxml:1038) for every size, `\@ptsize` 0
-(article.cls.ltxml:51 "should depend on options..."). **Rust.** `declare_standard_class_page` sets `\textwidth` from the
-document's size and paper options when the class is the document's, and `standard_class_ptsize` gives `\@ptsize` (0 for
-a class another class loads, which the document's options do not reach). Two goldens differ from Perl on purpose:
+(article.cls.ltxml:51 "should depend on options..."). **Rust.** `declare_standard_class_page` sets `\textwidth` and
+`standard_class_ptsize` gives `\@ptsize` from the options the class was given, `\opt@<class>.cls`, which a class's
+`\ProcessOptions` reads alone (latex.ltx `\@process@ptions`): the document's options for the document's class, the
+passed ones for a class another loads (elsarticle.cls:113, llncs.cls:47 `\PassOptionsToClass`, `\LoadClassWithOptions`;
+none for a bare `\LoadClass{article}`). A loading class's own `\textwidth` stands after it (llncs.cls:55, 347.12354pt);
+the elsarticle binding passes the size options as the class does (Perl's declared them no-ops). Two goldens differ from Perl on purpose:
 `tokenize/fancyvrb.xml` (12pt, `width="390.0pt"`) and `complex/cleveref_minimal.xml` (a `\rule` sized from it).
 Residual (post-merge): in two columns the registers stay 345pt (pdflatex 469pt/229.5pt;
-`class-bindings/standard_class_twocolumn_textwidth_red.tex`). **Guards**: `bindings_batch1::standard_class_size_option_sets_textwidth` (repro
+`class-bindings/standard_class_twocolumn_textwidth_red.tex`), and elsarticle's `5p` 390pt at 12pt (pdflatex 522pt;
+`elsarticle_twocolumn_textwidth_red.tex`). **Guards**: `bindings_batch1::standard_class_size_option_sets_textwidth` (repro
 `class-bindings/standard_class_size_option_sets_textwidth.tex`).
 
 ### 1021. `{verbatim}` prints the quotes `\@noligs` gives: upright under upquote (#801)
 
-**TeX.** latex.ltx's `\@verbatim` runs `\@noligs`, to which upquote.sty:17-27 appends `\let'\textquotesingle` (or
+**TeX.** latex.ltx's `\@verbatim` runs `\@noligs`, to which upquote.sty:26-37 appends `\let'\textquotesingle` (or
 `\def'{\char13 }` in OT1 cmtt), so `{verbatim}`/`{verbatim*}` print ' and ` upright, as fancyvrb's `Verbatim` and `\verb`
 do (pdflatex: all four forms upright). **Perl.** upquote is read raw (upquote.sty.ltxml:20) and the kernel's verbatim
 decodes its body through the typewriter font: all four forms print curly U+2019/U+2018. **Rust.** `after_digest_verbatim`
@@ -36043,7 +36047,8 @@ curly quotes stay, as pdflatex prints them. **Guards**: `bindings_batch1::verbat
 etoc binding (`\localtableofcontents`, `\etocsetnexttocdepth` undefined, 2 Errors). **Rust.** crossref.rs's
 `fill_in_tocs` lists the children of the unit an xml:id scope names; etoc_sty.rs's `\localtableofcontents` emits a TOC
 scoped to its enclosing unit's id (`current` outside any unit), to `\etocsetnexttocdepth`'s depth. Residuals
-(post-merge): `\etocsettocstyle`'s heading and `\localtableofcontentswithrelativedepth` (repros
+(post-merge): `\etocsettocstyle`'s heading (counted: a Warning naming the style's tokens) and
+`\localtableofcontentswithrelativedepth` (repros
 `package-bindings/etoc_settocstyle_heading_red.tex`, `etoc_relative_depth_red.tex`). **Guards**:
 `bindings_batch1::etoc_local_table_lists_the_unit` (repro `package-bindings/etoc_local_table_lists_the_unit.tex`).
 

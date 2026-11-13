@@ -1,6 +1,9 @@
 % issue #779: the standard classes' size option sets `\textwidth` as its size file does in one column (size12.clo:
 % 108-126, the paper's width less 2in, at most 390pt), and `\@ptsize` (article.cls:45-49); report 11pt, 360pt;
-% book 12pt on a5paper, 276pt. The binding's options were no-ops (Perl's too): 345pt and 0 for every size.
+% book 12pt on a5paper, 276pt. The binding's options were no-ops (Perl's too): 345pt and 0 for every size. The
+% options are those article was given (`\opt@article.cls`): `[12pt]{elsarticle}` 390pt/2 and a raw class passing
+% `\CurrentOption` or `\LoadClassWithOptions{article}` 390pt/2, `[12pt]{llncs}` its own 347.12354pt/2; a bare
+% `\LoadClass{article}` 345pt/0 (pdflatex; review revW2b: the head 0102466f6d gave 345pt/0 for all four).
 % witness: synthetic (issue #779: a 12pt article's `\begin{minipage}{\textwidth}`)
 % oracle:  pdflatex 0 errors: TEXTWIDTH = 390.0pt, PTSIZE = 2
 % engines: rust=0 perl=0 (2026-11-13, 345.0pt and 0)

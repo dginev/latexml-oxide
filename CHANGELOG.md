@@ -18,7 +18,9 @@
     360pt (11pt) or 390pt (12pt). Before, every size got 10pt's 345pt, so a
     `\begin{minipage}{\textwidth}` in a 12pt article was too narrow. Under
     `\documentstyle`, book's width is `bk1x.clo`'s 4.5in (10pt) or 5in. `\@ptsize`
-    now follows the size option too, when the class is the document's.
+    now follows the size option too. Both read the options the class was given,
+    so a class passing its options to `article` (elsarticle, llncs) reaches them;
+    llncs keeps its own 12.2cm.
   - **`\import@path` is defined (#772).** import.sty's own macro now holds the
     current import directory, as the package sets and restores it, so a document
     that reads it (`\href{\import@path index.tex}{…}`) no longer gets an
