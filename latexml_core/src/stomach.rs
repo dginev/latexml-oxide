@@ -20,7 +20,8 @@ static TRACE_BOUND_MODE: Lazy<bool> = Lazy::new(|| std::env::var("LXML_TRACE_BOU
 /// `LXML_TRACE_FRAMES=1`: one line per stack-frame push/pop with the depth, the
 /// owning token and (on pop) the bound mode — the save-stack view of a
 /// group/box/mode imbalance.
-static TRACE_FRAMES: Lazy<bool> = Lazy::new(|| std::env::var("LXML_TRACE_FRAMES").is_ok());
+pub(crate) static TRACE_FRAMES: Lazy<bool> =
+  Lazy::new(|| std::env::var("LXML_TRACE_FRAMES").is_ok());
 /// `LXML_TRACE_TERMINAL=1`: for every bounded body (`digest_next_body` with a
 /// terminal), the terminal, each token the loop reads with the boxing depth,
 /// and the exit — shows which loop actually digests a token (a brace group is

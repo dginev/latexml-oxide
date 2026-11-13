@@ -6711,7 +6711,7 @@ pub fn dump_top_frame_keys() -> String {
 
 pub fn push_frame() {
   // Easy: just push a new undo frame.
-  if std::env::var_os("LXML_TRACE_FRAMES").is_some() {
+  if *crate::stomach::TRACE_FRAMES {
     eprintln!(
       "[state] push_frame depth {} -> {}",
       get_frame_depth(),
@@ -6903,7 +6903,7 @@ fn hoist_top_frame_delta(table: TableName, pre_snapshot: &[SymStr], conditionals
 /// Ends the current level of grouping.
 /// Note that this is lower level than `\egroup`;
 pub fn pop_frame() -> Result<()> {
-  if std::env::var_os("LXML_TRACE_FRAMES").is_some() {
+  if *crate::stomach::TRACE_FRAMES {
     eprintln!(
       "[state] pop_frame depth {} -> {}",
       get_frame_depth(),
