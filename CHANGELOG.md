@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+  - **`\import@path` is defined (#772).** import.sty's own macro now holds the
+    current import directory, as the package sets and restores it, so a document
+    that reads it (`\href{\import@path index.tex}{…}`) no longer gets an
+    undefined-macro error. Also drops a stray space the import commands typeset
+    before the imported file.
   - **`post::PostOptions::nodefaultresources` is now `default_resources`, with the
     meaning inverted.** The double negative (`nodefaultresources: false`) is gone.
     The positive name is Perl's option name (`Config.pm:120` `defaultresources!`),
