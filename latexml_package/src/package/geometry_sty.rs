@@ -2,7 +2,8 @@
 //!
 //! Perl LaTeXML (`geometry.sty.ltxml`) makes every geometry macro a no-op:
 //! page geometry is meaningless for the reflowable HTML body, so `\textwidth`
-//! stays at the class default (345pt). We keep that behaviour for the HTML flow
+//! stays at the class default (345pt in Perl; ours the size file's, 390pt at 12pt, OXIDIZED_DESIGN_DIVERGENCES
+//! #1020). We keep that behaviour for the HTML flow
 //! — a `\rule{0.5\linewidth}`, a text minipage, `\includegraphics[width=
 //! \linewidth]` etc. are all sized from the class default exactly as in Perl.
 //!

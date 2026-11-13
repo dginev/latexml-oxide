@@ -103,7 +103,7 @@ LoadDefinitions!({
   def_macro(
     T_CS!("\\@ptsize"),
     None,
-    Tokens::new(ExplodeText!(standard_class_ptsize().to_string())),
+    Tokens::new(ExplodeText!(standard_class_ptsize("report").to_string())),
     None,
   )?;
   DefMacro!("\\@pnumwidth", "1.55em");

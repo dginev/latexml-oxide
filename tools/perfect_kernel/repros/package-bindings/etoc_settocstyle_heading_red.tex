@@ -1,0 +1,20 @@
+% etoc.sty:930-940 `\etocsettocstyle{<before>}{<after>}`: the tables print the user's <before> (here its heading) in
+% place of the class's "Contents" heading. The binding drops the style: both TOCs are titled "Contents", which the PDF
+% does not print, and the user's headings are lost (review revW2 of issue #760).
+% witness: synthetic (review revW2)
+% oracle:  pdflatex 0 errors (two runs): "Overview", "In this section", no "Contents"
+% engines: rust=0 (head 5149a37793: both TOCs titled Contents; Overview and In this section lost) perl=2 (undefined)
+% expect:  0 errors; the tables headed Overview and In this section
+% status:  RED
+% moves:   post-merge
+\documentclass{article}
+\usepackage{etoc}
+\begin{document}
+\etocsettocstyle{\section*{Overview}}{}
+\tableofcontents
+\section{First section}
+\etocsettocstyle{\subsection*{In this section}}{}
+\localtableofcontents
+\subsection{First subsection}
+text
+\end{document}

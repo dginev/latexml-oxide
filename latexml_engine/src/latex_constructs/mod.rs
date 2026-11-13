@@ -4484,7 +4484,8 @@ pub fn standard_class_twocolumn_page() -> (f64, f64) {
 
 /// The size file's facts the standard classes' `\textwidth` is computed from: the paper's width (the last declared of
 /// the paper options, article.cls:53-77, `landscape` swapping its sides) and the size's one-column width (size10.clo,
-/// size11.clo, size12.clo and bk1x.clo `\@tempdimb`: 345/360/390pt for the last of `10pt`/`11pt`/`12pt`), in points.
+/// size11.clo, size12.clo and bk1x.clo `\@tempdimb`: 345/360/390pt for the last of `10pt`/`11pt`/`12pt`), in points;
+/// under 2.09 compatibility bk1x.clo:105's one column is 4.5in/5in/5in instead (`declare_standard_class_page`).
 fn standard_class_size_file() -> (f64, f64) {
   let (width, height) = match last_declared_class_option(&[
     "a4paper",
@@ -4506,16 +4507,26 @@ fn standard_class_size_file() -> (f64, f64) {
   } else {
     width
   };
-  (width, standard_class_one_column(standard_class_ptsize()))
+  (width, standard_class_one_column(declared_ptsize()))
 }
 
-/// The standard classes' `\@ptsize` (article.cls:45-49 `\DeclareOption{11pt}{\renewcommand\@ptsize{1}}`): 0, 1 or 2
-/// for the last declared of `10pt`/`11pt`/`12pt`.
-pub fn standard_class_ptsize() -> u8 {
+/// The size the document's options declare: 0, 1 or 2 for the last declared of `10pt`/`11pt`/`12pt`.
+fn declared_ptsize() -> u8 {
   match last_declared_class_option(&["10pt", "11pt", "12pt"]) {
     Some("11pt") => 1,
     Some("12pt") => 2,
     _ => 0,
+  }
+}
+
+/// The standard classes' `\@ptsize` (article.cls:45-49 `\DeclareOption{11pt}{\renewcommand\@ptsize{1}}`): the
+/// declared size when `class` is the document's; 0 for a class another loads, which the document's options do not
+/// reach (a raw class's `\LoadClass{article}`).
+pub fn standard_class_ptsize(class: &str) -> u8 {
+  if is_document_class(class) {
+    declared_ptsize()
+  } else {
+    0
   }
 }
 
@@ -4540,16 +4551,21 @@ pub fn declare_standard_class_page(class: &str) -> Result<()> {
     let (column, text) = standard_class_twocolumn_page();
     declare_panel_page(column, text, true);
   } else if is_document_class(class) {
-    // size1x.clo:101-126 in one column: the paper's width less 2in, at most the size's width, `\@settopoint`ed; the
-    // size's width under 2.09 compatibility (issue #779: 12pt's 390pt, where the kernel's register is 10pt's 345pt).
+    // size1x.clo:101-126 in one column: the paper's width less 2in, at most the size's width, `\@settopoint`ed (issue
+    // #779: 12pt's 390pt, where the kernel's register is 10pt's 345pt). Under 2.09 compatibility size1x.clo's
+    // 345/360/390pt and bk1x.clo:105's 4.5in/5in/5in, unrounded (pdflatex 325.215pt, 361.34999pt).
     let (paper_width, one_column) = standard_class_size_file();
-    let text = if lookup_bool("2.09_COMPATIBILITY") {
-      one_column
-    } else {
-      (paper_width - 144.54_f64).min(one_column).floor()
+    let sp = match (
+      lookup_bool("2.09_COMPATIBILITY"),
+      class,
+      standard_class_ptsize(class),
+    ) {
+      (true, "book", 0) => 21_313_290,
+      (true, "book", _) => 23_681_433,
+      (true, ..) => (one_column * 65536.0) as i64,
+      (false, ..) => ((paper_width - 144.54_f64).min(one_column).floor() * 65536.0) as i64,
     };
-    let width = Dimension::new((text * 65536.0).round() as i64);
-    assign_register("\\textwidth", width.into(), None, Vec::new())?;
+    assign_register("\\textwidth", Dimension::new(sp).into(), None, Vec::new())?;
   }
   Ok(())
 }

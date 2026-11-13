@@ -78,7 +78,7 @@ LoadDefinitions!( {
   // counter, when article is the document's class.
   engine::latex_constructs::declare_fnsymbol_title_block("article", Some(false))?;
 
-  def_macro(T_CS!("\\@ptsize"), None, Tokens::new(ExplodeText!(standard_class_ptsize().to_string())), None)?;
+  def_macro(T_CS!("\\@ptsize"), None, Tokens::new(ExplodeText!(standard_class_ptsize("article").to_string())), None)?;
   DefMacro!("\\@pnumwidth", "1.55em");
   DefMacro!("\\@tocrmarg", "2.55em");
   DefMacro!("\\@dotsep", "4.5");

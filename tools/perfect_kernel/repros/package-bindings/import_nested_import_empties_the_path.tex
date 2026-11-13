@@ -1,0 +1,25 @@
+% import.sty:53-58: `\import`, `\inputfrom` (and `\includefrom`) empty `\import@path` globally (`\global\let
+% \import@path\@empty`) before `\@sub@import` saves it, so a nested `\import`/`\inputfrom` restores it to empty, not to
+% the enclosing import's directory (review revW2 of issue #772).
+% witness: synthetic (review revW2)
+% oracle:  pdflatex 0 errors: [][n/][c/] [] [] twice
+% engines: rust=0 (head 5149a37793: [][n/][c/] [n/] [], twice)
+% expect:  0 errors; the paths as pdflatex prints them
+% status:  GREEN
+\begin{filecontents*}{n/x.tex}
+[\import@path]\import{c/}{z}[\import@path]
+\end{filecontents*}
+\begin{filecontents*}{n/y.tex}
+[\import@path]\inputfrom{c/}{z}[\import@path]
+\end{filecontents*}
+\begin{filecontents*}{c/z.tex}
+[\import@path]
+\end{filecontents*}
+\documentclass{article}
+\usepackage{import}
+\begin{document}
+\makeatletter
+[\import@path]\import{n/}{x}[\import@path]
+
+[\import@path]\subimport{n/}{y}[\import@path]
+\end{document}

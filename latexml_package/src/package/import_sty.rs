@@ -169,10 +169,12 @@ LoadDefinitions!({
       set_import_path(&saved_import_path)?;
     }
   });
+  // import.sty:53-58: `\import`, `\inputfrom` and `\includefrom` empty `\import@path` globally before `\@sub@import`
+  // saves it, so a nested `\import` restores it to empty, not to the enclosing directory.
   DefMacro!("\\import OptionalMatch:* {}{}",
-    "\\lx@import@save\\lx@set@path #1{#2}\\lx@import@input{\\input}{#3}\\lx@import@restore");
+    "\\global\\let\\import@path\\@empty\\lx@import@save\\lx@set@path #1{#2}\\lx@import@input{\\input}{#3}\\lx@import@restore");
   DefMacro!("\\includefrom OptionalMatch:* {}{}",
-    "\\lx@import@save\\lx@set@path #1{#2}\\lx@import@input{\\include}{#3}\\lx@import@restore");
+    "\\global\\let\\import@path\\@empty\\lx@import@save\\lx@set@path #1{#2}\\lx@import@input{\\include}{#3}\\lx@import@restore");
   DefMacro!("\\subimport OptionalMatch:* {}{}",
     "\\lx@import@save\\lx@append@path #1{#2}\\lx@import@input{\\input}{#3}\\lx@import@restore");
   DefMacro!("\\subincludefrom OptionalMatch:* {}{}",

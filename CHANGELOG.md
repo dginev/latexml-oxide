@@ -16,13 +16,14 @@
     `article`, `report` and `book` now set `\textwidth` as their size file does
     (`size1x.clo`/`bk1x.clo`): the paper's width less 2in, at most 345pt (10pt),
     360pt (11pt) or 390pt (12pt). Before, every size got 10pt's 345pt, so a
-    `\begin{minipage}{\textwidth}` in a 12pt article was too narrow. `\@ptsize` now
-    follows the size option too.
+    `\begin{minipage}{\textwidth}` in a 12pt article was too narrow. Under
+    `\documentstyle`, book's width is `bk1x.clo`'s 4.5in (10pt) or 5in. `\@ptsize`
+    now follows the size option too, when the class is the document's.
   - **`\import@path` is defined (#772).** import.sty's own macro now holds the
     current import directory, as the package sets and restores it, so a document
     that reads it (`\href{\import@path index.tex}{…}`) no longer gets an
-    undefined-macro error. Also drops a stray space the import commands typeset
-    before the imported file.
+    undefined-macro error; a nested `\import` empties it, as import.sty does. Also
+    drops a stray space the import commands typeset before the imported file.
   - **`post::PostOptions::nodefaultresources` is now `default_resources`, with the
     meaning inverted.** The double negative (`nodefaultresources: false`) is gone.
     The positive name is Perl's option name (`Config.pm:120` `defaultresources!`),
