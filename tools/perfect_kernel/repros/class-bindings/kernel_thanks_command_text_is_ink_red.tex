@@ -9,6 +9,8 @@
 % engines: rust int160a (HG1) = 0 errors, 0 warnings: every author's note dropped (\dots, \LaTeX, \TeX, \LaTeXe), none counted; 92e's guard kept only the counts after DEL1
 % engines: rust UNC = 0 errors, 1 warning: the notes still dropped (no item is keyed by a text of no letter or
 %          digit, emitter/plan.rs `creator_items`), now counted: the content check's "4 notes … \thanks{\dots} \thanks{\LaTeX} \thanks{\TeX} \thanks{\LaTeXe}"
+% engines: rust LOGO1 = 0 errors, 1 warning: the logos' notes written (a constant template's text is ink,
+%          util_text.rs `printed_own_text`); `\thanks{\dots}` still dropped and counted
 % status:  RED (92e r1) -> GREEN (92e r2) -> RED (int160a, HG1) -> counted (UNC)
 % moves:   post-merge (the notes written: key a wordless note by its place, as a picture's)
 % preload: ar5iv.sty

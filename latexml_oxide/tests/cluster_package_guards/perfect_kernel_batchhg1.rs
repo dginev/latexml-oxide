@@ -841,13 +841,14 @@ fn reds_keep_their_counts_and_right_parts() {
       files:    &[],
       counts:   (0, 1),
       lines:    &[
-        r#"Warning:unexpected:frontmatter Frontmatter content check: 4 notes the author blocks print with no word are missing from the placed frontmatter: \thanks{\dots} \thanks{\LaTeX} \thanks{\TeX} \thanks{\LaTeXe}."#,
+        r#"Warning:unexpected:frontmatter Frontmatter content check: 1 notes the author blocks print with no word are missing from the placed frontmatter: \thanks{\dots}."#,
       ],
+      // (the logos' notes written since LOGO1: a constant template's text is ink, `util_text::printed_own_text`)
       creators: Creators::Hold(&[
         r#"<personname>Ann Able</personname>"#,
-        r#"<personname>Bob Baker</personname>"#,
-        r#"<personname>Cat Cole</personname>"#,
-        r#"<personname>Dan Doe</personname>"#,
+        r#"<personname>Bob Baker</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks"><text class="ltx_LaTeX_logo""#,
+        r#"<personname>Cat Cole</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks"><text class="ltx_TeX_logo""#,
+        r#"<personname>Dan Doe</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks"><text class="ltx_LaTeX_logo""#,
       ]),
     },
     Row {
@@ -887,10 +888,11 @@ fn reds_keep_their_counts_and_right_parts() {
       files:    &[],
       counts:   (0, 1),
       lines:    &[
-        r#"Warning:unexpected:frontmatter Frontmatter content check: 2 notes the author blocks print with no word are missing from the placed frontmatter: \thanks{$\openone$} \thanks{\emph{}}."#,
+        r#"Warning:unexpected:frontmatter Frontmatter content check: 1 notes the author blocks print with no word are missing from the placed frontmatter: \thanks{\emph{}}."#,
       ],
+      // (Ann's `$\openone$` note written since LOGO1: revsymb's constant template "1" is ink)
       creators: Creators::Hold(&[
-        r#"<personname>Ann Able</personname>"#,
+        r#"<personname>Ann Able</personname><note class="ltx_note_frontmatter ltx_thanks_note" role="thanks"><Math mode="inline" tex="\openone" text="1"><XMath><XMTok font="blackboard" role="UNKNOWN">1</XMTok></XMath></Math></note>"#,
         r#"<personname>Bob Baker</personname>"#,
         r#"role="author"><personname>Cat Cole</personname></creator>"#,
       ]),

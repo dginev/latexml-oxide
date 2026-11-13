@@ -35243,7 +35243,9 @@ Perl's `\mathchar` is a Box of it (`TeX_Math.pool.ltxml:576-580`); the text walk
 `text`, so a script of `\mathchar`s printed nothing. flexisym makes digits, letters and punctuation math-active
 `\mathchar`s (`\DeclareFlexSymbol`, flexisym.sty:244-258; cmbase.sym:68, 77, 128), so under it the marks query read `$^{2,3}$` as no mark
 (2312.00656: uai2023 + authblk[noblocks] + flexisym; F0's reading gave 7 creators without their marks and every
-affiliation on each, no Warning). `util_text::printed_glyph` gives the glyph a whatsit prints where it shows nothing else,
+affiliation on each, no Warning). `util_text::printed_own_text` (FMK1's `printed_glyph`) gives the glyph a whatsit prints
+where it shows nothing else — since LOGO1 also a constant constructor template's text (`\LaTeX`, `\TeX`, `\LaTeXe`: amsldoc's
+`\author{…, \LaTeX\ Project}` was the creator "Project", no Warning; guard `perfect_kernel_batchlogo1`) —
 and each reader of a whatsit's print reads it: `ink_text` (the observer's event text), `ink_word_text` (the title page
 check), `typesets_content`, the observer's `script_ink` (a mark's label) and `queue_digest::label_ink` (a printed
 label). Under flexisym a name's marks now read as without it (the authblk twin row without flexisym).

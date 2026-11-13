@@ -1,0 +1,15 @@
+% mechanism: kernel `\and` columns, the first a group name ("Open Project"): the next column's person is read as that
+%   group's affiliation line, so Ann Smith is no creator (her words kept in the contact). Not a logo shape: a `\LaTeX\
+%   Project` first column reads so once its logo is ink (LOGO1).
+% witness: synthetic (LOGO1, sibling sweep)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 `!`: two columns "Open Project" | "Ann Smith, Users Group"
+% engines: rust int171a base and LOGO1 0 E 0 W: one creator "Open Project", affiliation "Ann Smith, Users Group"
+% expect:  two creators: "Open Project"; "Ann Smith" with affiliation "Users Group"
+% status:  RED — moves: post-merge
+\documentclass{article}
+\begin{document}
+\title{T}
+\author{Open Project \and Ann Smith, Users Group}
+\maketitle
+Body.
+\end{document}
