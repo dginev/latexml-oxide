@@ -524,7 +524,7 @@ fn mark_text_symbols(label: &str) -> String {
     .collect()
 }
 
-/// Whether a Mark is the class's own request (`Resolver::class_requests`): its `\inst` (role `inst`, `inst parted`) or
+/// Whether a Mark is the class's own request (`RCreator::class_requests`): its `\inst` (role `inst`, `inst parted`) or
 /// a binding's request command (`request`) — not a mark printed by hand (`math`, `sup`, a footnote symbol).
 pub(super) fn is_class_request(event: &Event) -> bool {
   event
@@ -1777,11 +1777,10 @@ impl Resolver {
           self
             .fn_requests
             .extend(std::mem::take(&mut waiting_fn).into_iter().map(|l| (c, l)));
-          self.class_requests.extend(
+          self.out.creators[c].class_requests.extend(
             std::mem::take(&mut waiting_class)
               .into_iter()
-              .chain(block_requests.iter().cloned())
-              .map(|l| (c, l)),
+              .chain(block_requests.iter().cloned()),
           );
           self.parted.extend(
             std::mem::take(&mut waiting_parted)
@@ -1857,9 +1856,9 @@ impl Resolver {
                 .extend(labels.iter().map(|l| (c, l.clone())));
             }
             if class {
-              self
+              self.out.creators[c]
                 .class_requests
-                .extend(labels.iter().map(|l| (c, l.clone())));
+                .extend(labels.iter().cloned());
             }
             self.out.creators[c].requests.extend(labels);
             if after_comma {
@@ -1930,9 +1929,7 @@ impl Resolver {
       self
         .fn_requests
         .extend(waiting_fn.into_iter().map(|l| (c, l)));
-      self
-        .class_requests
-        .extend(waiting_class.into_iter().map(|l| (c, l)));
+      self.out.creators[c].class_requests.extend(waiting_class);
       self
         .parted
         .extend(waiting_parted.into_iter().map(|l| (c, l)));

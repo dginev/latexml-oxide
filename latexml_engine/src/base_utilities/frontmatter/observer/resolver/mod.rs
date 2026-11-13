@@ -69,33 +69,38 @@ pub struct Assoc {
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct RCreator {
   /// the name without its marks (ruling 1's fuzzy label)
-  pub name:          String,
+  pub name:           String,
   /// the marks shown on it, its requests
-  pub requests:      Vec<String>,
+  pub requests:       Vec<String>,
   /// how the name was split out
-  pub rule:          String,
+  pub rule:           String,
   /// the reading's joins of runs a separator parts into this one name, as `rule` tags them ([`NameJoin`]; the separator
   /// check reads them, `net::merged_names`)
-  pub joins:         Vec<NameJoin>,
+  pub joins:          Vec<NameJoin>,
   /// the ledger index of its block (or API call)
-  pub source:        usize,
+  pub source:         usize,
   /// the role of the creator call in its block that printed it, its Name's (`Event::role`: PoS's `\speaker`, `speaker`);
   /// none for a name the block itself printed (an author's)
-  pub role:          Option<String>,
+  pub role:           Option<String>,
   /// that call, its place among its block's (`Event::creator_call`): the keyvals the emitter writes on it
-  pub call:          Option<u16>,
-  pub affiliations:  Vec<Assoc>,
-  pub contacts:      Vec<Assoc>,
-  pub notes:         Vec<Assoc>,
+  pub call:           Option<u16>,
+  pub affiliations:   Vec<Assoc>,
+  pub contacts:       Vec<Assoc>,
+  pub notes:          Vec<Assoc>,
   /// each request a glued mark of letters and digits was parted into, with that mark as printed (`part_glued_labels`):
   /// a piece no entry answers shows the whole mark, never the piece alone — BESIII's `$^{50A,50C}$` under entries
   /// numbered 1 to 54 requests entry 50 and prints "50A,50C", not "A,C" (1705.11109, 1507.02068, 2204.09614)
-  pub whole_marks:   Vec<(String, String)>,
+  pub whole_marks:    Vec<(String, String)>,
+  /// the requests the class's own request command made: a Mark of llncs's and aa's `\inst` (role `inst`), a binding's
+  /// `\lx@request@frontmatter@annotation` (`request`), an `annotations=` list — not a mark printed by hand (`$^{1}$`,
+  /// `\textsuperscript{1}`, a paper's mark macro, a `*` after the `\inst`), which `answer_pending`'s `by_hand` reads off
+  /// the rest (a `_share=authors` entry only the class's `\inst{n}` picks; the emitter's kept `\inst` marks)
+  pub class_requests: Vec<String>,
   /// whether the reading marks them the corresponding author, by a note or a legend ([`Resolver::corresponding`]'s one
   /// fact): the emitter writes it on their creator as the transient `_corresponding`, which the Link step of an entry's
   /// addresses reads for the one address left of several carriers (`insert::link_entry_addresses`; dropped at output,
   /// as every `_` attribute is; repro llncs_legend_corresponding_author_takes_the_left_address)
-  pub corresponding: bool,
+  pub corresponding:  bool,
 }
 
 /// A rule of the reading joining runs a separator parts into one name (`lines.rs`, `blocks.rs`), each its tag in the
@@ -619,11 +624,6 @@ struct Resolver {
   /// the requests a `\footnotemark` made (creator, label): a footnote's mark, answered by a note, never by a labelled
   /// affiliation (`Kui Wu\inst{3\footnotemark[1]}` under `\institute{A \and B …}`, 2404.09857)
   fn_requests:        Vec<(usize, String)>,
-  /// the requests the class's own request command made (creator, label): a Mark of llncs's and aa's `\inst` (role
-  /// `inst`), a binding's `\lx@request@frontmatter@annotation` (`request`), an `annotations=` list — not a mark printed
-  /// by hand (`$^{1}$`, `\textsuperscript{1}`, a paper's mark macro), which [`Resolver::by_hand`] reads off the rest
-  /// (`answer_pending`: a `_share=authors` entry only the class's `\inst{n}` picks)
-  class_requests:     Vec<(usize, String)>,
   /// the pending entries (their place in `pending`) a `_share=authors` call made (llncs's one `\institute`, no `\and`
   /// in it: every author's unless the class's `\inst{n}` picks it), whether the entry holds a mark of its own, and
   /// whether it is a piece its institute's marks split it into (`_markpiece=true`: the numbers shown by hand label the
@@ -743,7 +743,6 @@ impl Resolver {
       stopgap:            Vec::new(),
       role_reads:         HashMap::default(),
       fn_requests:        Vec::new(),
-      class_requests:     Vec::new(),
       shared:             Vec::new(),
       row_units:          Vec::new(),
       keyed:              Vec::new(),

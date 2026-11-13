@@ -109,3 +109,42 @@ fn a_whole_list_entry_holds_a_position_a_name() {
     assert_eq!(first.contains(">Note <sup"), note, "{name}: {xml}");
   }
 }
+
+/// A `*` printed after a name's `\inst` mark is the name's text, no request of the label `*`, where another name of the
+/// whole-list block requests `*` by its `\inst{1*}` (2407.13764's shape): the emitter's kept `\inst` marks are each
+/// name's own (`RCreator::class_requests`), not the block's. Red on P23b (49b1490df2): Ann Able's name "Ann Able*" and a
+/// shown "∗" beside it. Rows: aa's and OmniBus's whole-list `\author` (`\lx@add@author@split`); llncs's list is cut at
+/// the call, one name a block. Distinct from `a_whole_list_entry_holds_a_position_a_name`: the writer's marks, not the
+/// queue's positions.
+#[test]
+fn a_star_after_an_inst_mark_is_the_names_text() {
+  let expected = rows(&[
+    &["Ann Able*", "affiliation=Univ A", "affiliation=Univ B"],
+    &["Bob Baker ∗", "affiliation=Univ A"],
+    &["Cy Coe", "affiliation=Univ B"],
+  ]);
+  for (name, tex, counts) in [
+    (
+      "aa",
+      repro!("aa_star_after_inst_mark_stays_the_names_text"),
+      (0, 0),
+    ),
+    (
+      "omnibus",
+      repro!("omnibus_star_after_inst_mark_stays_the_names_text"),
+      (0, 1),
+    ),
+  ] {
+    let (log, xml) = latexml::util::test::convert_files_with(tex, &[], Some("ar5iv.sty"));
+    assert_eq!(
+      (error_count(&log), warning_count(&log)),
+      counts,
+      "{name}: {log}"
+    );
+    assert_eq!(creators(&xml), expected, "{name}: {xml}");
+    assert!(
+      xml.contains("<personname>Ann Able*</personname>"),
+      "{name}: {xml}"
+    );
+  }
+}
