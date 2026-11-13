@@ -607,6 +607,9 @@ struct Resolver {
   annotated:          Vec<(usize, Vec<usize>)>,
   /// the pending entries whose marked line the binding attached by its group rule (`_grouped=true` at the call)
   grouped:            Vec<usize>,
+  /// the pending addresses a call placed by the mark of the affiliation they print under (`_placedbymark=<label>`), with
+  /// that label: `Resolver::entry_owners`
+  by_mark:            Vec<(usize, String)>,
   /// the pending entries labelled by a leading mark whose `annotate=new` placement (`piled`) is its run's stopgap alone:
   /// every author it reaches held the role before it ([`RUN_LEFTOVER`])
   stopgap:            Vec<usize>,
@@ -737,6 +740,7 @@ impl Resolver {
       empty_piled:        Vec::new(),
       annotated:          Vec::new(),
       grouped:            Vec::new(),
+      by_mark:            Vec::new(),
       stopgap:            Vec::new(),
       role_reads:         HashMap::default(),
       fn_requests:        Vec::new(),
@@ -918,10 +922,11 @@ impl Resolver {
   }
 
   /// The creators an `author:N` label names (`author_entries`): the N-th entry's; an address among several, the one of them it
-  /// spells, else none (the block's), as the call's own reading of the queue placed it by the names it spelled
+  /// spells, else the one showing `by_mark`, the mark the call placed it by, else none (the block's), as the call's own
+  /// reading of the queue placed it by the names it spelled
   /// (`email_block_calls`, `placed_contact_owner`: IEEEtran's e-mail line under one `\IEEEauthorblockN` of four names,
   /// 2010.07442, 2003.03692, 2510.03288, 2607.02294).
-  fn entry_owners(&self, n: &str, assoc: &Assoc) -> Vec<usize> {
+  fn entry_owners(&self, n: &str, assoc: &Assoc, by_mark: Option<&str>) -> Vec<usize> {
     let Some(entry) = n
       .trim()
       .parse::<usize>()
@@ -932,8 +937,22 @@ impl Resolver {
       return Vec::new();
     };
     match entry.as_slice() {
-      [_, _, ..] if assoc.role == "email" => {
-        self.spelled(&assoc.text, &entry).into_iter().collect()
+      [_, _, ..] if assoc.role == "email" => match self.spelled(&assoc.text, &entry) {
+        Some(one) => vec![one],
+        // (else the one of them showing the mark the address printed under, as that affiliation is: 2510.10414)
+        None => {
+          let marked: Vec<usize> = by_mark
+            .map(|label| label_owners(&self.out.creators, &entry, label))
+            .unwrap_or_default()
+            .into_iter()
+            .filter(|c| entry.contains(c))
+            .collect();
+          if marked.len() == 1 {
+            marked
+          } else {
+            Vec::new()
+          }
+        },
       },
       _ => entry,
     }

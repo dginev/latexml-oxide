@@ -1134,7 +1134,10 @@ impl Resolver {
         // (the queue holds each call whole: a position names a call's entry, and an address the call could place by no
         // name it held apart, the block's, is the one live creator's it spells, as the names read here say)
         let named = match label.strip_prefix("author:") {
-          Some(n) => self.entry_owners(n, &assoc),
+          Some(n) => {
+            let by_mark = self.by_mark.iter().find(|(p, _)| *p == at);
+            self.entry_owners(n, &assoc, by_mark.map(|(_, label)| label.as_str()))
+          },
           _ if label == "addresses:block" && assoc.role == "email" => {
             self.spelled(&assoc.text, &live).into_iter().collect()
           },

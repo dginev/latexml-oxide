@@ -870,6 +870,11 @@ impl Resolver {
           },
           ..assoc
         }));
+        if let Some(mark) = attr_value(attrs, "_placedbymark") {
+          self
+            .by_mark
+            .push((self.pending.len() - 1, mark.to_string()));
+        }
       }
       // (a key its class never prints labels it: no footnote's mark answers it, `answer_pending` — elsarticle's
       // `\address[*]{current address}`, 1108.0201)

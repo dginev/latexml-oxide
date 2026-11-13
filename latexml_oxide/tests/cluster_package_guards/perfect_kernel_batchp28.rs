@@ -7,7 +7,8 @@
 //! (OXIDIZED_DESIGN_DIVERGENCES #128, witness 2403.16405). Code paths, one guard each: the grid transposed and the
 //! blocks kept as written (pins of the order before P28), the plain route (a pin), a body held in a macro or written through `\\let` copies of the block commands (the route),
 //! a wrapper's calls (the block route's token steps), the grid's row break or column by meaning (the transposition),
-//! the body read again at the flush (P28m2, `\lx@IEEE@author@reread`).
+//! the body read again at the flush (P28m2, `\lx@IEEE@author@reread`), a marked block's address under a names call the
+//! reading parts (P28m3).
 //! Each converts its repros under `tools/perfect_kernel/repros/sectioning-frontmatter/` from the binary, eager and
 //! `--streaming`, and asserts the frontmatter whole, with exact Error and Warning counts.
 use super::perfect_kernel_batchp26::converted_any;
@@ -153,5 +154,32 @@ fn ieee_author_body_read_at_the_flush() {
       0
     ),
     r##"<title>T</title> <creator role="author"> <personname>Cy Coe</personname> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
+  );
+}
+
+/// An address printed in an affiliation block led by a reference mark, under a names call the reading parts into several
+/// names, is the one name's showing that mark (P28m3, `_placedbymark`, `Resolver::entry_owners`): IEEEtran's one names block
+/// listing marked names, written or held in macros (2510.10414), and REVTeX's one `\author` call (RED on int169a: the
+/// addresses no name spells on a nameless creator below the authors).
+#[test]
+fn marked_block_address_goes_to_the_name_showing_the_mark() {
+  let ieee = r##"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">*</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">*</sup>Univ X, C, D</contact> <contact name="Email: " role="email">chteng@x.org</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3">†</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">†</sup>Univ Y, E, F</contact> <contact name="Email: " role="email">idbj.real@y.org</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##;
+  assert_eq!(
+    converted_any(repro!("ieeetran_author_names_list_marked_block_address"), 0),
+    ieee
+  );
+  assert_eq!(
+    converted_any(
+      repro!("ieeetran_author_blocks_in_macros_marked_block_address"),
+      0
+    ),
+    ieee
+  );
+  assert_eq!(
+    converted_any(
+      repro!("revtex_author_names_list_marked_affiliation_address"),
+      0
+    ),
+    r##"<title>T</title> <creator role="author"> <personname>Ann Able<sup xml:id="id1">1</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id2">1</sup>Univ X, C, D</contact> <contact name="Email: " role="email">chteng@x.org</contact> </creator> <creator before=" " role="author"> <personname>Bob Baker<sup xml:id="id3">2</sup></personname> <contact name="Affiliation: " role="affiliation"><sup xml:id="id4">2</sup>Univ Y, E, F</contact> <contact name="Email: " role="email">idbj.real@y.org</contact> </creator> <para xml:id="p1"> <p xml:id="p1.1">Text.</p> </para>"##
   );
 }

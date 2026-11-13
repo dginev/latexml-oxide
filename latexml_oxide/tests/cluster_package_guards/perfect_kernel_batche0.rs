@@ -410,8 +410,9 @@ const MOVED_CUT_KIND_EMISSIONS: &[(&str, usize)] = &[
 /// `CUT_COPY_PLACE` moved unchanged to `defs/frontmatter_api.rs`, `kind.rs`' `balanced` deleted (core's `Tokens::is_balanced`);
 /// P6c to 1,878, `email_lines.rs`' and `kind.rs`' font reads the one reader's (`rows::name_text_command`, `mark_switch`);
 /// P6d to 1,867, `line_marks.rs`' `affil_splits` deleted (`classify::author_affil_splits` spelled again); P6f to 1,863,
-/// the cutter's `\and` test the line cut's (`classify::parts_entries`).
-const MOVED_CUT_KIND_CODE_LINES: usize = 1_863;
+/// the cutter's `\and` test the line cut's (`classify::parts_entries`). P28m3 to 1,862: `place_address_runs` reads the mark's
+/// label once (`queue_reading::mark_set_label`), its address calls carrying it, the resolver deciding (`entry_owners`).
+const MOVED_CUT_KIND_CODE_LINES: usize = 1_862;
 
 /// The fence on the moved Cut and Kind: they take no new decision either (review revZ18a check 3).
 #[test]
@@ -994,6 +995,12 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   ("[mark] lmcs_cls.rs", 1),
   ("[mark] package/iopart_support_sty.rs", 1),
   ("_answers= base_utilities/defs/frontmatter_fields.rs", 1),
+  // (P28m3: a new key, distinct from `\lx@sup@setlabel@affiliation`'s `_bymark` (revP28m3): the mark an address under a
+  // marked affiliation was placed by, for a names call the reading parts; 2510.10414)
+  (
+    "_placedbymark= base_utilities/defs/frontmatter_api/affiliations.rs",
+    1,
+  ),
   ("_group= base_utilities/defs/frontmatter_fields.rs", 1),
   ("_grouped= package/revtex4_support_sty.rs", 1),
   ("_labelprints= cas_dc_cls.rs", 1),

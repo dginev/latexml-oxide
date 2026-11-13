@@ -1878,7 +1878,12 @@ whole list is read. An address claims an author only where the list says whose i
 position (an explicit `author:N` label; `labelseq=author` counts every earlier email contact, which had made a creator
 with no name):
 - **The list puts addresses under its affiliations** (it has one marked affiliation, or a run sits above another
-  that is not a footnote-symbol legend such as `$^\dagger$ Corresponding author`; 2609.19448) → one address under an affiliation exactly one author requests is that author's; any other run under
+  that is not a footnote-symbol legend such as `$^\dagger$ Corresponding author`; 2609.19448) → one address under an affiliation exactly one author requests is that author's,
+  carrying the mark that placed it (`_placedbymark`, distinct from the set side's `_bymark` mark keys):
+  where the reading parts that call into several names
+  (`\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1} Bob Baker\IEEEauthorrefmark{2}}`, REVTeX's `\author{A$^1$ and
+  B$^2$}`), an address none of them spells is the one's showing that mark (`Resolver::entry_owners`; it had gone to a
+  nameless creator: 2510.10414, P28m3), the block's still where several show it; any other run under
   an affiliation continues it, as the PDF prints it — an affiliation several authors share, or several addresses
   under one author's, which may be everyone's.
 - **Otherwise the runs are the block's** → one address for each author goes to the authors in order (llncs
@@ -35275,6 +35280,10 @@ and Bob Baker invented, the printed Cy Coe lost, silently). authblk's `\author` 
 the class's route would take its authors back) and still reads its body at the call. Guard
 `perfect_kernel_batchp28::ieee_author_body_read_at_the_flush`; repros
 `sectioning-frontmatter/{ieeetran_author_macro_renewed_after_author,ieeetran_author_macro_renewed_at_begin_document,ieeetran_author_macro_defined_after_author,ieeetran_author_plain_macro_renewed_after_author}.tex`.
+Read so, a macro-held body reaches the marked-address placement of the written one: 2510.10414's
+`\IEEEauthorblockN{\varAuthors}\varInstitutions` put Ben-Jian Dong's address on a nameless creator until that placement
+read the mark (P28m3, #52(j)'s marked affiliation list). Guard
+`perfect_kernel_batchp28::marked_block_address_goes_to_the_name_showing_the_mark`.
 RED, post-merge (P28C): an anonymous-review conditional (`\ifblind Anonymous Authors\else <blocks>\fi`), literal or in
 the macro, reads its printed words as a nameless creator's affiliation
 (`ieeetran_author_blind_conditional{,_in_a_macro}_red.tex`).

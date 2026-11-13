@@ -268,11 +268,16 @@ pub(in crate::base_utilities) fn queued_label_requesters(label: &str) -> Result<
 /// The queue positions of the authors whose marks request the label a mark's `operand` sets, by its printed text as
 /// `\lx@sup@setlabel@affiliation` sets it ([`set_label`]).
 pub(in crate::base_utilities) fn queued_requesters(operand: &[Token]) -> Result<Vec<usize>> {
-  let operand = Tokens::new(operand.to_vec());
-  match set_label(&operand, printed_label(&operand)?.as_ref()) {
+  match mark_set_label(operand)? {
     Some(label) => queued_label_requesters(&label),
     None => Ok(Vec::new()),
   }
+}
+
+/// The label a mark's `operand` sets, by its printed text ([`set_label`]).
+pub(in crate::base_utilities) fn mark_set_label(operand: &[Token]) -> Result<Option<String>> {
+  let operand = Tokens::new(operand.to_vec());
+  Ok(set_label(&operand, printed_label(&operand)?.as_ref()))
 }
 
 /// The affiliation labels the queued authors' marks request (`affiliation:<key>`), or, once a flush took the queue, those of
