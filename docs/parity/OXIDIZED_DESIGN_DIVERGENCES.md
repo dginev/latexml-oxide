@@ -34898,8 +34898,9 @@ unfolded spans from the folded list: 2605.24599's `email}`). A declaration's spa
 `\foreignlanguage` reading its arguments in `\bbl@foreign@x`, `\ifthenelse`'s `\@firstoftwo` reading the branches), not at
 the one token whose cover it had, so the name or branch the call prints takes it back (2606.14878, 2605.24599). A box made
 while the call's own invocation still runs (`stomach::field_position_encloses`: a macro `\begin` running the kernel's
-`{CJK*}`, openjournal.cls's atbeginend copy) is inside it too (2606.12938). A declaration made after its call printed stays
-one, its span the whole call, as before (a later name reads it). A span the read tokens cannot give whole (out of them, its
+`{CJK*}`, openjournal.cls's atbeginend copy) is inside it too (2606.12938). A declaration made after a token of its call's
+arguments printed keeps its span as noted (`FieldDeclaration::read` 0), as before: NE5's `\footremember` declined by
+`declaration_reads_past`, a robust `\mbox{#1}\gdef\lastnm{#1}` replayed for a later name. A span the read tokens cannot give whole (out of them, its
 groups unbalanced) is not replayed: `declaration_reads_past` declines the block with its counted Warning. Guard
 `perfect_kernel_batchaut1::a_declaration_is_replayed_as_far_as_its_call_read`; RED
 `amsart_author_macro_lines_with_email_array_split_red`.

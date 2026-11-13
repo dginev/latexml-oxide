@@ -2318,11 +2318,9 @@ pub fn field_position_encloses(depth: usize, pos: u16) -> bool {
   stack
     .get(depth..stack.len().saturating_sub(1))
     .is_some_and(|below| {
-      below.iter().any(|t| {
-        t.prov != 0
-          && crate::token::field_prov_pos(t.prov) == pos
-          && t.get_catcode() != Catcode::BEGIN
-      })
+      below
+        .iter()
+        .any(|t| t.prov != 0 && crate::token::field_prov_pos(t.prov) == pos)
     })
 }
 
