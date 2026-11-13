@@ -917,9 +917,20 @@ pub fn rng_error_count(xml: &str) -> Option<usize> {
 /// conversion it gates.
 pub fn dump_available() -> bool { latexml_engine::dump_paths::format_dump_on_disk("latex") }
 
+/// The path the engine's kpathsea lookup resolves `file` to in the host TeX tree, if any (the lookup the conversion
+/// itself uses, so a test and the engine agree).
+pub fn kpse_path(file: &str) -> Option<String> { latexml_core::util::pathname::kpsewhich(&[file]) }
+
 /// True iff the engine's kpathsea lookup resolves the named file in the host TeX tree. For an expectation that
 /// depends on the tree; a test that cannot run without the file declares it with [`requires`] instead.
-pub fn kpse_has(file: &str) -> bool { latexml_core::util::pathname::kpsewhich(&[file]).is_some() }
+pub fn kpse_has(file: &str) -> bool { kpse_path(file).is_some() }
+
+/// The text of the host TeX tree's copy of `file` (a class's version decides a guard's expectation), if any.
+pub fn kpse_text(file: &str) -> Option<String> {
+  kpse_path(file)
+    .and_then(|path| std::fs::read(path).ok())
+    .map(|bytes| String::from_utf8_lossy(&bytes).into_owned())
+}
 
 //======================================================================
 // In-process conversion for guards (user directive 2026-10-03): the cargo-built library, never a spawned binary.

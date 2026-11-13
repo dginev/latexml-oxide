@@ -663,16 +663,55 @@ LoadDefinitions!({
         cs.to_string()
       };
       let message = s!("{command} takes no generic hook; its code does not run");
-      if document_hook_code(&hook) {
-        Warn!("hook", hook, message);
-      } else {
-        Info!("hook", hook, message);
+      assign_value(&s!("{HOOK_DECLINED}{hook}"), Stored::String(pin(&message)), Some(Scope::Global));
+      // from `\begin{document}` on the kernel patches before it stores the code (`\__hook_cmd_begindocument_code:` is
+      // gone, latex.ltx:6870, :5443-5475): the store step decides (KOMA-Script 3.49 scrartcl.cls:3306-3313)
+      if lookup_meaning(&T_CS!("\\__hook_cmd_begindocument_code:")).is_some() {
+        if document_hook_code(&hook) {
+          Warn!("hook", hook, message);
+        } else {
+          Info!("hook", hook, message);
+        }
       }
       return Ok(Tokens!());
     }
     let mut call = vec![T_CS!("\\lx@hook@patch@command"), cs, T_BEGIN!()];
     call.extend(name.unlist());
     call.extend([T_END!(), T_BEGIN!()]);
+    call.extend(hook.unlist());
+    call.push(T_END!());
+    Ok(Tokens::new(call))
+  }, protected => true);
+  // lthooks' store steps (latex.ltx:5355, :6332): code stored into a hook whose patch was declined is lost, so each
+  // store is decided by its owner — the document's (`top-level`, a label naming no loaded class or package, and
+  // `\AddToHookNext`'s, which carries none) a Warning, a class's or package's an Info.
+  Let!("\\lx@hook@gput@code@do", "\\__hook_hook_gput_code_do:nnn");
+  DefMacro!("\\__hook_hook_gput_code_do:nnn {} {} {}", sub[(hook, label, code)] {
+    let name = hook.to_string();
+    let message = lookup_string(&s!("{HOOK_DECLINED}{name}"));
+    if !message.is_empty() {
+      if document_hook_label(&label.to_string()) {
+        Warn!("hook", name, message);
+      } else {
+        Info!("hook", name, message);
+      }
+    }
+    let mut call = vec![T_CS!("\\lx@hook@gput@code@do"), T_BEGIN!()];
+    for arg in [hook, label, code] {
+      call.extend(arg.unlist());
+      call.extend([T_END!(), T_BEGIN!()]);
+    }
+    call.pop();
+    Ok(Tokens::new(call))
+  }, protected => true);
+  Let!("\\lx@hook@gput@next@do", "\\__hook_gput_next_do:nn");
+  DefMacro!("\\__hook_gput_next_do:nn {}", sub[(hook)] {
+    let name = hook.to_string();
+    let message = lookup_string(&s!("{HOOK_DECLINED}{name}"));
+    if !message.is_empty() {
+      Warn!("hook", name, message);
+    }
+    let mut call = vec![T_CS!("\\lx@hook@gput@next@do"), T_BEGIN!()];
     call.extend(hook.unlist());
     call.push(T_END!());
     Ok(Tokens::new(call))
@@ -1661,10 +1700,12 @@ pub(crate) fn allocate_ptex_format_registers() -> Result<()> {
   Ok(())
 }
 
+/// The `cmd` hooks whose patch a binding declined (`lx@hook@declined@<hook>`), each holding its message.
+const HOOK_DECLINED: &str = "lx@hook@declined@";
+
 /// Is the document's code on `hook`? lthooks labels code by its owner (latex.ltx:5208 `\__hook_currname_or_default:`): the
 /// document's is `top-level` (:5364-5369) or a label naming no loaded class or package; `\AddToHookNext`'s carries no
-/// label (:6340), counted as the document's; a hook added in the body patches at once, before its code is stored
-/// (`\__hook_cmd_begindocument_code:` is gone, :6870).
+/// label (:6340), counted as the document's.
 fn document_hook_code(hook: &str) -> bool {
   let body = |cs: &str| match lookup_meaning(&T_CS!(cs)) {
     Some(Stored::Expandable(m)) => match m.get_expansion() {
@@ -1673,10 +1714,9 @@ fn document_hook_code(hook: &str) -> bool {
     },
     _ => None,
   };
-  if lookup_meaning(&T_CS!("\\__hook_cmd_begindocument_code:")).is_none()
-    || ["toplevel", "next"]
-      .iter()
-      .any(|code| body(&s!("\\__hook_{code} {hook}")).is_some_and(|t| !t.is_empty()))
+  if ["toplevel", "next"]
+    .iter()
+    .any(|code| body(&s!("\\__hook_{code} {hook}")).is_some_and(|t| !t.is_empty()))
   {
     return true;
   }
@@ -1691,16 +1731,20 @@ fn document_hook_code(hook: &str) -> bool {
     rest = &rest[at + 1..];
     let end = rest.iter().position(|t| *t == mark).unwrap_or(rest.len());
     let label: String = rest[..end].iter().map(ToString::to_string).collect();
-    let owner = label.split('/').next().unwrap_or_default();
-    // (`state::file_loaded`: a `\@ifpackagelater` query's `\relax` `\ver@` is no load, F14)
-    if owner == "top-level"
-      || [".sty", ".cls"]
-        .iter()
-        .all(|ext| !file_loaded(&s!("{owner}{ext}")))
-    {
+    if document_hook_label(&label) {
       return true;
     }
     rest = &rest[end..];
   }
   false
+}
+
+/// Is a hook's code under `label` the document's: `top-level`, or a label naming no loaded class or package
+/// (`state::file_loaded`: a `\@ifpackagelater` query's `\relax` `\ver@` is no load, F14)?
+fn document_hook_label(label: &str) -> bool {
+  let owner = label.split('/').next().unwrap_or_default();
+  owner == "top-level"
+    || [".sty", ".cls"]
+      .iter()
+      .all(|ext| !file_loaded(&s!("{owner}{ext}")))
 }

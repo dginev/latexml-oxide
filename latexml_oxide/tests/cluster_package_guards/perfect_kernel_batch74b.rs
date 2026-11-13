@@ -412,18 +412,26 @@ fn gls_only_in_display_math_is_listed() {
 
 /// asmejour's `\keywords`, stored for the abstract's coffin the locked `{abstract}` never builds, are the document's
 /// keywords under the class's label; the class's own date footnote keeps `\date` (asmejour_cls.rs; 2510.10694).
+/// asmejour 2025/11/30 (cls:1105-1128) plugs the `caption/label` socket on a 2025-11-01 kernel that declares none:
+/// pdflatex's 2 `!` "Socket 'caption/label' undeclared", ours the same 2 Errors, the only ones.
 #[test]
 fn asmejour_keywords_are_kept() {
   if !requires(&["asmejour.cls", "inconsolata.sty"]) {
     return;
   }
+  let cls = latexml::util::test::kpse_text("asmejour.cls").unwrap_or_default();
   let (log, xml) = convert_with(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/class_notes/asmejour_keywords_kept.tex"
     ),
     Some("ar5iv.sty"),
   );
-  assert_eq!(error_count(&log), 0, "{log}");
+  // (none on a kernel older than 2025-11-01, where the class's `\IfFormatAtLeastTF` skips the plug, or one declaring it)
+  let socket = "Socket 'caption/label' undeclared!";
+  let sockets = log.lines().filter(|l| l.ends_with(socket)).count();
+  assert_eq!(error_count(&log), sockets, "{log}");
+  let plugs = cls.contains(r"\NewSocketPlug{caption/label}");
+  assert!(sockets == 0 || (plugs && sockets == 2), "{log}");
   let xml = squash(&xml);
   assert!(
     xml.contains(r#"<keywords name="Keywords: ">alpha, beta</keywords>"#),

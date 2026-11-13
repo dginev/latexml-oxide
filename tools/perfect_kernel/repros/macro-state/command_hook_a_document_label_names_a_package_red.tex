@@ -8,7 +8,8 @@
 % engines: rust QA47Ab: 0 errors, 0 warnings, `Info:hook:cmd/emph/before`; the X lost uncounted.
 % expect:  0 errors, 1 warning (`Warning:hook:cmd/emph/before`).
 % status:  RED (QA47Ab)
-% moves:   post-merge (QAHK: one fix with `command_hook_a_package_adds_in_the_body_red`)
+% moves:   post-merge (QAHK; its sibling `command_hook_a_package_adds_in_the_body` GREEN since KOMA1F: the label read
+%   at the store step; `\@currname` there would misread a class's code added from `begindocument/end`, KOMA-Script 3.49)
 \documentclass{article}
 \usepackage{amsmath}
 \AddToHook{cmd/emph/before}[amsmath]{X}
