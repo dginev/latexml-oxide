@@ -332,6 +332,8 @@ LoadDefinitions!({
 });
 
 fn longtable_bindings(template: Template) -> Result<()> {
+  // ltcaption.sty's `\caption@LT@setup`: the table's captions take `\captionsetup[longtable]` (caption_sty.rs).
+  assign_value("lx@caption@longtable", Stored::Bool(true), None);
   let mut props = SymHashMap::default();
   props.insert("guess_headers", Stored::Bool(false));
   // longtable.sty:133 `\let\\\LT@tabularcr`, which opens with no brace (`\noalign\\` is "Missing { inserted")

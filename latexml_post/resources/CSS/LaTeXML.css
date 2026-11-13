@@ -209,6 +209,13 @@ a.ltx_LaTeXML_logo { text-decoration: none; }
 }
 
 /* theorems, figure, tables, floats captions.. */
+/* caption.sty's justification= (issue #787), over a class theme's justified float captions */
+.ltx_figure .ltx_caption.ltx_centering, .ltx_table .ltx_caption.ltx_centering,
+.ltx_float .ltx_caption.ltx_centering { text-align:center; }
+.ltx_figure .ltx_caption.ltx_align_left, .ltx_table .ltx_caption.ltx_align_left,
+.ltx_float .ltx_caption.ltx_align_left { text-align:left; }
+.ltx_figure .ltx_caption.ltx_align_right, .ltx_table .ltx_caption.ltx_align_right,
+.ltx_float .ltx_caption.ltx_align_right { text-align:right; }
 /*======================================================================
  Blocks, Lists, Floats */
 .ltx_p,

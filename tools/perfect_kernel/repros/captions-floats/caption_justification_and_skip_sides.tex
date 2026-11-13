@@ -1,0 +1,27 @@
+% issue #787 siblings: typed `justification=` (raggedright, raggedleft, centering in a float), `skip=` under a bottom
+% caption (auto position: the rule precedes it, caption3.sty:1034-1045) is its top margin, `belowskip=` over a top
+% caption its top margin (caption.sty:251-258), `position=top` decides a starred caption's side.
+% witness: synthetic (issue #787)
+% oracle:  pdflatex 0 errors
+% engines: perl=0 (no class or spacing); rust base 6df4632fb1=0 `<caption>`s with no class or spacing
+% expect:  0 errors; classes ltx_align_left, ltx_align_right, ltx_centering; margins top 4pt, top 6pt, bottom 4pt
+% status:  GREEN (guard bindings_batch2::caption_justification_and_skip)
+\documentclass{article}
+\usepackage{caption}
+\captionsetup[figure]{justification=raggedright,skip=4pt}
+\captionsetup[table]{justification=raggedleft,belowskip=6pt}
+\begin{document}
+\begin{figure}
+\rule{1cm}{1cm}
+\caption{Bottom figure}
+\end{figure}
+\begin{table}
+\caption{Top table}
+\begin{tabular}{l}a\end{tabular}
+\end{table}
+\begin{figure}
+\captionsetup{justification=centering,position=top}
+\caption*{Starred}
+\rule{1cm}{1cm}
+\end{figure}
+\end{document}

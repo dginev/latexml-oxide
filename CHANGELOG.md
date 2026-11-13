@@ -80,6 +80,13 @@
     that reads it (`\href{\import@path index.tex}{…}`) no longer gets an
     undefined-macro error; a nested `\import` empties it, as import.sty does. Also
     drops a stray space the import commands typeset before the imported file.
+  - **caption's `justification=` and `skip=` reach the caption (#787).** A
+    `\captionsetup{justification=centering}` (or `raggedright`, `raggedleft`, and
+    ragged2e's capitalised ones) gives the `<caption>` the class `\centering` &c.
+    give (`ltx_centering`, `ltx_align_left`, `ltx_align_right`), and `skip=`,
+    `aboveskip=`, `belowskip=` its margins (`cssstyle`) on the sides caption puts
+    them; `\captionsetup[longtable]{…}` applies to longtable captions. Perl ignores
+    both.
   - **`post::PostOptions::nodefaultresources` is now `default_resources`, with the
     meaning inverted.** The double negative (`nodefaultresources: false`) is gone.
     The positive name is Perl's option name (`Config.pm:120` `defaultresources!`),
