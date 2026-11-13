@@ -128,7 +128,7 @@ pub fn reset_title_page_check() {
   crate::latex_constructs::title_page_reading::end_title_page_epoch();
   SPILLED.with_borrow_mut(|spilled| *spilled = SpilledWords::default());
   CALLED.with_borrow_mut(Vec::clear);
-  QUEUED_BY_LENGTH.with_borrow_mut(HashMap::clear);
+  QUEUED_BY_CONTENT.with_borrow_mut(HashMap::clear);
   STORED.with_borrow_mut(Vec::clear);
   UNREAD.with_borrow_mut(String::clear);
   reset_check_budget();
@@ -173,11 +173,12 @@ thread_local! {
   static CALLED: RefCell<Vec<CalledText>> = const { RefCell::new(Vec::new()) };
   /// The number the next record of `CALLED` takes.
   static NEXT_ID: std::cell::Cell<usize> = const { std::cell::Cell::new(0) };
-  /// The records of `CALLED` with a queued invocation, by the lengths of content it can end in
-  /// ([`content_lengths`]), in number order: what [`begin_frontmatter_entry_digestion`] compares an entry's content
-  /// to. It may hold a record since digested or taken out (`note_frontmatter_clear`), which a search drops as it
-  /// passes: a record not digested is under each of its lengths.
-  static QUEUED_BY_LENGTH: RefCell<HashMap<usize, Vec<usize>>> = RefCell::new(HashMap::default());
+  /// The records of `CALLED` with a queued invocation, by the contents it can end in ([`content_keys`]: a length and
+  /// a hash), in number order: what [`begin_frontmatter_entry_digestion`] compares an entry's content to. It may hold a
+  /// record since digested or taken out (`note_frontmatter_clear`), which a search drops as it passes: a record not
+  /// digested is under each of its contents.
+  static QUEUED_BY_CONTENT: RefCell<HashMap<(usize, u64), Vec<usize>>> =
+    RefCell::new(HashMap::default());
   /// What each argument the document gave raw setters prints, this conversion's: the check's third source
   /// ([`digest_raw_setter_calls`]).
   static STORED: RefCell<Vec<String>> = const { RefCell::new(Vec::new()) };
@@ -611,9 +612,9 @@ pub fn note_frontmatter_entry(tag: &str, role: &str, command: Option<&Tokens>) -
     pending.extend(never_digested(call));
   }
   if let Some(command) = command {
-    QUEUED_BY_LENGTH.with_borrow_mut(|index| {
-      for length in content_lengths(command.unlist_ref()) {
-        index.entry(length).or_default().push(id);
+    QUEUED_BY_CONTENT.with_borrow_mut(|index| {
+      for key in content_keys(command.unlist_ref()) {
+        index.entry(key).or_default().push(id);
       }
     });
   }
@@ -778,12 +779,12 @@ fn record_mut(called: &mut [CalledText], id: usize) -> Option<&mut CalledText> {
 }
 
 /// The position in `CALLED` of the first record not digested whose queued invocation ends in `content`
-/// ([`queued_content_is`]), read from those of its length (`QUEUED_BY_LENGTH`): an entry no record queued — the
-/// emitter's, digested past every record — is told apart without a comparison. The records
-/// passed that are digested or taken out leave the index.
+/// ([`queued_content_is`]), read from those of its content (`QUEUED_BY_CONTENT`): an entry no record queued — the
+/// emitter's, digested past every record — is told apart without a comparison (1901.01540's 1,427 `\affiliation`s, each
+/// compared to every record of its length before). The records passed that are digested or taken out leave the index.
 fn undigested_queued(called: &[CalledText], content: &Tokens) -> Option<usize> {
-  QUEUED_BY_LENGTH.with_borrow_mut(|index| {
-    let ids = index.get_mut(&content.unlist_ref().len())?;
+  QUEUED_BY_CONTENT.with_borrow_mut(|index| {
+    let ids = index.get_mut(&content_key(content.unlist_ref()))?;
     let mut found = None;
     let mut kept = 0;
     for read in 0..ids.len() {
@@ -810,20 +811,38 @@ fn undigested_queued(called: &[CalledText], content: &Tokens) -> Option<usize> {
   })
 }
 
-/// The lengths of content the queued invocation `command` can end in ([`queued_content_is`]): when its last token is a
-/// `}`, the count of tokens between each `{` it holds and that `}` (every `{`, the final group's and those inside it
-/// or before it: the comparison does not ask that the content be balanced).
-fn content_lengths(command: &[Token]) -> impl Iterator<Item = usize> + '_ {
-  command
-    .iter()
-    .enumerate()
-    .take(if closes(command) {
-      command.len() - 1
-    } else {
-      0
-    })
-    .filter(|(_, t)| opens(t))
-    .map(move |(at, _)| command.len() - at - 2)
+/// The contents the queued invocation `command` can end in ([`queued_content_is`]), each by [`content_key`]: when its last
+/// token is a `}`, the tokens between each `{` it holds and that `}` (every `{`, the final group's and those inside it
+/// or before it: the comparison does not ask that the content be balanced). One pass from the end, each key extending
+/// the one after it.
+fn content_keys(command: &[Token]) -> Vec<(usize, u64)> {
+  let mut keys = Vec::new();
+  if !closes(command) {
+    return keys;
+  }
+  let mut hash = 0;
+  for (at, t) in command[..command.len() - 1].iter().enumerate().rev() {
+    if opens(t) {
+      keys.push((command.len() - at - 2, hash));
+    }
+    hash = extend_key(hash, t);
+  }
+  keys
+}
+
+/// A content's length and hash, alike for contents equal as [`queued_content_is`] compares them (`Token`'s `Hash`),
+/// folded from its last token ([`content_keys`]).
+fn content_key(content: &[Token]) -> (usize, u64) {
+  (content.len(), content.iter().rev().fold(0, extend_key))
+}
+
+/// [`content_key`]'s hash with `token` before the tokens it hashed.
+fn extend_key(hash: u64, token: &Token) -> u64 {
+  use std::hash::{Hash, Hasher};
+  let mut hasher = rustc_hash::FxHasher::default();
+  hash.hash(&mut hasher);
+  token.hash(&mut hasher);
+  hasher.finish()
 }
 
 /// How deep [`writes`] reads the bodies of the document's macros an argument names.
