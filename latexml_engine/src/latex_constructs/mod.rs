@@ -4485,19 +4485,18 @@ pub fn standard_class_twocolumn_page(class: &str) -> (f64, f64) {
 
 /// The options a standard class was given: latex.ltx's `\ProcessOptions` in a class reads its `\opt@<class>.cls`
 /// alone (`\@process@ptions`, no `\@classoptionslist`), which is the document's options when it is the document's class
-/// and what a class passes it otherwise (`\PassOptionsToClass`, `\LoadClass[…]`: elsarticle.cls:113, llncs.cls:47).
+/// and what a class passes it otherwise (`\PassOptionsToClass`, `\LoadClass[…]`: elsarticle.cls:113, llncs.cls:47);
+/// here the State list `pass_options_with_raw` keeps with it.
 fn standard_class_options(class: &str) -> Vec<String> {
-  match lookup_definition(&T_CS!(s!("\\opt@{class}.cls"))) {
-    Ok(Some(defn)) => match defn.get_expansion() {
-      Some(ExpansionBody::Tokens(body)) => body
-        .to_string()
-        .split(',')
-        .map(|o| o.trim().to_string())
-        .collect(),
+  lookup_vecdeque(&s!("opt@{class}.cls"))
+    .unwrap_or_default()
+    .iter()
+    .flat_map(|item| match item {
+      Stored::String(o) => vec![with(*o, |o| o.to_string())],
+      Stored::Strings(os) => os.iter().map(|o| with(*o, |o| o.to_string())).collect(),
       _ => Vec::new(),
-    },
-    _ => Vec::new(),
-  }
+    })
+    .collect()
 }
 
 /// The size file's facts the standard classes' `\textwidth` is computed from: the paper's width (the last declared of
