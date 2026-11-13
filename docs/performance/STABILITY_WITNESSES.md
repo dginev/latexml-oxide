@@ -521,6 +521,17 @@ ms, no longer overlapped with option parsing. Library callers (`latexml::api`)
 run construction on the single worker thread they spawn; a multi-threaded host
 should call `init_kpathsea()` once at start-up before converting concurrently.
 
+**Second writer, `--init` only (fixed 2026-10-14)**: `real_main` set
+`LATEXML_INI_MODE` *after* spawning the prewarm thread, whose
+`kpathsea_init_format` reads `getenv("TEXMF_kpsewhich")`; `setenv` of the new
+name reallocated `environ` under it. Witness: `--init=latex.ltx` exited 139 in
+7 of 200 runs on Linux aarch64 (Ubuntu 24.04, TL2023 apt, `ci` profile), gdb
+`__GI_getenv` ← `kpathsea_var_expand` ← `kpathsea_init_format` on thread
+`kpathsea-prewarm`; it failed `tools/make_formats.sh` and
+`dump_gate_init::latex_ltx_init_has_zero_errors`. Fix: the `set_var` moved to
+just after `Cli::parse()`, before `init_kpathsea()` and the spawn. Rule: every
+environment write in the binaries precedes the prewarm spawn.
+
 ## Cluster K — fleet runaways reach `RLIMIT_AS` before any memory fuse (`oom:alloc_failed`) — dominant loop FIXED 2026-10-16 (68q); address-space fuse PARKED
 
 **Symptom.** 448 fleet `Fatal:oom:alloc_failed` in the 2026-10-16 study (agent_reports/2026-10-16_perf_ram_study.md),
