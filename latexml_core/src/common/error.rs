@@ -305,6 +305,28 @@ pub fn emit_warn(category: &str, object: &str, message: &str) {
   emit_record(LogStatus::Warning, &format!("{category}:{object}"), message);
 }
 
+/// The state key of a box whose measure a binding approximates, its value the box's name: a `breakable` tcolorbox set
+/// as one box (tcolorbox_sty.rs, Perl tcolorbox.sty.ltxml:21). Read by [`approximated_measure`].
+pub const APPROXIMATED_MEASURE: &str = "lx_approximated_measure";
+const APPROXIMATED_MEASURE_REPORTED: &str = "lx_approximated_measure_reported";
+
+/// Where an arithmetic overflow (tex.web §104, §460; etex.ch `scan_expr`), an Error as TeX's (OXIDIZED_DESIGN #519),
+/// is a Warning: inside a measure a binding approximates ([`APPROXIMATED_MEASURE`]) the size is ours, not the
+/// author's (DG 2026-11-13). The detail naming the box, and whether it is the box's first overflow (its Warning; the
+/// ones it cascades into an Info), or `None` outside one.
+pub fn approximated_measure() -> Option<(String, bool)> {
+  let name = crate::state::try_lookup_string(APPROXIMATED_MEASURE)?;
+  let first = crate::state::try_lookup_string(APPROXIMATED_MEASURE_REPORTED).as_deref()
+    != Some(name.as_str());
+  if first {
+    crate::state::try_assign_value_global(APPROXIMATED_MEASURE_REPORTED, name.clone().into());
+  }
+  Some((
+    format!("in {name}, set as one box where TeX breaks it: the size is ours"),
+    first,
+  ))
+}
+
 /// See [`emit_info`]. Unlike the `Error!` macro this cannot escalate by
 /// `return`ing — there is no `Err` channel in the contexts it serves — so
 /// when the error count or the consecutive-error count crosses its cap it

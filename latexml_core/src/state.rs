@@ -4741,6 +4741,25 @@ pub fn try_lookup_int(key: &str) -> Option<i64> {
   })
 }
 
+/// [`try_lookup_int`]'s string counterpart: the string at `key`, `None` when it holds none or the state is borrowed.
+pub fn try_lookup_string(key: &str) -> Option<String> {
+  let state = (*STATE).try_borrow().ok()?;
+  match state.lookup_value(key) {
+    Some(Stored::String(s)) => Some(arena::with(*s, str::to_owned)),
+    _ => None,
+  }
+}
+
+/// [`assign_value`] globally on the reporting path, where the state may be borrowed (as [`try_lookup_int`]): whether
+/// it was assigned.
+pub fn try_assign_value_global(key: &str, value: Stored) -> bool {
+  let Ok(mut state) = (*STATE).try_borrow_mut() else {
+    return false;
+  };
+  state.assign_value(key, value, Some(Scope::Global));
+  true
+}
+
 pub fn remove_vecdeque(key: &str) -> Option<VecDeque<Stored>> {
   match remove_value(key) {
     Some(Stored::VecDequeStored(v)) => Some(v),

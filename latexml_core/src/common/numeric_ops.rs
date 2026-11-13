@@ -104,15 +104,26 @@ pub const MAX_INTEGER: i64 = 0x7FFF_FFFF;
 /// to ±`ceiling` — `MAX_DIMEN` for a dimension, `MAX_INTEGER` for a count —
 /// never a wrapped value. An Error, as TeX's (OXIDIZED_DESIGN #519); no `Err`
 /// channel here, so the cap latches as [`emit_error`](crate::common::error::emit_error) does.
+/// A Warning in a box measured by our approximation ([`approximated_measure`](crate::common::error::approximated_measure)).
 pub fn clamp_arith_overflow(product: f64, ceiling: i64) -> i64 {
   if product.is_finite() && product.abs() < i64::MAX as f64 {
     product as i64
   } else {
-    crate::common::error::emit_error(
-      "expected",
-      "<number>",
-      &crate::generate_message!("Arithmetic overflow.", "clamped (tex.web §105-108)"),
-    );
+    let detail = "clamped (tex.web §105-108)";
+    use crate::common::error::{approximated_measure, emit_error, emit_info, emit_warn};
+    match approximated_measure() {
+      Some((ours, first)) => {
+        let message = crate::generate_message!("Arithmetic overflow.", detail, ours);
+        (if first { emit_warn } else { emit_info })("expected", "<number>", &message);
+      },
+      None => {
+        emit_error(
+          "expected",
+          "<number>",
+          &crate::generate_message!("Arithmetic overflow.", detail),
+        );
+      },
+    }
     if product < 0.0 { -ceiling } else { ceiling }
   }
 }

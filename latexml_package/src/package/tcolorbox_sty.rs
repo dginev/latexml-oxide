@@ -313,6 +313,17 @@ LoadDefinitions!({
   RequirePackage!("xparse");
 
   InputDefinitions!("tcolorbox", noltxml => true, extension => Some(Cow::Borrowed("sty")));
+  // A box whose own flag is breakable (tcolorbox.sty:1479 `\iftcb@isbreakable`) is set as one box (above), so the size
+  // its drawing measures (:2006) is ours: an overflow there is a Warning naming the box (`APPROXIMATED_MEASURE`, DG
+  // 2026-11-13: 2605.05949 2605.19136 2605.24941 2605.28003 2605.30434 2606.07718); elsewhere TeX's Error.
+  Let!("\\lx@tcb@draw@color@box", "\\tcb@draw@color@box");
+  DefMacro!("\\tcb@draw@color@box", "\\iftcb@isbreakable\\lx@tcb@measure@ours\\fi\\lx@tcb@draw@color@box");
+  DefPrimitive!("\\lx@tcb@measure@ours", {
+    let env = Expand!(T_CS!("\\@currenvir")).to_string();
+    let number = Expand!(T_CS!("\\thetcolorboxnumber")).to_string();
+    let name = Stored::from(s!("the breakable box {{{env}}} (box {number})"));
+    assign_value(APPROXIMATED_MEASURE, name, Some(Scope::Local));
+  });
 
   // Suppress tcolorbox's library version check. The Rust kpathsea binding
   // may resolve a different tcolorbox.sty version than the library files,

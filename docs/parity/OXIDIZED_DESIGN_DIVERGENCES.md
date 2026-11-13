@@ -16970,7 +16970,12 @@ yet TeX's: an e-TeX expression checks only its final value, so an intermediate o
 and a product past the i64 range keeps the bound (`clamp_arith_overflow`, one report per multiply) where etex.ch's
 `scan_expr` latches one error and returns 0 (`etex_expression_overflow_latched_once_red`). Guards `perfect_kernel_batch64zf::{number_and_dimension_overflow_clamp_and_err,
 integer_constant_overflow_is_infinity}`, `error_boundary::perfect_kernel_error_boundary` (both sides); repro
-expansion-primitives/dimension_overflow_max_dimen.
+expansion-primitives/dimension_overflow_max_dimen. The one exception (DG 2026-11-13, SBX1): an overflow in the measure of a
+`breakable` tcolorbox, which we set as one box where TeX breaks it (Perl tcolorbox.sty.ltxml:21), is a Warning naming the
+box, the overflows it cascades into an Info (`common::error::approximated_measure`, read by the box's own
+`\iftcb@isbreakable` when tcolorbox.sty:2006 `\tcb@draw@color@box` measures it; 2605.05949 2605.19136 2605.24941
+2605.28003 2605.30434 2606.07718: 4 Errors each → 1 Warning); a box of its own unbreakable, also one inside the
+breakable one, keeps the Error (`error_boundary::perfect_kernel_error_boundary`, three rows).
 
 ### 520. setspace's `\onehalfspace`/`\doublespace` switches are checked no-ops (Perl: an environment frame)
 

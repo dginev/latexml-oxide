@@ -1,0 +1,16 @@
+% witness: synthetic, the Error side of tcolorbox_breakable_box_overflow_warns: a box of its own `unbreakable`
+%          (tcolorbox.sty:1479 `\iftcb@isbreakable` false) after a document-wide `\tcbset{breakable}`
+% oracle:  pdflatex 9 `!` (3 Arithmetic overflow, 6 Dimension too large); Perl 8 errors
+% expect:  5 errors (2 Arithmetic overflow, 3 Dimension too large), 0 warnings; all 40 lines kept
+% status:  GREEN (SBX1; error_boundary::perfect_kernel_error_boundary)
+\documentclass{article}
+\usepackage[most]{tcolorbox}
+\tcbset{breakable}
+\newcommand\tall{Line \rule{1pt}{450pt}\par}
+\newcommand\ten{\tall\tall\tall\tall\tall\tall\tall\tall\tall\tall}
+\begin{document}
+\begin{tcolorbox}[unbreakable,title=Box]
+\ten\ten\ten\ten
+\end{tcolorbox}
+After.
+\end{document}
