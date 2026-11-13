@@ -197,14 +197,10 @@ jobs:
         run: cargo nextest run --cargo-profile ci --profile ci --workspace -E '${{ matrix.part == 'guards' && 'test(/^perfect_kernel_/)' || 'not test(/^perfect_kernel_/)' }}' --partition hash:${{ matrix.shard }}/${{ matrix.of }}
 
       - name: skipped tests (requirements not met)
-        # `requires` / `Requirements` skips (Perl's check_requirements): one `<test>\t<reason>` line each.
+        # `check_requirements` skips (Perl's check_requirements); no log = none skipped.
         if: always()
         shell: bash
-        run: |
-          log=target/test-skips.log
-          count=$(cat "$log" 2>/dev/null | wc -l | tr -d ' ')
-          echo "$count skipped test(s)"
-          if [ "$count" -gt 0 ]; then sort "$log"; { echo "### $count skipped test(s)"; echo '```'; sort "$log"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"; fi
+        run: bash tools/test_skip_summary.sh
 
   # COMPILE ONLY. No TeX Live, no dumps, no tests — just enough to prove the
   # Windows arms still typecheck against the crates we pin. This is the job

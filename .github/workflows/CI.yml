@@ -417,14 +417,10 @@ jobs:
         run: cargo nextest run --cargo-profile ci --profile ci --workspace --partition hash:${{ matrix.shard }}/8
 
       - name: skipped tests (requirements not met)
-        # `requires` / `Requirements` skips (Perl's check_requirements): one `<test>\t<reason>` line each.
+        # `check_requirements` skips (Perl's check_requirements); no log = none skipped.
         if: always()
         shell: bash
-        run: |
-          log=target/test-skips.log
-          count=$(cat "$log" 2>/dev/null | wc -l | tr -d ' ')
-          echo "$count skipped test(s)"
-          if [ "$count" -gt 0 ]; then sort "$log"; { echo "### $count skipped test(s)"; echo '```'; sort "$log"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"; fi
+        run: bash tools/test_skip_summary.sh
 
   # macOS mirror of the Linux job above (issue #217). Same `ci` profile,
   # same make-formats → build → run flow; only the platform deps differ:
@@ -518,14 +514,10 @@ jobs:
         run: cargo nextest run --cargo-profile ci --profile ci --workspace --partition hash:${{ matrix.shard }}/4
 
       - name: skipped tests (requirements not met)
-        # `requires` / `Requirements` skips (Perl's check_requirements): one `<test>\t<reason>` line each.
+        # `check_requirements` skips (Perl's check_requirements); no log = none skipped.
         if: always()
         shell: bash
-        run: |
-          log=target/test-skips.log
-          count=$(cat "$log" 2>/dev/null | wc -l | tr -d ' ')
-          echo "$count skipped test(s)"
-          if [ "$count" -gt 0 ]; then sort "$log"; { echo "### $count skipped test(s)"; echo '```'; sort "$log"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"; fi
+        run: bash tools/test_skip_summary.sh
 
   # Single aggregating gate. Branch protection matches required checks BY NAME,
   # and a skipped matrix check (`shard 1/4`, `macOS shard 2/4`, …) leaves a PR
