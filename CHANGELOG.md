@@ -35,9 +35,9 @@
     the 2-arg form stays local. Each side is a string, taken as a control-sequence
     name, or any `Token`, as in Perl: `Let(T_ACTIVE("~"), "\\nobreakspace")`,
     `Let(T_MATH(), …)`, `Let("\\x", T_OTHER("a"))`. New token constructors, as Perl's
-    Token.pm exports them: `T_LETTER`, `T_OTHER`, `T_ACTIVE`, `Token(string, catcode)`,
-    the constants `T_BEGIN()` … `T_CR()` and `CC_ESCAPE()` … `CC_ARG()`, and
-    `Tokens([…])`. `T_CS` now returns a single `Token`, not a one-token `Tokens`;
+    Token.pm exports them: `T_LETTER`, `T_OTHER`, `T_ACTIVE`, `T_COMMENT`, `T_MARKER`,
+    `T_ARG`, `Token(string, catcode)`, the constants `T_BEGIN()` … `T_CR()` and
+    `CC_ESCAPE()` … `CC_ARG()`, and `Tokens(…)` (up to four arguments, or an array). `T_CS` now returns a single `Token`, not a one-token `Tokens`;
     `Digest`, `Expand`, `ExpandPartially`, `UnTeX`, `AtBeginDocument`, `AtEndDocument`
     and `absorb` take either. `XEquals`, `IsDefined`, `LookupMeaning`,
     `LookupDefinition` and `AssignMeaning` take the same token arguments as `Let`.

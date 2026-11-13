@@ -141,29 +141,19 @@ pub(super) fn make_engine() -> Engine {
       latexml_core::stomach::digest(Tokens::new(vec![t])).map_err(rhai_err)
     },
   );
-  // Perl's `Tokens(@tokens)` (Tokens.pm:29): an array of `Token`s and `Tokens`, flattened.
+  // Perl's `Tokens(@tokens)` (Tokens.pm:29): an array of `Token`s and `Tokens`, flattened; also
+  // `Tokens()` and `Tokens(a, …)` with up to four items, Rhai having no variadic functions.
+  engine.register_fn("Tokens", || Tokens::new(Vec::new()));
+  engine.register_fn("Tokens", |a: Dynamic| tokens_of(vec![a]));
+  engine.register_fn("Tokens", |a: Dynamic, b: Dynamic| tokens_of(vec![a, b]));
+  engine.register_fn("Tokens", |a: Dynamic, b: Dynamic, c: Dynamic| {
+    tokens_of(vec![a, b, c])
+  });
   engine.register_fn(
     "Tokens",
-    |items: rhai::Array| -> std::result::Result<Tokens, Box<EvalAltResult>> {
-      let mut list = Vec::with_capacity(items.len());
-      for item in items {
-        if let Some(t) = item.clone().try_cast::<Token>() {
-          list.push(t);
-        } else if let Some(ts) = item.clone().try_cast::<Tokens>() {
-          list.extend(ts.unlist());
-        } else {
-          return Err(
-            format!(
-              "Tokens: expected a Token or Tokens, got {}",
-              item.type_name()
-            )
-            .into(),
-          );
-        }
-      }
-      Ok(Tokens::new(list))
-    },
+    |a: Dynamic, b: Dynamic, c: Dynamic, d: Dynamic| tokens_of(vec![a, b, c, d]),
   );
+  engine.register_fn("Tokens", tokens_of);
   // Perl's token constructors and catcode constants (Token.pm:26-37, :45-84); a Perl
   // constant (`T_MATH`, `CC_ACTIVE`) is a zero-argument function here.
   engine.register_type_with_name::<Token>("Token");
@@ -189,6 +179,29 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn("Token", |s: &str| -> Token {
     Token::new(s, Catcode::OTHER)
   });
+  // Token.pm:81-95: `T_COMMENT` prefixes the `%`; `T_ARG` takes 1-9 or a digit Token.
+  engine.register_fn("T_COMMENT", |c: &str| -> Token {
+    Token::new(format!("%{c}"), Catcode::COMMENT)
+  });
+  engine.register_fn("T_MARKER", |t: &str| -> Token {
+    Token::new(t, Catcode::MARKER)
+  });
+  engine.register_fn(
+    "T_ARG",
+    |v: Dynamic| -> std::result::Result<Token, Box<EvalAltResult>> {
+      let n = match v.clone().try_cast::<Token>() {
+        Some(t) => t.to_string().parse::<i64>().unwrap_or(0),
+        None => v
+          .as_int()
+          .map_err(|got| format!("T_ARG: expected an int or a Token, got {got}"))?,
+      };
+      if (1..=9).contains(&n) {
+        Ok(Token::new(n.to_string(), Catcode::ARG))
+      } else {
+        Err(format!("T_ARG: value should be #1-#9, got {n}").into())
+      }
+    },
+  );
   for (name, token) in [
     ("T_BEGIN", latexml_core::T_BEGIN!()),
     ("T_END", latexml_core::T_END!()),
@@ -2146,4 +2159,27 @@ pub(super) fn make_engine() -> Engine {
   def_hook_method!("unshiftAfterDigestBody", HookFamily::AfterDigestBody, true);
 
   engine
+}
+
+/// Perl's `Tokens(@tokens)` (Tokens.pm:29): `Token`s, `Tokens` and arrays of them, flattened.
+fn tokens_of(items: rhai::Array) -> std::result::Result<Tokens, Box<EvalAltResult>> {
+  let mut list = Vec::with_capacity(items.len());
+  for item in items {
+    if let Some(t) = item.clone().try_cast::<Token>() {
+      list.push(t);
+    } else if let Some(ts) = item.clone().try_cast::<Tokens>() {
+      list.extend(ts.unlist());
+    } else if let Some(nested) = item.clone().try_cast::<rhai::Array>() {
+      list.extend(tokens_of(nested)?.unlist());
+    } else {
+      return Err(
+        format!(
+          "Tokens: expected a Token or Tokens, got {}",
+          item.type_name()
+        )
+        .into(),
+      );
+    }
+  }
+  Ok(Tokens::new(list))
 }

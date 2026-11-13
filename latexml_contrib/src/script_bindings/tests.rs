@@ -206,6 +206,7 @@ fn let_takes_any_token() {
       Let(T_ACTIVE("?"), "\\ltfoo", "global");
       AssignMeaning(T_ACTIVE("="), T_ACTIVE("~"));
       assign_global("lt:assign", UnTeX(Expand(Tokens([T_ACTIVE("="), T_OTHER("x"), T_CS("\\ltfoo")]))));
+      assign_global("lt:tokens1", UnTeX(Expand(Tokens(T_CS("\\ltfoo")))));
       assign_global("lt:meaning", LookupMeaning(T_OTHER("a")));
       assign_global("lt:def", if LookupDefinition(T_ACTIVE("~")) == () { "none" } else { "some" });
       assign_global("lt:digest", ToString(Digest(T_CS("\\ltfoo"))));
@@ -237,6 +238,8 @@ fn let_takes_any_token() {
     "FOOxFOO",
     "AssignMeaning takes tokens; Tokens([...]) builds a list"
   );
+  // revW3c: Perl's `Tokens(@tokens)` with one Token (was "Function not found").
+  assert_eq!(lookup_str("lt:tokens1"), "FOO");
   assert_eq!(
     lookup_str("lt:meaning"),
     "a",

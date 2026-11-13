@@ -60,6 +60,18 @@ const GROUPS: &[(Option<&str>, &str, &str)] = &[
 /// node-returning calls that are hardest to infer. `Node?` reads "a Node, or `()`
 /// if there is none".
 ///
+/// The calls whose `Dynamic` parameters are token arguments (`token_arg`: a CS name or a `Token`),
+/// rendered `string|Token` rather than `?`.
+const TOKEN_ARG_FNS: &[&str] = &[
+  "AssignMeaning",
+  "IsDefined",
+  "Let",
+  "LookupDefinition",
+  "LookupMeaning",
+  "SetCondition",
+  "XEquals",
+];
+
 /// Hand-written, but not drift-prone in the direction that matters:
 /// [`overrides_all_exist`] fails if a name here is no longer registered, and any
 /// function NOT listed keeps its honest `?`.
@@ -803,6 +815,18 @@ const DOCS: &[(&str, Doc)] = &[
     Doc::Note("The `Token` a newline under `CC_SPACE` (a Perl constant; call it as `T_CR()`)."),
   ),
   (
+    "T_ARG",
+    Doc::Note(
+      "A parameter `Token` `#n` under `CC_ARG`, from an int 1-9 or a digit `Token` (Perl `T_ARG`).",
+    ),
+  ),
+  (
+    "T_COMMENT",
+    Doc::Note(
+      "A comment `Token`: `%` followed by the text, under `CC_COMMENT` (Perl `T_COMMENT`).",
+    ),
+  ),
+  (
     "T_CS",
     Doc::Note(
       "One control-sequence `Token`; `Digest`, `Expand`, `UnTeX`, `absorb` take it as a one-token list.",
@@ -813,6 +837,12 @@ const DOCS: &[(&str, Doc)] = &[
     Doc::Note("The `Token` `}` under `CC_END` (a Perl constant; call it as `T_END()`)."),
   ),
   ("T_LETTER", Doc::Note("One letter `Token` (catcode 11).")),
+  (
+    "T_MARKER",
+    Doc::Note(
+      "A marker `Token` under `CC_MARKER` (Perl `T_MARKER`, marked there \"don't use unless you know\").",
+    ),
+  ),
   (
     "T_MATH",
     Doc::Note("The `Token` `$` under `CC_MATH` (a Perl constant; call it as `T_MATH()`)."),
@@ -892,7 +922,7 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "Tokens",
     Doc::Note(
-      "Perl's `Tokens(@tokens)`: a token list from an array of `Token`s and `Tokens` (flattened). Where a call takes a `Token` (`Let`, `XEquals`, …), a `Tokens` is an error.",
+      "Perl's `Tokens(@tokens)`: a token list from `Token`s and `Tokens` (flattened), given as up to four arguments or as an array. Where a call takes a `Token` (`Let`, `XEquals`, …), a `Tokens` is an error.",
     ),
   ),
   (
@@ -1567,6 +1597,12 @@ impl Signature {
       params.remove(0);
     }
     let name = name.to_string();
+    if TOKEN_ARG_FNS.contains(&name.as_str()) {
+      for p in params.iter_mut().filter(|p| *p == "?") {
+        // `\|`: a bare pipe would split the Markdown table cell.
+        *p = "string\\|Token".into();
+      }
+    }
     // A known handle beats the opaque `Dynamic` the registration reports.
     let ret = match RETURN_OVERRIDES.iter().find(|(n, _)| *n == name) {
       Some((_, real)) => Some((*real).to_string()),
