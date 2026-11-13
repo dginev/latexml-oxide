@@ -3897,7 +3897,8 @@ fn names_overlap(index: usize, resolved: &Resolved) -> bool {
 /// macro whose arguments run past it, by its own meaning, not its tail call's ([`reads_past`]: 2505.04436, 1511.09009; the
 /// group-local `\let` of `\typeout` in IEEEtran's `\authorrefmark` is noted as one, 2609.25589), or a call printing apart
 /// defines what a later piece reads ([`printing_read_later`]: 2407.13730, 2606.19583). The block is then written as Perl's
-/// `\lx@add@authors` writes it ([`split_decline`]; OD #988, its FNR1 paragraph: 1404.5602, 2503.21719, 0809.5152, 1110.6375),
+/// `\lx@add@authors` writes it ([`split_decline`]; OD #988, its FNR1 paragraph: 1404.5602, 2503.21719; 0809.5152 and
+/// 1110.6375 until GRP1, whose `\received` now replays as far as it read and is no decline),
 /// in order, with a counted Warning, once per block over the flushes.
 fn declaration_reads_past(index: usize, resolved: &Resolved) -> bool {
   // (`Some(None)`: a declaration not cut whole)

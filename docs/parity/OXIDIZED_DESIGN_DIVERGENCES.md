@@ -34117,6 +34117,11 @@ Y` line under `… and Carl Cole\affil{1}` went to Carl, each `\\` line being it
 `\lx@author@withsup` made the address a creator with its mark moved after the text — Perl keeps both address lines inside
 the last creator's name, after a `<break/>`, and makes no address creator. Of the 23 decline papers, 0809.5152 and
 1110.6375 are written whole, byte-identical to the base, and 2503.21719 by (iii); the other 20 are unchanged by them.
+Since GRP1 (2026-11-13) the Taylor & Francis blocks no longer decline: their `\received` declaration, replayed as far as
+its call read, does not read past the block, so 0809.5152 gives 5 creators and 1110.6375 11, each with its marked
+affiliation, and 0906.2789 the same creators; the date is the source's, which the PDF prints (cJAS2e.cls:459-463 sets
+`\@author` before `\@received`), not the class default the decline's whole block printed (0906.2789's `{\em …}`
+affiliation loses its italic, uncounted: post-merge).
 (iii) A creator the reading made of the block whose name no creator's names hold (`emit::split_loses_a_name`,
 `perl_piece_of` of its words in `perl_names_words`, read only for a block a decline writes as Perl's split; PB) — the reading's
 creators, not its Name events, which hold comma pieces the resolver reads as an affiliation ("Dept of Physics"): 1511.09009's aaai `Yi Zhang\footremember{yi} \\, Yanghua Xiao\footremember{yh} \\, Seung-won Hwang…`, each `\\`
