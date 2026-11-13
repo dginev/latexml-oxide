@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+  - **The standard classes' size options set `\textwidth` (#779).** In one column,
+    `article`, `report` and `book` now set `\textwidth` as their size file does
+    (`size1x.clo`/`bk1x.clo`): the paper's width less 2in, at most 345pt (10pt),
+    360pt (11pt) or 390pt (12pt). Before, every size got 10pt's 345pt, so a
+    `\begin{minipage}{\textwidth}` in a 12pt article was too narrow. `\@ptsize` now
+    follows the size option too.
   - **`\import@path` is defined (#772).** import.sty's own macro now holds the
     current import directory, as the package sets and restores it, so a document
     that reads it (`\href{\import@path index.tex}{…}`) no longer gets an

@@ -127,6 +127,8 @@ mod xkeyval_internals;
 
 mod accent_composite_expansion;
 mod beamer_includegraphics_overlay;
+/// Issues #772, #760, #801, #787, #773, #779: the bindings batch of 2026-11-13.
+mod bindings_batch1;
 mod counter_id_formatters_from_the_dump;
 mod datatool_native_load;
 mod etex_logo;
@@ -639,8 +641,6 @@ mod stream_a_recall;
 mod svg_nested_picture;
 mod sweep125_roots;
 mod wrapstuff_inline_float;
-/// Issues #772, #760, #801, #787, #773, #779: the bindings batch of 2026-11-13.
-mod bindings_batch1;
 
 /// Guards for the sandbox-arxiv-2605 rerun regression clusters (2026-09-19).
 /// Each reproduces a cluster of arXiv papers that regressed against the

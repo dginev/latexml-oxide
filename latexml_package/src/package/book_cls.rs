@@ -83,7 +83,7 @@ LoadDefinitions!({
   // columns, as its size file sets it for the paper and size options (`standard_class_twocolumn_page`: 229.5pt
   // columns of a 469pt text on letter paper, 221/452pt on A4), when book is the document's class (review rev79c2
   // finding 1: a `figure*` stated 2 columns where the PDF gives 2.044). One column is the registers' page.
-  declare_standard_class_page("book");
+  declare_standard_class_page("book")?;
   // book.cls L339-348: \@endpart, called by \@part/\@spart — raw classes built on
   // this class invoke it directly (toptesi.sty L448; witness toptesi-example
   // L265 \part). The two-sided blank verso (`\null\thispagestyle{empty}\newpage`)
@@ -107,7 +107,12 @@ LoadDefinitions!({
   // counter reset after it, when book is the document's class.
   engine::latex_constructs::declare_fnsymbol_title_block("book", Some(true))?;
 
-  DefMacro!("\\@ptsize", "0"); // should depend on options...
+  def_macro(
+    T_CS!("\\@ptsize"),
+    None,
+    Tokens::new(ExplodeText!(standard_class_ptsize().to_string())),
+    None,
+  )?;
   DefMacro!("\\@pnumwidth", "1.55em");
   DefMacro!("\\@tocrmarg", "2.55em");
   DefMacro!("\\@dotsep", "4.5");

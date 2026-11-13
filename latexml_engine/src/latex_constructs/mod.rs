@@ -4460,6 +4460,15 @@ pub fn standard_class_twocolumn_page() -> (f64, f64) {
   if lookup_bool("2.09_COMPATIBILITY") {
     return (200.0, 410.0);
   }
+  let (paper_width, one_column) = standard_class_size_file();
+  let text = (paper_width - 144.54_f64).min(2.0 * one_column).floor();
+  ((text - 10.0) / 2.0, text)
+}
+
+/// The size file's facts the standard classes' `\textwidth` is computed from: the paper's width (the last declared of
+/// the paper options, article.cls:53-77, `landscape` swapping its sides) and the size's one-column width (size10.clo,
+/// size11.clo, size12.clo and bk1x.clo `\@tempdimb`: 345/360/390pt for the last of `10pt`/`11pt`/`12pt`), in points.
+fn standard_class_size_file() -> (f64, f64) {
   let (width, height) = match last_declared_class_option(&[
     "a4paper",
     "a5paper",
@@ -4480,13 +4489,25 @@ pub fn standard_class_twocolumn_page() -> (f64, f64) {
   } else {
     width
   };
-  let one_column = match last_declared_class_option(&["10pt", "11pt", "12pt"]) {
-    Some("11pt") => 360.0,
-    Some("12pt") => 390.0,
+  (width, standard_class_one_column(standard_class_ptsize()))
+}
+
+/// The standard classes' `\@ptsize` (article.cls:45-49 `\DeclareOption{11pt}{\renewcommand\@ptsize{1}}`): 0, 1 or 2
+/// for the last declared of `10pt`/`11pt`/`12pt`.
+pub fn standard_class_ptsize() -> u8 {
+  match last_declared_class_option(&["10pt", "11pt", "12pt"]) {
+    Some("11pt") => 1,
+    Some("12pt") => 2,
+    _ => 0,
+  }
+}
+
+fn standard_class_one_column(ptsize: u8) -> f64 {
+  match ptsize {
+    1 => 360.0,
+    2 => 390.0,
     _ => 345.0,
-  };
-  let text = (width - 144.54_f64).min(2.0 * one_column).floor();
-  ((text - 10.0) / 2.0, text)
+  }
 }
 
 /// A standard class (article, report, book) that is the document's (`is_document_class`) declares its page in two
@@ -4495,13 +4516,25 @@ pub fn standard_class_twocolumn_page() -> (f64, f64) {
 /// registers' 345pt read as the column and twice it as the text (`panel_page`; rev79c2: `figure*` `panelline` 2 for
 /// the PDF's 2.044). A class loading it (OmniBus, elsarticle, REVTeX) is not it: its page is its own. One column is
 /// the registers' page.
-pub fn declare_standard_class_page(class: &str) {
+pub fn declare_standard_class_page(class: &str) -> Result<()> {
   if is_document_class(class)
     && last_declared_class_option(&["onecolumn", "twocolumn"]) == Some("twocolumn")
   {
     let (column, text) = standard_class_twocolumn_page();
     declare_panel_page(column, text, true);
+  } else if is_document_class(class) {
+    // size1x.clo:101-126 in one column: the paper's width less 2in, at most the size's width, `\@settopoint`ed; the
+    // size's width under 2.09 compatibility (issue #779: 12pt's 390pt, where the kernel's register is 10pt's 345pt).
+    let (paper_width, one_column) = standard_class_size_file();
+    let text = if lookup_bool("2.09_COMPATIBILITY") {
+      one_column
+    } else {
+      (paper_width - 144.54_f64).min(one_column).floor()
+    };
+    let width = Dimension::new((text * 65536.0).round() as i64);
+    assign_register("\\textwidth", width.into(), None, Vec::new())?;
   }
+  Ok(())
 }
 
 /// The state value of a class whose floats are centred (`declare_panel_floats_centred`).

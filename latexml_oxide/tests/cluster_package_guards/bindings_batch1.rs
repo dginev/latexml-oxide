@@ -35,3 +35,27 @@ fn import_path_is_the_package_macro() {
   ));
   assert_element(&xml, "ltx:p", &[], "<p>[][a/][a/b/]\n[a/]\n[]</p>");
 }
+
+/// Issue #779: a standard class's size and paper options set `\textwidth` as its size file does in one column
+/// (size1x.clo:108-126) and `\@ptsize`; pdflatex's values. Red: 345.0pt and 0 for every row.
+#[test]
+fn standard_class_size_option_sets_textwidth() {
+  let tex = repro!(
+    "class-bindings",
+    "standard_class_size_option_sets_textwidth.tex"
+  );
+  for (class, width, ptsize) in [
+    (r"\documentclass[12pt]{article}", "390.0pt", "2"),
+    (r"\documentclass{article}", "345.0pt", "0"),
+    (r"\documentclass[11pt]{report}", "360.0pt", "1"),
+    (r"\documentclass[12pt,a5paper]{book}", "276.0pt", "2"),
+  ] {
+    let xml = clean(&tex.replace(r"\documentclass[12pt]{article}", class));
+    assert_element(
+      &xml,
+      "ltx:p",
+      &[],
+      &format!("<p>TEXTWIDTH = {width}, PTSIZE = {ptsize}</p>"),
+    );
+  }
+}

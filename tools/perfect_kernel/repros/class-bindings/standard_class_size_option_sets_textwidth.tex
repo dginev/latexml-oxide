@@ -1,0 +1,13 @@
+% issue #779: the standard classes' size option sets `\textwidth` as its size file does in one column (size12.clo:
+% 108-126, the paper's width less 2in, at most 390pt), and `\@ptsize` (article.cls:45-49); report 11pt, 360pt;
+% book 12pt on a5paper, 276pt. The binding's options were no-ops (Perl's too): 345pt and 0 for every size.
+% witness: synthetic (issue #779: a 12pt article's `\begin{minipage}{\textwidth}`)
+% oracle:  pdflatex 0 errors: TEXTWIDTH = 390.0pt, PTSIZE = 2
+% engines: rust=0 perl=0 (2026-11-13, 345.0pt and 0)
+% expect:  0 errors; TEXTWIDTH = 390.0pt, PTSIZE = 2
+% status:  GREEN
+\documentclass[12pt]{article}
+\begin{document}
+\makeatletter
+TEXTWIDTH = \the\textwidth, PTSIZE = \@ptsize
+\end{document}
