@@ -36077,7 +36077,7 @@ in vertical mode once the list holds a box (`\prevdepth`), a longtable's bottom 
 **Rust.** `caption_layout_tokens` (caption_sty.rs) puts on the caption, from its settings, `\lx@caption@justify`: the
 `text-align` in its `cssstyle` the justification's body sets (its last alignment command, so a `\DeclareCaptionJustification`
 of the document's counts; `justify` for a body with none, as `\@parboxrestore` leaves it — an alignment reached through a
-user macro reads as `justify` too), under `singlelinecheck` (caption3.sty:677, on by default; `slc`) with
+user macro reads as `justify` too: RED repro `captions-floats/caption_justification_through_a_macro_red`), under `singlelinecheck` (caption3.sty:677, on by default; `slc`) with
 `width:fit-content;margin-left:auto;margin-right:auto` beside it, the HTML reading of `\caption@slc` (:1497, :1568): a
 caption that fits one line sits centred, a longer one fills the line with the set alignment; this also removes the alignment class a `\centering` &c. of
 the float gives the caption (a `_justified` mark, the floats' `after_close`); and `\lx@caption@skip{above|below}
@@ -36088,8 +36088,7 @@ list (an element other than `ltx:tags`/`ltx:toccaption` before the caption, or b
 float); longtable's caption records it by the table's rows. The mark is its caption's: the caption formatter reads and
 clears it before any early return (a sub-caption) and the inline caption of a `\caption` outside a float drops it, so a
 caption formatted without `\caption` (listings') never reads another's. Only a key the document or class sets emits anything. A
-`Dimension` key's value is stored as its length (`skip=20pt` was stored empty). Not done: a `\DeclareCaptionSinglelinecheck`
-of the document's (read as on), `centerlast`/`centerfirst` read as centring,
+`Dimension` key's value is stored as its length (`skip=20pt` was stored empty). Not done: `centerlast`/`centerfirst` read as centring,
 `margin=`/`width=`, subcaption's sub-captions (`\captionsetup[sub]`, subcaption.sty:220 `skip=6pt`; RED repro
 `captions-floats/subcaption_justification_and_skip_red`), and a skip in relative units (`\baselineskip`, `em`) is read
 at the caption, not at the `\captionsetup`.
