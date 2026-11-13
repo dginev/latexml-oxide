@@ -339,6 +339,14 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn("Let", |a: &str, b: &str| {
     latexml_core::state::let_i(&latexml_core::T_CS!(a), &latexml_core::T_CS!(b), None);
   });
+  // Perl `Let($token1, $token2, $scope)` (Package.pm:383): "local"/"global", as `AssignValue` (#796).
+  engine.register_fn("Let", |a: &str, b: &str, scope: &str| {
+    latexml_core::state::let_i(
+      &latexml_core::T_CS!(a),
+      &latexml_core::T_CS!(b),
+      scope_of(scope),
+    );
+  });
   engine.register_fn("XEquals", |a: &str, b: &str| -> bool {
     latexml_core::state::x_equals(&latexml_core::T_CS!(a), &latexml_core::T_CS!(b))
   });

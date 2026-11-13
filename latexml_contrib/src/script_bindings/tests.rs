@@ -147,6 +147,43 @@ fn typed_assign_roundtrip() {
   assert!((state::lookup_float("ta:fg").expect("ta:fg").0 - 3.5).abs() < 1e-9);
 }
 
+/// #796: `Let(a, b, scope)` — Perl's `Let` takes a scope (Package.pm:383). Inside a group, a
+/// "global" `\let` survives the group's end; a "local" one and the 2-arg default do not.
+#[test]
+fn let_takes_a_scope() {
+  use latexml_core::{T_CS, state};
+  fresh_state();
+  load_script(r##"RawTeX("\\def\\lsfoo{FOO}");"##).expect("define \\lsfoo");
+  state::push_frame();
+  load_script(
+    r##"
+      Let("\\lsglobal", "\\lsfoo", "global");
+      Let("\\lslocal", "\\lsfoo", "local");
+      Let("\\lsdefault", "\\lsfoo");
+      assign_global("ls:inside", if IsDefined("\\lslocal") && IsDefined("\\lsdefault") { "both" } else { "missing" });
+    "##,
+  )
+  .expect("scoped Let script should load cleanly");
+  state::pop_frame().expect("pop the test's group");
+  assert_eq!(
+    lookup_str("ls:inside"),
+    "both",
+    "local and default Let hold inside the group"
+  );
+  assert!(
+    state::x_equals(&T_CS!("\\lsglobal"), &T_CS!("\\lsfoo")),
+    "a global Let survives the group"
+  );
+  assert!(
+    state::lookup_meaning(&T_CS!("\\lslocal")).is_none(),
+    "a local Let ends with the group"
+  );
+  assert!(
+    state::lookup_meaning(&T_CS!("\\lsdefault")).is_none(),
+    "the 2-arg Let is local"
+  );
+}
+
 /// #540: the value-table list family (`PushValue`/`PopValue`/`UnshiftValue`/
 /// `ShiftValue`, Perl `Package.pm` L265-279) plus the dedicated search-path
 /// bindings. As of #561 `SEARCHPATHS` is itself a group-scoped value-table list

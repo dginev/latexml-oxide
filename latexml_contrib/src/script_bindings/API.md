@@ -35,7 +35,7 @@ closure-registered functions; only the accepted types are.
 
 Called at the top level of a binding file, or from inside any body.
 
-104 functions, 138 calls.
+104 functions, 139 calls.
 
 | call | documentation |
 |---|---|
@@ -82,7 +82,7 @@ Called at the top level of a binding file, or from inside any body.
 | `InputDefinitions(string)`<br>`InputDefinitions(string, map)` | Find and load the definitions for a package or class. ([`input_definitions`](latexml_core::binding::content::input_definitions)) |
 | `IsDefined(string) -> bool` | Whether a control sequence is defined, and not `\let` to `\relax`. ([`is_defined_token`](latexml_core::binding::def::dialect::is_defined_token)) |
 | `LaTeXMLVersion() -> string` | The engine version string — the `LATEXML_VERSION` value ([`lookup_string`](latexml_core::state::lookup_string)). |
-| `Let(string, string)` | TeX's `\let`: copy one token's meaning onto another. ([`let_i`](latexml_core::state::let_i)) |
+| `Let(string, string)`<br>`Let(string, string, string)` | TeX's `\let`: copy one token's meaning onto another, with an optional scope (`"global"` is `\global\let`). ([`let_i`](latexml_core::state::let_i)) |
 | `LoadClass(string)`<br>`LoadClass(string, array)` | Load a document class, falling back to a prefix match then OmniBus. ([`load_class`](latexml_core::binding::content::load_class)) |
 | `LookupBool(string) -> bool` | Read a value as a boolean. ([`lookup_bool`](latexml_core::state::lookup_bool)) |
 | `LookupCatcode(string) -> int` | The category code currently in force for a character. ([`lookup_catcode`](latexml_core::state::lookup_catcode)) |

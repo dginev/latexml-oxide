@@ -397,7 +397,7 @@ const DOCS: &[(&str, Doc)] = &[
   (
     "Let",
     Doc::Rust(
-      "TeX's `\\let`: copy one token's meaning onto another.",
+      "TeX's `\\let`: copy one token's meaning onto another, with an optional scope (`\"global\"` is `\\global\\let`).",
       "latexml_core::state::let_i",
     ),
   ),

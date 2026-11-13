@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+  - **Rhai `Let(a, b, scope)`** (#796). A binding can now write a global `\let`
+    (`Let("\\alias", "\\target", "global")`), as Perl's `Let($t1, $t2, $scope)`;
+    the 2-arg form stays local. Guard `script_bindings::tests::let_takes_a_scope`.
+
   - **`post::PostOptions::nodefaultresources` is now `default_resources`, with the
     meaning inverted.** The double negative (`nodefaultresources: false`) is gone.
     The positive name is Perl's option name (`Config.pm:120` `defaultresources!`),
