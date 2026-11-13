@@ -1,4 +1,4 @@
-use latexml::util::test::requires;
+use latexml::util::test::{loads, requires};
 
 use super::perfect_kernel_batch46::{convert_with, error_count, warning_count};
 
@@ -475,6 +475,9 @@ fn text_font_command_ends_with_egroup() {
 /// labels, Fatal; Perl the same).
 #[test]
 fn glossaries_underscore_label_is_a_key() {
+  if !requires(loads::GLOSSARIES) {
+    return;
+  }
   let tex =
     include_str!("../../../tools/perfect_kernel/repros/index-bib/glossaries_underscore_label.tex");
   let (stderr, xml) = convert_with(tex, None);

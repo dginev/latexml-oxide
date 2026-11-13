@@ -27,22 +27,14 @@
 //! Conditional: needs the kernel dump (so expl3/pgf load cleanly) AND
 //! revtex4-1 + mathptmx + pgfplots installed (the exact package set drives
 //! the encoding state into the looping `\T1-cmd` form).
-use latexml::util::test::{convert_fixture, dump_available, requires};
+use latexml::util::test::{Requirements, convert_fixture};
 
 #[test]
 fn natbib_dotless_i_label_does_not_loop() {
-  if !dump_available() {
-    eprintln!(
-      "SKIP natbib_dotless_i_label_does_not_loop: no latex kernel dump \
-         in resources/dumps/ (run tools/make_formats.sh)"
-    );
-    return;
-  }
-  if !requires(&["revtex4-1.cls", "mathptmx.sty", "pgfplots.sty"]) {
-    eprintln!(
-      "SKIP natbib_dotless_i_label_does_not_loop: revtex4-1/mathptmx/pgfplots \
-         not installed in the host TeX tree"
-    );
+  if !Requirements::packages(&["revtex4-1.cls", "mathptmx.sty", "pgfplots.sty"])
+    .format_dump()
+    .met()
+  {
     return;
   }
 

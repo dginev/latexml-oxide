@@ -1,7 +1,7 @@
 //! Red/green guards for perfect-kernel phase-63 batches: run 336's `Fatal:Stomach:Recursion` cluster (arxbj
 //! `{longlist}`, etex register blocks, the autoref tag's `~` in math) and the VTeX IMS markup arxbj shares with
 //! arximspdf.
-use latexml::util::test::assert_element;
+use latexml::util::test::{assert_element, loads, requires};
 
 use super::perfect_kernel_batch57::{RAW, assert_elements};
 
@@ -3446,6 +3446,9 @@ fn interspeech_xml(tex: &str, files: &[(&str, &str)]) -> String {
 /// corresponding-author note on the author marked `**` (2605.02715). Repro sectioning-frontmatter/interspeech_author_keys.
 #[test]
 fn interspeech_author_keys() {
+  if !requires(loads::TIPA) {
+    return;
+  }
   let xml = interspeech_xml(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_author_keys.tex"
@@ -3470,6 +3473,9 @@ fn interspeech_author_keys() {
 /// authors and no affiliation or email (ruling 2026-10-06). Repro sectioning-frontmatter/interspeech_anonymous_submission.
 #[test]
 fn interspeech_anonymous_submission() {
+  if !requires(loads::TIPA) {
+    return;
+  }
   let xml = interspeech_xml(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_anonymous_submission.tex"
@@ -3489,6 +3495,9 @@ fn interspeech_anonymous_submission() {
 /// bold `\vec` (2409.08589). Repro sectioning-frontmatter/interspeech_affiliation_counter.
 #[test]
 fn interspeech_affiliation_counter() {
+  if !requires(loads::TIPA) {
+    return;
+  }
   let xml = interspeech_xml(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_affiliation_counter.tex"
@@ -3513,6 +3522,9 @@ fn interspeech_affiliation_counter() {
 /// 2605.02715). Repro loader/interspeech_class_packages.
 #[test]
 fn interspeech_class_packages() {
+  if !requires(loads::TIPA) {
+    return;
+  }
   let xml = interspeech_xml(
     include_str!("../../../tools/perfect_kernel/repros/loader/interspeech_class_packages.tex"),
     &[],
@@ -3532,6 +3544,9 @@ fn interspeech_class_packages() {
 /// sectioning-frontmatter/interspeech_math_affiliation_marks.
 #[test]
 fn interspeech_math_affiliation_marks() {
+  if !requires(loads::TIPA) {
+    return;
+  }
   let xml = interspeech_xml(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_math_affiliation_marks.tex"
@@ -3560,6 +3575,9 @@ fn interspeech_math_affiliation_marks() {
 /// Repro sectioning-frontmatter/interspeech_frontmatter_in_body.
 #[test]
 fn interspeech_frontmatter_in_body() {
+  if !requires(loads::TIPA) {
+    return;
+  }
   let xml = interspeech_xml(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_frontmatter_in_body.tex"
@@ -3581,6 +3599,9 @@ fn interspeech_frontmatter_in_body() {
 /// they name (2506.00350). Repro sectioning-frontmatter/interspeech_author_list_argument.
 #[test]
 fn interspeech_author_list_argument() {
+  if !requires(loads::TIPA) {
+    return;
+  }
   let xml = interspeech_xml(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_author_list_argument.tex"
@@ -3606,6 +3627,9 @@ fn interspeech_author_list_argument() {
 /// as printed (since 99a r2 in print order (R8: `relocate::at_queue_position`, OD #954)).
 #[test]
 fn interspeech_affiliation_nocounter() {
+  if !requires(loads::TIPA) {
+    return;
+  }
   let xml = interspeech_xml(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_affiliation_nocounter.tex"
@@ -3631,6 +3655,9 @@ fn interspeech_affiliation_nocounter() {
 /// sectioning-frontmatter/interspeech_unmarked_address_shared.
 #[test]
 fn interspeech_unmarked_address_shared() {
+  if !requires(loads::TIPA) {
+    return;
+  }
   let xml = interspeech_xml(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_unmarked_address_shared.tex"
@@ -3655,6 +3682,9 @@ fn interspeech_unmarked_address_shared() {
 /// sectioning-frontmatter/interspeech_affiliations_before_authors.
 #[test]
 fn interspeech_affiliations_before_authors() {
+  if !requires(loads::TIPA) {
+    return;
+  }
   let xml = interspeech_xml(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_affiliations_before_authors.tex"
@@ -3676,6 +3706,9 @@ fn interspeech_affiliations_before_authors() {
 /// sectioning-frontmatter/interspeech_class_starts_final.
 #[test]
 fn interspeech_class_starts_final() {
+  if !requires(loads::TIPA) {
+    return;
+  }
   let xml = interspeech_xml(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_class_starts_final.tex"
@@ -3700,6 +3733,9 @@ fn interspeech_class_starts_final() {
 /// Interspeech2024.cls:110-113). Repro sectioning-frontmatter/interspeech_class_starts_final.
 #[test]
 fn interspeech_class_calls_cameraready() {
+  if !requires(loads::TIPA) {
+    return;
+  }
   let xml = interspeech_xml(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_class_starts_final.tex"
@@ -3724,6 +3760,9 @@ fn interspeech_class_calls_cameraready() {
 /// the switch off, starts anonymous, as the template does. Repro sectioning-frontmatter/interspeech_class_starts_final.
 #[test]
 fn interspeech_class_template_stays_anonymous() {
+  if !requires(loads::TIPA) {
+    return;
+  }
   let xml = interspeech_xml(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/interspeech_class_starts_final.tex"

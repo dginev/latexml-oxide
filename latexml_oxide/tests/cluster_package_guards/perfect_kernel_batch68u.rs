@@ -22,12 +22,15 @@
 //! (1203.0762); beilstein's `\author[marks][e-mail]{name}` (beilstein.cls:627).
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
-use latexml::util::test::{assert_element, normalize_markup, xml_element};
+use latexml::util::test::{assert_element, normalize_markup, requires, xml_element};
 
 use super::{
   perfect_kernel_batch46::{convert_files_with, error_count, warning_count},
   perfect_kernel_batch57::{RAW, assert_elements, assert_elements_with},
 };
+
+/// beilstein.cls and the fonts it loads (texlive-fonts-extra, tex-gyre).
+const BEILSTEIN: &[&str] = &["beilstein.cls", "newtxtt.sty", "tgheros.sty"];
 
 /// The frontmatter block: from the title to the first paragraph, whole.
 fn front_block(xml: &str) -> String {
@@ -302,6 +305,9 @@ fn a_raw_class_keywords_environment_collecting_its_body_sets_the_keywords() {
 /// Before 68u r2: an author named `*`, and no affiliation.
 #[test]
 fn beilstein_authors_carry_their_numbered_affiliations() {
+  if !requires(BEILSTEIN) {
+    return;
+  }
   let xml = assert_elements(
     include_str!(
       "../../../tools/perfect_kernel/repros/class-bindings/beilstein_author_affiliation_numbers.tex"
@@ -324,6 +330,9 @@ fn beilstein_authors_carry_their_numbered_affiliations() {
 /// ann@example.org, …" and "2 Second Institute, Town, bob@example.org"). Before 68u r2 no affiliation, e-mail or ORCID.
 #[test]
 fn lni_authors_carry_email_orcid_and_affiliation() {
+  if !requires(&["lni.cls", "newtxtt.sty"]) {
+    return;
+  }
   let xml = assert_elements(
     include_str!(
       "../../../tools/perfect_kernel/repros/class-bindings/lni_author_email_orcid_affil.tex"
@@ -508,6 +517,9 @@ fn a_class_for_another_format_is_not_read_raw() {
 /// `[` and the e-mail and name stray text.
 #[test]
 fn beilstein_author_with_marks_and_email_options() {
+  if !requires(BEILSTEIN) {
+    return;
+  }
   let xml = assert_elements(
     "\\documentclass{beilstein}\n\\begin{document}\n\\title{The Title}\n\\author[1][ann@example.org]{Ann Able}\n\
      \\affiliation{First University}\n\\author*[2]{Bob Baker}{bob@example.org}\n\\affiliation{Second Institute}\n\

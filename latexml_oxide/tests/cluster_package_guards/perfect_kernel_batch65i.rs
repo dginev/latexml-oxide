@@ -9,7 +9,7 @@
 //!
 //! The 65c-class fixtures are ill-formed on purpose (pdflatex reports the open group), so each pins its exact
 //! diagnostic counts.
-use latexml::util::test::{assert_element, convert_with, rng_error_count, warning_count};
+use latexml::util::test::{assert_element, convert_with, requires, rng_error_count, warning_count};
 
 use super::perfect_kernel_batch46::error_count;
 
@@ -168,6 +168,9 @@ fn column_rewrite_reads_temptokena_empty() {
 /// pdflatex does, "15,00." (the default decimal comma). Repro alignment-bindings/rccol_with_natbib_pushback_loop.
 #[test]
 fn rccol_column_formats_its_number() {
+  if !requires(&["rccol.sty", "fltpoint.sty"]) {
+    return;
+  }
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/alignment-bindings/rccol_with_natbib_pushback_loop.tex"
   );

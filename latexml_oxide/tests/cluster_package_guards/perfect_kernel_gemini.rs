@@ -1,4 +1,4 @@
-use latexml::util::test::requires;
+use latexml::util::test::{loads, requires};
 
 use super::perfect_kernel_batch46::{convert, error_count, warning_count};
 
@@ -226,6 +226,9 @@ fn align_stale_node_boxes_are_swept() {
 /// 149.3 s with identical XML. Streaming output stays identical to eager.
 #[test]
 fn resident_glossary_does_not_sweep_every_yield() {
+  if !requires(loads::GLOSSARIES) {
+    return;
+  }
   let tex =
     include_str!("../../../tools/perfect_kernel/repros/streaming/resident_glossary_sweeps.tex");
   let (stderr, streamed) =
@@ -659,6 +662,9 @@ fn istgame_and_tikz_trees_child_nodes() {
 /// swallow subsequent spaces from input when to_match expects another space.
 #[test]
 fn expkv_ekvcsvloop_delimiter_adjacent_spaces() {
+  if !requires(loads::EXPKV) {
+    return;
+  }
   let tex = r"\documentclass{article}
 \usepackage{expkv}
 \newcommand*\myprocessor[1]{(#1)}

@@ -57,7 +57,6 @@ fn standalone_under_includestyles_provides_filehook_hooks() {
 #[test]
 fn raw_stex_sty_loads_not_the_perl_ltxml() {
   if !requires(&["stex.sty", "stex.sty.ltxml"]) {
-    eprintln!("stex.sty / stex.sty.ltxml not in TeX Live — skipping");
     return;
   }
   let log = convert(

@@ -3,7 +3,7 @@
 //! reproduction distilled during triage; the doc-comment names the
 //! ORIGINAL corpus witness (TeX Live doc corpus) whose larger conversion
 //! was vetted separately.
-use latexml::util::test::requires;
+use latexml::util::test::{loads, requires, requires_all};
 
 use super::{
   perfect_kernel_batch40_43::convert_with_files,
@@ -1611,6 +1611,9 @@ fn chemmacros_raw_load_keeps_chemformula_ch() {
 /// `D:YYYYMMDD…` stamp (pdfTeX manual §8.11; datetime2.sty:46-48).
 #[test]
 fn datetime2_raw_dates_render() {
+  if !requires(&["datetime2.sty", "tracklang.sty"]) {
+    return;
+  }
   let tex = r"\documentclass{article}
 \usepackage[en-GB]{datetime2}
 \begin{document}
@@ -4618,6 +4621,9 @@ fn sections_inside_floats_keep_number_id_and_ref() {
 /// carries the mechanism.
 #[test]
 fn math_content_in_a_ref_gets_an_inline_math() {
+  if !requires(loads::GLOSSARIES) {
+    return;
+  }
   let tex = r"\documentclass{article}
 \usepackage{hyperref}
 \usepackage{glossaries}
@@ -5670,6 +5676,9 @@ x
 /// the same spurious error over the same tree).
 #[test]
 fn capture_box_closes_its_descendants() {
+  if !requires_all(&[&["numberedblock.sty"], loads::LISTOFITEMS]) {
+    return;
+  }
   let tex = r"\documentclass{article}
 \usepackage{numberedblock}
 \begin{document}

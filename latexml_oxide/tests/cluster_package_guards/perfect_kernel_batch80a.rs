@@ -11,7 +11,7 @@
 //! redefined `\newtheorem` start), 80q (a post-title amsart `\keywords` a brace short), 80r (dgruyter.sty a stand-in).
 //! Each guard converts its repro under `tools/perfect_kernel/repros/`, asserts the
 //! diagnostics by count and the elements.
-use latexml::util::test::convert_files_with;
+use latexml::util::test::{convert_files_with, loads, requires};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -376,6 +376,9 @@ fn nicematrix_tabularnote_label_kept() {
 /// expansion-primitives/pdfstrcmp_compares_shown_token_lists.
 #[test]
 fn pdfstrcmp_compares_shown_token_lists() {
+  if !requires(loads::DATATOOL) {
+    return;
+  }
   let (log, xml) = convert_files_with(
     repro!("expansion-primitives/pdfstrcmp_compares_shown_token_lists.tex"),
     &[],

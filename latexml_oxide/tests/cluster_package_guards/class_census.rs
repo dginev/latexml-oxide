@@ -1,4 +1,4 @@
-use latexml::util::test::requires;
+use latexml::util::test::{loads, requires};
 
 use super::perfect_kernel_batch46::{convert_with, error_count, warning_count};
 
@@ -646,6 +646,9 @@ fn enumitem_shortlabels() {
 /// "Dual Connectivity"; Perl identical).
 #[test]
 fn glossaries_preamble_forward_reference() {
+  if !requires(loads::GLOSSARIES) {
+    return;
+  }
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/index-bib/glossaries_preamble_forward_reference.tex"
   );

@@ -1,6 +1,8 @@
 //! Red/green guards for batch 65y: the symbol and unit packages (SIunits, gensymb, eucal, libertine, fourier,
 //! newtxmath, stmaryrd, constants, amsbsy, mathtools) define the names papers call. Repros
 //! `tools/perfect_kernel/repros/{stub-dependencies,ams-internals}/*`.
+use latexml::util::test::{loads, requires};
+
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
 fn convert(tex: &str) -> String {
@@ -72,6 +74,9 @@ fn libertine_figure_styles() {
 /// RED repro math-parse/fourier_vert_fences.tex, math parked). Witnesses 2008.00463, 2508.01413, 1708.05248.
 #[test]
 fn fourier_math_symbols() {
+  if !requires(loads::FOURIER) {
+    return;
+  }
   let xml = convert(include_str!(
     "../../../tools/perfect_kernel/repros/stub-dependencies/fourier_math_symbols.tex"
   ));

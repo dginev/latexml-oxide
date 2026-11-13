@@ -2,7 +2,7 @@
 //! `\@ifdefinable` on a group, epsf's `\epsfsize`, wrapfig's `{wrapfloat}`, equations.sty's eqnarray, ntheorem's
 //! `\newtheorem*` stepping its counter, iopart's `\submitted`, espcrc's `\addressmark[…]`. Each guard converts its
 //! repro under `tools/perfect_kernel/repros/`, asserts the diagnostics by count and whole elements, against pdflatex.
-use latexml::util::test::{assert_element, convert_with};
+use latexml::util::test::{assert_element, convert_with, requires};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -140,6 +140,9 @@ fn epsfbox_global_reset_of_a_tl_copy() {
 /// pdflatex. Red on 78s r2 (review rev78s2 finding 1). Repro package-bindings/epsfbox_tl_sty_over_a_shipped_1991_tex.
 #[test]
 fn epsfbox_tl_sty_over_a_shipped_1991_tex() {
+  if !requires(&["epsf.sty", "epsf.tex"]) {
+    return;
+  }
   let xml = convert_clean(repro!(
     "package-bindings/epsfbox_tl_sty_over_a_shipped_1991_tex.tex"
   ));

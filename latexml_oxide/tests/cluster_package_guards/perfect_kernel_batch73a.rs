@@ -1,7 +1,7 @@
 //! Red/green guards for batch 73a: the binding shapes of the rc_struct6 study (agent_reports/2026-10-17_rc_struct6.md)
 //! and the two user rulings of 2026-10-18 — an `\index`/`\nomenclature` entry is typeset only where its list is printed
 //! (OXIDIZED_DESIGN_DIVERGENCES #738), and aastex701's `\tablecaption` before `\begin{deluxetable}` is kept (#739).
-use latexml::util::test::assert_element;
+use latexml::util::test::{assert_element, loads, requires};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -138,6 +138,9 @@ fn elsarticle_has_no_thm_environment() {
 /// pst-node.tex:1163-1192 `{psmatrix}` is an alignment of boxed nodes (0705.2689, 1712.01407).
 #[test]
 fn psmatrix_is_an_alignment() {
+  if !requires(loads::PSTRICKS) {
+    return;
+  }
   let xml = clean(include_str!(
     "../../../tools/perfect_kernel/repros/graphics-tikz/psmatrix_is_an_alignment.tex"
   ));
@@ -152,6 +155,9 @@ fn psmatrix_is_an_alignment() {
 /// pst-node.tex:206-220 `\cnodeput[par](x,y){name}{stuff}` reads its coordinate (cs0702114).
 #[test]
 fn cnodeput_reads_its_coordinate() {
+  if !requires(loads::PSTRICKS) {
+    return;
+  }
   let xml = clean(include_str!(
     "../../../tools/perfect_kernel/repros/graphics-tikz/cnodeput_reads_its_coordinate.tex"
   ));
@@ -454,6 +460,9 @@ fn revtex41_bm_is_defined_at_load() {
 /// finding 3).
 #[test]
 fn psmatrix_is_a_group() {
+  if !requires(loads::PSTRICKS) {
+    return;
+  }
   let xml = clean(include_str!(
     "../../../tools/perfect_kernel/repros/graphics-tikz/psmatrix_is_a_group.tex"
   ));

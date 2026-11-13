@@ -1,7 +1,7 @@
 //! Red/green guards for batch 77r: run-367 Error→Fatal regressions of classes and the kernel (the main session's
 //! triage C3, C6, C8-C13, C15). Each paper's whole document was lost to a Fatal or a crash; the guards assert no Fatal,
 //! the exact diagnostics, and the authored content in its element.
-use latexml::util::test::{assert_element, convert_files_with};
+use latexml::util::test::{assert_element, convert_files_with, loads, requires};
 
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
@@ -236,6 +236,9 @@ fn p_equation_taking_nine_arguments_does_not_loop() {
 /// fonts-nfss/t4_modified_letter_help_is_not_expanded.
 #[test]
 fn errmessage_help_is_not_expanded() {
+  if !requires(loads::T4) {
+    return;
+  }
   assert_elements_with(
     r"\documentclass{article}
 \usepackage[T4,T1]{fontenc}

@@ -2,7 +2,7 @@
 //! the package it stands in for — a `\RequirePackage`, a definition, a
 //! parameter shape or a routing — and one corpus manual errored on it. The
 //! repros live in `tools/perfect_kernel/repros/singletons/`.
-use latexml::util::test::{assert_element, requires};
+use latexml::util::test::{assert_element, loads, requires};
 
 use super::perfect_kernel_batch46::{convert, convert_files, error_count, warning_count};
 
@@ -367,6 +367,9 @@ fn qverb_quotes_share_the_verbatim_font() {
 /// 2309.07343 loads feynmp).
 #[test]
 fn fmfgraph_reads_its_size_pair() {
+  if !requires(loads::FEYNMF) {
+    return;
+  }
   let tex = include_str!("../../../tools/perfect_kernel/repros/singletons/feynmf_graph_pair.tex");
   for tex in [tex.to_string(), tex.replace("{feynmf}", "{feynmp}")] {
     let (stderr, xml) = convert(&tex, true);

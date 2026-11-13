@@ -1,5 +1,7 @@
 //! Red/green guards for batch 66f: regressions found by the cortex sandbox reruns of 2026-10-13 (runs 341/342).
 //! Repro `tools/perfect_kernel/repros/loader/jobname_aux_exists_after_begin_document.tex`.
+use latexml::util::test::requires;
+
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
 fn convert_counted(tex: &str) -> (String, String) {
@@ -38,6 +40,9 @@ fn element(xml: &str, open: &str, close: &str) -> String {
 /// `\l_tmpa_str` from its `\boldmath` (witnesses 2605.11518, 2605.12374, 2605.22763).
 #[test]
 fn mathversion_expands_its_argument() {
+  if !requires(&["XCharter.sty"]) {
+    return;
+  }
   let (log, xml) = convert_counted(include_str!(
     "../../../tools/perfect_kernel/repros/fonts-nfss/mathversion_expands_its_argument.tex"
   ));

@@ -3,7 +3,7 @@
 //! (sect02.rs `\lx@end@open@frontmatter`; was an empty `<document/>` with 0 errors), and a refused `\title` replays for
 //! its side effects as `\author`'s does (sect05.rs `\title`, the support bindings' `\title`; OXIDIZED_DESIGN #482). Each
 //! green asserts the three targets: the log's tally, the authored text, and the element that carries it.
-use latexml::util::test::{convert_files_with, convert_with, requires};
+use latexml::util::test::{convert_files_with, convert_with, loads, requires};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -386,6 +386,9 @@ fn aastex_figcaption_outside_a_figure_is_its_caption() {
 /// equation after the formula (glossaries_sty.rs `\lx@glossaries@glsadd`; silent-loss inventory #20).
 #[test]
 fn gls_only_in_display_math_is_listed() {
+  if !requires(loads::GLOSSARIES) {
+    return;
+  }
   let (log, xml, (html, post_log)) = latexml::util::test::convert_bytes_files_then(
     include_bytes!(
       "../../../tools/perfect_kernel/repros/index-bib/gls_only_in_display_math_is_listed.tex"
@@ -411,8 +414,7 @@ fn gls_only_in_display_math_is_listed() {
 /// keywords under the class's label; the class's own date footnote keeps `\date` (asmejour_cls.rs; 2510.10694).
 #[test]
 fn asmejour_keywords_are_kept() {
-  if !requires(&["asmejour.cls"]) {
-    eprintln!("skipped: asmejour.cls is not installed");
+  if !requires(&["asmejour.cls", "inconsolata.sty"]) {
     return;
   }
   let (log, xml) = convert_with(
@@ -567,7 +569,6 @@ fn an_without_its_class_warns() {
 #[test]
 fn apa_acknowledgements_are_kept_in_every_mode() {
   if !requires(&["apa.cls"]) {
-    eprintln!("skipped: apa.cls is not installed");
     return;
   }
   let tex = include_str!(
@@ -613,7 +614,6 @@ fn apa_acknowledgements_are_kept_in_every_mode() {
 #[test]
 fn cclayout_abstract_and_subject_are_kept() {
   if !requires(&["cc.cls"]) {
-    eprintln!("skipped: cc.cls is not installed");
     return;
   }
   let (log, xml) = convert_with(

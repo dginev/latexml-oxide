@@ -333,9 +333,13 @@ jobs:
     steps:
       # Minimal apt set: only what `make formats` + tests actually need.
       # Removed: imagemagick, inkscape (graphics post-processing —
-      # not exercised by the test suite); texlive-lang-* (only en/de/fr/
-      # ru/el needed by tests, and texlive-lang-european is the heaviest
-      # superset). Net: ~1.5 GB less apt download + install time.
+      # not exercised by the test suite). The second block (≈230 MB) is what the
+      # guards load (CIF0, 2026-11-13): tracklang/expkv (plain-generic), tipa,
+      # pstricks, the t4/lae/magyar/spanish encodings and languages, tex-gyre, and
+      # jing for the schema guards. texlive-fonts-extra (669 MB), lang-chinese/
+      # korean and games stay out: the tests that load them declare it with
+      # `requires` and skip visibly (listed after the run). These packages add
+      # no file the dumps read (latex.ltx/expl3), so the dump-cache key stays.
       - name: install dependencies
         run: |
           sudo apt-get update
@@ -345,7 +349,10 @@ jobs:
             texlive texlive-latex-extra texlive-science \
             texlive-bibtex-extra texlive-publishers \
             texlive-lang-german texlive-lang-french texlive-lang-greek \
-            texlive-lang-cyrillic
+            texlive-lang-cyrillic \
+            texlive-plain-generic tipa texlive-pstricks texlive-lang-other \
+            texlive-lang-arabic texlive-lang-european texlive-lang-spanish \
+            tex-gyre jing
       - uses: actions/checkout@v6
       - uses: dtolnay/rust-toolchain@nightly
       - uses: Swatinem/rust-cache@v2
@@ -462,7 +469,7 @@ jobs:
       - name: install dependencies
         run: |
           command -v pkg-config >/dev/null || brew install pkgconf
-          brew install libxml2 libxslt texlive
+          brew install libxml2 libxslt texlive jing-trang
       - name: surface keg-only pkg-config paths
         run: |
           echo "PKG_CONFIG_PATH=$(brew --prefix libxml2)/lib/pkgconfig:$(brew --prefix libxslt)/lib/pkgconfig" >> "$GITHUB_ENV"

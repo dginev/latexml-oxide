@@ -193,16 +193,22 @@ fn author_file_stand_ins_are_bindings_outside_tex_live() {
   assert!(!latexml_core::binding::author_files::stands_in_for_an_author_file("html.sty"));
 }
 
-/// The reverse: every registered `.cls`/`.sty`/`.tex` binding kpathsea does not find is a stand-in, a former TeX Live
-/// file or LaTeXML's own, so a new binding for an author's file cannot answer `\IfFileExists` unlisted. Runs on a full
-/// TeX Live tree only (`aastex701.cls` is found); a trimmed one (CI's) lacks files the list takes as TeX Live's, and
-/// the test says it skipped.
+/// The reverse: every registered `.cls`/`.sty`/`.tex` binding outside TeX Live is a stand-in, a former TeX Live file
+/// or LaTeXML's own, so a new binding for an author's file cannot answer `\IfFileExists` unlisted. "Outside TeX Live"
+/// is TeX Live's own package list (`tlpkg/texlive.tlpdb`) where the tree has one; a distribution's split TeX Live has
+/// none, and there a kpsewhich miss means "outside" only on a full install, so the test requires a file from each
+/// collection the list's TeX Live bindings come from and skips visibly on a partial one (CI's apt set).
 #[test]
 fn every_binding_outside_tex_live_is_listed() {
   use latexml_core::binding::author_files::{AUTHOR_FILE_STAND_INS, FORMER_TEX_LIVE, LATEXML_OWN};
-  if !latexml::util::test::requires(&["aastex701.cls"]) {
+  let tlpdb = tex_live_runfiles();
+  if tlpdb.is_none() && !latexml::util::test::requires(FULL_TEX_LIVE) {
     return;
   }
+  let in_tex_live = |file: &str| match &tlpdb {
+    Some(runfiles) => runfiles.contains(file),
+    None => !kpsewhich(file).is_empty(),
+  };
   let listed = |file: &str| {
     AUTHOR_FILE_STAND_INS.contains(&file)
       || FORMER_TEX_LIVE.iter().any(|(former, _)| *former == file)
@@ -211,12 +217,63 @@ fn every_binding_outside_tex_live_is_listed() {
   let unlisted: Vec<String> = registered_bindings()
     .into_iter()
     .filter(|file| file.ends_with(".cls") || file.ends_with(".sty") || file.ends_with(".tex"))
-    .filter(|file| !listed(file) && kpsewhich(file).is_empty())
+    .filter(|file| !listed(file) && !in_tex_live(file))
     .collect();
   assert!(
     unlisted.is_empty(),
     "bindings outside TeX Live on no list (latexml_core::binding::author_files): {unlisted:?}"
   );
+}
+
+/// One file of each distribution package (Debian's `texlive-*` split) holding a TeX Live file a binding is named
+/// after: fonts-extra, pstricks, plain-generic, luatex, tipa, lang-korean, lang-japanese, latex-cjk-common, feynmf,
+/// lang-other, lang-italian, lang-cjk, lang-arabic, tex-gyre, lmodern, publishers (CIF0, 2026-11-13).
+const FULL_TEX_LIVE: &[&str] = &[
+  "bbm.sty",
+  "pstricks.sty",
+  "tracklang.sty",
+  "luacode.sty",
+  "tipa.sty",
+  "kotexutf.sty",
+  "ascmac.sty",
+  "CJK.sty",
+  "feynmf.sty",
+  "vntex.sty",
+  "frontespizio.sty",
+  "xeCJK.sty",
+  "bidi.sty",
+  "tgpagella.sty",
+  "lmodern.sty",
+  "aastex701.cls",
+];
+
+/// The base names of the run files in TeX Live's package database, `$TEXMFROOT/tlpkg/texlive.tlpdb` (a `runfiles`
+/// block lists one path per line, indented by a space); `None` when the tree has none.
+fn tex_live_runfiles() -> Option<std::collections::HashSet<String>> {
+  let root = std::process::Command::new("kpsewhich")
+    .arg("-var-value=TEXMFROOT")
+    .output()
+    .ok()?;
+  let root = String::from_utf8_lossy(&root.stdout).trim().to_string();
+  let db = std::fs::read_to_string(std::path::Path::new(&root).join("tlpkg/texlive.tlpdb")).ok()?;
+  let mut in_runfiles = false;
+  let mut runfiles = std::collections::HashSet::new();
+  for line in db.lines() {
+    match line.strip_prefix(' ') {
+      Some(path) if in_runfiles => {
+        if let Some(name) = path
+          .split_whitespace()
+          .next()
+          .and_then(|p| p.rsplit('/').next())
+        {
+          runfiles.insert(name.to_string());
+        }
+      },
+      Some(_) => {},
+      None => in_runfiles = line.starts_with("runfiles"),
+    }
+  }
+  Some(runfiles)
 }
 
 /// jfm's `lineno` option (lineno-FLM.sty at the start of the document) is the newer copies'; with the v1.25 copy

@@ -8,8 +8,8 @@ use crate::core_interface::DigestionAPI;
 
 mod requirements;
 pub use requirements::{
-  RequirementTable, Requirements, check_table, current_test_name, file_available, requires, skip,
-  skip_log_path, texlive_version,
+  JING, RequirementTable, Requirements, check_table, current_test_name, file_available, fixtures,
+  loads, requires, requires_all, skip, skip_log_path, texlive_version,
 };
 
 // Process-once cached env vars (see WISDOM #56 — getenv hot-path race).
@@ -797,7 +797,8 @@ pub fn assert_element(xml: &str, tag: &str, attrs: &[&str], expected: &str) {
 /// RelaxNG-validate a core-XML string against the repo's authoritative
 /// `LaTeXML.rng` with `jing` (the S2 bar of the perfect-kernel program): the
 /// number of jing error lines, `Some(0)` = schema-valid; `None` when `jing` is
-/// not installed (CI installs it; a local run without it does not measure).
+/// not installed (CI installs it), logged as a skip of the check ([`skip`]); a guard
+/// whose point is the schema declares [`JING`] instead.
 /// The schema directory is prepared the way `tools/perfect_kernel/validate.sh`
 /// does — the `.rng` files copied to a temp dir with the `urn:x-LaTeXML:RelaxNG:`
 /// includes rewritten to relative paths — once for every process and checkout of
@@ -808,7 +809,7 @@ pub fn rng_error_count(xml: &str) -> Option<usize> {
   static SCHEMA: OnceLock<Option<PathBuf>> = OnceLock::new();
   let dir = SCHEMA
     .get_or_init(|| {
-      if !Command::new("jing").arg("--help").output().is_ok() {
+      if !requirements::program_available("jing") {
         return None;
       }
       let src = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../latexml_core/resources/RelaxNG");
@@ -874,7 +875,16 @@ pub fn rng_error_count(xml: &str) -> Option<usize> {
       };
       Some(dir)
     })
-    .as_ref()?;
+    .as_ref();
+  let Some(dir) = dir else {
+    // The caller's other assertions still run; the skipped schema check is logged like a skipped test.
+    let test = current_test_name();
+    skip(
+      &test,
+      &format!("Missing program jing for {test} (its schema check)"),
+    );
+    return None;
+  };
   let file = dir.join(format!(
     "doc-{}-{:?}.xml",
     std::process::id(),
@@ -900,16 +910,12 @@ pub fn rng_error_count(xml: &str) -> Option<usize> {
   )
 }
 
-/// True iff a year-versioned latex kernel dump is present in the dev tree.
-/// Without it the engine raw-loads `expl3-code.tex` (degraded mode) and the
-/// error landscape is dominated by unrelated raw-load cascades — dump-gated
-/// tests should SKIP rather than measure the wrong thing. Delegates to the
-/// engine's own dump-name convention so a filename-scheme change cannot make
-/// the tests silently self-skip forever.
-pub fn dump_available() -> bool {
-  let dir = std::path::Path::new(concat!(env!("CARGO_MANIFEST_DIR"), "/../resources/dumps"));
-  !latexml_engine::dump_paths::available_years_in_dir(dir, "latex").is_empty()
-}
+/// True iff a latex kernel dump built from this TeX tree is on disk where the format loads one from
+/// (`LATEXML_DUMP_PATH`/`LATEXML_DUMP_DIR`, installed, dev tree). Without it the engine raw-loads `expl3-code.tex`
+/// (degraded mode) and the error landscape is dominated by unrelated raw-load cascades — dump-gated tests declare
+/// it ([`Requirements::format_dump`]) and SKIP visibly. The engine's own lookup, so a test cannot disagree with the
+/// conversion it gates.
+pub fn dump_available() -> bool { latexml_engine::dump_paths::format_dump_on_disk("latex") }
 
 /// True iff the engine's kpathsea lookup resolves the named file in the host TeX tree. For an expectation that
 /// depends on the tree; a test that cannot run without the file declares it with [`requires`] instead.

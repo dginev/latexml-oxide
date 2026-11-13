@@ -7,7 +7,8 @@
 //! 2606.01993, 2402.19080 (spacing); 0705.0202, 1011.0523 (jpconf); 1711.01177, 1507.06515, 2007.00437, 2112.10068
 //! (bmcart); 0711.2399 (pst-plot).
 use latexml::util::test::{
-  assert_element, convert_files_with, convert_with, normalize_markup, xml_element,
+  assert_element, convert_files_with, convert_with, loads, normalize_markup, requires_all,
+  xml_element,
 };
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
@@ -227,6 +228,9 @@ fn bmcart_frontmatter_is_frontmatter() {
 /// `\usepackage{multido}` (0711.2399's `Error:undefined:\multido`). latex: three dots.
 #[test]
 fn pst_plot_loads_multido() {
+  if !requires_all(&[loads::PSTRICKS, &["pst-plot.sty"]]) {
+    return;
+  }
   let (log, xml) = convert_with(
     repro!("stub-dependencies/pst_plot_loads_multido.tex"),
     Some(PRELOAD),

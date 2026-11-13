@@ -1,7 +1,7 @@
 //! Red/green guards for perfect-kernel batch 64w: a native binding of axodraw v1 (1994), the Feynman-diagram package
 //! neither TeX Live nor most papers ship (run 336: 1,507 papers with `\Text` undefined), drawing its PostScript
 //! procedures into the picture model.
-use latexml::util::test::assert_element;
+use latexml::util::test::{assert_element, loads, requires};
 
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
@@ -323,6 +323,9 @@ fn axodraw4j_shipped_copy_is_read() {
 /// `stroke="none"`. Repro graphics-tikz/pstricks_psarc_keeps_its_stroke.
 #[test]
 fn pstricks_psarc_keeps_its_stroke() {
+  if !requires(loads::PSTRICKS) {
+    return;
+  }
   let xml = convert_clean(include_str!(
     "../../../tools/perfect_kernel/repros/graphics-tikz/pstricks_psarc_keeps_its_stroke.tex"
   ));

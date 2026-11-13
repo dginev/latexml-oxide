@@ -2,7 +2,7 @@
 //! values) and the §403 `scan_left_brace` of the alignment and box primitives (60j).
 use std::process::Command;
 
-use latexml::util::test::assert_element;
+use latexml::util::test::{assert_element, loads, requires};
 
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
@@ -700,6 +700,9 @@ fn identifiers_are_not_font_decoded() {
 /// fonts-nfss/text_ligatures_follow_the_encoding.
 #[test]
 fn text_ligatures_follow_the_encoding() {
+  if !requires(loads::LY1) {
+    return;
+  }
   let (stderr, xml) = latexml::util::test::convert_with(
     include_str!(
       "../../../tools/perfect_kernel/repros/fonts-nfss/text_ligatures_follow_the_encoding.tex"

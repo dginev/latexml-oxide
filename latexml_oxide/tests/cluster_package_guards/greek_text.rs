@@ -11,7 +11,7 @@
 //! Witnesses: greek-fontenc test-tuenc-greek, hyperref-with-greek,
 //! char-list-alphabeta, alphabeta-doc, test-lgrenc, char-list; teubner-doc;
 //! arXiv 2605.01889.
-use latexml::util::test::assert_element;
+use latexml::util::test::{assert_element, loads, requires};
 
 use super::perfect_kernel_batch46::{
   convert, convert_files, convert_with, error_count, warning_count,
@@ -238,6 +238,9 @@ fn redeclared_text_command_is_rewrapped() {
 /// t1enc.def keys, found under the kernel's key spelling.
 #[test]
 fn glyph_composite_is_a_character() {
+  if !requires(loads::LY1) {
+    return;
+  }
   let (stderr, xml) = convert(
     r#"\documentclass{article}
 \usepackage{amsmath}

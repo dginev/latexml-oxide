@@ -54,7 +54,6 @@ fn inline_item_paragraphs_are_line_breaks() {
 #[test]
 fn apa_acknowledgements_paragraphs_are_lines() {
   if !requires(&["apa.cls"]) {
-    eprintln!("skipped: apa.cls is not installed");
     return;
   }
   let tex = include_str!(

@@ -6,7 +6,9 @@
 //! oracle (pdflatex `!` count and text, Perl's) is in its repro header; the RED shapes stay catalog repros
 //! (`command_hook_on_an_optional_argument_command_red`, `command_hook_on_a_tex_primitive_red`,
 //! `command_hook_on_makecaption_caption_repeat_without_options_red`).
-use latexml::util::test::{assert_element, convert_with};
+use latexml::util::test::{
+  RequirementTable, Requirements, assert_element, check_table, convert_with, current_test_name,
+};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -251,9 +253,18 @@ const ROWS: &[Row] = &[
 ];
 
 /// Every row converted once, in-process: exact counts, the whole diagnostic lines, the whole elements.
+/// The rows' `requires` (Perl's per-test table): babel-spanish is texlive-lang-spanish's.
+const REQUIRES: &RequirementTable = &[(
+  "command_hook_on_makecaption_under_caption",
+  Requirements::packages(&["spanish.ldf"]),
+)];
+
 #[test]
 fn batchqa47a_command_hook_rows() {
   for row in ROWS {
+    if !check_table(&current_test_name(), row.name, Some(REQUIRES)) {
+      continue;
+    }
     let (log, xml) = convert_with(row.tex, Some("ar5iv.sty"));
     let name = row.name;
     assert_eq!(error_count(&log), row.counts.0, "{name}: errors\n{log}");

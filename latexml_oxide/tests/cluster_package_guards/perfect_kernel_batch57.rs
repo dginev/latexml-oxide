@@ -1,6 +1,8 @@
 //! Red/green guards for perfect-kernel phase-57 batches from 57ah on: the K13 stage-2 binding
 //! audit's residue (bindings that read differently from their real macro, 57ah) and the math
 //! follow-ups of the 57ag classification against Perl (57ai).
+use latexml::util::test::{loads, requires};
+
 use super::perfect_kernel_batch46::{convert_with, error_count, warning_count};
 
 /// 57ah: amsart's `\authors`, `\shortauthors` and `\addresses` are parameterless storage macros
@@ -1225,6 +1227,9 @@ fn assert_repro(tex: &str, preload: &str, tag: &str, attrs: &[&str], expected: &
 /// mfirstuc-manual 32 → 0 jing lines. Repro index/glshyperlink_target_resolves.
 #[test]
 fn glshyperlink_target_resolves() {
+  if !requires(loads::GLOSSARIES_EXTRA) {
+    return;
+  }
   let tex =
     include_str!("../../../tools/perfect_kernel/repros/index/glshyperlink_target_resolves.tex");
   assert_repro(

@@ -1,7 +1,7 @@
 //! Batch 56hi: the post stage keeps glossary phrases as NODES (Perl
 //! Scan.pm:442, MakeIndex.pm:477-480, CrossRef.pm:906-925) and fills an
 //! empty `ltx:glossaryref` from its entry (CrossRef.pm:469-476).
-use latexml::util::test::requires;
+use latexml::util::test::{loads, requires, requires_all};
 
 use crate::cluster::convert_and_post_clean;
 
@@ -35,6 +35,9 @@ fn acronym_refs_show_their_phrase() {
 /// `\gls` tooltip carried the TeX source (`angle \emph{in} radians`).
 #[test]
 fn glossaries_fields_keep_their_markup() {
+  if !requires(loads::GLOSSARIES) {
+    return;
+  }
   let xml = convert_and_post_clean("tests/cluster_regressions/glossaries_field_markup.tex");
   assert!(!xml.contains("\\emph"), "{xml}");
   latexml::util::test::assert_element(
@@ -76,7 +79,7 @@ fn convert_html_raw(tex: &str) -> (String, String) {
 /// (Vecteurs)" / "v velocity (vitesse)". Repro index-bib/glossary_user_keys_and_parents.
 #[test]
 fn glossary_user_keys_and_parents() {
-  if !requires(&["glosmathtools.sty"]) {
+  if !requires_all(&[loads::GLOSSARIES, &["glosmathtools.sty"]]) {
     return;
   }
   let (stderr, html) = convert_html_raw(include_str!(
@@ -121,6 +124,9 @@ fn glossary_user_keys_and_parents() {
 /// makeglossaries: α, x, ape, apd, b, q”x. Repro index-bib/glossary_sort_key_is_its_string.
 #[test]
 fn glossary_sort_key_is_its_string() {
+  if !requires(loads::GLOSSARIES) {
+    return;
+  }
   let (stderr, html) = convert_html_raw(include_str!(
     "../../../tools/perfect_kernel/repros/index-bib/glossary_sort_key_is_its_string.tex"
   ));

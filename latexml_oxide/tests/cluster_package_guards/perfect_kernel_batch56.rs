@@ -2,7 +2,7 @@
 //! \SetCatcodeRange / \setcatcoderange / \@setrangecatcode, \lstloadaspects,
 //! \DeclareTCBListing nested inside \NewDocumentEnvironment with bare
 //! environment invocation and outer listing scanning, and unicode-math table loading).
-use latexml::util::test::requires;
+use latexml::util::test::{loads, requires, requires_all};
 
 use super::perfect_kernel_batch46::{
   convert, convert_args, convert_files, convert_files_with, convert_html, convert_with,
@@ -500,6 +500,9 @@ After.
 /// undefined (witnesses elteikthesis ×3, elteiktdk ×2; RUST-ONLY).
 #[test]
 fn caption_lsep_default_keeps_magyar_off_the_removed_internal() {
+  if !requires(&["magyar.ldf"]) {
+    return;
+  }
   let tex = r"\documentclass{article}
 \usepackage[hungarian]{babel}
 \usepackage{caption}
@@ -2077,6 +2080,9 @@ fn beamer_loads_translator() {
 /// missing-font `\ClassErrorNoLine` branch (asmeconf/asmejour templates).
 #[test]
 fn font_exists_test_is_case_insensitive() {
+  if !requires(&["fontspec.sty", "TeXGyreTermesX-Regular.otf"]) {
+    return;
+  }
   let tex = r"\documentclass{article}
 \usepackage{fontspec}
 \begin{document}
@@ -3106,6 +3112,9 @@ fn class_and_datetime_definitions_exist() {
 /// `\lefthand`.
 #[test]
 fn binding_internals_reached_by_raw_code() {
+  if !requires(loads::FOURIER) {
+    return;
+  }
   let tex = r"\documentclass{article}
 \usepackage{lastpage}
 \usepackage{geometry}
@@ -3795,6 +3804,9 @@ $1\over2$ and $a\atop b$.
 /// expkv-bundle 13 errors, Perl omits the space too).
 #[test]
 fn meaning_prints_delimiter_control_words_with_a_space() {
+  if !requires_all(&[loads::EXPKV, &["expkv-cs.sty", "expkv-def.sty"]]) {
+    return;
+  }
   let tex = r"\documentclass{article}
 \begin{document}
 \def\x#1\foo#2{Q}\def\y a\bar{R}
@@ -4518,7 +4530,7 @@ fn raw_tabular_scaffold_closes_and_template_expands() {
 /// frontmatter time (witness ryethesis ryesample; Perl 0, Rust 1).
 #[test]
 fn class_redefined_abstract_defers_its_argument() {
-  if !requires(&["glossaries.sty"]) {
+  if !requires(loads::GLOSSARIES) {
     return;
   }
   let cls = "\\ProvidesClass{deferabs}\n\\LoadClass{report}\n\\newcommand{\\abstract}[1]{\\gdef\\my@theabstract{#1}}\n";
@@ -5447,6 +5459,9 @@ fn whitespace_padded_color_name_resolves() {
 /// and stubbed the lookahead name (chinesechess, sweep 70).
 #[test]
 fn package_options_are_stored_by_protected_xdef() {
+  if !requires(&["ctex.sty"]) {
+    return;
+  }
   // chinesechess itself reduced to a package that stores its options (`lxopt.sty`); ctex's
   // `fontset=none` keeps the fontset check (pdflatex: "fandol is unavailable") out. Note
   // (2026-09-28): a full expansion in `protected_xdef_options` no longer turns this, or the
@@ -5650,6 +5665,9 @@ fn accent_inner_survives_a_scantokens_round_trip() {
 /// unbalanced the molecule (chemexec/chemnum, sweep 74).
 #[test]
 fn delimited_read_keeps_a_groups_own_close_token() {
+  if !requires(&["chemfig.sty", "simplekv.tex"]) {
+    return;
+  }
   let tex = "\\documentclass{article}\n\\usepackage{chemfig}\n\\begin{document}\n\\chemfig{A(-B)(-C)D}\n\\end{document}\n";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -5679,6 +5697,9 @@ fn scantokens_everyeof_is_the_files_last_tokens() {
 /// every `sum(...)` cell re-pushed itself forever (spreadtab-en/-fr, 420 s).
 #[test]
 fn spreadtab_function_cell_evaluates() {
+  if !requires(&["spreadtab.sty", "simplekv.sty"]) {
+    return;
+  }
   let tex = "\\documentclass{article}\n\\usepackage{spreadtab}\n\\begin{document}\n\\begin{spreadtab}{{tabular}{c|c|c}}\n1 & 2 & :={sum(a1:b1)} \\\\\n\\end{spreadtab}\n\\end{document}\n";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -6655,6 +6676,9 @@ x
 /// bracket leaked into the verbatim and the size was lost (readarray.tex:440).
 #[test]
 fn verbatim_start_runs_a_prepended_command() {
+  if !requires_all(&[&["verbatimbox.sty"], loads::LISTOFITEMS]) {
+    return;
+  }
   let tex = r"\documentclass{article}
 \usepackage{verbatim}
 \newcommand\vbi[1][]{}
@@ -7096,7 +7120,7 @@ A\NoHyper B\endNoHyper C
 /// PDF-to-XML recall 0 %). The statement, its link and the license image survive.
 #[test]
 fn doclicense_statement_reaches_the_xml() {
-  if !requires(&["doclicense.sty"]) {
+  if !requires(&["doclicense.sty", "ccicons.sty"]) {
     return;
   }
   let tex = r"\documentclass{article}
@@ -8014,8 +8038,7 @@ fn newif_with_an_empty_name_lets_if_to_iffalse() {
 /// synthetic nested-`\text` fixture below does not, so this is the guard.
 #[test]
 fn glosmathtools_sample_is_not_emptied_by_the_math_rebuild() {
-  if !requires(&["glosmathtools.sty", "ulthese.cls"]) {
-    eprintln!("skipping: glosmathtools.sty / ulthese.cls not in the host TeX tree");
+  if !requires_all(&[loads::GLOSSARIES, &["glosmathtools.sty", "ulthese.cls"]]) {
     return;
   }
   let tex = include_str!("../cluster_regressions/glosmathtools/sample_glosmathtools_en.tex");
@@ -9541,6 +9564,9 @@ fn verbatim_decodes_the_input_encoding() {
 /// `{pspicture}` it is a framed group.
 #[test]
 fn psframebox_keeps_its_body() {
+  if !requires(loads::PSTRICKS) {
+    return;
+  }
   let tex = include_str!("../../../tools/perfect_kernel/repros/graphics-tikz/psframebox_body.tex");
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");

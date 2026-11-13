@@ -18,6 +18,9 @@ pub struct Requirements<'a> {
   pub texlive_min: u32,
   /// An environment variable that must be set (Perl's CI-only tests, `env => 'CI'`).
   pub env:         Option<&'a str>,
+  /// A latex kernel dump on disk ([`super::dump_available`]): without one the engine raw-loads the kernel and the
+  /// error landscape is the raw load's, not the test's.
+  pub format_dump: bool,
 }
 
 impl<'a> Requirements<'a> {
@@ -28,6 +31,7 @@ impl<'a> Requirements<'a> {
       programs: &[],
       texlive_min: 0,
       env: None,
+      format_dump: false,
     }
   }
   /// Also require the programs `programs` on `PATH`.
@@ -36,6 +40,8 @@ impl<'a> Requirements<'a> {
   pub const fn texlive_min(self, year: u32) -> Self { Requirements { texlive_min: year, ..self } }
   /// Also require the environment variable `var` to be set.
   pub const fn env(self, var: &'a str) -> Self { Requirements { env: Some(var), ..self } }
+  /// Also require a latex kernel dump on disk.
+  pub const fn format_dump(self) -> Self { Requirements { format_dump: true, ..self } }
 
   /// Why `test` cannot run here, in Perl's words; `None` when every requirement is met. Perl's order: the packages,
   /// (the programs,) then `texlive_min`, then `env`.
@@ -63,6 +69,11 @@ impl<'a> Requirements<'a> {
         "{test} is only checked in continuous integration. (set {var}=true)"
       ));
     }
+    if self.format_dump && !super::dump_available() {
+      return Some(format!(
+        "No latex kernel dump for {test} (run tools/make_formats.sh)"
+      ));
+    }
     None
   }
 
@@ -84,6 +95,89 @@ impl<'a> Requirements<'a> {
 /// The guard form: `if !requires(&["tcolorbox.sty"]) { return; }` skips the running test, visibly, when a file
 /// is missing from the host TeX tree.
 pub fn requires(files: &[&str]) -> bool { Requirements::packages(files).met() }
+
+/// [`requires`] for a test that needs several load sets ([`loads`]): `requires_all(&[loads::PSTRICKS, &["x.sty"]])`.
+pub fn requires_all(sets: &[&[&str]]) -> bool {
+  let files: Vec<&str> = sets.iter().flat_map(|set| set.iter().copied()).collect();
+  requires(&files)
+}
+
+/// The jing program the schema guards validate with ([`super::rng_error_count`]).
+pub const JING: Requirements<'static> = Requirements::packages(&[]).programs(&["jing"]);
+
+/// The fixture directories' `requires` tables that more than one harness reads: the `tex_tests!` binary and the
+/// streaming sweep (`tests/streaming_sweep`) of the same directory, keyed by the directory.
+pub mod fixtures {
+  use super::{RequirementTable, Requirements, loads};
+
+  /// Perl t/50_structure.t, without glossary's `env => 'CI'`: the local gates run it too.
+  pub static STRUCTURE: &RequirementTable = &[
+    ("amsarticle", Requirements::packages(&["amsart.cls"])),
+    ("csquotes", Requirements::packages(&["csquotes.sty"])),
+    (
+      "figure_grids",
+      Requirements::packages(&["graphicx.sty"]).texlive_min(2021),
+    ),
+    (
+      "glossary",
+      Requirements::packages(loads::GLOSSARIES).texlive_min(2016),
+    ),
+  ];
+
+  /// `tests/cluster_regressions`, whose fixtures 06_cluster_regressions and its guards convert one by one.
+  pub static CLUSTER_REGRESSIONS: &RequirementTable = &[
+    (
+      "glossaries_field_markup",
+      Requirements::packages(loads::GLOSSARIES),
+    ),
+    (
+      "newpsobject_forward",
+      Requirements::packages(loads::PSTRICKS),
+    ),
+  ];
+
+  /// The table of fixture directory `dir` (`tests/structure`), if it has one here.
+  pub fn table(dir: &str) -> Option<&'static RequirementTable> {
+    match dir.trim_end_matches('/') {
+      "tests/structure" => Some(STRUCTURE),
+      "tests/cluster_regressions" => Some(CLUSTER_REGRESSIONS),
+      _ => None,
+    }
+  }
+}
+
+/// Load sets the guards share: a package's own file and the files it loads from other distribution packages, so a
+/// partial TeX Live (Debian's split `texlive-*` packages, CI's apt set) that ships one without the other skips the
+/// test instead of failing it (CIF0, 2026-11-13).
+pub mod loads {
+  /// glossaries (texlive-latex-extra) loads tracklang (texlive-plain-generic).
+  pub const GLOSSARIES: &[&str] = &["glossaries.sty", "tracklang.sty"];
+  /// glossaries-extra over [`GLOSSARIES`].
+  pub const GLOSSARIES_EXTRA: &[&str] =
+    &["glossaries-extra.sty", "glossaries.sty", "tracklang.sty"];
+  /// datatool (texlive-latex-extra) loads tracklang (texlive-plain-generic).
+  pub const DATATOOL: &[&str] = &["datatool.sty", "tracklang.sty"];
+  /// pstricks.sty and the generic core it inputs (texlive-pstricks).
+  pub const PSTRICKS: &[&str] = &["pstricks.sty", "pstricks.tex", "pst-xkey.tex"];
+  /// tipa and its T3 encoding (tipa).
+  pub const TIPA: &[&str] = &["tipa.sty", "t3enc.def"];
+  /// expkv (texlive-plain-generic).
+  pub const EXPKV: &[&str] = &["expkv.sty"];
+  /// listofitems (texlive-plain-generic).
+  pub const LISTOFITEMS: &[&str] = &["listofitems.sty", "listofitems.tex"];
+  /// The LY1 encoding (texlive-fonts-extra).
+  pub const LY1: &[&str] = &["ly1enc.def"];
+  /// The T4 encoding (texlive-lang-other).
+  pub const T4: &[&str] = &["t4enc.def"];
+  /// The LAE encoding (texlive-lang-arabic).
+  pub const LAE: &[&str] = &["laeenc.def"];
+  /// fourier (texlive-fonts-extra) loads fourier-orns.
+  pub const FOURIER: &[&str] = &["fourier.sty", "fourier-orns.sty"];
+  /// newtxsf (texlive-fonts-extra).
+  pub const NEWTXSF: &[&str] = &["newtxsf.sty"];
+  /// feynmf and feynmp (Debian's separate `feynmf` package).
+  pub const FEYNMF: &[&str] = &["feynmf.sty", "feynmp.sty"];
+}
 
 /// Perl's `pathname_kpsewhich($reqmt) || pathname_find($reqmt)`, through the lookup the conversion itself uses.
 pub fn file_available(file: &str) -> bool {
