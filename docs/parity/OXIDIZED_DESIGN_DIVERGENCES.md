@@ -34891,6 +34891,19 @@ splits at the `\author` call by spelling and gives such a block one creator (Bas
 `article_author_macro_with_parameters_holding_names_red`. Witnesses 2103.13804, 2504.00496, 2112.09018, 2206.01053,
 2311.15269, 2609.00161.
 
+**GRP1 (a declaration replayed as far as its call read).** The emitter replays a block's declarations (`emit::declarations`)
+cut from the tokens its events were read from (`emit::declaration_cuts` over `AuthorBlock::read_tokens`; AUT1 had cut the
+unfolded spans from the folded list: 2605.24599's `email}`). A declaration's span ends where its call read
+(`FieldDeclaration::read`, kept by `field_notes::note_call_read` from the covers of the call's own expansion: babel's robust
+`\foreignlanguage` reading its arguments in `\bbl@foreign@x`, `\ifthenelse`'s `\@firstoftwo` reading the branches), not at
+the one token whose cover it had, so the name or branch the call prints takes it back (2606.14878, 2605.24599). A box made
+while the call's own invocation still runs (`stomach::field_position_encloses`: a macro `\begin` running the kernel's
+`{CJK*}`, openjournal.cls's atbeginend copy) is inside it too (2606.12938). A declaration made after its call printed stays
+one, its span the whole call, as before (a later name reads it). A span the read tokens cannot give whole (out of them, its
+groups unbalanced) is not replayed: `declaration_reads_past` declines the block with its counted Warning. Guard
+`perfect_kernel_batchaut1::a_declaration_is_replayed_as_far_as_its_call_read`; RED
+`amsart_author_macro_lines_with_email_array_split_red`.
+
 ### 994. The rehearsal binds a `\let` copy of an author-line separator or note command by its meaning, as the command it copies (SEP1)
 
 **Perl.** `\let\nx\and` then `\author{Ann Able \nx Bob Baker}` gives two creators, Ann Able and Bob Baker (Perl 0.8.8,

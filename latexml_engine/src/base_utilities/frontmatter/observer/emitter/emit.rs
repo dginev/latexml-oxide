@@ -3100,22 +3100,39 @@ fn declarations<'a>(sources: impl Iterator<Item = &'a usize>) -> Vec<Token> {
       if let Some(Entry::Author(block)) = ledger.entries().get(index)
         && let Outcome::Events { declarations, .. } = &block.outcome
       {
-        for (start, end) in declarations.iter().filter_map(|event| event.span) {
-          let at = |p: u16| usize::from(p).checked_sub(block.range.0);
-          if let (Some(start), Some(end)) = (at(start), at(end)) {
-            out.extend_from_slice(
-              block
-                .tokens
-                .unlist_ref()
-                .get(start..end)
-                .unwrap_or_default(),
-            );
-          }
+        for span in declaration_cuts(block, declarations).into_iter().flatten() {
+          out.extend_from_slice(span);
         }
       }
     }
     out
   })
+}
+
+/// Each declaration of `block` cut from the tokens its events were read from (AUT1's unfolded names, 2605.24599); `None` for
+/// one they can't give whole, out of them or its groups unbalanced, which [`declaration_reads_past`] declines.
+fn declaration_cuts<'a>(
+  block: &'a AuthorBlock,
+  declarations: &[Event],
+) -> Vec<Option<&'a [Token]>> {
+  let tokens = block.read_tokens().unlist_ref();
+  let at = |p: u16| usize::from(p).checked_sub(block.range.0);
+  let balanced = |span: &[Token]| {
+    let mut depth = 0i32;
+    span.iter().all(|t| {
+      depth += t.group_step();
+      depth >= 0
+    }) && depth == 0
+  };
+  declarations
+    .iter()
+    .filter_map(|event| event.span)
+    .map(|(start, end)| {
+      tokens
+        .get(at(start)?..at(end)?)
+        .filter(|span| balanced(span))
+    })
+    .collect()
 }
 
 /// Where an association came from: `Assoc::source`.
@@ -3879,17 +3896,17 @@ fn names_overlap(index: usize, resolved: &Resolved) -> bool {
 /// `\lx@add@authors` writes it ([`split_decline`]; OD #988, its FNR1 paragraph: 1404.5602, 2503.21719, 0809.5152, 1110.6375),
 /// in order, with a counted Warning, once per block over the flushes.
 fn declaration_reads_past(index: usize, resolved: &Resolved) -> bool {
+  // (`Some(None)`: a declaration not cut whole)
   let past = with_block(index, None, |block, _| {
     let Outcome::Events { declarations, .. } = &block.outcome else {
       return None;
     };
-    let tokens = block.read_tokens().unlist_ref();
-    let at = |p: u16| usize::from(p).checked_sub(block.range.0);
-    declarations
-      .iter()
-      .filter_map(|event| event.span)
-      .filter_map(|(start, end)| tokens.get(at(start)?..at(end)?))
-      .find_map(|span| reads_past(span, false).map(|call| span[call]))
+    declaration_cuts(block, declarations)
+      .into_iter()
+      .find_map(|span| match span {
+        Some(span) => reads_past(span, false).map(|call| Some(span[call])),
+        None => Some(None),
+      })
   });
   // (a printing call alone: where the split would be the whole block, CR7d, the replay is kept, review revFNR1 u01)
   let printing =
@@ -3899,7 +3916,7 @@ fn declaration_reads_past(index: usize, resolved: &Resolved) -> bool {
   }
   DebugFeature!(
     "frontmatter",
-    "FRONT emit: block {index}'s declaration holds {past:?}, reading past it, or prints apart: {printing}"
+    "FRONT emit: block {index}'s declaration holds {past:?}, reading past it or cut short, or prints apart: {printing}"
   );
   let once = s!("declaration|{index}");
   if lookup_mapping(EMITTED_ITEMS, &once).is_none() {

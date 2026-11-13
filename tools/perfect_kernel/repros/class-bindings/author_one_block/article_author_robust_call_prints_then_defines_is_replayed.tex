@@ -1,0 +1,17 @@
+% mechanism: field_notes.rs `note_call_read`: a robust call that prints its argument, then defines globally
+%   (`\mbox{#1}\gdef\lastnm{#1}`): no box follows the definition inside the call, so it stays a declaration, its span the
+%   whole call `\nm{Ann Lee}`, replayed before the names so Bob Ray's `\lastnm` reads it (the safe side of the take-back)
+% witness: synthetic (GRP1 sibling)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Lee1 / Bob Ray2 (with Ann Lee)"
+% engines: CAU1 0 errors, 1 warning; creators Ann Lee, Bob Ray (with Ann Lee)
+% expect:  0 errors, 1 warning (the separator net); creators Ann Lee, Bob Ray 2 (with Ann Lee)
+% status:  GREEN (CAU1, GRP1; guard perfect_kernel_batchaut1)
+% preload: ar5iv.sty
+\documentclass{article}
+\DeclareRobustCommand\nm[1]{\mbox{#1}\gdef\lastnm{#1}}
+\begin{document}
+\title{T}
+\author{\nm{Ann Lee}$^{1}$ \and Bob Ray$^{2}$ (with \lastnm)}
+\maketitle
+Hi.
+\end{document}

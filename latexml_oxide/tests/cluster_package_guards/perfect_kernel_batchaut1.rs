@@ -8,6 +8,7 @@
 //! block keeping its marks whose mark past a gap or a comma no written run prints, shown as a request (2209.05831).
 //! Every creator whole; exact Error and Warning counts. The API route (acmart's call, OmniBus's and llncs's blocks) is
 //! guarded by its own rows in `perfect_kernel_batchoc1` and `perfect_kernel_batchoc1c`.
+//! GRP1's rows: a declaration the emitter replays is cut from the tokens the block was read from, as far as its call read.
 
 use std::borrow::Cow;
 
@@ -142,6 +143,67 @@ fn a_macro_of_names_is_read_as_its_inline_twin() {
         r#"<creator before="  " role="author"><personname>Cy Cole<sup>3</sup></personname></creator>"#,
         r#"<creator before="  " role="author"><personname>Dee Dunn<sup>4</sup></personname></creator>"#,
         r#"<creator before="  " role="author"><personname>Eve Ell<sup><text font="italic">5</text></sup></personname></creator>"#,
+      ]),
+    },
+  ]);
+}
+
+/// GRP1: a declaration the block makes is replayed whole, cut from the tokens its events were read from (the unfolded ones), as
+/// far as its call read (`field_notes::note_call_read`), or taken back by a box of that call. One row per path: a macro's
+/// `\ifthenelse` unfolded (2605.24599), babel's robust `\foreignlanguage` (2606.14878), a macro `\begin` running the kernel's
+/// `{CJK*}` (2606.12938), and the safe side, a robust call defining after it printed, replayed for a later name.
+#[test]
+fn a_declaration_is_replayed_as_far_as_its_call_read() {
+  assert_rows(&[
+    // (the e-mail lines' entry cut is RED `amsart_author_macro_lines_with_email_array_split_red`: fragments)
+    Row {
+      repro:    repro!(
+        "class-bindings/author_one_block/amsart_author_macro_with_ifthenelse_declaration_is_cut_from_its_reading"
+      ),
+      files:    &[],
+      counts:   (0, 4),
+      lines:    &[],
+      creators: Creators::Hold(&[
+        r#"Ann Fodor<sup>1</sup></text></personname><contact name="Email: " role="email">ann@ubb.ro</contact></creator>"#,
+        r#"<contact name="Email: " role="email"><Math mode="inline""#,
+        r#"href="mailto:bob@ubb.ro">bob@ubb.ro</ref></XMText></XMApp></XMCell></XMRow></XMArray></XMath></Math></contact></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!(
+        "class-bindings/author_one_block/article_author_foreignlanguage_declaration_reads_its_arguments"
+      ),
+      files:    &[],
+      counts:   (0, 0),
+      lines:    &[],
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Võ Tiến Phong<sup>1,2</sup></personname></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!(
+        "class-bindings/author_one_block/article_author_begin_macro_declares_then_opens_cjk_environment"
+      ),
+      files:    &[],
+      counts:   (0, 1),
+      lines:    &["a name its events don't spell"],
+      // (fragments: the name's plain text keeps a space after "(", as on CAU1)
+      creators: Creators::Hold(&[
+        r#"汪玥)<sup>1</sup></personname></creator>"#,
+        r#"<creator before="  " role="author"><personname>Leander Thiele<sup>2</sup></personname></creator>"#,
+      ]),
+    },
+    Row {
+      repro:    repro!(
+        "class-bindings/author_one_block/article_author_robust_call_prints_then_defines_is_replayed"
+      ),
+      files:    &[],
+      counts:   (0, 1),
+      lines:    &[],
+      // (the italic mark as pinned above: RED `omnibus_author_math_mark_in_the_name_run_is_italic_red`)
+      creators: Creators::Whole(&[
+        r#"<creator role="author"><personname>Ann Lee<sup>1</sup></personname></creator>"#,
+        r#"<creator before="  " role="author"><personname>Bob Ray<sup><text font="italic">2</text></sup> (with Ann Lee)</personname></creator>"#,
       ]),
     },
   ]);
