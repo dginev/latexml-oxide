@@ -9,7 +9,7 @@ use super::perfect_kernel_batch46::{error_count, warning_count};
 
 /// One boundary row: name, oracle, document, the files on disk beside it (name, content), (errors, warnings), the
 /// first lines of the diagnostics that make the count (each as often as it occurs), and the whole elements (tag,
-/// `xml:id`, element).
+/// `xml:id` — or an attribute `name="value"`, or "" for the first of the tag —, element).
 type Row = (
   &'static str,
   &'static str,
@@ -63,6 +63,18 @@ const TCB_ARITHMETIC: &str = "Error:expected:<number> Arithmetic overflow.";
 const TCB_DIMENSION: &str = "Error:expected:<dimen> Dimension too large.";
 
 const AFTER_OVERFLOW: &str = r#"<p xml:id="p2.1">After: 0.0pt.</p>"#;
+
+const SBX2_THANKS_BOLD: &str = r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" class="ltx_authors_1line"><title>T</title><creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">Univ A</contact></creator><creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation"><text font="bold" xml:id="id1">Univ B</text></contact></creator><para xml:id="p1"><p xml:id="p1.1">Hi.</p></para></document>"#;
+
+const SBX2_THANKS_GROUP: &str = r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" class="ltx_authors_1line"><title>T</title><creator role="author"><personname>Ann Lee</personname><contact name="Affiliation: " role="affiliation">Ann Lee <text font="typewriter" fontsize="90%" xml:id="id1">al@itu.dk</text></contact></creator><creator before="  " role="author"><personname>Bob Roe</personname><contact name="Affiliation: " role="affiliation">Bob Roe <text font="typewriter" fontsize="90%" xml:id="id2">br@itu.dk</text> are with the IT-University.</contact></creator><para xml:id="p1"><p xml:id="p1.1">Hi.</p></para></document>"#;
+
+const SBX2_THANKS_TABLE: &str = r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" class="ltx_authors_1line"><title>T</title><creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">Univ A</contact></creator><creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation">Univ B</contact></creator><para xml:id="p1"><p xml:id="p1.1">Hi.</p></para></document>"#;
+
+const SBX2_THANKS_TABLE_MORE: &str = r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" class="ltx_authors_1line"><title>T</title><creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">Univ A</contact></creator><creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation">Univ B more</contact></creator><para xml:id="p1"><p xml:id="p1.1">Hi.</p></para></document>"#;
+
+const SBX2_ANN_UNIV_A: &str = r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" class="ltx_authors_1line"><title>T</title><creator role="author"><personname>Ann Lee</personname><contact name="Affiliation: " role="affiliation">Univ A</contact></creator><para xml:id="p1"><p xml:id="p1.1">Hi.</p></para></document>"#;
+
+const SBX2_LLNCS: &str = r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" class="ltx_authors_1line"><title>T</title><creator role="author"><personname>Ann Lee</personname><contact name="Affiliation: " role="affiliation">Amazon</contact></creator><creator before="  " role="author"><personname>Bob Roe</personname><contact name="Affiliation: " role="affiliation">UW</contact></creator><para xml:id="p1"><p xml:id="p1.1">Hi.</p></para></document>"#;
 
 const BOUNDARY: &[Row] = &[
   // --- `\chapter` (SVC, OD #734, #735). TeX errs (and Perl, where named): one Warning (user 2026-11-11) ---
@@ -560,6 +572,144 @@ const BOUNDARY: &[Row] = &[
       ("p", "p2.1", r#"<p xml:id="p2.1">[21.1112pt]</p>"#),
     ],
   ),
+  // --- SBX2: frontmatter pieces cut whole (`content::Field::whole`; a table's line, `Field::past_open_environment`), a replaced author never digested
+  // (`reading::superseded`), float.sty's `float@type` counter. A row's element by `xml:id`, an attribute, or "" the
+  // first of its tag ---
+  (
+    "a `$^n$` list in `\\thanks` ending in `\\textbf{…}` (repro sectioning-frontmatter/thanks_mark_list_last_entry_ends_in_a_braced_command)",
+    "pdflatex 0 `!`; Perl 0 errors 0 warnings",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/thanks_mark_list_last_entry_ends_in_a_braced_command.tex"
+    ),
+    &[],
+    (0, 0),
+    &[],
+    &[("document", "", SBX2_THANKS_BOLD)],
+  ),
+  (
+    "a group in `\\thanks` holding two `$^n$` entries (repro sectioning-frontmatter/thanks_mark_list_group_holds_two_entries)",
+    "pdflatex 0 `!`; Perl 0 errors",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/thanks_mark_list_group_holds_two_entries.tex"
+    ),
+    &[],
+    (0, 1),
+    &[
+      "Warning:unexpected:frontmatter Frontmatter content check: 1 words the author blocks print are missing from the \
+       placed frontmatter: and.",
+    ],
+    &[("document", "", SBX2_THANKS_GROUP)],
+  ),
+  (
+    "a `\\newtcbox` command in `\\author` takes its argument (repro sectioning-frontmatter/author_box_command_takes_its_argument)",
+    "pdflatex 0 `!`; Perl 0 errors",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_box_command_takes_its_argument.tex"
+    ),
+    &[],
+    (0, 0),
+    &[],
+    &[
+      (
+        "ref",
+        "href=\"https://a.org/\"",
+        r##"<ref class="ltx_href" color="#000000" href="https://a.org/">Website</ref>"##,
+      ),
+      (
+        "ref",
+        "href=\"https://b.org/\"",
+        r##"<ref class="ltx_href" color="#000000" href="https://b.org/">Code</ref>"##,
+      ),
+    ],
+  ),
+  (
+    "a `$^n$` list in `\\thanks` as a table's lines: each piece its line (revSBX2 B1) (repro sectioning-frontmatter/thanks_mark_list_in_a_tabular_one_line_each)",
+    "pdflatex 0 `!`; Perl not run",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/thanks_mark_list_in_a_tabular_one_line_each.tex"
+    ),
+    &[],
+    (0, 0),
+    &[],
+    &[("document", "", SBX2_THANKS_TABLE)],
+  ),
+  (
+    "the table's opening frame covers an `@{}` column spec (repro sectioning-frontmatter/thanks_mark_list_in_a_tabular_column_spec_at)",
+    "pdflatex 0 `!`; Perl not run",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/thanks_mark_list_in_a_tabular_column_spec_at.tex"
+    ),
+    &[],
+    (0, 0),
+    &[],
+    &[("document", "", SBX2_THANKS_TABLE)],
+  ),
+  (
+    "both entries on one table line: the last piece ends before `\\end{tabular}` (repro sectioning-frontmatter/thanks_mark_list_in_a_tabular_one_line)",
+    "pdflatex 0 `!`; Perl not run",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/thanks_mark_list_in_a_tabular_one_line.tex"
+    ),
+    &[],
+    (0, 0),
+    &[],
+    &[("document", "", SBX2_THANKS_TABLE)],
+  ),
+  (
+    "a piece holding the table's `\\end` and text after it: the counted text path (repro sectioning-frontmatter/thanks_mark_list_in_a_tabular_text_after)",
+    "pdflatex 0 `!`; Perl not run",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/thanks_mark_list_in_a_tabular_text_after.tex"
+    ),
+    &[],
+    (0, 1),
+    &[
+      "Warning:unexpected:frontmatter The frontmatter emitter writes \"Univ B more\" as its plain text, its markup lost: \
+       span letters differ",
+    ],
+    &[("document", "", SBX2_THANKS_TABLE_MORE)],
+  ),
+  (
+    "a replaced `\\author` with undefined `\\name`, `\\email` (repro sectioning-frontmatter/author_replaced_template_never_digested)",
+    "pdflatex 0 `!`; Perl 0 errors",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_replaced_template_never_digested.tex"
+    ),
+    &[],
+    (0, 0),
+    &[],
+    &[("document", "", SBX2_ANN_UNIV_A)],
+  ),
+  (
+    "llncs: a template `\\author` of `\\IEEEauthorblockN`s replaced (2605.25890)",
+    "pdflatex 0 `!`; Perl 0 errors",
+    "\\documentclass{llncs}\n\\title{T}\n\\author{\\IEEEauthorblockN{}\\IEEEauthorblockA{\\textit{Amazon}\\\\ a@b.com} \
+     \\and \\IEEEauthorblockN{}\\IEEEauthorblockA{\\textit{UW}\\\\ c@d.edu}}\n\\author{Ann Lee\\inst{1} \\and Bob \
+     Roe\\inst{2}}\n\\institute{Amazon \\and UW}\n\\begin{document}\n\\maketitle\nHi.\n\\end{document}\n",
+    &[],
+    (0, 0),
+    &[],
+    &[("document", "", SBX2_LLNCS)],
+  ),
+  (
+    "the replacing `\\author`'s own undefined `\\foo` still errs",
+    "pdflatex 1 `!` (Undefined control sequence); Perl 1 error (undefined:\\foo)",
+    "\\documentclass{article}\n\\title{T}\n\\author{\\name Ann Lee \\email a@b.edu}\n\\author{Ann Lee \\\\ Univ A \
+     \\foo}\n\\begin{document}\n\\maketitle\nHi.\n\\end{document}\n",
+    &[],
+    (1, 0),
+    &["Error:undefined:\\foo The token T_CS[\\foo] is not defined."],
+    &[("document", "", SBX2_ANN_UNIV_A)],
+  ),
+  (
+    "float.sty's `\\c@float@type` read by a document (repro package-bindings/float_type_counter)",
+    "pdflatex 0 `!`, \"Type 8.\"; Perl 3 errors (undefined:\\c@float@type, \\the\\c@float@type, \\thefloat@type)",
+    include_str!("../../../tools/perfect_kernel/repros/package-bindings/float_type_counter.tex"),
+    &[],
+    (0, 0),
+    &[],
+    &[("p", "p1.1", r#"<p xml:id="p1.1">Type 8.</p>"#)],
+  ),
 ];
 
 /// Every row converted once, in-process: the exact counts, each named diagnostic as often as listed, a schema-valid
@@ -579,7 +729,22 @@ fn perfect_kernel_error_boundary() {
       assert_eq!(lines, 0, "{name}: schema:\n{xml}");
     }
     for (tag, id, element) in *elements {
-      assert_element(&xml, tag, &[&format!("xml:id=\"{id}\"")], element);
+      let attr = match *id {
+        "" => None,
+        id if id.contains('=') => Some(id.to_string()),
+        id => Some(format!("xml:id=\"{id}\"")),
+      };
+      assert_element(
+        &xml,
+        tag,
+        attr
+          .as_slice()
+          .iter()
+          .map(String::as_str)
+          .collect::<Vec<_>>()
+          .as_slice(),
+        element,
+      );
     }
   }
 }

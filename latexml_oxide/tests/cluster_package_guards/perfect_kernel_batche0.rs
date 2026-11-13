@@ -1545,7 +1545,12 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (P23e, 462 -> 464, the main session's ruling: `email_lines::unprinted_email_unwrapped` names the reroute's key and the
   // class's own setter (`\lx@class@contact@rerouted@<name>`, `\lx@class@contact@<name>`, OD #936) to digest the meaning TeX
   // runs, as `\lx@class@contact@dispatch` does — a meaning asked, no spelling decides)
-  ("classify", 464),
+  // (SBX2, 464 -> 479: `whole_run` (now `content::Field::whole`) and `takes_arguments`, a cut piece made whole as TeX reads it — its braces,
+  // a leading `\end{…}`, a command's arguments — and `entry_starts::cut_at_starts` keeping a command with its argument:
+  // structure of the cut, decided by no spelling; 2605.00634, 2605.27539, 2606.14188, 2606.27043, 2605.07722; SBX2F,
+  // 479 -> 470: the piece made whole is `content::Field::whole`, its environments the digestion's frames, one reopen
+  // helper for both cutters, `notes::reopened`)
+  ("classify", 470),
   // (E0h: the rest of `author_block/` Z18m moved unchanged to `classify/old_reader/`, split off from `classify`'s row;
   // P5a, 131 -> 113: `names_continue`, `names_list_continues`, `notes_only_line`, `hoist_wrapped_separators` deleted with
   // their last caller, IEEEtran's `name_memberships`; P6f2, 109 -> 107: `line_parts`' parenthesis span, the split's rule
@@ -1783,8 +1788,9 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // command, whose parameters the call reads (a robust `\protect \cs␣`, IEEEtran's `\authorrefmark`), 0912.0896, 2609.25589)
   // FNR1c 16 -> 22: `reads_definition` reads whether a later token of the block reads what a printing call defined — its
   // control sequence, a counter's name as an argument, one level into a document's macro — the read no rehearsal event
-  // says (2407.13730, 2606.19583; the rehearsal's own read is post-merge, FNRR))
-  ("emitter/content", 22),
+  // says (2407.13730, 2606.19583; the rehearsal's own read is post-merge, FNRR); SBX2F 22 -> 25: `Field::whole` moved
+  // from `classify/notes.rs` (its leading `\end`, its spaces, a command's arguments), `classify` 479 -> 470 with it)
+  ("emitter/content", 25),
   // (Z4a, a new file: the emitter builds Perl's calls from the reading, its reads a call's own keys and pieces, `text_tokens` (`printed_text_tokens` since E0h) and the
   // catcodes of a cut: where a slice's edge falls past an option, a group or an accent's letter, OD #980; Z4ar2, 30 -> 28: an address
   // list's `@` no longer read, its inks are; NE3 28 -> 36: `key_tokens`' table of the specials a key value holds as characters,
@@ -2089,8 +2095,9 @@ const OBSERVER_BACKSLASH_LITERALS: &[(&str, usize)] = &[
   // `\footnoterecall{uni}` reads, `reads_definition`; 2407.13730; CMPJ2 68 -> 70: `\lx@frontmatter@item`, the wrapper it
   // writes a list's item in as the whole call is written, and `\expandafter\addtocounter\expandafter{\@listctr}`, which
   // it writes before an item to step the counter past the items before it — it writes them, no decision reads them;
-  // the list's opening and close are the digestion's frames, `Field::environments`; 1212.6367)
-  ("emitter", 70),
+  // the list's opening and close are the digestion's frames, `Field::environments`; 1212.6367; SBX2F 70 -> 71: `\end`,
+  // a cut piece's leading close moved with `Field::whole` from `classify/notes.rs`, whose count falls by it; 2606.27043)
+  ("emitter", 71),
   // (the "Knowledge in, driver out, one pass" move: the emitter's vocabulary, moved unchanged from `author_block/`, its literals with it: the API's calls it writes, the
   // mark and note commands it reads; none added)
   ("emitter/calls", 44),

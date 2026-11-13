@@ -826,3 +826,57 @@ pub(in crate::base_utilities) const ACCENT_COMMANDS: &[&str] = &[
   "\\'", "\\`", "\\^", "\\\"", "\\~", "\\=", "\\.", "\\u", "\\v", "\\H", "\\c", "\\d", "\\b",
   "\\t", "\\r", "\\k",
 ];
+
+/// Whether `cs` reads arguments by its definition: parameters of its own, or a parameterless macro whose expansion ends
+/// on a command that does or on an optional argument it hands on (tcolorbox's `\newtcbox{\linkpill}`, `\tcbox[…]`,
+/// which reads the box's text next: 2606.14188).
+pub(in crate::base_utilities) fn takes_arguments(cs: &Token) -> bool {
+  if cs.get_catcode() != Catcode::CS {
+    return false;
+  }
+  let Ok(Some(defn)) = lookup_definition(cs) else {
+    return false;
+  };
+  if defn.get_num_args() > 0 {
+    return true;
+  }
+  let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+    return false;
+  };
+  match body.unlist_ref().iter().rev().find(|t| **t != T_SPACE!()) {
+    Some(last) if *last == T_OTHER!("]") => true,
+    Some(last) if last.get_catcode() == Catcode::CS && last != cs => lookup_definition(last)
+      .ok()
+      .flatten()
+      .is_some_and(|d| d.get_num_args() > 0),
+    _ => false,
+  }
+}
+
+/// Whether `cs` before a brace is the group's wrapper, which a piece cut inside the group takes again: the command reading
+/// it as its argument ([`takes_arguments`], a text font command) or a declaration setting its font ([`sets_font`]) —
+/// never a note, made twice, nor a macro printing text (`\univ{…}` with `\newcommand\univ{Univ}`).
+pub(in crate::base_utilities) fn wraps_group(cs: &Token) -> bool {
+  cs.get_catcode() == Catcode::CS
+    && (is_text_font_command(cs)
+      || sets_font(cs)
+      || (takes_arguments(cs)
+        && !is_note_macro(cs)
+        && !["\\thanks", "\\footnote", "\\footnotetext"]
+          .iter()
+          .any(|n| *cs == T_CS!(*n))))
+}
+
+/// The tokens opening the group `v[open]` again for a piece cut inside it: its wrapper ([`wraps_group`]), the brace and
+/// the declarations it opens with up to `upto` ([`lead_declarations`]; 2605.27539, 2605.00634, 2407.15815).
+pub(in crate::base_utilities) fn reopened(v: &[Token], open: usize, upto: usize) -> Vec<Token> {
+  let mut tokens: Vec<Token> = open
+    .checked_sub(1)
+    .map(|c| v[c])
+    .filter(wraps_group)
+    .into_iter()
+    .collect();
+  tokens.push(v[open]);
+  tokens.extend(lead_declarations(&v[open + 1..upto.max(open + 1)]));
+  tokens
+}

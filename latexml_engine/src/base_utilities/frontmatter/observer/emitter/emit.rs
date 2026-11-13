@@ -444,7 +444,7 @@ fn rekeyed(
 }
 
 /// How many spaces `content` opens with, which print nothing there: an item's digestion skips them.
-fn leading_spaces(content: &[Token]) -> usize {
+pub(super) fn leading_spaces(content: &[Token]) -> usize {
   content
     .iter()
     .take_while(|t| t.get_catcode() == Catcode::SPACE)
@@ -636,28 +636,6 @@ fn past_unprinted_tail(index: usize, span: (u16, u16)) -> (u16, u16) {
   })
 }
 
-/// `start`, or past the environment a span opens and doesn't close: its first box takes the cover of what opened it
-/// (1507.02068's `\\begin{center}M. Ablikim`), a column spec with it. As the digestion's frames say it. And past the
-/// spaces after each such opening, which print nothing (the line's end after `\\begin{small}` and `\\begin{center}`,
-/// 1507.02068, 2609.17357).
-fn past_open_environment(field: &Field, start: usize, end: usize) -> usize {
-  let at = |p: u16| usize::from(p).saturating_sub(field.base);
-  let environments = field.environments;
-  let mut from = start;
-  for (n, step) in environments.iter().enumerate() {
-    if step.opens && at(step.start) == from && at(step.end) < end {
-      let closed = environments[n + 1..]
-        .iter()
-        .any(|later| !later.opens && at(later.start) < end);
-      if !closed {
-        from = at(step.end);
-        from += field.tokens.get(from..end).map_or(0, leading_spaces);
-      }
-    }
-  }
-  from
-}
-
 /// `end`, or past the letter, the control sequence or the group an accent sets, which the cover of its box stops short of, as
 /// nothing prints there but through it (`Živkovi\\'c`, `Petri\\v{c}`, ``Chiriv\\`\\i``: 2406.17108, 1202.0103, 1709.03335): a
 /// control sequence last, no event until past that. The argument as TeX reads an undelimited one: one token (a control word
@@ -787,7 +765,7 @@ fn event_run_at(
 ) -> Option<(Vec<Token>, (usize, usize), usize)> {
   let at = |p: u16| usize::from(p).checked_sub(field.base);
   let (start, end) = (at(first.span?.0)?, at(last.span?.1)?);
-  let start = past_open_environment(field, start, end);
+  let start = field.past_open_environment(start, end);
   let own_at = |e: &Event| {
     e.marks
       .filter(|_| e.kind == EventKind::Name)
@@ -1490,7 +1468,8 @@ pub(super) fn last_argument(call: &Tokens) -> Option<(Vec<Token>, Vec<Token>, Ve
 }
 
 /// The tokens of the block at ledger index `index` that the span `span` covers, as written: a call's own, whatever formula
-/// holds it ([`span_tokens_of`] takes that formula whole).
+/// holds it ([`span_tokens_of`] takes that formula whole), made whole as TeX reads it (`content::Field::whole`); `None` where
+/// no whole run holds it.
 fn span_call_tokens(index: usize, span: (u16, u16)) -> Option<Tokens> {
   with_ledger(|ledger| {
     let Some(Entry::Author(block)) = ledger.entries().get(index) else {
@@ -1498,9 +1477,30 @@ fn span_call_tokens(index: usize, span: (u16, u16)) -> Option<Tokens> {
     };
     let at = |p: u16| usize::from(p).checked_sub(block.range.0);
     let tokens = block.read_tokens().unlist_ref();
-    tokens
-      .get(at(span.0)?..at(span.1)?)
-      .map(|call| Tokens::new(call.to_vec()))
+    let (start, end) = (at(span.0)?, at(span.1)?);
+    if start > end || end > tokens.len() {
+      return None;
+    }
+    let Outcome::Events {
+      events,
+      formulas,
+      environments,
+      held,
+      ..
+    } = &block.outcome
+    else {
+      return None;
+    };
+    let field = Field {
+      tokens,
+      base: block.range.0,
+      formulas,
+      environments,
+      held,
+      aligned: aligned(events),
+      groups: Default::default(),
+    };
+    field.whole(start, end).map(Tokens::new)
   })
 }
 
@@ -2220,11 +2220,9 @@ fn item_call(
             .and_then(|tokens| note_argument(tokens, Some(&printed)))
         })
       });
-      // (or one piece of a note the reading cut at its marks, sourced at its own span: those tokens, the reading's cut, never
-      // cut again — `\\thanks{$^{1}$Univ A; $^{2}$Univ B. $^{*}$Corresponding author.}`, whose piece the writer's own cut of
-      // the whole note lost, review revG5 1; 2509.19480, 2206.07648 — read within the note, whose argument is the footnote's,
-      // never the formula's around it: `Bob Baker$^{2\thanks{$^{1}$Univ A; $^{2}$Univ B}}$`, whose pieces were that
-      // formula, the `\\thanks` digested twice, review rck2; else the span's exact slice)
+      // (or one piece of a note the reading cut at its marks, read within the note grown over the closers its last box
+      // leaves open — never the formula around it (rck2), never cut again (revG5 1): 2509.19480, 2206.07648, 2605.00634,
+      // 2606.00313, 2606.07062; else the span's slice made whole)
       let piece = argument
         .is_none()
         .then(|| note_piece(index, span))
@@ -2232,8 +2230,13 @@ fn item_call(
       let argument = argument.or_else(|| {
         piece
           .and_then(|note| {
-            span_tokens_within(index, span, Some(note), cut_runs)
-              .or_else(|| span_call_tokens(index, span))
+            span_tokens_within(
+              index,
+              span,
+              Some(past_unprinted_tail(index, note)),
+              cut_runs,
+            )
+            .or_else(|| span_call_tokens(index, span))
           })
           .map(Tokens::unlist)
       });

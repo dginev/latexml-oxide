@@ -1,0 +1,17 @@
+% A bare group in an author's `\thanks` holding two `$^n$`-marked entries, text after it: the second entry's piece
+% closed a group it did not open (`\lx@affiliation@withsup{$^{2}$B …} are with X.}`); made whole, the group is opened
+% again (`notes::reopened`). RDX1 r/b1.tex.
+% witness: 2605.27539
+% oracle:  pdflatex 0 `!`; Perl 0 errors
+% engines: rust CAU1: 1 error (\lx@frontmatterhere Attempt to close a group that switched to mode internal_vertical), 1 warning
+% expect:  0 errors, 1 warning (the content check's "and", which no entry holds: as on CAU1); each address on its author
+% status:  RED (CAU1) -> GREEN (SBX2; perfect_kernel_error_boundary)
+% preload: ar5iv.sty
+\documentclass{article}
+\author{Ann Lee$^{1}$, and Bob Roe$^{2}$
+  \thanks{{$^{1}$Ann Lee {\tt\small al@itu.dk} and $^{2}$Bob Roe \tt\small br@itu.dk} are with the IT-University.}}
+\title{T}
+\begin{document}
+\maketitle
+Hi.
+\end{document}

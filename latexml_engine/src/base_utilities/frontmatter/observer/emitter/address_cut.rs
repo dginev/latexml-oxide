@@ -773,8 +773,9 @@ pub(super) fn span_tokens_within(
       .filter(|&&(s, t)| s < to && t > from)
       .map(|&(s, t)| (s.max(from) - from, t.min(to) - from))
       .collect();
-    let start = at(span.0)?.checked_sub(from)?;
     let end = at(span.1)?.checked_sub(from)?;
+    // (a line of a table the note sets is that line's: `\thanks{\begin{tabular}{l}$^{1}$Univ A\\ $^{2}$Univ B\end{tabular}}`)
+    let start = field.past_open_environment(at(span.0)?.checked_sub(from)?, end);
     Some(field.content_cut((start, end), 0, start, &cuts)?.0)
   })
 }
