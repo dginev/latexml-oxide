@@ -53,6 +53,10 @@ const REFS: &str =
 const CALC_WIDTHOF: &str = "Warning:unexpected:\\widthof pgf's parser errs on calc's \\widthof in an expression; \
                             calc's value is used";
 
+const SBX2_THANKS_BOLD: &str = r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" class="ltx_authors_1line"><title>T</title><creator role="author"><personname>Ann Able</personname><contact name="Affiliation: " role="affiliation">Univ A</contact></creator><creator before="  " role="author"><personname>Bob Baker</personname><contact name="Affiliation: " role="affiliation"><text font="bold" xml:id="id1">Univ B</text></contact></creator><para xml:id="p1"><p xml:id="p1.1">Hi.</p></para></document>"#;
+
+const SBX2_THANKS_GROUP: &str = r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" class="ltx_authors_1line"><title>T</title><creator role="author"><personname>Ann Lee</personname><contact name="Affiliation: " role="affiliation">Ann Lee <text font="typewriter" fontsize="90%" xml:id="id1">al@itu.dk</text></contact></creator><creator before="  " role="author"><personname>Bob Roe</personname><contact name="Affiliation: " role="affiliation">Bob Roe <text font="typewriter" fontsize="90%" xml:id="id2">br@itu.dk</text> are with the IT-University.</contact></creator><para xml:id="p1"><p xml:id="p1.1">Hi.</p></para></document>"#;
+
 const SBX2_ANN_UNIV_A: &str = r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" class="ltx_authors_1line"><title>T</title><creator role="author"><personname>Ann Lee</personname><contact name="Affiliation: " role="affiliation">Univ A</contact></creator><para xml:id="p1"><p xml:id="p1.1">Hi.</p></para></document>"#;
 
 const SBX2_LLNCS: &str = r#"<document xmlns="http://dlmf.nist.gov/LaTeXML" class="ltx_authors_1line"><title>T</title><creator role="author"><personname>Ann Lee</personname><contact name="Affiliation: " role="affiliation">Amazon</contact></creator><creator before="  " role="author"><personname>Bob Roe</personname><contact name="Affiliation: " role="affiliation">UW</contact></creator><para xml:id="p1"><p xml:id="p1.1">Hi.</p></para></document>"#;
@@ -454,8 +458,56 @@ const BOUNDARY: &[Row] = &[
       ("p", "p2.1", r#"<p xml:id="p2.1">[21.1112pt]</p>"#),
     ],
   ),
-  // --- SBX2: a replaced author never digested (`reading::superseded`), float.sty's `float@type` counter. A row's
-  // element by `xml:id`, an attribute, or "" the first of its tag ---
+  // --- SBX2: frontmatter pieces cut whole (`notes::whole_run`), a replaced author never digested
+  // (`reading::superseded`), float.sty's `float@type` counter. A row's element by `xml:id`, an attribute, or "" the
+  // first of its tag ---
+  (
+    "a `$^n$` list in `\\thanks` ending in `\\textbf{…}` (repro sectioning-frontmatter/thanks_mark_list_last_entry_ends_in_a_braced_command)",
+    "pdflatex 0 `!`; Perl 0 errors 0 warnings",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/thanks_mark_list_last_entry_ends_in_a_braced_command.tex"
+    ),
+    &[],
+    (0, 0),
+    &[],
+    &[("document", "", SBX2_THANKS_BOLD)],
+  ),
+  (
+    "a group in `\\thanks` holding two `$^n$` entries (repro sectioning-frontmatter/thanks_mark_list_group_holds_two_entries)",
+    "pdflatex 0 `!`; Perl 0 errors",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/thanks_mark_list_group_holds_two_entries.tex"
+    ),
+    &[],
+    (0, 1),
+    &[
+      "Warning:unexpected:frontmatter Frontmatter content check: 1 words the author blocks print are missing from the \
+       placed frontmatter: and.",
+    ],
+    &[("document", "", SBX2_THANKS_GROUP)],
+  ),
+  (
+    "a `\\newtcbox` command in `\\author` takes its argument (repro sectioning-frontmatter/author_box_command_takes_its_argument)",
+    "pdflatex 0 `!`; Perl 0 errors",
+    include_str!(
+      "../../../tools/perfect_kernel/repros/sectioning-frontmatter/author_box_command_takes_its_argument.tex"
+    ),
+    &[],
+    (0, 0),
+    &[],
+    &[
+      (
+        "ref",
+        "href=\"https://a.org/\"",
+        r##"<ref class="ltx_href" color="#000000" href="https://a.org/">Website</ref>"##,
+      ),
+      (
+        "ref",
+        "href=\"https://b.org/\"",
+        r##"<ref class="ltx_href" color="#000000" href="https://b.org/">Code</ref>"##,
+      ),
+    ],
+  ),
   (
     "a replaced `\\author` with undefined `\\name`, `\\email` (repro sectioning-frontmatter/author_replaced_template_never_digested)",
     "pdflatex 0 `!`; Perl 0 errors",

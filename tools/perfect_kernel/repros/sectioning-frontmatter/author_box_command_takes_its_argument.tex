@@ -1,0 +1,19 @@
+% A box command written in `\author` (tcolorbox's `\newtcbox`, a parameterless macro for `\tcbox[…]`, which reads the
+% box's text next): the picture's note span held the command alone, its argument cut off, so the box read the `}`.
+% The run ends after the arguments the command takes (`notes::takes_arguments`, `notes::whole_run`).
+% witness: 2606.14188, 2606.15594
+% oracle:  pdflatex 0 `!`; Perl 0 errors
+% engines: rust CAU1: 2 errors (unexpected:} Attempt to close boxing group), 1 warning (Code, Website lost)
+% expect:  0 errors, 0 warnings; each pill a note holding its link
+% status:  RED (CAU1) -> GREEN (SBX2; perfect_kernel_error_boundary)
+% preload: ar5iv.sty
+\documentclass{article}
+\usepackage[most]{tcolorbox}
+\usepackage{hyperref}
+\newtcbox{\linkpill}{on line, colback=gray!10}
+\title{T}
+\author{Ann Lee \\ Univ A \\ \linkpill{\href{https://a.org/}{Website}} \quad \linkpill{\href{https://b.org/}{Code}}}
+\begin{document}
+\maketitle
+Hi.
+\end{document}

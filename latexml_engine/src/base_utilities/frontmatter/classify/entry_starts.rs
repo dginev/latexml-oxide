@@ -299,6 +299,16 @@ fn cut_at_starts(v: &[Token], at: &[usize], first: usize) -> Vec<Vec<Token>> {
     .iter()
     .rposition(|t| t.get_catcode() != Catcode::BEGIN && *t != T_CS!("\\protect"))
     .map_or(0, |i| i + 1);
+  // (and from the command whose argument that group is: `\institution{$^\dagger$Univ B}`, 2605.07722)
+  let cut = match cut.checked_sub(1) {
+    Some(cmd)
+      if v[cut].get_catcode() == Catcode::BEGIN
+        && (takes_arguments(&v[cmd]) || is_text_font_command(&v[cmd])) =>
+    {
+      cmd
+    },
+    _ => cut,
+  };
   // (the groups open at the cut, outermost first)
   let mut open: Vec<usize> = Vec::new();
   for (i, t) in v[..cut].iter().enumerate() {

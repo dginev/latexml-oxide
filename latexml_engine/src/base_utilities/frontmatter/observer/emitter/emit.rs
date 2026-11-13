@@ -1490,7 +1490,8 @@ pub(super) fn last_argument(call: &Tokens) -> Option<(Vec<Token>, Vec<Token>, Ve
 }
 
 /// The tokens of the block at ledger index `index` that the span `span` covers, as written: a call's own, whatever formula
-/// holds it ([`span_tokens_of`] takes that formula whole).
+/// holds it ([`span_tokens_of`] takes that formula whole), made whole as TeX reads it (`notes::whole_run`); `None` where
+/// no whole run holds it.
 fn span_call_tokens(index: usize, span: (u16, u16)) -> Option<Tokens> {
   with_ledger(|ledger| {
     let Some(Entry::Author(block)) = ledger.entries().get(index) else {
@@ -1498,9 +1499,11 @@ fn span_call_tokens(index: usize, span: (u16, u16)) -> Option<Tokens> {
     };
     let at = |p: u16| usize::from(p).checked_sub(block.range.0);
     let tokens = block.read_tokens().unlist_ref();
-    tokens
-      .get(at(span.0)?..at(span.1)?)
-      .map(|call| Tokens::new(call.to_vec()))
+    let (start, end) = (at(span.0)?, at(span.1)?);
+    (start <= end && end <= tokens.len())
+      .then(|| whole_run(tokens, start, end))
+      .flatten()
+      .map(Tokens::new)
   })
 }
 
@@ -2224,7 +2227,9 @@ fn item_call(
       // cut again — `\\thanks{$^{1}$Univ A; $^{2}$Univ B. $^{*}$Corresponding author.}`, whose piece the writer's own cut of
       // the whole note lost, review revG5 1; 2509.19480, 2206.07648 — read within the note, whose argument is the footnote's,
       // never the formula's around it: `Bob Baker$^{2\thanks{$^{1}$Univ A; $^{2}$Univ B}}$`, whose pieces were that
-      // formula, the `\\thanks` digested twice, review rck2; else the span's exact slice)
+      // formula, the `\\thanks` digested twice, review rck2; else the span's slice made whole). The note's span grown over
+      // the closers its last box leaves open, so a last piece ending in `\\textbf{Univ B}` keeps its brace (2605.00634,
+      // 2606.00313, 2606.07062: "expected:}")
       let piece = argument
         .is_none()
         .then(|| note_piece(index, span))
@@ -2232,8 +2237,13 @@ fn item_call(
       let argument = argument.or_else(|| {
         piece
           .and_then(|note| {
-            span_tokens_within(index, span, Some(note), cut_runs)
-              .or_else(|| span_call_tokens(index, span))
+            span_tokens_within(
+              index,
+              span,
+              Some(past_unprinted_tail(index, note)),
+              cut_runs,
+            )
+            .or_else(|| span_call_tokens(index, span))
           })
           .map(Tokens::unlist)
       });

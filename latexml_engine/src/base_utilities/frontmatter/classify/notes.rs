@@ -826,3 +826,133 @@ pub(in crate::base_utilities) const ACCENT_COMMANDS: &[&str] = &[
   "\\'", "\\`", "\\^", "\\\"", "\\~", "\\=", "\\.", "\\u", "\\v", "\\H", "\\c", "\\d", "\\b",
   "\\t", "\\r", "\\k",
 ];
+
+/// Whether `cs` reads arguments by its definition: parameters of its own, or a parameterless macro whose expansion ends
+/// on a command that does or on an optional argument it hands on (tcolorbox's `\newtcbox{\linkpill}`, `\tcbox[…]`,
+/// which reads the box's text next: 2606.14188).
+pub(in crate::base_utilities) fn takes_arguments(cs: &Token) -> bool {
+  if cs.get_catcode() != Catcode::CS {
+    return false;
+  }
+  let Ok(Some(defn)) = lookup_definition(cs) else {
+    return false;
+  };
+  if defn.get_num_args() > 0 {
+    return true;
+  }
+  let Some(ExpansionBody::Tokens(body)) = defn.get_expansion() else {
+    return false;
+  };
+  match body.unlist_ref().iter().rev().find(|t| **t != T_SPACE!()) {
+    Some(last) if *last == T_OTHER!("]") => true,
+    Some(last) if last.get_catcode() == Catcode::CS && last != cs => lookup_definition(last)
+      .ok()
+      .flatten()
+      .is_some_and(|d| d.get_num_args() > 0),
+    _ => false,
+  }
+}
+
+/// `all[start..end]`, a piece cut from a field's tokens, made whole as TeX reads it: an `\end{…}` it opens with is the
+/// piece's before (2606.27043's `\end{CJK}\yangchar`); a command it ends on takes its arguments ([`takes_arguments`];
+/// 2606.14188); a group it closes but does not open is opened again, with its font declarations and text font command
+/// (2605.27539, 2605.00634); one it opens is closed by the closers after it. `None` where a group or an environment stays
+/// unpaired.
+pub(in crate::base_utilities) fn whole_run(
+  all: &[Token],
+  start: usize,
+  end: usize,
+) -> Option<Vec<Token>> {
+  let past_spaces = |mut i: usize| {
+    while all.get(i) == Some(&T_SPACE!()) {
+      i += 1;
+    }
+    i
+  };
+  let (mut start, mut end) = (start.min(all.len()), end.min(all.len()));
+  let first = past_spaces(start);
+  if first < end && all[first] == T_CS!("\\end") {
+    start = past_spaces(skip_group(all, past_spaces(first + 1)));
+  }
+  if let Some(last) = all[start..end].iter().rposition(|t| *t != T_SPACE!())
+    && takes_arguments(&all[start + last])
+  {
+    let mut at = past_spaces(end);
+    loop {
+      match all.get(at) {
+        Some(t) if *t == T_OTHER!("[") => {
+          at = all[at..]
+            .iter()
+            .position(|t| *t == T_OTHER!("]"))
+            .map(|i| at + i + 1)?;
+        },
+        Some(t) if t.get_catcode() == Catcode::BEGIN => at = skip_group(all, at),
+        _ => break,
+      }
+      end = at;
+      at = past_spaces(at);
+    }
+  }
+  start = start.min(end);
+  // (the groups it closes but does not open: their openers, innermost first)
+  let mut reopen = Vec::new();
+  let mut depth = 0i32;
+  let mut before = (0..start).rev();
+  for t in &all[start..end] {
+    depth += t.group_step();
+    if depth < 0 {
+      let mut inner = 0i32;
+      let open = before.by_ref().find(|&k| {
+        inner += all[k].group_step();
+        inner > 0
+      })?;
+      let mut opener = Vec::new();
+      if let Some(cmd) = open
+        .checked_sub(1)
+        .map(|c| all[c])
+        .filter(is_text_font_command)
+      {
+        opener.push(cmd);
+      }
+      opener.push(all[open]);
+      opener.extend(lead_declarations(&all[open + 1..start]));
+      reopen.push(opener);
+      depth = 0;
+    }
+  }
+  while depth > 0
+    && all
+      .get(end)
+      .is_some_and(|t| t.get_catcode() == Catcode::END)
+  {
+    end += 1;
+    depth -= 1;
+  }
+  // (a group it leaves open closes only where the field closes it: what lies between is no piece's to drop, a picture's
+  // `;` in `\tikz\draw (0,0)--(1,0);}`, perfect_kernel_batchcr8)
+  if depth > 0 {
+    return None;
+  }
+  let mut out: Vec<Token> = reopen.into_iter().rev().flatten().collect();
+  out.extend_from_slice(&all[start..end]);
+  // (its environments paired, by name)
+  let mut open: Vec<Vec<Token>> = Vec::new();
+  let mut i = 0;
+  while i < out.len() {
+    let begins = out[i] == T_CS!("\\begin");
+    if begins || out[i] == T_CS!("\\end") {
+      let at = (i + 1..out.len()).find(|&k| out[k] != T_SPACE!())?;
+      let close = skip_group(&out, at);
+      let name = out[at..close].to_vec();
+      if begins {
+        open.push(name);
+      } else if open.pop() != Some(name) {
+        return None;
+      }
+      i = close;
+    } else {
+      i += 1;
+    }
+  }
+  open.is_empty().then_some(out)
+}

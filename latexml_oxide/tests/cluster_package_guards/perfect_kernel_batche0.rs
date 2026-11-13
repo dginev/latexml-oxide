@@ -1545,7 +1545,10 @@ const TOKEN_READS: &[(&str, usize)] = &[
   // (P23e, 462 -> 464, the main session's ruling: `email_lines::unprinted_email_unwrapped` names the reroute's key and the
   // class's own setter (`\lx@class@contact@rerouted@<name>`, `\lx@class@contact@<name>`, OD #936) to digest the meaning TeX
   // runs, as `\lx@class@contact@dispatch` does — a meaning asked, no spelling decides)
-  ("classify", 464),
+  // (SBX2, 464 -> 479: `notes::whole_run` and `takes_arguments`, a cut piece made whole as TeX reads it — its braces,
+  // a leading `\end{…}`, a command's arguments — and `entry_starts::cut_at_starts` keeping a command with its argument:
+  // structure of the cut, decided by no spelling; 2605.00634, 2605.27539, 2606.14188, 2606.27043, 2605.07722)
+  ("classify", 479),
   // (E0h: the rest of `author_block/` Z18m moved unchanged to `classify/old_reader/`, split off from `classify`'s row;
   // P5a, 131 -> 113: `names_continue`, `names_list_continues`, `notes_only_line`, `hoist_wrapped_separators` deleted with
   // their last caller, IEEEtran's `name_memberships`; P6f2, 109 -> 107: `line_parts`' parenthesis span, the split's rule
