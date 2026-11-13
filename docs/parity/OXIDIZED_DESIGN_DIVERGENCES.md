@@ -36083,9 +36083,11 @@ border move (normalize.rs's spans and pruned rows and columns, emulateapj's head
 the stylesheet's colour (LaTeXML.css `.ltx_border_t`), adds nothing. The binding stores `\CT@arc@` as colortbl does
 and evaluates it as each rule is drawn (`\lx@CT@arc@draw`, ahead of `\@@alignment@hline`, `\lx@cline` — `\hhline`
 and booktabs' `\cmidrule` too), so an author's raw `\gdef\CT@arc@` colours too. Only a `|` takes the colour, as only
-`\@arrayrule` wraps `{\CT@arc@\vline}`: the binding's `|` column type puts `\lx@CT@vrule <arc>` in the template, `<arc>`
-a copy of `\CT@arc@` frozen as the preamble (or a `\multicolumn`'s) is read, `\lx@CT@arc@<n>`, or `\CT@arc@` itself
-when that is `\relax`; `\lx@CT@vrule` draws the `\vrule` with that colour on the box. A `!{\vrule}` or a typed
+`\@arrayrule` wraps `{\CT@arc@\vline}`: the binding's `|` column type puts `\lx@CT@vrule\lx@CT@arc@<n>` in the template,
+`\lx@CT@arc@<n>` a copy of `\CT@arc@` frozen as the preamble (or a `\multicolumn`'s) is read, or `\lx@CT@vrule@live`
+(reading `\CT@arc@` as the rule is drawn) when that is `\relax`; each draws the `\vrule` with that colour on the box.
+The template skip lists (`template_after_fill_defeated`, `intercol_reachable_in_before`) read these by their
+`\lx@CT@` prefix, as they read `\vrule` by its spelling (e0's spelling pins +1 each). A `!{\vrule}` or a typed
 `\vline` keeps the default ink, and a table nested in a cell leaves the cell's rules theirs. `\CT@start`
 saves locally just before `\lx@begin@alignment` of a table `\@tabular@bindings`/`\@array@bindings` set up (a request
 local to the table's group), and

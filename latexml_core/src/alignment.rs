@@ -1370,9 +1370,7 @@ fn intercol_reachable_in_before(tokens: &Option<Tokens>) -> bool {
       }
       // These are skippable by the left-scan in Perl's extractAlignmentColumn
       if s == "\\vrule"
-        || s == "\\lx@CT@vrule"
-        || s.starts_with("\\lx@CT@arc@")
-        || s == "\\CT@arc@"
+        || s.starts_with("\\lx@CT@")
         || s == "\\relax"
         || s == "\\hfil"
         || s == "\\hfill"

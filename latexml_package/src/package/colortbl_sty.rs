@@ -263,30 +263,24 @@ LoadDefinitions!({
   // read as the rule is drawn. A `!{\vrule}` or a typed `\vline` keeps the default ink.
   DefColumnType!("|", {
     let arc = T_CS!("\\CT@arc@");
-    let arc = if arc.defined_as(&T_RELAX!()) {
-      arc
+    let rule = if arc.defined_as(&T_RELAX!()) {
+      vec![T_CS!("\\lx@CT@vrule@live")]
     } else {
       let n = lookup_int("lx@CT@arc@frozen") + 1;
       assign_value("lx@CT@arc@frozen", n, Some(Scope::Global));
       let frozen = T_CS!(s!("\\lx@CT@arc@{n}"));
       let_i(&frozen, &arc, Some(Scope::Global));
-      frozen
+      vec![T_CS!("\\lx@CT@vrule"), frozen]
     };
-    with_building_template(|template| {
-      template.add_between_column(vec![T_CS!("\\lx@CT@vrule"), arc])
-    });
+    with_building_template(|template| template.add_between_column(rule));
   });
   // The `|` rule: a `\vrule` carrying its colour as `border_color`, which the cell's border takes (`tex_tables.rs`
   // `extract_alignment_column`).
   DefPrimitive!("\\lx@CT@vrule Token", sub[(arc)] {
-    let color = arc_color(&arc)?;
-    let mut rule = digest(Tokens!(T_CS!("\\vrule")))?.unlist();
-    if let Some(color) = color {
-      for rule in rule.iter_mut().filter(|rule| rule.get_property_bool("isVerticalRule")) {
-        rule.set_property("border_color", Stored::String(pin(&color)));
-      }
-    }
-    Ok(rule)
+    arc_vrule(&arc)
+  });
+  DefPrimitive!("\\lx@CT@vrule@live", sub[_args] {
+    arc_vrule(&T_CS!("\\CT@arc@"))
   });
 
   // Perl L93: \minrowclearance
@@ -309,6 +303,21 @@ LoadDefinitions!({
 \providecommand\therownum{\arabic{rownum}}"
   );
 });
+
+/// A `\vrule` drawn in the colour `arc` gives, its `border_color`.
+fn arc_vrule(arc: &Token) -> Result<Vec<Digested>> {
+  let color = arc_color(arc)?;
+  let mut rule = digest(Tokens!(T_CS!("\\vrule")))?.unlist();
+  if let Some(color) = color {
+    for rule in rule
+      .iter_mut()
+      .filter(|rule| rule.get_property_bool("isVerticalRule"))
+    {
+      rule.set_property("border_color", Stored::String(pin(&color)));
+    }
+  }
+  Ok(rule)
+}
 
 /// The colour `arc` gives (colortbl.sty:161-192 `\CT@arc@`, or a preamble's frozen copy); black and `\relax` none.
 fn arc_color(arc: &Token) -> Result<Option<String>> {
