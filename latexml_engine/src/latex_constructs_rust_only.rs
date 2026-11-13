@@ -663,10 +663,15 @@ LoadDefinitions!({
         cs.to_string()
       };
       let message = s!("{command} takes no generic hook; its code does not run");
-      if document_hook_code(&hook) {
-        Warn!("hook", hook, message);
+      // in the body a hook patches at once, before its code is stored (`\__hook_cmd_begindocument_code:` is gone,
+      // latex.ltx:6870, :5443-5475)
+      let unstored = lookup_meaning(&T_CS!("\\__hook_cmd_begindocument_code:")).is_none();
+      if unstored && lookup_bool(HOOK_CMD_WINDOW) {
+        // added from `\begin{document}`'s hooks: the owner is read at `\lx@hook@cmd@decide`, once the code is
+        // stored (KOMA-Script 3.49 scrartcl.cls:3306-3313)
+        push_value(HOOK_CMD_PENDING, Stored::Strings([hook, message].map(|m| pin(&m)).into()))?;
       } else {
-        Info!("hook", hook, message);
+        report_unpatched_hook(&hook, &message, unstored);
       }
       return Ok(Tokens!());
     }
@@ -677,6 +682,20 @@ LoadDefinitions!({
     call.push(T_END!());
     Ok(Tokens::new(call))
   }, protected => true);
+  // after `\begin{document}`'s hooks (sect02.rs): the patches they made, decided by their code's owner
+  DefPrimitive!("\\lx@hook@cmd@decide", {
+    assign_value(HOOK_CMD_WINDOW, false, Some(Scope::Global));
+    if let Some(Stored::VecDequeStored(pending)) = lookup_value(HOOK_CMD_PENDING) {
+      assign_value(HOOK_CMD_PENDING, Stored::None, Some(Scope::Global));
+      for entry in pending {
+        if let Stored::Strings(pair) = entry {
+          let [hook, message] = [pair[0], pair[1]].map(|m| with(m, str::to_owned));
+          report_unpatched_hook(&hook, &message, false);
+        }
+      }
+    }
+    Ok(Vec::new())
+  });
 
   // `\@latexbug` — kernel macro used to mark would-be bug reports.
   // No-op stub.
@@ -1661,10 +1680,24 @@ pub(crate) fn allocate_ptex_format_registers() -> Result<()> {
   Ok(())
 }
 
+/// The window in which `\begin{document}`'s hooks run (opened by sect02.rs, closed by `\lx@hook@cmd@decide`), and the
+/// generic `cmd` hooks they added to a binding, each its hook and message.
+pub const HOOK_CMD_WINDOW: &str = "lx@hook@cmd@window";
+const HOOK_CMD_PENDING: &str = "lx@hook@cmd@pending";
+
+/// A binding's generic `cmd` hook does not run: a Warning for the document's code, an Info for a class's or package's;
+/// code not yet stored (`unstored`, added in the body) counts as the document's.
+fn report_unpatched_hook(hook: &str, message: &str, unstored: bool) {
+  if unstored || document_hook_code(hook) {
+    Warn!("hook", hook, message);
+  } else {
+    Info!("hook", hook, message);
+  }
+}
+
 /// Is the document's code on `hook`? lthooks labels code by its owner (latex.ltx:5208 `\__hook_currname_or_default:`): the
 /// document's is `top-level` (:5364-5369) or a label naming no loaded class or package; `\AddToHookNext`'s carries no
-/// label (:6340), counted as the document's; a hook added in the body patches at once, before its code is stored
-/// (`\__hook_cmd_begindocument_code:` is gone, :6870).
+/// label (:6340), counted as the document's.
 fn document_hook_code(hook: &str) -> bool {
   let body = |cs: &str| match lookup_meaning(&T_CS!(cs)) {
     Some(Stored::Expandable(m)) => match m.get_expansion() {
@@ -1673,10 +1706,9 @@ fn document_hook_code(hook: &str) -> bool {
     },
     _ => None,
   };
-  if lookup_meaning(&T_CS!("\\__hook_cmd_begindocument_code:")).is_none()
-    || ["toplevel", "next"]
-      .iter()
-      .any(|code| body(&s!("\\__hook_{code} {hook}")).is_some_and(|t| !t.is_empty()))
+  if ["toplevel", "next"]
+    .iter()
+    .any(|code| body(&s!("\\__hook_{code} {hook}")).is_some_and(|t| !t.is_empty()))
   {
     return true;
   }

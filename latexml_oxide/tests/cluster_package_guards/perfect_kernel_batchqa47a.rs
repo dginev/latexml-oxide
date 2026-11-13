@@ -248,6 +248,26 @@ const ROWS: &[Row] = &[
       r#"<p xml:id="p1.1">A <emph font="italic" xml:id="p1.1.1">b</emph> 0<note mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>N</note>.</p>"#,
     )],
   },
+  // A hook added from `begindocument/end` patches before its code is stored: its owner read after the hooks, a
+  // package's alone an Info, the document's (beside a package's too) a Warning, on any TeX Live (red on KOMA1's base:
+  // 3 warnings; KOMA-Script 3.49 scrartcl.cls:3306-3313 +1 Warning on every KOMA document).
+  Row {
+    name:     "command_hook_added_at_begindocument_end",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/command_hook_added_at_begindocument_end.tex"
+    ),
+    counts:   (0, 2),
+    messages: &[
+      r"Info:hook:cmd/@startsection/before LaTeXML's binding of \@startsection takes no generic hook; its code does not run",
+      r"Warning:hook:cmd/footnote/before LaTeXML's binding of \footnote takes no generic hook; its code does not run",
+      r"Warning:hook:cmd/emph/before LaTeXML's binding of \emph takes no generic hook; its code does not run",
+    ],
+    elements: &[(
+      "p",
+      "xml:id=\"S1.p1.1\"",
+      r#"<p xml:id="S1.p1.1">A<note mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>N</note> <emph font="italic" xml:id="S1.p1.1.1">b</emph> c.</p>"#,
+    )],
+  },
 ];
 
 /// Every row converted once, in-process: exact counts, the whole diagnostic lines, the whole elements.

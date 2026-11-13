@@ -35653,7 +35653,10 @@ errs as pdflatex. A command LaTeXML binds (a constructor or primitive, a locked 
 LaTeXML's argument types) has no macro to patch until the macro faces (BM Q3.8): the override of
 `\__hook_patch_command:Nnn` (`latex_constructs_rust_only.rs`) skips the patch with `Warning:hook` when the document's
 code is on the hook (`\__hook_toplevel~<hook>`, `\AddToHookNext`'s `\__hook_next~<hook>`, a label naming no loaded class or package, or a hook added in the body,
-where the kernel patches before storing the code), else `Info:hook`, as a class's redefinition of a locked command is
+where the kernel patches before storing the code), else `Info:hook`. A hook added from `\begin{document}`'s own hooks
+(`begindocument/end`, `\AfterEndPreamble`) is decided by the same labels once they have run (`\lx@hook@cmd@decide`,
+sect02.rs): KOMA-Script 3.49 adds `cmd/@startsection/before` there (scrartcl.cls:3306-3313, scrbook:3498,
+scrreprt:3531), an Info on any TeX Live (KOMA1), as a class's redefinition of a locked command is
 dropped with an Info (`state.rs`). The message names the command without "LaTeXML's binding of" when its definition is
 the document's (`\newtheorem`'s `\thm`). `\meaning` prints a macro's prefixes in `\escapechar` (tex.web §1295), which
 ltcmdhooks reads (latex.ltx:7011-7016; KNOWN_PERL_ERRORS #1229).
@@ -35664,7 +35667,7 @@ redefinitions are.
 **Witnesses**: 2602.09577 (`cmd/appendix` runs), 2510.06714, 2411.13565 (changes' `\added`/`\deleted`/`\replaced`: 3
 Warnings), 2511.21986, 2603.08400, 2607.15091 (memoir: 2 Infos).
 **Guard**: `perfect_kernel_batchqa47a::batchqa47a_command_hook_rows` (rows `command_hook_on_a_binding_is_counted`,
-`command_hook_owner_sets_its_severity`, `command_hook_on_a_register_errs`); the memoir pins in `perfect_kernel_batch56`,
+`command_hook_owner_sets_its_severity`, `command_hook_on_a_register_errs`, `command_hook_added_at_begindocument_end`); the memoir pins in `perfect_kernel_batch56`,
 `perfect_kernel_batch68x`, `perfect_kernel_batch72b` count no Warning for the class's hooks.
 **Open** (post-merge, QAHK): the owner is read from the label, so two shapes are misreported. A package's hook added in
 the body (projlib-author.sty's `cmd/@author/…` from `\author`) is a Warning, because the kernel patches before storing

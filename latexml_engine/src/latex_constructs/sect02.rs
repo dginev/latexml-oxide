@@ -398,6 +398,9 @@ pub(crate) fn load() -> Result<()> {
     let title_page = first_begin && lookup_bool("lx_title_page_at_begin_document");
     if !inline_hooks.is_empty() {
       if first_begin {
+        // the generic `cmd` hooks they add to a binding, decided once their code is stored (latex_constructs_rust_only.rs)
+        assign_value(crate::latex_constructs_rust_only::HOOK_CMD_WINDOW, true, Some(Scope::Global));
+        inline_hooks.push(T_CS!("\\lx@hook@cmd@decide"));
         inline_hooks.push(T_CS!("\\lx@net@document@hooks@done"));
       }
       if title_page {

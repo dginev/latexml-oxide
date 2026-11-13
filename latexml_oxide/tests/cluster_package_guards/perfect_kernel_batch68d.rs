@@ -147,24 +147,41 @@ fn registered_bindings() -> Vec<String> {
     .collect()
 }
 
-/// kpathsea's path for `file`, empty when it finds none.
-fn kpsewhich(file: &str) -> String {
-  std::process::Command::new("kpsewhich")
-    .arg(file)
-    .output()
-    .map(|out| String::from_utf8_lossy(&out.stdout).trim().to_string())
-    .unwrap_or_default()
+/// Does TeX Live distribute `file`: kpathsea finds it outside the host's own trees, `TEXMFLOCAL` and `TEXMFHOME`
+/// (where a host may keep Perl LaTeXML's `latexml.sty`; a distro's other trees, Debian's `/usr/share/texmf`, count).
+fn in_tex_live(file: &str) -> bool {
+  let kpsewhich = |args: &[&str]| {
+    std::process::Command::new("kpsewhich")
+      .args(args)
+      .output()
+      .map(|out| String::from_utf8_lossy(&out.stdout).trim().to_string())
+      .unwrap_or_default()
+  };
+  static LOCAL: std::sync::OnceLock<Vec<String>> = std::sync::OnceLock::new();
+  let local = LOCAL.get_or_init(|| {
+    let trees = kpsewhich(&["-expand-path=$TEXMFLOCAL:$TEXMFHOME"]);
+    trees
+      .split(':')
+      .filter(|tree| !tree.is_empty())
+      .map(str::to_string)
+      .collect()
+  });
+  kpsewhich(&["-all", file]).lines().any(|path| {
+    !local
+      .iter()
+      .any(|tree| std::path::Path::new(path).starts_with(tree))
+  })
 }
 
 /// Every stand-in for an author's file, every former TeX Live file and every LaTeXML-own file
 /// (`latexml_core::binding::author_files`) is a registered binding TeX Live 2025 does not distribute (kpathsea finds
-/// none of them; it finds `article.cls`, so it is there to ask), and no name is on two lists.
+/// none of them in its trees; it finds `article.cls`, so it is there to ask), and no name is on two lists.
 #[test]
 fn author_file_stand_ins_are_bindings_outside_tex_live() {
   use latexml_core::binding::author_files::{AUTHOR_FILE_STAND_INS, FORMER_TEX_LIVE, LATEXML_OWN};
   let registered = registered_bindings();
   assert!(
-    !kpsewhich("article.cls").is_empty(),
+    in_tex_live("article.cls"),
     "kpsewhich must be on PATH, with a TeX Live tree"
   );
   let lists = [
@@ -182,7 +199,7 @@ fn author_file_stand_ins_are_bindings_outside_tex_live() {
         registered.iter().any(|r| r == file),
         "{list}: {file} is no registered binding"
       );
-      assert_eq!(kpsewhich(file), "", "{list}: {file} is a TeX Live file");
+      assert!(!in_tex_live(file), "{list}: {file} is a TeX Live file");
       if let Some(other) = seen.insert(file.to_string(), *list) {
         panic!("{file} is on both {other} and {list}");
       }
@@ -193,14 +210,14 @@ fn author_file_stand_ins_are_bindings_outside_tex_live() {
   assert!(!latexml_core::binding::author_files::stands_in_for_an_author_file("html.sty"));
 }
 
-/// The reverse: every registered `.cls`/`.sty`/`.tex` binding kpathsea does not find is a stand-in, a former TeX Live
+/// The reverse: every registered `.cls`/`.sty`/`.tex` binding TeX Live does not distribute is a stand-in, a former TeX Live
 /// file or LaTeXML's own, so a new binding for an author's file cannot answer `\IfFileExists` unlisted. Runs on a full
 /// TeX Live tree only (`aastex701.cls` is found); a trimmed one (CI's) lacks files the list takes as TeX Live's, and
 /// the test says it skipped.
 #[test]
 fn every_binding_outside_tex_live_is_listed() {
   use latexml_core::binding::author_files::{AUTHOR_FILE_STAND_INS, FORMER_TEX_LIVE, LATEXML_OWN};
-  if kpsewhich("aastex701.cls").is_empty() {
+  if !in_tex_live("aastex701.cls") {
     eprintln!(
       "SKIPPED every_binding_outside_tex_live_is_listed: kpathsea finds no aastex701.cls, not a full TeX Live tree"
     );
@@ -214,7 +231,7 @@ fn every_binding_outside_tex_live_is_listed() {
   let unlisted: Vec<String> = registered_bindings()
     .into_iter()
     .filter(|file| file.ends_with(".cls") || file.ends_with(".sty") || file.ends_with(".tex"))
-    .filter(|file| !listed(file) && kpsewhich(file).is_empty())
+    .filter(|file| !listed(file) && !in_tex_live(file))
     .collect();
   assert!(
     unlisted.is_empty(),

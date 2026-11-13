@@ -914,12 +914,24 @@ pub fn dump_available() -> bool {
 }
 
 /// True iff `kpsewhich` resolves the named file in the host TeX tree.
-pub fn kpse_has(file: &str) -> bool {
+pub fn kpse_has(file: &str) -> bool { kpse_path(file).is_some() }
+
+/// The path `kpsewhich` resolves `file` to in the host TeX tree, if any.
+pub fn kpse_path(file: &str) -> Option<String> {
   std::process::Command::new("kpsewhich")
     .arg(file)
     .output()
-    .map(|o| o.status.success() && !o.stdout.is_empty())
-    .unwrap_or(false)
+    .ok()
+    .filter(|o| o.status.success())
+    .map(|o| String::from_utf8_lossy(&o.stdout).trim().to_string())
+    .filter(|path| !path.is_empty())
+}
+
+/// The text of the host TeX tree's copy of `file` (a class's version decides a guard's expectation), if any.
+pub fn kpse_text(file: &str) -> Option<String> {
+  kpse_path(file)
+    .and_then(|path| std::fs::read(path).ok())
+    .map(|bytes| String::from_utf8_lossy(&bytes).into_owned())
 }
 
 //======================================================================

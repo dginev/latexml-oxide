@@ -1,0 +1,28 @@
+% mechanism: a generic `cmd` hook a package or class adds from `begindocument/end` (KOMA-Script 3.49 scrartcl.cls:3306-3313,
+%   scrbook.cls:3498, scrreprt.cls:3531) patches at once, before lthooks stores its code (latex.ltx:5443-5475), so its
+%   owner is read once `\begin{document}`'s hooks have run (`\lx@hook@cmd@decide`): a package's or class's alone an
+%   Info, the document's (also beside a package's on the same hook) a Warning.
+% witness: synthetic (KOMA1); KOMA-Script 3.49's `sectioning-features-not-available` hook, +1 Warning on every
+%   scrartcl/scrbook/scrreprt document (22 guards on the distro TeX Live)
+% oracle:  pdflatex (TL 2025 and the distro tree) 0 `!`; "1 One AY1 Xb c." ("X", "Y" the document's words on the
+%   bound `\emph` and `\footnote`, lost and counted); Perl: `\AddToHook` a no-op, 0 errors 0 warnings.
+% engines: rust KOMA1 base: 3 Warnings (the package's `cmd/@startsection/before` too: every hook added in the body
+%   counted as the document's).
+% expect:  0 errors, 2 warnings (`cmd/emph/before`, `cmd/footnote/before`); Info:hook `cmd/@startsection/before`.
+% status:  GREEN (KOMA1)
+\begin{filecontents*}[overwrite]{qahooklate.sty}
+\ProvidesPackage{qahooklate}
+\ExplSyntaxOn
+\hook_gput_code:nnn {begindocument/end} {qahooklate}
+  { \hook_gput_code:nnn {cmd/@startsection/before} {qahooklate} {\relax} }
+\hook_gput_code:nnn {begindocument/end} {qahooklate}
+  { \hook_gput_code:nnn {cmd/footnote/before} {qahooklate} {\relax} }
+\ExplSyntaxOff
+\end{filecontents*}
+\documentclass{article}
+\usepackage{qahooklate}
+\AddToHook{begindocument/end}{\AddToHook{cmd/emph/before}{X}\AddToHook{cmd/footnote/before}{Y}}
+\begin{document}
+\section{One}
+A\footnote{N} \emph{b} c.
+\end{document}
