@@ -1248,8 +1248,11 @@ fn set_footnote_base(footnotes: bool, base: i64) {
 /// space's text and a field stamp too), the events lexed and the tokens read.
 #[derive(Default)]
 pub(in crate::base_utilities) struct CallRehearsals(
-  std::collections::HashMap<Vec<(SymStr, Catcode, u16)>, (Vec<Event>, usize)>,
+  std::collections::HashMap<CallContent, (Vec<Event>, usize)>,
 );
+
+/// A call's content as [`CallRehearsals`] keys it: each token's text, catcode and field stamp.
+type CallContent = Vec<(SymStr, Catcode, u16)>;
 
 /// [`rehearse`] of an API call's `content`, lexed by [`lex_events`]: the events of the same content rehearsed before in
 /// this reading (`seen`) when that run left nothing behind — no diagnostic, conditional, footnote step, definition,
