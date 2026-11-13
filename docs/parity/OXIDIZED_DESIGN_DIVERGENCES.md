@@ -36062,24 +36062,31 @@ path argument is typeset ("X ZY", KNOWN_PERL_ERRORS #1239), and `\import@path` i
 carry no space; `\import@path` is defined and kept as import.sty keeps it, a nested `\import` restoring it to empty.
 **Guards**: `bindings_batch1::import_path_is_the_package_macro` (repros `package-bindings/import_path_is_the_package_macro.tex`,
 `import_nested_import_empties_the_path.tex`).
-### 1024. caption's `justification=` and skips are the caption's class and margins (W2b, issue #787)
+
+### 1024. caption's `justification=` and skips are the caption's `text-align` and margins (W2b, issue #787)
 
 **Perl.** caption.sty.ltxml:30,52 declare `justification` and `skip` and `\captionsetup` stores them (`CAPTION_<key>`);
-nothing reads them, so the caption keeps the theme's alignment and spacing. **TeX.** caption3.sty:955-969: a
+nothing reads them, so the caption keeps the theme's alignment and spacing. **TeX.** caption3.sty:955-969, 1361-1364: a
 justification is a command run in the caption box (`\centering`, `\raggedright`, `\raggedleft`; ragged2e's
-`\Centering`/`\RaggedRight`/`\RaggedLeft`; `justified` none); :987-993 `skip`/`aboveskip` set `\abovecaptionskip`,
-`belowskip` `\belowcaptionskip`; caption.sty:251-258 puts the above-skip between a top caption and the float's body and
-above a bottom one, the below-skip on the other side; `position=auto` is top when nothing precedes the caption
-(caption3.sty:1034-1045 `\prevdepth`; ltcaption's `\LT@rows`), and a longtable's caption takes `\captionsetup[longtable]`
-over its type's (ltcaption `\caption@LT@setup`). **Rust.** `caption_layout_tokens` (caption_sty.rs) puts on the caption,
-from its settings: `\lx@add@cssclass` with the class Perl's `\@add@centering` &c. give a node, read from the
-justification's own body (`\caption@hj@<name>`'s first command, so a `\DeclareCaptionJustification` of the document's
-counts), and `\lx@caption@skip{above|below}{<position>}<glue>`, a constructor setting `margin-top`/`margin-bottom` in
-the caption's `cssstyle` (the schema's caption has no spacing attribute; `cssstyle` is Common, as framed.sty.ltxml:78
-uses it), deciding `auto` by whether an element other than `ltx:tags`/`ltx:toccaption` precedes the caption. Only a
-key the document or class sets emits anything. A `Dimension` key's value is stored as its length (`skip=20pt` was stored
-empty). longtable_sty.rs marks its group (`lx@caption@longtable`). LaTeXML.css gives the classes priority over a class
-theme's `text-align:justify` captions. Not done: `singlelinecheck` (HTML has no line count; the themes' flex column
-centres a short caption alike), `centerlast`/`centerfirst` read as centring, `margin=`/`width=`.
+`\Centering`/`\RaggedRight`/`\RaggedLeft`/`\justifying`; `justified` none), and the box runs `\@parboxrestore`, so a
+`\centering` in the float body does not align it; :987-993 `skip`/`aboveskip` set `\abovecaptionskip`, `belowskip`
+`\belowcaptionskip` (0pt by default); caption.sty:251-258 puts the above-skip between a top caption and the float's body
+and above a bottom one, the below-skip on the other side; `position=auto` (:1034-1045) is bottom in horizontal mode and
+in vertical mode once the list holds a box (`\prevdepth`), a longtable's bottom once it has a row (caption.sty:1169
+`\LT@rows`), and a longtable's caption takes `\captionsetup[longtable]` over its type's (ltcaption `\caption@LT@setup`).
+**Rust.** `caption_layout_tokens` (caption_sty.rs) puts on the caption, from its settings, `\lx@caption@justify`: the
+`text-align` in its `cssstyle` the justification's body sets (its last alignment command, so a `\DeclareCaptionJustification`
+of the document's counts; `justify` for an empty body), which also removes the alignment class a `\centering` &c. of
+the float gives the caption (a `_justified` mark, the floats' `after_close`); and `\lx@caption@skip{above|below}
+{<position>}<glue>`, `margin-top`/`margin-bottom` in the same `cssstyle` (the schema's caption has no spacing
+attribute; `cssstyle` is Common, as framed.sty.ltxml:78 uses it), nothing for a zero below-skip. `\lx@caption@where`,
+at `\caption`/`\captionof`, records `auto` as bottom in horizontal mode; in vertical mode the constructor reads the
+list (an element other than `ltx:tags`/`ltx:toccaption` before the caption, or before a `\captionof`'s wrapper outside a
+float); longtable's caption records it by the table's rows. Only a key the document or class sets emits anything. A
+`Dimension` key's value is stored as its length (`skip=20pt` was stored empty). Not done: `singlelinecheck` (HTML has
+no line count; the themes' flex column centres a short caption alike), `centerlast`/`centerfirst` read as centring,
+`margin=`/`width=`, subcaption's sub-captions (`\captionsetup[sub]`, subcaption.sty:220 `skip=6pt`; RED repro
+`captions-floats/subcaption_justification_and_skip_red`), and a skip in relative units (`\baselineskip`, `em`) is read
+at the caption, not at the `\captionsetup`.
 **Guards**: `bindings_batch2::caption_justification_and_skip`; `perfect_kernel_batch78d::mdpi_captions_end_the_label_with_a_period`
-(mdpi's `aboveskip=6pt`/`belowskip=-6pt`).
+(mdpi's `aboveskip=6pt`/`belowskip=-6pt`, `justification=justified`).

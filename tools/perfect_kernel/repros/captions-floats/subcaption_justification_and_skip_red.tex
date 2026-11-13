@@ -1,0 +1,20 @@
+% issue #787, review revCAP S1: subcaption's sub-captions take `\captionsetup[sub]{justification=…}` and the
+% sub-caption's own `skip=6pt` (subcaption.sty:220); ours puts neither on the sub-figures' captions (the main caption's
+% are kept), so the panels keep the theme's alignment and spacing.
+% witness: synthetic (review revCAP p4)
+% oracle:  pdflatex 0 errors: the sub-captions centred, the main caption ragged left
+% engines: perl=0 (none of these); rust bf059b707e and W2bF=0, `<caption>` bare on both panels
+% expect:  0 errors; the panels' captions text-align center with their 6pt skip; the main one right, margin-top 4pt
+% status:  RED (W2bF)
+% moves:   post-merge
+\documentclass{article}
+\usepackage{caption}
+\usepackage{subcaption}
+\captionsetup{justification=raggedleft,aboveskip=4pt}
+\captionsetup[sub]{justification=centering}
+\begin{document}
+\begin{figure}
+\begin{subfigure}{.4\textwidth}X\caption{Sub a.}\end{subfigure}
+\begin{subfigure}{.4\textwidth}\caption{Sub b.}Y\end{subfigure}
+\caption{Main.}\end{figure}
+\end{document}

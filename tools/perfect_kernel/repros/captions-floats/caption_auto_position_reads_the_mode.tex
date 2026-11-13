@@ -1,0 +1,25 @@
+% issue #787, review revCAP B2: `position=auto` as caption3.sty:1034-1045 `\caption@autoposition` reads it when the
+% caption begins: horizontal mode is bottom; in vertical mode bottom once the list holds a box (`\prevdepth`), so a
+% `\captionof` after a paragraph in a minipage and a second caption are bottom, a caption after a `\vspace` alone is
+% top; a longtable's is top before its first row (caption.sty:1169 `\LT@rows`). `skip=` lands on the side between the
+% caption and the body (caption.sty:251-258): margin-bottom for top, margin-top for bottom.
+% witness: synthetic (review revCAP p7)
+% oracle:  pdflatex 0 errors
+% engines: perl=0 (no spacing); rust bf059b707e=0, five read top: the `\captionof` after a paragraph in a minipage,
+%          the second caption, the `\captionof` after text in a float and in a paragraph, the longtable's last caption
+% expect:  0 errors; margins top, bottom, bottom, top, top, bottom, top, top, top, bottom
+% status:  GREEN (guard bindings_batch2::caption_justification_and_skip)
+\documentclass{article}
+\usepackage[skip=5pt]{caption}
+\usepackage{longtable}
+\begin{document}
+\begin{minipage}{.4\textwidth}Y\par\captionof{figure}{Mini after par.}\end{minipage}
+\begin{minipage}{.4\textwidth}\captionof{figure}{Mini first.}Z\end{minipage}
+\begin{figure}\caption{First.}\caption{Second.}\end{figure}
+\begin{figure}X\par\caption{After par.}\end{figure}
+\begin{figure}\vspace{2pt}\caption{After vspace.}X\end{figure}
+\begin{figure}X\captionof{table}{Captionof in a float.}\end{figure}
+Text \captionof{figure}{Inline.}
+\begin{longtable}{c}a\\ \caption{LT bottom.}\end{longtable}
+\begin{longtable}{c}\caption{LT top.}\\ a\\ \end{longtable}
+\end{document}

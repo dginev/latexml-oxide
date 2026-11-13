@@ -36,21 +36,26 @@ fn elements(xml: &str, tag: &str) -> Vec<String> {
   found
 }
 
-/// Issue #787: caption's `justification=` is the caption's alignment class (`\centering`'s, `\raggedright`'s,
-/// `\raggedleft`'s) and `skip=`/`belowskip=` its margins on the sides caption.sty:251-258 puts them: a longtable's
-/// `[longtable]` options (and not the next table's), a bottom caption by auto position, a `position=top` starred one.
-/// Red on base 6df4632fb1: every `<caption>` without class or cssstyle.
+/// Issue #787: caption's `justification=` is the caption's `text-align` (its body's last alignment command; `justify`
+/// for an empty one), replacing the class a `\centering` of its float gives it, and `skip=`/`belowskip=` its margins on
+/// the sides caption.sty:251-258 puts them, `position=auto` read as caption3.sty:1034-1045 reads it when the caption
+/// begins (the mode, then the list), a longtable's by its rows (caption.sty:1169). Red on base 6df4632fb1: every
+/// `<caption>` without class or cssstyle; on bf059b707e (review revCAP): alignment classes beside the float's
+/// `ltx_centering`, a `margin-top:0.0pt`, five auto positions read top, ragged2e's and a declared justification ignored.
 #[test]
 fn caption_justification_and_skip() {
-  if !kpse_has("caption.sty") || !kpse_has("longtable.sty") {
+  if !["caption.sty", "longtable.sty", "ragged2e.sty"]
+    .iter()
+    .all(|f| kpse_has(f))
+  {
     return;
   }
-  let rows: [(&str, &[&str]); 2] = [
+  let rows: [(&str, &[&str]); 5] = [
     (
       repro!("captions-floats", "caption_justification_and_skip.tex"),
       &[
-        "<caption class=\"ltx_centering\" cssstyle=\"margin-bottom:20.0pt\"><tag close=\": \">Table 1</tag>Results</caption>",
-        "<caption class=\"ltx_centering\"><tag close=\": \">Table 2</tag>After</caption>",
+        "<caption cssstyle=\"text-align:center;margin-bottom:20.0pt\"><tag close=\": \">Table 1</tag>Results</caption>",
+        "<caption cssstyle=\"text-align:center\"><tag close=\": \">Table 2</tag>After</caption>",
       ],
     ),
     (
@@ -59,9 +64,53 @@ fn caption_justification_and_skip() {
         "caption_justification_and_skip_sides.tex"
       ),
       &[
-        "<caption class=\"ltx_align_left\" cssstyle=\"margin-top:4.0pt\"><tag close=\": \">Figure 1</tag>Bottom figure</caption>",
-        "<caption class=\"ltx_align_right\" cssstyle=\"margin-top:6.0pt\"><tag close=\": \">Table 1</tag>Top table</caption>",
-        "<caption class=\"ltx_centering\" cssstyle=\"margin-bottom:4.0pt\">Starred</caption>",
+        "<caption cssstyle=\"text-align:left;margin-top:4.0pt\"><tag close=\": \">Figure 1</tag>Bottom figure</caption>",
+        "<caption cssstyle=\"text-align:right;margin-top:6.0pt\"><tag close=\": \">Table 1</tag>Top table</caption>",
+        "<caption cssstyle=\"text-align:center;margin-bottom:4.0pt\">Starred</caption>",
+      ],
+    ),
+    // Review revCAP B1: the float's `\centering` (`{center}`, a minipage's) no longer classes the caption.
+    (
+      repro!(
+        "captions-floats",
+        "caption_justification_replaces_the_float_alignment.tex"
+      ),
+      &[
+        "<caption cssstyle=\"text-align:left;margin-top:3.0pt\"><tag close=\": \">Figure 1</tag>Centred float.</caption>",
+        "<caption cssstyle=\"text-align:left;margin-top:3.0pt\">In center.</caption>",
+        "<caption cssstyle=\"text-align:left;margin-top:3.0pt\"><tag close=\": \">Figure 2</tag>In a minipage.</caption>",
+        "<caption cssstyle=\"text-align:center;margin-bottom:10.0pt\"><tag close=\": \">Table 1</tag>Top table.</caption>",
+        "<caption cssstyle=\"text-align:center;margin-top:10.0pt\"><tag close=\": \">Table 2</tag>Bottom table.</caption>",
+        "<caption cssstyle=\"text-align:justify;margin-top:3.0pt\"><tag close=\": \">Figure 3</tag>Justified.</caption>",
+        "<caption cssstyle=\"text-align:justify;margin-top:3.0pt\"><tag close=\": \">Figure 4</tag>Ragged2e justified.</caption>",
+      ],
+    ),
+    // Review revCAP B2: margin-top is a bottom caption, margin-bottom a top one.
+    (
+      repro!(
+        "captions-floats",
+        "caption_auto_position_reads_the_mode.tex"
+      ),
+      &[
+        "<caption cssstyle=\"margin-top:5.0pt\"><tag close=\": \">Figure 1</tag>Mini after par.</caption>",
+        "<caption cssstyle=\"margin-bottom:5.0pt\"><tag close=\": \">Figure 2</tag>Mini first.</caption>",
+        "<caption cssstyle=\"margin-bottom:5.0pt\"><tag close=\": \">Figure 3</tag>First.</caption>",
+        "<caption cssstyle=\"margin-top:5.0pt\"><tag close=\": \">Figure 4</tag>Second.</caption>",
+        "<caption cssstyle=\"margin-top:5.0pt\"><tag close=\": \">Figure 5</tag>After par.</caption>",
+        "<caption cssstyle=\"margin-bottom:5.0pt\"><tag close=\": \">Figure 6</tag>After vspace.</caption>",
+        "<caption cssstyle=\"margin-top:5.0pt\"><tag close=\": \">Table 1</tag>Captionof in a float.</caption>",
+        "<caption cssstyle=\"margin-top:5.0pt\"><tag close=\": \">Figure 7</tag>Inline.</caption>",
+        "<caption cssstyle=\"margin-top:5.0pt\"><tag close=\": \">Table 2</tag>LT bottom.</caption>",
+        "<caption cssstyle=\"margin-bottom:5.0pt\"><tag close=\": \">Table 3</tag>LT top.</caption>",
+      ],
+    ),
+    // Review revCAP B3: ragged2e's `RaggedRight`, a declared justification ending in `\raggedright`.
+    (
+      repro!("captions-floats", "caption_ragged2e_justification.tex"),
+      &[
+        "<caption cssstyle=\"text-align:left\"><tag close=\": \">Figure 1</tag>Fig cap.</caption>",
+        "<caption cssstyle=\"text-align:left;margin-top:12.0pt\"><tag close=\": \">Table 1</tag>Tab cap.</caption>",
+        "<caption cssstyle=\"text-align:left;margin-top:12.0pt\"><tag close=\": \">Table 2</tag>Captionof in figure.</caption>",
       ],
     ),
   ];

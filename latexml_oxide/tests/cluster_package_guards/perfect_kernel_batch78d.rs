@@ -423,7 +423,9 @@ fn subfigure_sets_the_line_width() {
 /// stands in for the class. Red (int45b): "Figure 1: " at the normal size. Repro
 /// class-bindings/mdpi_captions_end_the_label_with_a_period. (lastpage's `\AtEndDocument` label no longer lands on the
 /// table, closed before it with its caption's step: 78p, `Document::float_to_label_scoped`.) The margins are mdpi.cls's
-/// `aboveskip=6pt`/`belowskip=-6pt` on the sides caption.sty:251-258 puts them (issue #787).
+/// `aboveskip=6pt`/`belowskip=-6pt` on the sides caption.sty:251-258 puts them, and its `justification=justified`
+/// (singlelinecheck off: flush with the text width) the captions' `text-align`, which replaces the figure's `\centering`
+/// class (issue #787, review revCAP B1).
 #[test]
 fn mdpi_captions_end_the_label_with_a_period() {
   assert_clean(
@@ -438,7 +440,7 @@ fn mdpi_captions_end_the_label_with_a_period() {
  <tag role=\"creftypepluralcap\">Figures</tag><tag role=\"refnum\">1</tag>\
  <tag role=\"typerefnum\">Figure 1</tag></tags><p align=\"center\" xml:id=\"S1.F1.2\">X</p>\
  <toccaption class=\"ltx_centering\"><tag close=\" \">1</tag>Fig cap.</toccaption>\
- <caption class=\"ltx_centering\" cssstyle=\"margin-top:6.0pt;margin-bottom:-6.0pt\"><tag close=\". \">\
+ <caption cssstyle=\"text-align:justify;margin-top:6.0pt;margin-bottom:-6.0pt\"><tag close=\". \">\
  <text font=\"bold\" fontsize=\"90%\" xml:id=\"S1.F1.3\">Figure 1</text></tag>\
  <text fontsize=\"90%\" xml:id=\"S1.F1.4\">Fig cap.</text></caption></figure>",
       ),
@@ -450,7 +452,7 @@ fn mdpi_captions_end_the_label_with_a_period() {
   <tag role=\"creftypecap\">Table</tag><tag role=\"creftypeplural\">tables</tag>\
   <tag role=\"creftypepluralcap\">Tables</tag><tag role=\"refnum\">1</tag>\
   <tag role=\"typerefnum\">Table 1</tag></tags><toccaption><tag close=\" \">1</tag>Tab cap.</toccaption>\
-  <caption cssstyle=\"margin-bottom:6.0pt\"><tag close=\". \"><text font=\"bold\" fontsize=\"90%\" xml:id=\"S1.T1.2\">Table 1</text></tag>\
+  <caption cssstyle=\"text-align:justify;margin-bottom:6.0pt\"><tag close=\". \"><text font=\"bold\" fontsize=\"90%\" xml:id=\"S1.T1.2\">Table 1</text></tag>\
   <text fontsize=\"90%\" xml:id=\"S1.T1.3\">Tab cap.</text></caption>\
   <p align=\"center\" xml:id=\"S1.T1.4\">Y</p></table>",
       ),
