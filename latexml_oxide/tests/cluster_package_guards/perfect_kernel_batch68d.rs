@@ -200,10 +200,7 @@ fn author_file_stand_ins_are_bindings_outside_tex_live() {
 #[test]
 fn every_binding_outside_tex_live_is_listed() {
   use latexml_core::binding::author_files::{AUTHOR_FILE_STAND_INS, FORMER_TEX_LIVE, LATEXML_OWN};
-  if kpsewhich("aastex701.cls").is_empty() {
-    eprintln!(
-      "SKIPPED every_binding_outside_tex_live_is_listed: kpathsea finds no aastex701.cls, not a full TeX Live tree"
-    );
+  if !latexml::util::test::requires(&["aastex701.cls"]) {
     return;
   }
   let listed = |file: &str| {

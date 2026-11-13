@@ -11,12 +11,19 @@ mod helpers;
 ///**********************************************************************
 use std::rc::Rc;
 
-use latexml::tex_tests;
+use latexml::{
+  tex_tests,
+  util::test::{RequirementTable, Requirements},
+};
 use latexml_core::common::error::Result;
-use phf::phf_map;
-static REQUIRES: phf::Map<&'static str, &'static str> = phf_map! {
-"meaning" => "t1enc.def",
-"ifthen" => "ifthen.sty"};
+
+// Perl t/10_expansion.t.
+static REQUIRES: &RequirementTable = &[
+  ("meaning", Requirements::packages(&["t1enc.def"])),
+  ("ifthen", Requirements::packages(&["ifthen.sty"])),
+  ("textcase", Requirements::packages(&["textcase.sty"])),
+  ("etoolbox", Requirements::packages(&["etoolbox.sty"])),
+];
 
 pub fn expansion_tests_dispatch(filename: &str) -> Option<Result<()>> {
   match filename {
@@ -30,6 +37,6 @@ pub fn expansion_tests_dispatch(filename: &str) -> Option<Result<()>> {
 
 tex_tests!(
   "tests/expansion",
-  Some(&REQUIRES),
+  Some(REQUIRES),
   Some(Rc::new(expansion_tests_dispatch))
 );

@@ -2,10 +2,12 @@
 /// Test cases for latexml_oxide — theorem tests
 ///**********************************************************************
 use latexml::tex_tests;
-use phf::phf_map;
-static REQUIRES: phf::Map<&'static str, &'static str> = phf_map! {
-  "ntheorem" => "ntheorem.std",
-  "ntheoremstyle" => "ntheorem.std",
-};
+use latexml::util::test::{RequirementTable, Requirements};
 
-tex_tests!("tests/theorem", Some(&REQUIRES), None);
+// Perl t/55_theorem.t (ntheoremstyle reads the same file).
+static REQUIRES: &RequirementTable = &[
+  ("ntheorem", Requirements::packages(&["ntheorem.std"])),
+  ("ntheoremstyle", Requirements::packages(&["ntheorem.std"])),
+];
+
+tex_tests!("tests/theorem", Some(REQUIRES), None);

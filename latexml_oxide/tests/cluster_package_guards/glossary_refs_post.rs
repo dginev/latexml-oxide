@@ -1,6 +1,8 @@
 //! Batch 56hi: the post stage keeps glossary phrases as NODES (Perl
 //! Scan.pm:442, MakeIndex.pm:477-480, CrossRef.pm:906-925) and fills an
 //! empty `ltx:glossaryref` from its entry (CrossRef.pm:469-476).
+use latexml::util::test::requires;
+
 use crate::cluster::convert_and_post_clean;
 
 /// acronym.sty's `\ac`/`\acl`/`\acs` emit an EMPTY `<ltx:glossaryref
@@ -74,7 +76,7 @@ fn convert_html_raw(tex: &str) -> (String, String) {
 /// (Vecteurs)" / "v velocity (vitesse)". Repro index-bib/glossary_user_keys_and_parents.
 #[test]
 fn glossary_user_keys_and_parents() {
-  if !latexml::util::test::kpse_has("glosmathtools.sty") {
+  if !requires(&["glosmathtools.sty"]) {
     return;
   }
   let (stderr, html) = convert_html_raw(include_str!(

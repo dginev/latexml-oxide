@@ -2,7 +2,7 @@
 //! the package it stands in for — a `\RequirePackage`, a definition, a
 //! parameter shape or a routing — and one corpus manual errored on it. The
 //! repros live in `tools/perfect_kernel/repros/singletons/`.
-use latexml::util::test::assert_element;
+use latexml::util::test::{assert_element, requires};
 
 use super::perfect_kernel_batch46::{convert, convert_files, error_count, warning_count};
 
@@ -157,7 +157,7 @@ fn biblatex_mkbibacro_and_standard_toggles() {
     ("backend=biber", "[doi][isbn]"),
     ("style=ext-authoryear", "[doi][isbn]"),
   ] {
-    if options.contains("ext-") && !latexml::util::test::kpse_has("ext-authoryear.bbx") {
+    if options.contains("ext-") && !requires(&["ext-authoryear.bbx"]) {
       continue;
     }
     let control = tex

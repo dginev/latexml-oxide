@@ -1,3 +1,5 @@
+use latexml::util::test::requires;
+
 use super::perfect_kernel_batch46::{convert_with, error_count, warning_count};
 
 /// A kernel length is latex.ltx's allocated `\dimen<n>`, as the dump records it:
@@ -496,7 +498,7 @@ fn versonote_is_a_margin_note() {
 /// 196-203 `\gdef\@affiliation{Huygens-Kamerlingh Onnes Laboratory, …}`).
 #[test]
 fn k11_class_default_store() {
-  if !latexml::util::test::kpse_has("lion-msc.cls") {
+  if !requires(&["lion-msc.cls"]) {
     return;
   }
   let tex = include_str!(
@@ -669,7 +671,8 @@ fn glossaries_preamble_forward_reference() {
 /// glossaries-user, mfirstuc-manual).
 #[test]
 fn nlctuserguide_entries_defined_in_run() {
-  if !latexml::util::test::kpse_has("nlctuserguide.sty") {
+  // The whole load set: a TeX Live can ship nlctuserguide without its tracklang (CI's apt set).
+  if !requires(&["nlctuserguide.sty", "tracklang.sty"]) {
     return;
   }
   let tex = include_str!(

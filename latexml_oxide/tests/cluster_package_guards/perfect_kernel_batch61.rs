@@ -1,6 +1,8 @@
 //! Red/green guards for perfect-kernel phase-61 batches: G3 residual slices 7a/7b (T1/T2 ASCII slots, the Unicode
 //! profiles' OpenType flag, `\pdfsetmatrix`'s matrix, copyright lines a class prints only in a page foot).
-use latexml::util::test::{assert_element, convert_files_with, convert_with, xml_element};
+use latexml::util::test::{
+  assert_element, convert_files_with, convert_with, requires, xml_element,
+};
 
 use super::{
   perfect_kernel_batch46::{convert_with_then, error_count, warning_count},
@@ -6177,7 +6179,7 @@ fn marked_affiliation_continuation_lines_stay_with_it() {
 /// pdflatex: "Ann Able1, 2 and Bob Baker2", "1Univ A", "2Univ B", "Author Note", "Correspondence to Ann.".
 #[test]
 fn apa7_author_block_maps_onto_the_frontmatter() {
-  if !latexml::util::test::kpse_has("apa7.cls") {
+  if !requires(&["apa7.cls"]) {
     return;
   }
   let body = r"\title{A Title}

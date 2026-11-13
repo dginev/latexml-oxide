@@ -3,7 +3,7 @@
 //! (sect02.rs `\lx@end@open@frontmatter`; was an empty `<document/>` with 0 errors), and a refused `\title` replays for
 //! its side effects as `\author`'s does (sect05.rs `\title`, the support bindings' `\title`; OXIDIZED_DESIGN #482). Each
 //! green asserts the three targets: the log's tally, the authored text, and the element that carries it.
-use latexml::util::test::{convert_files_with, convert_with};
+use latexml::util::test::{convert_files_with, convert_with, requires};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -411,7 +411,7 @@ fn gls_only_in_display_math_is_listed() {
 /// keywords under the class's label; the class's own date footnote keeps `\date` (asmejour_cls.rs; 2510.10694).
 #[test]
 fn asmejour_keywords_are_kept() {
-  if !latexml::util::test::kpse_has("asmejour.cls") {
+  if !requires(&["asmejour.cls"]) {
     eprintln!("skipped: asmejour.cls is not installed");
     return;
   }
@@ -566,7 +566,7 @@ fn an_without_its_class_warns() {
 /// title page's `\note` (apa6_cls.rs `define_notes`). The one warning is the class's, as pdflatex's.
 #[test]
 fn apa_acknowledgements_are_kept_in_every_mode() {
-  if !latexml::util::test::kpse_has("apa.cls") {
+  if !requires(&["apa.cls"]) {
     eprintln!("skipped: apa.cls is not installed");
     return;
   }
@@ -612,7 +612,7 @@ fn apa_acknowledgements_are_kept_in_every_mode() {
 /// three warnings are cc's two and a "has changed" one, as pdflatex's three.
 #[test]
 fn cclayout_abstract_and_subject_are_kept() {
-  if !latexml::util::test::kpse_has("cc.cls") {
+  if !requires(&["cc.cls"]) {
     eprintln!("skipped: cc.cls is not installed");
     return;
   }

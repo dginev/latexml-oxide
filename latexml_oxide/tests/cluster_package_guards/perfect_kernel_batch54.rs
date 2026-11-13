@@ -3,20 +3,14 @@
 //! reproduction distilled during triage; the doc-comment names the
 //! ORIGINAL corpus witness (TeX Live doc corpus) whose larger conversion
 //! was vetted separately.
+use latexml::util::test::requires;
+
 use super::{
   perfect_kernel_batch40_43::convert_with_files,
   perfect_kernel_batch46::{convert, convert_with, error_count, warning_count},
   perfect_kernel_batch53::convert_with_sty,
   perfect_kernel_batch57::{RAW, assert_elements},
 };
-
-fn kpsewhich_has(name: &str) -> bool {
-  std::process::Command::new("kpsewhich")
-    .arg(name)
-    .output()
-    .map(|o| o.status.success() && !o.stdout.is_empty())
-    .unwrap_or(false)
-}
 
 /// biblatex.sty:4407-4425 defines `\DeclareIndex{Name,List,Field}Format`
 /// through the same `\blx@defformat` as their non-Index siblings, and
@@ -2775,7 +2769,7 @@ fn tabu_init_lets_rule_styles_and_starred_environments() {
 fn xkeyval_sets_the_loaded_sentinel() {
   // Host-portability: skip when the exercised package is absent from this
   // TeX Live tree (the behavior under test needs the real file).
-  if !kpsewhich_has("expex.sty") {
+  if !requires(&["expex.sty"]) {
     return;
   }
   let tex = r"\documentclass{article}
@@ -5028,7 +5022,7 @@ fn l3draw_surface_keeps_box_content() {
 fn installed_ldf_outranks_the_language_stub() {
   // Host-portability: skip when the exercised package is absent from this
   // TeX Live tree (the behavior under test needs the real file).
-  if !kpsewhich_has("spanish.ldf") || !kpsewhich_has("czech.ldf") {
+  if !requires(&["spanish.ldf", "czech.ldf"]) {
     return;
   }
   let tex = r"\documentclass{article}

@@ -11,10 +11,11 @@
 //! evaluates it (latex.ltx:16590-16602): 12.0pt since batch 56jr reads it as the
 //! `\\` expands (pdflatex's cmr9 ex gives 11.6pt); 15.99994pt before, in the
 //! row-end marker's later font.
+use latexml::util::test::requires;
 
 #[test]
 fn standard_shape_title_page_is_typeset_inline() {
-  if !latexml::util::test::kpse_has("frontespizio.sty") {
+  if !requires(&["frontespizio.sty"]) {
     return;
   }
   let tex = "\\documentclass[a4paper,titlepage]{book}\n\\usepackage{frontespizio}\n\\begin{document}\n\\begin{frontespizio}\n\\Universita{Padova}\n\\Facolta{Scienze Matematiche, Fisiche e Naturali}\n\\Corso[Laurea]{Matematica}\n\\Titoletto{Tesi di laurea}\n\\Titolo{Equivalenze fra categorie di moduli}\n\\Candidato[145822]{Enrico Gregorio}\n\\Relatore{Ch.mo Prof.~Adalberto Orsatti}\n\\Annoaccademico{1999-2000}\n\\end{frontespizio}\nBODY\n\\end{document}\n";
@@ -34,7 +35,7 @@ fn standard_shape_title_page_is_typeset_inline() {
 /// undefined inline, its argument leaked as body text) are gobbled.
 #[test]
 fn preambolo_material_is_executed_inline() {
-  if !latexml::util::test::kpse_has("frontespizio.sty") {
+  if !requires(&["frontespizio.sty"]) {
     return;
   }
   let tex = "\\documentclass[a4paper,titlepage]{book}\n\\usepackage{frontespizio}\n\\begin{document}\n\\begin{frontespizio}\n\\begin{Preambolo*}\n  \\usepackage{fourier}\n  \\geometry{a4paper, left=35mm, right=35mm}\n  \\newcommand{\\compring}{anelli compatti}\n\\end{Preambolo*}\n\\Universita{Bologna}\n\\Dipartimento{Matematica}\n\\Corso[Dottorato di Ricerca]{Matematica}\n\\Titolo{Sugli \\compring}\n\\Candidato{Nome Cognome}\n\\Relatore{Prof.~Relatore}\n\\Annoaccademico{2000-2001}\n\\end{frontespizio}\nBODY\n\\end{document}\n";

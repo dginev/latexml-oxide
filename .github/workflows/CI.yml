@@ -405,7 +405,19 @@ jobs:
         # `--cargo-profile ci` selects the Cargo profile; `--profile ci`
         # selects the NEXTEST profile (.config/nextest.toml). They are
         # different knobs that happen to share a name.
+        env:
+          LATEXML_TEST_SKIP_LOG: ${{ github.workspace }}/target/test-skips.log
         run: cargo nextest run --cargo-profile ci --profile ci --workspace --partition hash:${{ matrix.shard }}/8
+
+      - name: skipped tests (requirements not met)
+        # `requires` / `Requirements` skips (Perl's check_requirements): one `<test>\t<reason>` line each.
+        if: always()
+        shell: bash
+        run: |
+          log=target/test-skips.log
+          count=$(cat "$log" 2>/dev/null | wc -l | tr -d ' ')
+          echo "$count skipped test(s)"
+          if [ "$count" -gt 0 ]; then sort "$log"; { echo "### $count skipped test(s)"; echo '```'; sort "$log"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"; fi
 
   # macOS mirror of the Linux job above (issue #217). Same `ci` profile,
   # same make-formats → build → run flow; only the platform deps differ:
@@ -494,7 +506,19 @@ jobs:
         # `--cargo-profile ci` selects the Cargo profile; `--profile ci`
         # selects the NEXTEST profile (.config/nextest.toml). They are
         # different knobs that happen to share a name.
+        env:
+          LATEXML_TEST_SKIP_LOG: ${{ github.workspace }}/target/test-skips.log
         run: cargo nextest run --cargo-profile ci --profile ci --workspace --partition hash:${{ matrix.shard }}/4
+
+      - name: skipped tests (requirements not met)
+        # `requires` / `Requirements` skips (Perl's check_requirements): one `<test>\t<reason>` line each.
+        if: always()
+        shell: bash
+        run: |
+          log=target/test-skips.log
+          count=$(cat "$log" 2>/dev/null | wc -l | tr -d ' ')
+          echo "$count skipped test(s)"
+          if [ "$count" -gt 0 ]; then sort "$log"; { echo "### $count skipped test(s)"; echo '```'; sort "$log"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"; fi
 
   # Single aggregating gate. Branch protection matches required checks BY NAME,
   # and a skipped matrix check (`shard 1/4`, `macOS shard 2/4`, …) leaves a PR

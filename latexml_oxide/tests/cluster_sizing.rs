@@ -23,7 +23,7 @@ mod pgfplots_units {
   //!
   //! Conditional: needs the kernel dump (so expl3/pgf load cleanly, not the
   //! degraded raw path) AND pgf/pgfplots installed in the host TeX tree.
-  use latexml::util::test::{convert_fixture, dump_available, error_count, kpse_has};
+  use latexml::util::test::{convert_fixture, dump_available, error_count, requires};
 
   #[test]
   fn pgfplots_bar_shift_symbolic_coords_units_flag() {
@@ -34,11 +34,7 @@ mod pgfplots_units {
       );
       return;
     }
-    if !kpse_has("pgfplots.sty") || !kpse_has("pgf.sty") {
-      eprintln!(
-        "SKIP pgfplots_bar_shift_symbolic_coords_units_flag: pgf/pgfplots not \
-         installed in the host TeX tree"
-      );
+    if !requires(&["pgfplots.sty", "pgf.sty"]) {
       return;
     }
 
@@ -412,7 +408,7 @@ mod geometry_svg_sizing {
   //! Conditional: needs the kernel dump (so tcolorbox's expl3 loads cleanly) AND
   //! tcolorbox installed in the host TeX tree; self-skips otherwise.
 
-  use latexml::util::test::{convert_fixture, dump_available, kpse_has};
+  use latexml::util::test::{convert_fixture, dump_available, requires};
 
   /// Pull the first `viewBox="minx miny W H"` width (the 3rd number) out of the
   /// serialized markup — the tcolorbox root `<svg>` is the first picture.
@@ -439,7 +435,7 @@ mod geometry_svg_sizing {
   }
 
   /// True when this environment can raw-load tcolorbox on the kernel dump.
-  fn can_run() -> bool { dump_available() && kpse_has("tcolorbox.sty") }
+  fn can_run() -> bool { dump_available() && requires(&["tcolorbox.sty"]) }
 
   const TEX: &str = "literal:\\documentclass{article}\n\
     \\usepackage[left=2.5cm,right=2.5cm,top=2.5cm,bottom=2.5cm]{geometry}\n\
@@ -561,7 +557,7 @@ mod tcbline_nointerlineskip {
   //!
   //! Conditional: needs the kernel dump + tcolorbox in the host TeX tree.
 
-  use latexml::util::test::{convert_fixture, dump_available, kpse_has};
+  use latexml::util::test::{convert_fixture, dump_available, requires};
 
   fn first_box_viewbox_height(xml: &str) -> f64 {
     // The tcolorbox root <svg:svg> is the first picture; its viewBox is
@@ -585,7 +581,7 @@ mod tcbline_nointerlineskip {
 
   #[test]
   fn tcbline_box_not_over_measured() {
-    if !(dump_available() && kpse_has("tcolorbox.sty")) {
+    if !(dump_available() && requires(&["tcolorbox.sty"])) {
       eprintln!("skipping: needs kernel dump + tcolorbox.sty in the host TeX tree");
       return;
     }

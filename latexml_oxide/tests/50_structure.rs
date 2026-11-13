@@ -14,10 +14,27 @@
 // refactor clean.
 use std::rc::Rc;
 
-use latexml::tex_tests;
+use latexml::{
+  tex_tests,
+  util::test::{RequirementTable, Requirements},
+};
+
+// Perl t/50_structure.t, without glossary's `env => 'CI'`: the local gates run it too.
+static REQUIRES: &RequirementTable = &[
+  ("amsarticle", Requirements::packages(&["amsart.cls"])),
+  ("csquotes", Requirements::packages(&["csquotes.sty"])),
+  (
+    "figure_grids",
+    Requirements::packages(&["graphicx.sty"]).texlive_min(2021),
+  ),
+  (
+    "glossary",
+    Requirements::packages(&["glossaries.sty"]).texlive_min(2016),
+  ),
+];
 
 tex_tests!(
   "tests/structure",
-  None,
+  Some(REQUIRES),
   Some(Rc::new(latexml_contrib::dispatch))
 );

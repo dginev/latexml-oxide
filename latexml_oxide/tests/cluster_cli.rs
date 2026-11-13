@@ -587,9 +587,9 @@ mod kpathsea_backend_resolution {
     // libkpathsea and resolves via a spawned `kpsewhich`; with `KPSEWHICH`
     // pointed at nothing there is no resolver at all, so skip rather than fail.
     if log.contains("no libkpathsea is linked") {
-      eprintln!(
-        "skipping texinputs_resolves_without_a_resolvable_kpsewhich: build has no \
-         linked libkpathsea (needs --features kpathsea-build-from-source)"
+      latexml::util::test::skip(
+        &latexml::util::test::current_test_name(),
+        "build has no linked libkpathsea (needs --features kpathsea-build-from-source)",
       );
       return;
     }

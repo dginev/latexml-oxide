@@ -1,12 +1,6 @@
-use super::perfect_kernel_batch46::{convert, error_count, warning_count};
+use latexml::util::test::requires;
 
-fn kpsewhich_has(name: &str) -> bool {
-  std::process::Command::new("kpsewhich")
-    .arg(name)
-    .output()
-    .map(|o| o.status.success() && !o.stdout.is_empty())
-    .unwrap_or(false)
-}
+use super::perfect_kernel_batch46::{convert, error_count, warning_count};
 
 /// lineno.sty manual surface (witness lineno/ulineno): \linenumberwidth,
 /// \bframesep, \bframerule, \linerefp, \linerefr, and bare \internallinenumbers
@@ -1739,7 +1733,7 @@ fn pgf_functional_shading_and_gradients() {
 /// (witness: tikzpingus/tikzpingus-doc.tex Figure 1 Table 3).
 #[test]
 fn tikzpingus_cloak_functional_shading() {
-  if !kpsewhich_has("tikzpingus.sty") {
+  if !requires(&["tikzpingus.sty"]) {
     return;
   }
   let tex = r"\documentclass{article}
@@ -2659,7 +2653,7 @@ fn inner_float_without_a_panel_number_collapses() {
     &[r#"xml:id="S0.T1""#],
     r#"<table class="ltx_minipage" inlist="lot" labels="LABEL:t" placement="H" width="345.0pt" xml:id="S0.T1"><tags><tag>Table 1</tag><tag role="refnum">1</tag><tag role="typerefnum">Table 1</tag></tags><toccaption><tag close=" ">1</tag>Outer</toccaption><caption><tag close=": ">Table 1</tag>Outer</caption><tabular class="ltx_centering" vattach="middle"><tbody><tr><td align="center">a</td></tr></tbody></tabular></table>"#,
   );
-  if !kpsewhich_has("ltablex.sty") {
+  if !requires(&["ltablex.sty"]) {
     return;
   }
   let tex = "\\documentclass{article}\n\\usepackage{ltablex}\n\\begin{document}\n\\begin{table}\\caption{Outer}\n\\begin{tabularx}{\\linewidth}{X}a\\\\\\end{tabularx}\\label{L}\\addtocounter{table}{-1}\n\\end{table}\n\\begin{table}x\\caption{Next}\\end{table}\n\\end{document}\n";

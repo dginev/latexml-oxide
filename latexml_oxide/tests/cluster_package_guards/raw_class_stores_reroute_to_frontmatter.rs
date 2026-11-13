@@ -5,12 +5,13 @@
 //! never runs — is discarded as Perl does. Perl drops every such store
 //! (OmniBus's generic table is bypassed under raw class loading).
 //! `frontmatter_stores.rs`.
+use latexml::util::test::requires;
 
 /// jpsj2.cls:841-847 stores `\abst`/`\inst`/`\kword`/`\recdate` with
 /// `\long\def\abst#1{\long\gdef\@abst{#1}}`; the frontmatter carries them.
 #[test]
 fn jpsj2_stores_become_frontmatter() {
-  if !latexml::util::test::kpse_has("jpsj2.cls") {
+  if !requires(&["jpsj2.cls"]) {
     return;
   }
   let tex = std::fs::read_to_string("tests/cluster_regressions/jpsj2_stores_frontmatter.tex")

@@ -6,6 +6,12 @@ use once_cell::sync::Lazy;
 
 use crate::core_interface::DigestionAPI;
 
+mod requirements;
+pub use requirements::{
+  RequirementTable, Requirements, check_table, current_test_name, file_available, requires, skip,
+  skip_log_path, texlive_version,
+};
+
 // Process-once cached env vars (see WISDOM #56 — getenv hot-path race).
 // Sampled at static init; subsequent reads are atomic loads.
 static TEST_LOG: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_TEST_LOG").is_ok());
@@ -21,26 +27,23 @@ static BLESS: Lazy<bool> = Lazy::new(|| std::env::var("LATEXML_BLESS").is_ok());
 
 pub fn latexml_tests(
   dirpath: &str,
-  requires: Option<&phf::Map<&str, &str>>,
+  requires: Option<&RequirementTable>,
   dispatcher_opt: Option<BindingDispatcher>,
 ) {
   latexml_tests_internal(dirpath, requires, dispatcher_opt)
 }
 pub fn latexml_tests_internal(
   dirpath: &str,
-  requires: Option<&phf::Map<&str, &str>>,
+  requires: Option<&RequirementTable>,
   dispatcher_opt: Option<BindingDispatcher>,
 ) {
-  if !validate_requirements(dirpath, requires) {
-    return; // test group only if required files are found.
-  }
   for tex_file in glob(&s!("{}/*.tex", dirpath)).unwrap().flatten() {
     let name = tex_file.file_stem().unwrap().to_str().unwrap();
     let xml_file = tex_file.with_extension("xml");
 
     let tex_file_string = tex_file.to_str().unwrap();
     let xml_file_str = xml_file.to_str().unwrap();
-    if xml_file.exists() {
+    if xml_file.exists() && check_table(dirpath, name, requires) {
       latexml_ok_internal(tex_file_string, xml_file_str, name, dispatcher_opt.clone());
     } else {
       // Skip, these could be tex fragment files.
@@ -271,13 +274,13 @@ pub fn latexml_test_single(
   tex_file_str: &str,
   name: &str,
   dirpath: &str,
-  requires: Option<&phf::Map<&str, &str>>,
+  requires: Option<&RequirementTable>,
   dispatcher_opt: Option<BindingDispatcher>,
 ) {
   init_logger();
   init_test_rss_cap();
-  if !validate_requirements(dirpath, requires) {
-    return; // test group only if required files are found.
+  if !check_table(dirpath, name, requires) {
+    return;
   }
   // Platform-skipped golden fixtures: kept live (and compared) on the
   // platforms whose TeX distribution matches the committed golden, but
@@ -323,11 +326,6 @@ pub fn latexml_test_single(
   if suppress {
     latexml_core::common::error::set_suppress_log_output(false);
   }
-}
-
-fn validate_requirements(_dirpath: &str, _requires: Option<&phf::Map<&str, &str>>) -> bool {
-  // TODO
-  true
 }
 
 // fn latexml_ok(tex_path: &str, xml_path: &str, name: &str) { latexml_ok_internal(tex_path,
@@ -568,7 +566,7 @@ fn process_ltx_doc(doc: Document, name: &str) -> Vec<String> {
 
 // `new_test_engine` and `lex_single_tex_formula` moved to
 // `crate::util::preset` (audit DEP-02, 2026-05-18). They have no
-// dependency on `glob`/`phf` and need to be callable from the
+// dependency on `glob` and need to be callable from the
 // `latexmlmath_oxide` production binary, which builds without the
 // `test-utils` feature. Re-exported here so the dominant
 // `use latexml::util::test::*;` pattern in integration tests
@@ -913,14 +911,9 @@ pub fn dump_available() -> bool {
   !latexml_engine::dump_paths::available_years_in_dir(dir, "latex").is_empty()
 }
 
-/// True iff `kpsewhich` resolves the named file in the host TeX tree.
-pub fn kpse_has(file: &str) -> bool {
-  std::process::Command::new("kpsewhich")
-    .arg(file)
-    .output()
-    .map(|o| o.status.success() && !o.stdout.is_empty())
-    .unwrap_or(false)
-}
+/// True iff the engine's kpathsea lookup resolves the named file in the host TeX tree. For an expectation that
+/// depends on the tree; a test that cannot run without the file declares it with [`requires`] instead.
+pub fn kpse_has(file: &str) -> bool { latexml_core::util::pathname::kpsewhich(&[file]).is_some() }
 
 //======================================================================
 // In-process conversion for guards (user directive 2026-10-03): the cargo-built library, never a spawned binary.
