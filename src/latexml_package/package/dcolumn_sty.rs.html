@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/dcolumn_sty.rs`."><title>dcolumn_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>dcolumn_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/dcolumn_sty.rs`."><title>dcolumn_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>dcolumn_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a><span class="doccomment">/// Perl: absorbedString — digests tokens and extracts text content.
 <a href=#4 id=4 data-nosnippet>4</a>/// Mirrors the Perl function in dcolumn.sty.ltxml that creates a temporary
@@ -98,54 +98,78 @@
 <a href=#98 id=98 data-nosnippet>98</a>      <span class="kw">let </span>expansion = mouth::tokenize_internal(TeXString::assembled(expansion_body));
 <a href=#99 id=99 data-nosnippet>99</a>      def_macro(<span class="macro">T_CS!</span>(delim_str), <span class="prelude-val">None</span>, expansion, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
 <a href=#100 id=100 data-nosnippet>100</a>    }
-<a href=#101 id=101 data-nosnippet>101</a>    <span class="comment">// Save and deactivate $
-<a href=#102 id=102 data-nosnippet>102</a>    </span><span class="macro">Let!</span>(<span class="string">"\\DC@saved@dollar"</span>, <span class="string">"$"</span>);
-<a href=#103 id=103 data-nosnippet>103</a>    let_i(<span class="kw-2">&amp;</span><span class="macro">T_MATH!</span>(), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\relax"</span>), <span class="prelude-val">None</span>);
-<a href=#104 id=104 data-nosnippet>104</a>    <span class="comment">// Perl: return Tokens(LookupValue('IN_MATH') ? () : T_CS('\lx@begin@inline@math'));
-<a href=#105 id=105 data-nosnippet>105</a>    // FAITHFUL: no `DC_started_math` flag. Perl's \DC@ / \DC@end are symmetric by
-<a href=#106 id=106 data-nosnippet>106</a>    // construction — \DC@ begins inline math unless already IN_MATH, and \DC@end
-<a href=#107 id=107 data-nosnippet>107</a>    // ALWAYS ends inline math. The earlier Rust guard flag desynced across
-<a href=#108 id=108 data-nosnippet>108</a>    // consecutive D columns (a global value read back in a different cell scope),
-<a href=#109 id=109 data-nosnippet>109</a>    // leaking the math-mode frame so a later \endgroup/\end{...} failed with
-<a href=#110 id=110 data-nosnippet>110</a>    // "close a group that switched to mode display_math" (witness 1805.00875:
-<a href=#111 id=111 data-nosnippet>111</a>    // `D{.}{}{3}` followed by `D{.}{.}{-1}` — Perl 0, Rust was 5).
-<a href=#112 id=112 data-nosnippet>112</a>    </span><span class="kw">if </span>lookup_bool_sym(<span class="macro">pin!</span>(<span class="string">"IN_MATH"</span>)) {
-<a href=#113 id=113 data-nosnippet>113</a>      <span class="prelude-val">Ok</span>(Tokens::default())
-<a href=#114 id=114 data-nosnippet>114</a>    } <span class="kw">else </span>{
-<a href=#115 id=115 data-nosnippet>115</a>      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@begin@inline@math"</span>)))
-<a href=#116 id=116 data-nosnippet>116</a>    }
-<a href=#117 id=117 data-nosnippet>117</a>  });
-<a href=#118 id=118 data-nosnippet>118</a>
-<a href=#119 id=119 data-nosnippet>119</a>  <span class="comment">// Perl: \DC@end — restores $ and ALWAYS ends inline math (unconditional).
-<a href=#120 id=120 data-nosnippet>120</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\DC@end"</span>, sub[_args] {
-<a href=#121 id=121 data-nosnippet>121</a>    let_i(<span class="kw-2">&amp;</span><span class="macro">T_MATH!</span>(), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\DC@saved@dollar"</span>), <span class="prelude-val">None</span>);
-<a href=#122 id=122 data-nosnippet>122</a>    <span class="comment">// Perl: return (T_CS('\lx@end@inline@math'));
-<a href=#123 id=123 data-nosnippet>123</a>    </span><span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@end@inline@math"</span>)))
-<a href=#124 id=124 data-nosnippet>124</a>  });
-<a href=#125 id=125 data-nosnippet>125</a>
-<a href=#126 id=126 data-nosnippet>126</a>  <span class="comment">// Perl: DefColumnType('D{}{}{}', ...) — decimal alignment column
-<a href=#127 id=127 data-nosnippet>127</a>  // Perl: align =&gt; 'char:' . absorbedString(Tokens(T_CS('\ensuremath'), T_BEGIN, $todelim, T_END))
-<a href=#128 id=128 data-nosnippet>128</a>  </span><span class="macro">DefColumnType!</span>(<span class="string">"D{}{}{}"</span>, sub[(delim, todelim, ndec)] {
-<a href=#129 id=129 data-nosnippet>129</a>    <span class="comment">// Perl: absorbedString — digest \ensuremath{todelim} to get display character
-<a href=#130 id=130 data-nosnippet>130</a>    </span><span class="kw">let </span>alignment = absorbed_string(<span class="kw-2">&amp;</span>todelim);
-<a href=#131 id=131 data-nosnippet>131</a>    <span class="comment">// Build before tokens: \DC@{delim}{todelim}{ndec}
-<a href=#132 id=132 data-nosnippet>132</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>before = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\DC@"</span>), <span class="macro">T_BEGIN!</span>()];
-<a href=#133 id=133 data-nosnippet>133</a>    before.extend(delim.unlist());
-<a href=#134 id=134 data-nosnippet>134</a>    before.push(<span class="macro">T_END!</span>());
-<a href=#135 id=135 data-nosnippet>135</a>    before.push(<span class="macro">T_BEGIN!</span>());
-<a href=#136 id=136 data-nosnippet>136</a>    before.extend(todelim.unlist());
-<a href=#137 id=137 data-nosnippet>137</a>    before.push(<span class="macro">T_END!</span>());
-<a href=#138 id=138 data-nosnippet>138</a>    before.push(<span class="macro">T_BEGIN!</span>());
-<a href=#139 id=139 data-nosnippet>139</a>    before.extend(ndec.unlist());
-<a href=#140 id=140 data-nosnippet>140</a>    before.push(<span class="macro">T_END!</span>());
-<a href=#141 id=141 data-nosnippet>141</a>    with_current_build_template(|template_opt| {
-<a href=#142 id=142 data-nosnippet>142</a>      template_opt.unwrap().add_column(Cell {
-<a href=#143 id=143 data-nosnippet>143</a>        before: <span class="prelude-val">Some</span>(Tokens::new(before)),
-<a href=#144 id=144 data-nosnippet>144</a>        after: <span class="prelude-val">Some</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\DC@end"</span>))),
-<a href=#145 id=145 data-nosnippet>145</a>        align: <span class="prelude-val">Some</span>(Align::Char(alignment)),
-<a href=#146 id=146 data-nosnippet>146</a>        ..Cell::default()
-<a href=#147 id=147 data-nosnippet>147</a>      });
-<a href=#148 id=148 data-nosnippet>148</a>    });
-<a href=#149 id=149 data-nosnippet>149</a>  });
-<a href=#150 id=150 data-nosnippet>150</a>});
+<a href=#101 id=101 data-nosnippet>101</a>    <span class="comment">// Save and deactivate $ — in the column's own math only (`\lx@DC@dollar`)
+<a href=#102 id=102 data-nosnippet>102</a>    // (the meaning of the math shift, Perl's `Let(…, T_MATH)`: a `"$"` here named an undefined control sequence, which
+<a href=#103 id=103 data-nosnippet>103</a>    // `\DC@end` then gave back to `$` for the rest of the cell; as tex_tables.rs saves the alignment's caller's `$`)
+<a href=#104 id=104 data-nosnippet>104</a>    </span><span class="kw">if let </span><span class="prelude-val">Some</span>(dollar) = lookup_definition_stored(<span class="kw-2">&amp;</span><span class="macro">T_MATH!</span>())<span class="question-mark">? </span>{
+<a href=#105 id=105 data-nosnippet>105</a>      assign_meaning(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\DC@saved@dollar"</span>), dollar, <span class="prelude-val">None</span>);
+<a href=#106 id=106 data-nosnippet>106</a>    }
+<a href=#107 id=107 data-nosnippet>107</a>    let_i(<span class="kw-2">&amp;</span><span class="macro">T_MATH!</span>(), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\lx@DC@dollar"</span>), <span class="prelude-val">None</span>);
+<a href=#108 id=108 data-nosnippet>108</a>    <span class="comment">// Perl: return Tokens(LookupValue('IN_MATH') ? () : T_CS('\lx@begin@inline@math'));
+<a href=#109 id=109 data-nosnippet>109</a>    // FAITHFUL: no `DC_started_math` flag. Perl's \DC@ / \DC@end are symmetric by
+<a href=#110 id=110 data-nosnippet>110</a>    // construction — \DC@ begins inline math unless already IN_MATH, and \DC@end
+<a href=#111 id=111 data-nosnippet>111</a>    // ALWAYS ends inline math. The earlier Rust guard flag desynced across
+<a href=#112 id=112 data-nosnippet>112</a>    // consecutive D columns (a global value read back in a different cell scope),
+<a href=#113 id=113 data-nosnippet>113</a>    // leaking the math-mode frame so a later \endgroup/\end{...} failed with
+<a href=#114 id=114 data-nosnippet>114</a>    // "close a group that switched to mode display_math" (witness 1805.00875:
+<a href=#115 id=115 data-nosnippet>115</a>    // `D{.}{}{3}` followed by `D{.}{.}{-1}` — Perl 0, Rust was 5).
+<a href=#116 id=116 data-nosnippet>116</a>    </span><span class="kw">if </span>lookup_bool_sym(<span class="macro">pin!</span>(<span class="string">"IN_MATH"</span>)) {
+<a href=#117 id=117 data-nosnippet>117</a>      <span class="prelude-val">Ok</span>(Tokens::default())
+<a href=#118 id=118 data-nosnippet>118</a>    } <span class="kw">else </span>{
+<a href=#119 id=119 data-nosnippet>119</a>      <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@begin@inline@math"</span>)))
+<a href=#120 id=120 data-nosnippet>120</a>    }
+<a href=#121 id=121 data-nosnippet>121</a>  });
+<a href=#122 id=122 data-nosnippet>122</a>
+<a href=#123 id=123 data-nosnippet>123</a>  <span class="comment">// The cell's `$` (Perl: `\relax` for the whole cell, dcolumn.sty.ltxml:42-44): dcolumn.sty itself leaves `$` alone
+<a href=#124 id=124 data-nosnippet>124</a>  // (dcolumn.sty:43-80 `\DC@`), so an author's `$` at the cell's level would end the column's math; there it does
+<a href=#125 id=125 data-nosnippet>125</a>  // nothing, keeping the number in math as Perl does. In a box the cell holds — `\multirow{2}{*}{$E_{B}$}`, `\mbox` —
+<a href=#126 id=126 data-nosnippet>126</a>  // TeX is in horizontal mode again and the `$`s are math shifts (2306.05928: `\relax`, they left `E_{B}` in text, a
+<a href=#127 id=127 data-nosnippet>127</a>  // math error per script; KNOWN_PERL_ERRORS #859): the `$` that opens a formula there marks it
+<a href=#128 id=128 data-nosnippet>128</a>  // (`lx_dc_inner_math`, local to the formula's group), and the one inside closes it.
+<a href=#129 id=129 data-nosnippet>129</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@DC@dollar"</span>, {
+<a href=#130 id=130 data-nosnippet>130</a>    <span class="kw">let </span>in_math = lookup_bool_sym(<span class="macro">pin!</span>(<span class="string">"IN_MATH"</span>));
+<a href=#131 id=131 data-nosnippet>131</a>    <span class="prelude-val">Ok</span>(<span class="kw">if </span>in_math &amp;&amp; !lookup_bool(<span class="string">"lx_dc_inner_math"</span>) {
+<a href=#132 id=132 data-nosnippet>132</a>      <span class="macro">Tokens!</span>()
+<a href=#133 id=133 data-nosnippet>133</a>    } <span class="kw">else if </span>in_math {
+<a href=#134 id=134 data-nosnippet>134</a>      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\DC@saved@dollar"</span>))
+<a href=#135 id=135 data-nosnippet>135</a>    } <span class="kw">else </span>{
+<a href=#136 id=136 data-nosnippet>136</a>      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\DC@saved@dollar"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\lx@DC@inner@math"</span>))
+<a href=#137 id=137 data-nosnippet>137</a>    })
+<a href=#138 id=138 data-nosnippet>138</a>  });
+<a href=#139 id=139 data-nosnippet>139</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@DC@inner@math"</span>, {
+<a href=#140 id=140 data-nosnippet>140</a>    assign_value(<span class="string">"lx_dc_inner_math"</span>, <span class="bool-val">true</span>, <span class="prelude-val">None</span>);
+<a href=#141 id=141 data-nosnippet>141</a>  });
+<a href=#142 id=142 data-nosnippet>142</a>
+<a href=#143 id=143 data-nosnippet>143</a>  <span class="comment">// Perl: \DC@end — restores $ and ALWAYS ends inline math (unconditional).
+<a href=#144 id=144 data-nosnippet>144</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\DC@end"</span>, sub[_args] {
+<a href=#145 id=145 data-nosnippet>145</a>    let_i(<span class="kw-2">&amp;</span><span class="macro">T_MATH!</span>(), <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\DC@saved@dollar"</span>), <span class="prelude-val">None</span>);
+<a href=#146 id=146 data-nosnippet>146</a>    <span class="comment">// Perl: return (T_CS('\lx@end@inline@math'));
+<a href=#147 id=147 data-nosnippet>147</a>    </span><span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@end@inline@math"</span>)))
+<a href=#148 id=148 data-nosnippet>148</a>  });
+<a href=#149 id=149 data-nosnippet>149</a>
+<a href=#150 id=150 data-nosnippet>150</a>  <span class="comment">// Perl: DefColumnType('D{}{}{}', ...) — decimal alignment column
+<a href=#151 id=151 data-nosnippet>151</a>  // Perl: align =&gt; 'char:' . absorbedString(Tokens(T_CS('\ensuremath'), T_BEGIN, $todelim, T_END))
+<a href=#152 id=152 data-nosnippet>152</a>  </span><span class="macro">DefColumnType!</span>(<span class="string">"D{}{}{}"</span>, sub[(delim, todelim, ndec)] {
+<a href=#153 id=153 data-nosnippet>153</a>    <span class="comment">// Perl: absorbedString — digest \ensuremath{todelim} to get display character
+<a href=#154 id=154 data-nosnippet>154</a>    </span><span class="kw">let </span>alignment = absorbed_string(<span class="kw-2">&amp;</span>todelim);
+<a href=#155 id=155 data-nosnippet>155</a>    <span class="comment">// Build before tokens: \DC@{delim}{todelim}{ndec}
+<a href=#156 id=156 data-nosnippet>156</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>before = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\DC@"</span>), <span class="macro">T_BEGIN!</span>()];
+<a href=#157 id=157 data-nosnippet>157</a>    before.extend(delim.unlist());
+<a href=#158 id=158 data-nosnippet>158</a>    before.push(<span class="macro">T_END!</span>());
+<a href=#159 id=159 data-nosnippet>159</a>    before.push(<span class="macro">T_BEGIN!</span>());
+<a href=#160 id=160 data-nosnippet>160</a>    before.extend(todelim.unlist());
+<a href=#161 id=161 data-nosnippet>161</a>    before.push(<span class="macro">T_END!</span>());
+<a href=#162 id=162 data-nosnippet>162</a>    before.push(<span class="macro">T_BEGIN!</span>());
+<a href=#163 id=163 data-nosnippet>163</a>    before.extend(ndec.unlist());
+<a href=#164 id=164 data-nosnippet>164</a>    before.push(<span class="macro">T_END!</span>());
+<a href=#165 id=165 data-nosnippet>165</a>    with_building_template(|template| {
+<a href=#166 id=166 data-nosnippet>166</a>      template.add_column(Cell {
+<a href=#167 id=167 data-nosnippet>167</a>        before: <span class="prelude-val">Some</span>(Tokens::new(before)),
+<a href=#168 id=168 data-nosnippet>168</a>        after: <span class="prelude-val">Some</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\DC@end"</span>))),
+<a href=#169 id=169 data-nosnippet>169</a>        align: <span class="prelude-val">Some</span>(Align::Char(alignment)),
+<a href=#170 id=170 data-nosnippet>170</a>        ..Cell::default()
+<a href=#171 id=171 data-nosnippet>171</a>      });
+<a href=#172 id=172 data-nosnippet>172</a>    });
+<a href=#173 id=173 data-nosnippet>173</a>  });
+<a href=#174 id=174 data-nosnippet>174</a>});
 </code></pre></div></section></main></body></html>

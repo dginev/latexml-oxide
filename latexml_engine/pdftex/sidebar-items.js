@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_definitions"]};
+window.SIDEBAR_ITEMS = {"fn":["load_definitions","pdf_creation_date","pdftex_random_seed","reset_pdftex_random"]};

@@ -1,116 +1,355 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/revtex3_support_sty.rs`."><title>revtex3_support_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>revtex3_support_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/revtex3_support_sty.rs`."><title>revtex3_support_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>revtex3_support_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a>
-<a href=#3 id=3 data-nosnippet>3</a><span class="attr">#[rustfmt::skip]
-<a href=#4 id=4 data-nosnippet>4</a></span><span class="macro">LoadDefinitions!</span>({
-<a href=#5 id=5 data-nosnippet>5</a>  <span class="comment">// Perl: revtex3_support.sty.ltxml
-<a href=#6 id=6 data-nosnippet>6</a>
-<a href=#7 id=7 data-nosnippet>7</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"amsfonts"</span>, {
-<a href=#8 id=8 data-nosnippet>8</a>    <span class="macro">RequirePackage!</span>(<span class="string">"amsfonts"</span>);
-<a href=#9 id=9 data-nosnippet>9</a>  });
-<a href=#10 id=10 data-nosnippet>10</a>  <span class="macro">DeclareOption!</span>(<span class="string">"amssymb"</span>, {
-<a href=#11 id=11 data-nosnippet>11</a>    <span class="macro">RequirePackage!</span>(<span class="string">"amssymb"</span>);
-<a href=#12 id=12 data-nosnippet>12</a>  });
-<a href=#13 id=13 data-nosnippet>13</a>  <span class="macro">DeclareOption!</span>(<span class="string">"amsmath"</span>, {
-<a href=#14 id=14 data-nosnippet>14</a>    <span class="macro">RequirePackage!</span>(<span class="string">"amsmath"</span>);
-<a href=#15 id=15 data-nosnippet>15</a>  });
-<a href=#16 id=16 data-nosnippet>16</a>  <span class="macro">ProcessOptions!</span>();
-<a href=#17 id=17 data-nosnippet>17</a>
-<a href=#18 id=18 data-nosnippet>18</a>  <span class="macro">RequirePackage!</span>(<span class="string">"revtex4_support"</span>);
-<a href=#19 id=19 data-nosnippet>19</a>
-<a href=#20 id=20 data-nosnippet>20</a>  <span class="comment">//======================================================================
-<a href=#21 id=21 data-nosnippet>21</a>  // Additional or different definitions from revtex4_support
-<a href=#22 id=22 data-nosnippet>22</a>
-<a href=#23 id=23 data-nosnippet>23</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\ifpreprintsty"</span>);
-<a href=#24 id=24 data-nosnippet>24</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifsecnumbers"</span>);
-<a href=#25 id=25 data-nosnippet>25</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifsegabssty"</span>);
-<a href=#26 id=26 data-nosnippet>26</a>  <span class="comment">// Perl revtex 3 internals — `\iffirstfig`/`\iffirsttab` control float
-<a href=#27 id=27 data-nosnippet>27</a>  // placement on the first page; revtex 3 papers commonly set
-<a href=#28 id=28 data-nosnippet>28</a>  // `\firstfigfalse`/`\firsttabfalse` BEFORE `\begin{document}` to bypass
-<a href=#29 id=29 data-nosnippet>29</a>  // the kludge. The Perl LaTeXML bindings for revtex don't pre-define
-<a href=#30 id=30 data-nosnippet>30</a>  // these, so users' `\firstfigfalse`/`\firsttabfalse` raise undefined-CS
-<a href=#31 id=31 data-nosnippet>31</a>  // errors. Witness: hep-th0109174, cond-mat0005077.
-<a href=#32 id=32 data-nosnippet>32</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\iffirstfig"</span>);
-<a href=#33 id=33 data-nosnippet>33</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\iffirsttab"</span>);
-<a href=#34 id=34 data-nosnippet>34</a>
-<a href=#35 id=35 data-nosnippet>35</a>  def_macro_noop(<span class="string">"\\eqsecnum"</span>)<span class="question-mark">?</span>;
-<a href=#36 id=36 data-nosnippet>36</a>  def_macro_noop(<span class="string">"\\tightenlines"</span>)<span class="question-mark">?</span>;
-<a href=#37 id=37 data-nosnippet>37</a>  def_macro_noop(<span class="string">"\\wideabs"</span>)<span class="question-mark">?</span>; <span class="comment">// wide abstract — takes an arg, but avoid reading it
-<a href=#38 id=38 data-nosnippet>38</a>
-<a href=#39 id=39 data-nosnippet>39</a>  // RevTeX's subequation numbering environment
-<a href=#40 id=40 data-nosnippet>40</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\mathletters"</span>,    <span class="string">"\\lx@equationgroup@subnumbering@begin"</span>);
-<a href=#41 id=41 data-nosnippet>41</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endmathletters"</span>, <span class="string">"\\lx@equationgroup@subnumbering@end"</span>);
-<a href=#42 id=42 data-nosnippet>42</a>
-<a href=#43 id=43 data-nosnippet>43</a>  <span class="comment">//======================================================================
-<a href=#44 id=44 data-nosnippet>44</a>  // Revtex3 equation environments with $ faketext trick
-<a href=#45 id=45 data-nosnippet>45</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\if@lx@revtex@faketext@"</span>);
-<a href=#46 id=46 data-nosnippet>46</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@lx@revtex@nestmath@"</span>);
-<a href=#47 id=47 data-nosnippet>47</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@revtex@faketext"</span>, <span class="string">"\\@lx@revtex@faketext@true\\hbox\\bgroup"</span>);
-<a href=#48 id=48 data-nosnippet>48</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@revtex@nestmath"</span>, <span class="string">"\\@lx@revtex@nestmath@true\\lx@dollar@default"</span>);
-<a href=#49 id=49 data-nosnippet>49</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@dollar@in@oldrevtex"</span>,
-<a href=#50 id=50 data-nosnippet>50</a>    <span class="string">"\\ifmmode\
-<a href=#51 id=51 data-nosnippet>51</a>       \\if@lx@revtex@nestmath@\\let\\@next\\lx@dollar@default\\else\\let\\@next\\lx@revtex@faketext\\fi\
-<a href=#52 id=52 data-nosnippet>52</a>     \\else\
-<a href=#53 id=53 data-nosnippet>53</a>       \\if@lx@revtex@faketext@\\let\\@next\\egroup\\else\\let\\@next\\lx@revtex@nestmath\\fi\
-<a href=#54 id=54 data-nosnippet>54</a>     \\fi\\@next"</span>);
-<a href=#55 id=55 data-nosnippet>55</a>
-<a href=#56 id=56 data-nosnippet>56</a>  <span class="comment">// The earlier latex_constructs.rs `\begin{equation}` is installed
-<a href=#57 id=57 data-nosnippet>57</a>  // with `locked =&gt; true`. Under Perl `loadLTXML`'s UNLOCK scope, the
-<a href=#58 id=58 data-nosnippet>58</a>  // redefinitions below override that lock — and Rust's `_load_binding`
-<a href=#59 id=59 data-nosnippet>59</a>  // now wraps the dispatcher in `local_state_unlocked_guard(true)`
-<a href=#60 id=60 data-nosnippet>60</a>  // (Package.pm:2318 parity), so no surgical lock-clear is needed.
-<a href=#61 id=61 data-nosnippet>61</a>
-<a href=#62 id=62 data-nosnippet>62</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{equation}"</span>,
-<a href=#63 id=63 data-nosnippet>63</a>    <span class="string">"&lt;ltx:equation xml:id='#id'&gt;\
-<a href=#64 id=64 data-nosnippet>64</a>     #tags\
-<a href=#65 id=65 data-nosnippet>65</a>     &lt;ltx:Math mode='display'&gt;&lt;ltx:XMath&gt;#body&lt;/ltx:XMath&gt;&lt;/ltx:Math&gt;\
-<a href=#66 id=66 data-nosnippet>66</a>     &lt;/ltx:equation&gt;"</span>,
-<a href=#67 id=67 data-nosnippet>67</a>    mode =&gt; <span class="string">"display_math"</span>,
-<a href=#68 id=68 data-nosnippet>68</a>    before_digest =&gt; {
-<a href=#69 id=69 data-nosnippet>69</a>      <span class="macro">Let!</span>(<span class="macro">T_MATH!</span>(), <span class="string">"\\lx@dollar@in@oldrevtex"</span>);
-<a href=#70 id=70 data-nosnippet>70</a>    },
-<a href=#71 id=71 data-nosnippet>71</a>    properties =&gt; { ref_step_counter(<span class="string">"equation"</span>, <span class="bool-val">false</span>) },
-<a href=#72 id=72 data-nosnippet>72</a>    locked =&gt; <span class="bool-val">true</span>);
-<a href=#73 id=73 data-nosnippet>73</a>
-<a href=#74 id=74 data-nosnippet>74</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{equation*}"</span>,
-<a href=#75 id=75 data-nosnippet>75</a>    <span class="string">"&lt;ltx:equation xml:id='#id'&gt;\
-<a href=#76 id=76 data-nosnippet>76</a>     &lt;ltx:Math mode='display'&gt;&lt;ltx:XMath&gt;#body&lt;/ltx:XMath&gt;&lt;/ltx:Math&gt;\
-<a href=#77 id=77 data-nosnippet>77</a>     &lt;/ltx:equation&gt;"</span>,
-<a href=#78 id=78 data-nosnippet>78</a>    mode =&gt; <span class="string">"display_math"</span>,
-<a href=#79 id=79 data-nosnippet>79</a>    before_digest =&gt; {
-<a href=#80 id=80 data-nosnippet>80</a>      <span class="macro">Let!</span>(<span class="macro">T_MATH!</span>(), <span class="string">"\\lx@dollar@in@oldrevtex"</span>);
-<a href=#81 id=81 data-nosnippet>81</a>    },
-<a href=#82 id=82 data-nosnippet>82</a>    properties =&gt; { ref_step_id(<span class="string">"equation"</span>) },
-<a href=#83 id=83 data-nosnippet>83</a>    locked =&gt; <span class="bool-val">true</span>);
-<a href=#84 id=84 data-nosnippet>84</a>
-<a href=#85 id=85 data-nosnippet>85</a>  <span class="comment">// Perl revtex3_support.sty.ltxml L90-101: DefConstructorI('\[', undef, ...,
-<a href=#86 id=86 data-nosnippet>86</a>  //   beforeDigest =&gt; sub { beginMode('display_math'); Let(T_MATH, '\lx@dollar@in@oldrevtex'); },
-<a href=#87 id=87 data-nosnippet>87</a>  //   captureBody =&gt; 1, properties =&gt; sub { RefStepID('equation') });
-<a href=#88 id=88 data-nosnippet>88</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\["</span>,
-<a href=#89 id=89 data-nosnippet>89</a>    <span class="string">"&lt;ltx:equation xml:id='#id'&gt;\
-<a href=#90 id=90 data-nosnippet>90</a>     &lt;ltx:Math mode='display'&gt;&lt;ltx:XMath&gt;#body&lt;/ltx:XMath&gt;&lt;/ltx:Math&gt;\
-<a href=#91 id=91 data-nosnippet>91</a>     &lt;/ltx:equation&gt;"</span>,
-<a href=#92 id=92 data-nosnippet>92</a>    before_digest =&gt; {
-<a href=#93 id=93 data-nosnippet>93</a>      begin_mode(<span class="string">"display_math"</span>)<span class="question-mark">?</span>;
-<a href=#94 id=94 data-nosnippet>94</a>      <span class="macro">Let!</span>(<span class="macro">T_MATH!</span>(), <span class="string">"\\lx@dollar@in@oldrevtex"</span>);
-<a href=#95 id=95 data-nosnippet>95</a>    },
-<a href=#96 id=96 data-nosnippet>96</a>    properties =&gt; { ref_step_id(<span class="string">"equation"</span>) },
-<a href=#97 id=97 data-nosnippet>97</a>    capture_body =&gt; <span class="bool-val">true</span>);
+<a href=#3 id=3 data-nosnippet>3</a><span class="doccomment">/// The option files of the REVTeX 3 distribution (v3.0 astro-ph9601167, v3.1 adap-org9608001) a paper may pass as
+<a href=#4 id=4 data-nosnippet>4</a>/// `\documentstyle` options.
+<a href=#5 id=5 data-nosnippet>5</a></span><span class="kw">const </span>REVTEX3_OPTION_FILES: [<span class="kw-2">&amp;</span>str; <span class="number">11</span>] = [
+<a href=#6 id=6 data-nosnippet>6</a>  <span class="string">"version2"</span>, <span class="string">"prabib"</span>, <span class="string">"prbbib"</span>, <span class="string">"osabib"</span>, <span class="string">"segbib"</span>, <span class="string">"aps10"</span>, <span class="string">"aps12"</span>, <span class="string">"osa10"</span>, <span class="string">"osa12"</span>, <span class="string">"seg10"</span>,
+<a href=#7 id=7 data-nosnippet>7</a>  <span class="string">"seg12"</span>,
+<a href=#8 id=8 data-nosnippet>8</a>];
+<a href=#9 id=9 data-nosnippet>9</a>
+<a href=#10 id=10 data-nosnippet>10</a><span class="attr">#[rustfmt::skip]
+<a href=#11 id=11 data-nosnippet>11</a></span><span class="macro">LoadDefinitions!</span>({
+<a href=#12 id=12 data-nosnippet>12</a>  <span class="comment">// Perl: revtex3_support.sty.ltxml
+<a href=#13 id=13 data-nosnippet>13</a>
+<a href=#14 id=14 data-nosnippet>14</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"amsfonts"</span>, {
+<a href=#15 id=15 data-nosnippet>15</a>    <span class="macro">RequirePackage!</span>(<span class="string">"amsfonts"</span>);
+<a href=#16 id=16 data-nosnippet>16</a>  });
+<a href=#17 id=17 data-nosnippet>17</a>  <span class="macro">DeclareOption!</span>(<span class="string">"amssymb"</span>, {
+<a href=#18 id=18 data-nosnippet>18</a>    <span class="macro">RequirePackage!</span>(<span class="string">"amssymb"</span>);
+<a href=#19 id=19 data-nosnippet>19</a>  });
+<a href=#20 id=20 data-nosnippet>20</a>  <span class="macro">DeclareOption!</span>(<span class="string">"amsmath"</span>, {
+<a href=#21 id=21 data-nosnippet>21</a>    <span class="macro">RequirePackage!</span>(<span class="string">"amsmath"</span>);
+<a href=#22 id=22 data-nosnippet>22</a>  });
+<a href=#23 id=23 data-nosnippet>23</a>  <span class="macro">DeclareOption!</span>(<span class="string">"floats"</span>, {
+<a href=#24 id=24 data-nosnippet>24</a>    assign_value(<span class="string">"revtex3@floats"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#25 id=25 data-nosnippet>25</a>  });
+<a href=#26 id=26 data-nosnippet>26</a>  <span class="comment">// The other options of REVTeX 3's revtex.sty (v3.0 &lt;27 October 92&gt;, astro-ph9601167; v3.1 &lt;1 July 96&gt;,
+<a href=#27 id=27 data-nosnippet>27</a>  // adap-org9608001), its `\ds@&lt;option&gt;`s, declared so that under `\documentstyle[aps,preprint]{revtex}` they are
+<a href=#28 id=28 data-nosnippet>28</a>  // REVTeX's and not left for `\compat@loadpackages`, whose missing option loads OmniBus over this binding (Perl
+<a href=#29 id=29 data-nosnippet>29</a>  // latex_constructs.pool.ltxml:137-153) and gives an `\address` after `\author{A and B}` to B alone
+<a href=#30 id=30 data-nosnippet>30</a>  // (hep-th9610203, cond-mat9403039). Rust-only: Perl declares none of them here. `11pt`, `12pt`, `twoside`,
+<a href=#31 id=31 data-nosnippet>31</a>  // `draft`, `titlepage` and `twocolumn` (revtex.sty v3.1:17-18, 30-44) are article.cls's options as well, which the
+<a href=#32 id=32 data-nosnippet>32</a>  // `\documentstyle` article underneath has used.
+<a href=#33 id=33 data-nosnippet>33</a>  //
+<a href=#34 id=34 data-nosnippet>34</a>  // The society (revtex.sty v3.1:24-27), which picks the substyle `\input \@society.sty` loads (:194).
+<a href=#35 id=35 data-nosnippet>35</a>  </span><span class="kw">for </span>society <span class="kw">in </span>[<span class="string">"aps"</span>, <span class="string">"osa"</span>, <span class="string">"seg"</span>] {
+<a href=#36 id=36 data-nosnippet>36</a>    <span class="macro">DeclareOption!</span>(society, {
+<a href=#37 id=37 data-nosnippet>37</a>      assign_value(<span class="string">"revtex3@society"</span>, society, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#38 id=38 data-nosnippet>38</a>    });
+<a href=#39 id=39 data-nosnippet>39</a>  }
+<a href=#40 id=40 data-nosnippet>40</a>  <span class="comment">// revtex.sty v3.1:21-22: the preprint layout, `\global\preprintstytrue`; `abstract` (:70-75, SEG) too, with
+<a href=#41 id=41 data-nosnippet>41</a>  // `\global\segabsstytrue`.
+<a href=#42 id=42 data-nosnippet>42</a>  </span><span class="kw">for </span>option <span class="kw">in </span>[<span class="string">"preprint"</span>, <span class="string">"manuscript"</span>] {
+<a href=#43 id=43 data-nosnippet>43</a>    <span class="macro">DeclareOption!</span>(option, {
+<a href=#44 id=44 data-nosnippet>44</a>      assign_value(<span class="string">"revtex3@preprint"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#45 id=45 data-nosnippet>45</a>    });
+<a href=#46 id=46 data-nosnippet>46</a>  }
+<a href=#47 id=47 data-nosnippet>47</a>  <span class="macro">DeclareOption!</span>(<span class="string">"abstract"</span>, {
+<a href=#48 id=48 data-nosnippet>48</a>    assign_value(<span class="string">"revtex3@preprint"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#49 id=49 data-nosnippet>49</a>    assign_value(<span class="string">"revtex3@segabs"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#50 id=50 data-nosnippet>50</a>  });
+<a href=#51 id=51 data-nosnippet>51</a>  <span class="comment">// revtex.sty v3.1:53 `\global\secnumberstrue`: equations numbered within sections (aps.sty:358-365).
+<a href=#52 id=52 data-nosnippet>52</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"eqsecnum"</span>, {
+<a href=#53 id=53 data-nosnippet>53</a>    assign_value(<span class="string">"revtex3@eqsecnum"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#54 id=54 data-nosnippet>54</a>  });
+<a href=#55 id=55 data-nosnippet>55</a>  <span class="comment">// Layout only: `tighten` (:47, single spacing), `legalsize` (:76), and the journal (:55-68), which picks the
+<a href=#56 id=56 data-nosnippet>56</a>  // bibliography's typesetting (aps.sty:539-545 `prbbib`/`prabib`).
+<a href=#57 id=57 data-nosnippet>57</a>  </span><span class="kw">for </span>option <span class="kw">in </span>[
+<a href=#58 id=58 data-nosnippet>58</a>    <span class="string">"tighten"</span>, <span class="string">"legalsize"</span>,
+<a href=#59 id=59 data-nosnippet>59</a>    <span class="string">"pra"</span>, <span class="string">"prb"</span>, <span class="string">"prc"</span>, <span class="string">"prd"</span>, <span class="string">"pre"</span>, <span class="string">"prl"</span>, <span class="string">"josaa"</span>, <span class="string">"josab"</span>, <span class="string">"aplop"</span>, <span class="string">"geo"</span>, <span class="string">"tle"</span>,
+<a href=#60 id=60 data-nosnippet>60</a>  ] {
+<a href=#61 id=61 data-nosnippet>61</a>    <span class="macro">DeclareOption!</span>(option, <span class="prelude-val">None</span>);
+<a href=#62 id=62 data-nosnippet>62</a>  }
+<a href=#63 id=63 data-nosnippet>63</a>  <span class="comment">// Option files of the REVTeX 3 distribution, which a 2.09 `\documentstyle` option inputs after revtex.sty (latex.tex
+<a href=#64 id=64 data-nosnippet>64</a>  // `\@options`, for an option revtex.sty does not declare): `version2.sty`, the REVTeX 2 commands (its `{title}`,
+<a href=#65 id=65 data-nosnippet>65</a>  // `\author` and `{instit}` are the REVTeX 2.1 section below), `rmp.sty` (below), the bibliography and type-size
+<a href=#66 id=66 data-nosnippet>66</a>  // layouts `prabib`, `prbbib`, `osabib`, `segbib`, `aps10`, `aps12`, `osa10`,
+<a href=#67 id=67 data-nosnippet>67</a>  // `osa12`, `seg10`, `seg12`. Not in TeX Live; layout this binding does not emulate, so nothing, also when the paper
+<a href=#68 id=68 data-nosnippet>68</a>  // ships the file: raw over the binding, `rmp.sty`'s `\def\address` (hep-lat9608098, cond-mat9804141, hep-ph9610451)
+<a href=#69 id=69 data-nosnippet>69</a>  // dropped every address and added an error, which only OmniBus loaded after it used to cover.
+<a href=#70 id=70 data-nosnippet>70</a>  </span><span class="kw">for </span>option <span class="kw">in </span>REVTEX3_OPTION_FILES {
+<a href=#71 id=71 data-nosnippet>71</a>    <span class="macro">DeclareOption!</span>(option, <span class="prelude-val">None</span>);
+<a href=#72 id=72 data-nosnippet>72</a>  }
+<a href=#73 id=73 data-nosnippet>73</a>  <span class="comment">// `rmp.sty` (Rev. Mod. Phys.): otherwise title and heading layout, its headings referenced with dots, "II.A", "II.A.1"
+<a href=#74 id=74 data-nosnippet>74</a>  // (rmp.sty:140-145)
+<a href=#75 id=75 data-nosnippet>75</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"rmp"</span>, {
+<a href=#76 id=76 data-nosnippet>76</a>    assign_value(<span class="string">"revtex3@rmp"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#77 id=77 data-nosnippet>77</a>  });
+<a href=#78 id=78 data-nosnippet>78</a>  <span class="macro">ProcessOptions!</span>();
+<a href=#79 id=79 data-nosnippet>79</a>  <span class="comment">// aps.sty:614-630 (REVTeX 3.1): only with the `floats` option is `figure`
+<a href=#80 id=80 data-nosnippet>80</a>  // `\@float{figure}`; otherwise `\figure` is a list entry (`\vskip1pc`, the
+<a href=#81 id=81 data-nosnippet>81</a>  // caption type, "FIGURES" in preprint) that opens no TeX group, so a figure
+<a href=#82 id=82 data-nosnippet>82</a>  // ended by an enclosing `\endgroup` is clean in TeX (cond-mat9607130, whose
+<a href=#83 id=83 data-nosnippet>83</a>  // `\figure{N}` caption lines sit in `{references}`). `\table` keeps its
+<a href=#84 id=84 data-nosnippet>84</a>  // `\bgroup` either way (aps.sty:674-687). osa.sty:554-566 makes `\figure` a
+<a href=#85 id=85 data-nosnippet>85</a>  // list entry whatever the options. aipproc reaches this through its
+<a href=#86 id=86 data-nosnippet>86</a>  // `RequirePackage!("revtex3_support")` (aipproc_sty.rs:5).
+<a href=#87 id=87 data-nosnippet>87</a>  </span><span class="kw">if </span>!lookup_bool(<span class="string">"revtex3@floats"</span>) || lookup_string(<span class="string">"revtex3@society"</span>) == <span class="string">"osa" </span>{
+<a href=#88 id=88 data-nosnippet>88</a>    <span class="kw">for </span>env <span class="kw">in </span>[<span class="string">"figure"</span>, <span class="string">"figure*"</span>] {
+<a href=#89 id=89 data-nosnippet>89</a>      assign_value(
+<a href=#90 id=90 data-nosnippet>90</a>        <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\begin{{{env}}}:tex_group"</span>),
+<a href=#91 id=91 data-nosnippet>91</a>        TexGroup::None.as_str(),
+<a href=#92 id=92 data-nosnippet>92</a>        <span class="prelude-val">Some</span>(Scope::Global),
+<a href=#93 id=93 data-nosnippet>93</a>      );
+<a href=#94 id=94 data-nosnippet>94</a>    }
+<a href=#95 id=95 data-nosnippet>95</a>  }
+<a href=#96 id=96 data-nosnippet>96</a>
+<a href=#97 id=97 data-nosnippet>97</a>  <span class="macro">RequirePackage!</span>(<span class="string">"revtex4_support"</span>);
 <a href=#98 id=98 data-nosnippet>98</a>
-<a href=#99 id=99 data-nosnippet>99</a>  <span class="comment">// RevTeX3 decimal-alignment macros for tabular columns.
-<a href=#100 id=100 data-nosnippet>100</a>  //   \setdec 0.000   sets the format (read up to space)
-<a href=#101 id=101 data-nosnippet>101</a>  //   \dec    1.234   aligns the value
-<a href=#102 id=102 data-nosnippet>102</a>  // Used by ~12 cluster papers (nucl-th0002021 etc.) under
-<a href=#103 id=103 data-nosnippet>103</a>  // \documentstyle[prc,aps]{revtex}. Perl LaTeXML's revtex3_support
-<a href=#104 id=104 data-nosnippet>104</a>  // also lacks these — surpass-Perl stub. Decimal alignment is
-<a href=#105 id=105 data-nosnippet>105</a>  // irrelevant for HTML; pass the value through, drop the format spec.
-<a href=#106 id=106 data-nosnippet>106</a>  </span><span class="macro">RawTeX!</span>(<span class="string">"\\def\\setdec #1 {}"</span>);
-<a href=#107 id=107 data-nosnippet>107</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\def\\dec #1 {#1}"</span>);
-<a href=#108 id=108 data-nosnippet>108</a>
-<a href=#109 id=109 data-nosnippet>109</a>  <span class="comment">// \CITE — uppercase variant of \cite used in some revtex-era physics
-<a href=#110 id=110 data-nosnippet>110</a>  // papers (~11 cluster: cond-mat0003169, hep-ph0103298, etc.). Author
-<a href=#111 id=111 data-nosnippet>111</a>  // convention; not formally defined anywhere. Stub as alias to \cite
-<a href=#112 id=112 data-nosnippet>112</a>  // so the bib key is still resolved. Surpass-Perl (Perl LaTeXML also
-<a href=#113 id=113 data-nosnippet>113</a>  // errors here).
-<a href=#114 id=114 data-nosnippet>114</a>  </span><span class="macro">Let!</span>(<span class="string">"\\CITE"</span>, <span class="string">"\\cite"</span>);
-<a href=#115 id=115 data-nosnippet>115</a>});
+<a href=#99 id=99 data-nosnippet>99</a>  <span class="comment">//======================================================================
+<a href=#100 id=100 data-nosnippet>100</a>  // Additional or different definitions from revtex4_support
+<a href=#101 id=101 data-nosnippet>101</a>
+<a href=#102 id=102 data-nosnippet>102</a>  // REVTeX 3's own `\address` (aps.sty v3.1), the address of the author group before it (the group rule,
+<a href=#103 id=103 data-nosnippet>103</a>  // `annotate=run`, KNOWN_PERL_ERRORS #1190); revtex4's is its obsolete alias of `\affiliation`
+<a href=#104 id=104 data-nosnippet>104</a>  // (revtex4_support_sty.rs).
+<a href=#105 id=105 data-nosnippet>105</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\address{}"</span>, <span class="string">"\\lx@add@address[annotate=run]{#1}"</span>);
+<a href=#106 id=106 data-nosnippet>106</a>
+<a href=#107 id=107 data-nosnippet>107</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifpreprintsty"</span>);
+<a href=#108 id=108 data-nosnippet>108</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifsecnumbers"</span>);
+<a href=#109 id=109 data-nosnippet>109</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifsegabssty"</span>);
+<a href=#110 id=110 data-nosnippet>110</a>  <span class="comment">// Perl revtex 3 internals — `\iffirstfig`/`\iffirsttab` control float
+<a href=#111 id=111 data-nosnippet>111</a>  // placement on the first page; revtex 3 papers commonly set
+<a href=#112 id=112 data-nosnippet>112</a>  // `\firstfigfalse`/`\firsttabfalse` BEFORE `\begin{document}` to bypass
+<a href=#113 id=113 data-nosnippet>113</a>  // the kludge. The Perl LaTeXML bindings for revtex don't pre-define
+<a href=#114 id=114 data-nosnippet>114</a>  // these, so users' `\firstfigfalse`/`\firsttabfalse` raise undefined-CS
+<a href=#115 id=115 data-nosnippet>115</a>  // errors. Witness: hep-th0109174, cond-mat0005077.
+<a href=#116 id=116 data-nosnippet>116</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\iffirstfig"</span>);
+<a href=#117 id=117 data-nosnippet>117</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\iffirsttab"</span>);
+<a href=#118 id=118 data-nosnippet>118</a>  <span class="comment">// The switches the options set (revtex.sty v3.1:21-23, 53, 70-75).
+<a href=#119 id=119 data-nosnippet>119</a>  </span><span class="kw">if </span>lookup_bool(<span class="string">"revtex3@preprint"</span>) {
+<a href=#120 id=120 data-nosnippet>120</a>    <span class="macro">RawTeX!</span>(<span class="string">"\\global\\preprintstytrue"</span>);
+<a href=#121 id=121 data-nosnippet>121</a>  }
+<a href=#122 id=122 data-nosnippet>122</a>  <span class="kw">if </span>lookup_bool(<span class="string">"revtex3@segabs"</span>) {
+<a href=#123 id=123 data-nosnippet>123</a>    <span class="macro">RawTeX!</span>(<span class="string">"\\global\\segabsstytrue"</span>);
+<a href=#124 id=124 data-nosnippet>124</a>  }
+<a href=#125 id=125 data-nosnippet>125</a>  <span class="comment">// aps.sty v3.1:965-968 (REVTeX 3.1, as chao-dyn9701025 ships it) `\preprint` defines `\@preprint` only under
+<a href=#126 id=126 data-nosnippet>126</a>  // `\ifpreprintsty`, and `\@maketitle` prints it first (:1006-1010), with no reset at the document's start: a number
+<a href=#127 id=127 data-nosnippet>127</a>  // is printed in the preprint style wherever it is called, and is metadata otherwise (revtex4_support_sty.rs
+<a href=#128 id=128 data-nosnippet>128</a>  // `\lx@revtex@preprint@printed`/`…@identifier`; OXIDIZED_DESIGN_DIVERGENCES #770).
+<a href=#129 id=129 data-nosnippet>129</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#130 id=130 data-nosnippet>130</a>    <span class="string">"\\preprint"</span>,
+<a href=#131 id=131 data-nosnippet>131</a>    <span class="string">"\\ifpreprintsty\\expandafter\\lx@revtex@preprint@printed\\else\\expandafter\\lx@revtex@preprint@identifier\\fi"
+<a href=#132 id=132 data-nosnippet>132</a>  </span>);
+<a href=#133 id=133 data-nosnippet>133</a>  <span class="comment">// The substyle's numbering (aps.sty:220-227; seg.sty:247-253 the same without `\p@subsection`; osa.sty:195-202
+<a href=#134 id=134 data-nosnippet>134</a>  // with arabic sections): sections I, II, …, subsections A, B, … referenced with their section ("II A"),
+<a href=#135 id=135 data-nosnippet>135</a>  // subsubsections 1, 2, … ("II A 1").
+<a href=#136 id=136 data-nosnippet>136</a>  </span><span class="kw">let </span>society = lookup_string(<span class="string">"revtex3@society"</span>);
+<a href=#137 id=137 data-nosnippet>137</a>  <span class="kw">let </span>rmp = lookup_bool(<span class="string">"revtex3@rmp"</span>);
+<a href=#138 id=138 data-nosnippet>138</a>  <span class="macro">RawTeX!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(
+<a href=#139 id=139 data-nosnippet>139</a>    <span class="string">"\\def\\thesection{{{}}}\\def\\p@section{{}}\
+<a href=#140 id=140 data-nosnippet>140</a>     \\def\\thesubsection{{\\Alph{{subsection}}}}\\def\\p@subsection{{{}}}\
+<a href=#141 id=141 data-nosnippet>141</a>     \\def\\thesubsubsection{{\\arabic{{subsubsection}}}}\\def\\p@subsubsection{{{}}}\
+<a href=#142 id=142 data-nosnippet>142</a>     \\def\\theparagraph{{\\alph{{paragraph}}}}\\def\\thesubparagraph{{\\theparagraph.\\arabic{{subparagraph}}}}"</span>,
+<a href=#143 id=143 data-nosnippet>143</a>    <span class="kw">if </span>society == <span class="string">"osa" </span>{ <span class="string">"\\arabic{section}" </span>} <span class="kw">else </span>{ <span class="string">"\\Roman{section}" </span>},
+<a href=#144 id=144 data-nosnippet>144</a>    <span class="kw">if </span>rmp {
+<a href=#145 id=145 data-nosnippet>145</a>      <span class="string">"\\thesection."
+<a href=#146 id=146 data-nosnippet>146</a>    </span>} <span class="kw">else if </span>society == <span class="string">"seg" </span>{
+<a href=#147 id=147 data-nosnippet>147</a>      <span class="string">""
+<a href=#148 id=148 data-nosnippet>148</a>    </span>} <span class="kw">else </span>{
+<a href=#149 id=149 data-nosnippet>149</a>      <span class="string">"\\thesection\\,"
+<a href=#150 id=150 data-nosnippet>150</a>    </span>},
+<a href=#151 id=151 data-nosnippet>151</a>    <span class="kw">if </span>rmp { <span class="string">"\\thesection.\\thesubsection." </span>} <span class="kw">else </span>{ <span class="string">"\\thesection\\,\\thesubsection\\," </span>}
+<a href=#152 id=152 data-nosnippet>152</a>  ));
+<a href=#153 id=153 data-nosnippet>153</a>  <span class="comment">// aps.sty:358-365 (osa.sty:336-343, seg.sty:412-419): equations numbered `\theequation@prefix\arabic{equation}`;
+<a href=#154 id=154 data-nosnippet>154</a>  // under `eqsecnum` the counter is reset by each section and the prefix is the section's number in arabic, whatever
+<a href=#155 id=155 data-nosnippet>155</a>  // `\thesection` shows.
+<a href=#156 id=156 data-nosnippet>156</a>  </span><span class="macro">RawTeX!</span>(<span class="string">"\\def\\theequation@prefix{}\\def\\theequation{\\theequation@prefix\\arabic{equation}}"</span>);
+<a href=#157 id=157 data-nosnippet>157</a>  <span class="kw">if </span>lookup_bool(<span class="string">"revtex3@eqsecnum"</span>) {
+<a href=#158 id=158 data-nosnippet>158</a>    <span class="macro">RawTeX!</span>(<span class="string">"\\global\\secnumberstrue\\@addtoreset{equation}{section}\\def\\theequation@prefix{\\arabic{section}.}"</span>);
+<a href=#159 id=159 data-nosnippet>159</a>  }
+<a href=#160 id=160 data-nosnippet>160</a>  <span class="comment">// The appendix of the substyle's size file (aps12.sty:157-165, aps10.sty:178-186, osa12.sty:167-174): sections A,
+<a href=#161 id=161 data-nosnippet>161</a>  // B, …, subsections 1, 2, … ("A 1"), subsubsections a, b, …, equations A1, A2, … reset by each appendix (seg: A-1,
+<a href=#162 id=162 data-nosnippet>162</a>  // seg10.sty:205-221, seg12.sty:198-221). An unnumbered appendix steps the section counter all the same (aps.sty:280-295
+<a href=#163 id=163 data-nosnippet>163</a>  // `\@ssect`: `\ifappendixon\if@mainhead\stepcounter{section}`), so its equations are A1… too (cond-mat0006498,
+<a href=#164 id=164 data-nosnippet>164</a>  // chao-dyn9906002, gr-qc9803087, hep-th9605027).
+<a href=#165 id=165 data-nosnippet>165</a>  </span><span class="macro">Let!</span>(<span class="string">"\\lx@revtex@saved@appendix"</span>, <span class="string">"\\appendix"</span>);
+<a href=#166 id=166 data-nosnippet>166</a>  <span class="macro">RawTeX!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(
+<a href=#167 id=167 data-nosnippet>167</a>    <span class="string">"\\def\\appendix{{\\lx@revtex@saved@appendix\\global\\appendixontrue\
+<a href=#168 id=168 data-nosnippet>168</a>     \\def\\thesubsection{{\\arabic{{subsection}}}}\\def\\thesubsubsection{{\\alph{{subsubsection}}}}\
+<a href=#169 id=169 data-nosnippet>169</a>     \\def\\theequation@prefix{{\\thesection{}}}\\@addtoreset{{equation}}{{section}}}}"</span>,
+<a href=#170 id=170 data-nosnippet>170</a>    <span class="kw">if </span>society == <span class="string">"seg" </span>{ <span class="string">"-" </span>} <span class="kw">else </span>{ <span class="string">"" </span>}
+<a href=#171 id=171 data-nosnippet>171</a>  ));
+<a href=#172 id=172 data-nosnippet>172</a>  <span class="comment">// (the appendix's `\section` is the kernel's `\@@appendix`, `\let` to it by `\appendix`)
+<a href=#173 id=173 data-nosnippet>173</a>  </span><span class="macro">Let!</span>(<span class="string">"\\lx@revtex@saved@@appendix"</span>, <span class="string">"\\@@appendix"</span>);
+<a href=#174 id=174 data-nosnippet>174</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@@appendix"</span>, <span class="string">"\\@ifstar\\lx@revtex@appendix@ssect\\lx@revtex@saved@@appendix"</span>);
+<a href=#175 id=175 data-nosnippet>175</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@revtex@appendix@ssect"</span>, <span class="string">"\\stepcounter{section}\\lx@revtex@saved@@appendix*"</span>);
+<a href=#176 id=176 data-nosnippet>176</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\newif\\ifappendixon"</span>);
+<a href=#177 id=177 data-nosnippet>177</a>
+<a href=#178 id=178 data-nosnippet>178</a>  def_macro_noop(<span class="string">"\\eqsecnum"</span>)<span class="question-mark">?</span>;
+<a href=#179 id=179 data-nosnippet>179</a>  def_macro_noop(<span class="string">"\\tightenlines"</span>)<span class="question-mark">?</span>;
+<a href=#180 id=180 data-nosnippet>180</a>  def_macro_noop(<span class="string">"\\wideabs"</span>)<span class="question-mark">?</span>; <span class="comment">// wide abstract — takes an arg, but avoid reading it
+<a href=#181 id=181 data-nosnippet>181</a>
+<a href=#182 id=182 data-nosnippet>182</a>  // RevTeX's subequation numbering environment
+<a href=#183 id=183 data-nosnippet>183</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\mathletters"</span>,    <span class="string">"\\lx@equationgroup@subnumbering@begin"</span>);
+<a href=#184 id=184 data-nosnippet>184</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endmathletters"</span>, <span class="string">"\\lx@equationgroup@subnumbering@end"</span>);
+<a href=#185 id=185 data-nosnippet>185</a>
+<a href=#186 id=186 data-nosnippet>186</a>  <span class="comment">//======================================================================
+<a href=#187 id=187 data-nosnippet>187</a>  // Revtex3 equation environments with $ faketext trick
+<a href=#188 id=188 data-nosnippet>188</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\if@lx@revtex@faketext@"</span>);
+<a href=#189 id=189 data-nosnippet>189</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@lx@revtex@nestmath@"</span>);
+<a href=#190 id=190 data-nosnippet>190</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@revtex@faketext"</span>, <span class="string">"\\@lx@revtex@faketext@true\\hbox\\bgroup"</span>);
+<a href=#191 id=191 data-nosnippet>191</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@revtex@nestmath"</span>, <span class="string">"\\@lx@revtex@nestmath@true\\lx@dollar@default"</span>);
+<a href=#192 id=192 data-nosnippet>192</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@dollar@in@oldrevtex"</span>,
+<a href=#193 id=193 data-nosnippet>193</a>    <span class="string">"\\ifmmode\
+<a href=#194 id=194 data-nosnippet>194</a>       \\if@lx@revtex@nestmath@\\let\\@next\\lx@dollar@default\\else\\let\\@next\\lx@revtex@faketext\\fi\
+<a href=#195 id=195 data-nosnippet>195</a>     \\else\
+<a href=#196 id=196 data-nosnippet>196</a>       \\if@lx@revtex@faketext@\\let\\@next\\egroup\\else\\let\\@next\\lx@revtex@nestmath\\fi\
+<a href=#197 id=197 data-nosnippet>197</a>     \\fi\\@next"</span>);
+<a href=#198 id=198 data-nosnippet>198</a>
+<a href=#199 id=199 data-nosnippet>199</a>  <span class="comment">// The earlier latex_constructs.rs `\begin{equation}` is installed
+<a href=#200 id=200 data-nosnippet>200</a>  // with `locked =&gt; true`. Under Perl `loadLTXML`'s UNLOCK scope, the
+<a href=#201 id=201 data-nosnippet>201</a>  // redefinitions below override that lock — and Rust's `_load_binding`
+<a href=#202 id=202 data-nosnippet>202</a>  // now wraps the dispatcher in `local_state_unlocked_guard(true)`
+<a href=#203 id=203 data-nosnippet>203</a>  // (Package.pm:2318 parity), so no surgical lock-clear is needed.
+<a href=#204 id=204 data-nosnippet>204</a>
+<a href=#205 id=205 data-nosnippet>205</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{equation}"</span>,
+<a href=#206 id=206 data-nosnippet>206</a>    <span class="string">"&lt;ltx:equation xml:id='#id'&gt;\
+<a href=#207 id=207 data-nosnippet>207</a>     #tags\
+<a href=#208 id=208 data-nosnippet>208</a>     &lt;ltx:Math mode='display'&gt;&lt;ltx:XMath&gt;#body&lt;/ltx:XMath&gt;&lt;/ltx:Math&gt;\
+<a href=#209 id=209 data-nosnippet>209</a>     &lt;/ltx:equation&gt;"</span>,
+<a href=#210 id=210 data-nosnippet>210</a>    mode =&gt; <span class="string">"display_math"</span>,
+<a href=#211 id=211 data-nosnippet>211</a>    before_digest =&gt; {
+<a href=#212 id=212 data-nosnippet>212</a>      <span class="macro">Let!</span>(<span class="macro">T_MATH!</span>(), <span class="string">"\\lx@dollar@in@oldrevtex"</span>);
+<a href=#213 id=213 data-nosnippet>213</a>    },
+<a href=#214 id=214 data-nosnippet>214</a>    properties =&gt; { ref_step_counter_by_meaning(<span class="string">"equation"</span>) },
+<a href=#215 id=215 data-nosnippet>215</a>    locked =&gt; <span class="bool-val">true</span>);
+<a href=#216 id=216 data-nosnippet>216</a>
+<a href=#217 id=217 data-nosnippet>217</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{equation*}"</span>,
+<a href=#218 id=218 data-nosnippet>218</a>    <span class="string">"&lt;ltx:equation xml:id='#id'&gt;\
+<a href=#219 id=219 data-nosnippet>219</a>     &lt;ltx:Math mode='display'&gt;&lt;ltx:XMath&gt;#body&lt;/ltx:XMath&gt;&lt;/ltx:Math&gt;\
+<a href=#220 id=220 data-nosnippet>220</a>     &lt;/ltx:equation&gt;"</span>,
+<a href=#221 id=221 data-nosnippet>221</a>    mode =&gt; <span class="string">"display_math"</span>,
+<a href=#222 id=222 data-nosnippet>222</a>    before_digest =&gt; {
+<a href=#223 id=223 data-nosnippet>223</a>      <span class="macro">Let!</span>(<span class="macro">T_MATH!</span>(), <span class="string">"\\lx@dollar@in@oldrevtex"</span>);
+<a href=#224 id=224 data-nosnippet>224</a>    },
+<a href=#225 id=225 data-nosnippet>225</a>    properties =&gt; { ref_step_id(<span class="string">"equation"</span>) },
+<a href=#226 id=226 data-nosnippet>226</a>    locked =&gt; <span class="bool-val">true</span>);
+<a href=#227 id=227 data-nosnippet>227</a>
+<a href=#228 id=228 data-nosnippet>228</a>  <span class="comment">// Perl revtex3_support.sty.ltxml L90-101: DefConstructorI('\[', undef, ...,
+<a href=#229 id=229 data-nosnippet>229</a>  //   beforeDigest =&gt; sub { beginMode('display_math'); Let(T_MATH, '\lx@dollar@in@oldrevtex'); },
+<a href=#230 id=230 data-nosnippet>230</a>  //   captureBody =&gt; 1, properties =&gt; sub { RefStepID('equation') });
+<a href=#231 id=231 data-nosnippet>231</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\["</span>,
+<a href=#232 id=232 data-nosnippet>232</a>    <span class="string">"&lt;ltx:equation xml:id='#id'&gt;\
+<a href=#233 id=233 data-nosnippet>233</a>     &lt;ltx:Math mode='display'&gt;&lt;ltx:XMath&gt;#body&lt;/ltx:XMath&gt;&lt;/ltx:Math&gt;\
+<a href=#234 id=234 data-nosnippet>234</a>     &lt;/ltx:equation&gt;"</span>,
+<a href=#235 id=235 data-nosnippet>235</a>    before_digest =&gt; {
+<a href=#236 id=236 data-nosnippet>236</a>      begin_mode(<span class="string">"display_math"</span>)<span class="question-mark">?</span>;
+<a href=#237 id=237 data-nosnippet>237</a>      <span class="macro">Let!</span>(<span class="macro">T_MATH!</span>(), <span class="string">"\\lx@dollar@in@oldrevtex"</span>);
+<a href=#238 id=238 data-nosnippet>238</a>    },
+<a href=#239 id=239 data-nosnippet>239</a>    properties =&gt; { ref_step_id(<span class="string">"equation"</span>) },
+<a href=#240 id=240 data-nosnippet>240</a>    capture_body =&gt; <span class="bool-val">true</span>);
+<a href=#241 id=241 data-nosnippet>241</a>
+<a href=#242 id=242 data-nosnippet>242</a>  <span class="comment">// RevTeX3 decimal-alignment macros for tabular columns.
+<a href=#243 id=243 data-nosnippet>243</a>  //   \setdec 0.000   sets the format (read up to space)
+<a href=#244 id=244 data-nosnippet>244</a>  //   \dec    1.234   aligns the value
+<a href=#245 id=245 data-nosnippet>245</a>  // Used by ~12 cluster papers (nucl-th0002021 etc.) under
+<a href=#246 id=246 data-nosnippet>246</a>  // \documentstyle[prc,aps]{revtex}. Perl LaTeXML's revtex3_support
+<a href=#247 id=247 data-nosnippet>247</a>  // also lacks these — surpass-Perl stub. Decimal alignment is
+<a href=#248 id=248 data-nosnippet>248</a>  // irrelevant for HTML; pass the value through, drop the format spec.
+<a href=#249 id=249 data-nosnippet>249</a>  </span><span class="macro">RawTeX!</span>(<span class="string">"\\def\\setdec #1 {}"</span>);
+<a href=#250 id=250 data-nosnippet>250</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\def\\dec #1 {#1}"</span>);
+<a href=#251 id=251 data-nosnippet>251</a>
+<a href=#252 id=252 data-nosnippet>252</a>  <span class="comment">// \CITE — uppercase variant of \cite used in some revtex-era physics
+<a href=#253 id=253 data-nosnippet>253</a>  // papers (~11 cluster: cond-mat0003169, hep-ph0103298, etc.). Author
+<a href=#254 id=254 data-nosnippet>254</a>  // convention; not formally defined anywhere. Stub as alias to \cite
+<a href=#255 id=255 data-nosnippet>255</a>  // so the bib key is still resolved. Surpass-Perl (Perl LaTeXML also
+<a href=#256 id=256 data-nosnippet>256</a>  // errors here).
+<a href=#257 id=257 data-nosnippet>257</a>  </span><span class="macro">Let!</span>(<span class="string">"\\CITE"</span>, <span class="string">"\\cite"</span>);
+<a href=#258 id=258 data-nosnippet>258</a>
+<a href=#259 id=259 data-nosnippet>259</a>  <span class="comment">//======================================================================
+<a href=#260 id=260 data-nosnippet>260</a>  // REVTeX 2.1 (revtex.sty v2.1, APS 1991): not in TeX Live, its source survives embedded in arXiv papers
+<a href=#261 id=261 data-nosnippet>261</a>  // (hep-lat9302012.tex:978-2231, cited below as `revtex.sty v2.1:&lt;line of that file&gt;`). Papers written for it,
+<a href=#262 id=262 data-nosnippet>262</a>  // `\documentstyle[preprint,revtex]{aps}` or `\documentstyle[version2,aps]{revtex}` (an option REVTeX 3.0's
+<a href=#263 id=263 data-nosnippet>263</a>  // revtex.sty does not declare), reach this binding through the `revtex` option or class. Rust-only: Perl LaTeXML has
+<a href=#264 id=264 data-nosnippet>264</a>  // none of these, and `\begin{instit}` stops each such paper (750 run-336 papers: hep-ph9301226, cond-mat9408057,
+<a href=#265 id=265 data-nosnippet>265</a>  // cond-mat9311041, hep-lat9402019).
+<a href=#266 id=266 data-nosnippet>266</a>  //
+<a href=#267 id=267 data-nosnippet>267</a>  // The title is the body of a `{title}` environment (revtex.sty v2.1:1340-1350), which `\begin{title}` otherwise
+<a href=#268 id=268 data-nosnippet>268</a>  // read as `\title`'s one-token argument (the title "I", cond-mat9311041), and an `{instit}` environment
+<a href=#269 id=269 data-nosnippet>269</a>  // (:1383-1389) after an `\author` is that author's institution: the affiliation of the authors before it, as
+<a href=#270 id=270 data-nosnippet>270</a>  // REVTeX 4's `\affiliation`.
+<a href=#271 id=271 data-nosnippet>271</a>  </span><span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\begin{title}"</span>), <span class="prelude-val">None</span>, {
+<a href=#272 id=272 data-nosnippet>272</a>    <span class="prelude-val">Ok</span>(environment_body_as_argument(<span class="macro">T_CS!</span>(<span class="string">"\\title"</span>), <span class="string">"title"</span>)<span class="question-mark">?</span>)
+<a href=#273 id=273 data-nosnippet>273</a>  });
+<a href=#274 id=274 data-nosnippet>274</a>  <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\end{title}"</span>), <span class="prelude-val">None</span>, <span class="string">""</span>);
+<a href=#275 id=275 data-nosnippet>275</a>  <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\begin{instit}"</span>), <span class="prelude-val">None</span>, {
+<a href=#276 id=276 data-nosnippet>276</a>    <span class="prelude-val">Ok</span>(environment_body_as_argument(<span class="macro">T_CS!</span>(<span class="string">"\\affiliation"</span>), <span class="string">"instit"</span>)<span class="question-mark">?</span>)
+<a href=#277 id=277 data-nosnippet>277</a>  });
+<a href=#278 id=278 data-nosnippet>278</a>  <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\end{instit}"</span>), <span class="prelude-val">None</span>, <span class="string">""</span>);
+<a href=#279 id=279 data-nosnippet>279</a>  <span class="comment">// revtex.sty v2.1:1374 `\let\moreauthors=\author`
+<a href=#280 id=280 data-nosnippet>280</a>  </span><span class="macro">Let!</span>(<span class="string">"\\moreauthors"</span>, <span class="string">"\\author"</span>);
+<a href=#281 id=281 data-nosnippet>281</a>  <span class="comment">// revtex.sty v2.1:1391: the received date, centred as "(Received #1)"
+<a href=#282 id=282 data-nosnippet>282</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\receipt{}"</span>, <span class="string">"\\lx@add@date[role=received,name={\\lx@date@received@name}]{#1}"</span>);
+<a href=#283 id=283 data-nosnippet>283</a>  <span class="comment">// revtex.sty v2.1:1057-1058, 1064-1072: `\nonum` leaves the next section heading unnumbered (its
+<a href=#284 id=284 data-nosnippet>284</a>  // `\acknowledgments` is `\nonum\section{ACKNOWLEDGMENTS}`, :1123), the starred heading here; the paragraph ends and
+<a href=#285 id=285 data-nosnippet>285</a>  // column switches between them are kept (`\nonum\narrowtext\section`, cond-mat9303008; `\nonum` and a blank line,
+<a href=#286 id=286 data-nosnippet>286</a>  // hep-ph9206205).
+<a href=#287 id=287 data-nosnippet>287</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\nonum"</span>, {
+<a href=#288 id=288 data-nosnippet>288</a>    <span class="kw">let </span>headings = [<span class="macro">T_CS!</span>(<span class="string">"\\section"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\subsection"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\subsubsection"</span>)];
+<a href=#289 id=289 data-nosnippet>289</a>    <span class="kw">let </span>between = [<span class="macro">T_CS!</span>(<span class="string">"\\par"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\narrowtext"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\widetext"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\mediumtext"</span>)];
+<a href=#290 id=290 data-nosnippet>290</a>    <span class="kw">let </span><span class="kw-2">mut </span>read: Vec&lt;Token&gt; = Vec::new();
+<a href=#291 id=291 data-nosnippet>291</a>    <span class="kw">while let </span><span class="prelude-val">Some</span>(t) = read_token()<span class="question-mark">? </span>{
+<a href=#292 id=292 data-nosnippet>292</a>      read.push(t);
+<a href=#293 id=293 data-nosnippet>293</a>      <span class="kw">if </span>headings.contains(<span class="kw-2">&amp;</span>t) {
+<a href=#294 id=294 data-nosnippet>294</a>        read.push(<span class="macro">T_OTHER!</span>(<span class="string">"*"</span>));
+<a href=#295 id=295 data-nosnippet>295</a>        <span class="kw">break</span>;
+<a href=#296 id=296 data-nosnippet>296</a>      }
+<a href=#297 id=297 data-nosnippet>297</a>      <span class="kw">if </span>t.get_catcode() != Catcode::SPACE &amp;&amp; !between.contains(<span class="kw-2">&amp;</span>t) {
+<a href=#298 id=298 data-nosnippet>298</a>        <span class="kw">break</span>;
+<a href=#299 id=299 data-nosnippet>299</a>      }
+<a href=#300 id=300 data-nosnippet>300</a>    }
+<a href=#301 id=301 data-nosnippet>301</a>    <span class="prelude-val">Ok</span>(Tokens::new(read))
+<a href=#302 id=302 data-nosnippet>302</a>  });
+<a href=#303 id=303 data-nosnippet>303</a>  <span class="comment">// revtex.sty v2.1:1858-1860 `\tablenotes`: a table's notes, set below it in small type
+<a href=#304 id=304 data-nosnippet>304</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\tablenotes{}"</span>, <span class="string">"\\par{\\footnotesize #1}"</span>);
+<a href=#305 id=305 data-nosnippet>305</a>});
+<a href=#306 id=306 data-nosnippet>306</a>
+<a href=#307 id=307 data-nosnippet>307</a><span class="doccomment">/// `cs{&lt;body&gt;}`, the body of the environment `name` as the argument of `cs`: see [`read_environment_body`].
+<a href=#308 id=308 data-nosnippet>308</a></span><span class="kw">fn </span>environment_body_as_argument(cs: Token, name: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+<a href=#309 id=309 data-nosnippet>309</a>  <span class="kw">let </span><span class="kw-2">mut </span>call = <span class="macro">vec!</span>[cs, <span class="macro">T_BEGIN!</span>()];
+<a href=#310 id=310 data-nosnippet>310</a>  call.extend(read_environment_body(name)<span class="question-mark">?</span>.unlist());
+<a href=#311 id=311 data-nosnippet>311</a>  call.push(<span class="macro">T_END!</span>());
+<a href=#312 id=312 data-nosnippet>312</a>  <span class="prelude-val">Ok</span>(Tokens::new(call))
+<a href=#313 id=313 data-nosnippet>313</a>}
+<a href=#314 id=314 data-nosnippet>314</a>
+<a href=#315 id=315 data-nosnippet>315</a><span class="doccomment">/// The tokens of the environment `name`'s body, up to its `\end{name}` (a nested `\end{...}` is body), which is put
+<a href=#316 id=316 data-nosnippet>316</a>/// back so that the environment ends as usual; without the spaces around it (the line ends after `\begin{title}` and
+<a href=#317 id=317 data-nosnippet>317</a>/// before `\end{title}`), which REVTeX's environments ignore (revtex.sty v2.1:1340-1350 `\ignorespaces`, `\par`).
+<a href=#318 id=318 data-nosnippet>318</a></span><span class="kw">fn </span>read_environment_body(name: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+<a href=#319 id=319 data-nosnippet>319</a>  <span class="kw">let </span><span class="kw-2">mut </span>body: Vec&lt;Token&gt; = Vec::new();
+<a href=#320 id=320 data-nosnippet>320</a>  <span class="kw">while let </span><span class="prelude-val">Some</span>(token) = read_token()<span class="question-mark">? </span>{
+<a href=#321 id=321 data-nosnippet>321</a>    <span class="kw">if </span>token.get_catcode() == Catcode::BEGIN {
+<a href=#322 id=322 data-nosnippet>322</a>      body.push(token);
+<a href=#323 id=323 data-nosnippet>323</a>      body.extend(read_balanced(ExpansionLevel::Off, <span class="bool-val">false</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>.unlist());
+<a href=#324 id=324 data-nosnippet>324</a>      body.push(<span class="macro">T_END!</span>());
+<a href=#325 id=325 data-nosnippet>325</a>    } <span class="kw">else if </span>token == <span class="macro">T_CS!</span>(<span class="string">"\\end"</span>) {
+<a href=#326 id=326 data-nosnippet>326</a>      <span class="kw">let </span>env = read_arg(ExpansionLevel::Off)<span class="question-mark">?</span>;
+<a href=#327 id=327 data-nosnippet>327</a>      <span class="kw">if </span>env.to_string() == name {
+<a href=#328 id=328 data-nosnippet>328</a>        <span class="kw">let </span><span class="kw-2">mut </span>end = <span class="macro">vec!</span>[token, <span class="macro">T_BEGIN!</span>()];
+<a href=#329 id=329 data-nosnippet>329</a>        end.extend(env.unlist());
+<a href=#330 id=330 data-nosnippet>330</a>        end.push(<span class="macro">T_END!</span>());
+<a href=#331 id=331 data-nosnippet>331</a>        unread_vec(end);
+<a href=#332 id=332 data-nosnippet>332</a>        <span class="kw">break</span>;
+<a href=#333 id=333 data-nosnippet>333</a>      }
+<a href=#334 id=334 data-nosnippet>334</a>      body.push(token);
+<a href=#335 id=335 data-nosnippet>335</a>      body.push(<span class="macro">T_BEGIN!</span>());
+<a href=#336 id=336 data-nosnippet>336</a>      body.extend(env.unlist());
+<a href=#337 id=337 data-nosnippet>337</a>      body.push(<span class="macro">T_END!</span>());
+<a href=#338 id=338 data-nosnippet>338</a>    } <span class="kw">else </span>{
+<a href=#339 id=339 data-nosnippet>339</a>      body.push(token);
+<a href=#340 id=340 data-nosnippet>340</a>    }
+<a href=#341 id=341 data-nosnippet>341</a>  }
+<a href=#342 id=342 data-nosnippet>342</a>  <span class="kw">while </span>body
+<a href=#343 id=343 data-nosnippet>343</a>    .last()
+<a href=#344 id=344 data-nosnippet>344</a>    .is_some_and(|t| t.get_catcode() == Catcode::SPACE)
+<a href=#345 id=345 data-nosnippet>345</a>  {
+<a href=#346 id=346 data-nosnippet>346</a>    body.pop();
+<a href=#347 id=347 data-nosnippet>347</a>  }
+<a href=#348 id=348 data-nosnippet>348</a>  <span class="kw">let </span>lead = body
+<a href=#349 id=349 data-nosnippet>349</a>    .iter()
+<a href=#350 id=350 data-nosnippet>350</a>    .take_while(|t| t.get_catcode() == Catcode::SPACE)
+<a href=#351 id=351 data-nosnippet>351</a>    .count();
+<a href=#352 id=352 data-nosnippet>352</a>  body.drain(..lead);
+<a href=#353 id=353 data-nosnippet>353</a>  <span class="prelude-val">Ok</span>(Tokens::new(body))
+<a href=#354 id=354 data-nosnippet>354</a>}
 </code></pre></div></section></main></body></html>

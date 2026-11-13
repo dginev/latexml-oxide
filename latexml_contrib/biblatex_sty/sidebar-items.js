@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_definitions"]};
+window.SIDEBAR_ITEMS = {"constant":["BIBLATEX_VARIANT_OVERLAYS"],"fn":["load_definitions","load_variant"],"struct":["BiblatexOverlay"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["output_file_name","vfs_append_line","vfs_exists","vfs_read","vfs_remove","vfs_store"]};

@@ -1,45 +1,337 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/jfm_cls.rs`."><title>jfm_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>jfm_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Stub for jfm.cls (Journal of Fluid Mechanics).
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/jfm_cls.rs`."><title>jfm_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>jfm_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Stub for jfm.cls (Journal of Fluid Mechanics).
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! Author-bundled class commonly used by JFM submissions. Defines a few
 <a href=#4 id=4 data-nosnippet>4</a>//! frontmatter helpers that aren't in standard article (`\aff`, `\corresp`,
 <a href=#5 id=5 data-nosnippet>5</a>//! `\affiliation`). The cls itself isn't raw-loaded reliably; stub the
 <a href=#6 id=6 data-nosnippet>6</a>//! author-facing macros so submissions don't error on undefined CS.
 <a href=#7 id=7 data-nosnippet>7</a>//! Witness 2312.07468.
-<a href=#8 id=8 data-nosnippet>8</a></span><span class="kw">use </span>latexml_package::prelude::<span class="kw-2">*</span>;
-<a href=#9 id=9 data-nosnippet>9</a>
-<a href=#10 id=10 data-nosnippet>10</a><span class="macro">LoadDefinitions!</span>({
-<a href=#11 id=11 data-nosnippet>11</a>  <span class="macro">LoadClass!</span>(<span class="string">"OmniBus"</span>);
-<a href=#12 id=12 data-nosnippet>12</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amsmath"</span>);
-<a href=#13 id=13 data-nosnippet>13</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amssymb"</span>);
-<a href=#14 id=14 data-nosnippet>14</a>  <span class="macro">RequirePackage!</span>(<span class="string">"graphicx"</span>);
-<a href=#15 id=15 data-nosnippet>15</a>  <span class="macro">RequirePackage!</span>(<span class="string">"hyperref"</span>);
-<a href=#16 id=16 data-nosnippet>16</a>  <span class="macro">RequirePackage!</span>(<span class="string">"natbib"</span>);
-<a href=#17 id=17 data-nosnippet>17</a>
-<a href=#18 id=18 data-nosnippet>18</a>  <span class="comment">// jfm.cls L1498: \newcommand{\backsection}[2][\backsectionname]{...\textbf{#1.} #2...}
-<a href=#19 id=19 data-nosnippet>19</a>  // — a backmatter paragraph (Acknowledgements / Declaration of interests / Data
-<a href=#20 id=20 data-nosnippet>20</a>  // availability) with a bold title. Was undefined (Perl defines it). Render as the
-<a href=#21 id=21 data-nosnippet>21</a>  // faithful bold-title paragraph. The title is always given as the optional arg in
-<a href=#22 id=22 data-nosnippet>22</a>  // practice; default to "Acknowledgements". Witness 2309.14752.
-<a href=#23 id=23 data-nosnippet>23</a>  // jfm.cls: \newcommand\pagerange[1]{\gdef\@pagerange{#1}} — stores the page range
-<a href=#24 id=24 data-nosnippet>24</a>  // for the running head (no body output). Gobble (faithful: not rendered in body).
-<a href=#25 id=25 data-nosnippet>25</a>  // Was undefined. Witness 2406.18711.
-<a href=#26 id=26 data-nosnippet>26</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pagerange{}"</span>, <span class="string">""</span>);
-<a href=#27 id=27 data-nosnippet>27</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\backsectionname"</span>, <span class="string">"Acknowledgements"</span>);
-<a href=#28 id=28 data-nosnippet>28</a>  <span class="comment">// Optional title arg (always supplied in practice, e.g. [Acknowledgements] /
-<a href=#29 id=29 data-nosnippet>29</a>  // [Declaration of interests] / [Data availability statement]); empty default.
-<a href=#30 id=30 data-nosnippet>30</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\backsection[]{}"</span>, <span class="string">"\\par\\noindent\\textbf{#1.} #2\\par"</span>);
-<a href=#31 id=31 data-nosnippet>31</a>  <span class="comment">// jfm.cls L?: \def\aff#1{\ignorespaces\textsuperscript{#1}} — affil
-<a href=#32 id=32 data-nosnippet>32</a>  // marker as superscript.
-<a href=#33 id=33 data-nosnippet>33</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\aff{}"</span>, <span class="string">"\\textsuperscript{#1}"</span>);
-<a href=#34 id=34 data-nosnippet>34</a>  <span class="comment">// jfm.cls: \def\corresp#1{\unskip\thanks{#1}} — corresponding author
-<a href=#35 id=35 data-nosnippet>35</a>  // text routed via \thanks.
-<a href=#36 id=36 data-nosnippet>36</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\corresp{}"</span>, <span class="string">"\\thanks{#1}"</span>);
-<a href=#37 id=37 data-nosnippet>37</a>  <span class="comment">// \affiliation{...} — institution list, preserve as ltx:note.
-<a href=#38 id=38 data-nosnippet>38</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#39 id=39 data-nosnippet>39</a>    <span class="string">"\\affiliation{}"</span>,
-<a href=#40 id=40 data-nosnippet>40</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=affiliation]{#1}"
-<a href=#41 id=41 data-nosnippet>41</a>  </span>);
-<a href=#42 id=42 data-nosnippet>42</a>  <span class="comment">// \keywords{...} — JFM has its own keywords macro.
-<a href=#43 id=43 data-nosnippet>43</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\keywords{}"</span>, <span class="string">"\\@add@frontmatter{ltx:keywords}{#1}"</span>);
-<a href=#44 id=44 data-nosnippet>44</a>});
+<a href=#8 id=8 data-nosnippet>8</a></span><span class="kw">use </span>latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
+<a href=#9 id=9 data-nosnippet>9</a><span class="kw">use </span>latexml_package::prelude::<span class="kw-2">*</span>;
+<a href=#10 id=10 data-nosnippet>10</a>
+<a href=#11 id=11 data-nosnippet>11</a><span class="macro">LoadDefinitions!</span>({
+<a href=#12 id=12 data-nosnippet>12</a>  <span class="macro">LoadClass!</span>(<span class="string">"OmniBus"</span>);
+<a href=#13 id=13 data-nosnippet>13</a>  <span class="comment">// jfm.cls loads no amsmath (196 copies in a 1/20 arXiv sample): amsmath's commands for papers that use them unloaded,
+<a href=#14 id=14 data-nosnippet>14</a>  // its "Old form" error once the paper loads it; the paper's copy decides
+<a href=#15 id=15 data-nosnippet>15</a>  // (`amsmath_sty::require_amsmath_beyond_original`, KNOWN_PERL_ERRORS #993).
+<a href=#16 id=16 data-nosnippet>16</a>  </span>amsmath_sty::require_amsmath_beyond_original(
+<a href=#17 id=17 data-nosnippet>17</a>    latexml_package::shipped_class::shipped_copy_loads(<span class="string">"cls"</span>, <span class="string">"amsmath"</span>)<span class="question-mark">?</span>,
+<a href=#18 id=18 data-nosnippet>18</a>    <span class="kw-2">&amp;</span>[],
+<a href=#19 id=19 data-nosnippet>19</a>  )<span class="question-mark">?</span>;
+<a href=#20 id=20 data-nosnippet>20</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amssymb"</span>);
+<a href=#21 id=21 data-nosnippet>21</a>  <span class="macro">RequirePackage!</span>(<span class="string">"graphicx"</span>);
+<a href=#22 id=22 data-nosnippet>22</a>  <span class="macro">RequirePackage!</span>(<span class="string">"hyperref"</span>);
+<a href=#23 id=23 data-nosnippet>23</a>  <span class="macro">RequirePackage!</span>(<span class="string">"natbib"</span>);
+<a href=#24 id=24 data-nosnippet>24</a>  <span class="comment">// jfm.cls:663-712 builds subeqnarray in (2512.18771: `{subeqnarray}` undefined, its body read as text).
+<a href=#25 id=25 data-nosnippet>25</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"subeqnarray"</span>);
+<a href=#26 id=26 data-nosnippet>26</a>  <span class="comment">// jfm.cls (v1.27/v1.28 headers, which every copy keeps; line numbers from 2103.10260's v1.28 copy unless said)
+<a href=#27 id=27 data-nosnippet>27</a>  // :58, :72 `\newif\ifCUPmtlplainloaded`, set by the `prodtf` option for the press's own fonts (CUPTimes, jfm2esym,
+<a href=#28 id=28 data-nosnippet>28</a>  // :79; not distributed): the class and the template preamble test it around their font checks
+<a href=#29 id=29 data-nosnippet>29</a>  // (`\ifCUPmtlplainloaded \else \checkfont{eurm10} …`; run 340: 597 papers' first error; witnesses 2103.10260,
+<a href=#30 id=30 data-nosnippet>30</a>  // 2103.05851, 1904.02498). The newer copies' `lineno` option (2604.22963's :172, :186, :2239) loads the
+<a href=#31 id=31 data-nosnippet>31</a>  // lineno-FLM.sty the papers ship at the start of the document (`\nolinenumbers` in a title: 2401.13479, 2406.10975);
+<a href=#32 id=32 data-nosnippet>32</a>  // an older copy has no such option (2605.03843's v1.25, whose paper ships no lineno-FLM.sty: `[lineno]` is an unused
+<a href=#33 id=33 data-nosnippet>33</a>  // option there), so the option is the copy's when the paper has one.
+<a href=#34 id=34 data-nosnippet>34</a>  // The paper's own copy decides what follows where the versions differ: that option; caption, which 35 of 119 sampled
+<a href=#35 id=35 data-nosnippet>35</a>  // copies load (`\captionsetup`, run 340: 51; 2406.15733); the msam10 check's `\let\le=\leqslant` (73 copies,
+<a href=#36 id=36 data-nosnippet>36</a>  // active); the bold-italic sans `\mathsfbi` (below). Without a readable copy, the newer versions' choices.
+<a href=#37 id=37 data-nosnippet>37</a>  </span><span class="kw">let </span>shipped = <span class="kw">crate</span>::shipped_class::shipped_class_text(<span class="string">"jfm"</span>)<span class="question-mark">?</span>;
+<a href=#38 id=38 data-nosnippet>38</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\newif\ifCUPmtlplainloaded\newif\iflineno"</span>);
+<a href=#39 id=39 data-nosnippet>39</a>  <span class="macro">DeclareOption!</span>(<span class="string">"prodtf"</span>, <span class="string">"\\CUPmtlplainloadedtrue"</span>);
+<a href=#40 id=40 data-nosnippet>40</a>  <span class="kw">if </span>shipped
+<a href=#41 id=41 data-nosnippet>41</a>    .as_deref()
+<a href=#42 id=42 data-nosnippet>42</a>    .is_none_or(|text| <span class="kw">crate</span>::shipped_class::class_code_contains(text, <span class="string">"\\DeclareOption{lineno}"</span>))
+<a href=#43 id=43 data-nosnippet>43</a>  {
+<a href=#44 id=44 data-nosnippet>44</a>    <span class="macro">DeclareOption!</span>(<span class="string">"lineno"</span>, <span class="string">"\\linenotrue"</span>);
+<a href=#45 id=45 data-nosnippet>45</a>  }
+<a href=#46 id=46 data-nosnippet>46</a>  <span class="macro">DeclareOption!</span>(<span class="prelude-val">None</span>, {});
+<a href=#47 id=47 data-nosnippet>47</a>  <span class="macro">ProcessOptions!</span>();
+<a href=#48 id=48 data-nosnippet>48</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\iflineno\AtBeginDocument{\usepackage{lineno-FLM}}\fi"</span>);
+<a href=#49 id=49 data-nosnippet>49</a>  <span class="comment">// The copy's caption load keeps its options (2608.01828's :1837 `[…,labelsep=period,…]{caption}`: "Figure 1."); the
+<a href=#50 id=50 data-nosnippet>50</a>  // copies without caption print "Figure 1." with the label in small caps from their own `\@makecaption` (0712.2739's
+<a href=#51 id=51 data-nosnippet>51</a>  // :953-958 `{\normalfont\scshape #1\ifrem@fullpt\else .\fi} #2`, `\removefullpoint` dropping the period once),
+<a href=#52 id=52 data-nosnippet>52</a>  // which the kernel's caption keeps out (`\@makecaption keeps LaTeXML's definition`): its label format is the
+<a href=#53 id=53 data-nosnippet>53</a>  // figure's and table's title format, as amsart's (ams_support_sty.rs `ams_class_caption_format`), its font the label
+<a href=#54 id=54 data-nosnippet>54</a>  // font (`\fnum@font@&lt;type&gt;`, sect09.rs) under the class caption fonts knob alone. The document's caption package —
+<a href=#55 id=55 data-nosnippet>55</a>  // or subcaption's or subfig's, which load it — replaces the class's `\@makecaption` ("Figure 1:" in the text font;
+<a href=#56 id=56 data-nosnippet>56</a>  // 1711.01065, 2205.10181, 2507.07213 subcaption, 1805.00129 subfig), the old subfigure package does not, nor
+<a href=#57 id=57 data-nosnippet>57</a>  // floatrow, which loads caption's kernel alone (floatrow.sty:39 `caption3`, whose stand-in is our caption binding:
+<a href=#58 id=58 data-nosnippet>58</a>  // `\lx@caption@kernel@only`; 2312.13002, 2111.12004): so the format is the class's only where caption is not loaded
+<a href=#59 id=59 data-nosnippet>59</a>  // by `\begin{document}`; `\removefullpoint` is the copy's either way. Before, both gave "Figure 1:"
+<a href=#60 id=60 data-nosnippet>60</a>  // (OXIDIZED_DESIGN_DIVERGENCES #784; guards `perfect_kernel_batch78a::{
+<a href=#61 id=61 data-nosnippet>61</a>  // jfm_copy_captions_end_the_label_with_a_period, jfm_copy_caption_package_keeps_its_options,
+<a href=#62 id=62 data-nosnippet>62</a>  // jfm_copy_caption_yields_to_caption_loaders, jfm_copy_caption_kept_with_subfigure,
+<a href=#63 id=63 data-nosnippet>63</a>  // jfm_copy_caption_kept_with_floatrow}`).
+<a href=#64 id=64 data-nosnippet>64</a>  </span><span class="kw">if </span>shipped
+<a href=#65 id=65 data-nosnippet>65</a>    .as_deref()
+<a href=#66 id=66 data-nosnippet>66</a>    .is_some_and(|text| <span class="kw">crate</span>::shipped_class::class_code_contains(text, <span class="string">"rem@fullpt"</span>))
+<a href=#67 id=67 data-nosnippet>67</a>  {
+<a href=#68 id=68 data-nosnippet>68</a>    <span class="macro">RawTeX!</span>(<span class="string">r"\newif\ifrem@fullpt\def\removefullpoint{\global\rem@fullpttrue}"</span>);
+<a href=#69 id=69 data-nosnippet>69</a>  }
+<a href=#70 id=70 data-nosnippet>70</a>  <span class="kw">match </span>shipped.as_deref() {
+<a href=#71 id=71 data-nosnippet>71</a>    <span class="prelude-val">None </span>=&gt; <span class="macro">RequirePackage!</span>(<span class="string">"caption"</span>),
+<a href=#72 id=72 data-nosnippet>72</a>    <span class="prelude-val">Some</span>(text) <span class="kw">if </span><span class="kw">crate</span>::shipped_class::class_text_loads(text, <span class="string">"caption"</span>) =&gt; {
+<a href=#73 id=73 data-nosnippet>73</a>      <span class="comment">// The dependency scan declines a `\usepackage` it cannot read as the class's (a `\def` body, a comment block):
+<a href=#74 id=74 data-nosnippet>74</a>      // caption is loaded all the same.
+<a href=#75 id=75 data-nosnippet>75</a>      </span><span class="kw">if </span>!<span class="kw">crate</span>::shipped_class::require_shipped_packages(<span class="string">"cls"</span>, <span class="kw-2">&amp;</span>[<span class="string">"caption"</span>])<span class="question-mark">? </span>{
+<a href=#76 id=76 data-nosnippet>76</a>        <span class="macro">RequirePackage!</span>(<span class="string">"caption"</span>);
+<a href=#77 id=77 data-nosnippet>77</a>      }
+<a href=#78 id=78 data-nosnippet>78</a>    },
+<a href=#79 id=79 data-nosnippet>79</a>    <span class="prelude-val">Some</span>(text) =&gt; {
+<a href=#80 id=80 data-nosnippet>80</a>      <span class="kw">if </span><span class="kw">crate</span>::shipped_class::class_code_contains(text, <span class="string">"\\@makecaption"</span>)
+<a href=#81 id=81 data-nosnippet>81</a>        &amp;&amp; <span class="kw">crate</span>::shipped_class::class_code_contains(text, <span class="string">"rem@fullpt"</span>)
+<a href=#82 id=82 data-nosnippet>82</a>      {
+<a href=#83 id=83 data-nosnippet>83</a>        <span class="comment">// (the class's `\@makecaption` for every kernel float, a newfloat type's as a figure's: `\lx@makecaption`; its
+<a href=#84 id=84 data-nosnippet>84</a>        // small-caps label under the class caption fonts knob alone, caption_sty.rs `CLASS_CAPTION_FONTS`)
+<a href=#85 id=85 data-nosnippet>85</a>        </span><span class="kw">let </span>fonts = <span class="kw">if </span>caption_sty::class_caption_fonts() {
+<a href=#86 id=86 data-nosnippet>86</a>          <span class="string">r"\def\fnum@font@float{\scshape}\def\fnum@font@figure{\scshape}\def\fnum@font@table{\scshape}%"
+<a href=#87 id=87 data-nosnippet>87</a>        </span>} <span class="kw">else </span>{
+<a href=#88 id=88 data-nosnippet>88</a>          <span class="string">""
+<a href=#89 id=89 data-nosnippet>89</a>        </span>};
+<a href=#90 id=90 data-nosnippet>90</a>        caption_sty::class_makecaption(<span class="kw-2">&amp;</span><span class="macro">s!</span>(
+<a href=#91 id=91 data-nosnippet>91</a>          <span class="string">r"{fonts}
+<a href=#92 id=92 data-nosnippet>92</a>\long\def\lx@makecaption##1##2{{\lx@tag[][\ifrem@fullpt\space\else. \fi]{{\lx@fnum@@{{##1}}}}##2\global\rem@fullptfalse}}%
+<a href=#93 id=93 data-nosnippet>93</a>\long\def\format@title@figure##1{{\lx@makecaption{{figure}}{{##1}}}}\long\def\format@title@table##1{{\lx@makecaption{{table}}{{##1}}}}"
+<a href=#94 id=94 data-nosnippet>94</a>        </span>))<span class="question-mark">?</span>;
+<a href=#95 id=95 data-nosnippet>95</a>      }
+<a href=#96 id=96 data-nosnippet>96</a>    },
+<a href=#97 id=97 data-nosnippet>97</a>  }
+<a href=#98 id=98 data-nosnippet>98</a>  <span class="comment">// jfm.cls:1176-1183 `\checkfont` and the font checks every version runs (:1324-1365): amsbsy, and upmath when the
+<a href=#99 id=99 data-nosnippet>99</a>  // Euler fonts are found and the paper ships upmath.sty (TeX Live has none, so `\upi` is the class's `\pi`; witnesses
+<a href=#100 id=100 data-nosnippet>100</a>  // 2103.06961, 1904.11981); msam10 is found, so amssymb loads and, where the copy has it, `\le`, `\leq`, `\ge`, `\geq`
+<a href=#101 id=101 data-nosnippet>101</a>  // become the slanted ⩽ ⩾ (:1355-1363).
+<a href=#102 id=102 data-nosnippet>102</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#103 id=103 data-nosnippet>103</a>    <span class="string">r"\newif\iffontfound
+<a href=#104 id=104 data-nosnippet>104</a>\newcommand\checkfont[1]{\batchmode\font\test=#1\relax\errorstopmode\fontfoundfalse\ifx\test\nullfont\else\fontfoundtrue\fi}
+<a href=#105 id=105 data-nosnippet>105</a>\ifCUPmtlplainloaded\else
+<a href=#106 id=106 data-nosnippet>106</a>  \IfFileExists{amsbsy.sty}{\usepackage{amsbsy}}{\providecommand\boldsymbol[1]{\mbox{\boldmath $##1$}}}
+<a href=#107 id=107 data-nosnippet>107</a>  \checkfont{eurm10}
+<a href=#108 id=108 data-nosnippet>108</a>  \iffontfound\IfFileExists{upmath.sty}{\usepackage{upmath}}{\providecommand\upi{\pi}}\else\providecommand\upi{\pi}\fi
+<a href=#109 id=109 data-nosnippet>109</a>\fi"
+<a href=#110 id=110 data-nosnippet>110</a>  </span>);
+<a href=#111 id=111 data-nosnippet>111</a>  <span class="kw">if </span>shipped.as_deref().is_none_or(slants_inequalities) {
+<a href=#112 id=112 data-nosnippet>112</a>    <span class="macro">RawTeX!</span>(
+<a href=#113 id=113 data-nosnippet>113</a>      <span class="string">r"\ifCUPmtlplainloaded\else\let\le=\leqslant\let\leq=\leqslant\let\ge=\geqslant\let\geq=\geqslant\fi"
+<a href=#114 id=114 data-nosnippet>114</a>    </span>);
+<a href=#115 id=115 data-nosnippet>115</a>  }
+<a href=#116 id=116 data-nosnippet>116</a>  <span class="comment">// The author conveniences of the class versions (union of 119 sampled copies): what one version defines another may
+<a href=#117 id=117 data-nosnippet>117</a>  // not, so a paper whose copy lacks one defines it itself, and its own `\newcommand` wins over ours
+<a href=#118 id=118 data-nosnippet>118</a>  // (`DefinitionOrigin::Fallback`, as a fallback class's guesses do). Run 340 first errors: `\Rey` 321, `\mathsfbi`
+<a href=#119 id=119 data-nosnippet>119</a>  // 136, `\ns` 97, `\ls` 88, `\bnabla` 82, `\p` 52, `\bcdot` 50, `\Pran` 33 (witnesses 2508.02297, 2604.04559,
+<a href=#120 id=120 data-nosnippet>120</a>  // 1309.5858, 2103.06764, 2103.16498, 2103.09196, 1904.11400, 1904.04853).
+<a href=#121 id=121 data-nosnippet>121</a>  </span>{
+<a href=#122 id=122 data-nosnippet>122</a>    <span class="kw">let </span>_guess = OriginGuard::new(DefinitionOrigin::Fallback);
+<a href=#123 id=123 data-nosnippet>123</a>    <span class="comment">// :1107-1108 author-list spacing; :1269-1275 multi-letter symbols (`\Ray` in 2211.00559's copy); :1263-1266 bold
+<a href=#124 id=124 data-nosnippet>124</a>    // symbols; :1278-1291 Bessel functions, sans-serif letters, hats; :1293-1321 the template's shorthands.
+<a href=#125 id=125 data-nosnippet>125</a>    </span><span class="macro">RawTeX!</span>(
+<a href=#126 id=126 data-nosnippet>126</a>      <span class="string">r"\newcommand\ls{\kern.15em\relax}
+<a href=#127 id=127 data-nosnippet>127</a>\newcommand\ns{\kern.5em\relax}
+<a href=#128 id=128 data-nosnippet>128</a>\newcommand\dynpercm{\nobreak\mbox{$\;$dyn\,cm$^{-1}$}}
+<a href=#129 id=129 data-nosnippet>129</a>\newcommand\cmpermin{\nobreak\mbox{$\;$cm\,min$^{-1}$}}
+<a href=#130 id=130 data-nosnippet>130</a>\providecommand\bnabla{\boldsymbol{\nabla}}
+<a href=#131 id=131 data-nosnippet>131</a>\providecommand\bcdot{\boldsymbol{\cdot}}
+<a href=#132 id=132 data-nosnippet>132</a>\newcommand\biS{\boldsymbol{S}}
+<a href=#133 id=133 data-nosnippet>133</a>\newcommand\etb{\boldsymbol{\eta}}
+<a href=#134 id=134 data-nosnippet>134</a>\newcommand\Real{\mbox{Re}}
+<a href=#135 id=135 data-nosnippet>135</a>\newcommand\Imag{\mbox{Im}}
+<a href=#136 id=136 data-nosnippet>136</a>\newcommand\Rey{\mbox{\textit{Re}}}
+<a href=#137 id=137 data-nosnippet>137</a>\newcommand\Pran{\mbox{\textit{Pr}}}
+<a href=#138 id=138 data-nosnippet>138</a>\newcommand\Pen{\mbox{\textit{Pe}}}
+<a href=#139 id=139 data-nosnippet>139</a>\newcommand\Ray{\mbox{\textit{Ra}}}
+<a href=#140 id=140 data-nosnippet>140</a>\newcommand\Ai{\mbox{Ai}}
+<a href=#141 id=141 data-nosnippet>141</a>\newcommand\Bi{\mbox{Bi}}
+<a href=#142 id=142 data-nosnippet>142</a>\newcommand\rmJ{{\rm J}}
+<a href=#143 id=143 data-nosnippet>143</a>\newcommand\rmY{{\rm Y}}
+<a href=#144 id=144 data-nosnippet>144</a>\newcommand\rmK{{\rm K}}
+<a href=#145 id=145 data-nosnippet>145</a>\newcommand\rmI{{\rm I}}
+<a href=#146 id=146 data-nosnippet>146</a>\newcommand\ssC{\mathsf{C}}
+<a href=#147 id=147 data-nosnippet>147</a>\newcommand\sfsP{\mathsfi{P}}
+<a href=#148 id=148 data-nosnippet>148</a>\newcommand\slsQ{\mathsfbi{Q}}
+<a href=#149 id=149 data-nosnippet>149</a>\newcommand\hatp{\skew3\hat{p}}
+<a href=#150 id=150 data-nosnippet>150</a>\newcommand\hatR{\skew3\hat{R}}
+<a href=#151 id=151 data-nosnippet>151</a>\newcommand\hatRR{\skew3\hat{\hatR}}
+<a href=#152 id=152 data-nosnippet>152</a>\newcommand\doubletildesigma{\skew2\tilde{\skew2\tilde{\Sigma}}}
+<a href=#153 id=153 data-nosnippet>153</a>\newsavebox{\astrutbox}
+<a href=#154 id=154 data-nosnippet>154</a>\sbox{\astrutbox}{\rule[-5pt]{0pt}{20pt}}
+<a href=#155 id=155 data-nosnippet>155</a>\newcommand{\astrut}{\usebox{\astrutbox}}
+<a href=#156 id=156 data-nosnippet>156</a>\newcommand\GaPQ{\ensuremath{G_a(P,Q)}}
+<a href=#157 id=157 data-nosnippet>157</a>\newcommand\GsPQ{\ensuremath{G_s(P,Q)}}
+<a href=#158 id=158 data-nosnippet>158</a>\newcommand\p{\ensuremath{\partial}}
+<a href=#159 id=159 data-nosnippet>159</a>\newcommand\tti{\ensuremath{\rightarrow\infty}}
+<a href=#160 id=160 data-nosnippet>160</a>\newcommand\kgd{\ensuremath{k\gamma d}}
+<a href=#161 id=161 data-nosnippet>161</a>\newcommand\shalf{\ensuremath{{\scriptstyle\frac{1}{2}}}}
+<a href=#162 id=162 data-nosnippet>162</a>\newcommand\sh{\ensuremath{^{\shalf}}}
+<a href=#163 id=163 data-nosnippet>163</a>\newcommand\smh{\ensuremath{^{-\shalf}}}
+<a href=#164 id=164 data-nosnippet>164</a>\newcommand\squart{\ensuremath{{\textstyle\frac{1}{4}}}}
+<a href=#165 id=165 data-nosnippet>165</a>\newcommand\thalf{\ensuremath{{\textstyle\frac{1}{2}}}}
+<a href=#166 id=166 data-nosnippet>166</a>\newcommand\Gat{\ensuremath{\widetilde{G_a}}}
+<a href=#167 id=167 data-nosnippet>167</a>\newcommand\ttz{\ensuremath{\rightarrow 0}}
+<a href=#168 id=168 data-nosnippet>168</a>\newcommand\ndq{\ensuremath{\frac{\mbox{$\partial$}}{\mbox{$\partial$} n_q}}}
+<a href=#169 id=169 data-nosnippet>169</a>\newcommand\sumjm{\ensuremath{\sum_{j=1}^{M}}}
+<a href=#170 id=170 data-nosnippet>170</a>\newcommand\pvi{\ensuremath{\int_0^{\infty}\mskip\ifCUPmtlplainloaded -30mu\else -33mu\fi -\quad}}
+<a href=#171 id=171 data-nosnippet>171</a>\newcommand\etc{etc.\ }
+<a href=#172 id=172 data-nosnippet>172</a>\newcommand\eg{e.g.\ }"
+<a href=#173 id=173 data-nosnippet>173</a>    </span>);
+<a href=#174 id=174 data-nosnippet>174</a>    <span class="comment">// The sans-serif math alphabets (2103.09196's copy :173-187): the newer copies' bold-italic sans comes from
+<a href=#175 id=175 data-nosnippet>175</a>    // Helvetica where its font descriptions are installed (they test t1phv.fd, then ot1phv.fd, and TeX Live has both,
+<a href=#176 id=176 data-nosnippet>176</a>    // so pdflatex ends with OT1/phv/b/it); the older copies' `\mathsfbi` is slanted medium cmss (0712.2739's :166).
+<a href=#177 id=177 data-nosnippet>177</a>    // `\mathbi` (:1443) is `\boldsymbol`.
+<a href=#178 id=178 data-nosnippet>178</a>    </span><span class="macro">RawTeX!</span>(
+<a href=#179 id=179 data-nosnippet>179</a>      <span class="string">r"\DeclareTextFontCommand\textsfi{\usefont{OT1}{cmss}{m}{sl}}
+<a href=#180 id=180 data-nosnippet>180</a>\DeclareMathAlphabet\mathsfi{OT1}{cmss}{m}{sl}
+<a href=#181 id=181 data-nosnippet>181</a>\DeclareTextFontCommand\textsfb{\usefont{OT1}{cmss}{bx}{n}}
+<a href=#182 id=182 data-nosnippet>182</a>\DeclareMathAlphabet\mathsfb{OT1}{cmss}{bx}{n}
+<a href=#183 id=183 data-nosnippet>183</a>\let\mathbi\boldsymbol"
+<a href=#184 id=184 data-nosnippet>184</a>    </span>);
+<a href=#185 id=185 data-nosnippet>185</a>    <span class="kw">if </span>shipped
+<a href=#186 id=186 data-nosnippet>186</a>      .as_deref()
+<a href=#187 id=187 data-nosnippet>187</a>      .is_none_or(|text| text.contains(<span class="string">"{phv}{b}{it}"</span>))
+<a href=#188 id=188 data-nosnippet>188</a>    {
+<a href=#189 id=189 data-nosnippet>189</a>      <span class="macro">RawTeX!</span>(
+<a href=#190 id=190 data-nosnippet>190</a>        <span class="string">r"\DeclareTextFontCommand\textsfbi{\usefont{OT1}{phv}{b}{it}}\DeclareMathAlphabet\mathsfbi{OT1}{phv}{b}{it}"
+<a href=#191 id=191 data-nosnippet>191</a>      </span>);
+<a href=#192 id=192 data-nosnippet>192</a>    } <span class="kw">else </span>{
+<a href=#193 id=193 data-nosnippet>193</a>      <span class="macro">RawTeX!</span>(
+<a href=#194 id=194 data-nosnippet>194</a>        <span class="string">r"\DeclareTextFontCommand\textsfbi{\usefont{OT1}{cmss}{m}{sl}}\DeclareMathAlphabet\mathsfbi{OT1}{cmss}{m}{sl}"
+<a href=#195 id=195 data-nosnippet>195</a>      </span>);
+<a href=#196 id=196 data-nosnippet>196</a>    }
+<a href=#197 id=197 data-nosnippet>197</a>    <span class="comment">// :385-389 `\oneappendix`, a single appendix (the class titles it "Appendix" without a letter, which this
+<a href=#198 id=198 data-nosnippet>198</a>    // `\appendix` still prints: a residual); :1378 `\aunote` (`\corresp`'s twin); the newest copies' `\corresau`
+<a href=#199 id=199 data-nosnippet>199</a>    // (2604.22963's :2193), printed under the title as "Corresponding author: …".
+<a href=#200 id=200 data-nosnippet>200</a>    </span><span class="macro">RawTeX!</span>(
+<a href=#201 id=201 data-nosnippet>201</a>      <span class="string">r"\newif\ifappendix\newif\ifoneappendix\newcommand\oneappendix{\global\oneappendixtrue\appendix}"
+<a href=#202 id=202 data-nosnippet>202</a>    </span>);
+<a href=#203 id=203 data-nosnippet>203</a>    <span class="comment">// The figure-caption legend symbols (1702.03412's :1380-1405: `\fullcirc`, `\opencirc`, `\fullsquare`, the line
+<a href=#204 id=204 data-nosnippet>204</a>    // styles `\full`, `\dashed`, `\dotted`, `\chain`, …; 73 of 85 copies, 29 papers: 1702.03412, 1806.08341,
+<a href=#205 id=205 data-nosnippet>205</a>    // 1909.12979) and the upright capital Greek (:1419-1429 `\let\rmDelta\Delta`, …; 2004.10578, 2207.01368).
+<a href=#206 id=206 data-nosnippet>206</a>    </span><span class="macro">RawTeX!</span>(
+<a href=#207 id=207 data-nosnippet>207</a>      <span class="string">r"\newcommand{\opensquare}{\mbox{$\square$}}\newcommand{\opentriangle}{\mbox{$\vartriangle$}}
+<a href=#208 id=208 data-nosnippet>208</a>\newcommand{\opentriangledown}{\mbox{$\triangledown$}}\newcommand{\opendiamond}{\mbox{$\lozenge$}}
+<a href=#209 id=209 data-nosnippet>209</a>\newcommand{\fullsquare}{\mbox{$\blacksquare$}}\newcommand{\fulldiamond}{\mbox{$\blacklozenge$}}
+<a href=#210 id=210 data-nosnippet>210</a>\newcommand{\fullstar}{\mbox{$\bigstar$}}\newcommand{\fulltriangle}{\mbox{$\blacktriangle$}}\let\fulltri=\fulltriangle
+<a href=#211 id=211 data-nosnippet>211</a>\newcommand{\fulltriangledown}{\mbox{$\blacktriangledown$}}\let\fulltridown=\fulltriangledown
+<a href=#212 id=212 data-nosnippet>212</a>\newcommand{\opencirc}{\mbox{\Large$\circ$}}\newcommand{\opensqr}{\mbox{$\square$}}\newcommand{\opentri}{\mbox{$\triangle$}}
+<a href=#213 id=213 data-nosnippet>213</a>\newcommand{\opentridown}{\mbox{$\bigtriangledown$}}\newcommand{\fullcirc}{\mbox{{\Large$\bullet$}}}
+<a href=#214 id=214 data-nosnippet>214</a>\newcommand{\fullsqr}{\,\vrule height5pt depth0pt width5pt}
+<a href=#215 id=215 data-nosnippet>215</a>\newcommand{\dotted}{\protect\mbox{${\mathinner{\cdotp\cdotp\cdotp\cdotp\cdotp\cdotp}}$}}
+<a href=#216 id=216 data-nosnippet>216</a>\newcommand{\dashed}{\protect\mbox{-\ -\ -\ -}}\newcommand{\broken}{\protect\mbox{-- -- --}}
+<a href=#217 id=217 data-nosnippet>217</a>\newcommand{\longbroken}{\protect\mbox{--- --- ---}}\newcommand{\chain}{\protect\mbox{--- $\cdot$ ---}}
+<a href=#218 id=218 data-nosnippet>218</a>\newcommand{\dashddot}{\protect\mbox{--- $\cdot$ $\cdot$ ---}}\newcommand{\full}{\protect\mbox{------}}
+<a href=#219 id=219 data-nosnippet>219</a>\let\rmGamma\Gamma\let\rmDelta\Delta\let\rmTheta\Theta\let\rmLambda\Lambda\let\rmXi\Xi\let\rmPi\Pi
+<a href=#220 id=220 data-nosnippet>220</a>\let\rmSigma\Sigma\let\rmUpsilon\Upsilon\let\rmPhi\Phi\let\rmPsi\Psi\let\rmOmega\Omega"
+<a href=#221 id=221 data-nosnippet>221</a>    </span>);
+<a href=#222 id=222 data-nosnippet>222</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\aunote{}"</span>, <span class="string">"\\thanks{#1}"</span>);
+<a href=#223 id=223 data-nosnippet>223</a>    <span class="macro">DefMacro!</span>(
+<a href=#224 id=224 data-nosnippet>224</a>      <span class="string">"\\corresau{}"</span>,
+<a href=#225 id=225 data-nosnippet>225</a>      <span class="string">"\\@add@frontmatter{ltx:note}[role=corresponding]{#1}"
+<a href=#226 id=226 data-nosnippet>226</a>    </span>);
+<a href=#227 id=227 data-nosnippet>227</a>  }
+<a href=#228 id=228 data-nosnippet>228</a>
+<a href=#229 id=229 data-nosnippet>229</a>  <span class="comment">// Every version's (85 of 85 copies; 1702.03412's lines): the subequation number "(2.1\textit{a})" (:649) and
+<a href=#230 id=230 data-nosnippet>230</a>  // `\returnthesubequation`, which re-establishes it after a paper's own `{subeqnarray}` numbering (:641-642;
+<a href=#231 id=231 data-nosnippet>231</a>  // cond-mat0107563, cond-mat0306566; 14 papers), `\useAMSsubequations` (:624-625; 2304.12657, 2601.23025,
+<a href=#232 id=232 data-nosnippet>232</a>  // 2608.01542), the title page's `\norule` and `\followon` and the footnote's `\fulloutfootnote` (:1066-1070,
+<a href=#233 id=233 data-nosnippet>233</a>  // :733-734), the class's `\indexsize` (:136) and `\boldit` (:166-167) and the theorem spacing `\halflineskip`
+<a href=#234 id=234 data-nosnippet>234</a>  // (:217-218).
+<a href=#235 id=235 data-nosnippet>235</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#236 id=236 data-nosnippet>236</a>    <span class="string">r"\renewcommand\thesubequation{\theequation{\itshape\@alph\c@subequation}}
+<a href=#237 id=237 data-nosnippet>237</a>\newcommand\returnthesubequation{\gdef\thesubequation{\theequation{\itshape\@alph\c@subequation}}}
+<a href=#238 id=238 data-nosnippet>238</a>\newif\ifuseAMSsubequ\newcommand\useAMSsubequations{\global\useAMSsubequtrue}
+<a href=#239 id=239 data-nosnippet>239</a>\newif\iffollowon\newif\ifrmrule\newcommand\followon{\global\followontrue}\newcommand\norule{\global\rmruletrue}
+<a href=#240 id=240 data-nosnippet>240</a>\newif\iffofootnote\newcommand\fulloutfootnote{\global\fofootnotetrue}
+<a href=#241 id=241 data-nosnippet>241</a>\newcommand\indexsize{\@setfontsize\indexsize\@viiipt\@ixpt}
+<a href=#242 id=242 data-nosnippet>242</a>\newcommand\boldit{\usefont{OT1}{cmr}{bx}{it}\fontsize{10}{\f@baselineskip}\selectfont}
+<a href=#243 id=243 data-nosnippet>243</a>\newlength\halflineskip\setlength\halflineskip{6\p@ \@plus .5\p@ \@minus .5\p@}"
+<a href=#244 id=244 data-nosnippet>244</a>  </span>);
+<a href=#245 id=245 data-nosnippet>245</a>  <span class="comment">// Every version numbers the equations within the sections, "(2.1)" (v1.23-v1.28, cond-mat0107563's, 2608.04345's and
+<a href=#246 id=246 data-nosnippet>246</a>  // 2103.10260's copies: :615 `\renewcommand\theequation{\thesection.\@arabic\c@equation}`, `\section` itself zeroing
+<a href=#247 id=247 data-nosnippet>247</a>  // the counter, :301-306; the FLM copies, 2604.22963's and 2507.06135's JFM-FLM_Au.cls: :1317-1318, the same
+<a href=#248 id=248 data-nosnippet>248</a>  // `\theequation` and `\@addtoreset{equation}{section}`), and the appendices "(A 1)" (`\appendix`, :390-397 and
+<a href=#249 id=249 data-nosnippet>249</a>  // :616-626: the section counter and the equations zeroed, `\theequation{\thesection\,\@arabic\c@equation}`). The older
+<a href=#250 id=250 data-nosnippet>250</a>  // copies' `\nosectioneqnreset` (:297-299) numbers them through the paper, "(1)", the appendices' still reset (:303
+<a href=#251 id=251 data-nosnippet>251</a>  // `\ifappendix \setcounter{equation}\z@\fi`). The binding's article base kept "(1)", "(2)" (2608.04345: 116 equation
+<a href=#252 id=252 data-nosnippet>252</a>  // references; SYNC row 76; KNOWN_PERL_ERRORS #1097, Perl has no jfm binding). Guard
+<a href=#253 id=253 data-nosnippet>253</a>  // `perfect_kernel_batch78q::jfm_equations_within_sections`.
+<a href=#254 id=254 data-nosnippet>254</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#255 id=255 data-nosnippet>255</a>    <span class="string">r"\renewcommand\theequation{\thesection.\@arabic\c@equation}\@addtoreset{equation}{section}
+<a href=#256 id=256 data-nosnippet>256</a>\def\appendix{\@appendix\setcounter{section}\z@\setcounter{equation}\z@\@addtoreset{equation}{section}%
+<a href=#257 id=257 data-nosnippet>257</a>\renewcommand\theequation{\thesection\,\@arabic\c@equation}\global\appendixtrue}"
+<a href=#258 id=258 data-nosnippet>258</a>  </span>);
+<a href=#259 id=259 data-nosnippet>259</a>  {
+<a href=#260 id=260 data-nosnippet>260</a>    <span class="kw">let </span>_older = OriginGuard::new(DefinitionOrigin::Fallback);
+<a href=#261 id=261 data-nosnippet>261</a>    <span class="macro">RawTeX!</span>(
+<a href=#262 id=262 data-nosnippet>262</a>      <span class="string">r"\newif\ifno@eqnreset
+<a href=#263 id=263 data-nosnippet>263</a>\newcommand\nosectioneqnreset{\global\no@eqnresettrue\renewcommand\theequation{\@arabic\c@equation}%
+<a href=#264 id=264 data-nosnippet>264</a>\@removefromreset{equation}{section}}"
+<a href=#265 id=265 data-nosnippet>265</a>    </span>);
+<a href=#266 id=266 data-nosnippet>266</a>  }
+<a href=#267 id=267 data-nosnippet>267</a>  <span class="comment">// jfm.cls:299-306 (v1.23-v1.28, 72 of 74 census copies; 2608.04345's): `\section` itself zeroes the equation counter,
+<a href=#268 id=268 data-nosnippet>268</a>  // a starred one too ("(2.1)" after `\section*`, where the reset by the section counter gave "(2.3)"), only in the
+<a href=#269 id=269 data-nosnippet>269</a>  // appendices under `\nosectioneqnreset`. The FLM copies' `\section` (JFM-FLM_Au.cls:501, the zeroing commented out
+<a href=#270 id=270 data-nosnippet>270</a>  // at :481-487; 2507.06135 — 2505.15463's declares `JFM-FLM_Au` and is read raw) is a bare `\@startsection`, their equations reset by
+<a href=#271 id=271 data-nosnippet>271</a>  // `\@addtoreset{equation}{section}` (:1318), numbered sections only: the paper's copy decides. Residual (review
+<a href=#272 id=272 data-nosnippet>272</a>  // rev78q2): the appendices' `\section` is the kernel's `\@@appendix`, which the binding cannot wrap there (the locked
+<a href=#273 id=273 data-nosnippet>273</a>  // `\section` ignores a redefinition made in the document), so an appendix `\section*` keeps the count, "A 2" where
+<a href=#274 id=274 data-nosnippet>274</a>  // jfm.cls:303 zeroes it, "A 1". Guard `perfect_kernel_batch78q::jfm_section_star_zeroes_equations`.
+<a href=#275 id=275 data-nosnippet>275</a>  </span><span class="kw">if </span>shipped.as_deref().is_none_or(|text| {
+<a href=#276 id=276 data-nosnippet>276</a>    !<span class="kw">crate</span>::shipped_class::class_code_contains(text, <span class="string">"\\@addtoreset{equation}{section}"</span>)
+<a href=#277 id=277 data-nosnippet>277</a>  }) {
+<a href=#278 id=278 data-nosnippet>278</a>    <span class="macro">RawTeX!</span>(
+<a href=#279 id=279 data-nosnippet>279</a>      <span class="string">r"\let\lx@jfm@section\section
+<a href=#280 id=280 data-nosnippet>280</a>\def\section{\ifno@eqnreset\ifappendix\setcounter{equation}\z@\fi\else\setcounter{equation}\z@\fi\lx@jfm@section}"
+<a href=#281 id=281 data-nosnippet>281</a>    </span>);
+<a href=#282 id=282 data-nosnippet>282</a>  }
+<a href=#283 id=283 data-nosnippet>283</a>  <span class="comment">// jfm.cls L1498: \newcommand{\backsection}[2][\backsectionname]{...\textbf{#1.} #2...}
+<a href=#284 id=284 data-nosnippet>284</a>  // — a backmatter paragraph (Acknowledgements / Declaration of interests / Data
+<a href=#285 id=285 data-nosnippet>285</a>  // availability) with a bold title. Was undefined (Perl defines it). Render as the
+<a href=#286 id=286 data-nosnippet>286</a>  // faithful bold-title paragraph. The title is always given as the optional arg in
+<a href=#287 id=287 data-nosnippet>287</a>  // practice; default to "Acknowledgements". Witness 2309.14752.
+<a href=#288 id=288 data-nosnippet>288</a>  // jfm.cls: \newcommand\pagerange[1]{\gdef\@pagerange{#1}} — stores the page range
+<a href=#289 id=289 data-nosnippet>289</a>  // for the running head (no body output). Gobble (faithful: not rendered in body).
+<a href=#290 id=290 data-nosnippet>290</a>  // Was undefined. Witness 2406.18711.
+<a href=#291 id=291 data-nosnippet>291</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\pagerange{}"</span>, <span class="string">""</span>);
+<a href=#292 id=292 data-nosnippet>292</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\backsectionname"</span>, <span class="string">"Acknowledgements"</span>);
+<a href=#293 id=293 data-nosnippet>293</a>  <span class="comment">// Optional title arg (always supplied in practice, e.g. [Acknowledgements] /
+<a href=#294 id=294 data-nosnippet>294</a>  // [Declaration of interests] / [Data availability statement]); empty default.
+<a href=#295 id=295 data-nosnippet>295</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\backsection[]{}"</span>, <span class="string">"\\par\\noindent\\textbf{#1.} #2\\par"</span>);
+<a href=#296 id=296 data-nosnippet>296</a>  <span class="comment">// jfm.cls L?: \def\aff#1{\ignorespaces\textsuperscript{#1}} — affil
+<a href=#297 id=297 data-nosnippet>297</a>  // marker as superscript.
+<a href=#298 id=298 data-nosnippet>298</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\aff{}"</span>, <span class="string">"\\textsuperscript{#1}"</span>);
+<a href=#299 id=299 data-nosnippet>299</a>  <span class="comment">// jfm.cls: \def\corresp#1{\unskip\thanks{#1}} — corresponding author
+<a href=#300 id=300 data-nosnippet>300</a>  // text routed via \thanks.
+<a href=#301 id=301 data-nosnippet>301</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\corresp{}"</span>, <span class="string">"\\thanks{#1}"</span>);
+<a href=#302 id=302 data-nosnippet>302</a>  <span class="comment">// jfm.cls:680 `\newcommand\affiliation[1]{\gdef\@affiliation{#1}}`, printed once under the names (:733 `{\normalfont
+<a href=#303 id=303 data-nosnippet>303</a>  // \small \@affiliation \par}`). A list its marks label (`$^1$Institut …, $^2$School of Engineering …` under
+<a href=#304 id=304 data-nosnippet>304</a>  // `Randriamampianina$^1$, Fr\"uh$^2$`; the template's `\aff{1}`) is the names' affiliations, each entry the authors'
+<a href=#305 id=305 data-nosnippet>305</a>  // showing its mark (the frontmatter API's Cut: OXIDIZED_DESIGN_DIVERGENCES #954; census127 witnesses physics0607157,
+<a href=#306 id=306 data-nosnippet>306</a>  // 1302.1594), a sole entry every author's; an unmarked one stays the note it was.
+<a href=#307 id=307 data-nosnippet>307</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\affiliation{}"</span>, sub[(affiliation)] {
+<a href=#308 id=308 data-nosnippet>308</a>    <span class="kw">let </span>marked = leads_with_label(<span class="kw-2">&amp;</span>affiliation, <span class="string">"jfm affiliation"</span>)<span class="question-mark">? </span>&amp;&amp; queued_authors_marked()<span class="question-mark">?</span>;
+<a href=#309 id=309 data-nosnippet>309</a>    <span class="prelude-val">Ok</span>(<span class="kw">if </span>marked {
+<a href=#310 id=310 data-nosnippet>310</a>      <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@add@affiliation"</span>), <span class="macro">vec!</span>[
+<a href=#311 id=311 data-nosnippet>311</a>        <span class="prelude-val">Some</span>(mouth::tokenize_internal(<span class="string">"annotate=all"</span>)),
+<a href=#312 id=312 data-nosnippet>312</a>        <span class="prelude-val">Some</span>(affiliation)
+<a href=#313 id=313 data-nosnippet>313</a>      ])
+<a href=#314 id=314 data-nosnippet>314</a>    } <span class="kw">else </span>{
+<a href=#315 id=315 data-nosnippet>315</a>      <span class="kw">let </span><span class="kw-2">mut </span>note = mouth::tokenize_internal(<span class="string">"\\@add@frontmatter{ltx:note}[role=affiliation]"</span>).unlist();
+<a href=#316 id=316 data-nosnippet>316</a>      note.push(<span class="macro">T_BEGIN!</span>());
+<a href=#317 id=317 data-nosnippet>317</a>      note.extend(affiliation.unlist());
+<a href=#318 id=318 data-nosnippet>318</a>      note.push(<span class="macro">T_END!</span>());
+<a href=#319 id=319 data-nosnippet>319</a>      Tokens::new(note)
+<a href=#320 id=320 data-nosnippet>320</a>    })
+<a href=#321 id=321 data-nosnippet>321</a>  });
+<a href=#322 id=322 data-nosnippet>322</a>  <span class="comment">// \keywords{...} — JFM has its own keywords macro.
+<a href=#323 id=323 data-nosnippet>323</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\keywords{}"</span>, <span class="string">"\\@add@frontmatter{ltx:keywords}{#1}"</span>);
+<a href=#324 id=324 data-nosnippet>324</a>});
+<a href=#325 id=325 data-nosnippet>325</a>
+<a href=#326 id=326 data-nosnippet>326</a><span class="doccomment">/// Does this copy of jfm.cls set `\le`/`\ge` to the slanted ⩽ ⩾ when it finds the AMS symbol fonts (an uncommented
+<a href=#327 id=327 data-nosnippet>327</a>/// `\let\le=\leqslant`, 2103.10260's :1361)?
+<a href=#328 id=328 data-nosnippet>328</a></span><span class="kw">fn </span>slants_inequalities(class: <span class="kw-2">&amp;</span>str) -&gt; bool {
+<a href=#329 id=329 data-nosnippet>329</a>  class.lines().any(|line| {
+<a href=#330 id=330 data-nosnippet>330</a>    line
+<a href=#331 id=331 data-nosnippet>331</a>      .split(<span class="string">'%'</span>)
+<a href=#332 id=332 data-nosnippet>332</a>      .next()
+<a href=#333 id=333 data-nosnippet>333</a>      .unwrap_or_default()
+<a href=#334 id=334 data-nosnippet>334</a>      .contains(<span class="string">"\\let\\le=\\leqslant"</span>)
+<a href=#335 id=335 data-nosnippet>335</a>  })
+<a href=#336 id=336 data-nosnippet>336</a>}
 </code></pre></div></section></main></body></html>

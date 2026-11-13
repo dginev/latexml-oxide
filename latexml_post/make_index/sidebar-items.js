@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["MakeIndex"]};
+window.SIDEBAR_ITEMS = {"constant":["DEFAULT_INDEX_LIST"],"fn":["index_db_key"],"struct":["MakeIndex"]};

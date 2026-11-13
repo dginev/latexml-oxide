@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_definitions"]};
+window.SIDEBAR_ITEMS = {"fn":["load_definitions","natbib_invocation","natbib_merge_citations"]};

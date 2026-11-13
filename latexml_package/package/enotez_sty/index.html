@@ -1,0 +1,38 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="enotez.sty — raw load; the notes become LaTeXML endnotes and `\printendnotes` lists them."><title>latexml_package::package::enotez_sty - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc mod"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Module enotez_sty</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../../latexml_package/index.html">latexml_<wbr>package</a><span class="version">0.7.0</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Module enotez_<wbr>sty</a></h2><h3><a href="#functions">Module Items</a></h3><ul class="block"><li><a href="#functions" title="Functions">Functions</a></li></ul></section><div id="rustdoc-modnav"><h2><a href="../index.html">In latexml_<wbr>package::<wbr>package</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../../index.html">latexml_package</a>::<wbr><a href="../index.html">package</a></div><h1>Module <span>enotez_<wbr>sty</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../../src/latexml_package/package/enotez_sty.rs.html#1-141">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>enotez.sty — raw load; the notes become LaTeXML endnotes and <code>\printendnotes</code> lists them.</p>
+<p>enotez gives the list its notes only through the <code>.aux</code> round trip: <code>\endnote</code> writes
+<code>\enotez@note{id}{mark}{split}{…}{text}</code> to <code>\@auxout</code> (enotez.sty:323-327) and only the next
+run’s <code>\enotez@note</code> (:330-340) fills the property lists <code>\printendnotes</code> loops over (:435-471).
+LaTeXML converts in one pass with no <code>.aux</code>, so the list printed empty and every mark’s
+<code>\hyperlink{enz.N}</code> (:197-212) dangled (skeldoc manual: 15 of 345 words of its notes kept, 15
+schema errors; mla-example). Perl has no binding and loses them alike.</p>
+<p>The package is loaded raw — classes build on its templates and internals (mla.cls:285-290,
+skeldoc.sty:831 and :860-867, wiley-article.cls:695-700) — and its note internals are replaced:</p>
+<ul>
+<li>the note is recorded in the store <code>\enotez@note</code> fills, directly (no <code>.aux</code>; its text is not
+kept, since the list is the notes themselves);</li>
+<li><code>\endnote</code>, <code>\endnotemark</code>, <code>\endnotetext</code> are <code>\lx@note</code>/<code>\lx@notemark</code>/<code>\lx@notetext</code> of
+type <code>endnote</code>, as endnotes.sty’s binding; an optional mark is the note’s mark without a step
+(enotez.sty:236-238); the inline tag follows <code>mark-cs</code>/<code>mark-format</code>;</li>
+<li>each note is in the list <code>ent</code> and in the list of its partition <code>ent&lt;k&gt;</code> — the notes made
+after the k-th plain <code>\printendnotes</code> (enotez_en.tex:167-170), or a <code>split</code> unit;</li>
+<li><code>split=section|chapter</code> advances at the first note of a new unit, found by comparing what the
+unit’s headings changed: the counter and printed number (an appendix’s section A after section
+1 is a new unit) and the starred-heading counter LaTeXML steps (<code>\c@UNsection</code>/<code>\c@UNchapter</code>).
+enotez prepends to <code>\section</code>/<code>\chapter</code> (:884-905), starred forms included, which LaTeXML
+keeps locked. Differences from pdflatex: under <code>split=section</code> a <code>\chapter</code> heading starts a
+split (pdflatex: only a <code>\section</code> after it); an <code>\endnotetext</code> whose <code>\endnotemark</code> came before
+a heading is listed in the split of the last note before it, titled by the text’s unit, so a
+later note under that heading opens another split with the same title (pdflatex: one split, the
+text numbered 0 under <code>reset</code>); a <code>\c@chapter</code> created
+mid-document (a <code>\chapter*</code> alias in a class without chapters) splits once;</li>
+<li><code>\printendnotes</code> prints, through the package’s own heading, list name and split titles, one
+<code>ltx:TOC</code> per partition (<code>\printendnotes*</code>: all notes).</li>
+</ul>
+<p>Presentational keys (<code>list-style</code>, the list template’s <code>format</code>/<code>number</code>/<code>notes-sep</code>, <code>backref</code>)
+have no effect: the TOC replaces the typeset list. Dropped with the replaced internals: the
+undocumented <code>\enotezdisable</code> (:240), an optional mark’s <code>\@currentlabel</code> (:237; a <code>\label</code> after
+it names the note by the kernel’s tag), and the non-split list’s <code>\prop_gremove</code> (:634; the
+partitions keep the lists apart). The marks’ and the list’s <code>enz.N</code> hyperlinks are not made, so
+none dangles; a class’s <code>\enotez_write_mark:nn</code> (skeldoc.sty:831) is not reached. Guards
+<code>perfect_kernel_batch58::{enotez_notes_are_listed, enotez_split_lists_each_section, enotez_split_by_chapter, enotez_marks_texts_and_repeated_lists, enotez_split_by_section_in_a_book}</code>.</p>
+</div></details><h2 id="functions" class="section-header">Functions<a href="#functions" class="anchor">§</a></h2><dl class="item-table"><dt><a class="fn" href="fn.load_definitions.html" title="fn latexml_package::package::enotez_sty::load_definitions">load_<wbr>definitions</a></dt></dl></section></div></main></body></html>

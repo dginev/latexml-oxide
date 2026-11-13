@@ -1,0 +1,101 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/base_utilities/frontmatter/observer/mod.rs`."><title>mod.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../../../static.files/src-script-813739b1.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/base_utilities/frontmatter/observer/</div>mod.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! The frontmatter observer (frontmatter model M3; KERNEL_CAPABILITIES K23): what the document's `\title`/`\author`-family
+<a href=#2 id=2 data-nosnippet>2</a>//! calls hold, read as TeX prints them, which the emitter writes Perl's own API calls from (OXIDIZED_DESIGN_DIVERGENCES
+<a href=#3 id=3 data-nosnippet>3</a>//! #837, #980).
+<a href=#4 id=4 data-nosnippet>4</a>//!
+<a href=#5 id=5 data-nosnippet>5</a>//! - [`ledger`]: a block per `\author`-family call (the kernel `\author`, the bindings' `\lx@add@authors*` calls) with
+<a href=#6 id=6 data-nosnippet>6</a>//!   its stamped position range, its options and its place in the frontmatter queue; the S1 stamp of each `\title`;
+<a href=#7 id=7 data-nosnippet>7</a>//!   the contact/affiliation API calls (`\lx@annotate@frontmatter`'s queue entries); the footnote texts made after a
+<a href=#8 id=8 data-nosnippet>8</a>//!   block (`\footnotetext`, read for the `\footnotemark` a name shows).
+<a href=#9 id=9 data-nosnippet>9</a>//! - [`rehearsal`]: a block's stamped tokens digested in a group of Layer-B event bindings (`\and` a separator, `\\` a
+<a href=#10 id=10 data-nosnippet>10</a>//!   break, `\thanks` a note, the contact commands contacts), through the speculative-run engine: assignments rolled
+<a href=#11 id=11 data-nosnippet>11</a>//!   back, diagnostics held, output muted, the frontmatter frozen; the digested list handed to the lexer, then
+<a href=#12 id=12 data-nosnippet>12</a>//!   discarded.
+<a href=#13 id=13 data-nosnippet>13</a>//! - [`events`]: the digested list read into events (names, marks, separators, breaks, contacts, notes, layout), each
+<a href=#14 id=14 data-nosnippet>14</a>//!   with its span of the field's positions (`fieldProv`/`fieldSerial`, core `gullet::field_cover_of`) and its ink.
+<a href=#15 id=15 data-nosnippet>15</a>//! - [`marks`]: whether a formula in a name or an affiliation is a mark, read from its digested XMath (as digested and
+<a href=#16 id=16 data-nosnippet>16</a>//!   as parsed), the one reading of the content check's view of the placed output, `relocate::shown_marks` and
+<a href=#17 id=17 data-nosnippet>17</a>//!   `name_text::is_name_mark` (frontmatter refactor stage 1).
+<a href=#18 id=18 data-nosnippet>18</a>//! - [`resolver`] (S2a.2): the ledger's blocks and API calls read into the frontmatter tuples (creators with their
+<a href=#19 id=19 data-nosnippet>19</a>//!   names, affiliations, contacts and notes; the block's own), each association with the rule that decided it, under
+<a href=#20 id=20 data-nosnippet>20</a>//!   the family's conventions from [`policy`] (each binding declares its own at load; read keyed on the binding owning
+<a href=#21 id=21 data-nosnippet>21</a>//!   `\author` and the hook).
+<a href=#22 id=22 data-nosnippet>22</a>//! - [`reading`]: the flush's part — every real flush (`digest_front_matter`) rehearses and lexes each block not
+<a href=#23 id=23 data-nosnippet>23</a>//!   rehearsed yet — and the ledger's JSON dump the guards read the reading by, in process.
+<a href=#24 id=24 data-nosnippet>24</a>//! - [`emitter`]: the emitter (`emitter::emit`, OD #980), which replaces the flush's queued creators and their annotations
+<a href=#25 id=25 data-nosnippet>25</a>//!   by Perl's calls built from the reading, its vocabulary and cuts, and the content check on the placed output. (The S2b
+<a href=#26 id=26 data-nosnippet>26</a>//!   writer that rewrote placed frontmatter after `insert_frontmatter`, and the census switch `LATEXML_FM_SHADOW`, were
+<a href=#27 id=27 data-nosnippet>27</a>//!   deleted in DEL4.)
+<a href=#28 id=28 data-nosnippet>28</a>//! - [`argument_marks`]: the query on an argument's marks as digested (Option C F0), on the one rehearsal of
+<a href=#29 id=29 data-nosnippet>29</a>//!   [`separators`].
+<a href=#30 id=30 data-nosnippet>30</a>//! - [`separators`]: a binding's query on an argument's `\and`-family separators by meaning (`argument_separators`,
+<a href=#31 id=31 data-nosnippet>31</a>//!   `\lx@fm@separators`; OD #995).
+<a href=#32 id=32 data-nosnippet>32</a>
+<a href=#33 id=33 data-nosnippet>33</a></span><span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#34 id=34 data-nosnippet>34</a>
+<a href=#35 id=35 data-nosnippet>35</a><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">mod </span>argument_marks;
+<a href=#36 id=36 data-nosnippet>36</a><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">mod </span>emitter;
+<a href=#37 id=37 data-nosnippet>37</a><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">mod </span>events;
+<a href=#38 id=38 data-nosnippet>38</a><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">mod </span>field_notes;
+<a href=#39 id=39 data-nosnippet>39</a><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">mod </span>ledger;
+<a href=#40 id=40 data-nosnippet>40</a><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">mod </span>marks;
+<a href=#41 id=41 data-nosnippet>41</a><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">mod </span>policy;
+<a href=#42 id=42 data-nosnippet>42</a><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">mod </span>reading;
+<a href=#43 id=43 data-nosnippet>43</a><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">mod </span>rehearsal;
+<a href=#44 id=44 data-nosnippet>44</a><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">mod </span>resolver;
+<a href=#45 id=45 data-nosnippet>45</a><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">mod </span>separators;
+<a href=#46 id=46 data-nosnippet>46</a>
+<a href=#47 id=47 data-nosnippet>47</a><span class="comment">// (for the guards, which read a dump's events and the resolver's tuples, and the types of a public event's fields;
+<a href=#48 id=48 data-nosnippet>48</a>// prefixed, as the prelude re-exports these)
+<a href=#49 id=49 data-nosnippet>49</a>// (the emitter's vocabulary, moved unchanged, for its callers in `frontmatter/` and `defs/`: the plan's row "Knowledge in, driver out, one pass")
+<a href=#50 id=50 data-nosnippet>50</a>// (for the bindings, which ask what an argument's separators mean: Option C P2, OXIDIZED_DESIGN_DIVERGENCES #995)
+<a href=#51 id=51 data-nosnippet>51</a>// (the marks query, Option C F0)
+<a href=#52 id=52 data-nosnippet>52</a></span><span class="kw">pub use </span>argument_marks::{
+<a href=#53 id=53 data-nosnippet>53</a>  ListMarks, PrintedMark, RequestedEntries, argument_marks, is_label_mark, leads_with_label,
+<a href=#54 id=54 data-nosnippet>54</a>  list_marks, marks_as_printed, prints_list_marks, prints_marks, prints_marks_and_labels,
+<a href=#55 id=55 data-nosnippet>55</a>  prints_requested_marks, requested_entry_labels,
+<a href=#56 id=56 data-nosnippet>56</a>};
+<a href=#57 id=57 data-nosnippet>57</a><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">use </span>argument_marks::{
+<a href=#58 id=58 data-nosnippet>58</a>  argument_marks_and_name, argument_name_text, count_unread <span class="kw">as </span>count_unread_marks,
+<a href=#59 id=59 data-nosnippet>59</a>};
+<a href=#60 id=60 data-nosnippet>60</a><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">use </span>emitter::{
+<a href=#61 id=61 data-nosnippet>61</a>  EMITTING, NAMES_SHOWN_LABELS, SETTERS_RECOVERED, block_creator_written, calls::<span class="kw-2">*</span>,
+<a href=#62 id=62 data-nosnippet>62</a>  check_placed_content, emit_commands, emitted, names_show_label, setters_recovered, take_digested,
+<a href=#63 id=63 data-nosnippet>63</a>};
+<a href=#64 id=64 data-nosnippet>64</a><span class="kw">pub use </span>events::{
+<a href=#65 id=65 data-nosnippet>65</a>  BreakKind <span class="kw">as </span>FmBreakKind, EmailMeaning <span class="kw">as </span>FmEmailMeaning, Event <span class="kw">as </span>FmEvent,
+<a href=#66 id=66 data-nosnippet>66</a>  EventKind <span class="kw">as </span>FmEventKind, MarkBase <span class="kw">as </span>FmMarkBase, MarkFormula <span class="kw">as </span>FmMarkFormula,
+<a href=#67 id=67 data-nosnippet>67</a>  PrintedLabel <span class="kw">as </span>FmPrintedLabel, SepKind <span class="kw">as </span>FmSepKind,
+<a href=#68 id=68 data-nosnippet>68</a>};
+<a href=#69 id=69 data-nosnippet>69</a><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">use </span>ledger::{
+<a href=#70 id=70 data-nosnippet>70</a>  annotated_parent, content_text, field_stamped, note_field_stamp, record_api_call,
+<a href=#71 id=71 data-nosnippet>71</a>  record_author_body_clear, record_author_body_end, record_author_call, record_clear,
+<a href=#72 id=72 data-nosnippet>72</a>  record_cut_copy,
+<a href=#73 id=73 data-nosnippet>73</a>};
+<a href=#74 id=74 data-nosnippet>74</a><span class="kw">pub use </span>ledger::{
+<a href=#75 id=75 data-nosnippet>75</a>  author_tail_declared <span class="kw">as </span>fm_author_tail_declared, class_maketitle_runs <span class="kw">as </span>fm_class_maketitle_runs,
+<a href=#76 id=76 data-nosnippet>76</a>  note_binding_load, record_note_text <span class="kw">as </span>fm_record_note_text,
+<a href=#77 id=77 data-nosnippet>77</a>  record_switched_off_call <span class="kw">as </span>fm_record_switched_off_call,
+<a href=#78 id=78 data-nosnippet>78</a>};
+<a href=#79 id=79 data-nosnippet>79</a><span class="comment">// (the one reading of a formula's mark-ness, for `relocate` and `classify`)
+<a href=#80 id=80 data-nosnippet>80</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">use </span>marks::{
+<a href=#81 id=81 data-nosnippet>81</a>  FormulaMarks <span class="kw">as </span>FmFormulaMarks, read_formula <span class="kw">as </span>fm_read_formula,
+<a href=#82 id=82 data-nosnippet>82</a>};
+<a href=#83 id=83 data-nosnippet>83</a><span class="comment">// (for the bindings, which declare their conventions at load)
+<a href=#84 id=84 data-nosnippet>84</a></span><span class="kw">pub use </span>policy::{
+<a href=#85 id=85 data-nosnippet>85</a>  AuthorPage <span class="kw">as </span>FmAuthorPage, EmailOwner <span class="kw">as </span>FmEmailOwner, KERNEL <span class="kw">as </span>FM_KERNEL_CONVENTIONS,
+<a href=#86 id=86 data-nosnippet>86</a>  MaketitleRuns <span class="kw">as </span>FmMaketitleRuns, Policy <span class="kw">as </span>FmConventions, TitleMarks <span class="kw">as </span>FmTitleMarks,
+<a href=#87 id=87 data-nosnippet>87</a>  TitlePageDecl <span class="kw">as </span>FmTitlePageDecl, declare_frontmatter_conventions,
+<a href=#88 id=88 data-nosnippet>88</a>};
+<a href=#89 id=89 data-nosnippet>89</a><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">use </span>reading::read_at_flush;
+<a href=#90 id=90 data-nosnippet>90</a><span class="kw">pub use </span>reading::{fm_reading_json, reset_fm_reading};
+<a href=#91 id=91 data-nosnippet>91</a><span class="kw">pub use </span>rehearsal::{reading_author_fields, rehearsing_author_fields};
+<a href=#92 id=92 data-nosnippet>92</a><span class="comment">// (the old reader's owner logic, moved unchanged, for its callers in `frontmatter/` and `defs/`: the plan's row "Knowledge in, driver out, one pass")
+<a href=#93 id=93 data-nosnippet>93</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">use </span>resolver::owners::<span class="kw-2">*</span>;
+<a href=#94 id=94 data-nosnippet>94</a><span class="comment">// (for the guards, which resolve a block's input again)
+<a href=#95 id=95 data-nosnippet>95</a></span><span class="kw">pub use </span>resolver::{Input <span class="kw">as </span>FmInput, Resolved <span class="kw">as </span>FmResolved, resolve <span class="kw">as </span>fm_resolve};
+<a href=#96 id=96 data-nosnippet>96</a><span class="kw">pub use </span>separators::{
+<a href=#97 id=97 data-nosnippet>97</a>  ArgSeparator <span class="kw">as </span>FmArgSeparator, SepMeaning <span class="kw">as </span>FmSepMeaning, argument_separators,
+<a href=#98 id=98 data-nosnippet>98</a>  argument_separators_at_every_level, kernel_separator_runs, split_at_kernel_separators,
+<a href=#99 id=99 data-nosnippet>99</a>};
+<a href=#100 id=100 data-nosnippet>100</a><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">use </span>separators::{may_hold_kernel_separator, split_at_runs};
+</code></pre></div></section></main></body></html>

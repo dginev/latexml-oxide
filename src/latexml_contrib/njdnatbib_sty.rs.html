@@ -1,0 +1,71 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/njdnatbib_sty.rs`."><title>njdnatbib_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>njdnatbib_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! NJDnatbib.sty — Wiley's renamed copy of natbib 8.31b (`\ProvidesPackage{NJDnatbib}`, NJDnatbib.sty:29), which
+<a href=#2 id=2 data-nosnippet>2</a>//! WileyNJD-v2/v5/MRM.cls load in natbib's place (WileyNJDv5.cls:6021-6085 `\usepackage[numbers,super,…]{NJDnatbib}`,
+<a href=#3 id=3 data-nosnippet>3</a>//! MRM.cls:2441-2442 `\usepackage[numbers,super]{NJDnatbib}`). A stand-in for the author's file (author_files.rs
+<a href=#4 id=4 data-nosnippet>4</a>//! `AUTHOR_FILE_STAND_INS`): it is natbib, so the natbib binding loads with the options the class gave the copy
+<a href=#5 id=5 data-nosnippet>5</a>//! ([`natbib_fork_options`]), and the paper's copy, read after it, only provides (OXIDIZED_DESIGN_DIVERGENCES #731):
+<a href=#6 id=6 data-nosnippet>6</a>//! read raw, its `\bibsection`'s `\@ifundefined{chapter}` took the `\chapter*` branch, heading the references
+<a href=#7 id=7 data-nosnippet>7</a>//! "Bibliography" with `bib.bibxN` ids (2609.08425, 2101.06297, 2211.16474, 2411.11493, 2206.08798, 2602.03829,
+<a href=#8 id=8 data-nosnippet>8</a>//! 2408.07575, 2506.14995).
+<a href=#9 id=9 data-nosnippet>9</a>//!
+<a href=#10 id=10 data-nosnippet>10</a>//! The defaults its copies change that the PDF shows, by version (the class-family rule's dispatch on a conflict):
+<a href=#11 id=11 data-nosnippet>11</a>//! - v5 (md5 277c41da: 2602.03829, 2408.07575, 2609.08425): a class without chapters heads the bibliography
+<a href=#12 id=12 data-nosnippet>12</a>//!   "REFERENCES" (:1050-1053 `\bmsection*{…{{REFERENCES}}…}`; xelatex 2609.08425; the reviewer's probe njd_direct_v5),
+<a href=#13 id=13 data-nosnippet>13</a>//!   an amsart one `\refname` (:1065);
+<a href=#14 id=14 data-nosnippet>14</a>//! - v2 and MRM (2fa96b7a: 2101.06297, 2211.16474; 6838c57e: 2411.11493, 2206.08798; 4b333a37: 2506.14995): natbib's
+<a href=#15 id=15 data-nosnippet>15</a>//!   own `\section*{\refname…}` (:1052; probe njd_direct_v2: pdflatex "References"; MRM.cls:3191's `\refname`
+<a href=#16 id=16 data-nosnippet>16</a>//!   "REFERENCES" is the class's);
+<a href=#17 id=17 data-nosnippet>17</a>//! - every version: the superscript citation carries its postnote inside, ", p. 5" (:366-368; natbib's switch
+<a href=#18 id=18 data-nosnippet>18</a>//!   `NATBIB_SUPER_POSTNOTE_INSIDE`).
+<a href=#19 id=19 data-nosnippet>19</a>//!
+<a href=#20 id=20 data-nosnippet>20</a>//! The version is v5's class (`\@ifclassloaded{WileyNJDv5}`) or the copy's own `\bibsection` set by `\bmsection`, v5's
+<a href=#21 id=21 data-nosnippet>21</a>//! marker; a class without chapters is decided by the one "has chapters" test, as the copy's `\@ifundefined{chapter}`
+<a href=#22 id=22 data-nosnippet>22</a>//! does (`state::class_defines_chapter`, OXIDIZED_DESIGN #179): not by a `chapter` counter, which the Wiley classes
+<a href=#23 id=23 data-nosnippet>23</a>//! declare without a `\chapter` (WileyNJDv5.cls:5728, MRM.cls:2160 `\newcounter{chapter}[part]`). The WileyNJDv5
+<a href=#24 id=24 data-nosnippet>24</a>//! binding's OmniBus base keeps no kernel `\chapter` (a named binding is no unknown class), so the copy's test is TeX's
+<a href=#25 id=25 data-nosnippet>25</a>//! (2609.08425: "REFERENCES").
+<a href=#26 id=26 data-nosnippet>26</a></span><span class="kw">use </span>latexml_package::prelude::<span class="kw-2">*</span>;
+<a href=#27 id=27 data-nosnippet>27</a>
+<a href=#28 id=28 data-nosnippet>28</a><span class="doccomment">/// A renamed natbib copy's options are natbib's (natbib.sty:234-285): the natbib binding loads next with each one
+<a href=#29 id=29 data-nosnippet>29</a>/// the class gives the copy. A natbib loaded already (a class binding's, or the document's) takes them as a repeat
+<a href=#30 id=30 data-nosnippet>30</a>/// load does, as natbib's options, with an Info (natbib_sty.rs `\lx@natbib@repeat@options`) — not dropped silently
+<a href=#31 id=31 data-nosnippet>31</a>/// (MRM's binding had loaded natbib optionless before MRM.cls's `[numbers,super]{NJDnatbib}`: 2506.14995's
+<a href=#32 id=32 data-nosnippet>32</a>/// author-year where its PDF has superscripts).
+<a href=#33 id=33 data-nosnippet>33</a></span><span class="kw">pub fn </span>natbib_fork_options() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#34 id=34 data-nosnippet>34</a>  <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@natfork@options"</span>), <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>(), scope =&gt; <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#35 id=35 data-nosnippet>35</a>  <span class="macro">DeclareOption!</span>(<span class="prelude-val">None</span>, {
+<a href=#36 id=36 data-nosnippet>36</a>    <span class="macro">Digest!</span>(<span class="string">"\\xdef\\lx@natfork@options{\\lx@natfork@options,\\CurrentOption}"</span>)<span class="question-mark">?</span>;
+<a href=#37 id=37 data-nosnippet>37</a>  });
+<a href=#38 id=38 data-nosnippet>38</a>  <span class="macro">ProcessOptions!</span>();
+<a href=#39 id=39 data-nosnippet>39</a>  <span class="kw">let </span>options: Vec&lt;String&gt; = <span class="macro">Expand!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@natfork@options"</span>))
+<a href=#40 id=40 data-nosnippet>40</a>    .to_string()
+<a href=#41 id=41 data-nosnippet>41</a>    .split(<span class="string">','</span>)
+<a href=#42 id=42 data-nosnippet>42</a>    .map(|option| option.trim().to_string())
+<a href=#43 id=43 data-nosnippet>43</a>    .filter(|option| !option.is_empty())
+<a href=#44 id=44 data-nosnippet>44</a>    .collect();
+<a href=#45 id=45 data-nosnippet>45</a>  <span class="comment">// (the copy's own options, which its `\ProcessOptions` takes in TeX, even after a natbib loaded already:
+<a href=#46 id=46 data-nosnippet>46</a>  // `natbib.sty:options_of_a_renamed_copy`, binding/content.rs `apply_new_options_on_reload`)
+<a href=#47 id=47 data-nosnippet>47</a>  </span><span class="macro">AssignValue!</span>(<span class="string">"natbib.sty:options_of_a_renamed_copy" </span>=&gt; <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#48 id=48 data-nosnippet>48</a>  <span class="kw">let </span>loaded = require_package(<span class="string">"natbib"</span>, <span class="macro">NewDefault!</span>(RequireOptions, options =&gt; options));
+<a href=#49 id=49 data-nosnippet>49</a>  <span class="macro">AssignValue!</span>(<span class="string">"natbib.sty:options_of_a_renamed_copy" </span>=&gt; <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#50 id=50 data-nosnippet>50</a>  loaded
+<a href=#51 id=51 data-nosnippet>51</a>}
+<a href=#52 id=52 data-nosnippet>52</a>
+<a href=#53 id=53 data-nosnippet>53</a><span class="macro">LoadDefinitions!</span>({
+<a href=#54 id=54 data-nosnippet>54</a>  natbib_fork_options()<span class="question-mark">?</span>;
+<a href=#55 id=55 data-nosnippet>55</a>  <span class="macro">AssignValue!</span>(<span class="string">"NATBIB_SUPER_POSTNOTE_INSIDE" </span>=&gt; <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#56 id=56 data-nosnippet>56</a>  <span class="comment">// (after the copy, which is read at the end of this load: its `\bibsection` tells v5)
+<a href=#57 id=57 data-nosnippet>57</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\AtEndOfPackage{\lx@njd@bibsection@title}"</span>);
+<a href=#58 id=58 data-nosnippet>58</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@njd@bibsection@title"</span>, {
+<a href=#59 id=59 data-nosnippet>59</a>    <span class="kw">let </span>class = |name: <span class="kw-2">&amp;</span>str| has_meaning(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\ver@{name}.cls"</span>)));
+<a href=#60 id=60 data-nosnippet>60</a>    <span class="kw">let </span>marked = <span class="macro">matches!</span>(
+<a href=#61 id=61 data-nosnippet>61</a>      stand_in_copy_meaning(<span class="string">"NJDnatbib.sty"</span>, <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\bibsection"</span>)),
+<a href=#62 id=62 data-nosnippet>62</a>      <span class="prelude-val">Some</span>(Stored::Expandable(defn)) <span class="kw">if </span><span class="macro">matches!</span>(<span class="kw-2">&amp;</span>defn.expansion,
+<a href=#63 id=63 data-nosnippet>63</a>        <span class="prelude-val">Some</span>(ExpansionBody::Tokens(body)) <span class="kw">if </span>body.unlist_ref().contains(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\bmsection"</span>)))
+<a href=#64 id=64 data-nosnippet>64</a>    );
+<a href=#65 id=65 data-nosnippet>65</a>    <span class="kw">let </span>v5 = class(<span class="string">"WileyNJDv5"</span>) || class(<span class="string">"wileyNJDv5"</span>) || marked;
+<a href=#66 id=66 data-nosnippet>66</a>    <span class="kw">if </span>v5 &amp;&amp; !class_defines_chapter() &amp;&amp; !class(<span class="string">"amsart"</span>) {
+<a href=#67 id=67 data-nosnippet>67</a>      <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@bibliography@title"</span>), <span class="prelude-val">None</span>, <span class="macro">Tokenize!</span>(<span class="string">"REFERENCES"</span>), scope =&gt; <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#68 id=68 data-nosnippet>68</a>    }
+<a href=#69 id=69 data-nosnippet>69</a>  });
+<a href=#70 id=70 data-nosnippet>70</a>});
+</code></pre></div></section></main></body></html>

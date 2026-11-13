@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_definitions"]};
+window.SIDEBAR_ITEMS = {"fn":["load_definitions","parse_forest_keylist","parse_forest_tokens"],"struct":["ForestKey","ForestNode","ForestNodeKeys","ForestTree"]};

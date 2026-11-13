@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_definitions"]};
+window.SIDEBAR_ITEMS = {"constant":["CLASS_CAPTION_FONTS"],"fn":["class_caption_fonts","class_makecaption","class_makecaption_label","current_option_text","load_definitions","sub_label_tokens"]};

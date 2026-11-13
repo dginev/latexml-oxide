@@ -1,126 +1,662 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/wileynjd_cls.rs`."><title>wileynjd_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>wileynjd_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Stub for Wiley NJD family of classes (WileyNJD-v1, WileyASNA-v1, ...).
-<a href=#2 id=2 data-nosnippet>2</a>//!
-<a href=#3 id=3 data-nosnippet>3</a>//! These Wiley journal classes share a common set of frontmatter macros
-<a href=#4 id=4 data-nosnippet>4</a>//! (\corres, \authormark, \jnlcitation, \cname, \cyear, \vol, \DOI,
-<a href=#5 id=5 data-nosnippet>5</a>//! \papertype, ...). Route to OmniBus and gobble the frontmatter so
-<a href=#6 id=6 data-nosnippet>6</a>//! downstream content renders cleanly.
-<a href=#7 id=7 data-nosnippet>7</a></span><span class="kw">use </span>latexml_package::prelude::<span class="kw-2">*</span>;
-<a href=#8 id=8 data-nosnippet>8</a>
-<a href=#9 id=9 data-nosnippet>9</a><span class="macro">LoadDefinitions!</span>({
-<a href=#10 id=10 data-nosnippet>10</a>  <span class="macro">LoadClass!</span>(<span class="string">"OmniBus"</span>);
-<a href=#11 id=11 data-nosnippet>11</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amsmath"</span>);
-<a href=#12 id=12 data-nosnippet>12</a>  <span class="comment">// amssymb pulls in \gtrsim/\lesssim and other relation symbols Wiley
-<a href=#13 id=13 data-nosnippet>13</a>  // journal papers commonly use without an explicit \usepackage{amssymb}.
-<a href=#14 id=14 data-nosnippet>14</a>  // Witness 2406.06228 (WileyASNA-v1 paper).
-<a href=#15 id=15 data-nosnippet>15</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"amssymb"</span>);
-<a href=#16 id=16 data-nosnippet>16</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amsthm"</span>);
-<a href=#17 id=17 data-nosnippet>17</a>  <span class="macro">RequirePackage!</span>(<span class="string">"xcolor"</span>);
-<a href=#18 id=18 data-nosnippet>18</a>  <span class="comment">// Wiley journals frequently load hyperref; mirror so cross-refs work.
-<a href=#19 id=19 data-nosnippet>19</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"hyperref"</span>);
-<a href=#20 id=20 data-nosnippet>20</a>  <span class="comment">// Wiley templates assume booktabs / graphicx are available —
-<a href=#21 id=21 data-nosnippet>21</a>  // eager-load so docs that use \toprule/\midrule/\bottomrule and
-<a href=#22 id=22 data-nosnippet>22</a>  // \includegraphics without explicit \usepackage don't error.
-<a href=#23 id=23 data-nosnippet>23</a>  // Witness 2504.02281. (Did NOT preload algorithm/algorithmic
-<a href=#24 id=24 data-nosnippet>24</a>  // here — they conflict with algpseudocode and trigger schema
-<a href=#25 id=25 data-nosnippet>25</a>  // violations in listing-mode body.)
-<a href=#26 id=26 data-nosnippet>26</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"booktabs"</span>);
-<a href=#27 id=27 data-nosnippet>27</a>  <span class="macro">RequirePackage!</span>(<span class="string">"graphicx"</span>);
-<a href=#28 id=28 data-nosnippet>28</a>  <span class="comment">// wrapfig: WileyNJD-v2 authors routinely use \begin{wrapfigure} for
-<a href=#29 id=29 data-nosnippet>29</a>  // figure-with-side-text layouts. The Wiley cls itself doesn't load
-<a href=#30 id=30 data-nosnippet>30</a>  // wrapfig; mirror by eager-loading. Witness 2203.16535.
-<a href=#31 id=31 data-nosnippet>31</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"wrapfig"</span>);
-<a href=#32 id=32 data-nosnippet>32</a>
-<a href=#33 id=33 data-nosnippet>33</a>  <span class="comment">// Wiley frontmatter — preserve author content as ltx:note.
-<a href=#34 id=34 data-nosnippet>34</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\authormark{}"</span>, <span class="string">"\\textsuperscript{#1}"</span>);
-<a href=#35 id=35 data-nosnippet>35</a>  <span class="macro">DefMacro!</span>(
-<a href=#36 id=36 data-nosnippet>36</a>    <span class="string">"\\corres{}"</span>,
-<a href=#37 id=37 data-nosnippet>37</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=corresponding]{#1}"
-<a href=#38 id=38 data-nosnippet>38</a>  </span>);
-<a href=#39 id=39 data-nosnippet>39</a>  <span class="macro">DefMacro!</span>(
-<a href=#40 id=40 data-nosnippet>40</a>    <span class="string">"\\jnlcitation OptionalMatch:* []{}{}"</span>,
-<a href=#41 id=41 data-nosnippet>41</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=citation]{#3 #4}"
-<a href=#42 id=42 data-nosnippet>42</a>  </span>);
-<a href=#43 id=43 data-nosnippet>43</a>  <span class="macro">DefMacro!</span>(
-<a href=#44 id=44 data-nosnippet>44</a>    <span class="string">"\\presentadd[]{}"</span>,
-<a href=#45 id=45 data-nosnippet>45</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=present-address]{#2}"
-<a href=#46 id=46 data-nosnippet>46</a>  </span>);
-<a href=#47 id=47 data-nosnippet>47</a>  <span class="macro">DefMacro!</span>(
-<a href=#48 id=48 data-nosnippet>48</a>    <span class="string">"\\fundingInfo{}"</span>,
-<a href=#49 id=49 data-nosnippet>49</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=funding]{#1}"
-<a href=#50 id=50 data-nosnippet>50</a>  </span>);
-<a href=#51 id=51 data-nosnippet>51</a>  <span class="macro">DefMacro!</span>(
-<a href=#52 id=52 data-nosnippet>52</a>    <span class="string">"\\papertype{}"</span>,
-<a href=#53 id=53 data-nosnippet>53</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=papertype]{#1}"
-<a href=#54 id=54 data-nosnippet>54</a>  </span>);
-<a href=#55 id=55 data-nosnippet>55</a>  <span class="macro">DefMacro!</span>(
-<a href=#56 id=56 data-nosnippet>56</a>    <span class="string">"\\paperfield{}"</span>,
-<a href=#57 id=57 data-nosnippet>57</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=paperfield]{#1}"
-<a href=#58 id=58 data-nosnippet>58</a>  </span>);
-<a href=#59 id=59 data-nosnippet>59</a>  <span class="macro">DefMacro!</span>(
-<a href=#60 id=60 data-nosnippet>60</a>    <span class="string">"\\jname{}"</span>,
-<a href=#61 id=61 data-nosnippet>61</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=journal]{#1}"
-<a href=#62 id=62 data-nosnippet>62</a>  </span>);
-<a href=#63 id=63 data-nosnippet>63</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\jvol{}"</span>, <span class="string">"\\@add@frontmatter{ltx:note}[role=volume]{#1}"</span>);
-<a href=#64 id=64 data-nosnippet>64</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\jnum{}"</span>, <span class="string">"\\@add@frontmatter{ltx:note}[role=issue]{#1}"</span>);
-<a href=#65 id=65 data-nosnippet>65</a>  <span class="macro">DefMacro!</span>(
-<a href=#66 id=66 data-nosnippet>66</a>    <span class="string">"\\cname{}{}"</span>,
-<a href=#67 id=67 data-nosnippet>67</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=copyright]{#1 #2}"
-<a href=#68 id=68 data-nosnippet>68</a>  </span>);
-<a href=#69 id=69 data-nosnippet>69</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\cyear{}"</span>, <span class="string">"\\@add@frontmatter{ltx:note}[role=year]{#1}"</span>);
-<a href=#70 id=70 data-nosnippet>70</a>  <span class="comment">// \cjournal{name} / \cvol{N} / \ctitle{text} — citation-line fields
-<a href=#71 id=71 data-nosnippet>71</a>  // also in WileyNJDv5 frontmatter (alongside \cname / \cyear). Witness
-<a href=#72 id=72 data-nosnippet>72</a>  // 2504.02281 — preserve as ltx:note.
-<a href=#73 id=73 data-nosnippet>73</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#74 id=74 data-nosnippet>74</a>    <span class="string">"\\cjournal{}"</span>,
-<a href=#75 id=75 data-nosnippet>75</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=cjournal]{#1}"
-<a href=#76 id=76 data-nosnippet>76</a>  </span>);
-<a href=#77 id=77 data-nosnippet>77</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\cvol{}"</span>, <span class="string">"\\@add@frontmatter{ltx:note}[role=cvolume]{#1}"</span>);
-<a href=#78 id=78 data-nosnippet>78</a>  <span class="macro">DefMacro!</span>(
-<a href=#79 id=79 data-nosnippet>79</a>    <span class="string">"\\ctitle{}"</span>,
-<a href=#80 id=80 data-nosnippet>80</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=ctitle]{#1}"
-<a href=#81 id=81 data-nosnippet>81</a>  </span>);
-<a href=#82 id=82 data-nosnippet>82</a>  <span class="macro">DefMacro!</span>(
-<a href=#83 id=83 data-nosnippet>83</a>    <span class="string">"\\Copyrightline{}"</span>,
-<a href=#84 id=84 data-nosnippet>84</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=copyright]{#1}"
-<a href=#85 id=85 data-nosnippet>85</a>  </span>);
-<a href=#86 id=86 data-nosnippet>86</a>  <span class="macro">DefMacro!</span>(
-<a href=#87 id=87 data-nosnippet>87</a>    <span class="string">"\\artmonth{}"</span>,
-<a href=#88 id=88 data-nosnippet>88</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=month]{#1}"
-<a href=#89 id=89 data-nosnippet>89</a>  </span>);
-<a href=#90 id=90 data-nosnippet>90</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\DOI{}"</span>, <span class="string">"\\@add@frontmatter{ltx:note}[role=doi]{#1}"</span>);
-<a href=#91 id=91 data-nosnippet>91</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\doiline{}"</span>, <span class="string">"\\@add@frontmatter{ltx:note}[role=doi]{#1}"</span>);
-<a href=#92 id=92 data-nosnippet>92</a>  <span class="macro">DefMacro!</span>(
-<a href=#93 id=93 data-nosnippet>93</a>    <span class="string">"\\runningheads{}{}"</span>,
-<a href=#94 id=94 data-nosnippet>94</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=runningheads]{#1 / #2}"
-<a href=#95 id=95 data-nosnippet>95</a>  </span>);
-<a href=#96 id=96 data-nosnippet>96</a>  <span class="macro">DefMacro!</span>(
-<a href=#97 id=97 data-nosnippet>97</a>    <span class="string">"\\receiveddate{}"</span>,
-<a href=#98 id=98 data-nosnippet>98</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=received]{#1}"
-<a href=#99 id=99 data-nosnippet>99</a>  </span>);
-<a href=#100 id=100 data-nosnippet>100</a>  <span class="macro">DefMacro!</span>(
-<a href=#101 id=101 data-nosnippet>101</a>    <span class="string">"\\reviseddate{}"</span>,
-<a href=#102 id=102 data-nosnippet>102</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=revised]{#1}"
-<a href=#103 id=103 data-nosnippet>103</a>  </span>);
-<a href=#104 id=104 data-nosnippet>104</a>  <span class="macro">DefMacro!</span>(
-<a href=#105 id=105 data-nosnippet>105</a>    <span class="string">"\\accepteddate{}"</span>,
-<a href=#106 id=106 data-nosnippet>106</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=accepted]{#1}"
-<a href=#107 id=107 data-nosnippet>107</a>  </span>);
-<a href=#108 id=108 data-nosnippet>108</a>  <span class="comment">// wileyNJDv5.cls (newer template) adds these. Witness 2407.00139.
-<a href=#109 id=109 data-nosnippet>109</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#110 id=110 data-nosnippet>110</a>    <span class="string">"\\copyyear{}"</span>,
-<a href=#111 id=111 data-nosnippet>111</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=copyright-year]{#1}"
-<a href=#112 id=112 data-nosnippet>112</a>  </span>);
-<a href=#113 id=113 data-nosnippet>113</a>  <span class="macro">DefMacro!</span>(
-<a href=#114 id=114 data-nosnippet>114</a>    <span class="string">"\\titlemark{}"</span>,
-<a href=#115 id=115 data-nosnippet>115</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=titlemark]{#1}"
-<a href=#116 id=116 data-nosnippet>116</a>  </span>);
-<a href=#117 id=117 data-nosnippet>117</a>  <span class="macro">DefMacro!</span>(
-<a href=#118 id=118 data-nosnippet>118</a>    <span class="string">"\\startpage{}"</span>,
-<a href=#119 id=119 data-nosnippet>119</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=startpage]{#1}"
-<a href=#120 id=120 data-nosnippet>120</a>  </span>);
-<a href=#121 id=121 data-nosnippet>121</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bmsection{}"</span>, <span class="string">"\\section{#1}"</span>);
-<a href=#122 id=122 data-nosnippet>122</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bmsubsection{}"</span>, <span class="string">"\\subsection{#1}"</span>);
-<a href=#123 id=123 data-nosnippet>123</a>  <span class="comment">// 'corres' (without trailing 's' from real wileynjd) — alternative
-<a href=#124 id=124 data-nosnippet>124</a>  // \corres macro signature in v5 templates.
-<a href=#125 id=125 data-nosnippet>125</a></span>});
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/wileynjd_cls.rs`."><title>wileynjd_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>wileynjd_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! The Wiley NJD family of classes: WileyNJD-v1, WileyNJD-v2, WileyNJDv5 (and `wileyNJDv5`), and WileyASNA-v1
+<a href=#2 id=2 data-nosnippet>2</a>//! ([`crate::wileyasna_cls`]), one binding for every version (`wiley_njd_family`).
+<a href=#3 id=3 data-nosnippet>3</a>//!
+<a href=#4 id=4 data-nosnippet>4</a>//! These Wiley journal classes share a common set of frontmatter macros
+<a href=#5 id=5 data-nosnippet>5</a>//! (\corres, \authormark, \jnlcitation, \cname, \cyear, \vol, \DOI,
+<a href=#6 id=6 data-nosnippet>6</a>//! \papertype, ...). Route to OmniBus and gobble the frontmatter so
+<a href=#7 id=7 data-nosnippet>7</a>//! downstream content renders cleanly.
+<a href=#8 id=8 data-nosnippet>8</a></span><span class="kw">use </span>latexml_package::prelude::<span class="kw-2">*</span>;
+<a href=#9 id=9 data-nosnippet>9</a>
+<a href=#10 id=10 data-nosnippet>10</a><span class="kw">use </span><span class="kw">crate</span>::shipped_class::{
+<a href=#11 id=11 data-nosnippet>11</a>  class_code, class_code_contains, class_option_given, class_text_loads,
+<a href=#12 id=12 data-nosnippet>12</a>  require_shipped_algorithm_packages, shipped_class_text,
+<a href=#13 id=13 data-nosnippet>13</a>};
+<a href=#14 id=14 data-nosnippet>14</a>
+<a href=#15 id=15 data-nosnippet>15</a><span class="macro">LoadDefinitions!</span>({
+<a href=#16 id=16 data-nosnippet>16</a>  <span class="kw">let </span>class = <span class="macro">Expand!</span>(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\@currname"</span>))).to_string();
+<a href=#17 id=17 data-nosnippet>17</a>  wiley_njd_family(<span class="kw-2">&amp;</span>class)<span class="question-mark">?</span>;
+<a href=#18 id=18 data-nosnippet>18</a>});
+<a href=#19 id=19 data-nosnippet>19</a>
+<a href=#20 id=20 data-nosnippet>20</a><span class="doccomment">/// The definitions every Wiley NJD-family binding shares; `class` is the class the paper asked for (`\@currname`:
+<a href=#21 id=21 data-nosnippet>21</a>/// `WileyNJD-v2`, `WileyNJDv5`, `WileyASNA-v1`, …). The versions agree but for the box environments and the
+<a href=#22 id=22 data-nosnippet>22</a>/// theorem set, where the paper's copy decides (the class as its name says without one).
+<a href=#23 id=23 data-nosnippet>23</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>wiley_njd_family(class: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#24 id=24 data-nosnippet>24</a>  <span class="macro">LoadClass!</span>(<span class="string">"OmniBus"</span>);
+<a href=#25 id=25 data-nosnippet>25</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amsmath"</span>);
+<a href=#26 id=26 data-nosnippet>26</a>  <span class="comment">// amssymb pulls in \gtrsim/\lesssim and other relation symbols Wiley
+<a href=#27 id=27 data-nosnippet>27</a>  // journal papers commonly use without an explicit \usepackage{amssymb}.
+<a href=#28 id=28 data-nosnippet>28</a>  // Witness 2406.06228 (WileyASNA-v1 paper).
+<a href=#29 id=29 data-nosnippet>29</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"amssymb"</span>);
+<a href=#30 id=30 data-nosnippet>30</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amsthm"</span>);
+<a href=#31 id=31 data-nosnippet>31</a>  <span class="macro">RequirePackage!</span>(<span class="string">"xcolor"</span>);
+<a href=#32 id=32 data-nosnippet>32</a>  <span class="comment">// Wiley journals frequently load hyperref; mirror so cross-refs work.
+<a href=#33 id=33 data-nosnippet>33</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"hyperref"</span>);
+<a href=#34 id=34 data-nosnippet>34</a>  <span class="comment">// Wiley templates assume booktabs / graphicx are available —
+<a href=#35 id=35 data-nosnippet>35</a>  // eager-load so docs that use \toprule/\midrule/\bottomrule and
+<a href=#36 id=36 data-nosnippet>36</a>  // \includegraphics without explicit \usepackage don't error.
+<a href=#37 id=37 data-nosnippet>37</a>  // Witness 2504.02281. (The algorithm packages are the paper's copy's, below: a fixed algorithm/algorithmic
+<a href=#38 id=38 data-nosnippet>38</a>  // conflicts with algpseudocode.)
+<a href=#39 id=39 data-nosnippet>39</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"booktabs"</span>);
+<a href=#40 id=40 data-nosnippet>40</a>  <span class="macro">RequirePackage!</span>(<span class="string">"graphicx"</span>);
+<a href=#41 id=41 data-nosnippet>41</a>  <span class="comment">// wrapfig: WileyNJD-v2 authors routinely use \begin{wrapfigure} for
+<a href=#42 id=42 data-nosnippet>42</a>  // figure-with-side-text layouts. The Wiley cls itself doesn't load
+<a href=#43 id=43 data-nosnippet>43</a>  // wrapfig; mirror by eager-loading. Witness 2203.16535.
+<a href=#44 id=44 data-nosnippet>44</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"wrapfig"</span>);
+<a href=#45 id=45 data-nosnippet>45</a>  <span class="comment">// WileyNJDv5.cls:357-376, 413, 620-621 (the WileyNJD-v2 and WileyASNA-v1 copies this binding also stands in for load
+<a href=#46 id=46 data-nosnippet>46</a>  // the same: 2203.16535, 2406.06228): the tabular, float and caption packages the class loads, in its order
+<a href=#47 id=47 data-nosnippet>47</a>  // (`\multirow` and `\captionsetup` were undefined, 2609.06025), lettersp (:377) where the copy loads it, below. Left
+<a href=#48 id=48 data-nosnippet>48</a>  // out: ulem (without `normalem` it underlines `\emph`), enumerate, soul, `babel[english]`, `footmisc[bottom]`, and the
+<a href=#49 id=49 data-nosnippet>49</a>  // page-layout packages.
+<a href=#50 id=50 data-nosnippet>50</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"multicol"</span>);
+<a href=#51 id=51 data-nosnippet>51</a>  <span class="macro">RequirePackage!</span>(<span class="string">"multirow"</span>);
+<a href=#52 id=52 data-nosnippet>52</a>  <span class="macro">RequirePackage!</span>(<span class="string">"float"</span>);
+<a href=#53 id=53 data-nosnippet>53</a>  <span class="macro">RequirePackage!</span>(<span class="string">"rotating"</span>, options =&gt; <span class="macro">vec!</span>[<span class="macro">s!</span>(<span class="string">"figuresright"</span>)]);
+<a href=#54 id=54 data-nosnippet>54</a>  <span class="macro">RequirePackage!</span>(<span class="string">"caption"</span>);
+<a href=#55 id=55 data-nosnippet>55</a>  <span class="comment">// WileyNJDv5.cls:377 `\usepackage{lettersp}`, after caption and long before the algorithms (:6820): LETTERSP.STY:3-12
+<a href=#56 id=56 data-nosnippet>56</a>  // defines its `\Comment … \EndComment` block only while `\Comment` is undefined, keeping an existing one as its own;
+<a href=#57 id=57 data-nosnippet>57</a>  // loaded after algpseudocode it took algorithmicx's `\Comment` for it and ran its self-documentation as text
+<a href=#58 id=58 data-nosnippet>58</a>  // (2408.07575, 2501.12471, 2602.03829, 2609.08425, 2609.19994). lettersp is no TeX Live package: only the copy the
+<a href=#59 id=59 data-nosnippet>59</a>  // paper ships, where the paper's copy of the class loads it.
+<a href=#60 id=60 data-nosnippet>60</a>  </span><span class="kw">let </span>(<span class="kw">_</span>, class_text) = wiley_version(class)<span class="question-mark">?</span>;
+<a href=#61 id=61 data-nosnippet>61</a>  <span class="kw">let </span>lettersp = || {
+<a href=#62 id=62 data-nosnippet>62</a>    find_file(
+<a href=#63 id=63 data-nosnippet>63</a>      <span class="string">"lettersp"</span>,
+<a href=#64 id=64 data-nosnippet>64</a>      <span class="prelude-val">Some</span>(FindFileOptions {
+<a href=#65 id=65 data-nosnippet>65</a>        ext_type: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"sty"</span>)),
+<a href=#66 id=66 data-nosnippet>66</a>        forbid_ltxml: <span class="bool-val">true</span>,
+<a href=#67 id=67 data-nosnippet>67</a>        ..Default::default()
+<a href=#68 id=68 data-nosnippet>68</a>      }),
+<a href=#69 id=69 data-nosnippet>69</a>    )
+<a href=#70 id=70 data-nosnippet>70</a>    .is_some()
+<a href=#71 id=71 data-nosnippet>71</a>  };
+<a href=#72 id=72 data-nosnippet>72</a>  <span class="kw">if </span>class_text
+<a href=#73 id=73 data-nosnippet>73</a>    .as_deref()
+<a href=#74 id=74 data-nosnippet>74</a>    .is_some_and(|text| class_text_loads(text, <span class="string">"lettersp"</span>))
+<a href=#75 id=75 data-nosnippet>75</a>    &amp;&amp; lettersp()
+<a href=#76 id=76 data-nosnippet>76</a>  {
+<a href=#77 id=77 data-nosnippet>77</a>    <span class="macro">RequirePackage!</span>(<span class="string">"lettersp"</span>);
+<a href=#78 id=78 data-nosnippet>78</a>  }
+<a href=#79 id=79 data-nosnippet>79</a>  <span class="macro">RequirePackage!</span>(<span class="string">"tabularx"</span>);
+<a href=#80 id=80 data-nosnippet>80</a>  <span class="macro">RequirePackage!</span>(<span class="string">"varwidth"</span>);
+<a href=#81 id=81 data-nosnippet>81</a>  <span class="macro">RequirePackage!</span>(<span class="string">"dcolumn"</span>);
+<a href=#82 id=82 data-nosnippet>82</a>  <span class="comment">// WileyNJD-v2.cls:3331, WileyNJDv5.cls:6820 and WileyASNA-v1.cls:2555 `\usepackage{algorithm, algorithmicx,
+<a href=#83 id=83 data-nosnippet>83</a>  // algpseudocode}`, a copy `algorithm2e` (2002.02812:3338): `{algorithm}` and `\State` were undefined in papers that
+<a href=#84 id=84 data-nosnippet>84</a>  // rely on the class for them (1810.03033, 1810.12033, 2106.06046, 2106.14215, 2210.02694, 2402.11361, 2402.13183,
+<a href=#85 id=85 data-nosnippet>85</a>  // 2506.07013). The paper's copy decides; without one, none (Perl's OmniBus has no copy to scan either).
+<a href=#86 id=86 data-nosnippet>86</a>  </span>require_shipped_algorithm_packages(<span class="string">"cls"</span>)<span class="question-mark">?</span>;
+<a href=#87 id=87 data-nosnippet>87</a>  <span class="comment">// WileyNJD-v2.cls:63 `\DeclareOption{APA}{\global\@APArefstyletrue}` and :2722-2723 `\if@APArefstyle
+<a href=#88 id=88 data-nosnippet>88</a>  // \usepackage[natbibapa]{NJDapacite}`: the APA reference style's bibliography is apacite's (`\APACrefYearMonthDay`,
+<a href=#89 id=89 data-nosnippet>89</a>  // `{APACrefauthors}`, `\BBOQ`; 22 papers of run 353 with them undefined: 1811.00964, 1902.09230, 1904.10792).
+<a href=#90 id=90 data-nosnippet>90</a>  // NJDapacite.sty, shipped with the class, is apacite.sty of 2013 under another name (its :46 `\ProvidesPackage
+<a href=#91 id=91 data-nosnippet>91</a>  // {apacite}`), so the apacite binding stands for it, as for sn-jnl's `sn-apa` (sn_jnl_cls.rs). The class's
+<a href=#92 id=92 data-nosnippet>92</a>  // re-styling of the reference parts (:2725-2760, fonts and punctuation) is not followed. The load follows the
+<a href=#93 id=93 data-nosnippet>93</a>  // version (`wiley_njd_class_body`).
+<a href=#94 id=94 data-nosnippet>94</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"APA"</span>, {
+<a href=#95 id=95 data-nosnippet>95</a>    <span class="macro">AssignValue!</span>(<span class="string">"wileynjd@APA" </span>=&gt; <span class="bool-val">true</span>);
+<a href=#96 id=96 data-nosnippet>96</a>  });
+<a href=#97 id=97 data-nosnippet>97</a>  <span class="macro">ProcessOptions!</span>();
+<a href=#98 id=98 data-nosnippet>98</a>
+<a href=#99 id=99 data-nosnippet>99</a>  <span class="comment">// WileyNJD-v2.cls:1217-1221 (WileyNJDv5.cls:3636-3640, WileyASNA-v1 through WileyNJD-v1): the address parts of an
+<a href=#100 id=100 data-nosnippet>100</a>  // affiliation, each printing its argument; OmniBus has the others, but leaves `\state` out (omnibus_cls.rs: a
+<a href=#101 id=101 data-nosnippet>101</a>  // `\newcount\state` in some classes) — here it is only `\orgaddress{\state{NY}, \country{USA}}`, as in mrm_cls.rs.
+<a href=#102 id=102 data-nosnippet>102</a>  // Witnesses 1705.06379, 1910.04517, 2210.01555, 2605.24284.
+<a href=#103 id=103 data-nosnippet>103</a>  </span>def_macro_identity(<span class="string">"\\state{}"</span>)<span class="question-mark">?</span>;
+<a href=#104 id=104 data-nosnippet>104</a>
+<a href=#105 id=105 data-nosnippet>105</a>  <span class="comment">// Wiley frontmatter — preserve author content as ltx:note.
+<a href=#106 id=106 data-nosnippet>106</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\authormark{}"</span>, <span class="string">"\\textsuperscript{#1}"</span>);
+<a href=#107 id=107 data-nosnippet>107</a>  <span class="macro">DefMacro!</span>(
+<a href=#108 id=108 data-nosnippet>108</a>    <span class="string">"\\corres{}"</span>,
+<a href=#109 id=109 data-nosnippet>109</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=corresponding]{#1}"
+<a href=#110 id=110 data-nosnippet>110</a>  </span>);
+<a href=#111 id=111 data-nosnippet>111</a>  <span class="macro">DefMacro!</span>(
+<a href=#112 id=112 data-nosnippet>112</a>    <span class="string">"\\jnlcitation OptionalMatch:* []{}{}"</span>,
+<a href=#113 id=113 data-nosnippet>113</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=citation]{#3 #4}"
+<a href=#114 id=114 data-nosnippet>114</a>  </span>);
+<a href=#115 id=115 data-nosnippet>115</a>  <span class="macro">DefMacro!</span>(
+<a href=#116 id=116 data-nosnippet>116</a>    <span class="string">"\\presentadd[]{}"</span>,
+<a href=#117 id=117 data-nosnippet>117</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=present-address]{#2}"
+<a href=#118 id=118 data-nosnippet>118</a>  </span>);
+<a href=#119 id=119 data-nosnippet>119</a>  <span class="macro">DefMacro!</span>(
+<a href=#120 id=120 data-nosnippet>120</a>    <span class="string">"\\fundingInfo{}"</span>,
+<a href=#121 id=121 data-nosnippet>121</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=funding]{#1}"
+<a href=#122 id=122 data-nosnippet>122</a>  </span>);
+<a href=#123 id=123 data-nosnippet>123</a>  <span class="macro">DefMacro!</span>(
+<a href=#124 id=124 data-nosnippet>124</a>    <span class="string">"\\papertype{}"</span>,
+<a href=#125 id=125 data-nosnippet>125</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=papertype]{#1}"
+<a href=#126 id=126 data-nosnippet>126</a>  </span>);
+<a href=#127 id=127 data-nosnippet>127</a>  <span class="macro">DefMacro!</span>(
+<a href=#128 id=128 data-nosnippet>128</a>    <span class="string">"\\paperfield{}"</span>,
+<a href=#129 id=129 data-nosnippet>129</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=paperfield]{#1}"
+<a href=#130 id=130 data-nosnippet>130</a>  </span>);
+<a href=#131 id=131 data-nosnippet>131</a>  <span class="macro">DefMacro!</span>(
+<a href=#132 id=132 data-nosnippet>132</a>    <span class="string">"\\jname{}"</span>,
+<a href=#133 id=133 data-nosnippet>133</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=journal]{#1}"
+<a href=#134 id=134 data-nosnippet>134</a>  </span>);
+<a href=#135 id=135 data-nosnippet>135</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\jvol{}"</span>, <span class="string">"\\@add@frontmatter{ltx:note}[role=volume]{#1}"</span>);
+<a href=#136 id=136 data-nosnippet>136</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\jnum{}"</span>, <span class="string">"\\@add@frontmatter{ltx:note}[role=issue]{#1}"</span>);
+<a href=#137 id=137 data-nosnippet>137</a>  <span class="macro">DefMacro!</span>(
+<a href=#138 id=138 data-nosnippet>138</a>    <span class="string">"\\cname{}{}"</span>,
+<a href=#139 id=139 data-nosnippet>139</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=copyright]{#1 #2}"
+<a href=#140 id=140 data-nosnippet>140</a>  </span>);
+<a href=#141 id=141 data-nosnippet>141</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\cyear{}"</span>, <span class="string">"\\@add@frontmatter{ltx:note}[role=year]{#1}"</span>);
+<a href=#142 id=142 data-nosnippet>142</a>  <span class="comment">// \cjournal{name} / \cvol{N} / \ctitle{text} — citation-line fields
+<a href=#143 id=143 data-nosnippet>143</a>  // also in WileyNJDv5 frontmatter (alongside \cname / \cyear). Witness
+<a href=#144 id=144 data-nosnippet>144</a>  // 2504.02281 — preserve as ltx:note.
+<a href=#145 id=145 data-nosnippet>145</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#146 id=146 data-nosnippet>146</a>    <span class="string">"\\cjournal{}"</span>,
+<a href=#147 id=147 data-nosnippet>147</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=cjournal]{#1}"
+<a href=#148 id=148 data-nosnippet>148</a>  </span>);
+<a href=#149 id=149 data-nosnippet>149</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\cvol{}"</span>, <span class="string">"\\@add@frontmatter{ltx:note}[role=cvolume]{#1}"</span>);
+<a href=#150 id=150 data-nosnippet>150</a>  <span class="macro">DefMacro!</span>(
+<a href=#151 id=151 data-nosnippet>151</a>    <span class="string">"\\ctitle{}"</span>,
+<a href=#152 id=152 data-nosnippet>152</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=ctitle]{#1}"
+<a href=#153 id=153 data-nosnippet>153</a>  </span>);
+<a href=#154 id=154 data-nosnippet>154</a>  <span class="macro">DefMacro!</span>(
+<a href=#155 id=155 data-nosnippet>155</a>    <span class="string">"\\Copyrightline{}"</span>,
+<a href=#156 id=156 data-nosnippet>156</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=copyright]{#1}"
+<a href=#157 id=157 data-nosnippet>157</a>  </span>);
+<a href=#158 id=158 data-nosnippet>158</a>  <span class="macro">DefMacro!</span>(
+<a href=#159 id=159 data-nosnippet>159</a>    <span class="string">"\\artmonth{}"</span>,
+<a href=#160 id=160 data-nosnippet>160</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=month]{#1}"
+<a href=#161 id=161 data-nosnippet>161</a>  </span>);
+<a href=#162 id=162 data-nosnippet>162</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\DOI{}"</span>, <span class="string">"\\@add@frontmatter{ltx:note}[role=doi]{#1}"</span>);
+<a href=#163 id=163 data-nosnippet>163</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\doiline{}"</span>, <span class="string">"\\@add@frontmatter{ltx:note}[role=doi]{#1}"</span>);
+<a href=#164 id=164 data-nosnippet>164</a>  <span class="macro">DefMacro!</span>(
+<a href=#165 id=165 data-nosnippet>165</a>    <span class="string">"\\runningheads{}{}"</span>,
+<a href=#166 id=166 data-nosnippet>166</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=runningheads]{#1 / #2}"
+<a href=#167 id=167 data-nosnippet>167</a>  </span>);
+<a href=#168 id=168 data-nosnippet>168</a>  <span class="macro">DefMacro!</span>(
+<a href=#169 id=169 data-nosnippet>169</a>    <span class="string">"\\receiveddate{}"</span>,
+<a href=#170 id=170 data-nosnippet>170</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=received]{#1}"
+<a href=#171 id=171 data-nosnippet>171</a>  </span>);
+<a href=#172 id=172 data-nosnippet>172</a>  <span class="macro">DefMacro!</span>(
+<a href=#173 id=173 data-nosnippet>173</a>    <span class="string">"\\reviseddate{}"</span>,
+<a href=#174 id=174 data-nosnippet>174</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=revised]{#1}"
+<a href=#175 id=175 data-nosnippet>175</a>  </span>);
+<a href=#176 id=176 data-nosnippet>176</a>  <span class="macro">DefMacro!</span>(
+<a href=#177 id=177 data-nosnippet>177</a>    <span class="string">"\\accepteddate{}"</span>,
+<a href=#178 id=178 data-nosnippet>178</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=accepted]{#1}"
+<a href=#179 id=179 data-nosnippet>179</a>  </span>);
+<a href=#180 id=180 data-nosnippet>180</a>  <span class="comment">// wileyNJDv5.cls (newer template) adds these. Witness 2407.00139.
+<a href=#181 id=181 data-nosnippet>181</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#182 id=182 data-nosnippet>182</a>    <span class="string">"\\copyyear{}"</span>,
+<a href=#183 id=183 data-nosnippet>183</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=copyright-year]{#1}"
+<a href=#184 id=184 data-nosnippet>184</a>  </span>);
+<a href=#185 id=185 data-nosnippet>185</a>  <span class="macro">DefMacro!</span>(
+<a href=#186 id=186 data-nosnippet>186</a>    <span class="string">"\\titlemark{}"</span>,
+<a href=#187 id=187 data-nosnippet>187</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=titlemark]{#1}"
+<a href=#188 id=188 data-nosnippet>188</a>  </span>);
+<a href=#189 id=189 data-nosnippet>189</a>  <span class="macro">DefMacro!</span>(
+<a href=#190 id=190 data-nosnippet>190</a>    <span class="string">"\\startpage{}"</span>,
+<a href=#191 id=191 data-nosnippet>191</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=startpage]{#1}"
+<a href=#192 id=192 data-nosnippet>192</a>  </span>);
+<a href=#193 id=193 data-nosnippet>193</a>  wiley_njd_class_body(class)
+<a href=#194 id=194 data-nosnippet>194</a>}
+<a href=#195 id=195 data-nosnippet>195</a>
+<a href=#196 id=196 data-nosnippet>196</a><span class="doccomment">/// The version-sensitive definitions are chosen by the copy the paper ships, else by the class name.
+<a href=#197 id=197 data-nosnippet>197</a></span><span class="attr">#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+<a href=#198 id=198 data-nosnippet>198</a></span><span class="kw">enum </span>WileyVersion {
+<a href=#199 id=199 data-nosnippet>199</a>  <span class="doccomment">/// WileyNJD-v1.cls (2015-2017): its 20 theorems, `{boxtext}` an mdframed box.
+<a href=#200 id=200 data-nosnippet>200</a>  </span>V1,
+<a href=#201 id=201 data-nosnippet>201</a>  <span class="doccomment">/// WileyNJD-v2.cls and WileyASNA-v1.cls: the 47 theorems, `{boxtext}` without arguments.
+<a href=#202 id=202 data-nosnippet>202</a>  </span>V2,
+<a href=#203 id=203 data-nosnippet>203</a>  <span class="doccomment">/// WileyNJDv5.cls: v2's theorems, `{boxtext}[1]` and `{boxwithhead}[2]` (boites' `{breakbox}`).
+<a href=#204 id=204 data-nosnippet>204</a>  </span>V5,
+<a href=#205 id=205 data-nosnippet>205</a>}
+<a href=#206 id=206 data-nosnippet>206</a>
+<a href=#207 id=207 data-nosnippet>207</a><span class="doccomment">/// The version of the class the paper asked for, and the text of the copy it ships (`None` without one).
+<a href=#208 id=208 data-nosnippet>208</a></span><span class="kw">fn </span>wiley_version(class: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;(WileyVersion, <span class="prelude-ty">Option</span>&lt;String&gt;)&gt; {
+<a href=#209 id=209 data-nosnippet>209</a>  <span class="kw">let </span>name = class
+<a href=#210 id=210 data-nosnippet>210</a>    .rsplit([<span class="string">'/'</span>, <span class="string">'\\'</span>])
+<a href=#211 id=211 data-nosnippet>211</a>    .next()
+<a href=#212 id=212 data-nosnippet>212</a>    .unwrap_or_default()
+<a href=#213 id=213 data-nosnippet>213</a>    .to_ascii_lowercase();
+<a href=#214 id=214 data-nosnippet>214</a>  <span class="kw">let </span>by_name = <span class="kw">if </span>name.contains(<span class="string">"v5"</span>) {
+<a href=#215 id=215 data-nosnippet>215</a>    WileyVersion::V5
+<a href=#216 id=216 data-nosnippet>216</a>  } <span class="kw">else if </span>name.starts_with(<span class="string">"wileynjd-v1"</span>) {
+<a href=#217 id=217 data-nosnippet>217</a>    WileyVersion::V1
+<a href=#218 id=218 data-nosnippet>218</a>  } <span class="kw">else </span>{
+<a href=#219 id=219 data-nosnippet>219</a>    WileyVersion::V2
+<a href=#220 id=220 data-nosnippet>220</a>  };
+<a href=#221 id=221 data-nosnippet>221</a>  <span class="comment">// `shipped_class_text` reads the copy of the class the load resolved to (`\@currname`, or the request a fallback
+<a href=#222 id=222 data-nosnippet>222</a>  // answered with this binding: `WileyNJDv5_preprint`, `WileyNJD-v2a`)
+<a href=#223 id=223 data-nosnippet>223</a>  </span><span class="kw">let </span>binding = <span class="kw">if </span>name.starts_with(<span class="string">"wileyasna"</span>) {
+<a href=#224 id=224 data-nosnippet>224</a>    <span class="string">"WileyASNA-v1"
+<a href=#225 id=225 data-nosnippet>225</a>  </span>} <span class="kw">else </span>{
+<a href=#226 id=226 data-nosnippet>226</a>    class
+<a href=#227 id=227 data-nosnippet>227</a>  };
+<a href=#228 id=228 data-nosnippet>228</a>  <span class="kw">let </span>text = shipped_class_text(binding)<span class="question-mark">?</span>;
+<a href=#229 id=229 data-nosnippet>229</a>  <span class="kw">let </span>version = text
+<a href=#230 id=230 data-nosnippet>230</a>    .as_deref()
+<a href=#231 id=231 data-nosnippet>231</a>    .and_then(version_from_text)
+<a href=#232 id=232 data-nosnippet>232</a>    .unwrap_or(by_name);
+<a href=#233 id=233 data-nosnippet>233</a>  <span class="prelude-val">Ok</span>((version, text))
+<a href=#234 id=234 data-nosnippet>234</a>}
+<a href=#235 id=235 data-nosnippet>235</a>
+<a href=#236 id=236 data-nosnippet>236</a><span class="doccomment">/// The version a copy of the class is, by the definitions where the versions differ: WileyNJDv5.cls:592 `{boxtext}[1]`
+<a href=#237 id=237 data-nosnippet>237</a>/// (2302.02310), the v2 theorem set's `{eexample}` (WileyNJD-v2.cls:3012, 1712.08341; WileyASNA-v1.cls and the
+<a href=#238 id=238 data-nosnippet>238</a>/// WileyNJD-v1.cls of 2020, 2010.09463, have it too), the v1 set's `{example}` (WileyNJD-v1.cls:4564, 1511.08547).
+<a href=#239 id=239 data-nosnippet>239</a>/// `None` for a copy with none of them.
+<a href=#240 id=240 data-nosnippet>240</a></span><span class="kw">fn </span>version_from_text(text: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;WileyVersion&gt; {
+<a href=#241 id=241 data-nosnippet>241</a>  <span class="kw">if </span>class_code_contains(text, <span class="string">"\\newenvironment{boxtext}[1]"</span>) {
+<a href=#242 id=242 data-nosnippet>242</a>    <span class="prelude-val">Some</span>(WileyVersion::V5)
+<a href=#243 id=243 data-nosnippet>243</a>  } <span class="kw">else if </span>class_code_contains(text, <span class="string">"\\newtheorem{eexample}"</span>) {
+<a href=#244 id=244 data-nosnippet>244</a>    <span class="prelude-val">Some</span>(WileyVersion::V2)
+<a href=#245 id=245 data-nosnippet>245</a>  } <span class="kw">else if </span>class_code_contains(text, <span class="string">"\\newtheorem{example}{Example}"</span>) {
+<a href=#246 id=246 data-nosnippet>246</a>    <span class="prelude-val">Some</span>(WileyVersion::V1)
+<a href=#247 id=247 data-nosnippet>247</a>  } <span class="kw">else </span>{
+<a href=#248 id=248 data-nosnippet>248</a>    <span class="prelude-val">None
+<a href=#249 id=249 data-nosnippet>249</a>  </span>}
+<a href=#250 id=250 data-nosnippet>250</a>}
+<a href=#251 id=251 data-nosnippet>251</a>
+<a href=#252 id=252 data-nosnippet>252</a><span class="doccomment">/// The commands, environments and theorems the Wiley NJD classes define that papers use and OmniBus does not have
+<a href=#253 id=253 data-nosnippet>253</a>/// (the class bodies are the same in WileyNJD-v2.cls of 2017-10-25 (1712.08341, 312 copies), WileyNJDv5.cls
+<a href=#254 id=254 data-nosnippet>254</a>/// (2302.02310, 89 copies), WileyASNA-v1.cls (1804.11014, 158 copies) and WileyNJD-v1.cls (1511.08547, 12 copies) where
+<a href=#255 id=255 data-nosnippet>255</a>/// not said otherwise; line numbers are these copies').
+<a href=#256 id=256 data-nosnippet>256</a></span><span class="kw">fn </span>wiley_njd_class_body(class: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#257 id=257 data-nosnippet>257</a>  <span class="kw">let </span>(version, class_text) = wiley_version(class)<span class="question-mark">?</span>;
+<a href=#258 id=258 data-nosnippet>258</a>  <span class="kw">let </span>asna = class.to_ascii_lowercase().contains(<span class="string">"wileyasna"</span>);
+<a href=#259 id=259 data-nosnippet>259</a>  <span class="comment">// WileyNJD-v2.cls:1781 (WileyNJDv5.cls:5066, WileyASNA-v1.cls:1195, WileyNJD-v1.cls:956)
+<a href=#260 id=260 data-nosnippet>260</a>  // `\def\presentaddress#1{\gdef\@presentaddress{…\textbf{Present Address}\par #1}}`, printed under the
+<a href=#261 id=261 data-nosnippet>261</a>  // correspondence block of the title page (:2289): a frontmatter note, as sn-jnl's (sn_jnl_cls.rs). Undefined in 156
+<a href=#262 id=262 data-nosnippet>262</a>  // WileyNJD-v2, 68 WileyASNA-v1 and 38 WileyNJDv5 papers of run 353 (1701.02349, 1705.09846, 1712.08341, 1801.09541;
+<a href=#263 id=263 data-nosnippet>263</a>  // WileyNJD-v1 1709.02675).
+<a href=#264 id=264 data-nosnippet>264</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#265 id=265 data-nosnippet>265</a>    <span class="string">"\\presentaddress{}"</span>,
+<a href=#266 id=266 data-nosnippet>266</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=present-address]{#1}"
+<a href=#267 id=267 data-nosnippet>267</a>  </span>);
+<a href=#268 id=268 data-nosnippet>268</a>  <span class="comment">// The title-page stores (WileyNJD-v2.cls:1812, 1890-1891, 1198; WileyNJDv5.cls:5099, 5182-5183; WileyASNA-v1.cls:1226,
+<a href=#269 id=269 data-nosnippet>269</a>  // 1319-1320, 624): the history line, the funding block's headings and the article id are page furniture
+<a href=#270 id=270 data-nosnippet>270</a>  // `\@maketitle` lays out (`\historydates` 1902.09230, 2605.19910; `\fundinginfohead` 1806.09518; `\artid` 2101.04467,
+<a href=#271 id=271 data-nosnippet>271</a>  // 2608.01016). The running head's DOI text (WileyNJD-v2.cls:1820, WileyNJDv5.cls:5107, WileyASNA-v1.cls:1234), a
+<a href=#272 id=272 data-nosnippet>272</a>  // paper's DOI where it is given (`\doiheadtext{DOI: 10.1002/fld.4504}`, 1803.06134; 2306.05470, 2505.23984,
+<a href=#273 id=273 data-nosnippet>273</a>  // 2512.05601), is a DOI note, as `\DOI`.
+<a href=#274 id=274 data-nosnippet>274</a>  // `\uns` (WileyNJD-v2.cls:1180 `\def\uns{\ifmmode\,\else$\,$\fi}`) is a thin space in or out of math (2208.08472,
+<a href=#275 id=275 data-nosnippet>275</a>  // 2211.16474), as the class defines it (until 78a `\thinspace` out of math: the formula holding only `\,` ended the
+<a href=#276 id=276 data-nosnippet>276</a>  // paragraph's `--` ligatures in the kernel, 2208.08472's "1989--2008"; fixed in document.rs, guard
+<a href=#277 id=277 data-nosnippet>277</a>  // `perfect_kernel_batch78a::text_after_a_space_only_formula_is_ligatured`). `\subtitlefont`
+<a href=#278 id=278 data-nosnippet>278</a>  // (WileyNJD-v2.cls:1436, 1506, WileyNJDv5.cls:3990, the size options' title fonts) the font of a subtitle in
+<a href=#279 id=279 data-nosnippet>279</a>  // `\title{…\\\subtitlefont …}` (1902.01961, 2108.10040), its margins left out.
+<a href=#280 id=280 data-nosnippet>280</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#281 id=281 data-nosnippet>281</a>    <span class="string">r"\def\historydates#1{\gdef\@history@dates{#1}}%
+<a href=#282 id=282 data-nosnippet>282</a>\def\subtitlefont{\rmfamily\fontsize{16}{21}\bfseries\selectfont}%
+<a href=#283 id=283 data-nosnippet>283</a>\def\fundinginfohead#1{\gdef\@fundinginfo@head{#1}}%
+<a href=#284 id=284 data-nosnippet>284</a>\def\fundinginfoheadtext#1{\gdef\@fundinginfo@head@text{#1}}%
+<a href=#285 id=285 data-nosnippet>285</a>\def\artid#1{\gdef\@artid{#1}}%
+<a href=#286 id=286 data-nosnippet>286</a>\def\uns{\ifmmode\,\else$\,$\fi}%"
+<a href=#287 id=287 data-nosnippet>287</a>  </span>);
+<a href=#288 id=288 data-nosnippet>288</a>  <span class="macro">DefMacro!</span>(
+<a href=#289 id=289 data-nosnippet>289</a>    <span class="string">"\\doiheadtext{}"</span>,
+<a href=#290 id=290 data-nosnippet>290</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=doi]{#1}"
+<a href=#291 id=291 data-nosnippet>291</a>  </span>);
+<a href=#292 id=292 data-nosnippet>292</a>  <span class="comment">// WileyNJD-v1.cls's reference styles (1511.08547's copy: APA :1104-1106, AMS :1850-1851, AMA :2498-2499, Vancouver
+<a href=#293 id=293 data-nosnippet>293</a>  // :3080-3081, Chemistry :3684-3685) each load amsrefs, whose `{bibdiv}`, `{biblist}`, `\bib` and `\ndash` the papers'
+<a href=#294 id=294 data-nosnippet>294</a>  // reference lists use (1511.08547, 1707.00398, 1709.02675, 1709.08526, 1806.01802: 9 papers of run 353), each load
+<a href=#295 id=295 data-nosnippet>295</a>  // inside its `\if@…refstyle`, which only the option sets (:33-43, no `\ExecuteOptions`): no amsrefs without one of
+<a href=#296 id=296 data-nosnippet>296</a>  // APA, AMS, ACS, AMA, VANCOUVER. Those copies load no apacite, so their APA style is amsrefs' author-year, not the
+<a href=#297 id=297 data-nosnippet>297</a>  // later versions' NJDapacite (WileyNJD-v2.cls:2722-2723, WileyNJDv5.cls, WileyASNA-v1.cls and the WileyNJD-v1.cls of
+<a href=#298 id=298 data-nosnippet>298</a>  // 2020, 2010.09463, 2208.12482, which load no amsrefs and are the v2 version here). The 2020 copies' title-page
+<a href=#299 id=299 data-nosnippet>299</a>  // stores (2010.09463's copy :1825-1842): the journal's name, logo and URL in the running head; `\openaccess` (:1871)
+<a href=#300 id=300 data-nosnippet>300</a>  // sets its licence text as an unmarked footnote of the title page, a licence pubnote here (as
+<a href=#301 id=301 data-nosnippet>301</a>  // dmtcs_episciences_cls.rs, acmart_cls.rs).
+<a href=#302 id=302 data-nosnippet>302</a>  </span><span class="kw">let </span>copy_loads = |package: <span class="kw-2">&amp;</span>str, without_copy: bool| {
+<a href=#303 id=303 data-nosnippet>303</a>    class_text
+<a href=#304 id=304 data-nosnippet>304</a>      .as_deref()
+<a href=#305 id=305 data-nosnippet>305</a>      .map_or(without_copy, |text| class_text_loads(text, package))
+<a href=#306 id=306 data-nosnippet>306</a>  };
+<a href=#307 id=307 data-nosnippet>307</a>  <span class="kw">let </span>refstyle = [<span class="string">"APA"</span>, <span class="string">"AMS"</span>, <span class="string">"ACS"</span>, <span class="string">"AMA"</span>, <span class="string">"VANCOUVER"</span>]
+<a href=#308 id=308 data-nosnippet>308</a>    .into_iter()
+<a href=#309 id=309 data-nosnippet>309</a>    .map(class_option_given)
+<a href=#310 id=310 data-nosnippet>310</a>    .collect::&lt;<span class="prelude-ty">Result</span>&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;&gt;()<span class="question-mark">?
+<a href=#311 id=311 data-nosnippet>311</a>    </span>.contains(<span class="kw-2">&amp;</span><span class="bool-val">true</span>);
+<a href=#312 id=312 data-nosnippet>312</a>  <span class="kw">if </span>refstyle &amp;&amp; copy_loads(<span class="string">"amsrefs"</span>, version == WileyVersion::V1) {
+<a href=#313 id=313 data-nosnippet>313</a>    <span class="macro">RequirePackage!</span>(<span class="string">"amsrefs"</span>);
+<a href=#314 id=314 data-nosnippet>314</a>  }
+<a href=#315 id=315 data-nosnippet>315</a>  <span class="kw">if </span>lookup_bool(<span class="string">"wileynjd@APA"</span>)
+<a href=#316 id=316 data-nosnippet>316</a>    &amp;&amp; (copy_loads(<span class="string">"NJDapacite"</span>, version != WileyVersion::V1) || copy_loads(<span class="string">"apacite"</span>, <span class="bool-val">false</span>))
+<a href=#317 id=317 data-nosnippet>317</a>  {
+<a href=#318 id=318 data-nosnippet>318</a>    <span class="macro">RequirePackage!</span>(<span class="string">"apacite"</span>, options =&gt; <span class="macro">vec!</span>[<span class="macro">s!</span>(<span class="string">"natbibapa"</span>)]);
+<a href=#319 id=319 data-nosnippet>319</a>    <span class="comment">// The copy's own `\usepackage[apaciteclassic]{NJDapacite}` (WileyNJDv5.cls:6067; v2's `[natbibapa]`) is a repeat
+<a href=#320 id=320 data-nosnippet>320</a>    // of this load, NJDapacite.sty being the apacite.sty the binding stands for: marked loaded on the class's behalf,
+<a href=#321 id=321 data-nosnippet>321</a>    // as amsart marks amsthm (ams_support_sty.rs). Read raw after the binding, its `apaciteclassic` skip of the
+<a href=#322 id=322 data-nosnippet>322</a>    // `\if@APAC@natbib@emu` branch (NJDapacite.sty:587-987) met the natbib binding's `\ifciteindex` at :931's
+<a href=#323 id=323 data-nosnippet>323</a>    // `\newif\ifciteindex` — a conditional to the skip, where TeX, with no natbib loaded, sees an undefined name — and
+<a href=#324 id=324 data-nosnippet>324</a>    // ran on to :1878-1882's `\let\ifBR@verbose\iffalse\let\fi\fi`: three "Attempt to close a group" Errors
+<a href=#325 id=325 data-nosnippet>325</a>    // (2606.10545, 2602.12288; pdflatex 0).
+<a href=#326 id=326 data-nosnippet>326</a>    </span><span class="macro">AssignValue!</span>(<span class="string">"NJDapacite.sty_loaded" </span>=&gt; <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#327 id=327 data-nosnippet>327</a>    <span class="macro">RawTeX!</span>(
+<a href=#328 id=328 data-nosnippet>328</a>      <span class="string">r"\expandafter\let\csname ver@NJDapacite.sty\expandafter\endcsname\csname ver@apacite.sty\endcsname"
+<a href=#329 id=329 data-nosnippet>329</a>    </span>);
+<a href=#330 id=330 data-nosnippet>330</a>  }
+<a href=#331 id=331 data-nosnippet>331</a>  <span class="comment">// Every version loads listings and alltt (WileyNJD-v2.cls:3346-3347, WileyNJDv5.cls:6822, WileyASNA-v1.cls:2557,
+<a href=#332 id=332 data-nosnippet>332</a>  // WileyNJD-v1.cls:4712; `\lstset` undefined: 1802.08557, 2206.13356). WileyASNA-v1.cls:250 and the older
+<a href=#333 id=333 data-nosnippet>333</a>  // WileyNJD-v1.cls:256 load `[labelformat=empty]{subfig}` (`\subfloat` undefined: 1511.08547, 1707.00398); WileyNJD-v2
+<a href=#334 id=334 data-nosnippet>334</a>  // (:287), WileyNJDv5 (:397) and the WileyNJD-v1 of 2020 (2010.09463:281) only `\IfFileExists{subfigure.sty}{}{…}`,
+<a href=#335 id=335 data-nosnippet>335</a>  // and TeX Live has subfigure.sty, so none.
+<a href=#336 id=336 data-nosnippet>336</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"listings"</span>);
+<a href=#337 id=337 data-nosnippet>337</a>  <span class="macro">RequirePackage!</span>(<span class="string">"alltt"</span>);
+<a href=#338 id=338 data-nosnippet>338</a>  <span class="kw">let </span>subfig = <span class="kw">match </span>class_text.as_deref() {
+<a href=#339 id=339 data-nosnippet>339</a>    <span class="prelude-val">Some</span>(text) =&gt; {
+<a href=#340 id=340 data-nosnippet>340</a>      class_text_loads(text, <span class="string">"subfig"</span>)
+<a href=#341 id=341 data-nosnippet>341</a>        &amp;&amp; !class_code_contains(text, <span class="string">"\\IfFileExists{subfigure.sty}"</span>)
+<a href=#342 id=342 data-nosnippet>342</a>    },
+<a href=#343 id=343 data-nosnippet>343</a>    <span class="prelude-val">None </span>=&gt; version == WileyVersion::V1 || asna,
+<a href=#344 id=344 data-nosnippet>344</a>  };
+<a href=#345 id=345 data-nosnippet>345</a>  <span class="kw">if </span>subfig {
+<a href=#346 id=346 data-nosnippet>346</a>    <span class="macro">RequirePackage!</span>(<span class="string">"subfig"</span>, options =&gt; <span class="macro">vec!</span>[<span class="macro">s!</span>(<span class="string">"labelformat=empty"</span>)]);
+<a href=#347 id=347 data-nosnippet>347</a>  }
+<a href=#348 id=348 data-nosnippet>348</a>  <span class="macro">RawTeX!</span>(
+<a href=#349 id=349 data-nosnippet>349</a>    <span class="string">r"\def\journalname#1{\gdef\@journalname{#1}}%
+<a href=#350 id=350 data-nosnippet>350</a>\def\journallogo#1#2{\gdef\@journallogo{\textsc{#1}\ \textcolor{blue}{#2}}}%
+<a href=#351 id=351 data-nosnippet>351</a>\def\jurl#1{\gdef\@jurl{#1}}"
+<a href=#352 id=352 data-nosnippet>352</a>  </span>);
+<a href=#353 id=353 data-nosnippet>353</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\openaccess{}"</span>, <span class="string">"\\lx@add@pubnote[role=license]{#1}"</span>);
+<a href=#354 id=354 data-nosnippet>354</a>  <span class="comment">// WileyNJD-v2.cls:1857-1864 (WileyNJDv5.cls:5149, WileyASNA-v1.cls:1271, WileyNJD-v1.cls:978, every copy)
+<a href=#355 id=355 data-nosnippet>355</a>  // `\renewcommand\abstract[2][]{…\absheadfont#1…#2…}`: the abstract and, optionally, its heading
+<a href=#356 id=356 data-nosnippet>356</a>  // (`\abstract[Summary]{…}`, the templates' form: 45 of 60 sampled papers of the family, 1701.02349, 1712.08341; the
+<a href=#357 id=357 data-nosnippet>357</a>  // kernel's `\abstract` read `[Summary]` as text of the abstract in 219 of 490 papers). The heading names the
+<a href=#358 id=358 data-nosnippet>358</a>  // abstract; without one it keeps the kernel's name.
+<a href=#359 id=359 data-nosnippet>359</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#360 id=360 data-nosnippet>360</a>    <span class="string">r"\def\lx@wiley@abstract#1#2{\if\relax\detokenize{#1}\relax\lx@add@abstract{#2}\else%
+<a href=#361 id=361 data-nosnippet>361</a>\lx@add@abstract[name={#1}]{#2}\fi}"
+<a href=#362 id=362 data-nosnippet>362</a>  </span>);
+<a href=#363 id=363 data-nosnippet>363</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\abstract[]{}"</span>, <span class="string">"\\lx@wiley@abstract{#1}{#2}"</span>);
+<a href=#364 id=364 data-nosnippet>364</a>  <span class="comment">// WileyNJD-v2.cls:1877-1878 (WileyNJDv5.cls:5169-5170): the parts of a `\fundingInfo` entry, printed as
+<a href=#365 id=365 data-nosnippet>365</a>  // "Agency, Number."; WileyASNA-v1 sets them in running text (wileyasna_cls.rs).
+<a href=#366 id=366 data-nosnippet>366</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\def\fundingNumber#1{#1.}\def\fundingAgency#1{#1,\space}"</span>);
+<a href=#367 id=367 data-nosnippet>367</a>  <span class="comment">// WileyNJDv5.cls:5762-5764: the class's own sectioning commands, `\@startsection`s of the section levels, so with
+<a href=#368 id=368 data-nosnippet>368</a>  // their star and optional title (`\bmsection*{Acknowledgments}`, 2405.03603, 2511.08532: the former `\bmsection{}`
+<a href=#369 id=369 data-nosnippet>369</a>  // read the star as the title) and the section counter after `\appendix` (2511.08532's `\bmsection{Details …}`):
+<a href=#370 id=370 data-nosnippet>370</a>  // `\section` as it is when called. `\bmsubsubsection`: 2309.00837, 2311.07331, 2602.03894.
+<a href=#371 id=371 data-nosnippet>371</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#372 id=372 data-nosnippet>372</a>    <span class="string">r"\def\bmsection{\section}\def\bmsubsection{\subsection}\def\bmsubsubsection{\subsubsection}"
+<a href=#373 id=373 data-nosnippet>373</a>  </span>);
+<a href=#374 id=374 data-nosnippet>374</a>
+<a href=#375 id=375 data-nosnippet>375</a>  <span class="comment">// WileyNJD-v2.cls:2816-2828 (WileyNJDv5.cls:6188-6200, WileyASNA-v1.cls:2315-2327, WileyNJD-v1.cls:4321-4333): the
+<a href=#376 id=376 data-nosnippet>376</a>  // notes under a table, a list whose first item is the text before any `\item` (`\begin{tablenotes} a) Eq. 1, …`,
+<a href=#377 id=377 data-nosnippet>377</a>  // 1808.09739; `\item[$\dagger$] …`, 1808.05540, 1901.00057, 1903.09736), and `\tnote`, which prints its mark as it
+<a href=#378 id=378 data-nosnippet>378</a>  // is (1910.13464, 1911.09684). threeparttable, loaded after the class, replaces both. The class's leading
+<a href=#379 id=379 data-nosnippet>379</a>  // `\item\relax` opens an item only where text precedes the first `\item` (OXIDIZED_DESIGN_DIVERGENCES #601: the
+<a href=#380 id=380 data-nosnippet>380</a>  // empty first item the class sets before `\item[$\dagger$]` is a blank, no glyph, in the PDF, and would be an empty
+<a href=#381 id=381 data-nosnippet>381</a>  // `&lt;ltx:item&gt;` here).
+<a href=#382 id=382 data-nosnippet>382</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#383 id=383 data-nosnippet>383</a>    <span class="string">r"\newenvironment{tablenotes}{\list{}{\setlength{\labelsep}{0pt}%
+<a href=#384 id=384 data-nosnippet>384</a>\setlength{\labelwidth}{0pt}%
+<a href=#385 id=385 data-nosnippet>385</a>\setlength{\leftmargin}{0pt}%
+<a href=#386 id=386 data-nosnippet>386</a>\setlength{\rightmargin}{0pt}%
+<a href=#387 id=387 data-nosnippet>387</a>\setlength{\topsep}{2pt}%
+<a href=#388 id=388 data-nosnippet>388</a>\setlength{\itemsep}{0pt}%
+<a href=#389 id=389 data-nosnippet>389</a>\setlength{\partopsep}{0pt}%
+<a href=#390 id=390 data-nosnippet>390</a>\setlength{\listparindent}{0em}%
+<a href=#391 id=391 data-nosnippet>391</a>\setlength{\parsep}{0pt}}%
+<a href=#392 id=392 data-nosnippet>392</a>\@ifnextchar\item{}{\item\relax}}{\endlist}%
+<a href=#393 id=393 data-nosnippet>393</a>\def\tnote#1{#1}"
+<a href=#394 id=394 data-nosnippet>394</a>  </span>);
+<a href=#395 id=395 data-nosnippet>395</a>
+<a href=#396 id=396 data-nosnippet>396</a>  <span class="comment">// WileyNJD-v2.cls:3445-3465 (WileyNJDv5.cls:6924-6943 in a `{breakbox}`, WileyASNA-v1.cls:2656, WileyNJD-v1.cls:4811):
+<a href=#397 id=397 data-nosnippet>397</a>  // `\begin{biography}{photo}{text}`, the author's photo wrapped by the text, `\author` bold; shaped as IEEEtran's
+<a href=#398 id=398 data-nosnippet>398</a>  // biography (ieeetran_cls.rs, Perl IEEEtran.cls.ltxml:231-240), without the photo cell when the photo is empty
+<a href=#399 id=399 data-nosnippet>399</a>  // (`\begin{biography}{}{…}`, 1812.10266, 2102.03158). Witnesses 1705.00674, 1805.12509, 1810.07251, 1809.09035.
+<a href=#400 id=400 data-nosnippet>400</a>  </span><span class="macro">DefEnvironment!</span>(
+<a href=#401 id=401 data-nosnippet>401</a>    <span class="string">"{biography}{}{}"</span>,
+<a href=#402 id=402 data-nosnippet>402</a>    <span class="string">"&lt;ltx:float class='biography'&gt;\
+<a href=#403 id=403 data-nosnippet>403</a>      &lt;ltx:tabular&gt;\
+<a href=#404 id=404 data-nosnippet>404</a>        &lt;ltx:tr&gt;\
+<a href=#405 id=405 data-nosnippet>405</a>          ?#1(&lt;ltx:td&gt;#1&lt;/ltx:td&gt;)()\
+<a href=#406 id=406 data-nosnippet>406</a>          &lt;ltx:td&gt;&lt;ltx:inline-block&gt;#2 #body&lt;/ltx:inline-block&gt;&lt;/ltx:td&gt;\
+<a href=#407 id=407 data-nosnippet>407</a>        &lt;/ltx:tr&gt;\
+<a href=#408 id=408 data-nosnippet>408</a>      &lt;/ltx:tabular&gt;\
+<a href=#409 id=409 data-nosnippet>409</a>    &lt;/ltx:float&gt;"</span>,
+<a href=#410 id=410 data-nosnippet>410</a>    before_digest =&gt; {
+<a href=#411 id=411 data-nosnippet>411</a>      <span class="macro">DefMacro!</span>(<span class="string">"\\author{}"</span>, <span class="string">"\\textbf{#1}"</span>);
+<a href=#412 id=412 data-nosnippet>412</a>    }
+<a href=#413 id=413 data-nosnippet>413</a>  );
+<a href=#414 id=414 data-nosnippet>414</a>
+<a href=#415 id=415 data-nosnippet>415</a>  <span class="comment">// WileyNJD-v2.cls:3393-3395 (WileyNJDv5.cls:6869, WileyASNA-v1.cls:2604, WileyNJD-v1.cls:4759)
+<a href=#416 id=416 data-nosnippet>416</a>  // `\newenvironment{ack}[1][]{\begingroup\if!#1!\else\section*{#1}\fi}{\endgroup}`: the acknowledgements, headed by
+<a href=#417 id=417 data-nosnippet>417</a>  // the optional title (`\begin{ack}[Acknowledgements]`, 2205.06045; `[Conflict of interest]`, 2412.02681; none,
+<a href=#418 id=418 data-nosnippet>418</a>  // 1807.03475).
+<a href=#419 id=419 data-nosnippet>419</a>  </span><span class="macro">DefEnvironment!</span>(
+<a href=#420 id=420 data-nosnippet>420</a>    <span class="string">"{ack}[]"</span>,
+<a href=#421 id=421 data-nosnippet>421</a>    <span class="string">"&lt;ltx:acknowledgements ?#1(name='#1')()&gt;#body&lt;/ltx:acknowledgements&gt;"</span>,
+<a href=#422 id=422 data-nosnippet>422</a>    mode =&gt; <span class="string">"internal_vertical"
+<a href=#423 id=423 data-nosnippet>423</a>  </span>);
+<a href=#424 id=424 data-nosnippet>424</a>
+<a href=#425 id=425 data-nosnippet>425</a>  <span class="comment">// The boxed text. WileyNJD-v2.cls:466-475 frames the body (`\BX`, an `\fbox`); WileyASNA-v1.cls:267-271 and
+<a href=#426 id=426 data-nosnippet>426</a>  // WileyNJD-v1.cls:281-285 put it in an `{mdframed}`; WileyNJDv5.cls:592-608 frames the argument (boites'
+<a href=#427 id=427 data-nosnippet>427</a>  // `{breakbox}`, :6244), `{boxwithhead}` a bold head above it, and the body follows the box. A framed block, as
+<a href=#428 id=428 data-nosnippet>428</a>  // framed.sty's `{framed}`, for each. Witnesses 1811.09505, 2012.13740, 2101.02028, 2107.01251 (`{boxtext}`),
+<a href=#429 id=429 data-nosnippet>429</a>  // 2309.00837, 2405.03603, 2604.17508 (`{boxwithhead}`).
+<a href=#430 id=430 data-nosnippet>430</a>  // A `\section*` opening the box (its title: 1811.09505, 2012.13740) is the box's head, a bold line in the frame,
+<a href=#431 id=431 data-nosnippet>431</a>  // which a section, ending only at the next one, cannot be (OXIDIZED_DESIGN_DIVERGENCES #603). Only `\section` is
+<a href=#432 id=432 data-nosnippet>432</a>  // rebound: the 390 witness papers put no other level in a box.
+<a href=#433 id=433 data-nosnippet>433</a>  // framed.sty is the implementation vehicle of the frame (its `{framed}` the binding's framed logical block), not a
+<a href=#434 id=434 data-nosnippet>434</a>  // load of any version: the classes frame with `\BX`/`\fbox`, mdframed (WileyNJD-v1.cls:281, WileyASNA-v1.cls:267)
+<a href=#435 id=435 data-nosnippet>435</a>  // and boites (WileyNJDv5.cls).
+<a href=#436 id=436 data-nosnippet>436</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"framed"</span>);
+<a href=#437 id=437 data-nosnippet>437</a>  <span class="macro">RawTeX!</span>(
+<a href=#438 id=438 data-nosnippet>438</a>    <span class="string">r"\def\lx@wiley@boxhead{\@ifstar\lx@wiley@boxhead@\lx@wiley@boxhead@}%
+<a href=#439 id=439 data-nosnippet>439</a>\def\lx@wiley@boxhead@#1{\par\noindent{\bfseries #1}\par}"
+<a href=#440 id=440 data-nosnippet>440</a>  </span>);
+<a href=#441 id=441 data-nosnippet>441</a>  <span class="kw">if </span>version == WileyVersion::V5 {
+<a href=#442 id=442 data-nosnippet>442</a>    <span class="macro">RawTeX!</span>(
+<a href=#443 id=443 data-nosnippet>443</a>      <span class="string">r"\newenvironment{boxtext}[1]{\begin{framed}\noindent{\normalsize #1\par}\end{framed}}{}%
+<a href=#444 id=444 data-nosnippet>444</a>\newenvironment{boxwithhead}[2]{\begin{framed}{\noindent\bfseries #1}\par\noindent{\normalsize #2\par}\end{framed}}{}"
+<a href=#445 id=445 data-nosnippet>445</a>    </span>);
+<a href=#446 id=446 data-nosnippet>446</a>  } <span class="kw">else </span>{
+<a href=#447 id=447 data-nosnippet>447</a>    <span class="macro">RawTeX!</span>(<span class="string">r"\newenvironment{boxtext}{\begin{framed}\let\section\lx@wiley@boxhead}{\end{framed}}"</span>);
+<a href=#448 id=448 data-nosnippet>448</a>  }
+<a href=#449 id=449 data-nosnippet>449</a>
+<a href=#450 id=450 data-nosnippet>450</a>  <span class="comment">// The theorem set (WileyNJD-v2.cls:2923-3030, WileyNJDv5.cls and WileyASNA-v1.cls alike; WileyNJD-v1.cls:4502-4568
+<a href=#451 id=451 data-nosnippet>451</a>  // its first 20 in other styles): three amsthm styles and 47 theorems, each with its own counter. Undefined before
+<a href=#452 id=452 data-nosnippet>452</a>  // in the papers that use them without declaring them (`{assumption}`, 44 WileyNJD-v2 and 23 WileyNJDv5 papers of
+<a href=#453 id=453 data-nosnippet>453</a>  // run 353: 1803.11411, 1808.10367, 1901.09809; `{eexample}` 1806.09518, `{property}` 1904.09923, `{result}` 2106.06046,
+<a href=#454 id=454 data-nosnippet>454</a>  // `{LWrule}` 1911.03315). The class first redefines amsthm's `plain` (WileyNJD-v2.cls:2902-2910, every copy: an
+<a href=#455 id=455 data-nosnippet>455</a>  // italic head without punctuation, set off by `\newline`), then defines its three styles (:2923-2963), and leaves
+<a href=#456 id=456 data-nosnippet>456</a>  // the last, WBstylethree, current (v2:3005, WileyNJDv5.cls:6377, WileyASNA-v1.cls:2504, WileyNJD-v1.cls:4567): a
+<a href=#457 id=457 data-nosnippet>457</a>  // paper's own `\newtheorem{thm}` is in it, as a `\theoremstyle{plain}` one is in the class's `plain`. The versions'
+<a href=#458 id=458 data-nosnippet>458</a>  // body fonts differ (`theorem_styles`): pdflatex with 1712.08341's WileyNJD-v2.cls sets the paper's theorem, a
+<a href=#459 id=459 data-nosnippet>459</a>  // `plain` one and `{lemma}` upright (t1-stixgeneral), with 2302.02310's WileyNJDv5.cls the paper's upright, the
+<a href=#460 id=460 data-nosnippet>460</a>  // `plain` one and `{lemma}` italic (ptmr8t, ptmri8t, ptmri8t).
+<a href=#461 id=461 data-nosnippet>461</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\newif\ifOldenunciation\newif\ifEnunciation"</span>);
+<a href=#462 id=462 data-nosnippet>462</a>  <span class="kw">let </span>styles = class_text
+<a href=#463 id=463 data-nosnippet>463</a>    .as_deref()
+<a href=#464 id=464 data-nosnippet>464</a>    .and_then(copy_theorem_styles)
+<a href=#465 id=465 data-nosnippet>465</a>    .unwrap_or_else(|| theorem_styles(version, asna).to_owned());
+<a href=#466 id=466 data-nosnippet>466</a>  <span class="macro">RawTeX!</span>(<span class="kw-2">&amp;</span>styles);
+<a href=#467 id=467 data-nosnippet>467</a>  <span class="kw">if </span>version == WileyVersion::V1 {
+<a href=#468 id=468 data-nosnippet>468</a>    <span class="macro">RawTeX!</span>(
+<a href=#469 id=469 data-nosnippet>469</a>      <span class="string">r"\theoremstyle{WBstyleone}%
+<a href=#470 id=470 data-nosnippet>470</a>\newtheorem{theorem}{Theorem}\newtheorem{property}{Property}\newtheorem{problem}{Problem}\newtheorem{fact}{Fact}%
+<a href=#471 id=471 data-nosnippet>471</a>\newtheorem{construction}{Construction}\newtheorem{estimate}{Estimate}\newtheorem{case}{Case}\newtheorem{lemma}{Lemma}%
+<a href=#472 id=472 data-nosnippet>472</a>\newtheorem{corollary}{Corollary}\newtheorem{result}{Result}\newtheorem{algth}{Algorithm}%
+<a href=#473 id=473 data-nosnippet>473</a>\newtheorem{proposition}{Proposition}\newtheorem{condition}{Condition}\newtheorem{hypothesis}{Hypothesis}%
+<a href=#474 id=474 data-nosnippet>474</a>\newtheorem{model}{Model}\newtheorem{experiment}{Experiment}%
+<a href=#475 id=475 data-nosnippet>475</a>\theoremstyle{WBstyletwo}%
+<a href=#476 id=476 data-nosnippet>476</a>\newtheorem{remark}{Remark}\newtheorem{example}{Example}\newtheorem{assumption}{Assumption}%
+<a href=#477 id=477 data-nosnippet>477</a>\theoremstyle{WBstylethree}%
+<a href=#478 id=478 data-nosnippet>478</a>\newtheorem{definition}{Definition}"
+<a href=#479 id=479 data-nosnippet>479</a>    </span>);
+<a href=#480 id=480 data-nosnippet>480</a>  } <span class="kw">else </span>{
+<a href=#481 id=481 data-nosnippet>481</a>    <span class="macro">RawTeX!</span>(
+<a href=#482 id=482 data-nosnippet>482</a>      <span class="string">r"\theoremstyle{WBstyleone}%
+<a href=#483 id=483 data-nosnippet>483</a>\newtheorem{theorem}{Theorem}\newtheorem{construction}{Construction}\newtheorem{estimate}{Estimate}%
+<a href=#484 id=484 data-nosnippet>484</a>\newtheorem{lemma}{Lemma}\newtheorem{corollary}{Corollary}\newtheorem{result}{Result}\newtheorem{algth}{Algorithm}%
+<a href=#485 id=485 data-nosnippet>485</a>\newtheorem{proposition}{Proposition}\newtheorem{hypothesis}{Hypothesis}\newtheorem{experiment}{Experiment}%
+<a href=#486 id=486 data-nosnippet>486</a>\newtheorem{LWrule}{Rule}\newtheorem{procedure}{Procedure}%
+<a href=#487 id=487 data-nosnippet>487</a>\newtheorem{assertion}{Assertion}\newtheorem{axiom}{Axiom}\newtheorem{conjecture}{Conjecture}%
+<a href=#488 id=488 data-nosnippet>488</a>\newtheorem{criterion}{Criterion}\newtheorem{reduction}{Reduction}\newtheorem{sublemma}{Sublemma}%
+<a href=#489 id=489 data-nosnippet>489</a>\theoremstyle{WBstyletwo}%
+<a href=#490 id=490 data-nosnippet>490</a>\newtheorem{case}{Case}\newtheorem{remark}{Remark}\newtheorem{notation}{Notation}%
+<a href=#491 id=491 data-nosnippet>491</a>\newtheorem{answer}{Answer}\newtheorem{base}{Base}\newtheorem{claim}{Claim}\newtheorem{ccomment}{Comment}%
+<a href=#492 id=492 data-nosnippet>492</a>\newtheorem{subproof}{Subproof}\newtheorem{conclusion}{Conclusion}\newtheorem{observation}{Observation}%
+<a href=#493 id=493 data-nosnippet>493</a>\newtheorem{subcase}{Subcase}\newtheorem{step}{Step}\newtheorem{summary}{Summary}%
+<a href=#494 id=494 data-nosnippet>494</a>\theoremstyle{WBstylethree}%
+<a href=#495 id=495 data-nosnippet>495</a>\newtheorem{definition}{Definition}\newtheorem{condition}{Condition}\newtheorem{property}{Property}%
+<a href=#496 id=496 data-nosnippet>496</a>\newtheorem{problem}{Problem}\newtheorem{fact}{Fact}\newtheorem{assumption}{Assumption}%
+<a href=#497 id=497 data-nosnippet>497</a>\newtheorem{eexample}{Example}\newtheorem{model}{Model}%
+<a href=#498 id=498 data-nosnippet>498</a>\newtheorem{affirmation}{Affirmation}\newtheorem{application}{Application}\newtheorem{convention}{Convention}%
+<a href=#499 id=499 data-nosnippet>499</a>\newtheorem{discussion}{Discussion}\newtheorem{exercise}{Exercise}\newtheorem{question}{Question}%
+<a href=#500 id=500 data-nosnippet>500</a>\newtheorem{scholium}{Scholium}\newtheorem{terminology}{Terminology}"
+<a href=#501 id=501 data-nosnippet>501</a>    </span>);
+<a href=#502 id=502 data-nosnippet>502</a>  }
+<a href=#503 id=503 data-nosnippet>503</a>  <span class="prelude-val">Ok</span>(())
+<a href=#504 id=504 data-nosnippet>504</a>}
+<a href=#505 id=505 data-nosnippet>505</a>
+<a href=#506 id=506 data-nosnippet>506</a><span class="doccomment">/// The class's four theorem styles.
+<a href=#507 id=507 data-nosnippet>507</a></span><span class="kw">const </span>THEOREM_STYLES: [<span class="kw-2">&amp;</span>str; <span class="number">4</span>] = [<span class="string">"plain"</span>, <span class="string">"WBstyleone"</span>, <span class="string">"WBstyletwo"</span>, <span class="string">"WBstylethree"</span>];
+<a href=#508 id=508 data-nosnippet>508</a>
+<a href=#509 id=509 data-nosnippet>509</a><span class="doccomment">/// The settings of WileyNJD-v1.cls's (2015-2018) theorem bodies that set their math upright (1511.08547's copy
+<a href=#510 id=510 data-nosnippet>510</a>/// :4505, :4527, :4537 `{\itshape\everymath{\rm}\let\text\mathrm}`), left out: the formulas of a theorem would be
+<a href=#511 id=511 data-nosnippet>511</a>/// `\rm` formulas, whose letters the math parser reads as one word (`A_{ij}`'s subscript the identifier "ij", 1511.08547)
+<a href=#512 id=512 data-nosnippet>512</a>/// and whose `tex` starts with `\rm`; the body stays italic.
+<a href=#513 id=513 data-nosnippet>513</a></span><span class="kw">const </span>UPRIGHT_MATH: [<span class="kw-2">&amp;</span>str; <span class="number">2</span>] = [<span class="string">"\\everymath{\\rm}"</span>, <span class="string">"\\let\\text\\mathrm"</span>];
+<a href=#514 id=514 data-nosnippet>514</a>
+<a href=#515 id=515 data-nosnippet>515</a><span class="doccomment">/// The theorem styles as the paper's copy of the class defines them: each `\newtheoremstyle{&lt;name&gt;}` of
+<a href=#516 id=516 data-nosnippet>516</a>/// [`THEOREM_STYLES`] with its eight arguments, the last definition outside a comment; `None` where the copy lacks
+<a href=#517 id=517 data-nosnippet>517</a>/// one. (The 578 copies of the family's classes shipped by the 817 papers of the 67w inventory define them four ways,
+<a href=#518 id=518 data-nosnippet>518</a>/// [`theorem_styles`].)
+<a href=#519 id=519 data-nosnippet>519</a></span><span class="kw">fn </span>copy_theorem_styles(text: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;String&gt; {
+<a href=#520 id=520 data-nosnippet>520</a>  <span class="kw">let </span>code = class_code(text);
+<a href=#521 id=521 data-nosnippet>521</a>  <span class="kw">let </span><span class="kw-2">mut </span>styles = String::new();
+<a href=#522 id=522 data-nosnippet>522</a>  <span class="kw">for </span>name <span class="kw">in </span>THEOREM_STYLES {
+<a href=#523 id=523 data-nosnippet>523</a>    <span class="kw">let </span>head = <span class="macro">format!</span>(<span class="string">"\\newtheoremstyle{{{name}}}"</span>);
+<a href=#524 id=524 data-nosnippet>524</a>    <span class="kw">let </span>at = code.rfind(<span class="kw-2">&amp;</span>head)<span class="question-mark">?</span>;
+<a href=#525 id=525 data-nosnippet>525</a>    <span class="kw">let </span><span class="kw-2">mut </span>rest = <span class="kw-2">&amp;</span>code[at + head.len()..];
+<a href=#526 id=526 data-nosnippet>526</a>    styles.push_str(<span class="kw-2">&amp;</span>head);
+<a href=#527 id=527 data-nosnippet>527</a>    <span class="kw">for _ in </span><span class="number">0</span>..<span class="number">8 </span>{
+<a href=#528 id=528 data-nosnippet>528</a>      rest = rest.trim_start();
+<a href=#529 id=529 data-nosnippet>529</a>      <span class="kw">let </span>group = balanced_group(rest)<span class="question-mark">?</span>;
+<a href=#530 id=530 data-nosnippet>530</a>      styles.push_str(group);
+<a href=#531 id=531 data-nosnippet>531</a>      rest = <span class="kw-2">&amp;</span>rest[group.len()..];
+<a href=#532 id=532 data-nosnippet>532</a>    }
+<a href=#533 id=533 data-nosnippet>533</a>    styles.push_str(<span class="string">"%\n"</span>);
+<a href=#534 id=534 data-nosnippet>534</a>  }
+<a href=#535 id=535 data-nosnippet>535</a>  <span class="prelude-val">Some</span>(
+<a href=#536 id=536 data-nosnippet>536</a>    UPRIGHT_MATH
+<a href=#537 id=537 data-nosnippet>537</a>      .iter()
+<a href=#538 id=538 data-nosnippet>538</a>      .fold(styles, |styles, setting| styles.replace(setting, <span class="string">""</span>)),
+<a href=#539 id=539 data-nosnippet>539</a>  )
+<a href=#540 id=540 data-nosnippet>540</a>}
+<a href=#541 id=541 data-nosnippet>541</a>
+<a href=#542 id=542 data-nosnippet>542</a><span class="doccomment">/// The brace group `text` starts with, its braces included.
+<a href=#543 id=543 data-nosnippet>543</a></span><span class="kw">fn </span>balanced_group(text: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt; {
+<a href=#544 id=544 data-nosnippet>544</a>  <span class="kw">if </span>!text.starts_with(<span class="string">'{'</span>) {
+<a href=#545 id=545 data-nosnippet>545</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#546 id=546 data-nosnippet>546</a>  }
+<a href=#547 id=547 data-nosnippet>547</a>  <span class="kw">let </span><span class="kw-2">mut </span>depth = <span class="number">0usize</span>;
+<a href=#548 id=548 data-nosnippet>548</a>  <span class="kw">for </span>(at, ch) <span class="kw">in </span>text.char_indices() {
+<a href=#549 id=549 data-nosnippet>549</a>    <span class="kw">match </span>ch {
+<a href=#550 id=550 data-nosnippet>550</a>      <span class="string">'{' </span>=&gt; depth += <span class="number">1</span>,
+<a href=#551 id=551 data-nosnippet>551</a>      <span class="string">'}' </span>=&gt; {
+<a href=#552 id=552 data-nosnippet>552</a>        depth -= <span class="number">1</span>;
+<a href=#553 id=553 data-nosnippet>553</a>        <span class="kw">if </span>depth == <span class="number">0 </span>{
+<a href=#554 id=554 data-nosnippet>554</a>          <span class="kw">return </span><span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>text[..=at]);
+<a href=#555 id=555 data-nosnippet>555</a>        }
+<a href=#556 id=556 data-nosnippet>556</a>      },
+<a href=#557 id=557 data-nosnippet>557</a>      <span class="kw">_ </span>=&gt; {},
+<a href=#558 id=558 data-nosnippet>558</a>    }
+<a href=#559 id=559 data-nosnippet>559</a>  }
+<a href=#560 id=560 data-nosnippet>560</a>  <span class="prelude-val">None
+<a href=#561 id=561 data-nosnippet>561</a></span>}
+<a href=#562 id=562 data-nosnippet>562</a>
+<a href=#563 id=563 data-nosnippet>563</a><span class="doccomment">/// The theorem styles of a version, for a paper that ships no copy of the class: the bodies of WileyNJD-v2.cls:2902-2963
+<a href=#564 id=564 data-nosnippet>564</a>/// (1712.08341, 294 of the 312 v2 copies; the WileyNJD-v1.cls of 2020, 2010.09463, alike), WileyASNA-v1.cls:2401-2463
+<a href=#565 id=565 data-nosnippet>565</a>/// (1804.11014, and 18 v2 copies: the bodies indented, WBstyleone's italic), WileyNJDv5.cls:6274-6335 (2302.02310: `plain`
+<a href=#566 id=566 data-nosnippet>566</a>/// and WBstyleone italic) and WileyNJD-v1.cls:4481-4543 (1511.08547: the WB styles italic with bold heads, `plain`
+<a href=#567 id=567 data-nosnippet>567</a>/// upright with an italic head; their upright math left out, [`UPRIGHT_MATH`]).
+<a href=#568 id=568 data-nosnippet>568</a></span><span class="kw">fn </span>theorem_styles(version: WileyVersion, asna: bool) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
+<a href=#569 id=569 data-nosnippet>569</a>  <span class="kw">match </span>version {
+<a href=#570 id=570 data-nosnippet>570</a>    WileyVersion::V2 <span class="kw">if </span>asna =&gt; {
+<a href=#571 id=571 data-nosnippet>571</a>      <span class="string">r"\newtheoremstyle{plain}{8pt}{8pt}{\Enunciationtrue\ifOldenunciation\else\leftskip8pt\rightskip8pt\fi\normalfont}{}{\itshape}{}{\newline}{}%
+<a href=#572 id=572 data-nosnippet>572</a>\newtheoremstyle{WBstyleone}{6\p@}{6\p@}{\Enunciationtrue\leftskip8pt\rightskip8pt\normalfont\itshape}{\z@}{\bfseries}{.}{5\p@}{}%
+<a href=#573 id=573 data-nosnippet>573</a>\newtheoremstyle{WBstyletwo}{6\p@}{6\p@}{\Enunciationtrue\leftskip8pt\rightskip8pt\normalfont}{\z@}{\itshape}{.}{5\p@}{\thmname{#1}\thmnumber{ #2}\thmnote{. #3}}%
+<a href=#574 id=574 data-nosnippet>574</a>\newtheoremstyle{WBstylethree}{6\p@}{6\p@}{\Enunciationtrue\normalfont\leftskip8pt\rightskip8pt}{\z@}{\bfseries}{.}{5\p@}{}"
+<a href=#575 id=575 data-nosnippet>575</a>    </span>},
+<a href=#576 id=576 data-nosnippet>576</a>    WileyVersion::V2 =&gt; {
+<a href=#577 id=577 data-nosnippet>577</a>      <span class="string">r"\newtheoremstyle{plain}{8pt}{8pt}{\normalfont}{}{\itshape}{}{\newline}{}%
+<a href=#578 id=578 data-nosnippet>578</a>\newtheoremstyle{WBstyleone}{6\p@}{6\p@}{\normalfont}{\z@}{\bfseries}{.}{5\p@}{}%
+<a href=#579 id=579 data-nosnippet>579</a>\newtheoremstyle{WBstyletwo}{6\p@}{6\p@}{\normalfont}{\z@}{\itshape}{.}{5\p@}{\thmname{#1}\thmnumber{ #2}\thmnote{. #3}}%
+<a href=#580 id=580 data-nosnippet>580</a>\newtheoremstyle{WBstylethree}{6\p@}{6\p@}{\normalfont}{\z@}{\bfseries}{.}{5\p@}{}"
+<a href=#581 id=581 data-nosnippet>581</a>    </span>},
+<a href=#582 id=582 data-nosnippet>582</a>    WileyVersion::V5 =&gt; {
+<a href=#583 id=583 data-nosnippet>583</a>      <span class="string">r"\newtheoremstyle{plain}{8pt}{8pt}{\normalsize\it}{}{\itshape}{}{\newline}{}%
+<a href=#584 id=584 data-nosnippet>584</a>\newtheoremstyle{WBstyleone}{6\p@}{6\p@}{\normalfont\it}{\z@}{\bfseries}{.}{5\p@}{}%
+<a href=#585 id=585 data-nosnippet>585</a>\newtheoremstyle{WBstyletwo}{6\p@}{6\p@}{\normalfont}{\z@}{\itshape}{.}{5\p@}{\thmname{#1}\thmnumber{ #2}\thmnote{. #3}}%
+<a href=#586 id=586 data-nosnippet>586</a>\newtheoremstyle{WBstylethree}{6\p@}{6\p@}{\normalfont}{\z@}{\bfseries}{.}{5\p@}{}"
+<a href=#587 id=587 data-nosnippet>587</a>    </span>},
+<a href=#588 id=588 data-nosnippet>588</a>    WileyVersion::V1 =&gt; {
+<a href=#589 id=589 data-nosnippet>589</a>      <span class="string">r"\newtheoremstyle{plain}{8pt}{8pt}{\normalfont}{}{\itshape}{}{\newline}{}%
+<a href=#590 id=590 data-nosnippet>590</a>\newtheoremstyle{WBstyleone}{6\p@}{6\p@}{\itshape}{\z@}{\bfseries}{.}{5\p@}{}%
+<a href=#591 id=591 data-nosnippet>591</a>\newtheoremstyle{WBstyletwo}{6\p@}{6\p@}{\normalfont\itshape}{\z@}{\bfseries}{.}{5\p@}{\thmname{#1}\thmnumber{ #2}\thmnote{. #3}}%
+<a href=#592 id=592 data-nosnippet>592</a>\newtheoremstyle{WBstylethree}{6\p@}{6\p@}{\normalfont\itshape}{\z@}{\bfseries}{.}{5\p@}{}"
+<a href=#593 id=593 data-nosnippet>593</a>    </span>},
+<a href=#594 id=594 data-nosnippet>594</a>  }
+<a href=#595 id=595 data-nosnippet>595</a>}
+<a href=#596 id=596 data-nosnippet>596</a>
+<a href=#597 id=597 data-nosnippet>597</a><span class="attr">#[cfg(test)]
+<a href=#598 id=598 data-nosnippet>598</a></span><span class="kw">mod </span>tests {
+<a href=#599 id=599 data-nosnippet>599</a>  <span class="kw">use super</span>::{WileyVersion, copy_theorem_styles, version_from_text};
+<a href=#600 id=600 data-nosnippet>600</a>
+<a href=#601 id=601 data-nosnippet>601</a>  <span class="doccomment">/// The definitions `version_from_text` tells the copies apart by, as the copies have them, commented-out
+<a href=#602 id=602 data-nosnippet>602</a>  /// alternatives included (1511.08547's WileyNJD-v1.cls:4471 `%\newtheorem{eexample}{Example}`, 2302.02310's
+<a href=#603 id=603 data-nosnippet>603</a>  /// WileyNJDv5.cls:578 `%%\newenvironment{boxtext}{…`).
+<a href=#604 id=604 data-nosnippet>604</a>  </span><span class="attr">#[test]
+<a href=#605 id=605 data-nosnippet>605</a>  </span><span class="kw">fn </span>wiley_version_from_text_batch67w() {
+<a href=#606 id=606 data-nosnippet>606</a>    <span class="kw">let </span>v5 = <span class="string">"%%\\newenvironment{boxtext}{\\begingroup\\parskip=0pt\\parindent=0pt%\n\
+<a href=#607 id=607 data-nosnippet>607</a>              \\newenvironment{boxtext}[1]{%\n\\begin{breakbox}#1\\end{breakbox}}{}\n\
+<a href=#608 id=608 data-nosnippet>608</a>              %\\newtheorem{eexample}{Example}\n\\theoremstyle{WBstylethree}\n\\newtheorem{eexample}{Example}\n"</span>;
+<a href=#609 id=609 data-nosnippet>609</a>    <span class="kw">let </span>v2 = <span class="string">"%\\newenvironment{boxtext}{\\begingroup\\begin{fcolorbox}{black}{white}%\n\
+<a href=#610 id=610 data-nosnippet>610</a>              \\newenvironment{boxtext}{\\begingroup\\parskip=0pt\\parindent=0pt%\n\
+<a href=#611 id=611 data-nosnippet>611</a>              %\\newtheorem{eexample}{Example}\n\\newtheorem{definition}{Definition}\n\\newtheorem{eexample}{Example}\n"</span>;
+<a href=#612 id=612 data-nosnippet>612</a>    <span class="kw">let </span>v1 = <span class="string">"\\newenvironment{boxtext}{\\begingroup%\n%\\newtheorem{eexample}{Example}\n\
+<a href=#613 id=613 data-nosnippet>613</a>              \\theoremstyle{WBstyletwo}\n\\newtheorem{remark}{Remark}\n\\newtheorem{example}{Example}\n"</span>;
+<a href=#614 id=614 data-nosnippet>614</a>    <span class="macro">assert_eq!</span>(version_from_text(v5), <span class="prelude-val">Some</span>(WileyVersion::V5));
+<a href=#615 id=615 data-nosnippet>615</a>    <span class="macro">assert_eq!</span>(version_from_text(v2), <span class="prelude-val">Some</span>(WileyVersion::V2));
+<a href=#616 id=616 data-nosnippet>616</a>    <span class="macro">assert_eq!</span>(version_from_text(v1), <span class="prelude-val">Some</span>(WileyVersion::V1));
+<a href=#617 id=617 data-nosnippet>617</a>    <span class="macro">assert_eq!</span>(
+<a href=#618 id=618 data-nosnippet>618</a>      version_from_text(<span class="string">"\\ProvidesClass{WileyNJD-v2}\n%\\newtheorem{eexample}{Example}\n"</span>),
+<a href=#619 id=619 data-nosnippet>619</a>      <span class="prelude-val">None
+<a href=#620 id=620 data-nosnippet>620</a>    </span>);
+<a href=#621 id=621 data-nosnippet>621</a>  }
+<a href=#622 id=622 data-nosnippet>622</a>
+<a href=#623 id=623 data-nosnippet>623</a>  <span class="doccomment">/// The copy's own theorem styles, read as the class text writes them (2302.02310's WileyNJDv5.cls:6274-6335, a
+<a href=#624 id=624 data-nosnippet>624</a>  /// comment after every argument, an earlier commented-out definition).
+<a href=#625 id=625 data-nosnippet>625</a>  </span><span class="attr">#[test]
+<a href=#626 id=626 data-nosnippet>626</a>  </span><span class="kw">fn </span>wiley_copy_theorem_styles_batch67w() {
+<a href=#627 id=627 data-nosnippet>627</a>    <span class="kw">let </span>copy = <span class="string">"%\\newtheoremstyle{plain}{1pt}{1pt}{\\bfseries}{}{}{}{}{}\n\
+<a href=#628 id=628 data-nosnippet>628</a>                \\newtheoremstyle{plain}% Numbered\n{8pt}% Space above\n{8pt}% Space below\n{\\normalsize\\it}% Body font\n\
+<a href=#629 id=629 data-nosnippet>629</a>                {}% Indent amount\n{\\itshape}% Theorem head font\n{}% Punctuation\n{\\newline}% Space after\n{}% spec\n\n\
+<a href=#630 id=630 data-nosnippet>630</a>                \\newtheoremstyle{WBstyleone}\n  {6\\p@} % Space above\n  {6\\p@}\n  {\\normalfont\\it} % Body font\n  {\\z@}\n\
+<a href=#631 id=631 data-nosnippet>631</a>                  {\\bfseries}\n  {.}\n  {5\\p@}\n  {}\n\
+<a href=#632 id=632 data-nosnippet>632</a>                \\newtheoremstyle{WBstyletwo}{6\\p@}{6\\p@}{\\normalfont}{\\z@}{\\itshape}{.}{5\\p@}\n\
+<a href=#633 id=633 data-nosnippet>633</a>                  {\\thmname{#1}\\thmnumber{ #2}\\thmnote{. #3}} % Theorem head spec\n\
+<a href=#634 id=634 data-nosnippet>634</a>                \\newtheoremstyle{WBstylethree}{6\\p@}{6\\p@}{\\normalfont}{\\z@}{\\bfseries}{.}{5\\p@}{}\n"</span>;
+<a href=#635 id=635 data-nosnippet>635</a>    <span class="macro">assert_eq!</span>(
+<a href=#636 id=636 data-nosnippet>636</a>      copy_theorem_styles(copy).as_deref(),
+<a href=#637 id=637 data-nosnippet>637</a>      <span class="prelude-val">Some</span>(
+<a href=#638 id=638 data-nosnippet>638</a>        <span class="string">"\\newtheoremstyle{plain}{8pt}{8pt}{\\normalsize\\it}{}{\\itshape}{}{\\newline}{}%\n\
+<a href=#639 id=639 data-nosnippet>639</a>         \\newtheoremstyle{WBstyleone}{6\\p@}{6\\p@}{\\normalfont\\it}{\\z@}{\\bfseries}{.}{5\\p@}{}%\n\
+<a href=#640 id=640 data-nosnippet>640</a>         \\newtheoremstyle{WBstyletwo}{6\\p@}{6\\p@}{\\normalfont}{\\z@}{\\itshape}{.}{5\\p@}{\\thmname{#1}\\thmnumber{ #2}\\thmnote{. #3}}%\n\
+<a href=#641 id=641 data-nosnippet>641</a>         \\newtheoremstyle{WBstylethree}{6\\p@}{6\\p@}{\\normalfont}{\\z@}{\\bfseries}{.}{5\\p@}{}%\n"
+<a href=#642 id=642 data-nosnippet>642</a>      </span>)
+<a href=#643 id=643 data-nosnippet>643</a>    );
+<a href=#644 id=644 data-nosnippet>644</a>    <span class="comment">// WileyNJD-v1.cls's (1511.08547) italic bodies, their upright math left out
+<a href=#645 id=645 data-nosnippet>645</a>    </span><span class="kw">let </span>v1 = copy.replace(
+<a href=#646 id=646 data-nosnippet>646</a>      <span class="string">"{\\normalfont\\it}"</span>,
+<a href=#647 id=647 data-nosnippet>647</a>      <span class="string">"{\\itshape\\everymath{\\rm}\\let\\text\\mathrm}"</span>,
+<a href=#648 id=648 data-nosnippet>648</a>    );
+<a href=#649 id=649 data-nosnippet>649</a>    <span class="macro">assert!</span>(
+<a href=#650 id=650 data-nosnippet>650</a>      copy_theorem_styles(<span class="kw-2">&amp;</span>v1)
+<a href=#651 id=651 data-nosnippet>651</a>        .unwrap()
+<a href=#652 id=652 data-nosnippet>652</a>        .contains(<span class="string">"\\newtheoremstyle{WBstyleone}{6\\p@}{6\\p@}{\\itshape}{\\z@}"</span>),
+<a href=#653 id=653 data-nosnippet>653</a>      <span class="string">"{v1}"
+<a href=#654 id=654 data-nosnippet>654</a>    </span>);
+<a href=#655 id=655 data-nosnippet>655</a>    <span class="comment">// a copy without WBstylethree: the version's styles instead
+<a href=#656 id=656 data-nosnippet>656</a>    </span><span class="macro">assert_eq!</span>(
+<a href=#657 id=657 data-nosnippet>657</a>      copy_theorem_styles(<span class="kw-2">&amp;</span>copy.replace(<span class="string">"WBstylethree"</span>, <span class="string">"WBother"</span>)),
+<a href=#658 id=658 data-nosnippet>658</a>      <span class="prelude-val">None
+<a href=#659 id=659 data-nosnippet>659</a>    </span>);
+<a href=#660 id=660 data-nosnippet>660</a>  }
+<a href=#661 id=661 data-nosnippet>661</a>}
 </code></pre></div></section></main></body></html>

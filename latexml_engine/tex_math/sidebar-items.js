@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["adjust_mathstyle","frac_sizer","is_script","load_definitions","revert_script"],"static":["DELIMITER_MAP"],"struct":["DelimiterMeta"]};
+window.SIDEBAR_ITEMS = {"constant":["REREAD_COPY","WRITTEN_COPY"],"enum":["DelimiterSide","LeftRightGroup"],"fn":["adjust_mathstyle","close_open_left","decorate_delimiter","frac_sizer","in_left_group","is_script","left_right_group","load_definitions","revert_script","scan_delimiter","stretch_delimiter"],"static":["DELIMITER_MAP"],"struct":["DelimiterMeta"]};

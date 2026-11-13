@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_definitions"]};
+window.SIDEBAR_ITEMS = {"constant":["ONE_COLUMN_CH_NGETEXT"],"fn":["load_definitions"]};

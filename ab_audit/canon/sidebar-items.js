@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["attr_value","canonical","diff","line_hash","pgf_id","squeeze","volatile"],"struct":["Canon","CanonDiff"]};

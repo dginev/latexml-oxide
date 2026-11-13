@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["coverage_for_file","font_file_path","resolve_fontspec_file"],"struct":["GlyphCoverage"]};

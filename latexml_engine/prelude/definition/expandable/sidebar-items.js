@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"struct":["Expandable","ExpandableOptions"]};
+window.SIDEBAR_ITEMS = {"constant":["ETOOLBOX_WRITERS_OF_NAMES","KERNEL_WRITERS_OF_NAMES","WRITERS_OF_NAMES"],"enum":["SpecialCall"],"fn":["is_scratch_name","protect_is_typeset","set_native_call","value_group","written_store_name"],"struct":["Expandable","ExpandableOptions","StoredParameters"],"type":["NativeCall"]};

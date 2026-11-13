@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_definitions"]};
+window.SIDEBAR_ITEMS = {"constant":["FRONTMATTER_CONVENTIONS"],"fn":["define_keyword_markup","load_definitions","stm_affiliation"]};

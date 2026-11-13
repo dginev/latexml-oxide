@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["private_dir","private_to_user","publish_read_only","trusted_dir","user_id"]};

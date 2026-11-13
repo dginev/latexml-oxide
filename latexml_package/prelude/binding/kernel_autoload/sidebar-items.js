@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["set_hook","try_autoload"],"type":["KernelAutoloadHook"]};
+window.SIDEBAR_ITEMS = {"fn":["name_undefined_fallback","reset_undefined_fallback","set_hook","set_refused_environment_hook","try_autoload","try_refused_environment_definition","undefined_fallback"],"type":["KernelAutoloadHook","RefusedEnvironmentHook"]};

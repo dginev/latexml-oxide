@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_definitions"]};
+window.SIDEBAR_ITEMS = {"constant":["FRONTMATTER_CONVENTIONS"],"fn":["define_bold_vectors","load_definitions"]};

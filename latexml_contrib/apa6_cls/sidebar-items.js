@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["apa_family_class","define_numbered_author_forms","load_definitions"]};

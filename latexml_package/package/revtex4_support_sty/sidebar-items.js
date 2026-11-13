@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_definitions"]};
+window.SIDEBAR_ITEMS = {"constant":["FRONTMATTER_CONVENTIONS"],"fn":["defer_bm_to_begin_document","load_definitions"]};

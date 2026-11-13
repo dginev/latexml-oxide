@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["NO_BORROWED_TOKENS","NO_TOKENS","UNTEX_LINELENGTH"],"struct":["TeXString","Tokens"]};
+window.SIDEBAR_ITEMS = {"constant":["NO_BORROWED_TOKENS","NO_TOKENS","UNTEX_LINELENGTH"],"enum":["BodyPiece"],"struct":["TeXString","Tokens"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["load_definitions","vtex_keyword_markup"]};

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["AUTHOR_FILE_STAND_INS","FORMER_TEX_LIVE","LATEXML_OWN"],"fn":["stands_in_for_an_author_file"]};

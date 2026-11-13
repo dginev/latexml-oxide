@@ -1,114 +1,380 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/informs_cls.rs`."><title>informs_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>informs_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Stub for INFORMS journal classes (informs, informs3).
-<a href=#2 id=2 data-nosnippet>2</a>//!
-<a href=#3 id=3 data-nosnippet>3</a>//! The informs* classes are used by Operations Research, Management Science,
-<a href=#4 id=4 data-nosnippet>4</a>//! and other INFORMS journals. They define a large frontmatter API
-<a href=#5 id=5 data-nosnippet>5</a>//! (\TITLE, \ARTICLEAUTHORS, \ABSTRACT, \KEYWORDS, etc.) inside the cls,
-<a href=#6 id=6 data-nosnippet>6</a>//! which we never raw-load. Provide gobble stubs so papers using this
-<a href=#7 id=7 data-nosnippet>7</a>//! class convert without "undefined" cascades.
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/informs_cls.rs`."><title>informs_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>informs_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Binding for the INFORMS journal classes: informs3 (and its informs3h, informs3a, informs3noheader copies), informs4
+<a href=#2 id=2 data-nosnippet>2</a>//! (and informs4a, informs4post, informs4Preprint) and informs5.
+<a href=#3 id=3 data-nosnippet>3</a>//!
+<a href=#4 id=4 data-nosnippet>4</a>//! The informs* classes are used by Operations Research, Management Science and the other INFORMS journals. A paper
+<a href=#5 id=5 data-nosnippet>5</a>//! ships its own copy, which falls back here by version (`informs4`) or by prefix (`informs3noheader`). The class's
+<a href=#6 id=6 data-nosnippet>6</a>//! front-matter API (\TITLE, \ARTICLEAUTHORS, \AUTHOR, \AFF, \ABSTRACT, \KEYWORDS, …), its float commands and its
+<a href=#7 id=7 data-nosnippet>7</a>//! theorem sets are mapped onto the frontmatter API and the kernel's floats.
 <a href=#8 id=8 data-nosnippet>8</a></span><span class="kw">use </span>latexml_package::prelude::<span class="kw-2">*</span>;
 <a href=#9 id=9 data-nosnippet>9</a>
 <a href=#10 id=10 data-nosnippet>10</a><span class="macro">LoadDefinitions!</span>({
 <a href=#11 id=11 data-nosnippet>11</a>  <span class="macro">LoadClass!</span>(<span class="string">"OmniBus"</span>);
 <a href=#12 id=12 data-nosnippet>12</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amsmath"</span>);
-<a href=#13 id=13 data-nosnippet>13</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amsthm"</span>);
-<a href=#14 id=14 data-nosnippet>14</a>
-<a href=#15 id=15 data-nosnippet>15</a>  <span class="comment">// Frontmatter / paper metadata — preserve author content.
-<a href=#16 id=16 data-nosnippet>16</a>  // \TITLE / \ARTICLETITLE → \title to populate the document title.
-<a href=#17 id=17 data-nosnippet>17</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\TITLE{}"</span>, <span class="string">"\\title{#1}"</span>);
-<a href=#18 id=18 data-nosnippet>18</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ARTICLETITLE{}"</span>, <span class="string">"\\title{#1}"</span>);
-<a href=#19 id=19 data-nosnippet>19</a>  <span class="comment">// Running header variants — short title for header; preserve as note.
-<a href=#20 id=20 data-nosnippet>20</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#21 id=21 data-nosnippet>21</a>    <span class="string">"\\RUNAUTHOR{}"</span>,
-<a href=#22 id=22 data-nosnippet>22</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=runningauthor]{#1}"
-<a href=#23 id=23 data-nosnippet>23</a>  </span>);
-<a href=#24 id=24 data-nosnippet>24</a>  <span class="macro">DefMacro!</span>(
-<a href=#25 id=25 data-nosnippet>25</a>    <span class="string">"\\RUNTITLE{}"</span>,
-<a href=#26 id=26 data-nosnippet>26</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=runningtitle]{#1}"
-<a href=#27 id=27 data-nosnippet>27</a>  </span>);
-<a href=#28 id=28 data-nosnippet>28</a>  <span class="macro">DefMacro!</span>(
-<a href=#29 id=29 data-nosnippet>29</a>    <span class="string">"\\ECRUNAUTHOR{}"</span>,
-<a href=#30 id=30 data-nosnippet>30</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=ec-runningauthor]{#1}"
-<a href=#31 id=31 data-nosnippet>31</a>  </span>);
-<a href=#32 id=32 data-nosnippet>32</a>  <span class="macro">DefMacro!</span>(
-<a href=#33 id=33 data-nosnippet>33</a>    <span class="string">"\\ECRUNTITLE{}"</span>,
-<a href=#34 id=34 data-nosnippet>34</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=ec-runningtitle]{#1}"
-<a href=#35 id=35 data-nosnippet>35</a>  </span>);
-<a href=#36 id=36 data-nosnippet>36</a>  <span class="comment">// \AUTHOR{name}{affiliation} — emit name as author, affiliation as note.
-<a href=#37 id=37 data-nosnippet>37</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#38 id=38 data-nosnippet>38</a>    <span class="string">"\\AUTHOR{}{}"</span>,
-<a href=#39 id=39 data-nosnippet>39</a>    <span class="string">"\\author{#1}\\@add@frontmatter{ltx:note}[role=affiliation]{#2}"
-<a href=#40 id=40 data-nosnippet>40</a>  </span>);
-<a href=#41 id=41 data-nosnippet>41</a>  <span class="macro">DefMacro!</span>(
-<a href=#42 id=42 data-nosnippet>42</a>    <span class="string">"\\AFF[]{}"</span>,
-<a href=#43 id=43 data-nosnippet>43</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=affiliation]{#2}"
-<a href=#44 id=44 data-nosnippet>44</a>  </span>);
-<a href=#45 id=45 data-nosnippet>45</a>  <span class="comment">// \ABSTRACT → abstract env so the text is preserved as document abstract.
-<a href=#46 id=46 data-nosnippet>46</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\ABSTRACT{}"</span>, <span class="string">"\\begin{abstract}#1\\end{abstract}"</span>);
-<a href=#47 id=47 data-nosnippet>47</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ARTICLEABSTRACT{}"</span>, <span class="string">"\\begin{abstract}#1\\end{abstract}"</span>);
-<a href=#48 id=48 data-nosnippet>48</a>  <span class="macro">DefMacro!</span>(
-<a href=#49 id=49 data-nosnippet>49</a>    <span class="string">"\\KEYWORDS{}"</span>,
-<a href=#50 id=50 data-nosnippet>50</a>    <span class="string">"\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}"
-<a href=#51 id=51 data-nosnippet>51</a>  </span>);
-<a href=#52 id=52 data-nosnippet>52</a>  <span class="macro">DefMacro!</span>(
-<a href=#53 id=53 data-nosnippet>53</a>    <span class="string">"\\MANUSCRIPTNO{}"</span>,
-<a href=#54 id=54 data-nosnippet>54</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=manuscriptno]{#1}"
-<a href=#55 id=55 data-nosnippet>55</a>  </span>);
-<a href=#56 id=56 data-nosnippet>56</a>  <span class="macro">DefMacro!</span>(
-<a href=#57 id=57 data-nosnippet>57</a>    <span class="string">"\\HISTORY{}"</span>,
-<a href=#58 id=58 data-nosnippet>58</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=history]{#1}"
-<a href=#59 id=59 data-nosnippet>59</a>  </span>);
-<a href=#60 id=60 data-nosnippet>60</a>  <span class="macro">DefMacro!</span>(
-<a href=#61 id=61 data-nosnippet>61</a>    <span class="string">"\\ARTICLEAUTHORS{}"</span>,
-<a href=#62 id=62 data-nosnippet>62</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=authors]{#1}"
-<a href=#63 id=63 data-nosnippet>63</a>  </span>);
-<a href=#64 id=64 data-nosnippet>64</a>  <span class="macro">DefMacro!</span>(
-<a href=#65 id=65 data-nosnippet>65</a>    <span class="string">"\\authorinfo{}"</span>,
-<a href=#66 id=66 data-nosnippet>66</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=authorinfo]{#1}"
-<a href=#67 id=67 data-nosnippet>67</a>  </span>);
-<a href=#68 id=68 data-nosnippet>68</a>  def_macro_noop(<span class="string">"\\thetitle"</span>)<span class="question-mark">?</span>;
-<a href=#69 id=69 data-nosnippet>69</a>
-<a href=#70 id=70 data-nosnippet>70</a>  <span class="comment">// Layout / structure switches — no visual effect in XML.
-<a href=#71 id=71 data-nosnippet>71</a>  </span>def_macro_noop(<span class="string">"\\TheoremsNumberedThrough"</span>)<span class="question-mark">?</span>;
-<a href=#72 id=72 data-nosnippet>72</a>  def_macro_noop(<span class="string">"\\TheoremsNumberedBySection"</span>)<span class="question-mark">?</span>;
-<a href=#73 id=73 data-nosnippet>73</a>  def_macro_noop(<span class="string">"\\EquationsNumberedThrough"</span>)<span class="question-mark">?</span>;
-<a href=#74 id=74 data-nosnippet>74</a>  def_macro_noop(<span class="string">"\\EquationsNumberedBySection"</span>)<span class="question-mark">?</span>;
-<a href=#75 id=75 data-nosnippet>75</a>  def_macro_noop(<span class="string">"\\ECRepeatTheorems"</span>)<span class="question-mark">?</span>;
-<a href=#76 id=76 data-nosnippet>76</a>  def_macro_noop(<span class="string">"\\OneAndAHalfSpacedXI"</span>)<span class="question-mark">?</span>;
-<a href=#77 id=77 data-nosnippet>77</a>  def_macro_noop(<span class="string">"\\OneAndAHalfSpacedXII"</span>)<span class="question-mark">?</span>;
-<a href=#78 id=78 data-nosnippet>78</a>  def_macro_noop(<span class="string">"\\DoubleSpacedXI"</span>)<span class="question-mark">?</span>;
-<a href=#79 id=79 data-nosnippet>79</a>  def_macro_noop(<span class="string">"\\DoubleSpacedXII"</span>)<span class="question-mark">?</span>;
-<a href=#80 id=80 data-nosnippet>80</a>  def_macro_noop(<span class="string">"\\SingleSpacedXI"</span>)<span class="question-mark">?</span>;
-<a href=#81 id=81 data-nosnippet>81</a>
-<a href=#82 id=82 data-nosnippet>82</a>  <span class="comment">// {APPENDICES} env — render contents as appendix section.
-<a href=#83 id=83 data-nosnippet>83</a>  </span><span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\begin{APPENDICES}"</span>), <span class="prelude-val">None</span>, <span class="string">"\\appendix"</span>);
-<a href=#84 id=84 data-nosnippet>84</a>  <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\end{APPENDICES}"</span>), <span class="prelude-val">None</span>, <span class="string">""</span>);
-<a href=#85 id=85 data-nosnippet>85</a>
-<a href=#86 id=86 data-nosnippet>86</a>  <span class="comment">// informs3.cls L932: `\def\Halmos{\mbox{\quad$\square$}}` — proof-end
-<a href=#87 id=87 data-nosnippet>87</a>  // QED box. Render the square in math mode.
-<a href=#88 id=88 data-nosnippet>88</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\Halmos"</span>, <span class="string">"\\ensuremath{\\square}"</span>);
-<a href=#89 id=89 data-nosnippet>89</a>  <span class="comment">// informs3.cls L1231: `\def\EMAIL#1{#1}` — used within \AFF; plain
-<a href=#90 id=90 data-nosnippet>90</a>  // passthrough of the email text.
-<a href=#91 id=91 data-nosnippet>91</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\EMAIL{}"</span>, <span class="string">"#1"</span>);
-<a href=#92 id=92 data-nosnippet>92</a>  <span class="comment">// informs3.cls L1273: `\long\def\ACKNOWLEDGMENT#1{\section*{\bf
-<a href=#93 id=93 data-nosnippet>93</a>  // \theACKname.}{#1}}` (\theACKname defaults to "Acknowledgments").
-<a href=#94 id=94 data-nosnippet>94</a>  // Route the body to a structural acknowledgements block (see
-<a href=#95 id=95 data-nosnippet>95</a>  // feedback: prefer ltx:acknowledgements over a flattened \section*).
-<a href=#96 id=96 data-nosnippet>96</a>  </span><span class="macro">DefConstructor!</span>(
-<a href=#97 id=97 data-nosnippet>97</a>    <span class="string">"\\ACKNOWLEDGMENT{}"</span>,
-<a href=#98 id=98 data-nosnippet>98</a>    <span class="string">"&lt;ltx:acknowledgements name='Acknowledgments'&gt;#1&lt;/ltx:acknowledgements&gt;"
-<a href=#99 id=99 data-nosnippet>99</a>  </span>);
-<a href=#100 id=100 data-nosnippet>100</a>  <span class="comment">// \ACKname{name} sets the acknowledgements heading name.
-<a href=#101 id=101 data-nosnippet>101</a>  </span>def_macro_noop(<span class="string">"\\ACKname{}"</span>)<span class="question-mark">?</span>;
-<a href=#102 id=102 data-nosnippet>102</a>  <span class="comment">// informs3.cls L2642: `\newenvironment{APPENDIX}[1]{…appendix with
-<a href=#103 id=103 data-nosnippet>103</a>  // title #1…}`. The singular env wraps a single titled appendix.
-<a href=#104 id=104 data-nosnippet>104</a>  // Begin enters appendix mode + emits the title as a section; the arg
-<a href=#105 id=105 data-nosnippet>105</a>  // is read by the helper. Mirrors the {APPENDICES} handling.
-<a href=#106 id=106 data-nosnippet>106</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#107 id=107 data-nosnippet>107</a>    <span class="macro">T_CS!</span>(<span class="string">"\\begin{APPENDIX}"</span>),
-<a href=#108 id=108 data-nosnippet>108</a>    <span class="prelude-val">None</span>,
-<a href=#109 id=109 data-nosnippet>109</a>    <span class="string">"\\appendix\\lx@informs@appendixhead"
-<a href=#110 id=110 data-nosnippet>110</a>  </span>);
-<a href=#111 id=111 data-nosnippet>111</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@informs@appendixhead{}"</span>, <span class="string">"\\section{#1}"</span>);
-<a href=#112 id=112 data-nosnippet>112</a>  <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\end{APPENDIX}"</span>), <span class="prelude-val">None</span>, <span class="string">""</span>);
-<a href=#113 id=113 data-nosnippet>113</a>});
+<a href=#13 id=13 data-nosnippet>13</a>  <span class="comment">// informs3.cls:12 (informs4.cls:6, every copy) `\RequirePackage{amsmath,amssymb,ifthen,url,graphicx,color,array,
+<a href=#14 id=14 data-nosnippet>14</a>  // theorem}`: theorem.sty, not amsthm, so a paper's own `\usepackage{amsthm}` is a real load, after the class's
+<a href=#15 id=15 data-nosnippet>15</a>  // `\proof` (below), which it keeps, or after the paper cleared it (`\let\proof\relax\let\endproof\relax`), where it
+<a href=#16 id=16 data-nosnippet>16</a>  // puts amsthm's in its place (2008.02211, informs3opt.cls; `{proof}` was undefined there with amsthm preloaded).
+<a href=#17 id=17 data-nosnippet>17</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"amssymb"</span>);
+<a href=#18 id=18 data-nosnippet>18</a>  <span class="macro">RequirePackage!</span>(<span class="string">"theorem"</span>);
+<a href=#19 id=19 data-nosnippet>19</a>
+<a href=#20 id=20 data-nosnippet>20</a>  <span class="comment">// The class asked for (`fallback_request`, recorded by the versioned and the prefix fallback). The informs3 family
+<a href=#21 id=21 data-nosnippet>21</a>  // (informs3.cls, informs3h, informs3a, informs3noheader) declares twelve journals and no anonymous-review options
+<a href=#22 id=22 data-nosnippet>22</a>  // (informs3.cls:374-400), words its blind-review notice "(Authors' names blinded for peer review)" (:1034-1036) and, for
+<a href=#23 id=23 data-nosnippet>23</a>  // MOOR, prints the acknowledgment even under blind review (:1266-1274); informs3noheader prints no notice
+<a href=#24 id=24 data-nosnippet>24</a>  // (2609.04127 informs3noheader.cls:1032-1035). Older informs4 copies without `dblanonrev` word the notice as
+<a href=#25 id=25 data-nosnippet>25</a>  // informs3 does (2609.10587, 17368, 25924, 28947, 28263); the binding gives them the current wording.
+<a href=#26 id=26 data-nosnippet>26</a>  </span><span class="kw">let </span>request = lookup_string(<span class="string">"fallback_request"</span>);
+<a href=#27 id=27 data-nosnippet>27</a>  <span class="kw">let </span>class = request.rsplit(<span class="string">'/'</span>).next().unwrap_or_default();
+<a href=#28 id=28 data-nosnippet>28</a>  <span class="kw">let </span>informs3 = class.starts_with(<span class="string">"informs3"</span>);
+<a href=#29 id=29 data-nosnippet>29</a>  <span class="kw">let </span>blind_notice = <span class="kw">if </span>class.starts_with(<span class="string">"informs3noheader"</span>) {
+<a href=#30 id=30 data-nosnippet>30</a>    <span class="string">""
+<a href=#31 id=31 data-nosnippet>31</a>  </span>} <span class="kw">else if </span>informs3 {
+<a href=#32 id=32 data-nosnippet>32</a>    <span class="string">"(Authors' names blinded for peer review)"
+<a href=#33 id=33 data-nosnippet>33</a>  </span>} <span class="kw">else </span>{
+<a href=#34 id=34 data-nosnippet>34</a>    <span class="string">"(Authors' names are not included for peer review)"
+<a href=#35 id=35 data-nosnippet>35</a>  </span>};
+<a href=#36 id=36 data-nosnippet>36</a>
+<a href=#37 id=37 data-nosnippet>37</a>  <span class="comment">// informs4.cls:9-54 (informs3.cls declares twelve of these journals): the journal a paper is set for and the review
+<a href=#38 id=38 data-nosnippet>38</a>  // mode, as the switches a paper's own preamble tests (2609.37380: `\if@IJOC`, `\if@MOOR`, `\if@STSY`, `\if@IJOO`).
+<a href=#39 id=39 data-nosnippet>39</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#40 id=40 data-nosnippet>40</a>    <span class="string">r"\newif\if@DECA\newif\if@IJOC\newif\if@INTE\newif\if@ISRE\newif\if@MNSC\newif\if@MKSC\newif\if@MOOR\newif\if@MSOM\newif\if@OPRE\newif\if@ORSC\newif\if@TRSC\newif\if@ITED\newif\if@SERV\newif\if@STSC\newif\if@STSY\newif\if@IJDS\newif\if@IJOO\newif\if@COPYEDIT\newif\if@BLINDREV\newif\if@NONBLINDREV"
+<a href=#41 id=41 data-nosnippet>41</a>  </span>);
+<a href=#42 id=42 data-nosnippet>42</a>  <span class="macro">DeclareOption!</span>(<span class="string">"deca"</span>, <span class="string">"\\@DECAtrue"</span>);
+<a href=#43 id=43 data-nosnippet>43</a>  <span class="macro">DeclareOption!</span>(<span class="string">"ijoc"</span>, <span class="string">"\\@IJOCtrue"</span>);
+<a href=#44 id=44 data-nosnippet>44</a>  <span class="macro">DeclareOption!</span>(<span class="string">"inte"</span>, <span class="string">"\\@INTEtrue"</span>);
+<a href=#45 id=45 data-nosnippet>45</a>  <span class="macro">DeclareOption!</span>(<span class="string">"isre"</span>, <span class="string">"\\@ISREtrue"</span>);
+<a href=#46 id=46 data-nosnippet>46</a>  <span class="macro">DeclareOption!</span>(<span class="string">"mnsc"</span>, <span class="string">"\\@MNSCtrue"</span>);
+<a href=#47 id=47 data-nosnippet>47</a>  <span class="macro">DeclareOption!</span>(<span class="string">"mksc"</span>, <span class="string">"\\@MKSCtrue"</span>);
+<a href=#48 id=48 data-nosnippet>48</a>  <span class="macro">DeclareOption!</span>(<span class="string">"moor"</span>, <span class="string">"\\@MOORtrue"</span>);
+<a href=#49 id=49 data-nosnippet>49</a>  <span class="macro">DeclareOption!</span>(<span class="string">"msom"</span>, <span class="string">"\\@MSOMtrue"</span>);
+<a href=#50 id=50 data-nosnippet>50</a>  <span class="macro">DeclareOption!</span>(<span class="string">"opre"</span>, <span class="string">"\\@OPREtrue"</span>);
+<a href=#51 id=51 data-nosnippet>51</a>  <span class="macro">DeclareOption!</span>(<span class="string">"orsc"</span>, <span class="string">"\\@ORSCtrue"</span>);
+<a href=#52 id=52 data-nosnippet>52</a>  <span class="macro">DeclareOption!</span>(<span class="string">"trsc"</span>, <span class="string">"\\@TRSCtrue"</span>);
+<a href=#53 id=53 data-nosnippet>53</a>  <span class="macro">DeclareOption!</span>(<span class="string">"ited"</span>, <span class="string">"\\@ITEDtrue"</span>);
+<a href=#54 id=54 data-nosnippet>54</a>  <span class="macro">DeclareOption!</span>(<span class="string">"copyedit"</span>, <span class="string">"\\@COPYEDITtrue"</span>);
+<a href=#55 id=55 data-nosnippet>55</a>  <span class="macro">DeclareOption!</span>(<span class="string">"blindrev"</span>, <span class="string">"\\@BLINDREVtrue"</span>);
+<a href=#56 id=56 data-nosnippet>56</a>  <span class="macro">DeclareOption!</span>(<span class="string">"nonblindrev"</span>, <span class="string">"\\@NONBLINDREVtrue"</span>);
+<a href=#57 id=57 data-nosnippet>57</a>  <span class="kw">if </span>!informs3 {
+<a href=#58 id=58 data-nosnippet>58</a>    <span class="macro">DeclareOption!</span>(<span class="string">"stsy"</span>, <span class="string">"\\@STSYtrue"</span>);
+<a href=#59 id=59 data-nosnippet>59</a>    <span class="macro">DeclareOption!</span>(<span class="string">"ijaa"</span>, <span class="string">"\\@INTEtrue"</span>);
+<a href=#60 id=60 data-nosnippet>60</a>    <span class="macro">DeclareOption!</span>(<span class="string">"serv"</span>, <span class="string">"\\@SERVtrue"</span>);
+<a href=#61 id=61 data-nosnippet>61</a>    <span class="macro">DeclareOption!</span>(<span class="string">"stsc"</span>, <span class="string">"\\@STSCtrue"</span>);
+<a href=#62 id=62 data-nosnippet>62</a>    <span class="macro">DeclareOption!</span>(<span class="string">"ijds"</span>, <span class="string">"\\@IJDStrue"</span>);
+<a href=#63 id=63 data-nosnippet>63</a>    <span class="macro">DeclareOption!</span>(<span class="string">"ijoo"</span>, <span class="string">"\\@IJOOtrue"</span>);
+<a href=#64 id=64 data-nosnippet>64</a>    <span class="macro">DeclareOption!</span>(<span class="string">"dblanonrev"</span>, <span class="string">"\\@BLINDREVtrue"</span>);
+<a href=#65 id=65 data-nosnippet>65</a>    <span class="macro">DeclareOption!</span>(<span class="string">"sglanonrev"</span>, <span class="string">"\\@NONBLINDREVtrue"</span>);
+<a href=#66 id=66 data-nosnippet>66</a>  }
+<a href=#67 id=67 data-nosnippet>67</a>  <span class="macro">ProcessOptions!</span>();
+<a href=#68 id=68 data-nosnippet>68</a>
+<a href=#69 id=69 data-nosnippet>69</a>  <span class="comment">// informs4.cls:948-985: the journal's metadata and the running heads and feet, each setter storing its value in
+<a href=#70 id=70 data-nosnippet>70</a>  // `\the…`; the class prints them only in the masthead and the page heads (page furniture), so they reach no element
+<a href=#71 id=71 data-nosnippet>71</a>  // here, but a paper reads them back (2609.23739, 38842: `\theRUNTITLE`; 22690, 24605, 25924: `\RRHSecondLine`;
+<a href=#72 id=72 data-nosnippet>72</a>  // 10587: `\JOURNAL`; 28084: `\theRRHFirstLine` in its own page head). The running-head lines default empty here;
+<a href=#73 id=73 data-nosnippet>73</a>  // the class's defaults (:1067-1083) name the journal and the running author and title.
+<a href=#74 id=74 data-nosnippet>74</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#75 id=75 data-nosnippet>75</a>    <span class="string">r"\def\JOURNAL#1{\gdef\theJOURNAL{#1}}\def\theJOURNAL{Journal Name}
+<a href=#76 id=76 data-nosnippet>76</a>\def\JOURNALshort#1{\gdef\theJOURNALshort{#1}}\def\theJOURNALshort{Journal Name}
+<a href=#77 id=77 data-nosnippet>77</a>\def\VOLUME#1{\gdef\theVOLUME{#1}}\def\theVOLUME{00}
+<a href=#78 id=78 data-nosnippet>78</a>\def\NO#1{\gdef\theNO{#1}}\def\theNO{0}
+<a href=#79 id=79 data-nosnippet>79</a>\def\ISSUE#1{\gdef\theISSUE{#1}}\def\theISSUE{0000}
+<a href=#80 id=80 data-nosnippet>80</a>\def\MONTH#1{\gdef\theMONTH{#1}}\def\theMONTH{Xxxxx}
+<a href=#81 id=81 data-nosnippet>81</a>\def\YEAR#1{\gdef\theYEAR{#1}}\def\theYEAR{0000}
+<a href=#82 id=82 data-nosnippet>82</a>\def\ISSN#1{\gdef\theISSN{#1}}\def\theISSN{0000-0000}
+<a href=#83 id=83 data-nosnippet>83</a>\def\EISSN#1{\gdef\theEISSN{#1}}\def\theEISSN{0000-0000}
+<a href=#84 id=84 data-nosnippet>84</a>\def\DOI#1{\gdef\theDOI{#1}}\def\theDOI{10.1287/xxxx.0000.0000}
+<a href=#85 id=85 data-nosnippet>85</a>\def\FIRSTPAGE#1{\gdef\theFIRSTPAGE{#1}}\def\theFIRSTPAGE{000}
+<a href=#86 id=86 data-nosnippet>86</a>\def\LONGFIRSTPAGE#1{\gdef\theLONGFIRSTPAGE{#1}}\def\theLONGFIRSTPAGE{0001}
+<a href=#87 id=87 data-nosnippet>87</a>\def\LASTPAGE#1{\gdef\theLASTPAGE{#1}}\def\theLASTPAGE{000}
+<a href=#88 id=88 data-nosnippet>88</a>\def\SHORTYEAR#1{\gdef\theSHORTYEAR{#1}}\def\theSHORTYEAR{00}
+<a href=#89 id=89 data-nosnippet>89</a>\def\PAGERANGE#1{\gdef\thePAGERANGE{#1}}\def\thePAGERANGE{}
+<a href=#90 id=90 data-nosnippet>90</a>\def\theRUNAUTHOR{Author}\def\theRUNTITLE{Article Short Title}
+<a href=#91 id=91 data-nosnippet>91</a>\def\theECRUNAUTHOR{\theRUNAUTHOR}\def\theECRUNTITLE{\theRUNTITLE}
+<a href=#92 id=92 data-nosnippet>92</a>\def\ECTYPE#1{\gdef\theECTYPE{#1}}\def\theECTYPE{e-companion to\enspace}
+<a href=#93 id=93 data-nosnippet>93</a>\def\ECAUpunct#1{\gdef\theECAUpunct{#1}}\def\theECAUpunct{:\space}
+<a href=#94 id=94 data-nosnippet>94</a>\def\LRHFirstLine#1{\gdef\theLRHFirstLine{#1}}\def\theLRHFirstLine{}
+<a href=#95 id=95 data-nosnippet>95</a>\def\LRHSecondLine#1{\gdef\theLRHSecondLine{#1}}\def\theLRHSecondLine{}
+<a href=#96 id=96 data-nosnippet>96</a>\def\RRHFirstLine#1{\gdef\theRRHFirstLine{#1}}\def\theRRHFirstLine{}
+<a href=#97 id=97 data-nosnippet>97</a>\def\RRHSecondLine#1{\gdef\theRRHSecondLine{#1}}\def\theRRHSecondLine{}
+<a href=#98 id=98 data-nosnippet>98</a>\def\ECLRHFirstLine#1{\gdef\theECLRHFirstLine{#1}}\def\theECLRHFirstLine{}
+<a href=#99 id=99 data-nosnippet>99</a>\def\ECLRHSecondLine#1{\gdef\theECLRHSecondLine{#1}}\def\theECLRHSecondLine{}
+<a href=#100 id=100 data-nosnippet>100</a>\def\ECRRHFirstLine#1{\gdef\theECRRHFirstLine{#1}}\def\theECRRHFirstLine{}
+<a href=#101 id=101 data-nosnippet>101</a>\def\ECRRHSecondLine#1{\gdef\theECRRHSecondLine{#1}}\def\theECRRHSecondLine{}
+<a href=#102 id=102 data-nosnippet>102</a>\def\LRFFirstLine#1{\gdef\theLRFFirstLine{#1}}\def\theLRFFirstLine{}
+<a href=#103 id=103 data-nosnippet>103</a>\def\LRFSecondLine#1{\gdef\theLRFSecondLine{#1}}\def\theLRFSecondLine{}
+<a href=#104 id=104 data-nosnippet>104</a>\def\RRFFirstLine#1{\gdef\theRRFFirstLine{#1}}\def\theRRFFirstLine{}
+<a href=#105 id=105 data-nosnippet>105</a>\def\RRFSecondLine#1{\gdef\theRRFSecondLine{#1}}\def\theRRFSecondLine{}"
+<a href=#106 id=106 data-nosnippet>106</a>  </span>);
+<a href=#107 id=107 data-nosnippet>107</a>  <span class="comment">// informs4.cls:889-890 (2609.10587, 11171, 18126, 21433, 28859, 37380, 37489 use them undefined).
+<a href=#108 id=108 data-nosnippet>108</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\def\argmax{\mathop{\rm arg\,max}}\def\argmin{\mathop{\rm arg\,min}}"</span>);
+<a href=#109 id=109 data-nosnippet>109</a>
+<a href=#110 id=110 data-nosnippet>110</a>  <span class="comment">// informs3.cls:98-247 (informs4.cls:145-294, the same in every version sampled — informs1 2005-2012, informs2,
+<a href=#111 id=111 data-nosnippet>111</a>  // informs3, informs4 2015-2024): bold letters and digits from the class's symbol fonts — `boperators` (OT1 cmr bx n,
+<a href=#112 id=112 data-nosnippet>112</a>  // bold upright: `\BFx`, `\BFzero`, `\BFGamma`), `bletters` (OML cmm b it, bold italic Greek: `\BFbeta`) and `bsymbols`
+<a href=#113 id=113 data-nosnippet>113</a>  // (OMS cmsy b n, bold calligraphic: `\BFcalX`, `\BFcal`) — as `\mathbf` and `\boldsymbol` here, which keep their
+<a href=#114 id=114 data-nosnippet>114</a>  // weight (a `\DeclareMathSymbol` keeps only the glyph; `\BFx` 13 of the 75 sampled papers, `\BFy` 11, `\BFbeta` 7:
+<a href=#115 id=115 data-nosnippet>115</a>  // 1501.01126, 1710.02642, 2008.02154, 2010.06802).
+<a href=#116 id=116 data-nosnippet>116</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#117 id=117 data-nosnippet>117</a>    <span class="string">r"\def\BFa{\mathbf{a}}\def\BFb{\mathbf{b}}\def\BFc{\mathbf{c}}\def\BFd{\mathbf{d}}\def\BFe{\mathbf{e}}
+<a href=#118 id=118 data-nosnippet>118</a>\def\BFf{\mathbf{f}}\def\BFg{\mathbf{g}}\def\BFh{\mathbf{h}}\def\BFi{\mathbf{i}}\def\BFj{\mathbf{j}}
+<a href=#119 id=119 data-nosnippet>119</a>\def\BFk{\mathbf{k}}\def\BFl{\mathbf{l}}\def\BFm{\mathbf{m}}\def\BFn{\mathbf{n}}\def\BFo{\mathbf{o}}
+<a href=#120 id=120 data-nosnippet>120</a>\def\BFp{\mathbf{p}}\def\BFq{\mathbf{q}}\def\BFr{\mathbf{r}}\def\BFs{\mathbf{s}}\def\BFt{\mathbf{t}}
+<a href=#121 id=121 data-nosnippet>121</a>\def\BFu{\mathbf{u}}\def\BFv{\mathbf{v}}\def\BFw{\mathbf{w}}\def\BFx{\mathbf{x}}\def\BFy{\mathbf{y}}
+<a href=#122 id=122 data-nosnippet>122</a>\def\BFz{\mathbf{z}}\def\BFA{\mathbf{A}}\def\BFB{\mathbf{B}}\def\BFC{\mathbf{C}}\def\BFD{\mathbf{D}}
+<a href=#123 id=123 data-nosnippet>123</a>\def\BFE{\mathbf{E}}\def\BFF{\mathbf{F}}\def\BFG{\mathbf{G}}\def\BFH{\mathbf{H}}\def\BFI{\mathbf{I}}
+<a href=#124 id=124 data-nosnippet>124</a>\def\BFJ{\mathbf{J}}\def\BFK{\mathbf{K}}\def\BFL{\mathbf{L}}\def\BFM{\mathbf{M}}\def\BFN{\mathbf{N}}
+<a href=#125 id=125 data-nosnippet>125</a>\def\BFO{\mathbf{O}}\def\BFP{\mathbf{P}}\def\BFQ{\mathbf{Q}}\def\BFR{\mathbf{R}}\def\BFS{\mathbf{S}}
+<a href=#126 id=126 data-nosnippet>126</a>\def\BFT{\mathbf{T}}\def\BFU{\mathbf{U}}\def\BFV{\mathbf{V}}\def\BFW{\mathbf{W}}\def\BFX{\mathbf{X}}
+<a href=#127 id=127 data-nosnippet>127</a>\def\BFY{\mathbf{Y}}\def\BFZ{\mathbf{Z}}\def\BFzero{\mathbf{0}}\def\BFone{\mathbf{1}}\def\BFtwo{\mathbf{2}}
+<a href=#128 id=128 data-nosnippet>128</a>\def\BFthree{\mathbf{3}}\def\BFfour{\mathbf{4}}\def\BFfive{\mathbf{5}}\def\BFsix{\mathbf{6}}\def\BFseven{\mathbf{7}}
+<a href=#129 id=129 data-nosnippet>129</a>\def\BFeight{\mathbf{8}}\def\BFnine{\mathbf{9}}\def\BFalpha{\boldsymbol{\alpha}}\def\BFbeta{\boldsymbol{\beta}}\def\BFgamma{\boldsymbol{\gamma}}
+<a href=#130 id=130 data-nosnippet>130</a>\def\BFdelta{\boldsymbol{\delta}}\def\BFepsilon{\boldsymbol{\epsilon}}\def\BFzeta{\boldsymbol{\zeta}}\def\BFeta{\boldsymbol{\eta}}\def\BFtheta{\boldsymbol{\theta}}
+<a href=#131 id=131 data-nosnippet>131</a>\def\BFiota{\boldsymbol{\iota}}\def\BFkappa{\boldsymbol{\kappa}}\def\BFlambda{\boldsymbol{\lambda}}\def\BFmu{\boldsymbol{\mu}}\def\BFnu{\boldsymbol{\nu}}
+<a href=#132 id=132 data-nosnippet>132</a>\def\BFxi{\boldsymbol{\xi}}\def\BFpi{\boldsymbol{\pi}}\def\BFrho{\boldsymbol{\rho}}\def\BFsigma{\boldsymbol{\sigma}}\def\BFtau{\boldsymbol{\tau}}
+<a href=#133 id=133 data-nosnippet>133</a>\def\BFupsilon{\boldsymbol{\upsilon}}\def\BFphi{\boldsymbol{\phi}}\def\BFchi{\boldsymbol{\chi}}\def\BFpsi{\boldsymbol{\psi}}\def\BFomega{\boldsymbol{\omega}}
+<a href=#134 id=134 data-nosnippet>134</a>\def\BFvarepsilon{\boldsymbol{\varepsilon}}\def\BFvartheta{\boldsymbol{\vartheta}}\def\BFvarpi{\boldsymbol{\varpi}}\def\BFvarrho{\boldsymbol{\varrho}}\def\BFvarsigma{\boldsymbol{\varsigma}}
+<a href=#135 id=135 data-nosnippet>135</a>\def\BFvarphi{\boldsymbol{\varphi}}\def\BFGamma{\mathbf{\Gamma}}\def\BFDelta{\mathbf{\Delta}}\def\BFTheta{\mathbf{\Theta}}\def\BFLambda{\mathbf{\Lambda}}
+<a href=#136 id=136 data-nosnippet>136</a>\def\BFXi{\mathbf{\Xi}}\def\BFPi{\mathbf{\Pi}}\def\BFSigma{\mathbf{\Sigma}}\def\BFUpsilon{\mathbf{\Upsilon}}\def\BFPhi{\mathbf{\Phi}}
+<a href=#137 id=137 data-nosnippet>137</a>\def\BFPsi{\mathbf{\Psi}}\def\BFOmega{\mathbf{\Omega}}\def\BFimath{\boldsymbol{\imath}}\def\BFjmath{\boldsymbol{\jmath}}\def\BFell{\boldsymbol{\ell}}
+<a href=#138 id=138 data-nosnippet>138</a>\def\BFwp{\boldsymbol{\wp}}\def\BFnabla{\boldsymbol{\nabla}}\def\BFcalA{\boldsymbol{\mathcal{A}}}\def\BFcalB{\boldsymbol{\mathcal{B}}}\def\BFcalC{\boldsymbol{\mathcal{C}}}
+<a href=#139 id=139 data-nosnippet>139</a>\def\BFcalD{\boldsymbol{\mathcal{D}}}\def\BFcalE{\boldsymbol{\mathcal{E}}}\def\BFcalF{\boldsymbol{\mathcal{F}}}\def\BFcalG{\boldsymbol{\mathcal{G}}}\def\BFcalH{\boldsymbol{\mathcal{H}}}
+<a href=#140 id=140 data-nosnippet>140</a>\def\BFcalI{\boldsymbol{\mathcal{I}}}\def\BFcalJ{\boldsymbol{\mathcal{J}}}\def\BFcalK{\boldsymbol{\mathcal{K}}}\def\BFcalL{\boldsymbol{\mathcal{L}}}\def\BFcalM{\boldsymbol{\mathcal{M}}}
+<a href=#141 id=141 data-nosnippet>141</a>\def\BFcalN{\boldsymbol{\mathcal{N}}}\def\BFcalO{\boldsymbol{\mathcal{O}}}\def\BFcalP{\boldsymbol{\mathcal{P}}}\def\BFcalQ{\boldsymbol{\mathcal{Q}}}\def\BFcalR{\boldsymbol{\mathcal{R}}}
+<a href=#142 id=142 data-nosnippet>142</a>\def\BFcalS{\boldsymbol{\mathcal{S}}}\def\BFcalT{\boldsymbol{\mathcal{T}}}\def\BFcalU{\boldsymbol{\mathcal{U}}}\def\BFcalV{\boldsymbol{\mathcal{V}}}\def\BFcalW{\boldsymbol{\mathcal{W}}}
+<a href=#143 id=143 data-nosnippet>143</a>\def\BFcalX{\boldsymbol{\mathcal{X}}}\def\BFcalY{\boldsymbol{\mathcal{Y}}}\def\BFcalZ{\boldsymbol{\mathcal{Z}}}
+<a href=#144 id=144 data-nosnippet>144</a>\def\BFcal#1{\boldsymbol{\mathcal{#1}}}"
+<a href=#145 id=145 data-nosnippet>145</a>  </span>);
+<a href=#146 id=146 data-nosnippet>146</a>  <span class="comment">// informs4.cls:391, 638, 867, 883, 913, 1471-1472 (1501.01126's informs3.cls:426, 685, 931, 961, 1506-1507):
+<a href=#147 id=147 data-nosnippet>147</a>  // `\fs.size.skip.` sets the type size, `\HD{h}{d}` an invisible strut that `\up`/`\down`/`\updown` put in a table
+<a href=#148 id=148 data-nosnippet>148</a>  // row (6, 5, 3 papers: 1402.4593, 1810.10900), `\halmos` the end-of-proof box (9 papers: 1011.5677), `\n` a
+<a href=#149 id=149 data-nosnippet>149</a>  // `\nobreak` (1510.08335).
+<a href=#150 id=150 data-nosnippet>150</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#151 id=151 data-nosnippet>151</a>    <span class="string">r"\def\fs.#1.#2.{\fontsize{#1}{#2}\selectfont}
+<a href=#152 id=152 data-nosnippet>152</a>\def\HD#1#2{\vrule height #1pt depth #2pt width 0pt\relax}
+<a href=#153 id=153 data-nosnippet>153</a>\def\up{\HD{13}{0}}\def\down{\HD{0}{5}}\def\updown{\up\down}
+<a href=#154 id=154 data-nosnippet>154</a>\def\halmos{\mbox{\quad$\square$}}
+<a href=#155 id=155 data-nosnippet>155</a>\def\n{\nobreak}"
+<a href=#156 id=156 data-nosnippet>156</a>  </span>);
+<a href=#157 id=157 data-nosnippet>157</a>  <span class="comment">// informs4.cls:1001-1020 (informs3.cls:1047-1063): the subject classifications the title page lists under the
+<a href=#158 id=158 data-nosnippet>158</a>  // keywords (`\MSCCLASS` and `\ORMSCLASS` 6 papers, `\AREAOFREVIEW` 4, `\SUBJECTCLASS` 3; 1009.2653, 1508.02966,
+<a href=#159 id=159 data-nosnippet>159</a>  // 0908.2788), headed by the class's names (`\MSCCLASSname`, … which a paper may redefine for the print; the
+<a href=#160 id=160 data-nosnippet>160</a>  // classification's name here is their text).
+<a href=#161 id=161 data-nosnippet>161</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#162 id=162 data-nosnippet>162</a>    <span class="string">r"\def\SUBJECTCLASSname{{\it Subject classifications\/}{\kern0.7pt}:\enskip}
+<a href=#163 id=163 data-nosnippet>163</a>\def\AREAOFREVIEWname{{\it Area of review\/}{\kern0.7pt}:\enskip}
+<a href=#164 id=164 data-nosnippet>164</a>\def\MSCCLASSname{{\it MSC2000 subject classification\/}{\kern0.7pt}:\enskip}
+<a href=#165 id=165 data-nosnippet>165</a>\def\ORMSCLASSname{{\it OR/MS subject classification\/}{\kern0.7pt}:\enskip}
+<a href=#166 id=166 data-nosnippet>166</a>\def\SUBJECTCLASS#1{\lx@add@classification[scheme=subject,name={Subject classifications:~}]{#1}}
+<a href=#167 id=167 data-nosnippet>167</a>\def\AREAOFREVIEW#1{\lx@add@classification[scheme=area of review,name={Area of review:~}]{#1}}
+<a href=#168 id=168 data-nosnippet>168</a>\def\MSCCLASS#1{\lx@add@classification[scheme=MSC,name={MSC2000 subject classification:~}]{#1}}
+<a href=#169 id=169 data-nosnippet>169</a>\def\ORMSCLASS#1{\lx@add@classification[scheme=OR/MS,name={OR/MS subject classification:~}]{#1}}"
+<a href=#170 id=170 data-nosnippet>170</a>  </span>);
+<a href=#171 id=171 data-nosnippet>171</a>  <span class="comment">// informs4.cls:1377-1387 (informs3.cls:1412-1422): `{Trivlist}`, a trivlist without the space around it (3 papers:
+<a href=#172 id=172 data-nosnippet>172</a>  // 1408.4711), on which the class's `\proof` is built; the spacing is print layout.
+<a href=#173 id=173 data-nosnippet>173</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\let\Trivlist\trivlist\let\endTrivlist\endtrivlist"</span>);
+<a href=#174 id=174 data-nosnippet>174</a>  <span class="comment">// informs4.cls:1829-1830 (informs3.cls:1864-1865) `\def\proof#1{\Trivlist\item[\hspace*{1em}\hskip\labelsep{\it #1
+<a href=#175 id=175 data-nosnippet>175</a>  // \enskip }]…}`: the proof's head is its argument, in italics, as written (`\proof{Proof.}`, `\begin{proof}{Proof of
+<a href=#176 id=176 data-nosnippet>176</a>  // Theorem 1.}` — 229 and 87 of the 456 inventory papers), and no end mark (the papers write `\Halmos`). amsthm's
+<a href=#177 id=177 data-nosnippet>177</a>  // proof took the argument as its first text: "Proof. Proof." (1301.2609). A constructor pair, as autart's `{pf}`
+<a href=#178 id=178 data-nosnippet>178</a>  // (autart_cls.rs): the body stays in the mode around it.
+<a href=#179 id=179 data-nosnippet>179</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\def\proof#1{\lx@informs@proof{{\itshape #1}}}"</span>);
+<a href=#180 id=180 data-nosnippet>180</a>  <span class="macro">DefConstructor!</span>(
+<a href=#181 id=181 data-nosnippet>181</a>    <span class="string">"\\lx@informs@proof{}"</span>,
+<a href=#182 id=182 data-nosnippet>182</a>    <span class="string">"&lt;ltx:proof&gt;&lt;ltx:title&gt;#1&lt;/ltx:title&gt;"
+<a href=#183 id=183 data-nosnippet>183</a>  </span>);
+<a href=#184 id=184 data-nosnippet>184</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\endproof"</span>, sub[document, _args] {
+<a href=#185 id=185 data-nosnippet>185</a>    document.maybe_close_element(<span class="string">"ltx:proof"</span>)<span class="question-mark">?</span>;
+<a href=#186 id=186 data-nosnippet>186</a>  });
+<a href=#187 id=187 data-nosnippet>187</a>  <span class="comment">// informs4.cls:1420-1452 (informs3.cls:1455-1487): `\NatBibNumeric` renews `{thebibliography}` to number natbib's
+<a href=#188 id=188 data-nosnippet>188</a>  // entries; the bibliography is the natbib binding's here, which numbers them already (8 papers: 1009.2653).
+<a href=#189 id=189 data-nosnippet>189</a>  </span>def_macro_noop(<span class="string">"\\NatBibNumeric"</span>)<span class="question-mark">?</span>;
+<a href=#190 id=190 data-nosnippet>190</a>  <span class="comment">// informs4.cls:1621-1638 (informs3.cls the same): `{descr}`, a description list with an upright label (1501.01126).
+<a href=#191 id=191 data-nosnippet>191</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#192 id=192 data-nosnippet>192</a>    <span class="string">r"\newcommand*\descrlabel[1]{\hspace\labelsep\normalfont #1}
+<a href=#193 id=193 data-nosnippet>193</a>\def\descr{\ifnum \@itemdepth &gt;\thr@@\@toodeep\else\advance\@itemdepth\@ne\list{}{\DescrListParams}\fi}
+<a href=#194 id=194 data-nosnippet>194</a>\def\DescrListParams{\leftmargin\z@ \labelwidth\z@\ifnum \@itemdepth=1\itemindent1em\else  \ifnum \@itemdepth=2\itemindent2em\else \itemindent\labelsep\advance\itemindent3em \fi\fi\let\makelabel\descrlabel}
+<a href=#195 id=195 data-nosnippet>195</a>\let\enddescr=\endlist"
+<a href=#196 id=196 data-nosnippet>196</a>  </span>);
+<a href=#197 id=197 data-nosnippet>197</a>  <span class="comment">// informs4.cls:1173-1175, 1822, 1853, 2141-2147 (informs3.cls:1857): the fonts and hooks a paper redefines for its
+<a href=#198 id=198 data-nosnippet>198</a>  // title page, theorem heads and float notes (`\TITLEfont` 2311.06745, `\TheoremHeaderFont` 2101.01816, `\HOOKtop`
+<a href=#199 id=199 data-nosnippet>199</a>  // 2503.15150, `\FigureNoteStyle` 2112.05010).
+<a href=#200 id=200 data-nosnippet>200</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#201 id=201 data-nosnippet>201</a>    <span class="string">r"\def\TITLEfont{\rm}\def\AUTHORfont{\rm}\def\AFFfont{\rm}\def\HOOKtop{\vspace*{0pt}}
+<a href=#202 id=202 data-nosnippet>202</a>\def\FigureNoteStyle{\rm}\def\TableNoteStyle{\rm}
+<a href=#203 id=203 data-nosnippet>203</a>\def\thit{\it}\def\TheoremTextFont{\thit}\def\ExampleHeaderFont{\mdseries\scshape}\def\ExampleTextFont{\rm}"
+<a href=#204 id=204 data-nosnippet>204</a>  </span>);
+<a href=#205 id=205 data-nosnippet>205</a>  <span class="kw">if </span>informs3 {
+<a href=#206 id=206 data-nosnippet>206</a>    <span class="macro">RawTeX!</span>(<span class="string">r"\def\TheoremHeaderFont{\mdseries\scshape}"</span>);
+<a href=#207 id=207 data-nosnippet>207</a>  } <span class="kw">else </span>{
+<a href=#208 id=208 data-nosnippet>208</a>    <span class="macro">RawTeX!</span>(<span class="string">r"\def\TheoremHeaderFont{\sffamily\mdseries\scshape}"</span>);
+<a href=#209 id=209 data-nosnippet>209</a>  }
+<a href=#210 id=210 data-nosnippet>210</a>  <span class="comment">// informs4.cls:2742-2744 (informs3.cls the same): `\ECDisclaimer`, the production notice "This page is intentionally
+<a href=#211 id=211 data-nosnippet>211</a>  // blank…" on the e-companion's title page — page furniture (3 papers: 1102.2551).
+<a href=#212 id=212 data-nosnippet>212</a>  </span>def_macro_noop(<span class="string">"\\ECDisclaimer"</span>)<span class="question-mark">?</span>;
+<a href=#213 id=213 data-nosnippet>213</a>
+<a href=#214 id=214 data-nosnippet>214</a>  <span class="comment">// Frontmatter / paper metadata — preserve author content.
+<a href=#215 id=215 data-nosnippet>215</a>  // \TITLE / \ARTICLETITLE → \title to populate the document title.
+<a href=#216 id=216 data-nosnippet>216</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\TITLE{}"</span>, <span class="string">"\\title{#1}"</span>);
+<a href=#217 id=217 data-nosnippet>217</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ARTICLETITLE{}"</span>, <span class="string">"\\title{#1}"</span>);
+<a href=#218 id=218 data-nosnippet>218</a>  <span class="comment">// Running header variants — short title for header; preserve as note.
+<a href=#219 id=219 data-nosnippet>219</a>  // Under the blind-review options the running heads print the class's notice, not the running authors
+<a href=#220 id=220 data-nosnippet>220</a>  // (informs4.cls:1071-1076, informs3.cls:1108-1111); the e-companion heads print `\theECRUNAUTHOR` either way
+<a href=#221 id=221 data-nosnippet>221</a>  // (:1067-1069).
+<a href=#222 id=222 data-nosnippet>222</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#223 id=223 data-nosnippet>223</a>    <span class="string">"\\RUNAUTHOR{}"</span>,
+<a href=#224 id=224 data-nosnippet>224</a>    <span class="string">"\\gdef\\theRUNAUTHOR{#1}\\if@BLINDREV\\expandafter\\@gobble\\else\\expandafter\\lx@informs@runningauthor\\fi{#1}"
+<a href=#225 id=225 data-nosnippet>225</a>  </span>);
+<a href=#226 id=226 data-nosnippet>226</a>  <span class="macro">DefMacro!</span>(
+<a href=#227 id=227 data-nosnippet>227</a>    <span class="string">"\\lx@informs@runningauthor{}"</span>,
+<a href=#228 id=228 data-nosnippet>228</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=runningauthor]{#1}"
+<a href=#229 id=229 data-nosnippet>229</a>  </span>);
+<a href=#230 id=230 data-nosnippet>230</a>  <span class="macro">DefMacro!</span>(
+<a href=#231 id=231 data-nosnippet>231</a>    <span class="string">"\\RUNTITLE{}"</span>,
+<a href=#232 id=232 data-nosnippet>232</a>    <span class="string">"\\gdef\\theRUNTITLE{#1}\\@add@frontmatter{ltx:note}[role=runningtitle]{#1}"
+<a href=#233 id=233 data-nosnippet>233</a>  </span>);
+<a href=#234 id=234 data-nosnippet>234</a>  <span class="macro">DefMacro!</span>(
+<a href=#235 id=235 data-nosnippet>235</a>    <span class="string">"\\ECRUNAUTHOR{}"</span>,
+<a href=#236 id=236 data-nosnippet>236</a>    <span class="string">"\\gdef\\theECRUNAUTHOR{#1}\\@add@frontmatter{ltx:note}[role=ec-runningauthor]{#1}"
+<a href=#237 id=237 data-nosnippet>237</a>  </span>);
+<a href=#238 id=238 data-nosnippet>238</a>  <span class="macro">DefMacro!</span>(
+<a href=#239 id=239 data-nosnippet>239</a>    <span class="string">"\\ECRUNTITLE{}"</span>,
+<a href=#240 id=240 data-nosnippet>240</a>    <span class="string">"\\gdef\\theECRUNTITLE{#1}\\@add@frontmatter{ltx:note}[role=ec-runningtitle]{#1}"
+<a href=#241 id=241 data-nosnippet>241</a>  </span>);
+<a href=#242 id=242 data-nosnippet>242</a>  <span class="comment">// informs4.cls:1198-1206 (informs3.cls:1236-1244): `\AUTHOR{name}` and `\AFF{affiliation}` each take one argument,
+<a href=#243 id=243 data-nosnippet>243</a>  // the affiliation under its author. They were read as `\AUTHOR{name}{affiliation}` and `\AFF[]{…}`, so `\AUTHOR`
+<a href=#244 id=244 data-nosnippet>244</a>  // took the following `\AFF` token as its affiliation and the affiliations became loose notes (2609.37380). Each
+<a href=#245 id=245 data-nosnippet>245</a>  // `\AUTHOR` adds its authors to the ones before, and the superscript marks of a marked author list link the marked
+<a href=#246 id=246 data-nosnippet>246</a>  // `\AFF` lines to their authors (2609.17368 `$^{a,e}$`, 22690 and 28084 `\textsuperscript{1}`).
+<a href=#247 id=247 data-nosnippet>247</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\AUTHOR{}"</span>, <span class="string">"\\lx@add@authors@list{#1}"</span>);
+<a href=#248 id=248 data-nosnippet>248</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\AFF{}"</span>, <span class="string">"\\lx@add@affiliation@marked{#1}"</span>);
+<a href=#249 id=249 data-nosnippet>249</a>  <span class="comment">// \ABSTRACT → abstract env so the text is preserved as document abstract.
+<a href=#250 id=250 data-nosnippet>250</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\ABSTRACT{}"</span>, <span class="string">"\\begin{abstract}#1\\end{abstract}"</span>);
+<a href=#251 id=251 data-nosnippet>251</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ARTICLEABSTRACT{}"</span>, <span class="string">"\\begin{abstract}#1\\end{abstract}"</span>);
+<a href=#252 id=252 data-nosnippet>252</a>  <span class="macro">DefMacro!</span>(
+<a href=#253 id=253 data-nosnippet>253</a>    <span class="string">"\\KEYWORDS{}"</span>,
+<a href=#254 id=254 data-nosnippet>254</a>    <span class="string">"\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}"
+<a href=#255 id=255 data-nosnippet>255</a>  </span>);
+<a href=#256 id=256 data-nosnippet>256</a>  <span class="macro">DefMacro!</span>(
+<a href=#257 id=257 data-nosnippet>257</a>    <span class="string">"\\MANUSCRIPTNO{}"</span>,
+<a href=#258 id=258 data-nosnippet>258</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=manuscriptno]{#1}"
+<a href=#259 id=259 data-nosnippet>259</a>  </span>);
+<a href=#260 id=260 data-nosnippet>260</a>  <span class="comment">// informs4.cls:1952 (informs3.cls:1946): the title page prints the history unless under blind review (2609.08001,
+<a href=#261 id=261 data-nosnippet>261</a>  // 21433, 28084).
+<a href=#262 id=262 data-nosnippet>262</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#263 id=263 data-nosnippet>263</a>    <span class="string">"\\HISTORY{}"</span>,
+<a href=#264 id=264 data-nosnippet>264</a>    <span class="string">"\\if@BLINDREV\\expandafter\\@gobble\\else\\expandafter\\lx@informs@history\\fi{#1}"
+<a href=#265 id=265 data-nosnippet>265</a>  </span>);
+<a href=#266 id=266 data-nosnippet>266</a>  <span class="macro">DefMacro!</span>(
+<a href=#267 id=267 data-nosnippet>267</a>    <span class="string">"\\lx@informs@history{}"</span>,
+<a href=#268 id=268 data-nosnippet>268</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=history]{#1}"
+<a href=#269 id=269 data-nosnippet>269</a>  </span>);
+<a href=#270 id=270 data-nosnippet>270</a>  <span class="comment">// informs4.cls:987-995, 1225-1233 (informs3.cls:1032-1039, 1266-1274): when it loads, the class decides that under
+<a href=#271 id=271 data-nosnippet>271</a>  // the blind-review options the author block prints only its notice in place of the names (none in informs3noheader)
+<a href=#272 id=272 data-nosnippet>272</a>  // and `\ACKNOWLEDGMENT` and `\AUTHORBIO` print nothing; informs3's MOOR acknowledgment, defined after, prints anyway.
+<a href=#273 id=273 data-nosnippet>273</a>  // No 2609 paper sets blindrev or dblanonrev (2609.23739 has it commented out).
+<a href=#274 id=274 data-nosnippet>274</a>  </span>raw_tex(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">r"\def\lx@informs@blindnotice{{{blind_notice}}}"</span>))<span class="question-mark">?</span>;
+<a href=#275 id=275 data-nosnippet>275</a>  <span class="macro">RawTeX!</span>(
+<a href=#276 id=276 data-nosnippet>276</a>    <span class="string">r"\long\def\ARTICLEAUTHORS#1{#1}\long\def\ACKNOWLEDGMENT#1{\lx@informs@acknowledgment{#1}}\long\def\AUTHORBIO#1{#1}
+<a href=#277 id=277 data-nosnippet>277</a>\if@BLINDREV\long\def\ARTICLEAUTHORS#1{\ifx\lx@informs@blindnotice\@empty\else\@add@frontmatter{ltx:note}[role=authors]{\lx@informs@blindnotice}\fi}\long\def\ACKNOWLEDGMENT#1{}\long\def\AUTHORBIO#1{}\fi"
+<a href=#278 id=278 data-nosnippet>278</a>  </span>);
+<a href=#279 id=279 data-nosnippet>279</a>  <span class="kw">if </span>informs3 {
+<a href=#280 id=280 data-nosnippet>280</a>    <span class="macro">RawTeX!</span>(<span class="string">r"\if@MOOR\long\def\ACKNOWLEDGMENT#1{\lx@informs@acknowledgment{#1}}\fi"</span>);
+<a href=#281 id=281 data-nosnippet>281</a>  }
+<a href=#282 id=282 data-nosnippet>282</a>  <span class="comment">// informs4.cls:1023: the funding statement the title page prints ("Funding: …"; 2609.17368).
+<a href=#283 id=283 data-nosnippet>283</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#284 id=284 data-nosnippet>284</a>    <span class="string">"\\FUNDING{}"</span>,
+<a href=#285 id=285 data-nosnippet>285</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=funding]{#1}"
+<a href=#286 id=286 data-nosnippet>286</a>  </span>);
+<a href=#287 id=287 data-nosnippet>287</a>  <span class="macro">DefMacro!</span>(
+<a href=#288 id=288 data-nosnippet>288</a>    <span class="string">"\\authorinfo{}"</span>,
+<a href=#289 id=289 data-nosnippet>289</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=authorinfo]{#1}"
+<a href=#290 id=290 data-nosnippet>290</a>  </span>);
+<a href=#291 id=291 data-nosnippet>291</a>  def_macro_noop(<span class="string">"\\thetitle"</span>)<span class="question-mark">?</span>;
+<a href=#292 id=292 data-nosnippet>292</a>
+<a href=#293 id=293 data-nosnippet>293</a>  <span class="comment">// Layout / structure switches — no visual effect in XML.
+<a href=#294 id=294 data-nosnippet>294</a>  // The class's theorem styles TH and EX end the head with a period (informs3.cls:1809-1856 `\theorem@headerfont ##1\
+<a href=#295 id=295 data-nosnippet>295</a>  // ##2.`), which theorem.sty's own styles do not (`\thm@headpunct` empty, theorem_sty.rs), so each set gives it.
+<a href=#296 id=296 data-nosnippet>296</a>  // informs3.cls:1511-1527, 2089, 2117-2124, 2442-2523, 2727-2738: the theorem sets a paper picks (numbered through
+<a href=#297 id=297 data-nosnippet>297</a>  // or by section; the class's theorem.sty styles TH and EX, :1809-1856, are amsthm's plain and definition: an italic
+<a href=#298 id=298 data-nosnippet>298</a>  // and an upright body), the equation numbering, and the e-companion switch that renumbers sections,
+<a href=#299 id=299 data-nosnippet>299</a>  // equations, theorems, figures and tables `EC.n` — `{assumption}` and `\ECSwitch` were undefined (2609.08001).
+<a href=#300 id=300 data-nosnippet>300</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#301 id=301 data-nosnippet>301</a>    <span class="string">r"\def\TheoremsNumberedThrough{\theoremstyle{plain}\thm@headpunct{.}\newtheorem{theorem}{Theorem}\newtheorem{lemma}{Lemma}\newtheorem{proposition}{Proposition}\newtheorem{corollary}{Corollary}\newtheorem{claim}{Claim}\newtheorem{conjecture}{Conjecture}\newtheorem{hypothesis}{Hypothesis}\newtheorem{assumption}{Assumption}\theoremstyle{definition}\thm@headpunct{.}\newtheorem{remark}{Remark}\newtheorem{example}{Example}\newtheorem{problem}{Problem}\newtheorem{definition}{Definition}\newtheorem{question}{Question}\newtheorem{answer}{Answer}\newtheorem{exercise}{Exercise}\def\ECHowTheorems{\setcounter{theorem}{0}\expandafter\let\csname oldthetheorem\expandafter\endcsname\csname thetheorem\endcsname\expandafter\def\csname thetheorem\endcsname{EC.\csname oldthetheorem\endcsname}\setcounter{lemma}{0}\expandafter\let\csname oldthelemma\expandafter\endcsname\csname thelemma\endcsname\expandafter\def\csname thelemma\endcsname{EC.\csname oldthelemma\endcsname}\setcounter{proposition}{0}\expandafter\let\csname oldtheproposition\expandafter\endcsname\csname theproposition\endcsname\expandafter\def\csname theproposition\endcsname{EC.\csname oldtheproposition\endcsname}\setcounter{corollary}{0}\expandafter\let\csname oldthecorollary\expandafter\endcsname\csname thecorollary\endcsname\expandafter\def\csname thecorollary\endcsname{EC.\csname oldthecorollary\endcsname}\setcounter{claim}{0}\expandafter\let\csname oldtheclaim\expandafter\endcsname\csname theclaim\endcsname\expandafter\def\csname theclaim\endcsname{EC.\csname oldtheclaim\endcsname}\setcounter{conjecture}{0}\expandafter\let\csname oldtheconjecture\expandafter\endcsname\csname theconjecture\endcsname\expandafter\def\csname theconjecture\endcsname{EC.\csname oldtheconjecture\endcsname}\setcounter{hypothesis}{0}\expandafter\let\csname oldthehypothesis\expandafter\endcsname\csname thehypothesis\endcsname\expandafter\def\csname thehypothesis\endcsname{EC.\csname oldthehypothesis\endcsname}\setcounter{assumption}{0}\expandafter\let\csname oldtheassumption\expandafter\endcsname\csname theassumption\endcsname\expandafter\def\csname theassumption\endcsname{EC.\csname oldtheassumption\endcsname}\setcounter{remark}{0}\expandafter\let\csname oldtheremark\expandafter\endcsname\csname theremark\endcsname\expandafter\def\csname theremark\endcsname{EC.\csname oldtheremark\endcsname}\setcounter{example}{0}\expandafter\let\csname oldtheexample\expandafter\endcsname\csname theexample\endcsname\expandafter\def\csname theexample\endcsname{EC.\csname oldtheexample\endcsname}\setcounter{problem}{0}\expandafter\let\csname oldtheproblem\expandafter\endcsname\csname theproblem\endcsname\expandafter\def\csname theproblem\endcsname{EC.\csname oldtheproblem\endcsname}\setcounter{definition}{0}\expandafter\let\csname oldthedefinition\expandafter\endcsname\csname thedefinition\endcsname\expandafter\def\csname thedefinition\endcsname{EC.\csname oldthedefinition\endcsname}\setcounter{question}{0}\expandafter\let\csname oldthequestion\expandafter\endcsname\csname thequestion\endcsname\expandafter\def\csname thequestion\endcsname{EC.\csname oldthequestion\endcsname}\setcounter{answer}{0}\expandafter\let\csname oldtheanswer\expandafter\endcsname\csname theanswer\endcsname\expandafter\def\csname theanswer\endcsname{EC.\csname oldtheanswer\endcsname}\setcounter{exercise}{0}\expandafter\let\csname oldtheexercise\expandafter\endcsname\csname theexercise\endcsname\expandafter\def\csname theexercise\endcsname{EC.\csname oldtheexercise\endcsname}}}
+<a href=#302 id=302 data-nosnippet>302</a>\def\TheoremsNumberedBySection{\theoremstyle{plain}\thm@headpunct{.}\newtheorem{theorem}{Theorem}[section]\newtheorem{lemma}{Lemma}[section]\newtheorem{proposition}{Proposition}[section]\newtheorem{corollary}{Corollary}[section]\newtheorem{claim}{Claim}[section]\newtheorem{conjecture}{Conjecture}[section]\newtheorem{hypothesis}{Hypothesis}[section]\newtheorem{assumption}{Assumption}[section]\theoremstyle{definition}\thm@headpunct{.}\newtheorem{remark}{Remark}[section]\newtheorem{example}{Example}[section]\newtheorem{problem}{Problem}[section]\newtheorem{definition}{Definition}[section]\newtheorem{question}{Question}[section]\newtheorem{answer}{Answer}[section]\newtheorem{exercise}{Exercise}[section]\def\ECHowTheorems{\setcounter{theorem}{0}\expandafter\let\csname oldthetheorem\expandafter\endcsname\csname thetheorem\endcsname\expandafter\def\csname thetheorem\endcsname{\csname oldthetheorem\endcsname}\setcounter{lemma}{0}\expandafter\let\csname oldthelemma\expandafter\endcsname\csname thelemma\endcsname\expandafter\def\csname thelemma\endcsname{\csname oldthelemma\endcsname}\setcounter{proposition}{0}\expandafter\let\csname oldtheproposition\expandafter\endcsname\csname theproposition\endcsname\expandafter\def\csname theproposition\endcsname{\csname oldtheproposition\endcsname}\setcounter{corollary}{0}\expandafter\let\csname oldthecorollary\expandafter\endcsname\csname thecorollary\endcsname\expandafter\def\csname thecorollary\endcsname{\csname oldthecorollary\endcsname}\setcounter{claim}{0}\expandafter\let\csname oldtheclaim\expandafter\endcsname\csname theclaim\endcsname\expandafter\def\csname theclaim\endcsname{\csname oldtheclaim\endcsname}\setcounter{conjecture}{0}\expandafter\let\csname oldtheconjecture\expandafter\endcsname\csname theconjecture\endcsname\expandafter\def\csname theconjecture\endcsname{\csname oldtheconjecture\endcsname}\setcounter{hypothesis}{0}\expandafter\let\csname oldthehypothesis\expandafter\endcsname\csname thehypothesis\endcsname\expandafter\def\csname thehypothesis\endcsname{\csname oldthehypothesis\endcsname}\setcounter{assumption}{0}\expandafter\let\csname oldtheassumption\expandafter\endcsname\csname theassumption\endcsname\expandafter\def\csname theassumption\endcsname{\csname oldtheassumption\endcsname}\setcounter{remark}{0}\expandafter\let\csname oldtheremark\expandafter\endcsname\csname theremark\endcsname\expandafter\def\csname theremark\endcsname{\csname oldtheremark\endcsname}\setcounter{example}{0}\expandafter\let\csname oldtheexample\expandafter\endcsname\csname theexample\endcsname\expandafter\def\csname theexample\endcsname{\csname oldtheexample\endcsname}\setcounter{problem}{0}\expandafter\let\csname oldtheproblem\expandafter\endcsname\csname theproblem\endcsname\expandafter\def\csname theproblem\endcsname{\csname oldtheproblem\endcsname}\setcounter{definition}{0}\expandafter\let\csname oldthedefinition\expandafter\endcsname\csname thedefinition\endcsname\expandafter\def\csname thedefinition\endcsname{\csname oldthedefinition\endcsname}\setcounter{question}{0}\expandafter\let\csname oldthequestion\expandafter\endcsname\csname thequestion\endcsname\expandafter\def\csname thequestion\endcsname{\csname oldthequestion\endcsname}\setcounter{answer}{0}\expandafter\let\csname oldtheanswer\expandafter\endcsname\csname theanswer\endcsname\expandafter\def\csname theanswer\endcsname{\csname oldtheanswer\endcsname}\setcounter{exercise}{0}\expandafter\let\csname oldtheexercise\expandafter\endcsname\csname theexercise\endcsname\expandafter\def\csname theexercise\endcsname{\csname oldtheexercise\endcsname}}}
+<a href=#303 id=303 data-nosnippet>303</a>\def\EquationsNumberedThrough{\def\theequation{\arabic{equation}}\def\ECHowEquations{\setcounter{equation}{0}\let\oldtheequation\theequation\def\theequation{EC.\oldtheequation}}}
+<a href=#304 id=304 data-nosnippet>304</a>\def\EquationsNumberedBySection{\@addtoreset{equation}{section}\def\theequation{\thesection.\arabic{equation}}\def\ECHowEquations{\setcounter{equation}{0}\let\oldtheequation\theequation\def\theequation{EC.\oldtheequation}}}
+<a href=#305 id=305 data-nosnippet>305</a>\EquationsNumberedThrough
+<a href=#306 id=306 data-nosnippet>306</a>\def\ECHowSections{\setcounter{section}{0}\renewcommand\thesection{EC.\@arabic\c@section}\renewcommand\thesubsection{\thesection.\@arabic\c@subsection}\renewcommand\thesubsubsection{\thesubsection.\@arabic\c@subsubsection}\renewcommand\theparagraph{\thesubsubsection.\@arabic\c@paragraph}\renewcommand\thesubparagraph{\theparagraph.\@arabic\c@subparagraph}}
+<a href=#307 id=307 data-nosnippet>307</a>\def\ECSwitch{\ECHowTheorems\ECHowEquations\ECHowSections\setcounter{figure}{0}\renewcommand\thefigure{EC.\@arabic\c@figure}\setcounter{table}{0}\renewcommand\thetable{EC.\@arabic\c@table}}
+<a href=#308 id=308 data-nosnippet>308</a>\def\ECHead#1{\par\noindent{\raggedright\bfseries #1\par}}"
+<a href=#309 id=309 data-nosnippet>309</a>  </span>);
+<a href=#310 id=310 data-nosnippet>310</a>  <span class="comment">// informs4.cls:2680-2696 (informs3.cls:2529-2545): the e-companion's repeated statements, unnumbered here by the
+<a href=#311 id=311 data-nosnippet>311</a>  // paper's own `\renewcommand\therepeattheorem` (`{repeattheorem}` 5 papers, `{repeatproposition}` 5, `{repeatlemma}` 3:
+<a href=#312 id=312 data-nosnippet>312</a>  // 1704.09011, 1707.00361, 1108.3299).
+<a href=#313 id=313 data-nosnippet>313</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#314 id=314 data-nosnippet>314</a>    <span class="string">r"\def\ECRepeatTheorems{\theoremstyle{plain}\thm@headpunct{.}\newtheorem{repeattheorem}{Theorem}\newtheorem{repeatlemma}{Lemma}\newtheorem{repeatproposition}{Proposition}\newtheorem{repeatcorollary}{Corollary}\newtheorem{repeatclaim}{Claim}\newtheorem{repeatconjecture}{Conjecture}\newtheorem{repeathypothesis}{Hypothesis}\newtheorem{repeatassumption}{Assumption}\theoremstyle{definition}\thm@headpunct{.}\newtheorem{repeatremark}{Remark}\newtheorem{repeatexample}{Example}\newtheorem{repeatproblem}{Problem}\newtheorem{repeatdefinition}{Definition}\newtheorem{repeatquestion}{Question}\newtheorem{repeatanswer}{Answer}\newtheorem{repeatexercise}{Exercise}}"
+<a href=#315 id=315 data-nosnippet>315</a>  </span>);
+<a href=#316 id=316 data-nosnippet>316</a>  <span class="comment">// The line-spacing switches (informs4.cls:407-470, informs2.cls:475-485): `\SingleSpacedXII` (4 papers: 1909.08021),
+<a href=#317 id=317 data-nosnippet>317</a>  // `\TableSpaced` (3: 1905.08224), informs2's `\SingleSpaced`/`\DoubleSpaced` (3: 0910.0063).
+<a href=#318 id=318 data-nosnippet>318</a>  </span>def_macro_noop(<span class="string">"\\SingleSpacedXII"</span>)<span class="question-mark">?</span>;
+<a href=#319 id=319 data-nosnippet>319</a>  def_macro_noop(<span class="string">"\\TableSpaced"</span>)<span class="question-mark">?</span>;
+<a href=#320 id=320 data-nosnippet>320</a>  def_macro_noop(<span class="string">"\\SingleSpaced"</span>)<span class="question-mark">?</span>;
+<a href=#321 id=321 data-nosnippet>321</a>  def_macro_noop(<span class="string">"\\DoubleSpaced"</span>)<span class="question-mark">?</span>;
+<a href=#322 id=322 data-nosnippet>322</a>  def_macro_noop(<span class="string">"\\OneAndAHalfSpacedXI"</span>)<span class="question-mark">?</span>;
+<a href=#323 id=323 data-nosnippet>323</a>  def_macro_noop(<span class="string">"\\OneAndAHalfSpacedXII"</span>)<span class="question-mark">?</span>;
+<a href=#324 id=324 data-nosnippet>324</a>  def_macro_noop(<span class="string">"\\DoubleSpacedXI"</span>)<span class="question-mark">?</span>;
+<a href=#325 id=325 data-nosnippet>325</a>  def_macro_noop(<span class="string">"\\DoubleSpacedXII"</span>)<span class="question-mark">?</span>;
+<a href=#326 id=326 data-nosnippet>326</a>  def_macro_noop(<span class="string">"\\SingleSpacedXI"</span>)<span class="question-mark">?</span>;
+<a href=#327 id=327 data-nosnippet>327</a>
+<a href=#328 id=328 data-nosnippet>328</a>  <span class="comment">// informs4.cls:1702-1763 (informs3.cls the same): `{henumerate}` and `{hitemize}`, enumerate and itemize with a
+<a href=#329 id=329 data-nosnippet>329</a>  // hanging layout (2609.21433).
+<a href=#330 id=330 data-nosnippet>330</a>  </span><span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\begin{henumerate}"</span>), <span class="prelude-val">None</span>, <span class="string">"\\begin{enumerate}"</span>);
+<a href=#331 id=331 data-nosnippet>331</a>  <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\end{henumerate}"</span>), <span class="prelude-val">None</span>, <span class="string">"\\end{enumerate}"</span>);
+<a href=#332 id=332 data-nosnippet>332</a>  <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\begin{hitemize}"</span>), <span class="prelude-val">None</span>, <span class="string">"\\begin{itemize}"</span>);
+<a href=#333 id=333 data-nosnippet>333</a>  <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\end{hitemize}"</span>), <span class="prelude-val">None</span>, <span class="string">"\\end{itemize}"</span>);
+<a href=#334 id=334 data-nosnippet>334</a>
+<a href=#335 id=335 data-nosnippet>335</a>  <span class="comment">// {APPENDICES} env — render contents as appendix section.
+<a href=#336 id=336 data-nosnippet>336</a>  </span><span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\begin{APPENDICES}"</span>), <span class="prelude-val">None</span>, <span class="string">"\\appendix"</span>);
+<a href=#337 id=337 data-nosnippet>337</a>  <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\end{APPENDICES}"</span>), <span class="prelude-val">None</span>, <span class="string">""</span>);
+<a href=#338 id=338 data-nosnippet>338</a>
+<a href=#339 id=339 data-nosnippet>339</a>  <span class="comment">// informs3.cls L932: `\def\Halmos{\mbox{\quad$\square$}}` — proof-end
+<a href=#340 id=340 data-nosnippet>340</a>  // QED box. Render the square in math mode.
+<a href=#341 id=341 data-nosnippet>341</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\Halmos"</span>, <span class="string">"\\ensuremath{\\square}"</span>);
+<a href=#342 id=342 data-nosnippet>342</a>  <span class="comment">// informs3.cls L1231: `\def\EMAIL#1{#1}` — used within \AFF; plain
+<a href=#343 id=343 data-nosnippet>343</a>  // passthrough of the email text.
+<a href=#344 id=344 data-nosnippet>344</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\EMAIL{}"</span>, <span class="string">"#1"</span>);
+<a href=#345 id=345 data-nosnippet>345</a>  <span class="comment">// informs3.cls L1273: `\long\def\ACKNOWLEDGMENT#1{\section*{\bf
+<a href=#346 id=346 data-nosnippet>346</a>  // \theACKname.}{#1}}` (\theACKname defaults to "Acknowledgments").
+<a href=#347 id=347 data-nosnippet>347</a>  // Route the body to a structural acknowledgements block (see
+<a href=#348 id=348 data-nosnippet>348</a>  // feedback: prefer ltx:acknowledgements over a flattened \section*);
+<a href=#349 id=349 data-nosnippet>349</a>  // `\ACKNOWLEDGMENT` and `\AUTHORBIO` (2609.24605) are defined with the blind-review choice above.
+<a href=#350 id=350 data-nosnippet>350</a>  </span><span class="macro">DefConstructor!</span>(
+<a href=#351 id=351 data-nosnippet>351</a>    <span class="string">"\\lx@informs@acknowledgment{}"</span>,
+<a href=#352 id=352 data-nosnippet>352</a>    <span class="string">"&lt;ltx:acknowledgements name='Acknowledgments'&gt;#1&lt;/ltx:acknowledgements&gt;"
+<a href=#353 id=353 data-nosnippet>353</a>  </span>);
+<a href=#354 id=354 data-nosnippet>354</a>  <span class="comment">// \ACKname{name} sets the acknowledgements heading name.
+<a href=#355 id=355 data-nosnippet>355</a>  </span>def_macro_noop(<span class="string">"\\ACKname{}"</span>)<span class="question-mark">?</span>;
+<a href=#356 id=356 data-nosnippet>356</a>  <span class="comment">// informs3.cls L2642: `\newenvironment{APPENDIX}[1]{…appendix with
+<a href=#357 id=357 data-nosnippet>357</a>  // title #1…}`. The singular env wraps a single titled appendix.
+<a href=#358 id=358 data-nosnippet>358</a>  // Begin enters appendix mode + emits the title as a section; the arg
+<a href=#359 id=359 data-nosnippet>359</a>  // is read by the helper. Mirrors the {APPENDICES} handling.
+<a href=#360 id=360 data-nosnippet>360</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#361 id=361 data-nosnippet>361</a>    <span class="macro">T_CS!</span>(<span class="string">"\\begin{APPENDIX}"</span>),
+<a href=#362 id=362 data-nosnippet>362</a>    <span class="prelude-val">None</span>,
+<a href=#363 id=363 data-nosnippet>363</a>    <span class="string">"\\appendix\\lx@informs@appendixhead"
+<a href=#364 id=364 data-nosnippet>364</a>  </span>);
+<a href=#365 id=365 data-nosnippet>365</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@informs@appendixhead{}"</span>, <span class="string">"\\section{#1}"</span>);
+<a href=#366 id=366 data-nosnippet>366</a>  <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\end{APPENDIX}"</span>), <span class="prelude-val">None</span>, <span class="string">""</span>);
+<a href=#367 id=367 data-nosnippet>367</a>
+<a href=#368 id=368 data-nosnippet>368</a>  <span class="comment">// informs4.cls:2142-2148, 2229-2259, 2449-2470: `\FIGURE{body}{caption}{note}` and `\TABLE{caption}{body}{note}`
+<a href=#369 id=369 data-nosnippet>369</a>  // inside the float environments, the caption before the body and the note after it; the body is a group (:2251
+<a href=#370 id=370 data-nosnippet>370</a>  // `{#1}`, :2470 `{\TEGT #2}`), so its font changes stay in it; a figure's note is headed "Note.", a table's prints as
+<a href=#371 id=371 data-nosnippet>371</a>  // written; an empty note prints nothing (2609.10587, 25924). The class gives `\caption` an empty list entry; ours
+<a href=#372 id=372 data-nosnippet>372</a>  // takes the list entry from the caption (Perl latex_constructs.pool.ltxml:3189). The class's rotation and box
+<a href=#373 id=373 data-nosnippet>373</a>  // measurement are layout.
+<a href=#374 id=374 data-nosnippet>374</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#375 id=375 data-nosnippet>375</a>    <span class="string">r"\def\FigureNoteName{Note.}\def\TableNoteName{Note.}
+<a href=#376 id=376 data-nosnippet>376</a>\long\def\FIGURE#1#2#3{\caption[]{#2}{#1}\long\def\testfignote{#3}\long\def\itis@empty{}\ifx\testfignote\itis@empty\else\par\noindent{\it\FigureNoteName}\enskip #3\par\fi}
+<a href=#377 id=377 data-nosnippet>377</a>\long\def\TABLE#1#2#3{\caption[]{#1}{#2}\long\def\testtabnote{#3}\long\def\itis@empty{}\ifx\testtabnote\itis@empty\else\par\noindent #3\par\fi}"
+<a href=#378 id=378 data-nosnippet>378</a>  </span>);
+<a href=#379 id=379 data-nosnippet>379</a>});
 </code></pre></div></section></main></body></html>

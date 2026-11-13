@@ -1,72 +1,177 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/booktabs_sty.rs`."><title>booktabs_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>booktabs_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/booktabs_sty.rs`."><title>booktabs_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>booktabs_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a><span class="attr">#[rustfmt::skip]
 <a href=#4 id=4 data-nosnippet>4</a></span><span class="macro">LoadDefinitions!</span>({
 <a href=#5 id=5 data-nosnippet>5</a>  <span class="comment">// Perl: booktabs.sty.ltxml
 <a href=#6 id=6 data-nosnippet>6</a>  // Adjust thickness of rules? Currently no support for variable thickness.
-<a href=#7 id=7 data-nosnippet>7</a>
-<a href=#8 id=8 data-nosnippet>8</a>  // \toprule[thickness]  doubled
-<a href=#9 id=9 data-nosnippet>9</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\toprule[Dimension]"</span>, <span class="string">"\\hline\\hline"</span>);
-<a href=#10 id=10 data-nosnippet>10</a>  <span class="comment">// \midrule[thickness]
-<a href=#11 id=11 data-nosnippet>11</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\midrule[Dimension]"</span>, <span class="string">"\\hline"</span>);
-<a href=#12 id=12 data-nosnippet>12</a>  <span class="comment">// \bottomrule[thickness] doubled
-<a href=#13 id=13 data-nosnippet>13</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\bottomrule[Dimension]"</span>, <span class="string">"\\hline\\hline"</span>);
-<a href=#14 id=14 data-nosnippet>14</a>
-<a href=#15 id=15 data-nosnippet>15</a>  <span class="comment">// \cmidrule[thickness](trim){col-col}
-<a href=#16 id=16 data-nosnippet>16</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@afterfi Until:\\fi"</span>, <span class="string">"\\fi#1"</span>);
-<a href=#17 id=17 data-nosnippet>17</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\cmidrule[]"</span>,
-<a href=#18 id=18 data-nosnippet>18</a>    <span class="string">r"\@ifnextchar({\ifx.#1.\expandafter\ltx@@cmidrule\else\@afterfi\ltx@@cmidrule[#1]\fi}{\ifx.#1.\expandafter\ltx@cmidrule\else\@afterfi\ltx@cmidrule[#1]\fi}"
-<a href=#19 id=19 data-nosnippet>19</a>  </span>);
-<a href=#20 id=20 data-nosnippet>20</a>  <span class="comment">// The cmidrule helpers draw the partial rule via `\cline`. They route through
-<a href=#21 id=21 data-nosnippet>21</a>  // a PRIVATE saved copy (`\ltx@saved@cline`, captured at load below) rather than
-<a href=#22 id=22 data-nosnippet>22</a>  // the public `\cline`, so a document `\let\cline\cmidrule` (a common idiom to
-<a href=#23 id=23 data-nosnippet>23</a>  // make `\cline` render like a booktabs rule) does NOT create a
-<a href=#24 id=24 data-nosnippet>24</a>  // `\cmidrule`→`\cline`→`\cmidrule` infinite expansion. Real LaTeX avoids the
-<a href=#25 id=25 data-nosnippet>25</a>  // cycle because its `\cmidrule` draws the rule directly; LaTeXML's simplified
-<a href=#26 id=26 data-nosnippet>26</a>  // `\cmidrule`→`\cline` binding (shared with Perl, which hangs on this — see
-<a href=#27 id=27 data-nosnippet>27</a>  // KNOWN_PERL_ERRORS) would otherwise loop until the conditional limit.
-<a href=#28 id=28 data-nosnippet>28</a>  // Witnesses: arXiv 2506.23179, 2511.17056 (both `\let\cline\cmidrule`).
-<a href=#29 id=29 data-nosnippet>29</a>  // Output-neutral for ordinary `\cmidrule` (saved CS == `\cline` at load).
-<a href=#30 id=30 data-nosnippet>30</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\ltx@@cmidrule[Dimension] SkipMatch:( Until:){}"</span>, <span class="string">"\\ltx@saved@cline{#3}"</span>);
-<a href=#31 id=31 data-nosnippet>31</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ltx@cmidrule[Dimension]{}"</span>, <span class="string">"\\ltx@saved@cline{#2}"</span>);
-<a href=#32 id=32 data-nosnippet>32</a>
-<a href=#33 id=33 data-nosnippet>33</a>  <span class="comment">// add vspace
-<a href=#34 id=34 data-nosnippet>34</a>  </span>def_macro_noop(<span class="string">"\\addlinespace[Dimension]"</span>)<span class="question-mark">?</span>;
-<a href=#35 id=35 data-nosnippet>35</a>  <span class="comment">// adjust spacing to make double line
-<a href=#36 id=36 data-nosnippet>36</a>  </span>def_macro_noop(<span class="string">"\\morecmidrules"</span>)<span class="question-mark">?</span>;
-<a href=#37 id=37 data-nosnippet>37</a>  <span class="comment">// \specialrule{thickness}{above}{below}
-<a href=#38 id=38 data-nosnippet>38</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\specialrule{Dimension}{Dimension}{Dimension}"</span>, <span class="string">"\\hline"</span>);
-<a href=#39 id=39 data-nosnippet>39</a>
-<a href=#40 id=40 data-nosnippet>40</a>  <span class="comment">// Capture the real `\cline` at load time (before any document redefinition)
-<a href=#41 id=41 data-nosnippet>41</a>  // so `\cmidrule` can draw its rule without depending on the live `\cline`.
-<a href=#42 id=42 data-nosnippet>42</a>  </span><span class="macro">TeX!</span>(<span class="string">r"\let\ltx@saved@cline\cline"</span>);
-<a href=#43 id=43 data-nosnippet>43</a>
-<a href=#44 id=44 data-nosnippet>44</a>  <span class="macro">TeX!</span>(<span class="string">r"\newdimen\heavyrulewidth
-<a href=#45 id=45 data-nosnippet>45</a>\newdimen\lightrulewidth
-<a href=#46 id=46 data-nosnippet>46</a>\newdimen\cmidrulewidth
-<a href=#47 id=47 data-nosnippet>47</a>\newdimen\belowrulesep
-<a href=#48 id=48 data-nosnippet>48</a>\newdimen\belowbottomsep
-<a href=#49 id=49 data-nosnippet>49</a>\newdimen\aboverulesep
-<a href=#50 id=50 data-nosnippet>50</a>\newdimen\abovetopsep
-<a href=#51 id=51 data-nosnippet>51</a>\newdimen\cmidrulesep
-<a href=#52 id=52 data-nosnippet>52</a>\newdimen\cmidrulekern
-<a href=#53 id=53 data-nosnippet>53</a>\newdimen\defaultaddspace
-<a href=#54 id=54 data-nosnippet>54</a>\heavyrulewidth=.08em
-<a href=#55 id=55 data-nosnippet>55</a>\lightrulewidth=.05em
-<a href=#56 id=56 data-nosnippet>56</a>\cmidrulewidth=.03em
-<a href=#57 id=57 data-nosnippet>57</a>\belowrulesep=.65ex
-<a href=#58 id=58 data-nosnippet>58</a>\belowbottomsep=0pt
-<a href=#59 id=59 data-nosnippet>59</a>\aboverulesep=.4ex
-<a href=#60 id=60 data-nosnippet>60</a>\abovetopsep=0pt
-<a href=#61 id=61 data-nosnippet>61</a>\cmidrulesep=\doublerulesep
-<a href=#62 id=62 data-nosnippet>62</a>\cmidrulekern=.5em
-<a href=#63 id=63 data-nosnippet>63</a>\defaultaddspace=.5em
-<a href=#64 id=64 data-nosnippet>64</a>\newcount\@cmidla
-<a href=#65 id=65 data-nosnippet>65</a>\newcount\@cmidlb
-<a href=#66 id=66 data-nosnippet>66</a>\newdimen\@aboverulesep
-<a href=#67 id=67 data-nosnippet>67</a>\newdimen\@belowrulesep
-<a href=#68 id=68 data-nosnippet>68</a>\newcount\@thisruleclass
-<a href=#69 id=69 data-nosnippet>69</a>\newcount\@lastruleclass
-<a href=#70 id=70 data-nosnippet>70</a>"</span>);
-<a href=#71 id=71 data-nosnippet>71</a>});
+<a href=#7 id=7 data-nosnippet>7</a>  // The widths and spaces are therefore read untyped: they are unused, and a
+<a href=#8 id=8 data-nosnippet>8</a>  // typed read hands what follows the value back to the input (OXIDIZED_DESIGN
+<a href=#9 id=9 data-nosnippet>9</a>  // #317), which between rows opens a cell — `\cmidrule[lr]{1-2}` for `(lr)`
+<a href=#10 id=10 data-nosnippet>10</a>  // put "lr" in the next row and lost the next rule (2605.27476, 2605.25272),
+<a href=#11 id=11 data-nosnippet>11</a>  // `\addlinespace[2pt plus 1pt]` put "plus 1pt" there (booktabs.sty:80-82 reads
+<a href=#12 id=12 data-nosnippet>12</a>  // a skip). Perl reads `[Dimension]` (booktabs.sty.ltxml) and drops the rest.
+<a href=#13 id=13 data-nosnippet>13</a>
+<a href=#14 id=14 data-nosnippet>14</a>  // The width is still a &lt;dimen&gt; to TeX (booktabs.sty:85-114 `\@BTrule[#1]`
+<a href=#15 id=15 data-nosnippet>15</a>  // assigns it), so one that is not reports what Perl's `[Dimension]` read
+<a href=#16 id=16 data-nosnippet>16</a>  // reports — "Missing number (Dimension)" / "Illegal unit" Warnings
+<a href=#17 id=17 data-nosnippet>17</a>  // (Gullet.pm:969-972), at the rule — judged on its text (`width_shape`, the
+<a href=#18 id=18 data-nosnippet>18</a>  // shapes of tex.web §448-458) at expansion time, so nothing is left between the
+<a href=#19 id=19 data-nosnippet>19</a>  // rows (witnesses 2605.27476, 2605.25272: `\cmidrule[lr]`). pdflatex: the same as Errors. Under
+<a href=#20 id=20 data-nosnippet>20</a>  // tabularray (its `booktabs` library, `\toprule[2pt,red]`) the brackets hold
+<a href=#21 id=21 data-nosnippet>21</a>  // tabularray's keys, not a width.
+<a href=#22 id=22 data-nosnippet>22</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@booktabs@width{}"</span>, sub[(width)] {
+<a href=#23 id=23 data-nosnippet>23</a>    <span class="kw">if </span>!width.is_empty() &amp;&amp; !package_loaded(<span class="string">"tabularray"</span>) {
+<a href=#24 id=24 data-nosnippet>24</a>      <span class="kw">match </span>width_shape(<span class="kw-2">&amp;</span>width.to_string()) {
+<a href=#25 id=25 data-nosnippet>25</a>        WidthShape::Dimension =&gt; {},
+<a href=#26 id=26 data-nosnippet>26</a>        WidthShape::NoUnit =&gt; <span class="macro">Warn!</span>(
+<a href=#27 id=27 data-nosnippet>27</a>          <span class="string">"expected"</span>,
+<a href=#28 id=28 data-nosnippet>28</a>          <span class="string">"&lt;unit&gt;"</span>,
+<a href=#29 id=29 data-nosnippet>29</a>          <span class="string">"Illegal unit of measure (pt inserted)."</span>,
+<a href=#30 id=30 data-nosnippet>30</a>          <span class="macro">s!</span>(<span class="string">"in the rule width [{width}]"</span>)
+<a href=#31 id=31 data-nosnippet>31</a>        ),
+<a href=#32 id=32 data-nosnippet>32</a>        WidthShape::NoNumber =&gt; <span class="macro">Warn!</span>(
+<a href=#33 id=33 data-nosnippet>33</a>          <span class="string">"expected"</span>,
+<a href=#34 id=34 data-nosnippet>34</a>          <span class="string">"&lt;number&gt;"</span>,
+<a href=#35 id=35 data-nosnippet>35</a>          <span class="string">"Missing number (Dimension), treated as zero."</span>,
+<a href=#36 id=36 data-nosnippet>36</a>          <span class="macro">s!</span>(<span class="string">"in the rule width [{width}]"</span>)
+<a href=#37 id=37 data-nosnippet>37</a>        ),
+<a href=#38 id=38 data-nosnippet>38</a>      }
+<a href=#39 id=39 data-nosnippet>39</a>    }
+<a href=#40 id=40 data-nosnippet>40</a>    <span class="prelude-val">Ok</span>(<span class="macro">Tokens!</span>())
+<a href=#41 id=41 data-nosnippet>41</a>  });
+<a href=#42 id=42 data-nosnippet>42</a>
+<a href=#43 id=43 data-nosnippet>43</a>  <span class="comment">// \toprule[thickness]  doubled
+<a href=#44 id=44 data-nosnippet>44</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\toprule[]"</span>, <span class="string">"\\lx@booktabs@width{#1}\\hline\\hline"</span>);
+<a href=#45 id=45 data-nosnippet>45</a>  <span class="comment">// \midrule[thickness]
+<a href=#46 id=46 data-nosnippet>46</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\midrule[]"</span>, <span class="string">"\\lx@booktabs@width{#1}\\hline"</span>);
+<a href=#47 id=47 data-nosnippet>47</a>  <span class="comment">// \bottomrule[thickness] doubled
+<a href=#48 id=48 data-nosnippet>48</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\bottomrule[]"</span>, <span class="string">"\\lx@booktabs@width{#1}\\hline\\hline"</span>);
+<a href=#49 id=49 data-nosnippet>49</a>
+<a href=#50 id=50 data-nosnippet>50</a>  <span class="comment">// \cmidrule[thickness](trim){col-col}
+<a href=#51 id=51 data-nosnippet>51</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@afterfi Until:\\fi"</span>, <span class="string">"\\fi#1"</span>);
+<a href=#52 id=52 data-nosnippet>52</a>  <span class="comment">// Whether a width was given: `\detokenize`'s emptiness test, as `\ifx.#1.` is true for `[.5pt]`, whose leading `.`
+<a href=#53 id=53 data-nosnippet>53</a>  // it compares with its own, so "5pt." was typeset into the next cell (2405.01314; Perl booktabs.sty.ltxml:31-33).
+<a href=#54 id=54 data-nosnippet>54</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\cmidrule[]"</span>,
+<a href=#55 id=55 data-nosnippet>55</a>    <span class="string">r"\lx@booktabs@width{#1}\@ifnextchar({\if\relax\detokenize{#1}\relax\expandafter\ltx@@cmidrule\else\@afterfi\ltx@@cmidrule[#1]\fi}{\if\relax\detokenize{#1}\relax\expandafter\ltx@cmidrule\else\@afterfi\ltx@cmidrule[#1]\fi}"
+<a href=#56 id=56 data-nosnippet>56</a>  </span>);
+<a href=#57 id=57 data-nosnippet>57</a>  <span class="comment">// The cmidrule helpers draw the partial rule via `\cline`. They route through
+<a href=#58 id=58 data-nosnippet>58</a>  // a PRIVATE saved copy (`\ltx@saved@cline`, captured at load below) rather than
+<a href=#59 id=59 data-nosnippet>59</a>  // the public `\cline`, so a document `\let\cline\cmidrule` (a common idiom to
+<a href=#60 id=60 data-nosnippet>60</a>  // make `\cline` render like a booktabs rule) does NOT create a
+<a href=#61 id=61 data-nosnippet>61</a>  // `\cmidrule`→`\cline`→`\cmidrule` infinite expansion. Real LaTeX avoids the
+<a href=#62 id=62 data-nosnippet>62</a>  // cycle because its `\cmidrule` draws the rule directly; LaTeXML's simplified
+<a href=#63 id=63 data-nosnippet>63</a>  // `\cmidrule`→`\cline` binding (shared with Perl, which hangs on this — see
+<a href=#64 id=64 data-nosnippet>64</a>  // KNOWN_PERL_ERRORS) would otherwise loop until the conditional limit.
+<a href=#65 id=65 data-nosnippet>65</a>  // Witnesses: arXiv 2506.23179, 2511.17056 (both `\let\cline\cmidrule`).
+<a href=#66 id=66 data-nosnippet>66</a>  // Output-neutral for ordinary `\cmidrule` (saved CS == `\cline` at load).
+<a href=#67 id=67 data-nosnippet>67</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\ltx@@cmidrule[] SkipMatch:( Until:){}"</span>, <span class="string">"\\ltx@saved@cline{#3}"</span>);
+<a href=#68 id=68 data-nosnippet>68</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ltx@cmidrule[]{}"</span>, <span class="string">"\\ltx@saved@cline{#2}"</span>);
+<a href=#69 id=69 data-nosnippet>69</a>
+<a href=#70 id=70 data-nosnippet>70</a>  <span class="comment">// add vspace
+<a href=#71 id=71 data-nosnippet>71</a>  </span>def_macro_noop(<span class="string">"\\addlinespace[]"</span>)<span class="question-mark">?</span>;
+<a href=#72 id=72 data-nosnippet>72</a>  <span class="comment">// adjust spacing to make double line
+<a href=#73 id=73 data-nosnippet>73</a>  </span>def_macro_noop(<span class="string">"\\morecmidrules"</span>)<span class="question-mark">?</span>;
+<a href=#74 id=74 data-nosnippet>74</a>  <span class="comment">// \specialrule{thickness}{above}{below}
+<a href=#75 id=75 data-nosnippet>75</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\specialrule{}{}{}"</span>, <span class="string">"\\hline"</span>);
+<a href=#76 id=76 data-nosnippet>76</a>
+<a href=#77 id=77 data-nosnippet>77</a>  <span class="comment">// Capture the real `\cline` at load time (before any document redefinition)
+<a href=#78 id=78 data-nosnippet>78</a>  // so `\cmidrule` can draw its rule without depending on the live `\cline`.
+<a href=#79 id=79 data-nosnippet>79</a>  </span><span class="macro">TeX!</span>(<span class="string">r"\let\ltx@saved@cline\cline"</span>);
+<a href=#80 id=80 data-nosnippet>80</a>
+<a href=#81 id=81 data-nosnippet>81</a>  <span class="macro">TeX!</span>(<span class="string">r"\newdimen\heavyrulewidth
+<a href=#82 id=82 data-nosnippet>82</a>\newdimen\lightrulewidth
+<a href=#83 id=83 data-nosnippet>83</a>\newdimen\cmidrulewidth
+<a href=#84 id=84 data-nosnippet>84</a>\newdimen\belowrulesep
+<a href=#85 id=85 data-nosnippet>85</a>\newdimen\belowbottomsep
+<a href=#86 id=86 data-nosnippet>86</a>\newdimen\aboverulesep
+<a href=#87 id=87 data-nosnippet>87</a>\newdimen\abovetopsep
+<a href=#88 id=88 data-nosnippet>88</a>\newdimen\cmidrulesep
+<a href=#89 id=89 data-nosnippet>89</a>\newdimen\cmidrulekern
+<a href=#90 id=90 data-nosnippet>90</a>\newdimen\defaultaddspace
+<a href=#91 id=91 data-nosnippet>91</a>\heavyrulewidth=.08em
+<a href=#92 id=92 data-nosnippet>92</a>\lightrulewidth=.05em
+<a href=#93 id=93 data-nosnippet>93</a>\cmidrulewidth=.03em
+<a href=#94 id=94 data-nosnippet>94</a>\belowrulesep=.65ex
+<a href=#95 id=95 data-nosnippet>95</a>\belowbottomsep=0pt
+<a href=#96 id=96 data-nosnippet>96</a>\aboverulesep=.4ex
+<a href=#97 id=97 data-nosnippet>97</a>\abovetopsep=0pt
+<a href=#98 id=98 data-nosnippet>98</a>\cmidrulesep=\doublerulesep
+<a href=#99 id=99 data-nosnippet>99</a>\cmidrulekern=.5em
+<a href=#100 id=100 data-nosnippet>100</a>\defaultaddspace=.5em
+<a href=#101 id=101 data-nosnippet>101</a>\newcount\@cmidla
+<a href=#102 id=102 data-nosnippet>102</a>\newcount\@cmidlb
+<a href=#103 id=103 data-nosnippet>103</a>\newdimen\@aboverulesep
+<a href=#104 id=104 data-nosnippet>104</a>\newdimen\@belowrulesep
+<a href=#105 id=105 data-nosnippet>105</a>\newcount\@thisruleclass
+<a href=#106 id=106 data-nosnippet>106</a>\newcount\@lastruleclass
+<a href=#107 id=107 data-nosnippet>107</a>"</span>);
+<a href=#108 id=108 data-nosnippet>108</a>  <span class="comment">// booktabs.sty:53-118 — the rule machinery a document reaches when it
+<a href=#109 id=109 data-nosnippet>109</a>  // copies the REAL `\midrule`/`\toprule` verbatim over the binding's
+<a href=#110 id=110 data-nosnippet>110</a>  // simplified ones (l2kurz.tex:58-65 = booktabs.sty:67-71): the `\noalign{`
+<a href=#111 id=111 data-nosnippet>111</a>  // opened by `\ifnum0=`}\fi` is closed only by `\@BTendrule`'s
+<a href=#112 id=112 data-nosnippet>112</a>  // `\ifnum0=`{\fi}`, so with `\@BTrule` undefined the noalign body over-ran
+<a href=#113 id=113 data-nosnippet>113</a>  // to the end of the table and the alignment frame leaked through the whole
+<a href=#114 id=114 data-nosnippet>114</a>  // document (lshort-german l2kurz, 41 errors; Perl shares the gap). The
+<a href=#115 id=115 data-nosnippet>115</a>  // binding's own `\toprule`/`\midrule`/`\bottomrule` stay `\hline`-based;
+<a href=#116 id=116 data-nosnippet>116</a>  // longtable's `\@BLTrule` branch (booktabs.sty:103-108, cmidrule kerning
+<a href=#117 id=117 data-nosnippet>117</a>  // internals) reduces to `\@BTnormal`. Guard:
+<a href=#118 id=118 data-nosnippet>118</a>  // `perfect_kernel_batch56::booktabs_rule_machinery_closes_its_noalign`.
+<a href=#119 id=119 data-nosnippet>119</a>  </span><span class="macro">TeX!</span>(<span class="string">r"\@lastruleclass=0
+<a href=#120 id=120 data-nosnippet>120</a>\@ifundefined{@thisrulewidth}{\newdimen\@thisrulewidth}{}
+<a href=#121 id=121 data-nosnippet>121</a>\def\futurenonspacelet#1{\def\@BTcs{#1}\afterassignment\@BTfnslone\let\nexttoken= }
+<a href=#122 id=122 data-nosnippet>122</a>\def\@BTfnslone{\expandafter\futurelet\@BTcs\@BTfnsltwo}
+<a href=#123 id=123 data-nosnippet>123</a>\def\@BTfnsltwo{\expandafter\ifx\@BTcs\@sptoken\let\next=\@BTfnslthree
+<a href=#124 id=124 data-nosnippet>124</a>   \else\let\next=\nexttoken\fi \next}
+<a href=#125 id=125 data-nosnippet>125</a>\def\@BTfnslthree{\afterassignment\@BTfnslone\let\next= }
+<a href=#126 id=126 data-nosnippet>126</a>\def\@addspace[#1]{\global\@belowrulesep=#1\global\@thisruleclass=\tw@
+<a href=#127 id=127 data-nosnippet>127</a>  \futurelet\@tempa\@BTendrule}
+<a href=#128 id=128 data-nosnippet>128</a>\def\@BTrule[#1]{\let\@BTswitch\@BTnormal
+<a href=#129 id=129 data-nosnippet>129</a>  \global\@thisrulewidth=#1\relax
+<a href=#130 id=130 data-nosnippet>130</a>  \ifnum\@thisruleclass=\tw@\vskip\@aboverulesep\else
+<a href=#131 id=131 data-nosnippet>131</a>  \ifnum\@lastruleclass=\z@\vskip\@aboverulesep\else
+<a href=#132 id=132 data-nosnippet>132</a>  \ifnum\@lastruleclass=\@ne\vskip\doublerulesep\fi\fi\fi
+<a href=#133 id=133 data-nosnippet>133</a>  \@BTswitch}
+<a href=#134 id=134 data-nosnippet>134</a>\providecommand*\CT@arc@{}
+<a href=#135 id=135 data-nosnippet>135</a>\def\@BTnormal{{\CT@arc@\hrule\@height\@thisrulewidth}\futurenonspacelet\@tempa\@BTendrule}
+<a href=#136 id=136 data-nosnippet>136</a>\let\@BLTrule\@BTnormal
+<a href=#137 id=137 data-nosnippet>137</a>\let\@BTswitch\@BTnormal
+<a href=#138 id=138 data-nosnippet>138</a>\def\@BTendrule{\ifx\@tempa\toprule\global\@lastruleclass=\@thisruleclass
+<a href=#139 id=139 data-nosnippet>139</a>  \else\ifx\@tempa\midrule\global\@lastruleclass=\@thisruleclass
+<a href=#140 id=140 data-nosnippet>140</a>  \else\ifx\@tempa\bottomrule\global\@lastruleclass=\@thisruleclass
+<a href=#141 id=141 data-nosnippet>141</a>  \else\ifx\@tempa\cmidrule\global\@lastruleclass=\@thisruleclass
+<a href=#142 id=142 data-nosnippet>142</a>  \else\ifx\@tempa\specialrule\global\@lastruleclass=\@thisruleclass
+<a href=#143 id=143 data-nosnippet>143</a>  \else\ifx\@tempa\addlinespace\global\@lastruleclass=\@thisruleclass
+<a href=#144 id=144 data-nosnippet>144</a>  \else\global\@lastruleclass=\z@\fi\fi\fi\fi\fi\fi
+<a href=#145 id=145 data-nosnippet>145</a>  \ifnum\@lastruleclass=\@ne\relax\else\vskip\@belowrulesep\fi
+<a href=#146 id=146 data-nosnippet>146</a>  \ifnum0=`{\fi}}
+<a href=#147 id=147 data-nosnippet>147</a>"</span>);
+<a href=#148 id=148 data-nosnippet>148</a>});
+<a href=#149 id=149 data-nosnippet>149</a>
+<a href=#150 id=150 data-nosnippet>150</a><span class="doccomment">/// How a booktabs rule width reads as a TeX `&lt;dimen&gt;` (tex.web §448-458).
+<a href=#151 id=151 data-nosnippet>151</a></span><span class="kw">enum </span>WidthShape {
+<a href=#152 id=152 data-nosnippet>152</a>  <span class="doccomment">/// A factor and a unit (`.5pt`, `2.5\arrayrulewidth`), or a register or macro (`\heavyrulewidth`).
+<a href=#153 id=153 data-nosnippet>153</a>  </span>Dimension,
+<a href=#154 id=154 data-nosnippet>154</a>  <span class="doccomment">/// A number with no unit (`0`): "Illegal unit of measure (pt inserted)".
+<a href=#155 id=155 data-nosnippet>155</a>  </span>NoUnit,
+<a href=#156 id=156 data-nosnippet>156</a>  <span class="doccomment">/// No number (`lr`, a typo for `(lr)`): "Missing number, treated as zero".
+<a href=#157 id=157 data-nosnippet>157</a>  </span>NoNumber,
+<a href=#158 id=158 data-nosnippet>158</a>}
+<a href=#159 id=159 data-nosnippet>159</a>
+<a href=#160 id=160 data-nosnippet>160</a><span class="kw">fn </span>width_shape(width: <span class="kw-2">&amp;</span>str) -&gt; WidthShape {
+<a href=#161 id=161 data-nosnippet>161</a>  <span class="kw">static </span>DIMENSION: Lazy&lt;Regex&gt; = Lazy::new(|| {
+<a href=#162 id=162 data-nosnippet>162</a>    Regex::new(
+<a href=#163 id=163 data-nosnippet>163</a>      <span class="comment">// TeX's unit keywords ignore case (tex.web §407 scan_keyword: `\toprule[1PT]`).
+<a href=#164 id=164 data-nosnippet>164</a>      </span><span class="string">r"(?i)^\s*[-+\s]*(?:(?:\d+[.,]?\d*|[.,]\d+)\s*(?:true\s*)?(?:pt|pc|in|bp|cm|mm|dd|cc|sp|em|ex|px|nd|nc)|(?:\d+[.,]?\d*|[.,]\d+)?\s*\\[A-Za-z@])"</span>,
+<a href=#165 id=165 data-nosnippet>165</a>    )
+<a href=#166 id=166 data-nosnippet>166</a>    .unwrap()
+<a href=#167 id=167 data-nosnippet>167</a>  });
+<a href=#168 id=168 data-nosnippet>168</a>  <span class="kw">static </span>NUMBER: Lazy&lt;Regex&gt; = Lazy::new(|| Regex::new(<span class="string">r"^\s*[-+\s]*(?:\d|[.,]\d)"</span>).unwrap());
+<a href=#169 id=169 data-nosnippet>169</a>  <span class="kw">if </span>DIMENSION.is_match(width) {
+<a href=#170 id=170 data-nosnippet>170</a>    WidthShape::Dimension
+<a href=#171 id=171 data-nosnippet>171</a>  } <span class="kw">else if </span>NUMBER.is_match(width) {
+<a href=#172 id=172 data-nosnippet>172</a>    WidthShape::NoUnit
+<a href=#173 id=173 data-nosnippet>173</a>  } <span class="kw">else </span>{
+<a href=#174 id=174 data-nosnippet>174</a>    WidthShape::NoNumber
+<a href=#175 id=175 data-nosnippet>175</a>  }
+<a href=#176 id=176 data-nosnippet>176</a>}
 </code></pre></div></section></main></body></html>

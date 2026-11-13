@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/pgfmathcalc_code_tex.rs`."><title>pgfmathcalc_code_tex.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>pgfmathcalc_code_tex.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! pgfmathcalc.code.tex — PGF math calculation macros
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/pgfmathcalc_code_tex.rs`."><title>pgfmathcalc_code_tex.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>pgfmathcalc_code_tex.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! pgfmathcalc.code.tex — PGF math calculation macros
 <a href=#2 id=2 data-nosnippet>2</a>//! Perl: pgfmathcalc.code.tex.ltxml (34 lines)
 <a href=#3 id=3 data-nosnippet>3</a>//!
 <a href=#4 id=4 data-nosnippet>4</a>//! Loads the raw TeX code and provides \pgfmathsetmacro in Rust.
@@ -16,17 +16,107 @@
 <a href=#16 id=16 data-nosnippet>16</a>  // Rust port had dropped the scope, leaking redefinitions upward past
 <a href=#17 id=17 data-nosnippet>17</a>  // the begingroup/endgroup wrapper. Restore Scope::Local to match Perl.
 <a href=#18 id=18 data-nosnippet>18</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pgfmathsetmacro{}{}"</span>, sub[(cs, expression)] {
-<a href=#19 id=19 data-nosnippet>19</a>    <span class="kw">let </span>expr_str = do_expand(expression)<span class="question-mark">?</span>.to_string();
-<a href=#20 id=20 data-nosnippet>20</a>    bgroup();
-<a href=#21 id=21 data-nosnippet>21</a>    <span class="kw">let </span>result = pgfmath_code_tex::pgfmathparse_eval(<span class="kw-2">&amp;</span>expr_str);
+<a href=#19 id=19 data-nosnippet>19</a>    <span class="comment">// Perl L26-28: the parse runs in the group (pgfmath.code.tex.ltxml's `sub pgfmathparse`, as `\pgfmathparse`'s).
+<a href=#20 id=20 data-nosnippet>20</a>    </span>bgroup();
+<a href=#21 id=21 data-nosnippet>21</a>    <span class="kw">let </span>parsed = pgfmath_code_tex::pgfmathparse(expression);
 <a href=#22 id=22 data-nosnippet>22</a>    egroup()<span class="question-mark">?</span>;
-<a href=#23 id=23 data-nosnippet>23</a>    <span class="kw">let </span>result_tokens = mouth::tokenize_internal(TeXString::assembled(result));
-<a href=#24 id=24 data-nosnippet>24</a>    def_macro(
-<a href=#25 id=25 data-nosnippet>25</a>      cs.unlist().into_iter().next().unwrap_or_else(|| <span class="macro">T_CS!</span>(<span class="string">"\\pgfmathresult"</span>)),
-<a href=#26 id=26 data-nosnippet>26</a>      <span class="prelude-val">None</span>,
-<a href=#27 id=27 data-nosnippet>27</a>      result_tokens,
-<a href=#28 id=28 data-nosnippet>28</a>      <span class="prelude-val">Some</span>(ExpandableOptions { scope: <span class="prelude-val">Some</span>(Scope::Local), ..Default::default() }))<span class="question-mark">?</span>;
-<a href=#29 id=29 data-nosnippet>29</a>    <span class="prelude-val">Ok</span>(Vec::new())
-<a href=#30 id=30 data-nosnippet>30</a>  });
-<a href=#31 id=31 data-nosnippet>31</a>});
+<a href=#23 id=23 data-nosnippet>23</a>    <span class="kw">let </span>(result, _units) = parsed<span class="question-mark">?</span>;
+<a href=#24 id=24 data-nosnippet>24</a>    <span class="kw">let </span>result_tokens = mouth::tokenize_internal(TeXString::assembled(result));
+<a href=#25 id=25 data-nosnippet>25</a>    def_macro(
+<a href=#26 id=26 data-nosnippet>26</a>      cs.unlist().into_iter().next().unwrap_or_else(|| <span class="macro">T_CS!</span>(<span class="string">"\\pgfmathresult"</span>)),
+<a href=#27 id=27 data-nosnippet>27</a>      <span class="prelude-val">None</span>,
+<a href=#28 id=28 data-nosnippet>28</a>      result_tokens,
+<a href=#29 id=29 data-nosnippet>29</a>      <span class="prelude-val">Some</span>(ExpandableOptions { scope: <span class="prelude-val">Some</span>(Scope::Local), ..Default::default() }))<span class="question-mark">?</span>;
+<a href=#30 id=30 data-nosnippet>30</a>    <span class="prelude-val">Ok</span>(Vec::new())
+<a href=#31 id=31 data-nosnippet>31</a>  });
+<a href=#32 id=32 data-nosnippet>32</a>
+<a href=#33 id=33 data-nosnippet>33</a>  <span class="comment">// pgfmathcalc.code.tex:366-468 `\pgfmathpointintersectionoflineandarc`:
+<a href=#34 id=34 data-nosnippet>34</a>  // pgf bisects the arc's parametric angle until the angle from #2 to the
+<a href=#35 id=35 data-nosnippet>35</a>  // arc point EQUALS (`\ifdim\x pt=\q pt`, :447) the angle from #2 to #1 in
+<a href=#36 id=36 data-nosnippet>36</a>  // its own fixed-point trig — the loop's only exit. Our trig is float
+<a href=#37 id=37 data-nosnippet>37</a>  // (pgfmath_code_tex.rs `\pgfmathcos@`/`sin@`/`atantwo@`), so the two
+<a href=#38 id=38 data-nosnippet>38</a>  // never meet exactly and a rounded-rectangle corner border query (a
+<a href=#39 id=39 data-nosnippet>39</a>  // self-loop wire — tikz-cd `\ar[loop]`, zx-calculus `\zxLoopAboveDots`;
+<a href=#40 id=40 data-nosnippet>40</a>  // callout nodes, arXiv 2201.09268) spun 2 boxes per iteration into the
+<a href=#41 id=41 data-nosnippet>41</a>  // cycle fatal. The intersection is closed form: the ray from #2 toward #1
+<a href=#42 id=42 data-nosnippet>42</a>  // meets the ellipse (center #3, radii #6) at a quadratic's roots; the root
+<a href=#43 id=43 data-nosnippet>43</a>  // on the arc (nearest to it otherwise — pgf's "best estimate" `\n`) is the
+<a href=#44 id=44 data-nosnippet>44</a>  // parametric angle. Same point set as the bisection's limit, no loop.
+<a href=#45 id=45 data-nosnippet>45</a>  // Guard: `perfect_kernel_batch56::line_and_arc_intersection_is_closed_form`.
+<a href=#46 id=46 data-nosnippet>46</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\def\pgfmathpointintersectionoflineandarc#1#2#3#4#5#6{%
+<a href=#47 id=47 data-nosnippet>47</a>  \pgf@process{%
+<a href=#48 id=48 data-nosnippet>48</a>    \pgfmathanglebetweenpoints{#2}{#1}%
+<a href=#49 id=49 data-nosnippet>49</a>    \let\x\pgfmathresult
+<a href=#50 id=50 data-nosnippet>50</a>    \pgfmath@in@{and }{#6}%
+<a href=#51 id=51 data-nosnippet>51</a>    \ifpgfmath@in@\pgf@polar@#6\@@\else\pgf@polar@#6 and #6\@@\fi
+<a href=#52 id=52 data-nosnippet>52</a>    \edef\xarcradius{\the\pgf@x}%
+<a href=#53 id=53 data-nosnippet>53</a>    \edef\yarcradius{\the\pgf@y}%
+<a href=#54 id=54 data-nosnippet>54</a>    \pgfmathsetmacro\s{#4}%
+<a href=#55 id=55 data-nosnippet>55</a>    \pgfmathsetmacro\e{#5}%
+<a href=#56 id=56 data-nosnippet>56</a>    \pgf@process{#2}\edef\lx@lineandarc@q{\the\pgf@x,\the\pgf@y}%
+<a href=#57 id=57 data-nosnippet>57</a>    \pgf@process{#3}\edef\lx@lineandarc@c{\the\pgf@x,\the\pgf@y}%
+<a href=#58 id=58 data-nosnippet>58</a>    \lx@pgf@lineandarc
+<a href=#59 id=59 data-nosnippet>59</a>    \pgfpointadd{#3}{\pgfpointpolar{\n}{\xarcradius and \yarcradius}}%
+<a href=#60 id=60 data-nosnippet>60</a>  }%
+<a href=#61 id=61 data-nosnippet>61</a>}"</span>);
+<a href=#62 id=62 data-nosnippet>62</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@pgf@lineandarc"</span>, sub[_args] {
+<a href=#63 id=63 data-nosnippet>63</a>    <span class="kw">fn </span>num(s: <span class="kw-2">&amp;</span>str) -&gt; f64 { s.trim().trim_end_matches(<span class="string">"pt"</span>).trim().parse::&lt;f64&gt;().unwrap_or(<span class="number">0.0</span>) }
+<a href=#64 id=64 data-nosnippet>64</a>    <span class="kw">fn </span>pair(s: <span class="kw-2">&amp;</span>str) -&gt; (f64, f64) {
+<a href=#65 id=65 data-nosnippet>65</a>      <span class="kw">let </span><span class="kw-2">mut </span>it = s.split(<span class="string">','</span>);
+<a href=#66 id=66 data-nosnippet>66</a>      (num(it.next().unwrap_or(<span class="string">"0"</span>)), num(it.next().unwrap_or(<span class="string">"0"</span>)))
+<a href=#67 id=67 data-nosnippet>67</a>    }
+<a href=#68 id=68 data-nosnippet>68</a>    <span class="kw">let </span>expand = |cs: <span class="kw-2">&amp;</span>str| -&gt; <span class="prelude-ty">Result</span>&lt;String&gt; { <span class="prelude-val">Ok</span>(do_expand(<span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(cs)))<span class="question-mark">?</span>.to_string()) };
+<a href=#69 id=69 data-nosnippet>69</a>    <span class="kw">let </span>x = num(<span class="kw-2">&amp;</span>expand(<span class="string">"\\x"</span>)<span class="question-mark">?</span>);
+<a href=#70 id=70 data-nosnippet>70</a>    <span class="kw">let </span>s = num(<span class="kw-2">&amp;</span>expand(<span class="string">"\\s"</span>)<span class="question-mark">?</span>);
+<a href=#71 id=71 data-nosnippet>71</a>    <span class="kw">let </span>e = num(<span class="kw-2">&amp;</span>expand(<span class="string">"\\e"</span>)<span class="question-mark">?</span>);
+<a href=#72 id=72 data-nosnippet>72</a>    <span class="kw">let </span>rx = num(<span class="kw-2">&amp;</span>expand(<span class="string">"\\xarcradius"</span>)<span class="question-mark">?</span>).abs().max(<span class="number">1e-6</span>);
+<a href=#73 id=73 data-nosnippet>73</a>    <span class="kw">let </span>ry = num(<span class="kw-2">&amp;</span>expand(<span class="string">"\\yarcradius"</span>)<span class="question-mark">?</span>).abs().max(<span class="number">1e-6</span>);
+<a href=#74 id=74 data-nosnippet>74</a>    <span class="kw">let </span>(qx, qy) = pair(<span class="kw-2">&amp;</span>expand(<span class="string">"\\lx@lineandarc@q"</span>)<span class="question-mark">?</span>);
+<a href=#75 id=75 data-nosnippet>75</a>    <span class="kw">let </span>(cx, cy) = pair(<span class="kw-2">&amp;</span>expand(<span class="string">"\\lx@lineandarc@c"</span>)<span class="question-mark">?</span>);
+<a href=#76 id=76 data-nosnippet>76</a>    <span class="comment">// pgfmathcalc.code.tex:395-406: the arc's angles mod 360, straddling zero
+<a href=#77 id=77 data-nosnippet>77</a>    // when the end comes before the start.
+<a href=#78 id=78 data-nosnippet>78</a>    </span><span class="kw">let </span>norm = |t: f64| t.rem_euclid(<span class="number">360.0</span>);
+<a href=#79 id=79 data-nosnippet>79</a>    <span class="kw">let </span>(ss, ee) = (norm(s), norm(e));
+<a href=#80 id=80 data-nosnippet>80</a>    <span class="kw">let </span>on_arc = |t: f64| <span class="kw">if </span>ee &lt; ss { t &gt;= ss || t &lt;= ee } <span class="kw">else </span>{ ss &lt;= t &amp;&amp; t &lt;= ee };
+<a href=#81 id=81 data-nosnippet>81</a>    <span class="kw">let </span>arc_distance = |t: f64| {
+<a href=#82 id=82 data-nosnippet>82</a>      <span class="kw">if </span>on_arc(t) { <span class="number">0.0 </span>} <span class="kw">else </span>{
+<a href=#83 id=83 data-nosnippet>83</a>        <span class="kw">let </span>d = |a: f64| { <span class="kw">let </span>m = (t - a).rem_euclid(<span class="number">360.0</span>); m.min(<span class="number">360.0 </span>- m) };
+<a href=#84 id=84 data-nosnippet>84</a>        d(ss).min(d(ee))
+<a href=#85 id=85 data-nosnippet>85</a>      }
+<a href=#86 id=86 data-nosnippet>86</a>    };
+<a href=#87 id=87 data-nosnippet>87</a>    <span class="kw">let </span>(dx, dy) = (x.to_radians().cos(), x.to_radians().sin());
+<a href=#88 id=88 data-nosnippet>88</a>    <span class="kw">let </span>(u, v, a, b) = ((qx - cx) / rx, (qy - cy) / ry, dx / rx, dy / ry);
+<a href=#89 id=89 data-nosnippet>89</a>    <span class="kw">let </span>(qa, qb, qc) = (a * a + b * b, <span class="number">2.0 </span>* (u * a + v * b), u * u + v * v - <span class="number">1.0</span>);
+<a href=#90 id=90 data-nosnippet>90</a>    <span class="kw">let </span>disc = qb * qb - <span class="number">4.0 </span>* qa * qc;
+<a href=#91 id=91 data-nosnippet>91</a>    <span class="comment">// The default `\n`: the middle of the arc (:412-413). A ray that MISSES
+<a href=#92 id=92 data-nosnippet>92</a>    // the arc (the shapes' `\anchorborder` never sends one — it takes the
+<a href=#93 id=93 data-nosnippet>93</a>    // straight edges through `\pgfpointintersectionoflines`) gets the true
+<a href=#94 id=94 data-nosnippet>94</a>    // off-arc root nearest the arc where pgf's bisection would clamp inside
+<a href=#95 id=95 data-nosnippet>95</a>    // [#4,#5]; both are "meaningless points" per pgf's own comment (:356).
+<a href=#96 id=96 data-nosnippet>96</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>n = (s + e) / <span class="number">2.0</span>;
+<a href=#97 id=97 data-nosnippet>97</a>    <span class="kw">if </span>disc &gt;= <span class="number">0.0 </span>&amp;&amp; qa &gt; <span class="number">0.0 </span>{
+<a href=#98 id=98 data-nosnippet>98</a>      <span class="kw">let </span>sq = disc.sqrt();
+<a href=#99 id=99 data-nosnippet>99</a>      <span class="kw">let </span><span class="kw-2">mut </span>best: <span class="prelude-ty">Option</span>&lt;(bool, f64, f64)&gt; = <span class="prelude-val">None</span>; <span class="comment">// (forward ray, distance to the arc, angle)
+<a href=#100 id=100 data-nosnippet>100</a>      </span><span class="kw">for </span>lam <span class="kw">in </span>[(-qb + sq) / (<span class="number">2.0 </span>* qa), (-qb - sq) / (<span class="number">2.0 </span>* qa)] {
+<a href=#101 id=101 data-nosnippet>101</a>        <span class="kw">let </span>(px, py) = (qx + lam * dx, qy + lam * dy);
+<a href=#102 id=102 data-nosnippet>102</a>        <span class="kw">let </span>t = norm(((py - cy) / ry).atan2((px - cx) / rx).to_degrees());
+<a href=#103 id=103 data-nosnippet>103</a>        <span class="kw">let </span>cand = (lam &gt;= <span class="number">0.0</span>, arc_distance(t), t);
+<a href=#104 id=104 data-nosnippet>104</a>        <span class="kw">let </span>better = <span class="kw">match </span>best {
+<a href=#105 id=105 data-nosnippet>105</a>          <span class="prelude-val">None </span>=&gt; <span class="bool-val">true</span>,
+<a href=#106 id=106 data-nosnippet>106</a>          <span class="prelude-val">Some</span>((fwd, dist, <span class="kw">_</span>)) =&gt; (cand.<span class="number">0 </span>&amp;&amp; !fwd) || (cand.<span class="number">0 </span>== fwd &amp;&amp; cand.<span class="number">1 </span>&lt; dist),
+<a href=#107 id=107 data-nosnippet>107</a>        };
+<a href=#108 id=108 data-nosnippet>108</a>        <span class="kw">if </span>better { best = <span class="prelude-val">Some</span>(cand); }
+<a href=#109 id=109 data-nosnippet>109</a>      }
+<a href=#110 id=110 data-nosnippet>110</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>((<span class="kw">_</span>, <span class="kw">_</span>, t)) = best { n = t; }
+<a href=#111 id=111 data-nosnippet>111</a>    }
+<a href=#112 id=112 data-nosnippet>112</a>    <span class="kw">let </span>text = <span class="macro">format!</span>(<span class="string">"{n:.5}"</span>);
+<a href=#113 id=113 data-nosnippet>113</a>    <span class="kw">let </span>text = text.trim_end_matches(<span class="string">'0'</span>).trim_end_matches(<span class="string">'.'</span>).to_string();
+<a href=#114 id=114 data-nosnippet>114</a>    def_macro(
+<a href=#115 id=115 data-nosnippet>115</a>      <span class="macro">T_CS!</span>(<span class="string">"\\n"</span>),
+<a href=#116 id=116 data-nosnippet>116</a>      <span class="prelude-val">None</span>,
+<a href=#117 id=117 data-nosnippet>117</a>      mouth::tokenize_internal(TeXString::assembled(text)),
+<a href=#118 id=118 data-nosnippet>118</a>      <span class="prelude-val">Some</span>(ExpandableOptions { scope: <span class="prelude-val">Some</span>(Scope::Local), ..Default::default() }))<span class="question-mark">?</span>;
+<a href=#119 id=119 data-nosnippet>119</a>    <span class="prelude-val">Ok</span>(Vec::new())
+<a href=#120 id=120 data-nosnippet>120</a>  });
+<a href=#121 id=121 data-nosnippet>121</a>});
 </code></pre></div></section></main></body></html>

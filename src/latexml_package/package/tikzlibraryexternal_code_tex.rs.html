@@ -1,0 +1,26 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/tikzlibraryexternal_code_tex.rs`."><title>tikzlibraryexternal_code_tex.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>tikzlibraryexternal_code_tex.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! tikzlibraryexternal.code.tex — TikZ picture externalization.
+<a href=#2 id=2 data-nosnippet>2</a>//!
+<a href=#3 id=3 data-nosnippet>3</a>//! The real library is loaded; only its operating MODE is changed. With
+<a href=#4 id=4 data-nosnippet>4</a>//! `\tikzexternalize` in its default `convert with system call` mode every
+<a href=#5 id=5 data-nosnippet>5</a>//! `tikzpicture` is intercepted, the external file is absent, the shell
+<a href=#6 id=6 data-nosnippet>6</a>//! escape (`\write18`, inert here) yields nothing, and
+<a href=#7 id=7 data-nosnippet>7</a>//! tikzexternalshared.code.tex:1636 raises "the system call … did NOT
+<a href=#8 id=8 data-nosnippet>8</a>//! result in a usable output file" — then typesets the picture inline
+<a href=#9 id=9 data-nosnippet>9</a>//! anyway. TeX Live builds these manuals with `-shell-escape`; a plain run
+<a href=#10 id=10 data-nosnippet>10</a>//! and Perl LaTeXML raise the same error per picture (tikzviolinplots 591,
+<a href=#11 id=11 data-nosnippet>11</a>//! causets 106, tilings 80, tikz-feynhand 55, tikzscale 5). tikz's own
+<a href=#12 id=12 data-nosnippet>12</a>//! `mode=graphics if exists` (tikzexternalshared.code.tex:137) is the
+<a href=#13 id=13 data-nosnippet>13</a>//! faithful no-shell-escape behaviour: use the graphics file when present,
+<a href=#14 id=14 data-nosnippet>14</a>//! otherwise typeset inline with no system call. Guard:
+<a href=#15 id=15 data-nosnippet>15</a>//! `perfect_kernel_batch56::tikz_externalize_typesets_inline_without_a_system_call`.
+<a href=#16 id=16 data-nosnippet>16</a></span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<a href=#17 id=17 data-nosnippet>17</a>
+<a href=#18 id=18 data-nosnippet>18</a><span class="macro">LoadDefinitions!</span>({
+<a href=#19 id=19 data-nosnippet>19</a>  <span class="macro">InputDefinitions!</span>(
+<a href=#20 id=20 data-nosnippet>20</a>    <span class="string">"tikzlibraryexternal.code"</span>,
+<a href=#21 id=21 data-nosnippet>21</a>    extension =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"tex"</span>)),
+<a href=#22 id=22 data-nosnippet>22</a>    noltxml =&gt; <span class="bool-val">true
+<a href=#23 id=23 data-nosnippet>23</a>  </span>);
+<a href=#24 id=24 data-nosnippet>24</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\tikzset{/tikz/external/mode=graphics if exists}"</span>);
+<a href=#25 id=25 data-nosnippet>25</a>});
+</code></pre></div></section></main></body></html>

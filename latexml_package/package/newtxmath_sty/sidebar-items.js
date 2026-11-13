@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_definitions"]};
+window.SIDEBAR_ITEMS = {"fn":["declare_newtx_greek_options","def_newtx_math_symbols","load_definitions","newtx_capital_greek"]};

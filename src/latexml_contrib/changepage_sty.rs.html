@@ -1,45 +1,41 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/changepage_sty.rs`."><title>changepage_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>changepage_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>latexml_package::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/changepage_sty.rs`."><title>changepage_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>changepage_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>latexml_package::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a>
-<a href=#3 id=3 data-nosnippet>3</a><span class="macro">LoadDefinitions!</span>({
-<a href=#4 id=4 data-nosnippet>4</a>  <span class="macro">DeclareOption!</span>(<span class="string">"strict"</span>, <span class="string">""</span>);
-<a href=#5 id=5 data-nosnippet>5</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifoddpage"</span>);
-<a href=#6 id=6 data-nosnippet>6</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifstrictpagecheck"</span>);
-<a href=#7 id=7 data-nosnippet>7</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifcpstrict"</span>);
-<a href=#8 id=8 data-nosnippet>8</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifcpoddpage"</span>);
-<a href=#9 id=9 data-nosnippet>9</a>  def_macro_noop(<span class="string">"\\strictpagecheck"</span>)<span class="question-mark">?</span>;
-<a href=#10 id=10 data-nosnippet>10</a>  def_macro_noop(<span class="string">"\\easypagecheck"</span>)<span class="question-mark">?</span>;
-<a href=#11 id=11 data-nosnippet>11</a>  def_macro_noop(<span class="string">"\\pmemlabel{}"</span>)<span class="question-mark">?</span>;
-<a href=#12 id=12 data-nosnippet>12</a>  def_macro_noop(<span class="string">"\\newpmemlabel{}{}"</span>)<span class="question-mark">?</span>;
-<a href=#13 id=13 data-nosnippet>13</a>  def_macro_noop(<span class="string">"\\pmemlabelref{}"</span>)<span class="question-mark">?</span>;
-<a href=#14 id=14 data-nosnippet>14</a>  def_macro_noop(<span class="string">"\\checkoddpage"</span>)<span class="question-mark">?</span>;
-<a href=#15 id=15 data-nosnippet>15</a>  def_macro_noop(<span class="string">"\\cplabelprefix"</span>)<span class="question-mark">?</span>;
-<a href=#16 id=16 data-nosnippet>16</a>  def_macro_noop(<span class="string">"\\cplabel{}"</span>)<span class="question-mark">?</span>;
-<a href=#17 id=17 data-nosnippet>17</a>  def_macro_noop(<span class="string">"\\newcplabel{}{}"</span>)<span class="question-mark">?</span>;
-<a href=#18 id=18 data-nosnippet>18</a>  <span class="comment">// Mode must be internal_vertical so `$$`-display-math inside the env
-<a href=#19 id=19 data-nosnippet>19</a>  // is recognised by the dollar handler (tex_math.rs's
-<a href=#20 id=20 data-nosnippet>20</a>  // `BOUND_MODE.ends_with("vertical")` gate). Without this, witness
-<a href=#21 id=21 data-nosnippet>21</a>  // 2305.09826: `$$\log_2(x)$$` inside `\begin{adjustwidth}{...}{...}`
-<a href=#22 id=22 data-nosnippet>22</a>  // emitted Error:unexpected:_ "Script _ can only appear in math mode"
-<a href=#23 id=23 data-nosnippet>23</a>  // for every `_` in the formula because the wrapping env's default
-<a href=#24 id=24 data-nosnippet>24</a>  // restricted_horizontal mode kept the `$` handler from entering
-<a href=#25 id=25 data-nosnippet>25</a>  // display math. See sibling fix in
-<a href=#26 id=26 data-nosnippet>26</a>  // latexml_package/src/package/changepage_sty.rs.
-<a href=#27 id=27 data-nosnippet>27</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{adjustwidth} OptionalMatch:* []{}{}"</span>, <span class="string">"#body"</span>,
-<a href=#28 id=28 data-nosnippet>28</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
-<a href=#29 id=29 data-nosnippet>29</a>  <span class="comment">// `adjustwidth*` is a SEPARATE environment in changepage.sty (L122
-<a href=#30 id=30 data-nosnippet>30</a>  // `\newenvironment{adjustwidth*}[2]`) — the `*` is part of the env NAME,
-<a href=#31 id=31 data-nosnippet>31</a>  // not a `*`-argument, so the `OptionalMatch:*` on `{adjustwidth}` above
-<a href=#32 id=32 data-nosnippet>32</a>  // never matches it. Perl has no changepage binding and raw-loads the real
-<a href=#33 id=33 data-nosnippet>33</a>  // .sty, which defines both; our stub previously defined only the unstarred
-<a href=#34 id=34 data-nosnippet>34</a>  // form, so `\begin{adjustwidth*}{..}{..}` (odd/even-page margin variant)
-<a href=#35 id=35 data-nosnippet>35</a>  // raised "The environment {adjustwidth*} is not defined" (witness
-<a href=#36 id=36 data-nosnippet>36</a>  // 2006.09676). Mirror the unstarred env (the odd/even-page distinction in
-<a href=#37 id=37 data-nosnippet>37</a>  // the real def is moot for our paradigm — both branches just set list
-<a href=#38 id=38 data-nosnippet>38</a>  // margins, which we ignore). Same `internal_vertical` mode fix for
-<a href=#39 id=39 data-nosnippet>39</a>  // `$$`-display-math inside the env.
-<a href=#40 id=40 data-nosnippet>40</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{adjustwidth*} []{}{}"</span>, <span class="string">"#body"</span>,
-<a href=#41 id=41 data-nosnippet>41</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
-<a href=#42 id=42 data-nosnippet>42</a>  def_macro_noop(<span class="string">"\\changetext{}{}{}{}{}"</span>)<span class="question-mark">?</span>;
-<a href=#43 id=43 data-nosnippet>43</a>  def_macro_noop(<span class="string">"\\changepage{}{}{}{}{}{}{}{}{}"</span>)<span class="question-mark">?</span>;
-<a href=#44 id=44 data-nosnippet>44</a>});
+<a href=#3 id=3 data-nosnippet>3</a><span class="doccomment">/// `\ch@ngetext` in LaTeXML's one column. changepage's (changepage.sty:80-88), chngpage's
+<a href=#4 id=4 data-nosnippet>4</a>/// (chngpage.sty:79-88) and memoir's (memoir.cls:11237-11245), which `\changetext`/`\changepage`
+<a href=#5 id=5 data-nosnippet>5</a>/// end with, halve `\columnwidth` under `\if@twocolumn`; LaTeXML sets one column, so
+<a href=#6 id=6 data-nosnippet>6</a>/// `\columnwidth` is the changed `\textwidth` and `\linewidth` follows it (every later
+<a href=#7 id=7 data-nosnippet>7</a>/// `width=\linewidth` graphic at half width otherwise). OXIDIZED_DESIGN_DIVERGENCES #341.
+<a href=#8 id=8 data-nosnippet>8</a></span><span class="kw">pub const </span>ONE_COLUMN_CH_NGETEXT: <span class="kw-2">&amp;</span>str = <span class="string">r"\DeclareRobustCommand{\ch@ngetext}{%
+<a href=#9 id=9 data-nosnippet>9</a>  \setlength{\@colht}{\textheight}\setlength{\@colroom}{\textheight}%
+<a href=#10 id=10 data-nosnippet>10</a>  \setlength{\vsize}{\textheight}\setlength{\columnwidth}{\textwidth}%
+<a href=#11 id=11 data-nosnippet>11</a>  \setlength{\hsize}{\columnwidth}\setlength{\linewidth}{\hsize}}"</span>;
+<a href=#12 id=12 data-nosnippet>12</a>
+<a href=#13 id=13 data-nosnippet>13</a><span class="macro">LoadDefinitions!</span>({
+<a href=#14 id=14 data-nosnippet>14</a>  <span class="comment">// memoir provides changepage's commands itself (memoir.cls:12216 `\EmulatedPackage{changepage}`,
+<a href=#15 id=15 data-nosnippet>15</a>  // which a later `\RequirePackage` then skips), and changepage.sty stops under memoir
+<a href=#16 id=16 data-nosnippet>16</a>  // (changepage.sty:8-11): memoir's `\checkoddpage` and page macros stay. Its `{adjustwidth}`
+<a href=#17 id=17 data-nosnippet>17</a>  // (memoir.cls:11267-11297) is the same list as changepage's, so the environments below are
+<a href=#18 id=18 data-nosnippet>18</a>  // defined either way.
+<a href=#19 id=19 data-nosnippet>19</a>  </span><span class="kw">if </span>!class_loaded(<span class="string">"memoir"</span>) {
+<a href=#20 id=20 data-nosnippet>20</a>    <span class="comment">// The page-check and page-layout macros are the package's own TeX: `[strict]` (:22),
+<a href=#21 id=21 data-nosnippet>21</a>    // `\ifoddpage`, the `cp@cntr` counter and `\cp@tempcnt` (:29-31; the dgruyter.sty that arXiv
+<a href=#22 id=22 data-nosnippet>22</a>    // 2605.13539 and 2605.16066 ship reads it), `\cplabel` (:32), `\checkoddpage` (:59-67; odd, on
+<a href=#23 id=23 data-nosnippet>23</a>    // LaTeXML's one page).
+<a href=#24 id=24 data-nosnippet>24</a>    </span><span class="macro">InputDefinitions!</span>(<span class="string">"changepage"</span>, noltxml =&gt; <span class="bool-val">true</span>, extension =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"sty"</span>)));
+<a href=#25 id=25 data-nosnippet>25</a>    <span class="macro">RawTeX!</span>(ONE_COLUMN_CH_NGETEXT);
+<a href=#26 id=26 data-nosnippet>26</a>  }
+<a href=#27 id=27 data-nosnippet>27</a>  <span class="comment">// `{adjustwidth}` and `{adjustwidth*}` are lists (:110-139): the list's end closes the paragraph
+<a href=#28 id=28 data-nosnippet>28</a>  // (`\endtrivlist`'s `\ifhmode\unskip\par`, latex.ltx:15915-15926) and the text after it goes on in
+<a href=#29 id=29 data-nosnippet>29</a>  // the same logical paragraph (`\@doendpe`, :15939). The body stays in the flow — loaded raw it is
+<a href=#30 id=30 data-nosnippet>30</a>  // a tagless one-item &lt;itemize&gt;, in which a bibliography is malformed — and its last paragraph
+<a href=#31 id=31 data-nosnippet>31</a>  // closes before the end. `internal_vertical` keeps `$$` inside a display (witness 2305.09826);
+<a href=#32 id=32 data-nosnippet>32</a>  // `{adjustwidth*}` is its own environment (:122; witness 2006.09676). The margins are read, not
+<a href=#33 id=33 data-nosnippet>33</a>  // typeset: digested, `{-0.005\linewidth}` assigned `\linewidth` = 0pt (witness 2605.02723, a
+<a href=#34 id=34 data-nosnippet>34</a>  // figure at zero width). The ar5iv binding this replaced stubbed all of it (KPE #318); the
+<a href=#35 id=35 data-nosnippet>35</a>  // transparent body is a divergence from the raw list (OXIDIZED_DESIGN_DIVERGENCES #341).
+<a href=#36 id=36 data-nosnippet>36</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{adjustwidth} Undigested Undigested"</span>, <span class="string">"#body"</span>,
+<a href=#37 id=37 data-nosnippet>37</a>    mode =&gt; <span class="string">"internal_vertical"</span>, before_digest_end =&gt; { leave_horizontal()<span class="question-mark">?</span>; });
+<a href=#38 id=38 data-nosnippet>38</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{adjustwidth*} Undigested Undigested"</span>, <span class="string">"#body"</span>,
+<a href=#39 id=39 data-nosnippet>39</a>    mode =&gt; <span class="string">"internal_vertical"</span>, before_digest_end =&gt; { leave_horizontal()<span class="question-mark">?</span>; });
+<a href=#40 id=40 data-nosnippet>40</a>});
 </code></pre></div></section></main></body></html>

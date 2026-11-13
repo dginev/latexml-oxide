@@ -1,67 +1,142 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/sigma_cls.rs`."><title>sigma_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>sigma_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Stub for sigma.cls (SIGMA journal — Symmetry, Integrability, Geometry).
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/sigma_cls.rs`."><title>sigma_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>sigma_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Stub for sigma.cls (SIGMA journal — Symmetry, Integrability, Geometry).
 <a href=#2 id=2 data-nosnippet>2</a></span><span class="kw">use </span>latexml_package::prelude::<span class="kw-2">*</span>;
 <a href=#3 id=3 data-nosnippet>3</a>
-<a href=#4 id=4 data-nosnippet>4</a><span class="macro">LoadDefinitions!</span>({
-<a href=#5 id=5 data-nosnippet>5</a>  <span class="macro">LoadClass!</span>(<span class="string">"OmniBus"</span>);
-<a href=#6 id=6 data-nosnippet>6</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amsmath"</span>);
-<a href=#7 id=7 data-nosnippet>7</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amsthm"</span>);
-<a href=#8 id=8 data-nosnippet>8</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amssymb"</span>);
-<a href=#9 id=9 data-nosnippet>9</a>  <span class="comment">// Eager xcolor preload removed for Perl parity: it makes a later document
-<a href=#10 id=10 data-nosnippet>10</a>  // xcolor[table] load a no-op, so colortbl/array never load and array m{}/b{}
-<a href=#11 id=11 data-nosnippet>11</a>  // columns break (Unrecognized tabular template -&gt; Extra alignment tab). The
-<a href=#12 id=12 data-nosnippet>12</a>  // document loads xcolor itself; color/definecolor stay via hyperref-&gt;color.
-<a href=#13 id=13 data-nosnippet>13</a>  // See ifacconf_cls.rs and SYNC_STATUS (eager-xcolor cluster).
-<a href=#14 id=14 data-nosnippet>14</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"hyperref"</span>);
-<a href=#15 id=15 data-nosnippet>15</a>
-<a href=#16 id=16 data-nosnippet>16</a>  <span class="comment">// SIGMA frontmatter — preserve author content.
-<a href=#17 id=17 data-nosnippet>17</a>  </span>def_macro_noop(<span class="string">"\\FirstPageHeading"</span>)<span class="question-mark">?</span>;
-<a href=#18 id=18 data-nosnippet>18</a>  <span class="macro">DefMacro!</span>(
-<a href=#19 id=19 data-nosnippet>19</a>    <span class="string">"\\ShortArticleName{}"</span>,
-<a href=#20 id=20 data-nosnippet>20</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=shorttitle]{#1}"
-<a href=#21 id=21 data-nosnippet>21</a>  </span>);
-<a href=#22 id=22 data-nosnippet>22</a>  <span class="comment">// \ArticleName{title} → \title{...}, \Author{name} → \author{...}.
-<a href=#23 id=23 data-nosnippet>23</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\ArticleName{}"</span>, <span class="string">"\\title{#1}"</span>);
-<a href=#24 id=24 data-nosnippet>24</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Author{}"</span>, <span class="string">"\\author{#1}"</span>);
-<a href=#25 id=25 data-nosnippet>25</a>  <span class="macro">DefMacro!</span>(
-<a href=#26 id=26 data-nosnippet>26</a>    <span class="string">"\\AuthorNameForHeading{}"</span>,
-<a href=#27 id=27 data-nosnippet>27</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=runningauthor]{#1}"
-<a href=#28 id=28 data-nosnippet>28</a>  </span>);
-<a href=#29 id=29 data-nosnippet>29</a>  <span class="macro">DefMacro!</span>(
-<a href=#30 id=30 data-nosnippet>30</a>    <span class="string">"\\Address{}"</span>,
-<a href=#31 id=31 data-nosnippet>31</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=address]{#1}"
-<a href=#32 id=32 data-nosnippet>32</a>  </span>);
-<a href=#33 id=33 data-nosnippet>33</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\EmailD{}"</span>, <span class="string">"\\@add@frontmatter{ltx:note}[role=email]{#1}"</span>);
-<a href=#34 id=34 data-nosnippet>34</a>  <span class="comment">// \Email{addr} — alternate variant in newer sigma.cls templates.
-<a href=#35 id=35 data-nosnippet>35</a>  // Witness 2306.12539, 2307.06355 (both fail with undefined:\\Email).
-<a href=#36 id=36 data-nosnippet>36</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\Email{}"</span>, <span class="string">"\\@add@frontmatter{ltx:note}[role=email]{#1}"</span>);
-<a href=#37 id=37 data-nosnippet>37</a>  <span class="macro">DefMacro!</span>(
-<a href=#38 id=38 data-nosnippet>38</a>    <span class="string">"\\URLaddressD{}"</span>,
-<a href=#39 id=39 data-nosnippet>39</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=url]{#1}"
-<a href=#40 id=40 data-nosnippet>40</a>  </span>);
-<a href=#41 id=41 data-nosnippet>41</a>  <span class="comment">// \URLaddress{url} — newer sigma.cls variant (without trailing D).
-<a href=#42 id=42 data-nosnippet>42</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#43 id=43 data-nosnippet>43</a>    <span class="string">"\\URLaddress{}"</span>,
-<a href=#44 id=44 data-nosnippet>44</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=url]{#1}"
-<a href=#45 id=45 data-nosnippet>45</a>  </span>);
+<a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span><span class="kw">crate</span>::shipped_class::{class_code_contains, shipped_class_text};
+<a href=#5 id=5 data-nosnippet>5</a>
+<a href=#6 id=6 data-nosnippet>6</a><span class="macro">LoadDefinitions!</span>({
+<a href=#7 id=7 data-nosnippet>7</a>  <span class="comment">// sigma.cls:20-21 `\LoadClass[fleqn,11pt,twoside]{article}` and `\PassOptionsToPackage{fleqn}{amsmath}`: displays flush
+<a href=#8 id=8 data-nosnippet>8</a>  // left, and amsmath's `\[…\]` set as its `\if@fleqn` display (`\hbox{$\displaystyle …$}`, 69c), where a `$` in it is
+<a href=#9 id=9 data-nosnippet>9</a>  // text (2111.06645). The binding dropped both options. Guard: `perfect_kernel_batch73a::sigma_passes_fleqn`.
+<a href=#10 id=10 data-nosnippet>10</a>  </span><span class="macro">Digest!</span>(<span class="string">"\\PassOptionsToClass{fleqn,11pt,twoside}{article}"</span>)<span class="question-mark">?</span>;
+<a href=#11 id=11 data-nosnippet>11</a>  <span class="macro">LoadClass!</span>(<span class="string">"OmniBus"</span>);
+<a href=#12 id=12 data-nosnippet>12</a>  <span class="comment">// sigma.cls:20-21 (2111.06645's copy; 0902.2977's, 0705.3628's and 1404.0720's at :17-19) `\LoadClass[fleqn,11pt,
+<a href=#13 id=13 data-nosnippet>13</a>  // twoside]{article}` and `\PassOptionsToPackage{fleqn}{amsmath}`: flush-left displays (fleqn.clo, fleqn_sty.rs), then
+<a href=#14 id=14 data-nosnippet>14</a>  // amsmath's under `\if@fleqn`, which set an author's `$` in a display as text in the math (amsmath_sty.rs
+<a href=#15 id=15 data-nosnippet>15</a>  // `\lx@mathdisplay@hook`). Guard `perfect_kernel_batch73b::sigma_displays_are_flush_left_hboxes`.
+<a href=#16 id=16 data-nosnippet>16</a>  </span>fleqn_sty::fleqn_clo()<span class="question-mark">?</span>;
+<a href=#17 id=17 data-nosnippet>17</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amsmath"</span>, options =&gt; <span class="macro">vec!</span>[<span class="string">"fleqn"</span>.to_string()]);
+<a href=#18 id=18 data-nosnippet>18</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amsthm"</span>);
+<a href=#19 id=19 data-nosnippet>19</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amssymb"</span>);
+<a href=#20 id=20 data-nosnippet>20</a>  <span class="comment">// Eager xcolor preload removed for Perl parity: it makes a later document
+<a href=#21 id=21 data-nosnippet>21</a>  // xcolor[table] load a no-op, so colortbl/array never load and array m{}/b{}
+<a href=#22 id=22 data-nosnippet>22</a>  // columns break (Unrecognized tabular template -&gt; Extra alignment tab). The
+<a href=#23 id=23 data-nosnippet>23</a>  // document loads xcolor itself; color/definecolor stay via hyperref-&gt;color.
+<a href=#24 id=24 data-nosnippet>24</a>  // See ifacconf_cls.rs and SYNC_STATUS (eager-xcolor cluster).
+<a href=#25 id=25 data-nosnippet>25</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"hyperref"</span>);
+<a href=#26 id=26 data-nosnippet>26</a>  <span class="comment">// sigma.cls:20-28 (0902.2977's copy, every one of the 20 sampled) `\RequirePackage{amsthm}`, `{amsmath}`,
+<a href=#27 id=27 data-nosnippet>27</a>  // `{latexsym}`, `{amssymb}`, `{amscd}`, `{epsfig}`, `{graphics}`, `{ifthen}`, `\usepackage{color}`: papers draw
+<a href=#28 id=28 data-nosnippet>28</a>  // commutative diagrams in `{CD}` (20 of run 353 with it undefined: 0902.2977, 0907.2394, 0910.5929) and colour with
+<a href=#29 id=29 data-nosnippet>29</a>  // `\color` (12) without loading them.
+<a href=#30 id=30 data-nosnippet>30</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"latexsym"</span>);
+<a href=#31 id=31 data-nosnippet>31</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amscd"</span>);
+<a href=#32 id=32 data-nosnippet>32</a>  <span class="macro">RequirePackage!</span>(<span class="string">"epsfig"</span>);
+<a href=#33 id=33 data-nosnippet>33</a>  <span class="macro">RequirePackage!</span>(<span class="string">"graphics"</span>);
+<a href=#34 id=34 data-nosnippet>34</a>  <span class="macro">RequirePackage!</span>(<span class="string">"ifthen"</span>);
+<a href=#35 id=35 data-nosnippet>35</a>  <span class="macro">RequirePackage!</span>(<span class="string">"color"</span>);
+<a href=#36 id=36 data-nosnippet>36</a>
+<a href=#37 id=37 data-nosnippet>37</a>  <span class="comment">// SIGMA frontmatter — preserve author content.
+<a href=#38 id=38 data-nosnippet>38</a>  </span>def_macro_noop(<span class="string">"\\FirstPageHeading"</span>)<span class="question-mark">?</span>;
+<a href=#39 id=39 data-nosnippet>39</a>  <span class="macro">DefMacro!</span>(
+<a href=#40 id=40 data-nosnippet>40</a>    <span class="string">"\\ShortArticleName{}"</span>,
+<a href=#41 id=41 data-nosnippet>41</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=shorttitle]{#1}"
+<a href=#42 id=42 data-nosnippet>42</a>  </span>);
+<a href=#43 id=43 data-nosnippet>43</a>  <span class="comment">// \ArticleName{title} → \title{...}, \Author{name} → \author{...}.
+<a href=#44 id=44 data-nosnippet>44</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\ArticleName{}"</span>, <span class="string">"\\title{#1}"</span>);
+<a href=#45 id=45 data-nosnippet>45</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Author{}"</span>, <span class="string">"\\author{#1}"</span>);
 <a href=#46 id=46 data-nosnippet>46</a>  <span class="macro">DefMacro!</span>(
-<a href=#47 id=47 data-nosnippet>47</a>    <span class="string">"\\ArticleDates{}"</span>,
-<a href=#48 id=48 data-nosnippet>48</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=dates]{#1}"
+<a href=#47 id=47 data-nosnippet>47</a>    <span class="string">"\\AuthorNameForHeading{}"</span>,
+<a href=#48 id=48 data-nosnippet>48</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=runningauthor]{#1}"
 <a href=#49 id=49 data-nosnippet>49</a>  </span>);
-<a href=#50 id=50 data-nosnippet>50</a>  <span class="comment">// sigma.cls custom frontmatter macros for abstract / keywords /
-<a href=#51 id=51 data-nosnippet>51</a>  // classification + last-page sentinel.
-<a href=#52 id=52 data-nosnippet>52</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\Abstract{}"</span>, <span class="string">"\\begin{abstract}#1\\end{abstract}"</span>);
-<a href=#53 id=53 data-nosnippet>53</a>  <span class="macro">DefMacro!</span>(
-<a href=#54 id=54 data-nosnippet>54</a>    <span class="string">"\\Keywords{}"</span>,
-<a href=#55 id=55 data-nosnippet>55</a>    <span class="string">"\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}"
-<a href=#56 id=56 data-nosnippet>56</a>  </span>);
-<a href=#57 id=57 data-nosnippet>57</a>  <span class="macro">DefMacro!</span>(
-<a href=#58 id=58 data-nosnippet>58</a>    <span class="string">"\\Classification{}"</span>,
-<a href=#59 id=59 data-nosnippet>59</a>    <span class="string">"\\@add@frontmatter{ltx:classification}[scheme=AMS]{#1}"
-<a href=#60 id=60 data-nosnippet>60</a>  </span>);
-<a href=#61 id=61 data-nosnippet>61</a>  def_macro_noop(<span class="string">"\\LastPageEnding"</span>)<span class="question-mark">?</span>;
-<a href=#62 id=62 data-nosnippet>62</a>  <span class="comment">// SIGMA authors use \orcid for the ORCID identifier. Route through the kernel
-<a href=#63 id=63 data-nosnippet>63</a>  // `\lx@add@orcid` → `ltx:contact[role=orcid]` → clickable orcid.org link
-<a href=#64 id=64 data-nosnippet>64</a>  // (vs a bare dagger note). html_feedback#6571.
-<a href=#65 id=65 data-nosnippet>65</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\orcid{}"</span>, <span class="string">"\\lx@add@orcid{#1}"</span>);
-<a href=#66 id=66 data-nosnippet>66</a>});
+<a href=#50 id=50 data-nosnippet>50</a>  <span class="macro">DefMacro!</span>(
+<a href=#51 id=51 data-nosnippet>51</a>    <span class="string">"\\Address{}"</span>,
+<a href=#52 id=52 data-nosnippet>52</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=address]{#1}"
+<a href=#53 id=53 data-nosnippet>53</a>  </span>);
+<a href=#54 id=54 data-nosnippet>54</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\EmailD{}"</span>, <span class="string">"\\@add@frontmatter{ltx:note}[role=email]{#1}"</span>);
+<a href=#55 id=55 data-nosnippet>55</a>  <span class="comment">// \Email{addr} — alternate variant in newer sigma.cls templates.
+<a href=#56 id=56 data-nosnippet>56</a>  // Witness 2306.12539, 2307.06355 (both fail with undefined:\\Email).
+<a href=#57 id=57 data-nosnippet>57</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\Email{}"</span>, <span class="string">"\\@add@frontmatter{ltx:note}[role=email]{#1}"</span>);
+<a href=#58 id=58 data-nosnippet>58</a>  <span class="comment">// sigma.cls:77-83 (0705.3628's v3.0 and 1404.0720's v1.7 copies; v1.8, 2609.01661, keeps `\EmailD`, `\URLaddress`,
+<a href=#59 id=59 data-nosnippet>59</a>  // `\URLaddressD`): the e-mail and URL lines under a doubly marked (`DD`) or a starred (`Marked`) author, each printing
+<a href=#60 id=60 data-nosnippet>60</a>  // nothing for an empty argument (`\ifthenelse{\equal{#1}{}}{}{…}`; 66 papers of the inventory with `\EmailDD`
+<a href=#61 id=61 data-nosnippet>61</a>  // undefined, 14 with `\URLaddressDD`: 0705.3628, 0707.2869, 0711.1671), and v1.8's `\mail{x}`, a `mailto:` link
+<a href=#62 id=62 data-nosnippet>62</a>  // written inside `\EmailD` (sigma.cls:80 of 2609.01661; 2 of the 211 sampled copies), defined where the paper's copy
+<a href=#63 id=63 data-nosnippet>63</a>  // has it, so a paper whose copy does not can define its own.
+<a href=#64 id=64 data-nosnippet>64</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#65 id=65 data-nosnippet>65</a>    <span class="string">r"\def\lx@sigma@contact#1#2{\def\lx@sigma@arg{#2}\ifx\lx@sigma@arg\@empty\else\@add@frontmatter{ltx:note}[role=#1]{#2}\fi}
+<a href=#66 id=66 data-nosnippet>66</a>\def\EmailDD{\lx@sigma@contact{email}}\def\EmailMarked{\lx@sigma@contact{email}}
+<a href=#67 id=67 data-nosnippet>67</a>\def\URLaddressDD{\lx@sigma@contact{url}}\def\URLaddressMarked{\lx@sigma@contact{url}}"
+<a href=#68 id=68 data-nosnippet>68</a>  </span>);
+<a href=#69 id=69 data-nosnippet>69</a>  <span class="kw">let </span>shipped = shipped_class_text(<span class="string">"sigma"</span>)<span class="question-mark">?</span>;
+<a href=#70 id=70 data-nosnippet>70</a>  <span class="kw">if </span>shipped
+<a href=#71 id=71 data-nosnippet>71</a>    .as_deref()
+<a href=#72 id=72 data-nosnippet>72</a>    .is_some_and(|text| class_code_contains(text, <span class="string">"\\newcommand{\\mail}"</span>))
+<a href=#73 id=73 data-nosnippet>73</a>  {
+<a href=#74 id=74 data-nosnippet>74</a>    <span class="macro">RawTeX!</span>(<span class="string">r"\def\mail#1{\href{mailto:#1}{#1}}"</span>);
+<a href=#75 id=75 data-nosnippet>75</a>  }
+<a href=#76 id=76 data-nosnippet>76</a>  <span class="macro">DefMacro!</span>(
+<a href=#77 id=77 data-nosnippet>77</a>    <span class="string">"\\URLaddressD{}"</span>,
+<a href=#78 id=78 data-nosnippet>78</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=url]{#1}"
+<a href=#79 id=79 data-nosnippet>79</a>  </span>);
+<a href=#80 id=80 data-nosnippet>80</a>  <span class="comment">// \URLaddress{url} — newer sigma.cls variant (without trailing D).
+<a href=#81 id=81 data-nosnippet>81</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#82 id=82 data-nosnippet>82</a>    <span class="string">"\\URLaddress{}"</span>,
+<a href=#83 id=83 data-nosnippet>83</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=url]{#1}"
+<a href=#84 id=84 data-nosnippet>84</a>  </span>);
+<a href=#85 id=85 data-nosnippet>85</a>  <span class="macro">DefMacro!</span>(
+<a href=#86 id=86 data-nosnippet>86</a>    <span class="string">"\\ArticleDates{}"</span>,
+<a href=#87 id=87 data-nosnippet>87</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=dates]{#1}"
+<a href=#88 id=88 data-nosnippet>88</a>  </span>);
+<a href=#89 id=89 data-nosnippet>89</a>  <span class="comment">// sigma.cls custom frontmatter macros for abstract / keywords /
+<a href=#90 id=90 data-nosnippet>90</a>  // classification + last-page sentinel.
+<a href=#91 id=91 data-nosnippet>91</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\Abstract{}"</span>, <span class="string">"\\begin{abstract}#1\\end{abstract}"</span>);
+<a href=#92 id=92 data-nosnippet>92</a>  <span class="macro">DefMacro!</span>(
+<a href=#93 id=93 data-nosnippet>93</a>    <span class="string">"\\Keywords{}"</span>,
+<a href=#94 id=94 data-nosnippet>94</a>    <span class="string">"\\@add@frontmatter{ltx:classification}[scheme=keywords]{#1}"
+<a href=#95 id=95 data-nosnippet>95</a>  </span>);
+<a href=#96 id=96 data-nosnippet>96</a>  <span class="macro">DefMacro!</span>(
+<a href=#97 id=97 data-nosnippet>97</a>    <span class="string">"\\Classification{}"</span>,
+<a href=#98 id=98 data-nosnippet>98</a>    <span class="string">"\\@add@frontmatter{ltx:classification}[scheme=AMS]{#1}"
+<a href=#99 id=99 data-nosnippet>99</a>  </span>);
+<a href=#100 id=100 data-nosnippet>100</a>  def_macro_noop(<span class="string">"\\LastPageEnding"</span>)<span class="question-mark">?</span>;
+<a href=#101 id=101 data-nosnippet>101</a>  <span class="comment">// sigma.cls:161-178 (0705.3628's copy): the class's theorem set, each with its own counter, `{definition}`,
+<a href=#102 id=102 data-nosnippet>102</a>  // `{example}`, `{remark}`, `{note}` in amsthm's definition style, and an unnumbered starred twin of each
+<a href=#103 id=103 data-nosnippet>103</a>  // (`{theorem*}` 20 papers of the inventory, `{remark*}` 12, `{example*}` 6: 1301.4541, 1404.0720, 1601.01181). The
+<a href=#104 id=104 data-nosnippet>104</a>  // class sets them in a group, which ends the style; amsthm defines the environments globally (amsthm.sty:81), so they
+<a href=#105 id=105 data-nosnippet>105</a>  // outlive it. Without them OmniBus's fallback set numbered them by section on a shared counter. The starred twins and
+<a href=#106 id=106 data-nosnippet>106</a>  // `{conjecture}` came with v1.2 (208 of the 211 sampled copies, and a paper without a copy); the v1.0/1.1 copies
+<a href=#107 id=107 data-nosnippet>107</a>  // (nlin0510055's :154-161, nlin0511055, nlin0512032) define the rest.
+<a href=#108 id=108 data-nosnippet>108</a>  </span><span class="kw">if </span>shipped
+<a href=#109 id=109 data-nosnippet>109</a>    .as_deref()
+<a href=#110 id=110 data-nosnippet>110</a>    .is_none_or(|text| class_code_contains(text, <span class="string">"\\newtheorem*{theorem*}"</span>))
+<a href=#111 id=111 data-nosnippet>111</a>  {
+<a href=#112 id=112 data-nosnippet>112</a>    <span class="macro">RawTeX!</span>(
+<a href=#113 id=113 data-nosnippet>113</a>      <span class="string">r"\newtheorem{theorem}{Theorem}\newtheorem*{theorem*}{Theorem}
+<a href=#114 id=114 data-nosnippet>114</a>\newtheorem{lemma}{Lemma}\newtheorem*{lemma*}{Lemma}
+<a href=#115 id=115 data-nosnippet>115</a>\newtheorem{corollary}{Corollary}\newtheorem*{corollary*}{Corollary}
+<a href=#116 id=116 data-nosnippet>116</a>\newtheorem{proposition}{Proposition}\newtheorem*{proposition*}{Proposition}
+<a href=#117 id=117 data-nosnippet>117</a>\newtheorem{conjecture}{Conjecture}\newtheorem*{conjecture*}{Conjecture}
+<a href=#118 id=118 data-nosnippet>118</a>{\theoremstyle{definition}\newtheorem{definition}{Definition}\newtheorem*{definition*}{Definition}
+<a href=#119 id=119 data-nosnippet>119</a>\newtheorem{example}{Example}\newtheorem*{example*}{Example}
+<a href=#120 id=120 data-nosnippet>120</a>\newtheorem{remark}{Remark}\newtheorem*{remark*}{Remark}
+<a href=#121 id=121 data-nosnippet>121</a>\newtheorem{note}{Note}\newtheorem*{note*}{Note}}"
+<a href=#122 id=122 data-nosnippet>122</a>    </span>);
+<a href=#123 id=123 data-nosnippet>123</a>  } <span class="kw">else </span>{
+<a href=#124 id=124 data-nosnippet>124</a>    <span class="macro">RawTeX!</span>(
+<a href=#125 id=125 data-nosnippet>125</a>      <span class="string">r"\newtheorem{theorem}{Theorem}\newtheorem{lemma}{Lemma}\newtheorem{corollary}{Corollary}
+<a href=#126 id=126 data-nosnippet>126</a>\newtheorem{proposition}{Proposition}
+<a href=#127 id=127 data-nosnippet>127</a>{\theoremstyle{definition}\newtheorem{definition}{Definition}\newtheorem{example}{Example}
+<a href=#128 id=128 data-nosnippet>128</a>\newtheorem{remark}{Remark}\newtheorem{note}{Note}}"
+<a href=#129 id=129 data-nosnippet>129</a>    </span>);
+<a href=#130 id=130 data-nosnippet>130</a>  }
+<a href=#131 id=131 data-nosnippet>131</a>  <span class="comment">// sigma.cls:182-191 (v3.0 on: 0705.3628, 1404.0720): `\tsep{dim}` and `\bsep{dim}`, invisible struts that add
+<a href=#132 id=132 data-nosnippet>132</a>  // `dim` above or below a table row (104 and 83 papers of the inventory: 0706.0314, 0708.0957).
+<a href=#133 id=133 data-nosnippet>133</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#134 id=134 data-nosnippet>134</a>    <span class="string">r"\def\tsep#1{{\@tempdima=\ht\strutbox\advance\@tempdima #1\vrule height \@tempdima depth 0pt width 0pt\nobreak\hspace{0pt}}}
+<a href=#135 id=135 data-nosnippet>135</a>\def\bsep#1{{\@tempdima=\dp\strutbox \advance\@tempdima #1\nobreak\hspace{0pt}\vrule height 0pt depth \@tempdima width 0pt}}"
+<a href=#136 id=136 data-nosnippet>136</a>  </span>);
+<a href=#137 id=137 data-nosnippet>137</a>  <span class="comment">// SIGMA authors use \orcid for the ORCID identifier. Route through the kernel
+<a href=#138 id=138 data-nosnippet>138</a>  // `\lx@add@orcid` → `ltx:contact[role=orcid]` → clickable orcid.org link
+<a href=#139 id=139 data-nosnippet>139</a>  // (vs a bare dagger note). html_feedback#6571.
+<a href=#140 id=140 data-nosnippet>140</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\orcid{}"</span>, <span class="string">"\\lx@add@orcid{#1}"</span>);
+<a href=#141 id=141 data-nosnippet>141</a>});
 </code></pre></div></section></main></body></html>

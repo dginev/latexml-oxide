@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/parskip_sty.rs`."><title>parskip_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>parskip_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/parskip_sty.rs`."><title>parskip_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>parskip_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a><span class="attr">#[rustfmt::skip]
 <a href=#4 id=4 data-nosnippet>4</a></span><span class="macro">LoadDefinitions!</span>({
@@ -6,25 +6,33 @@
 <a href=#6 id=6 data-nosnippet>6</a>  // a simplification that drops the real package's entire effect, so both
 <a href=#7 id=7 data-nosnippet>7</a>  // engines leave the first-line indent that `\usepackage{parskip}` is meant to
 <a href=#8 id=8 data-nosnippet>8</a>  // remove (issue #558, reporter nasser1; same-host Perl 0.8.8 identical =&gt;
-<a href=#9 id=9 data-nosnippet>9</a>  // SHARED-FAILURE). Ground truth is the real package: parskip.sty v2.0h sets
-<a href=#10 id=10 data-nosnippet>10</a>  // `\setlength\parindent{0pt}` (L58, default `indent=0pt`) and
-<a href=#11 id=11 data-nosnippet>11</a>  // `\parskip=.5\baselineskip plus 2pt` (L51-54). Port that here — surpass-Perl,
-<a href=#12 id=12 data-nosnippet>12</a>  // OXIDIZED_DESIGN #106.
-<a href=#13 id=13 data-nosnippet>13</a>  //
-<a href=#14 id=14 data-nosnippet>14</a>  // `\parindent=0` is the whole fix for the reported symptom: the paragraph
-<a href=#15 id=15 data-nosnippet>15</a>  // machinery flips every paragraph to the `ltx_noindent` class when the
-<a href=#16 id=16 data-nosnippet>16</a>  // `\parindent` register is zero (`tex_paragraph.rs`, the boolean no-indent
-<a href=#17 id=17 data-nosnippet>17</a>  // toggle), exactly as a manual `\setlength{\parindent}{0pt}` already does.
-<a href=#18 id=18 data-nosnippet>18</a>  // The FIRST paragraph joined this only with issue #719 (same reporter): the
-<a href=#19 id=19 data-nosnippet>19</a>  // deferred `\par` mechanism records the class for the NEXT paragraph, so
-<a href=#20 id=20 data-nosnippet>20</a>  // before #719 the first paragraph kept the stylesheet's default indent.
-<a href=#21 id=21 data-nosnippet>21</a>  // Guarded by `parskip_test` (all three paragraphs now `ltx_noindent`).
-<a href=#22 id=22 data-nosnippet>22</a>  // `\parskip` is set for faithfulness to the real package (its glue is not
-<a href=#23 id=23 data-nosnippet>23</a>  // typeset into HTML by LaTeXML — neither here nor for a manual `\setlength`).
-<a href=#24 id=24 data-nosnippet>24</a>  //
-<a href=#25 id=25 data-nosnippet>25</a>  // Package options (`skip`/`indent`/`tocskip`, kvoptions) are not yet handled;
-<a href=#26 id=26 data-nosnippet>26</a>  // the no-option `\usepackage{parskip}` default is the common case (and the one
-<a href=#27 id=27 data-nosnippet>27</a>  // reported).
-<a href=#28 id=28 data-nosnippet>28</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\setlength{\parindent}{0pt}\setlength{\parskip}{.5\baselineskip plus 2pt}"</span>);
-<a href=#29 id=29 data-nosnippet>29</a>});
+<a href=#9 id=9 data-nosnippet>9</a>  // SHARED-FAILURE). Ground truth is the real package, so load it raw —
+<a href=#10 id=10 data-nosnippet>10</a>  // surpass-Perl, OXIDIZED_DESIGN #106. parskip.sty v2.0h (2021-03-14):
+<a href=#11 id=11 data-nosnippet>11</a>  //  * requires kvoptions (L44) and processes its `indent`/`parfill`/`skip`/
+<a href=#12 id=12 data-nosnippet>12</a>  //    `tocskip` options (L45-50), then sets `\parskip` (L51-55, default
+<a href=#13 id=13 data-nosnippet>13</a>  //    `.5\baselineskip plus 2pt`), `\parfillskip` (L56-57) and `\parindent`
+<a href=#14 id=14 data-nosnippet>14</a>  //    (L58, default `indent=0pt`);
+<a href=#15 id=15 data-nosnippet>15</a>  //  * requires etoolbox (L59) for its `\patchcmd`s, which the document may use
+<a href=#16 id=16 data-nosnippet>16</a>  //    too: loading neither left `\AtEndPreamble` undefined wherever etoolbox
+<a href=#17 id=17 data-nosnippet>17</a>  //    did not arrive by another route (under pdfTeX it came only through babel;
+<a href=#18 id=18 data-nosnippet>18</a>  //    witnesses liftarm, polyomino under the `[luatex]` profile).
+<a href=#19 id=19 data-nosnippet>19</a>  //    Guard: `shipout_parskip::parskip_loads_kvoptions_and_etoolbox`.
+<a href=#20 id=20 data-nosnippet>20</a>  //
+<a href=#21 id=21 data-nosnippet>21</a>  // `\parindent=0` is the whole fix for the reported symptom: the paragraph
+<a href=#22 id=22 data-nosnippet>22</a>  // machinery flips every paragraph to the `ltx_noindent` class when the
+<a href=#23 id=23 data-nosnippet>23</a>  // `\parindent` register is zero (`tex_paragraph.rs`, the boolean no-indent
+<a href=#24 id=24 data-nosnippet>24</a>  // toggle), exactly as a manual `\setlength{\parindent}{0pt}` already does.
+<a href=#25 id=25 data-nosnippet>25</a>  // The FIRST paragraph joined this only with issue #719 (same reporter): the
+<a href=#26 id=26 data-nosnippet>26</a>  // deferred `\par` mechanism records the class for the NEXT paragraph, so
+<a href=#27 id=27 data-nosnippet>27</a>  // before #719 the first paragraph kept the stylesheet's default indent.
+<a href=#28 id=28 data-nosnippet>28</a>  // Guarded by `parskip_test` (all three paragraphs now `ltx_noindent`).
+<a href=#29 id=29 data-nosnippet>29</a>  // `\parskip` is set for faithfulness to the real package (its glue is not
+<a href=#30 id=30 data-nosnippet>30</a>  // typeset into HTML by LaTeXML — neither here nor for a manual `\setlength`).
+<a href=#31 id=31 data-nosnippet>31</a>  // Expected on every parskip document: parskip's `\patchcmd\@startsection`
+<a href=#32 id=32 data-nosnippet>32</a>  // fails (LaTeXML's `\@startsection` has no `\addvspace\@tempskipa`), giving
+<a href=#33 id=33 data-nosnippet>33</a>  // one `Info:unexpected:patchcmd` and the console line "Couldn't patch
+<a href=#34 id=34 data-nosnippet>34</a>  // \@startsection"; its `\@starttoc` and `\@xsect` patches apply. The spacing
+<a href=#35 id=35 data-nosnippet>35</a>  // it patches never reaches the XML, so neither message needs a fix.
+<a href=#36 id=36 data-nosnippet>36</a>  </span><span class="macro">InputDefinitions!</span>(<span class="string">"parskip"</span>, noltxml =&gt; <span class="bool-val">true</span>, extension =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"sty"</span>)));
+<a href=#37 id=37 data-nosnippet>37</a>});
 </code></pre></div></section></main></body></html>

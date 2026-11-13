@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_definitions"]};
+window.SIDEBAR_ITEMS = {"fn":["byte_of_arg","enable_pdftex_byte_mouth","install_utf8_byte_activation","load_definitions","utf8_octets","utf8_octets_of"]};

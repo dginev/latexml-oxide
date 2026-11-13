@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {};
+window.SIDEBAR_ITEMS = {"fn":["accent_composite","accent_inner_name","declared_text_composite","is_accent_inner"]};

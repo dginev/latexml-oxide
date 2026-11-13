@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/cas_dc_cls.rs`."><title>cas_dc_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>cas_dc_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Stub for Elsevier cas-dc.cls / cas-sc.cls (CAS journals double-column).
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/cas_dc_cls.rs`."><title>cas_dc_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>cas_dc_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Stub for Elsevier cas-dc.cls / cas-sc.cls (CAS journals double-column).
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! The cas-* classes load cas-common.sty which uses xparse/expl3
 <a href=#4 id=4 data-nosnippet>4</a>//! NewDocumentCommand to define many frontmatter helpers. Our raw load
@@ -6,146 +6,466 @@
 <a href=#6 id=6 data-nosnippet>6</a>//! frontmatter macros.
 <a href=#7 id=7 data-nosnippet>7</a></span><span class="kw">use </span>latexml_package::prelude::<span class="kw-2">*</span>;
 <a href=#8 id=8 data-nosnippet>8</a>
-<a href=#9 id=9 data-nosnippet>9</a><span class="macro">LoadDefinitions!</span>({
-<a href=#10 id=10 data-nosnippet>10</a>  <span class="macro">LoadClass!</span>(<span class="string">"OmniBus"</span>);
-<a href=#11 id=11 data-nosnippet>11</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amsmath"</span>);
-<a href=#12 id=12 data-nosnippet>12</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amsthm"</span>);
-<a href=#13 id=13 data-nosnippet>13</a>  <span class="comment">// amssymb supplies \lesssim, \gtrsim, \nleq, \ngeq, \square, \blacksquare
-<a href=#14 id=14 data-nosnippet>14</a>  // and other binary-relation/blackboard-bold symbols that CAS authors
-<a href=#15 id=15 data-nosnippet>15</a>  // routinely use without explicit \usepackage{amssymb}. Witness
-<a href=#16 id=16 data-nosnippet>16</a>  // 2312.12523 (\lesssim undefined).
-<a href=#17 id=17 data-nosnippet>17</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"amssymb"</span>);
-<a href=#18 id=18 data-nosnippet>18</a>  <span class="macro">RequirePackage!</span>(<span class="string">"xcolor"</span>);
-<a href=#19 id=19 data-nosnippet>19</a>  <span class="macro">RequirePackage!</span>(<span class="string">"hyperref"</span>);
-<a href=#20 id=20 data-nosnippet>20</a>  <span class="comment">// cas-dc.cls L63: \RequirePackage{booktabs,makecell,multirow,array,colortbl,dcolumn,stfloats}.
-<a href=#21 id=21 data-nosnippet>21</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"booktabs"</span>);
-<a href=#22 id=22 data-nosnippet>22</a>  <span class="macro">RequirePackage!</span>(<span class="string">"multirow"</span>);
-<a href=#23 id=23 data-nosnippet>23</a>  <span class="macro">RequirePackage!</span>(<span class="string">"array"</span>);
-<a href=#24 id=24 data-nosnippet>24</a>  <span class="macro">RequirePackage!</span>(<span class="string">"colortbl"</span>);
-<a href=#25 id=25 data-nosnippet>25</a>  <span class="macro">RequirePackage!</span>(<span class="string">"makecell"</span>);
-<a href=#26 id=26 data-nosnippet>26</a>  <span class="comment">// cas-dc.cls L: `\RequirePackage{etoolbox,balance}` — pulls in the
-<a href=#27 id=27 data-nosnippet>27</a>  // balance package which defines `\balance` (column-balancing in
-<a href=#28 id=28 data-nosnippet>28</a>  // 2-col docs). Without it, papers using `\balance` near the end
-<a href=#29 id=29 data-nosnippet>29</a>  // trip Error:undefined. Witness 2303.04712.
-<a href=#30 id=30 data-nosnippet>30</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"balance"</span>);
-<a href=#31 id=31 data-nosnippet>31</a>  <span class="comment">// cas-dc.cls (Elsevier CAS) aliases \newdefinition and \newproof to \newtheorem
-<a href=#32 id=32 data-nosnippet>32</a>  // (elsarticle convention), used to declare definition/proof-like theorem envs.
-<a href=#33 id=33 data-nosnippet>33</a>  // Were undefined (Perl defines them). Witness 2306.04212.
-<a href=#34 id=34 data-nosnippet>34</a>  </span><span class="macro">Let!</span>(<span class="string">"\\newdefinition"</span>, <span class="string">"\\newtheorem"</span>);
-<a href=#35 id=35 data-nosnippet>35</a>  <span class="macro">Let!</span>(<span class="string">"\\newproof"</span>, <span class="string">"\\newtheorem"</span>);
-<a href=#36 id=36 data-nosnippet>36</a>
-<a href=#37 id=37 data-nosnippet>37</a>  <span class="comment">// cas-common.sty dynamically defines `\tblwidth` via
-<a href=#38 id=38 data-nosnippet>38</a>  // `\csgdef{tblwidth}{\dim_use:N \l_tbl_width_dim}` only inside its
-<a href=#39 id=39 data-nosnippet>39</a>  // own table-float wrapper. Authors use `\tblwidth` directly as the
-<a href=#40 id=40 data-nosnippet>40</a>  // width argument of `\begin{tabular*}{\tblwidth}{...}` even outside
-<a href=#41 id=41 data-nosnippet>41</a>  // that wrapper. Provide a \linewidth fallback so the tabular still
-<a href=#42 id=42 data-nosnippet>42</a>  // renders with reasonable width. Witness 2209.06932 (cas-dc table
-<a href=#43 id=43 data-nosnippet>43</a>  // cascade — 136 errors).
-<a href=#44 id=44 data-nosnippet>44</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\tblwidth"</span>, <span class="string">"\\linewidth"</span>);
-<a href=#45 id=45 data-nosnippet>45</a>  <span class="comment">// cas-common.sty L2070-2072: \newcolumntype{L|R|C}{...}. Authors use
-<a href=#46 id=46 data-nosnippet>46</a>  // L/R/C column types in `\begin{tabular*}{...}{@{} LLLLLL @{}}`.
-<a href=#47 id=47 data-nosnippet>47</a>  // Without these, the unrecognized column letters trigger one
-<a href=#48 id=48 data-nosnippet>48</a>  // "Extra alignment tab '&amp;'" per &amp; cell. Define matching short-hand
-<a href=#49 id=49 data-nosnippet>49</a>  // raggedright/etc. column types.
-<a href=#50 id=50 data-nosnippet>50</a>  </span><span class="macro">RawTeX!</span>(
-<a href=#51 id=51 data-nosnippet>51</a>    <span class="string">r"\newcolumntype{L}{@{\extracolsep{\fill}}l}\newcolumntype{R}{@{\extracolsep{\fill}}r}\newcolumntype{C}{@{\extracolsep{\fill}}c}"
-<a href=#52 id=52 data-nosnippet>52</a>  </span>);
-<a href=#53 id=53 data-nosnippet>53</a>
-<a href=#54 id=54 data-nosnippet>54</a>  <span class="comment">// cas-common frontmatter — gobble cleanly.
-<a href=#55 id=55 data-nosnippet>55</a>  // Title-note text — author prose. Preserve as ltx:note frontmatter.
-<a href=#56 id=56 data-nosnippet>56</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#57 id=57 data-nosnippet>57</a>    <span class="string">"\\tnotetext[]{}"</span>,
-<a href=#58 id=58 data-nosnippet>58</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=titlenote]{#2}"
-<a href=#59 id=59 data-nosnippet>59</a>  </span>);
-<a href=#60 id=60 data-nosnippet>60</a>  def_macro_noop(<span class="string">"\\tnotemark[]"</span>)<span class="question-mark">?</span>; <span class="comment">// mark only, no body
-<a href=#61 id=61 data-nosnippet>61</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#62 id=62 data-nosnippet>62</a>    <span class="string">"\\tnoteref[]{}"</span>,
-<a href=#63 id=63 data-nosnippet>63</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=titlenote-ref]{#2}"
-<a href=#64 id=64 data-nosnippet>64</a>  </span>);
-<a href=#65 id=65 data-nosnippet>65</a>  def_macro_noop(<span class="string">"\\fnmark[]"</span>)<span class="question-mark">?</span>;
-<a href=#66 id=66 data-nosnippet>66</a>  <span class="macro">DefMacro!</span>(
-<a href=#67 id=67 data-nosnippet>67</a>    <span class="string">"\\fnref[]{}"</span>,
-<a href=#68 id=68 data-nosnippet>68</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=footnote-ref]{#2}"
-<a href=#69 id=69 data-nosnippet>69</a>  </span>);
-<a href=#70 id=70 data-nosnippet>70</a>  <span class="comment">// Footnote / author-note text — preserve as ltx:note rather than
-<a href=#71 id=71 data-nosnippet>71</a>  // gobble (content-preserving). `\fntext` / `\nonumnote` carry the
-<a href=#72 id=72 data-nosnippet>72</a>  // actual note prose, `\cortext` is the corresponding-author byline.
-<a href=#73 id=73 data-nosnippet>73</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#74 id=74 data-nosnippet>74</a>    <span class="string">"\\fntext[]{}"</span>,
-<a href=#75 id=75 data-nosnippet>75</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=footnote]{#2}"
-<a href=#76 id=76 data-nosnippet>76</a>  </span>);
-<a href=#77 id=77 data-nosnippet>77</a>  <span class="macro">DefMacro!</span>(
-<a href=#78 id=78 data-nosnippet>78</a>    <span class="string">"\\nonumnote{}"</span>,
-<a href=#79 id=79 data-nosnippet>79</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=note]{#1}"
-<a href=#80 id=80 data-nosnippet>80</a>  </span>);
-<a href=#81 id=81 data-nosnippet>81</a>  <span class="macro">DefMacro!</span>(
-<a href=#82 id=82 data-nosnippet>82</a>    <span class="string">"\\nonumtnotetext{}"</span>,
-<a href=#83 id=83 data-nosnippet>83</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=note]{#1}"
-<a href=#84 id=84 data-nosnippet>84</a>  </span>);
-<a href=#85 id=85 data-nosnippet>85</a>  <span class="macro">DefMacro!</span>(
-<a href=#86 id=86 data-nosnippet>86</a>    <span class="string">"\\cortext[]{}"</span>,
-<a href=#87 id=87 data-nosnippet>87</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=corresponding]{#2}"
-<a href=#88 id=88 data-nosnippet>88</a>  </span>);
-<a href=#89 id=89 data-nosnippet>89</a>  def_macro_noop(<span class="string">"\\cormark[]"</span>)<span class="question-mark">?</span>; <span class="comment">// mark only, no body
-<a href=#90 id=90 data-nosnippet>90</a>  </span>def_macro_noop(<span class="string">"\\corref[]"</span>)<span class="question-mark">?</span>;
-<a href=#91 id=91 data-nosnippet>91</a>  <span class="comment">// \affiliation[id]{text} — affiliation string author typed.
-<a href=#92 id=92 data-nosnippet>92</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#93 id=93 data-nosnippet>93</a>    <span class="string">"\\affiliation[]{}"</span>,
-<a href=#94 id=94 data-nosnippet>94</a>    <span class="string">"\\@add@to@frontmatter{ltx:creator}{\\@@@affiliation{#2}}"
-<a href=#95 id=95 data-nosnippet>95</a>  </span>);
-<a href=#96 id=96 data-nosnippet>96</a>  <span class="comment">// \ead[type]{address} — author email/url, preserve as contact.
-<a href=#97 id=97 data-nosnippet>97</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#98 id=98 data-nosnippet>98</a>    <span class="string">"\\ead[]{}"</span>,
-<a href=#99 id=99 data-nosnippet>99</a>    <span class="string">"\\@add@to@frontmatter{ltx:creator}{\\@@@email{#1}{#2}}"
-<a href=#100 id=100 data-nosnippet>100</a>  </span>);
-<a href=#101 id=101 data-nosnippet>101</a>  <span class="comment">// ltx:contact stubs (mirror elsart_support_core@@@affiliation form)
-<a href=#102 id=102 data-nosnippet>102</a>  </span><span class="macro">DefConstructor!</span>(
-<a href=#103 id=103 data-nosnippet>103</a>    <span class="string">"\\@@@affiliation{}"</span>,
-<a href=#104 id=104 data-nosnippet>104</a>    <span class="string">"^ &lt;ltx:contact role='affiliation'&gt;#1&lt;/ltx:contact&gt;"
-<a href=#105 id=105 data-nosnippet>105</a>  </span>);
-<a href=#106 id=106 data-nosnippet>106</a>  <span class="macro">DefConstructor!</span>(
-<a href=#107 id=107 data-nosnippet>107</a>    <span class="string">"\\@@@email{}{}"</span>,
-<a href=#108 id=108 data-nosnippet>108</a>    <span class="string">"^ &lt;ltx:contact role='#1'&gt;#2&lt;/ltx:contact&gt;"
-<a href=#109 id=109 data-nosnippet>109</a>  </span>);
-<a href=#110 id=110 data-nosnippet>110</a>
-<a href=#111 id=111 data-nosnippet>111</a>  <span class="comment">// \sep — author/affil separator that cas-common defines.
-<a href=#112 id=112 data-nosnippet>112</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\sep"</span>, <span class="string">","</span>);
-<a href=#113 id=113 data-nosnippet>113</a>
-<a href=#114 id=114 data-nosnippet>114</a>  <span class="comment">// cas-common credit-tagging macros (CRediT taxonomy). \credit{role}
-<a href=#115 id=115 data-nosnippet>115</a>  // attaches an author contribution (Conceptualization, Investigation,
-<a href=#116 id=116 data-nosnippet>116</a>  // etc.); \printcredits emits the credit list. Round-34 surpass-Perl:
-<a href=#117 id=117 data-nosnippet>117</a>  // preserve the role text as a frontmatter note so the CRediT
-<a href=#118 id=118 data-nosnippet>118</a>  // taxonomy is retained for downstream JATS conversion. Witness
-<a href=#119 id=119 data-nosnippet>119</a>  // 2405.20972.
-<a href=#120 id=120 data-nosnippet>120</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#121 id=121 data-nosnippet>121</a>    <span class="string">"\\credit{}"</span>,
-<a href=#122 id=122 data-nosnippet>122</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=credit]{#1}"
-<a href=#123 id=123 data-nosnippet>123</a>  </span>);
-<a href=#124 id=124 data-nosnippet>124</a>  def_macro_noop(<span class="string">"\\printcredits"</span>)<span class="question-mark">?</span>;
-<a href=#125 id=125 data-nosnippet>125</a>
-<a href=#126 id=126 data-nosnippet>126</a>  <span class="comment">// Elsevier highlights / biography environments (cas-common.sty).
-<a href=#127 id=127 data-nosnippet>127</a>  // `{highlights}` collects bullet points for the dedicated highlights
-<a href=#128 id=128 data-nosnippet>128</a>  // section; `{bio}` / `\bio` defines an author biography. Render as
-<a href=#129 id=129 data-nosnippet>129</a>  // ltx:note (frontmatter) so author content is preserved.
-<a href=#130 id=130 data-nosnippet>130</a>  // Witness 2503.16816, 2502.18516 (cas-dc).
-<a href=#131 id=131 data-nosnippet>131</a>  // Use internal_vertical mode so the body can contain paragraphs,
-<a href=#132 id=132 data-nosnippet>132</a>  // lists, and other block-level content. Without the explicit mode,
-<a href=#133 id=133 data-nosnippet>133</a>  // the env infers restricted_horizontal and trips
-<a href=#134 id=134 data-nosnippet>134</a>  // `Error:unexpected:\endbio Attempt to end mode restricted_horizontal
-<a href=#135 id=135 data-nosnippet>135</a>  // in internal_vertical` when the bio contains \par-separated prose.
-<a href=#136 id=136 data-nosnippet>136</a>  // Witness 2503.16816.
-<a href=#137 id=137 data-nosnippet>137</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{highlights}"</span>,
-<a href=#138 id=138 data-nosnippet>138</a>    <span class="string">"&lt;ltx:note role='highlights'&gt;#body&lt;/ltx:note&gt;"</span>,
-<a href=#139 id=139 data-nosnippet>139</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
-<a href=#140 id=140 data-nosnippet>140</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{bio}{}"</span>,
-<a href=#141 id=141 data-nosnippet>141</a>    <span class="string">"&lt;ltx:note role='biography' name='#1'&gt;#body&lt;/ltx:note&gt;"</span>,
-<a href=#142 id=142 data-nosnippet>142</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
-<a href=#143 id=143 data-nosnippet>143</a>  <span class="comment">// \newproof{env}{display-name} — cas-common's environment factory
-<a href=#144 id=144 data-nosnippet>144</a>  // for proof-like environments. Define a basic environment that
-<a href=#145 id=145 data-nosnippet>145</a>  // wraps content in ltx:proof.
-<a href=#146 id=146 data-nosnippet>146</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#147 id=147 data-nosnippet>147</a>    <span class="string">"\\newproof{}{}"</span>,
-<a href=#148 id=148 data-nosnippet>148</a>    <span class="string">"\\newenvironment{#1}{\\par\\noindent\\textbf{#2.}\\hspace{0.5em}}{\\par}"
-<a href=#149 id=149 data-nosnippet>149</a>  </span>);
-<a href=#150 id=150 data-nosnippet>150</a>});
+<a href=#9 id=9 data-nosnippet>9</a><span class="kw">use </span><span class="kw">crate</span>::shipped_class::class_option_given;
+<a href=#10 id=10 data-nosnippet>10</a>
+<a href=#11 id=11 data-nosnippet>11</a><span class="macro">LoadDefinitions!</span>({
+<a href=#12 id=12 data-nosnippet>12</a>  <span class="macro">LoadClass!</span>(<span class="string">"OmniBus"</span>);
+<a href=#13 id=13 data-nosnippet>13</a>  <span class="comment">// cas-sc.cls:144, cas-dc.cls:142 `\RequirePackage[T1]{fontenc}`: text `_`, `&lt;`, `&gt;`, `|` print as themselves.
+<a href=#14 id=14 data-nosnippet>14</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"fontenc"</span>, options =&gt; <span class="macro">vec!</span>[<span class="macro">s!</span>(<span class="string">"T1"</span>)]);
+<a href=#15 id=15 data-nosnippet>15</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amsmath"</span>);
+<a href=#16 id=16 data-nosnippet>16</a>  <span class="comment">// cas-common.sty:1500, :2264 `\RequirePackage{moreverb}` and `{wrapfig}`. moreverb has no binding (raw loading is off
+<a href=#17 id=17 data-nosnippet>17</a>  // by default, a warning in every cas paper), so the verbatim it loads, whose `{comment}` the papers use
+<a href=#18 id=18 data-nosnippet>18</a>  // (2506.19439), stands for it.
+<a href=#19 id=19 data-nosnippet>19</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"verbatim"</span>);
+<a href=#20 id=20 data-nosnippet>20</a>  <span class="macro">RequirePackage!</span>(<span class="string">"wrapfig"</span>);
+<a href=#21 id=21 data-nosnippet>21</a>  <span class="comment">// cas-dc.cls:64 `\RequirePackage{xspace,xstring,footmisc}` (the samples'
+<a href=#22 id=22 data-nosnippet>22</a>  // `\def\tsc#1{\textsc{#1}\xspace}`); xstring has no binding and would
+<a href=#23 id=23 data-nosnippet>23</a>  // warn under the default (non-raw) load, so only the bound two.
+<a href=#24 id=24 data-nosnippet>24</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"xspace"</span>);
+<a href=#25 id=25 data-nosnippet>25</a>  <span class="macro">RequirePackage!</span>(<span class="string">"footmisc"</span>);
+<a href=#26 id=26 data-nosnippet>26</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amsthm"</span>);
+<a href=#27 id=27 data-nosnippet>27</a>  <span class="comment">// amssymb supplies \lesssim, \gtrsim, \nleq, \ngeq, \square, \blacksquare
+<a href=#28 id=28 data-nosnippet>28</a>  // and other binary-relation/blackboard-bold symbols that CAS authors
+<a href=#29 id=29 data-nosnippet>29</a>  // routinely use without explicit \usepackage{amssymb}. Witness
+<a href=#30 id=30 data-nosnippet>30</a>  // 2312.12523 (\lesssim undefined).
+<a href=#31 id=31 data-nosnippet>31</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"amssymb"</span>);
+<a href=#32 id=32 data-nosnippet>32</a>  <span class="macro">RequirePackage!</span>(<span class="string">"xcolor"</span>);
+<a href=#33 id=33 data-nosnippet>33</a>  <span class="macro">RequirePackage!</span>(<span class="string">"hyperref"</span>);
+<a href=#34 id=34 data-nosnippet>34</a>  <span class="comment">// cas-dc.cls L63: \RequirePackage{booktabs,makecell,multirow,array,colortbl,dcolumn,stfloats}.
+<a href=#35 id=35 data-nosnippet>35</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"booktabs"</span>);
+<a href=#36 id=36 data-nosnippet>36</a>  <span class="macro">RequirePackage!</span>(<span class="string">"multirow"</span>);
+<a href=#37 id=37 data-nosnippet>37</a>  <span class="macro">RequirePackage!</span>(<span class="string">"array"</span>);
+<a href=#38 id=38 data-nosnippet>38</a>  <span class="macro">RequirePackage!</span>(<span class="string">"colortbl"</span>);
+<a href=#39 id=39 data-nosnippet>39</a>  <span class="macro">RequirePackage!</span>(<span class="string">"makecell"</span>);
+<a href=#40 id=40 data-nosnippet>40</a>  <span class="comment">// cas-dc.cls L: `\RequirePackage{etoolbox,balance}` — pulls in the
+<a href=#41 id=41 data-nosnippet>41</a>  // balance package which defines `\balance` (column-balancing in
+<a href=#42 id=42 data-nosnippet>42</a>  // 2-col docs). Without it, papers using `\balance` near the end
+<a href=#43 id=43 data-nosnippet>43</a>  // trip Error:undefined. Witness 2303.04712.
+<a href=#44 id=44 data-nosnippet>44</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"balance"</span>);
+<a href=#45 id=45 data-nosnippet>45</a>  <span class="comment">// cas-sc.cls:49, :67 and cas-dc.cls:49, :67: the `review` option loads setspace (the double spacing itself, :136-138,
+<a href=#46 id=46 data-nosnippet>46</a>  // is layout); a paper's `\DeclareCaptionFont{mysingle}{\setstretch{1}}` under `[review]` calls it (2512.10464).
+<a href=#47 id=47 data-nosnippet>47</a>  </span><span class="kw">if </span>class_option_given(<span class="string">"review"</span>)<span class="question-mark">? </span>{
+<a href=#48 id=48 data-nosnippet>48</a>    <span class="macro">RequirePackage!</span>(<span class="string">"setspace"</span>);
+<a href=#49 id=49 data-nosnippet>49</a>  }
+<a href=#50 id=50 data-nosnippet>50</a>  <span class="comment">// cas-dc.cls (Elsevier CAS) aliases \newdefinition and \newproof to \newtheorem
+<a href=#51 id=51 data-nosnippet>51</a>  // (elsarticle convention), used to declare definition/proof-like theorem envs.
+<a href=#52 id=52 data-nosnippet>52</a>  // Were undefined (Perl defines them). Witness 2306.04212.
+<a href=#53 id=53 data-nosnippet>53</a>  </span><span class="macro">Let!</span>(<span class="string">"\\newdefinition"</span>, <span class="string">"\\newtheorem"</span>);
+<a href=#54 id=54 data-nosnippet>54</a>  <span class="macro">Let!</span>(<span class="string">"\\newproof"</span>, <span class="string">"\\newtheorem"</span>);
+<a href=#55 id=55 data-nosnippet>55</a>  <span class="comment">// cas-common.sty:247-425, 1634, 2033-2042: the name parsers, the e-mail, URL, ORCID and first-page-note printers its
+<a href=#56 id=56 data-nosnippet>56</a>  // `\author`/`\ead` machinery calls, and its page styles, which a paper's own `\RenewDocumentCommand` or `\ps@cas`
+<a href=#57 id=57 data-nosnippet>57</a>  // needs defined — ltcmd errors on renewing an undefined command (2609.16168, 16199, 36345 `\firstname`,
+<a href=#58 id=58 data-nosnippet>58</a>  // `\emailauthor`, `\ps@cas`; 2609.00634, 20010 `\printorcid`, `\printemails`). This binding's frontmatter, which
+<a href=#59 id=59 data-nosnippet>59</a>  // keeps the e-mails and notes itself, does not call them; the page styles are page furniture.
+<a href=#60 id=60 data-nosnippet>60</a>  // cas-common.sty:1723-1732: the title-page layout keys (`\pprintMaketitle[&lt;keys&gt;]`, `\MaketitleBox[…]`, :1748-1829,
+<a href=#61 id=61 data-nosnippet>61</a>  // or a paper's own `\keys_set:nn {stm/mktitle}{nologo}`, 2609.00281) — layout only here.
+<a href=#62 id=62 data-nosnippet>62</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#63 id=63 data-nosnippet>63</a>    <span class="string">r"\ExplSyntaxOn
+<a href=#64 id=64 data-nosnippet>64</a>\bool_if_exist:NF \g_stm_blind_bool { \bool_new:N \g_stm_blind_bool }
+<a href=#65 id=65 data-nosnippet>65</a>\bool_if_exist:NF \g_stm_longtitle_bool { \bool_new:N \g_stm_longtitle_bool }
+<a href=#66 id=66 data-nosnippet>66</a>\bool_if_exist:NF \g_stm_nologo_bool { \bool_new:N \g_stm_nologo_bool }
+<a href=#67 id=67 data-nosnippet>67</a>\tl_if_exist:NF \g_stm_footer_default_tl { \tl_new:N \g_stm_footer_default_tl }
+<a href=#68 id=68 data-nosnippet>68</a>\tl_if_exist:NF \g_stm_footer_custom_tl { \tl_new:N \g_stm_footer_custom_tl }
+<a href=#69 id=69 data-nosnippet>69</a>\clist_if_exist:NF \g_stm_breakafter_clist { \clist_new:N \g_stm_breakafter_clist }
+<a href=#70 id=70 data-nosnippet>70</a>\keys_define:nn { stm / mktitle }
+<a href=#71 id=71 data-nosnippet>71</a>  {
+<a href=#72 id=72 data-nosnippet>72</a>    blind .bool_gset:N = \g_stm_blind_bool,
+<a href=#73 id=73 data-nosnippet>73</a>    footer .multichoice:,
+<a href=#74 id=74 data-nosnippet>74</a>    footer/default .tl_gset:N = \g_stm_footer_default_tl,
+<a href=#75 id=75 data-nosnippet>75</a>    footer/custom .tl_gset:N = \g_stm_footer_custom_tl,
+<a href=#76 id=76 data-nosnippet>76</a>    longtitle .bool_gset:N = \g_stm_longtitle_bool,
+<a href=#77 id=77 data-nosnippet>77</a>    longabstract .bool_gset:N = \g_stm_longtitle_bool,
+<a href=#78 id=78 data-nosnippet>78</a>    breakafter .clist_gset:N = \g_stm_breakafter_clist,
+<a href=#79 id=79 data-nosnippet>79</a>    nologo .bool_gset:N = \g_stm_nologo_bool,
+<a href=#80 id=80 data-nosnippet>80</a>  }
+<a href=#81 id=81 data-nosnippet>81</a>\ExplSyntaxOff"
+<a href=#82 id=82 data-nosnippet>82</a>  </span>);
+<a href=#83 id=83 data-nosnippet>83</a>  <span class="kw">for </span>(cs, args) <span class="kw">in </span>[
+<a href=#84 id=84 data-nosnippet>84</a>    (<span class="string">"\\parsename"</span>, <span class="string">"{}"</span>),
+<a href=#85 id=85 data-nosnippet>85</a>    (<span class="string">"\\invparsename"</span>, <span class="string">"{}"</span>),
+<a href=#86 id=86 data-nosnippet>86</a>    (<span class="string">"\\surname"</span>, <span class="string">""</span>),
+<a href=#87 id=87 data-nosnippet>87</a>    (<span class="string">"\\firstname"</span>, <span class="string">""</span>),
+<a href=#88 id=88 data-nosnippet>88</a>    (<span class="string">"\\eadauthor"</span>, <span class="string">""</span>),
+<a href=#89 id=89 data-nosnippet>89</a>    (<span class="string">"\\urlauthor"</span>, <span class="string">"{}{}"</span>),
+<a href=#90 id=90 data-nosnippet>90</a>    (<span class="string">"\\emailauthor"</span>, <span class="string">"{}{}"</span>),
+<a href=#91 id=91 data-nosnippet>91</a>    (<span class="string">"\\printorcid"</span>, <span class="string">""</span>),
+<a href=#92 id=92 data-nosnippet>92</a>    (<span class="string">"\\printemails"</span>, <span class="string">""</span>),
+<a href=#93 id=93 data-nosnippet>93</a>    (<span class="string">"\\printurls"</span>, <span class="string">""</span>),
+<a href=#94 id=94 data-nosnippet>94</a>    (<span class="string">"\\printFirstPageNotes"</span>, <span class="string">""</span>),
+<a href=#95 id=95 data-nosnippet>95</a>    (<span class="string">"\\ps@first"</span>, <span class="string">""</span>),
+<a href=#96 id=96 data-nosnippet>96</a>    (<span class="string">"\\ps@cas"</span>, <span class="string">""</span>),
+<a href=#97 id=97 data-nosnippet>97</a>  ] {
+<a href=#98 id=98 data-nosnippet>98</a>    def_macro_noop(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{cs}{args}"</span>))<span class="question-mark">?</span>;
+<a href=#99 id=99 data-nosnippet>99</a>  }
+<a href=#100 id=100 data-nosnippet>100</a>
+<a href=#101 id=101 data-nosnippet>101</a>  <span class="comment">// cas-common.sty:1599-1610 the classification lines a `{keywords}` block ends with, `\MSC[&lt;year&gt;]{&lt;codes&gt;}`,
+<a href=#102 id=102 data-nosnippet>102</a>  // `\JEL{&lt;codes&gt;}`, `\PACS{&lt;codes&gt;}`; :415-423 `\orcidauthor{&lt;id&gt;}{&lt;name&gt;}`, an author's ORCID, which the class
+<a href=#103 id=103 data-nosnippet>103</a>  // prints in its ORCID list (`\printorcid`): kept as the contact of the author just given; :774 `\stmAuthorSetup`, the
+<a href=#104 id=104 data-nosnippet>104</a>  // author-type keys; :2067-2068 the `\FullWidth` dimension of its wide floats. 35 cas-sc and 14 cas-dc papers of run
+<a href=#105 id=105 data-nosnippet>105</a>  // 353 had one of them undefined (1909.01564, 2012.11920, 2108.00185, 2407.03849 `\MSC`; 2104.12510, 2304.13458,
+<a href=#106 id=106 data-nosnippet>106</a>  // 2407.18715 `\orcidauthor`, each after its own `\author`; 2106.08963 swaps the two arguments, `{Andrew S.
+<a href=#107 id=107 data-nosnippet>107</a>  // Nencka}{0000-…}`, the author's error, so its link is orcid.org/Andrew S. Nencka).
+<a href=#108 id=108 data-nosnippet>108</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#109 id=109 data-nosnippet>109</a>    <span class="string">r"\NewDocumentCommand\MSC{O{}m}{\par\noindent\textit{#1 MSC: }#2}
+<a href=#110 id=110 data-nosnippet>110</a>\NewDocumentCommand\JEL{m}{\par\noindent\textit{JEL: }#1}
+<a href=#111 id=111 data-nosnippet>111</a>\NewDocumentCommand\PACS{m}{\par\noindent\textit{PACS: }#1}
+<a href=#112 id=112 data-nosnippet>112</a>\NewDocumentCommand\orcidauthor{mm}{\lx@add@orcid{#1}}
+<a href=#113 id=113 data-nosnippet>113</a>\DeclareDocumentCommand\stmAuthorSetup{m}{}
+<a href=#114 id=114 data-nosnippet>114</a>\newdimen\FullWidth \FullWidth=\textwidth"
+<a href=#115 id=115 data-nosnippet>115</a>  </span>);
+<a href=#116 id=116 data-nosnippet>116</a>  <span class="comment">// cas-common.sty dynamically defines `\tblwidth` via
+<a href=#117 id=117 data-nosnippet>117</a>  // `\csgdef{tblwidth}{\dim_use:N \l_tbl_width_dim}` only inside its
+<a href=#118 id=118 data-nosnippet>118</a>  // own table-float wrapper. Authors use `\tblwidth` directly as the
+<a href=#119 id=119 data-nosnippet>119</a>  // width argument of `\begin{tabular*}{\tblwidth}{...}` even outside
+<a href=#120 id=120 data-nosnippet>120</a>  // that wrapper. Provide a \linewidth fallback so the tabular still
+<a href=#121 id=121 data-nosnippet>121</a>  // renders with reasonable width. Witness 2209.06932 (cas-dc table
+<a href=#122 id=122 data-nosnippet>122</a>  // cascade — 136 errors).
+<a href=#123 id=123 data-nosnippet>123</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\tblwidth"</span>, <span class="string">"\\linewidth"</span>);
+<a href=#124 id=124 data-nosnippet>124</a>  <span class="comment">// cas-common.sty L2070-2072: \newcolumntype{L|R|C}{...}. Authors use
+<a href=#125 id=125 data-nosnippet>125</a>  // L/R/C column types in `\begin{tabular*}{...}{@{} LLLLLL @{}}`.
+<a href=#126 id=126 data-nosnippet>126</a>  // Without these, the unrecognized column letters trigger one
+<a href=#127 id=127 data-nosnippet>127</a>  // "Extra alignment tab '&amp;'" per &amp; cell. Define matching short-hand
+<a href=#128 id=128 data-nosnippet>128</a>  // raggedright/etc. column types.
+<a href=#129 id=129 data-nosnippet>129</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#130 id=130 data-nosnippet>130</a>    <span class="string">r"\newcolumntype{L}{@{\extracolsep{\fill}}l}\newcolumntype{R}{@{\extracolsep{\fill}}r}\newcolumntype{C}{@{\extracolsep{\fill}}c}"
+<a href=#131 id=131 data-nosnippet>131</a>  </span>);
+<a href=#132 id=132 data-nosnippet>132</a>
+<a href=#133 id=133 data-nosnippet>133</a>  <span class="comment">// cas-common frontmatter — gobble cleanly.
+<a href=#134 id=134 data-nosnippet>134</a>  // Title-note text — author prose. Preserve as ltx:note frontmatter.
+<a href=#135 id=135 data-nosnippet>135</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#136 id=136 data-nosnippet>136</a>    <span class="string">"\\tnotetext[]{}"</span>,
+<a href=#137 id=137 data-nosnippet>137</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=titlenote]{#2}"
+<a href=#138 id=138 data-nosnippet>138</a>  </span>);
+<a href=#139 id=139 data-nosnippet>139</a>  def_macro_noop(<span class="string">"\\tnotemark[]"</span>)<span class="question-mark">?</span>; <span class="comment">// mark only, no body
+<a href=#140 id=140 data-nosnippet>140</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#141 id=141 data-nosnippet>141</a>    <span class="string">"\\tnoteref[]{}"</span>,
+<a href=#142 id=142 data-nosnippet>142</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=titlenote-ref]{#2}"
+<a href=#143 id=143 data-nosnippet>143</a>  </span>);
+<a href=#144 id=144 data-nosnippet>144</a>  def_macro_noop(<span class="string">"\\fnmark[]"</span>)<span class="question-mark">?</span>;
+<a href=#145 id=145 data-nosnippet>145</a>  <span class="macro">DefMacro!</span>(
+<a href=#146 id=146 data-nosnippet>146</a>    <span class="string">"\\fnref[]{}"</span>,
+<a href=#147 id=147 data-nosnippet>147</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=footnote-ref]{#2}"
+<a href=#148 id=148 data-nosnippet>148</a>  </span>);
+<a href=#149 id=149 data-nosnippet>149</a>  <span class="comment">// Footnote / author-note text — preserve as ltx:note rather than
+<a href=#150 id=150 data-nosnippet>150</a>  // gobble (content-preserving). `\fntext` / `\nonumnote` carry the
+<a href=#151 id=151 data-nosnippet>151</a>  // actual note prose, `\cortext` is the corresponding-author byline.
+<a href=#152 id=152 data-nosnippet>152</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#153 id=153 data-nosnippet>153</a>    <span class="string">"\\fntext[]{}"</span>,
+<a href=#154 id=154 data-nosnippet>154</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=footnote]{#2}"
+<a href=#155 id=155 data-nosnippet>155</a>  </span>);
+<a href=#156 id=156 data-nosnippet>156</a>  <span class="macro">DefMacro!</span>(
+<a href=#157 id=157 data-nosnippet>157</a>    <span class="string">"\\nonumnote{}"</span>,
+<a href=#158 id=158 data-nosnippet>158</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=note]{#1}"
+<a href=#159 id=159 data-nosnippet>159</a>  </span>);
+<a href=#160 id=160 data-nosnippet>160</a>  <span class="macro">DefMacro!</span>(
+<a href=#161 id=161 data-nosnippet>161</a>    <span class="string">"\\nonumtnotetext{}"</span>,
+<a href=#162 id=162 data-nosnippet>162</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=note]{#1}"
+<a href=#163 id=163 data-nosnippet>163</a>  </span>);
+<a href=#164 id=164 data-nosnippet>164</a>  <span class="macro">DefMacro!</span>(
+<a href=#165 id=165 data-nosnippet>165</a>    <span class="string">"\\cortext[]{}"</span>,
+<a href=#166 id=166 data-nosnippet>166</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=corresponding]{#2}"
+<a href=#167 id=167 data-nosnippet>167</a>  </span>);
+<a href=#168 id=168 data-nosnippet>168</a>  def_macro_noop(<span class="string">"\\cormark[]"</span>)<span class="question-mark">?</span>; <span class="comment">// mark only, no body
+<a href=#169 id=169 data-nosnippet>169</a>  // cas-common.sty:224 `\NewDocumentCommand \corref { m }`: the label of the `\cortext` it marks, no text (an optional
+<a href=#170 id=170 data-nosnippet>170</a>  // `\corref[]` left `cor1` typeset after the name or as a paragraph, 2303.00352's "Enrique García-Macíascor1"; the
+<a href=#171 id=171 data-nosnippet>171</a>  // mark's link to its `\cortext` is not built); the key, which prints nothing, is the binding's declared drop, so the
+<a href=#172 id=172 data-nosnippet>172</a>  // title-page check wants none of it (OXIDIZED_DESIGN_DIVERGENCES #953 "106t")
+<a href=#173 id=173 data-nosnippet>173</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\corref{}"</span>, <span class="string">""</span>, drops =&gt; [<span class="number">1</span>]);
+<a href=#174 id=174 data-nosnippet>174</a>  <span class="comment">// cas-common.sty:895 `\RenewDocumentCommand\author{O{} m O{}}` —
+<a href=#175 id=175 data-nosnippet>175</a>  // `\author[affil-marks]{name}[type=editor, auid=…, orcid=…]`, once per
+<a href=#176 id=176 data-nosnippet>176</a>  // author (cas-sc-sample.tex:58-97: four calls). The inst_support shape
+<a href=#177 id=177 data-nosnippet>177</a>  // `[marks]{name}` left every `[keyvals]` block in the stream, typeset as a
+<a href=#178 id=178 data-nosnippet>178</a>  // `&lt;para&gt;` before the title (els-cas-templates/cas-sc-sample, cas-dc-sample:
+<a href=#179 id=179 data-nosnippet>179</a>  // three such paragraphs, schema-invalid). Same name splitting and
+<a href=#180 id=180 data-nosnippet>180</a>  // accumulation as inst_support; the keyvals go through the shared
+<a href=#181 id=181 data-nosnippet>181</a>  // `\lx@add@author@keyvals` (base_utilities.rs: `orcid=` → contact, the
+<a href=#182 id=182 data-nosnippet>182</a>  // production keys dropped).
+<a href=#183 id=183 data-nosnippet>183</a>  // The marks link the author to the affiliations labelled with them (cas-common.sty:895-940 `\author[1,2]{…}`,
+<a href=#184 id=184 data-nosnippet>184</a>  // :1252-1266 `\affiliation[1]{…}`); unmarked, a group's one affiliation is every author's, several are each its run's,
+<a href=#185 id=185 data-nosnippet>185</a>  // and under marked authors one is the author's before it (`cas_labelled_entry`; 2201.00009, 2511.22218, 2106.02306,
+<a href=#186 id=186 data-nosnippet>186</a>  // 2606.24054; 2202.06096).
+<a href=#187 id=187 data-nosnippet>187</a>  // (the names are split as the kernel splits an author list, at commas, `\and` and the word "and": cas prints the
+<a href=#188 id=188 data-nosnippet>188</a>  // argument as written, `\author[a]{Cy Cee and Dee Dee}` two people; review of 63u)
+<a href=#189 id=189 data-nosnippet>189</a>  // (the marks are read as the letters cas prints, `cas_mark_labels`: `\author[1,2]` under `\address[a]…\address[b]`
+<a href=#190 id=190 data-nosnippet>190</a>  // is "a,b", 2207.12381; under `\address[b]{Univ X}\address[a]{Univ Y}`, which print "a Univ X", "b Univ Y", it is
+<a href=#191 id=191 data-nosnippet>191</a>  // Univ X and Univ Y, review of 88b r1)
+<a href=#192 id=192 data-nosnippet>192</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\author[]{}[]"</span>, sub[(marks, name, keys)] {
+<a href=#193 id=193 data-nosnippet>193</a>    <span class="kw">let </span>name: Tokens = name;
+<a href=#194 id=194 data-nosnippet>194</a>    <span class="comment">// (a marked author: from here on an unlabelled entry is the unmarked authors', `cas_labelled_entry`)
+<a href=#195 id=195 data-nosnippet>195</a>    </span><span class="kw">let </span>marked = marks.as_ref().is_some_and(|marks| !marks.to_string().trim().is_empty());
+<a href=#196 id=196 data-nosnippet>196</a>    <span class="kw">let </span><span class="kw-2">mut </span>out = <span class="kw">if </span>marked {
+<a href=#197 id=197 data-nosnippet>197</a>      mouth::tokenize_internal(<span class="string">"\\gdef\\lx@cas@labelled{}"</span>).unlist()
+<a href=#198 id=198 data-nosnippet>198</a>    } <span class="kw">else </span>{
+<a href=#199 id=199 data-nosnippet>199</a>      Vec::new()
+<a href=#200 id=200 data-nosnippet>200</a>    };
+<a href=#201 id=201 data-nosnippet>201</a>    out.extend(mouth::tokenize_internal(<span class="string">"\\lx@add@authors@append[annotations="</span>).unlist());
+<a href=#202 id=202 data-nosnippet>202</a>    out.push(<span class="macro">T_BEGIN!</span>());
+<a href=#203 id=203 data-nosnippet>203</a>    out.extend(cas_mark_labels(marks));
+<a href=#204 id=204 data-nosnippet>204</a>    out.extend([<span class="macro">T_END!</span>(), <span class="macro">T_OTHER!</span>(<span class="string">"]"</span>), <span class="macro">T_BEGIN!</span>()]);
+<a href=#205 id=205 data-nosnippet>205</a>    out.extend(name.unlist());
+<a href=#206 id=206 data-nosnippet>206</a>    out.extend([<span class="macro">T_END!</span>(), <span class="macro">T_CS!</span>(<span class="string">"\\lx@add@author@keyvals"</span>), <span class="macro">T_BEGIN!</span>()]);
+<a href=#207 id=207 data-nosnippet>207</a>    out.extend(keys.map(Tokens::unlist).unwrap_or_default());
+<a href=#208 id=208 data-nosnippet>208</a>    out.push(<span class="macro">T_END!</span>());
+<a href=#209 id=209 data-nosnippet>209</a>    <span class="prelude-val">Ok</span>(Tokens::new(out))
+<a href=#210 id=210 data-nosnippet>210</a>  });
+<a href=#211 id=211 data-nosnippet>211</a>  <span class="comment">// \affiliation[id]{keys}: cas-common.sty:1118-1160 reads the argument as nearly the `stm/affiliation` keys
+<a href=#212 id=212 data-nosnippet>212</a>  // elsarticle reads (elsarticle.cls:387-440), printed as the class prints them (`stm_affiliation`): `organization={X},
+<a href=#213 id=213 data-nosnippet>213</a>  // city={Y}, country={Z}` is "X, Y, Z". The keys were typeset as text (160 of 200 cas papers of 2609: 2609.00047,
+<a href=#214 id=214 data-nosnippet>214</a>  // 2609.04891) and every affiliation went to the last author.
+<a href=#215 id=215 data-nosnippet>215</a>  // cas-common.sty:1252 `\NewDocumentCommand \affiliation { O{} m O{} }`: the trailing optional is the `stm/address`
+<a href=#216 id=216 data-nosnippet>216</a>  // keys (`foot`, `type`, `name`: where and under what heading the class prints the entry, :1178-1190), no text of it.
+<a href=#217 id=217 data-nosnippet>217</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\affiliation[]{}[]"</span>, sub[(label, keys, options)] {
+<a href=#218 id=218 data-nosnippet>218</a>    <span class="kw">let </span>keys: Tokens = keys;
+<a href=#219 id=219 data-nosnippet>219</a>    <span class="kw">let </span><span class="kw-2">mut </span>out = cas_labelled_entry(label, options);
+<a href=#220 id=220 data-nosnippet>220</a>    out.extend([<span class="macro">T_BEGIN!</span>(), <span class="macro">T_CS!</span>(<span class="string">"\\lx@cas@affiliation"</span>), <span class="macro">T_BEGIN!</span>()]);
+<a href=#221 id=221 data-nosnippet>221</a>    out.extend(keys.unlist());
+<a href=#222 id=222 data-nosnippet>222</a>    out.extend([<span class="macro">T_END!</span>(), <span class="macro">T_END!</span>()]);
+<a href=#223 id=223 data-nosnippet>223</a>    <span class="prelude-val">Ok</span>(Tokens::new(out))
+<a href=#224 id=224 data-nosnippet>224</a>  });
+<a href=#225 id=225 data-nosnippet>225</a>  <span class="comment">// cas-common.sty:1216 `\NewDocumentCommand \address { O{} m O{} }` files the address in the affiliation list
+<a href=#226 id=226 data-nosnippet>226</a>  // `\affiliation` files into (`g_stm_aff&lt;n&gt;_seq`), labelled as it labels (`\textsuperscript{\itshape\@currentlabel}`
+<a href=#227 id=227 data-nosnippet>227</a>  // from `#1`, :1222-1242), its text printed as written (no keys read), the trailing optional the same `stm/address`
+<a href=#228 id=228 data-nosnippet>228</a>  // keys. OmniBus's `\address[]{}` (Perl OmniBus.cls.ltxml:91) dropped the label, so `\author[1]{…}[orcid=…]
+<a href=#229 id=229 data-nosnippet>229</a>  // \author[2]{…}\address[1]{X}\address[2]{Y}` gave both addresses to the last author (2011.00505). Both commands'
+<a href=#230 id=230 data-nosnippet>230</a>  // labels are read as cas prints them (`cas_labelled_entry`).
+<a href=#231 id=231 data-nosnippet>231</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\address[]{}[]"</span>, sub[(label, text, options)] {
+<a href=#232 id=232 data-nosnippet>232</a>    <span class="kw">let </span>text: Tokens = text;
+<a href=#233 id=233 data-nosnippet>233</a>    <span class="kw">let </span><span class="kw-2">mut </span>out = cas_labelled_entry(label, options);
+<a href=#234 id=234 data-nosnippet>234</a>    out.push(<span class="macro">T_BEGIN!</span>());
+<a href=#235 id=235 data-nosnippet>235</a>    out.extend(text.unlist());
+<a href=#236 id=236 data-nosnippet>236</a>    out.push(<span class="macro">T_END!</span>());
+<a href=#237 id=237 data-nosnippet>237</a>    <span class="prelude-val">Ok</span>(Tokens::new(out))
+<a href=#238 id=238 data-nosnippet>238</a>  });
+<a href=#239 id=239 data-nosnippet>239</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@cas@affiliation {}"</span>, sub[(raw)] {
+<a href=#240 id=240 data-nosnippet>240</a>    elsart_support_core_sty::stm_affiliation(raw, <span class="bool-val">false</span>)
+<a href=#241 id=241 data-nosnippet>241</a>  });
+<a href=#242 id=242 data-nosnippet>242</a>  <span class="comment">// \ead[type]{address} — author email/url, preserve as contact. The address is read verbatim, as cas-common.sty
+<a href=#243 id=243 data-nosnippet>243</a>  // prints it, stringified (`\ttfamily \tl_to_str:n`, :362; the `[url]` form through `\url`, :338): 2410.07921's
+<a href=#244 id=244 data-nosnippet>244</a>  // `arash_khajooei@…`, its `_` an error. The type is `email` by default, as elsarticle's, through the same contact
+<a href=#245 id=245 data-nosnippet>245</a>  // API (elsart_support_core_sty.rs; an empty `role` before), in the typewriter type cas-common.sty sets it in; the
+<a href=#246 id=246 data-nosnippet>246</a>  // HTML link is made of the address text inside it (LaTeXML-structure-xhtml.xsl `contact-address`).
+<a href=#247 id=247 data-nosnippet>247</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#248 id=248 data-nosnippet>248</a>    <span class="string">"\\ead Optional:email Semiverbatim"</span>,
+<a href=#249 id=249 data-nosnippet>249</a>    <span class="string">"\\lx@add@contact[role=#1]{\\lx@address@urlfont{#2}}"
+<a href=#250 id=250 data-nosnippet>250</a>  </span>);
+<a href=#251 id=251 data-nosnippet>251</a>  <span class="comment">// \sep — author/affil separator that cas-common defines.
+<a href=#252 id=252 data-nosnippet>252</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\sep"</span>, <span class="string">","</span>);
+<a href=#253 id=253 data-nosnippet>253</a>
+<a href=#254 id=254 data-nosnippet>254</a>  <span class="comment">// cas-common credit-tagging macros (CRediT taxonomy). \credit{role}
+<a href=#255 id=255 data-nosnippet>255</a>  // attaches an author contribution (Conceptualization, Investigation,
+<a href=#256 id=256 data-nosnippet>256</a>  // etc.); \printcredits emits the credit list. Round-34 surpass-Perl:
+<a href=#257 id=257 data-nosnippet>257</a>  // preserve the role text as a frontmatter note so the CRediT
+<a href=#258 id=258 data-nosnippet>258</a>  // taxonomy is retained for downstream JATS conversion. Witness
+<a href=#259 id=259 data-nosnippet>259</a>  // 2405.20972.
+<a href=#260 id=260 data-nosnippet>260</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#261 id=261 data-nosnippet>261</a>    <span class="string">"\\credit{}"</span>,
+<a href=#262 id=262 data-nosnippet>262</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=credit]{#1}"
+<a href=#263 id=263 data-nosnippet>263</a>  </span>);
+<a href=#264 id=264 data-nosnippet>264</a>  def_macro_noop(<span class="string">"\\printcredits"</span>)<span class="question-mark">?</span>;
+<a href=#265 id=265 data-nosnippet>265</a>
+<a href=#266 id=266 data-nosnippet>266</a>  <span class="comment">// Elsevier highlights / biography environments (cas-common.sty).
+<a href=#267 id=267 data-nosnippet>267</a>  // `{highlights}` collects bullet points for the dedicated highlights
+<a href=#268 id=268 data-nosnippet>268</a>  // section; `{bio}` / `\bio` defines an author biography. Render as
+<a href=#269 id=269 data-nosnippet>269</a>  // ltx:note (frontmatter) so author content is preserved.
+<a href=#270 id=270 data-nosnippet>270</a>  // Witness 2503.16816, 2502.18516 (cas-dc).
+<a href=#271 id=271 data-nosnippet>271</a>  // Use internal_vertical mode so the body can contain paragraphs,
+<a href=#272 id=272 data-nosnippet>272</a>  // lists, and other block-level content. Without the explicit mode,
+<a href=#273 id=273 data-nosnippet>273</a>  // the env infers restricted_horizontal and trips
+<a href=#274 id=274 data-nosnippet>274</a>  // `Error:unexpected:\endbio Attempt to end mode restricted_horizontal
+<a href=#275 id=275 data-nosnippet>275</a>  // in internal_vertical` when the bio contains \par-separated prose.
+<a href=#276 id=276 data-nosnippet>276</a>  // Witness 2503.16816.
+<a href=#277 id=277 data-nosnippet>277</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{highlights}"</span>,
+<a href=#278 id=278 data-nosnippet>278</a>    <span class="string">"&lt;ltx:note role='highlights'&gt;#body&lt;/ltx:note&gt;"</span>,
+<a href=#279 id=279 data-nosnippet>279</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
+<a href=#280 id=280 data-nosnippet>280</a>  <span class="comment">// cas-common.sty:1560 `\DeclareDocumentEnvironment{graphicalabstract}
+<a href=#281 id=281 data-nosnippet>281</a>  // {O{Graphical~Abstract}}`; same shape as elsarticle. Witness cas-sc/cas-dc.
+<a href=#282 id=282 data-nosnippet>282</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{graphicalabstract}[]"</span>,
+<a href=#283 id=283 data-nosnippet>283</a>    <span class="string">"&lt;ltx:note role='graphicalabstract'&gt;#body&lt;/ltx:note&gt;"</span>,
+<a href=#284 id=284 data-nosnippet>284</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
+<a href=#285 id=285 data-nosnippet>285</a>  <span class="comment">// cas-common.sty:2402 `\NewDocumentCommand \bio { O{} m }`: the options and the photo's file, which `\WrapFigure`
+<a href=#286 id=286 data-nosnippet>286</a>  // includes (`\includegraphics{#2}`, :2376) and never typesets: `\bio{Figures/chamara_sandeepa.png}` raised "Script _
+<a href=#287 id=287 data-nosnippet>287</a>  // can only appear in math mode" (2203.04264; OXIDIZED_DESIGN #551), and `\bio[width=…]{…}` read `[` as the file.
+<a href=#288 id=288 data-nosnippet>288</a>  // The photo is not carried: `ltx:note` has no attribute for it (the schema drops a `name`). Guard
+<a href=#289 id=289 data-nosnippet>289</a>  // `perfect_kernel_batch65m::file_arguments_are_not_typeset`.
+<a href=#290 id=290 data-nosnippet>290</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{bio}[] Semiverbatim"</span>,
+<a href=#291 id=291 data-nosnippet>291</a>    <span class="string">"&lt;ltx:note role='biography'&gt;#body&lt;/ltx:note&gt;"</span>,
+<a href=#292 id=292 data-nosnippet>292</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
+<a href=#293 id=293 data-nosnippet>293</a>  <span class="comment">// \newproof{env}{display-name} — cas-common's environment factory
+<a href=#294 id=294 data-nosnippet>294</a>  // for proof-like environments. Define a basic environment that
+<a href=#295 id=295 data-nosnippet>295</a>  // wraps content in ltx:proof.
+<a href=#296 id=296 data-nosnippet>296</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#297 id=297 data-nosnippet>297</a>    <span class="string">"\\newproof{}{}"</span>,
+<a href=#298 id=298 data-nosnippet>298</a>    <span class="string">"\\newenvironment{#1}{\\par\\noindent\\textbf{#2.}\\hspace{0.5em}}{\\par}"
+<a href=#299 id=299 data-nosnippet>299</a>  </span>);
+<a href=#300 id=300 data-nosnippet>300</a>});
+<a href=#301 id=301 data-nosnippet>301</a>
+<a href=#302 id=302 data-nosnippet>302</a><span class="doccomment">/// The entry counter cas prints its affiliation-list labels by (`\g_stm_aff_int`, cas-common.sty:1175), global and
+<a href=#303 id=303 data-nosnippet>303</a>/// never reset, which `\address` and `\affiliation` share.
+<a href=#304 id=304 data-nosnippet>304</a></span><span class="kw">const </span>CAS_ENTRY_COUNTER: <span class="kw-2">&amp;</span>str = <span class="string">"lx_cas_aff_int"</span>;
+<a href=#305 id=305 data-nosnippet>305</a>
+<a href=#306 id=306 data-nosnippet>306</a><span class="doccomment">/// The key of the letter a cas entry's label prints (`\stmLabel`'s `X@&lt;label&gt;:`, cas-common.sty:184-196), in the
+<a href=#307 id=307 data-nosnippet>307</a>/// deferred labels' table (`set_label_ref_once`, read as `\lx@label@ref`: cas's `\stmRef` reads it from the `.aux` of
+<a href=#308 id=308 data-nosnippet>308</a>/// the run before, where the first entry under a label keeps it).
+<a href=#309 id=309 data-nosnippet>309</a></span><span class="kw">fn </span>cas_label_key(label: <span class="kw-2">&amp;</span>str) -&gt; String { <span class="macro">s!</span>(<span class="string">"cas:{label}"</span>) }
+<a href=#310 id=310 data-nosnippet>310</a>
+<a href=#311 id=311 data-nosnippet>311</a><span class="doccomment">/// The key of the letter the last entry of cas's affiliation list printed (`\@currentlabel`, cas-common.sty:1233,
+<a href=#312 id=312 data-nosnippet>312</a>/// :1240), in the same table (no label's key: those are `cas:&lt;label&gt;`): the letter a lettered `[foot]` entry is printed
+<a href=#313 id=313 data-nosnippet>313</a>/// under (:1310 `\tex_def:D \thefootnote{\itshape\@currentlabel}`), the last the entries printed, as the title page
+<a href=#314 id=314 data-nosnippet>314</a>/// prints its footnoted entries after them.
+<a href=#315 id=315 data-nosnippet>315</a></span><span class="kw">const </span>CAS_CURRENT_LABEL: <span class="kw-2">&amp;</span>str = <span class="string">"cas@current"</span>;
+<a href=#316 id=316 data-nosnippet>316</a>
+<a href=#317 id=317 data-nosnippet>317</a><span class="doccomment">/// The marks a cas `\author[marks]` requests, as the letters cas-common.sty:907-914 prints them: a list opening with a
+<a href=#318 id=318 data-nosnippet>318</a>/// letter reads each item as an entry's label, the letter that entry prints (`\processAffRef`, `\stmRef`, :197-201,
+<a href=#319 id=319 data-nosnippet>319</a>/// :278-286; the letter when the entry came first, else `\lx@label@ref`, read at the flush once the entries are known,
+<a href=#320 id=320 data-nosnippet>320</a>/// as cas reads it from the `.aux` of the run before; nothing for a label no entry has, where cas prints "0"), any
+<a href=#321 id=321 data-nosnippet>321</a>/// other each number N as the N-th letter (`\processAffNum`, `\int_to_alph:n`, :288-296), the letter
+<a href=#322 id=322 data-nosnippet>322</a>/// the entry `\address[N]` and the N-th lettered entry print (`cas_labelled_entry`). (an item cas cannot read so, a
+<a href=#323 id=323 data-nosnippet>323</a>/// `*` among letters or a template's `&lt;num&gt;` among numbers, as written)
+<a href=#324 id=324 data-nosnippet>324</a></span><span class="kw">fn </span>cas_mark_labels(marks: <span class="prelude-ty">Option</span>&lt;Tokens&gt;) -&gt; Vec&lt;Token&gt; {
+<a href=#325 id=325 data-nosnippet>325</a>  <span class="kw">let </span>marks = marks.map(Tokens::unlist).unwrap_or_default();
+<a href=#326 id=326 data-nosnippet>326</a>  <span class="kw">let </span>by_label = cas_letter_headed(<span class="kw-2">&amp;</span>marks);
+<a href=#327 id=327 data-nosnippet>327</a>  <span class="kw">let </span><span class="kw-2">mut </span>out: Vec&lt;Token&gt; = Vec::new();
+<a href=#328 id=328 data-nosnippet>328</a>  <span class="kw">for </span>item <span class="kw">in </span>marks.split(|t| <span class="kw-2">*</span>t == <span class="macro">T_OTHER!</span>(<span class="string">","</span>)) {
+<a href=#329 id=329 data-nosnippet>329</a>    <span class="kw">let </span>text = Tokens::new(item.to_vec()).to_string();
+<a href=#330 id=330 data-nosnippet>330</a>    <span class="kw">let </span>text = text.trim();
+<a href=#331 id=331 data-nosnippet>331</a>    <span class="kw">if </span>text.is_empty() {
+<a href=#332 id=332 data-nosnippet>332</a>      <span class="kw">continue</span>;
+<a href=#333 id=333 data-nosnippet>333</a>    }
+<a href=#334 id=334 data-nosnippet>334</a>    <span class="kw">if </span>!out.is_empty() {
+<a href=#335 id=335 data-nosnippet>335</a>      out.push(<span class="macro">T_OTHER!</span>(<span class="string">","</span>));
+<a href=#336 id=336 data-nosnippet>336</a>    }
+<a href=#337 id=337 data-nosnippet>337</a>    <span class="kw">if </span>by_label &amp;&amp; cas_letter_headed(item) {
+<a href=#338 id=338 data-nosnippet>338</a>      <span class="comment">// (the letter, when the entry came first; else read once the entries are known)
+<a href=#339 id=339 data-nosnippet>339</a>      </span><span class="kw">let </span>key = cas_label_key(text);
+<a href=#340 id=340 data-nosnippet>340</a>      <span class="kw">match </span>label_ref_text(<span class="kw-2">&amp;</span>key) {
+<a href=#341 id=341 data-nosnippet>341</a>        <span class="prelude-val">Some</span>(letter) =&gt; out.extend(mouth::tokenize_internal(TeXString::assembled(letter)).unlist()),
+<a href=#342 id=342 data-nosnippet>342</a>        <span class="prelude-val">None </span>=&gt; out.extend(label_ref_tokens(<span class="kw-2">&amp;</span>key)),
+<a href=#343 id=343 data-nosnippet>343</a>      }
+<a href=#344 id=344 data-nosnippet>344</a>    } <span class="kw">else </span>{
+<a href=#345 id=345 data-nosnippet>345</a>      <span class="kw">let </span>letter = (!by_label)
+<a href=#346 id=346 data-nosnippet>346</a>        .then(|| cas_number(text))
+<a href=#347 id=347 data-nosnippet>347</a>        .flatten()
+<a href=#348 id=348 data-nosnippet>348</a>        .filter(|n| <span class="kw-2">*</span>n &gt; <span class="number">0</span>);
+<a href=#349 id=349 data-nosnippet>349</a>      <span class="kw">let </span>text = letter.map_or_else(|| text.to_string(), radix::radix_alpha);
+<a href=#350 id=350 data-nosnippet>350</a>      out.extend(mouth::tokenize_internal(TeXString::assembled(text)).unlist());
+<a href=#351 id=351 data-nosnippet>351</a>    }
+<a href=#352 id=352 data-nosnippet>352</a>  }
+<a href=#353 id=353 data-nosnippet>353</a>  out
+<a href=#354 id=354 data-nosnippet>354</a>}
+<a href=#355 id=355 data-nosnippet>355</a>
+<a href=#356 id=356 data-nosnippet>356</a><span class="doccomment">/// `\lx@add@contact[label={…},role=affiliation]` for a cas affiliation-list entry (`\affiliation[label]{…}[keys]`,
+<a href=#357 id=357 data-nosnippet>357</a>/// `\address[label]{…}[keys]`), labelled by the letter it prints, as cas-common.sty:1228-1242 (and :1274-1290) prints
+<a href=#358 id=358 data-nosnippet>358</a>/// it: a label opening with a letter steps the entry counter and prints its letter, the letter the label stands for
+<a href=#359 id=359 data-nosnippet>359</a>/// (`\int_gincr:N \g_stm_aff_int`, `\stmLabel`); a number N sets the counter and prints the N-th letter
+<a href=#360 id=360 data-nosnippet>360</a>/// (`\int_gset:Nn`). So `\address[b]{Univ X}\address[a]{Univ Y}` prints "a Univ X", "b Univ Y", the entries an
+<a href=#361 id=361 data-nosnippet>361</a>/// `\author[1]` and an `\author[2]` ask for, and `\address[1]{X}\affiliation[a]{…}` prints X and the affiliation as
+<a href=#362 id=362 data-nosnippet>362</a>/// "a" and "b". An entry the `foot` key sets as a footnote (:1294-1326, :1328-1373) leaves the counter and labels
+<a href=#363 id=363 data-nosnippet>363</a>/// nothing: a number N prints the N-th letter, a lettered one the letter the entries before it printed last
+<a href=#364 id=364 data-nosnippet>364</a>/// (`\@currentlabel`, `\lx@label@ref{cas@current}`). (a label cas cannot read so, a `*` or `1a`, is kept as written and leaves
+<a href=#365 id=365 data-nosnippet>365</a>/// the counter; no label, none)
+<a href=#366 id=366 data-nosnippet>366</a></span><span class="kw">fn </span>cas_labelled_entry(label: <span class="prelude-ty">Option</span>&lt;Tokens&gt;, keys: <span class="prelude-ty">Option</span>&lt;Tokens&gt;) -&gt; Vec&lt;Token&gt; {
+<a href=#367 id=367 data-nosnippet>367</a>  <span class="kw">let </span>label = label.map(Tokens::unlist).unwrap_or_default();
+<a href=#368 id=368 data-nosnippet>368</a>  <span class="kw">let </span>text = Tokens::new(label.clone()).to_string();
+<a href=#369 id=369 data-nosnippet>369</a>  <span class="kw">let </span>text = text.trim();
+<a href=#370 id=370 data-nosnippet>370</a>  <span class="kw">let </span>lettered = !text.is_empty() &amp;&amp; cas_letter_headed(<span class="kw-2">&amp;</span>label);
+<a href=#371 id=371 data-nosnippet>371</a>  <span class="kw">let </span>foot = keys.is_some_and(|keys| cas_foot_key(<span class="kw-2">&amp;</span>keys));
+<a href=#372 id=372 data-nosnippet>372</a>  <span class="kw">let </span>printed = <span class="kw">if </span>text.is_empty() {
+<a href=#373 id=373 data-nosnippet>373</a>    <span class="prelude-val">None
+<a href=#374 id=374 data-nosnippet>374</a>  </span>} <span class="kw">else if </span>foot {
+<a href=#375 id=375 data-nosnippet>375</a>    <span class="kw">if </span>lettered {
+<a href=#376 id=376 data-nosnippet>376</a>      <span class="prelude-val">Some</span>(label_ref_tokens(CAS_CURRENT_LABEL))
+<a href=#377 id=377 data-nosnippet>377</a>    } <span class="kw">else </span>{
+<a href=#378 id=378 data-nosnippet>378</a>      cas_number(text).map(|n| cas_letter_tokens(n, <span class="kw-2">&amp;</span>label))
+<a href=#379 id=379 data-nosnippet>379</a>    }
+<a href=#380 id=380 data-nosnippet>380</a>  } <span class="kw">else </span>{
+<a href=#381 id=381 data-nosnippet>381</a>    <span class="kw">let </span>counter = <span class="kw">if </span>lettered {
+<a href=#382 id=382 data-nosnippet>382</a>      <span class="prelude-val">Some</span>(lookup_int(CAS_ENTRY_COUNTER) + <span class="number">1</span>)
+<a href=#383 id=383 data-nosnippet>383</a>    } <span class="kw">else </span>{
+<a href=#384 id=384 data-nosnippet>384</a>      cas_number(text)
+<a href=#385 id=385 data-nosnippet>385</a>    };
+<a href=#386 id=386 data-nosnippet>386</a>    counter.map(|counter| {
+<a href=#387 id=387 data-nosnippet>387</a>      assign_value(CAS_ENTRY_COUNTER, Stored::Int(counter), <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#388 id=388 data-nosnippet>388</a>      <span class="kw">let </span>letter = radix::radix_alpha(counter);
+<a href=#389 id=389 data-nosnippet>389</a>      set_label_ref(CAS_CURRENT_LABEL, <span class="kw-2">&amp;</span>letter);
+<a href=#390 id=390 data-nosnippet>390</a>      <span class="kw">if </span>lettered {
+<a href=#391 id=391 data-nosnippet>391</a>        <span class="comment">// (the first entry under a label keeps it: `\NewLabel` defines `X@&lt;label&gt;:` globally only when it is free,
+<a href=#392 id=392 data-nosnippet>392</a>        // and LaTeX reads the `.aux` in a group, latex.ltx:9486-9490, so the second's local definition goes)
+<a href=#393 id=393 data-nosnippet>393</a>        </span>set_label_ref_once(<span class="kw-2">&amp;</span>cas_label_key(text), <span class="kw-2">&amp;</span>letter);
+<a href=#394 id=394 data-nosnippet>394</a>      }
+<a href=#395 id=395 data-nosnippet>395</a>      cas_letter_tokens(counter, <span class="kw-2">&amp;</span>label)
+<a href=#396 id=396 data-nosnippet>396</a>    })
+<a href=#397 id=397 data-nosnippet>397</a>  };
+<a href=#398 id=398 data-nosnippet>398</a>  <span class="comment">// (a label read as the letter cas prints before the line is one that prints, `_labelprints`: the mark a legend's note
+<a href=#399 id=399 data-nosnippet>399</a>  // shows, OXIDIZED_DESIGN_DIVERGENCES #961, 2303.06763)
+<a href=#400 id=400 data-nosnippet>400</a>  </span><span class="kw">let </span>prints = printed.is_some();
+<a href=#401 id=401 data-nosnippet>401</a>  <span class="comment">// (an unlabelled entry under no marked author: cas prints the entry list under the whole row of names, so the
+<a href=#402 id=402 data-nosnippet>402</a>  // group's one entry is every author's, before it and after it — `\author{Ann}\affiliation{organization={Univ
+<a href=#403 id=403 data-nosnippet>403</a>  // A}}\author{Bob}\author{Cat}` prints "Ann, Bob and Cat / Univ A", 2201.00009, 2511.22218, 2106.02306, 2606.24054 —;
+<a href=#404 id=404 data-nosnippet>404</a>  // with two or more the PDF cannot tell whose each is, and each is its run's, the authors since the entry before it,
+<a href=#405 id=405 data-nosnippet>405</a>  // read by authoring order as elsarticle reads an unlabelled `\address` (`annotate=run`, `\lx@els@shared`):
+<a href=#406 id=406 data-nosnippet>406</a>  // `\author{Liu}\address{RC}\author{Sun}\author{Zhang}\address{UCAS}` is Liu's RC, Sun's and Zhang's UCAS
+<a href=#407 id=407 data-nosnippet>407</a>  // (2202.06096). Declared `_share=authors,annotate=run`: the reading shares such an entry only when it is the
+<a href=#408 id=408 data-nosnippet>408</a>  // only one (`Resolver::sole_shared_run`), OXIDIZED_DESIGN_DIVERGENCES #901. Once an author is marked, the marks link the entries (FIDELITY_CHARTER
+<a href=#409 id=409 data-nosnippet>409</a>  // §4 R1) and an unlabelled one stays the author's before it, as elsarticle's does)
+<a href=#410 id=410 data-nosnippet>410</a>  </span><span class="kw">let </span>shared = printed.is_none()
+<a href=#411 id=411 data-nosnippet>411</a>    &amp;&amp; text.is_empty()
+<a href=#412 id=412 data-nosnippet>412</a>    &amp;&amp; !foot
+<a href=#413 id=413 data-nosnippet>413</a>    &amp;&amp; lookup_meaning(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\lx@cas@labelled"</span>)).is_none();
+<a href=#414 id=414 data-nosnippet>414</a>  <span class="kw">let </span><span class="kw-2">mut </span>out = mouth::tokenize_internal(<span class="string">"\\lx@add@contact[label="</span>).unlist();
+<a href=#415 id=415 data-nosnippet>415</a>  out.push(<span class="macro">T_BEGIN!</span>());
+<a href=#416 id=416 data-nosnippet>416</a>  out.extend(printed.unwrap_or(label));
+<a href=#417 id=417 data-nosnippet>417</a>  out.push(<span class="macro">T_END!</span>());
+<a href=#418 id=418 data-nosnippet>418</a>  out.extend(
+<a href=#419 id=419 data-nosnippet>419</a>    mouth::tokenize_internal(<span class="kw">if </span>prints {
+<a href=#420 id=420 data-nosnippet>420</a>      <span class="string">",role=affiliation,_labelprints=true]"
+<a href=#421 id=421 data-nosnippet>421</a>    </span>} <span class="kw">else if </span>shared {
+<a href=#422 id=422 data-nosnippet>422</a>      <span class="string">",role=affiliation,_share={authors},annotate=run]"
+<a href=#423 id=423 data-nosnippet>423</a>    </span>} <span class="kw">else </span>{
+<a href=#424 id=424 data-nosnippet>424</a>      <span class="string">",role=affiliation]"
+<a href=#425 id=425 data-nosnippet>425</a>    </span>})
+<a href=#426 id=426 data-nosnippet>426</a>    .unlist(),
+<a href=#427 id=427 data-nosnippet>427</a>  );
+<a href=#428 id=428 data-nosnippet>428</a>  out
+<a href=#429 id=429 data-nosnippet>429</a>}
+<a href=#430 id=430 data-nosnippet>430</a>
+<a href=#431 id=431 data-nosnippet>431</a><span class="doccomment">/// The tokens of the letter `\int_to_alph:n` prints for `number`, else (0, which prints none) `label` as written.
+<a href=#432 id=432 data-nosnippet>432</a></span><span class="kw">fn </span>cas_letter_tokens(number: i64, label: <span class="kw-2">&amp;</span>[Token]) -&gt; Vec&lt;Token&gt; {
+<a href=#433 id=433 data-nosnippet>433</a>  <span class="kw">let </span>letter = radix::radix_alpha(number);
+<a href=#434 id=434 data-nosnippet>434</a>  <span class="kw">if </span>letter.is_empty() {
+<a href=#435 id=435 data-nosnippet>435</a>    label.to_vec()
+<a href=#436 id=436 data-nosnippet>436</a>  } <span class="kw">else </span>{
+<a href=#437 id=437 data-nosnippet>437</a>    mouth::tokenize_internal(TeXString::assembled(letter)).unlist()
+<a href=#438 id=438 data-nosnippet>438</a>  }
+<a href=#439 id=439 data-nosnippet>439</a>}
+<a href=#440 id=440 data-nosnippet>440</a>
+<a href=#441 id=441 data-nosnippet>441</a><span class="doccomment">/// Whether an entry's `stm/address` keys set it as a footnote: `foot` (a `.bool_gset:N`, cas-common.sty:1180, true
+<a href=#442 id=442 data-nosnippet>442</a>/// when given no value) set true, the last setting read. Each entry reads its own keys from `foot = false`
+<a href=#443 id=443 data-nosnippet>443</a>/// (`\__reset_addr:`, :1200).
+<a href=#444 id=444 data-nosnippet>444</a></span><span class="kw">fn </span>cas_foot_key(keys: <span class="kw-2">&amp;</span>Tokens) -&gt; bool {
+<a href=#445 id=445 data-nosnippet>445</a>  <span class="kw">let </span>text = keys.to_string();
+<a href=#446 id=446 data-nosnippet>446</a>  <span class="kw">let </span><span class="kw-2">mut </span>foot = <span class="bool-val">false</span>;
+<a href=#447 id=447 data-nosnippet>447</a>  <span class="kw">for </span>item <span class="kw">in </span>text.split(<span class="string">','</span>) {
+<a href=#448 id=448 data-nosnippet>448</a>    <span class="kw">let </span>(key, value) = item.split_once(<span class="string">'='</span>).unwrap_or((item, <span class="string">"true"</span>));
+<a href=#449 id=449 data-nosnippet>449</a>    <span class="kw">if </span>key.trim() == <span class="string">"foot" </span>{
+<a href=#450 id=450 data-nosnippet>450</a>      foot = value.trim().trim_matches(|c| c == <span class="string">'{' </span>|| c == <span class="string">'}'</span>).trim() == <span class="string">"true"</span>;
+<a href=#451 id=451 data-nosnippet>451</a>    }
+<a href=#452 id=452 data-nosnippet>452</a>  }
+<a href=#453 id=453 data-nosnippet>453</a>  foot
+<a href=#454 id=454 data-nosnippet>454</a>}
+<a href=#455 id=455 data-nosnippet>455</a>
+<a href=#456 id=456 data-nosnippet>456</a><span class="doccomment">/// Whether a cas label opens with a letter (`\tl_if_head_eq_catcode:nNTF {#1} a`, spaces skipped as the head is read).
+<a href=#457 id=457 data-nosnippet>457</a></span><span class="kw">fn </span>cas_letter_headed(label: <span class="kw-2">&amp;</span>[Token]) -&gt; bool {
+<a href=#458 id=458 data-nosnippet>458</a>  label
+<a href=#459 id=459 data-nosnippet>459</a>    .iter()
+<a href=#460 id=460 data-nosnippet>460</a>    .find(|t| <span class="kw-2">**</span>t != <span class="macro">T_SPACE!</span>())
+<a href=#461 id=461 data-nosnippet>461</a>    .is_some_and(|t| t.get_catcode() == Catcode::LETTER)
+<a href=#462 id=462 data-nosnippet>462</a>}
+<a href=#463 id=463 data-nosnippet>463</a>
+<a href=#464 id=464 data-nosnippet>464</a><span class="doccomment">/// A cas label written as a number in digits, the value `\int_gset:Nn` and `\int_to_alph:n` read.
+<a href=#465 id=465 data-nosnippet>465</a></span><span class="kw">fn </span>cas_number(text: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;i64&gt; {
+<a href=#466 id=466 data-nosnippet>466</a>  <span class="kw">if </span>text.is_empty() || !text.bytes().all(|b| b.is_ascii_digit()) {
+<a href=#467 id=467 data-nosnippet>467</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#468 id=468 data-nosnippet>468</a>  }
+<a href=#469 id=469 data-nosnippet>469</a>  text.parse().ok()
+<a href=#470 id=470 data-nosnippet>470</a>}
 </code></pre></div></section></main></body></html>

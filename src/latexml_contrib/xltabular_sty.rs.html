@@ -1,14 +1,42 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/xltabular_sty.rs`."><title>xltabular_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>xltabular_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>latexml_package::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/xltabular_sty.rs`."><title>xltabular_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>xltabular_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>latexml_package::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a><span class="macro">LoadDefinitions!</span>({
-<a href=#4 id=4 data-nosnippet>4</a>  <span class="macro">Warn!</span>(
-<a href=#5 id=5 data-nosnippet>5</a>    <span class="string">"missing_file"</span>,
-<a href=#6 id=6 data-nosnippet>6</a>    <span class="string">"xltabular.sty"</span>,
-<a href=#7 id=7 data-nosnippet>7</a>    <span class="string">"xltabular.sty is only minimally stubbed and will not be interpreted raw."
-<a href=#8 id=8 data-nosnippet>8</a>  </span>);
-<a href=#9 id=9 data-nosnippet>9</a>  <span class="macro">RequirePackage!</span>(<span class="string">"tabularx"</span>);
-<a href=#10 id=10 data-nosnippet>10</a>  <span class="macro">RequirePackage!</span>(<span class="string">"longtable"</span>);
-<a href=#11 id=11 data-nosnippet>11</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\xltabular"</span>, <span class="string">"\\tabularx"</span>);
-<a href=#12 id=12 data-nosnippet>12</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endxltabular"</span>, <span class="string">"\\endtabularx"</span>);
-<a href=#13 id=13 data-nosnippet>13</a>});
+<a href=#4 id=4 data-nosnippet>4</a>  <span class="comment">// xltabular.sty — tabularx's `X` columns inside a page-breaking longtable.
+<a href=#5 id=5 data-nosnippet>5</a>  //
+<a href=#6 id=6 data-nosnippet>6</a>  // The real environment (xltabular.sty L118-135 `\newenvironment{xltabular}[1][x]`)
+<a href=#7 id=7 data-nosnippet>7</a>  // collects the body through tabularx's trial loop and then runs
+<a href=#8 id=8 data-nosnippet>8</a>  // `\expandafter\longtable\the\toks@\endlongtable` (L94-96), restoring
+<a href=#9 id=9 data-nosnippet>9</a>  // `\caption`/`\endhead`/`\endfirsthead`/`\endfoot`/`\endlastfoot` to
+<a href=#10 id=10 data-nosnippet>10</a>  // longtable's versions first (L86-91). So semantically it IS a longtable
+<a href=#11 id=11 data-nosnippet>11</a>  // whose column spec may contain `X`; `X` is a global column type once
+<a href=#12 id=12 data-nosnippet>12</a>  // tabularx is loaded, so longtable's alignment machinery accepts it as is.
+<a href=#13 id=13 data-nosnippet>13</a>  //
+<a href=#14 id=14 data-nosnippet>14</a>  // The former alias `\xltabular → \tabularx` left `\caption`/`\endhead`
+<a href=#15 id=15 data-nosnippet>15</a>  // bound to the class versions: under a binding class that gave `Use of
+<a href=#16 id=16 data-nosnippet>16</a>  // \caption outside any known float`, and under raw KOMA (tocbasic's expl3
+<a href=#17 id=17 data-nosnippet>17</a>  // `\caption` reads `\@captype`, xltabular-doc, hvfloat: 36→101 errors) a
+<a href=#18 id=18 data-nosnippet>18</a>  // fatal cascade. Guard: `perfect_kernel_batch53::xltabular_is_a_longtable`.
+<a href=#19 id=19 data-nosnippet>19</a>  //
+<a href=#20 id=20 data-nosnippet>20</a>  // Signature: `\begin{xltabular}[l|r|c|x]{width}[vpos]{cols}` — the leading
+<a href=#21 id=21 data-nosnippet>21</a>  // optional is longtable's horizontal alignment (L120-128 sets
+<a href=#22 id=22 data-nosnippet>22</a>  // `\LTleft`/`\LTright`), the width is presentational (the X columns fill
+<a href=#23 id=23 data-nosnippet>23</a>  // it), the second optional is tabularx's vertical position.
+<a href=#24 id=24 data-nosnippet>24</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"tabularx"</span>);
+<a href=#25 id=25 data-nosnippet>25</a>  <span class="macro">RequirePackage!</span>(<span class="string">"longtable"</span>);
+<a href=#26 id=26 data-nosnippet>26</a>  <span class="comment">// `X` is tabularx's own column here, as xltabular.sty:28 runs `\TX@newcol` before the preamble is read
+<a href=#27 id=27 data-nosnippet>27</a>  // (KNOWN_PERL_ERRORS #463).
+<a href=#28 id=28 data-nosnippet>28</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#29 id=29 data-nosnippet>29</a>    <span class="string">"\\xltabular[]{}[]{}"</span>,
+<a href=#30 id=30 data-nosnippet>30</a>    <span class="string">r"\let\NC@rewrite@X\lx@tabularx@X\lx@longtable@bindings{#4}\@@longtable[#1]{#4}\lx@begin@alignment"
+<a href=#31 id=31 data-nosnippet>31</a>  </span>);
+<a href=#32 id=32 data-nosnippet>32</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endxltabular"</span>, <span class="string">r"\lx@end@alignment\@end@tabular"</span>);
+<a href=#33 id=33 data-nosnippet>33</a>  <span class="comment">// xltabular.sty:19-21 — `\newif\ifXLT@normalPB` plus the two user toggles
+<a href=#34 id=34 data-nosnippet>34</a>  // that flip it; the boolean only steers longtable's page-break patches
+<a href=#35 id=35 data-nosnippet>35</a>  // (L103-104), which have no XML counterpart. The binding replaces the raw
+<a href=#36 id=36 data-nosnippet>36</a>  // .sty, so it must carry the user surface (witness: xltabular-doc, 2
+<a href=#37 id=37 data-nosnippet>37</a>  // `undefined` errors). Guard: `perfect_kernel_batch54::xltabular_pagebreak_toggles`.
+<a href=#38 id=38 data-nosnippet>38</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\newif\ifXLT@normalPB \XLT@normalPBtrue"</span>);
+<a href=#39 id=39 data-nosnippet>39</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\normalLTpagebreak"</span>, <span class="string">r"\global\XLT@normalPBtrue"</span>);
+<a href=#40 id=40 data-nosnippet>40</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\specialLTpagebreak"</span>, <span class="string">r"\global\XLT@normalPBfalse"</span>);
+<a href=#41 id=41 data-nosnippet>41</a>});
 </code></pre></div></section></main></body></html>

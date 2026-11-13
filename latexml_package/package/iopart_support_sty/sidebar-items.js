@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_definitions"]};
+window.SIDEBAR_ITEMS = {"constant":["FRONTMATTER_CONVENTIONS"],"fn":["iop_address_and_email","load_definitions"]};

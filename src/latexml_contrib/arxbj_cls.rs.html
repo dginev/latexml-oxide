@@ -1,32 +1,101 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/arxbj_cls.rs`."><title>arxbj_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>arxbj_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>latexml_package::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/arxbj_cls.rs`."><title>arxbj_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>arxbj_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>latexml_package::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a><span class="macro">LoadDefinitions!</span>({
 <a href=#4 id=4 data-nosnippet>4</a>  <span class="macro">LoadClass!</span>(<span class="string">"OmniBus"</span>);
-<a href=#5 id=5 data-nosnippet>5</a>  <span class="macro">RequirePackage!</span>(<span class="string">"elsart_support"</span>);
-<a href=#6 id=6 data-nosnippet>6</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amssymb"</span>);
-<a href=#7 id=7 data-nosnippet>7</a>  <span class="macro">RequirePackage!</span>(<span class="string">"bm"</span>);
-<a href=#8 id=8 data-nosnippet>8</a>  <span class="macro">RequirePackage!</span>(<span class="string">"keyval"</span>);
-<a href=#9 id=9 data-nosnippet>9</a>  <span class="macro">RequirePackage!</span>(<span class="string">"hyperref"</span>);
-<a href=#10 id=10 data-nosnippet>10</a>  def_macro_noop(<span class="string">"\\pdftitle {}"</span>)<span class="question-mark">?</span>;
-<a href=#11 id=11 data-nosnippet>11</a>  def_macro_noop(<span class="string">"\\pdfauthor {}"</span>)<span class="question-mark">?</span>;
-<a href=#12 id=12 data-nosnippet>12</a>  def_macro_noop(<span class="string">"\\pdfsubject {}"</span>)<span class="question-mark">?</span>;
-<a href=#13 id=13 data-nosnippet>13</a>  def_macro_noop(<span class="string">"\\pdfkeywords {}"</span>)<span class="question-mark">?</span>;
-<a href=#14 id=14 data-nosnippet>14</a>  def_macro_noop(<span class="string">"\\printhistory"</span>)<span class="question-mark">?</span>;
-<a href=#15 id=15 data-nosnippet>15</a>  <span class="comment">// Motivated by arXiv:1102.2078
-<a href=#16 id=16 data-nosnippet>16</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\tfrac{}{}"</span>, <span class="string">"{\\textstyle\\frac{#1}{#2}}"</span>);
-<a href=#17 id=17 data-nosnippet>17</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\dfrac{}{}"</span>, <span class="string">"{\\displaystyle\\frac{#1}{#2}}"</span>);
-<a href=#18 id=18 data-nosnippet>18</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\dvt"</span>, <span class="string">"\\colon\\ "</span>);
-<a href=#19 id=19 data-nosnippet>19</a>  <span class="macro">DefMacro!</span>(
-<a href=#20 id=20 data-nosnippet>20</a>    <span class="string">"\\dvtx"</span>,
-<a href=#21 id=21 data-nosnippet>21</a>    <span class="string">"\\mathchoice{\\nobreak\\,\\colon\\relax}%\n{\\nobreak\\,\\colon\\relax}%\n{\\nobreak\\,\\colon\\;\\relax}%\n{\\nobreak\\,\\colon\\;\\relax}%"
-<a href=#22 id=22 data-nosnippet>22</a>  </span>);
-<a href=#23 id=23 data-nosnippet>23</a>  <span class="macro">Let!</span>(<span class="string">"\\longlist"</span>, <span class="string">"\\list"</span>);
-<a href=#24 id=24 data-nosnippet>24</a>  <span class="macro">Let!</span>(<span class="string">"\\endlonglist"</span>, <span class="string">"\\endlist"</span>);
-<a href=#25 id=25 data-nosnippet>25</a>  <span class="macro">DefMacro!</span>(
-<a href=#26 id=26 data-nosnippet>26</a>    <span class="string">"\\MR{}"</span>,
-<a href=#27 id=27 data-nosnippet>27</a>    <span class="string">"\\href{http://www.ams.org/mathscinet-getitem?mr=#1}{MR#1}"
-<a href=#28 id=28 data-nosnippet>28</a>  </span>);
-<a href=#29 id=29 data-nosnippet>29</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\expandafter\def\csname remark*\endcsname{\begin{remark}}"</span>);
-<a href=#30 id=30 data-nosnippet>30</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\expandafter\def\csname endremark*\endcsname{\end{remark}}"</span>);
-<a href=#31 id=31 data-nosnippet>31</a>});
+<a href=#5 id=5 data-nosnippet>5</a>  <span class="comment">// elsart_support for the markup arxbj.cls shares with elsart, not elsart.cls's theorems (`{cor}`, `{lem}`, `{prob}`,
+<a href=#6 id=6 data-nosnippet>6</a>  // …): arxbj.cls:1418-1431 defines `{thm}` only, so an author's `\newcommand{\prob}` is theirs (1601.03906).
+<a href=#7 id=7 data-nosnippet>7</a>  </span><span class="macro">AssignValue!</span>(<span class="string">"lx_elsart_class_theorems_off" </span>=&gt; <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Local));
+<a href=#8 id=8 data-nosnippet>8</a>  <span class="macro">RequirePackage!</span>(<span class="string">"elsart_support"</span>);
+<a href=#9 id=9 data-nosnippet>9</a>  <span class="macro">AssignValue!</span>(<span class="string">"lx_elsart_class_theorems_off" </span>=&gt; <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Local));
+<a href=#10 id=10 data-nosnippet>10</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amssymb"</span>);
+<a href=#11 id=11 data-nosnippet>11</a>  <span class="macro">RequirePackage!</span>(<span class="string">"bm"</span>);
+<a href=#12 id=12 data-nosnippet>12</a>  <span class="macro">RequirePackage!</span>(<span class="string">"keyval"</span>);
+<a href=#13 id=13 data-nosnippet>13</a>  <span class="macro">RequirePackage!</span>(<span class="string">"hyperref"</span>);
+<a href=#14 id=14 data-nosnippet>14</a>  <span class="comment">// The VTeX IMS markup arxbj.cls shares with arximspdf.cls: `{barticle}`/`\b*` (:2599-2897), `{pf}` with `\qed`
+<a href=#15 id=15 data-nosnippet>15</a>  // (:1428-1445), `\tablewidth` (:1684) and `\bolds` (1003.1189, 1203.0186).
+<a href=#16 id=16 data-nosnippet>16</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"ims_support"</span>);
+<a href=#17 id=17 data-nosnippet>17</a>  def_macro_noop(<span class="string">"\\pdftitle {}"</span>)<span class="question-mark">?</span>;
+<a href=#18 id=18 data-nosnippet>18</a>  def_macro_noop(<span class="string">"\\pdfauthor {}"</span>)<span class="question-mark">?</span>;
+<a href=#19 id=19 data-nosnippet>19</a>  def_macro_noop(<span class="string">"\\pdfsubject {}"</span>)<span class="question-mark">?</span>;
+<a href=#20 id=20 data-nosnippet>20</a>  def_macro_noop(<span class="string">"\\pdfkeywords {}"</span>)<span class="question-mark">?</span>;
+<a href=#21 id=21 data-nosnippet>21</a>  def_macro_noop(<span class="string">"\\printhistory"</span>)<span class="question-mark">?</span>;
+<a href=#22 id=22 data-nosnippet>22</a>  <span class="comment">// Motivated by arXiv:1102.2078
+<a href=#23 id=23 data-nosnippet>23</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\tfrac{}{}"</span>, <span class="string">"{\\textstyle\\frac{#1}{#2}}"</span>);
+<a href=#24 id=24 data-nosnippet>24</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\dfrac{}{}"</span>, <span class="string">"{\\displaystyle\\frac{#1}{#2}}"</span>);
+<a href=#25 id=25 data-nosnippet>25</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\dvt"</span>, <span class="string">"\\colon\\ "</span>);
+<a href=#26 id=26 data-nosnippet>26</a>  <span class="macro">DefMacro!</span>(
+<a href=#27 id=27 data-nosnippet>27</a>    <span class="string">"\\dvtx"</span>,
+<a href=#28 id=28 data-nosnippet>28</a>    <span class="string">"\\mathchoice{\\nobreak\\,\\colon\\relax}%\n{\\nobreak\\,\\colon\\relax}%\n{\\nobreak\\,\\colon\\;\\relax}%\n{\\nobreak\\,\\colon\\;\\relax}%"
+<a href=#29 id=29 data-nosnippet>29</a>  </span>);
+<a href=#30 id=30 data-nosnippet>30</a>  <span class="comment">// `{longlist}` is the class's own list (arxbj.cls:930-958, labels re-set at :1070): items counted `longlist`, labelled
+<a href=#31 id=31 data-nosnippet>31</a>  // "(i)", "(ii)", … with an optional widest-label argument. A bare `\list` (the ar5iv-bindings Perl `\let`) took the
+<a href=#32 id=32 data-nosnippet>32</a>  // first `\item` as its label argument, so every item's label was `\item` again: an endless recursion (1203.0186,
+<a href=#33 id=33 data-nosnippet>33</a>  // 1003.1189; Perl deep_recursion too).
+<a href=#34 id=34 data-nosnippet>34</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#35 id=35 data-nosnippet>35</a>    <span class="string">r"\newcounter{longlist}
+<a href=#36 id=36 data-nosnippet>36</a>\def\thelonglist{\@roman\c@longlist}
+<a href=#37 id=37 data-nosnippet>37</a>\def\labellonglist{(\thelonglist)}
+<a href=#38 id=38 data-nosnippet>38</a>\def\longlist{\@ifnextchar[{\@longlist}{\@longlist[]}}
+<a href=#39 id=39 data-nosnippet>39</a>\def\@longlist[#1]{\list{\labellonglist}{\usecounter{longlist}}}
+<a href=#40 id=40 data-nosnippet>40</a>\let\endlonglist\endlist"
+<a href=#41 id=41 data-nosnippet>41</a>  </span>);
+<a href=#42 id=42 data-nosnippet>42</a>  <span class="macro">DefMacro!</span>(
+<a href=#43 id=43 data-nosnippet>43</a>    <span class="string">"\\MR{}"</span>,
+<a href=#44 id=44 data-nosnippet>44</a>    <span class="string">"\\href{http://www.ams.org/mathscinet-getitem?mr=#1}{MR#1}"
+<a href=#45 id=45 data-nosnippet>45</a>  </span>);
+<a href=#46 id=46 data-nosnippet>46</a>  <span class="comment">// arxbj.cls (1106.2467's copy, line numbers of it) — the class's own commands the papers use, beside the URL and
+<a href=#47 id=47 data-nosnippet>47</a>  // attribute helpers it shares with arximspdf.cls (ims_support_sty.rs: `\arxivurl` 94 papers of the inventory,
+<a href=#48 id=48 data-nosnippet>48</a>  // `\doiurl` 43, `\surl` 17, `\setattribute`, `\tsub`; 1206.6586, 1106.2467, 1303.4890).
+<a href=#49 id=49 data-nosnippet>49</a>  // :2490-2541 `{keyword}[class=…]` with `\kwd[sep]{text}` (ims_support_sty.rs, the VTeX classes' shared markup):
+<a href=#50 id=50 data-nosnippet>50</a>  // arxbj's entries are joined by "; " (:2539 `\sep`), under its headings (:2495-2496).
+<a href=#51 id=51 data-nosnippet>51</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#52 id=52 data-nosnippet>52</a>    <span class="string">r"\def\sep{\unskip; }
+<a href=#53 id=53 data-nosnippet>53</a>\setattribute{keyword}{KWD}{Keywords:}
+<a href=#54 id=54 data-nosnippet>54</a>\setattribute{keyword}{AMS}{AMS 2000 subject classifications:}"
+<a href=#55 id=55 data-nosnippet>55</a>  </span>);
+<a href=#56 id=56 data-nosnippet>56</a>  <span class="comment">// :2259-2260 `\def\docsubty#1{}`, the document subtype, which prints nothing (98 papers: 1106.2467, 0811.0643).
+<a href=#57 id=57 data-nosnippet>57</a>  </span>def_macro_noop(<span class="string">"\\docsubty{}"</span>)<span class="question-mark">?</span>;
+<a href=#58 id=58 data-nosnippet>58</a>  <span class="comment">// :1273 `\eqntext{text}`, text set in an `{eqnarray}` row's number place (18 papers: 1002.0175), kept in the row.
+<a href=#59 id=59 data-nosnippet>59</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\eqntext{}"</span>, <span class="string">"#1"</span>);
+<a href=#60 id=60 data-nosnippet>60</a>  <span class="comment">// :392-395 `\startlocaldefs`/`\endlocaldefs` around a paper's own definitions (:495-502 `\setvaluelist{list}{a,b,…}`
+<a href=#61 id=61 data-nosnippet>61</a>  // and `\getitemvalue{list}{n}`, the class's value lists, 3 papers: 0811.0643, are ims_support's); 0902.2924's copy:
+<a href=#62 id=62 data-nosnippet>62</a>  // `\vtexed` and `\CRC`, production flags; :1795 `\legend{text}`, a table note without a mark (1506.00847).
+<a href=#63 id=63 data-nosnippet>63</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#64 id=64 data-nosnippet>64</a>    <span class="string">r"\def\startlocaldefs{\makeatletter}\def\endlocaldefs{\makeatother}
+<a href=#65 id=65 data-nosnippet>65</a>\def\legend#1{\tabnotetext[]{}{#1}}"
+<a href=#66 id=66 data-nosnippet>66</a>  </span>);
+<a href=#67 id=67 data-nosnippet>67</a>  def_macro_noop(<span class="string">"\\vtexed{}"</span>)<span class="question-mark">?</span>;
+<a href=#68 id=68 data-nosnippet>68</a>  def_macro_noop(<span class="string">"\\CRC"</span>)<span class="question-mark">?</span>;
+<a href=#69 id=69 data-nosnippet>69</a>  <span class="comment">// :2543-2598 `{supplement}[id=…]`: the supplementary material, under the heading "Supplementary Material" (once),
+<a href=#70 id=70 data-nosnippet>70</a>  // as `\sname`'s label, `\stitle`'s title, the `\slink[doi]`/`\slink[url]` link, `\sdatatype`, `\sdescription` print
+<a href=#71 id=71 data-nosnippet>71</a>  // at its end ("Supplement A: Title (DOI: …; .pdf). Description"; 35 papers: 1106.2467, 1302.0163); `\sfilename`
+<a href=#72 id=72 data-nosnippet>72</a>  // prints nothing (:2562), and `\thesuppdoi{id}` reprints the link.
+<a href=#73 id=73 data-nosnippet>73</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#74 id=74 data-nosnippet>74</a>    <span class="string">r"\def\supplement@name{Supplementary Material}
+<a href=#75 id=75 data-nosnippet>75</a>\def\sname#1{\def\@sname{#1}\def\@currentlabel{#1}}
+<a href=#76 id=76 data-nosnippet>76</a>\def\stitle#1{\def\@stitle{#1}}
+<a href=#77 id=77 data-nosnippet>77</a>\def\sdatatype#1{\def\@sdatatype{#1}}
+<a href=#78 id=78 data-nosnippet>78</a>\def\sfilename#1{}
+<a href=#79 id=79 data-nosnippet>79</a>\define@key{slink}{text}{\def\sdoi@text{#1}}
+<a href=#80 id=80 data-nosnippet>80</a>\define@key{slink}{doi}[true]{\def\slink@type{doi}}
+<a href=#81 id=81 data-nosnippet>81</a>\define@key{slink}{url}[true]{\def\slink@type{url}}
+<a href=#82 id=82 data-nosnippet>82</a>\def\slink[#1]#2{\setkeys{slink}{#1}\@namedef{slink@\slink@type}{#2}}
+<a href=#83 id=83 data-nosnippet>83</a>\def\sdescription#1{\def\@sdescription{#1}}
+<a href=#84 id=84 data-nosnippet>84</a>\def\suppsection@fmt{\section*{\supplement@name}}
+<a href=#85 id=85 data-nosnippet>85</a>\def\lx@arxbj@doibase{http://dx.doi.org/}
+<a href=#86 id=86 data-nosnippet>86</a>\def\slink@doi@fmt{DOI: \href{\lx@arxbj@doibase\slink@doi}{\@ifundefined{sdoi@text}{\slink@doi}{\sdoi@text}}\@ifundefined{supp@label}{}{\expandafter\xdef\csname\supp@label @doi\endcsname{\slink@doi}}}
+<a href=#87 id=87 data-nosnippet>87</a>\def\thesuppdoi#1{\@ifundefined{#1@doi}{}{DOI: \href{\lx@arxbj@doibase\csname #1@doi\endcsname}{\csname #1@doi\endcsname}}}
+<a href=#88 id=88 data-nosnippet>88</a>\define@key{supplement}{id}{\def\supp@label{#1}}
+<a href=#89 id=89 data-nosnippet>89</a>\long\def\supplement{\@ifnextchar[{\@supplement}{\@supplement[]}}
+<a href=#90 id=90 data-nosnippet>90</a>\long\def\@supplement[#1]{\suppsection@fmt\global\let\suppsection@fmt\relax\setkeys{supplement}{#1}}
+<a href=#91 id=91 data-nosnippet>91</a>\def\endsupplement{\par\noindent\@ifundefined{@sname}{}{\@ifundefined{supp@label}{}{\label{\supp@label}}\textbf{\@sname: }}\@ifundefined{@stitle}{}{\textbf{\@stitle\ }}(\@ifundefined{slink@doi}{}{\slink@doi@fmt}\@ifundefined{slink@url}{}{\href{\slink@url}{\slink@url}}\@ifundefined{@sdatatype}{}{; \@sdatatype}). \@ifundefined{@sdescription}{}{\@sdescription}\par}"
+<a href=#92 id=92 data-nosnippet>92</a>  </span>);
+<a href=#93 id=93 data-nosnippet>93</a>  <span class="comment">// :1302-1345 (vtexthm.sty, which the class carries): the starred twin of every `\newtheorem` and `\newproclaim`
+<a href=#94 id=94 data-nosnippet>94</a>  // (ims_support_sty.rs), and arxbj's `\newremark` (:1479), `\newtheorem` in the remark style.
+<a href=#95 id=95 data-nosnippet>95</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\def\newremark{\theoremstyle{remark}\lx@vtex@thm}"</span>);
+<a href=#96 id=96 data-nosnippet>96</a>  <span class="comment">// :1412-1421: the class's own `{thm}` (elsart_support_sty.rs here) with its twin `{thm*}` (1309.7754).
+<a href=#97 id=97 data-nosnippet>97</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\@ifundefined{thm*}{\lx@vtex@newtheorem*{thm*}{Theorem}}{}"</span>);
+<a href=#98 id=98 data-nosnippet>98</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\expandafter\def\csname remark*\endcsname{\begin{remark}}"</span>);
+<a href=#99 id=99 data-nosnippet>99</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\expandafter\def\csname endremark*\endcsname{\end{remark}}"</span>);
+<a href=#100 id=100 data-nosnippet>100</a>});
 </code></pre></div></section></main></body></html>

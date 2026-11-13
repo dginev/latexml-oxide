@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["GIT_REVISION","VERSION"],"fn":["executable_name","identity_banner"]};
+window.SIDEBAR_ITEMS = {"constant":["GIT_REVISION","VERSION","VERSION_WITH_REVISION"],"fn":["executable_name","identity_banner"]};

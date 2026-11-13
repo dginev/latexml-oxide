@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/meta_class.rs`."><title>meta_class.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>meta_class.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Shared helper: the frontmatter interface common to the "addtolist ML
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/meta_class.rs`."><title>meta_class.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>meta_class.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Shared helper: the frontmatter interface common to the "addtolist ML
 <a href=#2 id=2 data-nosnippet>2</a>//! meta-class" family (`fairmeta` / `selfevolagent` / `openmoss` and future
 <a href=#3 id=3 data-nosnippet>3</a>//! siblings) — pre-print classes whose `\author`/`\affiliation`/`\contribution`/
 <a href=#4 id=4 data-nosnippet>4</a>//! `\correspondence`/`\abstract`/`\beginappendix` commands are defined on an
@@ -6,7 +6,7 @@
 <a href=#6 id=6 data-nosnippet>6</a>//! raw-loaded (OmniBus extracts dependencies only), so every one of those is
 <a href=#7 id=7 data-nosnippet>7</a>//! `Error:undefined` without a binding. Mirrors the shared-helper pattern of
 <a href=#8 id=8 data-nosnippet>8</a>//! [`crate::discard_env`].
-<a href=#9 id=9 data-nosnippet>9</a></span><span class="kw">use </span>latexml_package::prelude::<span class="kw-2">*</span>;
+<a href=#9 id=9 data-nosnippet>9</a></span><span class="kw">use </span>latexml_package::{package::authblk_sty::author_names_a_list, prelude::<span class="kw-2">*</span>};
 <a href=#10 id=10 data-nosnippet>10</a>
 <a href=#11 id=11 data-nosnippet>11</a><span class="doccomment">/// Install the identical, order-independent frontmatter routing shared by every
 <a href=#12 id=12 data-nosnippet>12</a>/// sibling class: route `\author`/`\affiliation`/`\contribution` through
@@ -34,32 +34,43 @@
 <a href=#34 id=34 data-nosnippet>34</a>  // step attaches each contact to the creators that cite its mark. Dropping the
 <a href=#35 id=35 data-nosnippet>35</a>  // mark (the old `\lx@add@author{#2}` + detached `ltx:note`) lost every
 <a href=#36 id=36 data-nosnippet>36</a>  // author↔institution association (arXiv/html_feedback#1396 and the fairmeta
-<a href=#37 id=37 data-nosnippet>37</a>  // family #662/#3512/#4707/#4971/#5035/#5466). The annotation/label mechanism is
-<a href=#38 id=38 data-nosnippet>38</a>  // byte-identical to Perl LaTeXML (verified via the shared `\lx@add@creator`/
-<a href=#39 id=39 data-nosnippet>39</a>  // `\lx@add@contact` primitives); on the fairmeta papers themselves Rust
-<a href=#40 id=40 data-nosnippet>40</a>  // surpasses Perl, which has no binding and mangles them under OmniBus. An
-<a href=#41 id=41 data-nosnippet>41</a>  // uncited mark has no target and is dropped — parity with Perl's plan; the
-<a href=#42 id=42 data-nosnippet>42</a>  // marks in real papers are always cited. `\author` must NOT expand to `\author`
-<a href=#43 id=43 data-nosnippet>43</a>  // (that re-matches this macro and recurses) — use `\lx@add@creator`.
-<a href=#44 id=44 data-nosnippet>44</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#45 id=45 data-nosnippet>45</a>    <span class="string">"\\author[]{}"</span>,
-<a href=#46 id=46 data-nosnippet>46</a>    <span class="string">"\\lx@add@creator[role=author,annotations={#1}]{#2}"
-<a href=#47 id=47 data-nosnippet>47</a>  </span>);
-<a href=#48 id=48 data-nosnippet>48</a>  <span class="macro">DefMacro!</span>(
-<a href=#49 id=49 data-nosnippet>49</a>    <span class="string">"\\affiliation[]{}"</span>,
-<a href=#50 id=50 data-nosnippet>50</a>    <span class="string">"\\lx@add@contact[role=affiliation,annotate={\\ifx.#1.new\\else 1\\fi},label={#1}]{#2}"
-<a href=#51 id=51 data-nosnippet>51</a>  </span>);
+<a href=#37 id=37 data-nosnippet>37</a>  // family #662/#3512/#4707/#4971/#5035/#5466); Perl has no binding and mangles
+<a href=#38 id=38 data-nosnippet>38</a>  // them under OmniBus. An uncited mark has no target and is dropped. An unmarked
+<a href=#39 id=39 data-nosnippet>39</a>  // call naming several authors, as authblk's `\author` reads one, is their list
+<a href=#40 id=40 data-nosnippet>40</a>  // (13 names and their legend in one `\author{}`, 2605.17829).
+<a href=#41 id=41 data-nosnippet>41</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\author[]{}"</span>, sub[(marks, name)] {
+<a href=#42 id=42 data-nosnippet>42</a>    <span class="kw">let </span>marks = marks.unwrap_or_default();
+<a href=#43 id=43 data-nosnippet>43</a>    <span class="kw">if </span>marks.is_empty() &amp;&amp; author_names_a_list(<span class="kw-2">&amp;</span>name)<span class="question-mark">? </span>{
+<a href=#44 id=44 data-nosnippet>44</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@add@authors@list"</span>), <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(name)]));
+<a href=#45 id=45 data-nosnippet>45</a>    }
+<a href=#46 id=46 data-nosnippet>46</a>    <span class="prelude-val">Ok</span>(<span class="macro">Invocation!</span>(<span class="string">"\\lx@add@creator[role=author,annotations={#1}]{#2}"</span>, <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(marks), <span class="prelude-val">Some</span>(name)]))
+<a href=#47 id=47 data-nosnippet>47</a>  });
+<a href=#48 id=48 data-nosnippet>48</a>  <span class="comment">// (an unmarked contact is the new authors': `annotate=new` written out, which the queue's reading of a list
+<a href=#49 id=49 data-nosnippet>49</a>  // above reads, as it reads no conditional)
+<a href=#50 id=50 data-nosnippet>50</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\affiliation[]{}"</span>, sub[(mark, text)] { meta_contact(<span class="string">"affiliation"</span>, mark, text) });
+<a href=#51 id=51 data-nosnippet>51</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\contribution[]{}"</span>, sub[(mark, text)] { meta_contact(<span class="string">"contribution"</span>, mark, text) });
 <a href=#52 id=52 data-nosnippet>52</a>  <span class="macro">DefMacro!</span>(
-<a href=#53 id=53 data-nosnippet>53</a>    <span class="string">"\\contribution[]{}"</span>,
-<a href=#54 id=54 data-nosnippet>54</a>    <span class="string">"\\lx@add@contact[role=contribution,annotate={\\ifx.#1.new\\else 1\\fi},label={#1}]{#2}"
+<a href=#53 id=53 data-nosnippet>53</a>    <span class="string">"\\correspondence{}"</span>,
+<a href=#54 id=54 data-nosnippet>54</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=correspondence]{#1}"
 <a href=#55 id=55 data-nosnippet>55</a>  </span>);
-<a href=#56 id=56 data-nosnippet>56</a>  <span class="macro">DefMacro!</span>(
-<a href=#57 id=57 data-nosnippet>57</a>    <span class="string">"\\correspondence{}"</span>,
-<a href=#58 id=58 data-nosnippet>58</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=correspondence]{#1}"
-<a href=#59 id=59 data-nosnippet>59</a>  </span>);
-<a href=#60 id=60 data-nosnippet>60</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\abstract{}"</span>, <span class="string">"\\lx@add@abstract{#1}"</span>);
-<a href=#61 id=61 data-nosnippet>61</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\email{}"</span>, <span class="string">"\\href{mailto:#1}{\\texttt{#1}}"</span>);
-<a href=#62 id=62 data-nosnippet>62</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\beginappendix"</span>, <span class="string">"\\appendix"</span>);
-<a href=#63 id=63 data-nosnippet>63</a>  <span class="prelude-val">Ok</span>(())
-<a href=#64 id=64 data-nosnippet>64</a>}
+<a href=#56 id=56 data-nosnippet>56</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\abstract{}"</span>, <span class="string">"\\lx@add@abstract{#1}"</span>);
+<a href=#57 id=57 data-nosnippet>57</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\email{}"</span>, <span class="string">"\\href{mailto:#1}{\\texttt{#1}}"</span>);
+<a href=#58 id=58 data-nosnippet>58</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\beginappendix"</span>, <span class="string">"\\appendix"</span>);
+<a href=#59 id=59 data-nosnippet>59</a>  <span class="prelude-val">Ok</span>(())
+<a href=#60 id=60 data-nosnippet>60</a>}
+<a href=#61 id=61 data-nosnippet>61</a>
+<a href=#62 id=62 data-nosnippet>62</a><span class="doccomment">/// `\lx@add@contact[role=&lt;role&gt;,annotate=…,label={mark}]{text}`: the contact labelled `mark` (`annotate=1`), or, unmarked,
+<a href=#63 id=63 data-nosnippet>63</a>/// the new authors' (`annotate=new`).
+<a href=#64 id=64 data-nosnippet>64</a></span><span class="kw">fn </span>meta_contact(role: <span class="kw-2">&amp;</span>str, mark: <span class="prelude-ty">Option</span>&lt;Tokens&gt;, text: Tokens) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+<a href=#65 id=65 data-nosnippet>65</a>  <span class="kw">let </span>mark = mark.unwrap_or_default();
+<a href=#66 id=66 data-nosnippet>66</a>  <span class="kw">let </span>annotate = <span class="kw">if </span>mark.is_empty() { <span class="string">"new" </span>} <span class="kw">else </span>{ <span class="string">"1" </span>};
+<a href=#67 id=67 data-nosnippet>67</a>  <span class="kw">let </span>keys = <span class="macro">TokenizeInternal!</span>(TeXString::assembled(<span class="macro">s!</span>(
+<a href=#68 id=68 data-nosnippet>68</a>    <span class="string">"role={role},annotate={annotate},label="
+<a href=#69 id=69 data-nosnippet>69</a>  </span>)));
+<a href=#70 id=70 data-nosnippet>70</a>  <span class="prelude-val">Ok</span>(<span class="macro">Invocation!</span>(<span class="string">"\\lx@add@contact[#1{#2}]{#3}"</span>, <span class="macro">vec!</span>[
+<a href=#71 id=71 data-nosnippet>71</a>    <span class="prelude-val">Some</span>(keys),
+<a href=#72 id=72 data-nosnippet>72</a>    <span class="prelude-val">Some</span>(mark),
+<a href=#73 id=73 data-nosnippet>73</a>    <span class="prelude-val">Some</span>(text)
+<a href=#74 id=74 data-nosnippet>74</a>  ]))
+<a href=#75 id=75 data-nosnippet>75</a>}
 </code></pre></div></section></main></body></html>

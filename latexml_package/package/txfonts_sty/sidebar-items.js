@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_definitions"]};
+window.SIDEBAR_ITEMS = {"fn":["def_txfonts_symbols","def_txfonts_symbols_newpx_lacks","load_definitions"]};

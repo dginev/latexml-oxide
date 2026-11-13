@@ -1,0 +1,638 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/base_utilities/defs/frontmatter_api/affiliations.rs`."><title>affiliations.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../../../static.files/src-script-813739b1.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/base_utilities/defs/frontmatter_api/</div>affiliations.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! The frontmatter API's entry cutter: the `\lx@add@affiliation` calls for a printed list (`entry_calls`), address
+<a href=#2 id=2 data-nosnippet>2</a>//! runs and their placement, the marks a list's entries are cut at, and the marked/shared affiliation gates
+<a href=#3 id=3 data-nosnippet>3</a>//! (`\lx@add@affiliation@marked`/`@shared`) and class-numbered institutes the bindings and `frontmatter_stores` call. Moved
+<a href=#4 id=4 data-nosnippet>4</a>//! unchanged from `author_block/affiliations.rs` (Z18j): the Cut's own closure, rerouted onto the reading by Option C
+<a href=#5 id=5 data-nosnippet>5</a>//! P2-P4 (FRONTMATTER_SINGLE_ENGINE_PLAN, row "`author_block/`'s survivors").
+<a href=#6 id=6 data-nosnippet>6</a>
+<a href=#7 id=7 data-nosnippet>7</a></span><span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#8 id=8 data-nosnippet>8</a>
+<a href=#9 id=9 data-nosnippet>9</a><span class="doccomment">/// The `\lx@add@affiliation` calls for an affiliation list: one per line or `\and`-separated
+<a href=#10 id=10 data-nosnippet>10</a>/// entry, each with its superscript marker as its label when the list has markers (Perl
+<a href=#11 id=11 data-nosnippet>11</a>/// Base_Utility.pool.ltxml:742-753, the body of `\lx@add@affiliations` after its dequeue). `attr`
+<a href=#12 id=12 data-nosnippet>12</a>/// is passed to each entry, `marked_attr` instead when the list has markers and `marks_are_labels` — and there
+<a href=#13 id=13 data-nosnippet>13</a>/// `unmarked_attr`, when given, to an entry no mark labels (no mark in it, no footnote symbol leading it): llncs's one
+<a href=#14 id=14 data-nosnippet>14</a>/// `\institute`'s `labelseq=affiliation,_share=authors`, its first line every author's as the class prints it (shape
+<a href=#15 id=15 data-nosnippet>15</a>/// (c), `\lx@llncs@institute@sup`). `authors_queued` says every author is queued, so an unmarked line may be placed by
+<a href=#16 id=16 data-nosnippet>16</a>/// the marks: an address run by its authors' positions, another line with the affiliation before it. An `\author`
+<a href=#17 id=17 data-nosnippet>17</a>/// call's tail (`author_tail_calls`) may come before later authors, and then its unmarked lines are its own creators'
+<a href=#18 id=18 data-nosnippet>18</a>/// rows, as each was before. A marked entry shows its mark where the list's names show theirs, as the Cut's entries do
+<a href=#19 id=19 data-nosnippet>19</a>/// (`mark_shown_attr`; llncs's `\institute{$^{1}$Univ A \\ $^{2}$Univ B}`, 1209.0041).
+<a href=#20 id=20 data-nosnippet>20</a></span><span class="kw">pub fn </span>affiliation_calls(
+<a href=#21 id=21 data-nosnippet>21</a>  attr: <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
+<a href=#22 id=22 data-nosnippet>22</a>  marked_attr: <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
+<a href=#23 id=23 data-nosnippet>23</a>  unmarked_attr: <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
+<a href=#24 id=24 data-nosnippet>24</a>  stuff: Tokens,
+<a href=#25 id=25 data-nosnippet>25</a>  marks_are_labels: bool,
+<a href=#26 id=26 data-nosnippet>26</a>  authors_queued: bool,
+<a href=#27 id=27 data-nosnippet>27</a>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Token&gt;&gt; {
+<a href=#28 id=28 data-nosnippet>28</a>  <span class="kw">let </span>add = |attr: <span class="prelude-ty">Option</span>&lt;Tokens&gt;, entry: Tokens| {
+<a href=#29 id=29 data-nosnippet>29</a>    <span class="kw">let </span>(<span class="kw">_</span>, attr) = mark_shown_attr(attr, <span class="kw-2">&amp;</span>entry, MARK_SHOWN_WITH_NAMES);
+<a href=#30 id=30 data-nosnippet>30</a>    <span class="prelude-val">Ok</span>(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@add@affiliation"</span>), <span class="macro">vec!</span>[attr, <span class="prelude-val">Some</span>(entry)]).unlist())
+<a href=#31 id=31 data-nosnippet>31</a>  };
+<a href=#32 id=32 data-nosnippet>32</a>  entry_calls(
+<a href=#33 id=33 data-nosnippet>33</a>    <span class="kw-2">&amp;</span>EntryCall {
+<a href=#34 id=34 data-nosnippet>34</a>      add:                    <span class="kw-2">&amp;</span>add,
+<a href=#35 id=35 data-nosnippet>35</a>      labelled_address_lines: <span class="bool-val">false</span>,
+<a href=#36 id=36 data-nosnippet>36</a>    },
+<a href=#37 id=37 data-nosnippet>37</a>    attr,
+<a href=#38 id=38 data-nosnippet>38</a>    marked_attr,
+<a href=#39 id=39 data-nosnippet>39</a>    unmarked_attr,
+<a href=#40 id=40 data-nosnippet>40</a>    stuff,
+<a href=#41 id=41 data-nosnippet>41</a>    marks_are_labels,
+<a href=#42 id=42 data-nosnippet>42</a>    authors_queued,
+<a href=#43 id=43 data-nosnippet>43</a>  )
+<a href=#44 id=44 data-nosnippet>44</a>}
+<a href=#45 id=45 data-nosnippet>45</a>
+<a href=#46 id=46 data-nosnippet>46</a><span class="doccomment">/// How [`entry_calls`] adds an entry: the call made of its attributes and content, and whether an address line behind
+<a href=#47 id=47 data-nosnippet>47</a>/// an e-mail label is an address line of the list (the frontmatter API's Cut, [`cut_marked_contact`]) or text of the
+<a href=#48 id=48 data-nosnippet>48</a>/// entry above it (a binding's own list).
+<a href=#49 id=49 data-nosnippet>49</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">struct </span>EntryCall&lt;<span class="lifetime">'a</span>&gt; {
+<a href=#50 id=50 data-nosnippet>50</a>  <span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) add: <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw">dyn </span>Fn(<span class="prelude-ty">Option</span>&lt;Tokens&gt;, Tokens) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Token&gt;&gt;,
+<a href=#51 id=51 data-nosnippet>51</a>  <span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) labelled_address_lines: bool,
+<a href=#52 id=52 data-nosnippet>52</a>}
+<a href=#53 id=53 data-nosnippet>53</a>
+<a href=#54 id=54 data-nosnippet>54</a><span class="doccomment">/// [`affiliation_calls`], each entry's call made by `add` (its attributes, its content) — the frontmatter API's Cut
+<a href=#55 id=55 data-nosnippet>55</a>/// ([`cut_marked_contact`]) adds an entry with the call that held the list, its role and wrapper kept.
+<a href=#56 id=56 data-nosnippet>56</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>entry_calls(
+<a href=#57 id=57 data-nosnippet>57</a>  call: <span class="kw-2">&amp;</span>EntryCall,
+<a href=#58 id=58 data-nosnippet>58</a>  attr: <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
+<a href=#59 id=59 data-nosnippet>59</a>  marked_attr: <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
+<a href=#60 id=60 data-nosnippet>60</a>  unmarked_attr: <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
+<a href=#61 id=61 data-nosnippet>61</a>  stuff: Tokens,
+<a href=#62 id=62 data-nosnippet>62</a>  marks_are_labels: bool,
+<a href=#63 id=63 data-nosnippet>63</a>  authors_queued: bool,
+<a href=#64 id=64 data-nosnippet>64</a>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Token&gt;&gt; {
+<a href=#65 id=65 data-nosnippet>65</a>  <span class="kw">let </span>EntryCall { add, labelled_address_lines } = <span class="kw-2">*</span>call;
+<a href=#66 id=66 data-nosnippet>66</a>  <span class="kw">let </span><span class="kw-2">mut </span>calls: Vec&lt;Token&gt; = Vec::new();
+<a href=#67 id=67 data-nosnippet>67</a>  <span class="comment">// Consume `\\[len]` row-break optionals before splitting (KNOWN_PERL_ERRORS #75).
+<a href=#68 id=68 data-nosnippet>68</a>  // (the lines a list sets in wrappers, a one-column tabular's rows, commands side by side, read as lines, as the
+<a href=#69 id=69 data-nosnippet>69</a>  // frontmatter API's Cut reads them — `relocate::wrapped_lines_as_lines`: IEEEtran's `\IEEEauthorblockA{\begin{tabular}{c}
+<a href=#70 id=70 data-nosnippet>70</a>  // $^{1}$ Univ A \\ $^{2}$ Univ B \\ …\end{tabular}}`, 2606.28962)
+<a href=#71 id=71 data-nosnippet>71</a>  </span><span class="kw">let </span>stuff = wrapped_lines_as_lines(<span class="kw-2">&amp;</span>stuff).unwrap_or(stuff);
+<a href=#72 id=72 data-nosnippet>72</a>  <span class="kw">let </span>stuff = spaced_marks_as_marks(<span class="kw-2">&amp;</span>stuff).unwrap_or(stuff);
+<a href=#73 id=73 data-nosnippet>73</a>  <span class="kw">let </span>stuff = rewrite_ordinal_superscripts(strip_linebreak_options(unalias_mark_commands(stuff)));
+<a href=#74 id=74 data-nosnippet>74</a>  <span class="kw">let </span>stuff = blank_line_marks_dropped(stuff);
+<a href=#75 id=75 data-nosnippet>75</a>  <span class="kw">let </span>stuff = glued_line_marks_as_marks(stuff, <span class="bool-val">true</span>);
+<a href=#76 id=76 data-nosnippet>76</a>  <span class="comment">// (the list's marks as digested, as its gate reads them, `affiliation_is_marked`: a store's `\ma` printing
+<a href=#77 id=77 data-nosnippet>77</a>  // `\textsuperscript{a}`, revP4d S1; a note's label, 1504.01072), and where its entries start, as the Cut's decision
+<a href=#78 id=78 data-nosnippet>78</a>  // reads them (`list_marks`: `\ua Univ A` with `\newcommand\ua{\textsuperscript{1}}`, 2608.21425's `\affmark{1}`)
+<a href=#79 id=79 data-nosnippet>79</a>  </span><span class="kw">let </span>marks = marks_are_labels
+<a href=#80 id=80 data-nosnippet>80</a>    .then(|| list_marks(<span class="kw-2">&amp;</span>stuff, <span class="string">"affiliation_calls"</span>))
+<a href=#81 id=81 data-nosnippet>81</a>    .transpose()<span class="question-mark">?</span>;
+<a href=#82 id=82 data-nosnippet>82</a>  <span class="kw">let </span>with_sup = marks.as_ref().is_some_and(|marks| marks.prints);
+<a href=#83 id=83 data-nosnippet>83</a>  <span class="kw">let </span>(lines, line_starts) = lines_starts(
+<a href=#84 id=84 data-nosnippet>84</a>    <span class="kw-2">&amp;</span>stuff,
+<a href=#85 id=85 data-nosnippet>85</a>    affiliation_lines(<span class="kw-2">&amp;</span>stuff)<span class="question-mark">?</span>,
+<a href=#86 id=86 data-nosnippet>86</a>    marks.as_ref().filter(|<span class="kw">_</span>| with_sup),
+<a href=#87 id=87 data-nosnippet>87</a>  );
+<a href=#88 id=88 data-nosnippet>88</a>  <span class="comment">// In a marked list, the affiliations it names, each a mark-led line (or a piece of one) with the unmarked lines
+<a href=#89 id=89 data-nosnippet>89</a>  // that follow it.
+<a href=#90 id=90 data-nosnippet>90</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>marked_entries: Vec&lt;Vec&lt;Token&gt;&gt; = Vec::new();
+<a href=#91 id=91 data-nosnippet>91</a>  <span class="comment">// (whether each entry opens with a mark, as its first line's starts say; unread, `None`)
+<a href=#92 id=92 data-nosnippet>92</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>entry_opens: Vec&lt;<span class="prelude-ty">Option</span>&lt;bool&gt;&gt; = Vec::new();
+<a href=#93 id=93 data-nosnippet>93</a>  <span class="comment">// The runs of address lines, placed once the whole list is read (`place_address_runs`); whether a run is being
+<a href=#94 id=94 data-nosnippet>94</a>  // read, and whether the line just read was an entry or its continuation.
+<a href=#95 id=95 data-nosnippet>95</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>address_runs: Vec&lt;AddressRun&gt; = Vec::new();
+<a href=#96 id=96 data-nosnippet>96</a>  <span class="kw">let </span><span class="kw-2">mut </span>in_run = <span class="bool-val">false</span>;
+<a href=#97 id=97 data-nosnippet>97</a>  <span class="kw">let </span><span class="kw-2">mut </span>follows_entry = <span class="bool-val">false</span>;
+<a href=#98 id=98 data-nosnippet>98</a>  <span class="comment">// (the notes of the list's address lines, the document's: [`address_line_notes`])
+<a href=#99 id=99 data-nosnippet>99</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>address_notes: Vec&lt;Token&gt; = Vec::new();
+<a href=#100 id=100 data-nosnippet>100</a>  <span class="kw">for </span>((delimiter, line), starts) <span class="kw">in </span>lines.into_iter().zip(line_starts) {
+<a href=#101 id=101 data-nosnippet>101</a>    <span class="comment">// Skip empty segments (e.g. a trailing \\ or a line that was wholly
+<a href=#102 id=102 data-nosnippet>102</a>    // consumed by an \email/\url) so they don't become blank affiliations.
+<a href=#103 id=103 data-nosnippet>103</a>    // Mirrors \lx@add@authors. So is a line that prints nothing ([`prints_nothing`]: IEEEtran's
+<a href=#104 id=104 data-nosnippet>104</a>    // `\end{@IEEEauthorhalign}\hfill\strut`, 2309.15562, an empty affiliation of the last author).
+<a href=#105 id=105 data-nosnippet>105</a>    </span><span class="kw">if </span>line.is_empty() || prints_nothing(<span class="kw-2">&amp;</span>line) {
+<a href=#106 id=106 data-nosnippet>106</a>      <span class="kw">continue</span>;
+<a href=#107 id=107 data-nosnippet>107</a>    }
+<a href=#108 id=108 data-nosnippet>108</a>    <span class="kw">if </span>with_sup {
+<a href=#109 id=109 data-nosnippet>109</a>      <span class="kw">let </span>across_and = parts_entries(<span class="kw-2">&amp;</span>delimiter);
+<a href=#110 id=110 data-nosnippet>110</a>      <span class="comment">// (in a list the frontmatter API cuts, an address line behind an e-mail label is one too, its addresses the run's:
+<a href=#111 id=111 data-nosnippet>111</a>      // `email: agupta@…, orion@…` closing an aa `\institute`, astro-ph0405186 — its label the contacts' own name,
+<a href=#112 id=112 data-nosnippet>112</a>      // `email_line_calls`; a binding's own list keeps such a line in the entry above it, which the observer's writer
+<a href=#113 id=113 data-nosnippet>113</a>      // reads: IEEEtran's `\IEEEauthorblockA{$^\dag$…\\ … \\ E-mail: …}`, 2308.05546)
+<a href=#114 id=114 data-nosnippet>114</a>      </span><span class="kw">let </span>is_address_line = |line: <span class="kw-2">&amp;</span>Tokens| {
+<a href=#115 id=115 data-nosnippet>115</a>        <span class="kw">if </span>labelled_address_lines {
+<a href=#116 id=116 data-nosnippet>116</a>          line_addresses(line).is_some()
+<a href=#117 id=117 data-nosnippet>117</a>        } <span class="kw">else </span>{
+<a href=#118 id=118 data-nosnippet>118</a>          line_is_email_list(line)
+<a href=#119 id=119 data-nosnippet>119</a>        }
+<a href=#120 id=120 data-nosnippet>120</a>      };
+<a href=#121 id=121 data-nosnippet>121</a>      <span class="comment">// (a line no entry starts in: `q2`'s `\affmark{1} Univ A\\ Street A`, the street; unread, no mark in its tokens)
+<a href=#122 id=122 data-nosnippet>122</a>      </span><span class="kw">let </span>unmarked = line_unmarked(<span class="kw-2">&amp;</span>line, starts.as_ref());
+<a href=#123 id=123 data-nosnippet>123</a>      <span class="comment">// (…and one carrying notes, its notes the document's, after the list's calls: [`address_line_notes`],
+<a href=#124 id=124 data-nosnippet>124</a>      // `\institute{$^{1}$Univ X \\ $^{2}$Univ Y \\ \texttt{a@x, b@y}\thanks{…}}`, as 2605.23553's author block)
+<a href=#125 id=125 data-nosnippet>125</a>      </span><span class="kw">let </span>line = <span class="kw">match </span>(authors_queued &amp;&amp; unmarked)
+<a href=#126 id=126 data-nosnippet>126</a>        .then(|| address_line_notes(<span class="kw-2">&amp;</span>line, |rest| <span class="prelude-val">Ok</span>(is_address_line(rest))))
+<a href=#127 id=127 data-nosnippet>127</a>        .transpose()<span class="question-mark">?
+<a href=#128 id=128 data-nosnippet>128</a>        </span>.flatten()
+<a href=#129 id=129 data-nosnippet>129</a>      {
+<a href=#130 id=130 data-nosnippet>130</a>        <span class="prelude-val">Some</span>((rest, notes)) =&gt; {
+<a href=#131 id=131 data-nosnippet>131</a>          address_notes.extend(notes);
+<a href=#132 id=132 data-nosnippet>132</a>          rest
+<a href=#133 id=133 data-nosnippet>133</a>        },
+<a href=#134 id=134 data-nosnippet>134</a>        <span class="prelude-val">None </span>=&gt; line,
+<a href=#135 id=135 data-nosnippet>135</a>      };
+<a href=#136 id=136 data-nosnippet>136</a>      <span class="kw">let </span>address_line = is_address_line(<span class="kw-2">&amp;</span>line);
+<a href=#137 id=137 data-nosnippet>137</a>      <span class="kw">if </span>authors_queued &amp;&amp; unmarked &amp;&amp; address_line {
+<a href=#138 id=138 data-nosnippet>138</a>        <span class="comment">// (`\and` separates entries, and runs: `Univ A \\ a@x \and b@y` is two)
+<a href=#139 id=139 data-nosnippet>139</a>        </span><span class="kw">if </span>!in_run || across_and {
+<a href=#140 id=140 data-nosnippet>140</a>          <span class="kw">let </span>under = (follows_entry &amp;&amp; !across_and).then(|| {
+<a href=#141 id=141 data-nosnippet>141</a>            <span class="kw">let </span>entry = marked_entries.len() - <span class="number">1</span>;
+<a href=#142 id=142 data-nosnippet>142</a>            (entry, marked_entries[entry].len())
+<a href=#143 id=143 data-nosnippet>143</a>          });
+<a href=#144 id=144 data-nosnippet>144</a>          address_runs.push(AddressRun { lines: Vec::new(), under });
+<a href=#145 id=145 data-nosnippet>145</a>          in_run = <span class="bool-val">true</span>;
+<a href=#146 id=146 data-nosnippet>146</a>        }
+<a href=#147 id=147 data-nosnippet>147</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(run) = address_runs.last_mut() {
+<a href=#148 id=148 data-nosnippet>148</a>          run.lines.push((delimiter, line));
+<a href=#149 id=149 data-nosnippet>149</a>        }
+<a href=#150 id=150 data-nosnippet>150</a>        follows_entry = <span class="bool-val">false</span>;
+<a href=#151 id=151 data-nosnippet>151</a>        <span class="kw">continue</span>;
+<a href=#152 id=152 data-nosnippet>152</a>      }
+<a href=#153 id=153 data-nosnippet>153</a>      in_run = <span class="bool-val">false</span>;
+<a href=#154 id=154 data-nosnippet>154</a>      <span class="comment">// An unmarked line continues the affiliation before it, with its `\\` put back, as an unmarked line continues
+<a href=#155 id=155 data-nosnippet>155</a>      // an entry in `\lx@add@authors`: `$^1$Department\\University` is one affiliation; on its own, an unlabelled
+<a href=#156 id=156 data-nosnippet>156</a>      // line was placed by position, not by mark (2609.19448; repro
+<a href=#157 id=157 data-nosnippet>157</a>      // sectioning-frontmatter/marked_affiliation_continuation_lines_stay_with_it). Not across `\and`, which
+<a href=#158 id=158 data-nosnippet>158</a>      // separates entries there too (DIVERGENCES #52(g)), nor a footnote-symbol legend (`* Equal contribution`,
+<a href=#159 id=159 data-nosnippet>159</a>      // `$\dagger$ Corresponding author`), which belongs to the whole block (llncs `\institute`, 2609.06094).
+<a href=#160 id=160 data-nosnippet>160</a>      </span><span class="kw">if </span>authors_queued
+<a href=#161 id=161 data-nosnippet>161</a>        &amp;&amp; unmarked
+<a href=#162 id=162 data-nosnippet>162</a>        &amp;&amp; !across_and
+<a href=#163 id=163 data-nosnippet>163</a>        &amp;&amp; !starts_with_footnote_symbol(<span class="kw-2">&amp;</span>line)
+<a href=#164 id=164 data-nosnippet>164</a>        &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(last) = marked_entries.last_mut()
+<a href=#165 id=165 data-nosnippet>165</a>      {
+<a href=#166 id=166 data-nosnippet>166</a>        last.extend(delimiter);
+<a href=#167 id=167 data-nosnippet>167</a>        last.extend(line.unlist());
+<a href=#168 id=168 data-nosnippet>168</a>        follows_entry = <span class="bool-val">true</span>;
+<a href=#169 id=169 data-nosnippet>169</a>        <span class="kw">continue</span>;
+<a href=#170 id=170 data-nosnippet>170</a>      }
+<a href=#171 id=171 data-nosnippet>171</a>      <span class="comment">// The superscript markers ARE the affiliation labels here, so drop any
+<a href=#172 id=172 data-nosnippet>172</a>      // caller-supplied labelseq: applying both double-labels each affiliation
+<a href=#173 id=173 data-nosnippet>173</a>      // and duplicates it onto every \inst{n} author. Mirrors \lx@add@authors,
+<a href=#174 id=174 data-nosnippet>174</a>      // which likewise passes no attr in its with-superscript branch.
+<a href=#175 id=175 data-nosnippet>175</a>      </span><span class="kw">let </span>segs = entry_pieces(line, starts.as_ref())<span class="question-mark">?</span>;
+<a href=#176 id=176 data-nosnippet>176</a>      <span class="kw">for </span>(seg, opens) <span class="kw">in </span>segs {
+<a href=#177 id=177 data-nosnippet>177</a>        <span class="kw">if </span>spacing_end(seg.unlist_ref()) == <span class="number">0 </span>{
+<a href=#178 id=178 data-nosnippet>178</a>          <span class="kw">continue</span>;
+<a href=#179 id=179 data-nosnippet>179</a>        }
+<a href=#180 id=180 data-nosnippet>180</a>        marked_entries.push(seg.unlist());
+<a href=#181 id=181 data-nosnippet>181</a>        entry_opens.push(opens);
+<a href=#182 id=182 data-nosnippet>182</a>        follows_entry = <span class="bool-val">true</span>;
+<a href=#183 id=183 data-nosnippet>183</a>      }
+<a href=#184 id=184 data-nosnippet>184</a>    } <span class="kw">else </span>{
+<a href=#185 id=185 data-nosnippet>185</a>      calls.extend(add(attr.clone(), line)<span class="question-mark">?</span>);
+<a href=#186 id=186 data-nosnippet>186</a>    }
+<a href=#187 id=187 data-nosnippet>187</a>  }
+<a href=#188 id=188 data-nosnippet>188</a>  <span class="kw">let </span>email_calls = place_address_runs(address_runs, <span class="kw-2">&amp;mut </span>marked_entries, <span class="number">0</span>)<span class="question-mark">?</span>;
+<a href=#189 id=189 data-nosnippet>189</a>  <span class="comment">// The separator between two affiliations (`$^1$Univ A, $^2$Univ B`) is trimmed from each entry but the last once
+<a href=#190 id=190 data-nosnippet>190</a>  // its address runs are in place: an entry is whole only then, and a run spliced at the length the entry had when the
+<a href=#191 id=191 data-nosnippet>191</a>  // run was read (`AddressRun::under`) would otherwise land past the end of an entry trimmed before it
+<a href=#192 id=192 data-nosnippet>192</a>  // (`\IEEEauthorrefmark{2}…Nankai University,\\ \{…\}@mail.nankai.edu.cn;\\ \IEEEauthorrefmark{3}…`, 2509.13772: a
+<a href=#193 id=193 data-nosnippet>193</a>  // panic, "range end index 44 out of range for slice of length 43"; repro
+<a href=#194 id=194 data-nosnippet>194</a>  // sectioning-frontmatter/affiliation_address_run_after_a_trailing_comma).
+<a href=#195 id=195 data-nosnippet>195</a>  </span><span class="kw">let </span>last = marked_entries.len().saturating_sub(<span class="number">1</span>);
+<a href=#196 id=196 data-nosnippet>196</a>  <span class="kw">for </span>entry <span class="kw">in </span><span class="kw-2">&amp;mut </span>marked_entries[..last] {
+<a href=#197 id=197 data-nosnippet>197</a>    <span class="kw-2">*</span>entry = trim_trailing_separator(std::mem::take(entry));
+<a href=#198 id=198 data-nosnippet>198</a>  }
+<a href=#199 id=199 data-nosnippet>199</a>  <span class="kw">for </span>(entry, opens) <span class="kw">in </span>marked_entries.into_iter().zip(entry_opens) {
+<a href=#200 id=200 data-nosnippet>200</a>    <span class="comment">// (an entry no mark labels, in a list whose caller says how such an entry is placed: as that call places it, not
+<a href=#201 id=201 data-nosnippet>201</a>    // labelled by a mark — llncs's `\institute{Univ A, Town \\ \textsuperscript{*}Equal contribution}`, whose `Univ A,
+<a href=#202 id=202 data-nosnippet>202</a>    // Town` went to the last author alone, every author's in pdflatex: dev20k 2603.18089, 2608.22772, 2207.13038,
+<a href=#203 id=203 data-nosnippet>203</a>    // 2609.31726, 1905.07852)
+<a href=#204 id=204 data-nosnippet>204</a>    </span><span class="kw">let </span>entry = Tokens::new(entry);
+<a href=#205 id=205 data-nosnippet>205</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(unmarked) = <span class="kw-2">&amp;</span>unmarked_attr
+<a href=#206 id=206 data-nosnippet>206</a>      &amp;&amp; !opens.unwrap_or_else(|| author_mark_position(<span class="kw-2">&amp;</span>entry).is_some())
+<a href=#207 id=207 data-nosnippet>207</a>      &amp;&amp; !starts_with_footnote_symbol(<span class="kw-2">&amp;</span>entry)
+<a href=#208 id=208 data-nosnippet>208</a>    {
+<a href=#209 id=209 data-nosnippet>209</a>      calls.extend(add(<span class="prelude-val">Some</span>(unmarked.clone()), entry)<span class="question-mark">?</span>);
+<a href=#210 id=210 data-nosnippet>210</a>      <span class="kw">continue</span>;
+<a href=#211 id=211 data-nosnippet>211</a>    }
+<a href=#212 id=212 data-nosnippet>212</a>    <span class="kw">let </span>withsup = <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@affiliation@withsup"</span>), <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(entry)]);
+<a href=#213 id=213 data-nosnippet>213</a>    calls.extend(add(marked_attr.clone(), withsup)<span class="question-mark">?</span>);
+<a href=#214 id=214 data-nosnippet>214</a>  }
+<a href=#215 id=215 data-nosnippet>215</a>  calls.extend(email_calls);
+<a href=#216 id=216 data-nosnippet>216</a>  calls.extend(address_notes);
+<a href=#217 id=217 data-nosnippet>217</a>  <span class="prelude-val">Ok</span>(calls)
+<a href=#218 id=218 data-nosnippet>218</a>}
+<a href=#219 id=219 data-nosnippet>219</a>
+<a href=#220 id=220 data-nosnippet>220</a><span class="doccomment">/// `stuff` without the marks opening a line that print no label — a superscript of spacing alone (`$^{\;}$`, `$^{~}$`,
+<a href=#221 id=221 data-nosnippet>221</a>/// `\textsuperscript{\,}`), braces, spaces and `\relax` aside: such a line is unmarked, so it continues the entry above
+<a href=#222 id=222 data-nosnippet>222</a>/// it as any unmarked line does, not an entry of its own (mnras 2303.08793's `$^{8}$Institute for Quantum Computing …,
+<a href=#223 id=223 data-nosnippet>223</a>/// Waterloo, \\ $^{\;}$Ontario N2L 3G1, Canada`, which pdflatex prints under entry 8 with no label; the line had gone to
+<a href=#224 id=224 data-nosnippet>224</a>/// the last name). Read by every list's cutter (and, until DEL2, by the old author block reader `dispatch::add_authors_calls_sectioned`)
+<a href=#225 id=225 data-nosnippet>225</a>/// ([`entry_calls`]). A blank mark elsewhere is left to the mark readers (`email_lines::drop_empty_marks`).
+<a href=#226 id=226 data-nosnippet>226</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>blank_line_marks_dropped(stuff: Tokens) -&gt; Tokens {
+<a href=#227 id=227 data-nosnippet>227</a>  <span class="kw">let </span>v = stuff.unlist_ref();
+<a href=#228 id=228 data-nosnippet>228</a>  <span class="kw">let </span>blank = |range: <span class="kw-2">&amp;</span>[Token]| {
+<a href=#229 id=229 data-nosnippet>229</a>    range.iter().all(|t| {
+<a href=#230 id=230 data-nosnippet>230</a>      <span class="macro">matches!</span>(
+<a href=#231 id=231 data-nosnippet>231</a>        t.get_catcode(),
+<a href=#232 id=232 data-nosnippet>232</a>        Catcode::BEGIN | Catcode::END | Catcode::SPACE
+<a href=#233 id=233 data-nosnippet>233</a>      ) || <span class="kw-2">*</span>t == <span class="macro">T_CS!</span>(<span class="string">"\\relax"</span>)
+<a href=#234 id=234 data-nosnippet>234</a>        || is_spacing(t)
+<a href=#235 id=235 data-nosnippet>235</a>    })
+<a href=#236 id=236 data-nosnippet>236</a>  };
+<a href=#237 id=237 data-nosnippet>237</a>  <span class="comment">// (the mark at `i`, a line's first token: where it ends when it prints no label)
+<a href=#238 id=238 data-nosnippet>238</a>  </span><span class="kw">let </span>blank_mark_end = |i: usize| -&gt; <span class="prelude-ty">Option</span>&lt;usize&gt; {
+<a href=#239 id=239 data-nosnippet>239</a>    <span class="kw">let </span>(operand, closing) =
+<a href=#240 id=240 data-nosnippet>240</a>      <span class="kw">if </span>v[i].get_catcode() == Catcode::MATH &amp;&amp; v.get(i + <span class="number">1</span>) == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="macro">T_SUPER!</span>()) {
+<a href=#241 id=241 data-nosnippet>241</a>        (i + <span class="number">2</span>, <span class="bool-val">true</span>)
+<a href=#242 id=242 data-nosnippet>242</a>      } <span class="kw">else if </span>is_mark_command(<span class="kw-2">&amp;</span>v[i]) {
+<a href=#243 id=243 data-nosnippet>243</a>        (
+<a href=#244 id=244 data-nosnippet>244</a>          i + <span class="number">1 </span>+ v[i + <span class="number">1</span>..].iter().take_while(|t| <span class="kw-2">**</span>t == <span class="macro">T_SPACE!</span>()).count(),
+<a href=#245 id=245 data-nosnippet>245</a>          <span class="bool-val">false</span>,
+<a href=#246 id=246 data-nosnippet>246</a>        )
+<a href=#247 id=247 data-nosnippet>247</a>      } <span class="kw">else </span>{
+<a href=#248 id=248 data-nosnippet>248</a>        <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#249 id=249 data-nosnippet>249</a>      };
+<a href=#250 id=250 data-nosnippet>250</a>    <span class="kw">if </span>v.get(operand)<span class="question-mark">?</span>.get_catcode() != Catcode::BEGIN {
+<a href=#251 id=251 data-nosnippet>251</a>      <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#252 id=252 data-nosnippet>252</a>    }
+<a href=#253 id=253 data-nosnippet>253</a>    <span class="kw">let </span>close = skip_group(v, operand);
+<a href=#254 id=254 data-nosnippet>254</a>    <span class="kw">if </span>close &gt; v.len() || !blank(<span class="kw-2">&amp;</span>v[operand..close]) {
+<a href=#255 id=255 data-nosnippet>255</a>      <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#256 id=256 data-nosnippet>256</a>    }
+<a href=#257 id=257 data-nosnippet>257</a>    <span class="kw">if </span>closing {
+<a href=#258 id=258 data-nosnippet>258</a>      (v.get(close)<span class="question-mark">?</span>.get_catcode() == Catcode::MATH).then_some(close + <span class="number">1</span>)
+<a href=#259 id=259 data-nosnippet>259</a>    } <span class="kw">else </span>{
+<a href=#260 id=260 data-nosnippet>260</a>      <span class="prelude-val">Some</span>(close)
+<a href=#261 id=261 data-nosnippet>261</a>    }
+<a href=#262 id=262 data-nosnippet>262</a>  };
+<a href=#263 id=263 data-nosnippet>263</a>  <span class="kw">let </span><span class="kw-2">mut </span>out: Vec&lt;Token&gt; = Vec::with_capacity(v.len());
+<a href=#264 id=264 data-nosnippet>264</a>  <span class="kw">let </span><span class="kw-2">mut </span>line_start = <span class="bool-val">true</span>;
+<a href=#265 id=265 data-nosnippet>265</a>  <span class="kw">let </span><span class="kw-2">mut </span>i = <span class="number">0</span>;
+<a href=#266 id=266 data-nosnippet>266</a>  <span class="kw">let </span><span class="kw-2">mut </span>dropped = <span class="bool-val">false</span>;
+<a href=#267 id=267 data-nosnippet>267</a>  <span class="kw">while </span>i &lt; v.len() {
+<a href=#268 id=268 data-nosnippet>268</a>    <span class="kw">let </span>t = v[i];
+<a href=#269 id=269 data-nosnippet>269</a>    <span class="kw">if </span>line_start &amp;&amp; t == <span class="macro">T_SPACE!</span>() {
+<a href=#270 id=270 data-nosnippet>270</a>      out.push(t);
+<a href=#271 id=271 data-nosnippet>271</a>      i += <span class="number">1</span>;
+<a href=#272 id=272 data-nosnippet>272</a>      <span class="kw">continue</span>;
+<a href=#273 id=273 data-nosnippet>273</a>    }
+<a href=#274 id=274 data-nosnippet>274</a>    <span class="kw">if </span>line_start &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(end) = blank_mark_end(i) {
+<a href=#275 id=275 data-nosnippet>275</a>      i = end;
+<a href=#276 id=276 data-nosnippet>276</a>      dropped = <span class="bool-val">true</span>;
+<a href=#277 id=277 data-nosnippet>277</a>      line_start = <span class="bool-val">false</span>;
+<a href=#278 id=278 data-nosnippet>278</a>      <span class="kw">continue</span>;
+<a href=#279 id=279 data-nosnippet>279</a>    }
+<a href=#280 id=280 data-nosnippet>280</a>    line_start = t == <span class="macro">T_CS!</span>(<span class="string">"\\\\"</span>) || t == <span class="macro">T_CS!</span>(<span class="string">"\\newline"</span>);
+<a href=#281 id=281 data-nosnippet>281</a>    out.push(t);
+<a href=#282 id=282 data-nosnippet>282</a>    i += <span class="number">1</span>;
+<a href=#283 id=283 data-nosnippet>283</a>  }
+<a href=#284 id=284 data-nosnippet>284</a>  <span class="kw">if </span>dropped { Tokens::new(out) } <span class="kw">else </span>{ stuff }
+<a href=#285 id=285 data-nosnippet>285</a>}
+<a href=#286 id=286 data-nosnippet>286</a>
+<a href=#287 id=287 data-nosnippet>287</a><span class="doccomment">/// The key of a printed list the Cut reads (`list`, its marks written as the plain marks they print,
+<a href=#288 id=288 data-nosnippet>288</a>/// [`printed_marks_as_marks`]) of a contact of `role` annotating `parenttag`: two calls holding the same list have the
+<a href=#289 id=289 data-nosnippet>289</a>/// same key.
+<a href=#290 id=290 data-nosnippet>290</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>cut_list_key(
+<a href=#291 id=291 data-nosnippet>291</a>  parenttag: <span class="kw-2">&amp;</span>Tokens,
+<a href=#292 id=292 data-nosnippet>292</a>  role: <span class="kw-2">&amp;</span>str,
+<a href=#293 id=293 data-nosnippet>293</a>  list: <span class="kw-2">&amp;</span>Tokens,
+<a href=#294 id=294 data-nosnippet>294</a>) -&gt; String {
+<a href=#295 id=295 data-nosnippet>295</a>  <span class="kw">use </span>std::hash::{Hash, Hasher};
+<a href=#296 id=296 data-nosnippet>296</a>  <span class="kw">let </span><span class="kw-2">mut </span>hasher = std::hash::DefaultHasher::new();
+<a href=#297 id=297 data-nosnippet>297</a>  (parenttag.to_string(), role, list.to_string()).hash(<span class="kw-2">&amp;mut </span>hasher);
+<a href=#298 id=298 data-nosnippet>298</a>  <span class="macro">s!</span>(<span class="string">"{:016x}"</span>, hasher.finish())
+<a href=#299 id=299 data-nosnippet>299</a>}
+<a href=#300 id=300 data-nosnippet>300</a>
+<a href=#301 id=301 data-nosnippet>301</a><span class="doccomment">/// `list` with the marks spelled otherwise written as the plain marks they print, for the Cut's readers
+<a href=#302 id=302 data-nosnippet>302</a>/// ([`cut_marked_contact`]): lines in one-argument line wrappers as lines (`relocate::wrapped_lines_as_lines`), a
+<a href=#303 id=303 data-nosnippet>303</a>/// superscript spelled otherwise as `$^{…}$` (`relocate::spaced_marks_as_marks`), a class's `\inst{n}` as
+<a href=#304 id=304 data-nosnippet>304</a>/// `\textsuperscript{n}`.
+<a href=#305 id=305 data-nosnippet>305</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>printed_marks_as_marks(list: Tokens) -&gt; Tokens {
+<a href=#306 id=306 data-nosnippet>306</a>  <span class="comment">// (a list wholly in one group, `{\bfseries $^3$Lab C\\ $^4$Lab D}`, is its content: the contact is a group of its own)
+<a href=#307 id=307 data-nosnippet>307</a>  </span><span class="kw">let </span>v = list.unlist_ref();
+<a href=#308 id=308 data-nosnippet>308</a>  <span class="kw">let </span>start = v.iter().position(|t| <span class="kw-2">*</span>t != <span class="macro">T_SPACE!</span>()).unwrap_or(v.len());
+<a href=#309 id=309 data-nosnippet>309</a>  <span class="kw">let </span>end = v
+<a href=#310 id=310 data-nosnippet>310</a>    .iter()
+<a href=#311 id=311 data-nosnippet>311</a>    .rposition(|t| <span class="kw-2">*</span>t != <span class="macro">T_SPACE!</span>())
+<a href=#312 id=312 data-nosnippet>312</a>    .map_or(<span class="number">0</span>, |i| i + <span class="number">1</span>);
+<a href=#313 id=313 data-nosnippet>313</a>  <span class="kw">let </span>list = <span class="kw">if </span>start &lt; end
+<a href=#314 id=314 data-nosnippet>314</a>    &amp;&amp; v[start].get_catcode() == Catcode::BEGIN
+<a href=#315 id=315 data-nosnippet>315</a>    &amp;&amp; skip_group(v, start) == end
+<a href=#316 id=316 data-nosnippet>316</a>    &amp;&amp; split_top_level_lines(<span class="kw-2">&amp;</span>v[start + <span class="number">1</span>..end - <span class="number">1</span>]).len() &gt; <span class="number">1
+<a href=#317 id=317 data-nosnippet>317</a>  </span>{
+<a href=#318 id=318 data-nosnippet>318</a>    Tokens::new(v[start + <span class="number">1</span>..end - <span class="number">1</span>].to_vec())
+<a href=#319 id=319 data-nosnippet>319</a>  } <span class="kw">else </span>{
+<a href=#320 id=320 data-nosnippet>320</a>    list
+<a href=#321 id=321 data-nosnippet>321</a>  };
+<a href=#322 id=322 data-nosnippet>322</a>  <span class="kw">let </span>list = wrapped_lines_as_lines(<span class="kw-2">&amp;</span>list).unwrap_or(list);
+<a href=#323 id=323 data-nosnippet>323</a>  <span class="kw">let </span>list = spaced_marks_written(<span class="kw-2">&amp;</span>list, <span class="bool-val">true</span>).unwrap_or(list);
+<a href=#324 id=324 data-nosnippet>324</a>  <span class="comment">// (`\inst` by its meaning, the one-argument mark it prints: `line_marks::inst_prints_its_mark`)
+<a href=#325 id=325 data-nosnippet>325</a>  </span><span class="kw">if </span>!list.unlist_ref().contains(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\inst"</span>)) || !inst_prints_its_mark() {
+<a href=#326 id=326 data-nosnippet>326</a>    <span class="kw">return </span>list;
+<a href=#327 id=327 data-nosnippet>327</a>  }
+<a href=#328 id=328 data-nosnippet>328</a>  Tokens::new(
+<a href=#329 id=329 data-nosnippet>329</a>    list
+<a href=#330 id=330 data-nosnippet>330</a>      .unlist()
+<a href=#331 id=331 data-nosnippet>331</a>      .into_iter()
+<a href=#332 id=332 data-nosnippet>332</a>      .map(|t| {
+<a href=#333 id=333 data-nosnippet>333</a>        <span class="kw">if </span>t == <span class="macro">T_CS!</span>(<span class="string">"\\inst"</span>) {
+<a href=#334 id=334 data-nosnippet>334</a>          <span class="macro">T_CS!</span>(<span class="string">"\\textsuperscript"</span>)
+<a href=#335 id=335 data-nosnippet>335</a>        } <span class="kw">else </span>{
+<a href=#336 id=336 data-nosnippet>336</a>          t
+<a href=#337 id=337 data-nosnippet>337</a>        }
+<a href=#338 id=338 data-nosnippet>338</a>      })
+<a href=#339 id=339 data-nosnippet>339</a>      .collect(),
+<a href=#340 id=340 data-nosnippet>340</a>  )
+<a href=#341 id=341 data-nosnippet>341</a>}
+<a href=#342 id=342 data-nosnippet>342</a>
+<a href=#343 id=343 data-nosnippet>343</a><span class="doccomment">/// The frontmatter API's Cut decision (`cut_marked_contact`), the one predicate every reader of a store's marked
+<a href=#344 id=344 data-nosnippet>344</a>/// entries asks: does `list` hold two or more entries led by marks of distinct labels that queued names request, its
+<a href=#345 id=345 data-nosnippet>345</a>/// first ink a mark — its marks as digested ([`requested_entry_labels`]), read as the Cut reads them
+<a href=#346 id=346 data-nosnippet>346</a>/// (`printed_marks_as_marks`)?
+<a href=#347 id=347 data-nosnippet>347</a></span><span class="kw">pub fn </span>holds_requested_marked_entries(list: <span class="kw-2">&amp;</span>Tokens) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
+<a href=#348 id=348 data-nosnippet>348</a>  <span class="kw">let </span>list = printed_marks_as_marks(list.clone());
+<a href=#349 id=349 data-nosnippet>349</a>  <span class="prelude-val">Ok</span>(
+<a href=#350 id=350 data-nosnippet>350</a>    requested_entry_labels(<span class="kw-2">&amp;</span>list, <span class="string">"holds_requested_marked_entries"</span>)<span class="question-mark">?
+<a href=#351 id=351 data-nosnippet>351</a>      </span>.labels
+<a href=#352 id=352 data-nosnippet>352</a>      .len()
+<a href=#353 id=353 data-nosnippet>353</a>      &gt;= <span class="number">2</span>,
+<a href=#354 id=354 data-nosnippet>354</a>  )
+<a href=#355 id=355 data-nosnippet>355</a>}
+<a href=#356 id=356 data-nosnippet>356</a>
+<a href=#357 id=357 data-nosnippet>357</a><span class="doccomment">/// A class-numbered institute list as its title page prints it: llncs.cls:870-885 `\institutename` (copied by
+<a href=#358 id=358 data-nosnippet>358</a>/// preprint.cls:233-256, 2405.16615) redefines `\and` to step the institute counter and print `$^{\theinst}$` before the
+<a href=#359 id=359 data-nosnippet>359</a>/// next entry, the first numbered 1 — so the n-th `\and` entry of the `\@institute` store is affiliation n, which the
+<a href=#360 id=360 data-nosnippet>360</a>/// authors' numeric marks pick (`$^{1}$`, `$^2$`). `stuff` with each entry led by its number as a superscript, when the
+<a href=#361 id=361 data-nosnippet>361</a>/// class numbers the entries of its `store` (named by its control sequence, `\@institute`), the store holds at least two
+<a href=#362 id=362 data-nosnippet>362</a>/// `\and` entries and no mark of its own, both read by meaning (the kernel's `\and` a macro holds, a mark a macro prints:
+<a href=#363 id=363 data-nosnippet>363</a>/// [`split_at_kernel_separators`]; a mark a name requests, [`prints_requested_marks`]), and the queued authors' marks request numbers
+<a href=#364 id=364 data-nosnippet>364</a>/// ([`numbered_marks_requested`]); else `None` (the entries annotate every author, `\lx@add@store@affiliations`).
+<a href=#365 id=365 data-nosnippet>365</a>/// Whether the class numbers them is what its own title page printed in the speculative run frontmatter_stores.rs
+<a href=#366 id=366 data-nosnippet>366</a>/// `note_and_numbering` made of the store (`lx_and_numbered_&lt;store&gt;`: the sentinel entries each printed after its
+<a href=#367 id=367 data-nosnippet>367</a>/// number, in `\and` order — sab.cls:404-426's and edpsci.cls's `\refstepcounter{inst}`, 2308.05831, 2308.05830,
+<a href=#368 id=368 data-nosnippet>368</a>/// 2501.08874, baaa.cls 2206.02830, comsis2.cls 2207.09249; batch 104b); with no such run (no store, none could be
+<a href=#369 id=369 data-nosnippet>369</a>/// made), the class's `\institutename` read as before: a `\def\and` stepping a counter (`\stepcounter`). Was each
+<a href=#370 id=370 data-nosnippet>370</a>/// author given every institute (2405.16615; SYNC_STATUS row 153; the sab family, SYNC_STATUS row "104b").
+<a href=#371 id=371 data-nosnippet>371</a></span><span class="kw">pub fn </span>class_numbered_institutes(stuff: <span class="kw-2">&amp;</span>Tokens, store: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Tokens&gt;&gt; {
+<a href=#372 id=372 data-nosnippet>372</a>  <span class="kw">let </span>run = store.and_then(|store| <span class="kw">match </span>lookup_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"lx_and_numbered_{store}"</span>)) {
+<a href=#373 id=373 data-nosnippet>373</a>    <span class="prelude-val">Some</span>(Stored::Bool(numbered)) =&gt; <span class="prelude-val">Some</span>(numbered),
+<a href=#374 id=374 data-nosnippet>374</a>    <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#375 id=375 data-nosnippet>375</a>  });
+<a href=#376 id=376 data-nosnippet>376</a>  <span class="kw">let </span>numbers_its_entries = run.unwrap_or_else(|| {
+<a href=#377 id=377 data-nosnippet>377</a>    <span class="macro">matches!</span>(lookup_definition_stored(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\institutename"</span>)),
+<a href=#378 id=378 data-nosnippet>378</a>    <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Stored::Expandable(definition)))
+<a href=#379 id=379 data-nosnippet>379</a>      <span class="kw">if </span><span class="macro">matches!</span>(definition.get_expansion(), <span class="prelude-val">Some</span>(ExpansionBody::Tokens(body))
+<a href=#380 id=380 data-nosnippet>380</a>        <span class="kw">if </span>body.unlist_ref().windows(<span class="number">2</span>).any(|w| w[<span class="number">0</span>] == <span class="macro">T_CS!</span>(<span class="string">"\\def"</span>) &amp;&amp; w[<span class="number">1</span>] == <span class="macro">T_CS!</span>(<span class="string">"\\and"</span>))
+<a href=#381 id=381 data-nosnippet>381</a>          &amp;&amp; body.unlist_ref().contains(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\stepcounter"</span>))))
+<a href=#382 id=382 data-nosnippet>382</a>  });
+<a href=#383 id=383 data-nosnippet>383</a>  <span class="kw">if </span>!numbers_its_entries
+<a href=#384 id=384 data-nosnippet>384</a>    || prints_requested_marks(stuff, <span class="string">"class_numbered_institutes"</span>)<span class="question-mark">?
+<a href=#385 id=385 data-nosnippet>385</a>    </span>|| !numbered_marks_requested()<span class="question-mark">?
+<a href=#386 id=386 data-nosnippet>386</a>  </span>{
+<a href=#387 id=387 data-nosnippet>387</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
+<a href=#388 id=388 data-nosnippet>388</a>  }
+<a href=#389 id=389 data-nosnippet>389</a>  <span class="kw">let </span>(entries, <span class="kw">_</span>) = split_at_kernel_separators(stuff.clone(), <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\and"</span>).into()])<span class="question-mark">?</span>;
+<a href=#390 id=390 data-nosnippet>390</a>  <span class="kw">if </span>entries.len() &lt; <span class="number">2 </span>{
+<a href=#391 id=391 data-nosnippet>391</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
+<a href=#392 id=392 data-nosnippet>392</a>  }
+<a href=#393 id=393 data-nosnippet>393</a>  <span class="kw">let </span><span class="kw-2">mut </span>out: Vec&lt;Token&gt; = Vec::new();
+<a href=#394 id=394 data-nosnippet>394</a>  <span class="kw">for </span>(n, (<span class="kw">_</span>, entry)) <span class="kw">in </span>entries.into_iter().enumerate() {
+<a href=#395 id=395 data-nosnippet>395</a>    <span class="kw">let </span>and = <span class="kw">if </span>n &gt; <span class="number">0 </span>{ <span class="string">"\\and" </span>} <span class="kw">else </span>{ <span class="string">"" </span>};
+<a href=#396 id=396 data-nosnippet>396</a>    <span class="kw">let </span>lead = <span class="macro">s!</span>(<span class="string">"{and}\\textsuperscript{{{}}}"</span>, n + <span class="number">1</span>);
+<a href=#397 id=397 data-nosnippet>397</a>    out.extend(mouth::tokenize_internal(TeXString::assembled(lead)).unlist());
+<a href=#398 id=398 data-nosnippet>398</a>    out.extend(entry.unlist());
+<a href=#399 id=399 data-nosnippet>399</a>  }
+<a href=#400 id=400 data-nosnippet>400</a>  <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(Tokens::new(out)))
+<a href=#401 id=401 data-nosnippet>401</a>}
+<a href=#402 id=402 data-nosnippet>402</a>
+<a href=#403 id=403 data-nosnippet>403</a><span class="doccomment">/// Do the queued authors' marks request numbered entries: each mark a comma list of numbers (`\inst{1,2}`), at least
+<a href=#404 id=404 data-nosnippet>404</a>/// one, beside which only symbols stand — a legend's `\textsuperscript{\dag}`, `*` (comsis2.cls's names, 2207.09249), an
+<a href=#405 id=405 data-nosnippet>405</a>/// empty piece (edpsci's `\inst{1,2}$^{,}$`, 2501.08874), a command (a `\ref{…}` key, an unread name's spelling) —,
+<a href=#406 id=406 data-nosnippet>406</a>/// never a letter label (`\inst{a}`), which no number answers? The marks by printed text (`queued_author_marks`).
+<a href=#407 id=407 data-nosnippet>407</a></span><span class="kw">pub fn </span>numbered_marks_requested() -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
+<a href=#408 id=408 data-nosnippet>408</a>  <span class="kw">let </span><span class="kw-2">mut </span>numbers = <span class="bool-val">false</span>;
+<a href=#409 id=409 data-nosnippet>409</a>  <span class="kw">for </span>mark <span class="kw">in </span>queued_author_marks()<span class="question-mark">?</span>.iter().flatten() {
+<a href=#410 id=410 data-nosnippet>410</a>    <span class="kw">for </span>piece <span class="kw">in </span>mark.split(<span class="string">','</span>) {
+<a href=#411 id=411 data-nosnippet>411</a>      <span class="kw">let </span>piece = piece.trim();
+<a href=#412 id=412 data-nosnippet>412</a>      <span class="kw">if </span>piece.starts_with(<span class="string">'\\'</span>) || !piece.chars().any(char::is_alphanumeric) {
+<a href=#413 id=413 data-nosnippet>413</a>        <span class="kw">continue</span>;
+<a href=#414 id=414 data-nosnippet>414</a>      }
+<a href=#415 id=415 data-nosnippet>415</a>      <span class="kw">if </span>!piece.chars().all(|c| c.is_ascii_digit()) {
+<a href=#416 id=416 data-nosnippet>416</a>        <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="bool-val">false</span>);
+<a href=#417 id=417 data-nosnippet>417</a>      }
+<a href=#418 id=418 data-nosnippet>418</a>      numbers = <span class="bool-val">true</span>;
+<a href=#419 id=419 data-nosnippet>419</a>    }
+<a href=#420 id=420 data-nosnippet>420</a>  }
+<a href=#421 id=421 data-nosnippet>421</a>  <span class="prelude-val">Ok</span>(numbers)
+<a href=#422 id=422 data-nosnippet>422</a>}
+<a href=#423 id=423 data-nosnippet>423</a>
+<a href=#424 id=424 data-nosnippet>424</a><span class="doccomment">/// Whether an affiliation a class gives after its authors is a marked list: it prints a mark, read as digested
+<a href=#425 id=425 data-nosnippet>425</a>/// ([`prints_list_marks`]: its own or a note's label), and the queued authors' names print marks — or none is queued
+<a href=#426 id=426 data-nosnippet>426</a>/// yet, the marks labels for the names to come.
+<a href=#427 id=427 data-nosnippet>427</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>affiliation_is_marked(stuff: <span class="kw-2">&amp;</span>Tokens) -&gt; <span class="prelude-ty">Result</span>&lt;bool&gt; {
+<a href=#428 id=428 data-nosnippet>428</a>  <span class="prelude-val">Ok</span>(
+<a href=#429 id=429 data-nosnippet>429</a>    (queued_authors_marked()<span class="question-mark">? </span>|| queued_creator_count() == <span class="number">0</span>)
+<a href=#430 id=430 data-nosnippet>430</a>      &amp;&amp; prints_list_marks(stuff, <span class="string">"affiliation_is_marked"</span>)<span class="question-mark">?</span>,
+<a href=#431 id=431 data-nosnippet>431</a>  )
+<a href=#432 id=432 data-nosnippet>432</a>}
+<a href=#433 id=433 data-nosnippet>433</a>
+<a href=#434 id=434 data-nosnippet>434</a><span class="doccomment">/// The calls for an unmarked address shared by the authors before it (`\lx@add@affiliation@shared`): each of its
+<a href=#435 id=435 data-nosnippet>435</a>/// entries (separated by the `\and` family, `\And` the column break of the conference templates) one affiliation,
+<a href=#436 id=436 data-nosnippet>436</a>/// attributed by `attr` — one for entries printed alike (1302.5348's `\UMDAddress \\ … \And \UMDAddress \\ …`) —
+<a href=#437 id=437 data-nosnippet>437</a>/// without its e-mail lines, whose addresses, all of them, are one run placed as a marked list's are
+<a href=#438 id=438 data-nosnippet>438</a>/// ([`place_address_runs`]: one for each author of the row, in their order, else the block's, one contact an address —
+<a href=#439 id=439 data-nosnippet>439</a>/// the row the authors queued after the last affiliation, as `annotate=run` attaches one: 2302.10910's four e-mails of
+<a href=#440 id=440 data-nosnippet>440</a>/// a later row go to its four authors, not to the block for not being one for each queued author) — not lines of the
+<a href=#441 id=441 data-nosnippet>441</a>/// affiliation (1806.02924's `Carnegie Mellon University\\ \{asuggala, adarshp, vaishnavh, pradeepr\}@cs.cmu.edu`,
+<a href=#442 id=442 data-nosnippet>442</a>/// 1311.1894's `\texttt{\small \{honda,takemura\}@…}`), as the authors' own addresses are in a paired block
+<a href=#443 id=443 data-nosnippet>443</a>/// (2610.11580).
+<a href=#444 id=444 data-nosnippet>444</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>shared_affiliation_calls(
+<a href=#445 id=445 data-nosnippet>445</a>  attr: <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
+<a href=#446 id=446 data-nosnippet>446</a>  stuff: Tokens,
+<a href=#447 id=447 data-nosnippet>447</a>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Token&gt;&gt; {
+<a href=#448 id=448 data-nosnippet>448</a>  <span class="kw">let </span>authors_queued = queued_creator_count() &gt; <span class="number">0</span>;
+<a href=#449 id=449 data-nosnippet>449</a>  <span class="kw">let </span><span class="kw-2">mut </span>entries: Vec&lt;Vec&lt;Token&gt;&gt; = Vec::new();
+<a href=#450 id=450 data-nosnippet>450</a>  <span class="kw">let </span><span class="kw-2">mut </span>run = AddressRun { lines: Vec::new(), under: <span class="prelude-val">None </span>};
+<a href=#451 id=451 data-nosnippet>451</a>  <span class="kw">for </span>entry <span class="kw">in </span>split_tokens(strip_linebreak_options(stuff), author_and_splits()) {
+<a href=#452 id=452 data-nosnippet>452</a>    <span class="kw">let </span><span class="kw-2">mut </span>kept: Vec&lt;Token&gt; = Vec::new();
+<a href=#453 id=453 data-nosnippet>453</a>    <span class="kw">for </span>(delimiter, line) <span class="kw">in </span>split_tokens_delimited(entry, author_line_breaks()) {
+<a href=#454 id=454 data-nosnippet>454</a>      <span class="kw">if </span>authors_queued &amp;&amp; line_is_email_list(<span class="kw-2">&amp;</span>line) {
+<a href=#455 id=455 data-nosnippet>455</a>        run.lines.push((delimiter, line));
+<a href=#456 id=456 data-nosnippet>456</a>      } <span class="kw">else if </span>spacing_end(line.unlist_ref()) &gt; <span class="number">0 </span>{
+<a href=#457 id=457 data-nosnippet>457</a>        <span class="kw">if </span>!kept.is_empty() {
+<a href=#458 id=458 data-nosnippet>458</a>          kept.extend(delimiter);
+<a href=#459 id=459 data-nosnippet>459</a>        }
+<a href=#460 id=460 data-nosnippet>460</a>        kept.extend(line.unlist());
+<a href=#461 id=461 data-nosnippet>461</a>      }
+<a href=#462 id=462 data-nosnippet>462</a>    }
+<a href=#463 id=463 data-nosnippet>463</a>    <span class="kw">let </span>lead = kept
+<a href=#464 id=464 data-nosnippet>464</a>      .iter()
+<a href=#465 id=465 data-nosnippet>465</a>      .take_while(|t| t.get_catcode() == Catcode::SPACE)
+<a href=#466 id=466 data-nosnippet>466</a>      .count();
+<a href=#467 id=467 data-nosnippet>467</a>    kept.drain(..lead);
+<a href=#468 id=468 data-nosnippet>468</a>    <span class="kw">while </span>kept
+<a href=#469 id=469 data-nosnippet>469</a>      .last()
+<a href=#470 id=470 data-nosnippet>470</a>      .is_some_and(|t| t.get_catcode() == Catcode::SPACE)
+<a href=#471 id=471 data-nosnippet>471</a>    {
+<a href=#472 id=472 data-nosnippet>472</a>      kept.pop();
+<a href=#473 id=473 data-nosnippet>473</a>    }
+<a href=#474 id=474 data-nosnippet>474</a>    <span class="kw">if </span>!kept.is_empty() &amp;&amp; !entries.contains(<span class="kw-2">&amp;</span>kept) {
+<a href=#475 id=475 data-nosnippet>475</a>      entries.push(kept);
+<a href=#476 id=476 data-nosnippet>476</a>    }
+<a href=#477 id=477 data-nosnippet>477</a>  }
+<a href=#478 id=478 data-nosnippet>478</a>  <span class="kw">let </span><span class="kw-2">mut </span>calls: Vec&lt;Token&gt; = Vec::new();
+<a href=#479 id=479 data-nosnippet>479</a>  <span class="kw">for </span>entry <span class="kw">in </span>entries {
+<a href=#480 id=480 data-nosnippet>480</a>    calls.extend(
+<a href=#481 id=481 data-nosnippet>481</a>      <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@add@affiliation"</span>), <span class="macro">vec!</span>[
+<a href=#482 id=482 data-nosnippet>482</a>        attr.clone(),
+<a href=#483 id=483 data-nosnippet>483</a>        <span class="prelude-val">Some</span>(Tokens::new(entry))
+<a href=#484 id=484 data-nosnippet>484</a>      ])
+<a href=#485 id=485 data-nosnippet>485</a>      .unlist(),
+<a href=#486 id=486 data-nosnippet>486</a>    );
+<a href=#487 id=487 data-nosnippet>487</a>  }
+<a href=#488 id=488 data-nosnippet>488</a>  <span class="kw">if </span>!run.lines.is_empty() {
+<a href=#489 id=489 data-nosnippet>489</a>    calls.extend(place_address_runs(<span class="macro">vec!</span>[run], <span class="kw-2">&amp;mut </span>[], queued_row_start()<span class="question-mark">?</span>)<span class="question-mark">?</span>);
+<a href=#490 id=490 data-nosnippet>490</a>  }
+<a href=#491 id=491 data-nosnippet>491</a>  <span class="prelude-val">Ok</span>(calls)
+<a href=#492 id=492 data-nosnippet>492</a>}
+<a href=#493 id=493 data-nosnippet>493</a>
+<a href=#494 id=494 data-nosnippet>494</a><span class="doccomment">/// The addresses of an address line of a marked list: a line of addresses only (`email_addresses`), or one behind an
+<a href=#495 id=495 data-nosnippet>495</a>/// e-mail label (`email: a@x, b@y`: `split_email_label`), whose label `email_line_calls` keeps as the contacts' name.
+<a href=#496 id=496 data-nosnippet>496</a>/// Read on the tokens the e-mail calls are cut from, at the binding's call: `resolver::prints_only_addresses` on a reading
+<a href=#497 id=497 data-nosnippet>497</a>/// says only whether (P6f).
+<a href=#498 id=498 data-nosnippet>498</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>line_addresses(line: <span class="kw-2">&amp;</span>Tokens) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;String&gt;&gt; {
+<a href=#499 id=499 data-nosnippet>499</a>  email_addresses(line).or_else(|| <span class="kw">match </span>split_email_label(line) {
+<a href=#500 id=500 data-nosnippet>500</a>    (<span class="prelude-val">Some</span>(<span class="kw">_</span>), rest) =&gt; email_addresses(<span class="kw-2">&amp;</span>rest),
+<a href=#501 id=501 data-nosnippet>501</a>    <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#502 id=502 data-nosnippet>502</a>  })
+<a href=#503 id=503 data-nosnippet>503</a>}
+<a href=#504 id=504 data-nosnippet>504</a>
+<a href=#505 id=505 data-nosnippet>505</a><span class="doccomment">/// A run of consecutive address lines in a marked affiliation list, with the entry it follows (when the line before
+<a href=#506 id=506 data-nosnippet>506</a>/// it was that entry, not across `\and`) and the length that entry had when the run was read: where a continuation
+<a href=#507 id=507 data-nosnippet>507</a>/// goes.
+<a href=#508 id=508 data-nosnippet>508</a></span><span class="kw">struct </span>AddressRun {
+<a href=#509 id=509 data-nosnippet>509</a>  lines: Vec&lt;(Vec&lt;Token&gt;, Tokens)&gt;,
+<a href=#510 id=510 data-nosnippet>510</a>  under: <span class="prelude-ty">Option</span>&lt;(usize, usize)&gt;,
+<a href=#511 id=511 data-nosnippet>511</a>}
+<a href=#512 id=512 data-nosnippet>512</a>
+<a href=#513 id=513 data-nosnippet>513</a><span class="doccomment">/// The `\lx@add@email` calls for the address runs of a marked affiliation list (OXIDIZED_DESIGN #52(j)); a run that
+<a href=#514 id=514 data-nosnippet>514</a>/// stays with its affiliation is spliced into that entry. An address claims an author only where the list says
+<a href=#515 id=515 data-nosnippet>515</a>/// whose it is:
+<a href=#516 id=516 data-nosnippet>516</a>/// - when the list puts addresses under its affiliations — it has one, or a run sits between two (2609.19448
+<a href=#517 id=517 data-nosnippet>517</a>///   `$^1$Department\\University\\\texttt{david.abel@ed.ac.uk}\\[2ex]$^2$…`) — one address under an affiliation
+<a href=#518 id=518 data-nosnippet>518</a>///   exactly one author requests is that author's; any other run under an affiliation goes back into that entry, whose
+<a href=#519 id=519 data-nosnippet>519</a>///   Kind step takes it out as the entry's e-mails and whose Link step places them (the author each spells, the entry's
+<a href=#520 id=520 data-nosnippet>520</a>///   only carrier, …, else the block once: [`kind_entry_addresses`], OD #956);
+<a href=#521 id=521 data-nosnippet>521</a>/// - else the run is the block's: one address for each author goes to the authors in order (llncs
+<a href=#522 id=522 data-nosnippet>522</a>///   `\institute{$^1$A \\ $^2$B \\ \email{a@x} \\ \email{b@y}}`), any other is one contact an address on the shared
+<a href=#523 id=523 data-nosnippet>523</a>///   creator below the authors (#159) — by order, 2609.06094's four addresses for six authors had given Jindong
+<a href=#524 id=524 data-nosnippet>524</a>///   Gu's to Runjia Li, and by the mark of the affiliation they follow, three of them to the wrong author.
+<a href=#525 id=525 data-nosnippet>525</a>///
+<a href=#526 id=526 data-nosnippet>526</a>/// `row_start` is the queue position the authors the list belongs to start after (0: every queued author).
+<a href=#527 id=527 data-nosnippet>527</a></span><span class="kw">fn </span>place_address_runs(
+<a href=#528 id=528 data-nosnippet>528</a>  runs: Vec&lt;AddressRun&gt;,
+<a href=#529 id=529 data-nosnippet>529</a>  entries: <span class="kw-2">&amp;mut </span>[Vec&lt;Token&gt;],
+<a href=#530 id=530 data-nosnippet>530</a>  row_start: usize,
+<a href=#531 id=531 data-nosnippet>531</a>) -&gt; <span class="prelude-ty">Result</span>&lt;Vec&lt;Token&gt;&gt; {
+<a href=#532 id=532 data-nosnippet>532</a>  <span class="kw">let </span>authors = queued_author_positions()<span class="question-mark">?</span>;
+<a href=#533 id=533 data-nosnippet>533</a>  <span class="kw">let </span>row_start = row_start.min(authors);
+<a href=#534 id=534 data-nosnippet>534</a>  <span class="comment">// (a legend line, `* Equal contribution`, is an entry with no mark; nor does a footnote-symbol mark after a run,
+<a href=#535 id=535 data-nosnippet>535</a>  // `$^\dagger$ Corresponding author`, show the run sits under an affiliation — as an iopart `\address`'s one mark it
+<a href=#536 id=536 data-nosnippet>536</a>  // still labels one)
+<a href=#537 id=537 data-nosnippet>537</a>  </span><span class="kw">let </span>marks: Vec&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;Token&gt;&gt;&gt; = entries.iter().map(|entry| entry_mark(entry)).collect();
+<a href=#538 id=538 data-nosnippet>538</a>  <span class="kw">let </span>affiliation_follows = |entry: usize| {
+<a href=#539 id=539 data-nosnippet>539</a>    marks[entry + <span class="number">1</span>..]
+<a href=#540 id=540 data-nosnippet>540</a>      .iter()
+<a href=#541 id=541 data-nosnippet>541</a>      .flatten()
+<a href=#542 id=542 data-nosnippet>542</a>      .any(|mark| !is_symbol_mark(mark))
+<a href=#543 id=543 data-nosnippet>543</a>  };
+<a href=#544 id=544 data-nosnippet>544</a>  <span class="kw">let </span>under_affiliations = marks.iter().flatten().count() == <span class="number">1
+<a href=#545 id=545 data-nosnippet>545</a>    </span>|| runs.iter().any(|run| {
+<a href=#546 id=546 data-nosnippet>546</a>      run
+<a href=#547 id=547 data-nosnippet>547</a>        .under
+<a href=#548 id=548 data-nosnippet>548</a>        .is_some_and(|(entry, <span class="kw">_</span>)| affiliation_follows(entry))
+<a href=#549 id=549 data-nosnippet>549</a>    });
+<a href=#550 id=550 data-nosnippet>550</a>  <span class="kw">let </span><span class="kw-2">mut </span>placed: Vec&lt;Vec&lt;Token&gt;&gt; = Vec::new();
+<a href=#551 id=551 data-nosnippet>551</a>  <span class="comment">// In reverse, so a continuation spliced into an entry leaves the places of the runs before it there.
+<a href=#552 id=552 data-nosnippet>552</a>  </span><span class="kw">for </span>run <span class="kw">in </span>runs.into_iter().rev() {
+<a href=#553 id=553 data-nosnippet>553</a>    <span class="kw">let </span>counts: Vec&lt;usize&gt; = run
+<a href=#554 id=554 data-nosnippet>554</a>      .lines
+<a href=#555 id=555 data-nosnippet>555</a>      .iter()
+<a href=#556 id=556 data-nosnippet>556</a>      .map(|(<span class="kw">_</span>, line)| line_addresses(line).map_or(<span class="number">0</span>, |a| a.len()))
+<a href=#557 id=557 data-nosnippet>557</a>      .collect();
+<a href=#558 id=558 data-nosnippet>558</a>    <span class="kw">let </span>total: usize = counts.iter().sum();
+<a href=#559 id=559 data-nosnippet>559</a>    <span class="kw">let </span><span class="kw-2">mut </span>calls = Vec::new();
+<a href=#560 id=560 data-nosnippet>560</a>    <span class="kw">match </span>run.under {
+<a href=#561 id=561 data-nosnippet>561</a>      <span class="comment">// (a run under an affiliation is that entry's: it goes back into it, whose Kind step takes its addresses out as
+<a href=#562 id=562 data-nosnippet>562</a>      // the entry's e-mails and whose Link step places them — the author each spells, the entry's only carrier, every
+<a href=#563 id=563 data-nosnippet>563</a>      // carrier of a symbol-led one, one per carrier in order, else the block once: `kind_entry_addresses`,
+<a href=#564 id=564 data-nosnippet>564</a>      // `owners::entry_address_owners`, OXIDIZED_DESIGN_DIVERGENCES #956; it no longer stays in the entry's text,
+<a href=#565 id=565 data-nosnippet>565</a>      // 2609.19448's one address under one author's affiliation still that author's)
+<a href=#566 id=566 data-nosnippet>566</a>      </span><span class="prelude-val">Some</span>((entry, at)) <span class="kw">if </span>under_affiliations =&gt; {
+<a href=#567 id=567 data-nosnippet>567</a>        <span class="kw">let </span>label = entry_mark(<span class="kw-2">&amp;</span>entries[entry]).map_or(<span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>), |m| mark_set_label(<span class="kw-2">&amp;</span>m))<span class="question-mark">?</span>;
+<a href=#568 id=568 data-nosnippet>568</a>        <span class="kw">let </span>requesting = queued_label_requesters(label.as_deref().unwrap_or_default())<span class="question-mark">?</span>;
+<a href=#569 id=569 data-nosnippet>569</a>        <span class="comment">// (one address under an affiliation one author requests is that author's, its line made the contact here: an
+<a href=#570 id=570 data-nosnippet>570</a>        // e-mail command a raw class's store holds, `\email{hyf@…}` under `\inst{1}`'s institute, prints nowhere if
+<a href=#571 id=571 data-nosnippet>571</a>        // left in the entry — astro-ph0701846), with the mark that placed it: a call the reading parts into several
+<a href=#572 id=572 data-nosnippet>572</a>        // names gives it to the one showing that mark (`Resolver::entry_owners`; IEEEtran's one names block, 2510.10414)
+<a href=#573 id=573 data-nosnippet>573</a>        </span><span class="kw">if let </span>(<span class="prelude-val">Some</span>(label), [author], <span class="number">1</span>) = (label, requesting.as_slice(), total) {
+<a href=#574 id=574 data-nosnippet>574</a>          <span class="kw">let </span>by_mark =
+<a href=#575 id=575 data-nosnippet>575</a>            mouth::tokenize_internal(TeXString::assembled(<span class="macro">s!</span>(<span class="string">"_placedbymark={{{label}}}"</span>)));
+<a href=#576 id=576 data-nosnippet>576</a>          <span class="kw">for </span>(<span class="kw">_</span>, line) <span class="kw">in </span>run.lines {
+<a href=#577 id=577 data-nosnippet>577</a>            <span class="kw">let </span>placed = email_line_calls(line, AddressPlacement::Authors(<span class="macro">vec!</span>[<span class="kw-2">*</span>author]))<span class="question-mark">?</span>;
+<a href=#578 id=578 data-nosnippet>578</a>            calls.extend(optioned_email_calls(placed, by_mark.unlist_ref()));
+<a href=#579 id=579 data-nosnippet>579</a>          }
+<a href=#580 id=580 data-nosnippet>580</a>        } <span class="kw">else </span>{
+<a href=#581 id=581 data-nosnippet>581</a>          <span class="kw">let </span>continuation: Vec&lt;Token&gt; = run
+<a href=#582 id=582 data-nosnippet>582</a>            .lines
+<a href=#583 id=583 data-nosnippet>583</a>            .into_iter()
+<a href=#584 id=584 data-nosnippet>584</a>            .flat_map(|(delimiter, line)| delimiter.into_iter().chain(line.unlist()))
+<a href=#585 id=585 data-nosnippet>585</a>            .collect();
+<a href=#586 id=586 data-nosnippet>586</a>          entries[entry].splice(at..at, continuation);
+<a href=#587 id=587 data-nosnippet>587</a>        }
+<a href=#588 id=588 data-nosnippet>588</a>      },
+<a href=#589 id=589 data-nosnippet>589</a>      <span class="kw">_ if </span>total == authors - row_start &amp;&amp; run_in_author_order(<span class="kw-2">&amp;</span>run.lines, row_start)<span class="question-mark">? </span>=&gt; {
+<a href=#590 id=590 data-nosnippet>590</a>        <span class="kw">let </span><span class="kw-2">mut </span>positions = row_start + <span class="number">1</span>..;
+<a href=#591 id=591 data-nosnippet>591</a>        <span class="kw">for </span>((<span class="kw">_</span>, line), count) <span class="kw">in </span>run.lines.into_iter().zip(counts) {
+<a href=#592 id=592 data-nosnippet>592</a>          <span class="kw">let </span>authors = positions.by_ref().take(count).collect();
+<a href=#593 id=593 data-nosnippet>593</a>          calls.extend(email_line_calls(line, AddressPlacement::Authors(authors))<span class="question-mark">?</span>);
+<a href=#594 id=594 data-nosnippet>594</a>        }
+<a href=#595 id=595 data-nosnippet>595</a>      },
+<a href=#596 id=596 data-nosnippet>596</a>      <span class="kw">_ </span>=&gt; {
+<a href=#597 id=597 data-nosnippet>597</a>        <span class="comment">// (an address the run's place leaves to no author still goes to the one it spells, before the block: the
+<a href=#598 id=598 data-nosnippet>598</a>        // placement order's step 2 before step 4 — aa's `\institute{$^{1}$Univ X\\ $^{2}$Univ Y\\ \email{ann.able@y.org}}`
+<a href=#599 id=599 data-nosnippet>599</a>        // under three names, 1507.05963, cut at its marks by the frontmatter API, OXIDIZED_DESIGN_DIVERGENCES #954)
+<a href=#600 id=600 data-nosnippet>600</a>        </span><span class="kw">let </span>keys = queued_author_name_keys()<span class="question-mark">?</span>;
+<a href=#601 id=601 data-nosnippet>601</a>        <span class="kw">for </span>(<span class="kw">_</span>, line) <span class="kw">in </span>run.lines {
+<a href=#602 id=602 data-nosnippet>602</a>          <span class="kw">let </span>owners: Vec&lt;<span class="prelude-ty">Option</span>&lt;usize&gt;&gt; = line_addresses(<span class="kw-2">&amp;</span>line)
+<a href=#603 id=603 data-nosnippet>603</a>            .unwrap_or_default()
+<a href=#604 id=604 data-nosnippet>604</a>            .iter()
+<a href=#605 id=605 data-nosnippet>605</a>            .map(|address| spelled_owner(<span class="kw-2">&amp;</span>keys, address).map(|owner| owner + <span class="number">1</span>))
+<a href=#606 id=606 data-nosnippet>606</a>            .collect();
+<a href=#607 id=607 data-nosnippet>607</a>          <span class="kw">let </span>placement = <span class="kw">if </span>owners.iter().any(Option::is_some) {
+<a href=#608 id=608 data-nosnippet>608</a>            AddressPlacement::Settled(owners)
+<a href=#609 id=609 data-nosnippet>609</a>          } <span class="kw">else </span>{
+<a href=#610 id=610 data-nosnippet>610</a>            AddressPlacement::Shared
+<a href=#611 id=611 data-nosnippet>611</a>          };
+<a href=#612 id=612 data-nosnippet>612</a>          calls.extend(email_line_calls(line, placement)<span class="question-mark">?</span>);
+<a href=#613 id=613 data-nosnippet>613</a>        }
+<a href=#614 id=614 data-nosnippet>614</a>      },
+<a href=#615 id=615 data-nosnippet>615</a>    }
+<a href=#616 id=616 data-nosnippet>616</a>    placed.push(calls);
+<a href=#617 id=617 data-nosnippet>617</a>  }
+<a href=#618 id=618 data-nosnippet>618</a>  <span class="prelude-val">Ok</span>(placed.into_iter().rev().flatten().collect())
+<a href=#619 id=619 data-nosnippet>619</a>}
+<a href=#620 id=620 data-nosnippet>620</a>
+<a href=#621 id=621 data-nosnippet>621</a><span class="doccomment">/// Where the addresses of a line in an author block go.
+<a href=#622 id=622 data-nosnippet>622</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">enum </span>AddressPlacement {
+<a href=#623 id=623 data-nosnippet>623</a>  <span class="doccomment">/// Each address to the author at that queue position, by the `author:N` label the creator digests with.
+<a href=#624 id=624 data-nosnippet>624</a>  </span>Authors(Vec&lt;usize&gt;),
+<a href=#625 id=625 data-nosnippet>625</a>  <span class="doccomment">/// Each address a name settles to the author at that queue position, as [`AddressPlacement::Authors`]; each other
+<a href=#626 id=626 data-nosnippet>626</a>  /// the block's, as [`AddressPlacement::Shared`] places it (2609.15028's `qq@…`-like address no name spells beside
+<a href=#627 id=627 data-nosnippet>627</a>  /// `zihanxue@…`, `serhii@…`; user ruling R10 2026-10-20). The line itself when no address is settled.
+<a href=#628 id=628 data-nosnippet>628</a>  </span>Settled(Vec&lt;<span class="prelude-ty">Option</span>&lt;usize&gt;&gt;),
+<a href=#629 id=629 data-nosnippet>629</a>  <span class="doccomment">/// The block's, on the shared creator below the authors (#159): its label names no creator. One contact an address
+<a href=#630 id=630 data-nosnippet>630</a>  /// when the line lists several (1802.07182's `\{jrr41,$\,$wct23,…\}@cam.ac.uk`, whose raw line a Semiverbatim
+<a href=#631 id=631 data-nosnippet>631</a>  /// contact showed as `{jrr41,$ $wct23,…}`), else the line.
+<a href=#632 id=632 data-nosnippet>632</a>  </span>Shared,
+<a href=#633 id=633 data-nosnippet>633</a>  <span class="doccomment">/// Each address its own contact, with no placement of its own: an address line of an affiliation-kind entry, digested
+<a href=#634 id=634 data-nosnippet>634</a>  /// inside it, the entry's address — its owners the entry's Link step gives ([`kind_entry_addresses`],
+<a href=#635 id=635 data-nosnippet>635</a>  /// `owners::entry_address_owners`).
+<a href=#636 id=636 data-nosnippet>636</a>  </span>Inner,
+<a href=#637 id=637 data-nosnippet>637</a>}
+</code></pre></div></section></main></body></html>

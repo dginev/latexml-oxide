@@ -1,127 +1,199 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/revtex4_1_cls.rs`."><title>revtex4_1_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>revtex4_1_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
-<a href=#2 id=2 data-nosnippet>2</a><span class="attr">#[rustfmt::skip]
-<a href=#3 id=3 data-nosnippet>3</a></span><span class="macro">LoadDefinitions!</span>({
-<a href=#4 id=4 data-nosnippet>4</a>  <span class="comment">// Perl: revtex4-1.cls.ltxml
-<a href=#5 id=5 data-nosnippet>5</a>  </span><span class="kw">for </span>option <span class="kw">in </span>[<span class="string">"overload"</span>, <span class="string">"preprint"</span>, <span class="string">"manuscript"</span>, <span class="string">"showpacs"</span>, <span class="string">"noshowpacs"</span>,
-<a href=#6 id=6 data-nosnippet>6</a>    <span class="string">"showkeys"</span>, <span class="string">"noshowkeys"</span>, <span class="string">"balancelastpage"</span>, <span class="string">"nobalancelastpage"</span>,
-<a href=#7 id=7 data-nosnippet>7</a>    <span class="string">"preprintnumbers"</span>, <span class="string">"nopreprintnumbers"</span>, <span class="string">"bibnotes"</span>, <span class="string">"nobibnotes"</span>,
-<a href=#8 id=8 data-nosnippet>8</a>    <span class="string">"footinbib"</span>, <span class="string">"nofootinbib"</span>, <span class="string">"altaffilletter"</span>, <span class="string">"altaffilsymbol"</span>,
-<a href=#9 id=9 data-nosnippet>9</a>    <span class="string">"superbib"</span>, <span class="string">"citeautoscript"</span>, <span class="string">"raggedbottom"</span>, <span class="string">"flushbottom"</span>,
-<a href=#10 id=10 data-nosnippet>10</a>    <span class="string">"tightenlines"</span>, <span class="string">"lengthcheck"</span>, <span class="string">"eqsecnum"</span>, <span class="string">"secnumarabic"</span>,
-<a href=#11 id=11 data-nosnippet>11</a>    <span class="string">"fleqn"</span>, <span class="string">"floats"</span>, <span class="string">"endfloats"</span>,
-<a href=#12 id=12 data-nosnippet>12</a>    <span class="comment">// Perl L29 also declares the starred `endfloats*`; Rust was missing it
-<a href=#13 id=13 data-nosnippet>13</a>    // so `\documentclass[endfloats*]{revtex4-1}` fell through to the article
-<a href=#14 id=14 data-nosnippet>14</a>    // option passthrough.
-<a href=#15 id=15 data-nosnippet>15</a>    </span><span class="string">"endfloats*"</span>,
-<a href=#16 id=16 data-nosnippet>16</a>    <span class="string">"titlepage"</span>, <span class="string">"notitlepage"</span>,
-<a href=#17 id=17 data-nosnippet>17</a>    <span class="string">"groupedaddress"</span>, <span class="string">"unsortedaddress"</span>, <span class="string">"runinaddress"</span>,
-<a href=#18 id=18 data-nosnippet>18</a>    <span class="string">"superscriptaddress"</span>, <span class="string">"byrevtex"</span>, <span class="string">"floatfix"</span>, <span class="string">"nofloatfix"</span>,
-<a href=#19 id=19 data-nosnippet>19</a>    <span class="string">"ltxgridinfo"</span>, <span class="string">"outputdebug"</span>, <span class="string">"raggedfooter"</span>,
-<a href=#20 id=20 data-nosnippet>20</a>    <span class="string">"newabstract"</span>, <span class="string">"oldabstract"</span>, <span class="string">"checkin"</span>].iter()
-<a href=#21 id=21 data-nosnippet>21</a>  {
-<a href=#22 id=22 data-nosnippet>22</a>    <span class="macro">DeclareOption!</span>(<span class="kw-2">*</span>option, <span class="prelude-val">None</span>);
-<a href=#23 id=23 data-nosnippet>23</a>  }
-<a href=#24 id=24 data-nosnippet>24</a>  <span class="kw">for </span>substyle <span class="kw">in </span>[<span class="string">"aps"</span>, <span class="string">"pra"</span>, <span class="string">"prb"</span>, <span class="string">"prc"</span>, <span class="string">"prd"</span>, <span class="string">"pre"</span>, <span class="string">"prl"</span>,
-<a href=#25 id=25 data-nosnippet>25</a>    <span class="string">"prstab"</span>, <span class="string">"rmp"</span>, <span class="string">"osa"</span>, <span class="string">"osameet"</span>, <span class="string">"opex"</span>, <span class="string">"tops"</span>, <span class="string">"josa"</span>].iter()
-<a href=#26 id=26 data-nosnippet>26</a>  {
-<a href=#27 id=27 data-nosnippet>27</a>    <span class="macro">DeclareOption!</span>(<span class="kw-2">*</span>substyle, <span class="prelude-val">None</span>);
-<a href=#28 id=28 data-nosnippet>28</a>  }
-<a href=#29 id=29 data-nosnippet>29</a>  <span class="comment">// Perl revtex4-1.cls.ltxml L40-45:
-<a href=#30 id=30 data-nosnippet>30</a>  //   my @revtex_toload = ();        # EMPTY by default
-<a href=#31 id=31 data-nosnippet>31</a>  //   foreach my $pkg (qw(amsfonts amssymb amsmath)) {
-<a href=#32 id=32 data-nosnippet>32</a>  //     DeclareOption($pkg,   sub { push(@revtex_toload, $pkg); });
-<a href=#33 id=33 data-nosnippet>33</a>  //     DeclareOption("no$pkg", sub { @revtex_toload = grep {…} … }); }
-<a href=#34 id=34 data-nosnippet>34</a>  // Same Perl-faithful empty default as revtex4_cls.rs sister fix.
-<a href=#35 id=35 data-nosnippet>35</a>  // Was: defaulted to TRUE with the misattributed claim that Perl's
-<a href=#36 id=36 data-nosnippet>36</a>  // default is the full list; Perl's actual default is `()`. The flip
-<a href=#37 id=37 data-nosnippet>37</a>  // pulled amsmath into papers that don't opt in, and amsmath's `\cases`
-<a href=#38 id=38 data-nosnippet>38</a>  // redefinition then mis-parsed plain TeX `\cases{… &amp; … \cr}` inside
-<a href=#39 id=39 data-nosnippet>39</a>  // `\begin{equation}`. RUST REGRESSION — drop the default-true.
-<a href=#40 id=40 data-nosnippet>40</a>  //
-<a href=#41 id=41 data-nosnippet>41</a>  // Driver 2210.07776's `\boldsymbol undefined` cascade was the
-<a href=#42 id=42 data-nosnippet>42</a>  // originally-claimed motivation; if it regresses, the proper fix is
-<a href=#43 id=43 data-nosnippet>43</a>  // in the DeclareOption / ProcessOptions handler (separate work).
-<a href=#44 id=44 data-nosnippet>44</a>  </span><span class="kw">for </span>pkg <span class="kw">in </span>[<span class="string">"amsfonts"</span>, <span class="string">"amssymb"</span>, <span class="string">"amsmath"</span>].iter() {
-<a href=#45 id=45 data-nosnippet>45</a>    <span class="kw">let </span>pkg_owned = pkg.to_string();
-<a href=#46 id=46 data-nosnippet>46</a>    <span class="macro">DeclareOption!</span>(<span class="kw-2">*</span>pkg, {
-<a href=#47 id=47 data-nosnippet>47</a>      assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"revtex_load_{}"</span>, pkg_owned), <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#48 id=48 data-nosnippet>48</a>    });
-<a href=#49 id=49 data-nosnippet>49</a>    <span class="kw">let </span>nopkg = <span class="macro">s!</span>(<span class="string">"no{}"</span>, pkg);
-<a href=#50 id=50 data-nosnippet>50</a>    <span class="macro">DeclareOption!</span>(<span class="kw-2">&amp;</span>nopkg, {
-<a href=#51 id=51 data-nosnippet>51</a>      assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"revtex_load_{}"</span>, pkg), <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#52 id=52 data-nosnippet>52</a>    });
-<a href=#53 id=53 data-nosnippet>53</a>  }
-<a href=#54 id=54 data-nosnippet>54</a>  <span class="comment">// Perl L47-49: osajnl (Optical Society) sub-option also pushed graphics
-<a href=#55 id=55 data-nosnippet>55</a>  // onto @revtex_toload and Let-aliased \ocis → \pacs. Revtex4 class has
-<a href=#56 id=56 data-nosnippet>56</a>  // this (revtex4_cls.rs L37-39); the revtex4-1 port had dropped it,
-<a href=#57 id=57 data-nosnippet>57</a>  // which breaks OSA documents that rely on the \ocis classification.
-<a href=#58 id=58 data-nosnippet>58</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"osajnl"</span>, {
-<a href=#59 id=59 data-nosnippet>59</a>    assign_value(<span class="string">"revtex_load_graphics"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#60 id=60 data-nosnippet>60</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\ocis"</span>, <span class="string">"\\pacs"</span>);
-<a href=#61 id=61 data-nosnippet>61</a>  });
-<a href=#62 id=62 data-nosnippet>62</a>  <span class="macro">DeclareOption!</span>(<span class="prelude-val">None</span>, {
-<a href=#63 id=63 data-nosnippet>63</a>    <span class="macro">Digest!</span>(<span class="string">"\\PassOptionsToClass{\\CurrentOption}{article}"</span>)<span class="question-mark">?</span>;
-<a href=#64 id=64 data-nosnippet>64</a>  });
-<a href=#65 id=65 data-nosnippet>65</a>  <span class="comment">// REVTeX4-1 declares `author-year` / `numerical`, DEFAULT numerical
-<a href=#66 id=66 data-nosnippet>66</a>  // (revtex4-1.cls L6001-6003 → `\@booleanfalse\authoryear@sw`): bracketed
-<a href=#67 id=67 data-nosnippet>67</a>  // numeric citations like the PDF. Perl's revtex4-1 binding and natbib's
-<a href=#68 id=68 data-nosnippet>68</a>  // default both give author-year, so oxide SURPASSES Perl to match the real
-<a href=#69 id=69 data-nosnippet>69</a>  // class + PDF; a later `\setcitestyle`/`\bibpunct` still overrides. Sister
-<a href=#70 id=70 data-nosnippet>70</a>  // logic to revtex4_cls.rs. html_feedback #6609.
-<a href=#71 id=71 data-nosnippet>71</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"numerical"</span>, {
-<a href=#72 id=72 data-nosnippet>72</a>    assign_value(<span class="string">"revtex_cite_style"</span>, pin(<span class="string">"numbers"</span>), <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#73 id=73 data-nosnippet>73</a>  });
-<a href=#74 id=74 data-nosnippet>74</a>  <span class="macro">DeclareOption!</span>(<span class="string">"author-year"</span>, {
-<a href=#75 id=75 data-nosnippet>75</a>    assign_value(<span class="string">"revtex_cite_style"</span>, pin(<span class="string">"authoryear"</span>), <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#76 id=76 data-nosnippet>76</a>  });
-<a href=#77 id=77 data-nosnippet>77</a>  assign_value(<span class="string">"revtex_cite_style"</span>, pin(<span class="string">"numbers"</span>), <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#78 id=78 data-nosnippet>78</a>  <span class="macro">ProcessOptions!</span>();
-<a href=#79 id=79 data-nosnippet>79</a>  <span class="macro">LoadClass!</span>(<span class="string">"article"</span>);
-<a href=#80 id=80 data-nosnippet>80</a>  <span class="comment">// Queue the citation style onto natbib (numbers → numeric `[N]`; author-year →
-<a href=#81 id=81 data-nosnippet>81</a>  // natbib's default). `\PassOptionsToPackage` on purpose, not a direct
-<a href=#82 id=82 data-nosnippet>82</a>  // `RequirePackage("natbib", [numbers])`: pre-loading natbib here flips it ahead
-<a href=#83 id=83 data-nosnippet>83</a>  // of revtex4_support's hyperref and that perturbation trips a latent libxml
-<a href=#84 id=84 data-nosnippet>84</a>  // heisenbug. Queuing keeps natbib in its original position. Sister logic to
-<a href=#85 id=85 data-nosnippet>85</a>  // revtex4_cls.rs. html_feedback #6609.
-<a href=#86 id=86 data-nosnippet>86</a>  </span><span class="kw">if </span>lookup_string(<span class="string">"revtex_cite_style"</span>) == <span class="string">"numbers" </span>{
-<a href=#87 id=87 data-nosnippet>87</a>    <span class="macro">Digest!</span>(<span class="string">"\\PassOptionsToPackage{numbers}{natbib}"</span>)<span class="question-mark">?</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/revtex4_1_cls.rs`."><title>revtex4_1_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>revtex4_1_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">super</span>::revtex4_cls;
+<a href=#2 id=2 data-nosnippet>2</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<a href=#3 id=3 data-nosnippet>3</a><span class="attr">#[rustfmt::skip]
+<a href=#4 id=4 data-nosnippet>4</a></span><span class="macro">LoadDefinitions!</span>({
+<a href=#5 id=5 data-nosnippet>5</a>  <span class="comment">// Perl: revtex4-1.cls.ltxml
+<a href=#6 id=6 data-nosnippet>6</a>  </span><span class="kw">for </span>option <span class="kw">in </span>[<span class="string">"overload"</span>, <span class="string">"showpacs"</span>, <span class="string">"noshowpacs"</span>,
+<a href=#7 id=7 data-nosnippet>7</a>    <span class="string">"showkeys"</span>, <span class="string">"noshowkeys"</span>, <span class="string">"balancelastpage"</span>, <span class="string">"nobalancelastpage"</span>,
+<a href=#8 id=8 data-nosnippet>8</a>    <span class="string">"bibnotes"</span>, <span class="string">"nobibnotes"</span>,
+<a href=#9 id=9 data-nosnippet>9</a>    <span class="string">"footinbib"</span>, <span class="string">"nofootinbib"</span>,
+<a href=#10 id=10 data-nosnippet>10</a>    <span class="string">"superbib"</span>, <span class="string">"citeautoscript"</span>, <span class="string">"raggedbottom"</span>, <span class="string">"flushbottom"</span>,
+<a href=#11 id=11 data-nosnippet>11</a>    <span class="string">"tightenlines"</span>, <span class="string">"lengthcheck"</span>,
+<a href=#12 id=12 data-nosnippet>12</a>    <span class="string">"fleqn"</span>, <span class="string">"floats"</span>, <span class="string">"endfloats"</span>,
+<a href=#13 id=13 data-nosnippet>13</a>    <span class="comment">// Perl L29 also declares the starred `endfloats*`; Rust was missing it
+<a href=#14 id=14 data-nosnippet>14</a>    // so `\documentclass[endfloats*]{revtex4-1}` fell through to the article
+<a href=#15 id=15 data-nosnippet>15</a>    // option passthrough.
+<a href=#16 id=16 data-nosnippet>16</a>    </span><span class="string">"endfloats*"</span>,
+<a href=#17 id=17 data-nosnippet>17</a>    <span class="string">"titlepage"</span>, <span class="string">"notitlepage"</span>,
+<a href=#18 id=18 data-nosnippet>18</a>    <span class="string">"groupedaddress"</span>, <span class="string">"unsortedaddress"</span>, <span class="string">"runinaddress"</span>,
+<a href=#19 id=19 data-nosnippet>19</a>    <span class="string">"superscriptaddress"</span>, <span class="string">"byrevtex"</span>, <span class="string">"floatfix"</span>, <span class="string">"nofloatfix"</span>,
+<a href=#20 id=20 data-nosnippet>20</a>    <span class="string">"ltxgridinfo"</span>, <span class="string">"outputdebug"</span>, <span class="string">"raggedfooter"</span>,
+<a href=#21 id=21 data-nosnippet>21</a>    <span class="string">"newabstract"</span>, <span class="string">"oldabstract"</span>].iter()
+<a href=#22 id=22 data-nosnippet>22</a>  {
+<a href=#23 id=23 data-nosnippet>23</a>    <span class="macro">DeclareOption!</span>(<span class="kw-2">*</span>option, <span class="prelude-val">None</span>);
+<a href=#24 id=24 data-nosnippet>24</a>  }
+<a href=#25 id=25 data-nosnippet>25</a>  <span class="comment">// The front matter's footnote marks (revtex4_support_sty.rs `\frontmatter@thefootnote`): letters under
+<a href=#26 id=26 data-nosnippet>26</a>  // `altaffilletter`, symbols by default and under `altaffilsymbol` (revtex4-1.cls:5955-5957, revtex4.cls:3934-3937,
+<a href=#27 id=27 data-nosnippet>27</a>  // revtex4-2.cls:5976-5978).
+<a href=#28 id=28 data-nosnippet>28</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"altaffilletter"</span>, {
+<a href=#29 id=29 data-nosnippet>29</a>    assign_value(<span class="string">"revtex@altaffilletter"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#30 id=30 data-nosnippet>30</a>  });
+<a href=#31 id=31 data-nosnippet>31</a>  <span class="macro">DeclareOption!</span>(<span class="string">"altaffilsymbol"</span>, {
+<a href=#32 id=32 data-nosnippet>32</a>    assign_value(<span class="string">"revtex@altaffilletter"</span>, <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#33 id=33 data-nosnippet>33</a>  });
+<a href=#34 id=34 data-nosnippet>34</a>  <span class="comment">// The options that decide whether the class prints the `\preprint` numbers (revtex4-1.cls:5856-5909, revtex4.cls
+<a href=#35 id=35 data-nosnippet>35</a>  // :3847-3892, revtex4-2.cls alike): `preprint` (and `manuscript`, `checkin`) set the preprint style, which prints
+<a href=#36 id=36 data-nosnippet>36</a>  // them unless `nopreprintnumbers`; `preprintnumbers` prints them in any style (revtex4_support_sty.rs
+<a href=#37 id=37 data-nosnippet>37</a>  // `preprint_printed`).
+<a href=#38 id=38 data-nosnippet>38</a>  </span><span class="kw">for </span>option <span class="kw">in </span>[<span class="string">"preprint"</span>, <span class="string">"manuscript"</span>, <span class="string">"checkin"</span>] {
+<a href=#39 id=39 data-nosnippet>39</a>    <span class="macro">DeclareOption!</span>(option, {
+<a href=#40 id=40 data-nosnippet>40</a>      assign_value(<span class="string">"revtex@preprintsty"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#41 id=41 data-nosnippet>41</a>    });
+<a href=#42 id=42 data-nosnippet>42</a>  }
+<a href=#43 id=43 data-nosnippet>43</a>  <span class="macro">DeclareOption!</span>(<span class="string">"preprintnumbers"</span>, {
+<a href=#44 id=44 data-nosnippet>44</a>    assign_value(<span class="string">"revtex@preprintnumbers"</span>, Stored::Bool(<span class="bool-val">true</span>), <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#45 id=45 data-nosnippet>45</a>  });
+<a href=#46 id=46 data-nosnippet>46</a>  <span class="macro">DeclareOption!</span>(<span class="string">"nopreprintnumbers"</span>, {
+<a href=#47 id=47 data-nosnippet>47</a>    assign_value(<span class="string">"revtex@preprintnumbers"</span>, Stored::Bool(<span class="bool-val">false</span>), <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#48 id=48 data-nosnippet>48</a>  });
+<a href=#49 id=49 data-nosnippet>49</a>  <span class="comment">// The society and journal, which the section numbers depend on (the `rmp` journal, apsrmp4-1.rtx:115-139; PRL's
+<a href=#50 id=50 data-nosnippet>50</a>  // `secnumdepth`, aps4-1.rtx:564), are read from the options as the class reads them
+<a href=#51 id=51 data-nosnippet>51</a>  // (`revtex4_support_sty::selected_journal`).
+<a href=#52 id=52 data-nosnippet>52</a>  </span><span class="kw">for </span>substyle <span class="kw">in </span>[<span class="string">"aps"</span>, <span class="string">"pra"</span>, <span class="string">"prb"</span>, <span class="string">"prc"</span>, <span class="string">"prd"</span>, <span class="string">"pre"</span>, <span class="string">"prl"</span>,
+<a href=#53 id=53 data-nosnippet>53</a>    <span class="string">"prstab"</span>, <span class="string">"rmp"</span>, <span class="string">"osa"</span>, <span class="string">"osameet"</span>, <span class="string">"opex"</span>, <span class="string">"tops"</span>, <span class="string">"josa"</span>].iter()
+<a href=#54 id=54 data-nosnippet>54</a>  {
+<a href=#55 id=55 data-nosnippet>55</a>    <span class="macro">DeclareOption!</span>(<span class="kw-2">*</span>substyle, <span class="prelude-val">None</span>);
+<a href=#56 id=56 data-nosnippet>56</a>  }
+<a href=#57 id=57 data-nosnippet>57</a>  <span class="comment">// The options that number the sections and equations (`revtex4_support_sty::define_section_numbers`): `eqsecnum`
+<a href=#58 id=58 data-nosnippet>58</a>  // (revtex4-1.cls:6036-6043) and `secnumarabic` (:6047-6050).
+<a href=#59 id=59 data-nosnippet>59</a>  </span><span class="kw">for </span>option <span class="kw">in </span>[<span class="string">"eqsecnum"</span>, <span class="string">"secnumarabic"</span>] {
+<a href=#60 id=60 data-nosnippet>60</a>    <span class="macro">DeclareOption!</span>(option, {
+<a href=#61 id=61 data-nosnippet>61</a>      assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"revtex@opt@{option}"</span>), <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#62 id=62 data-nosnippet>62</a>    });
+<a href=#63 id=63 data-nosnippet>63</a>  }
+<a href=#64 id=64 data-nosnippet>64</a>  <span class="comment">// Perl revtex4-1.cls.ltxml L40-45:
+<a href=#65 id=65 data-nosnippet>65</a>  //   my @revtex_toload = ();        # EMPTY by default
+<a href=#66 id=66 data-nosnippet>66</a>  //   foreach my $pkg (qw(amsfonts amssymb amsmath)) {
+<a href=#67 id=67 data-nosnippet>67</a>  //     DeclareOption($pkg,   sub { push(@revtex_toload, $pkg); });
+<a href=#68 id=68 data-nosnippet>68</a>  //     DeclareOption("no$pkg", sub { @revtex_toload = grep {…} … }); }
+<a href=#69 id=69 data-nosnippet>69</a>  // Same Perl-faithful empty default as revtex4_cls.rs sister fix.
+<a href=#70 id=70 data-nosnippet>70</a>  // Was: defaulted to TRUE with the misattributed claim that Perl's
+<a href=#71 id=71 data-nosnippet>71</a>  // default is the full list; Perl's actual default is `()`. The flip
+<a href=#72 id=72 data-nosnippet>72</a>  // pulled amsmath into papers that don't opt in, and amsmath's `\cases`
+<a href=#73 id=73 data-nosnippet>73</a>  // redefinition then mis-parsed plain TeX `\cases{… &amp; … \cr}` inside
+<a href=#74 id=74 data-nosnippet>74</a>  // `\begin{equation}`. RUST REGRESSION — drop the default-true.
+<a href=#75 id=75 data-nosnippet>75</a>  //
+<a href=#76 id=76 data-nosnippet>76</a>  // Driver 2210.07776's `\boldsymbol undefined` cascade was the
+<a href=#77 id=77 data-nosnippet>77</a>  // originally-claimed motivation; if it regresses, the proper fix is
+<a href=#78 id=78 data-nosnippet>78</a>  // in the DeclareOption / ProcessOptions handler (separate work).
+<a href=#79 id=79 data-nosnippet>79</a>  </span><span class="kw">for </span>pkg <span class="kw">in </span>[<span class="string">"amsfonts"</span>, <span class="string">"amssymb"</span>, <span class="string">"amsmath"</span>].iter() {
+<a href=#80 id=80 data-nosnippet>80</a>    <span class="kw">let </span>pkg_owned = pkg.to_string();
+<a href=#81 id=81 data-nosnippet>81</a>    <span class="macro">DeclareOption!</span>(<span class="kw-2">*</span>pkg, {
+<a href=#82 id=82 data-nosnippet>82</a>      assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"revtex_load_{}"</span>, pkg_owned), <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#83 id=83 data-nosnippet>83</a>    });
+<a href=#84 id=84 data-nosnippet>84</a>    <span class="kw">let </span>nopkg = <span class="macro">s!</span>(<span class="string">"no{}"</span>, pkg);
+<a href=#85 id=85 data-nosnippet>85</a>    <span class="macro">DeclareOption!</span>(<span class="kw-2">&amp;</span>nopkg, {
+<a href=#86 id=86 data-nosnippet>86</a>      assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"revtex_load_{}"</span>, pkg), <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#87 id=87 data-nosnippet>87</a>    });
 <a href=#88 id=88 data-nosnippet>88</a>  }
-<a href=#89 id=89 data-nosnippet>89</a>  <span class="macro">RequirePackage!</span>(<span class="string">"revtex4_support"</span>);
-<a href=#90 id=90 data-nosnippet>90</a>
-<a href=#91 id=91 data-nosnippet>91</a>  <span class="comment">// Load the AMS packages requested via options BEFORE the `.rty` input.
-<a href=#92 id=92 data-nosnippet>92</a>  // Perl revtex4-1.cls.ltxml runs `map { RequirePackage($_) } @revtex_toload`
-<a href=#93 id=93 data-nosnippet>93</a>  // (L58) *before* the `\jobname.rty` load (L60-63). A paper-local `.rty`
-<a href=#94 id=94 data-nosnippet>94</a>  // that uses an AMS macro — e.g. `\DeclareMathOperator` in HSWS.rty
-<a href=#95 id=95 data-nosnippet>95</a>  // (witness 1508.02642, `\documentclass[…,amsmath,…]{revtex4-1}`) — would
-<a href=#96 id=96 data-nosnippet>96</a>  // otherwise hit it undefined. Rust previously loaded the `.rty` first.
-<a href=#97 id=97 data-nosnippet>97</a>  </span><span class="kw">for </span>pkg <span class="kw">in </span>[<span class="string">"amsfonts"</span>, <span class="string">"amssymb"</span>, <span class="string">"amsmath"</span>].iter() {
-<a href=#98 id=98 data-nosnippet>98</a>    <span class="kw">if </span>lookup_bool(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"revtex_load_{}"</span>, pkg)) {
-<a href=#99 id=99 data-nosnippet>99</a>      <span class="macro">RequirePackage!</span>(<span class="kw-2">*</span>pkg);
-<a href=#100 id=100 data-nosnippet>100</a>    }
-<a href=#101 id=101 data-nosnippet>101</a>  }
-<a href=#102 id=102 data-nosnippet>102</a>  <span class="kw">if </span>lookup_bool(<span class="string">"revtex_load_graphics"</span>) {
-<a href=#103 id=103 data-nosnippet>103</a>    <span class="macro">RequirePackage!</span>(<span class="string">"graphics"</span>);
-<a href=#104 id=104 data-nosnippet>104</a>  }
-<a href=#105 id=105 data-nosnippet>105</a>
-<a href=#106 id=106 data-nosnippet>106</a>  <span class="comment">// Perl revtex4-1.cls.ltxml L60-63: auto-load `&lt;jobname&gt;.rty` if present.
-<a href=#107 id=107 data-nosnippet>107</a>  // Same convention as revtex4 — paper-local macros stashed in .rty file.
-<a href=#108 id=108 data-nosnippet>108</a>  </span><span class="macro">Digest!</span>(<span class="string">"\\InputIfFileExists{\\jobname.rty}{}{}"</span>)<span class="question-mark">?</span>;
-<a href=#109 id=109 data-nosnippet>109</a>
-<a href=#110 id=110 data-nosnippet>110</a>  <span class="comment">// revtex4-1.cls L1965: `\providecommand\doi[0]{\begingroup\@sanitize@url\@doi}`
-<a href=#111 id=111 data-nosnippet>111</a>  // — `\@sanitize@url` makes URL special chars (incl. `%`) catcode-other
-<a href=#112 id=112 data-nosnippet>112</a>  // BEFORE the argument is read. Used in bibliography entries (e.g.
-<a href=#113 id=113 data-nosnippet>113</a>  // `\doi{10.1103/PhysRevLett.123.210602}`). For XML we just emit the DOI
-<a href=#114 id=114 data-nosnippet>114</a>  // as a hyperlink.
-<a href=#115 id=115 data-nosnippet>115</a>  //
-<a href=#116 id=116 data-nosnippet>116</a>  // `Semiverbatim` neutralizes SPECIALS (`_ &amp; # ^ ~ $ '`) but NOT `%`, so
-<a href=#117 id=117 data-nosnippet>117</a>  // a DOI like `10.7567%2Fjjaps...` had its `%` treated as a comment —
-<a href=#118 id=118 data-nosnippet>118</a>  // eating the closing `}`, leaving `\doi{` unclosed and sending
-<a href=#119 id=119 data-nosnippet>119</a>  // `readBalanced` runaway-to-EOF then an infinite pushback loop (FATAL).
-<a href=#120 id=120 data-nosnippet>120</a>  // `HyperVerbatim` does `begin_semiverbatim(['%'])` (the `\@sanitize@url`
-<a href=#121 id=121 data-nosnippet>121</a>  // analogue) so `%`/`_`/`&amp;`/`#` are all literal. Witnesses: 2006.12945
-<a href=#122 id=122 data-nosnippet>122</a>  // (`\doi{...%2F...}` → PushbackLimit FATAL; Perl raw-loads the cls and is
-<a href=#123 id=123 data-nosnippet>123</a>  // clean), 2403.08476, 2112.03925 (`_` in DOIs).
-<a href=#124 id=124 data-nosnippet>124</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\doi HyperVerbatim"</span>, <span class="string">"doi:\\href{https://doi.org/#1}{#1}"</span>);
-<a href=#125 id=125 data-nosnippet>125</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\doibase"</span>,   <span class="string">"https://doi.org/"</span>);
-<a href=#126 id=126 data-nosnippet>126</a>});
+<a href=#89 id=89 data-nosnippet>89</a>  <span class="comment">// Perl L47-49: osajnl (Optical Society) sub-option also pushed graphics
+<a href=#90 id=90 data-nosnippet>90</a>  // onto @revtex_toload and Let-aliased \ocis → \pacs. Revtex4 class has
+<a href=#91 id=91 data-nosnippet>91</a>  // this (revtex4_cls.rs L37-39); the revtex4-1 port had dropped it,
+<a href=#92 id=92 data-nosnippet>92</a>  // which breaks OSA documents that rely on the \ocis classification.
+<a href=#93 id=93 data-nosnippet>93</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"osajnl"</span>, {
+<a href=#94 id=94 data-nosnippet>94</a>    assign_value(<span class="string">"revtex_load_graphics"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#95 id=95 data-nosnippet>95</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\ocis"</span>, <span class="string">"\\pacs"</span>);
+<a href=#96 id=96 data-nosnippet>96</a>  });
+<a href=#97 id=97 data-nosnippet>97</a>  <span class="comment">// The `aip` society (revtex4-1.cls:6317 `\@process@society`) picks AIP's
+<a href=#98 id=98 data-nosnippet>98</a>  // bibliography style (`implicit_bibstyle`); the class ignores it otherwise.
+<a href=#99 id=99 data-nosnippet>99</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"aip"</span>, {
+<a href=#100 id=100 data-nosnippet>100</a>    assign_value(<span class="string">"revtex_society"</span>, pin(<span class="string">"aip"</span>), <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#101 id=101 data-nosnippet>101</a>  });
+<a href=#102 id=102 data-nosnippet>102</a>  <span class="macro">DeclareOption!</span>(<span class="prelude-val">None</span>, {
+<a href=#103 id=103 data-nosnippet>103</a>    <span class="macro">Digest!</span>(<span class="string">"\\PassOptionsToClass{\\CurrentOption}{article}"</span>)<span class="question-mark">?</span>;
+<a href=#104 id=104 data-nosnippet>104</a>  });
+<a href=#105 id=105 data-nosnippet>105</a>  <span class="comment">// REVTeX4-1 declares `author-year` / `numerical`, DEFAULT numerical
+<a href=#106 id=106 data-nosnippet>106</a>  // (revtex4-1.cls L6001-6003 → `\@booleanfalse\authoryear@sw`): bracketed
+<a href=#107 id=107 data-nosnippet>107</a>  // numeric citations like the PDF. Perl's revtex4-1 binding and natbib's
+<a href=#108 id=108 data-nosnippet>108</a>  // default both give author-year, so oxide SURPASSES Perl to match the real
+<a href=#109 id=109 data-nosnippet>109</a>  // class + PDF; a later `\setcitestyle`/`\bibpunct` still overrides. Sister
+<a href=#110 id=110 data-nosnippet>110</a>  // logic to revtex4_cls.rs. html_feedback #6609.
+<a href=#111 id=111 data-nosnippet>111</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"numerical"</span>, {
+<a href=#112 id=112 data-nosnippet>112</a>    assign_value(<span class="string">"revtex_cite_style"</span>, pin(<span class="string">"numbers"</span>), <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#113 id=113 data-nosnippet>113</a>  });
+<a href=#114 id=114 data-nosnippet>114</a>  <span class="macro">DeclareOption!</span>(<span class="string">"author-year"</span>, {
+<a href=#115 id=115 data-nosnippet>115</a>    assign_value(<span class="string">"revtex_cite_style"</span>, pin(<span class="string">"authoryear"</span>), <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#116 id=116 data-nosnippet>116</a>  });
+<a href=#117 id=117 data-nosnippet>117</a>  <span class="comment">// revtex4-1.cls:6186-6193 `\DeclareOption{linenumbers}{\appdef\class@documenthook{\RequirePackage{lineno}…\linenumbers}}`:
+<a href=#118 id=118 data-nosnippet>118</a>  // the option loads lineno at the document's start, and papers given it call `\nolinenumbers`, `{linenomath}`
+<a href=#119 id=119 data-nosnippet>119</a>  // (revtex4-1 and revtex4-2 papers of run 353: 16 + 16 with the option and lineno's commands undefined; 1010.3732,
+<a href=#120 id=120 data-nosnippet>120</a>  // 1209.2541, 2003.07846, 2010.12920). Without the option the class loads none: a paper calling them then errs in
+<a href=#121 id=121 data-nosnippet>121</a>  // pdflatex too. Perl's binding lacks the option (KNOWN_PERL_ERRORS #697).
+<a href=#122 id=122 data-nosnippet>122</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"linenumbers"</span>, {
+<a href=#123 id=123 data-nosnippet>123</a>    assign_value(<span class="string">"revtex_linenumbers"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#124 id=124 data-nosnippet>124</a>  });
+<a href=#125 id=125 data-nosnippet>125</a>  <span class="comment">// revtex4-1.cls:6194-6198, revtex4-2.cls:6215-6219: `nomerge` turns natbib's entry merging off.
+<a href=#126 id=126 data-nosnippet>126</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"nomerge"</span>, {
+<a href=#127 id=127 data-nosnippet>127</a>    assign_value(<span class="string">"revtex_nomerge"</span>, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#128 id=128 data-nosnippet>128</a>  });
+<a href=#129 id=129 data-nosnippet>129</a>  assign_value(<span class="string">"revtex_cite_style"</span>, pin(<span class="string">"numbers"</span>), <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#130 id=130 data-nosnippet>130</a>  <span class="macro">ProcessOptions!</span>();
+<a href=#131 id=131 data-nosnippet>131</a>  <span class="macro">LoadClass!</span>(<span class="string">"article"</span>);
+<a href=#132 id=132 data-nosnippet>132</a>  <span class="comment">// The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`), as revtex4_cls.rs:
+<a href=#133 id=133 data-nosnippet>133</a>  // 510pt in two 246pt columns under `twocolumn` or `reprint`, one column of 510pt otherwise; `preprint` sets 468pt,
+<a href=#134 id=134 data-nosnippet>134</a>  // in two 229pt columns where `twocolumn` or a `reprint` given before it sets two (review rev78x2 finding 4).
+<a href=#135 id=135 data-nosnippet>135</a>  // Witnesses 2005.13806 (`reprint`), 1104.5578 (`twocolumn`).
+<a href=#136 id=136 data-nosnippet>136</a>  </span>{
+<a href=#137 id=137 data-nosnippet>137</a>    <span class="kw">let </span>preprint = <span class="macro">matches!</span>(last_class_option(<span class="kw-2">&amp;</span>[<span class="string">"preprint"</span>, <span class="string">"manuscript"</span>, <span class="string">"reprint"</span>]), <span class="prelude-val">Some</span>(<span class="string">"preprint" </span>| <span class="string">"manuscript"</span>));
+<a href=#138 id=138 data-nosnippet>138</a>    <span class="kw">let </span>twocolumn = <span class="macro">matches!</span>(last_class_option(<span class="kw-2">&amp;</span>[<span class="string">"twocolumn"</span>, <span class="string">"onecolumn"</span>, <span class="string">"reprint"</span>]), <span class="prelude-val">Some</span>(<span class="string">"twocolumn" </span>| <span class="string">"reprint"</span>));
+<a href=#139 id=139 data-nosnippet>139</a>    <span class="kw">let </span>(column, text) = <span class="kw">if </span>preprint { (<span class="number">229.0</span>, <span class="number">468.0</span>) } <span class="kw">else </span>{ (<span class="number">246.0</span>, <span class="number">510.0</span>) };
+<a href=#140 id=140 data-nosnippet>140</a>    declare_panel_page(column, text, twocolumn);
+<a href=#141 id=141 data-nosnippet>141</a>  }
+<a href=#142 id=142 data-nosnippet>142</a>  <span class="comment">// REVTeX's floats are centred (revtex4-1.cls:6749-6751 `\appdef\@xfloat@prep{\appdef\@parboxrestore{\centering}}`):
+<a href=#143 id=143 data-nosnippet>143</a>  // a `\\` in them is `\@centercr` (`declare_panel_floats_centred`).
+<a href=#144 id=144 data-nosnippet>144</a>  </span>declare_panel_floats_centred();
+<a href=#145 id=145 data-nosnippet>145</a>  <span class="comment">// Queue the citation style onto natbib (numbers → numeric `[N]`; author-year →
+<a href=#146 id=146 data-nosnippet>146</a>  // natbib's default). `\PassOptionsToPackage` on purpose, not a direct
+<a href=#147 id=147 data-nosnippet>147</a>  // `RequirePackage("natbib", [numbers])`: pre-loading natbib here flips it ahead
+<a href=#148 id=148 data-nosnippet>148</a>  // of revtex4_support's hyperref and that perturbation trips a latent libxml
+<a href=#149 id=149 data-nosnippet>149</a>  // heisenbug. Queuing keeps natbib in its original position. Sister logic to
+<a href=#150 id=150 data-nosnippet>150</a>  // revtex4_cls.rs. html_feedback #6609.
+<a href=#151 id=151 data-nosnippet>151</a>  </span><span class="kw">if </span>lookup_string(<span class="string">"revtex_cite_style"</span>) == <span class="string">"numbers" </span>{
+<a href=#152 id=152 data-nosnippet>152</a>    <span class="macro">Digest!</span>(<span class="string">"\\PassOptionsToPackage{numbers}{natbib}"</span>)<span class="question-mark">?</span>;
+<a href=#153 id=153 data-nosnippet>153</a>  }
+<a href=#154 id=154 data-nosnippet>154</a>  <span class="comment">// revtex4-1.cls:7021 `\RequirePackage[sort&amp;compress]{natbib}`: a citation's numbers sorted, a run of three or more
+<a href=#155 id=155 data-nosnippet>155</a>  // joined with an en dash ("[1–3]"; natbib_sty.rs, KNOWN_PERL_ERRORS #1072). Guard
+<a href=#156 id=156 data-nosnippet>156</a>  // `perfect_kernel_batch78j::revtex_citations_sort_and_compress`.
+<a href=#157 id=157 data-nosnippet>157</a>  </span><span class="macro">Digest!</span>(<span class="string">"\\PassOptionsToPackage{sort&amp;compress}{natbib}"</span>)<span class="question-mark">?</span>;
+<a href=#158 id=158 data-nosnippet>158</a>  <span class="macro">RequirePackage!</span>(<span class="string">"revtex4_support"</span>);
+<a href=#159 id=159 data-nosnippet>159</a>  <span class="comment">// revtex4-1.cls:2649-2662: an author block repeated after `\maketitle` switched off (`revtex4_cls.rs`).
+<a href=#160 id=160 data-nosnippet>160</a>  </span>revtex4_cls::switch_off_author_block_after_maketitle()<span class="question-mark">?</span>;
+<a href=#161 id=161 data-nosnippet>161</a>  <span class="comment">// revtex4-1.cls:7046, revtex4-2.cls:7067 `\let\NAT@merge\thr@@`: `\cite{a,*b}` merges b's entry into a's
+<a href=#162 id=162 data-nosnippet>162</a>  // (`natbib_sty::natbib_merge_citations`; REVTeX 4.0 does not merge). 1808.00247.
+<a href=#163 id=163 data-nosnippet>163</a>  </span><span class="kw">if </span>!lookup_bool(<span class="string">"revtex_nomerge"</span>) {
+<a href=#164 id=164 data-nosnippet>164</a>    natbib_sty::natbib_merge_citations(<span class="string">"\\thr@@"</span>, <span class="bool-val">false</span>)<span class="question-mark">?</span>;
+<a href=#165 id=165 data-nosnippet>165</a>  }
+<a href=#166 id=166 data-nosnippet>166</a>  revtex4_support_sty::define_section_numbers(<span class="string">"4-1"</span>)<span class="question-mark">?</span>;
+<a href=#167 id=167 data-nosnippet>167</a>  revtex4_support_sty::record_implicit_bibstyle(<span class="string">"4-1"</span>);
+<a href=#168 id=168 data-nosnippet>168</a>  revtex4_support_sty::retire_option_handlers();
+<a href=#169 id=169 data-nosnippet>169</a>  revtex4_support_sty::define_float_repair()<span class="question-mark">?</span>;
+<a href=#170 id=170 data-nosnippet>170</a>
+<a href=#171 id=171 data-nosnippet>171</a>  <span class="comment">// Load the AMS packages requested via options BEFORE the `.rty` input.
+<a href=#172 id=172 data-nosnippet>172</a>  // Perl revtex4-1.cls.ltxml runs `map { RequirePackage($_) } @revtex_toload`
+<a href=#173 id=173 data-nosnippet>173</a>  // (L58) *before* the `\jobname.rty` load (L60-63). A paper-local `.rty`
+<a href=#174 id=174 data-nosnippet>174</a>  // that uses an AMS macro — e.g. `\DeclareMathOperator` in HSWS.rty
+<a href=#175 id=175 data-nosnippet>175</a>  // (witness 1508.02642, `\documentclass[…,amsmath,…]{revtex4-1}`) — would
+<a href=#176 id=176 data-nosnippet>176</a>  // otherwise hit it undefined. Rust previously loaded the `.rty` first.
+<a href=#177 id=177 data-nosnippet>177</a>  </span><span class="kw">for </span>pkg <span class="kw">in </span>[<span class="string">"amsfonts"</span>, <span class="string">"amssymb"</span>, <span class="string">"amsmath"</span>].iter() {
+<a href=#178 id=178 data-nosnippet>178</a>    <span class="kw">if </span>lookup_bool(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"revtex_load_{}"</span>, pkg)) {
+<a href=#179 id=179 data-nosnippet>179</a>      <span class="macro">RequirePackage!</span>(<span class="kw-2">*</span>pkg);
+<a href=#180 id=180 data-nosnippet>180</a>    }
+<a href=#181 id=181 data-nosnippet>181</a>  }
+<a href=#182 id=182 data-nosnippet>182</a>  <span class="kw">if </span>lookup_bool(<span class="string">"revtex_load_graphics"</span>) {
+<a href=#183 id=183 data-nosnippet>183</a>    <span class="macro">RequirePackage!</span>(<span class="string">"graphics"</span>);
+<a href=#184 id=184 data-nosnippet>184</a>  }
+<a href=#185 id=185 data-nosnippet>185</a>
+<a href=#186 id=186 data-nosnippet>186</a>  <span class="comment">// Perl revtex4-1.cls.ltxml L60-63: auto-load `&lt;jobname&gt;.rty` if present.
+<a href=#187 id=187 data-nosnippet>187</a>  // Same convention as revtex4 — paper-local macros stashed in .rty file.
+<a href=#188 id=188 data-nosnippet>188</a>  </span><span class="macro">Digest!</span>(<span class="string">"\\InputIfFileExists{\\jobname.rty}{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#189 id=189 data-nosnippet>189</a>  <span class="kw">if </span>lookup_bool(<span class="string">"revtex_linenumbers"</span>) {
+<a href=#190 id=190 data-nosnippet>190</a>    <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@revtex@lineno"</span>, {
+<a href=#191 id=191 data-nosnippet>191</a>      <span class="macro">RequirePackage!</span>(<span class="string">"lineno"</span>);
+<a href=#192 id=192 data-nosnippet>192</a>    });
+<a href=#193 id=193 data-nosnippet>193</a>    <span class="macro">RawTeX!</span>(<span class="string">r"\AtBeginDocument{\lx@revtex@lineno}"</span>);
+<a href=#194 id=194 data-nosnippet>194</a>  }
+<a href=#195 id=195 data-nosnippet>195</a>
+<a href=#196 id=196 data-nosnippet>196</a>  <span class="comment">// The class internals documents call, `\doi` among them (`define_revtex41_internals`).
+<a href=#197 id=197 data-nosnippet>197</a>  </span>revtex4_support_sty::define_revtex41_internals()<span class="question-mark">?</span>;
+<a href=#198 id=198 data-nosnippet>198</a>});
 </code></pre></div></section></main></body></html>

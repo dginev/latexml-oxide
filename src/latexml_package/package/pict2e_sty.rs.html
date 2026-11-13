@@ -1,28 +1,340 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/pict2e_sty.rs`."><title>pict2e_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>pict2e_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! pict2e.sty — extended LaTeX picture environment.
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/pict2e_sty.rs`."><title>pict2e_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>pict2e_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! pict2e.sty — extended LaTeX picture environment.
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! pict2e enhances the standard LaTeX picture environment with arbitrary-
-<a href=#4 id=4 data-nosnippet>4</a>//! slope `\line` / `\vector`, smooth curves, and quadratic/cubic Bezier
-<a href=#5 id=5 data-nosnippet>5</a>//! handling. The package's driver-dispatch chain (p2e-pdftex.def, etc.)
-<a href=#6 id=6 data-nosnippet>6</a>//! is heavy and fails our raw-load with "No suitable driver specified".
-<a href=#7 id=7 data-nosnippet>7</a>//! LaTeX picture is rendered as XML/SVG in our pipeline regardless of
-<a href=#8 id=8 data-nosnippet>8</a>//! driver, so the extended picture commands work the same way without
-<a href=#9 id=9 data-nosnippet>9</a>//! pict2e's PDF-specific drawing code.
-<a href=#10 id=10 data-nosnippet>10</a>//!
-<a href=#11 id=11 data-nosnippet>11</a>//! Stub as no-op (skip raw load + driver detection). The standard
-<a href=#12 id=12 data-nosnippet>12</a>//! picture environment is fully handled by latex_constructs.rs.
-<a href=#13 id=13 data-nosnippet>13</a>//! Witness 2503.14673 (pict2e error blocking 1 paper conversion).
-<a href=#14 id=14 data-nosnippet>14</a></span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
-<a href=#15 id=15 data-nosnippet>15</a>
-<a href=#16 id=16 data-nosnippet>16</a><span class="macro">LoadDefinitions!</span>({
-<a href=#17 id=17 data-nosnippet>17</a>  <span class="comment">// Intentionally empty: skip pict2e's raw load. LaTeX picture
-<a href=#18 id=18 data-nosnippet>18</a>  // environment is handled by latex_constructs.rs regardless of
-<a href=#19 id=19 data-nosnippet>19</a>  // driver, so the PDF-specific drawing primitives that pict2e
-<a href=#20 id=20 data-nosnippet>20</a>  // would override are irrelevant in XML output.
-<a href=#21 id=21 data-nosnippet>21</a>  //
-<a href=#22 id=22 data-nosnippet>22</a>  // Define a few defensive stubs for pict2e-specific user-facing
-<a href=#23 id=23 data-nosnippet>23</a>  // CSes that some packages probe.
-<a href=#24 id=24 data-nosnippet>24</a>  </span>def_macro_noop(<span class="string">"\\OriginalPictureCmds"</span>)<span class="question-mark">?</span>;
-<a href=#25 id=25 data-nosnippet>25</a>  def_macro_noop(<span class="string">"\\pIIe@vector@ltx"</span>)<span class="question-mark">?</span>;
-<a href=#26 id=26 data-nosnippet>26</a>  def_macro_noop(<span class="string">"\\pIIe@vector@pst"</span>)<span class="question-mark">?</span>;
-<a href=#27 id=27 data-nosnippet>27</a>});
+<a href=#4 id=4 data-nosnippet>4</a>//! slope `\line` / `\vector`, smooth curves, quadratic/cubic Bezier
+<a href=#5 id=5 data-nosnippet>5</a>//! handling and a PostScript-like path interface. LaTeX picture is rendered
+<a href=#6 id=6 data-nosnippet>6</a>//! as XML/SVG in our pipeline regardless of driver, so the driver-dispatch
+<a href=#7 id=7 data-nosnippet>7</a>//! chain (p2e-pdftex.def, p2e-dvips.def, …) has no XML meaning and is not
+<a href=#8 id=8 data-nosnippet>8</a>//! raw-loaded; the user-facing commands are bound here.
+<a href=#9 id=9 data-nosnippet>9</a>//!
+<a href=#10 id=10 data-nosnippet>10</a>//! Under `\pdfoutput=0` (pdftex.rs:11, and Perl) pict2e.cfg would pick the
+<a href=#11 id=11 data-nosnippet>11</a>//! dvips driver and pict2e.sty:160 `\ifnum\pIIe@mode&gt;\z@` would define the
+<a href=#12 id=12 data-nosnippet>12</a>//! path interface `\moveto`/`\lineto`/`\curveto`/`\circlearc`/`\closepath`/
+<a href=#13 id=13 data-nosnippet>13</a>//! `\strokepath`/`\fillpath` (pict2e.sty:742-774). An earlier stub skipped
+<a href=#14 id=14 data-nosnippet>14</a>//! them ("No suitable driver" was a stale reading), so fancyqr-doc and
+<a href=#15 id=15 data-nosnippet>15</a>//! curve2e-manual (curve2e.sty:19 requires pict2e, :92 `\let\originalmoveto
+<a href=#16 id=16 data-nosnippet>16</a>//! \moveto`) failed on `undefined:\moveto` while same-host Perl (raw load)
+<a href=#17 id=17 data-nosnippet>17</a>//! converted with an empty picture. Here the path is accumulated per subpath
+<a href=#18 id=18 data-nosnippet>18</a>//! and stroked/filled as `ltx:line` polylines (curves and arcs sampled), which
+<a href=#19 id=19 data-nosnippet>19</a>//! renders what Perl drops. Witness 2503.14673 (pict2e error blocking 1 paper).
+<a href=#20 id=20 data-nosnippet>20</a></span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<a href=#21 id=21 data-nosnippet>21</a>
+<a href=#22 id=22 data-nosnippet>22</a><span class="doccomment">/// The graph being built: what `\pIIe@GRAPH` holds. A global token register (pict2e.sty:186 `\global\pIIe@GRAPH`, :203
+<a href=#23 id=23 data-nosnippet>23</a>/// emptied by a stroke or a fill alone), so a path left unstroked is stroked with the next one, in another picture too, as
+<a href=#24 id=24 data-nosnippet>24</a>/// pdflatex prints it (`0 0 m 1 1 l 2 2 m 3 3 l S`), and it is state a rollback puts back: a rehearsal's path, stroked once
+<a href=#25 id=25 data-nosnippet>25</a>/// more at the body's `\strokepath`, gave one more line on and off alike.
+<a href=#26 id=26 data-nosnippet>26</a></span><span class="attr">#[derive(Clone, Default)]
+<a href=#27 id=27 data-nosnippet>27</a></span><span class="kw">struct </span>Graph {
+<a href=#28 id=28 data-nosnippet>28</a>  <span class="doccomment">/// One point list per subpath (`\moveto` opens one), in `\unitlength` multiples. `\strokepath`/`\fillpath` consume it.
+<a href=#29 id=29 data-nosnippet>29</a>  </span>path:     Vec&lt;Vec&lt;(f64, f64)&gt;&gt;,
+<a href=#30 id=30 data-nosnippet>30</a>  <span class="doccomment">/// The points `\pIIe@add@nums`/`\pIIe@add@CP` put on the graph ahead of the operator `\pIIe@addtoGraph` adds
+<a href=#31 id=31 data-nosnippet>31</a>  /// (pict2e.sty:206-217), in `\unitlength` multiples.
+<a href=#32 id=32 data-nosnippet>32</a>  </span>operands: Vec&lt;(f64, f64)&gt;,
+<a href=#33 id=33 data-nosnippet>33</a>}
+<a href=#34 id=34 data-nosnippet>34</a>
+<a href=#35 id=35 data-nosnippet>35</a><span class="kw">static </span>GRAPH: DocumentState&lt;Graph&gt; = DocumentState::new(<span class="string">"pict2e_graph"</span>);
+<a href=#36 id=36 data-nosnippet>36</a>
+<a href=#37 id=37 data-nosnippet>37</a><span class="doccomment">/// `\unitlength` in sp, exact, as `{picture}`'s coordinates are scaled by it.
+<a href=#38 id=38 data-nosnippet>38</a></span><span class="kw">fn </span>unitlength_sp() -&gt; <span class="prelude-ty">Result</span>&lt;i64&gt; { latexml_engine::base_utilities::unitlength_sp() }
+<a href=#39 id=39 data-nosnippet>39</a>
+<a href=#40 id=40 data-nosnippet>40</a><span class="doccomment">/// An angle argument (`\pIIe@arc … {start}{end}`): a plain or macro-held number.
+<a href=#41 id=41 data-nosnippet>41</a></span><span class="kw">fn </span>pic_number(tokens: Tokens) -&gt; <span class="prelude-ty">Result</span>&lt;f64&gt; {
+<a href=#42 id=42 data-nosnippet>42</a>  <span class="kw">let </span>text = <span class="macro">Expand!</span>(tokens).to_string();
+<a href=#43 id=43 data-nosnippet>43</a>  <span class="prelude-val">Ok</span>(text.trim().parse().unwrap_or(<span class="number">0.0</span>))
+<a href=#44 id=44 data-nosnippet>44</a>}
+<a href=#45 id=45 data-nosnippet>45</a>
+<a href=#46 id=46 data-nosnippet>46</a><span class="doccomment">/// A driver-level `\pIIe@*` argument is a real dimension (pict2e.sty:267-308
+<a href=#47 id=47 data-nosnippet>47</a>/// `\pIIe@add@CP{#1}{#2}`): convert to `\unitlength` multiples.
+<a href=#48 id=48 data-nosnippet>48</a></span><span class="kw">fn </span>pic_dim(d: Dimension) -&gt; <span class="prelude-ty">Result</span>&lt;f64&gt; {
+<a href=#49 id=49 data-nosnippet>49</a>  <span class="kw">let </span>unit = unitlength_sp()<span class="question-mark">?</span>;
+<a href=#50 id=50 data-nosnippet>50</a>  <span class="prelude-val">Ok</span>(<span class="kw">if </span>unit == <span class="number">0 </span>{
+<a href=#51 id=51 data-nosnippet>51</a>    <span class="number">0.0
+<a href=#52 id=52 data-nosnippet>52</a>  </span>} <span class="kw">else </span>{
+<a href=#53 id=53 data-nosnippet>53</a>    d.value_of() <span class="kw">as </span>f64 / unit <span class="kw">as </span>f64
+<a href=#54 id=54 data-nosnippet>54</a>  })
+<a href=#55 id=55 data-nosnippet>55</a>}
+<a href=#56 id=56 data-nosnippet>56</a>
+<a href=#57 id=57 data-nosnippet>57</a><span class="kw">fn </span>path_push(point: (f64, f64), new_subpath: bool) {
+<a href=#58 id=58 data-nosnippet>58</a>  GRAPH.update(|graph| {
+<a href=#59 id=59 data-nosnippet>59</a>    <span class="kw">let </span>p = <span class="kw-2">&amp;mut </span>graph.path;
+<a href=#60 id=60 data-nosnippet>60</a>    <span class="kw">if </span>new_subpath || p.is_empty() {
+<a href=#61 id=61 data-nosnippet>61</a>      p.push(Vec::new());
+<a href=#62 id=62 data-nosnippet>62</a>    }
+<a href=#63 id=63 data-nosnippet>63</a>    p.last_mut().expect(<span class="string">"subpath"</span>).push(point);
+<a href=#64 id=64 data-nosnippet>64</a>  });
+<a href=#65 id=65 data-nosnippet>65</a>}
+<a href=#66 id=66 data-nosnippet>66</a>
+<a href=#67 id=67 data-nosnippet>67</a><span class="kw">fn </span>path_current() -&gt; <span class="prelude-ty">Option</span>&lt;(f64, f64)&gt; {
+<a href=#68 id=68 data-nosnippet>68</a>  GRAPH.read(|graph| graph.path.last().and_then(|s| s.last().copied()))
+<a href=#69 id=69 data-nosnippet>69</a>}
+<a href=#70 id=70 data-nosnippet>70</a>
+<a href=#71 id=71 data-nosnippet>71</a><span class="doccomment">/// Cubic Bezier from the current point, sampled into the current subpath.
+<a href=#72 id=72 data-nosnippet>72</a></span><span class="kw">fn </span>path_curveto(c1: (f64, f64), c2: (f64, f64), end: (f64, f64)) {
+<a href=#73 id=73 data-nosnippet>73</a>  <span class="kw">let </span>(x0, y0) = path_current().unwrap_or((<span class="number">0.0</span>, <span class="number">0.0</span>));
+<a href=#74 id=74 data-nosnippet>74</a>  <span class="kw">for </span>i <span class="kw">in </span><span class="number">1</span>..=<span class="number">8 </span>{
+<a href=#75 id=75 data-nosnippet>75</a>    <span class="kw">let </span>t = f64::from(i) / <span class="number">8.0</span>;
+<a href=#76 id=76 data-nosnippet>76</a>    <span class="kw">let </span>u = <span class="number">1.0 </span>- t;
+<a href=#77 id=77 data-nosnippet>77</a>    <span class="kw">let </span>x = u * u * u * x0 + <span class="number">3.0 </span>* u * u * t * c1.<span class="number">0 </span>+ <span class="number">3.0 </span>* u * t * t * c2.<span class="number">0 </span>+ t * t * t * end.<span class="number">0</span>;
+<a href=#78 id=78 data-nosnippet>78</a>    <span class="kw">let </span>y = u * u * u * y0 + <span class="number">3.0 </span>* u * u * t * c1.<span class="number">1 </span>+ <span class="number">3.0 </span>* u * t * t * c2.<span class="number">1 </span>+ t * t * t * end.<span class="number">1</span>;
+<a href=#79 id=79 data-nosnippet>79</a>    path_push((x, y), <span class="bool-val">false</span>);
+<a href=#80 id=80 data-nosnippet>80</a>  }
+<a href=#81 id=81 data-nosnippet>81</a>}
+<a href=#82 id=82 data-nosnippet>82</a>
+<a href=#83 id=83 data-nosnippet>83</a><span class="doccomment">/// `\pIIe@arc[mode]{cx}{cy}{r}{start}{end}` (pict2e.sty:615-660): mode 0 = `\lineto` the arc's start from the
+<a href=#84 id=84 data-nosnippet>84</a>/// current point, 1 = `\moveto` it (a new subpath), 2 = the arc continues the current subpath (`\ifcase #1
+<a href=#85 id=85 data-nosnippet>85</a>/// \pIIe@lineto \or \pIIe@moveto \or \fi`, :643-646; the pict2e manual's `\circlearc[N]`). `\arc*`'s sector is the
+<a href=#86 id=86 data-nosnippet>86</a>/// mode 0 arc after a `\moveto` to the centre (:670-676). Angles in degrees, sampled every ≤10°.
+<a href=#87 id=87 data-nosnippet>87</a></span><span class="kw">fn </span>path_arc(mode: i64, (cx, cy, r): (f64, f64, f64), start: f64, end: f64) {
+<a href=#88 id=88 data-nosnippet>88</a>  <span class="kw">let </span>sweep = end - start;
+<a href=#89 id=89 data-nosnippet>89</a>  <span class="kw">let </span>steps = ((sweep.abs() / <span class="number">10.0</span>).ceil() <span class="kw">as </span>usize).max(<span class="number">1</span>);
+<a href=#90 id=90 data-nosnippet>90</a>  <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..=steps {
+<a href=#91 id=91 data-nosnippet>91</a>    <span class="kw">let </span>a = (start + sweep * (i <span class="kw">as </span>f64) / (steps <span class="kw">as </span>f64)).to_radians();
+<a href=#92 id=92 data-nosnippet>92</a>    <span class="kw">let </span>point = (cx + r * a.cos(), cy + r * a.sin());
+<a href=#93 id=93 data-nosnippet>93</a>    <span class="kw">if </span>i == <span class="number">0 </span>&amp;&amp; mode == <span class="number">2 </span>&amp;&amp; path_current().is_some() {
+<a href=#94 id=94 data-nosnippet>94</a>      <span class="kw">continue</span>;
+<a href=#95 id=95 data-nosnippet>95</a>    }
+<a href=#96 id=96 data-nosnippet>96</a>    path_push(point, i == <span class="number">0 </span>&amp;&amp; mode == <span class="number">1</span>);
+<a href=#97 id=97 data-nosnippet>97</a>  }
+<a href=#98 id=98 data-nosnippet>98</a>}
+<a href=#99 id=99 data-nosnippet>99</a>
+<a href=#100 id=100 data-nosnippet>100</a><span class="kw">fn </span>path_close() {
+<a href=#101 id=101 data-nosnippet>101</a>  GRAPH.update(|graph| {
+<a href=#102 id=102 data-nosnippet>102</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(sub) = graph.path.last_mut()
+<a href=#103 id=103 data-nosnippet>103</a>      &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(first) = sub.first().copied()
+<a href=#104 id=104 data-nosnippet>104</a>    {
+<a href=#105 id=105 data-nosnippet>105</a>      sub.push(first);
+<a href=#106 id=106 data-nosnippet>106</a>    }
+<a href=#107 id=107 data-nosnippet>107</a>  });
+<a href=#108 id=108 data-nosnippet>108</a>}
+<a href=#109 id=109 data-nosnippet>109</a>
+<a href=#110 id=110 data-nosnippet>110</a><span class="doccomment">/// Emit one `\lx@pic@polyline{}{closed}(x,y)…` per subpath and clear the path. A closed polyline returns to its
+<a href=#111 id=111 data-nosnippet>111</a>/// start itself, so a subpath already closed by `\pIIe@closepath` (`\arc*`'s sector) drops its closing point.
+<a href=#112 id=112 data-nosnippet>112</a></span><span class="kw">fn </span>path_flush(closed: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+<a href=#113 id=113 data-nosnippet>113</a>  <span class="kw">let </span><span class="kw-2">mut </span>subpaths = GRAPH.update(|graph| std::mem::take(<span class="kw-2">&amp;mut </span>graph.path));
+<a href=#114 id=114 data-nosnippet>114</a>  <span class="kw">let </span><span class="kw-2">mut </span>out = Vec::new();
+<a href=#115 id=115 data-nosnippet>115</a>  <span class="kw">if </span>closed != <span class="string">"0" </span>{
+<a href=#116 id=116 data-nosnippet>116</a>    <span class="kw">for </span>sub <span class="kw">in </span><span class="kw-2">&amp;mut </span>subpaths {
+<a href=#117 id=117 data-nosnippet>117</a>      <span class="kw">if </span>sub.len() &gt; <span class="number">2 </span>&amp;&amp; sub.first() == sub.last() {
+<a href=#118 id=118 data-nosnippet>118</a>        sub.pop();
+<a href=#119 id=119 data-nosnippet>119</a>      }
+<a href=#120 id=120 data-nosnippet>120</a>    }
+<a href=#121 id=121 data-nosnippet>121</a>  }
+<a href=#122 id=122 data-nosnippet>122</a>  <span class="kw">for </span>sub <span class="kw">in </span>subpaths.iter().filter(|s| s.len() &gt; <span class="number">1</span>) {
+<a href=#123 id=123 data-nosnippet>123</a>    <span class="kw">let </span><span class="kw-2">mut </span>pairs = String::new();
+<a href=#124 id=124 data-nosnippet>124</a>    <span class="kw">for </span>(x, y) <span class="kw">in </span>sub {
+<a href=#125 id=125 data-nosnippet>125</a>      pairs.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"({x},{y})"</span>));
+<a href=#126 id=126 data-nosnippet>126</a>    }
+<a href=#127 id=127 data-nosnippet>127</a>    out.extend(
+<a href=#128 id=128 data-nosnippet>128</a>      <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@pic@polyline"</span>), <span class="macro">vec!</span>[
+<a href=#129 id=129 data-nosnippet>129</a>        <span class="macro">Tokens!</span>(),
+<a href=#130 id=130 data-nosnippet>130</a>        Tokens::new(<span class="macro">ExplodeText!</span>(closed))
+<a href=#131 id=131 data-nosnippet>131</a>      ])
+<a href=#132 id=132 data-nosnippet>132</a>      .unlist(),
+<a href=#133 id=133 data-nosnippet>133</a>    );
+<a href=#134 id=134 data-nosnippet>134</a>    out.extend(<span class="macro">ExplodeText!</span>(<span class="kw-2">&amp;</span>pairs));
+<a href=#135 id=135 data-nosnippet>135</a>  }
+<a href=#136 id=136 data-nosnippet>136</a>  <span class="prelude-val">Ok</span>(Tokens::new(out))
+<a href=#137 id=137 data-nosnippet>137</a>}
+<a href=#138 id=138 data-nosnippet>138</a>
+<a href=#139 id=139 data-nosnippet>139</a><span class="macro">LoadDefinitions!</span>({
+<a href=#140 id=140 data-nosnippet>140</a>  <span class="comment">// pict2e.sty:123, the mode &gt; 0 branch: trig.sty's `\CalculateSin`/`\UseCos` (ellipse.sty:121-124, :213-218;
+<a href=#141 id=141 data-nosnippet>141</a>  // longfbox.sty:105-107).
+<a href=#142 id=142 data-nosnippet>142</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"trig"</span>);
+<a href=#143 id=143 data-nosnippet>143</a>  <span class="comment">// pict2e before v0.4b (2020/09/30, "use of fewer system dimension registers", pict2e.dtx:3317-3318) allocated
+<a href=#144 id=144 data-nosnippet>144</a>  // `\@tempdimd`; ellipse.sty:95 and longfbox.sty:107 still use it, and TeX Live 2025 pdflatex fails on both without it
+<a href=#145 id=145 data-nosnippet>145</a>  // (2109.06028: 643 Errors, then the same-error cap's Fatal).
+<a href=#146 id=146 data-nosnippet>146</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\ifx\undefined\@tempdimd \newdimen\@tempdimd \fi"</span>);
+<a href=#147 id=147 data-nosnippet>147</a>  def_macro_noop(<span class="string">"\\OriginalPictureCmds"</span>)<span class="question-mark">?</span>;
+<a href=#148 id=148 data-nosnippet>148</a>  <span class="comment">// pict2e.sty:686-740 — the polygonal-line family that curve2e.sty:240
+<a href=#149 id=149 data-nosnippet>149</a>  // `\renewcommand*`s (sapthesis-doc, unifith-doc: `\polyline` undefined).
+<a href=#150 id=150 data-nosnippet>150</a>  // `\lx@pic@polyline{terminators}{closed}` (latex_constructs.rs) reads the
+<a href=#151 id=151 data-nosnippet>151</a>  // `(x,y)…` pairs and emits one `ltx:line`.
+<a href=#152 id=152 data-nosnippet>152</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\polyline []"</span>, <span class="string">"\\lx@pic@polyline{}{0}"</span>);
+<a href=#153 id=153 data-nosnippet>153</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Line"</span>, <span class="string">"\\lx@pic@polyline{}{0}"</span>);
+<a href=#154 id=154 data-nosnippet>154</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\polyvector"</span>, <span class="string">"\\lx@pic@polyline{-&gt;}{0}"</span>);
+<a href=#155 id=155 data-nosnippet>155</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\Vector"</span>, <span class="string">"\\lx@pic@polyline{-&gt;}{0}"</span>);
+<a href=#156 id=156 data-nosnippet>156</a>  <span class="comment">// `\polygon*` fills the polygon (pict2e.sty:731-740 `\pIIe@polygon` → `\fillpath`).
+<a href=#157 id=157 data-nosnippet>157</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\polygon OptionalMatch:*"</span>, sub[(star)] {
+<a href=#158 id=158 data-nosnippet>158</a>    <span class="macro">TokenizeInternal!</span>(<span class="kw">if </span>star.is_some() { <span class="string">"\\lx@pic@polyline{}{2}" </span>} <span class="kw">else </span>{ <span class="string">"\\lx@pic@polyline{}{1}" </span>})
+<a href=#159 id=159 data-nosnippet>159</a>  });
+<a href=#160 id=160 data-nosnippet>160</a>  def_macro_noop(<span class="string">"\\pIIe@vector@ltx"</span>)<span class="question-mark">?</span>;
+<a href=#161 id=161 data-nosnippet>161</a>  def_macro_noop(<span class="string">"\\pIIe@vector@pst"</span>)<span class="question-mark">?</span>;
+<a href=#162 id=162 data-nosnippet>162</a>
+<a href=#163 id=163 data-nosnippet>163</a>  <span class="comment">// The driver level `\pIIe@moveto{dim}{dim}` … (pict2e.sty:267-308) feeds a
+<a href=#164 id=164 data-nosnippet>164</a>  // subpath accumulator; every argument is a real dimension read by the
+<a href=#165 id=165 data-nosnippet>165</a>  // engine (`{Dimension}`), so register and `\dimexpr` coordinates
+<a href=#166 id=166 data-nosnippet>166</a>  // (FramedSyntax.sty:189 `\moveto(\SIXR,\SIYD+#4)`) scale correctly — an
+<a href=#167 id=167 data-nosnippet>167</a>  // earlier string parse of the expansion read a register name as 0 (141
+<a href=#168 id=168 data-nosnippet>168</a>  // zero-point frames in curve2e-manual). Guards:
+<a href=#169 id=169 data-nosnippet>169</a>  // `perfect_kernel_batch56::{pict2e_path_interface_strokes_a_polyline,
+<a href=#170 id=170 data-nosnippet>170</a>  // curve2e_raw_load_renders_arcs_and_vectors}`.
+<a href=#171 id=171 data-nosnippet>171</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\pIIe@moveto {Dimension}{Dimension}"</span>, sub[(x, y)] {
+<a href=#172 id=172 data-nosnippet>172</a>    path_push((pic_dim(x)<span class="question-mark">?</span>, pic_dim(y)<span class="question-mark">?</span>), <span class="bool-val">true</span>);
+<a href=#173 id=173 data-nosnippet>173</a>    <span class="prelude-val">Ok</span>(Vec::new())
+<a href=#174 id=174 data-nosnippet>174</a>  });
+<a href=#175 id=175 data-nosnippet>175</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\pIIe@lineto {Dimension}{Dimension}"</span>, sub[(x, y)] {
+<a href=#176 id=176 data-nosnippet>176</a>    path_push((pic_dim(x)<span class="question-mark">?</span>, pic_dim(y)<span class="question-mark">?</span>), <span class="bool-val">false</span>);
+<a href=#177 id=177 data-nosnippet>177</a>    <span class="prelude-val">Ok</span>(Vec::new())
+<a href=#178 id=178 data-nosnippet>178</a>  });
+<a href=#179 id=179 data-nosnippet>179</a>  <span class="macro">DefPrimitive!</span>(
+<a href=#180 id=180 data-nosnippet>180</a>    <span class="string">"\\pIIe@curveto {Dimension}{Dimension}{Dimension}{Dimension}{Dimension}{Dimension}"</span>,
+<a href=#181 id=181 data-nosnippet>181</a>    sub[(x1, y1, x2, y2, x3, y3)] {
+<a href=#182 id=182 data-nosnippet>182</a>      <span class="kw">let </span>c1 = (pic_dim(x1)<span class="question-mark">?</span>, pic_dim(y1)<span class="question-mark">?</span>);
+<a href=#183 id=183 data-nosnippet>183</a>      <span class="kw">let </span>c2 = (pic_dim(x2)<span class="question-mark">?</span>, pic_dim(y2)<span class="question-mark">?</span>);
+<a href=#184 id=184 data-nosnippet>184</a>      <span class="kw">let </span>end = (pic_dim(x3)<span class="question-mark">?</span>, pic_dim(y3)<span class="question-mark">?</span>);
+<a href=#185 id=185 data-nosnippet>185</a>      path_curveto(c1, c2, end);
+<a href=#186 id=186 data-nosnippet>186</a>      <span class="prelude-val">Ok</span>(Vec::new())
+<a href=#187 id=187 data-nosnippet>187</a>    }
+<a href=#188 id=188 data-nosnippet>188</a>  );
+<a href=#189 id=189 data-nosnippet>189</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\pIIe@arc [Number]{Dimension}{Dimension}{Dimension}{}{}"</span>, sub[(mode, cx, cy, r, start, end)] {
+<a href=#190 id=190 data-nosnippet>190</a>    <span class="kw">let </span>centre = (pic_dim(cx)<span class="question-mark">?</span>, pic_dim(cy)<span class="question-mark">?</span>, pic_dim(r)<span class="question-mark">?</span>);
+<a href=#191 id=191 data-nosnippet>191</a>    path_arc(mode.value_of(), centre, pic_number(start)<span class="question-mark">?</span>, pic_number(end)<span class="question-mark">?</span>);
+<a href=#192 id=192 data-nosnippet>192</a>    <span class="prelude-val">Ok</span>(Vec::new())
+<a href=#193 id=193 data-nosnippet>193</a>  });
+<a href=#194 id=194 data-nosnippet>194</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\pIIe@closepath"</span>, sub[()] {
+<a href=#195 id=195 data-nosnippet>195</a>    path_close();
+<a href=#196 id=196 data-nosnippet>196</a>    <span class="prelude-val">Ok</span>(Vec::new())
+<a href=#197 id=197 data-nosnippet>197</a>  });
+<a href=#198 id=198 data-nosnippet>198</a>  <span class="comment">// The graph-code level a package may drive directly (ellipse.sty:222-245 `\pIIe@elliparc@draw`): operands, then
+<a href=#199 id=199 data-nosnippet>199</a>  // the operator that takes them (pict2e.sty:164-217, the pdftex names of the mode 2 branch).
+<a href=#200 id=200 data-nosnippet>200</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#201 id=201 data-nosnippet>201</a>    <span class="string">r"\def\pIIe@moveto@op{m}\def\pIIe@lineto@op{l}\def\pIIe@curveto@op{c}\def\pIIe@closepath@op{h}
+<a href=#202 id=202 data-nosnippet>202</a>\def\pIIe@setlinewidth@op{w}\def\pIIe@stroke@op{S}\def\pIIe@fill@op{f}\def\pIIe@concat@op{cm}
+<a href=#203 id=203 data-nosnippet>203</a>\def\pIIe@CPx{}\def\pIIe@CPy{}
+<a href=#204 id=204 data-nosnippet>204</a>\def\pIIe@add@CP#1#2{\begingroup\@tempdima#1\xdef\pIIe@CPx{\the\@tempdima}\@tempdimb#2\xdef\pIIe@CPy{\the\@tempdimb}%
+<a href=#205 id=205 data-nosnippet>205</a>  \lx@pIIe@operand\@tempdima\@tempdimb\endgroup}
+<a href=#206 id=206 data-nosnippet>206</a>\def\pIIe@add@nums#1#2{\lx@pIIe@operand{#1}{#2}}"
+<a href=#207 id=207 data-nosnippet>207</a>  </span>);
+<a href=#208 id=208 data-nosnippet>208</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@pIIe@operand {Dimension}{Dimension}"</span>, sub[(x, y)] {
+<a href=#209 id=209 data-nosnippet>209</a>    <span class="kw">let </span>point = (pic_dim(x)<span class="question-mark">?</span>, pic_dim(y)<span class="question-mark">?</span>);
+<a href=#210 id=210 data-nosnippet>210</a>    GRAPH.update(|graph| graph.operands.push(point));
+<a href=#211 id=211 data-nosnippet>211</a>    <span class="prelude-val">Ok</span>(Vec::new())
+<a href=#212 id=212 data-nosnippet>212</a>  });
+<a href=#213 id=213 data-nosnippet>213</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\pIIe@addtoGraph {}"</span>, sub[(op)] {
+<a href=#214 id=214 data-nosnippet>214</a>    <span class="kw">let </span>operands = GRAPH.update(|graph| std::mem::take(<span class="kw-2">&amp;mut </span>graph.operands));
+<a href=#215 id=215 data-nosnippet>215</a>    <span class="kw">match </span>(<span class="macro">Expand!</span>(op).to_string().trim(), operands.as_slice()) {
+<a href=#216 id=216 data-nosnippet>216</a>      (<span class="string">"m" </span>| <span class="string">"moveto"</span>, [.., point]) =&gt; path_push(<span class="kw-2">*</span>point, <span class="bool-val">true</span>),
+<a href=#217 id=217 data-nosnippet>217</a>      (<span class="string">"l" </span>| <span class="string">"lineto"</span>, [.., point]) =&gt; path_push(<span class="kw-2">*</span>point, <span class="bool-val">false</span>),
+<a href=#218 id=218 data-nosnippet>218</a>      (<span class="string">"c" </span>| <span class="string">"curveto"</span>, [.., c1, c2, end]) =&gt; path_curveto(<span class="kw-2">*</span>c1, <span class="kw-2">*</span>c2, <span class="kw-2">*</span>end),
+<a href=#219 id=219 data-nosnippet>219</a>      (<span class="string">"h" </span>| <span class="string">"closepath"</span>, <span class="kw">_</span>) =&gt; path_close(),
+<a href=#220 id=220 data-nosnippet>220</a>      <span class="comment">// A transformation or a drawing parameter: the picture's own XML carries neither.
+<a href=#221 id=221 data-nosnippet>221</a>      </span><span class="kw">_ </span>=&gt; {},
+<a href=#222 id=222 data-nosnippet>222</a>    }
+<a href=#223 id=223 data-nosnippet>223</a>    <span class="prelude-val">Ok</span>(Vec::new())
+<a href=#224 id=224 data-nosnippet>224</a>  });
+<a href=#225 id=225 data-nosnippet>225</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pIIe@strokeGraph"</span>, sub[()] { path_flush(<span class="string">"0"</span>) });
+<a href=#226 id=226 data-nosnippet>226</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\pIIe@fillGraph"</span>, sub[()] { path_flush(<span class="string">"2"</span>) });
+<a href=#227 id=227 data-nosnippet>227</a>  <span class="comment">// The user level, verbatim pict2e.sty:742-774 (the mode &gt; 0 branch a
+<a href=#228 id=228 data-nosnippet>228</a>  // driver enables): `\@defaultunitsset` scales a bare number by
+<a href=#229 id=229 data-nosnippet>229</a>  // `\unitlength` and passes a dimension through. Plain macros, so
+<a href=#230 id=230 data-nosnippet>230</a>  // curve2e.sty:92-96 can `\let\originalmoveto\moveto` and wrap them for its
+<a href=#231 id=231 data-nosnippet>231</a>  // macro-pair `(\P)` form; `\lx@pictii@*` are stable aliases of the same.
+<a href=#232 id=232 data-nosnippet>232</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#233 id=233 data-nosnippet>233</a>    <span class="string">r"\ifx\undefined\pIIe@tempdima \newdimen\pIIe@tempdima \fi
+<a href=#234 id=234 data-nosnippet>234</a>\ifx\undefined\pIIe@tempdimb \newdimen\pIIe@tempdimb \fi
+<a href=#235 id=235 data-nosnippet>235</a>\ifx\undefined\pIIe@tempdimc \newdimen\pIIe@tempdimc \fi
+<a href=#236 id=236 data-nosnippet>236</a>\ifx\undefined\pIIe@tempdimd \newdimen\pIIe@tempdimd \fi
+<a href=#237 id=237 data-nosnippet>237</a>\ifx\undefined\pIIe@tempdime \newdimen\pIIe@tempdime \fi
+<a href=#238 id=238 data-nosnippet>238</a>\ifx\undefined\pIIe@tempdimf \newdimen\pIIe@tempdimf \fi
+<a href=#239 id=239 data-nosnippet>239</a>\def\moveto(#1,#2){\@killglue
+<a href=#240 id=240 data-nosnippet>240</a>  \@defaultunitsset\pIIe@tempdima{#1}\unitlength
+<a href=#241 id=241 data-nosnippet>241</a>  \@defaultunitsset\pIIe@tempdimb{#2}\unitlength
+<a href=#242 id=242 data-nosnippet>242</a>  \pIIe@moveto{\pIIe@tempdima}{\pIIe@tempdimb}\ignorespaces}
+<a href=#243 id=243 data-nosnippet>243</a>\def\lineto(#1,#2){\@killglue
+<a href=#244 id=244 data-nosnippet>244</a>  \@defaultunitsset\pIIe@tempdima{#1}\unitlength
+<a href=#245 id=245 data-nosnippet>245</a>  \@defaultunitsset\pIIe@tempdimb{#2}\unitlength
+<a href=#246 id=246 data-nosnippet>246</a>  \pIIe@lineto{\pIIe@tempdima}{\pIIe@tempdimb}\ignorespaces}
+<a href=#247 id=247 data-nosnippet>247</a>\def\curveto(#1,#2)(#3,#4)(#5,#6){\@killglue
+<a href=#248 id=248 data-nosnippet>248</a>  \@defaultunitsset\pIIe@tempdima{#1}\unitlength
+<a href=#249 id=249 data-nosnippet>249</a>  \@defaultunitsset\pIIe@tempdimb{#2}\unitlength
+<a href=#250 id=250 data-nosnippet>250</a>  \@defaultunitsset\pIIe@tempdimc{#3}\unitlength
+<a href=#251 id=251 data-nosnippet>251</a>  \@defaultunitsset\pIIe@tempdimd{#4}\unitlength
+<a href=#252 id=252 data-nosnippet>252</a>  \@defaultunitsset\pIIe@tempdime{#5}\unitlength
+<a href=#253 id=253 data-nosnippet>253</a>  \@defaultunitsset\pIIe@tempdimf{#6}\unitlength
+<a href=#254 id=254 data-nosnippet>254</a>  \pIIe@curveto{\pIIe@tempdima}{\pIIe@tempdimb}{\pIIe@tempdimc}{\pIIe@tempdimd}{\pIIe@tempdime}{\pIIe@tempdimf}\ignorespaces}
+<a href=#255 id=255 data-nosnippet>255</a>\newcommand*\circlearc[6][0]{\@killglue
+<a href=#256 id=256 data-nosnippet>256</a>  \@defaultunitsset\pIIe@tempdima{#2}\unitlength
+<a href=#257 id=257 data-nosnippet>257</a>  \@defaultunitsset\pIIe@tempdimb{#3}\unitlength
+<a href=#258 id=258 data-nosnippet>258</a>  \@defaultunitsset\pIIe@tempdimc{#4}\unitlength
+<a href=#259 id=259 data-nosnippet>259</a>  \pIIe@arc[#1]{\pIIe@tempdima}{\pIIe@tempdimb}{\pIIe@tempdimc}{#5}{#6}\ignorespaces}
+<a href=#260 id=260 data-nosnippet>260</a>\def\closepath{\pIIe@closepath}
+<a href=#261 id=261 data-nosnippet>261</a>\def\strokepath{\pIIe@strokeGraph}
+<a href=#262 id=262 data-nosnippet>262</a>\def\fillpath{\pIIe@fillGraph}
+<a href=#263 id=263 data-nosnippet>263</a>\let\lx@pictii@moveto\moveto \let\lx@pictii@lineto\lineto \let\lx@pictii@curveto\curveto"
+<a href=#264 id=264 data-nosnippet>264</a>  </span>);
+<a href=#265 id=265 data-nosnippet>265</a>  <span class="comment">// pict2e.sty:667-684 `\arc[start,end]{radius}` (a stroked circular arc about the current `\put` point, by default
+<a href=#266 id=266 data-nosnippet>266</a>  // the whole circle) and `\arc*` (the filled sector), verbatim (68b, binding gaps G3; 1201.4907, 1503.03277,
+<a href=#267 id=267 data-nosnippet>267</a>  // 1503.03676, 1507.03747, 1611.00631, 2001.00020, 0811.3832).
+<a href=#268 id=268 data-nosnippet>268</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#269 id=269 data-nosnippet>269</a>    <span class="string">r"\newcommand*\pIIearc{\@ifstar{\@tempswatrue\pIIe@arc@}{\@tempswafalse\pIIe@arc@}}
+<a href=#270 id=270 data-nosnippet>270</a>\newcommand*\pIIe@arc@[2][0,360]{\pIIe@arc@@(#1){#2}}
+<a href=#271 id=271 data-nosnippet>271</a>\def\pIIe@arc@@(#1,#2)#3{\@defaultunitsset\pIIe@tempdima{#3}\unitlength
+<a href=#272 id=272 data-nosnippet>272</a>  \if@tempswa\pIIe@moveto\z@\z@\pIIe@arc{\z@}{\z@}{\pIIe@tempdima}{#1}{#2}\pIIe@closepath\pIIe@fillGraph
+<a href=#273 id=273 data-nosnippet>273</a>  \else\pIIe@arc[1]{\z@}{\z@}{\pIIe@tempdima}{#1}{#2}\pIIe@strokeGraph\fi}
+<a href=#274 id=274 data-nosnippet>274</a>\let\arc\pIIearc"
+<a href=#275 id=275 data-nosnippet>275</a>  </span>);
+<a href=#276 id=276 data-nosnippet>276</a>  <span class="comment">// pict2e.sty:78-80 arrow-head parameters, :603 `\pIIe@bezier@QtoC`,
+<a href=#277 id=277 data-nosnippet>277</a>  // :779-791 the line cap/join declarations (pdfTeX driver operators).
+<a href=#278 id=278 data-nosnippet>278</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#279 id=279 data-nosnippet>279</a>    <span class="string">r"\newcommand*\pIIe@FAL{1.52}\newcommand*\pIIe@FAW{3.2}\newcommand*\pIIe@CAW{1.5pt}
+<a href=#280 id=280 data-nosnippet>280</a>\newcommand*\pIIe@bezier@QtoC[3]{\@tempdimc#1\relax \advance\@tempdimc-#2\relax
+<a href=#281 id=281 data-nosnippet>281</a>  \divide\@tempdimc\thr@@ \advance\@tempdimc #2\relax #3\@tempdimc}
+<a href=#282 id=282 data-nosnippet>282</a>\ifx\undefined\@arclen \newdimen\@arclen \fi
+<a href=#283 id=283 data-nosnippet>283</a>\ifx\undefined\@arcrad \newdimen\@arcrad \fi
+<a href=#284 id=284 data-nosnippet>284</a>\newcommand*\pIIe@linecap@op{J}\newcommand*\pIIe@linejoin@op{j}
+<a href=#285 id=285 data-nosnippet>285</a>\def\pIIe@linecap{}\def\pIIe@linejoin{}
+<a href=#286 id=286 data-nosnippet>286</a>\def\buttcap{\edef\pIIe@linecap{ 0 \pIIe@linecap@op}}
+<a href=#287 id=287 data-nosnippet>287</a>\def\roundcap{\edef\pIIe@linecap{ 1 \pIIe@linecap@op}}
+<a href=#288 id=288 data-nosnippet>288</a>\def\squarecap{\edef\pIIe@linecap{ 2 \pIIe@linecap@op}}
+<a href=#289 id=289 data-nosnippet>289</a>\def\miterjoin{\edef\pIIe@linejoin{ 0 \pIIe@linejoin@op}}
+<a href=#290 id=290 data-nosnippet>290</a>\def\roundjoin{\edef\pIIe@linejoin{ 1 \pIIe@linejoin@op}}
+<a href=#291 id=291 data-nosnippet>291</a>\def\beveljoin{\edef\pIIe@linejoin{ 2 \pIIe@linejoin@op}}
+<a href=#292 id=292 data-nosnippet>292</a>\def\pIIe@mode{2}"
+<a href=#293 id=293 data-nosnippet>293</a>  </span>);
+<a href=#294 id=294 data-nosnippet>294</a>  <span class="comment">// curve2e.sty:273-280 `\@picture` sets `\pict@dimen`/`\pict@offset` for its
+<a href=#295 id=295 data-nosnippet>295</a>  // grid defaults; the picture environment constructor (sect13.rs) records the
+<a href=#296 id=296 data-nosnippet>296</a>  // same pairs, so expose them here.
+<a href=#297 id=297 data-nosnippet>297</a>  </span><span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\pict@dimen"</span>), <span class="prelude-val">None</span>, {
+<a href=#298 id=298 data-nosnippet>298</a>    <span class="macro">ExplodeText!</span>(
+<a href=#299 id=299 data-nosnippet>299</a>      <span class="kw-2">&amp;</span>lookup_value(<span class="string">"PICTURE_DIMEN"</span>)
+<a href=#300 id=300 data-nosnippet>300</a>        .map(|v| v.to_string())
+<a href=#301 id=301 data-nosnippet>301</a>        .unwrap_or_else(|| <span class="string">"0,0"</span>.into())
+<a href=#302 id=302 data-nosnippet>302</a>    )
+<a href=#303 id=303 data-nosnippet>303</a>  });
+<a href=#304 id=304 data-nosnippet>304</a>  <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\pict@offset"</span>), <span class="prelude-val">None</span>, {
+<a href=#305 id=305 data-nosnippet>305</a>    <span class="macro">ExplodeText!</span>(
+<a href=#306 id=306 data-nosnippet>306</a>      <span class="kw-2">&amp;</span>lookup_value(<span class="string">"PICTURE_OFFSET"</span>)
+<a href=#307 id=307 data-nosnippet>307</a>        .map(|v| v.to_string())
+<a href=#308 id=308 data-nosnippet>308</a>        .unwrap_or_else(|| <span class="string">"0,0"</span>.into())
+<a href=#309 id=309 data-nosnippet>309</a>    )
+<a href=#310 id=310 data-nosnippet>310</a>  });
+<a href=#311 id=311 data-nosnippet>311</a>  <span class="comment">// pict2e.sty:791 `\cbezier[N](p0)(p1)(p2)(p3)` — the cubic Bézier pict2e adds
+<a href=#312 id=312 data-nosnippet>312</a>  // beside the kernel's `\qbezier` (halloweenmath-man draws its pumpkins with
+<a href=#313 id=313 data-nosnippet>313</a>  // it); forwarded to the kernel's four-point `\lx@pic@cbezier`.
+<a href=#314 id=314 data-nosnippet>314</a>  // Guard: `perfect_kernel_batch56::pict2e_cbezier_cubic`.
+<a href=#315 id=315 data-nosnippet>315</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\cbezier [Number] Pair Pair Pair Pair"</span>, sub[args] {
+<a href=#316 id=316 data-nosnippet>316</a>    <span class="kw">let </span>get_pair = |i: usize| -&gt; (f64, f64) {
+<a href=#317 id=317 data-nosnippet>317</a>      args.get(i).and_then(|a| <span class="kw">match </span>a {
+<a href=#318 id=318 data-nosnippet>318</a>        ArgWrap::Pair(p) =&gt; <span class="prelude-val">Some</span>((p.x.<span class="number">0</span>, p.y.<span class="number">0</span>)),
+<a href=#319 id=319 data-nosnippet>319</a>        <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#320 id=320 data-nosnippet>320</a>      }).unwrap_or((<span class="number">0.0_f64</span>, <span class="number">0.0_f64</span>))
+<a href=#321 id=321 data-nosnippet>321</a>    };
+<a href=#322 id=322 data-nosnippet>322</a>    <span class="kw">let </span>n = args.first().map(|a| a.revert().unwrap_or_default()).unwrap_or_default();
+<a href=#323 id=323 data-nosnippet>323</a>    <span class="kw">let </span><span class="kw-2">mut </span>result = Vec::with_capacity(<span class="number">50</span>);
+<a href=#324 id=324 data-nosnippet>324</a>    result.push(<span class="macro">T_CS!</span>(<span class="string">"\\lx@pic@cbezier"</span>));
+<a href=#325 id=325 data-nosnippet>325</a>    result.push(<span class="macro">T_BEGIN!</span>());
+<a href=#326 id=326 data-nosnippet>326</a>    result.extend(n.unlist_ref().iter().copied());
+<a href=#327 id=327 data-nosnippet>327</a>    result.push(<span class="macro">T_END!</span>());
+<a href=#328 id=328 data-nosnippet>328</a>    <span class="kw">for </span>i <span class="kw">in </span><span class="number">1</span>..=<span class="number">4 </span>{
+<a href=#329 id=329 data-nosnippet>329</a>      <span class="kw">let </span>(x, y) = get_pair(i);
+<a href=#330 id=330 data-nosnippet>330</a>      result.push(<span class="macro">T_BEGIN!</span>());
+<a href=#331 id=331 data-nosnippet>331</a>      result.extend(<span class="macro">Explode!</span>(<span class="macro">s!</span>(<span class="string">"{}"</span>, x)));
+<a href=#332 id=332 data-nosnippet>332</a>      result.push(<span class="macro">T_END!</span>());
+<a href=#333 id=333 data-nosnippet>333</a>      result.push(<span class="macro">T_BEGIN!</span>());
+<a href=#334 id=334 data-nosnippet>334</a>      result.extend(<span class="macro">Explode!</span>(<span class="macro">s!</span>(<span class="string">"{}"</span>, y)));
+<a href=#335 id=335 data-nosnippet>335</a>      result.push(<span class="macro">T_END!</span>());
+<a href=#336 id=336 data-nosnippet>336</a>    }
+<a href=#337 id=337 data-nosnippet>337</a>    <span class="prelude-val">Ok</span>(Tokens::new(result))
+<a href=#338 id=338 data-nosnippet>338</a>  });
+<a href=#339 id=339 data-nosnippet>339</a>});
 </code></pre></div></section></main></body></html>

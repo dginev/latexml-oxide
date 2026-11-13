@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/tex_logic.rs`."><title>tex_logic.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/</div>tex_logic.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! TeX Logic
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/tex_logic.rs`."><title>tex_logic.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/</div>tex_logic.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! TeX Logic
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! Core TeX Implementation for LaTeXML
 <a href=#4 id=4 data-nosnippet>4</a>
@@ -41,7 +41,7 @@
 <a href=#41 id=41 data-nosnippet>41</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if ExpandedIfToken ExpandedIfToken"</span>, sub[(left,right)] {
 <a href=#42 id=42 data-nosnippet>42</a>    left.get_charcode() == right.get_charcode()
 <a href=#43 id=43 data-nosnippet>43</a>  });
-<a href=#44 id=44 data-nosnippet>44</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifx Token Token"</span>, sub[(left,right)] { x_equals(<span class="kw-2">&amp;</span>left, <span class="kw-2">&amp;</span>right) });
+<a href=#44 id=44 data-nosnippet>44</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifx NormalToken NormalToken"</span>, sub[(left,right)] { x_equals(<span class="kw-2">&amp;</span>left, <span class="kw-2">&amp;</span>right) });
 <a href=#45 id=45 data-nosnippet>45</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifcat ExpandedIfToken ExpandedIfToken"</span>, sub[(left,right)] {
 <a href=#46 id=46 data-nosnippet>46</a>    left.get_catcode() == right.get_catcode()
 <a href=#47 id=47 data-nosnippet>47</a>  });
@@ -107,57 +107,55 @@
 <a href=#107 id=107 data-nosnippet>107</a>    <span class="kw">let </span>mode = lookup_string_from_sym(<span class="macro">pin!</span>(<span class="string">"MODE"</span>));
 <a href=#108 id=108 data-nosnippet>108</a>    mode.ends_with(<span class="string">"horizontal"</span>)
 <a href=#109 id=109 data-nosnippet>109</a>  });
-<a href=#110 id=110 data-nosnippet>110</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifinner"</span>, {
-<a href=#111 id=111 data-nosnippet>111</a>    <span class="kw">let </span>mode = lookup_string_from_sym(<span class="macro">pin!</span>(<span class="string">"MODE"</span>));
-<a href=#112 id=112 data-nosnippet>112</a>    <span class="macro">matches!</span>(
-<a href=#113 id=113 data-nosnippet>113</a>      mode.as_str(),
-<a href=#114 id=114 data-nosnippet>114</a>      <span class="string">"restricted_horizontal" </span>| <span class="string">"internal_vertical" </span>| <span class="string">"math"
-<a href=#115 id=115 data-nosnippet>115</a>    </span>)
-<a href=#116 id=116 data-nosnippet>116</a>  });
-<a href=#117 id=117 data-nosnippet>117</a>  <span class="comment">// Perl: LookupValue('MODE') =~ /math$/
-<a href=#118 id=118 data-nosnippet>118</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\ifmmode"</span>, {
-<a href=#119 id=119 data-nosnippet>119</a>    <span class="kw">let </span>mode = lookup_string_from_sym(<span class="macro">pin!</span>(<span class="string">"MODE"</span>));
-<a href=#120 id=120 data-nosnippet>120</a>    mode.ends_with(<span class="string">"math"</span>)
-<a href=#121 id=121 data-nosnippet>121</a>  });
-<a href=#122 id=122 data-nosnippet>122</a>
-<a href=#123 id=123 data-nosnippet>123</a>  <span class="comment">//======================================================================
-<a href=#124 id=124 data-nosnippet>124</a>  // I/O testing
-<a href=#125 id=125 data-nosnippet>125</a>  //----------------------------------------------------------------------
-<a href=#126 id=126 data-nosnippet>126</a>  // \ifeof c tests for the end of a file .
-<a href=#127 id=127 data-nosnippet>127</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\ifeof Number"</span>, sub[(port)] {
-<a href=#128 id=128 data-nosnippet>128</a>    with_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"input_file:{}"</span>, port), |val_opt|
-<a href=#129 id=129 data-nosnippet>129</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Mouth(mouth)) = val_opt {
-<a href=#130 id=130 data-nosnippet>130</a>        mouth.borrow().at_eof()
-<a href=#131 id=131 data-nosnippet>131</a>      } <span class="kw">else </span>{
-<a href=#132 id=132 data-nosnippet>132</a>        <span class="bool-val">true
-<a href=#133 id=133 data-nosnippet>133</a>      </span>})
-<a href=#134 id=134 data-nosnippet>134</a>  });
-<a href=#135 id=135 data-nosnippet>135</a>});
-<a href=#136 id=136 data-nosnippet>136</a>
-<a href=#137 id=137 data-nosnippet>137</a><span class="kw">fn </span>compare(u: i64, rel: Token, v: i64) -&gt; bool {
-<a href=#138 id=138 data-nosnippet>138</a>  <span class="comment">// NOTE: One would expect this to be best written as an advanced match state::ent
-<a href=#139 id=139 data-nosnippet>139</a>  // however, due to the shallow comparison of Cow&lt;str&gt; the Cow::Borrowed("&lt;") and
-<a href=#140 id=140 data-nosnippet>140</a>  // Cow::Owned("&lt;") variants will NOT be equal via a destructuring match.
-<a href=#141 id=141 data-nosnippet>141</a>  // However, since we've defined our own PartialEq trait over Token, an equality comparison
-<a href=#142 id=142 data-nosnippet>142</a>  // will produce the right behavior
-<a href=#143 id=143 data-nosnippet>143</a>  </span><span class="kw">if </span>rel == <span class="macro">T_OTHER!</span>(<span class="string">"&lt;"</span>) || rel == <span class="macro">T_CS!</span>(<span class="string">"\\@@&lt;"</span>) {
-<a href=#144 id=144 data-nosnippet>144</a>    u &lt; v
-<a href=#145 id=145 data-nosnippet>145</a>  } <span class="kw">else if </span>rel == <span class="macro">T_OTHER!</span>(<span class="string">"="</span>) {
-<a href=#146 id=146 data-nosnippet>146</a>    u == v
-<a href=#147 id=147 data-nosnippet>147</a>  } <span class="kw">else if </span>rel == <span class="macro">T_OTHER!</span>(<span class="string">"&gt;"</span>) || rel == <span class="macro">T_CS!</span>(<span class="string">"\\@@&gt;"</span>) {
-<a href=#148 id=148 data-nosnippet>148</a>    u &gt; v
-<a href=#149 id=149 data-nosnippet>149</a>  } <span class="kw">else </span>{
-<a href=#150 id=150 data-nosnippet>150</a>    <span class="kw">let </span>message = <span class="macro">s!</span>(
-<a href=#151 id=151 data-nosnippet>151</a>      <span class="string">"Expected a relational token for comparision. Got {:?} (cc {:?})"</span>,
-<a href=#152 id=152 data-nosnippet>152</a>      rel,
-<a href=#153 id=153 data-nosnippet>153</a>      rel.get_catcode()
-<a href=#154 id=154 data-nosnippet>154</a>    );
-<a href=#155 id=155 data-nosnippet>155</a>    <span class="kw">let </span>err = || {
-<a href=#156 id=156 data-nosnippet>156</a>      <span class="macro">Error!</span>(<span class="string">"expected"</span>, <span class="string">"&lt;relationaltoken&gt;"</span>, message);
-<a href=#157 id=157 data-nosnippet>157</a>      <span class="prelude-val">Ok</span>(())
-<a href=#158 id=158 data-nosnippet>158</a>    };
-<a href=#159 id=159 data-nosnippet>159</a>    err().ok();
-<a href=#160 id=160 data-nosnippet>160</a>    <span class="bool-val">false
-<a href=#161 id=161 data-nosnippet>161</a>  </span>}
-<a href=#162 id=162 data-nosnippet>162</a>}
+<a href=#110 id=110 data-nosnippet>110</a>  <span class="comment">// tex.web §211: inner = a box or non-display-math interior. The frame-bound
+<a href=#111 id=111 data-nosnippet>111</a>  // `INNER_BOX` flag (stomach.rs `begin_mode_opt`) carries that sign; the
+<a href=#112 id=112 data-nosnippet>112</a>  // former mode-string test read the document body's `internal_vertical`
+<a href=#113 id=113 data-nosnippet>113</a>  // galley as inner (Perl TeX_Logic.pool:127 identical).
+<a href=#114 id=114 data-nosnippet>114</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\ifinner"</span>, { lookup_bool_sym(<span class="macro">pin!</span>(<span class="string">"INNER_BOX"</span>)) });
+<a href=#115 id=115 data-nosnippet>115</a>  <span class="comment">// Perl: LookupValue('MODE') =~ /math$/
+<a href=#116 id=116 data-nosnippet>116</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\ifmmode"</span>, {
+<a href=#117 id=117 data-nosnippet>117</a>    <span class="kw">let </span>mode = lookup_string_from_sym(<span class="macro">pin!</span>(<span class="string">"MODE"</span>));
+<a href=#118 id=118 data-nosnippet>118</a>    mode.ends_with(<span class="string">"math"</span>)
+<a href=#119 id=119 data-nosnippet>119</a>  });
+<a href=#120 id=120 data-nosnippet>120</a>
+<a href=#121 id=121 data-nosnippet>121</a>  <span class="comment">//======================================================================
+<a href=#122 id=122 data-nosnippet>122</a>  // I/O testing
+<a href=#123 id=123 data-nosnippet>123</a>  //----------------------------------------------------------------------
+<a href=#124 id=124 data-nosnippet>124</a>  // \ifeof c tests for the end of a file .
+<a href=#125 id=125 data-nosnippet>125</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\ifeof Number"</span>, sub[(port)] {
+<a href=#126 id=126 data-nosnippet>126</a>    with_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"input_file:{}"</span>, port), |val_opt|
+<a href=#127 id=127 data-nosnippet>127</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Mouth(mouth)) = val_opt {
+<a href=#128 id=128 data-nosnippet>128</a>        mouth.borrow().at_eof()
+<a href=#129 id=129 data-nosnippet>129</a>      } <span class="kw">else </span>{
+<a href=#130 id=130 data-nosnippet>130</a>        <span class="bool-val">true
+<a href=#131 id=131 data-nosnippet>131</a>      </span>})
+<a href=#132 id=132 data-nosnippet>132</a>  });
+<a href=#133 id=133 data-nosnippet>133</a>});
+<a href=#134 id=134 data-nosnippet>134</a>
+<a href=#135 id=135 data-nosnippet>135</a><span class="kw">fn </span>compare(u: i64, rel: Token, v: i64) -&gt; bool {
+<a href=#136 id=136 data-nosnippet>136</a>  <span class="comment">// NOTE: One would expect this to be best written as an advanced match state::ent
+<a href=#137 id=137 data-nosnippet>137</a>  // however, due to the shallow comparison of Cow&lt;str&gt; the Cow::Borrowed("&lt;") and
+<a href=#138 id=138 data-nosnippet>138</a>  // Cow::Owned("&lt;") variants will NOT be equal via a destructuring match.
+<a href=#139 id=139 data-nosnippet>139</a>  // However, since we've defined our own PartialEq trait over Token, an equality comparison
+<a href=#140 id=140 data-nosnippet>140</a>  // will produce the right behavior
+<a href=#141 id=141 data-nosnippet>141</a>  </span><span class="kw">if </span>rel == <span class="macro">T_OTHER!</span>(<span class="string">"&lt;"</span>) || rel == <span class="macro">T_CS!</span>(<span class="string">"\\@@&lt;"</span>) {
+<a href=#142 id=142 data-nosnippet>142</a>    u &lt; v
+<a href=#143 id=143 data-nosnippet>143</a>  } <span class="kw">else if </span>rel == <span class="macro">T_OTHER!</span>(<span class="string">"="</span>) {
+<a href=#144 id=144 data-nosnippet>144</a>    u == v
+<a href=#145 id=145 data-nosnippet>145</a>  } <span class="kw">else if </span>rel == <span class="macro">T_OTHER!</span>(<span class="string">"&gt;"</span>) || rel == <span class="macro">T_CS!</span>(<span class="string">"\\@@&gt;"</span>) {
+<a href=#146 id=146 data-nosnippet>146</a>    u &gt; v
+<a href=#147 id=147 data-nosnippet>147</a>  } <span class="kw">else </span>{
+<a href=#148 id=148 data-nosnippet>148</a>    <span class="kw">let </span>message = <span class="macro">s!</span>(
+<a href=#149 id=149 data-nosnippet>149</a>      <span class="string">"Expected a relational token for comparision. Got {:?} (cc {:?})"</span>,
+<a href=#150 id=150 data-nosnippet>150</a>      rel,
+<a href=#151 id=151 data-nosnippet>151</a>      rel.get_catcode()
+<a href=#152 id=152 data-nosnippet>152</a>    );
+<a href=#153 id=153 data-nosnippet>153</a>    <span class="kw">let </span>err = || {
+<a href=#154 id=154 data-nosnippet>154</a>      <span class="macro">Error!</span>(<span class="string">"expected"</span>, <span class="string">"&lt;relationaltoken&gt;"</span>, message);
+<a href=#155 id=155 data-nosnippet>155</a>      <span class="prelude-val">Ok</span>(())
+<a href=#156 id=156 data-nosnippet>156</a>    };
+<a href=#157 id=157 data-nosnippet>157</a>    err().ok();
+<a href=#158 id=158 data-nosnippet>158</a>    <span class="bool-val">false
+<a href=#159 id=159 data-nosnippet>159</a>  </span>}
+<a href=#160 id=160 data-nosnippet>160</a>}
 </code></pre></div></section></main></body></html>

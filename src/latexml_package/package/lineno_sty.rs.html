@@ -1,75 +1,142 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/lineno_sty.rs`."><title>lineno_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>lineno_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/lineno_sty.rs`."><title>lineno_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>lineno_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a><span class="attr">#[rustfmt::skip]
 <a href=#4 id=4 data-nosnippet>4</a></span><span class="macro">LoadDefinitions!</span>({
-<a href=#5 id=5 data-nosnippet>5</a>  <span class="comment">// Perl: lineno.sty.ltxml — stub (line numbering not meaningful for XML)
-<a href=#6 id=6 data-nosnippet>6</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{linenumbers*}[Number]"</span>,         <span class="string">"#body"</span>);
-<a href=#7 id=7 data-nosnippet>7</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{runninglinenumbers*}[Number]"</span>,  <span class="string">"#body"</span>);
-<a href=#8 id=8 data-nosnippet>8</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{pagewiselinenumbers*}[Number]"</span>, <span class="string">"#body"</span>);
-<a href=#9 id=9 data-nosnippet>9</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{linenomath}"</span>,                   <span class="string">"#body"</span>);
-<a href=#10 id=10 data-nosnippet>10</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{linenomath*}"</span>,                  <span class="string">"#body"</span>);
-<a href=#11 id=11 data-nosnippet>11</a>  <span class="comment">// Real lineno.sty also defines control sequences `\linenomath`,
-<a href=#12 id=12 data-nosnippet>12</a>  // `\linenomathWithnumbers`, `\linenomathNonumbers` (raw-load
-<a href=#13 id=13 data-nosnippet>13</a>  // sees these as macros). Other packages — eccv.sty, journal templates —
-<a href=#14 id=14 data-nosnippet>14</a>  // test them with `\ifx\linenomath\linenomathWithnumbers` to switch
-<a href=#15 id=15 data-nosnippet>15</a>  // between AMS-math styles. Without explicit defs here, all three resolve
-<a href=#16 id=16 data-nosnippet>16</a>  // to `\relax` and the `\ifx` test is TRUE — the then-branch fires
-<a href=#17 id=17 data-nosnippet>17</a>  // `\patchcmd\linenomathAMS{...}` which is undefined → cascade of
-<a href=#18 id=18 data-nosnippet>18</a>  // `\else` / `\fi` mismatch (27 of 44 wp4 \else-error papers use eccv).
-<a href=#19 id=19 data-nosnippet>19</a>  // Make them three *distinct* no-op macros so the `\ifx` test picks the
-<a href=#20 id=20 data-nosnippet>20</a>  // else-branch reliably, matching the no-linenumbers default.
-<a href=#21 id=21 data-nosnippet>21</a>  // Don't redefine `\linenomath` / `\endlinenomath` — those are the
-<a href=#22 id=22 data-nosnippet>22</a>  // env-begin/env-end macros set up by DefEnvironment above. We DO
-<a href=#23 id=23 data-nosnippet>23</a>  // define the two "style switch" macros that real lineno provides,
-<a href=#24 id=24 data-nosnippet>24</a>  // with distinct bodies so journal-template `\ifx\linenomath\linenomathWithnumbers`
-<a href=#25 id=25 data-nosnippet>25</a>  // tests reliably pick the no-linenumbers branch.
-<a href=#26 id=26 data-nosnippet>26</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\linenomathWithnumbers"</span>, <span class="string">"\\relax"</span>);
-<a href=#27 id=27 data-nosnippet>27</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\linenomathNonumbers"</span>,   <span class="string">"\\@empty"</span>);
-<a href=#28 id=28 data-nosnippet>28</a>  <span class="comment">// \internallinenumbers (lineno.sty) — adds line numbers inside the
-<a href=#29 id=29 data-nosnippet>29</a>  // environment body. Also gets a starred form auto-defined via
-<a href=#30 id=30 data-nosnippet>30</a>  // `\@namedef{internallinenumbers*}{\internallinenumbers*}` at lineno
-<a href=#31 id=31 data-nosnippet>31</a>  // L?? (cf. iclr2025_conference.sty L230 which calls it). Stub as
-<a href=#32 id=32 data-nosnippet>32</a>  // body-passthrough since line numbers are irrelevant in XML output.
-<a href=#33 id=33 data-nosnippet>33</a>  // Witness 52 papers with iclr2025_conference using this env.
-<a href=#34 id=34 data-nosnippet>34</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{internallinenumbers}[Number]"</span>,  <span class="string">"#body"</span>);
-<a href=#35 id=35 data-nosnippet>35</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{internallinenumbers*}[Number]"</span>, <span class="string">"#body"</span>);
-<a href=#36 id=36 data-nosnippet>36</a>
-<a href=#37 id=37 data-nosnippet>37</a>  def_macro_noop(<span class="string">"\\linenumbers OptionalMatch:* [Number]"</span>)<span class="question-mark">?</span>;
-<a href=#38 id=38 data-nosnippet>38</a>  def_macro_noop(<span class="string">"\\nolinenumbers"</span>)<span class="question-mark">?</span>;
-<a href=#39 id=39 data-nosnippet>39</a>  def_macro_noop(<span class="string">"\\runninglinenumbers OptionalMatch:* [Number]"</span>)<span class="question-mark">?</span>;
-<a href=#40 id=40 data-nosnippet>40</a>  def_macro_noop(<span class="string">"\\pagewiselinenumbers"</span>)<span class="question-mark">?</span>;
-<a href=#41 id=41 data-nosnippet>41</a>  def_macro_noop(<span class="string">"\\realpagewiselinenumbers"</span>)<span class="question-mark">?</span>;
-<a href=#42 id=42 data-nosnippet>42</a>  def_macro_noop(<span class="string">"\\runningpagewiselinenumbers"</span>)<span class="question-mark">?</span>;
-<a href=#43 id=43 data-nosnippet>43</a>
-<a href=#44 id=44 data-nosnippet>44</a>  def_macro_noop(<span class="string">"\\leftlinenumbers  OptionalMatch:*"</span>)<span class="question-mark">?</span>;
-<a href=#45 id=45 data-nosnippet>45</a>  def_macro_noop(<span class="string">"\\rightlinenumbers OptionalMatch:*"</span>)<span class="question-mark">?</span>;
-<a href=#46 id=46 data-nosnippet>46</a>  def_macro_noop(<span class="string">"\\switchlinenumbers OptionalMatch:*"</span>)<span class="question-mark">?</span>;
-<a href=#47 id=47 data-nosnippet>47</a>
-<a href=#48 id=48 data-nosnippet>48</a>  def_macro_noop(<span class="string">"\\setrunninglinenumbers"</span>)<span class="question-mark">?</span>;
-<a href=#49 id=49 data-nosnippet>49</a>  def_macro_noop(<span class="string">"\\setpagewiselinenumbers"</span>)<span class="question-mark">?</span>;
-<a href=#50 id=50 data-nosnippet>50</a>
-<a href=#51 id=51 data-nosnippet>51</a>  def_macro_noop(<span class="string">"\\resetlinenumber [Number]"</span>)<span class="question-mark">?</span>;
-<a href=#52 id=52 data-nosnippet>52</a>  def_macro_noop(<span class="string">"\\modulolinenumbers [Number]"</span>)<span class="question-mark">?</span>;
-<a href=#53 id=53 data-nosnippet>53</a>
-<a href=#54 id=54 data-nosnippet>54</a>  def_macro_noop(<span class="string">"\\linenumberfont"</span>)<span class="question-mark">?</span>;
-<a href=#55 id=55 data-nosnippet>55</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\linenumbersep"</span>, Number(<span class="number">0</span>));
-<a href=#56 id=56 data-nosnippet>56</a>
-<a href=#57 id=57 data-nosnippet>57</a>  def_macro_noop(<span class="string">"\\thelinenumber"</span>)<span class="question-mark">?</span>;
-<a href=#58 id=58 data-nosnippet>58</a>
-<a href=#59 id=59 data-nosnippet>59</a>  def_macro_noop(<span class="string">"\\makeLineNumber"</span>)<span class="question-mark">?</span>;
-<a href=#60 id=60 data-nosnippet>60</a>  def_macro_noop(<span class="string">"\\makeLineNumberRunning"</span>)<span class="question-mark">?</span>;
-<a href=#61 id=61 data-nosnippet>61</a>  def_macro_noop(<span class="string">"\\makeLineNumberOdd"</span>)<span class="question-mark">?</span>;
-<a href=#62 id=62 data-nosnippet>62</a>  def_macro_noop(<span class="string">"\\makeLineNumberEven"</span>)<span class="question-mark">?</span>;
-<a href=#63 id=63 data-nosnippet>63</a>  def_macro_noop(<span class="string">"\\makeLineNumberRight"</span>)<span class="question-mark">?</span>;
-<a href=#64 id=64 data-nosnippet>64</a>  def_macro_noop(<span class="string">"\\makeLineNumberLeft"</span>)<span class="question-mark">?</span>;
-<a href=#65 id=65 data-nosnippet>65</a>  def_macro_noop(<span class="string">"\\LineNumber"</span>)<span class="question-mark">?</span>;
-<a href=#66 id=66 data-nosnippet>66</a>
-<a href=#67 id=67 data-nosnippet>67</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\numquote"</span>,        <span class="string">"\\quote"</span>);
-<a href=#68 id=68 data-nosnippet>68</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endnumquote"</span>,     <span class="string">"\\endquote"</span>);
-<a href=#69 id=69 data-nosnippet>69</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\numquotation"</span>,    <span class="string">"\\quote"</span>);
-<a href=#70 id=70 data-nosnippet>70</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endnumquotation"</span>, <span class="string">"\\endquote"</span>);
-<a href=#71 id=71 data-nosnippet>71</a>
-<a href=#72 id=72 data-nosnippet>72</a>  def_macro_noop(<span class="string">"\\quotelinenumberfont"</span>)<span class="question-mark">?</span>;
-<a href=#73 id=73 data-nosnippet>73</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\quotelinenumbersep"</span>, Number(<span class="number">0</span>));
-<a href=#74 id=74 data-nosnippet>74</a>});
+<a href=#5 id=5 data-nosnippet>5</a>  <span class="macro">RequirePackage!</span>(<span class="string">"etoolbox"</span>); <span class="comment">// lineno.sty:264-265
+<a href=#6 id=6 data-nosnippet>6</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"kvoptions"</span>);
+<a href=#7 id=7 data-nosnippet>7</a>  <span class="comment">// lineno.sty:2628 reads its options with `\ProcessKeyvalOptions`, which marks them processed: `\@curroptions` stays as it was.
+<a href=#8 id=8 data-nosnippet>8</a>  </span>key_options_processed()<span class="question-mark">?</span>;
+<a href=#9 id=9 data-nosnippet>9</a>  <span class="comment">// Perl: lineno.sty.ltxml — stub (line numbering not meaningful for XML). Its DefEnvironments boxed the body in
+<a href=#10 id=10 data-nosnippet>10</a>  // restricted horizontal mode (a `$$` there no display, a `\section` inside a box); lineno.sty:1157-1165 makes the
+<a href=#11 id=11 data-nosnippet>11</a>  // environments macros: `\par` and the switch, ended by `\par\@endpetrue`. `{pagewiselinenumbers*}`,
+<a href=#12 id=12 data-nosnippet>12</a>  // which lineno does not define, is kept from Perl's binding, without its `[Number]`.
+<a href=#13 id=13 data-nosnippet>13</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\@namedef{linenumbers*}{\par\linenumbers*}
+<a href=#14 id=14 data-nosnippet>14</a>\@namedef{runninglinenumbers*}{\par\runninglinenumbers*}
+<a href=#15 id=15 data-nosnippet>15</a>\@namedef{pagewiselinenumbers*}{\par\pagewiselinenumbers}
+<a href=#16 id=16 data-nosnippet>16</a>\def\endlinenumbers{\par\@endpetrue}
+<a href=#17 id=17 data-nosnippet>17</a>\let\endrunninglinenumbers\endlinenumbers
+<a href=#18 id=18 data-nosnippet>18</a>\let\endpagewiselinenumbers\endlinenumbers
+<a href=#19 id=19 data-nosnippet>19</a>\expandafter\let\csname endlinenumbers*\endcsname\endlinenumbers
+<a href=#20 id=20 data-nosnippet>20</a>\expandafter\let\csname endrunninglinenumbers*\endcsname\endlinenumbers
+<a href=#21 id=21 data-nosnippet>21</a>\expandafter\let\csname endpagewiselinenumbers*\endcsname\endlinenumbers
+<a href=#22 id=22 data-nosnippet>22</a>\let\endnolinenumbers\endlinenumbers"</span>);
+<a href=#23 id=23 data-nosnippet>23</a>  <span class="comment">// lineno.sty:2881-2908 `bframe` — a framed block (frame presentational; ulineno), which begins
+<a href=#24 id=24 data-nosnippet>24</a>  // and ends with `\par`: its body is paragraphs of their own, as setspace's `{spacing}`.
+<a href=#25 id=25 data-nosnippet>25</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{bframe}"</span>,                       <span class="string">"#body"</span>, mode =&gt; <span class="string">"internal_vertical"</span>,
+<a href=#26 id=26 data-nosnippet>26</a>    before_digest_end =&gt; { leave_horizontal()<span class="question-mark">?</span>; });
+<a href=#27 id=27 data-nosnippet>27</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\bframerule"</span>, Dimension(<span class="number">26214</span>)); <span class="comment">// lineno.sty:2914 \fboxrule = 0.4pt
+<a href=#28 id=28 data-nosnippet>28</a>  </span><span class="macro">DefRegister!</span>(<span class="string">"\\bframesep"</span>,  Dimension(<span class="number">196608</span>)); <span class="comment">// lineno.sty:2917 \fboxsep = 3pt
+<a href=#29 id=29 data-nosnippet>29</a>  // lineno.sty:1219-1271: `{linenomath}`/`{linenomath*}` are plain macros — penalties and holding inserts for
+<a href=#30 id=30 data-nosnippet>30</a>  // the line numbers, then `\ignorespaces`; `\endlinenomath` `\global\@ignoretrue` — so a `$$` in them is display
+<a href=#31 id=31 data-nosnippet>31</a>  // math, in the mode around it (tex.web:21715). Perl's DefEnvironments box the body in restricted horizontal
+<a href=#32 id=32 data-nosnippet>32</a>  // mode, where `$$` is two empty inline formulas and the formula ran as text: "Script _ can only appear in math
+<a href=#33 id=33 data-nosnippet>33</a>  // mode" (2307.10980, 2301.10600). The two styles are lineno's (:1219-1250), their penalties under `\ifLineNumbers`,
+<a href=#34 id=34 data-nosnippet>34</a>  // which stays false (line numbers are not modelled); `\linenomath` is a macro calling one, so a template's
+<a href=#35 id=35 data-nosnippet>35</a>  // `\ifx\linenomath\linenomathWithnumbers` (eccv.sty) takes the no-numbers branch, as with lineno's default
+<a href=#36 id=36 data-nosnippet>36</a>  // `\nolinenumberdisplaymath` (:1254-1263, :1280). `\linenopenalty`, `\linenopenaltypar`: lineno.sty:448, :467.
+<a href=#37 id=37 data-nosnippet>37</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\newcount\linenopenalty\linenopenalty=-100000
+<a href=#38 id=38 data-nosnippet>38</a>\mathchardef\linenopenaltypar=32000
+<a href=#39 id=39 data-nosnippet>39</a>\def\@LN@outer@holdins{0}
+<a href=#40 id=40 data-nosnippet>40</a>\newcommand\linenomathNonumbers{\ifLineNumbers\ifnum\interlinepenalty&gt;-\linenopenaltypar
+<a href=#41 id=41 data-nosnippet>41</a>\global\holdinginserts\thr@@\advance\interlinepenalty\linenopenalty
+<a href=#42 id=42 data-nosnippet>42</a>\ifhmode\advance\predisplaypenalty\linenopenalty\fi\fi\fi\ignorespaces}
+<a href=#43 id=43 data-nosnippet>43</a>\newcommand\linenomathWithnumbers{\ifLineNumbers\ifnum\interlinepenalty&gt;-\linenopenaltypar
+<a href=#44 id=44 data-nosnippet>44</a>\global\holdinginserts\thr@@\advance\interlinepenalty\linenopenalty
+<a href=#45 id=45 data-nosnippet>45</a>\ifhmode\advance\predisplaypenalty\linenopenalty\fi
+<a href=#46 id=46 data-nosnippet>46</a>\advance\postdisplaypenalty\linenopenalty\advance\interdisplaylinepenalty\linenopenalty\fi\fi\ignorespaces}
+<a href=#47 id=47 data-nosnippet>47</a>\newcommand\linenumberdisplaymath{\def\linenomath{\linenomathWithnumbers}\@namedef{linenomath*}{\linenomathNonumbers}}
+<a href=#48 id=48 data-nosnippet>48</a>\newcommand\nolinenumberdisplaymath{\def\linenomath{\linenomathNonumbers}\@namedef{linenomath*}{\linenomathWithnumbers}}
+<a href=#49 id=49 data-nosnippet>49</a>\nolinenumberdisplaymath
+<a href=#50 id=50 data-nosnippet>50</a>\def\endlinenomath{\ifLineNumbers\global\holdinginserts\@LN@outer@holdins\fi\global\@ignoretrue}
+<a href=#51 id=51 data-nosnippet>51</a>\expandafter\let\csname endlinenomath*\endcsname\endlinenomath"</span>);
+<a href=#52 id=52 data-nosnippet>52</a>
+<a href=#53 id=53 data-nosnippet>53</a>  <span class="comment">// \internallinenumbers (lineno.sty:2732) is a macro with optional * and [Number].
+<a href=#54 id=54 data-nosnippet>54</a>  // lineno.sty also defines `\let\endinternallinenumbers\endlinenumbers` and
+<a href=#55 id=55 data-nosnippet>55</a>  // `\@namedef{internallinenumbers*}{\internallinenumbers*}` so it can be used
+<a href=#56 id=56 data-nosnippet>56</a>  // BOTH as a macro (inside boxes/parboxes; ulineno.tex:902) and as an environment
+<a href=#57 id=57 data-nosnippet>57</a>  // (\begin{internallinenumbers}; iclr2025_conference.sty, aastex, fvextra).
+<a href=#58 id=58 data-nosnippet>58</a>  // A DefEnvironment here breaks macro calls by entering restricted_horizontal mode
+<a href=#59 id=59 data-nosnippet>59</a>  // and opening an unbalanced group. Stub as no-op macros for both forms.
+<a href=#60 id=60 data-nosnippet>60</a>  </span>def_macro_noop(<span class="string">"\\internallinenumbers OptionalMatch:* [Number]"</span>)<span class="question-mark">?</span>;
+<a href=#61 id=61 data-nosnippet>61</a>  def_macro_noop(<span class="string">"\\endinternallinenumbers"</span>)<span class="question-mark">?</span>;
+<a href=#62 id=62 data-nosnippet>62</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\csname internallinenumbers*\\endcsname OptionalMatch:* [Number]"</span>, <span class="string">""</span>);
+<a href=#63 id=63 data-nosnippet>63</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\csname endinternallinenumbers*\\endcsname"</span>, <span class="string">""</span>);
+<a href=#64 id=64 data-nosnippet>64</a>
+<a href=#65 id=65 data-nosnippet>65</a>  def_macro_noop(<span class="string">"\\linenumbers OptionalMatch:* [Number]"</span>)<span class="question-mark">?</span>;
+<a href=#66 id=66 data-nosnippet>66</a>  <span class="comment">// lineno.sty:2214 `\newcommand*\firstlinenumber[1]{\chardef\c@firstlinenumber#1\relax …}`
+<a href=#67 id=67 data-nosnippet>67</a>  // — the binding replaces the raw file, so the command must exist here
+<a href=#68 id=68 data-nosnippet>68</a>  // (lineno/lineno manual: `\firstlinenumber{1}`). Guard:
+<a href=#69 id=69 data-nosnippet>69</a>  // `perfect_kernel_batch56::sweep47_single_name_gaps`.
+<a href=#70 id=70 data-nosnippet>70</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\firstlinenumber{}"</span>, <span class="string">"\\chardef\\c@firstlinenumber#1\\relax"</span>);
+<a href=#71 id=71 data-nosnippet>71</a>  def_macro_noop(<span class="string">"\\nolinenumbers"</span>)<span class="question-mark">?</span>;
+<a href=#72 id=72 data-nosnippet>72</a>  def_macro_noop(<span class="string">"\\runninglinenumbers OptionalMatch:* [Number]"</span>)<span class="question-mark">?</span>;
+<a href=#73 id=73 data-nosnippet>73</a>  def_macro_noop(<span class="string">"\\pagewiselinenumbers"</span>)<span class="question-mark">?</span>;
+<a href=#74 id=74 data-nosnippet>74</a>  def_macro_noop(<span class="string">"\\realpagewiselinenumbers"</span>)<span class="question-mark">?</span>;
+<a href=#75 id=75 data-nosnippet>75</a>  def_macro_noop(<span class="string">"\\runningpagewiselinenumbers"</span>)<span class="question-mark">?</span>;
+<a href=#76 id=76 data-nosnippet>76</a>
+<a href=#77 id=77 data-nosnippet>77</a>  def_macro_noop(<span class="string">"\\leftlinenumbers  OptionalMatch:*"</span>)<span class="question-mark">?</span>;
+<a href=#78 id=78 data-nosnippet>78</a>  def_macro_noop(<span class="string">"\\rightlinenumbers OptionalMatch:*"</span>)<span class="question-mark">?</span>;
+<a href=#79 id=79 data-nosnippet>79</a>  def_macro_noop(<span class="string">"\\switchlinenumbers OptionalMatch:*"</span>)<span class="question-mark">?</span>;
+<a href=#80 id=80 data-nosnippet>80</a>
+<a href=#81 id=81 data-nosnippet>81</a>  def_macro_noop(<span class="string">"\\setrunninglinenumbers"</span>)<span class="question-mark">?</span>;
+<a href=#82 id=82 data-nosnippet>82</a>  def_macro_noop(<span class="string">"\\setpagewiselinenumbers"</span>)<span class="question-mark">?</span>;
+<a href=#83 id=83 data-nosnippet>83</a>
+<a href=#84 id=84 data-nosnippet>84</a>  def_macro_noop(<span class="string">"\\resetlinenumber OptionalMatch:* [Number]"</span>)<span class="question-mark">?</span>;
+<a href=#85 id=85 data-nosnippet>85</a>  <span class="comment">// lineno.sty:2151-2158 `\modulolinenumbers` takes a star (`\@ifstar`), then `[1][\z@]` (:2182);
+<a href=#86 id=86 data-nosnippet>86</a>  // Perl's `[Number]` (lineno.sty.ltxml:43) typeset the star and the option.
+<a href=#87 id=87 data-nosnippet>87</a>  </span>def_macro_noop(<span class="string">"\\modulolinenumbers OptionalMatch:* [Number]"</span>)<span class="question-mark">?</span>;
+<a href=#88 id=88 data-nosnippet>88</a>
+<a href=#89 id=89 data-nosnippet>89</a>  def_macro_noop(<span class="string">"\\linenumberfont"</span>)<span class="question-mark">?</span>;
+<a href=#90 id=90 data-nosnippet>90</a>  <span class="comment">// lineno.sty:1549-1552 `\newdimen\linenumbersep \linenumbersep=10pt` (Perl: `Number(0)`).
+<a href=#91 id=91 data-nosnippet>91</a>  </span><span class="macro">DefRegister!</span>(<span class="string">"\\linenumbersep"</span>, Dimension(<span class="number">655360</span>)); <span class="comment">// 10pt
+<a href=#92 id=92 data-nosnippet>92</a>  </span><span class="macro">DefRegister!</span>(<span class="string">"\\linenumberwidth"</span>, Dimension(<span class="number">655360</span>)); <span class="comment">// 10pt
+<a href=#93 id=93 data-nosnippet>93</a>
+<a href=#94 id=94 data-nosnippet>94</a>  </span>def_macro_noop(<span class="string">"\\thelinenumber"</span>)<span class="question-mark">?</span>;
+<a href=#95 id=95 data-nosnippet>95</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\c@linenumber"</span>, Number(<span class="number">0</span>));
+<a href=#96 id=96 data-nosnippet>96</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\c@runninglinenumber"</span>, Number(<span class="number">0</span>));
+<a href=#97 id=97 data-nosnippet>97</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\c@internallinenumber"</span>, Number(<span class="number">0</span>));
+<a href=#98 id=98 data-nosnippet>98</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\c@internallinenumbers"</span>, Number(<span class="number">0</span>));
+<a href=#99 id=99 data-nosnippet>99</a>
+<a href=#100 id=100 data-nosnippet>100</a>  def_macro_noop(<span class="string">"\\makeLineNumber"</span>)<span class="question-mark">?</span>;
+<a href=#101 id=101 data-nosnippet>101</a>  def_macro_noop(<span class="string">"\\makeLineNumberRunning"</span>)<span class="question-mark">?</span>;
+<a href=#102 id=102 data-nosnippet>102</a>  def_macro_noop(<span class="string">"\\makeLineNumberOdd"</span>)<span class="question-mark">?</span>;
+<a href=#103 id=103 data-nosnippet>103</a>  def_macro_noop(<span class="string">"\\makeLineNumberEven"</span>)<span class="question-mark">?</span>;
+<a href=#104 id=104 data-nosnippet>104</a>  def_macro_noop(<span class="string">"\\makeLineNumberRight"</span>)<span class="question-mark">?</span>;
+<a href=#105 id=105 data-nosnippet>105</a>  def_macro_noop(<span class="string">"\\makeLineNumberLeft"</span>)<span class="question-mark">?</span>;
+<a href=#106 id=106 data-nosnippet>106</a>  def_macro_noop(<span class="string">"\\LineNumber"</span>)<span class="question-mark">?</span>;
+<a href=#107 id=107 data-nosnippet>107</a>
+<a href=#108 id=108 data-nosnippet>108</a>  <span class="comment">// lineno.sty:2849-2867: the quote environments number their lines through `\numquotelist`, whose
+<a href=#109 id=109 data-nosnippet>109</a>  // `\quotelinenumbers` reads a star or `[n]` as `\linenumbers` does; `{numquotation}` is a
+<a href=#110 id=110 data-nosnippet>110</a>  // `\quotation`, and the starred environments exist. Perl's `\numquote`/`\numquotation` = `\quote`
+<a href=#111 id=111 data-nosnippet>111</a>  // (lineno.sty.ltxml:58-61) typeset a `[n]` and left `{numquote*}` undefined. `\numquotelist` keeps
+<a href=#112 id=112 data-nosnippet>112</a>  // only `\quotelinenumbers`: lineno.sty:2855-2862 also sets `\leftlinenumbers`, `\linenumbersep` and
+<a href=#113 id=113 data-nosnippet>113</a>  // the number font, presentational here.
+<a href=#114 id=114 data-nosnippet>114</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\newcommand\quotelinenumbers{\@ifstar\linenumbers{\@ifnextchar[\linenumbers{\linenumbers*}}}
+<a href=#115 id=115 data-nosnippet>115</a>\newcommand\numquotelist{\quotelinenumbers}
+<a href=#116 id=116 data-nosnippet>116</a>\newenvironment{numquote}{\quote\numquotelist}{\endquote}
+<a href=#117 id=117 data-nosnippet>117</a>\newenvironment{numquotation}{\quotation\numquotelist}{\endquotation}
+<a href=#118 id=118 data-nosnippet>118</a>\newenvironment{numquote*}{\quote\numquotelist*}{\endquote}
+<a href=#119 id=119 data-nosnippet>119</a>\newenvironment{numquotation*}{\quotation\numquotelist*}{\endquotation}"</span>);
+<a href=#120 id=120 data-nosnippet>120</a>
+<a href=#121 id=121 data-nosnippet>121</a>  def_macro_noop(<span class="string">"\\quotelinenumberfont"</span>)<span class="question-mark">?</span>;
+<a href=#122 id=122 data-nosnippet>122</a>  <span class="comment">// lineno.sty:2852-2853 `\newdimen\quotelinenumbersep \quotelinenumbersep=\linenumbersep`.
+<a href=#123 id=123 data-nosnippet>123</a>  </span><span class="macro">DefRegister!</span>(<span class="string">"\\quotelinenumbersep"</span>, Dimension(<span class="number">655360</span>)); <span class="comment">// 10pt
+<a href=#124 id=124 data-nosnippet>124</a>
+<a href=#125 id=125 data-nosnippet>125</a>  // lineno.sty:1077 `\newif\ifLineNumbers \LineNumbersfalse`, :1934-1935
+<a href=#126 id=126 data-nosnippet>126</a>  // `\newif\ifoddNumberedPage`, `\newif\ifcolumnwiselinenumbers`. Classes test
+<a href=#127 id=127 data-nosnippet>127</a>  // the switch: minimalist.sty:144 `\LocallyStopLineNumbers` =
+<a href=#128 id=128 data-nosnippet>128</a>  // `\LNturnsONfalse\ifLineNumbers\LNturnsONtrue\fi\nolinenumbers`, reached
+<a href=#129 id=129 data-nosnippet>129</a>  // from homework.cls:128 `\@maketitle` (homework-demo-{cn,de,en,es,fr,jp}).
+<a href=#130 id=130 data-nosnippet>130</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\ifLineNumbers"</span>);
+<a href=#131 id=131 data-nosnippet>131</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifoddNumberedPage"</span>);
+<a href=#132 id=132 data-nosnippet>132</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifcolumnwiselinenumbers"</span>);
+<a href=#133 id=133 data-nosnippet>133</a>  <span class="comment">// lineno.sty:1445 `\linelabel{key}` marks the current line for `\lineref`
+<a href=#134 id=134 data-nosnippet>134</a>  // (= `\ref` of the line number); the line number itself is layout, so the
+<a href=#135 id=135 data-nosnippet>135</a>  // pair is the kernel label/ref (lineno manual; Perl's binding lacks both).
+<a href=#136 id=136 data-nosnippet>136</a>  // \lineref, \linerefr, \linerefp take optional [*] and optional [offset] (lineno.sty:2804-2825).
+<a href=#137 id=137 data-nosnippet>137</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\linelabel Semiverbatim"</span>, <span class="string">"\\label{#1}"</span>);
+<a href=#138 id=138 data-nosnippet>138</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lineref OptionalMatch:* [] Semiverbatim"</span>, <span class="string">"\\ref{#3}"</span>);
+<a href=#139 id=139 data-nosnippet>139</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\linerefr OptionalMatch:* [] Semiverbatim"</span>, <span class="string">"\\ref{#3}"</span>);
+<a href=#140 id=140 data-nosnippet>140</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\linerefp OptionalMatch:* [] Semiverbatim"</span>, <span class="string">"\\ref{#3}"</span>);
+<a href=#141 id=141 data-nosnippet>141</a>});
 </code></pre></div></section></main></body></html>

@@ -1,113 +1,183 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/comment_sty.rs`."><title>comment_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>comment_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/comment_sty.rs`."><title>comment_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>comment_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a>
-<a href=#3 id=3 data-nosnippet>3</a><span class="doccomment">/// The prefix of a raw body line up to its first *unescaped* `%` — comment.sty
-<a href=#4 id=4 data-nosnippet>4</a>/// reads its body with `%` active as a TeX comment, so an `\end{name}` sitting
-<a href=#5 id=5 data-nosnippet>5</a>/// behind a `%` (e.g. `% […] \end{comment}`) does NOT close the environment.
-<a href=#6 id=6 data-nosnippet>6</a>/// `%` and `\` are ASCII, so byte scanning is UTF-8-safe (the cut index always
-<a href=#7 id=7 data-nosnippet>7</a>/// lands on a char boundary).
-<a href=#8 id=8 data-nosnippet>8</a></span><span class="kw">fn </span>strip_tex_comment(line: <span class="kw-2">&amp;</span>str) -&gt; <span class="kw-2">&amp;</span>str {
-<a href=#9 id=9 data-nosnippet>9</a>  <span class="kw">let </span>bytes = line.as_bytes();
-<a href=#10 id=10 data-nosnippet>10</a>  <span class="kw">for </span>i <span class="kw">in </span><span class="number">0</span>..bytes.len() {
-<a href=#11 id=11 data-nosnippet>11</a>    <span class="kw">if </span>bytes[i] == <span class="string">b'%' </span>{
-<a href=#12 id=12 data-nosnippet>12</a>      <span class="kw">let </span><span class="kw-2">mut </span>bs = <span class="number">0</span>;
-<a href=#13 id=13 data-nosnippet>13</a>      <span class="kw">while </span>i &gt; bs &amp;&amp; bytes[i - <span class="number">1 </span>- bs] == <span class="string">b'\\' </span>{
-<a href=#14 id=14 data-nosnippet>14</a>        bs += <span class="number">1</span>;
-<a href=#15 id=15 data-nosnippet>15</a>      }
-<a href=#16 id=16 data-nosnippet>16</a>      <span class="kw">if </span>bs % <span class="number">2 </span>== <span class="number">0 </span>{
-<a href=#17 id=17 data-nosnippet>17</a>        <span class="kw">return </span><span class="kw-2">&amp;</span>line[..i];
-<a href=#18 id=18 data-nosnippet>18</a>      }
-<a href=#19 id=19 data-nosnippet>19</a>    }
-<a href=#20 id=20 data-nosnippet>20</a>  }
-<a href=#21 id=21 data-nosnippet>21</a>  line
-<a href=#22 id=22 data-nosnippet>22</a>}
-<a href=#23 id=23 data-nosnippet>23</a>
-<a href=#24 id=24 data-nosnippet>24</a><span class="macro">LoadDefinitions!</span>({
-<a href=#25 id=25 data-nosnippet>25</a>  <span class="comment">//**********************************************************************
-<a href=#26 id=26 data-nosnippet>26</a>  // Define \name and \begin{name} to start an ignored section
-<a href=#27 id=27 data-nosnippet>27</a>  // until \endname or \end{name}, respectively
-<a href=#28 id=28 data-nosnippet>28</a>  </span><span class="kw">let </span>define_excluded: PrimitiveClosure = Rc::new(|<span class="kw-2">mut </span>args: Vec&lt;ArgWrap&gt;| {
-<a href=#29 id=29 data-nosnippet>29</a>    <span class="kw">let </span>name = args.remove(<span class="number">0</span>).owned_tokens().unwrap();
-<a href=#30 id=30 data-nosnippet>30</a>    <span class="kw">let </span>begin_mark = <span class="macro">s!</span>(<span class="string">"\\begin{{{name}}}"</span>);
-<a href=#31 id=31 data-nosnippet>31</a>    <span class="macro">DefConstructor!</span>(<span class="macro">T_CS!</span>(begin_mark), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
-<a href=#32 id=32 data-nosnippet>32</a>    after_digest =&gt; {
-<a href=#33 id=33 data-nosnippet>33</a>      <span class="comment">// Detect `\end{name}` MID-LINE (allowing spaces, `\end {name}`), but only
-<a href=#34 id=34 data-nosnippet>34</a>      // in the code part of the line — an `\end` hidden behind a `%` comment
-<a href=#35 id=35 data-nosnippet>35</a>      // does NOT close the environment (comment.sty reads its body with `%`
-<a href=#36 id=36 data-nosnippet>36</a>      // active). Perl comment.sty.ltxml L30 matched only a whole line,
-<a href=#37 id=37 data-nosnippet>37</a>      // `/^\s*\Q$endmark\E\s*$/`, and our prior port did the same
-<a href=#38 id=38 data-nosnippet>38</a>      // (`line.trim() == end_mark`), so a comment ending `…text.\end{name}`
-<a href=#39 id=39 data-nosnippet>39</a>      // overran to EOF and silently swallowed everything after it — a document's
-<a href=#40 id=40 data-nosnippet>40</a>      // bibliography included. Surpass-Perl divergence (OXIDIZED_DESIGN #133):
-<a href=#41 id=41 data-nosnippet>41</a>      // both LaTeXML engines lose it, and pdflatex keeps it for the witness
-<a href=#42 id=42 data-nosnippet>42</a>      // arXiv:2606.11493 (`\begin{comment}…\(G(h_1)=0\).\end{comment}` swallowed
-<a href=#43 id=43 data-nosnippet>43</a>      // a 31-`\bibitem` thebibliography). The `%`-guard keeps the tokenize
-<a href=#44 id=44 data-nosnippet>44</a>      // `comment` fixture's `% […] \end{Excluded}` from closing early. Guard
-<a href=#45 id=45 data-nosnippet>45</a>      // `comment_midline_end_keeps_bibliography`.
-<a href=#46 id=46 data-nosnippet>46</a>      </span><span class="kw">let </span>end_re = Regex::new(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"\\\\end\\s*\\{{{name}\\}}"</span>)).unwrap();
-<a href=#47 id=47 data-nosnippet>47</a>      <span class="kw">let </span><span class="kw-2">mut </span>nlines = <span class="number">0</span>;
-<a href=#48 id=48 data-nosnippet>48</a>      read_raw_line();    <span class="comment">// IGNORE 1st line (after the \begin{$name} !!!
-<a href=#49 id=49 data-nosnippet>49</a>      </span><span class="kw">while let </span><span class="prelude-val">Some</span>(line) = read_raw_line() {
-<a href=#50 id=50 data-nosnippet>50</a>        <span class="kw">let </span>code = strip_tex_comment(<span class="kw-2">&amp;</span>line);
-<a href=#51 id=51 data-nosnippet>51</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(m) = end_re.find(code) {
-<a href=#52 id=52 data-nosnippet>52</a>          <span class="comment">// comment.sty expects `\end{name}` at the line's end; trailing content
-<a href=#53 id=53 data-nosnippet>53</a>          // on that line is dropped, as verbatim.sty's `\verbatim@` does too.
-<a href=#54 id=54 data-nosnippet>54</a>          </span><span class="kw">if </span>!code[m.end()..].trim().is_empty() {
-<a href=#55 id=55 data-nosnippet>55</a>            <span class="macro">Info!</span>(<span class="string">"unexpected"</span>, <span class="string">"stuff"</span>,
-<a href=#56 id=56 data-nosnippet>56</a>              <span class="macro">s!</span>(<span class="string">"Characters dropped after '\\end{{{name}}}'"</span>));
-<a href=#57 id=57 data-nosnippet>57</a>          }
-<a href=#58 id=58 data-nosnippet>58</a>          <span class="kw">break</span>;
-<a href=#59 id=59 data-nosnippet>59</a>        }
-<a href=#60 id=60 data-nosnippet>60</a>        nlines += <span class="number">1</span>;
-<a href=#61 id=61 data-nosnippet>61</a>      }
-<a href=#62 id=62 data-nosnippet>62</a>      note_progress(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"[Skipped {name} ({nlines} lines)]"</span>));
-<a href=#63 id=63 data-nosnippet>63</a>      <span class="prelude-val">Ok</span>(Vec::new())
-<a href=#64 id=64 data-nosnippet>64</a>    });
-<a href=#65 id=65 data-nosnippet>65</a>    <span class="prelude-val">Ok</span>(Vec::new())
-<a href=#66 id=66 data-nosnippet>66</a>  });
-<a href=#67 id=67 data-nosnippet>67</a>
-<a href=#68 id=68 data-nosnippet>68</a>  <span class="comment">// I don't understand Rust closures enough to figure out how to clone one, so instantiating it
-<a href=#69 id=69 data-nosnippet>69</a>  // twice instead, via a macro
-<a href=#70 id=70 data-nosnippet>70</a>  </span><span class="kw">let </span>define_included: PrimitiveBody = PrimitiveBody::Closure(Rc::new(|<span class="kw-2">mut </span>args: Vec&lt;ArgWrap&gt;| {
-<a href=#71 id=71 data-nosnippet>71</a>    args.reverse(); <span class="comment">// we'll be using .pop() from the front
-<a href=#72 id=72 data-nosnippet>72</a>    </span><span class="kw">let </span>name = args
-<a href=#73 id=73 data-nosnippet>73</a>      .pop()
-<a href=#74 id=74 data-nosnippet>74</a>      .unwrap()
-<a href=#75 id=75 data-nosnippet>75</a>      .owned_tokens()
-<a href=#76 id=76 data-nosnippet>76</a>      .expect(<span class="string">"expecting a Tokens argument"</span>)
-<a href=#77 id=77 data-nosnippet>77</a>      .to_string();
-<a href=#78 id=78 data-nosnippet>78</a>    <span class="kw">let </span><span class="kw-2">mut </span>before_tokens = <span class="kw">match </span>args.pop() {
-<a href=#79 id=79 data-nosnippet>79</a>      <span class="prelude-val">Some</span>(arg) =&gt; arg.unlist(),
-<a href=#80 id=80 data-nosnippet>80</a>      <span class="prelude-val">None </span>=&gt; Vec::new(),
-<a href=#81 id=81 data-nosnippet>81</a>    };
-<a href=#82 id=82 data-nosnippet>82</a>    before_tokens.push(<span class="macro">T_CS!</span>(<span class="string">"\\ignorespaces"</span>));
-<a href=#83 id=83 data-nosnippet>83</a>    <span class="kw">let </span><span class="kw-2">mut </span>after_tokens = <span class="kw">match </span>args.pop() {
-<a href=#84 id=84 data-nosnippet>84</a>      <span class="prelude-val">Some</span>(arg) =&gt; arg.unlist(),
-<a href=#85 id=85 data-nosnippet>85</a>      <span class="prelude-val">None </span>=&gt; Vec::new(),
-<a href=#86 id=86 data-nosnippet>86</a>    };
-<a href=#87 id=87 data-nosnippet>87</a>    after_tokens.push(<span class="macro">T_CS!</span>(<span class="string">"\\ignorespaces"</span>));
-<a href=#88 id=88 data-nosnippet>88</a>    <span class="comment">// Note that we define the `magic' environment control sequences,
-<a href=#89 id=89 data-nosnippet>89</a>    // but DO NOT do any of the normal environ things, like \begingroup \endgroup!
-<a href=#90 id=90 data-nosnippet>90</a>    </span><span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\begin{{{name}}}"</span>)), <span class="prelude-val">None</span>, {
-<a href=#91 id=91 data-nosnippet>91</a>      read_raw_line(); <span class="comment">// IGNORE 1st line (after the \begin{$name} !!!
-<a href=#92 id=92 data-nosnippet>92</a>      </span>before_tokens.clone()
-<a href=#93 id=93 data-nosnippet>93</a>    });
-<a href=#94 id=94 data-nosnippet>94</a>    <span class="macro">DefMacro!</span>(
-<a href=#95 id=95 data-nosnippet>95</a>      <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\end{{{name}}}"</span>)),
-<a href=#96 id=96 data-nosnippet>96</a>      <span class="prelude-val">None</span>,
-<a href=#97 id=97 data-nosnippet>97</a>      Tokens::new(after_tokens)
-<a href=#98 id=98 data-nosnippet>98</a>    );
-<a href=#99 id=99 data-nosnippet>99</a>    <span class="prelude-val">Ok</span>(Vec::new())
-<a href=#100 id=100 data-nosnippet>100</a>  }));
-<a href=#101 id=101 data-nosnippet>101</a>
-<a href=#102 id=102 data-nosnippet>102</a>  define_excluded(<span class="macro">vec!</span>[ArgWrap::Tokens(<span class="macro">Tokenize!</span>(<span class="string">"comment"</span>))])<span class="question-mark">?</span>;
-<a href=#103 id=103 data-nosnippet>103</a>
-<a href=#104 id=104 data-nosnippet>104</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\includecomment{}"</span>, <span class="prelude-val">Some</span>(define_included.clone()));
-<a href=#105 id=105 data-nosnippet>105</a>  <span class="macro">DefPrimitive!</span>(
-<a href=#106 id=106 data-nosnippet>106</a>    <span class="string">"\\excludecomment{}"</span>,
-<a href=#107 id=107 data-nosnippet>107</a>    <span class="prelude-val">Some</span>(PrimitiveBody::Closure(define_excluded))
-<a href=#108 id=108 data-nosnippet>108</a>  );
-<a href=#109 id=109 data-nosnippet>109</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\specialcomment{}{}{}"</span>, <span class="prelude-val">Some</span>(define_included));
-<a href=#110 id=110 data-nosnippet>110</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\processcomment{}{}{}{}"</span>, <span class="prelude-val">None</span>);
-<a href=#111 id=111 data-nosnippet>111</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\csarg{}{}"</span>, <span class="string">r"\expandafter#1\csname#2\endcsname"</span>);
-<a href=#112 id=112 data-nosnippet>112</a>});
+<a href=#3 id=3 data-nosnippet>3</a><span class="macro">LoadDefinitions!</span>({
+<a href=#4 id=4 data-nosnippet>4</a>  <span class="comment">//**********************************************************************
+<a href=#5 id=5 data-nosnippet>5</a>  // Define \name and \begin{name} to start an ignored section
+<a href=#6 id=6 data-nosnippet>6</a>  // until \endname or \end{name}, respectively
+<a href=#7 id=7 data-nosnippet>7</a>  </span><span class="kw">let </span>define_excluded: PrimitiveClosure = Rc::new(|<span class="kw-2">mut </span>args: Vec&lt;ArgWrap&gt;| {
+<a href=#8 id=8 data-nosnippet>8</a>    <span class="kw">let </span>name = args.remove(<span class="number">0</span>).owned_tokens().unwrap();
+<a href=#9 id=9 data-nosnippet>9</a>    <span class="kw">let </span>name_str = name.to_string();
+<a href=#10 id=10 data-nosnippet>10</a>    <span class="kw">let </span>begin_mark = <span class="macro">format!</span>(<span class="string">"\\begin{{{name_str}}}"</span>);
+<a href=#11 id=11 data-nosnippet>11</a>    <span class="kw">let </span>begin_mark_let = begin_mark.clone();
+<a href=#12 id=12 data-nosnippet>12</a>    <span class="kw">let </span>name_clone = name_str.clone();
+<a href=#13 id=13 data-nosnippet>13</a>    <span class="macro">DefConstructor!</span>(<span class="macro">T_CS!</span>(begin_mark), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>,
+<a href=#14 id=14 data-nosnippet>14</a>    after_digest =&gt; {
+<a href=#15 id=15 data-nosnippet>15</a>      <span class="comment">// comment.sty:186-193 reads the body LINE by line with every special
+<a href=#16 id=16 data-nosnippet>16</a>      // made innocent and compares each whole line against `\end{name}`
+<a href=#17 id=17 data-nosnippet>17</a>      // (`\ProcessCommentLine#1^^M{\def\test{#1}\csarg\ifx{End…Test}\test`):
+<a href=#18 id=18 data-nosnippet>18</a>      // only a line that IS `\end{name}` ends the comment — TeX's line
+<a href=#19 id=19 data-nosnippet>19</a>      // reader strips trailing spaces (tex.web §362), so `\end{name}   ` does,
+<a href=#20 id=20 data-nosnippet>20</a>      // while a trailing `%` (innocent, so literal), text
+<a href=#21 id=21 data-nosnippet>21</a>      // before it, or text after it do not, and the comment then runs to the
+<a href=#22 id=22 data-nosnippet>22</a>      // end of the file where pdflatex stops with "File ended while scanning
+<a href=#23 id=23 data-nosnippet>23</a>      // use of \next" (verified on each shape, 2026-09-05). The earlier
+<a href=#24 id=24 data-nosnippet>24</a>      // mid-line detection (OXIDIZED_DESIGN #133, since retracted) showed
+<a href=#25 id=25 data-nosnippet>25</a>      // MORE than pdflatex; we now report TeX's error at EOF instead.
+<a href=#26 id=26 data-nosnippet>26</a>      // An end line indented by spaces or tabs ends it too, as Perl's `/^\s*\Q$endmark\E\s*$/` does
+<a href=#27 id=27 data-nosnippet>27</a>      // (comment.sty.ltxml:30), where pdflatex runs on to the end of the file: a TAB indent ended it in LaTeX until
+<a href=#28 id=28 data-nosnippet>28</a>      // 2024-11, which put TAB in `\dospecials`, and the acmart papers that indent `\end{CCSXML}` lost their whole body
+<a href=#29 id=29 data-nosnippet>29</a>      // to it (2401.14656, 2405.12964, 2411.10188, 2501.06699, 2504.19287; user ruling 2026-10-09: accept both).
+<a href=#30 id=30 data-nosnippet>30</a>      // The terminator is handed to the CURRENT `\end` macro (K3, #199).
+<a href=#31 id=31 data-nosnippet>31</a>      // Guards: `00_tokenize::comment_test` (golden), `06_cluster_bibliography::
+<a href=#32 id=32 data-nosnippet>32</a>      // comment_midline_end_runs_to_eof_like_pdflatex`,
+<a href=#33 id=33 data-nosnippet>33</a>      // `perfect_kernel_gemini::comment_self_terminating_hands_to_end`.
+<a href=#34 id=34 data-nosnippet>34</a>      </span><span class="kw">let </span>end_line = <span class="macro">format!</span>(<span class="string">"\\end{{{name_clone}}}"</span>);
+<a href=#35 id=35 data-nosnippet>35</a>      <span class="kw">let </span><span class="kw-2">mut </span>nlines = <span class="number">0</span>;
+<a href=#36 id=36 data-nosnippet>36</a>      <span class="kw">let </span><span class="kw-2">mut </span>ended = <span class="bool-val">false</span>;
+<a href=#37 id=37 data-nosnippet>37</a>      read_raw_line();    <span class="comment">// IGNORE 1st line (after the \begin{$name} !!!
+<a href=#38 id=38 data-nosnippet>38</a>      </span><span class="kw">while let </span><span class="prelude-val">Some</span>(line) = read_raw_line() {
+<a href=#39 id=39 data-nosnippet>39</a>        <span class="kw">if </span>line.trim() == end_line {
+<a href=#40 id=40 data-nosnippet>40</a>          <span class="kw">let </span><span class="kw-2">mut </span>end_tokens = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\end"</span>), <span class="macro">T_BEGIN!</span>()];
+<a href=#41 id=41 data-nosnippet>41</a>          end_tokens.extend(<span class="macro">ExplodeText!</span>(<span class="kw-2">&amp;</span>name_clone));
+<a href=#42 id=42 data-nosnippet>42</a>          end_tokens.push(<span class="macro">T_END!</span>());
+<a href=#43 id=43 data-nosnippet>43</a>          unread_expansion(Tokens::new(end_tokens));
+<a href=#44 id=44 data-nosnippet>44</a>          ended = <span class="bool-val">true</span>;
+<a href=#45 id=45 data-nosnippet>45</a>          <span class="kw">break</span>;
+<a href=#46 id=46 data-nosnippet>46</a>        }
+<a href=#47 id=47 data-nosnippet>47</a>        nlines += <span class="number">1</span>;
+<a href=#48 id=48 data-nosnippet>48</a>      }
+<a href=#49 id=49 data-nosnippet>49</a>      <span class="kw">if </span>!ended {
+<a href=#50 id=50 data-nosnippet>50</a>        <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, <span class="string">"EOF"</span>,
+<a href=#51 id=51 data-nosnippet>51</a>          <span class="macro">s!</span>(<span class="string">"File ended while scanning use of \\next (no whole-line \\end{{{name_clone}}} closes this {name_clone})"</span>));
+<a href=#52 id=52 data-nosnippet>52</a>      }
+<a href=#53 id=53 data-nosnippet>53</a>      note_progress(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"[Skipped {name_clone} ({nlines} lines)]"</span>));
+<a href=#54 id=54 data-nosnippet>54</a>      <span class="prelude-val">Ok</span>(Vec::new())
+<a href=#55 id=55 data-nosnippet>55</a>    });
+<a href=#56 id=56 data-nosnippet>56</a>    <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="macro">format!</span>(<span class="string">"\\end{{{name_str}}}"</span>)), <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>());
+<a href=#57 id=57 data-nosnippet>57</a>    <span class="comment">// (an empty name, `\excludecomment{}` or `\includecomment{}` written by mistake — 2508.09827:687 — names no command
+<a href=#58 id=58 data-nosnippet>58</a>    // of the document, comment.sty's being `\csname\endcsname`: `\&lt;name&gt;` would be read as `\\`, every later line break
+<a href=#59 id=59 data-nosnippet>59</a>    // reading the rest of its line raw, and `\end&lt;name&gt;` would be `\end`)
+<a href=#60 id=60 data-nosnippet>60</a>    </span><span class="kw">if </span>!name_str.is_empty() {
+<a href=#61 id=61 data-nosnippet>61</a>      <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="macro">format!</span>(<span class="string">"\\end{name_str}"</span>)), <span class="prelude-val">None</span>, <span class="macro">Tokens!</span>());
+<a href=#62 id=62 data-nosnippet>62</a>    }
+<a href=#63 id=63 data-nosnippet>63</a>    <span class="comment">// comment.sty's own name for the environment (`\csarg\def{#1}`, comment.sty:241-248): a kernel-style `\begin`
+<a href=#64 id=64 data-nosnippet>64</a>    // that looks up only `\&lt;name&gt;` — arabtex's alatex.sty:113 — finds it, where Perl's binding (only `\begin{&lt;name&gt;}`)
+<a href=#65 id=65 data-nosnippet>65</a>    // left "Environment comment undefined" and typeset the comment (KNOWN_PERL_ERRORS #1148; 2104.08110's commented-out
+<a href=#66 id=66 data-nosnippet>66</a>    // figure, 4 missing images).
+<a href=#67 id=67 data-nosnippet>67</a>    // Guard: `perfect_kernel_batch79k::a_comment_under_a_kernel_begin_is_skipped`.
+<a href=#68 id=68 data-nosnippet>68</a>    </span><span class="kw">if </span>!name_str.is_empty() {
+<a href=#69 id=69 data-nosnippet>69</a>      let_i(
+<a href=#70 id=70 data-nosnippet>70</a>        <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">format!</span>(<span class="string">"\\{name_str}"</span>)),
+<a href=#71 id=71 data-nosnippet>71</a>        <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(begin_mark_let),
+<a href=#72 id=72 data-nosnippet>72</a>        <span class="prelude-val">None</span>,
+<a href=#73 id=73 data-nosnippet>73</a>      );
+<a href=#74 id=74 data-nosnippet>74</a>    }
+<a href=#75 id=75 data-nosnippet>75</a>    <span class="prelude-val">Ok</span>(Vec::new())
+<a href=#76 id=76 data-nosnippet>76</a>  });
+<a href=#77 id=77 data-nosnippet>77</a>
+<a href=#78 id=78 data-nosnippet>78</a>  <span class="comment">// I don't understand Rust closures enough to figure out how to clone one, so instantiating it
+<a href=#79 id=79 data-nosnippet>79</a>  // twice instead, via a macro
+<a href=#80 id=80 data-nosnippet>80</a>  </span><span class="kw">let </span>define_included: PrimitiveBody = PrimitiveBody::Closure(Rc::new(|<span class="kw-2">mut </span>args: Vec&lt;ArgWrap&gt;| {
+<a href=#81 id=81 data-nosnippet>81</a>    args.reverse(); <span class="comment">// we'll be using .pop() from the front
+<a href=#82 id=82 data-nosnippet>82</a>    </span><span class="kw">let </span>name = args
+<a href=#83 id=83 data-nosnippet>83</a>      .pop()
+<a href=#84 id=84 data-nosnippet>84</a>      .unwrap()
+<a href=#85 id=85 data-nosnippet>85</a>      .owned_tokens()
+<a href=#86 id=86 data-nosnippet>86</a>      .expect(<span class="string">"expecting a Tokens argument"</span>)
+<a href=#87 id=87 data-nosnippet>87</a>      .to_string();
+<a href=#88 id=88 data-nosnippet>88</a>    <span class="kw">let </span><span class="kw-2">mut </span>before_tokens = <span class="kw">match </span>args.pop() {
+<a href=#89 id=89 data-nosnippet>89</a>      <span class="prelude-val">Some</span>(arg) =&gt; arg.unlist(),
+<a href=#90 id=90 data-nosnippet>90</a>      <span class="prelude-val">None </span>=&gt; Vec::new(),
+<a href=#91 id=91 data-nosnippet>91</a>    };
+<a href=#92 id=92 data-nosnippet>92</a>    before_tokens.push(<span class="macro">T_CS!</span>(<span class="string">"\\ignorespaces"</span>));
+<a href=#93 id=93 data-nosnippet>93</a>    <span class="kw">let </span><span class="kw-2">mut </span>after_tokens = <span class="kw">match </span>args.pop() {
+<a href=#94 id=94 data-nosnippet>94</a>      <span class="prelude-val">Some</span>(arg) =&gt; arg.unlist(),
+<a href=#95 id=95 data-nosnippet>95</a>      <span class="prelude-val">None </span>=&gt; Vec::new(),
+<a href=#96 id=96 data-nosnippet>96</a>    };
+<a href=#97 id=97 data-nosnippet>97</a>    after_tokens.push(<span class="macro">T_CS!</span>(<span class="string">"\\ignorespaces"</span>));
+<a href=#98 id=98 data-nosnippet>98</a>    <span class="comment">// Note that we define the `magic' environment control sequences,
+<a href=#99 id=99 data-nosnippet>99</a>    // but DO NOT do any of the normal environ things, like \begingroup \endgroup!
+<a href=#100 id=100 data-nosnippet>100</a>    </span><span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\begin{{{name}}}"</span>)), <span class="prelude-val">None</span>, {
+<a href=#101 id=101 data-nosnippet>101</a>      read_raw_line(); <span class="comment">// IGNORE 1st line (after the \begin{$name} !!!
+<a href=#102 id=102 data-nosnippet>102</a>      </span>before_tokens.clone()
+<a href=#103 id=103 data-nosnippet>103</a>    });
+<a href=#104 id=104 data-nosnippet>104</a>    <span class="macro">DefMacro!</span>(
+<a href=#105 id=105 data-nosnippet>105</a>      <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\end{{{name}}}"</span>)),
+<a href=#106 id=106 data-nosnippet>106</a>      <span class="prelude-val">None</span>,
+<a href=#107 id=107 data-nosnippet>107</a>      Tokens::new(after_tokens)
+<a href=#108 id=108 data-nosnippet>108</a>    );
+<a href=#109 id=109 data-nosnippet>109</a>    <span class="comment">// comment.sty's own names (`\csarg\def{#1}`, comment.sty:234-240), as for an excluded comment above, and none for
+<a href=#110 id=110 data-nosnippet>110</a>    // an empty name
+<a href=#111 id=111 data-nosnippet>111</a>    </span><span class="kw">if </span>!name.is_empty() {
+<a href=#112 id=112 data-nosnippet>112</a>      let_i(
+<a href=#113 id=113 data-nosnippet>113</a>        <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\{name}"</span>)),
+<a href=#114 id=114 data-nosnippet>114</a>        <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\begin{{{name}}}"</span>)),
+<a href=#115 id=115 data-nosnippet>115</a>        <span class="prelude-val">None</span>,
+<a href=#116 id=116 data-nosnippet>116</a>      );
+<a href=#117 id=117 data-nosnippet>117</a>      let_i(
+<a href=#118 id=118 data-nosnippet>118</a>        <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\end{name}"</span>)),
+<a href=#119 id=119 data-nosnippet>119</a>        <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\end{{{name}}}"</span>)),
+<a href=#120 id=120 data-nosnippet>120</a>        <span class="prelude-val">None</span>,
+<a href=#121 id=121 data-nosnippet>121</a>      );
+<a href=#122 id=122 data-nosnippet>122</a>    }
+<a href=#123 id=123 data-nosnippet>123</a>    <span class="prelude-val">Ok</span>(Vec::new())
+<a href=#124 id=124 data-nosnippet>124</a>  }));
+<a href=#125 id=125 data-nosnippet>125</a>
+<a href=#126 id=126 data-nosnippet>126</a>  define_excluded(<span class="macro">vec!</span>[ArgWrap::Tokens(<span class="macro">Tokenize!</span>(<span class="string">"comment"</span>))])<span class="question-mark">?</span>;
+<a href=#127 id=127 data-nosnippet>127</a>
+<a href=#128 id=128 data-nosnippet>128</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\includecomment{}"</span>, <span class="prelude-val">Some</span>(define_included.clone()));
+<a href=#129 id=129 data-nosnippet>129</a>  <span class="macro">DefPrimitive!</span>(
+<a href=#130 id=130 data-nosnippet>130</a>    <span class="string">"\\excludecomment{}"</span>,
+<a href=#131 id=131 data-nosnippet>131</a>    <span class="prelude-val">Some</span>(PrimitiveBody::Closure(define_excluded))
+<a href=#132 id=132 data-nosnippet>132</a>  );
+<a href=#133 id=133 data-nosnippet>133</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\specialcomment{}{}{}"</span>, <span class="prelude-val">Some</span>(define_included));
+<a href=#134 id=134 data-nosnippet>134</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\csarg{}{}"</span>, <span class="string">r"\expandafter#1\csname#2\endcsname"</span>);
+<a href=#135 id=135 data-nosnippet>135</a>  <span class="comment">// comment.sty's own machinery (:170-233, :283-289), for what builds a comment type of its own on it (lwarp.sty:1349-1363
+<a href=#136 id=136 data-nosnippet>136</a>  // `\CommentEndDef`, `\ProcessComment`, `\SetUpCutFile`: tikz-trackschematic and its snippets), and the two types the
+<a href=#137 id=137 data-nosnippet>137</a>  // binding leaves to it, as the file has them (:266-272 `\generalcomment`, `\processcomment`; Perl's binding has none of
+<a href=#138 id=138 data-nosnippet>138</a>  // this, "\CommentEndDef undefined"). `\excludecomment`, `\includecomment`, `\specialcomment` stay the binding's.
+<a href=#139 id=139 data-nosnippet>139</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#140 id=140 data-nosnippet>140</a>    <span class="string">r"\def\makeinnocent#1{\catcode`#1=12 }
+<a href=#141 id=141 data-nosnippet>141</a>\newwrite\CommentStream
+<a href=#142 id=142 data-nosnippet>142</a>\def\DefaultCutFileName{\def\CommentCutFile{comment.cut}}
+<a href=#143 id=143 data-nosnippet>143</a>\DefaultCutFileName
+<a href=#144 id=144 data-nosnippet>144</a>\def\ProcessComment#1{\def\CurrentComment{#1}%
+<a href=#145 id=145 data-nosnippet>145</a>  \begingroup
+<a href=#146 id=146 data-nosnippet>146</a>  \let\do\makeinnocent \dospecials
+<a href=#147 id=147 data-nosnippet>147</a>  \makeinnocent\^^L%
+<a href=#148 id=148 data-nosnippet>148</a>  \endlinechar`\^^M\relax \catcode`\^^M=12\relax \xComment}
+<a href=#149 id=149 data-nosnippet>149</a>{\catcode`\^^M=12 \endlinechar=-1 %
+<a href=#150 id=150 data-nosnippet>150</a> \gdef\xComment#1^^M{\ProcessCommentLine}
+<a href=#151 id=151 data-nosnippet>151</a> \gdef\ProcessCommentLine#1^^M{\def\test{#1}
+<a href=#152 id=152 data-nosnippet>152</a>      \csarg\ifx{End\CurrentComment Test}\test
+<a href=#153 id=153 data-nosnippet>153</a>          \edef\next{\endgroup\noexpand\EndOfComment{\CurrentComment}}%
+<a href=#154 id=154 data-nosnippet>154</a>      \else \ThisComment{#1}\let\next\ProcessCommentLine
+<a href=#155 id=155 data-nosnippet>155</a>      \fi \next}
+<a href=#156 id=156 data-nosnippet>156</a>}
+<a href=#157 id=157 data-nosnippet>157</a>\def\SetUpCutFile{\immediate\openout\CommentStream=\CommentCutFile
+<a href=#158 id=158 data-nosnippet>158</a>  \PrepareCutFile}
+<a href=#159 id=159 data-nosnippet>159</a>\def\PrepareCutFile{}
+<a href=#160 id=160 data-nosnippet>160</a>\long\def\WriteCommentLine#1{\immediate\write\CommentStream{\unexpanded{#1}}}
+<a href=#161 id=161 data-nosnippet>161</a>\let\ThisComment\WriteCommentLine
+<a href=#162 id=162 data-nosnippet>162</a>\def\ProcessCutFile{\message{Straight input of \CommentCutFile.}%
+<a href=#163 id=163 data-nosnippet>163</a>  \input{\CommentCutFile}\relax}
+<a href=#164 id=164 data-nosnippet>164</a>\def\CloseAndInputCutFile{\FinalizeCutFile
+<a href=#165 id=165 data-nosnippet>165</a>  \immediate\closeout\CommentStream
+<a href=#166 id=166 data-nosnippet>166</a>  \ProcessCutFile}
+<a href=#167 id=167 data-nosnippet>167</a>\def\FinalizeCutFile{}
+<a href=#168 id=168 data-nosnippet>168</a>\long\def\generalcomment#1#2#3{\message{General comment '#1'}%
+<a href=#169 id=169 data-nosnippet>169</a>  \csarg\def{#1}{\endgroup #2 \relax \SetUpCutFile \ProcessComment{#1}}%
+<a href=#170 id=170 data-nosnippet>170</a>  \csarg\def{After#1Comment}{\CloseAndInputCutFile #3}%
+<a href=#171 id=171 data-nosnippet>171</a>  \CommentEndDef{#1}}
+<a href=#172 id=172 data-nosnippet>172</a>\long\def\processcomment#1#2#3#4{\message{Lines-Processing comment '#1'}%
+<a href=#173 id=173 data-nosnippet>173</a>  \csarg\def{#1}{\endgroup \SetUpCutFile #2\relax
+<a href=#174 id=174 data-nosnippet>174</a>    \ProcessComment{#1}}%
+<a href=#175 id=175 data-nosnippet>175</a>  \csarg\def{After#1Comment}{#3\CloseAndInputCutFile #4}%
+<a href=#176 id=176 data-nosnippet>176</a>  \CommentEndDef{#1}}
+<a href=#177 id=177 data-nosnippet>177</a>\def\EndOfComment#1{\csname After#1Comment\endcsname
+<a href=#178 id=178 data-nosnippet>178</a>  \begingroup\def\@currenvir{#1}\end{#1}}
+<a href=#179 id=179 data-nosnippet>179</a>\def\CommentEndDef#1{{\escapechar=-1\relax
+<a href=#180 id=180 data-nosnippet>180</a>  \csarg\xdef{End#1Test}{\string\\end\string\{#1\string\}}}}"
+<a href=#181 id=181 data-nosnippet>181</a>  </span>);
+<a href=#182 id=182 data-nosnippet>182</a>});
 </code></pre></div></section></main></body></html>

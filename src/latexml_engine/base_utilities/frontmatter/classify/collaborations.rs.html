@@ -1,0 +1,233 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/base_utilities/frontmatter/classify/collaborations.rs`."><title>collaborations.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../../../static.files/src-script-813739b1.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/base_utilities/frontmatter/classify/</div>collaborations.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! The text rules on printed ink and the token primitives of `author_block/collaborations.rs`, moved unchanged (the plan's row
+<a href=#2 id=2 data-nosnippet>2</a>//! "Knowledge in, driver out, one pass", user ruling 2026-11-08).
+<a href=#3 id=3 data-nosnippet>3</a>
+<a href=#4 id=4 data-nosnippet>4</a></span><span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#5 id=5 data-nosnippet>5</a>
+<a href=#6 id=6 data-nosnippet>6</a><span class="doccomment">/// What frames a collaboration's name on the line ([`collaboration_core`]): nothing, a bare "the" before it, or more —
+<a href=#7 id=7 data-nosnippet>7</a>/// "for", "on behalf of", "representing", brackets, dashes.
+<a href=#8 id=8 data-nosnippet>8</a></span><span class="attr">#[derive(Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Debug)]
+<a href=#9 id=9 data-nosnippet>9</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">enum </span>Framing {
+<a href=#10 id=10 data-nosnippet>10</a>  <span class="doccomment">/// the name alone: `\textit{WIDE Consortium}` (2501.13770), `\center BESIII Collaboration` (2212.06489)
+<a href=#11 id=11 data-nosnippet>11</a>  </span>Unframed,
+<a href=#12 id=12 data-nosnippet>12</a>  <span class="doccomment">/// a bare "the": `the ATLAS Collaboration`, `The Robotics Group`
+<a href=#13 id=13 data-nosnippet>13</a>  </span>The,
+<a href=#14 id=14 data-nosnippet>14</a>  <span class="doccomment">/// "for", "on behalf of", "representing", brackets or dashes: `On Behalf Of The ATLAS Collaboration` (0910.2149),
+<a href=#15 id=15 data-nosnippet>15</a>  /// `Representing the BES Collaboration` (hep-ex0011032), `(XYZ Collaboration)`, `-- QCDSF-UKQCD Collaboration --`
+<a href=#16 id=16 data-nosnippet>16</a>  </span>Framed,
+<a href=#17 id=17 data-nosnippet>17</a>}
+<a href=#18 id=18 data-nosnippet>18</a>
+<a href=#19 id=19 data-nosnippet>19</a><span class="doccomment">/// `text` without what frames a collaboration's name — a list's "and", brackets, dashes (`-- QCDSF-UKQCD Collaboration
+<a href=#20 id=20 data-nosnippet>20</a>/// --`, hep-ph0502212), "for", "on behalf of", "representing", "the" — and what framed it ([`Framing`]); and whether
+<a href=#21 id=21 data-nosnippet>21</a>/// brackets held a name opening with "The" (`(The Nearby Supernova Factory)`, 1511.01102).
+<a href=#22 id=22 data-nosnippet>22</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>collaboration_core(text: <span class="kw-2">&amp;</span>str) -&gt; (String, Framing, bool) {
+<a href=#23 id=23 data-nosnippet>23</a>  <span class="kw">let </span>dash = |c: char| <span class="macro">matches!</span>(c, <span class="string">'-' </span>| <span class="string">'–' </span>| <span class="string">'—'</span>);
+<a href=#24 id=24 data-nosnippet>24</a>  <span class="kw">let </span><span class="kw-2">mut </span>t = text.trim().to_string();
+<a href=#25 id=25 data-nosnippet>25</a>  <span class="kw">let </span>(<span class="kw-2">mut </span>framing, <span class="kw-2">mut </span>the_in_brackets) = (Framing::Unframed, <span class="bool-val">false</span>);
+<a href=#26 id=26 data-nosnippet>26</a>  <span class="kw">loop </span>{
+<a href=#27 id=27 data-nosnippet>27</a>    <span class="kw">let </span>before = t.clone();
+<a href=#28 id=28 data-nosnippet>28</a>    <span class="kw">for </span>p <span class="kw">in </span>[<span class="string">"and "</span>, <span class="string">"And "</span>, <span class="string">"&amp; "</span>] {
+<a href=#29 id=29 data-nosnippet>29</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(rest) = t.strip_prefix(p) {
+<a href=#30 id=30 data-nosnippet>30</a>        t = rest.trim_start().to_string();
+<a href=#31 id=31 data-nosnippet>31</a>      }
+<a href=#32 id=32 data-nosnippet>32</a>    }
+<a href=#33 id=33 data-nosnippet>33</a>    <span class="kw">if </span>t.len() &gt;= <span class="number">2
+<a href=#34 id=34 data-nosnippet>34</a>      </span>&amp;&amp; ((t.starts_with(<span class="string">'('</span>) &amp;&amp; t.ends_with(<span class="string">')'</span>)) || (t.starts_with(<span class="string">'['</span>) &amp;&amp; t.ends_with(<span class="string">']'</span>)))
+<a href=#35 id=35 data-nosnippet>35</a>    {
+<a href=#36 id=36 data-nosnippet>36</a>      t = t[<span class="number">1</span>..t.len() - <span class="number">1</span>].trim().to_string();
+<a href=#37 id=37 data-nosnippet>37</a>      framing = Framing::Framed;
+<a href=#38 id=38 data-nosnippet>38</a>      the_in_brackets |= t.get(..<span class="number">4</span>).is_some_and(|p| p.eq_ignore_ascii_case(<span class="string">"the "</span>));
+<a href=#39 id=39 data-nosnippet>39</a>    }
+<a href=#40 id=40 data-nosnippet>40</a>    <span class="kw">if </span>t.starts_with(dash) &amp;&amp; t.ends_with(dash) {
+<a href=#41 id=41 data-nosnippet>41</a>      t = t.trim_matches(dash).trim().to_string();
+<a href=#42 id=42 data-nosnippet>42</a>      framing = Framing::Framed;
+<a href=#43 id=43 data-nosnippet>43</a>    }
+<a href=#44 id=44 data-nosnippet>44</a>    <span class="kw">for </span>p <span class="kw">in </span>SPEAKS_FOR.iter().chain(<span class="kw-2">&amp;</span>[<span class="string">"the "</span>]) {
+<a href=#45 id=45 data-nosnippet>45</a>      <span class="kw">if </span>t.get(..p.len()).is_some_and(|q| q.eq_ignore_ascii_case(p)) {
+<a href=#46 id=46 data-nosnippet>46</a>        t = t[p.len()..].trim_start().to_string();
+<a href=#47 id=47 data-nosnippet>47</a>        framing = framing.max(<span class="kw">if </span><span class="kw-2">*</span>p == <span class="string">"the " </span>{
+<a href=#48 id=48 data-nosnippet>48</a>          Framing::The
+<a href=#49 id=49 data-nosnippet>49</a>        } <span class="kw">else </span>{
+<a href=#50 id=50 data-nosnippet>50</a>          Framing::Framed
+<a href=#51 id=51 data-nosnippet>51</a>        });
+<a href=#52 id=52 data-nosnippet>52</a>        <span class="kw">break</span>;
+<a href=#53 id=53 data-nosnippet>53</a>      }
+<a href=#54 id=54 data-nosnippet>54</a>    }
+<a href=#55 id=55 data-nosnippet>55</a>    <span class="kw">if </span>t == before {
+<a href=#56 id=56 data-nosnippet>56</a>      <span class="kw">break</span>;
+<a href=#57 id=57 data-nosnippet>57</a>    }
+<a href=#58 id=58 data-nosnippet>58</a>  }
+<a href=#59 id=59 data-nosnippet>59</a>  (t, framing, the_in_brackets)
+<a href=#60 id=60 data-nosnippet>60</a>}
+<a href=#61 id=61 data-nosnippet>61</a>
+<a href=#62 id=62 data-nosnippet>62</a><span class="doccomment">/// A word without the punctuation around it, lowercased (as [`word_forms`] reads it).
+<a href=#63 id=63 data-nosnippet>63</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>bare_word(word: <span class="kw-2">&amp;</span>str) -&gt; String {
+<a href=#64 id=64 data-nosnippet>64</a>  word
+<a href=#65 id=65 data-nosnippet>65</a>    .trim_matches(|c: char| <span class="string">".,;:()[]"</span>.contains(c))
+<a href=#66 id=66 data-nosnippet>66</a>    .to_lowercase()
+<a href=#67 id=67 data-nosnippet>67</a>}
+<a href=#68 id=68 data-nosnippet>68</a>
+<a href=#69 id=69 data-nosnippet>69</a><span class="doccomment">/// Whether a word names a collaboration, a team or a group ([`COLLABORATION_WORDS`], [`TEAM_WORDS`]).
+<a href=#70 id=70 data-nosnippet>70</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>collaboration_word(word: <span class="kw-2">&amp;</span>str) -&gt; bool {
+<a href=#71 id=71 data-nosnippet>71</a>  <span class="kw">let </span>bare = bare_word(word);
+<a href=#72 id=72 data-nosnippet>72</a>  COLLABORATION_WORDS.contains(<span class="kw-2">&amp;</span>bare.as_str()) || TEAM_WORDS.contains(<span class="kw-2">&amp;</span>bare.as_str())
+<a href=#73 id=73 data-nosnippet>73</a>}
+<a href=#74 id=74 data-nosnippet>74</a>
+<a href=#75 id=75 data-nosnippet>75</a><span class="doccomment">/// Whether the visible text of an author-line piece names a collaboration, a team or a consortium and no person: its
+<a href=#76 id=76 data-nosnippet>76</a>/// name ends with a collaboration word ([`COLLABORATION_WORDS`]: `XYZ Collaboration`, `for the ATLAS, CDF, CMS and D0
+<a href=#77 id=77 data-nosnippet>77</a>/// Collaborations`, 1311.7305) or with a team word ([`TEAM_WORDS`]) the line frames — "the", "for", "on behalf of",
+<a href=#78 id=78 data-nosnippet>78</a>/// brackets: `and the GAPS Team`, 1708.04166 — or a names line lists with "and" (`listed`: `and LHD experimental group`,
+<a href=#79 id=79 data-nosnippet>79</a>/// 1711.07097), and no word before it names an institution (`The ATLAS Collaboration Office`, `Theory Group, Department
+<a href=#80 id=80 data-nosnippet>80</a>/// of Physics` stay affiliations); or brackets hold a name opening with "The" that no word names an institution in
+<a href=#81 id=81 data-nosnippet>81</a>/// (`(The Nearby Supernova Factory)`, 1511.01102). A name the collaboration follows is a name and its remark
+<a href=#82 id=82 data-nosnippet>82</a>/// (`collaboration_split`), no collaboration: `Bob Baker for the ATLAS Collaboration`; nor is a surname holding such a
+<a href=#83 id=83 data-nosnippet>83</a>/// word (`M.~Huertas-Company`, 1212.4143: "Company" no collaboration's).
+<a href=#84 id=84 data-nosnippet>84</a></span><span class="kw">pub fn </span>reads_as_collaboration(text: <span class="kw-2">&amp;</span>str, listed: bool) -&gt; bool {
+<a href=#85 id=85 data-nosnippet>85</a>  collaboration_framing(text, listed, <span class="bool-val">false</span>).is_some()
+<a href=#86 id=86 data-nosnippet>86</a>}
+<a href=#87 id=87 data-nosnippet>87</a>
+<a href=#88 id=88 data-nosnippet>88</a><span class="doccomment">/// Whether a line of its own under or over the names names a collaboration ([`reads_as_collaboration`]), and how its
+<a href=#89 id=89 data-nosnippet>89</a>/// name is framed: a team word's only by more than a bare "the" (`for the GAPS Team`, `(The Robotics Group)`) — `The
+<a href=#90 id=90 data-nosnippet>90</a>/// Robotics Group`, `the Applied Mathematics Group` under a name are its institution's, an affiliation.
+<a href=#91 id=91 data-nosnippet>91</a></span><span class="kw">pub fn </span>collaboration_line_framing(text: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Framing&gt; {
+<a href=#92 id=92 data-nosnippet>92</a>  collaboration_framing(text, <span class="bool-val">false</span>, <span class="bool-val">true</span>)
+<a href=#93 id=93 data-nosnippet>93</a>}
+<a href=#94 id=94 data-nosnippet>94</a>
+<a href=#95 id=95 data-nosnippet>95</a><span class="doccomment">/// [`reads_as_collaboration`] (`line` false) and [`collaboration_line_framing`] (`line` true): how the collaboration a
+<a href=#96 id=96 data-nosnippet>96</a>/// piece or line names is framed, `None` when it names none.
+<a href=#97 id=97 data-nosnippet>97</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>collaboration_framing(
+<a href=#98 id=98 data-nosnippet>98</a>  text: <span class="kw-2">&amp;</span>str,
+<a href=#99 id=99 data-nosnippet>99</a>  listed: bool,
+<a href=#100 id=100 data-nosnippet>100</a>  line: bool,
+<a href=#101 id=101 data-nosnippet>101</a>) -&gt; <span class="prelude-ty">Option</span>&lt;Framing&gt; {
+<a href=#102 id=102 data-nosnippet>102</a>  <span class="kw">if </span>text.contains(<span class="string">'@'</span>) {
+<a href=#103 id=103 data-nosnippet>103</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#104 id=104 data-nosnippet>104</a>  }
+<a href=#105 id=105 data-nosnippet>105</a>  <span class="kw">let </span>(core, framing, the_in_brackets) = collaboration_core(text);
+<a href=#106 id=106 data-nosnippet>106</a>  <span class="kw">let </span>lower = core.to_lowercase();
+<a href=#107 id=107 data-nosnippet>107</a>  <span class="kw">if </span>SPEAKS_FOR.iter().any(|p| lower.contains(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">" {p}"</span>))) || core.contains([<span class="string">'('</span>, <span class="string">'['</span>]) {
+<a href=#108 id=108 data-nosnippet>108</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#109 id=109 data-nosnippet>109</a>  }
+<a href=#110 id=110 data-nosnippet>110</a>  <span class="kw">let </span>words: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = core.split_whitespace().collect();
+<a href=#111 id=111 data-nosnippet>111</a>  <span class="kw">let </span>last = words.last()<span class="question-mark">?</span>;
+<a href=#112 id=112 data-nosnippet>112</a>  <span class="kw">if </span>words.len() &gt; <span class="number">12 </span>{
+<a href=#113 id=113 data-nosnippet>113</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#114 id=114 data-nosnippet>114</a>  }
+<a href=#115 id=115 data-nosnippet>115</a>  <span class="kw">let </span>before = <span class="kw-2">&amp;</span>words[..words.len() - <span class="number">1</span>];
+<a href=#116 id=116 data-nosnippet>116</a>  <span class="kw">if </span>before
+<a href=#117 id=117 data-nosnippet>117</a>    .iter()
+<a href=#118 id=118 data-nosnippet>118</a>    .any(|w| non_name_word(w) &amp;&amp; !collaboration_word(w))
+<a href=#119 id=119 data-nosnippet>119</a>  {
+<a href=#120 id=120 data-nosnippet>120</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#121 id=121 data-nosnippet>121</a>  }
+<a href=#122 id=122 data-nosnippet>122</a>  <span class="comment">// (a name, not a sentence or a person's: a lowercase word only right before the collaboration word, `LHD experimental
+<a href=#123 id=123 data-nosnippet>123</a>  // group` — not `Monica Brigida\\on behalf of the \emph{Fermi}-LAT Collaboration`, whose line break the text does
+<a href=#124 id=124 data-nosnippet>124</a>  // not part, 0907.0548)
+<a href=#125 id=125 data-nosnippet>125</a>  </span><span class="kw">if </span>before.iter().enumerate().any(|(at, w)| {
+<a href=#126 id=126 data-nosnippet>126</a>    ![<span class="string">"and"</span>, <span class="string">"of"</span>, <span class="string">"the"</span>, <span class="string">"&amp;"</span>].contains(<span class="kw-2">&amp;</span>bare_word(w).as_str())
+<a href=#127 id=127 data-nosnippet>127</a>      &amp;&amp; w.chars().next().is_some_and(char::is_lowercase)
+<a href=#128 id=128 data-nosnippet>128</a>      &amp;&amp; at + <span class="number">1 </span>!= before.len()
+<a href=#129 id=129 data-nosnippet>129</a>  }) {
+<a href=#130 id=130 data-nosnippet>130</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#131 id=131 data-nosnippet>131</a>  }
+<a href=#132 id=132 data-nosnippet>132</a>  <span class="kw">let </span>head = bare_word(last);
+<a href=#133 id=133 data-nosnippet>133</a>  <span class="kw">if </span>COLLABORATION_WORDS.contains(<span class="kw-2">&amp;</span>head.as_str()) {
+<a href=#134 id=134 data-nosnippet>134</a>    <span class="kw">return </span><span class="prelude-val">Some</span>(framing);
+<a href=#135 id=135 data-nosnippet>135</a>  }
+<a href=#136 id=136 data-nosnippet>136</a>  <span class="kw">if </span>TEAM_WORDS.contains(<span class="kw-2">&amp;</span>head.as_str()) {
+<a href=#137 id=137 data-nosnippet>137</a>    <span class="kw">let </span>framed = <span class="kw">if </span>line {
+<a href=#138 id=138 data-nosnippet>138</a>      framing == Framing::Framed
+<a href=#139 id=139 data-nosnippet>139</a>    } <span class="kw">else </span>{
+<a href=#140 id=140 data-nosnippet>140</a>      framing != Framing::Unframed
+<a href=#141 id=141 data-nosnippet>141</a>    };
+<a href=#142 id=142 data-nosnippet>142</a>    <span class="kw">return </span>(framed || listed).then_some(framing);
+<a href=#143 id=143 data-nosnippet>143</a>  }
+<a href=#144 id=144 data-nosnippet>144</a>  (the_in_brackets &amp;&amp; !before.is_empty() &amp;&amp; !words.iter().any(|w| non_name_word(w)))
+<a href=#145 id=145 data-nosnippet>145</a>    .then_some(framing)
+<a href=#146 id=146 data-nosnippet>146</a>}
+<a href=#147 id=147 data-nosnippet>147</a>
+<a href=#148 id=148 data-nosnippet>148</a><span class="doccomment">/// Whether a piece of a names line names a collaboration beside the names ([`reads_as_collaboration`]) the way a line
+<a href=#149 id=149 data-nosnippet>149</a>/// lists one: framed — "the", "for", "on behalf of", brackets — or listed with "and" (`listed`). A piece the commas alone
+<a href=#150 id=150 data-nosnippet>150</a>/// part from the names is no collaboration of theirs: revtex's `\collaboration{Fermilab Lattice, HPQCD, and MILC
+<a href=#151 id=151 data-nosnippet>151</a>/// Collaborations}` (2412.18491, its `\author{#1}`) one collaboration, no name "Fermilab Lattice".
+<a href=#152 id=152 data-nosnippet>152</a></span><span class="kw">pub fn </span>reads_as_listed_collaboration(text: <span class="kw-2">&amp;</span>str, listed: bool) -&gt; bool {
+<a href=#153 id=153 data-nosnippet>153</a>  reads_as_collaboration(text, listed)
+<a href=#154 id=154 data-nosnippet>154</a>    &amp;&amp; (listed || collaboration_core(text).<span class="number">1 </span>!= Framing::Unframed)
+<a href=#155 id=155 data-nosnippet>155</a>}
+<a href=#156 id=156 data-nosnippet>156</a>
+<a href=#157 id=157 data-nosnippet>157</a><span class="doccomment">/// Whether a collaboration's text ends with a colon, a heading over the names after it (`Tam\'as Cs\"org\H{o}$^{4}$,
+<a href=#158 id=158 data-nosnippet>158</a>/// for the TOTEM Collaboration:\\ G.~Antchev …`, 1204.5689; `JLQCD Collaboration: S.~Aoki$^1$, …`, hep-lat0212039).
+<a href=#159 id=159 data-nosnippet>159</a></span><span class="kw">pub fn </span>collaboration_heads(text: <span class="kw-2">&amp;</span>str) -&gt; bool { text.trim_end().ends_with(<span class="string">':'</span>) }
+<a href=#160 id=160 data-nosnippet>160</a>
+<a href=#161 id=161 data-nosnippet>161</a><span class="doccomment">/// The words a remark on a name opens with when it names whom the author speaks for (`for the ATLAS Collaboration`, `on
+<a href=#162 id=162 data-nosnippet>162</a>/// behalf of the CMS Team`, `representing the ATLAS Pixel Collaboration` — a call of its own under the names,
+<a href=#163 id=163 data-nosnippet>163</a>/// hep-ex9903035, as [`collaboration_core`]'s framing reads it), lowercased with the space after them:
+<a href=#164 id=164 data-nosnippet>164</a>/// the reading's list.
+<a href=#165 id=165 data-nosnippet>165</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">const </span>SPEAKS_FOR: [<span class="kw-2">&amp;</span>str; <span class="number">3</span>] =
+<a href=#166 id=166 data-nosnippet>166</a>  [<span class="string">"for "</span>, <span class="string">"on behalf of "</span>, <span class="string">"representing "</span>];
+<a href=#167 id=167 data-nosnippet>167</a>
+<a href=#168 id=168 data-nosnippet>168</a><span class="doccomment">/// The [`NON_NAME_WORDS`] that name a collaboration as the last word of its name (`the ATLAS Collaboration`, `the GAPS
+<a href=#169 id=169 data-nosnippet>169</a>/// Consortium`): read so in a names line or on a line of its own ([`reads_as_collaboration`]).
+<a href=#170 id=170 data-nosnippet>170</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">const </span>COLLABORATION_WORDS: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str] =
+<a href=#171 id=171 data-nosnippet>171</a>  <span class="kw-2">&amp;</span>[<span class="string">"collaboration"</span>, <span class="string">"collaborations"</span>, <span class="string">"consortium"</span>, <span class="string">"consortia"</span>];
+<a href=#172 id=172 data-nosnippet>172</a>
+<a href=#173 id=173 data-nosnippet>173</a><span class="doccomment">/// The [`NON_NAME_WORDS`] that name a team, a group or an experiment as the last word of its name, which may as well be
+<a href=#174 id=174 data-nosnippet>174</a>/// an institution's (`Speech Group`, `Google Brain Team`): a collaboration only where the line frames it so — after
+<a href=#175 id=175 data-nosnippet>175</a>/// "the", "for", "on behalf of", in brackets — or a names line lists it with "and" (`… and LHD experimental group`,
+<a href=#176 id=176 data-nosnippet>176</a>/// 1711.07097; [`reads_as_collaboration`]).
+<a href=#177 id=177 data-nosnippet>177</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">const </span>TEAM_WORDS: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str] = <span class="kw-2">&amp;</span>[
+<a href=#178 id=178 data-nosnippet>178</a>  <span class="string">"team"</span>,
+<a href=#179 id=179 data-nosnippet>179</a>  <span class="string">"teams"</span>,
+<a href=#180 id=180 data-nosnippet>180</a>  <span class="string">"group"</span>,
+<a href=#181 id=181 data-nosnippet>181</a>  <span class="string">"groups"</span>,
+<a href=#182 id=182 data-nosnippet>182</a>  <span class="string">"experiment"</span>,
+<a href=#183 id=183 data-nosnippet>183</a>  <span class="string">"experiments"</span>,
+<a href=#184 id=184 data-nosnippet>184</a>];
+<a href=#185 id=185 data-nosnippet>185</a>
+<a href=#186 id=186 data-nosnippet>186</a><span class="doccomment">/// How a remark frames the group it names: "for", "on behalf of", "representing" ([`SPEAKS_FOR`], [`Framing::Framed`];
+<a href=#187 id=187 data-nosnippet>187</a>/// `for the Hall A DVCS collaboration`, 1502.03246) or a bare "the" after a list's "and" ([`Framing::The`]; `and the MAST
+<a href=#188 id=188 data-nosnippet>188</a>/// Team`, 1609.09534), its last word a collaboration's or a team's ([`collaboration_word`]); `None` when it names none.
+<a href=#189 id=189 data-nosnippet>189</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>collaboration_remark(text: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Framing&gt; {
+<a href=#190 id=190 data-nosnippet>190</a>  <span class="kw">let </span>lower = text.trim().to_lowercase();
+<a href=#191 id=191 data-nosnippet>191</a>  <span class="kw">let </span>t = lower.strip_prefix(<span class="string">"and "</span>).unwrap_or(<span class="kw-2">&amp;</span>lower).trim_start();
+<a href=#192 id=192 data-nosnippet>192</a>  <span class="kw">let </span>(framing, rest) = <span class="kw">match </span>SPEAKS_FOR.iter().find_map(|p| t.strip_prefix(p)) {
+<a href=#193 id=193 data-nosnippet>193</a>    <span class="prelude-val">Some</span>(rest) =&gt; (Framing::Framed, rest),
+<a href=#194 id=194 data-nosnippet>194</a>    <span class="prelude-val">None </span>=&gt; (Framing::The, t.strip_prefix(<span class="string">"the "</span>)<span class="question-mark">?</span>),
+<a href=#195 id=195 data-nosnippet>195</a>  };
+<a href=#196 id=196 data-nosnippet>196</a>  <span class="comment">// (a heading's colon is no part of the word: `for the TOTEM Collaboration:`, 1204.5689, is `collaboration_heads`'s)
+<a href=#197 id=197 data-nosnippet>197</a>  </span><span class="kw">let </span>last = rest.split_whitespace().last()<span class="question-mark">?</span>;
+<a href=#198 id=198 data-nosnippet>198</a>  (!last.ends_with(<span class="string">':'</span>) &amp;&amp; collaboration_word(last)).then_some(framing)
+<a href=#199 id=199 data-nosnippet>199</a>}
+<a href=#200 id=200 data-nosnippet>200</a>
+<a href=#201 id=201 data-nosnippet>201</a><span class="doccomment">/// Whether the text after a name's notes is a remark naming the group the author speaks for: "for" or "on behalf of",
+<a href=#202 id=202 data-nosnippet>202</a>/// then a few words that name a group (`Eleni Petrakou\inst{1}\fnsep\thanks{…} for CAPP/IBS`, webofc, 1702.03664) —
+<a href=#203 id=203 data-nosnippet>203</a>/// the name ended at its notes, so the remark is no part of it, a collaboration contact as a collaboration's remark is
+<a href=#204 id=204 data-nosnippet>204</a>/// (the reading's remark, row C2; moved from `author_block/collaborations.rs`). A
+<a href=#205 id=205 data-nosnippet>205</a>/// group's words are acronyms or slashed names (`CAPP/IBS`, `CMS`) or a team's word, with "the", "and", "of" between
+<a href=#206 id=206 data-nosnippet>206</a>/// them; a remark naming anything else stays the name's, as before — a funding line or a
+<a href=#207 id=207 data-nosnippet>207</a>/// number (`for NSF Grant 123`, `for Section Three`), a company (`for ACME Corp`), a person (`on behalf of Ed Eve`), a
+<a href=#208 id=208 data-nosnippet>208</a>/// phrase going on in lowercase (`for discussions`), more than six words or an address (review rev106c).
+<a href=#209 id=209 data-nosnippet>209</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>speaks_for_after_notes(text: <span class="kw-2">&amp;</span>str) -&gt; bool {
+<a href=#210 id=210 data-nosnippet>210</a>  <span class="kw">let </span>lower = text.trim().to_lowercase();
+<a href=#211 id=211 data-nosnippet>211</a>  <span class="kw">let </span><span class="prelude-val">Some</span>(rest) = SPEAKS_FOR
+<a href=#212 id=212 data-nosnippet>212</a>    .iter()
+<a href=#213 id=213 data-nosnippet>213</a>    .find_map(|p| lower.starts_with(p).then(|| text.trim()[p.len()..].trim()))
+<a href=#214 id=214 data-nosnippet>214</a>  <span class="kw">else </span>{
+<a href=#215 id=215 data-nosnippet>215</a>    <span class="kw">return </span><span class="bool-val">false</span>;
+<a href=#216 id=216 data-nosnippet>216</a>  };
+<a href=#217 id=217 data-nosnippet>217</a>  <span class="kw">let </span>words: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = rest.split_whitespace().collect();
+<a href=#218 id=218 data-nosnippet>218</a>  <span class="kw">let </span>joining = |w: <span class="kw-2">&amp;</span>str| [<span class="string">"the"</span>, <span class="string">"and"</span>, <span class="string">"of"</span>, <span class="string">"&amp;"</span>].contains(<span class="kw-2">&amp;</span>w.to_lowercase().as_str());
+<a href=#219 id=219 data-nosnippet>219</a>  <span class="comment">// (an acronym, `CMS`, or names a slash joins, `CAPP/IBS`: two capitals or a slash between letters, no lowercase
+<a href=#220 id=220 data-nosnippet>220</a>  // letter nor digit)
+<a href=#221 id=221 data-nosnippet>221</a>  </span><span class="kw">let </span>acronym = |w: <span class="kw-2">&amp;</span>str| {
+<a href=#222 id=222 data-nosnippet>222</a>    <span class="kw">let </span>w = w.trim_matches(|c: char| !c.is_alphanumeric());
+<a href=#223 id=223 data-nosnippet>223</a>    !w.chars().any(|c| c.is_lowercase() || c.is_numeric())
+<a href=#224 id=224 data-nosnippet>224</a>      &amp;&amp; (w.chars().filter(|c| c.is_uppercase()).count() &gt;= <span class="number">2 </span>|| w.contains(<span class="string">'/'</span>))
+<a href=#225 id=225 data-nosnippet>225</a>  };
+<a href=#226 id=226 data-nosnippet>226</a>  words.len() &lt;= <span class="number">6
+<a href=#227 id=227 data-nosnippet>227</a>    </span>&amp;&amp; !rest.contains(<span class="string">'@'</span>)
+<a href=#228 id=228 data-nosnippet>228</a>    &amp;&amp; words.iter().any(|w| !joining(w))
+<a href=#229 id=229 data-nosnippet>229</a>    &amp;&amp; words
+<a href=#230 id=230 data-nosnippet>230</a>      .iter()
+<a href=#231 id=231 data-nosnippet>231</a>      .all(|w| joining(w) || collaboration_word(w) || acronym(w))
+<a href=#232 id=232 data-nosnippet>232</a>}
+</code></pre></div></section></main></body></html>

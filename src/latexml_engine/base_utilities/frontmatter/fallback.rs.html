@@ -1,0 +1,1673 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/base_utilities/frontmatter/fallback.rs`."><title>fallback.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../../static.files/src-script-813739b1.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/base_utilities/frontmatter/</div>fallback.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Perl's whole-block fallback (`Base_Utility.pool.ltxml:693`, `\lx@add@author` of the raw block) with its own preparation,
+<a href=#2 id=2 data-nosnippet>2</a>//! moved unchanged from `author_block/` (the plan's row "Knowledge in, driver out, one pass", user ruling 2026-11-08; the preparation
+<a href=#3 id=3 data-nosnippet>3</a>//! moves with it as the fallback's own, the keep-improvements ruling). [`whole_block_author`] is Perl's raw call, which the
+<a href=#4 id=4 data-nosnippet>4</a>//! emitter and `defs/author_macros.rs` (the queued entry) make with the block raw, the emitter's tabular juggles aside
+<a href=#5 id=5 data-nosnippet>5</a>//! ([`tabular_juggles_in_a_whole_block`]). The old driver's raw-token preparation (OXIDIZED_DESIGN_DIVERGENCES #52: note
+<a href=#6 id=6 data-nosnippet>6</a>//! environments as commands, math-active scripts, tabular juggles and ACM columns as line breaks, alignment environments
+<a href=#7 id=7 data-nosnippet>7</a>//! unwrapped, `\hspace` runs between names as separators, icons joined to their links) went with that driver; what is
+<a href=#8 id=8 data-nosnippet>8</a>//! left is a binding's too (`strip_linebreak_options`, `has_author_marks`, `glued_line_marks_as_marks`).
+<a href=#9 id=9 data-nosnippet>9</a>
+<a href=#10 id=10 data-nosnippet>10</a></span><span class="kw">use super</span>::{classify::title_code::title_code_author_statements, <span class="kw-2">*</span>};
+<a href=#11 id=11 data-nosnippet>11</a>
+<a href=#12 id=12 data-nosnippet>12</a><span class="doccomment">/// Perl's whole-block creator (Base_Utility.pool.ltxml:693, `\lx@add@authors`' `{tabular}` fallback, and :588-589):
+<a href=#13 id=13 data-nosnippet>13</a>/// `\lx@add@author[keyvals]{…}` of the block `written`, as given. The one writer of a block kept whole, Perl's raw call —
+<a href=#14 id=14 data-nosnippet>14</a>/// the queued entry (`defs::author_macros`) and the emitter's for a block it can't read or whose reading loses a name's
+<a href=#15 id=15 data-nosnippet>15</a>/// words (`observer::emitter::emit`; OD #980) — not a footnote-counter or definition decline, which writes the block as
+<a href=#16 id=16 data-nosnippet>16</a>/// Perl's `\lx@add@authors` splits it ([`perl_author_calls`], this only for its tabular branch; OD #988). No raw-token preparation runs but the emitter's tabular juggles
+<a href=#17 id=17 data-nosnippet>17</a>/// ([`tabular_juggles_in_a_whole_block`], which digestion can't answer: 1511.05911): digestion does each rewrite's job in a
+<a href=#18 id=18 data-nosnippet>18</a>/// block nothing splits — `\\[len]` is `\lx@newline`'s own optional, a `\begin{footnote}` runs `\footnote`, a
+<a href=#19 id=19 data-nosnippet>19</a>/// mathcode-"8000 `^` reads as `\sp`, braces and superscripts digest to the same markup — and three of them hurt there
+<a href=#20 id=20 data-nosnippet>20</a>/// (the gap of `\\[0.5cm]`, hep-ph0207056; `\hspace` turned `\quad`, hep-th0111116, 1511.05911; a symbol superscript's
+<a href=#21 id=21 data-nosnippet>21</a>/// `\lx@frontmatter@symbolmark`, whose digestion glued 2608.19750's "*Corresponding author" into an affiliation):
+<a href=#22 id=22 data-nosnippet>22</a>/// measured on 1,538 papers, none helped (OD #52).
+<a href=#23 id=23 data-nosnippet>23</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>whole_block_author(
+<a href=#24 id=24 data-nosnippet>24</a>  keyvals: <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
+<a href=#25 id=25 data-nosnippet>25</a>  written: Tokens,
+<a href=#26 id=26 data-nosnippet>26</a>) -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+<a href=#27 id=27 data-nosnippet>27</a>  <span class="prelude-val">Ok</span>(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@add@author"</span>), <span class="macro">vec!</span>[
+<a href=#28 id=28 data-nosnippet>28</a>    keyvals,
+<a href=#29 id=29 data-nosnippet>29</a>    <span class="prelude-val">Some</span>(written)
+<a href=#30 id=30 data-nosnippet>30</a>  ]))
+<a href=#31 id=31 data-nosnippet>31</a>}
+<a href=#32 id=32 data-nosnippet>32</a>
+<a href=#33 id=33 data-nosnippet>33</a><span class="doccomment">/// Which of Perl's `\lx@add@authors` branches (Base_Utility.pool.ltxml:686-720) a block takes ([`perl_author_branch`]).
+<a href=#34 id=34 data-nosnippet>34</a></span><span class="attr">#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+<a href=#35 id=35 data-nosnippet>35</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">enum </span>PerlAuthorBranch {
+<a href=#36 id=36 data-nosnippet>36</a>  <span class="doccomment">/// `{tabular}`, `{minipage}` or `\halign` in the block: one `\lx@add@author` of it whole (:691-693)
+<a href=#37 id=37 data-nosnippet>37</a>  </span>Whole,
+<a href=#38 id=38 data-nosnippet>38</a>  <span class="doccomment">/// a superscript mark in the block: its lines cut at `@authoraffilsplits`, each an author line cut at its commas (and
+<a href=#39 id=39 data-nosnippet>39</a>  /// " and ") or a marked affiliation, a line of no mark continuing the entry before it (:694-712) — but across the `\and`
+<a href=#40 id=40 data-nosnippet>40</a>  /// family an author of its own (OD #52(g))
+<a href=#41 id=41 data-nosnippet>41</a>  </span>Marks,
+<a href=#42 id=42 data-nosnippet>42</a>  <span class="doccomment">/// neither: cut at `@authorsplits`, each piece an author whose `\\` lines are its affiliations (:713-719), the comma and
+<a href=#43 id=43 data-nosnippet>43</a>  /// " and " cutting only the piece's names line
+<a href=#44 id=44 data-nosnippet>44</a>  </span>Split,
+<a href=#45 id=45 data-nosnippet>45</a>}
+<a href=#46 id=46 data-nosnippet>46</a>
+<a href=#47 id=47 data-nosnippet>47</a><span class="kw">impl </span>PerlAuthorBranch {
+<a href=#48 id=48 data-nosnippet>48</a>  <span class="doccomment">/// What the decline's counted Warning says the block is written as.
+<a href=#49 id=49 data-nosnippet>49</a>  </span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>written_as(<span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
+<a href=#50 id=50 data-nosnippet>50</a>    <span class="kw">match </span><span class="self">self </span>{
+<a href=#51 id=51 data-nosnippet>51</a>      PerlAuthorBranch::Whole =&gt; {
+<a href=#52 id=52 data-nosnippet>52</a>        <span class="string">"the block is written whole, as Perl's \\lx@add@authors writes a block holding a tabular"
+<a href=#53 id=53 data-nosnippet>53</a>      </span>},
+<a href=#54 id=54 data-nosnippet>54</a>      PerlAuthorBranch::Marks =&gt; {
+<a href=#55 id=55 data-nosnippet>55</a>        <span class="string">"the block is written as Perl's \\lx@add@authors splits a block with superscript marks, its pieces digested in order"
+<a href=#56 id=56 data-nosnippet>56</a>      </span>},
+<a href=#57 id=57 data-nosnippet>57</a>      PerlAuthorBranch::Split =&gt; {
+<a href=#58 id=58 data-nosnippet>58</a>        <span class="string">"the block is written as Perl's \\lx@add@authors splits it at its separators, its pieces digested in order"
+<a href=#59 id=59 data-nosnippet>59</a>      </span>},
+<a href=#60 id=60 data-nosnippet>60</a>    }
+<a href=#61 id=61 data-nosnippet>61</a>  }
+<a href=#62 id=62 data-nosnippet>62</a>}
+<a href=#63 id=63 data-nosnippet>63</a>
+<a href=#64 id=64 data-nosnippet>64</a><span class="doccomment">/// Perl's `@authorsup_markers` (Base_Utility.pool.ltxml:684).
+<a href=#65 id=65 data-nosnippet>65</a></span><span class="kw">fn </span>perl_authorsup_markers() -&gt; [Token; <span class="number">2</span>] { [<span class="macro">T_SUPER!</span>(), <span class="macro">T_CS!</span>(<span class="string">"\\textsuperscript"</span>)] }
+<a href=#66 id=66 data-nosnippet>66</a>
+<a href=#67 id=67 data-nosnippet>67</a><span class="doccomment">/// The branch Perl's `\lx@add@authors` takes for the block `stuff` (Base_Utility.pool.ltxml:691-694): `ToString($stuff) =~
+<a href=#68 id=68 data-nosnippet>68</a>/// /\{tabular\}|\{minipage\}|\\halign/`, else `positionOf($stuff, @authorsup_markers)`.
+<a href=#69 id=69 data-nosnippet>69</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>perl_author_branch(stuff: <span class="kw-2">&amp;</span>Tokens) -&gt; PerlAuthorBranch {
+<a href=#70 id=70 data-nosnippet>70</a>  <span class="kw">let </span>text = stuff.to_string();
+<a href=#71 id=71 data-nosnippet>71</a>  <span class="kw">if </span>text.contains(<span class="string">"{tabular}"</span>) || text.contains(<span class="string">"{minipage}"</span>) || text.contains(<span class="string">"\\halign"</span>) {
+<a href=#72 id=72 data-nosnippet>72</a>    PerlAuthorBranch::Whole
+<a href=#73 id=73 data-nosnippet>73</a>  } <span class="kw">else if </span>position_of(stuff, <span class="kw-2">&amp;</span>perl_authorsup_markers()).is_some() {
+<a href=#74 id=74 data-nosnippet>74</a>    PerlAuthorBranch::Marks
+<a href=#75 id=75 data-nosnippet>75</a>  } <span class="kw">else </span>{
+<a href=#76 id=76 data-nosnippet>76</a>    PerlAuthorBranch::Split
+<a href=#77 id=77 data-nosnippet>77</a>  }
+<a href=#78 id=78 data-nosnippet>78</a>}
+<a href=#79 id=79 data-nosnippet>79</a>
+<a href=#80 id=80 data-nosnippet>80</a><span class="doccomment">/// Perl's `\lx@add@authors` (Base_Utility.pool.ltxml:676-720) of a block the frontmatter emitter declines to read
+<a href=#81 id=81 data-nosnippet>81</a>/// (`observer::emitter::emit`'s footnote-counter and definition declines): its calls, in order, the `n`-th `\lx@add@author`
+<a href=#82 id=82 data-nosnippet>82</a>/// (from 0) given `keys(n)` — and how many creators they make —, its `dequeueFrontMatter` the emitter's own (it writes the queue's creators). The tabular branch is
+<a href=#83 id=83 data-nosnippet>83</a>/// [`whole_block_author`] of the block, its tabular juggles the line breaks they print
+<a href=#84 id=84 data-nosnippet>84</a>/// ([`tabular_juggles_in_a_whole_block`]); the two split branches cut it as Perl does (`@authorsplits`,
+<a href=#85 id=85 data-nosnippet>85</a>/// `@authoraffilsplits`, :678-682), each piece digested in its place, so the footnote counter and a definition step as
+<a href=#86 id=86 data-nosnippet>86</a>/// TeX steps them. Perl's comma and " and " cut only a names line, never a `\\` line under it (the kernel's own lists,
+<a href=#87 id=87 data-nosnippet>87</a>/// OXIDIZED_DESIGN_DIVERGENCES #52, #988: `author_affil_splits`, witness 2605.00347): Perl's cut PoS's `\\ Department of
+<a href=#88 id=88 data-nosnippet>88</a>/// Physics, College of Science, Swansea University, …` into four authors (1302.3028) and 1110.6375's `D. Schmidiger,\\
+<a href=#89 id=89 data-nosnippet>89</a>/// E. Wulf, S. Zhao and A. Zheludev$^\dag$` glued "D. SchmidigerE. Wulf, S. Zhao" (cr5_fncounter_and: Ann Able∗ and Bob Baker‡; 1003.2281, cs0404029, 2410.22720; the `\footremember`
+<a href=#90 id=90 data-nosnippet>90</a>/// of 1404.5602, 2503.21719, 0809.5152, 1110.6375). There a juggle — a macro closing the class's tabular,
+<a href=#91 id=91 data-nosnippet>91</a>/// `\alignauthor` — parts two authors, as `\and` does (`author_and_splits`; Perl's OmniBus makes it empty,
+<a href=#92 id=92 data-nosnippet>92</a>/// OmniBus.cls.ltxml:76, 1003.2281's sig-alternate). A `\\[len]` or `\\*` cut leaves no "[len]" or "*" at the head of
+<a href=#93 id=93 data-nosnippet>93</a>/// the next piece ([`strip_linebreak_options`], the kernel's own beyond-Perl fix of Perl's `\\[1em]` gap,
+<a href=#94 id=94 data-nosnippet>94</a>/// Base_Utility.pool.ltxml:670, KNOWN_PERL_ERRORS #75: 2007.01340's creator "[1em] Julia Fukuyama"). With the calls,
+<a href=#95 id=95 data-nosnippet>95</a>/// each creator's names as written, in order (the names line of its piece, not the affiliations under it): what the
+<a href=#96 id=96 data-nosnippet>96</a>/// emitter matches the reading's names against (`emit`'s owner labels). Beyond Perl, where the kernel reads a line
+<a href=#97 id=97 data-nosnippet>97</a>/// otherwise (OD #52, #988): a line of no mark that starts an author at the `\and` family is a names line, cut at its
+<a href=#98 id=98 data-nosnippet>98</a>/// commas as one is. As Perl's `next unless $block-&gt;unlist` (:714), an empty name between two cuts (`\corrauth, and
+<a href=#99 id=99 data-nosnippet>99</a>/// Zhengru Zhang`, 2004.03371) makes no creator. And each call's tokens as cut, its wrapping aside, with the creator
+<a href=#100 id=100 data-nosnippet>100</a>/// it makes (`None` for an affiliation): what a call digests of the block, in order ([`PerlCalls::cut`]).
+<a href=#101 id=101 data-nosnippet>101</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>perl_author_calls(
+<a href=#102 id=102 data-nosnippet>102</a>  keys: <span class="kw">impl </span>Fn(usize) -&gt; <span class="prelude-ty">Option</span>&lt;Tokens&gt;,
+<a href=#103 id=103 data-nosnippet>103</a>  stuff: Tokens,
+<a href=#104 id=104 data-nosnippet>104</a>) -&gt; <span class="prelude-ty">Result</span>&lt;PerlCalls&gt; {
+<a href=#105 id=105 data-nosnippet>105</a>  <span class="kw">let </span>branch = perl_author_branch(<span class="kw-2">&amp;</span>stuff);
+<a href=#106 id=106 data-nosnippet>106</a>  <span class="kw">if </span>branch == PerlAuthorBranch::Whole {
+<a href=#107 id=107 data-nosnippet>107</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(PerlCalls {
+<a href=#108 id=108 data-nosnippet>108</a>      calls: <span class="macro">vec!</span>[whole_block_author(
+<a href=#109 id=109 data-nosnippet>109</a>        keys(<span class="number">0</span>),
+<a href=#110 id=110 data-nosnippet>110</a>        tabular_juggles_in_a_whole_block(stuff.clone()),
+<a href=#111 id=111 data-nosnippet>111</a>      )<span class="question-mark">?</span>],
+<a href=#112 id=112 data-nosnippet>112</a>      cut:   <span class="macro">vec!</span>[(<span class="prelude-val">Some</span>(<span class="number">0</span>), stuff.unlist_ref().to_vec())],
+<a href=#113 id=113 data-nosnippet>113</a>      names: <span class="macro">vec!</span>[stuff],
+<a href=#114 id=114 data-nosnippet>114</a>    });
+<a href=#115 id=115 data-nosnippet>115</a>  }
+<a href=#116 id=116 data-nosnippet>116</a>  <span class="kw">let </span><span class="kw-2">mut </span>cut: Vec&lt;(<span class="prelude-ty">Option</span>&lt;usize&gt;, Vec&lt;Token&gt;)&gt; = Vec::new();
+<a href=#117 id=117 data-nosnippet>117</a>  <span class="comment">// (the creators the calls cut so far make: `cut`'s numbers, as `author` numbers its keys)
+<a href=#118 id=118 data-nosnippet>118</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>made = <span class="number">0usize</span>;
+<a href=#119 id=119 data-nosnippet>119</a>  <span class="kw">let </span><span class="kw-2">mut </span>next = || {
+<a href=#120 id=120 data-nosnippet>120</a>    made += <span class="number">1</span>;
+<a href=#121 id=121 data-nosnippet>121</a>    made - <span class="number">1
+<a href=#122 id=122 data-nosnippet>122</a>  </span>};
+<a href=#123 id=123 data-nosnippet>123</a>  <span class="kw">let </span>stuff = strip_linebreak_options(tabular_juggles_as(stuff, <span class="macro">T_CS!</span>(<span class="string">"\\and"</span>)));
+<a href=#124 id=124 data-nosnippet>124</a>  <span class="kw">let </span><span class="kw-2">mut </span>pieces: Vec&lt;Tokens&gt; = Vec::new();
+<a href=#125 id=125 data-nosnippet>125</a>  <span class="kw">let </span><span class="kw-2">mut </span>author = |names: Tokens, content: Tokens| {
+<a href=#126 id=126 data-nosnippet>126</a>    <span class="kw">let </span>n = pieces.len();
+<a href=#127 id=127 data-nosnippet>127</a>    pieces.push(names);
+<a href=#128 id=128 data-nosnippet>128</a>    whole_block_author(keys(n), content)
+<a href=#129 id=129 data-nosnippet>129</a>  };
+<a href=#130 id=130 data-nosnippet>130</a>  <span class="kw">let </span>affiliation = |content: Tokens| -&gt; <span class="prelude-ty">Result</span>&lt;Tokens&gt; {
+<a href=#131 id=131 data-nosnippet>131</a>    <span class="prelude-val">Ok</span>(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@add@affiliation"</span>), <span class="macro">vec!</span>[
+<a href=#132 id=132 data-nosnippet>132</a>      <span class="prelude-val">None</span>,
+<a href=#133 id=133 data-nosnippet>133</a>      <span class="prelude-val">Some</span>(content)
+<a href=#134 id=134 data-nosnippet>134</a>    ]))
+<a href=#135 id=135 data-nosnippet>135</a>  };
+<a href=#136 id=136 data-nosnippet>136</a>  <span class="kw">let </span>markers = perl_authorsup_markers();
+<a href=#137 id=137 data-nosnippet>137</a>  <span class="comment">// (the `\and` family parts two authors: OD #52(g)'s hard boundary, `author_and_splits`)
+<a href=#138 id=138 data-nosnippet>138</a>  </span><span class="kw">let </span>and_family = author_and_splits();
+<a href=#139 id=139 data-nosnippet>139</a>  <span class="kw">let </span>parts_authors = |cut: <span class="kw-2">&amp;</span>[Token]| {
+<a href=#140 id=140 data-nosnippet>140</a>    cut.first().is_some_and(|t| {
+<a href=#141 id=141 data-nosnippet>141</a>      and_family
+<a href=#142 id=142 data-nosnippet>142</a>        .iter()
+<a href=#143 id=143 data-nosnippet>143</a>        .any(|d| <span class="macro">matches!</span>(d, SplitDelim::Token(u) <span class="kw">if </span>u == t))
+<a href=#144 id=144 data-nosnippet>144</a>    })
+<a href=#145 id=145 data-nosnippet>145</a>  };
+<a href=#146 id=146 data-nosnippet>146</a>  <span class="comment">// (a names line's own cuts, Perl's comma and " and " — at the top level, as `SplitTokens` cuts: a note's text keeps its
+<a href=#147 id=147 data-nosnippet>147</a>  // commas)
+<a href=#148 id=148 data-nosnippet>148</a>  </span><span class="kw">let </span>names = |line: Tokens| split_tokens(line, <span class="macro">vec!</span>[<span class="macro">T_OTHER!</span>(<span class="string">","</span>).into(), literal_and()]);
+<a href=#149 id=149 data-nosnippet>149</a>  <span class="comment">// (a names line's names, none empty: Perl's `next unless $block-&gt;unlist`, :714)
+<a href=#150 id=150 data-nosnippet>150</a>  </span><span class="kw">let </span>people_of = |line: Tokens| -&gt; Vec&lt;Vec&lt;Token&gt;&gt; {
+<a href=#151 id=151 data-nosnippet>151</a>    names(line)
+<a href=#152 id=152 data-nosnippet>152</a>      .into_iter()
+<a href=#153 id=153 data-nosnippet>153</a>      .filter(|name| !name.is_empty())
+<a href=#154 id=154 data-nosnippet>154</a>      .map(Tokens::unlist)
+<a href=#155 id=155 data-nosnippet>155</a>      .collect()
+<a href=#156 id=156 data-nosnippet>156</a>  };
+<a href=#157 id=157 data-nosnippet>157</a>  <span class="kw">let </span><span class="kw-2">mut </span>calls = Vec::new();
+<a href=#158 id=158 data-nosnippet>158</a>  <span class="kw">if </span>branch == PerlAuthorBranch::Marks {
+<a href=#159 id=159 data-nosnippet>159</a>    <span class="comment">// (each entry: whether an author, and its tokens)
+<a href=#160 id=160 data-nosnippet>160</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>entries: Vec&lt;(bool, Vec&lt;Token&gt;)&gt; = Vec::new();
+<a href=#161 id=161 data-nosnippet>161</a>    <span class="kw">for </span>(cut, line) <span class="kw">in </span>split_tokens_delimited(stuff, author_affil_splits()) {
+<a href=#162 id=162 data-nosnippet>162</a>      <span class="kw">if </span>line.is_empty() {
+<a href=#163 id=163 data-nosnippet>163</a>        <span class="kw">continue</span>;
+<a href=#164 id=164 data-nosnippet>164</a>      }
+<a href=#165 id=165 data-nosnippet>165</a>      <span class="kw">match </span>position_of(<span class="kw-2">&amp;</span>line, <span class="kw-2">&amp;</span>markers) {
+<a href=#166 id=166 data-nosnippet>166</a>        <span class="comment">// (a line of no mark continues the entry before it with the cut it was cut at — a line break, `\quad` the space
+<a href=#167 id=167 data-nosnippet>167</a>        // it prints —, which Perl's `Tokens(…)` drops: 1609.02993's "Soumith ChintalaFacebook AI Research", 1110.6375's
+<a href=#168 id=168 data-nosnippet>168</a>        // "G. EhlersOak Ridge" glued, their words lost; but one cut at the `\and` family starts an author, the kernel's
+<a href=#169 id=169 data-nosnippet>169</a>        // boundary, OD #52(g): `Ann Able$^{1}$… \and Bob Baker\\ $^{1}$Univ X` is two authors, as pdflatex prints them,
+<a href=#170 id=170 data-nosnippet>170</a>        // where Perl glues "Ann AbleBob Baker" — a names line, cut at its commas as one is: `\and Bob Baker, Carl Cole\\`
+<a href=#171 id=171 data-nosnippet>171</a>        // two authors, review revS5CR7b S3)
+<a href=#172 id=172 data-nosnippet>172</a>        </span><span class="prelude-val">None </span>=&gt; <span class="kw">match </span>entries.last_mut() {
+<a href=#173 id=173 data-nosnippet>173</a>          <span class="prelude-val">Some</span>(last) <span class="kw">if </span>!parts_authors(<span class="kw-2">&amp;</span>cut) =&gt; {
+<a href=#174 id=174 data-nosnippet>174</a>            last.<span class="number">1</span>.extend(cut);
+<a href=#175 id=175 data-nosnippet>175</a>            last.<span class="number">1</span>.extend(line.unlist());
+<a href=#176 id=176 data-nosnippet>176</a>          },
+<a href=#177 id=177 data-nosnippet>177</a>          <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; entries.extend(people_of(line).into_iter().map(|name| (<span class="bool-val">true</span>, name))),
+<a href=#178 id=178 data-nosnippet>178</a>          <span class="prelude-val">None </span>=&gt; entries.push((<span class="bool-val">true</span>, line.unlist())),
+<a href=#179 id=179 data-nosnippet>179</a>        },
+<a href=#180 id=180 data-nosnippet>180</a>        <span class="prelude-val">Some</span>(p) <span class="kw">if </span>p &lt; <span class="number">8 </span>=&gt; entries.push((<span class="bool-val">false</span>, line.unlist())),
+<a href=#181 id=181 data-nosnippet>181</a>        <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; entries.extend(names(line).into_iter().map(|name| (<span class="bool-val">true</span>, name.unlist()))),
+<a href=#182 id=182 data-nosnippet>182</a>      }
+<a href=#183 id=183 data-nosnippet>183</a>    }
+<a href=#184 id=184 data-nosnippet>184</a>    <span class="kw">for </span>(is_author, line) <span class="kw">in </span>entries {
+<a href=#185 id=185 data-nosnippet>185</a>      cut.push((is_author.then(<span class="kw-2">&amp;mut </span>next), line.clone()));
+<a href=#186 id=186 data-nosnippet>186</a>      <span class="kw">let </span>line = Tokens::new(line);
+<a href=#187 id=187 data-nosnippet>187</a>      calls.push(<span class="kw">if </span>is_author {
+<a href=#188 id=188 data-nosnippet>188</a>        author(
+<a href=#189 id=189 data-nosnippet>189</a>          line.clone(),
+<a href=#190 id=190 data-nosnippet>190</a>          <span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@author@withsup"</span>), <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(line)]),
+<a href=#191 id=191 data-nosnippet>191</a>        )<span class="question-mark">?
+<a href=#192 id=192 data-nosnippet>192</a>      </span>} <span class="kw">else </span>{
+<a href=#193 id=193 data-nosnippet>193</a>        affiliation(<span class="macro">Invocation!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\lx@affiliation@withsup"</span>), <span class="macro">vec!</span>[<span class="prelude-val">Some</span>(
+<a href=#194 id=194 data-nosnippet>194</a>          line
+<a href=#195 id=195 data-nosnippet>195</a>        )]))<span class="question-mark">?
+<a href=#196 id=196 data-nosnippet>196</a>      </span>});
+<a href=#197 id=197 data-nosnippet>197</a>    }
+<a href=#198 id=198 data-nosnippet>198</a>  } <span class="kw">else </span>{
+<a href=#199 id=199 data-nosnippet>199</a>    <span class="kw">let </span>splits: Vec&lt;SplitDelim&gt; = <span class="macro">vec!</span>[
+<a href=#200 id=200 data-nosnippet>200</a>      <span class="macro">T_CS!</span>(<span class="string">"\\and"</span>).into(),
+<a href=#201 id=201 data-nosnippet>201</a>      <span class="macro">T_CS!</span>(<span class="string">"\\And"</span>).into(),
+<a href=#202 id=202 data-nosnippet>202</a>      <span class="macro">T_CS!</span>(<span class="string">"\\AND"</span>).into(),
+<a href=#203 id=203 data-nosnippet>203</a>      <span class="macro">T_CS!</span>(<span class="string">"\\quad"</span>).into(),
+<a href=#204 id=204 data-nosnippet>204</a>      <span class="macro">T_CS!</span>(<span class="string">"\\qquad"</span>).into(),
+<a href=#205 id=205 data-nosnippet>205</a>    ];
+<a href=#206 id=206 data-nosnippet>206</a>    <span class="kw">for </span>block <span class="kw">in </span>split_tokens(stuff, splits) {
+<a href=#207 id=207 data-nosnippet>207</a>      <span class="kw">if </span>block.is_empty() {
+<a href=#208 id=208 data-nosnippet>208</a>        <span class="kw">continue</span>;
+<a href=#209 id=209 data-nosnippet>209</a>      }
+<a href=#210 id=210 data-nosnippet>210</a>      <span class="kw">let </span><span class="kw-2">mut </span>lines = split_tokens(block, <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\\\"</span>).into()]).into_iter();
+<a href=#211 id=211 data-nosnippet>211</a>      <span class="comment">// (each person: their names as written, and their call's content)
+<a href=#212 id=212 data-nosnippet>212</a>      </span><span class="kw">let </span><span class="kw-2">mut </span>people: Vec&lt;(Vec&lt;Token&gt;, Vec&lt;Token&gt;)&gt; = lines
+<a href=#213 id=213 data-nosnippet>213</a>        .next()
+<a href=#214 id=214 data-nosnippet>214</a>        .map(people_of)
+<a href=#215 id=215 data-nosnippet>215</a>        .unwrap_or_default()
+<a href=#216 id=216 data-nosnippet>216</a>        .into_iter()
+<a href=#217 id=217 data-nosnippet>217</a>        .map(|name| (name.clone(), name))
+<a href=#218 id=218 data-nosnippet>218</a>        .collect();
+<a href=#219 id=219 data-nosnippet>219</a>      <span class="kw">if </span>people.is_empty() {
+<a href=#220 id=220 data-nosnippet>220</a>        people.push((Vec::new(), Vec::new()));
+<a href=#221 id=221 data-nosnippet>221</a>      }
+<a href=#222 id=222 data-nosnippet>222</a>      <span class="comment">// (the block's `\\` lines its last name's, as Perl's one author of the piece has them)
+<a href=#223 id=223 data-nosnippet>223</a>      </span><span class="kw">let </span><span class="kw-2">mut </span>raw: Vec&lt;Vec&lt;Token&gt;&gt; = people.iter().map(|(names, <span class="kw">_</span>)| names.clone()).collect();
+<a href=#224 id=224 data-nosnippet>224</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(last) = people.last_mut() {
+<a href=#225 id=225 data-nosnippet>225</a>        <span class="kw">for </span>line <span class="kw">in </span>lines.filter(|line| !line.is_empty()) {
+<a href=#226 id=226 data-nosnippet>226</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(raw) = raw.last_mut() {
+<a href=#227 id=227 data-nosnippet>227</a>            raw.extend_from_slice(line.unlist_ref());
+<a href=#228 id=228 data-nosnippet>228</a>          }
+<a href=#229 id=229 data-nosnippet>229</a>          last.<span class="number">1</span>.extend(affiliation(line)<span class="question-mark">?</span>.unlist());
+<a href=#230 id=230 data-nosnippet>230</a>        }
+<a href=#231 id=231 data-nosnippet>231</a>      }
+<a href=#232 id=232 data-nosnippet>232</a>      <span class="kw">for </span>((names, person), raw) <span class="kw">in </span>people.into_iter().zip(raw) {
+<a href=#233 id=233 data-nosnippet>233</a>        cut.push((<span class="prelude-val">Some</span>(next()), raw));
+<a href=#234 id=234 data-nosnippet>234</a>        calls.push(author(Tokens::new(names), Tokens::new(person))<span class="question-mark">?</span>);
+<a href=#235 id=235 data-nosnippet>235</a>      }
+<a href=#236 id=236 data-nosnippet>236</a>    }
+<a href=#237 id=237 data-nosnippet>237</a>  }
+<a href=#238 id=238 data-nosnippet>238</a>  <span class="prelude-val">Ok</span>(PerlCalls { calls, names: pieces, cut })
+<a href=#239 id=239 data-nosnippet>239</a>}
+<a href=#240 id=240 data-nosnippet>240</a>
+<a href=#241 id=241 data-nosnippet>241</a><span class="doccomment">/// What [`perl_author_calls`] makes of a block: Perl's calls, in order.
+<a href=#242 id=242 data-nosnippet>242</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">struct </span>PerlCalls {
+<a href=#243 id=243 data-nosnippet>243</a>  <span class="doccomment">/// the `\lx@add@author` and `\lx@add@affiliation` calls
+<a href=#244 id=244 data-nosnippet>244</a>  </span><span class="kw">pub </span>calls: Vec&lt;Tokens&gt;,
+<a href=#245 id=245 data-nosnippet>245</a>  <span class="doccomment">/// each creator's names as written (its piece's names line)
+<a href=#246 id=246 data-nosnippet>246</a>  </span><span class="kw">pub </span>names: Vec&lt;Tokens&gt;,
+<a href=#247 id=247 data-nosnippet>247</a>  <span class="doccomment">/// each call's tokens of the block as cut, its wrapping aside, with the creator it makes (`None` for an affiliation):
+<a href=#248 id=248 data-nosnippet>248</a>  /// a subsequence of the block's tokens, in order
+<a href=#249 id=249 data-nosnippet>249</a>  </span><span class="kw">pub </span>cut:   Vec&lt;(<span class="prelude-ty">Option</span>&lt;usize&gt;, Vec&lt;Token&gt;)&gt;,
+<a href=#250 id=250 data-nosnippet>250</a>}
+<a href=#251 id=251 data-nosnippet>251</a>
+<a href=#252 id=252 data-nosnippet>252</a><span class="doccomment">/// Does an author block mark its names (`$^{a}$`, `\textsuperscript{1}`)? A superscript inside a `\footnote` or
+<a href=#253 id=253 data-nosnippet>253</a>/// `\thanks` is the note's own text, not a mark: 0911.0568's `LPT Orsay (CNRS)~\footnote{$^a$Laboratoire …}` line
+<a href=#254 id=254 data-nosnippet>254</a>/// made its PoS author block a marked list, its affiliation and email line read as a person (63k).
+<a href=#255 id=255 data-nosnippet>255</a></span><span class="kw">pub fn </span>has_author_marks(stuff: <span class="kw-2">&amp;</span>Tokens) -&gt; bool {
+<a href=#256 id=256 data-nosnippet>256</a>  <span class="kw">let </span>tokens = stuff.unlist_ref();
+<a href=#257 id=257 data-nosnippet>257</a>  <span class="kw">let </span><span class="kw-2">mut </span>i = <span class="number">0</span>;
+<a href=#258 id=258 data-nosnippet>258</a>  <span class="kw">while </span>i &lt; tokens.len() {
+<a href=#259 id=259 data-nosnippet>259</a>    <span class="kw">let </span>t = <span class="kw-2">&amp;</span>tokens[i];
+<a href=#260 id=260 data-nosnippet>260</a>    <span class="kw">if </span><span class="kw-2">*</span>t == <span class="macro">T_CS!</span>(<span class="string">"\\footnote"</span>) || <span class="kw-2">*</span>t == <span class="macro">T_CS!</span>(<span class="string">"\\thanks"</span>) {
+<a href=#261 id=261 data-nosnippet>261</a>      i += <span class="number">1</span>;
+<a href=#262 id=262 data-nosnippet>262</a>      <span class="kw">while </span>i &lt; tokens.len() &amp;&amp; tokens[i] == <span class="macro">T_SPACE!</span>() {
+<a href=#263 id=263 data-nosnippet>263</a>        i += <span class="number">1</span>;
+<a href=#264 id=264 data-nosnippet>264</a>      }
+<a href=#265 id=265 data-nosnippet>265</a>      <span class="kw">if </span>i &lt; tokens.len() &amp;&amp; tokens[i] == <span class="macro">T_OTHER!</span>(<span class="string">"["</span>) {
+<a href=#266 id=266 data-nosnippet>266</a>        <span class="kw">while </span>i &lt; tokens.len() &amp;&amp; tokens[i] != <span class="macro">T_OTHER!</span>(<span class="string">"]"</span>) {
+<a href=#267 id=267 data-nosnippet>267</a>          i += <span class="number">1</span>;
+<a href=#268 id=268 data-nosnippet>268</a>        }
+<a href=#269 id=269 data-nosnippet>269</a>        i += <span class="number">1</span>;
+<a href=#270 id=270 data-nosnippet>270</a>      }
+<a href=#271 id=271 data-nosnippet>271</a>      <span class="kw">if </span>i &lt; tokens.len() &amp;&amp; tokens[i].code == Catcode::BEGIN {
+<a href=#272 id=272 data-nosnippet>272</a>        <span class="kw">let </span><span class="kw-2">mut </span>depth = <span class="number">0usize</span>;
+<a href=#273 id=273 data-nosnippet>273</a>        <span class="kw">while </span>i &lt; tokens.len() {
+<a href=#274 id=274 data-nosnippet>274</a>          <span class="kw">match </span>tokens[i].code {
+<a href=#275 id=275 data-nosnippet>275</a>            Catcode::BEGIN =&gt; depth += <span class="number">1</span>,
+<a href=#276 id=276 data-nosnippet>276</a>            Catcode::END =&gt; {
+<a href=#277 id=277 data-nosnippet>277</a>              depth -= <span class="number">1</span>;
+<a href=#278 id=278 data-nosnippet>278</a>              <span class="kw">if </span>depth == <span class="number">0 </span>{
+<a href=#279 id=279 data-nosnippet>279</a>                <span class="kw">break</span>;
+<a href=#280 id=280 data-nosnippet>280</a>              }
+<a href=#281 id=281 data-nosnippet>281</a>            },
+<a href=#282 id=282 data-nosnippet>282</a>            <span class="kw">_ </span>=&gt; {},
+<a href=#283 id=283 data-nosnippet>283</a>          }
+<a href=#284 id=284 data-nosnippet>284</a>          i += <span class="number">1</span>;
+<a href=#285 id=285 data-nosnippet>285</a>        }
+<a href=#286 id=286 data-nosnippet>286</a>      }
+<a href=#287 id=287 data-nosnippet>287</a>    } <span class="kw">else if </span>is_author_mark(t) {
+<a href=#288 id=288 data-nosnippet>288</a>      <span class="kw">return </span><span class="bool-val">true</span>;
+<a href=#289 id=289 data-nosnippet>289</a>    }
+<a href=#290 id=290 data-nosnippet>290</a>    i += <span class="number">1</span>;
+<a href=#291 id=291 data-nosnippet>291</a>  }
+<a href=#292 id=292 data-nosnippet>292</a>  <span class="bool-val">false
+<a href=#293 id=293 data-nosnippet>293</a></span>}
+<a href=#294 id=294 data-nosnippet>294</a>
+<a href=#295 id=295 data-nosnippet>295</a><span class="doccomment">/// Drop the optional `*` and `[&lt;len&gt;]` that follow a `\\` line-break token in an
+<a href=#296 id=296 data-nosnippet>296</a>/// author/affiliation block, before the block is split into lines. The
+<a href=#297 id=297 data-nosnippet>297</a>/// author/affiliation splitters key on the bare `\\` control sequence, so a
+<a href=#298 id=298 data-nosnippet>298</a>/// `\\[1em]` (or `\\*[1em]`) would otherwise orphan `[1em]` at the head of the
+<a href=#299 id=299 data-nosnippet>299</a>/// next segment — where it leaks as literal `[1em]` text AND, by pushing a
+<a href=#300 id=300 data-nosnippet>300</a>/// following `\textsuperscript` past the author-vs-affiliation position
+<a href=#301 id=301 data-nosnippet>301</a>/// threshold, flips a comma-bearing affiliation line into phantom author
+<a href=#302 id=302 data-nosnippet>302</a>/// creators. Perl's own `\lx@add@authors` flags this exact gap ("matching `\\`
+<a href=#303 id=303 data-nosnippet>303</a>/// this way fails to catch `\\[1em]`, so really should Let it") but never fixes
+<a href=#304 id=304 data-nosnippet>304</a>/// it, so both engines garble it identically; consuming it here is a beyond-Perl
+<a href=#305 id=305 data-nosnippet>305</a>/// improvement (KNOWN_PERL_ERRORS #75, witness arXiv:2605.23553). The `[...]` is
+<a href=#306 id=306 data-nosnippet>306</a>/// matched only as a balanced OTHER-catcode bracket group following the `\\` and
+<a href=#307 id=307 data-nosnippet>307</a>/// the spaces after it, which `\@ifnextchar` skips (`\\ [0.5em]`, 2604.20841), so
+<a href=#308 id=308 data-nosnippet>308</a>/// ordinary bracketed content elsewhere in a name/affiliation is untouched.
+<a href=#309 id=309 data-nosnippet>309</a></span><span class="kw">pub fn </span>strip_linebreak_options(tokens: Tokens) -&gt; Tokens {
+<a href=#310 id=310 data-nosnippet>310</a>  linebreak_options_stripped(tokens, <span class="bool-val">false</span>)
+<a href=#311 id=311 data-nosnippet>311</a>}
+<a href=#312 id=312 data-nosnippet>312</a>
+<a href=#313 id=313 data-nosnippet>313</a><span class="doccomment">/// Whether the tokens of a `\\[…]` option, between its brackets, are a positive length: not led by a minus sign, and
+<a href=#314 id=314 data-nosnippet>314</a>/// a register (`\bigskipamount`, `\baselineskip`) or a number with a non-zero digit (`12pt`, `.5cm`; not `0pt`).
+<a href=#315 id=315 data-nosnippet>315</a></span><span class="kw">fn </span>positive_length(option: <span class="kw-2">&amp;</span>[Token]) -&gt; bool {
+<a href=#316 id=316 data-nosnippet>316</a>  <span class="kw">let </span><span class="kw-2">mut </span>tokens = option.iter().filter(|t| <span class="kw-2">**</span>t != <span class="macro">T_SPACE!</span>());
+<a href=#317 id=317 data-nosnippet>317</a>  <span class="kw">let </span><span class="prelude-val">Some</span>(first) = tokens.next() <span class="kw">else </span>{
+<a href=#318 id=318 data-nosnippet>318</a>    <span class="kw">return </span><span class="bool-val">false</span>;
+<a href=#319 id=319 data-nosnippet>319</a>  };
+<a href=#320 id=320 data-nosnippet>320</a>  <span class="kw-2">*</span>first != <span class="macro">T_OTHER!</span>(<span class="string">"-"</span>)
+<a href=#321 id=321 data-nosnippet>321</a>    &amp;&amp; std::iter::once(first).chain(tokens).any(|t| {
+<a href=#322 id=322 data-nosnippet>322</a>      t.get_catcode() == Catcode::CS || t.with_str(|s| s.chars().any(|c| (<span class="string">'1'</span>..=<span class="string">'9'</span>).contains(<span class="kw-2">&amp;</span>c)))
+<a href=#323 id=323 data-nosnippet>323</a>    })
+<a href=#324 id=324 data-nosnippet>324</a>}
+<a href=#325 id=325 data-nosnippet>325</a>
+<a href=#326 id=326 data-nosnippet>326</a><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>linebreak_options_stripped(
+<a href=#327 id=327 data-nosnippet>327</a>  tokens: Tokens,
+<a href=#328 id=328 data-nosnippet>328</a>  keep_gaps: bool,
+<a href=#329 id=329 data-nosnippet>329</a>) -&gt; Tokens {
+<a href=#330 id=330 data-nosnippet>330</a>  <span class="kw">let </span>src = tokens.unlist();
+<a href=#331 id=331 data-nosnippet>331</a>  <span class="kw">let </span>n = src.len();
+<a href=#332 id=332 data-nosnippet>332</a>  <span class="kw">let </span><span class="kw-2">mut </span>out: Vec&lt;Token&gt; = Vec::with_capacity(n);
+<a href=#333 id=333 data-nosnippet>333</a>  <span class="kw">let </span>brk = <span class="macro">T_CS!</span>(<span class="string">"\\\\"</span>);
+<a href=#334 id=334 data-nosnippet>334</a>  <span class="comment">// (the brace depth and the environment depth outside braces; whether the line since the last line break holds a wide
+<a href=#335 id=335 data-nosnippet>335</a>  // space or a run of spacing at its top level, a row)
+<a href=#336 id=336 data-nosnippet>336</a>  </span><span class="kw">let </span>(<span class="kw-2">mut </span>depth, <span class="kw-2">mut </span>environments) = (<span class="number">0usize</span>, <span class="number">0usize</span>);
+<a href=#337 id=337 data-nosnippet>337</a>  <span class="kw">let </span><span class="kw-2">mut </span>row = <span class="bool-val">false</span>;
+<a href=#338 id=338 data-nosnippet>338</a>  <span class="kw">let </span><span class="kw-2">mut </span>i = <span class="number">0</span>;
+<a href=#339 id=339 data-nosnippet>339</a>  <span class="kw">while </span>i &lt; n {
+<a href=#340 id=340 data-nosnippet>340</a>    out.push(src[i]);
+<a href=#341 id=341 data-nosnippet>341</a>    <span class="kw">if </span>depth == <span class="number">0
+<a href=#342 id=342 data-nosnippet>342</a>      </span>&amp;&amp; (is_separating_space(<span class="kw-2">&amp;</span>src[i])
+<a href=#343 id=343 data-nosnippet>343</a>        || (is_spacing_command(<span class="kw-2">&amp;</span>src[i])
+<a href=#344 id=344 data-nosnippet>344</a>          &amp;&amp; src[i + <span class="number">1</span>..]
+<a href=#345 id=345 data-nosnippet>345</a>            .iter()
+<a href=#346 id=346 data-nosnippet>346</a>            .find(|t| <span class="kw-2">**</span>t != <span class="macro">T_SPACE!</span>())
+<a href=#347 id=347 data-nosnippet>347</a>            .is_some_and(is_spacing_command)))
+<a href=#348 id=348 data-nosnippet>348</a>    {
+<a href=#349 id=349 data-nosnippet>349</a>      row = <span class="bool-val">true</span>;
+<a href=#350 id=350 data-nosnippet>350</a>    }
+<a href=#351 id=351 data-nosnippet>351</a>    <span class="kw">match </span>src[i].get_catcode() {
+<a href=#352 id=352 data-nosnippet>352</a>      Catcode::BEGIN =&gt; depth += <span class="number">1</span>,
+<a href=#353 id=353 data-nosnippet>353</a>      Catcode::END =&gt; depth = depth.saturating_sub(<span class="number">1</span>),
+<a href=#354 id=354 data-nosnippet>354</a>      <span class="kw">_ if </span>depth == <span class="number">0 </span>&amp;&amp; src[i] == <span class="macro">T_CS!</span>(<span class="string">"\\begin"</span>) =&gt; environments += <span class="number">1</span>,
+<a href=#355 id=355 data-nosnippet>355</a>      <span class="kw">_ if </span>depth == <span class="number">0 </span>&amp;&amp; src[i] == <span class="macro">T_CS!</span>(<span class="string">"\\end"</span>) =&gt; environments = environments.saturating_sub(<span class="number">1</span>),
+<a href=#356 id=356 data-nosnippet>356</a>      <span class="kw">_ </span>=&gt; {},
+<a href=#357 id=357 data-nosnippet>357</a>    }
+<a href=#358 id=358 data-nosnippet>358</a>    <span class="kw">if </span>src[i] == brk {
+<a href=#359 id=359 data-nosnippet>359</a>      <span class="kw">let </span>top = depth == <span class="number">0 </span>&amp;&amp; environments == <span class="number">0</span>;
+<a href=#360 id=360 data-nosnippet>360</a>      <span class="kw">let </span>after_row = std::mem::take(<span class="kw-2">&amp;mut </span>row);
+<a href=#361 id=361 data-nosnippet>361</a>      <span class="kw">let </span><span class="kw-2">mut </span>j = i + <span class="number">1</span>;
+<a href=#362 id=362 data-nosnippet>362</a>      <span class="kw">let </span><span class="kw-2">mut </span>consumed = <span class="bool-val">false</span>;
+<a href=#363 id=363 data-nosnippet>363</a>      <span class="comment">// (the spaces before the optional argument skipped, as `\@ifnextchar` skips them: latex.ltx's `\@xnewline`,
+<a href=#364 id=364 data-nosnippet>364</a>      // `\@xarraycr`; `\\ [0.5em]`, 2604.20841, the r7 re-review's finding 8. Not before a star: `\\ * Equal
+<a href=#365 id=365 data-nosnippet>365</a>      // contribution` stays a legend line, though `\@ifstar` skips them too and pdflatex prints no star there —
+<a href=#366 id=366 data-nosnippet>366</a>      // 2608.23637, a SYNC_STATUS residual)
+<a href=#367 id=367 data-nosnippet>367</a>      </span><span class="kw">let </span>after_spaces = |from: usize| {
+<a href=#368 id=368 data-nosnippet>368</a>        from
+<a href=#369 id=369 data-nosnippet>369</a>          + src[from.min(n)..]
+<a href=#370 id=370 data-nosnippet>370</a>            .iter()
+<a href=#371 id=371 data-nosnippet>371</a>            .take_while(|t| <span class="kw-2">**</span>t == <span class="macro">T_SPACE!</span>())
+<a href=#372 id=372 data-nosnippet>372</a>            .count()
+<a href=#373 id=373 data-nosnippet>373</a>      };
+<a href=#374 id=374 data-nosnippet>374</a>      <span class="kw">if </span>j &lt; n &amp;&amp; src[j] == <span class="macro">T_OTHER!</span>(<span class="string">"*"</span>) {
+<a href=#375 id=375 data-nosnippet>375</a>        j += <span class="number">1</span>;
+<a href=#376 id=376 data-nosnippet>376</a>        consumed = <span class="bool-val">true</span>;
+<a href=#377 id=377 data-nosnippet>377</a>      }
+<a href=#378 id=378 data-nosnippet>378</a>      <span class="kw">if </span>after_spaces(j) &lt; n &amp;&amp; src[after_spaces(j)] == <span class="macro">T_OTHER!</span>(<span class="string">"["</span>) {
+<a href=#379 id=379 data-nosnippet>379</a>        j = after_spaces(j);
+<a href=#380 id=380 data-nosnippet>380</a>        <span class="kw">let </span><span class="kw-2">mut </span>k = j + <span class="number">1</span>;
+<a href=#381 id=381 data-nosnippet>381</a>        <span class="kw">let </span><span class="kw-2">mut </span>depth = <span class="number">1usize</span>;
+<a href=#382 id=382 data-nosnippet>382</a>        <span class="kw">while </span>k &lt; n &amp;&amp; depth &gt; <span class="number">0 </span>{
+<a href=#383 id=383 data-nosnippet>383</a>          <span class="kw">if </span>src[k] == <span class="macro">T_OTHER!</span>(<span class="string">"["</span>) {
+<a href=#384 id=384 data-nosnippet>384</a>            depth += <span class="number">1</span>;
+<a href=#385 id=385 data-nosnippet>385</a>          } <span class="kw">else if </span>src[k] == <span class="macro">T_OTHER!</span>(<span class="string">"]"</span>) {
+<a href=#386 id=386 data-nosnippet>386</a>            depth -= <span class="number">1</span>;
+<a href=#387 id=387 data-nosnippet>387</a>          }
+<a href=#388 id=388 data-nosnippet>388</a>          k += <span class="number">1</span>;
+<a href=#389 id=389 data-nosnippet>389</a>        }
+<a href=#390 id=390 data-nosnippet>390</a>        <span class="kw">if </span>depth == <span class="number">0 </span>{
+<a href=#391 id=391 data-nosnippet>391</a>          <span class="kw">if </span>keep_gaps &amp;&amp; top &amp;&amp; !after_row &amp;&amp; positive_length(<span class="kw-2">&amp;</span>src[j + <span class="number">1</span>..k - <span class="number">1</span>]) {
+<a href=#392 id=392 data-nosnippet>392</a>            out.extend([<span class="macro">T_SPACE!</span>(), brk]);
+<a href=#393 id=393 data-nosnippet>393</a>          }
+<a href=#394 id=394 data-nosnippet>394</a>          j = k;
+<a href=#395 id=395 data-nosnippet>395</a>          consumed = <span class="bool-val">true</span>;
+<a href=#396 id=396 data-nosnippet>396</a>        }
+<a href=#397 id=397 data-nosnippet>397</a>      }
+<a href=#398 id=398 data-nosnippet>398</a>      <span class="kw">if </span>consumed {
+<a href=#399 id=399 data-nosnippet>399</a>        i = j;
+<a href=#400 id=400 data-nosnippet>400</a>        <span class="kw">continue</span>;
+<a href=#401 id=401 data-nosnippet>401</a>      }
+<a href=#402 id=402 data-nosnippet>402</a>    }
+<a href=#403 id=403 data-nosnippet>403</a>    i += <span class="number">1</span>;
+<a href=#404 id=404 data-nosnippet>404</a>  }
+<a href=#405 id=405 data-nosnippet>405</a>  Tokens::new(out)
+<a href=#406 id=406 data-nosnippet>406</a>}
+<a href=#407 id=407 data-nosnippet>407</a>
+<a href=#408 id=408 data-nosnippet>408</a><span class="doccomment">/// Rewrite horizontal-space macros into `\quad`, so the author/affiliation
+<a href=#409 id=409 data-nosnippet>409</a>/// splitter treats them as separators. `\author{A \hspace{1cm} B \hspace{1cm} C}`
+<a href=#410 id=410 data-nosnippet>410</a>/// (and `\hfill`-separated variants) is a "regular" way to lay out co-authors
+<a href=#411 id=411 data-nosnippet>411</a>/// that LaTeXML's `\and`/`\quad` splitter otherwise misses, collapsing every name
+<a href=#412 id=412 data-nosnippet>412</a>/// into one `&lt;personname&gt;`. `\quad` is already a hard separator in every author /
+<a href=#413 id=413 data-nosnippet>413</a>/// affiliation split set, so rewriting to it needs no new delimiter plumbing.
+<a href=#414 id=414 data-nosnippet>414</a>/// `\hspace`'s optional `*` and mandatory `{len}` argument are consumed together
+<a href=#415 id=415 data-nosnippet>415</a>/// so the length cannot leak as literal text. OXIDIZED_DESIGN #52; witness
+<a href=#416 id=416 data-nosnippet>416</a>/// arXiv:2506.06941 (six authors separated by `\hspace{0.5cm}`).
+<a href=#417 id=417 data-nosnippet>417</a>///
+<a href=#418 id=418 data-nosnippet>418</a>/// A run of two or more spacing commands ([`is_spacing_command`]) between two names at the block's top level is such a
+<a href=#419 id=419 data-nosnippet>419</a>/// separator too (user ruling 2026-10-19, batch 77p): `\textbf{Ann Able}\textsuperscript{1}\;\;\textbf{Bob Baker}`
+<a href=#420 id=420 data-nosnippet>420</a>/// (2610.20409), `Ann Able$^{1}$ \ \ \ \ Bob Baker` (2310.10873), ACL's `Shanshan Wang$^1$~~~~ Derek F. Wong$^1$`
+<a href=#421 id=421 data-nosnippet>421</a>/// (2603.20851; `~~`, 2605.30274), 1702.05821, 1508.00093, 2009.12421 (OXIDIZED_DESIGN #52(o)). One spacing command
+<a href=#422 id=422 data-nosnippet>422</a>/// stays inside a name (`J.~Smith`, `Ann\ Able`, `van~der~Berg`); see [`spacing_run_separator`] for what counts as the
+<a href=#423 id=423 data-nosnippet>423</a>/// names on either side. A run or `\quad` inside a group parts nothing here: neurips_2024's 2406.09417 (one tie between
+<a href=#424 id=424 data-nosnippet>424</a>/// spaces) and 2603.20775 (`{\large \bf A \quad B}`), named with the ruling, are that shape.
+<a href=#425 id=425 data-nosnippet>425</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>normalize_hspace_separators(tokens: Tokens) -&gt; Tokens {
+<a href=#426 id=426 data-nosnippet>426</a>  <span class="doccomment">/// A length written as zero, `0pt`, `0.0mm`, `0`, `\z@`: an `\hspace` of it is no separator.
+<a href=#427 id=427 data-nosnippet>427</a>  </span><span class="kw">static </span>ZERO_LENGTH: std::sync::LazyLock&lt;Regex&gt; = std::sync::LazyLock::new(|| {
+<a href=#428 id=428 data-nosnippet>428</a>    Regex::new(<span class="string">r"^\s*(?:[+-]?(?:0+(?:\.0*)?|\.0+)\s*(?:pt|mm|cm|in|em|ex|bp|sp|pc|dd|cc|mu)?|\\z@(?:skip)?)\s*$"</span>)
+<a href=#429 id=429 data-nosnippet>429</a>      .unwrap()
+<a href=#430 id=430 data-nosnippet>430</a>  });
+<a href=#431 id=431 data-nosnippet>431</a>  <span class="comment">// (marked as the branch choice reads it, a footnote-symbol mark no mark: `\textbf{Vaibhav Singh}$^{*}$`, 2603.09835)
+<a href=#432 id=432 data-nosnippet>432</a>  </span><span class="kw">let </span>marked_block = has_author_marks(<span class="kw-2">&amp;</span>rewrite_symbol_superscripts(tokens.clone()));
+<a href=#433 id=433 data-nosnippet>433</a>  <span class="kw">let </span>src = spacing_math_unwrapped(tokens.unlist());
+<a href=#434 id=434 data-nosnippet>434</a>  <span class="kw">let </span>n = src.len();
+<a href=#435 id=435 data-nosnippet>435</a>  <span class="kw">let </span><span class="kw-2">mut </span>out: Vec&lt;Token&gt; = Vec::with_capacity(n);
+<a href=#436 id=436 data-nosnippet>436</a>  <span class="comment">// (the group depth and math mode at `src[i]`: a run is a separator only at the top level, outside math; whether a
+<a href=#437 id=437 data-nosnippet>437</a>  // name letter — outside math, outside a mark command's argument, at the top level or inside a group that shows its
+<a href=#438 id=438 data-nosnippet>438</a>  // letters as name text ([`shows_name_text`]) — came since the last top-level separator, so a run after a
+<a href=#439 id=439 data-nosnippet>439</a>  // line-leading mark is the mark's space, `$\ast$~~Department of Physics`, hep-ph9708397, and one after an icon is
+<a href=#440 id=440 data-nosnippet>440</a>  // the icon's, `\raisebox{-0.3ex}{\includegraphics[height=1.1em]{daedalus.jpg}}\;\;Daedalus Research Team`,
+<a href=#441 id=441 data-nosnippet>441</a>  // 2604.10005; the depth of the mark argument being read)
+<a href=#442 id=442 data-nosnippet>442</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>depth = <span class="number">0usize</span>;
+<a href=#443 id=443 data-nosnippet>443</a>  <span class="kw">let </span><span class="kw-2">mut </span>in_math = <span class="bool-val">false</span>;
+<a href=#444 id=444 data-nosnippet>444</a>  <span class="kw">let </span><span class="kw-2">mut </span>named = <span class="bool-val">false</span>;
+<a href=#445 id=445 data-nosnippet>445</a>  <span class="kw">let </span><span class="kw-2">mut </span>mark_argument: <span class="prelude-ty">Option</span>&lt;usize&gt; = <span class="prelude-val">None</span>;
+<a href=#446 id=446 data-nosnippet>446</a>  <span class="comment">// (for each open group, whether its letters are name text; and the depth of an optional argument being read, whose
+<a href=#447 id=447 data-nosnippet>447</a>  // letters are not, `\includegraphics[height=0.7em]`)
+<a href=#448 id=448 data-nosnippet>448</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>shown: Vec&lt;bool&gt; = Vec::new();
+<a href=#449 id=449 data-nosnippet>449</a>  <span class="kw">let </span><span class="kw-2">mut </span>closed_shown = <span class="bool-val">true</span>;
+<a href=#450 id=450 data-nosnippet>450</a>  <span class="kw">let </span><span class="kw-2">mut </span>optional_argument = <span class="bool-val">false</span>;
+<a href=#451 id=451 data-nosnippet>451</a>  <span class="comment">// (whether the line opens with a mark — an affiliation line, `$^1$The University of Hong Kong~~~~~~$^2$Zhejiang Lab`,
+<a href=#452 id=452 data-nosnippet>452</a>  // 2310.15160 —, where a run before the next mark parts two entries; `None` before its first token)
+<a href=#453 id=453 data-nosnippet>453</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>mark_led: <span class="prelude-ty">Option</span>&lt;bool&gt; = <span class="prelude-val">None</span>;
+<a href=#454 id=454 data-nosnippet>454</a>  <span class="comment">// (whether this is a line of names — the block's first, or the first after an `\and`; a line break ends it — and
+<a href=#455 id=455 data-nosnippet>455</a>  // where in `out` the piece since the last top-level separator starts)
+<a href=#456 id=456 data-nosnippet>456</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>names_line = <span class="bool-val">true</span>;
+<a href=#457 id=457 data-nosnippet>457</a>  <span class="kw">let </span><span class="kw-2">mut </span>piece_start = <span class="number">0usize</span>;
+<a href=#458 id=458 data-nosnippet>458</a>  <span class="comment">// (in an unmarked block, the line break that began this line, where in `out` it stands, after a line of names: a
+<a href=#459 id=459 data-nosnippet>459</a>  // run that parts two names on this line makes it a row of names going on with the one before, the break a `\quad`
+<a href=#460 id=460 data-nosnippet>460</a>  // — `\textbf{Pratham Grover}\\ \textbf{Ramakrishna B.~Bairi}\ \ \textbf{Ritabrata Maiti}`, 2603.09835, where
+<a href=#461 id=461 data-nosnippet>461</a>  // "Ramakrishna B. Bairi" had read as an address line of Pratham Grover; a marked block reads its rows by their marks)
+<a href=#462 id=462 data-nosnippet>462</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>row_break: <span class="prelude-ty">Option</span>&lt;usize&gt; = <span class="prelude-val">None</span>;
+<a href=#463 id=463 data-nosnippet>463</a>  <span class="comment">// (where in `out` the names line starts, and where in `src` the line after it does: a row of names goes on with the
+<a href=#464 id=464 data-nosnippet>464</a>  // names line only when it lists another number of names than it, or a line that is no row of as many entries
+<a href=#465 id=465 data-nosnippet>465</a>  // follows it — [`row_of_names`])
+<a href=#466 id=466 data-nosnippet>466</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>names_start = <span class="number">0usize</span>;
+<a href=#467 id=467 data-nosnippet>467</a>  <span class="kw">let </span><span class="kw-2">mut </span>row_start = <span class="number">0usize</span>;
+<a href=#468 id=468 data-nosnippet>468</a>  <span class="comment">// (where in `src` the last top-level mark or note ended, for an `\enskip` right after it)
+<a href=#469 id=469 data-nosnippet>469</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>mark_end: <span class="prelude-ty">Option</span>&lt;usize&gt; = <span class="prelude-val">None</span>;
+<a href=#470 id=470 data-nosnippet>470</a>  <span class="kw">let </span><span class="kw-2">mut </span>i = <span class="number">0</span>;
+<a href=#471 id=471 data-nosnippet>471</a>  <span class="kw">while </span>i &lt; n {
+<a href=#472 id=472 data-nosnippet>472</a>    <span class="kw">let </span>t = src[i];
+<a href=#473 id=473 data-nosnippet>473</a>    <span class="kw">if </span>depth == <span class="number">0 </span>&amp;&amp; !in_math &amp;&amp; mark_end.is_none_or(|at| at &lt;= i) {
+<a href=#474 id=474 data-nosnippet>474</a>      <span class="kw">let </span>marks = leading_marks_end(<span class="kw-2">&amp;</span>src[i..]);
+<a href=#475 id=475 data-nosnippet>475</a>      <span class="kw">if </span>marks &gt; <span class="number">0 </span>{
+<a href=#476 id=476 data-nosnippet>476</a>        mark_end = <span class="prelude-val">Some</span>(i + marks);
+<a href=#477 id=477 data-nosnippet>477</a>      }
+<a href=#478 id=478 data-nosnippet>478</a>    }
+<a href=#479 id=479 data-nosnippet>479</a>    <span class="kw">if </span>mark_led.is_none() &amp;&amp; t.get_catcode() != Catcode::SPACE &amp;&amp; t != <span class="macro">T_CS!</span>(<span class="string">"\\par"</span>) {
+<a href=#480 id=480 data-nosnippet>480</a>      mark_led = <span class="prelude-val">Some</span>(starts_with_mark(after_leading_markup(<span class="kw-2">&amp;</span>src[i..])));
+<a href=#481 id=481 data-nosnippet>481</a>    }
+<a href=#482 id=482 data-nosnippet>482</a>    <span class="comment">// (the horizontal space a name sets before its own mark or note is the name's, no separator: `Oleg
+<a href=#483 id=483 data-nosnippet>483</a>    // Lychkovskiy\thanks{…}\hspace*{2mm}$^{\rm a,b}$, Sergei Blinnikov\hspace*{2mm}$^{\rm a,c}$`, 0905.3658, where the
+<a href=#484 id=484 data-nosnippet>484</a>    // `\quad` it made parted ", Sergei Blinnikov" off as an affiliation line; `\hspace*{1.3mm}$^{,\ddag}$`, 1312.1414)
+<a href=#485 id=485 data-nosnippet>485</a>    </span><span class="kw">if </span>depth == <span class="number">0
+<a href=#486 id=486 data-nosnippet>486</a>      </span>&amp;&amp; !in_math
+<a href=#487 id=487 data-nosnippet>487</a>      &amp;&amp; named
+<a href=#488 id=488 data-nosnippet>488</a>      &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(end) = space_before_own_mark(<span class="kw-2">&amp;</span>src, i)
+<a href=#489 id=489 data-nosnippet>489</a>    {
+<a href=#490 id=490 data-nosnippet>490</a>      i = end;
+<a href=#491 id=491 data-nosnippet>491</a>      <span class="kw">continue</span>;
+<a href=#492 id=492 data-nosnippet>492</a>    }
+<a href=#493 id=493 data-nosnippet>493</a>    <span class="kw">match </span>t.get_catcode() {
+<a href=#494 id=494 data-nosnippet>494</a>      Catcode::BEGIN =&gt; {
+<a href=#495 id=495 data-nosnippet>495</a>        depth += <span class="number">1</span>;
+<a href=#496 id=496 data-nosnippet>496</a>        <span class="kw">if </span>mark_argument.is_none() &amp;&amp; out.last().is_some_and(is_mark_command) {
+<a href=#497 id=497 data-nosnippet>497</a>          mark_argument = <span class="prelude-val">Some</span>(depth);
+<a href=#498 id=498 data-nosnippet>498</a>        }
+<a href=#499 id=499 data-nosnippet>499</a>        <span class="kw">let </span>outer = shown.last().copied().unwrap_or(<span class="bool-val">true</span>);
+<a href=#500 id=500 data-nosnippet>500</a>        shown.push(outer &amp;&amp; !optional_argument &amp;&amp; shows_name_text(out.last(), closed_shown));
+<a href=#501 id=501 data-nosnippet>501</a>      },
+<a href=#502 id=502 data-nosnippet>502</a>      Catcode::END =&gt; {
+<a href=#503 id=503 data-nosnippet>503</a>        <span class="kw">if </span>mark_argument == <span class="prelude-val">Some</span>(depth) {
+<a href=#504 id=504 data-nosnippet>504</a>          mark_argument = <span class="prelude-val">None</span>;
+<a href=#505 id=505 data-nosnippet>505</a>        }
+<a href=#506 id=506 data-nosnippet>506</a>        depth = depth.saturating_sub(<span class="number">1</span>);
+<a href=#507 id=507 data-nosnippet>507</a>        closed_shown = shown.pop().unwrap_or(<span class="bool-val">true</span>);
+<a href=#508 id=508 data-nosnippet>508</a>      },
+<a href=#509 id=509 data-nosnippet>509</a>      Catcode::MATH =&gt; in_math = !in_math,
+<a href=#510 id=510 data-nosnippet>510</a>      Catcode::LETTER
+<a href=#511 id=511 data-nosnippet>511</a>        <span class="kw">if </span>!in_math
+<a href=#512 id=512 data-nosnippet>512</a>          &amp;&amp; mark_argument.is_none()
+<a href=#513 id=513 data-nosnippet>513</a>          &amp;&amp; !optional_argument
+<a href=#514 id=514 data-nosnippet>514</a>          &amp;&amp; shown.last().copied().unwrap_or(<span class="bool-val">true</span>) =&gt;
+<a href=#515 id=515 data-nosnippet>515</a>      {
+<a href=#516 id=516 data-nosnippet>516</a>        named = <span class="bool-val">true
+<a href=#517 id=517 data-nosnippet>517</a>      </span>},
+<a href=#518 id=518 data-nosnippet>518</a>      Catcode::OTHER
+<a href=#519 id=519 data-nosnippet>519</a>        <span class="kw">if </span>t == <span class="macro">T_OTHER!</span>(<span class="string">"["</span>) &amp;&amp; out.last().is_some_and(|p| p.get_catcode() == Catcode::CS) =&gt;
+<a href=#520 id=520 data-nosnippet>520</a>      {
+<a href=#521 id=521 data-nosnippet>521</a>        optional_argument = <span class="bool-val">true
+<a href=#522 id=522 data-nosnippet>522</a>      </span>},
+<a href=#523 id=523 data-nosnippet>523</a>      Catcode::OTHER <span class="kw">if </span>t == <span class="macro">T_OTHER!</span>(<span class="string">"]"</span>) =&gt; optional_argument = <span class="bool-val">false</span>,
+<a href=#524 id=524 data-nosnippet>524</a>      <span class="kw">_ if </span>depth == <span class="number">0 </span>&amp;&amp; is_line_separator(<span class="kw-2">&amp;</span>t) =&gt; {
+<a href=#525 id=525 data-nosnippet>525</a>        (named, mark_led) = (<span class="bool-val">false</span>, <span class="prelude-val">None</span>);
+<a href=#526 id=526 data-nosnippet>526</a>        piece_start = out.len() + <span class="number">1</span>;
+<a href=#527 id=527 data-nosnippet>527</a>        <span class="kw">if </span>t == <span class="macro">T_CS!</span>(<span class="string">"\\\\"</span>) || t == <span class="macro">T_CS!</span>(<span class="string">"\\newline"</span>) {
+<a href=#528 id=528 data-nosnippet>528</a>          row_break = (names_line &amp;&amp; !marked_block).then_some(out.len());
+<a href=#529 id=529 data-nosnippet>529</a>          row_start = i + <span class="number">1</span>;
+<a href=#530 id=530 data-nosnippet>530</a>          names_line = <span class="bool-val">false</span>;
+<a href=#531 id=531 data-nosnippet>531</a>        } <span class="kw">else if </span>t == <span class="macro">T_CS!</span>(<span class="string">"\\and"</span>) || t == <span class="macro">T_CS!</span>(<span class="string">"\\And"</span>) || t == <span class="macro">T_CS!</span>(<span class="string">"\\AND"</span>) {
+<a href=#532 id=532 data-nosnippet>532</a>          (names_line, row_break) = (<span class="bool-val">true</span>, <span class="prelude-val">None</span>);
+<a href=#533 id=533 data-nosnippet>533</a>          names_start = out.len() + <span class="number">1</span>;
+<a href=#534 id=534 data-nosnippet>534</a>        }
+<a href=#535 id=535 data-nosnippet>535</a>      },
+<a href=#536 id=536 data-nosnippet>536</a>      <span class="kw">_ </span>=&gt; {},
+<a href=#537 id=537 data-nosnippet>537</a>    }
+<a href=#538 id=538 data-nosnippet>538</a>    <span class="comment">// (a line opens with a mark only in a marked block, a mark being what the branch choice reads as one: in a block
+<a href=#539 id=539 data-nosnippet>539</a>    // marked only with footnote symbols — no mark there, [`rewrite_symbol_superscripts`] — a symbol-led line is an
+<a href=#540 id=540 data-nosnippet>540</a>    // affiliation line read as any other line off the names line, `$^{*}$\daplablogo\ Columbia University\ \ \
+<a href=#541 id=541 data-nosnippet>541</a>    // $^{\dagger}$University at Buffalo` (2609.35807; was a creator "†University at Buffalo", 77p r4 re-review))
+<a href=#542 id=542 data-nosnippet>542</a>    </span><span class="kw">let </span>entry_mark_led = marked_block &amp;&amp; mark_led == <span class="prelude-val">Some</span>(<span class="bool-val">true</span>);
+<a href=#543 id=543 data-nosnippet>543</a>    <span class="kw">if </span>depth == <span class="number">0
+<a href=#544 id=544 data-nosnippet>544</a>      </span>&amp;&amp; !in_math
+<a href=#545 id=545 data-nosnippet>545</a>      &amp;&amp; named
+<a href=#546 id=546 data-nosnippet>546</a>      &amp;&amp; is_spacing_command(<span class="kw-2">&amp;</span>t)
+<a href=#547 id=547 data-nosnippet>547</a>      &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(run) = spacing_run_separator(<span class="kw-2">&amp;</span>src, <span class="kw-2">&amp;</span>out, i, RunContext {
+<a href=#548 id=548 data-nosnippet>548</a>        mark_led: entry_mark_led,
+<a href=#549 id=549 data-nosnippet>549</a>        names_line,
+<a href=#550 id=550 data-nosnippet>550</a>        piece_start,
+<a href=#551 id=551 data-nosnippet>551</a>      })
+<a href=#552 id=552 data-nosnippet>552</a>      <span class="comment">// (in an unmarked block, off the names line, a run between two names parts them only on a row of names going on
+<a href=#553 id=553 data-nosnippet>553</a>      // with the names line — the line right after it, [`row_of_names`]: not institutions under the names, `Ann
+<a href=#554 id=554 data-nosnippet>554</a>      // Able~~~~Bob Baker \\ Carnegie Mellon~~~~Johns Hopkins`, nor names under an affiliation, `Ann Able \\ Univ A
+<a href=#555 id=555 data-nosnippet>555</a>      // \\ Bob Baker~~~~Cat Cole`, which read as the affiliation lines they stand as, nor on a line a footnote symbol
+<a href=#556 id=556 data-nosnippet>556</a>      // leads, `$^{*}$Univ A~~~~$^{\dagger}$Univ B` (2609.35807); a marked block reads its lines by their marks)
+<a href=#557 id=557 data-nosnippet>557</a>      </span>&amp;&amp; (names_line
+<a href=#558 id=558 data-nosnippet>558</a>        || marked_block
+<a href=#559 id=559 data-nosnippet>559</a>        || row_break
+<a href=#560 id=560 data-nosnippet>560</a>          .is_some_and(|at| row_of_names(<span class="kw-2">&amp;</span>out[names_start.min(at)..at], <span class="kw-2">&amp;</span>src[row_start..])))
+<a href=#561 id=561 data-nosnippet>561</a>    {
+<a href=#562 id=562 data-nosnippet>562</a>      <span class="kw">if </span>!names_line
+<a href=#563 id=563 data-nosnippet>563</a>        &amp;&amp; !entry_mark_led
+<a href=#564 id=564 data-nosnippet>564</a>        &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(at) = row_break.take()
+<a href=#565 id=565 data-nosnippet>565</a>      {
+<a href=#566 id=566 data-nosnippet>566</a>        out[at] = <span class="macro">T_CS!</span>(<span class="string">"\\quad"</span>);
+<a href=#567 id=567 data-nosnippet>567</a>        names_line = <span class="bool-val">true</span>;
+<a href=#568 id=568 data-nosnippet>568</a>      }
+<a href=#569 id=569 data-nosnippet>569</a>      <span class="kw">if </span>run.and_word {
+<a href=#570 id=570 data-nosnippet>570</a>        out.extend([
+<a href=#571 id=571 data-nosnippet>571</a>          <span class="macro">T_SPACE!</span>(),
+<a href=#572 id=572 data-nosnippet>572</a>          <span class="macro">T_LETTER!</span>(<span class="string">"a"</span>),
+<a href=#573 id=573 data-nosnippet>573</a>          <span class="macro">T_LETTER!</span>(<span class="string">"n"</span>),
+<a href=#574 id=574 data-nosnippet>574</a>          <span class="macro">T_LETTER!</span>(<span class="string">"d"</span>),
+<a href=#575 id=575 data-nosnippet>575</a>          <span class="macro">T_SPACE!</span>(),
+<a href=#576 id=576 data-nosnippet>576</a>        ]);
+<a href=#577 id=577 data-nosnippet>577</a>      } <span class="kw">else </span>{
+<a href=#578 id=578 data-nosnippet>578</a>        out.push(<span class="macro">T_CS!</span>(<span class="string">"\\quad"</span>));
+<a href=#579 id=579 data-nosnippet>579</a>      }
+<a href=#580 id=580 data-nosnippet>580</a>      (named, mark_led) = (<span class="bool-val">false</span>, <span class="prelude-val">None</span>);
+<a href=#581 id=581 data-nosnippet>581</a>      piece_start = out.len();
+<a href=#582 id=582 data-nosnippet>582</a>      i = run.end;
+<a href=#583 id=583 data-nosnippet>583</a>      <span class="kw">continue</span>;
+<a href=#584 id=584 data-nosnippet>584</a>    }
+<a href=#585 id=585 data-nosnippet>585</a>    <span class="kw">if </span>t == <span class="macro">T_CS!</span>(<span class="string">"\\hspace"</span>) {
+<a href=#586 id=586 data-nosnippet>586</a>      <span class="kw">let </span><span class="kw-2">mut </span>j = i + <span class="number">1</span>;
+<a href=#587 id=587 data-nosnippet>587</a>      <span class="comment">// optional `*` (\hspace*)
+<a href=#588 id=588 data-nosnippet>588</a>      </span><span class="kw">if </span>j &lt; n &amp;&amp; src[j] == <span class="macro">T_OTHER!</span>(<span class="string">"*"</span>) {
+<a href=#589 id=589 data-nosnippet>589</a>        j += <span class="number">1</span>;
+<a href=#590 id=590 data-nosnippet>590</a>      }
+<a href=#591 id=591 data-nosnippet>591</a>      <span class="comment">// mandatory `{len}` group
+<a href=#592 id=592 data-nosnippet>592</a>      </span><span class="kw">let </span>length_start = j + <span class="number">1</span>;
+<a href=#593 id=593 data-nosnippet>593</a>      <span class="kw">if </span>j &lt; n &amp;&amp; src[j] == <span class="macro">T_BEGIN!</span>() {
+<a href=#594 id=594 data-nosnippet>594</a>        <span class="kw">let </span><span class="kw-2">mut </span>depth = <span class="number">1usize</span>;
+<a href=#595 id=595 data-nosnippet>595</a>        j += <span class="number">1</span>;
+<a href=#596 id=596 data-nosnippet>596</a>        <span class="kw">while </span>j &lt; n &amp;&amp; depth &gt; <span class="number">0 </span>{
+<a href=#597 id=597 data-nosnippet>597</a>          <span class="kw">if </span>src[j] == <span class="macro">T_BEGIN!</span>() {
+<a href=#598 id=598 data-nosnippet>598</a>            depth += <span class="number">1</span>;
+<a href=#599 id=599 data-nosnippet>599</a>          } <span class="kw">else if </span>src[j] == <span class="macro">T_END!</span>() {
+<a href=#600 id=600 data-nosnippet>600</a>            depth -= <span class="number">1</span>;
+<a href=#601 id=601 data-nosnippet>601</a>          }
+<a href=#602 id=602 data-nosnippet>602</a>          j += <span class="number">1</span>;
+<a href=#603 id=603 data-nosnippet>603</a>        }
+<a href=#604 id=604 data-nosnippet>604</a>      }
+<a href=#605 id=605 data-nosnippet>605</a>      <span class="comment">// (a zero length inside a group, a mark's argument or math prints no gap and parts nothing:
+<a href=#606 id=606 data-nosnippet>606</a>      // `\textsuperscript{1\hspace{0pt}2}` prints the label 12, as `\hskip0pt` is no spacing,
+<a href=#607 id=607 data-nosnippet>607</a>      // `util_text::is_blank_item`; at the top level of the author line it stays the `\quad` that parts two names,
+<a href=#608 id=608 data-nosnippet>608</a>      // `Ann Able\hspace{0pt}Bob Baker` two creators)
+<a href=#609 id=609 data-nosnippet>609</a>      </span><span class="kw">let </span>zero = (depth &gt; <span class="number">0 </span>|| in_math || mark_argument.is_some())
+<a href=#610 id=610 data-nosnippet>610</a>        &amp;&amp; length_start &lt; j
+<a href=#611 id=611 data-nosnippet>611</a>        &amp;&amp; ZERO_LENGTH.is_match(<span class="kw-2">&amp;</span>Tokens::new(src[length_start..j - <span class="number">1</span>].to_vec()).to_string());
+<a href=#612 id=612 data-nosnippet>612</a>      <span class="kw">if </span>!zero {
+<a href=#613 id=613 data-nosnippet>613</a>        out.push(<span class="macro">T_CS!</span>(<span class="string">"\\quad"</span>));
+<a href=#614 id=614 data-nosnippet>614</a>      }
+<a href=#615 id=615 data-nosnippet>615</a>      i = j;
+<a href=#616 id=616 data-nosnippet>616</a>      <span class="kw">continue</span>;
+<a href=#617 id=617 data-nosnippet>617</a>    }
+<a href=#618 id=618 data-nosnippet>618</a>    <span class="kw">if </span>t == <span class="macro">T_CS!</span>(<span class="string">"\\hfill"</span>) || t == <span class="macro">T_CS!</span>(<span class="string">"\\hfil"</span>) {
+<a href=#619 id=619 data-nosnippet>619</a>      out.push(<span class="macro">T_CS!</span>(<span class="string">"\\quad"</span>));
+<a href=#620 id=620 data-nosnippet>620</a>      i += <span class="number">1</span>;
+<a href=#621 id=621 data-nosnippet>621</a>      <span class="kw">continue</span>;
+<a href=#622 id=622 data-nosnippet>622</a>    }
+<a href=#623 id=623 data-nosnippet>623</a>    <span class="comment">// (latex.ltx's `\enskip`, `\hskip.5em\relax`, is such a space too, at the top level right after a mark or note:
+<a href=#624 id=624 data-nosnippet>624</a>    // `\normalsize Dominic W.\ Berry\thanks{…} \enskip \normalsize Andrew M.\ Childs\thanks{…}…`, 1312.1414, five
+<a href=#625 id=625 data-nosnippet>625</a>    // names read as one; elsewhere it is a spacing command, one of which stays inside a name, `J.\enskip Smith$^{1}$`)
+<a href=#626 id=626 data-nosnippet>626</a>    </span><span class="kw">if </span>t == <span class="macro">T_CS!</span>(<span class="string">"\\enskip"</span>)
+<a href=#627 id=627 data-nosnippet>627</a>      &amp;&amp; depth == <span class="number">0
+<a href=#628 id=628 data-nosnippet>628</a>      </span>&amp;&amp; !in_math
+<a href=#629 id=629 data-nosnippet>629</a>      &amp;&amp; mark_end.is_some_and(|at| src[at..i].iter().all(|u| u.get_catcode() == Catcode::SPACE))
+<a href=#630 id=630 data-nosnippet>630</a>    {
+<a href=#631 id=631 data-nosnippet>631</a>      out.push(<span class="macro">T_CS!</span>(<span class="string">"\\quad"</span>));
+<a href=#632 id=632 data-nosnippet>632</a>      i += <span class="number">1</span>;
+<a href=#633 id=633 data-nosnippet>633</a>      <span class="kw">continue</span>;
+<a href=#634 id=634 data-nosnippet>634</a>    }
+<a href=#635 id=635 data-nosnippet>635</a>    out.push(t);
+<a href=#636 id=636 data-nosnippet>636</a>    i += <span class="number">1</span>;
+<a href=#637 id=637 data-nosnippet>637</a>  }
+<a href=#638 id=638 data-nosnippet>638</a>  Tokens::new(out)
+<a href=#639 id=639 data-nosnippet>639</a>}
+<a href=#640 id=640 data-nosnippet>640</a>
+<a href=#641 id=641 data-nosnippet>641</a><span class="doccomment">/// The horizontal spaces an author line parts its entries with ([`normalize_hspace_separators`]), which are separators
+<a href=#642 id=642 data-nosnippet>642</a>/// at its top level: `\hspace` (its `*` and length read with it), `\hfill`, `\hfil`, `\quad`, `\qquad`. (Not `\enskip`,
+<a href=#643 id=643 data-nosnippet>643</a>/// a separator only after a mark or note, else a spacing command, [`is_spacing_command`].)
+<a href=#644 id=644 data-nosnippet>644</a></span><span class="kw">fn </span>is_separating_space(t: <span class="kw-2">&amp;</span>Token) -&gt; bool {
+<a href=#645 id=645 data-nosnippet>645</a>  t.get_catcode() == Catcode::CS
+<a href=#646 id=646 data-nosnippet>646</a>    &amp;&amp; t.with_str(|s| <span class="macro">matches!</span>(s, <span class="string">"\\hspace" </span>| <span class="string">"\\hfill" </span>| <span class="string">"\\hfil" </span>| <span class="string">"\\quad" </span>| <span class="string">"\\qquad"</span>))
+<a href=#647 id=647 data-nosnippet>647</a>}
+<a href=#648 id=648 data-nosnippet>648</a>
+<a href=#649 id=649 data-nosnippet>649</a><span class="doccomment">/// The run of horizontal space that opens `tokens` — spaces, separating spaces ([`is_separating_space`], `\hspace`'s `*`
+<a href=#650 id=650 data-nosnippet>650</a>/// and length read with it) and spacing commands ([`is_spacing_command`]) —: where it ends, how many spacing commands
+<a href=#651 id=651 data-nosnippet>651</a>/// it holds, and whether it holds a separating space.
+<a href=#652 id=652 data-nosnippet>652</a></span><span class="kw">fn </span>horizontal_space_run(tokens: <span class="kw-2">&amp;</span>[Token]) -&gt; (usize, usize, bool) {
+<a href=#653 id=653 data-nosnippet>653</a>  <span class="kw">let </span>(<span class="kw-2">mut </span>end, <span class="kw-2">mut </span>commands, <span class="kw-2">mut </span>separating) = (<span class="number">0</span>, <span class="number">0</span>, <span class="bool-val">false</span>);
+<a href=#654 id=654 data-nosnippet>654</a>  <span class="kw">while let </span><span class="prelude-val">Some</span>(t) = tokens.get(end) {
+<a href=#655 id=655 data-nosnippet>655</a>    <span class="kw">if </span><span class="kw-2">*</span>t == <span class="macro">T_CS!</span>(<span class="string">"\\hspace"</span>) {
+<a href=#656 id=656 data-nosnippet>656</a>      separating = <span class="bool-val">true</span>;
+<a href=#657 id=657 data-nosnippet>657</a>      end += <span class="number">1</span>;
+<a href=#658 id=658 data-nosnippet>658</a>      <span class="kw">if </span>tokens.get(end) == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="macro">T_OTHER!</span>(<span class="string">"*"</span>)) {
+<a href=#659 id=659 data-nosnippet>659</a>        end += <span class="number">1</span>;
+<a href=#660 id=660 data-nosnippet>660</a>      }
+<a href=#661 id=661 data-nosnippet>661</a>      end = skip_group(tokens, end);
+<a href=#662 id=662 data-nosnippet>662</a>    } <span class="kw">else if </span>is_separating_space(t) {
+<a href=#663 id=663 data-nosnippet>663</a>      separating = <span class="bool-val">true</span>;
+<a href=#664 id=664 data-nosnippet>664</a>      end += <span class="number">1</span>;
+<a href=#665 id=665 data-nosnippet>665</a>    } <span class="kw">else if </span>is_spacing_command(t) {
+<a href=#666 id=666 data-nosnippet>666</a>      commands += <span class="number">1</span>;
+<a href=#667 id=667 data-nosnippet>667</a>      end += <span class="number">1</span>;
+<a href=#668 id=668 data-nosnippet>668</a>    } <span class="kw">else if </span>t.get_catcode() == Catcode::SPACE {
+<a href=#669 id=669 data-nosnippet>669</a>      end += <span class="number">1</span>;
+<a href=#670 id=670 data-nosnippet>670</a>    } <span class="kw">else </span>{
+<a href=#671 id=671 data-nosnippet>671</a>      <span class="kw">break</span>;
+<a href=#672 id=672 data-nosnippet>672</a>    }
+<a href=#673 id=673 data-nosnippet>673</a>  }
+<a href=#674 id=674 data-nosnippet>674</a>  (end, commands, separating)
+<a href=#675 id=675 data-nosnippet>675</a>}
+<a href=#676 id=676 data-nosnippet>676</a>
+<a href=#677 id=677 data-nosnippet>677</a><span class="doccomment">/// Where a run of horizontal space that starts at `src[start]` with a separating space ([`is_separating_space`]) ends,
+<a href=#678 id=678 data-nosnippet>678</a>/// when what follows it is a mark or a note of the name before it ([`leading_marks_end`]: `$^{a,b}$`,
+<a href=#679 id=679 data-nosnippet>679</a>/// `\textsuperscript{1}`, `\thanks{…}`) that no entry text follows — a comma, `;`, the word "and", a separator, a line
+<a href=#680 id=680 data-nosnippet>680</a>/// break, a separating run of spacing (a separating space, or two or more spacing commands, OXIDIZED_DESIGN #52(o)) or
+<a href=#681 id=681 data-nosnippet>681</a>/// the end come after it —, so the space is the name's: `Oleg L.\hspace*{2mm}$^{\rm a,b}$, Sergei B.` (0905.3658). A
+<a href=#682 id=682 data-nosnippet>682</a>/// `\footnotemark[n]` is such a mark here, `\protect` before a mark no text ([`own_marks_end`]).
+<a href=#683 id=683 data-nosnippet>683</a>/// `None` before a mark that leads an entry (`$^1$Univ A\quad$^2$Univ B`, an affiliation line's two entries; with one
+<a href=#684 id=684 data-nosnippet>684</a>/// tie or control space after the mark, the entry's own, `$^1$~Univ A\quad$^2$~Univ B` and `\textsuperscript{2}\ Univ
+<a href=#685 id=685 data-nosnippet>685</a>/// B`, whose two universities read as one) and before anything else.
+<a href=#686 id=686 data-nosnippet>686</a></span><span class="kw">fn </span>space_before_own_mark(src: <span class="kw-2">&amp;</span>[Token], start: usize) -&gt; <span class="prelude-ty">Option</span>&lt;usize&gt; {
+<a href=#687 id=687 data-nosnippet>687</a>  <span class="kw">if </span>!src.get(start).is_some_and(is_separating_space) {
+<a href=#688 id=688 data-nosnippet>688</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#689 id=689 data-nosnippet>689</a>  }
+<a href=#690 id=690 data-nosnippet>690</a>  <span class="kw">let </span>end = start + horizontal_space_run(<span class="kw-2">&amp;</span>src[start..]).<span class="number">0</span>;
+<a href=#691 id=691 data-nosnippet>691</a>  <span class="kw">let </span>marks = own_marks_end(<span class="kw-2">&amp;</span>src[end..]);
+<a href=#692 id=692 data-nosnippet>692</a>  <span class="kw">if </span>marks == <span class="number">0 </span>{
+<a href=#693 id=693 data-nosnippet>693</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#694 id=694 data-nosnippet>694</a>  }
+<a href=#695 id=695 data-nosnippet>695</a>  <span class="kw">let </span>rest = <span class="kw-2">&amp;</span>src[end + marks..];
+<a href=#696 id=696 data-nosnippet>696</a>  <span class="comment">// (the spacing after the marks: a separating run ends the entry there — an `\enskip` too, which right after a mark or
+<a href=#697 id=697 data-nosnippet>697</a>  // note is a separator, `Childs\thanks{…}\hspace*{1.1mm}$^{,}$\thanks{…} \enskip \normalsize Richard Cleve`,
+<a href=#698 id=698 data-nosnippet>698</a>  // 1312.1414 —; one other spacing command, and the spaces around it, is the next entry's, which the token after it
+<a href=#699 id=699 data-nosnippet>699</a>  // tells)
+<a href=#700 id=700 data-nosnippet>700</a>  </span><span class="kw">let </span>(after, commands, separating) = horizontal_space_run(rest);
+<a href=#701 id=701 data-nosnippet>701</a>  <span class="kw">if </span>separating || commands &gt;= <span class="number">2 </span>|| rest[..after].contains(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\enskip"</span>)) {
+<a href=#702 id=702 data-nosnippet>702</a>    <span class="kw">return </span><span class="prelude-val">Some</span>(end);
+<a href=#703 id=703 data-nosnippet>703</a>  }
+<a href=#704 id=704 data-nosnippet>704</a>  <span class="kw">let </span>rest = <span class="kw-2">&amp;</span>rest[after..];
+<a href=#705 id=705 data-nosnippet>705</a>  <span class="kw">let </span>own = <span class="kw">match </span>rest.first() {
+<a href=#706 id=706 data-nosnippet>706</a>    <span class="prelude-val">None </span>=&gt; <span class="bool-val">true</span>,
+<a href=#707 id=707 data-nosnippet>707</a>    <span class="prelude-val">Some</span>(t) <span class="kw">if </span><span class="kw-2">*</span>t == <span class="macro">T_OTHER!</span>(<span class="string">","</span>) || <span class="kw-2">*</span>t == <span class="macro">T_OTHER!</span>(<span class="string">";"</span>) || <span class="kw-2">*</span>t == <span class="macro">T_END!</span>() =&gt; <span class="bool-val">true</span>,
+<a href=#708 id=708 data-nosnippet>708</a>    <span class="prelude-val">Some</span>(t) <span class="kw">if </span>is_line_separator(t) || <span class="kw-2">*</span>t == <span class="macro">T_CS!</span>(<span class="string">"\\par"</span>) =&gt; <span class="bool-val">true</span>,
+<a href=#709 id=709 data-nosnippet>709</a>    <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; and_word_end(rest, <span class="bool-val">false</span>).is_some(),
+<a href=#710 id=710 data-nosnippet>710</a>  };
+<a href=#711 id=711 data-nosnippet>711</a>  own.then_some(end)
+<a href=#712 id=712 data-nosnippet>712</a>}
+<a href=#713 id=713 data-nosnippet>713</a>
+<a href=#714 id=714 data-nosnippet>714</a><span class="doccomment">/// [`leading_marks_end`], with what a name also sets as its own mark after a space: a `\footnotemark[n]`, and `\protect`
+<a href=#715 id=715 data-nosnippet>715</a>/// before a mark (`Zhengyi Han\hspace{0.1em}\protect\footnotemark[1]`, 2609.40220, a creator of the mark alone once
+<a href=#716 id=716 data-nosnippet>716</a>/// authblk's gate read the space, `has_author_block_separator`).
+<a href=#717 id=717 data-nosnippet>717</a></span><span class="kw">fn </span>own_marks_end(tokens: <span class="kw-2">&amp;</span>[Token]) -&gt; usize {
+<a href=#718 id=718 data-nosnippet>718</a>  <span class="kw">let </span><span class="kw-2">mut </span>end = <span class="number">0</span>;
+<a href=#719 id=719 data-nosnippet>719</a>  <span class="kw">loop </span>{
+<a href=#720 id=720 data-nosnippet>720</a>    <span class="kw">let </span>at = end + usize::from(tokens.get(end) == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\protect"</span>)));
+<a href=#721 id=721 data-nosnippet>721</a>    <span class="kw">let </span>next = <span class="kw">if </span>tokens.get(at).is_some_and(is_footnote_mark) {
+<a href=#722 id=722 data-nosnippet>722</a>      <span class="kw">let </span>optional = (tokens.get(at + <span class="number">1</span>) == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="macro">T_OTHER!</span>(<span class="string">"["</span>)))
+<a href=#723 id=723 data-nosnippet>723</a>        .then(|| tokens[at + <span class="number">1</span>..].iter().position(|t| <span class="kw-2">*</span>t == <span class="macro">T_OTHER!</span>(<span class="string">"]"</span>)))
+<a href=#724 id=724 data-nosnippet>724</a>        .flatten();
+<a href=#725 id=725 data-nosnippet>725</a>      at + <span class="number">1 </span>+ optional.map_or(<span class="number">0</span>, |close| close + <span class="number">1</span>)
+<a href=#726 id=726 data-nosnippet>726</a>    } <span class="kw">else </span>{
+<a href=#727 id=727 data-nosnippet>727</a>      at + leading_marks_end(<span class="kw-2">&amp;</span>tokens[at..])
+<a href=#728 id=728 data-nosnippet>728</a>    };
+<a href=#729 id=729 data-nosnippet>729</a>    <span class="kw">if </span>next == at {
+<a href=#730 id=730 data-nosnippet>730</a>      <span class="kw">return </span>end;
+<a href=#731 id=731 data-nosnippet>731</a>    }
+<a href=#732 id=732 data-nosnippet>732</a>    end = next;
+<a href=#733 id=733 data-nosnippet>733</a>  }
+<a href=#734 id=734 data-nosnippet>734</a>}
+<a href=#735 id=735 data-nosnippet>735</a>
+<a href=#736 id=736 data-nosnippet>736</a><span class="doccomment">/// `tokens` with each math group of its top level that holds only spacing — `$\qquad$` — written as that spacing,
+<a href=#737 id=737 data-nosnippet>737</a>/// outside math, which the separators read as written so (`Michael J. Wilber$^{1,2}$ $\qquad$ Vitaly
+<a href=#738 id=738 data-nosnippet>738</a>/// Shmatikov$^{1,2}$ $\qquad$ Serge Belongie$^{1,2}$`, 1602.04504, whose three names read as one); and so each brace
+<a href=#739 id=739 data-nosnippet>739</a>/// group of its top level that holds only spacing with a `\quad` or `\qquad` in it, no command's argument (`Byeongjun
+<a href=#740 id=740 data-nosnippet>740</a>/// Park$^{1}${\quad} Byung-Hoon Kim$^{1,2,*}${\quad} …\\ $^{1}$EverEx{\quad}$^{2}$Yonsei University`, 2609.03563:
+<a href=#741 id=741 data-nosnippet>741</a>/// one creator, its institutions one; a glue's group changes nothing, OXIDIZED_DESIGN_DIVERGENCES #897).
+<a href=#742 id=742 data-nosnippet>742</a></span><span class="kw">fn </span>spacing_math_unwrapped(tokens: Vec&lt;Token&gt;) -&gt; Vec&lt;Token&gt; {
+<a href=#743 id=743 data-nosnippet>743</a>  <span class="kw">let </span>spacing = |t: <span class="kw-2">&amp;</span>Token| {
+<a href=#744 id=744 data-nosnippet>744</a>    t.get_catcode() == Catcode::SPACE
+<a href=#745 id=745 data-nosnippet>745</a>      || is_spacing_command(t)
+<a href=#746 id=746 data-nosnippet>746</a>      || (t.get_catcode() == Catcode::CS &amp;&amp; t.with_str(|s| <span class="macro">matches!</span>(s, <span class="string">"\\quad" </span>| <span class="string">"\\qquad"</span>)))
+<a href=#747 id=747 data-nosnippet>747</a>  };
+<a href=#748 id=748 data-nosnippet>748</a>  <span class="kw">let </span><span class="kw-2">mut </span>out = Vec::with_capacity(tokens.len());
+<a href=#749 id=749 data-nosnippet>749</a>  <span class="kw">let </span><span class="kw-2">mut </span>depth = <span class="number">0usize</span>;
+<a href=#750 id=750 data-nosnippet>750</a>  <span class="kw">let </span><span class="kw-2">mut </span>in_math = <span class="bool-val">false</span>;
+<a href=#751 id=751 data-nosnippet>751</a>  <span class="kw">let </span><span class="kw-2">mut </span>i = <span class="number">0</span>;
+<a href=#752 id=752 data-nosnippet>752</a>  <span class="kw">while </span>i &lt; tokens.len() {
+<a href=#753 id=753 data-nosnippet>753</a>    <span class="kw">let </span>t = tokens[i];
+<a href=#754 id=754 data-nosnippet>754</a>    <span class="kw">match </span>t.get_catcode() {
+<a href=#755 id=755 data-nosnippet>755</a>      Catcode::BEGIN
+<a href=#756 id=756 data-nosnippet>756</a>        <span class="kw">if </span>depth == <span class="number">0
+<a href=#757 id=757 data-nosnippet>757</a>          </span>&amp;&amp; !in_math
+<a href=#758 id=758 data-nosnippet>758</a>          &amp;&amp; !out.last().is_some_and(|p: <span class="kw-2">&amp;</span>Token| {
+<a href=#759 id=759 data-nosnippet>759</a>            p.get_catcode() == Catcode::CS || <span class="kw-2">*</span>p == <span class="macro">T_OTHER!</span>(<span class="string">"*"</span>) || <span class="kw-2">*</span>p == <span class="macro">T_OTHER!</span>(<span class="string">"]"</span>)
+<a href=#760 id=760 data-nosnippet>760</a>          }) =&gt;
+<a href=#761 id=761 data-nosnippet>761</a>      {
+<a href=#762 id=762 data-nosnippet>762</a>        <span class="kw">let </span>end = skip_group(<span class="kw-2">&amp;</span>tokens, i);
+<a href=#763 id=763 data-nosnippet>763</a>        <span class="kw">let </span>inner = <span class="kw-2">&amp;</span>tokens[i + <span class="number">1</span>..end.saturating_sub(<span class="number">1</span>).max(i + <span class="number">1</span>)];
+<a href=#764 id=764 data-nosnippet>764</a>        <span class="kw">if </span>end &lt;= tokens.len()
+<a href=#765 id=765 data-nosnippet>765</a>          &amp;&amp; tokens[end - <span class="number">1</span>].get_catcode() == Catcode::END
+<a href=#766 id=766 data-nosnippet>766</a>          &amp;&amp; !inner.is_empty()
+<a href=#767 id=767 data-nosnippet>767</a>          &amp;&amp; inner.iter().all(spacing)
+<a href=#768 id=768 data-nosnippet>768</a>          &amp;&amp; inner
+<a href=#769 id=769 data-nosnippet>769</a>            .iter()
+<a href=#770 id=770 data-nosnippet>770</a>            .any(|u| u.with_str(|s| <span class="macro">matches!</span>(s, <span class="string">"\\quad" </span>| <span class="string">"\\qquad"</span>)))
+<a href=#771 id=771 data-nosnippet>771</a>        {
+<a href=#772 id=772 data-nosnippet>772</a>          out.extend(
+<a href=#773 id=773 data-nosnippet>773</a>            inner
+<a href=#774 id=774 data-nosnippet>774</a>              .iter()
+<a href=#775 id=775 data-nosnippet>775</a>              .copied()
+<a href=#776 id=776 data-nosnippet>776</a>              .filter(|u| u.get_catcode() != Catcode::SPACE),
+<a href=#777 id=777 data-nosnippet>777</a>          );
+<a href=#778 id=778 data-nosnippet>778</a>          i = end;
+<a href=#779 id=779 data-nosnippet>779</a>          <span class="kw">continue</span>;
+<a href=#780 id=780 data-nosnippet>780</a>        }
+<a href=#781 id=781 data-nosnippet>781</a>        depth += <span class="number">1</span>;
+<a href=#782 id=782 data-nosnippet>782</a>      },
+<a href=#783 id=783 data-nosnippet>783</a>      Catcode::BEGIN =&gt; depth += <span class="number">1</span>,
+<a href=#784 id=784 data-nosnippet>784</a>      Catcode::END =&gt; depth = depth.saturating_sub(<span class="number">1</span>),
+<a href=#785 id=785 data-nosnippet>785</a>      Catcode::MATH <span class="kw">if </span>depth == <span class="number">0 </span>&amp;&amp; !in_math =&gt; {
+<a href=#786 id=786 data-nosnippet>786</a>        <span class="kw">let </span>close = tokens[i + <span class="number">1</span>..]
+<a href=#787 id=787 data-nosnippet>787</a>          .iter()
+<a href=#788 id=788 data-nosnippet>788</a>          .position(|u| u.get_catcode() == Catcode::MATH);
+<a href=#789 id=789 data-nosnippet>789</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(close) = close {
+<a href=#790 id=790 data-nosnippet>790</a>          <span class="kw">let </span>inner = <span class="kw-2">&amp;</span>tokens[i + <span class="number">1</span>..i + <span class="number">1 </span>+ close];
+<a href=#791 id=791 data-nosnippet>791</a>          <span class="kw">if </span>inner.iter().all(spacing) &amp;&amp; inner.iter().any(|u| u.get_catcode() != Catcode::SPACE) {
+<a href=#792 id=792 data-nosnippet>792</a>            out.extend(
+<a href=#793 id=793 data-nosnippet>793</a>              inner
+<a href=#794 id=794 data-nosnippet>794</a>                .iter()
+<a href=#795 id=795 data-nosnippet>795</a>                .copied()
+<a href=#796 id=796 data-nosnippet>796</a>                .filter(|u| u.get_catcode() != Catcode::SPACE),
+<a href=#797 id=797 data-nosnippet>797</a>            );
+<a href=#798 id=798 data-nosnippet>798</a>            i += close + <span class="number">2</span>;
+<a href=#799 id=799 data-nosnippet>799</a>            <span class="kw">continue</span>;
+<a href=#800 id=800 data-nosnippet>800</a>          }
+<a href=#801 id=801 data-nosnippet>801</a>        }
+<a href=#802 id=802 data-nosnippet>802</a>        in_math = <span class="bool-val">true</span>;
+<a href=#803 id=803 data-nosnippet>803</a>      },
+<a href=#804 id=804 data-nosnippet>804</a>      Catcode::MATH =&gt; in_math = !in_math,
+<a href=#805 id=805 data-nosnippet>805</a>      <span class="kw">_ </span>=&gt; {},
+<a href=#806 id=806 data-nosnippet>806</a>    }
+<a href=#807 id=807 data-nosnippet>807</a>    out.push(t);
+<a href=#808 id=808 data-nosnippet>808</a>    i += <span class="number">1</span>;
+<a href=#809 id=809 data-nosnippet>809</a>  }
+<a href=#810 id=810 data-nosnippet>810</a>  out
+<a href=#811 id=811 data-nosnippet>811</a>}
+<a href=#812 id=812 data-nosnippet>812</a>
+<a href=#813 id=813 data-nosnippet>813</a><span class="doccomment">/// Whether the line after a line of names `names` (as rewritten so far, the rows it already goes on with included) —
+<a href=#814 id=814 data-nosnippet>814</a>/// `rest`, from just after the line break —, which a spacing run parts into names, is a row of more names going on with
+<a href=#815 id=815 data-nosnippet>815</a>/// them rather than the institutions under them, one under each name (`Ann Able~~~~Bob Baker \\ Carnegie
+<a href=#816 id=816 data-nosnippet>816</a>/// Mellon~~~~Johns Hopkins`, a column per author; `Ann Able \\ Carnegie Mellon~~~~Johns Hopkins`). The names line holds
+<a href=#817 id=817 data-nosnippet>817</a>/// two or more names, and the row lists another number of names (2603.09835, 2607.07318, 2603.07624, 2603.16856: rows
+<a href=#818 id=818 data-nosnippet>818</a>/// of five over three, two over four), or a line follows it that is no row of as many entries — the address under all
+<a href=#819 id=819 data-nosnippet>819</a>/// the rows (2605.24414's six names over six over three, then `\textit{JIUTIAN Research}`; 2608.21409's three over
+<a href=#820 id=820 data-nosnippet>820</a>/// three over its e-mail line; 2607.09029's five over five over `LiAuto Inc.`). A row of institutions under the names
+<a href=#821 id=821 data-nosnippet>821</a>/// ends the block, or has a row of as many entries under it (their e-mails). Markup does not tell the two apart:
+<a href=#822 id=822 data-nosnippet>822</a>/// 2607.07318's and 2603.16856's second rows open with `{\bf`/`\bf` under plain first rows.
+<a href=#823 id=823 data-nosnippet>823</a>///
+<a href=#824 id=824 data-nosnippet>824</a>/// A line of addresses under the row says whose they are ([`row_spelled_by_addresses`]): the row is names only when an
+<a href=#825 id=825 data-nosnippet>825</a>/// address spells one of its pieces, or the addresses are as many as the names of both rows together — not institutions
+<a href=#826 id=826 data-nosnippet>826</a>/// over the authors' addresses, `Ann Able~~~~Bob Baker \\ Carnegie Mellon~~~~Johns Hopkins \\
+<a href=#827 id=827 data-nosnippet>827</a>/// \texttt{\{aa,bb\}@x.edu}`, nor three over three over one address (probes v1, v3: were creators "Carnegie Mellon",
+<a href=#828 id=828 data-nosnippet>828</a>/// "Johns Hopkins", 77p r4 re-review).
+<a href=#829 id=829 data-nosnippet>829</a></span><span class="kw">fn </span>row_of_names(names: <span class="kw-2">&amp;</span>[Token], rest: <span class="kw-2">&amp;</span>[Token]) -&gt; bool {
+<a href=#830 id=830 data-nosnippet>830</a>  <span class="kw">let </span>names_count = row_name_count(names);
+<a href=#831 id=831 data-nosnippet>831</a>  <span class="kw">if </span>names_count &lt; <span class="number">2 </span>{
+<a href=#832 id=832 data-nosnippet>832</a>    <span class="kw">return </span><span class="bool-val">false</span>;
+<a href=#833 id=833 data-nosnippet>833</a>  }
+<a href=#834 id=834 data-nosnippet>834</a>  <span class="kw">let </span>rest = after_line_break_options(rest);
+<a href=#835 id=835 data-nosnippet>835</a>  <span class="kw">let </span><span class="kw-2">mut </span>at = rest.iter().position(is_row_break).unwrap_or(rest.len());
+<a href=#836 id=836 data-nosnippet>836</a>  <span class="kw">let </span>row = <span class="kw-2">&amp;</span>rest[..at];
+<a href=#837 id=837 data-nosnippet>837</a>  <span class="kw">let </span>row_count = row_name_count(row);
+<a href=#838 id=838 data-nosnippet>838</a>  <span class="comment">// (the next line that prints something, past the lines of spacing alone: `\vspace{2mm}\\`)
+<a href=#839 id=839 data-nosnippet>839</a>  </span><span class="kw">let </span><span class="kw-2">mut </span>under: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>[Token]&gt; = <span class="prelude-val">None</span>;
+<a href=#840 id=840 data-nosnippet>840</a>  <span class="kw">while </span>rest
+<a href=#841 id=841 data-nosnippet>841</a>    .get(at)
+<a href=#842 id=842 data-nosnippet>842</a>    .is_some_and(|t| <span class="kw-2">*</span>t == <span class="macro">T_CS!</span>(<span class="string">"\\\\"</span>) || <span class="kw-2">*</span>t == <span class="macro">T_CS!</span>(<span class="string">"\\newline"</span>))
+<a href=#843 id=843 data-nosnippet>843</a>  {
+<a href=#844 id=844 data-nosnippet>844</a>    <span class="kw">let </span>start = rest.len() - after_line_break_options(<span class="kw-2">&amp;</span>rest[at + <span class="number">1</span>..]).len();
+<a href=#845 id=845 data-nosnippet>845</a>    <span class="kw">let </span>end = start
+<a href=#846 id=846 data-nosnippet>846</a>      + rest[start..]
+<a href=#847 id=847 data-nosnippet>847</a>        .iter()
+<a href=#848 id=848 data-nosnippet>848</a>        .position(is_row_break)
+<a href=#849 id=849 data-nosnippet>849</a>        .unwrap_or(rest.len() - start);
+<a href=#850 id=850 data-nosnippet>850</a>    <span class="kw">let </span>line = <span class="kw-2">&amp;</span>rest[start..end];
+<a href=#851 id=851 data-nosnippet>851</a>    <span class="kw">if </span>spacing_end(line) &gt; <span class="number">0 </span>{
+<a href=#852 id=852 data-nosnippet>852</a>      under = <span class="prelude-val">Some</span>(line);
+<a href=#853 id=853 data-nosnippet>853</a>      <span class="kw">break</span>;
+<a href=#854 id=854 data-nosnippet>854</a>    }
+<a href=#855 id=855 data-nosnippet>855</a>    at = end;
+<a href=#856 id=856 data-nosnippet>856</a>  }
+<a href=#857 id=857 data-nosnippet>857</a>  <span class="kw">if let </span><span class="prelude-val">Some</span>(addresses) = under.and_then(|line| email_addresses(<span class="kw-2">&amp;</span>Tokens::new(line.to_vec()))) {
+<a href=#858 id=858 data-nosnippet>858</a>    <span class="kw">return </span>addresses.len() == names_count + row_count
+<a href=#859 id=859 data-nosnippet>859</a>      || row_spelled_by_addresses(names, row, <span class="kw-2">&amp;</span>addresses);
+<a href=#860 id=860 data-nosnippet>860</a>  }
+<a href=#861 id=861 data-nosnippet>861</a>  <span class="kw">if </span>row_count != names_count {
+<a href=#862 id=862 data-nosnippet>862</a>    <span class="kw">return </span><span class="bool-val">true</span>;
+<a href=#863 id=863 data-nosnippet>863</a>  }
+<a href=#864 id=864 data-nosnippet>864</a>  under.is_some_and(|line| row_entry_count(line) != names_count)
+<a href=#865 id=865 data-nosnippet>865</a>}
+<a href=#866 id=866 data-nosnippet>866</a>
+<a href=#867 id=867 data-nosnippet>867</a><span class="doccomment">/// Whether one of `addresses` spells a piece of `row` ([`spelled_owners`], the names line's pieces `names` spelled
+<a href=#868 id=868 data-nosnippet>868</a>/// against too, so an address spells the row's piece only when it spells it best).
+<a href=#869 id=869 data-nosnippet>869</a></span><span class="kw">fn </span>row_spelled_by_addresses(names: <span class="kw-2">&amp;</span>[Token], row: <span class="kw-2">&amp;</span>[Token], addresses: <span class="kw-2">&amp;</span>[String]) -&gt; bool {
+<a href=#870 id=870 data-nosnippet>870</a>  <span class="kw">let </span>pieces = |tokens: <span class="kw-2">&amp;</span>[Token]| -&gt; Vec&lt;NameKeys&gt; {
+<a href=#871 id=871 data-nosnippet>871</a>    <span class="kw">let </span><span class="kw-2">mut </span>keys = Vec::new();
+<a href=#872 id=872 data-nosnippet>872</a>    <span class="kw">let </span><span class="kw-2">mut </span>i = <span class="number">0</span>;
+<a href=#873 id=873 data-nosnippet>873</a>    <span class="kw">while </span>i &lt; tokens.len() &amp;&amp; !is_row_break(<span class="kw-2">&amp;</span>tokens[i]) {
+<a href=#874 id=874 data-nosnippet>874</a>      <span class="kw">let </span>piece = next_name_piece(<span class="kw-2">&amp;</span>tokens[i..]);
+<a href=#875 id=875 data-nosnippet>875</a>      <span class="kw">if </span>piece.is_empty() {
+<a href=#876 id=876 data-nosnippet>876</a>        i += <span class="number">1</span>;
+<a href=#877 id=877 data-nosnippet>877</a>        <span class="kw">continue</span>;
+<a href=#878 id=878 data-nosnippet>878</a>      }
+<a href=#879 id=879 data-nosnippet>879</a>      <span class="kw">if </span>has_name_letter(piece) {
+<a href=#880 id=880 data-nosnippet>880</a>        keys.push(NameKeys::of(<span class="kw-2">&amp;</span>Tokens::new(outside_notes(piece))));
+<a href=#881 id=881 data-nosnippet>881</a>      }
+<a href=#882 id=882 data-nosnippet>882</a>      i += piece.len();
+<a href=#883 id=883 data-nosnippet>883</a>    }
+<a href=#884 id=884 data-nosnippet>884</a>    keys
+<a href=#885 id=885 data-nosnippet>885</a>  };
+<a href=#886 id=886 data-nosnippet>886</a>  <span class="kw">let </span><span class="kw-2">mut </span>keys = pieces(names);
+<a href=#887 id=887 data-nosnippet>887</a>  <span class="kw">let </span>row_from = keys.len();
+<a href=#888 id=888 data-nosnippet>888</a>  keys.extend(pieces(row));
+<a href=#889 id=889 data-nosnippet>889</a>  addresses.iter().any(|address| {
+<a href=#890 id=890 data-nosnippet>890</a>    spelled_owners(<span class="kw-2">&amp;</span>keys, address)
+<a href=#891 id=891 data-nosnippet>891</a>      .iter()
+<a href=#892 id=892 data-nosnippet>892</a>      .any(|owner| <span class="kw-2">*</span>owner &gt;= row_from)
+<a href=#893 id=893 data-nosnippet>893</a>  })
+<a href=#894 id=894 data-nosnippet>894</a>}
+<a href=#895 id=895 data-nosnippet>895</a>
+<a href=#896 id=896 data-nosnippet>896</a><span class="doccomment">/// `tokens` after the star and the optional `[…]` argument of the line break before them, and the spaces before each
+<a href=#897 id=897 data-nosnippet>897</a>/// (`\\[0.2em]`, `\\*`).
+<a href=#898 id=898 data-nosnippet>898</a></span><span class="kw">fn </span>after_line_break_options(tokens: <span class="kw-2">&amp;</span>[Token]) -&gt; <span class="kw-2">&amp;</span>[Token] {
+<a href=#899 id=899 data-nosnippet>899</a>  <span class="kw">let </span><span class="kw-2">mut </span>i = tokens
+<a href=#900 id=900 data-nosnippet>900</a>    .iter()
+<a href=#901 id=901 data-nosnippet>901</a>    .take_while(|t| t.get_catcode() == Catcode::SPACE)
+<a href=#902 id=902 data-nosnippet>902</a>    .count();
+<a href=#903 id=903 data-nosnippet>903</a>  <span class="kw">if </span>tokens.get(i) == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="macro">T_OTHER!</span>(<span class="string">"*"</span>)) {
+<a href=#904 id=904 data-nosnippet>904</a>    i += <span class="number">1</span>;
+<a href=#905 id=905 data-nosnippet>905</a>  }
+<a href=#906 id=906 data-nosnippet>906</a>  <span class="kw">if </span>tokens.get(i) == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="macro">T_OTHER!</span>(<span class="string">"["</span>))
+<a href=#907 id=907 data-nosnippet>907</a>    &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(close) = tokens[i..].iter().position(|t| <span class="kw-2">*</span>t == <span class="macro">T_OTHER!</span>(<span class="string">"]"</span>))
+<a href=#908 id=908 data-nosnippet>908</a>  {
+<a href=#909 id=909 data-nosnippet>909</a>    i += close + <span class="number">1</span>;
+<a href=#910 id=910 data-nosnippet>910</a>  }
+<a href=#911 id=911 data-nosnippet>911</a>  <span class="kw-2">&amp;</span>tokens[i..]
+<a href=#912 id=912 data-nosnippet>912</a>}
+<a href=#913 id=913 data-nosnippet>913</a>
+<a href=#914 id=914 data-nosnippet>914</a><span class="doccomment">/// How many entries an author line lists up to its first line break: the pieces between its separators
+<a href=#915 id=915 data-nosnippet>915</a>/// ([`next_name_piece`]) that print text (`\texttt{a@x}~~~~\texttt{b@y}` two).
+<a href=#916 id=916 data-nosnippet>916</a></span><span class="kw">fn </span>row_entry_count(tokens: <span class="kw-2">&amp;</span>[Token]) -&gt; usize {
+<a href=#917 id=917 data-nosnippet>917</a>  <span class="kw">let </span><span class="kw-2">mut </span>count = <span class="number">0</span>;
+<a href=#918 id=918 data-nosnippet>918</a>  <span class="kw">let </span><span class="kw-2">mut </span>i = <span class="number">0</span>;
+<a href=#919 id=919 data-nosnippet>919</a>  <span class="kw">while </span>i &lt; tokens.len() &amp;&amp; !is_row_break(<span class="kw-2">&amp;</span>tokens[i]) {
+<a href=#920 id=920 data-nosnippet>920</a>    <span class="kw">let </span>piece = next_name_piece(<span class="kw-2">&amp;</span>tokens[i..]);
+<a href=#921 id=921 data-nosnippet>921</a>    <span class="kw">if </span>piece.is_empty() {
+<a href=#922 id=922 data-nosnippet>922</a>      i += <span class="number">1</span>;
+<a href=#923 id=923 data-nosnippet>923</a>      <span class="kw">continue</span>;
+<a href=#924 id=924 data-nosnippet>924</a>    }
+<a href=#925 id=925 data-nosnippet>925</a>    <span class="kw">if </span>!visible_name_text(piece).trim().is_empty() {
+<a href=#926 id=926 data-nosnippet>926</a>      count += <span class="number">1</span>;
+<a href=#927 id=927 data-nosnippet>927</a>    }
+<a href=#928 id=928 data-nosnippet>928</a>    i += piece.len();
+<a href=#929 id=929 data-nosnippet>929</a>  }
+<a href=#930 id=930 data-nosnippet>930</a>  count
+<a href=#931 id=931 data-nosnippet>931</a>}
+<a href=#932 id=932 data-nosnippet>932</a>
+<a href=#933 id=933 data-nosnippet>933</a><span class="doccomment">/// A token that ends an author line's row of names: a line break, or the `\and` family.
+<a href=#934 id=934 data-nosnippet>934</a></span><span class="kw">fn </span>is_row_break(t: <span class="kw-2">&amp;</span>Token) -&gt; bool {
+<a href=#935 id=935 data-nosnippet>935</a>  t.with_str(|s| <span class="macro">matches!</span>(s, <span class="string">"\\\\" </span>| <span class="string">"\\newline" </span>| <span class="string">"\\and" </span>| <span class="string">"\\And" </span>| <span class="string">"\\AND"</span>))
+<a href=#936 id=936 data-nosnippet>936</a>}
+<a href=#937 id=937 data-nosnippet>937</a>
+<a href=#938 id=938 data-nosnippet>938</a><span class="doccomment">/// How many names an author line lists up to its first line break ([`is_row_break`]): each piece between its
+<a href=#939 id=939 data-nosnippet>939</a>/// separators ([`next_name_piece`]) with a name letter counts the names its text lists ([`name_count`], "Ann Able and
+<a href=#940 id=940 data-nosnippet>940</a>/// Bob Baker" two), one at least.
+<a href=#941 id=941 data-nosnippet>941</a></span><span class="kw">fn </span>row_name_count(tokens: <span class="kw-2">&amp;</span>[Token]) -&gt; usize {
+<a href=#942 id=942 data-nosnippet>942</a>  <span class="kw">let </span><span class="kw-2">mut </span>count = <span class="number">0</span>;
+<a href=#943 id=943 data-nosnippet>943</a>  <span class="kw">let </span><span class="kw-2">mut </span>i = <span class="number">0</span>;
+<a href=#944 id=944 data-nosnippet>944</a>  <span class="kw">while </span>i &lt; tokens.len() &amp;&amp; !is_row_break(<span class="kw-2">&amp;</span>tokens[i]) {
+<a href=#945 id=945 data-nosnippet>945</a>    <span class="kw">let </span>piece = next_name_piece(<span class="kw-2">&amp;</span>tokens[i..]);
+<a href=#946 id=946 data-nosnippet>946</a>    <span class="kw">if </span>piece.is_empty() {
+<a href=#947 id=947 data-nosnippet>947</a>      i += <span class="number">1</span>;
+<a href=#948 id=948 data-nosnippet>948</a>      <span class="kw">continue</span>;
+<a href=#949 id=949 data-nosnippet>949</a>    }
+<a href=#950 id=950 data-nosnippet>950</a>    <span class="kw">if </span>has_name_letter(piece) {
+<a href=#951 id=951 data-nosnippet>951</a>      count += name_count(visible_name_text(<span class="kw-2">&amp;</span>outside_notes(piece)).trim()).max(<span class="number">1</span>);
+<a href=#952 id=952 data-nosnippet>952</a>    }
+<a href=#953 id=953 data-nosnippet>953</a>    i += piece.len();
+<a href=#954 id=954 data-nosnippet>954</a>  }
+<a href=#955 id=955 data-nosnippet>955</a>  count
+<a href=#956 id=956 data-nosnippet>956</a>}
+<a href=#957 id=957 data-nosnippet>957</a>
+<a href=#958 id=958 data-nosnippet>958</a><span class="doccomment">/// Whether `tokens` open with an author mark: `$^…$` or `\(^…\)` (a math shift before a superscript), a superscript, a
+<a href=#959 id=959 data-nosnippet>959</a>/// mark command ([`is_author_mark`]).
+<a href=#960 id=960 data-nosnippet>960</a></span><span class="kw">fn </span>starts_with_mark(tokens: <span class="kw-2">&amp;</span>[Token]) -&gt; bool {
+<a href=#961 id=961 data-nosnippet>961</a>  <span class="kw">match </span>tokens {
+<a href=#962 id=962 data-nosnippet>962</a>    [t, ..] <span class="kw">if </span>is_author_mark(t) =&gt; <span class="bool-val">true</span>,
+<a href=#963 id=963 data-nosnippet>963</a>    <span class="comment">// (`$^1$`, and `\(^{1}\)`: 2604.12896's `\(^{1}\)Huawei Technologies, Canada~~\(^2\)University of Alberta`)
+<a href=#964 id=964 data-nosnippet>964</a>    </span>[open, sup, ..] =&gt; {
+<a href=#965 id=965 data-nosnippet>965</a>      (open.get_catcode() == Catcode::MATH || <span class="kw-2">*</span>open == <span class="macro">T_CS!</span>(<span class="string">"\\("</span>)) &amp;&amp; <span class="kw-2">*</span>sup == <span class="macro">T_SUPER!</span>()
+<a href=#966 id=966 data-nosnippet>966</a>    },
+<a href=#967 id=967 data-nosnippet>967</a>    <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
+<a href=#968 id=968 data-nosnippet>968</a>  }
+<a href=#969 id=969 data-nosnippet>969</a>}
+<a href=#970 id=970 data-nosnippet>970</a>
+<a href=#971 id=971 data-nosnippet>971</a><span class="doccomment">/// Whether a group opened after `before` shows its letters as name text, for a spacing run to part names after them: a
+<a href=#972 id=972 data-nosnippet>972</a>/// group of its own (`{\scshape Vitaly~Bergelson}`, also after a separator or a spacing command: `~~ {Kyungtae Lim}`
+<a href=#973 id=973 data-nosnippet>973</a>/// once the run before it is `\quad`, 2605.30545) or a font command's argument (`\textbf{Ann Able}`); not another
+<a href=#974 id=974 data-nosnippet>974</a>/// command's argument (`\raisebox{-0.3ex}{\includegraphics[…]{daedalus.jpg}}`, 2604.10005; `\mbox{\orcidlink{…}}`,
+<a href=#975 id=975 data-nosnippet>975</a>/// 2605.06250; `\url{…}`, 2605.28131). A group right after another (`}{`) is shown as that one was (`closed_shown`):
+<a href=#976 id=976 data-nosnippet>976</a>/// the next argument of the same command.
+<a href=#977 id=977 data-nosnippet>977</a></span><span class="kw">fn </span>shows_name_text(before: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Token&gt;, closed_shown: bool) -&gt; bool {
+<a href=#978 id=978 data-nosnippet>978</a>  <span class="kw">match </span>before {
+<a href=#979 id=979 data-nosnippet>979</a>    <span class="prelude-val">Some</span>(t) <span class="kw">if </span>t.get_catcode() == Catcode::CS =&gt; {
+<a href=#980 id=980 data-nosnippet>980</a>      name_text_command(t)
+<a href=#981 id=981 data-nosnippet>981</a>        || t.with_str(|s| <span class="macro">matches!</span>(s, <span class="string">"\\par" </span>| <span class="string">"\\relax" </span>| <span class="string">"\\noindent"</span>))
+<a href=#982 id=982 data-nosnippet>982</a>        || is_line_separator(t)
+<a href=#983 id=983 data-nosnippet>983</a>        || is_spacing_command(t)
+<a href=#984 id=984 data-nosnippet>984</a>    },
+<a href=#985 id=985 data-nosnippet>985</a>    <span class="prelude-val">Some</span>(t) <span class="kw">if </span><span class="kw-2">*</span>t == <span class="macro">T_END!</span>() || <span class="kw-2">*</span>t == <span class="macro">T_OTHER!</span>(<span class="string">"]"</span>) =&gt; closed_shown,
+<a href=#986 id=986 data-nosnippet>986</a>    <span class="kw">_ </span>=&gt; <span class="bool-val">true</span>,
+<a href=#987 id=987 data-nosnippet>987</a>  }
+<a href=#988 id=988 data-nosnippet>988</a>}
+<a href=#989 id=989 data-nosnippet>989</a>
+<a href=#990 id=990 data-nosnippet>990</a><span class="doccomment">/// What a spacing run's place on its author block tells [`spacing_run_separator`].
+<a href=#991 id=991 data-nosnippet>991</a></span><span class="kw">struct </span>RunContext {
+<a href=#992 id=992 data-nosnippet>992</a>  <span class="doccomment">/// the line of a marked block opens with a mark (an affiliation line, `$^1$Univ A~~~~$^2$Univ B`, 2310.15160)
+<a href=#993 id=993 data-nosnippet>993</a>  </span>mark_led:    bool,
+<a href=#994 id=994 data-nosnippet>994</a>  <span class="doccomment">/// the line is a line of names: the block's first, or the first after an `\and` (a line break ends it)
+<a href=#995 id=995 data-nosnippet>995</a>  </span>names_line:  bool,
+<a href=#996 id=996 data-nosnippet>996</a>  <span class="doccomment">/// where in the tokens before the run the piece since the last top-level separator starts
+<a href=#997 id=997 data-nosnippet>997</a>  </span>piece_start: usize,
+<a href=#998 id=998 data-nosnippet>998</a>}
+<a href=#999 id=999 data-nosnippet>999</a>
+<a href=#1000 id=1000 data-nosnippet>1000</a><span class="doccomment">/// A spacing run that parts two names ([`spacing_run_separator`]): where it ends, and whether the word "and" stands in
+<a href=#1001 id=1001 data-nosnippet>1001</a>/// it (`~~AND~~`, `~~{and}~~`), which then is the separator, written as the plain word between spaces that every author
+<a href=#1002 id=1002 data-nosnippet>1002</a>/// split reads (`Cat Cole~~\textrm{and}~~Dan Dorn` → `Cat Cole and Dan Dorn`; a marked block's line welds a piece a
+<a href=#1003 id=1003 data-nosnippet>1003</a>/// `\quad` parts off into the entry before it).
+<a href=#1004 id=1004 data-nosnippet>1004</a></span><span class="kw">struct </span>RunSeparator {
+<a href=#1005 id=1005 data-nosnippet>1005</a>  end:      usize,
+<a href=#1006 id=1006 data-nosnippet>1006</a>  and_word: bool,
+<a href=#1007 id=1007 data-nosnippet>1007</a>}
+<a href=#1008 id=1008 data-nosnippet>1008</a>
+<a href=#1009 id=1009 data-nosnippet>1009</a><span class="doccomment">/// Where a run of spacing commands that starts at `src[start]` ends, when it parts two names: two or more spacing
+<a href=#1010 id=1010 data-nosnippet>1010</a>/// commands ([`is_spacing_command`], spaces and a blank line's `\par` between them), after a name — `out` holds what
+<a href=#1011 id=1011 data-nosnippet>1011</a>/// precedes it, a name letter is on its line (the caller's test), and it does not end with a separator already (`\\`,
+<a href=#1012 id=1012 data-nosnippet>1012</a>/// `\and`, `\quad`, a comma or `;`), nor with an initial (`R.~~Beyer`, 2603.17646; `L.~~Caballero-Ontanaya`,
+<a href=#1013 id=1013 data-nosnippet>1013</a>/// 2604.25437; `Rafa\l ~R.\ ~Suszek`, 2603.20914: one person) — and before the next one, which starts with a letter, a
+<a href=#1014 id=1014 data-nosnippet>1014</a>/// group or a command that is no name annotation (a run before `\thanks{…}`, `\textsuperscript{1}` or a `$^1$` mark
+<a href=#1015 id=1015 data-nosnippet>1015</a>/// leaves the mark on its name) and has a name letter before the next separator (not `~~\JMorcid,`, 2605.12398;
+<a href=#1016 id=1016 data-nosnippet>1016</a>/// `~~\mbox{\orcidlink{…}}`, 2605.06250); or, on a line that opens with a mark (`ctx.mark_led`), with the next mark.
+<a href=#1017 id=1017 data-nosnippet>1017</a>/// Off the names line (`ctx.names_line`: after a line break, before the next `\and`) both sides must read as names, not
+<a href=#1018 id=1018 data-nosnippet>1018</a>/// as an address, an e-mail or a link (`Ann Able \\ Department of Physics~~~~University of X`; `\url{…}~~~ \url{…}`,
+<a href=#1019 id=1019 data-nosnippet>1019</a>/// 2605.28131). A run before the word "and" — in any case, alone or in one wrapper ([`and_word_end`]: `~~AND~~`,
+<a href=#1020 id=1020 data-nosnippet>1020</a>/// `~~{and}~~`, `\;\;\textnormal{AND}\;\;`, 2606.27261, 2607.03677) — parts with it, the word the separator
+<a href=#1021 id=1021 data-nosnippet>1021</a>/// ([`RunSeparator`]). `None` for a single spacing command, inside one name, and for a run after the word "and", or
+<a href=#1022 id=1022 data-nosnippet>1022</a>/// after a byline's "By" (`By~~{\scshape Vitaly~Bergelson}~~and~~…`, 2603.25922, 2604.12864, 2603.27258, 2604.07186),
+<a href=#1023 id=1023 data-nosnippet>1023</a>/// which separate the names themselves.
+<a href=#1024 id=1024 data-nosnippet>1024</a></span><span class="kw">fn </span>spacing_run_separator(
+<a href=#1025 id=1025 data-nosnippet>1025</a>  src: <span class="kw-2">&amp;</span>[Token],
+<a href=#1026 id=1026 data-nosnippet>1026</a>  out: <span class="kw-2">&amp;</span>[Token],
+<a href=#1027 id=1027 data-nosnippet>1027</a>  start: usize,
+<a href=#1028 id=1028 data-nosnippet>1028</a>  ctx: RunContext,
+<a href=#1029 id=1029 data-nosnippet>1029</a>) -&gt; <span class="prelude-ty">Option</span>&lt;RunSeparator&gt; {
+<a href=#1030 id=1030 data-nosnippet>1030</a>  <span class="kw">let </span><span class="kw-2">mut </span>end = start;
+<a href=#1031 id=1031 data-nosnippet>1031</a>  <span class="kw">let </span><span class="kw-2">mut </span>commands = <span class="number">0</span>;
+<a href=#1032 id=1032 data-nosnippet>1032</a>  <span class="kw">while let </span><span class="prelude-val">Some</span>(t) = src.get(end) {
+<a href=#1033 id=1033 data-nosnippet>1033</a>    <span class="kw">if </span>is_spacing_command(t) {
+<a href=#1034 id=1034 data-nosnippet>1034</a>      commands += <span class="number">1</span>;
+<a href=#1035 id=1035 data-nosnippet>1035</a>    } <span class="kw">else if </span>t.get_catcode() != Catcode::SPACE &amp;&amp; <span class="kw-2">*</span>t != <span class="macro">T_CS!</span>(<span class="string">"\\par"</span>) {
+<a href=#1036 id=1036 data-nosnippet>1036</a>      <span class="kw">break</span>;
+<a href=#1037 id=1037 data-nosnippet>1037</a>    }
+<a href=#1038 id=1038 data-nosnippet>1038</a>    end += <span class="number">1</span>;
+<a href=#1039 id=1039 data-nosnippet>1039</a>  }
+<a href=#1040 id=1040 data-nosnippet>1040</a>  <span class="kw">if </span>commands &lt; <span class="number">2 </span>{
+<a href=#1041 id=1041 data-nosnippet>1041</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#1042 id=1042 data-nosnippet>1042</a>  }
+<a href=#1043 id=1043 data-nosnippet>1043</a>  <span class="kw">let </span>unprinted = |t: &amp;&amp;Token| t.get_catcode() == Catcode::SPACE || <span class="kw-2">**</span>t == <span class="macro">T_CS!</span>(<span class="string">"\\par"</span>);
+<a href=#1044 id=1044 data-nosnippet>1044</a>  <span class="kw">let </span><span class="kw-2">mut </span>before_run = out.iter().rev().skip_while(unprinted);
+<a href=#1045 id=1045 data-nosnippet>1045</a>  <span class="kw">let </span>before = <span class="kw-2">*</span>before_run.next()<span class="question-mark">?</span>;
+<a href=#1046 id=1046 data-nosnippet>1046</a>  <span class="kw">if </span>is_line_separator(<span class="kw-2">&amp;</span>before)
+<a href=#1047 id=1047 data-nosnippet>1047</a>    || before == <span class="macro">T_CS!</span>(<span class="string">"\\&amp;"</span>)
+<a href=#1048 id=1048 data-nosnippet>1048</a>    || <span class="macro">matches!</span>(before.get_catcode(), Catcode::OTHER <span class="kw">if </span>before.with_str(|s| s == <span class="string">"," </span>|| s == <span class="string">";"</span>))
+<a href=#1049 id=1049 data-nosnippet>1049</a>  {
+<a href=#1050 id=1050 data-nosnippet>1050</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#1051 id=1051 data-nosnippet>1051</a>  }
+<a href=#1052 id=1052 data-nosnippet>1052</a>  <span class="comment">// (an initial: one letter and its period, after no letter)
+<a href=#1053 id=1053 data-nosnippet>1053</a>  </span><span class="kw">if </span>before == <span class="macro">T_OTHER!</span>(<span class="string">"."</span>)
+<a href=#1054 id=1054 data-nosnippet>1054</a>    &amp;&amp; before_run
+<a href=#1055 id=1055 data-nosnippet>1055</a>      .next()
+<a href=#1056 id=1056 data-nosnippet>1056</a>      .is_some_and(|t| t.get_catcode() == Catcode::LETTER)
+<a href=#1057 id=1057 data-nosnippet>1057</a>    &amp;&amp; before_run
+<a href=#1058 id=1058 data-nosnippet>1058</a>      .next()
+<a href=#1059 id=1059 data-nosnippet>1059</a>      .is_none_or(|t| t.get_catcode() != Catcode::LETTER)
+<a href=#1060 id=1060 data-nosnippet>1060</a>  {
+<a href=#1061 id=1061 data-nosnippet>1061</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#1062 id=1062 data-nosnippet>1062</a>  }
+<a href=#1063 id=1063 data-nosnippet>1063</a>  <span class="comment">// (a run after the word "and" — in any case, alone or in one wrapper — leaves the separating to it: `Cat
+<a href=#1064 id=1064 data-nosnippet>1064</a>  // Cole and~~Dan Dorn`; so does one after a byline's "by")
+<a href=#1065 id=1065 data-nosnippet>1065</a>  </span><span class="kw">let </span>word_before: String = word_letters(out.iter().rev()).chars().rev().collect();
+<a href=#1066 id=1066 data-nosnippet>1066</a>  <span class="kw">if </span>and_word_end(<span class="kw-2">&amp;</span>out.iter().rev().copied().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;(), <span class="bool-val">true</span>).is_some()
+<a href=#1067 id=1067 data-nosnippet>1067</a>    || word_before.eq_ignore_ascii_case(<span class="string">"by"</span>)
+<a href=#1068 id=1068 data-nosnippet>1068</a>  {
+<a href=#1069 id=1069 data-nosnippet>1069</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#1070 id=1070 data-nosnippet>1070</a>  }
+<a href=#1071 id=1071 data-nosnippet>1071</a>  <span class="comment">// (a run before the word "and" — `~~and~~`, `~~AND~~`, `~~{and}~~`, `\;\;\textnormal{AND}\;\;`, 2606.27261,
+<a href=#1072 id=1072 data-nosnippet>1072</a>  // 2607.03677 — is one separator with it and the space after it: what follows must open a name as after a run)
+<a href=#1073 id=1073 data-nosnippet>1073</a>  </span><span class="kw">let </span>(end, and_word) = <span class="kw">match </span>and_word_end(<span class="kw-2">&amp;</span>src[end..], <span class="bool-val">false</span>) {
+<a href=#1074 id=1074 data-nosnippet>1074</a>    <span class="prelude-val">Some</span>(word_end) =&gt; (
+<a href=#1075 id=1075 data-nosnippet>1075</a>      end
+<a href=#1076 id=1076 data-nosnippet>1076</a>        + word_end
+<a href=#1077 id=1077 data-nosnippet>1077</a>        + src[end + word_end..]
+<a href=#1078 id=1078 data-nosnippet>1078</a>          .iter()
+<a href=#1079 id=1079 data-nosnippet>1079</a>          .take_while(|t| {
+<a href=#1080 id=1080 data-nosnippet>1080</a>            t.get_catcode() == Catcode::SPACE || is_spacing_command(t) || <span class="kw-2">**</span>t == <span class="macro">T_CS!</span>(<span class="string">"\\par"</span>)
+<a href=#1081 id=1081 data-nosnippet>1081</a>          })
+<a href=#1082 id=1082 data-nosnippet>1082</a>          .count(),
+<a href=#1083 id=1083 data-nosnippet>1083</a>      <span class="bool-val">true</span>,
+<a href=#1084 id=1084 data-nosnippet>1084</a>    ),
+<a href=#1085 id=1085 data-nosnippet>1085</a>    <span class="prelude-val">None </span>=&gt; (end, <span class="bool-val">false</span>),
+<a href=#1086 id=1086 data-nosnippet>1086</a>  };
+<a href=#1087 id=1087 data-nosnippet>1087</a>  <span class="kw">let </span>after = src.get(end)<span class="question-mark">?</span>;
+<a href=#1088 id=1088 data-nosnippet>1088</a>  <span class="kw">if </span><span class="kw-2">*</span>after == <span class="macro">T_CS!</span>(<span class="string">"\\&amp;"</span>) {
+<a href=#1089 id=1089 data-nosnippet>1089</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#1090 id=1090 data-nosnippet>1090</a>  }
+<a href=#1091 id=1091 data-nosnippet>1091</a>  <span class="comment">// (on a mark-led line, a run before the next mark parts its entries: `$^1$Univ A~~~~$^2$Univ B`; the word "and" in
+<a href=#1092 id=1092 data-nosnippet>1092</a>  // it too, off the names line as the `\quad` that parts affiliation entries, `$^1$Univ A~~and~~$^2$Univ B` (probe
+<a href=#1093 id=1093 data-nosnippet>1093</a>  // w10, was "Univ A and" an entry))
+<a href=#1094 id=1094 data-nosnippet>1094</a>  </span><span class="kw">if </span>ctx.mark_led &amp;&amp; starts_with_mark(after_leading_markup(<span class="kw-2">&amp;</span>src[end..])) {
+<a href=#1095 id=1095 data-nosnippet>1095</a>    <span class="kw">return </span><span class="prelude-val">Some</span>(RunSeparator {
+<a href=#1096 id=1096 data-nosnippet>1096</a>      end,
+<a href=#1097 id=1097 data-nosnippet>1097</a>      and_word: and_word &amp;&amp; ctx.names_line,
+<a href=#1098 id=1098 data-nosnippet>1098</a>    });
+<a href=#1099 id=1099 data-nosnippet>1099</a>  }
+<a href=#1100 id=1100 data-nosnippet>1100</a>  <span class="kw">let </span>starts_name = <span class="kw">match </span>after.get_catcode() {
+<a href=#1101 id=1101 data-nosnippet>1101</a>    Catcode::LETTER | Catcode::BEGIN =&gt; <span class="bool-val">true</span>,
+<a href=#1102 id=1102 data-nosnippet>1102</a>    Catcode::OTHER =&gt; after.with_str(|s| s.chars().next().is_some_and(char::is_alphabetic)),
+<a href=#1103 id=1103 data-nosnippet>1103</a>    Catcode::CS =&gt; {
+<a href=#1104 id=1104 data-nosnippet>1104</a>      !is_line_separator(after)
+<a href=#1105 id=1105 data-nosnippet>1105</a>        &amp;&amp; !is_name_annotation(after)
+<a href=#1106 id=1106 data-nosnippet>1106</a>        &amp;&amp; !is_footnote_mark(after)
+<a href=#1107 id=1107 data-nosnippet>1107</a>        &amp;&amp; !is_mark_command(after)
+<a href=#1108 id=1108 data-nosnippet>1108</a>    },
+<a href=#1109 id=1109 data-nosnippet>1109</a>    <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
+<a href=#1110 id=1110 data-nosnippet>1110</a>  };
+<a href=#1111 id=1111 data-nosnippet>1111</a>  <span class="kw">if </span>!starts_name {
+<a href=#1112 id=1112 data-nosnippet>1112</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#1113 id=1113 data-nosnippet>1113</a>  }
+<a href=#1114 id=1114 data-nosnippet>1114</a>  <span class="kw">let </span>next_piece = next_name_piece(<span class="kw-2">&amp;</span>src[end..]);
+<a href=#1115 id=1115 data-nosnippet>1115</a>  <span class="kw">if </span>!has_name_letter(next_piece) {
+<a href=#1116 id=1116 data-nosnippet>1116</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#1117 id=1117 data-nosnippet>1117</a>  }
+<a href=#1118 id=1118 data-nosnippet>1118</a>  <span class="kw">if </span>!ctx.names_line
+<a href=#1119 id=1119 data-nosnippet>1119</a>    &amp;&amp; !(reads_as_name_piece(<span class="kw-2">&amp;</span>out[ctx.piece_start.min(out.len())..])
+<a href=#1120 id=1120 data-nosnippet>1120</a>      &amp;&amp; reads_as_name_piece(next_piece))
+<a href=#1121 id=1121 data-nosnippet>1121</a>  {
+<a href=#1122 id=1122 data-nosnippet>1122</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#1123 id=1123 data-nosnippet>1123</a>  }
+<a href=#1124 id=1124 data-nosnippet>1124</a>  <span class="prelude-val">Some</span>(RunSeparator { end, and_word })
+<a href=#1125 id=1125 data-nosnippet>1125</a>}
+<a href=#1126 id=1126 data-nosnippet>1126</a>
+<a href=#1127 id=1127 data-nosnippet>1127</a><span class="doccomment">/// The letters of the word `tokens` open with, after their spaces.
+<a href=#1128 id=1128 data-nosnippet>1128</a></span><span class="kw">fn </span>word_letters&lt;<span class="lifetime">'a</span>&gt;(tokens: <span class="kw">impl </span>Iterator&lt;Item = <span class="kw-2">&amp;</span><span class="lifetime">'a </span>Token&gt;) -&gt; String {
+<a href=#1129 id=1129 data-nosnippet>1129</a>  tokens
+<a href=#1130 id=1130 data-nosnippet>1130</a>    .skip_while(|t| t.get_catcode() == Catcode::SPACE)
+<a href=#1131 id=1131 data-nosnippet>1131</a>    .take_while(|t| t.get_catcode() == Catcode::LETTER)
+<a href=#1132 id=1132 data-nosnippet>1132</a>    .map(|t| t.with_str(str::to_string))
+<a href=#1133 id=1133 data-nosnippet>1133</a>    .collect()
+<a href=#1134 id=1134 data-nosnippet>1134</a>}
+<a href=#1135 id=1135 data-nosnippet>1135</a>
+<a href=#1136 id=1136 data-nosnippet>1136</a><span class="doccomment">/// Where the word "and" that `tokens` open with ends (after their spaces), in any case (`and`, `And`, `AND`), written
+<a href=#1137 id=1137 data-nosnippet>1137</a>/// alone or as the only word of one wrapper — a group, or a font command's argument (`{and}`, `\textrm{and}`,
+<a href=#1138 id=1138 data-nosnippet>1138</a>/// `\textnormal{AND}`: 2606.27261, 2607.03677, 2608.24427). `reversed`: `tokens` run backwards (the tokens before a
+<a href=#1139 id=1139 data-nosnippet>1139</a>/// run), the wrapper's closing brace first. `None` when they open with anything else (`Andrew`, `Anders`).
+<a href=#1140 id=1140 data-nosnippet>1140</a></span><span class="kw">fn </span>and_word_end(tokens: <span class="kw-2">&amp;</span>[Token], reversed: bool) -&gt; <span class="prelude-ty">Option</span>&lt;usize&gt; {
+<a href=#1141 id=1141 data-nosnippet>1141</a>  <span class="kw">let </span>(open, close) = <span class="kw">if </span>reversed {
+<a href=#1142 id=1142 data-nosnippet>1142</a>    (<span class="macro">T_END!</span>(), <span class="macro">T_BEGIN!</span>())
+<a href=#1143 id=1143 data-nosnippet>1143</a>  } <span class="kw">else </span>{
+<a href=#1144 id=1144 data-nosnippet>1144</a>    (<span class="macro">T_BEGIN!</span>(), <span class="macro">T_END!</span>())
+<a href=#1145 id=1145 data-nosnippet>1145</a>  };
+<a href=#1146 id=1146 data-nosnippet>1146</a>  <span class="kw">let </span><span class="kw-2">mut </span>i = tokens
+<a href=#1147 id=1147 data-nosnippet>1147</a>    .iter()
+<a href=#1148 id=1148 data-nosnippet>1148</a>    .take_while(|t| t.get_catcode() == Catcode::SPACE)
+<a href=#1149 id=1149 data-nosnippet>1149</a>    .count();
+<a href=#1150 id=1150 data-nosnippet>1150</a>  <span class="comment">// (a font command before its argument: read forwards, it opens the wrapper; read backwards, it stands after it)
+<a href=#1151 id=1151 data-nosnippet>1151</a>  </span><span class="kw">if </span>!reversed &amp;&amp; tokens.get(i).is_some_and(name_text_command) &amp;&amp; tokens.get(i + <span class="number">1</span>) == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>open) {
+<a href=#1152 id=1152 data-nosnippet>1152</a>    i += <span class="number">1</span>;
+<a href=#1153 id=1153 data-nosnippet>1153</a>  }
+<a href=#1154 id=1154 data-nosnippet>1154</a>  <span class="kw">let </span>wrapped = tokens.get(i) == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>open);
+<a href=#1155 id=1155 data-nosnippet>1155</a>  <span class="kw">if </span>wrapped {
+<a href=#1156 id=1156 data-nosnippet>1156</a>    i += <span class="number">1</span>;
+<a href=#1157 id=1157 data-nosnippet>1157</a>  }
+<a href=#1158 id=1158 data-nosnippet>1158</a>  <span class="kw">let </span>word_start = i
+<a href=#1159 id=1159 data-nosnippet>1159</a>    + tokens[i..]
+<a href=#1160 id=1160 data-nosnippet>1160</a>      .iter()
+<a href=#1161 id=1161 data-nosnippet>1161</a>      .take_while(|t| wrapped &amp;&amp; t.get_catcode() == Catcode::SPACE)
+<a href=#1162 id=1162 data-nosnippet>1162</a>      .count();
+<a href=#1163 id=1163 data-nosnippet>1163</a>  <span class="kw">let </span>word: String = word_letters(tokens[word_start..].iter());
+<a href=#1164 id=1164 data-nosnippet>1164</a>  <span class="kw">let </span>word: String = <span class="kw">if </span>reversed {
+<a href=#1165 id=1165 data-nosnippet>1165</a>    word.chars().rev().collect()
+<a href=#1166 id=1166 data-nosnippet>1166</a>  } <span class="kw">else </span>{
+<a href=#1167 id=1167 data-nosnippet>1167</a>    word
+<a href=#1168 id=1168 data-nosnippet>1168</a>  };
+<a href=#1169 id=1169 data-nosnippet>1169</a>  <span class="kw">if </span>!word.eq_ignore_ascii_case(<span class="string">"and"</span>) {
+<a href=#1170 id=1170 data-nosnippet>1170</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#1171 id=1171 data-nosnippet>1171</a>  }
+<a href=#1172 id=1172 data-nosnippet>1172</a>  i = word_start + <span class="number">3</span>;
+<a href=#1173 id=1173 data-nosnippet>1173</a>  <span class="kw">if </span>wrapped {
+<a href=#1174 id=1174 data-nosnippet>1174</a>    i += tokens[i..]
+<a href=#1175 id=1175 data-nosnippet>1175</a>      .iter()
+<a href=#1176 id=1176 data-nosnippet>1176</a>      .take_while(|t| t.get_catcode() == Catcode::SPACE)
+<a href=#1177 id=1177 data-nosnippet>1177</a>      .count();
+<a href=#1178 id=1178 data-nosnippet>1178</a>    <span class="kw">if </span>tokens.get(i) != <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>close) {
+<a href=#1179 id=1179 data-nosnippet>1179</a>      <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#1180 id=1180 data-nosnippet>1180</a>    }
+<a href=#1181 id=1181 data-nosnippet>1181</a>    i += <span class="number">1</span>;
+<a href=#1182 id=1182 data-nosnippet>1182</a>  }
+<a href=#1183 id=1183 data-nosnippet>1183</a>  <span class="comment">// (a letter or a letter command after it is a longer word's: `and\o`; the closing word of a reversed read must not
+<a href=#1184 id=1184 data-nosnippet>1184</a>  // be glued to one before it either, `Rand`)
+<a href=#1185 id=1185 data-nosnippet>1185</a>  </span>tokens
+<a href=#1186 id=1186 data-nosnippet>1186</a>    .get(i)
+<a href=#1187 id=1187 data-nosnippet>1187</a>    .is_none_or(|t| !parts_words_after(t))
+<a href=#1188 id=1188 data-nosnippet>1188</a>    .then_some(i)
+<a href=#1189 id=1189 data-nosnippet>1189</a>}
+<a href=#1190 id=1190 data-nosnippet>1190</a>
+<a href=#1191 id=1191 data-nosnippet>1191</a><span class="doccomment">/// Whether `t`, after a word, goes on with it: a letter, or a letter written as a command (`\o`, `\ss`).
+<a href=#1192 id=1192 data-nosnippet>1192</a></span><span class="kw">fn </span>parts_words_after(t: <span class="kw-2">&amp;</span>Token) -&gt; bool {
+<a href=#1193 id=1193 data-nosnippet>1193</a>  t.get_catcode() == Catcode::LETTER
+<a href=#1194 id=1194 data-nosnippet>1194</a>    || (t.get_catcode() == Catcode::CS &amp;&amp; t.with_str(letter_command).is_some())
+<a href=#1195 id=1195 data-nosnippet>1195</a>}
+<a href=#1196 id=1196 data-nosnippet>1196</a>
+<a href=#1197 id=1197 data-nosnippet>1197</a><span class="doccomment">/// The tokens from the start of `tokens` to the next top-level separator: a line separator ([`is_line_separator`]), a
+<a href=#1198 id=1198 data-nosnippet>1198</a>/// comma or `;`, a run of two or more spacing commands, or the mark that ends a name (`Rui Wang$^{*, 2}$ &lt;blank line&gt;
+<a href=#1199 id=1199 data-nosnippet>1199</a>/// \vspace{2pt} $^1$Ant Group`, 2603.19223: the name, not the lines after it).
+<a href=#1200 id=1200 data-nosnippet>1200</a></span><span class="kw">fn </span>next_name_piece(tokens: <span class="kw-2">&amp;</span>[Token]) -&gt; <span class="kw-2">&amp;</span>[Token] {
+<a href=#1201 id=1201 data-nosnippet>1201</a>  <span class="kw">let </span><span class="kw-2">mut </span>depth = <span class="number">0usize</span>;
+<a href=#1202 id=1202 data-nosnippet>1202</a>  <span class="kw">let </span><span class="kw-2">mut </span>lettered = <span class="bool-val">false</span>;
+<a href=#1203 id=1203 data-nosnippet>1203</a>  <span class="kw">for </span>(j, t) <span class="kw">in </span>tokens.iter().enumerate() {
+<a href=#1204 id=1204 data-nosnippet>1204</a>    <span class="kw">match </span>t.get_catcode() {
+<a href=#1205 id=1205 data-nosnippet>1205</a>      Catcode::BEGIN =&gt; depth += <span class="number">1</span>,
+<a href=#1206 id=1206 data-nosnippet>1206</a>      Catcode::END <span class="kw">if </span>depth == <span class="number">0 </span>=&gt; <span class="kw">return </span><span class="kw-2">&amp;</span>tokens[..j],
+<a href=#1207 id=1207 data-nosnippet>1207</a>      Catcode::END =&gt; depth -= <span class="number">1</span>,
+<a href=#1208 id=1208 data-nosnippet>1208</a>      Catcode::LETTER =&gt; lettered = <span class="bool-val">true</span>,
+<a href=#1209 id=1209 data-nosnippet>1209</a>      <span class="kw">_ if </span>depth &gt; <span class="number">0 </span>=&gt; {},
+<a href=#1210 id=1210 data-nosnippet>1210</a>      <span class="kw">_ if </span>lettered &amp;&amp; starts_with_mark(<span class="kw-2">&amp;</span>tokens[j..]) =&gt; <span class="kw">return </span><span class="kw-2">&amp;</span>tokens[..j],
+<a href=#1211 id=1211 data-nosnippet>1211</a>      <span class="kw">_ if </span>is_line_separator(t) || <span class="kw-2">*</span>t == <span class="macro">T_OTHER!</span>(<span class="string">","</span>) || <span class="kw-2">*</span>t == <span class="macro">T_OTHER!</span>(<span class="string">";"</span>) =&gt; {
+<a href=#1212 id=1212 data-nosnippet>1212</a>        <span class="kw">return </span><span class="kw-2">&amp;</span>tokens[..j];
+<a href=#1213 id=1213 data-nosnippet>1213</a>      },
+<a href=#1214 id=1214 data-nosnippet>1214</a>      <span class="kw">_ if </span>is_spacing_command(t)
+<a href=#1215 id=1215 data-nosnippet>1215</a>        &amp;&amp; tokens[j + <span class="number">1</span>..]
+<a href=#1216 id=1216 data-nosnippet>1216</a>          .iter()
+<a href=#1217 id=1217 data-nosnippet>1217</a>          .find(|u| u.get_catcode() != Catcode::SPACE)
+<a href=#1218 id=1218 data-nosnippet>1218</a>          .is_some_and(is_spacing_command) =&gt;
+<a href=#1219 id=1219 data-nosnippet>1219</a>      {
+<a href=#1220 id=1220 data-nosnippet>1220</a>        <span class="kw">return </span><span class="kw-2">&amp;</span>tokens[..j];
+<a href=#1221 id=1221 data-nosnippet>1221</a>      },
+<a href=#1222 id=1222 data-nosnippet>1222</a>      <span class="kw">_ </span>=&gt; {},
+<a href=#1223 id=1223 data-nosnippet>1223</a>    }
+<a href=#1224 id=1224 data-nosnippet>1224</a>  }
+<a href=#1225 id=1225 data-nosnippet>1225</a>  tokens
+<a href=#1226 id=1226 data-nosnippet>1226</a>}
+<a href=#1227 id=1227 data-nosnippet>1227</a>
+<a href=#1228 id=1228 data-nosnippet>1228</a><span class="doccomment">/// Whether `tokens` hold a letter of name text: outside math, outside a mark command's argument and an optional
+<a href=#1229 id=1229 data-nosnippet>1229</a>/// argument, at the top level or in a group that shows its letters ([`shows_name_text`]).
+<a href=#1230 id=1230 data-nosnippet>1230</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>has_name_letter(tokens: <span class="kw-2">&amp;</span>[Token]) -&gt; bool {
+<a href=#1231 id=1231 data-nosnippet>1231</a>  <span class="kw">let </span><span class="kw-2">mut </span>shown: Vec&lt;bool&gt; = Vec::new();
+<a href=#1232 id=1232 data-nosnippet>1232</a>  <span class="kw">let </span><span class="kw-2">mut </span>closed_shown = <span class="bool-val">true</span>;
+<a href=#1233 id=1233 data-nosnippet>1233</a>  <span class="kw">let </span><span class="kw-2">mut </span>in_math = <span class="bool-val">false</span>;
+<a href=#1234 id=1234 data-nosnippet>1234</a>  <span class="kw">let </span><span class="kw-2">mut </span>optional_argument = <span class="bool-val">false</span>;
+<a href=#1235 id=1235 data-nosnippet>1235</a>  <span class="kw">let </span><span class="kw-2">mut </span>previous: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Token&gt; = <span class="prelude-val">None</span>;
+<a href=#1236 id=1236 data-nosnippet>1236</a>  <span class="kw">for </span>t <span class="kw">in </span>tokens {
+<a href=#1237 id=1237 data-nosnippet>1237</a>    <span class="kw">match </span>t.get_catcode() {
+<a href=#1238 id=1238 data-nosnippet>1238</a>      Catcode::BEGIN =&gt; {
+<a href=#1239 id=1239 data-nosnippet>1239</a>        <span class="kw">let </span>outer = shown.last().copied().unwrap_or(<span class="bool-val">true</span>);
+<a href=#1240 id=1240 data-nosnippet>1240</a>        shown.push(
+<a href=#1241 id=1241 data-nosnippet>1241</a>          outer
+<a href=#1242 id=1242 data-nosnippet>1242</a>            &amp;&amp; !optional_argument
+<a href=#1243 id=1243 data-nosnippet>1243</a>            &amp;&amp; !previous.is_some_and(is_mark_command)
+<a href=#1244 id=1244 data-nosnippet>1244</a>            &amp;&amp; shows_name_text(previous, closed_shown),
+<a href=#1245 id=1245 data-nosnippet>1245</a>        );
+<a href=#1246 id=1246 data-nosnippet>1246</a>      },
+<a href=#1247 id=1247 data-nosnippet>1247</a>      Catcode::END =&gt; {
+<a href=#1248 id=1248 data-nosnippet>1248</a>        closed_shown = shown.pop().unwrap_or(<span class="bool-val">true</span>);
+<a href=#1249 id=1249 data-nosnippet>1249</a>      },
+<a href=#1250 id=1250 data-nosnippet>1250</a>      Catcode::MATH =&gt; in_math = !in_math,
+<a href=#1251 id=1251 data-nosnippet>1251</a>      Catcode::LETTER
+<a href=#1252 id=1252 data-nosnippet>1252</a>        <span class="kw">if </span>!in_math &amp;&amp; !optional_argument &amp;&amp; shown.last().copied().unwrap_or(<span class="bool-val">true</span>) =&gt;
+<a href=#1253 id=1253 data-nosnippet>1253</a>      {
+<a href=#1254 id=1254 data-nosnippet>1254</a>        <span class="kw">return </span><span class="bool-val">true</span>;
+<a href=#1255 id=1255 data-nosnippet>1255</a>      },
+<a href=#1256 id=1256 data-nosnippet>1256</a>      Catcode::OTHER
+<a href=#1257 id=1257 data-nosnippet>1257</a>        <span class="kw">if </span><span class="kw-2">*</span>t == <span class="macro">T_OTHER!</span>(<span class="string">"["</span>) &amp;&amp; previous.is_some_and(|p| p.get_catcode() == Catcode::CS) =&gt;
+<a href=#1258 id=1258 data-nosnippet>1258</a>      {
+<a href=#1259 id=1259 data-nosnippet>1259</a>        optional_argument = <span class="bool-val">true
+<a href=#1260 id=1260 data-nosnippet>1260</a>      </span>},
+<a href=#1261 id=1261 data-nosnippet>1261</a>      Catcode::OTHER <span class="kw">if </span><span class="kw-2">*</span>t == <span class="macro">T_OTHER!</span>(<span class="string">"]"</span>) =&gt; optional_argument = <span class="bool-val">false</span>,
+<a href=#1262 id=1262 data-nosnippet>1262</a>      <span class="kw">_ </span>=&gt; {},
+<a href=#1263 id=1263 data-nosnippet>1263</a>    }
+<a href=#1264 id=1264 data-nosnippet>1264</a>    previous = <span class="prelude-val">Some</span>(t);
+<a href=#1265 id=1265 data-nosnippet>1265</a>  }
+<a href=#1266 id=1266 data-nosnippet>1266</a>  <span class="bool-val">false
+<a href=#1267 id=1267 data-nosnippet>1267</a></span>}
+<a href=#1268 id=1268 data-nosnippet>1268</a>
+<a href=#1269 id=1269 data-nosnippet>1269</a><span class="doccomment">/// Whether a piece of an author line off its names line reads as a name, for a spacing run there to part two: its text
+<a href=#1270 id=1270 data-nosnippet>1270</a>/// is names ([`name_count`]), not an affiliation ([`reads_as_affiliation`]), and it holds no address (`@`) or link
+<a href=#1271 id=1271 data-nosnippet>1271</a>/// (`\url`, `\href`, `\texttt`).
+<a href=#1272 id=1272 data-nosnippet>1272</a></span><span class="kw">fn </span>reads_as_name_piece(piece: <span class="kw-2">&amp;</span>[Token]) -&gt; bool {
+<a href=#1273 id=1273 data-nosnippet>1273</a>  <span class="comment">// (a name's notes are no part of it: `Xinlei He\textsuperscript{1}\thanks{… \href{mailto:…}{…}}`, 2605.30366)
+<a href=#1274 id=1274 data-nosnippet>1274</a>  </span><span class="kw">let </span>piece = outside_notes(piece);
+<a href=#1275 id=1275 data-nosnippet>1275</a>  <span class="kw">let </span>text = visible_name_text(<span class="kw-2">&amp;</span>piece);
+<a href=#1276 id=1276 data-nosnippet>1276</a>  !text.contains(<span class="string">'@'</span>)
+<a href=#1277 id=1277 data-nosnippet>1277</a>    &amp;&amp; !piece
+<a href=#1278 id=1278 data-nosnippet>1278</a>      .iter()
+<a href=#1279 id=1279 data-nosnippet>1279</a>      .any(|t| t.with_str(|s| <span class="macro">matches!</span>(s, <span class="string">"\\url" </span>| <span class="string">"\\href" </span>| <span class="string">"\\texttt" </span>| <span class="string">"\\tt"</span>)))
+<a href=#1280 id=1280 data-nosnippet>1280</a>    &amp;&amp; name_count(<span class="kw-2">&amp;</span>text) &gt; <span class="number">0
+<a href=#1281 id=1281 data-nosnippet>1281</a>    </span>&amp;&amp; !reads_as_affiliation(<span class="kw-2">&amp;</span>Tokens::new(piece))
+<a href=#1282 id=1282 data-nosnippet>1282</a>}
+<a href=#1283 id=1283 data-nosnippet>1283</a>
+<a href=#1284 id=1284 data-nosnippet>1284</a><span class="doccomment">/// A parameterless macro whose expansion closes the title page's tabular and opens another, not an author separator
+<a href=#1285 id=1285 data-nosnippet>1285</a>/// ([`author_and_splits`]): the ACM SIG template's `\def\sharedaffiliation{\end{tabular}\begin{tabular}{c}}` in `\author`
+<a href=#1286 id=1286 data-nosnippet>1286</a>/// (sig-alternate.cls:283's `\alignauthor` juggles the same way) prints a line break between the names above and the
+<a href=#1287 id=1287 data-nosnippet>1287</a>/// affiliation below (1704.03168, 1301.5612, 1401.6981, 0712.1016). Read by its meaning, whatever its name: the
+<a href=#1288 id=1288 data-nosnippet>1288</a>/// rehearsal binds it to the column or the row break it is (`observer::rehearsal`), as the juggle written inline. It
+<a href=#1289 id=1289 data-nosnippet>1289</a>/// reopens one after what it prints between (1301.5612's `\def\sharedaffiliation{\end{tabular}\newline
+<a href=#1290 id=1290 data-nosnippet>1290</a>/// \begin{tabular}{c}}`), which this gives; a macro that only closes one (`\newcommand{\etab}{\end{tabular}}`, closing a
+<a href=#1291 id=1291 data-nosnippet>1291</a>/// tabular the block opened itself) is no juggle.
+<a href=#1292 id=1292 data-nosnippet>1292</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>tabular_juggle_between(t: <span class="kw-2">&amp;</span>Token) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;Token&gt;&gt; {
+<a href=#1293 id=1293 data-nosnippet>1293</a>  <span class="kw">let </span>rest = tabular_close_rest(t)<span class="question-mark">?</span>;
+<a href=#1294 id=1294 data-nosnippet>1294</a>  (<span class="number">0</span>..rest.len())
+<a href=#1295 id=1295 data-nosnippet>1295</a>    .find(|<span class="kw-2">&amp;</span>at| environment_call_len(<span class="kw-2">&amp;</span>rest[at..], <span class="macro">T_CS!</span>(<span class="string">"\\begin"</span>), <span class="string">"tabular"</span>).is_some())
+<a href=#1296 id=1296 data-nosnippet>1296</a>    .map(|at| without_optional_line_breaks(<span class="kw-2">&amp;</span>rest[..at]))
+<a href=#1297 id=1297 data-nosnippet>1297</a>}
+<a href=#1298 id=1298 data-nosnippet>1298</a>
+<a href=#1299 id=1299 data-nosnippet>1299</a><span class="doccomment">/// `between` without a `\linebreak[n]` of `n` below 4, which allows a break and forces none (latex.ltx:9235-9270
+<a href=#1300 id=1300 data-nosnippet>1300</a>/// `\@no@lnbk`, `\penalty-\@getpen{n}`: 0, `\@lowpenalty`, `\@medpenalty`, `\@highpenalty`; only 4 is `\@M`), so
+<a href=#1301 id=1301 data-nosnippet>1301</a>/// prints no row break: neurips_2022.sty:285's `\NewAnd`, `\hfil\linebreak[0]\hfil` between its columns, which the PDF
+<a href=#1302 id=1302 data-nosnippet>1302</a>/// sets side by side as `\and`'s (2205.14141; review revPB S2: an unmarked name after it was read as an address line).
+<a href=#1303 id=1303 data-nosnippet>1303</a></span><span class="kw">fn </span>without_optional_line_breaks(between: <span class="kw-2">&amp;</span>[Token]) -&gt; Vec&lt;Token&gt; {
+<a href=#1304 id=1304 data-nosnippet>1304</a>  <span class="kw">let </span><span class="kw-2">mut </span>out = Vec::with_capacity(between.len());
+<a href=#1305 id=1305 data-nosnippet>1305</a>  <span class="kw">let </span><span class="kw-2">mut </span>i = <span class="number">0</span>;
+<a href=#1306 id=1306 data-nosnippet>1306</a>  <span class="kw">while </span>i &lt; between.len() {
+<a href=#1307 id=1307 data-nosnippet>1307</a>    <span class="kw">let </span>optional = between[i] == <span class="macro">T_CS!</span>(<span class="string">"\\linebreak"</span>)
+<a href=#1308 id=1308 data-nosnippet>1308</a>      &amp;&amp; between.get(i + <span class="number">1</span>) == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="macro">T_OTHER!</span>(<span class="string">"["</span>))
+<a href=#1309 id=1309 data-nosnippet>1309</a>      &amp;&amp; between.get(i + <span class="number">3</span>) == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="macro">T_OTHER!</span>(<span class="string">"]"</span>))
+<a href=#1310 id=1310 data-nosnippet>1310</a>      &amp;&amp; between
+<a href=#1311 id=1311 data-nosnippet>1311</a>        .get(i + <span class="number">2</span>)
+<a href=#1312 id=1312 data-nosnippet>1312</a>        .is_some_and(|n| [<span class="string">"0"</span>, <span class="string">"1"</span>, <span class="string">"2"</span>, <span class="string">"3"</span>].iter().any(|d| n.with_str(|s| s == <span class="kw-2">*</span>d)));
+<a href=#1313 id=1313 data-nosnippet>1313</a>    <span class="kw">if </span>optional {
+<a href=#1314 id=1314 data-nosnippet>1314</a>      i += <span class="number">4</span>;
+<a href=#1315 id=1315 data-nosnippet>1315</a>    } <span class="kw">else </span>{
+<a href=#1316 id=1316 data-nosnippet>1316</a>      out.push(between[i]);
+<a href=#1317 id=1317 data-nosnippet>1317</a>      i += <span class="number">1</span>;
+<a href=#1318 id=1318 data-nosnippet>1318</a>    }
+<a href=#1319 id=1319 data-nosnippet>1319</a>  }
+<a href=#1320 id=1320 data-nosnippet>1320</a>  out
+<a href=#1321 id=1321 data-nosnippet>1321</a>}
+<a href=#1322 id=1322 data-nosnippet>1322</a>
+<a href=#1323 id=1323 data-nosnippet>1323</a><span class="doccomment">/// The rest of `body` past the environment command `cs` and the `{name}` group after it (`\end{tabular}`), if it
+<a href=#1324 id=1324 data-nosnippet>1324</a>/// starts with them.
+<a href=#1325 id=1325 data-nosnippet>1325</a></span><span class="kw">fn </span>past_environment(body: <span class="kw-2">&amp;</span>[Token], cs: Token, name: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;Token&gt;&gt; {
+<a href=#1326 id=1326 data-nosnippet>1326</a>  environment_call_len(body, cs, name).map(|len| body[len..].to_vec())
+<a href=#1327 id=1327 data-nosnippet>1327</a>}
+<a href=#1328 id=1328 data-nosnippet>1328</a>
+<a href=#1329 id=1329 data-nosnippet>1329</a><span class="doccomment">/// How many tokens the environment command `cs` and the `{name}` group after it (`\end{tabular}`) take, if `body`
+<a href=#1330 id=1330 data-nosnippet>1330</a>/// starts with them.
+<a href=#1331 id=1331 data-nosnippet>1331</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>environment_call_len(
+<a href=#1332 id=1332 data-nosnippet>1332</a>  body: <span class="kw-2">&amp;</span>[Token],
+<a href=#1333 id=1333 data-nosnippet>1333</a>  cs: Token,
+<a href=#1334 id=1334 data-nosnippet>1334</a>  name: <span class="kw-2">&amp;</span>str,
+<a href=#1335 id=1335 data-nosnippet>1335</a>) -&gt; <span class="prelude-ty">Option</span>&lt;usize&gt; {
+<a href=#1336 id=1336 data-nosnippet>1336</a>  <span class="comment">// (the command and the open brace first: this runs at every token position of a block, `inline_juggles_as_columns`)
+<a href=#1337 id=1337 data-nosnippet>1337</a>  </span><span class="kw">let </span>(first, group) = body.split_first()<span class="question-mark">?</span>;
+<a href=#1338 id=1338 data-nosnippet>1338</a>  <span class="kw">let </span>(open, group) = group.split_first()<span class="question-mark">?</span>;
+<a href=#1339 id=1339 data-nosnippet>1339</a>  <span class="kw">if </span><span class="kw-2">*</span>first != cs || open.get_catcode() != Catcode::BEGIN {
+<a href=#1340 id=1340 data-nosnippet>1340</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#1341 id=1341 data-nosnippet>1341</a>  }
+<a href=#1342 id=1342 data-nosnippet>1342</a>  <span class="kw">let </span>close = group.iter().position(|t| t.get_catcode() == Catcode::END)<span class="question-mark">?</span>;
+<a href=#1343 id=1343 data-nosnippet>1343</a>  spells(<span class="kw-2">&amp;</span>group[..close], name).then_some(close + <span class="number">3</span>)
+<a href=#1344 id=1344 data-nosnippet>1344</a>}
+<a href=#1345 id=1345 data-nosnippet>1345</a>
+<a href=#1346 id=1346 data-nosnippet>1346</a><span class="doccomment">/// Whether `group`'s tokens, written out as `to_string()` writes them, spell `name`: matched as they are written, no
+<a href=#1347 id=1347 data-nosnippet>1347</a>/// `String` built.
+<a href=#1348 id=1348 data-nosnippet>1348</a></span><span class="kw">fn </span>spells(group: <span class="kw-2">&amp;</span>[Token], name: <span class="kw-2">&amp;</span>str) -&gt; bool {
+<a href=#1349 id=1349 data-nosnippet>1349</a>  <span class="doccomment">/// What is left of the name to match; `fmt::Error` at the first difference.
+<a href=#1350 id=1350 data-nosnippet>1350</a>  </span><span class="kw">struct </span>Rest&lt;<span class="lifetime">'a</span>&gt;(<span class="kw-2">&amp;</span><span class="lifetime">'a </span>str);
+<a href=#1351 id=1351 data-nosnippet>1351</a>  <span class="kw">impl </span>std::fmt::Write <span class="kw">for </span>Rest&lt;<span class="lifetime">'_</span>&gt; {
+<a href=#1352 id=1352 data-nosnippet>1352</a>    <span class="kw">fn </span>write_str(<span class="kw-2">&amp;mut </span><span class="self">self</span>, text: <span class="kw-2">&amp;</span>str) -&gt; std::fmt::Result {
+<a href=#1353 id=1353 data-nosnippet>1353</a>      <span class="self">self</span>.<span class="number">0 </span>= <span class="self">self</span>.<span class="number">0</span>.strip_prefix(text).ok_or(std::fmt::Error)<span class="question-mark">?</span>;
+<a href=#1354 id=1354 data-nosnippet>1354</a>      <span class="prelude-val">Ok</span>(())
+<a href=#1355 id=1355 data-nosnippet>1355</a>    }
+<a href=#1356 id=1356 data-nosnippet>1356</a>  }
+<a href=#1357 id=1357 data-nosnippet>1357</a>  <span class="kw">let </span><span class="kw-2">mut </span>rest = Rest(name);
+<a href=#1358 id=1358 data-nosnippet>1358</a>  group
+<a href=#1359 id=1359 data-nosnippet>1359</a>    .iter()
+<a href=#1360 id=1360 data-nosnippet>1360</a>    .all(|t| std::fmt::Write::write_fmt(<span class="kw-2">&amp;mut </span>rest, <span class="macro">format_args!</span>(<span class="string">"{t}"</span>)).is_ok())
+<a href=#1361 id=1361 data-nosnippet>1361</a>    &amp;&amp; rest.<span class="number">0</span>.is_empty()
+<a href=#1362 id=1362 data-nosnippet>1362</a>}
+<a href=#1363 id=1363 data-nosnippet>1363</a>
+<a href=#1364 id=1364 data-nosnippet>1364</a><span class="doccomment">/// For a parameterless macro, not an author separator ([`author_and_splits`]), whose expansion starts with
+<a href=#1365 id=1365 data-nosnippet>1365</a>/// `\end{tabular}`: the rest of its expansion (spaces out).
+<a href=#1366 id=1366 data-nosnippet>1366</a></span><span class="kw">fn </span>tabular_close_rest(t: <span class="kw-2">&amp;</span>Token) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;Token&gt;&gt; {
+<a href=#1367 id=1367 data-nosnippet>1367</a>  tabular_close_rest_of_any(t).filter(|<span class="kw">_</span>| {
+<a href=#1368 id=1368 data-nosnippet>1368</a>    !author_and_splits()
+<a href=#1369 id=1369 data-nosnippet>1369</a>      .iter()
+<a href=#1370 id=1370 data-nosnippet>1370</a>      .any(|s| <span class="macro">matches!</span>(s, SplitDelim::Token(d) <span class="kw">if </span>d == t))
+<a href=#1371 id=1371 data-nosnippet>1371</a>  })
+<a href=#1372 id=1372 data-nosnippet>1372</a>}
+<a href=#1373 id=1373 data-nosnippet>1373</a>
+<a href=#1374 id=1374 data-nosnippet>1374</a><span class="doccomment">/// A block written whole (the emitter's, `observer::emitter::emit`; OD #980), each macro whose
+<a href=#1375 id=1375 data-nosnippet>1375</a>/// expansion starts by closing a tabular — a juggle or a column, `\alignauthor` too, which nothing splits there — the line
+<a href=#1376 id=1376 data-nosnippet>1376</a>/// break it prints between what it parts, one opening the block nothing: digested, it closed a tabular the block never
+<a href=#1377 id=1377 data-nosnippet>1377</a>/// opened, inside the creator's `\lx@personname`, four Errors and every name lost (vldb.cls:270 `\def\alignauthor{\end{tabular}
+<a href=#1378 id=1378 data-nosnippet>1378</a>/// \begin{tabular}[t]{p{\auwidth}}\centering}`, which its `\@maketitle` sets inside its own `\begin{tabular}[t]{c}\@author
+<a href=#1379 id=1379 data-nosnippet>1379</a>/// \end{tabular}`; 1511.05911). The deleted old driver's own rewrite of a juggle (`tabular_juggles_as_line_breaks`),
+<a href=#1380 id=1380 data-nosnippet>1380</a>/// the column's split ([`author_and_splits`]) a line break where nothing splits.
+<a href=#1381 id=1381 data-nosnippet>1381</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>tabular_juggles_in_a_whole_block(tokens: Tokens) -&gt; Tokens {
+<a href=#1382 id=1382 data-nosnippet>1382</a>  tabular_juggles_as(tokens, <span class="macro">T_CS!</span>(<span class="string">"\\\\"</span>))
+<a href=#1383 id=1383 data-nosnippet>1383</a>}
+<a href=#1384 id=1384 data-nosnippet>1384</a>
+<a href=#1385 id=1385 data-nosnippet>1385</a><span class="doccomment">/// `tokens` with each macro whose expansion starts by closing a tabular ([`tabular_juggles_in_a_whole_block`]) the
+<a href=#1386 id=1386 data-nosnippet>1386</a>/// `separator`, one opening the block nothing.
+<a href=#1387 id=1387 data-nosnippet>1387</a></span><span class="kw">fn </span>tabular_juggles_as(tokens: Tokens, separator: Token) -&gt; Tokens {
+<a href=#1388 id=1388 data-nosnippet>1388</a>  <span class="kw">let </span>toks = tokens.unlist();
+<a href=#1389 id=1389 data-nosnippet>1389</a>  <span class="kw">if </span>!toks.iter().any(|t| tabular_close_rest_of_any(t).is_some()) {
+<a href=#1390 id=1390 data-nosnippet>1390</a>    <span class="kw">return </span>Tokens::new(toks);
+<a href=#1391 id=1391 data-nosnippet>1391</a>  }
+<a href=#1392 id=1392 data-nosnippet>1392</a>  <span class="kw">let </span><span class="kw-2">mut </span>out: Vec&lt;Token&gt; = Vec::with_capacity(toks.len());
+<a href=#1393 id=1393 data-nosnippet>1393</a>  <span class="kw">for </span>t <span class="kw">in </span>toks {
+<a href=#1394 id=1394 data-nosnippet>1394</a>    <span class="kw">if </span>tabular_close_rest_of_any(<span class="kw-2">&amp;</span>t).is_some() {
+<a href=#1395 id=1395 data-nosnippet>1395</a>      <span class="kw">if </span>!out.is_empty() {
+<a href=#1396 id=1396 data-nosnippet>1396</a>        out.push(separator);
+<a href=#1397 id=1397 data-nosnippet>1397</a>      }
+<a href=#1398 id=1398 data-nosnippet>1398</a>    } <span class="kw">else </span>{
+<a href=#1399 id=1399 data-nosnippet>1399</a>      out.push(t);
+<a href=#1400 id=1400 data-nosnippet>1400</a>    }
+<a href=#1401 id=1401 data-nosnippet>1401</a>  }
+<a href=#1402 id=1402 data-nosnippet>1402</a>  Tokens::new(out)
+<a href=#1403 id=1403 data-nosnippet>1403</a>}
+<a href=#1404 id=1404 data-nosnippet>1404</a>
+<a href=#1405 id=1405 data-nosnippet>1405</a><span class="doccomment">/// For a parameterless macro whose expansion starts with `\end{tabular}`: the rest of its expansion (spaces out). An
+<a href=#1406 id=1406 data-nosnippet>1406</a>/// undefined one the class's title code defines where it reads `\@author` ([`title_code_juggle`]) is read by that
+<a href=#1407 id=1407 data-nosnippet>1407</a>/// definition.
+<a href=#1408 id=1408 data-nosnippet>1408</a></span><span class="kw">fn </span>tabular_close_rest_of_any(t: <span class="kw-2">&amp;</span>Token) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;Token&gt;&gt; {
+<a href=#1409 id=1409 data-nosnippet>1409</a>  <span class="kw">if </span>t.get_catcode() != Catcode::CS {
+<a href=#1410 id=1410 data-nosnippet>1410</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#1411 id=1411 data-nosnippet>1411</a>  }
+<a href=#1412 id=1412 data-nosnippet>1412</a>  <span class="kw">let </span><span class="prelude-val">Some</span>(defn) = lookup_definition(t).ok()<span class="question-mark">? </span><span class="kw">else </span>{
+<a href=#1413 id=1413 data-nosnippet>1413</a>    <span class="kw">return </span>title_code_juggle(t);
+<a href=#1414 id=1414 data-nosnippet>1414</a>  };
+<a href=#1415 id=1415 data-nosnippet>1415</a>  <span class="kw">if </span>!defn.is_expandable()
+<a href=#1416 id=1416 data-nosnippet>1416</a>    || defn
+<a href=#1417 id=1417 data-nosnippet>1417</a>      .get_parameters()
+<a href=#1418 id=1418 data-nosnippet>1418</a>      .is_some_and(|p| !p.get_parameters().is_empty())
+<a href=#1419 id=1419 data-nosnippet>1419</a>  {
+<a href=#1420 id=1420 data-nosnippet>1420</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#1421 id=1421 data-nosnippet>1421</a>  }
+<a href=#1422 id=1422 data-nosnippet>1422</a>  <span class="kw">let </span><span class="prelude-val">Some</span>(ExpansionBody::Tokens(body)) = defn.get_expansion() <span class="kw">else </span>{
+<a href=#1423 id=1423 data-nosnippet>1423</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#1424 id=1424 data-nosnippet>1424</a>  };
+<a href=#1425 id=1425 data-nosnippet>1425</a>  tabular_close_rest_of_body(body.unlist_ref())
+<a href=#1426 id=1426 data-nosnippet>1426</a>}
+<a href=#1427 id=1427 data-nosnippet>1427</a>
+<a href=#1428 id=1428 data-nosnippet>1428</a><span class="doccomment">/// The rest (spaces out) of a parameterless macro's expansion `body` past the `\end{tabular}` it starts with, if it does.
+<a href=#1429 id=1429 data-nosnippet>1429</a></span><span class="kw">fn </span>tabular_close_rest_of_body(body: <span class="kw-2">&amp;</span>[Token]) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;Token&gt;&gt; {
+<a href=#1430 id=1430 data-nosnippet>1430</a>  <span class="kw">let </span>unspaced = || body.iter().filter(|t| t.get_catcode() != Catcode::SPACE);
+<a href=#1431 id=1431 data-nosnippet>1431</a>  <span class="comment">// (its `\end` read before the body is copied: this runs for every macro of every rehearsal)
+<a href=#1432 id=1432 data-nosnippet>1432</a>  </span><span class="kw">if </span>unspaced().next() != <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\end"</span>)) {
+<a href=#1433 id=1433 data-nosnippet>1433</a>    <span class="kw">return </span><span class="prelude-val">None</span>;
+<a href=#1434 id=1434 data-nosnippet>1434</a>  }
+<a href=#1435 id=1435 data-nosnippet>1435</a>  <span class="kw">let </span>body: Vec&lt;Token&gt; = unspaced().copied().collect();
+<a href=#1436 id=1436 data-nosnippet>1436</a>  past_environment(<span class="kw-2">&amp;</span>body, <span class="macro">T_CS!</span>(<span class="string">"\\end"</span>), <span class="string">"tabular"</span>)
+<a href=#1437 id=1437 data-nosnippet>1437</a>}
+<a href=#1438 id=1438 data-nosnippet>1438</a>
+<a href=#1439 id=1439 data-nosnippet>1439</a><span class="doccomment">/// For `t` undefined at the block, the rest of the expansion past its `\end{tabular}` ([`tabular_close_rest_of_body`]) of
+<a href=#1440 id=1440 data-nosnippet>1440</a>/// the parameterless `\def` the class's title code makes of it where it reads `\@author`
+<a href=#1441 id=1441 data-nosnippet>1441</a>/// (`defs::frontmatter_fields::title_code_author_statements`; never replayed for the author content, closing a group it
+<a href=#1442 id=1442 data-nosnippet>1442</a>/// did not open): neurips_2022.sty:285's `\def\NewAnd{\end{tabular}\hfil\linebreak[0]\hfil\begin{tabular}[t]{c}
+<a href=#1443 id=1443 data-nosnippet>1443</a>/// \ignorespaces}`, defined by its `\@maketitle` beside `\And` and `\AND` (2205.14141, 2205.14539) — read as a juggle
+<a href=#1444 id=1444 data-nosnippet>1444</a>/// defined at the block is (`\sharedaffiliation`, [`tabular_juggle_between`]).
+<a href=#1445 id=1445 data-nosnippet>1445</a></span><span class="kw">fn </span>title_code_juggle(t: <span class="kw-2">&amp;</span>Token) -&gt; <span class="prelude-ty">Option</span>&lt;Vec&lt;Token&gt;&gt; {
+<a href=#1446 id=1446 data-nosnippet>1446</a>  title_code_author_statements()
+<a href=#1447 id=1447 data-nosnippet>1447</a>    .into_iter()
+<a href=#1448 id=1448 data-nosnippet>1448</a>    .find(|(definee, statement)| definee == t &amp;&amp; statement.first() == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\def"</span>)))
+<a href=#1449 id=1449 data-nosnippet>1449</a>    .and_then(|(<span class="kw">_</span>, statement)| {
+<a href=#1450 id=1450 data-nosnippet>1450</a>      <span class="comment">// (`\def\X{…}`: parameterless, its body's group right after the definee)
+<a href=#1451 id=1451 data-nosnippet>1451</a>      </span><span class="kw">let </span>(open, rest) = statement.get(<span class="number">2</span>..)<span class="question-mark">?</span>.split_first()<span class="question-mark">?</span>;
+<a href=#1452 id=1452 data-nosnippet>1452</a>      <span class="kw">let </span>(close, inner) = rest.split_last()<span class="question-mark">?</span>;
+<a href=#1453 id=1453 data-nosnippet>1453</a>      (open.get_catcode() == Catcode::BEGIN &amp;&amp; close.get_catcode() == Catcode::END)
+<a href=#1454 id=1454 data-nosnippet>1454</a>        .then_some(inner)
+<a href=#1455 id=1455 data-nosnippet>1455</a>        .and_then(tabular_close_rest_of_body)
+<a href=#1456 id=1456 data-nosnippet>1456</a>    })
+<a href=#1457 id=1457 data-nosnippet>1457</a>}
+<a href=#1458 id=1458 data-nosnippet>1458</a>
+<a href=#1459 id=1459 data-nosnippet>1459</a><span class="doccomment">/// `tokens` with a mark that leads a line of labelled entries written without the symbols glued to it (`$^{*1}$Kyoto
+<a href=#1460 id=1460 data-nosnippet>1460</a>/// University`, `$^{1*}$Univ X`, 2606.23258): the mark labels the line, the symbol with it, and a line prints no label in
+<a href=#1461 id=1461 data-nosnippet>1461</a>/// its text — it read "* Univ X", or matched no name once the names' `*1` asks for 1 and `*` apart (`glued_marks`).
+<a href=#1462 id=1462 data-nosnippet>1462</a>/// From the first line if `first_line` (an affiliation list), else from after the first line break (an author block,
+<a href=#1463 id=1463 data-nosnippet>1463</a>/// whose first line is names, its marks after them).
+<a href=#1464 id=1464 data-nosnippet>1464</a></span><span class="kw">pub fn </span>glued_line_marks_as_marks(tokens: Tokens, first_line: bool) -&gt; Tokens {
+<a href=#1465 id=1465 data-nosnippet>1465</a>  <span class="kw">let </span>v = tokens.unlist_ref();
+<a href=#1466 id=1466 data-nosnippet>1466</a>  <span class="kw">if </span>!v
+<a href=#1467 id=1467 data-nosnippet>1467</a>    .iter()
+<a href=#1468 id=1468 data-nosnippet>1468</a>    .any(|t| <span class="kw-2">*</span>t == <span class="macro">T_SUPER!</span>() || <span class="kw-2">*</span>t == <span class="macro">T_CS!</span>(<span class="string">"\\textsuperscript"</span>))
+<a href=#1469 id=1469 data-nosnippet>1469</a>  {
+<a href=#1470 id=1470 data-nosnippet>1470</a>    <span class="kw">return </span>tokens;
+<a href=#1471 id=1471 data-nosnippet>1471</a>  }
+<a href=#1472 id=1472 data-nosnippet>1472</a>  <span class="kw">let </span><span class="kw-2">mut </span>out: Vec&lt;Token&gt; = Vec::with_capacity(v.len());
+<a href=#1473 id=1473 data-nosnippet>1473</a>  <span class="comment">// (the group depth; whether a letter came since the last separator; whether the names line is over)
+<a href=#1474 id=1474 data-nosnippet>1474</a>  </span><span class="kw">let </span>(<span class="kw-2">mut </span>depth, <span class="kw-2">mut </span>lettered, <span class="kw-2">mut </span>broke) = (<span class="number">0usize</span>, !first_line, first_line);
+<a href=#1475 id=1475 data-nosnippet>1475</a>  <span class="kw">let </span><span class="kw-2">mut </span>i = <span class="number">0</span>;
+<a href=#1476 id=1476 data-nosnippet>1476</a>  <span class="kw">while </span>i &lt; v.len() {
+<a href=#1477 id=1477 data-nosnippet>1477</a>    <span class="kw">let </span>t = v[i];
+<a href=#1478 id=1478 data-nosnippet>1478</a>    <span class="kw">if </span>depth == <span class="number">0 </span>&amp;&amp; !lettered {
+<a href=#1479 id=1479 data-nosnippet>1479</a>      <span class="comment">// (`\textsuperscript{…}`; `$^{…}$`, `${}^{…}$`)
+<a href=#1480 id=1480 data-nosnippet>1480</a>      </span><span class="kw">let </span>at = <span class="kw">match </span>t.get_catcode() {
+<a href=#1481 id=1481 data-nosnippet>1481</a>        Catcode::MATH =&gt; {
+<a href=#1482 id=1482 data-nosnippet>1482</a>          <span class="kw">let </span>p = i
+<a href=#1483 id=1483 data-nosnippet>1483</a>            + <span class="number">1
+<a href=#1484 id=1484 data-nosnippet>1484</a>            </span>+ usize::from(v.get(i + <span class="number">1</span>) == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="macro">T_BEGIN!</span>()) &amp;&amp; v.get(i + <span class="number">2</span>) == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="macro">T_END!</span>())) * <span class="number">2</span>;
+<a href=#1485 id=1485 data-nosnippet>1485</a>          (v.get(p) == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="macro">T_SUPER!</span>()) &amp;&amp; v.get(p + <span class="number">1</span>) == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="macro">T_BEGIN!</span>())).then_some(p + <span class="number">1</span>)
+<a href=#1486 id=1486 data-nosnippet>1486</a>        },
+<a href=#1487 id=1487 data-nosnippet>1487</a>        <span class="kw">_ if </span>t == <span class="macro">T_CS!</span>(<span class="string">"\\textsuperscript"</span>) &amp;&amp; v.get(i + <span class="number">1</span>) == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="macro">T_BEGIN!</span>()) =&gt; <span class="prelude-val">Some</span>(i + <span class="number">1</span>),
+<a href=#1488 id=1488 data-nosnippet>1488</a>        <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#1489 id=1489 data-nosnippet>1489</a>      };
+<a href=#1490 id=1490 data-nosnippet>1490</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(open) = at {
+<a href=#1491 id=1491 data-nosnippet>1491</a>        <span class="kw">let </span>close = skip_group(v, open);
+<a href=#1492 id=1492 data-nosnippet>1492</a>        <span class="kw">let </span>math = t.get_catcode() == Catcode::MATH;
+<a href=#1493 id=1493 data-nosnippet>1493</a>        <span class="kw">let </span>end = <span class="kw">if </span>math { close + <span class="number">1 </span>} <span class="kw">else </span>{ close };
+<a href=#1494 id=1494 data-nosnippet>1494</a>        <span class="kw">if </span>close &lt;= v.len()
+<a href=#1495 id=1495 data-nosnippet>1495</a>          &amp;&amp; (!math || v.get(close) == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="macro">T_MATH!</span>()))
+<a href=#1496 id=1496 data-nosnippet>1496</a>          &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(glued) = glued_marks(<span class="kw-2">&amp;</span>v[open + <span class="number">1</span>..close - <span class="number">1</span>])
+<a href=#1497 id=1497 data-nosnippet>1497</a>        {
+<a href=#1498 id=1498 data-nosnippet>1498</a>          out.extend_from_slice(<span class="kw-2">&amp;</span>v[i..=open]);
+<a href=#1499 id=1499 data-nosnippet>1499</a>          <span class="kw">for </span>marks <span class="kw">in </span>glued.into_iter().filter_map(|part| <span class="kw">match </span>part {
+<a href=#1500 id=1500 data-nosnippet>1500</a>            GluedPart::Marks(marks) =&gt; <span class="prelude-val">Some</span>(marks),
+<a href=#1501 id=1501 data-nosnippet>1501</a>            GluedPart::Symbol(<span class="kw">_</span>) =&gt; <span class="prelude-val">None</span>,
+<a href=#1502 id=1502 data-nosnippet>1502</a>          }) {
+<a href=#1503 id=1503 data-nosnippet>1503</a>            out.extend(marks);
+<a href=#1504 id=1504 data-nosnippet>1504</a>          }
+<a href=#1505 id=1505 data-nosnippet>1505</a>          out.push(<span class="macro">T_END!</span>());
+<a href=#1506 id=1506 data-nosnippet>1506</a>          <span class="kw">if </span>math {
+<a href=#1507 id=1507 data-nosnippet>1507</a>            out.push(<span class="macro">T_MATH!</span>());
+<a href=#1508 id=1508 data-nosnippet>1508</a>          }
+<a href=#1509 id=1509 data-nosnippet>1509</a>          i = end;
+<a href=#1510 id=1510 data-nosnippet>1510</a>          <span class="kw">continue</span>;
+<a href=#1511 id=1511 data-nosnippet>1511</a>        }
+<a href=#1512 id=1512 data-nosnippet>1512</a>      }
+<a href=#1513 id=1513 data-nosnippet>1513</a>    }
+<a href=#1514 id=1514 data-nosnippet>1514</a>    <span class="kw">match </span>t.get_catcode() {
+<a href=#1515 id=1515 data-nosnippet>1515</a>      Catcode::BEGIN =&gt; depth += <span class="number">1</span>,
+<a href=#1516 id=1516 data-nosnippet>1516</a>      Catcode::END =&gt; depth = depth.saturating_sub(<span class="number">1</span>),
+<a href=#1517 id=1517 data-nosnippet>1517</a>      Catcode::LETTER =&gt; lettered = <span class="bool-val">true</span>,
+<a href=#1518 id=1518 data-nosnippet>1518</a>      <span class="kw">_ if </span>depth == <span class="number">0 </span>&amp;&amp; is_line_separator(<span class="kw-2">&amp;</span>t) =&gt; {
+<a href=#1519 id=1519 data-nosnippet>1519</a>        broke |= first_line || t == <span class="macro">T_CS!</span>(<span class="string">"\\\\"</span>) || t == <span class="macro">T_CS!</span>(<span class="string">"\\newline"</span>);
+<a href=#1520 id=1520 data-nosnippet>1520</a>        lettered &amp;= !broke;
+<a href=#1521 id=1521 data-nosnippet>1521</a>      },
+<a href=#1522 id=1522 data-nosnippet>1522</a>      <span class="kw">_ </span>=&gt; {},
+<a href=#1523 id=1523 data-nosnippet>1523</a>    }
+<a href=#1524 id=1524 data-nosnippet>1524</a>    out.push(t);
+<a href=#1525 id=1525 data-nosnippet>1525</a>    i += <span class="number">1</span>;
+<a href=#1526 id=1526 data-nosnippet>1526</a>  }
+<a href=#1527 id=1527 data-nosnippet>1527</a>  Tokens::new(out)
+<a href=#1528 id=1528 data-nosnippet>1528</a>}
+<a href=#1529 id=1529 data-nosnippet>1529</a>
+<a href=#1530 id=1530 data-nosnippet>1530</a><span class="doccomment">/// Rewrite an ordinal suffix superscript after a numeral (`5\textsuperscript{th}`, `21$^{st}$`) onto a visible
+<a href=#1531 id=1531 data-nosnippet>1531</a>/// superscript: it is the number's, not an affiliation mark, so a marked list is not split at it nor labelled by it
+<a href=#1532 id=1532 data-nosnippet>1532</a>/// (repro sectioning-frontmatter/affiliation_line_superscript_ordinal_is_not_a_mark; iopart's
+<a href=#1533 id=1533 data-nosnippet>1533</a>/// `\address{$^1$Univ A, 5 \textsuperscript{th} floor}`, 2609.01831).
+<a href=#1534 id=1534 data-nosnippet>1534</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>rewrite_ordinal_superscripts(tokens: Tokens) -&gt; Tokens {
+<a href=#1535 id=1535 data-nosnippet>1535</a>  <span class="kw">let </span>is_ordinal = is_ordinal_suffix;
+<a href=#1536 id=1536 data-nosnippet>1536</a>  <span class="kw">let </span>is_digit = |t: <span class="kw-2">&amp;</span>Token| {
+<a href=#1537 id=1537 data-nosnippet>1537</a>    t.get_catcode() == Catcode::OTHER
+<a href=#1538 id=1538 data-nosnippet>1538</a>      &amp;&amp; t.with_str(|s| !s.is_empty() &amp;&amp; s.chars().all(|c| c.is_ascii_digit()))
+<a href=#1539 id=1539 data-nosnippet>1539</a>  };
+<a href=#1540 id=1540 data-nosnippet>1540</a>  <span class="kw">let </span>after_numeral = |out: <span class="kw-2">&amp;</span>[Token]| {
+<a href=#1541 id=1541 data-nosnippet>1541</a>    out
+<a href=#1542 id=1542 data-nosnippet>1542</a>      .iter()
+<a href=#1543 id=1543 data-nosnippet>1543</a>      .rev()
+<a href=#1544 id=1544 data-nosnippet>1544</a>      .find(|t| <span class="kw-2">**</span>t != <span class="macro">T_SPACE!</span>())
+<a href=#1545 id=1545 data-nosnippet>1545</a>      .is_some_and(is_digit)
+<a href=#1546 id=1546 data-nosnippet>1546</a>  };
+<a href=#1547 id=1547 data-nosnippet>1547</a>  <span class="comment">// The suffix is shown in text: a math-only wrapper takes its text form (`$^{\mathrm{th}}$`).
+<a href=#1548 id=1548 data-nosnippet>1548</a>  </span><span class="kw">let </span>text_mode = |operand: Vec&lt;Token&gt;| -&gt; Vec&lt;Token&gt; {
+<a href=#1549 id=1549 data-nosnippet>1549</a>    operand
+<a href=#1550 id=1550 data-nosnippet>1550</a>      .into_iter()
+<a href=#1551 id=1551 data-nosnippet>1551</a>      .map(|t| {
+<a href=#1552 id=1552 data-nosnippet>1552</a>        <span class="kw">if </span>t == <span class="macro">T_CS!</span>(<span class="string">"\\mathrm"</span>) {
+<a href=#1553 id=1553 data-nosnippet>1553</a>          <span class="macro">T_CS!</span>(<span class="string">"\\textrm"</span>)
+<a href=#1554 id=1554 data-nosnippet>1554</a>        } <span class="kw">else if </span>t == <span class="macro">T_CS!</span>(<span class="string">"\\mathup"</span>) {
+<a href=#1555 id=1555 data-nosnippet>1555</a>          <span class="macro">T_CS!</span>(<span class="string">"\\textup"</span>)
+<a href=#1556 id=1556 data-nosnippet>1556</a>        } <span class="kw">else if </span>t == <span class="macro">T_CS!</span>(<span class="string">"\\mathit"</span>) {
+<a href=#1557 id=1557 data-nosnippet>1557</a>          <span class="macro">T_CS!</span>(<span class="string">"\\textit"</span>)
+<a href=#1558 id=1558 data-nosnippet>1558</a>        } <span class="kw">else if </span>t == <span class="macro">T_CS!</span>(<span class="string">"\\mathbf"</span>) {
+<a href=#1559 id=1559 data-nosnippet>1559</a>          <span class="macro">T_CS!</span>(<span class="string">"\\textbf"</span>)
+<a href=#1560 id=1560 data-nosnippet>1560</a>        } <span class="kw">else if </span>t == <span class="macro">T_CS!</span>(<span class="string">"\\mathsf"</span>) {
+<a href=#1561 id=1561 data-nosnippet>1561</a>          <span class="macro">T_CS!</span>(<span class="string">"\\textsf"</span>)
+<a href=#1562 id=1562 data-nosnippet>1562</a>        } <span class="kw">else </span>{
+<a href=#1563 id=1563 data-nosnippet>1563</a>          t
+<a href=#1564 id=1564 data-nosnippet>1564</a>        }
+<a href=#1565 id=1565 data-nosnippet>1565</a>      })
+<a href=#1566 id=1566 data-nosnippet>1566</a>      .collect()
+<a href=#1567 id=1567 data-nosnippet>1567</a>  };
+<a href=#1568 id=1568 data-nosnippet>1568</a>  <span class="kw">let </span>src = tokens.unlist();
+<a href=#1569 id=1569 data-nosnippet>1569</a>  <span class="kw">let </span><span class="kw-2">mut </span>out: Vec&lt;Token&gt; = Vec::with_capacity(src.len());
+<a href=#1570 id=1570 data-nosnippet>1570</a>  <span class="kw">let </span><span class="kw-2">mut </span>i = <span class="number">0</span>;
+<a href=#1571 id=1571 data-nosnippet>1571</a>  <span class="kw">while </span>i &lt; src.len() {
+<a href=#1572 id=1572 data-nosnippet>1572</a>    <span class="kw">let </span>t = src[i];
+<a href=#1573 id=1573 data-nosnippet>1573</a>    <span class="kw">if </span>t == <span class="macro">T_CS!</span>(<span class="string">"\\textsuperscript"</span>)
+<a href=#1574 id=1574 data-nosnippet>1574</a>      &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>((operand, next)) = sup_operand_at(<span class="kw-2">&amp;</span>src, i + <span class="number">1</span>)
+<a href=#1575 id=1575 data-nosnippet>1575</a>      &amp;&amp; is_ordinal(<span class="kw-2">&amp;</span>operand)
+<a href=#1576 id=1576 data-nosnippet>1576</a>      &amp;&amp; after_numeral(<span class="kw-2">&amp;</span>out)
+<a href=#1577 id=1577 data-nosnippet>1577</a>    {
+<a href=#1578 id=1578 data-nosnippet>1578</a>      out.extend(visible_sup(text_mode(operand)));
+<a href=#1579 id=1579 data-nosnippet>1579</a>      i = next;
+<a href=#1580 id=1580 data-nosnippet>1580</a>      <span class="kw">continue</span>;
+<a href=#1581 id=1581 data-nosnippet>1581</a>    }
+<a href=#1582 id=1582 data-nosnippet>1582</a>    <span class="kw">if </span>t == <span class="macro">T_MATH!</span>() {
+<a href=#1583 id=1583 data-nosnippet>1583</a>      <span class="comment">// `$^{th}$` after a numeral, or `$5^{th}$` with the numeral inside: the digits stay, the suffix is shown.
+<a href=#1584 id=1584 data-nosnippet>1584</a>      </span><span class="kw">let </span>digits_end = (i + <span class="number">1</span>..src.len())
+<a href=#1585 id=1585 data-nosnippet>1585</a>        .find(|<span class="kw-2">&amp;</span>k| !is_digit(<span class="kw-2">&amp;</span>src[k]))
+<a href=#1586 id=1586 data-nosnippet>1586</a>        .unwrap_or(src.len());
+<a href=#1587 id=1587 data-nosnippet>1587</a>      <span class="kw">if </span>src.get(digits_end) == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="macro">T_SUPER!</span>())
+<a href=#1588 id=1588 data-nosnippet>1588</a>        &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>((operand, next)) = sup_operand_at(<span class="kw-2">&amp;</span>src, digits_end + <span class="number">1</span>)
+<a href=#1589 id=1589 data-nosnippet>1589</a>        &amp;&amp; src.get(next) == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="macro">T_MATH!</span>())
+<a href=#1590 id=1590 data-nosnippet>1590</a>        &amp;&amp; is_ordinal(<span class="kw-2">&amp;</span>operand)
+<a href=#1591 id=1591 data-nosnippet>1591</a>        &amp;&amp; (digits_end &gt; i + <span class="number">1 </span>|| after_numeral(<span class="kw-2">&amp;</span>out))
+<a href=#1592 id=1592 data-nosnippet>1592</a>      {
+<a href=#1593 id=1593 data-nosnippet>1593</a>        out.extend_from_slice(<span class="kw-2">&amp;</span>src[i + <span class="number">1</span>..digits_end]);
+<a href=#1594 id=1594 data-nosnippet>1594</a>        out.extend(visible_sup(text_mode(operand)));
+<a href=#1595 id=1595 data-nosnippet>1595</a>        i = next + <span class="number">1</span>;
+<a href=#1596 id=1596 data-nosnippet>1596</a>        <span class="kw">continue</span>;
+<a href=#1597 id=1597 data-nosnippet>1597</a>      }
+<a href=#1598 id=1598 data-nosnippet>1598</a>    }
+<a href=#1599 id=1599 data-nosnippet>1599</a>    out.push(t);
+<a href=#1600 id=1600 data-nosnippet>1600</a>    i += <span class="number">1</span>;
+<a href=#1601 id=1601 data-nosnippet>1601</a>  }
+<a href=#1602 id=1602 data-nosnippet>1602</a>  Tokens::new(out)
+<a href=#1603 id=1603 data-nosnippet>1603</a>}
+<a href=#1604 id=1604 data-nosnippet>1604</a>
+<a href=#1605 id=1605 data-nosnippet>1605</a><span class="doccomment">/// Rewrite a superscript inside a word, a letter on each side of it (`Craig M$^{\mathrm{c}}$Rae`, 2505.09041;
+<a href=#1606 id=1606 data-nosnippet>1606</a>/// `M\textsuperscript{c}Donald`; `I$^2$R`, `NLP$^2$C`), onto a visible superscript: it is the name's spelling, not an
+<a href=#1607 id=1607 data-nosnippet>1607</a>/// affiliation mark, which follows a name — read as one, its letter was a request and left the name ("Craig MRae", the
+<a href=#1608 id=1608 data-nosnippet>1608</a>/// "c" shown after it). Not a mark list (`$^{1,3}$`: a list of marks is never spelling) nor a mark glued to the word
+<a href=#1609 id=1609 data-nosnippet>1609</a>/// "and" after it (`Hiroshi Ito$^{1,3}$and Tetsuya Ogata`, 2605.00471; `Bipasha Kundu$^{1}$and Cristian Linte`,
+<a href=#1610 id=1610 data-nosnippet>1610</a>/// 2604.27101): those are the name's marks, which kept as its text lost their affiliations (77n r3 review).
+<a href=#1611 id=1611 data-nosnippet>1611</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>rewrite_in_word_superscripts(tokens: Tokens) -&gt; Tokens {
+<a href=#1612 id=1612 data-nosnippet>1612</a>  <span class="kw">let </span>src = tokens.unlist();
+<a href=#1613 id=1613 data-nosnippet>1613</a>  <span class="kw">let </span>letter = |t: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Token&gt;| t.is_some_and(|t| t.get_catcode() == Catcode::LETTER);
+<a href=#1614 id=1614 data-nosnippet>1614</a>  <span class="comment">// (the operand a mark's: a list of marks, or the word after it "and", the separator before the next name; `Andrew`
+<a href=#1615 id=1615 data-nosnippet>1615</a>  // is a word, 77n r4 review probe a8. Only "and" itself: `Ann Able$^{1}$And Bob Baker$^{2}$`, `AND`, stays one name,
+<a href=#1616 id=1616 data-nosnippet>1616</a>  // which `flag_merged_creators` reports — read as a mark, its "And" merged the names silently, 77n r5 review probes
+<a href=#1617 id=1617 data-nosnippet>1617</a>  // a1, a6)
+<a href=#1618 id=1618 data-nosnippet>1618</a>  </span><span class="kw">let </span>marks = |operand: <span class="kw-2">&amp;</span>[Token], after: usize| {
+<a href=#1619 id=1619 data-nosnippet>1619</a>    operand.contains(<span class="kw-2">&amp;</span><span class="macro">T_OTHER!</span>(<span class="string">","</span>))
+<a href=#1620 id=1620 data-nosnippet>1620</a>      || (src.get(after..after + <span class="number">3</span>) == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>[<span class="macro">T_LETTER!</span>(<span class="string">"a"</span>), <span class="macro">T_LETTER!</span>(<span class="string">"n"</span>), <span class="macro">T_LETTER!</span>(<span class="string">"d"</span>)][..])
+<a href=#1621 id=1621 data-nosnippet>1621</a>        &amp;&amp; !letter(src.get(after + <span class="number">3</span>)))
+<a href=#1622 id=1622 data-nosnippet>1622</a>  };
+<a href=#1623 id=1623 data-nosnippet>1623</a>  <span class="comment">// (the letters before it a word, not a length's unit: `\kern2pt$^{1}$Univ A` is a spacing, then a mark; 2407.15815)
+<a href=#1624 id=1624 data-nosnippet>1624</a>  </span><span class="kw">let </span>after_a_word = |out: <span class="kw-2">&amp;</span>[Token]| {
+<a href=#1625 id=1625 data-nosnippet>1625</a>    <span class="kw">let </span>word = out
+<a href=#1626 id=1626 data-nosnippet>1626</a>      .iter()
+<a href=#1627 id=1627 data-nosnippet>1627</a>      .rev()
+<a href=#1628 id=1628 data-nosnippet>1628</a>      .take_while(|t| t.get_catcode() == Catcode::LETTER)
+<a href=#1629 id=1629 data-nosnippet>1629</a>      .count();
+<a href=#1630 id=1630 data-nosnippet>1630</a>    word &gt; <span class="number">0
+<a href=#1631 id=1631 data-nosnippet>1631</a>      </span>&amp;&amp; out[..out.len() - word].last().is_none_or(|t| {
+<a href=#1632 id=1632 data-nosnippet>1632</a>        !(t.get_catcode() == Catcode::OTHER
+<a href=#1633 id=1633 data-nosnippet>1633</a>          &amp;&amp; t.with_str(|s| {
+<a href=#1634 id=1634 data-nosnippet>1634</a>            s.chars()
+<a href=#1635 id=1635 data-nosnippet>1635</a>              .all(|c| c.is_ascii_digit() || c == <span class="string">'.' </span>|| c == <span class="string">','</span>)
+<a href=#1636 id=1636 data-nosnippet>1636</a>          }))
+<a href=#1637 id=1637 data-nosnippet>1637</a>      })
+<a href=#1638 id=1638 data-nosnippet>1638</a>  };
+<a href=#1639 id=1639 data-nosnippet>1639</a>  <span class="kw">let </span><span class="kw-2">mut </span>out: Vec&lt;Token&gt; = Vec::with_capacity(src.len());
+<a href=#1640 id=1640 data-nosnippet>1640</a>  <span class="kw">let </span><span class="kw-2">mut </span>i = <span class="number">0</span>;
+<a href=#1641 id=1641 data-nosnippet>1641</a>  <span class="kw">while </span>i &lt; src.len() {
+<a href=#1642 id=1642 data-nosnippet>1642</a>    <span class="kw">let </span>t = src[i];
+<a href=#1643 id=1643 data-nosnippet>1643</a>    <span class="kw">if </span>after_a_word(<span class="kw-2">&amp;</span>out) {
+<a href=#1644 id=1644 data-nosnippet>1644</a>      <span class="kw">if </span>t == <span class="macro">T_CS!</span>(<span class="string">"\\textsuperscript"</span>)
+<a href=#1645 id=1645 data-nosnippet>1645</a>        &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>((operand, next)) = sup_operand_at(<span class="kw-2">&amp;</span>src, i + <span class="number">1</span>)
+<a href=#1646 id=1646 data-nosnippet>1646</a>        &amp;&amp; letter(src.get(next))
+<a href=#1647 id=1647 data-nosnippet>1647</a>        &amp;&amp; !marks(<span class="kw-2">&amp;</span>operand, next)
+<a href=#1648 id=1648 data-nosnippet>1648</a>      {
+<a href=#1649 id=1649 data-nosnippet>1649</a>        out.extend(visible_sup(operand));
+<a href=#1650 id=1650 data-nosnippet>1650</a>        i = next;
+<a href=#1651 id=1651 data-nosnippet>1651</a>        <span class="kw">continue</span>;
+<a href=#1652 id=1652 data-nosnippet>1652</a>      }
+<a href=#1653 id=1653 data-nosnippet>1653</a>      <span class="kw">if </span>t == <span class="macro">T_MATH!</span>()
+<a href=#1654 id=1654 data-nosnippet>1654</a>        &amp;&amp; src.get(i + <span class="number">1</span>) == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="macro">T_SUPER!</span>())
+<a href=#1655 id=1655 data-nosnippet>1655</a>        &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>((operand, next)) = sup_operand_at(<span class="kw-2">&amp;</span>src, i + <span class="number">2</span>)
+<a href=#1656 id=1656 data-nosnippet>1656</a>        &amp;&amp; src.get(next) == <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="macro">T_MATH!</span>())
+<a href=#1657 id=1657 data-nosnippet>1657</a>        &amp;&amp; letter(src.get(next + <span class="number">1</span>))
+<a href=#1658 id=1658 data-nosnippet>1658</a>        &amp;&amp; !marks(<span class="kw-2">&amp;</span>operand, next + <span class="number">1</span>)
+<a href=#1659 id=1659 data-nosnippet>1659</a>      {
+<a href=#1660 id=1660 data-nosnippet>1660</a>        <span class="kw">let </span><span class="kw-2">mut </span>math = <span class="macro">vec!</span>[<span class="macro">T_MATH!</span>()];
+<a href=#1661 id=1661 data-nosnippet>1661</a>        math.extend(operand);
+<a href=#1662 id=1662 data-nosnippet>1662</a>        math.push(<span class="macro">T_MATH!</span>());
+<a href=#1663 id=1663 data-nosnippet>1663</a>        out.extend(visible_sup(math));
+<a href=#1664 id=1664 data-nosnippet>1664</a>        i = next + <span class="number">1</span>;
+<a href=#1665 id=1665 data-nosnippet>1665</a>        <span class="kw">continue</span>;
+<a href=#1666 id=1666 data-nosnippet>1666</a>      }
+<a href=#1667 id=1667 data-nosnippet>1667</a>    }
+<a href=#1668 id=1668 data-nosnippet>1668</a>    out.push(t);
+<a href=#1669 id=1669 data-nosnippet>1669</a>    i += <span class="number">1</span>;
+<a href=#1670 id=1670 data-nosnippet>1670</a>  }
+<a href=#1671 id=1671 data-nosnippet>1671</a>  Tokens::new(out)
+<a href=#1672 id=1672 data-nosnippet>1672</a>}
+</code></pre></div></section></main></body></html>

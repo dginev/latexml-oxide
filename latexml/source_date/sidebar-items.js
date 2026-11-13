@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["of_archive","of_directory","of_file"]};

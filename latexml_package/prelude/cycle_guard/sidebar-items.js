@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["MAX_WINDOW","REPEAT"],"struct":["CycleGuard"]};
+window.SIDEBAR_ITEMS = {"constant":["MAX_SPAN_PERIOD","MAX_WINDOW","REPEAT"],"struct":["CycleGuard","SpanHistory"]};

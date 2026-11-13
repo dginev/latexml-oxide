@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["EPSILON","ROUNDING_HALF","SCALES","UNITY","UNITY_F64"],"fn":["fixpoint","fixpoint_unit","kround","round_to"],"trait":["NumericOps"]};
+window.SIDEBAR_ITEMS = {"constant":["EPSILON","MAX_DIMEN","MAX_INTEGER","ROUNDING_HALF","SCALES","UNITY","UNITY_F64"],"fn":["clamp_arith_overflow","fixpoint","fixpoint_unit","fixpoint_unit_checked","kround","round_to"],"trait":["NumericOps"]};

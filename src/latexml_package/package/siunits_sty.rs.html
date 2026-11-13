@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/siunits_sty.rs`."><title>siunits_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>siunits_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/siunits_sty.rs`."><title>siunits_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>siunits_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a><span class="attr">#[rustfmt::skip]
 <a href=#4 id=4 data-nosnippet>4</a></span><span class="macro">LoadDefinitions!</span>({
@@ -6,26 +6,527 @@
 <a href=#6 id=6 data-nosnippet>6</a>  // Apparently siunitx is a revision and extension of SIunits
 <a href=#7 id=7 data-nosnippet>7</a>  // Not quite backwards compatible, but worth a try...
 <a href=#8 id=8 data-nosnippet>8</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"siunitx"</span>);
-<a href=#9 id=9 data-nosnippet>9</a>
-<a href=#10 id=10 data-nosnippet>10</a>  <span class="comment">// Apparently similar, but expects the numbers to be already formatted?
-<a href=#11 id=11 data-nosnippet>11</a>  // (things like \times, ^, etc appear)
-<a href=#12 id=12 data-nosnippet>12</a>  </span><span class="macro">Let!</span>(<span class="string">"\\unit"</span>, <span class="string">"\\SI"</span>);
-<a href=#13 id=13 data-nosnippet>13</a>
-<a href=#14 id=14 data-nosnippet>14</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\sisetup{parse-numbers = false, input-product = \\times,}"</span>);
+<a href=#9 id=9 data-nosnippet>9</a>  <span class="comment">// SIunits.sty:173.
+<a href=#10 id=10 data-nosnippet>10</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"amstext"</span>);
+<a href=#11 id=11 data-nosnippet>11</a>
+<a href=#12 id=12 data-nosnippet>12</a>  <span class="comment">// Apparently similar, but expects the numbers to be already formatted?
+<a href=#13 id=13 data-nosnippet>13</a>  // (things like \times, ^, etc appear)
+<a href=#14 id=14 data-nosnippet>14</a>  </span><span class="macro">Let!</span>(<span class="string">"\\unit"</span>, <span class="string">"\\SI"</span>);
 <a href=#15 id=15 data-nosnippet>15</a>
-<a href=#16 id=16 data-nosnippet>16</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\squaren{}"</span>, <span class="string">"{#1}^{2}"</span>);
+<a href=#16 id=16 data-nosnippet>16</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\sisetup{parse-numbers = false, input-product = \\times,}"</span>);
 <a href=#17 id=17 data-nosnippet>17</a>
-<a href=#18 id=18 data-nosnippet>18</a>  <span class="comment">// NOTE: do NOT `six_enable_unit_macros(true)` here. The real SIunits package
-<a href=#19 id=19 data-nosnippet>19</a>  // defines short single-letter unit macros (`\m`=metre, `\s`=second, `\g`,
-<a href=#20 id=20 data-nosnippet>20</a>  // `\A`, …), but Perl's `SIunits.sty.ltxml` is a thin shim — it only
-<a href=#21 id=21 data-nosnippet>21</a>  // `RequirePackage('siunitx')` + `\squaren`, defining NONE of those macros
-<a href=#22 id=22 data-nosnippet>22</a>  // (siunitx uses `\si{\metre}` syntax instead). Enabling them here was a
-<a href=#23 id=23 data-nosnippet>23</a>  // Rust-only divergence: defining `\m` clobbers the extremely common user
-<a href=#24 id=24 data-nosnippet>24</a>  // macro `\newcommand{\m}[1]{\(#1\)}` (a LaTeX `\newcommand` of an
-<a href=#25 id=25 data-nosnippet>25</a>  // already-defined CS is silently ignored), so every `\m{…}` rendered as the
-<a href=#26 id=26 data-nosnippet>26</a>  // metre symbol in TEXT mode → 753× `^`/`_` "can only appear in math mode"
-<a href=#27 id=27 data-nosnippet>27</a>  // (witness 1509.04521, `\usepackage[squaren]{SIunits}` + `\newcommand{\m}`).
-<a href=#28 id=28 data-nosnippet>28</a>  // Matching Perl (which leaves `\m` for the document) fixes it; SIunits docs
-<a href=#29 id=29 data-nosnippet>29</a>  // that genuinely use `\m`/`\metre` standalone already fail in Perl too.
-<a href=#30 id=30 data-nosnippet>30</a></span>});
+<a href=#18 id=18 data-nosnippet>18</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\squaren{}"</span>, <span class="string">"{#1}^{2}"</span>);
+<a href=#19 id=19 data-nosnippet>19</a>
+<a href=#20 id=20 data-nosnippet>20</a>  <span class="comment">// SIunits.sty's own commands and units, which papers use outside `\SI`/`\unit` (`\addunit{\Pa}{Pa}`,
+<a href=#21 id=21 data-nosnippet>21</a>  // `$221\usk\meter$`, `\metre\usk\reciprocal\second`, `\degreecelsius`; witnesses 0709.1649, 2103.01586, 1904.06264,
+<a href=#22 id=22 data-nosnippet>22</a>  // 2407.13230). Each is defined with `\providecommand`, which keeps a definition a paper or another package made
+<a href=#23 id=23 data-nosnippet>23</a>  // first and replaces the `\relax` the siunitx shim leaves its unit names outside `\si` (`\si` rebinds them to its
+<a href=#24 id=24 data-nosnippet>24</a>  // own unit objects inside its argument). The unit-building commands and aliases (`\meter`, `\deka`) are SIunits.sty
+<a href=#25 id=25 data-nosnippet>25</a>  // L51-193 and 266; `\no@qsk`
+<a href=#26 id=26 data-nosnippet>26</a>  // (L117) removes the quantity skip of SIunits' own `\unit`, which is siunitx's here; `\SI@square` (L162) is
+<a href=#27 id=27 data-nosnippet>27</a>  // `\squaren` or the `\square` SIunits defines, both `\power{#1}{2}`. Beyond Perl's shim: OXIDIZED_DESIGN_DIVERGENCES #565.
+<a href=#28 id=28 data-nosnippet>28</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\providecommand\SI@fstyle[1]{\mathrm{#1}}
+<a href=#29 id=29 data-nosnippet>29</a>\providecommand{\addunit}[2]{\newcommand{#1}{\ensuremath{\SI@fstyle{#2}}}}
+<a href=#30 id=30 data-nosnippet>30</a>\providecommand{\addprefix}[2]{\newcommand{#1}{\ensuremath{\SI@fstyle{#2}}}}
+<a href=#31 id=31 data-nosnippet>31</a>\def\lx@siunits@unit#1#2{\providecommand{#1}{\ensuremath{\SI@fstyle{#2}}}}
+<a href=#32 id=32 data-nosnippet>32</a>\providecommand*{\usk}{\ensuremath{\;}}
+<a href=#33 id=33 data-nosnippet>33</a>\providecommand*{\unitskip}[1]{\renewcommand{\usk}{\ensuremath{#1}}}
+<a href=#34 id=34 data-nosnippet>34</a>\providecommand*{\per}{\ensuremath{\SI@fstyle{/}}}
+<a href=#35 id=35 data-nosnippet>35</a>\providecommand{\power}[2]{\ensuremath{\SI@fstyle{#1}^{\SI@fstyle{#2}}}}
+<a href=#36 id=36 data-nosnippet>36</a>\providecommand*{\squared}{\ensuremath{^{\SI@fstyle{2}}}}
+<a href=#37 id=37 data-nosnippet>37</a>\providecommand*{\cubic}[1]{\power{#1}{3}}
+<a href=#38 id=38 data-nosnippet>38</a>\providecommand*{\cubed}{\ensuremath{^{\SI@fstyle{3}}}}
+<a href=#39 id=39 data-nosnippet>39</a>\providecommand*{\fourth}[1]{\power{#1}{4}}
+<a href=#40 id=40 data-nosnippet>40</a>\providecommand*{\SIminus}{\ensuremath{-}}
+<a href=#41 id=41 data-nosnippet>41</a>\providecommand*{\reciprocal}[1]{\power{#1}{\SIminus1}}
+<a href=#42 id=42 data-nosnippet>42</a>\providecommand*{\rp}[1]{\power{#1}{\SIminus1}}
+<a href=#43 id=43 data-nosnippet>43</a>\providecommand*{\rpsquare}[1]{\power{#1}{\SIminus2}}
+<a href=#44 id=44 data-nosnippet>44</a>\providecommand*{\rpsquared}{\ensuremath{^{\SI@fstyle{\SIminus2}}}}
+<a href=#45 id=45 data-nosnippet>45</a>\providecommand*{\rpcubic}[1]{\power{#1}{\SIminus3}}
+<a href=#46 id=46 data-nosnippet>46</a>\providecommand*{\rpcubed}{\ensuremath{^{\SI@fstyle{\SIminus3}}}}
+<a href=#47 id=47 data-nosnippet>47</a>\providecommand*{\rpfourth}[1]{\power{#1}{\SIminus4}}
+<a href=#48 id=48 data-nosnippet>48</a>\providecommand{\degreecelsius}{\ensuremath{\lx@siunits@degreecelsius}}
+<a href=#49 id=49 data-nosnippet>49</a>\providecommand*{\SImu}{\textmu}
+<a href=#50 id=50 data-nosnippet>50</a>\def\no@qsk{}
+<a href=#51 id=51 data-nosnippet>51</a>\providecommand*{\meter}{\metre}
+<a href=#52 id=52 data-nosnippet>52</a>\providecommand*{\deka}{\deca}
+<a href=#53 id=53 data-nosnippet>53</a>\providecommand*{\dekad}{\decad}
+<a href=#54 id=54 data-nosnippet>54</a>\providecommand*{\NoAMS}{\def\micro{\ensuremath{\SI@fstyle{\mbox{\SImu}}}}}
+<a href=#55 id=55 data-nosnippet>55</a>\providecommand*{\quantityskip}[1]{}
+<a href=#56 id=56 data-nosnippet>56</a>\def\SI@square#1{\power{#1}{2}}
+<a href=#57 id=57 data-nosnippet>57</a>\newif\if@redefsquare \newif\if@defsquaren \newif\if@redefGray \newif\if@defGray \newif\if@optionbinary
+<a href=#58 id=58 data-nosnippet>58</a>\newif\if@optionNoAMS
+<a href=#59 id=59 data-nosnippet>59</a>\providecommand*\SIunits[1][thickspace,thickqspace]{\@for\SIunits@@:=#1\do{\SIunits@execopt\SIunits@@}}
+<a href=#60 id=60 data-nosnippet>60</a>\providecommand*\SIunits@execopt[1]{\@ifundefined{SIunits@opt@#1}%
+<a href=#61 id=61 data-nosnippet>61</a>  {\PackageWarning{SIunits}{Requested option `#1' not provided}}%
+<a href=#62 id=62 data-nosnippet>62</a>  {\@nameuse{SIunits@opt@#1}}}
+<a href=#63 id=63 data-nosnippet>63</a>\providecommand*\SIunits@opt@cdot{\renewcommand*{\usk}{\ensuremath{\cdot}}}
+<a href=#64 id=64 data-nosnippet>64</a>\providecommand*\SIunits@opt@thickspace{\renewcommand*{\usk}{\ensuremath{\;}}}
+<a href=#65 id=65 data-nosnippet>65</a>\providecommand*\SIunits@opt@mediumspace{\renewcommand*{\usk}{\ensuremath{\:}}}
+<a href=#66 id=66 data-nosnippet>66</a>\providecommand*\SIunits@opt@thinspace{\renewcommand*{\usk}{\ensuremath{\,}}}
+<a href=#67 id=67 data-nosnippet>67</a>\providecommand*\SIunits@opt@thickqspace{}
+<a href=#68 id=68 data-nosnippet>68</a>\providecommand*\SIunits@opt@mediumqspace{}
+<a href=#69 id=69 data-nosnippet>69</a>\providecommand*\SIunits@opt@thinqspace{}"</span>);
+<a href=#70 id=70 data-nosnippet>70</a>  <span class="comment">// `\degreecelsius` (L266, `\degree\Celsius`: a raised ring before an upright C) as the one glyph ℃, as gensymb's
+<a href=#71 id=71 data-nosnippet>71</a>  // `\celsius`, so a number before it parses as the quantity it is.
+<a href=#72 id=72 data-nosnippet>72</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\lx@siunits@degreecelsius"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{2103}"</span>, alias =&gt; <span class="string">"\\degreecelsius"</span>);
+<a href=#73 id=73 data-nosnippet>73</a>  <span class="comment">// `\DeclareMathSymbol{\upmu}{\mathord}{greek}{"16}` (L51), as upgreek's; a package that defined it first keeps it.
+<a href=#74 id=74 data-nosnippet>74</a>  </span><span class="kw">if </span>!is_defined(<span class="string">"\\upmu"</span>) {
+<a href=#75 id=75 data-nosnippet>75</a>    <span class="macro">DefMath!</span>(<span class="string">"\\upmu"</span>, <span class="string">'\u{03BC}'</span>, font =&gt; { shape =&gt; <span class="string">"upright"</span>, forceshape =&gt; <span class="bool-val">true </span>});
+<a href=#76 id=76 data-nosnippet>76</a>  }
+<a href=#77 id=77 data-nosnippet>77</a>  <span class="comment">// The raised `{}^{\circ}`, `'` and `''` of `\degree`, `\arcminute` and `\arcsecond` (L398-402) as their glyphs, as
+<a href=#78 id=78 data-nosnippet>78</a>  // `\degreecelsius`: a number before them parses as the angle it is.
+<a href=#79 id=79 data-nosnippet>79</a>  </span><span class="macro">DefMath!</span>(<span class="string">"\\lx@siunits@degree"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{00B0}"</span>, alias =&gt; <span class="string">"\\degree"</span>);
+<a href=#80 id=80 data-nosnippet>80</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lx@siunits@arcminute"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{2032}"</span>, alias =&gt; <span class="string">"\\arcminute"</span>);
+<a href=#81 id=81 data-nosnippet>81</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lx@siunits@arcsecond"</span>, <span class="prelude-val">None</span>, <span class="string">"\u{2033}"</span>, alias =&gt; <span class="string">"\\arcsecond"</span>);
+<a href=#82 id=82 data-nosnippet>82</a>  <span class="kw">let </span><span class="kw-2">mut </span>units = String::new();
+<a href=#83 id=83 data-nosnippet>83</a>  <span class="kw">for </span><span class="kw-2">&amp;</span>(name, body) <span class="kw">in </span>SIUNITS_UNITS {
+<a href=#84 id=84 data-nosnippet>84</a>    <span class="kw">let </span>body = <span class="kw">match </span>name {
+<a href=#85 id=85 data-nosnippet>85</a>      <span class="string">r"\degree" </span>=&gt; <span class="string">r"\lx@siunits@degree"</span>,
+<a href=#86 id=86 data-nosnippet>86</a>      <span class="string">r"\arcminute" </span>| <span class="string">r"\paminute" </span>=&gt; <span class="string">r"\lx@siunits@arcminute"</span>,
+<a href=#87 id=87 data-nosnippet>87</a>      <span class="string">r"\arcsecond" </span>| <span class="string">r"\pasecond" </span>=&gt; <span class="string">r"\lx@siunits@arcsecond"</span>,
+<a href=#88 id=88 data-nosnippet>88</a>      <span class="kw">_ </span>=&gt; body,
+<a href=#89 id=89 data-nosnippet>89</a>    };
+<a href=#90 id=90 data-nosnippet>90</a>    units.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"\\lx@siunits@unit{name}{{{body}}}\n"</span>));
+<a href=#91 id=91 data-nosnippet>91</a>  }
+<a href=#92 id=92 data-nosnippet>92</a>  <span class="macro">RawTeX!</span>(<span class="kw-2">&amp;</span>units);
+<a href=#93 id=93 data-nosnippet>93</a>  <span class="kw">for </span>(option, table) <span class="kw">in </span>[(<span class="string">"derivedinbase"</span>, SIUNITS_DERIVED_IN_BASE), (<span class="string">"derived"</span>, SIUNITS_DERIVED)] {
+<a href=#94 id=94 data-nosnippet>94</a>    <span class="kw">let </span><span class="kw-2">mut </span>body = <span class="macro">format!</span>(<span class="string">"\\def\\SIunits@opt@{option}{{"</span>);
+<a href=#95 id=95 data-nosnippet>95</a>    <span class="kw">for </span>(name, unit) <span class="kw">in </span>table {
+<a href=#96 id=96 data-nosnippet>96</a>      body.push_str(<span class="kw-2">&amp;</span><span class="macro">format!</span>(<span class="string">"\\lx@siunits@unit{name}{{{unit}}}"</span>));
+<a href=#97 id=97 data-nosnippet>97</a>    }
+<a href=#98 id=98 data-nosnippet>98</a>    body.push(<span class="string">'}'</span>);
+<a href=#99 id=99 data-nosnippet>99</a>    <span class="macro">RawTeX!</span>(<span class="kw-2">&amp;</span>body);
+<a href=#100 id=100 data-nosnippet>100</a>  }
+<a href=#101 id=101 data-nosnippet>101</a>
+<a href=#102 id=102 data-nosnippet>102</a>  <span class="comment">// SIunits.sty:545-569, the package options.
+<a href=#103 id=103 data-nosnippet>103</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"cdot"</span>, <span class="string">"\\SIunits@opt@cdot"</span>);
+<a href=#104 id=104 data-nosnippet>104</a>  <span class="macro">DeclareOption!</span>(<span class="string">"thickspace"</span>, <span class="string">"\\SIunits@opt@thickspace"</span>);
+<a href=#105 id=105 data-nosnippet>105</a>  <span class="macro">DeclareOption!</span>(<span class="string">"mediumspace"</span>, <span class="string">"\\SIunits@opt@mediumspace"</span>);
+<a href=#106 id=106 data-nosnippet>106</a>  <span class="macro">DeclareOption!</span>(<span class="string">"thinspace"</span>, <span class="string">"\\SIunits@opt@thinspace"</span>);
+<a href=#107 id=107 data-nosnippet>107</a>  <span class="macro">DeclareOption!</span>(<span class="string">"thickqspace"</span>, <span class="string">"\\SIunits@opt@thickqspace"</span>);
+<a href=#108 id=108 data-nosnippet>108</a>  <span class="macro">DeclareOption!</span>(<span class="string">"mediumqspace"</span>, <span class="string">"\\SIunits@opt@mediumqspace"</span>);
+<a href=#109 id=109 data-nosnippet>109</a>  <span class="macro">DeclareOption!</span>(<span class="string">"thinqspace"</span>, <span class="string">"\\SIunits@opt@thinqspace"</span>);
+<a href=#110 id=110 data-nosnippet>110</a>  <span class="macro">DeclareOption!</span>(<span class="string">"derivedinbase"</span>, <span class="string">"\\SIunits@opt@derivedinbase"</span>);
+<a href=#111 id=111 data-nosnippet>111</a>  <span class="macro">DeclareOption!</span>(<span class="string">"derived"</span>, <span class="string">"\\SIunits@opt@derived"</span>);
+<a href=#112 id=112 data-nosnippet>112</a>  <span class="macro">DeclareOption!</span>(<span class="string">"textstyle"</span>, <span class="string">"\\renewcommand\\SI@fstyle[1]{\\text{#1}}"</span>);
+<a href=#113 id=113 data-nosnippet>113</a>  <span class="macro">DeclareOption!</span>(<span class="string">"amssymb"</span>, <span class="string">"\\@redefsquaretrue"</span>);
+<a href=#114 id=114 data-nosnippet>114</a>  <span class="macro">DeclareOption!</span>(<span class="string">"squaren"</span>, <span class="string">"\\@defsquarentrue"</span>);
+<a href=#115 id=115 data-nosnippet>115</a>  <span class="macro">DeclareOption!</span>(<span class="string">"pstricks"</span>, <span class="string">"\\@redefGraytrue"</span>);
+<a href=#116 id=116 data-nosnippet>116</a>  <span class="macro">DeclareOption!</span>(<span class="string">"Gray"</span>, <span class="string">"\\@defGraytrue"</span>);
+<a href=#117 id=117 data-nosnippet>117</a>  <span class="macro">DeclareOption!</span>(<span class="string">"italian"</span>, <span class="prelude-val">None</span>);
+<a href=#118 id=118 data-nosnippet>118</a>  <span class="macro">DeclareOption!</span>(<span class="string">"binary"</span>, <span class="string">"\\@optionbinarytrue"</span>);
+<a href=#119 id=119 data-nosnippet>119</a>  <span class="macro">DeclareOption!</span>(<span class="string">"noams"</span>, <span class="string">"\\@optionNoAMStrue"</span>);
+<a href=#120 id=120 data-nosnippet>120</a>  <span class="macro">ProcessOptions!</span>();
+<a href=#121 id=121 data-nosnippet>121</a>  <span class="comment">// L566 loads binary.sty for option `binary`; L201-209, 125-150 and 271-301 define `\micro`, `\square` and `\gray`
+<a href=#122 id=122 data-nosnippet>122</a>  // (or `\Gray`) at the document's start, where the options and the packages loaded meanwhile decide them (an
+<a href=#123 id=123 data-nosnippet>123</a>  // amssymb `\square` is kept: SIunits' error for it is not repeated).
+<a href=#124 id=124 data-nosnippet>124</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\if@optionbinary\RequirePackage{binary}\fi
+<a href=#125 id=125 data-nosnippet>125</a>\AtBeginDocument{%
+<a href=#126 id=126 data-nosnippet>126</a>\if@optionNoAMS\lx@siunits@unit\micro{\mbox{\SImu}}\else\lx@siunits@unit\micro{\upmu}\fi
+<a href=#127 id=127 data-nosnippet>127</a>\if@redefsquare\def\square#1{\power{#1}{2}}\else\if@defsquaren\else
+<a href=#128 id=128 data-nosnippet>128</a>  \@ifundefined{square}{\def\square#1{\power{#1}{2}}}{}\fi\fi
+<a href=#129 id=129 data-nosnippet>129</a>\if@redefGray\def\gray{\ensuremath{\SI@fstyle{Gy}}}\else\if@defGray\def\Gray{\ensuremath{\SI@fstyle{Gy}}}\else
+<a href=#130 id=130 data-nosnippet>130</a>  \lx@siunits@unit\gray{Gy}\fi\fi}"</span>);
+<a href=#131 id=131 data-nosnippet>131</a>
+<a href=#132 id=132 data-nosnippet>132</a>  <span class="comment">// NOTE: do NOT `six_enable_unit_macros(true)` here. siunitx's unit macros include short abbreviations (`\m`, `\s`,
+<a href=#133 id=133 data-nosnippet>133</a>  // `\g`, `\A`, …) that SIunits never defines (its shortest names are `\rad`, `\ton`, `\lux`, `\bel`); enabling them
+<a href=#134 id=134 data-nosnippet>134</a>  // clobbered the extremely common user macro `\newcommand{\m}[1]{\(#1\)}` (a LaTeX `\newcommand` of an
+<a href=#135 id=135 data-nosnippet>135</a>  // already-defined CS is silently ignored), so every `\m{…}` rendered as the metre symbol in TEXT mode → 753× `^`/`_`
+<a href=#136 id=136 data-nosnippet>136</a>  // "can only appear in math mode" (witness 1509.04521, `\usepackage[squaren]{SIunits}` + `\newcommand{\m}`). The
+<a href=#137 id=137 data-nosnippet>137</a>  // table above defines SIunits' own names only.
+<a href=#138 id=138 data-nosnippet>138</a></span>});
+<a href=#139 id=139 data-nosnippet>139</a>
+<a href=#140 id=140 data-nosnippet>140</a><span class="doccomment">/// SIunits.sty's units and prefixes: its top-level `\addunit`/`\addprefix` calls (L195-543) in file order, as
+<a href=#141 id=141 data-nosnippet>141</a>/// `(name, body)`. The begin-document `\micro`/`\gray` and the option sets below are defined apart.
+<a href=#142 id=142 data-nosnippet>142</a></span><span class="kw">const </span>SIUNITS_UNITS: <span class="kw-2">&amp;</span>[(<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str)] = <span class="kw-2">&amp;</span>[
+<a href=#143 id=143 data-nosnippet>143</a>  (<span class="string">r"\yocto"</span>, <span class="string">r"y"</span>),                                              <span class="comment">// :195
+<a href=#144 id=144 data-nosnippet>144</a>  </span>(<span class="string">r"\zepto"</span>, <span class="string">r"z"</span>),                                              <span class="comment">// :196
+<a href=#145 id=145 data-nosnippet>145</a>  </span>(<span class="string">r"\atto"</span>, <span class="string">r"a"</span>),                                               <span class="comment">// :197
+<a href=#146 id=146 data-nosnippet>146</a>  </span>(<span class="string">r"\femto"</span>, <span class="string">r"f"</span>),                                              <span class="comment">// :198
+<a href=#147 id=147 data-nosnippet>147</a>  </span>(<span class="string">r"\pico"</span>, <span class="string">r"p"</span>),                                               <span class="comment">// :199
+<a href=#148 id=148 data-nosnippet>148</a>  </span>(<span class="string">r"\nano"</span>, <span class="string">r"n"</span>),                                               <span class="comment">// :200
+<a href=#149 id=149 data-nosnippet>149</a>  </span>(<span class="string">r"\milli"</span>, <span class="string">r"m"</span>),                                              <span class="comment">// :210
+<a href=#150 id=150 data-nosnippet>150</a>  </span>(<span class="string">r"\centi"</span>, <span class="string">r"c"</span>),                                              <span class="comment">// :211
+<a href=#151 id=151 data-nosnippet>151</a>  </span>(<span class="string">r"\deci"</span>, <span class="string">r"d"</span>),                                               <span class="comment">// :212
+<a href=#152 id=152 data-nosnippet>152</a>  </span>(<span class="string">r"\deca"</span>, <span class="string">r"da"</span>),                                              <span class="comment">// :213
+<a href=#153 id=153 data-nosnippet>153</a>  </span>(<span class="string">r"\hecto"</span>, <span class="string">r"h"</span>),                                              <span class="comment">// :214
+<a href=#154 id=154 data-nosnippet>154</a>  </span>(<span class="string">r"\kilo"</span>, <span class="string">r"k"</span>),                                               <span class="comment">// :215
+<a href=#155 id=155 data-nosnippet>155</a>  </span>(<span class="string">r"\mega"</span>, <span class="string">r"M"</span>),                                               <span class="comment">// :216
+<a href=#156 id=156 data-nosnippet>156</a>  </span>(<span class="string">r"\giga"</span>, <span class="string">r"G"</span>),                                               <span class="comment">// :217
+<a href=#157 id=157 data-nosnippet>157</a>  </span>(<span class="string">r"\tera"</span>, <span class="string">r"T"</span>),                                               <span class="comment">// :218
+<a href=#158 id=158 data-nosnippet>158</a>  </span>(<span class="string">r"\peta"</span>, <span class="string">r"P"</span>),                                               <span class="comment">// :219
+<a href=#159 id=159 data-nosnippet>159</a>  </span>(<span class="string">r"\exa"</span>, <span class="string">r"E"</span>),                                                <span class="comment">// :220
+<a href=#160 id=160 data-nosnippet>160</a>  </span>(<span class="string">r"\zetta"</span>, <span class="string">r"Z"</span>),                                              <span class="comment">// :221
+<a href=#161 id=161 data-nosnippet>161</a>  </span>(<span class="string">r"\yotta"</span>, <span class="string">r"Y"</span>),                                              <span class="comment">// :222
+<a href=#162 id=162 data-nosnippet>162</a>  </span>(<span class="string">r"\gram"</span>, <span class="string">r"g"</span>),                                               <span class="comment">// :243
+<a href=#163 id=163 data-nosnippet>163</a>  </span>(<span class="string">r"\metre"</span>, <span class="string">r"m"</span>),                                              <span class="comment">// :244
+<a href=#164 id=164 data-nosnippet>164</a>  </span>(<span class="string">r"\kilogram"</span>, <span class="string">r"\kilo\gram"</span>),                                  <span class="comment">// :245
+<a href=#165 id=165 data-nosnippet>165</a>  </span>(<span class="string">r"\second"</span>, <span class="string">r"s"</span>),                                             <span class="comment">// :246
+<a href=#166 id=166 data-nosnippet>166</a>  </span>(<span class="string">r"\ampere"</span>, <span class="string">r"A"</span>),                                             <span class="comment">// :247
+<a href=#167 id=167 data-nosnippet>167</a>  </span>(<span class="string">r"\kelvin"</span>, <span class="string">r"K"</span>),                                             <span class="comment">// :248
+<a href=#168 id=168 data-nosnippet>168</a>  </span>(<span class="string">r"\mole"</span>, <span class="string">r"mol"</span>),                                             <span class="comment">// :249
+<a href=#169 id=169 data-nosnippet>169</a>  </span>(<span class="string">r"\candela"</span>, <span class="string">r"cd"</span>),                                           <span class="comment">// :250
+<a href=#170 id=170 data-nosnippet>170</a>  </span>(<span class="string">r"\radian"</span>, <span class="string">r"rad"</span>),                                           <span class="comment">// :251
+<a href=#171 id=171 data-nosnippet>171</a>  </span>(<span class="string">r"\steradian"</span>, <span class="string">r"sr"</span>),                                         <span class="comment">// :252
+<a href=#172 id=172 data-nosnippet>172</a>  </span>(<span class="string">r"\hertz"</span>, <span class="string">r"Hz"</span>),                                             <span class="comment">// :253
+<a href=#173 id=173 data-nosnippet>173</a>  </span>(<span class="string">r"\newton"</span>, <span class="string">r"N"</span>),                                             <span class="comment">// :254
+<a href=#174 id=174 data-nosnippet>174</a>  </span>(<span class="string">r"\pascal"</span>, <span class="string">r"Pa"</span>),                                            <span class="comment">// :255
+<a href=#175 id=175 data-nosnippet>175</a>  </span>(<span class="string">r"\joule"</span>, <span class="string">r"J"</span>),                                              <span class="comment">// :256
+<a href=#176 id=176 data-nosnippet>176</a>  </span>(<span class="string">r"\watt"</span>, <span class="string">r"W"</span>),                                               <span class="comment">// :257
+<a href=#177 id=177 data-nosnippet>177</a>  </span>(<span class="string">r"\coulomb"</span>, <span class="string">r"C"</span>),                                            <span class="comment">// :258
+<a href=#178 id=178 data-nosnippet>178</a>  </span>(<span class="string">r"\volt"</span>, <span class="string">r"V"</span>),                                               <span class="comment">// :259
+<a href=#179 id=179 data-nosnippet>179</a>  </span>(<span class="string">r"\farad"</span>, <span class="string">r"F"</span>),                                              <span class="comment">// :260
+<a href=#180 id=180 data-nosnippet>180</a>  </span>(<span class="string">r"\ohm"</span>, <span class="string">r"\ensuremath{\Omega}"</span>),                              <span class="comment">// :261
+<a href=#181 id=181 data-nosnippet>181</a>  </span>(<span class="string">r"\siemens"</span>, <span class="string">r"S"</span>),                                            <span class="comment">// :262
+<a href=#182 id=182 data-nosnippet>182</a>  </span>(<span class="string">r"\weber"</span>, <span class="string">r"Wb"</span>),                                             <span class="comment">// :263
+<a href=#183 id=183 data-nosnippet>183</a>  </span>(<span class="string">r"\tesla"</span>, <span class="string">r"T"</span>),                                              <span class="comment">// :264
+<a href=#184 id=184 data-nosnippet>184</a>  </span>(<span class="string">r"\henry"</span>, <span class="string">r"H"</span>),                                              <span class="comment">// :265
+<a href=#185 id=185 data-nosnippet>185</a>  </span>(<span class="string">r"\celsius"</span>, <span class="string">r"\degreecelsius"</span>),                               <span class="comment">// :267
+<a href=#186 id=186 data-nosnippet>186</a>  </span>(<span class="string">r"\lumen"</span>, <span class="string">r"lm"</span>),                                             <span class="comment">// :268
+<a href=#187 id=187 data-nosnippet>187</a>  </span>(<span class="string">r"\lux"</span>, <span class="string">r"lx"</span>),                                               <span class="comment">// :269
+<a href=#188 id=188 data-nosnippet>188</a>  </span>(<span class="string">r"\becquerel"</span>, <span class="string">r"Bq"</span>),                                         <span class="comment">// :270
+<a href=#189 id=189 data-nosnippet>189</a>  </span>(<span class="string">r"\sievert"</span>, <span class="string">r"Sv"</span>),                                           <span class="comment">// :299
+<a href=#190 id=190 data-nosnippet>190</a>  </span>(<span class="string">r"\katal"</span>, <span class="string">r"kat"</span>),                                            <span class="comment">// :300
+<a href=#191 id=191 data-nosnippet>191</a>  </span>(<span class="string">r"\minute"</span>, <span class="string">r"min"</span>),                                           <span class="comment">// :395
+<a href=#192 id=192 data-nosnippet>192</a>  </span>(<span class="string">r"\hour"</span>, <span class="string">r"h"</span>),                                               <span class="comment">// :396
+<a href=#193 id=193 data-nosnippet>193</a>  </span>(<span class="string">r"\dday"</span>, <span class="string">r"d"</span>),                                               <span class="comment">// :397
+<a href=#194 id=194 data-nosnippet>194</a>  </span>(<span class="string">r"\degree"</span>, <span class="string">r"\no@qsk\ensuremath{^{\circ}}"</span>),                  <span class="comment">// :398
+<a href=#195 id=195 data-nosnippet>195</a>  </span>(<span class="string">r"\paminute"</span>, <span class="string">r"\no@qsk\ensuremath{'}"</span>),                       <span class="comment">// :399
+<a href=#196 id=196 data-nosnippet>196</a>  </span>(<span class="string">r"\arcminute"</span>, <span class="string">r"\no@qsk\ensuremath{'}"</span>),                      <span class="comment">// :400
+<a href=#197 id=197 data-nosnippet>197</a>  </span>(<span class="string">r"\pasecond"</span>, <span class="string">r"\no@qsk\ensuremath{''}"</span>),                      <span class="comment">// :401
+<a href=#198 id=198 data-nosnippet>198</a>  </span>(<span class="string">r"\arcsecond"</span>, <span class="string">r"\no@qsk\ensuremath{''}"</span>),                     <span class="comment">// :402
+<a href=#199 id=199 data-nosnippet>199</a>  </span>(<span class="string">r"\ton"</span>, <span class="string">r"t"</span>),                                                <span class="comment">// :403
+<a href=#200 id=200 data-nosnippet>200</a>  </span>(<span class="string">r"\tonne"</span>, <span class="string">r"t"</span>),                                              <span class="comment">// :404
+<a href=#201 id=201 data-nosnippet>201</a>  </span>(<span class="string">r"\liter"</span>, <span class="string">r"L"</span>),                                              <span class="comment">// :405
+<a href=#202 id=202 data-nosnippet>202</a>  </span>(<span class="string">r"\litre"</span>, <span class="string">r"l"</span>),                                              <span class="comment">// :406
+<a href=#203 id=203 data-nosnippet>203</a>  </span>(<span class="string">r"\neper"</span>, <span class="string">r"Np"</span>),                                             <span class="comment">// :407
+<a href=#204 id=204 data-nosnippet>204</a>  </span>(<span class="string">r"\bel"</span>, <span class="string">r"B"</span>),                                                <span class="comment">// :408
+<a href=#205 id=205 data-nosnippet>205</a>  </span>(<span class="string">r"\curie"</span>, <span class="string">r"Ci"</span>),                                             <span class="comment">// :409
+<a href=#206 id=206 data-nosnippet>206</a>  </span>(<span class="string">r"\rad"</span>, <span class="string">r"rad"</span>),                                              <span class="comment">// :410
+<a href=#207 id=207 data-nosnippet>207</a>  </span>(<span class="string">r"\arad"</span>, <span class="string">r"rd"</span>),                                              <span class="comment">// :411
+<a href=#208 id=208 data-nosnippet>208</a>  </span>(<span class="string">r"\rem"</span>, <span class="string">r"rem"</span>),                                              <span class="comment">// :412
+<a href=#209 id=209 data-nosnippet>209</a>  </span>(<span class="string">r"\roentgen"</span>, <span class="string">r"R"</span>),                                           <span class="comment">// :413
+<a href=#210 id=210 data-nosnippet>210</a>  </span>(<span class="string">r"\electronvolt"</span>, <span class="string">r"e\kern-0.05ex\volt"</span>),                      <span class="comment">// :414
+<a href=#211 id=211 data-nosnippet>211</a>  </span>(<span class="string">r"\atomicmass"</span>, <span class="string">r"u"</span>),                                         <span class="comment">// :415
+<a href=#212 id=212 data-nosnippet>212</a>  </span>(<span class="string">r"\atomicmassunit"</span>, <span class="string">r"u"</span>),                                     <span class="comment">// :416
+<a href=#213 id=213 data-nosnippet>213</a>  </span>(<span class="string">r"\dalton"</span>, <span class="string">r"Da"</span>),                                            <span class="comment">// :417
+<a href=#214 id=214 data-nosnippet>214</a>  </span>(<span class="string">r"\are"</span>, <span class="string">r"a"</span>),                                                <span class="comment">// :418
+<a href=#215 id=215 data-nosnippet>215</a>  </span>(<span class="string">r"\hectare"</span>, <span class="string">r"\hecto\are"</span>),                                   <span class="comment">// :419
+<a href=#216 id=216 data-nosnippet>216</a>  </span>(<span class="string">r"\barn"</span>, <span class="string">r"b"</span>),                                               <span class="comment">// :420
+<a href=#217 id=217 data-nosnippet>217</a>  </span>(<span class="string">r"\bbar"</span>, <span class="string">r"bar"</span>),                                             <span class="comment">// :421
+<a href=#218 id=218 data-nosnippet>218</a>  </span>(<span class="string">r"\gal"</span>, <span class="string">r"Gal"</span>),                                              <span class="comment">// :422
+<a href=#219 id=219 data-nosnippet>219</a>  </span>(<span class="string">r"\angstrom"</span>, <span class="string">r"\mbox{{\AA}}"</span>),                                <span class="comment">// :423
+<a href=#220 id=220 data-nosnippet>220</a>  </span>(<span class="string">r"\rperminute"</span>, <span class="string">r"r\per\minute"</span>),                              <span class="comment">// :424
+<a href=#221 id=221 data-nosnippet>221</a>  </span>(<span class="string">r"\rpersecond"</span>, <span class="string">r"r\per\second"</span>),                              <span class="comment">// :425
+<a href=#222 id=222 data-nosnippet>222</a>  </span>(<span class="string">r"\squaremetre"</span>, <span class="string">r"\SI@square\metre"</span>),                         <span class="comment">// :426
+<a href=#223 id=223 data-nosnippet>223</a>  </span>(<span class="string">r"\cubicmetre"</span>, <span class="string">r"\cubic\metre"</span>),                              <span class="comment">// :427
+<a href=#224 id=224 data-nosnippet>224</a>  </span>(<span class="string">r"\graypersecond"</span>, <span class="string">r"\gray\per\second"</span>),                       <span class="comment">// :428
+<a href=#225 id=225 data-nosnippet>225</a>  </span>(<span class="string">r"\graypersecondnp"</span>, <span class="string">r"\gray\usk\reciprocal\second"</span>),          <span class="comment">// :429
+<a href=#226 id=226 data-nosnippet>226</a>  </span>(<span class="string">r"\metrepersquaresecond"</span>, <span class="string">r"\metre\per\second\squared"</span>),       <span class="comment">// :430
+<a href=#227 id=227 data-nosnippet>227</a>  </span>(<span class="string">r"\metrepersquaresecondnp"</span>, <span class="string">r"\metre\usk\second\rpsquared"</span>),   <span class="comment">// :431
+<a href=#228 id=228 data-nosnippet>228</a>  </span>(<span class="string">r"\joulepermole"</span>, <span class="string">r"\joule\per\mole"</span>),                         <span class="comment">// :432
+<a href=#229 id=229 data-nosnippet>229</a>  </span>(<span class="string">r"\joulepermolenp"</span>, <span class="string">r"\joule\usk\reciprocal\mole"</span>),            <span class="comment">// :433
+<a href=#230 id=230 data-nosnippet>230</a>  </span>(<span class="string">r"\molepercubicmetre"</span>, <span class="string">r"\mole\per\cubic\metre"</span>),              <span class="comment">// :434
+<a href=#231 id=231 data-nosnippet>231</a>  </span>(<span class="string">r"\molepercubicmetrenp"</span>, <span class="string">r"\mole\usk\rpcubic\metre"</span>),          <span class="comment">// :435
+<a href=#232 id=232 data-nosnippet>232</a>  </span>(<span class="string">r"\radianpersquaresecond"</span>, <span class="string">r"\radian\per\second\squared"</span>),     <span class="comment">// :436
+<a href=#233 id=233 data-nosnippet>233</a>  </span>(<span class="string">r"\radianpersquaresecondnp"</span>, <span class="string">r"\radian\usk\second\rpsquared"</span>), <span class="comment">// :437
+<a href=#234 id=234 data-nosnippet>234</a>  </span>(
+<a href=#235 id=235 data-nosnippet>235</a>    <span class="string">r"\kilogramsquaremetrepersecond"</span>,
+<a href=#236 id=236 data-nosnippet>236</a>    <span class="string">r"\kilogram\usk\squaremetre\per\second"</span>,
+<a href=#237 id=237 data-nosnippet>237</a>  ), <span class="comment">// :438
+<a href=#238 id=238 data-nosnippet>238</a>  </span>(
+<a href=#239 id=239 data-nosnippet>239</a>    <span class="string">r"\kilogramsquaremetrepersecondnp"</span>,
+<a href=#240 id=240 data-nosnippet>240</a>    <span class="string">r"\kilogram\usk\squaremetre\usk\reciprocal\second"</span>,
+<a href=#241 id=241 data-nosnippet>241</a>  ), <span class="comment">// :439
+<a href=#242 id=242 data-nosnippet>242</a>  </span>(<span class="string">r"\radianpersecond"</span>, <span class="string">r"\radian\per\second"</span>),                   <span class="comment">// :440
+<a href=#243 id=243 data-nosnippet>243</a>  </span>(<span class="string">r"\radianpersecondnp"</span>, <span class="string">r"\radian\usk\reciprocal\second"</span>),      <span class="comment">// :441
+<a href=#244 id=244 data-nosnippet>244</a>  </span>(
+<a href=#245 id=245 data-nosnippet>245</a>    <span class="string">r"\squaremetrepercubicmetre"</span>,
+<a href=#246 id=246 data-nosnippet>246</a>    <span class="string">r"\squaremetre\per\cubic\metre"</span>,
+<a href=#247 id=247 data-nosnippet>247</a>  ), <span class="comment">// :442
+<a href=#248 id=248 data-nosnippet>248</a>  </span>(
+<a href=#249 id=249 data-nosnippet>249</a>    <span class="string">r"\squaremetrepercubicmetrenp"</span>,
+<a href=#250 id=250 data-nosnippet>250</a>    <span class="string">r"\squaremetre\usk\rpcubic\metre"</span>,
+<a href=#251 id=251 data-nosnippet>251</a>  ), <span class="comment">// :443
+<a href=#252 id=252 data-nosnippet>252</a>  </span>(<span class="string">r"\katalpercubicmetre"</span>, <span class="string">r"\katal\per\cubic\metre"</span>),            <span class="comment">// :444
+<a href=#253 id=253 data-nosnippet>253</a>  </span>(<span class="string">r"\katalpercubicmetrenp"</span>, <span class="string">r"\katal\usk\rpcubic\metre"</span>),        <span class="comment">// :445
+<a href=#254 id=254 data-nosnippet>254</a>  </span>(<span class="string">r"\coulombpermol"</span>, <span class="string">r"\coulomb\per\mole"</span>),                      <span class="comment">// :446
+<a href=#255 id=255 data-nosnippet>255</a>  </span>(<span class="string">r"\coulombpermolnp"</span>, <span class="string">r"\coulomb\usk\reciprocal\mole"</span>),         <span class="comment">// :447
+<a href=#256 id=256 data-nosnippet>256</a>  </span>(<span class="string">r"\amperepersquaremetre"</span>, <span class="string">r"\ampere\per\squaremetre"</span>),         <span class="comment">// :448
+<a href=#257 id=257 data-nosnippet>257</a>  </span>(<span class="string">r"\amperepersquaremetrenp"</span>, <span class="string">r"\ampere\usk\rpsquare\metre"</span>),    <span class="comment">// :449
+<a href=#258 id=258 data-nosnippet>258</a>  </span>(<span class="string">r"\kilogrampercubicmetre"</span>, <span class="string">r"\kilogram\per\cubic\metre"</span>),      <span class="comment">// :450
+<a href=#259 id=259 data-nosnippet>259</a>  </span>(<span class="string">r"\kilogrampercubicmetrenp"</span>, <span class="string">r"\kilogram\usk\rpcubic\metre"</span>),  <span class="comment">// :451
+<a href=#260 id=260 data-nosnippet>260</a>  </span>(
+<a href=#261 id=261 data-nosnippet>261</a>    <span class="string">r"\squaremetrepernewtonsecond"</span>,
+<a href=#262 id=262 data-nosnippet>262</a>    <span class="string">r"\squaremetre\per\newton\usk\second"</span>,
+<a href=#263 id=263 data-nosnippet>263</a>  ), <span class="comment">// :452
+<a href=#264 id=264 data-nosnippet>264</a>  </span>(
+<a href=#265 id=265 data-nosnippet>265</a>    <span class="string">r"\squaremetrepernewtonsecondnp"</span>,
+<a href=#266 id=266 data-nosnippet>266</a>    <span class="string">r"\squaremetre\usk\reciprocal\newton\usk\reciprocal\second"</span>,
+<a href=#267 id=267 data-nosnippet>267</a>  ), <span class="comment">// :453
+<a href=#268 id=268 data-nosnippet>268</a>  </span>(<span class="string">r"\pascalsecond"</span>, <span class="string">r"\pascal\usk\second"</span>),                      <span class="comment">// :454
+<a href=#269 id=269 data-nosnippet>269</a>  </span>(<span class="string">r"\coulombpercubicmetre"</span>, <span class="string">r"\coulomb\per\cubic\metre"</span>),        <span class="comment">// :455
+<a href=#270 id=270 data-nosnippet>270</a>  </span>(<span class="string">r"\coulombpercubicmetrenp"</span>, <span class="string">r"\coulomb\usk\rpcubic\metre"</span>),    <span class="comment">// :456
+<a href=#271 id=271 data-nosnippet>271</a>  </span>(<span class="string">r"\amperemetresecond"</span>, <span class="string">r"\ampere\usk\metre\usk\second"</span>),       <span class="comment">// :457
+<a href=#272 id=272 data-nosnippet>272</a>  </span>(<span class="string">r"\voltpermetre"</span>, <span class="string">r"\volt\per\metre"</span>),                         <span class="comment">// :458
+<a href=#273 id=273 data-nosnippet>273</a>  </span>(<span class="string">r"\voltpermetrenp"</span>, <span class="string">r"\volt\usk\reciprocal\metre"</span>),            <span class="comment">// :459
+<a href=#274 id=274 data-nosnippet>274</a>  </span>(<span class="string">r"\coulombpersquaremetre"</span>, <span class="string">r"\coulomb\per\squaremetre"</span>),       <span class="comment">// :460
+<a href=#275 id=275 data-nosnippet>275</a>  </span>(<span class="string">r"\coulombpersquaremetrenp"</span>, <span class="string">r"\coulomb\usk\rpsquare\metre"</span>),  <span class="comment">// :461
+<a href=#276 id=276 data-nosnippet>276</a>  </span>(<span class="string">r"\faradpermetre"</span>, <span class="string">r"\farad\per\metre"</span>),                       <span class="comment">// :462
+<a href=#277 id=277 data-nosnippet>277</a>  </span>(<span class="string">r"\faradpermetrenp"</span>, <span class="string">r"\farad\usk\reciprocal\metre"</span>),          <span class="comment">// :463
+<a href=#278 id=278 data-nosnippet>278</a>  </span>(<span class="string">r"\ohmmetre"</span>, <span class="string">r"\ohm\usk\metre"</span>),                              <span class="comment">// :464
+<a href=#279 id=279 data-nosnippet>279</a>  </span>(<span class="string">r"\kilowatthour"</span>, <span class="string">r"\kilo\watt\hour"</span>),                         <span class="comment">// :465
+<a href=#280 id=280 data-nosnippet>280</a>  </span>(<span class="string">r"\wattpersquaremetre"</span>, <span class="string">r"\watt\per\squaremetre"</span>),             <span class="comment">// :466
+<a href=#281 id=281 data-nosnippet>281</a>  </span>(<span class="string">r"\wattpersquaremetrenp"</span>, <span class="string">r"\watt\usk\rpsquare\metre"</span>),        <span class="comment">// :467
+<a href=#282 id=282 data-nosnippet>282</a>  </span>(<span class="string">r"\joulepersquaremetre"</span>, <span class="string">r"\joule\per\squaremetre"</span>),           <span class="comment">// :468
+<a href=#283 id=283 data-nosnippet>283</a>  </span>(<span class="string">r"\joulepersquaremetrenp"</span>, <span class="string">r"\joule\usk\rpsquare\metre"</span>),      <span class="comment">// :469
+<a href=#284 id=284 data-nosnippet>284</a>  </span>(<span class="string">r"\newtonpercubicmetre"</span>, <span class="string">r"\newton\per\cubic\metre"</span>),          <span class="comment">// :470
+<a href=#285 id=285 data-nosnippet>285</a>  </span>(<span class="string">r"\newtonpercubicmetrenp"</span>, <span class="string">r"\newton\usk\rpcubic\metre"</span>),      <span class="comment">// :471
+<a href=#286 id=286 data-nosnippet>286</a>  </span>(<span class="string">r"\newtonperkilogram"</span>, <span class="string">r"\newton\per\kilogram"</span>),               <span class="comment">// :472
+<a href=#287 id=287 data-nosnippet>287</a>  </span>(<span class="string">r"\newtonperkilogramnp"</span>, <span class="string">r"\newton\usk\reciprocal\kilogram"</span>),  <span class="comment">// :473
+<a href=#288 id=288 data-nosnippet>288</a>  </span>(<span class="string">r"\jouleperkelvin"</span>, <span class="string">r"\joule\per\kelvin"</span>),                     <span class="comment">// :474
+<a href=#289 id=289 data-nosnippet>289</a>  </span>(<span class="string">r"\jouleperkelvinnp"</span>, <span class="string">r"\joule\usk\reciprocal\kelvin"</span>),        <span class="comment">// :475
+<a href=#290 id=290 data-nosnippet>290</a>  </span>(<span class="string">r"\jouleperkilogram"</span>, <span class="string">r"\joule\per\kilogram"</span>),                 <span class="comment">// :476
+<a href=#291 id=291 data-nosnippet>291</a>  </span>(<span class="string">r"\jouleperkilogramnp"</span>, <span class="string">r"\joule\usk\reciprocal\kilogram"</span>),    <span class="comment">// :477
+<a href=#292 id=292 data-nosnippet>292</a>  </span>(<span class="string">r"\coulombperkilogram"</span>, <span class="string">r"\coulomb\per\kilogram"</span>),             <span class="comment">// :478
+<a href=#293 id=293 data-nosnippet>293</a>  </span>(
+<a href=#294 id=294 data-nosnippet>294</a>    <span class="string">r"\coulombperkilogramnp"</span>,
+<a href=#295 id=295 data-nosnippet>295</a>    <span class="string">r"\coulomb\usk\reciprocal\kilogram"</span>,
+<a href=#296 id=296 data-nosnippet>296</a>  ), <span class="comment">// :479
+<a href=#297 id=297 data-nosnippet>297</a>  </span>(<span class="string">r"\squaremetrepersecond"</span>, <span class="string">r"\squaremetre\per\second"</span>),         <span class="comment">// :480
+<a href=#298 id=298 data-nosnippet>298</a>  </span>(
+<a href=#299 id=299 data-nosnippet>299</a>    <span class="string">r"\squaremetrepersecondnp"</span>,
+<a href=#300 id=300 data-nosnippet>300</a>    <span class="string">r"\squaremetre\usk\reciprocal\second"</span>,
+<a href=#301 id=301 data-nosnippet>301</a>  ), <span class="comment">// :481
+<a href=#302 id=302 data-nosnippet>302</a>  </span>(
+<a href=#303 id=303 data-nosnippet>303</a>    <span class="string">r"\squaremetrepersquaresecond"</span>,
+<a href=#304 id=304 data-nosnippet>304</a>    <span class="string">r"\squaremetre\per\second\squared"</span>,
+<a href=#305 id=305 data-nosnippet>305</a>  ), <span class="comment">// :482
+<a href=#306 id=306 data-nosnippet>306</a>  </span>(
+<a href=#307 id=307 data-nosnippet>307</a>    <span class="string">r"\squaremetrepersquaresecondnp"</span>,
+<a href=#308 id=308 data-nosnippet>308</a>    <span class="string">r"\squaremetre\usk\second\rpsquared"</span>,
+<a href=#309 id=309 data-nosnippet>309</a>  ), <span class="comment">// :483
+<a href=#310 id=310 data-nosnippet>310</a>  </span>(
+<a href=#311 id=311 data-nosnippet>311</a>    <span class="string">r"\kilogrammetrepersecond"</span>,
+<a href=#312 id=312 data-nosnippet>312</a>    <span class="string">r"\kilogram\usk\metre\per\second"</span>,
+<a href=#313 id=313 data-nosnippet>313</a>  ), <span class="comment">// :484
+<a href=#314 id=314 data-nosnippet>314</a>  </span>(
+<a href=#315 id=315 data-nosnippet>315</a>    <span class="string">r"\kilogrammetrepersecondnp"</span>,
+<a href=#316 id=316 data-nosnippet>316</a>    <span class="string">r"\kilogram\usk\metre\usk\reciprocal\second"</span>,
+<a href=#317 id=317 data-nosnippet>317</a>  ), <span class="comment">// :485
+<a href=#318 id=318 data-nosnippet>318</a>  </span>(<span class="string">r"\candelapersquaremetre"</span>, <span class="string">r"\candela\per\squaremetre"</span>),       <span class="comment">// :486
+<a href=#319 id=319 data-nosnippet>319</a>  </span>(<span class="string">r"\candelapersquaremetrenp"</span>, <span class="string">r"\candela\usk\rpsquare\metre"</span>),  <span class="comment">// :487
+<a href=#320 id=320 data-nosnippet>320</a>  </span>(<span class="string">r"\amperepermetre"</span>, <span class="string">r"\ampere\per\metre"</span>),                     <span class="comment">// :488
+<a href=#321 id=321 data-nosnippet>321</a>  </span>(<span class="string">r"\amperepermetrenp"</span>, <span class="string">r"\ampere\usk\reciprocal\metre"</span>),        <span class="comment">// :489
+<a href=#322 id=322 data-nosnippet>322</a>  </span>(<span class="string">r"\joulepertesla"</span>, <span class="string">r"\joule\per\tesla"</span>),                       <span class="comment">// :490
+<a href=#323 id=323 data-nosnippet>323</a>  </span>(<span class="string">r"\jouleperteslanp"</span>, <span class="string">r"\joule\usk\reciprocal\tesla"</span>),          <span class="comment">// :491
+<a href=#324 id=324 data-nosnippet>324</a>  </span>(<span class="string">r"\henrypermetre"</span>, <span class="string">r"\henry\per\metre"</span>),                       <span class="comment">// :492
+<a href=#325 id=325 data-nosnippet>325</a>  </span>(<span class="string">r"\henrypermetrenp"</span>, <span class="string">r"\henry\usk\reciprocal\metre"</span>),          <span class="comment">// :493
+<a href=#326 id=326 data-nosnippet>326</a>  </span>(<span class="string">r"\kilogrampersecond"</span>, <span class="string">r"\kilogram\per\second"</span>),               <span class="comment">// :494
+<a href=#327 id=327 data-nosnippet>327</a>  </span>(<span class="string">r"\kilogrampersecondnp"</span>, <span class="string">r"\kilogram\usk\reciprocal\second"</span>),  <span class="comment">// :495
+<a href=#328 id=328 data-nosnippet>328</a>  </span>(
+<a href=#329 id=329 data-nosnippet>329</a>    <span class="string">r"\kilogrampersquaremetresecond"</span>,
+<a href=#330 id=330 data-nosnippet>330</a>    <span class="string">r"\kilogram\per\squaremetre\usk\second"</span>,
+<a href=#331 id=331 data-nosnippet>331</a>  ), <span class="comment">// :496
+<a href=#332 id=332 data-nosnippet>332</a>  </span>(
+<a href=#333 id=333 data-nosnippet>333</a>    <span class="string">r"\kilogrampersquaremetresecondnp"</span>,
+<a href=#334 id=334 data-nosnippet>334</a>    <span class="string">r"\kilogram\usk\rpsquare\metre\usk\reciprocal\second"</span>,
+<a href=#335 id=335 data-nosnippet>335</a>  ), <span class="comment">// :497
+<a href=#336 id=336 data-nosnippet>336</a>  </span>(<span class="string">r"\kilogrampersquaremetre"</span>, <span class="string">r"\kilogram\per\squaremetre"</span>),     <span class="comment">// :498
+<a href=#337 id=337 data-nosnippet>337</a>  </span>(
+<a href=#338 id=338 data-nosnippet>338</a>    <span class="string">r"\kilogrampersquaremetrenp"</span>,
+<a href=#339 id=339 data-nosnippet>339</a>    <span class="string">r"\kilogram\usk\rpsquare\metre"</span>,
+<a href=#340 id=340 data-nosnippet>340</a>  ), <span class="comment">// :499
+<a href=#341 id=341 data-nosnippet>341</a>  </span>(<span class="string">r"\kilogrampermetre"</span>, <span class="string">r"\kilogram\per\metre"</span>),                 <span class="comment">// :500
+<a href=#342 id=342 data-nosnippet>342</a>  </span>(<span class="string">r"\kilogrampermetrenp"</span>, <span class="string">r"\kilogram\usk\reciprocal\metre"</span>),    <span class="comment">// :501
+<a href=#343 id=343 data-nosnippet>343</a>  </span>(<span class="string">r"\joulepermolekelvin"</span>, <span class="string">r"\joule\per\mole\usk\kelvin"</span>),        <span class="comment">// :502
+<a href=#344 id=344 data-nosnippet>344</a>  </span>(
+<a href=#345 id=345 data-nosnippet>345</a>    <span class="string">r"\joulepermolekelvinnp"</span>,
+<a href=#346 id=346 data-nosnippet>346</a>    <span class="string">r"\joule\usk\reciprocal\mole\usk\reciprocal\kelvin"</span>,
+<a href=#347 id=347 data-nosnippet>347</a>  ), <span class="comment">// :503
+<a href=#348 id=348 data-nosnippet>348</a>  </span>(<span class="string">r"\kilogramperkilomole"</span>, <span class="string">r"\kilogram\per\kilo\mole"</span>),          <span class="comment">// :504
+<a href=#349 id=349 data-nosnippet>349</a>  </span>(
+<a href=#350 id=350 data-nosnippet>350</a>    <span class="string">r"\kilogramperkilomolenp"</span>,
+<a href=#351 id=351 data-nosnippet>351</a>    <span class="string">r"\kilogram\usk\kilo\reciprocal\mole"</span>,
+<a href=#352 id=352 data-nosnippet>352</a>  ), <span class="comment">// :505
+<a href=#353 id=353 data-nosnippet>353</a>  </span>(<span class="string">r"\kilogramsquaremetre"</span>, <span class="string">r"\kilogram\usk\squaremetre"</span>),        <span class="comment">// :506
+<a href=#354 id=354 data-nosnippet>354</a>  </span>(<span class="string">r"\kilogramsquaremetrenp"</span>, <span class="string">r"\kilogramsquaremetre"</span>),           <span class="comment">// :507
+<a href=#355 id=355 data-nosnippet>355</a>  </span>(
+<a href=#356 id=356 data-nosnippet>356</a>    <span class="string">r"\kilogrammetrepersquaresecond"</span>,
+<a href=#357 id=357 data-nosnippet>357</a>    <span class="string">r"\kilogram\usk\metre\per\second\squared"</span>,
+<a href=#358 id=358 data-nosnippet>358</a>  ), <span class="comment">// :508
+<a href=#359 id=359 data-nosnippet>359</a>  </span>(
+<a href=#360 id=360 data-nosnippet>360</a>    <span class="string">r"\kilogrammetrepersquaresecondnp"</span>,
+<a href=#361 id=361 data-nosnippet>361</a>    <span class="string">r"\kilogram\usk\metre\usk\second\rpsquared"</span>,
+<a href=#362 id=362 data-nosnippet>362</a>  ), <span class="comment">// :509
+<a href=#363 id=363 data-nosnippet>363</a>  </span>(<span class="string">r"\newtonpersquaremetre"</span>, <span class="string">r"\newton\per\squaremetre"</span>),         <span class="comment">// :510
+<a href=#364 id=364 data-nosnippet>364</a>  </span>(<span class="string">r"\newtonpersquaremetrenp"</span>, <span class="string">r"\newton\usk\rpsquare\metre"</span>),    <span class="comment">// :511
+<a href=#365 id=365 data-nosnippet>365</a>  </span>(<span class="string">r"\persquaremetresecond"</span>, <span class="string">r"1\per\squaremetre\usk\second"</span>),    <span class="comment">// :512
+<a href=#366 id=366 data-nosnippet>366</a>  </span>(
+<a href=#367 id=367 data-nosnippet>367</a>    <span class="string">r"\persquaremetresecondnp"</span>,
+<a href=#368 id=368 data-nosnippet>368</a>    <span class="string">r"\rpsquare\metre\usk\reciprocal\second"</span>,
+<a href=#369 id=369 data-nosnippet>369</a>  ), <span class="comment">// :513
+<a href=#370 id=370 data-nosnippet>370</a>  </span>(<span class="string">r"\wattperkilogram"</span>, <span class="string">r"\watt\per\kilogram"</span>),                   <span class="comment">// :514
+<a href=#371 id=371 data-nosnippet>371</a>  </span>(<span class="string">r"\wattperkilogramnp"</span>, <span class="string">r"\watt\usk\reciprocal\kilogram"</span>),      <span class="comment">// :515
+<a href=#372 id=372 data-nosnippet>372</a>  </span>(<span class="string">r"\wattpercubicmetre"</span>, <span class="string">r"\watt\per\cubic\metre"</span>),              <span class="comment">// :516
+<a href=#373 id=373 data-nosnippet>373</a>  </span>(<span class="string">r"\wattpercubicmetrenp"</span>, <span class="string">r"\watt\usk\rpcubic\metre"</span>),          <span class="comment">// :517
+<a href=#374 id=374 data-nosnippet>374</a>  </span>(
+<a href=#375 id=375 data-nosnippet>375</a>    <span class="string">r"\wattpersquaremetresteradian"</span>,
+<a href=#376 id=376 data-nosnippet>376</a>    <span class="string">r"\watt\per\squaremetre\usk\steradian"</span>,
+<a href=#377 id=377 data-nosnippet>377</a>  ), <span class="comment">// :518
+<a href=#378 id=378 data-nosnippet>378</a>  </span>(
+<a href=#379 id=379 data-nosnippet>379</a>    <span class="string">r"\wattpersquaremetresteradiannp"</span>,
+<a href=#380 id=380 data-nosnippet>380</a>    <span class="string">r"\watt\usk\rpsquare\metre\usk\rp\steradian"</span>,
+<a href=#381 id=381 data-nosnippet>381</a>  ), <span class="comment">// :519
+<a href=#382 id=382 data-nosnippet>382</a>  </span>(
+<a href=#383 id=383 data-nosnippet>383</a>    <span class="string">r"\jouleperkilogramkelvin"</span>,
+<a href=#384 id=384 data-nosnippet>384</a>    <span class="string">r"\joule\per\kilogram\usk\kelvin"</span>,
+<a href=#385 id=385 data-nosnippet>385</a>  ), <span class="comment">// :520
+<a href=#386 id=386 data-nosnippet>386</a>  </span>(
+<a href=#387 id=387 data-nosnippet>387</a>    <span class="string">r"\jouleperkilogramkelvinnp"</span>,
+<a href=#388 id=388 data-nosnippet>388</a>    <span class="string">r"\joule\usk\reciprocal\kilogram\usk\reciprocal\kelvin"</span>,
+<a href=#389 id=389 data-nosnippet>389</a>  ), <span class="comment">// :521
+<a href=#390 id=390 data-nosnippet>390</a>  </span>(<span class="string">r"\squaremetreperkilogram"</span>, <span class="string">r"\squaremetre\per\kilogram"</span>),     <span class="comment">// :522
+<a href=#391 id=391 data-nosnippet>391</a>  </span>(
+<a href=#392 id=392 data-nosnippet>392</a>    <span class="string">r"\rpsquaremetreperkilogram"</span>,
+<a href=#393 id=393 data-nosnippet>393</a>    <span class="string">r"\squaremetre\usk\reciprocal\kilogram"</span>,
+<a href=#394 id=394 data-nosnippet>394</a>  ), <span class="comment">// :523
+<a href=#395 id=395 data-nosnippet>395</a>  </span>(<span class="string">r"\cubicmetreperkilogram"</span>, <span class="string">r"\cubic\metre\per\kilogram"</span>),      <span class="comment">// :524
+<a href=#396 id=396 data-nosnippet>396</a>  </span>(
+<a href=#397 id=397 data-nosnippet>397</a>    <span class="string">r"\rpcubicmetreperkilogram"</span>,
+<a href=#398 id=398 data-nosnippet>398</a>    <span class="string">r"\cubic\metre\usk\reciprocal\kilogram"</span>,
+<a href=#399 id=399 data-nosnippet>399</a>  ), <span class="comment">// :525
+<a href=#400 id=400 data-nosnippet>400</a>  </span>(<span class="string">r"\newtonpermetre"</span>, <span class="string">r"\newton\per\metre"</span>),                     <span class="comment">// :526
+<a href=#401 id=401 data-nosnippet>401</a>  </span>(<span class="string">r"\newtonpermetrenp"</span>, <span class="string">r"\newton\usk\reciprocal\metre"</span>),        <span class="comment">// :527
+<a href=#402 id=402 data-nosnippet>402</a>  </span>(<span class="string">r"\Celsius"</span>, <span class="string">r"\ensuremath{\SI@fstyle{C}}"</span>),                   <span class="comment">// :528
+<a href=#403 id=403 data-nosnippet>403</a>  </span>(<span class="string">r"\wattpermetrekelvin"</span>, <span class="string">r"\watt\per\metre\usk\kelvin"</span>),        <span class="comment">// :529
+<a href=#404 id=404 data-nosnippet>404</a>  </span>(
+<a href=#405 id=405 data-nosnippet>405</a>    <span class="string">r"\wattpermetrekelvinnp"</span>,
+<a href=#406 id=406 data-nosnippet>406</a>    <span class="string">r"\watt\usk\reciprocal\metre\usk\reciprocal\kelvin"</span>,
+<a href=#407 id=407 data-nosnippet>407</a>  ), <span class="comment">// :530
+<a href=#408 id=408 data-nosnippet>408</a>  </span>(<span class="string">r"\newtonmetre"</span>, <span class="string">r"\newton\usk\metre"</span>),                        <span class="comment">// :531
+<a href=#409 id=409 data-nosnippet>409</a>  </span>(<span class="string">r"\newtonmetrenp"</span>, <span class="string">r"\newtonmetre"</span>),                           <span class="comment">// :531
+<a href=#410 id=410 data-nosnippet>410</a>  </span>(
+<a href=#411 id=411 data-nosnippet>411</a>    <span class="string">r"\squaremetrepercubicsecond"</span>,
+<a href=#412 id=412 data-nosnippet>412</a>    <span class="string">r"\squaremetre\per\cubic\second"</span>,
+<a href=#413 id=413 data-nosnippet>413</a>  ), <span class="comment">// :532
+<a href=#414 id=414 data-nosnippet>414</a>  </span>(
+<a href=#415 id=415 data-nosnippet>415</a>    <span class="string">r"\squaremetrepercubicsecondnp"</span>,
+<a href=#416 id=416 data-nosnippet>416</a>    <span class="string">r"\squaremetre\usk\rpcubic\second"</span>,
+<a href=#417 id=417 data-nosnippet>417</a>  ), <span class="comment">// :533
+<a href=#418 id=418 data-nosnippet>418</a>  </span>(<span class="string">r"\metrepersecond"</span>, <span class="string">r"\metre\per\second"</span>),                     <span class="comment">// :534
+<a href=#419 id=419 data-nosnippet>419</a>  </span>(<span class="string">r"\metrepersecondnp"</span>, <span class="string">r"\metre\usk\reciprocal\second"</span>),        <span class="comment">// :535
+<a href=#420 id=420 data-nosnippet>420</a>  </span>(<span class="string">r"\joulepercubicmetre"</span>, <span class="string">r"\joule\per\cubicmetre"</span>),             <span class="comment">// :536
+<a href=#421 id=421 data-nosnippet>421</a>  </span>(<span class="string">r"\joulepercubicmetrenp"</span>, <span class="string">r"\joule\usk\rpcubic\metre"</span>),        <span class="comment">// :537
+<a href=#422 id=422 data-nosnippet>422</a>  </span>(
+<a href=#423 id=423 data-nosnippet>423</a>    <span class="string">r"\kilogrampercubicmetrecoulomb"</span>,
+<a href=#424 id=424 data-nosnippet>424</a>    <span class="string">r"\kilogram\per\cubic\metre\usk\coulomb"</span>,
+<a href=#425 id=425 data-nosnippet>425</a>  ), <span class="comment">// :538
+<a href=#426 id=426 data-nosnippet>426</a>  </span>(
+<a href=#427 id=427 data-nosnippet>427</a>    <span class="string">r"\kilogrampercubicmetrecoulombnp"</span>,
+<a href=#428 id=428 data-nosnippet>428</a>    <span class="string">r"\kilogram\usk\rpcubic\metre\usk\reciprocal\coulomb"</span>,
+<a href=#429 id=429 data-nosnippet>429</a>  ), <span class="comment">// :539
+<a href=#430 id=430 data-nosnippet>430</a>  </span>(<span class="string">r"\cubicmetrepersecond"</span>, <span class="string">r"\cubicmetre\per\second"</span>),           <span class="comment">// :540
+<a href=#431 id=431 data-nosnippet>431</a>  </span>(
+<a href=#432 id=432 data-nosnippet>432</a>    <span class="string">r"\rpcubicmetrepersecond"</span>,
+<a href=#433 id=433 data-nosnippet>433</a>    <span class="string">r"\cubicmetre\usk\reciprocal\second"</span>,
+<a href=#434 id=434 data-nosnippet>434</a>  ), <span class="comment">// :541
+<a href=#435 id=435 data-nosnippet>435</a>  </span>(
+<a href=#436 id=436 data-nosnippet>436</a>    <span class="string">r"\kilogrampersecondcubicmetre"</span>,
+<a href=#437 id=437 data-nosnippet>437</a>    <span class="string">r"\kilogram\per\second\usk\cubicmetre"</span>,
+<a href=#438 id=438 data-nosnippet>438</a>  ), <span class="comment">// :542
+<a href=#439 id=439 data-nosnippet>439</a>  </span>(
+<a href=#440 id=440 data-nosnippet>440</a>    <span class="string">r"\kilogrampersecondcubicmetrenp"</span>,
+<a href=#441 id=441 data-nosnippet>441</a>    <span class="string">r"\kilogram\usk\reciprocal\second\usk\rpcubic\metre"</span>,
+<a href=#442 id=442 data-nosnippet>442</a>  ), <span class="comment">// :543
+<a href=#443 id=443 data-nosnippet>443</a></span>];
+<a href=#444 id=444 data-nosnippet>444</a>
+<a href=#445 id=445 data-nosnippet>445</a><span class="doccomment">/// `\SIunits@opt@derivedinbase` (L302-347): option `derivedinbase`, the derived units in base units.
+<a href=#446 id=446 data-nosnippet>446</a></span><span class="kw">const </span>SIUNITS_DERIVED_IN_BASE: <span class="kw-2">&amp;</span>[(<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str)] = <span class="kw-2">&amp;</span>[
+<a href=#447 id=447 data-nosnippet>447</a>  (<span class="string">r"\radianbase"</span>, <span class="string">r"\metre\usk\reciprocal\metre"</span>), <span class="comment">// :304
+<a href=#448 id=448 data-nosnippet>448</a>  </span>(<span class="string">r"\steradianbase"</span>, <span class="string">r"\squaremetre\usk\rpsquare\metre"</span>), <span class="comment">// :306
+<a href=#449 id=449 data-nosnippet>449</a>  </span>(<span class="string">r"\hertzbase"</span>, <span class="string">r"\reciprocal\second"</span>),           <span class="comment">// :308
+<a href=#450 id=450 data-nosnippet>450</a>  </span>(<span class="string">r"\newtonbase"</span>, <span class="string">r"\metre\usk\kilogram\usk\second\rpsquared"</span>), <span class="comment">// :310
+<a href=#451 id=451 data-nosnippet>451</a>  </span>(
+<a href=#452 id=452 data-nosnippet>452</a>    <span class="string">r"\pascalbase"</span>,
+<a href=#453 id=453 data-nosnippet>453</a>    <span class="string">r"\reciprocal\metre\usk\kilogram\usk\second\rpsquared"</span>,
+<a href=#454 id=454 data-nosnippet>454</a>  ), <span class="comment">// :312
+<a href=#455 id=455 data-nosnippet>455</a>  </span>(
+<a href=#456 id=456 data-nosnippet>456</a>    <span class="string">r"\joulebase"</span>,
+<a href=#457 id=457 data-nosnippet>457</a>    <span class="string">r"\squaremetre\usk\kilogram\usk\second\rpsquared"</span>,
+<a href=#458 id=458 data-nosnippet>458</a>  ), <span class="comment">// :314
+<a href=#459 id=459 data-nosnippet>459</a>  </span>(
+<a href=#460 id=460 data-nosnippet>460</a>    <span class="string">r"\wattbase"</span>,
+<a href=#461 id=461 data-nosnippet>461</a>    <span class="string">r"\squaremetre\usk\kilogram\usk\rpcubic\second"</span>,
+<a href=#462 id=462 data-nosnippet>462</a>  ), <span class="comment">// :316
+<a href=#463 id=463 data-nosnippet>463</a>  </span>(<span class="string">r"\coulombbase"</span>, <span class="string">r"\ampere\usk\second"</span>),         <span class="comment">// :318
+<a href=#464 id=464 data-nosnippet>464</a>  </span>(
+<a href=#465 id=465 data-nosnippet>465</a>    <span class="string">r"\voltbase"</span>,
+<a href=#466 id=466 data-nosnippet>466</a>    <span class="string">r"\squaremetre\usk\kilogram\usk\rpcubic\second\usk\reciprocal\ampere"</span>,
+<a href=#467 id=467 data-nosnippet>467</a>  ), <span class="comment">// :320
+<a href=#468 id=468 data-nosnippet>468</a>  </span>(
+<a href=#469 id=469 data-nosnippet>469</a>    <span class="string">r"\faradbase"</span>,
+<a href=#470 id=470 data-nosnippet>470</a>    <span class="string">r"\rpsquare\metre\usk\reciprocal\kilogram\usk\fourth\second\usk\ampere\squared"</span>,
+<a href=#471 id=471 data-nosnippet>471</a>  ), <span class="comment">// :322
+<a href=#472 id=472 data-nosnippet>472</a>  </span>(
+<a href=#473 id=473 data-nosnippet>473</a>    <span class="string">r"\ohmbase"</span>,
+<a href=#474 id=474 data-nosnippet>474</a>    <span class="string">r"\squaremetre\usk\kilogram\usk\rpcubic\second\usk\rpsquare\ampere"</span>,
+<a href=#475 id=475 data-nosnippet>475</a>  ), <span class="comment">// :324
+<a href=#476 id=476 data-nosnippet>476</a>  </span>(
+<a href=#477 id=477 data-nosnippet>477</a>    <span class="string">r"\siemensbase"</span>,
+<a href=#478 id=478 data-nosnippet>478</a>    <span class="string">r"\rpsquare\metre\usk\reciprocal\kilogram\usk\cubic\second\usk\ampere\squared"</span>,
+<a href=#479 id=479 data-nosnippet>479</a>  ), <span class="comment">// :326
+<a href=#480 id=480 data-nosnippet>480</a>  </span>(
+<a href=#481 id=481 data-nosnippet>481</a>    <span class="string">r"\weberbase"</span>,
+<a href=#482 id=482 data-nosnippet>482</a>    <span class="string">r"\squaremetre\usk\kilogram\usk\second\rpsquared\usk\reciprocal\ampere"</span>,
+<a href=#483 id=483 data-nosnippet>483</a>  ), <span class="comment">// :328
+<a href=#484 id=484 data-nosnippet>484</a>  </span>(
+<a href=#485 id=485 data-nosnippet>485</a>    <span class="string">r"\teslabase"</span>,
+<a href=#486 id=486 data-nosnippet>486</a>    <span class="string">r"\kilogram\usk\second\rpsquared\usk\reciprocal\ampere"</span>,
+<a href=#487 id=487 data-nosnippet>487</a>  ), <span class="comment">// :330
+<a href=#488 id=488 data-nosnippet>488</a>  </span>(
+<a href=#489 id=489 data-nosnippet>489</a>    <span class="string">r"\henrybase"</span>,
+<a href=#490 id=490 data-nosnippet>490</a>    <span class="string">r"\squaremetre\usk\kilogram\usk\second\rpsquared\usk\rpsquare\ampere"</span>,
+<a href=#491 id=491 data-nosnippet>491</a>  ), <span class="comment">// :332
+<a href=#492 id=492 data-nosnippet>492</a>  </span>(<span class="string">r"\celsiusbase"</span>, <span class="string">r"\kelvin"</span>),                    <span class="comment">// :334
+<a href=#493 id=493 data-nosnippet>493</a>  </span>(
+<a href=#494 id=494 data-nosnippet>494</a>    <span class="string">r"\lumenbase"</span>,
+<a href=#495 id=495 data-nosnippet>495</a>    <span class="string">r"\candela\usk\squaremetre\usk\rpsquare\metre"</span>,
+<a href=#496 id=496 data-nosnippet>496</a>  ), <span class="comment">// :336
+<a href=#497 id=497 data-nosnippet>497</a>  </span>(<span class="string">r"\luxbase"</span>, <span class="string">r"\candela\usk\squaremetre\usk\rpfourth\metre"</span>), <span class="comment">// :338
+<a href=#498 id=498 data-nosnippet>498</a>  </span>(<span class="string">r"\becquerelbase"</span>, <span class="string">r"\hertzbase"</span>),               <span class="comment">// :340
+<a href=#499 id=499 data-nosnippet>499</a>  </span>(<span class="string">r"\graybase"</span>, <span class="string">r"\squaremetre\usk\second\rpsquared"</span>), <span class="comment">// :342
+<a href=#500 id=500 data-nosnippet>500</a>  </span>(<span class="string">r"\sievertbase"</span>, <span class="string">r"\graybase"</span>),                  <span class="comment">// :344
+<a href=#501 id=501 data-nosnippet>501</a>  </span>(<span class="string">r"\katalbase"</span>, <span class="string">r"\rp\second\usk\mole"</span>),          <span class="comment">// :346
+<a href=#502 id=502 data-nosnippet>502</a></span>];
+<a href=#503 id=503 data-nosnippet>503</a>
+<a href=#504 id=504 data-nosnippet>504</a><span class="doccomment">/// `\SIunits@opt@derived` (L349-393): option `derived`, the derived units in derived units.
+<a href=#505 id=505 data-nosnippet>505</a></span><span class="kw">const </span>SIUNITS_DERIVED: <span class="kw-2">&amp;</span>[(<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str)] = <span class="kw-2">&amp;</span>[
+<a href=#506 id=506 data-nosnippet>506</a>  (<span class="string">r"\derradian"</span>, <span class="string">r"\metre\usk\reciprocal\metre"</span>), <span class="comment">// :350
+<a href=#507 id=507 data-nosnippet>507</a>  </span>(<span class="string">r"\dersteradian"</span>, <span class="string">r"\squaremetre\usk\rpsquare\metre"</span>), <span class="comment">// :352
+<a href=#508 id=508 data-nosnippet>508</a>  </span>(<span class="string">r"\derhertz"</span>, <span class="string">r"\reciprocal\second"</span>),           <span class="comment">// :354
+<a href=#509 id=509 data-nosnippet>509</a>  </span>(<span class="string">r"\dernewton"</span>, <span class="string">r"\metre\usk\kilogram\usk\second\rpsquared"</span>), <span class="comment">// :356
+<a href=#510 id=510 data-nosnippet>510</a>  </span>(<span class="string">r"\derpascal"</span>, <span class="string">r"\newton\usk\rpsquare\metre"</span>),  <span class="comment">// :358
+<a href=#511 id=511 data-nosnippet>511</a>  </span>(<span class="string">r"\derjoule"</span>, <span class="string">r"\newton\usk\metre"</span>),            <span class="comment">// :360
+<a href=#512 id=512 data-nosnippet>512</a>  </span>(<span class="string">r"\derwatt"</span>, <span class="string">r"\joule\usk\reciprocal\second"</span>),  <span class="comment">// :362
+<a href=#513 id=513 data-nosnippet>513</a>  </span>(<span class="string">r"\dercoulomb"</span>, <span class="string">r"\ampere\usk\second"</span>),         <span class="comment">// :364
+<a href=#514 id=514 data-nosnippet>514</a>  </span>(<span class="string">r"\dervolt"</span>, <span class="string">r"\watt\usk\reciprocal\ampere"</span>),   <span class="comment">// :366
+<a href=#515 id=515 data-nosnippet>515</a>  </span>(<span class="string">r"\derfarad"</span>, <span class="string">r"\coulomb\usk\reciprocal\volt"</span>), <span class="comment">// :368
+<a href=#516 id=516 data-nosnippet>516</a>  </span>(<span class="string">r"\derohm"</span>, <span class="string">r"\volt\usk\reciprocal\ampere"</span>),    <span class="comment">// :370
+<a href=#517 id=517 data-nosnippet>517</a>  </span>(<span class="string">r"\dersiemens"</span>, <span class="string">r"\ampere\usk\reciprocal\volt"</span>), <span class="comment">// :372
+<a href=#518 id=518 data-nosnippet>518</a>  </span>(
+<a href=#519 id=519 data-nosnippet>519</a>    <span class="string">r"\derweber"</span>,
+<a href=#520 id=520 data-nosnippet>520</a>    <span class="string">r"\squaremetre\usk\kilogram\usk\second\rpsquared\usk\reciprocal\ampere"</span>,
+<a href=#521 id=521 data-nosnippet>521</a>  ), <span class="comment">// :374
+<a href=#522 id=522 data-nosnippet>522</a>  </span>(<span class="string">r"\dertesla"</span>, <span class="string">r"\weber\usk\rpsquare\metre"</span>),    <span class="comment">// :376
+<a href=#523 id=523 data-nosnippet>523</a>  </span>(<span class="string">r"\derhenry"</span>, <span class="string">r"\weber\usk\reciprocal\ampere"</span>), <span class="comment">// :378
+<a href=#524 id=524 data-nosnippet>524</a>  </span>(<span class="string">r"\dercelsius"</span>, <span class="string">r"\kelvin"</span>),                    <span class="comment">// :380
+<a href=#525 id=525 data-nosnippet>525</a>  </span>(<span class="string">r"\derlumen"</span>, <span class="string">r"\candela\usk\steradian"</span>),       <span class="comment">// :382
+<a href=#526 id=526 data-nosnippet>526</a>  </span>(<span class="string">r"\derlux"</span>, <span class="string">r"\lumen\usk\rpsquare\metre"</span>),      <span class="comment">// :384
+<a href=#527 id=527 data-nosnippet>527</a>  </span>(<span class="string">r"\derbecquerel"</span>, <span class="string">r"\derhertz"</span>),                <span class="comment">// :386
+<a href=#528 id=528 data-nosnippet>528</a>  </span>(<span class="string">r"\dergray"</span>, <span class="string">r"\joule\usk\reciprocal\kilogram"</span>), <span class="comment">// :388
+<a href=#529 id=529 data-nosnippet>529</a>  </span>(<span class="string">r"\dersievert"</span>, <span class="string">r"\dergray"</span>),                   <span class="comment">// :390
+<a href=#530 id=530 data-nosnippet>530</a>  </span>(<span class="string">r"\derkatal"</span>, <span class="string">r"\katalbase"</span>),                   <span class="comment">// :392
+<a href=#531 id=531 data-nosnippet>531</a></span>];
 </code></pre></div></section></main></body></html>

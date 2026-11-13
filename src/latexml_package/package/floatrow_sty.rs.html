@@ -1,0 +1,49 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/floatrow_sty.rs`."><title>floatrow_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>floatrow_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<a href=#2 id=2 data-nosnippet>2</a>
+<a href=#3 id=3 data-nosnippet>3</a><span class="attr">#[rustfmt::skip]
+<a href=#4 id=4 data-nosnippet>4</a></span><span class="macro">LoadDefinitions!</span>({
+<a href=#5 id=5 data-nosnippet>5</a>  <span class="comment">// floatrow.sty itself lays out each floatbox: its caption and its `\floatfoot` text go to its
+<a href=#6 id=6 data-nosnippet>6</a>  // own boxes, `\@floatcapt` (filled by `\flrow@makecaption`, floatrow.sty:85-102) and
+<a href=#7 id=7 data-nosnippet>7</a>  // `\flrow@foot`, and the layout (`\flrow@FB@`, `\flrow@FC@`, :363-418) places the foot only
+<a href=#8 id=8 data-nosnippet>8</a>  // where the caption box is not void. LaTeXML's locked `\@caption` never calls `\@makecaption`,
+<a href=#9 id=9 data-nosnippet>9</a>  // so the box stayed void and every foot was lost; the kernel's caption material goes through
+<a href=#10 id=10 data-nosnippet>10</a>  // `\lx@setfloatcapt` (sect09.rs), which a floatbox points at `\@floatcapt`.
+<a href=#11 id=11 data-nosnippet>11</a>  </span><span class="macro">InputDefinitions!</span>(<span class="string">"floatrow"</span>, noltxml =&gt; <span class="bool-val">true</span>, extension =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"sty"</span>)));
+<a href=#12 id=12 data-nosnippet>12</a>  <span class="comment">// floatrow.sty:34-37 marks float.sty and rotfloat.sty loaded (`\@namedef{ver@float.sty}`: it carries its own excerpt
+<a href=#13 id=13 data-nosnippet>13</a>  // of both), so LaTeX skips a later `\usepackage{float}` (latex.ltx `\@onefilewithoptions`). Our loader keys on its
+<a href=#14 id=14 data-nosnippet>14</a>  // own record, not on `\ver@`, so the binding records the same; otherwise float's binding replaced floatrow's
+<a href=#15 id=15 data-nosnippet>15</a>  // `\float@end` and every restyled float stayed open (2010.00977, 2003.11778, 2011.10793, 2105.04869;
+<a href=#16 id=16 data-nosnippet>16</a>  // KNOWN_PERL_ERRORS #668; user ruling 2026-10-14: floatrow's marks, no general `\ver@` rule). Guard:
+<a href=#17 id=17 data-nosnippet>17</a>  // `perfect_kernel_batch66v::floatrow_marks_float_loaded`.
+<a href=#18 id=18 data-nosnippet>18</a>  </span><span class="macro">AssignValue!</span>(<span class="string">"float.sty_loaded" </span>=&gt; <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#19 id=19 data-nosnippet>19</a>  <span class="macro">AssignValue!</span>(<span class="string">"rotfloat.sty_loaded" </span>=&gt; <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#20 id=20 data-nosnippet>20</a>
+<a href=#21 id=21 data-nosnippet>21</a>  <span class="comment">// `\FBget@box` runs once per floatbox (`\@@@floatbox`, :776), in its group, before every
+<a href=#22 id=22 data-nosnippet>22</a>  // measuring pass and the real one (`\FBsetbox@obj`); each pass refills `\@floatcapt`, as
+<a href=#23 id=23 data-nosnippet>23</a>  // `\flrow@makecaption` does. Sub-floats reset the capture at their begin (`begin_float`).
+<a href=#24 id=24 data-nosnippet>24</a>  // `\RawCaption` keeps the plain caption (:252). Guards
+<a href=#25 id=25 data-nosnippet>25</a>  // `perfect_kernel_batch58::{floatrow_floatfoot_keeps_its_text, floatrow_subcaption_stays_in_its_panel}`.
+<a href=#26 id=26 data-nosnippet>26</a>  // The capture is `\flrow@makecaption`'s box (floatrow.sty:88-102): the caption box starts from
+<a href=#27 id=27 data-nosnippet>27</a>  // the paragraph and font defaults, so a size switch in the object does not reach it.
+<a href=#28 id=28 data-nosnippet>28</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\def\lx@flrow@setfloatcapt#1{\global\setbox\@floatcapt\vbox\bgroup\@parboxrestore\reset@font
+<a href=#29 id=29 data-nosnippet>29</a>  \if@@FS\ifdim\FBc@wd&gt;\z@\hsize\FBc@wd\else\adj@dim\hsize+\FBo@wadj=\hsize\fi\fi
+<a href=#30 id=30 data-nosnippet>30</a>  \linewidth\hsize\ifdim\hsize&lt;70mm\sloppy\fi\normalsize\abovecaptionskip\z@\belowcaptionskip\z@#1\egroup}
+<a href=#31 id=31 data-nosnippet>31</a>\let\lx@flrow@FBget@box\FBget@box
+<a href=#32 id=32 data-nosnippet>32</a>\def\FBget@box{\let\lx@setfloatcapt\lx@flrow@setfloatcapt\lx@flrow@FBget@box}
+<a href=#33 id=33 data-nosnippet>33</a>\def\RawCaption#1{{\let\@makecaption\FR@makecaption\let\lx@setfloatcapt\lx@kernel@setfloatcapt#1}}"</span>);
+<a href=#34 id=34 data-nosnippet>34</a>  <span class="comment">// A plain `figure`/`table` (no floatbox object) is the kernel's float, which never reaches floatrow's float end
+<a href=#35 id=35 data-nosnippet>35</a>  // (`\float@end`, floatrow.sty:114-127, :421-424, whose layout `\FB@foot` sets `\flrow@foot` under the caption): its
+<a href=#36 id=36 data-nosnippet>36</a>  // `\floatfoot` filled the box (`\floatfoot@`, :502-504) and nothing set it, the text lost with 0 errors. The float's
+<a href=#37 id=37 data-nosnippet>37</a>  // end sets a foot still pending there, and empties the box globally, as `\floatfoot@` filled it. A floatbox inside the
+<a href=#38 id=38 data-nosnippet>38</a>  // float sets and empties it in its own layout first. Repro captions-floats/floatrow_floatfoot_in_plain_figure.
+<a href=#39 id=39 data-nosnippet>39</a>  // A `\DeclareNewFloatType` float ends with floatrow's own `\float@end`/`\float@dblend`/`\float@endH` (`\let` to its
+<a href=#40 id=40 data-nosnippet>40</a>  // `\end&lt;type&gt;` when the type is declared, floatrow.sty:126-127, :274), whose layout sets the foot only beside a filled
+<a href=#41 id=41 data-nosnippet>41</a>  // caption box — which the kernel's caption leaves void: the pending foot is set first there too.
+<a href=#42 id=42 data-nosnippet>42</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\def\lx@flrow@plainfoot{\ifvoid\flrow@foot\else\par\copy\flrow@foot\global\setbox\flrow@foot\box\voidb@x\fi}
+<a href=#43 id=43 data-nosnippet>43</a>\AddToHook{env/figure/end}{\lx@flrow@plainfoot}\AddToHook{env/figure*/end}{\lx@flrow@plainfoot}
+<a href=#44 id=44 data-nosnippet>44</a>\AddToHook{env/table/end}{\lx@flrow@plainfoot}\AddToHook{env/table*/end}{\lx@flrow@plainfoot}
+<a href=#45 id=45 data-nosnippet>45</a>\let\lx@flrow@float@end\float@end\def\float@end{\lx@flrow@plainfoot\lx@flrow@float@end}
+<a href=#46 id=46 data-nosnippet>46</a>\let\lx@flrow@float@dblend\float@dblend\def\float@dblend{\lx@flrow@plainfoot\lx@flrow@float@dblend}
+<a href=#47 id=47 data-nosnippet>47</a>\let\lx@flrow@float@endH\float@endH\def\float@endH{\lx@flrow@plainfoot\lx@flrow@float@endH}"</span>);
+<a href=#48 id=48 data-nosnippet>48</a>});
+</code></pre></div></section></main></body></html>

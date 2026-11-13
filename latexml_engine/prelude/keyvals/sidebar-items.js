@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["SkipMissing"],"struct":["KeyVals","KeyvalsConfig"]};
+window.SIDEBAR_ITEMS = {"enum":["SkipMissing"],"fn":["reset_unknown_keys_reported"],"struct":["KeyVals","KeyvalsConfig"]};

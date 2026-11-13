@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["def_autoload","load_definitions"]};
+window.SIDEBAR_ITEMS = {"fn":["def_autoload","fire_autoload","load_definitions","unfired_autoload_package"]};

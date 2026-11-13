@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["get_multirow_alignment_rule","load_definitions","rearrange_ams_align","rearrange_ams_gather","rearrange_ams_multirow","rearrange_lone_ams_aligned"]};
+window.SIDEBAR_ITEMS = {"fn":["amsmath_loaded_beyond_original","define_ams_macro_accent","define_ams_matrix_base","define_ams_setstack_commands","define_amsfonts_macro_accent","define_undelimited_argument","get_multirow_alignment_rule","load_definitions","rearrange_ams_align","rearrange_ams_gather","rearrange_ams_multirow","rearrange_lone_ams_aligned","require_amsmath_beyond_original"]};

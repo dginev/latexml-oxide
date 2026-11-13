@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_definitions"]};
+window.SIDEBAR_ITEMS = {"enum":["BoldArgument"],"fn":["bold_math","define_bold_delimiter","define_grouped_bm","load_definitions"]};

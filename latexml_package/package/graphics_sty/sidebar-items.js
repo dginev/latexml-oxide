@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_definitions","rotated_properties","scaled_properties"]};
+window.SIDEBAR_ITEMS = {"enum":["RotationKey"],"fn":["load_definitions","rotated_properties","rotated_properties_with","scaled_properties"],"struct":["RotationOptions"]};

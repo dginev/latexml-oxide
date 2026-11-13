@@ -1,0 +1,37 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="axodraw.sty — J.A.M. Vermaseren’s Feynman-diagram package, version 1 (“Made by J.A.M. Vermaseren 14-feb-1994”)."><title>latexml_package::package::axodraw_sty - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc mod"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Module axodraw_sty</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../../latexml_package/index.html">latexml_<wbr>package</a><span class="version">0.7.0</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Module axodraw_<wbr>sty</a></h2><h3><a href="#functions">Module Items</a></h3><ul class="block"><li><a href="#functions" title="Functions">Functions</a></li></ul></section><div id="rustdoc-modnav"><h2><a href="../index.html">In latexml_<wbr>package::<wbr>package</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../../index.html">latexml_package</a>::<wbr><a href="../index.html">package</a></div><h1>Module <span>axodraw_<wbr>sty</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../../src/latexml_package/package/axodraw_sty.rs.html#1-1370">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>axodraw.sty — J.A.M. Vermaseren’s Feynman-diagram package, version 1
+(“Made by J.A.M. Vermaseren 14-feb-1994”).</p>
+<p>axodraw v1 is neither in TeX Live (which has its successor <code>axodraw2</code>) nor,
+mostly, shipped with the papers that load it: run 336 had 1,507 arXiv
+papers with <code>\Text</code> undefined (149 as their first error; witnesses
+hep-th0506235, hep-ph0512261, hep-ph0305218, 0710.3255, 0809.0800). Its
+drawing layer is PostScript: every command is <code>\put(\axoxoff,\axoyoff)</code>
+around a <code>\special{"…}</code> that calls a procedure the package installs with
+<code>\special{! …}</code> (dvips header code), so a raw load draws nothing even where
+the file is present. This binding keeps v1’s TeX layer — the same command
+signatures, <code>\Set*</code> state macros and <code>\put</code> placement — and replaces each
+<code>\special</code> with <code>\lx@axo@draw{procedure}{arguments}</code>, which evaluates the
+procedure’s geometry here, transcribed from the v1 PostScript, into the
+picture model (<code>ltx:line</code>, <code>ltx:bezier</code>, <code>ltx:arc</code>, <code>ltx:circle</code>,
+<code>ltx:polygon</code>, <code>ltx:rect</code>, <code>ltx:ellipse</code>) that <code>{picture}</code> and the
+pstricks binding emit and the SVG post-processor renders.</p>
+<p>A paper’s own copy of axodraw.sty (about one zip in 830 ships one) is
+answered by this binding too, as any binding outranks a raw file: raw, its
+drawing is lost all the same. axodraw2 (TeX Live) and axodraw4j
+(JaxoDraw’s 2008 keyval forerunner of axodraw2, shipped by papers:
+1301.5845, 1701.08134) are other packages, read from their files
+(axodraw2_sty.rs keeps the versioned-name fallback off axodraw2).</p>
+<p>An argument is what v1 splices into PostScript, so it may be a PostScript
+expression over a dvips-header constant (<code>{20 Tdensity mul}</code>, 0901.1195,
+1701.01554): <code>ps_value</code> evaluates the arithmetic.</p>
+<p>The command set is the union of the v1 variants arXiv papers ship (all
+share one PostScript geometry): the original 1994 file (hep-ph9702393,
+hep-ph0101185) and the colordvi-aware one adding <code>\SetColor</code>, <code>\CCirc</code>,
+<code>\CBox(c)</code>, <code>\COval</code>, <code>\CText</code>, <code>\C2Text</code> and the triangles (hep-ph0101235).</p>
+<p>Units, v1 semantics (both sides deliberate in v1, and relied on by papers:
+0809.0800 writes <code>\unitlength 0.6pt\SetScale{0.6}</code>): graphics coordinates
+are PostScript points scaled by <code>\SetScale</code> and ignore <code>\unitlength</code>;
+<code>\Text</code>/<code>\rText</code> place TeX text at <code>\unitlength</code> multiples, unscaled. v1
+draws in big points; this reads them as TeX points, the correction
+axodraw2 made (axodraw2.sty:3080 <code>/gs{gsave 1.00375 div dup scale}</code>), so a
+label set at the same coordinates as a line meets it.</p>
+</div></details><h2 id="functions" class="section-header">Functions<a href="#functions" class="anchor">§</a></h2><dl class="item-table"><dt><a class="fn" href="fn.load_definitions.html" title="fn latexml_package::package::axodraw_sty::load_definitions">load_<wbr>definitions</a></dt></dl></section></div></main></body></html>

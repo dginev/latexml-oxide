@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_definitions"]};
+window.SIDEBAR_ITEMS = {"constant":["KEYWORD_MARKUP"],"fn":["imsart_arxiv","imsart_sty_markup","load_definitions"]};

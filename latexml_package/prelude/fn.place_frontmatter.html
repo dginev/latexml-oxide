@@ -1,0 +1,47 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="The ONE frontmatter placement pass (OXIDIZED_DESIGN #247). The schema wants every frontmatter-group element before all `document.body.class` content (`LaTeXML-structure.rnc:34`), and `Para.class` — hence the body group — includes `pagination`, `rule` and `para` (`LaTeXML-para.rnc:18-20`). Perl only ever places at the current point (`\maketitle`) or at the top (fallback) and leaves whatever that yields. This pass looks at the LEADING REGION — the root children between the resources and the bound (the abstract’s own `ltx:_Frontmatter_Capture_` position marker when it has one, else everything built so far) — and classifies each node:"><title>place_frontmatter in latexml_package::prelude - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="sidebar-items.js"></script><script defer src="../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc fn"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">place_frontmatter</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../latexml_package/index.html">latexml_<wbr>package</a><span class="version">0.7.0</span></h2></div><div class="sidebar-elems"><div id="rustdoc-modnav"><h2><a href="index.html">In latexml_<wbr>package::<wbr>prelude</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../index.html">latexml_package</a>::<wbr><a href="index.html">prelude</a></div><h1>Function <span class="fn">place_<wbr>frontmatter</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../src/latexml_engine/base_utilities/frontmatter/place.rs.html#1010-1014">Source</a> </span></div><pre class="rust item-decl"><code>pub fn place_frontmatter(
+    document: &amp;mut <a class="struct" href="struct.Document.html" title="struct latexml_package::prelude::Document">Document</a>,
+    wrap_layout: <a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.bool.html">bool</a>,
+    anchor: <a class="enum" href="enum.FrontmatterAnchor.html" title="enum latexml_package::prelude::FrontmatterAnchor">FrontmatterAnchor</a>,
+) -&gt; <a class="enum" href="https://doc.rust-lang.org/nightly/core/result/enum.Result.html" title="enum core::result::Result">Result</a>&lt;<a class="primitive" href="https://doc.rust-lang.org/nightly/std/primitive.unit.html">()</a>, <a class="struct" href="struct.Error.html" title="struct latexml_package::prelude::Error">Error</a>&gt;</code></pre><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>The ONE frontmatter placement pass (OXIDIZED_DESIGN #247). The schema wants every
+frontmatter-group element before all <code>document.body.class</code> content
+(<code>LaTeXML-structure.rnc:34</code>), and <code>Para.class</code> — hence the body group — includes
+<code>pagination</code>, <code>rule</code> and <code>para</code> (<code>LaTeXML-para.rnc:18-20</code>). Perl only ever places at
+the current point (<code>\maketitle</code>) or at the top (fallback) and leaves whatever that
+yields. This pass looks at the LEADING REGION — the root children between the
+resources and the bound (the abstract’s own <code>ltx:_Frontmatter_Capture_</code> position
+marker when it has one, else everything built so far) — and classifies each node:</p>
+<ul>
+<li>a first-group element (<code>is_frontmatter_group_element</code>) stays and becomes the
+anchor candidate;</li>
+<li>a content-free node (<code>node_is_content_free</code>: a pagebreak, an empty paragraph, an
+ink-free empty box) or PREAMBLE residue (<code>is_preamble_residue</code>: built before
+<code>\begin{document}</code>, where LaTeX forbids typesetting) is left in place and, if it
+preceded the anchor, moved after the placed frontmatter;</li>
+<li>hand-typeset title-page LAYOUT — <code>para</code> / demotable <code>logical-block</code> / <code>pagination</code>
+with visible ink, <code>wrap_layout</code> only (the abstract-only fallback: a cover typeset
+before a <code>\begin{abstract}</code> with no <code>\maketitle</code>) — is wrapped, in its exact order,
+into <code>&lt;ltx:titlepage&gt;</code> (<code>titlepage_model = (FrontMatter.class | SectionalFrontMatter.class | Block.class)*</code> is the schema’s container for exactly
+that; <code>para</code>→<code>block</code>, <code>logical-block</code> demoted bottom-up as in #244);</li>
+<li>anything else — a <code>&lt;TOC&gt;</code>, a section, a float, a root <code>&lt;rule&gt;</code>, a VISIBLE body
+paragraph on the <code>\maketitle</code> path — ends the region: it stays where it is and the
+frontmatter is placed ahead of it, so the document still opens with its front
+group (Perl places at the current point and strands the title; user-approved
+surpass, OXIDIZED_DESIGN #262).</li>
+</ul>
+<p>The frontmatter is inserted after the wrapped titlepage, else after the leading
+first-group run (<code>FrontmatterAnchor::LeadingFrontmatter</code>) or at the top, via the
+same <code>_Capture_</code> insert→fill→unwrap machinery Perl’s fallback uses. Run at every
+placement point — <code>\lx@frontmatterhere</code>, both <code>\lx@frontmatter@fallback</code> branches,
+the <code>{titlepage}</code> environment’s <code>after_construct</code> — so a leading pagebreak before a
+built titlepage is settled when that titlepage is built, not by a later pass. The
+bound matters: without the marker a sectionless manual’s whole body would read as
+cover (jourcl’s cover LETTER, derivative’s after-abstract cover). Superseded by this
+pass: #242’s content-free gate, #245’s <code>\end{document}</code> relocation, #246’s anchor
+helpers. Kept beside it: the conservative title promotion (<code>maybe_promote_leading_title</code>,
+user-ruled), <code>maybe_dedup_leading_title_ink</code> (#6924), <code>insert_late_frontmatter</code>, the
+marker sweep in <code>insert_frontmatter</code> and the core <code>finalize_rec</code>.</p>
+<p>Witnesses: amsldoc/tkz-doc/tzplot (#242, 14 docs), gitinfo2/gitlog/FrontespizioScudo/
+toptesi-example-* (#245, 6), toptesi-example-magistrale/tipfr-doc/isosigns-docs/
+bootstrapicons-docs/derivative/jourcl (#246, 16), the faketitlepage /
+promote_center_title / svabstract fixtures, <code>114_streaming_structure</code> (eager ≡ streaming).</p>
+</div></details></section></div></main></body></html>

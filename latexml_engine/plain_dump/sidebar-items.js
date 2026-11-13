@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_definitions","plain_dump_available"]};
+window.SIDEBAR_ITEMS = {"fn":["load_definitions","plain_dump_available","plain_dump_on_disk"]};

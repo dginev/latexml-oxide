@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["convert_to_html","convert_to_xml"]};
+window.SIDEBAR_ITEMS = {"fn":["convert_to_html","convert_to_html_with","convert_to_xml"],"struct":["HtmlOptions"]};

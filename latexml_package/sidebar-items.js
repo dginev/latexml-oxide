@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"constant":["BINDINGS"],"externcrate":["engine"],"fn":["binding_names","dispatch"],"mod":["package","prelude","xmath_helpers"],"type":["BindingLoader"]};
+window.SIDEBAR_ITEMS = {"constant":["BINDINGS"],"externcrate":["engine"],"fn":["binding_names","dispatch"],"mod":["float_description","package","prelude","shipped_class","xmath_helpers"],"type":["BindingLoader"]};

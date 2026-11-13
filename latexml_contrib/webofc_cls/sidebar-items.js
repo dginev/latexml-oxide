@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["FRONTMATTER_CONVENTIONS"],"fn":["load_definitions"]};

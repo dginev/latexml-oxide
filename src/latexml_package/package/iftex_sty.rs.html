@@ -1,47 +1,128 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/iftex_sty.rs`."><title>iftex_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>iftex_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">/// Perl: iftex.sty.ltxml — TeX engine detection conditionals
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/iftex_sty.rs`."><title>iftex_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>iftex_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">/// Perl: iftex.sty.ltxml — TeX engine detection conditionals
 <a href=#2 id=2 data-nosnippet>2</a></span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#3 id=3 data-nosnippet>3</a>
 <a href=#4 id=4 data-nosnippet>4</a><span class="attr">#[rustfmt::skip]
 <a href=#5 id=5 data-nosnippet>5</a></span><span class="macro">LoadDefinitions!</span>({
-<a href=#6 id=6 data-nosnippet>6</a>  <span class="comment">// eTeX and pdfTeX are considered "true" for LaTeXML
-<a href=#7 id=7 data-nosnippet>7</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\ifetex"</span>, { <span class="bool-val">true </span>});
-<a href=#8 id=8 data-nosnippet>8</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifeTeX"</span>, { <span class="bool-val">true </span>});
-<a href=#9 id=9 data-nosnippet>9</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifpdftex"</span>, { <span class="bool-val">true </span>});
-<a href=#10 id=10 data-nosnippet>10</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifPDFTeX"</span>, { <span class="bool-val">true </span>});
-<a href=#11 id=11 data-nosnippet>11</a>  <span class="comment">// All others are false
-<a href=#12 id=12 data-nosnippet>12</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\ifpdf"</span>);
-<a href=#13 id=13 data-nosnippet>13</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifxetex"</span>);
-<a href=#14 id=14 data-nosnippet>14</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifXeTeX"</span>);
-<a href=#15 id=15 data-nosnippet>15</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifluatex"</span>);
-<a href=#16 id=16 data-nosnippet>16</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifLuaTeX"</span>);
-<a href=#17 id=17 data-nosnippet>17</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifluahbtex"</span>);
-<a href=#18 id=18 data-nosnippet>18</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifLuaHBTeX"</span>);
-<a href=#19 id=19 data-nosnippet>19</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifptex"</span>);
-<a href=#20 id=20 data-nosnippet>20</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifpTeX"</span>);
-<a href=#21 id=21 data-nosnippet>21</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifuptex"</span>);
-<a href=#22 id=22 data-nosnippet>22</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifupTeX"</span>);
-<a href=#23 id=23 data-nosnippet>23</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifptexng"</span>);
-<a href=#24 id=24 data-nosnippet>24</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifpTeXng"</span>);
-<a href=#25 id=25 data-nosnippet>25</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifvtex"</span>);
-<a href=#26 id=26 data-nosnippet>26</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifVTeX"</span>);
-<a href=#27 id=27 data-nosnippet>27</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifalephtex"</span>);
-<a href=#28 id=28 data-nosnippet>28</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifAlephTeX"</span>);
-<a href=#29 id=29 data-nosnippet>29</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\iftutex"</span>);
-<a href=#30 id=30 data-nosnippet>30</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifTUTeX"</span>);
-<a href=#31 id=31 data-nosnippet>31</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\iftexpadtex"</span>);
-<a href=#32 id=32 data-nosnippet>32</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifTexpadTeX"</span>);
-<a href=#33 id=33 data-nosnippet>33</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifhint"</span>);
-<a href=#34 id=34 data-nosnippet>34</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHINT"</span>);
-<a href=#35 id=35 data-nosnippet>35</a>
-<a href=#36 id=36 data-nosnippet>36</a>  <span class="comment">// \Require* macros — all no-ops
-<a href=#37 id=37 data-nosnippet>37</a>  </span><span class="kw">for </span>cs <span class="kw">in </span>[
-<a href=#38 id=38 data-nosnippet>38</a>    <span class="string">"\\RequireeTeX"</span>, <span class="string">"\\RequirePDFTeX"</span>, <span class="string">"\\RequireXeTeX"</span>,
-<a href=#39 id=39 data-nosnippet>39</a>    <span class="string">"\\RequireLuaTeX"</span>, <span class="string">"\\RequireLuaHBTeX"</span>, <span class="string">"\\RequirepTeX"</span>,
-<a href=#40 id=40 data-nosnippet>40</a>    <span class="string">"\\RequireupTeX"</span>, <span class="string">"\\RequirepTeXng"</span>, <span class="string">"\\RequireVTeX"</span>,
-<a href=#41 id=41 data-nosnippet>41</a>    <span class="string">"\\RequireAlephTeX"</span>, <span class="string">"\\RequireTUTeX"</span>, <span class="string">"\\RequireTexpadTeX"</span>,
-<a href=#42 id=42 data-nosnippet>42</a>    <span class="string">"\\RequireHINT"</span>,
-<a href=#43 id=43 data-nosnippet>43</a>  ] {
-<a href=#44 id=44 data-nosnippet>44</a>    <span class="macro">DefMacro!</span>(<span class="macro">T_CS!</span>(cs), <span class="prelude-val">None</span>, <span class="prelude-val">None</span>);
-<a href=#45 id=45 data-nosnippet>45</a>  }
-<a href=#46 id=46 data-nosnippet>46</a>});
+<a href=#6 id=6 data-nosnippet>6</a>  <span class="comment">// eTeX is always "true" for LaTeXML; the pdfTeX/LuaTeX pair follows the
+<a href=#7 id=7 data-nosnippet>7</a>  // opt-in `luatex` latexml.sty profile (user decision 2026-08-31): a
+<a href=#8 id=8 data-nosnippet>8</a>  // LuaLaTeX-authored document converted with
+<a href=#9 id=9 data-nosnippet>9</a>  // `--preload=[…,luatex]latexml.sty` identifies as LuaTeX so its
+<a href=#10 id=10 data-nosnippet>10</a>  // engine-detection branches run; everything else stays the pdfTeX model.
+<a href=#11 id=11 data-nosnippet>11</a>  // Consulting the state value HERE (not a load-time constant) matters
+<a href=#12 id=12 data-nosnippet>12</a>  // because this binding may load after latexml.sty processed its options.
+<a href=#13 id=13 data-nosnippet>13</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\ifetex"</span>, { <span class="bool-val">true </span>});
+<a href=#14 id=14 data-nosnippet>14</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifeTeX"</span>, { <span class="bool-val">true </span>});
+<a href=#15 id=15 data-nosnippet>15</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifpdftex"</span>, { !unicode_engine_profile() });
+<a href=#16 id=16 data-nosnippet>16</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifPDFTeX"</span>, { !unicode_engine_profile() });
+<a href=#17 id=17 data-nosnippet>17</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifluatex"</span>, { lookup_bool(<span class="string">"LUATEX_PROFILE"</span>) });
+<a href=#18 id=18 data-nosnippet>18</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifLuaTeX"</span>, { lookup_bool(<span class="string">"LUATEX_PROFILE"</span>) });
+<a href=#19 id=19 data-nosnippet>19</a>  <span class="comment">// iftex.sty:272-291: `\ifpdf` is TRUE on LuaTeX whenever
+<a href=#20 id=20 data-nosnippet>20</a>  // `tex.outputmode`/`tex.pdfoutput` &gt; 0 — always, LuaTeX defaults to PDF
+<a href=#21 id=21 data-nosnippet>21</a>  // output — so a lualatex-oracle document sees the PDF branch
+<a href=#22 id=22 data-nosnippet>22</a>  // (tikzrput.sty defines `\rput` only inside `\ifpdf…\fi`: pgfornament
+<a href=#23 id=23 data-nosnippet>23</a>  // ornaments/tikzrput). On pdfTeX it is `\ifnum\pdfoutput&gt;0` (:290-291), and
+<a href=#24 id=24 data-nosnippet>24</a>  // XeTeX has no `\pdfoutput` (false). Perl makes it a static FALSE, so the 925
+<a href=#25 id=25 data-nosnippet>25</a>  // arXiv 2605 papers that set `\pdfoutput=1` themselves took their DVI branch;
+<a href=#26 id=26 data-nosnippet>26</a>  // the default output mode is set per document (the K6 ruling, 2026-09-24:
+<a href=#27 id=27 data-nosnippet>27</a>  // `core_interface::establish_pdf_output_mode`). Read when tested, not at
+<a href=#28 id=28 data-nosnippet>28</a>  // load: our format loads iftex before the document's own `\pdfoutput=1`.
+<a href=#29 id=29 data-nosnippet>29</a>  // Guards: `perfect_kernel_batch56::ifpdf_is_true_under_the_luatex_profile`,
+<a href=#30 id=30 data-nosnippet>30</a>  // `class_census::ifpdf_follows_pdfoutput`.
+<a href=#31 id=31 data-nosnippet>31</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\ifpdf"</span>, {
+<a href=#32 id=32 data-nosnippet>32</a>    lookup_bool(<span class="string">"LUATEX_PROFILE"</span>)
+<a href=#33 id=33 data-nosnippet>33</a>      || (!lookup_bool(<span class="string">"XETEX_PROFILE"</span>)
+<a href=#34 id=34 data-nosnippet>34</a>        &amp;&amp; lookup_register(<span class="string">"\\pdfoutput"</span>, Vec::new())
+<a href=#35 id=35 data-nosnippet>35</a>          .ok()
+<a href=#36 id=36 data-nosnippet>36</a>          .flatten()
+<a href=#37 id=37 data-nosnippet>37</a>          .is_some_and(|v| Number::from(<span class="kw-2">&amp;</span>v).value_of() &gt; <span class="number">0</span>))
+<a href=#38 id=38 data-nosnippet>38</a>  });
+<a href=#39 id=39 data-nosnippet>39</a>  <span class="comment">// iftex.sty:269-270: the legacy ifpdf.sty setters.
+<a href=#40 id=40 data-nosnippet>40</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\def\pdftrue{\let\ifpdf\iftrue}\def\pdffalse{\let\ifpdf\iffalse}"</span>);
+<a href=#41 id=41 data-nosnippet>41</a>  <span class="comment">// The opt-in `xetex` profile (latexml.sty, OXIDIZED_DESIGN #283).
+<a href=#42 id=42 data-nosnippet>42</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\ifxetex"</span>, { lookup_bool(<span class="string">"XETEX_PROFILE"</span>) });
+<a href=#43 id=43 data-nosnippet>43</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifXeTeX"</span>, { lookup_bool(<span class="string">"XETEX_PROFILE"</span>) });
+<a href=#44 id=44 data-nosnippet>44</a>  <span class="comment">// All others are false
+<a href=#45 id=45 data-nosnippet>45</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\ifluahbtex"</span>);
+<a href=#46 id=46 data-nosnippet>46</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifLuaHBTeX"</span>);
+<a href=#47 id=47 data-nosnippet>47</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifptex"</span>);
+<a href=#48 id=48 data-nosnippet>48</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifpTeX"</span>);
+<a href=#49 id=49 data-nosnippet>49</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifuptex"</span>);
+<a href=#50 id=50 data-nosnippet>50</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifupTeX"</span>);
+<a href=#51 id=51 data-nosnippet>51</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifptexng"</span>);
+<a href=#52 id=52 data-nosnippet>52</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifpTeXng"</span>);
+<a href=#53 id=53 data-nosnippet>53</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifvtex"</span>);
+<a href=#54 id=54 data-nosnippet>54</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifVTeX"</span>);
+<a href=#55 id=55 data-nosnippet>55</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifalephtex"</span>);
+<a href=#56 id=56 data-nosnippet>56</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifAlephTeX"</span>);
+<a href=#57 id=57 data-nosnippet>57</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\iftutex"</span>, { unicode_engine_profile() });
+<a href=#58 id=58 data-nosnippet>58</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifTUTeX"</span>, { unicode_engine_profile() });
+<a href=#59 id=59 data-nosnippet>59</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\iftexpadtex"</span>);
+<a href=#60 id=60 data-nosnippet>60</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifTexpadTeX"</span>);
+<a href=#61 id=61 data-nosnippet>61</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifhint"</span>);
+<a href=#62 id=62 data-nosnippet>62</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\ifHINT"</span>);
+<a href=#63 id=63 data-nosnippet>63</a>
+<a href=#64 id=64 data-nosnippet>64</a>  define_xetex_interchar()<span class="question-mark">?</span>;
+<a href=#65 id=65 data-nosnippet>65</a>  <span class="comment">// `\RequireXeTeX` and `\RequireTUTeX` pass (Perl makes every `\Require&lt;engine&gt;` a
+<a href=#66 id=66 data-nosnippet>66</a>  // no-op, iftex.sty.ltxml:52-64): what XeTeX gives a document — UTF-8 input,
+<a href=#67 id=67 data-nosnippet>67</a>  // OpenType font selection, script switching — the Unicode-native engine and
+<a href=#68 id=68 data-nosnippet>68</a>  // its fontspec/polyglossia/unicode-math bindings already provide, so an
+<a href=#69 id=69 data-nosnippet>69</a>  // XeLaTeX paper converts under the default persona (11 papers of arXiv 2605
+<a href=#70 id=70 data-nosnippet>70</a>  // halted, 2605.02089, 2605.16477). The other engines keep iftex's halt.
+<a href=#71 id=71 data-nosnippet>71</a>  // iftex.sty:42-52 + :78-91 verbatim: `\Require&lt;engine&gt;` tests the engine
+<a href=#72 id=72 data-nosnippet>72</a>  // conditional and otherwise writes the banner and HALTS via the
+<a href=#73 id=73 data-nosnippet>73</a>  // `\batchmode\read -1` terminal read (tex.web §484 → Fatal here). Formerly
+<a href=#74 id=74 data-nosnippet>74</a>  // 13 no-ops, which let XeTeX-only packages (bidi, ucharclasses) run their
+<a href=#75 id=75 data-nosnippet>75</a>  // bodies on undefined XeTeX primitives — the sweep-57 alloc_failed cluster.
+<a href=#76 id=76 data-nosnippet>76</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#77 id=77 data-nosnippet>77</a>    <span class="string">r"\def\IFTEX@Require#1#2#3{#1\else\newlinechar 64\relax\errorcontextlines -1\relax
+<a href=#78 id=78 data-nosnippet>78</a>  \immediate\write20{@********************************************@* #2 is required to compile this document.@* Sorry!@********************************************}%
+<a href=#79 id=79 data-nosnippet>79</a>  \batchmode\read -1 to \@tempa #3}
+<a href=#80 id=80 data-nosnippet>80</a>\protected\def\RequireeTeX{\IFTEX@Require\ifetex{eTeX}\fi}
+<a href=#81 id=81 data-nosnippet>81</a>\protected\def\RequirePDFTeX{\IFTEX@Require\ifpdftex{pdfTeX}\fi}
+<a href=#82 id=82 data-nosnippet>82</a>\protected\def\RequireXeTeX{\lx@xetex@interchar}
+<a href=#83 id=83 data-nosnippet>83</a>\protected\def\RequireLuaTeX{\IFTEX@Require\ifluatex{LuaTeX}\fi}
+<a href=#84 id=84 data-nosnippet>84</a>\protected\def\RequireLuaHBTeX{\IFTEX@Require\ifluahbtex{LuaHBTeX}\fi}
+<a href=#85 id=85 data-nosnippet>85</a>\protected\def\RequireLuaMetaTeX{\IFTEX@Require\ifluahbtex{LuaMetaTeX}\fi}
+<a href=#86 id=86 data-nosnippet>86</a>\protected\def\RequirepTeX{\IFTEX@Require\ifptex{pTeX}\fi}
+<a href=#87 id=87 data-nosnippet>87</a>\protected\def\RequireupTeX{\IFTEX@Require\ifuptex{upTeX}\fi}
+<a href=#88 id=88 data-nosnippet>88</a>\protected\def\RequirepTeXng{\IFTEX@Require\ifptexng{pTeX-ng}\fi}
+<a href=#89 id=89 data-nosnippet>89</a>\protected\def\RequireVTeX{\IFTEX@Require\ifvtex{VTeX}\fi}
+<a href=#90 id=90 data-nosnippet>90</a>\protected\def\RequireAlephTeX{\IFTEX@Require\ifalephtex{AlephTeX}\fi}
+<a href=#91 id=91 data-nosnippet>91</a>\protected\def\RequireTUTeX{}
+<a href=#92 id=92 data-nosnippet>92</a>\protected\def\RequireTexpadTeX{\IFTEX@Require\iftexpadtex{TexpadTeX}\fi}
+<a href=#93 id=93 data-nosnippet>93</a>\protected\def\RequireHINT{\IFTEX@Require\ifhint{HINT}\fi}"
+<a href=#94 id=94 data-nosnippet>94</a>  </span>);
+<a href=#95 id=95 data-nosnippet>95</a>});
+<a href=#96 id=96 data-nosnippet>96</a>
+<a href=#97 id=97 data-nosnippet>97</a><span class="doccomment">/// XeTeX's inter-character primitives, for the packages that DECLARE themselves
+<a href=#98 id=98 data-nosnippet>98</a>/// XeTeX-only: `\RequireXeTeX` installs them (ucharclasses.sty:987, then its
+<a href=#99 id=99 data-nosnippet>99</a>/// `\XeTeXcharclass` loops over whole Unicode blocks). With them undefined, the
+<a href=#100 id=100 data-nosnippet>100</a>/// loop `\XeTeXcharclass \count \class` degraded into a spurious assignment and
+<a href=#101 id=101 data-nosnippet>101</a>/// never ended (latexbangla: 95k warnings, then a 6.3 GB `alloc_failed`; the
+<a href=#102 id=102 data-nosnippet>102</a>/// sweep-57 cluster). They read their real arguments — `&lt;number&gt; [=] &lt;number&gt;`,
+<a href=#103 id=103 data-nosnippet>103</a>/// `&lt;number&gt; &lt;number&gt; [=] {&lt;tokens&gt;}`, an integer parameter — and change nothing:
+<a href=#104 id=104 data-nosnippet>104</a>/// the classes drive font switching the Unicode-native engine does not need.
+<a href=#105 id=105 data-nosnippet>105</a>/// Installed on request, or by latexml.sty's `xetex` profile (run at the format
+<a href=#106 id=106 data-nosnippet>106</a>/// seam, `latex.rs`), because amsmath, mathastext, minted2 and others probe
+<a href=#107 id=107 data-nosnippet>107</a>/// `\XeTeXcharclass` to detect XeTeX (ordinary pdfLaTeX documents must not take
+<a href=#108 id=108 data-nosnippet>108</a>/// those branches). `\newXeTeXintercharclass` is latex.ltx:22025-22031's
+<a href=#109 id=109 data-nosnippet>109</a>/// allocator, over a fresh counter (latex.ltx `\countdef`s register 257, which
+<a href=#110 id=110 data-nosnippet>110</a>/// the pdfTeX-persona format may already use).
+<a href=#111 id=111 data-nosnippet>111</a></span><span class="kw">pub fn </span>define_xetex_interchar() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#112 id=112 data-nosnippet>112</a>  <span class="comment">// The optional `=` is scanned with expansion (tex.web §405), as for every register.
+<a href=#113 id=113 data-nosnippet>113</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@XeTeXcharclass Number SkipKeyword:= Number"</span>, sub[(_c, _k)] {});
+<a href=#114 id=114 data-nosnippet>114</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@XeTeXinterchartoks Number Number SkipKeyword:= {}"</span>, sub[(_a, _b, _t)] {});
+<a href=#115 id=115 data-nosnippet>115</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\lx@XeTeXinterchartokenstate" </span>=&gt; Number::new(<span class="number">0</span>));
+<a href=#116 id=116 data-nosnippet>116</a>  <span class="macro">RawTeX!</span>(
+<a href=#117 id=117 data-nosnippet>117</a>    <span class="string">r"\def\lx@xetex@interchar{\ifx\XeTeXcharclass\@undefined
+<a href=#118 id=118 data-nosnippet>118</a>  \let\XeTeXcharclass\lx@XeTeXcharclass
+<a href=#119 id=119 data-nosnippet>119</a>  \let\XeTeXinterchartoks\lx@XeTeXinterchartoks
+<a href=#120 id=120 data-nosnippet>120</a>  \let\XeTeXinterchartokenstate\lx@XeTeXinterchartokenstate
+<a href=#121 id=121 data-nosnippet>121</a>  \chardef\e@alloc@intercharclass@top=4095
+<a href=#122 id=122 data-nosnippet>122</a>  \newcount\xe@alloc@intercharclass
+<a href=#123 id=123 data-nosnippet>123</a>  \def\newXeTeXintercharclass{\e@alloc\XeTeXcharclass\chardef\xe@alloc@intercharclass\m@ne\e@alloc@intercharclass@top}%
+<a href=#124 id=124 data-nosnippet>124</a>  \fi}"
+<a href=#125 id=125 data-nosnippet>125</a>  </span>);
+<a href=#126 id=126 data-nosnippet>126</a>  <span class="prelude-val">Ok</span>(())
+<a href=#127 id=127 data-nosnippet>127</a>}
 </code></pre></div></section></main></body></html>

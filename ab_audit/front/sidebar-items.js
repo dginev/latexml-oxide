@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["align","attr","contact_address","diff_creator","diff_front","is_typewriter_run","read_contact","read_front","show_contact"],"struct":["Contact","Creator","Front","FrontDiff"]};

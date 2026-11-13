@@ -1,0 +1,67 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/aguplus_cls.rs`."><title>aguplus_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>aguplus_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! aguplus.cls (AGU++, P. W. Daly, 1999/08/19 1.6b): the class is loaded raw — it reads the AGUTeX package its option
+<a href=#2 id=2 data-nosnippet>2</a>//! names (aguplus.cls:47-71 `\getAGU`, `\InputIfFileExists{\AGUpack.sty}`: agupp.sty, agums.sty, jgrga.sty, …) — and
+<a href=#3 id=3 data-nosnippet>3</a>//! the title-page commands the AGUTeX packages share with AASTeX, which they derive from, become the frontmatter as the
+<a href=#4 id=4 data-nosnippet>4</a>//! AAS binding makes them (aas_support_sty.rs, Perl aas_support.sty.ltxml:121-134). Under the raw class (the
+<a href=#5 id=5 data-nosnippet>5</a>//! rawclasses lever) they were the class's typesetting: `\affil` set its text into the `\@title` box (aguplus.cls:236)
+<a href=#6 id=6 data-nosnippet>6</a>//! that `\xmaketitle` typesets at the first `\section` (:192, :225), so the affiliations were body paragraphs, and
+<a href=#7 id=7 data-nosnippet>7</a>//! `\authoraddr` (agupp.sty:154-158) gathered `\authaddr@list`, printed only by the class's own end of the references
+<a href=#8 id=8 data-nosnippet>8</a>//! (agupp.sty:266-306 `\endreferences`, `\endthebibliography`), which the kernel's bibliography replaces, so every
+<a href=#9 id=9 data-nosnippet>9</a>//! author address was lost (1107.5305, 1203.5042, physics9702009, 1010.3998, 0811.3118).
+<a href=#10 id=10 data-nosnippet>10</a>//!
+<a href=#11 id=11 data-nosnippet>11</a>//! The class also carries a copy of natbib 7.0 (aguplus.cls:861-1173, `\ModuleVersion{natbib}[1999/05/28 7.0 (PWD)]`)
+<a href=#12 id=12 data-nosnippet>12</a>//! with square brackets (:864 `\NAT@open{[} \NAT@close{]}`): it loads natbib's binding with `square`, as the copy
+<a href=#13 id=13 data-nosnippet>13</a>//! is natbib's. Without it `\citet`/`\citep` were the copy's, printing a bold "?" for every reference (the kernel's
+<a href=#14 id=14 data-nosnippet>14</a>//! bibliography writes no `\bibcite`; 1010.3998: 75), and `\cite[][]{key}` the kernel's (1107.5305).
+<a href=#15 id=15 data-nosnippet>15</a></span><span class="kw">use </span>latexml_package::prelude::<span class="kw-2">*</span>;
+<a href=#16 id=16 data-nosnippet>16</a>
+<a href=#17 id=17 data-nosnippet>17</a><span class="macro">LoadDefinitions!</span>({
+<a href=#18 id=18 data-nosnippet>18</a>  <span class="macro">InputDefinitions!</span>(<span class="string">"aguplus"</span>, noltxml =&gt; <span class="bool-val">true</span>, extension =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"cls"</span>)));
+<a href=#19 id=19 data-nosnippet>19</a>  <span class="macro">RequirePackage!</span>(<span class="string">"natbib"</span>, options =&gt; <span class="macro">vec!</span>[<span class="macro">s!</span>(<span class="string">"square"</span>)]);
+<a href=#20 id=20 data-nosnippet>20</a>  <span class="comment">// The class's `\title`, `\author` and `\affil` only build its title-page box (aguplus.cls:227-238 `\setbox\@title=
+<a href=#21 id=21 data-nosnippet>21</a>  // \vbox{… \box\@title \aguauthor{#1}}`), which the frontmatter replaces: the refused `\author` is not replayed
+<a href=#22 id=22 data-nosnippet>22</a>  // for its side effects (`replay_class_setter`, sect05.rs), as the box it would build is the kernel's `\@title` text
+<a href=#23 id=23 data-nosnippet>23</a>  // ("Missing number" for every author, 1010.3998).
+<a href=#24 id=24 data-nosnippet>24</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\global\let\lx@dropped@author\relax\global\let\lx@dropped@title\relax"</span>);
+<a href=#25 id=25 data-nosnippet>25</a>  <span class="comment">// An affiliation is every preceding author's that has none yet (`\author{…}\affil{…}` per author,
+<a href=#26 id=26 data-nosnippet>26</a>  // physics9702009), as the AAS binding's (aas_support_sty.rs).
+<a href=#27 id=27 data-nosnippet>27</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\affil{}"</span>, <span class="string">"\\lx@add@affiliation[annotate=new]{#1}"</span>);
+<a href=#28 id=28 data-nosnippet>28</a>  <span class="comment">// The author addresses the class gathers (agupp.sty:154-158 `\authoraddress`, `\let\authoraddr`) and prints in a
+<a href=#29 id=29 data-nosnippet>29</a>  // block after the references, each naming its author ("S. G. Claudepierre, Laboratory …"; 1010.3998): each is
+<a href=#30 id=30 data-nosnippet>30</a>  // placed with the author it spells, else the only author, else the block (`\lx@add@contact@placed`). They are
+<a href=#31 id=31 data-nosnippet>31</a>  // gathered as the class gathers them, `\authoraddr` being given before `\author` too (0811.3118), and handed on
+<a href=#32 id=32 data-nosnippet>32</a>  // where the authors are queued and the frontmatter not yet made: at `\maketitle`, else at the first section (ahead
+<a href=#33 id=33 data-nosnippet>33</a>  // of the kernel's frontmatter fallback on `\@startsection@hook`), else at the end of the document.
+<a href=#34 id=34 data-nosnippet>34</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#35 id=35 data-nosnippet>35</a>    <span class="string">r"\let\lx@agu@authoraddrs\@empty
+<a href=#36 id=36 data-nosnippet>36</a>\def\lx@agu@hand@authoraddrs{\lx@agu@authoraddrs\global\let\lx@agu@authoraddrs\@empty}
+<a href=#37 id=37 data-nosnippet>37</a>\begingroup\toks0=\expandafter{\@startsection@hook}\xdef\@startsection@hook{\noexpand\lx@agu@hand@authoraddrs\the\toks0}\endgroup
+<a href=#38 id=38 data-nosnippet>38</a>\AtEndDocument{\lx@agu@hand@authoraddrs}"
+<a href=#39 id=39 data-nosnippet>39</a>  </span>);
+<a href=#40 id=40 data-nosnippet>40</a>  <span class="macro">AddToMacro!</span>(<span class="string">"\\lx@maketitle@begin"</span>, <span class="string">"\\lx@agu@hand@authoraddrs"</span>);
+<a href=#41 id=41 data-nosnippet>41</a>  <span class="macro">DefMacro!</span>(
+<a href=#42 id=42 data-nosnippet>42</a>    <span class="string">"\\authoraddress{}"</span>,
+<a href=#43 id=43 data-nosnippet>43</a>    <span class="string">"\\g@addto@macro\\lx@agu@authoraddrs{\\lx@add@contact@placed[role=address]{}{#1}}"
+<a href=#44 id=44 data-nosnippet>44</a>  </span>);
+<a href=#45 id=45 data-nosnippet>45</a>  <span class="macro">Let!</span>(<span class="string">"\\authoraddr"</span>, <span class="string">"\\authoraddress"</span>);
+<a href=#46 id=46 data-nosnippet>46</a>  <span class="comment">// `\altaffilmark` marks an author, `\altaffiltext{n}{…}` gives the marked authors the affiliation (agupp.sty:150,
+<a href=#47 id=47 data-nosnippet>47</a>  // aguplus.cls:239-242 a title footnote), as the AAS binding's.
+<a href=#48 id=48 data-nosnippet>48</a>  </span>aas_support_sty::altaffil_markup()<span class="question-mark">?</span>;
+<a href=#49 id=49 data-nosnippet>49</a>  <span class="comment">// The dates printed under the references (agupp.sty:68-70, :119-126 `\@dates`), and the slug comment over the
+<a href=#50 id=50 data-nosnippet>50</a>  // title (agupp.sty:110-117 `\@makeslugcmmnt`; aguplus.cls:245 `\let\date=\slugcomment`), as the AAS binding's.
+<a href=#51 id=51 data-nosnippet>51</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#52 id=52 data-nosnippet>52</a>    <span class="string">"\\received{}"</span>,
+<a href=#53 id=53 data-nosnippet>53</a>    <span class="string">"\\lx@add@date[role=received,name=Received]{#1}"
+<a href=#54 id=54 data-nosnippet>54</a>  </span>);
+<a href=#55 id=55 data-nosnippet>55</a>  <span class="macro">DefMacro!</span>(
+<a href=#56 id=56 data-nosnippet>56</a>    <span class="string">"\\revised{}"</span>,
+<a href=#57 id=57 data-nosnippet>57</a>    <span class="string">"\\lx@add@date[role=revised,name=Revised]{#1}"
+<a href=#58 id=58 data-nosnippet>58</a>  </span>);
+<a href=#59 id=59 data-nosnippet>59</a>  <span class="macro">DefMacro!</span>(
+<a href=#60 id=60 data-nosnippet>60</a>    <span class="string">"\\accepted{}"</span>,
+<a href=#61 id=61 data-nosnippet>61</a>    <span class="string">"\\lx@add@date[role=accepted,name=Accepted]{#1}"
+<a href=#62 id=62 data-nosnippet>62</a>  </span>);
+<a href=#63 id=63 data-nosnippet>63</a>  <span class="comment">// agupp.sty:109 `\slugcomment` (and `\date`, aguplus.cls:245): the slug line, its text alone (FIDELITY_CHARTER §4, user ruling 2026-10-30; OXIDIZED_DESIGN_DIVERGENCES #921)
+<a href=#64 id=64 data-nosnippet>64</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\slugcomment{}"</span>, <span class="string">"\\lx@add@pubnote[role=note,name={}]{#1}"</span>);
+<a href=#65 id=65 data-nosnippet>65</a>  <span class="macro">Let!</span>(<span class="string">"\\date"</span>, <span class="string">"\\slugcomment"</span>);
+<a href=#66 id=66 data-nosnippet>66</a>});
+</code></pre></div></section></main></body></html>

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["child_span"],"struct":["Constructor","ConstructorOptions"]};
+window.SIDEBAR_ITEMS = {"enum":["TexGroup"],"fn":["child_span"],"struct":["Constructor","ConstructorOptions"]};

@@ -1,0 +1,31 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/pasa_cls.rs`."><title>pasa_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>pasa_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! pasa.cls (Publications of the Astronomical Society of Australia, 2013/04/01 v1.0): the papers ship the class (it is
+<a href=#2 id=2 data-nosnippet>2</a>//! not in TeX Live), and it is read raw. Its :45-52 redefine `\@pushfilename` with the body of the LaTeX2e kernel
+<a href=#3 id=3 data-nosnippet>3</a>//! before 2020 and call it once, bare. latex.ltx's `\@pushfilename` (2020-10 on) also pushes the default hook label
+<a href=#4 id=4 data-nosnippet>4</a>//! and the file path (`\@expl@push@filename@@`, `\@kernel@currpathstack`, its last token reading the three that follow
+<a href=#5 id=5 data-nosnippet>5</a>//! it — `\xdef\@currname{…}` in `\@onefilewithoptions`) and its `\@popfilename` pops both, so every package loaded
+<a href=#6 id=6 data-nosnippet>6</a>//! after the class — the class's own `\usepackage{graphicx}` at :1339 first — popped a label nobody pushed: "LaTeX
+<a href=#7 id=7 data-nosnippet>7</a>//! hooks Error: Extra \PopDefaultHookLabel", one per load (pdflatex on TL 2025 raises the same, with "File ended while
+<a href=#8 id=8 data-nosnippet>8</a>//! scanning use of \@p@pfilepath@aux"; the class is clean on the LaTeX of its era). Its copy is the push of that era,
+<a href=#9 id=9 data-nosnippet>9</a>//! and the bare call at :52 needs it, so the pop of the same era (latex.ltx before 2020-10) is held while the class is
+<a href=#10 id=10 data-nosnippet>10</a>//! read, its loads balanced, and the kernel's push and pop both return after it (OXIDIZED_DESIGN_DIVERGENCES #764). Witnesses
+<a href=#11 id=11 data-nosnippet>11</a>//! 1307.3127, 1501.02922, 1510.05346, 1703.06635, 1802.01188, 1407.1937, 1607.08620, 1602.04538, 1401.2223,
+<a href=#12 id=12 data-nosnippet>12</a>//! 1705.02067, 1609.00634, 1511.02959, 1703.03169 (every Error of each was this one, 13-39 per paper).
+<a href=#13 id=13 data-nosnippet>13</a></span><span class="kw">use </span>latexml_package::{
+<a href=#14 id=14 data-nosnippet>14</a>  prelude::<span class="kw-2">*</span>,
+<a href=#15 id=15 data-nosnippet>15</a>  shipped_class::{RawRead, read_raw},
+<a href=#16 id=16 data-nosnippet>16</a>};
+<a href=#17 id=17 data-nosnippet>17</a>
+<a href=#18 id=18 data-nosnippet>18</a><span class="kw">const </span>PASA: RawRead = RawRead {
+<a href=#19 id=19 data-nosnippet>19</a>  shipped: <span class="bool-val">true</span>,
+<a href=#20 id=20 data-nosnippet>20</a>  held: <span class="kw-2">&amp;</span>[(
+<a href=#21 id=21 data-nosnippet>21</a>    <span class="string">"\\@popfilename"</span>,
+<a href=#22 id=22 data-nosnippet>22</a>    <span class="string">r"\def\@popfilename{\expandafter\@p@pfilename\@currnamestack\@nil}"</span>,
+<a href=#23 id=23 data-nosnippet>23</a>  )],
+<a href=#24 id=24 data-nosnippet>24</a>  restored: <span class="kw-2">&amp;</span>[<span class="string">"\\@pushfilename"</span>],
+<a href=#25 id=25 data-nosnippet>25</a>  ..RawRead::new(<span class="string">"pasa"</span>, <span class="string">"cls"</span>)
+<a href=#26 id=26 data-nosnippet>26</a>};
+<a href=#27 id=27 data-nosnippet>27</a>
+<a href=#28 id=28 data-nosnippet>28</a><span class="macro">LoadDefinitions!</span>({
+<a href=#29 id=29 data-nosnippet>29</a>  read_raw(<span class="kw-2">&amp;</span>PASA)<span class="question-mark">?</span>;
+<a href=#30 id=30 data-nosnippet>30</a>});
+</code></pre></div></section></main></body></html>

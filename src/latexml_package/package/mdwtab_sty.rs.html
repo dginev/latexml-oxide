@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/mdwtab_sty.rs`."><title>mdwtab_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>mdwtab_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! mdwtab.sty — alternative tabular environment by Mark Wooding (1996).
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/mdwtab_sty.rs`."><title>mdwtab_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>mdwtab_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! mdwtab.sty — alternative tabular environment by Mark Wooding (1996).
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! mdwtab.sty completely reimplements `\tabular` with its own
 <a href=#4 id=4 data-nosnippet>4</a>//! `\tab@*` preamble-parsing machinery (`\tab@right`,
@@ -26,5 +26,55 @@
 <a href=#26 id=26 data-nosnippet>26</a>//! which `\RequirePackage{mdwtab}`).
 <a href=#27 id=27 data-nosnippet>27</a></span><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#28 id=28 data-nosnippet>28</a>
-<a href=#29 id=29 data-nosnippet>29</a><span class="macro">LoadDefinitions!</span>({});
+<a href=#29 id=29 data-nosnippet>29</a><span class="macro">LoadDefinitions!</span>({
+<a href=#30 id=30 data-nosnippet>30</a>  <span class="comment">// mdwtab.sty:418-423 `\array` → `\tab@array`, whose `\tab@left` for the `c`, `t` and `b` positions is
+<a href=#31 id=31 data-nosnippet>31</a>  // `\leavevmode\hbox\bgroup$\@arrayleft\vcenter\bgroup` (`\vtop`, `\vbox`; mdwtab.sty:505-529): the array enters
+<a href=#32 id=32 data-nosnippet>32</a>  // math itself, so in text it is a formula of its own without the kernel's "Missing $ inserted" for a `[c]` array
+<a href=#33 id=33 data-nosnippet>33</a>  // (sect10.rs `\lx@array@vcenter@check`, latex.ltx's `\@array`). Its cells stay math (`\tab@bmaths` = `$`).
+<a href=#34 id=34 data-nosnippet>34</a>  // rc_struct3 E2 (est. 89 papers; arXiv 1807.04837): `\begin{center}\begin{array}{rl}…\end{array}\end{center}`.
+<a href=#35 id=35 data-nosnippet>35</a>  // Guard: `perfect_kernel_batch69b::mdwtab_array_in_text_is_a_formula`.
+<a href=#36 id=36 data-nosnippet>36</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#37 id=37 data-nosnippet>37</a>    <span class="string">"\\lx@array@text@open{}"</span>,
+<a href=#38 id=38 data-nosnippet>38</a>    <span class="string">r"\ifmmode\let\lx@array@text@close\relax\else\lx@begin@inline@math\let\lx@array@text@close\lx@end@inline@math\fi"
+<a href=#39 id=39 data-nosnippet>39</a>  </span>);
+<a href=#40 id=40 data-nosnippet>40</a>  <span class="comment">// mdwtab.sty:765-790 `\hlx{letters}`: `v[dim]` = `\vgap`, which ENDS the
+<a href=#41 id=41 data-nosnippet>41</a>  // current row (`\cr`) and adds vertical space; `h` = `\hline` (`hh`
+<a href=#42 id=42 data-nosnippet>42</a>  // double); `b`, `/` are print-only. Parsed here and emitted as bare
+<a href=#43 id=43 data-nosnippet>43</a>  // `\\`/`\hline` tokens — a TeX-level loop left its bookkeeping assignment
+<a href=#44 id=44 data-nosnippet>44</a>  // as the next row's first token, which the alignment then took as cell
+<a href=#45 id=45 data-nosnippet>45</a>  // content and the following `\hline` was "`\noalign` cannot be used here"
+<a href=#46 id=46 data-nosnippet>46</a>  // (talkdoc `\hlx{hhv[1pt]}`). Guard:
+<a href=#47 id=47 data-nosnippet>47</a>  // `perfect_kernel_batch54::mdwtab_hlx_ends_the_row_and_rules`.
+<a href=#48 id=48 data-nosnippet>48</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\hlx{}"</span>, sub[(letters)] {
+<a href=#49 id=49 data-nosnippet>49</a>    <span class="kw">let </span>spec = letters.to_string();
+<a href=#50 id=50 data-nosnippet>50</a>    <span class="kw">let </span><span class="kw-2">mut </span>out: Vec&lt;Token&gt; = Vec::new();
+<a href=#51 id=51 data-nosnippet>51</a>    <span class="comment">// At a table's very start (talkdoc's leading `\hlx{hhv[1pt]}`) no row is
+<a href=#52 id=52 data-nosnippet>52</a>    // open, so no `\\` precedes the rules.
+<a href=#53 id=53 data-nosnippet>53</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>row_open = <span class="kw">match </span>lookup_alignment() {
+<a href=#54 id=54 data-nosnippet>54</a>      <span class="prelude-val">Some</span>(a) =&gt; a.alignment_cell().map(|cell| cell.borrow().is_in_row()).unwrap_or(<span class="bool-val">true</span>),
+<a href=#55 id=55 data-nosnippet>55</a>      <span class="prelude-val">None </span>=&gt; <span class="bool-val">true</span>,
+<a href=#56 id=56 data-nosnippet>56</a>    };
+<a href=#57 id=57 data-nosnippet>57</a>    <span class="kw">let </span><span class="kw-2">mut </span>chars = spec.chars().peekable();
+<a href=#58 id=58 data-nosnippet>58</a>    <span class="kw">while let </span><span class="prelude-val">Some</span>(c) = chars.next() {
+<a href=#59 id=59 data-nosnippet>59</a>      <span class="kw">match </span>c {
+<a href=#60 id=60 data-nosnippet>60</a>        <span class="string">'v' </span>| <span class="string">'h' </span>=&gt; {
+<a href=#61 id=61 data-nosnippet>61</a>          <span class="kw">if </span>row_open {
+<a href=#62 id=62 data-nosnippet>62</a>            out.push(<span class="macro">T_CS!</span>(<span class="string">"\\\\"</span>));
+<a href=#63 id=63 data-nosnippet>63</a>            row_open = <span class="bool-val">false</span>;
+<a href=#64 id=64 data-nosnippet>64</a>          }
+<a href=#65 id=65 data-nosnippet>65</a>          <span class="kw">if </span>c == <span class="string">'h' </span>{
+<a href=#66 id=66 data-nosnippet>66</a>            out.push(<span class="macro">T_CS!</span>(<span class="string">"\\hline"</span>));
+<a href=#67 id=67 data-nosnippet>67</a>          }
+<a href=#68 id=68 data-nosnippet>68</a>        },
+<a href=#69 id=69 data-nosnippet>69</a>        <span class="string">'[' </span>=&gt; {
+<a href=#70 id=70 data-nosnippet>70</a>          <span class="kw">for </span>d <span class="kw">in </span>chars.by_ref() {
+<a href=#71 id=71 data-nosnippet>71</a>            <span class="kw">if </span>d == <span class="string">']' </span>{ <span class="kw">break</span>; }
+<a href=#72 id=72 data-nosnippet>72</a>          }
+<a href=#73 id=73 data-nosnippet>73</a>        },
+<a href=#74 id=74 data-nosnippet>74</a>        <span class="kw">_ </span>=&gt; {},
+<a href=#75 id=75 data-nosnippet>75</a>      }
+<a href=#76 id=76 data-nosnippet>76</a>    }
+<a href=#77 id=77 data-nosnippet>77</a>    <span class="prelude-val">Ok</span>(Tokens::new(out))
+<a href=#78 id=78 data-nosnippet>78</a>  });
+<a href=#79 id=79 data-nosnippet>79</a>});
 </code></pre></div></section></main></body></html>

@@ -1,0 +1,39 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/wileyasna_cls.rs`."><title>wileyasna_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>wileyasna_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! WileyASNA-v1.cls (Astronomische Nachrichten): a Wiley NJD class ([`crate::wileynjd_cls`]), and the class's own
+<a href=#2 id=2 data-nosnippet>2</a>//! bibliography package.
+<a href=#3 id=3 data-nosnippet>3</a></span><span class="kw">use </span>latexml_package::prelude::<span class="kw-2">*</span>;
+<a href=#4 id=4 data-nosnippet>4</a>
+<a href=#5 id=5 data-nosnippet>5</a><span class="macro">LoadDefinitions!</span>({
+<a href=#6 id=6 data-nosnippet>6</a>  <span class="kw">crate</span>::wileynjd_cls::wiley_njd_family(<span class="string">"WileyASNA-v1"</span>)<span class="question-mark">?</span>;
+<a href=#7 id=7 data-nosnippet>7</a>  <span class="comment">// WileyASNA-v1.cls:2120 `\RequirePackage[natbibapa]{apacite}`: the apacite macros its `.bbl` entries use
+<a href=#8 id=8 data-nosnippet>8</a>  // (`\APACinsertmetastar`, `\APACrefYearMonthDay`, `{APACrefauthors}`, 2407.11648: 30 errors).
+<a href=#9 id=9 data-nosnippet>9</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"apacite"</span>, options =&gt; <span class="macro">vec!</span>[<span class="macro">s!</span>(<span class="string">"natbibapa"</span>)]);
+<a href=#10 id=10 data-nosnippet>10</a>  <span class="comment">// WileyASNA-v1.cls:1300-1301: the funding agency and grant number set where the text names them, bold and italic
+<a href=#11 id=11 data-nosnippet>11</a>  // ("acknowledge the \fundingAgency{Czech Science Foundation} Grant No. \fundingNumber{16-03564Y}", 1806.06754;
+<a href=#12 id=12 data-nosnippet>12</a>  // 1810.06326, 1812.03179), each also added to `\fundagenandnum`, which `\AtEndDocument` writes to the `.finfo` file
+<a href=#13 id=13 data-nosnippet>13</a>  // for the publisher (:1303-1307), not to the page. Undefined in 70 papers of run 353.
+<a href=#14 id=14 data-nosnippet>14</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#15 id=15 data-nosnippet>15</a>    <span class="string">r"\def\fundagenandnum{}%
+<a href=#16 id=16 data-nosnippet>16</a>\def\fundingAgency#1{\textbf{#1}\g@addto@macro\fundagenandnum{#1,\ }}%
+<a href=#17 id=17 data-nosnippet>17</a>\def\fundingNumber#1{\textit{#1}\g@addto@macro\fundagenandnum{#1.\ }}"
+<a href=#18 id=18 data-nosnippet>18</a>  </span>);
+<a href=#19 id=19 data-nosnippet>19</a>  <span class="comment">// WileyASNA-v1.cls:2722-2788, "Author macros included from journals.tex": the journal abbreviations of the
+<a href=#20 id=20 data-nosnippet>20</a>  // astronomy reference lists (`\aaa`, 1909.01905, 2303.03859).
+<a href=#21 id=21 data-nosnippet>21</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#22 id=22 data-nosnippet>22</a>    <span class="string">r"\def\aaa{A\&amp;A}\def\aaas{A\&amp;AS}\def\mnras{MNRAS}\def\aas{A\&amp;AS}\def\aj{AJ}\def\apj{ApJ}\def\apjl{ApJ}%
+<a href=#23 id=23 data-nosnippet>23</a>\def\apjs{ApJS}\def\baas{BAAS}\def\pasp{PASP}\def\pasj{PASJ}\def\araa{ARA\&amp;A}\def\an{AN}\def\apss{Ap\&amp;SS}%
+<a href=#24 id=24 data-nosnippet>24</a>\def\aap{A\&amp;A}\def\aaps{A\&amp;AS}\let\astap=\aap\def\aapr{A\&amp;A~Rev.}\def\actaa{Acta Astron.}\def\ao{Appl.~Opt.}%
+<a href=#25 id=25 data-nosnippet>25</a>\let\applopt\ao\let\apjlett\apjl\let\apjsupp\apjs\def\aplett{Astrophys.~Lett.}%
+<a href=#26 id=26 data-nosnippet>26</a>\def\apspr{Astrophys.~Space~Phys.~Res.}\def\azh{AZh}\def\bac{Bull. astr. Inst. Czechosl.}%
+<a href=#27 id=27 data-nosnippet>27</a>\def\bain{Bull.~Astron.~Inst.~Netherlands}\def\caa{Chinese Astron. Astrophys.}%
+<a href=#28 id=28 data-nosnippet>28</a>\def\cjaa{Chinese J. Astron. Astrophys.}\def\fcp{Fund.~Cosmic~Phys.}\def\gca{Geochim.~Cosmochim.~Acta}%
+<a href=#29 id=29 data-nosnippet>29</a>\def\grl{Geophys.~Res.~Lett.}\def\iaucirc{IAU~Circ.}\def\icarus{Icarus}\def\jcap{J. Cosmology Astropart. Phys.}%
+<a href=#30 id=30 data-nosnippet>30</a>\def\jcp{J.~Chem.~Phys.}\def\jgr{J.~Geophys.~Res.}\def\jqsrt{J.~Quant.~Spec.~Radiat.~Transf.}\def\jrasc{JRASC}%
+<a href=#31 id=31 data-nosnippet>31</a>\def\memras{MmRAS}\def\memsai{Mem.~Soc.~Astron.~Italiana}\def\na{New A}\def\nar{New A Rev.}\def\nat{Nature}%
+<a href=#32 id=32 data-nosnippet>32</a>\def\nphysa{Nucl.~Phys.~A}\def\pasa{PASA}\def\physrep{Phys.~Rep.}\def\physscr{Phys.~Scr}%
+<a href=#33 id=33 data-nosnippet>33</a>\def\planss{Planet.~Space~Sci.}\def\pra{Phys.~Rev.~A}\def\prb{Phys.~Rev.~B}\def\prc{Phys.~Rev.~C}%
+<a href=#34 id=34 data-nosnippet>34</a>\def\prd{Phys.~Rev.~D}\def\pre{Phys.~Rev.~E}\def\prl{Phys.~Rev.~Lett.}\def\procspie{Proc.~SPIE}%
+<a href=#35 id=35 data-nosnippet>35</a>\def\qjras{QJRAS}\def\rmxaa{Rev. Mexicana Astron. Astrofis.}\def\skytel{S\&amp;T}\def\solphys{Sol.~Phys.}%
+<a href=#36 id=36 data-nosnippet>36</a>\def\sovast{Soviet~Ast.}\def\ssr{Space~Sci.~Rev.}\def\zap{ZAp}"
+<a href=#37 id=37 data-nosnippet>37</a>  </span>);
+<a href=#38 id=38 data-nosnippet>38</a>});
+</code></pre></div></section></main></body></html>

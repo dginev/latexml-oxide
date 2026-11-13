@@ -1,9 +1,51 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/svjour3_cls.rs`."><title>svjour3_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>svjour3_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-1"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/svjour3_cls.rs`."><title>svjour3_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>svjour3_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 <a href=#2 id=2 data-nosnippet>2</a>
-<a href=#3 id=3 data-nosnippet>3</a><span class="attr">#[rustfmt::skip]
-<a href=#4 id=4 data-nosnippet>4</a></span><span class="macro">LoadDefinitions!</span>({
-<a href=#5 id=5 data-nosnippet>5</a>  <span class="comment">// Perl: svjour3.cls.ltxml
-<a href=#6 id=6 data-nosnippet>6</a>  // Intended to cover svjour.cls, svjour1.cls, svjour2.cls &amp; svjour3.cls
-<a href=#7 id=7 data-nosnippet>7</a>  </span>load_class(<span class="string">"svjour"</span>, Vec::new(), <span class="macro">Tokens!</span>())<span class="question-mark">?</span>;
-<a href=#8 id=8 data-nosnippet>8</a>});
+<a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<a href=#4 id=4 data-nosnippet>4</a>
+<a href=#5 id=5 data-nosnippet>5</a><span class="attr">#[rustfmt::skip]
+<a href=#6 id=6 data-nosnippet>6</a></span><span class="macro">LoadDefinitions!</span>({
+<a href=#7 id=7 data-nosnippet>7</a>  <span class="comment">// Perl: svjour3.cls.ltxml
+<a href=#8 id=8 data-nosnippet>8</a>  // Intended to cover svjour.cls, svjour1.cls, svjour2.cls &amp; svjour3.cls
+<a href=#9 id=9 data-nosnippet>9</a>  </span><span class="macro">LoadClass!</span>(<span class="string">"svjour"</span>);
+<a href=#10 id=10 data-nosnippet>10</a>  <span class="comment">// The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`) under `twocolumn`
+<a href=#11 id=11 data-nosnippet>11</a>  // (svjour3.cls:42, :1414 `\columnsep{1.5cc}`), as pdflatex gives it: 495pt in two 238.964pt columns, where the
+<a href=#12 id=12 data-nosnippet>12</a>  // registers' 345pt read as the column and twice it as the text (review rev79c2 finding 1). One column (347pt,
+<a href=#13 id=13 data-nosnippet>13</a>  // `smallextended` 338pt, within 2% of the registers') is the registers' page.
+<a href=#14 id=14 data-nosnippet>14</a>  </span><span class="kw">if </span>is_document_class(<span class="string">"svjour3"</span>) &amp;&amp; given_class_options().iter().any(|option| option == <span class="string">"twocolumn"</span>) {
+<a href=#15 id=15 data-nosnippet>15</a>    declare_panel_page(<span class="number">238.96417</span>, <span class="number">495.0</span>, <span class="bool-val">true</span>);
+<a href=#16 id=16 data-nosnippet>16</a>  }
+<a href=#17 id=17 data-nosnippet>17</a>  <span class="comment">// What editions of svjour3.cls papers ship add (run 347: 42 svjour3 papers), a copy without one leaving it to the
+<a href=#18 id=18 data-nosnippet>18</a>  // paper (`DefinitionOrigin::Fallback`):
+<a href=#19 id=19 data-nosnippet>19</a>  // - the economics edition's `\JEL{codes}` (6 copies, v3.2 and v3.3, 1402.2599's :314-317 "JEL Classification", its
+<a href=#20 id=20 data-nosnippet>20</a>  //   codes separated by `\and`), as `\subclass`: 1402.2599, 2110.08612, 2401.08594, 2404.18137, 2409.15978;
+<a href=#21 id=21 data-nosnippet>21</a>  // - the 2023 edition's back-matter statements (3 copies, 2411.13175's :1133-1159, 1315-1317): `{funding}`/`{Funding}`
+<a href=#22 id=22 data-nosnippet>22</a>  //   "Funding", `{dataavailability}`/`{data}` "Data Availability", `{conflict}`/`{Conflict}` "Conflict of interest",
+<a href=#23 id=23 data-nosnippet>23</a>  //   each a run-in bold heading over its text (2307.15129, 2411.13175, 2001.01655, 2403.11828).
+<a href=#24 id=24 data-nosnippet>24</a>  </span>{
+<a href=#25 id=25 data-nosnippet>25</a>    <span class="kw">let </span>_class = OriginGuard::new(DefinitionOrigin::Fallback);
+<a href=#26 id=26 data-nosnippet>26</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\JELname"</span>, <span class="string">"JEL Classification"</span>);
+<a href=#27 id=27 data-nosnippet>27</a>    <span class="macro">DefMacro!</span>(
+<a href=#28 id=28 data-nosnippet>28</a>      <span class="string">"\\JEL{}"</span>,
+<a href=#29 id=29 data-nosnippet>29</a>      <span class="string">"\\lx@add@classification[scheme=JEL,name={\\JELname: }]{\\def\\and{\\unskip\\ $\\cdot$ }#1}"
+<a href=#30 id=30 data-nosnippet>30</a>    </span>);
+<a href=#31 id=31 data-nosnippet>31</a>    <span class="macro">RawTeX!</span>(<span class="string">r"\def\fundname{Funding}
+<a href=#32 id=32 data-nosnippet>32</a>\def\dataname{Data Availability}
+<a href=#33 id=33 data-nosnippet>33</a>\def\conflictname{Conflict of interest}
+<a href=#34 id=34 data-nosnippet>34</a>\def\funding{\par\small\rmfamily\trivlist\if!\fundname!\item[]\else\item[\hskip\labelsep{\bfseries\fundname}]\fi}
+<a href=#35 id=35 data-nosnippet>35</a>\def\endfunding{\endtrivlist}
+<a href=#36 id=36 data-nosnippet>36</a>\newenvironment{Funding}{\begin{funding}}{\end{funding}}
+<a href=#37 id=37 data-nosnippet>37</a>\def\dataavailability{\par\small\rmfamily\trivlist\if!\dataname!\item[]\else\item[\hskip\labelsep{\bfseries\dataname}]\fi}
+<a href=#38 id=38 data-nosnippet>38</a>\def\enddataavailability{\endtrivlist}
+<a href=#39 id=39 data-nosnippet>39</a>\newenvironment{data}{\begin{dataavailability}}{\end{dataavailability}}
+<a href=#40 id=40 data-nosnippet>40</a>\def\conflict{\par\small\rmfamily\trivlist\if!\conflictname!\item[]\else\item[\hskip\labelsep{\bfseries\conflictname}]\fi}
+<a href=#41 id=41 data-nosnippet>41</a>\def\endconflict{\endtrivlist}
+<a href=#42 id=42 data-nosnippet>42</a>\newenvironment{Conflict}{\begin{conflict}}{\end{conflict}}"</span>);
+<a href=#43 id=43 data-nosnippet>43</a>  }
+<a href=#44 id=44 data-nosnippet>44</a>  <span class="comment">// svjour3.cls :474-478 (every copy, 0712.0031's) `\lastand`, the separator before the last author in the title (", and"),
+<a href=#45 id=45 data-nosnippet>45</a>  // which papers write in `\author` (`\author{Silvia Chiappa\thanks{…} \lastand Ulrich Paquet}`, 1907.12906): an `\and`
+<a href=#46 id=46 data-nosnippet>46</a>  // (Perl's binding lacks it: KNOWN_PERL_ERRORS #813).
+<a href=#47 id=47 data-nosnippet>47</a>  </span><span class="macro">Let!</span>(<span class="string">"\\lastand"</span>, <span class="string">"\\and"</span>);
+<a href=#48 id=48 data-nosnippet>48</a>  <span class="comment">// The astronomical journal abbreviations 9 copies paste in (0812.0839, 1111.3868, 1406.4364).
+<a href=#49 id=49 data-nosnippet>49</a>  </span><span class="kw">crate</span>::shipped_class::provide_shipped_aas_macros(<span class="string">"svjour3"</span>)<span class="question-mark">?</span>;
+<a href=#50 id=50 data-nosnippet>50</a>});
 </code></pre></div></section></main></body></html>

@@ -1,0 +1,73 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/base_utilities/frontmatter/classify/rows.rs`."><title>rows.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../../../static.files/src-script-813739b1.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/base_utilities/frontmatter/classify/</div>rows.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! The text rules on printed ink and the token primitives of `author_block/rows.rs`, moved unchanged (the plan's row
+<a href=#2 id=2 data-nosnippet>2</a>//! "Knowledge in, driver out, one pass", user ruling 2026-11-08).
+<a href=#3 id=3 data-nosnippet>3</a>
+<a href=#4 id=4 data-nosnippet>4</a></span><span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#5 id=5 data-nosnippet>5</a>
+<a href=#6 id=6 data-nosnippet>6</a><span class="doccomment">/// The spacing commands a run of which parts two author names (user ruling 2026-10-19): the control space `\ ` — also
+<a href=#7 id=7 data-nosnippet>7</a>/// as the control return a line ending in `\ ` leaves, TeX dropping the line's trailing space (latex.ltx's `\^^M` is
+<a href=#8 id=8 data-nosnippet>8</a>/// `\ `; cs0207008's `K.V. Hindriks \affila\ \ ⏎ W. van der Hoek`) —, the medium and thick spaces `\:`, `\&gt;`, `\;`,
+<a href=#9 id=9 data-nosnippet>9</a>/// the tie `~`, `\enspace` and `\enskip` (latex.ltx `\hskip.5em\relax`, a separator by itself only after a mark or note,
+<a href=#10 id=10 data-nosnippet>10</a>/// [`normalize_hspace_separators`]: `A.\enskip B. Smith` is one name).
+<a href=#11 id=11 data-nosnippet>11</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>is_spacing_command(t: <span class="kw-2">&amp;</span>Token) -&gt; bool {
+<a href=#12 id=12 data-nosnippet>12</a>  <span class="kw-2">*</span>t == <span class="macro">T_ACTIVE!</span>(<span class="string">'~'</span>)
+<a href=#13 id=13 data-nosnippet>13</a>    || (t.get_catcode() == Catcode::CS
+<a href=#14 id=14 data-nosnippet>14</a>      &amp;&amp; t.with_str(|s| {
+<a href=#15 id=15 data-nosnippet>15</a>        <span class="macro">matches!</span>(
+<a href=#16 id=16 data-nosnippet>16</a>          s,
+<a href=#17 id=17 data-nosnippet>17</a>          <span class="string">"\\ " </span>| <span class="string">"\\\r" </span>| <span class="string">"\\:" </span>| <span class="string">"\\&gt;" </span>| <span class="string">"\\;" </span>| <span class="string">"\\enspace" </span>| <span class="string">"\\enskip"
+<a href=#18 id=18 data-nosnippet>18</a>        </span>)
+<a href=#19 id=19 data-nosnippet>19</a>      }))
+<a href=#20 id=20 data-nosnippet>20</a>}
+<a href=#21 id=21 data-nosnippet>21</a>
+<a href=#22 id=22 data-nosnippet>22</a><span class="doccomment">/// `tokens` after the markup a line or an entry may open with before its mark: spaces, group openings and the font and
+<a href=#23 id=23 data-nosnippet>23</a>/// size commands of [`name_text_command`] (`\normalsize{$^1$I3A - Universidad de Zaragoza} ~~~~~~
+<a href=#24 id=24 data-nosnippet>24</a>/// \normalsize{$^2$École Polytechnique Fédérale de Lausanne}`, 2308.10525).
+<a href=#25 id=25 data-nosnippet>25</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>after_leading_markup(tokens: <span class="kw-2">&amp;</span>[Token]) -&gt; <span class="kw-2">&amp;</span>[Token] {
+<a href=#26 id=26 data-nosnippet>26</a>  <span class="kw">let </span>lead = tokens
+<a href=#27 id=27 data-nosnippet>27</a>    .iter()
+<a href=#28 id=28 data-nosnippet>28</a>    .take_while(|t| {
+<a href=#29 id=29 data-nosnippet>29</a>      <span class="macro">matches!</span>(t.get_catcode(), Catcode::SPACE | Catcode::BEGIN) || name_text_command(t)
+<a href=#30 id=30 data-nosnippet>30</a>    })
+<a href=#31 id=31 data-nosnippet>31</a>    .count();
+<a href=#32 id=32 data-nosnippet>32</a>  <span class="kw-2">&amp;</span>tokens[lead..]
+<a href=#33 id=33 data-nosnippet>33</a>}
+<a href=#34 id=34 data-nosnippet>34</a>
+<a href=#35 id=35 data-nosnippet>35</a><span class="doccomment">/// A token that ends an author line or a name, before any spacing run reads it so: the `\and` family, `\quad`,
+<a href=#36 id=36 data-nosnippet>36</a>/// `\qquad`, a line break, the horizontal spaces [`normalize_hspace_separators`] makes `\quad`. Not `\par`: an author
+<a href=#37 id=37 data-nosnippet>37</a>/// block is set in a `c` column (latex.ltx's `\@maketitle`, `\begin{tabular}[t]{c}\@author\end{tabular}`; ACL's the
+<a href=#38 id=38 data-nosnippet>38</a>/// same), restricted horizontal mode, where a blank line's `\par` ends no paragraph and prints nothing (tex.web §1094
+<a href=#39 id=39 data-nosnippet>39</a>/// `hmode+par_end` calls `end_graf`, §1096 acts only when `mode=hmode`): 2009.12421's `Ehsan
+<a href=#40 id=40 data-nosnippet>40</a>/// Shareghi$^\spadesuit$$^\clubsuit$ &lt;blank line&gt; \ \ Nigel Collier$^\clubsuit$` prints the two names on one row.
+<a href=#41 id=41 data-nosnippet>41</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>is_line_separator(t: <span class="kw-2">&amp;</span>Token) -&gt; bool {
+<a href=#42 id=42 data-nosnippet>42</a>  t.get_catcode() == Catcode::CS
+<a href=#43 id=43 data-nosnippet>43</a>    &amp;&amp; (author_affil_splits()
+<a href=#44 id=44 data-nosnippet>44</a>      .iter()
+<a href=#45 id=45 data-nosnippet>45</a>      .chain(author_and_splits().iter())
+<a href=#46 id=46 data-nosnippet>46</a>      .chain(author_line_breaks().iter())
+<a href=#47 id=47 data-nosnippet>47</a>      .any(|d| <span class="macro">matches!</span>(d, SplitDelim::Token(d) <span class="kw">if </span>d == t))
+<a href=#48 id=48 data-nosnippet>48</a>      || t.with_str(|s| <span class="macro">matches!</span>(s, <span class="string">"\\qquad" </span>| <span class="string">"\\hfill" </span>| <span class="string">"\\hfil" </span>| <span class="string">"\\hspace"</span>)))
+<a href=#49 id=49 data-nosnippet>49</a>}
+<a href=#50 id=50 data-nosnippet>50</a>
+<a href=#51 id=51 data-nosnippet>51</a><span class="doccomment">/// The font commands an author line styles a name or an entry with besides the font declarations: their argument
+<a href=#52 id=52 data-nosnippet>52</a>/// prints as the name it styles ([`shows_name_text`]).
+<a href=#53 id=53 data-nosnippet>53</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">const </span>NAME_TEXT_ARGUMENT_COMMANDS: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str] = <span class="kw-2">&amp;</span>[
+<a href=#54 id=54 data-nosnippet>54</a>  <span class="string">"\\textbf"</span>,
+<a href=#55 id=55 data-nosnippet>55</a>  <span class="string">"\\textit"</span>,
+<a href=#56 id=56 data-nosnippet>56</a>  <span class="string">"\\textsc"</span>,
+<a href=#57 id=57 data-nosnippet>57</a>  <span class="string">"\\textsl"</span>,
+<a href=#58 id=58 data-nosnippet>58</a>  <span class="string">"\\textup"</span>,
+<a href=#59 id=59 data-nosnippet>59</a>  <span class="string">"\\textmd"</span>,
+<a href=#60 id=60 data-nosnippet>60</a>  <span class="string">"\\textrm"</span>,
+<a href=#61 id=61 data-nosnippet>61</a>  <span class="string">"\\textsf"</span>,
+<a href=#62 id=62 data-nosnippet>62</a>  <span class="string">"\\textnormal"</span>,
+<a href=#63 id=63 data-nosnippet>63</a>  <span class="string">"\\emph"</span>,
+<a href=#64 id=64 data-nosnippet>64</a>];
+<a href=#65 id=65 data-nosnippet>65</a>
+<a href=#66 id=66 data-nosnippet>66</a><span class="doccomment">/// Whether `t` is a font or size command an author line styles a name or an entry with: their argument, or the group
+<a href=#67 id=67 data-nosnippet>67</a>/// after the declaration (`frontmatter_stores::font_declaration`), prints as the name it styles
+<a href=#68 id=68 data-nosnippet>68</a>/// ([`shows_name_text`]), and an entry may open with them before its mark ([`after_leading_markup`]).
+<a href=#69 id=69 data-nosnippet>69</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>name_text_command(t: <span class="kw-2">&amp;</span>Token) -&gt; bool {
+<a href=#70 id=70 data-nosnippet>70</a>  <span class="kw">crate</span>::frontmatter_stores::font_declaration(t)
+<a href=#71 id=71 data-nosnippet>71</a>    || <span class="kw">crate</span>::frontmatter_stores::cs_in(t, NAME_TEXT_ARGUMENT_COMMANDS)
+<a href=#72 id=72 data-nosnippet>72</a>}
+</code></pre></div></section></main></body></html>

@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["assign_date_registers","load_definitions"]};

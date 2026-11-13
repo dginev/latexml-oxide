@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/latex_kernel.rs`."><title>latex_kernel.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/</div>latex_kernel.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Loading the LaTeX format on demand — the eager trigger list's safety net.
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/latex_kernel.rs`."><title>latex_kernel.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/</div>latex_kernel.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Loading the LaTeX format on demand — the eager trigger list's safety net.
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! `TeX.pool` installs the Perl-faithful autoload triggers (`TeX.pool.ltxml`
 <a href=#4 id=4 data-nosnippet>4</a>//! L33-56: `\documentclass`, `\newcommand`, `\begin`, …), each a macro that
@@ -62,137 +62,184 @@
 <a href=#62 id=62 data-nosnippet>62</a>//! reachable at all — there is no key set to test against, so
 <a href=#63 id=63 data-nosnippet>63</a>//! [`latex_kernel_defines`] is always `false` and this mechanism never fires.
 <a href=#64 id=64 data-nosnippet>64</a>//! Behaviour there is bit-identical to before: the Perl `TeX.pool` L33-56
-<a href=#65 id=65 data-nosnippet>65</a>//! trigger list remains the only mechanism.
-<a href=#66 id=66 data-nosnippet>66</a>
-<a href=#67 id=67 data-nosnippet>67</a></span><span class="kw">use </span>std::cell::OnceCell;
-<a href=#68 id=68 data-nosnippet>68</a>
-<a href=#69 id=69 data-nosnippet>69</a><span class="kw">use </span>once_cell::sync::Lazy;
-<a href=#70 id=70 data-nosnippet>70</a><span class="kw">use </span>rustc_hash::FxHashSet;
-<a href=#71 id=71 data-nosnippet>71</a>
-<a href=#72 id=72 data-nosnippet>72</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
-<a href=#73 id=73 data-nosnippet>73</a>
-<a href=#74 id=74 data-nosnippet>74</a><span class="comment">// Process-once cached env var (see WISDOM #56 — getenv hot-path race).
-<a href=#75 id=75 data-nosnippet>75</a></span><span class="kw">static </span>INI_MODE: Lazy&lt;bool&gt; = Lazy::new(|| std::env::var_os(<span class="string">"LATEXML_INI_MODE"</span>).is_some());
+<a href=#65 id=65 data-nosnippet>65</a>//! trigger list remains the only mechanism — in a plain TeX document, where
+<a href=#66 id=66 data-nosnippet>66</a>//! those triggers are held undefined ([`LATEX_TRIGGERS`]), it acts on them
+<a href=#67 id=67 data-nosnippet>67</a>//! alone, as their definitions would.
+<a href=#68 id=68 data-nosnippet>68</a>//!
+<a href=#69 id=69 data-nosnippet>69</a>//! # Plain TeX documents
+<a href=#70 id=70 data-nosnippet>70</a>//!
+<a href=#71 id=71 data-nosnippet>71</a>//! A plain TeX document (`state::plain_tex_document`) is compiled by TeX, with
+<a href=#72 id=72 data-nosnippet>72</a>//! no LaTeX to fall back on: a LaTeX kernel command there is undefined, and the
+<a href=#73 id=73 data-nosnippet>73</a>//! format loads only on a use of one of Perl's triggers.
+<a href=#74 id=74 data-nosnippet>74</a>
+<a href=#75 id=75 data-nosnippet>75</a></span><span class="kw">use </span>std::cell::OnceCell;
 <a href=#76 id=76 data-nosnippet>76</a>
-<a href=#77 id=77 data-nosnippet>77</a><span class="doccomment">/// Per-session flag: the kernel autoload has already been attempted.
-<a href=#78 id=78 data-nosnippet>78</a>///
-<a href=#79 id=79 data-nosnippet>79</a>/// Necessary and not redundant with `LaTeX.pool_loaded`, which
-<a href=#80 id=80 data-nosnippet>80</a>/// `input_definitions` only sets *after* the pool body has run — so without
-<a href=#81 id=81 data-nosnippet>81</a>/// this the load could re-enter itself through its own undefined CSes. It is a
-<a href=#82 id=82 data-nosnippet>82</a>/// State value, so it resets with the session (a test binary runs many
-<a href=#83 id=83 data-nosnippet>83</a>/// conversions on one thread) while surviving group pops (assigned globally).
-<a href=#84 id=84 data-nosnippet>84</a></span><span class="kw">const </span>AUTOLOAD_ATTEMPTED: <span class="kw-2">&amp;</span>str = <span class="string">"LaTeX.pool_autoload_attempted"</span>;
-<a href=#85 id=85 data-nosnippet>85</a>
-<a href=#86 id=86 data-nosnippet>86</a><span class="macro">thread_local!</span> {
-<a href=#87 id=87 data-nosnippet>87</a>  <span class="doccomment">/// Control-sequence names the ambient kernel dump defines. Built at most once
-<a href=#88 id=88 data-nosnippet>88</a>  /// per process, and only on the cold path below — never at startup, so the
-<a href=#89 id=89 data-nosnippet>89</a>  /// ~161 ms per-process bootstrap is untouched. ~22k boxed names (&lt;1 MB) that
-<a href=#90 id=90 data-nosnippet>90</a>  /// only ever materialise in a session that reached an undefined CS with no
-<a href=#91 id=91 data-nosnippet>91</a>  /// LaTeX format loaded.
-<a href=#92 id=92 data-nosnippet>92</a>  </span><span class="kw">static </span>KERNEL_CS: OnceCell&lt;FxHashSet&lt;Box&lt;str&gt;&gt;&gt; = <span class="kw">const </span>{ OnceCell::new() };
-<a href=#93 id=93 data-nosnippet>93</a>}
-<a href=#94 id=94 data-nosnippet>94</a>
-<a href=#95 id=95 data-nosnippet>95</a><span class="doccomment">/// Load `LaTeX.pool`, the way the `\@load@latex@pool` trigger primitive does.
-<a href=#96 id=96 data-nosnippet>96</a>///
-<a href=#97 id=97 data-nosnippet>97</a>/// Single definition of "pull the LaTeX format in", shared by that primitive
-<a href=#98 id=98 data-nosnippet>98</a>/// and by [`autoload_latex_kernel`], so the post-load fixups can never diverge
-<a href=#99 id=99 data-nosnippet>99</a>/// between the eager and the on-undefined route.
-<a href=#100 id=100 data-nosnippet>100</a></span><span class="kw">pub fn </span>load_latex_pool() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#101 id=101 data-nosnippet>101</a>  input_definitions(<span class="string">"LaTeX"</span>, InputDefinitionOptions {
-<a href=#102 id=102 data-nosnippet>102</a>    extension: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"pool"</span>)),
-<a href=#103 id=103 data-nosnippet>103</a>    ..InputDefinitionOptions::default()
-<a href=#104 id=104 data-nosnippet>104</a>  })<span class="question-mark">?</span>;
-<a href=#105 id=105 data-nosnippet>105</a>  <span class="comment">// Restore our `\documentstyle` impl after the LaTeX pool load. The
-<a href=#106 id=106 data-nosnippet>106</a>  // latex_dump unconditionally redefines `\documentstyle` to the
-<a href=#107 id=107 data-nosnippet>107</a>  // kernel-style `\input{latex209.def}\documentclass`; in Perl that's
-<a href=#108 id=108 data-nosnippet>108</a>  // overridden by latex_constructs.pool.ltxml's DefConstructor, but
-<a href=#109 id=109 data-nosnippet>109</a>  // our latex_constructs.rs port doesn't redefine it. Re-Let to our
-<a href=#110 id=110 data-nosnippet>110</a>  // backup to win. See tex_job.rs `\lx@documentstyle@impl` for the
-<a href=#111 id=111 data-nosnippet>111</a>  // full diagnostic context (hep-th9912229 witness).
-<a href=#112 id=112 data-nosnippet>112</a>  </span><span class="macro">Let!</span>(<span class="string">"\\documentstyle"</span>, <span class="string">"\\lx@documentstyle@impl"</span>);
-<a href=#113 id=113 data-nosnippet>113</a>  <span class="prelude-val">Ok</span>(())
-<a href=#114 id=114 data-nosnippet>114</a>}
-<a href=#115 id=115 data-nosnippet>115</a>
-<a href=#116 id=116 data-nosnippet>116</a><span class="doccomment">/// Does loading `LaTeX.pool` define `cs`? See the module docs for why the
-<a href=#117 id=117 data-nosnippet>117</a>/// ambient kernel dump is the oracle. `false` on the degraded no-dump branch.
-<a href=#118 id=118 data-nosnippet>118</a></span><span class="kw">pub fn </span>latex_kernel_defines(cs: <span class="kw-2">&amp;</span>str) -&gt; bool {
-<a href=#119 id=119 data-nosnippet>119</a>  KERNEL_CS.with(|cell| cell.get_or_init(build_kernel_catalogue).contains(cs))
-<a href=#120 id=120 data-nosnippet>120</a>}
-<a href=#121 id=121 data-nosnippet>121</a>
-<a href=#122 id=122 data-nosnippet>122</a><span class="kw">fn </span>build_kernel_catalogue() -&gt; FxHashSet&lt;Box&lt;str&gt;&gt; {
-<a href=#123 id=123 data-nosnippet>123</a>  <span class="comment">// Same resolver `latex_dump::load_definitions` uses (env overrides, ambient
-<a href=#124 id=124 data-nosnippet>124</a>  // year, embedded fallback), so the catalogue can never name a CS from a
-<a href=#125 id=125 data-nosnippet>125</a>  // different dump than the one the pool would load. Key scan only — no record
-<a href=#126 id=126 data-nosnippet>126</a>  // is parsed and no State is touched.
-<a href=#127 id=127 data-nosnippet>127</a>  </span><span class="kw">match </span><span class="kw">crate</span>::latex_dump::resolve_dump_text() {
-<a href=#128 id=128 data-nosnippet>128</a>    <span class="prelude-val">Some</span>((content, _label, _year, _from_embedded)) =&gt; dump_reader::collect_meaning_keys(<span class="kw-2">&amp;</span>content),
-<a href=#129 id=129 data-nosnippet>129</a>    <span class="prelude-val">None </span>=&gt; FxHashSet::default(),
-<a href=#130 id=130 data-nosnippet>130</a>  }
-<a href=#131 id=131 data-nosnippet>131</a>}
-<a href=#132 id=132 data-nosnippet>132</a>
-<a href=#133 id=133 data-nosnippet>133</a><span class="doccomment">/// The `latexml_core::binding::kernel_autoload` hook: `true` means the LaTeX
-<a href=#134 id=134 data-nosnippet>134</a>/// format was just loaded *and* `token` now has a meaning, so the caller must
-<a href=#135 id=135 data-nosnippet>135</a>/// retry it; `false` means take the ordinary bounded `Error:undefined` path.
-<a href=#136 id=136 data-nosnippet>136</a></span><span class="kw">pub fn </span>autoload_latex_kernel(token: <span class="kw-2">&amp;</span>Token) -&gt; bool {
-<a href=#137 id=137 data-nosnippet>137</a>  <span class="kw">if </span>token.get_catcode() != Catcode::CS {
-<a href=#138 id=138 data-nosnippet>138</a>    <span class="kw">return </span><span class="bool-val">false</span>;
-<a href=#139 id=139 data-nosnippet>139</a>  }
-<a href=#140 id=140 data-nosnippet>140</a>  <span class="comment">// Dump-build (`--init=plain.tex` / `--init=latex.ltx`) raw-loads a format
-<a href=#141 id=141 data-nosnippet>141</a>  // file against a deliberately minimal state and writes the delta. Pulling
-<a href=#142 id=142 data-nosnippet>142</a>  // `LaTeX.pool` in from an undefined CS there would put the whole pool into
-<a href=#143 id=143 data-nosnippet>143</a>  // the snapshot — i.e. a previous run's dump would leak into the next one.
-<a href=#144 id=144 data-nosnippet>144</a>  // The dump must be built from the format file alone.
-<a href=#145 id=145 data-nosnippet>145</a>  </span><span class="kw">if </span><span class="kw-2">*</span>INI_MODE {
-<a href=#146 id=146 data-nosnippet>146</a>    <span class="kw">return </span><span class="bool-val">false</span>;
-<a href=#147 id=147 data-nosnippet>147</a>  }
-<a href=#148 id=148 data-nosnippet>148</a>  <span class="comment">// The caller has declared that undefined CSes in this stretch are expected
-<a href=#149 id=149 data-nosnippet>149</a>  // forward references that later fixups resolve (expl3-code.tex and friends).
-<a href=#150 id=150 data-nosnippet>150</a>  // Acting on one would load the format on a name that is about to be defined
-<a href=#151 id=151 data-nosnippet>151</a>  // anyway. Same gate the undefined-CS `Error!` sites use.
-<a href=#152 id=152 data-nosnippet>152</a>  </span><span class="kw">if </span>lookup_bool(<span class="string">"SUPPRESS_UNDEFINED_ERRORS"</span>) {
-<a href=#153 id=153 data-nosnippet>153</a>    <span class="kw">return </span><span class="bool-val">false</span>;
-<a href=#154 id=154 data-nosnippet>154</a>  }
-<a href=#155 id=155 data-nosnippet>155</a>  <span class="comment">// Once the format is in, the question is moot: the CS is either defined or
-<a href=#156 id=156 data-nosnippet>156</a>  // genuinely undefined.
-<a href=#157 id=157 data-nosnippet>157</a>  </span><span class="kw">if </span>lookup_bool(<span class="string">"LaTeX.pool_loaded"</span>) {
-<a href=#158 id=158 data-nosnippet>158</a>    <span class="kw">return </span><span class="bool-val">false</span>;
-<a href=#159 id=159 data-nosnippet>159</a>  }
-<a href=#160 id=160 data-nosnippet>160</a>  <span class="kw">if </span>lookup_bool(AUTOLOAD_ATTEMPTED) {
-<a href=#161 id=161 data-nosnippet>161</a>    <span class="kw">return </span><span class="bool-val">false</span>;
-<a href=#162 id=162 data-nosnippet>162</a>  }
-<a href=#163 id=163 data-nosnippet>163</a>  <span class="kw">if </span>!token.with_cs_name(latex_kernel_defines) {
-<a href=#164 id=164 data-nosnippet>164</a>    <span class="kw">return </span><span class="bool-val">false</span>;
-<a href=#165 id=165 data-nosnippet>165</a>  }
-<a href=#166 id=166 data-nosnippet>166</a>  <span class="comment">// Claim the single attempt BEFORE loading. The pool load runs arbitrary
-<a href=#167 id=167 data-nosnippet>167</a>  // definition code that can itself reach an undefined CS, and re-entering
-<a href=#168 id=168 data-nosnippet>168</a>  // here would recurse; a trigger that re-emits itself spins the gullet
-<a href=#169 id=169 data-nosnippet>169</a>  // forever, silently, with no error for `too_many_errors` to cap (witness
-<a href=#170 id=170 data-nosnippet>170</a>  // 2606.21610, see the `def_autoload` closure in `tex.rs`).
-<a href=#171 id=171 data-nosnippet>171</a>  </span>assign_value(AUTOLOAD_ATTEMPTED, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
-<a href=#172 id=172 data-nosnippet>172</a>  <span class="kw">let </span>cs_name = token.with_cs_name(|cs| cs.to_string());
-<a href=#173 id=173 data-nosnippet>173</a>  <span class="macro">Info!</span>(
-<a href=#174 id=174 data-nosnippet>174</a>    <span class="string">"autoload"</span>,
-<a href=#175 id=175 data-nosnippet>175</a>    <span class="string">"LaTeX"</span>,
-<a href=#176 id=176 data-nosnippet>176</a>    <span class="macro">s!</span>(<span class="string">"{cs_name} is a LaTeX kernel command — loading LaTeX.pool"</span>)
-<a href=#177 id=177 data-nosnippet>177</a>  );
-<a href=#178 id=178 data-nosnippet>178</a>  <span class="comment">// Hoist whatever the load installs at the current frame up to global: this
-<a href=#179 id=179 data-nosnippet>179</a>  // can fire at any group depth (unlike the eager triggers, which in practice
-<a href=#180 id=180 data-nosnippet>180</a>  // fire at top level), and definitions popped by the enclosing `}` would
-<a href=#181 id=181 data-nosnippet>181</a>  // leave `LaTeX.pool_loaded` set with the format gone. Same guard
-<a href=#182 id=182 data-nosnippet>182</a>  // `def_autoload` uses in `tex.rs`.
-<a href=#183 id=183 data-nosnippet>183</a>  </span><span class="kw">let </span>pre_keys = snapshot_top_frame_meaning_keys();
-<a href=#184 id=184 data-nosnippet>184</a>  <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = load_latex_pool() {
-<a href=#185 id=185 data-nosnippet>185</a>    <span class="macro">Warn!</span>(
-<a href=#186 id=186 data-nosnippet>186</a>      <span class="string">"autoload"</span>,
-<a href=#187 id=187 data-nosnippet>187</a>      <span class="string">"LaTeX"</span>,
-<a href=#188 id=188 data-nosnippet>188</a>      <span class="macro">s!</span>(<span class="string">"failed to load LaTeX.pool for {cs_name}: {e}"</span>)
-<a href=#189 id=189 data-nosnippet>189</a>    );
+<a href=#77 id=77 data-nosnippet>77</a><span class="kw">use </span>once_cell::sync::Lazy;
+<a href=#78 id=78 data-nosnippet>78</a><span class="kw">use </span>rustc_hash::FxHashSet;
+<a href=#79 id=79 data-nosnippet>79</a>
+<a href=#80 id=80 data-nosnippet>80</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<a href=#81 id=81 data-nosnippet>81</a>
+<a href=#82 id=82 data-nosnippet>82</a><span class="comment">// Process-once cached env var (see WISDOM #56 — getenv hot-path race).
+<a href=#83 id=83 data-nosnippet>83</a></span><span class="kw">static </span>INI_MODE: Lazy&lt;bool&gt; = Lazy::new(|| std::env::var_os(<span class="string">"LATEXML_INI_MODE"</span>).is_some());
+<a href=#84 id=84 data-nosnippet>84</a>
+<a href=#85 id=85 data-nosnippet>85</a><span class="doccomment">/// Per-session flag: the kernel autoload has already been attempted.
+<a href=#86 id=86 data-nosnippet>86</a>///
+<a href=#87 id=87 data-nosnippet>87</a>/// Necessary and not redundant with `LaTeX.pool_loaded`, which
+<a href=#88 id=88 data-nosnippet>88</a>/// `input_definitions` only sets *after* the pool body has run — so without
+<a href=#89 id=89 data-nosnippet>89</a>/// this the load could re-enter itself through its own undefined CSes. It is a
+<a href=#90 id=90 data-nosnippet>90</a>/// State value, so it resets with the session (a test binary runs many
+<a href=#91 id=91 data-nosnippet>91</a>/// conversions on one thread) while surviving group pops (assigned globally).
+<a href=#92 id=92 data-nosnippet>92</a></span><span class="kw">const </span>AUTOLOAD_ATTEMPTED: <span class="kw-2">&amp;</span>str = <span class="string">"LaTeX.pool_autoload_attempted"</span>;
+<a href=#93 id=93 data-nosnippet>93</a>
+<a href=#94 id=94 data-nosnippet>94</a><span class="macro">thread_local!</span> {
+<a href=#95 id=95 data-nosnippet>95</a>  <span class="doccomment">/// Control-sequence names the ambient kernel dump defines. Built at most once
+<a href=#96 id=96 data-nosnippet>96</a>  /// per process, and only on the cold path below — never at startup, so the
+<a href=#97 id=97 data-nosnippet>97</a>  /// ~161 ms per-process bootstrap is untouched. ~22k boxed names (&lt;1 MB) that
+<a href=#98 id=98 data-nosnippet>98</a>  /// only ever materialise in a session that reached an undefined CS with no
+<a href=#99 id=99 data-nosnippet>99</a>  /// LaTeX format loaded.
+<a href=#100 id=100 data-nosnippet>100</a>  </span><span class="kw">static </span>KERNEL_CS: OnceCell&lt;FxHashSet&lt;Box&lt;str&gt;&gt;&gt; = <span class="kw">const </span>{ OnceCell::new() };
+<a href=#101 id=101 data-nosnippet>101</a>}
+<a href=#102 id=102 data-nosnippet>102</a>
+<a href=#103 id=103 data-nosnippet>103</a><span class="doccomment">/// The Perl `TeX.pool` LaTeX triggers (`TeX.pool.ltxml` L33-39), each a macro that loads the format and re-reads
+<a href=#104 id=104 data-nosnippet>104</a>/// itself (`tex.rs`).
+<a href=#105 id=105 data-nosnippet>105</a>///
+<a href=#106 id=106 data-nosnippet>106</a>/// A plain TeX document holds them undefined (OXIDIZED_DESIGN_DIVERGENCES #536). Generic-format files probe these
+<a href=#107 id=107 data-nosnippet>107</a>/// names to tell LaTeX from plain TeX — pst-xkey.tex:44 `\ifx\ProvidesFile\@undefined`, iftex.sty:31-33 (and
+<a href=#108 id=108 data-nosnippet>108</a>/// eplain.tex:47-49, its inlined copy) `\csname ProvidesPackage\endcsname`, atbegshi.sty:155-156 and the other Oberdiek packages
+<a href=#109 id=109 data-nosnippet>109</a>/// `\csname RequirePackage\endcsname`, dual-mode files `\ifx\documentclass\undefined` — and Perl's defined trigger
+<a href=#110 id=110 data-nosnippet>110</a>/// answered "LaTeX": the file took its LaTeX branch, which loaded the format in the middle of a plain document
+<a href=#111 id=111 data-nosnippet>111</a>/// (math0305287, math0111222: pstricks; the eplain papers on TL 2025). Held undefined, a probe sees what TeX sees, and a
+<a href=#112 id=112 data-nosnippet>112</a>/// *use* still loads the format, now through [`autoload_latex_kernel`].
+<a href=#113 id=113 data-nosnippet>113</a></span><span class="kw">pub const </span>LATEX_TRIGGERS: [<span class="kw-2">&amp;</span>str; <span class="number">16</span>] = [
+<a href=#114 id=114 data-nosnippet>114</a>  <span class="string">"\\documentclass"</span>,
+<a href=#115 id=115 data-nosnippet>115</a>  <span class="string">"\\newcommand"</span>,
+<a href=#116 id=116 data-nosnippet>116</a>  <span class="string">"\\renewcommand"</span>,
+<a href=#117 id=117 data-nosnippet>117</a>  <span class="string">"\\newenvironment"</span>,
+<a href=#118 id=118 data-nosnippet>118</a>  <span class="string">"\\renewenvironment"</span>,
+<a href=#119 id=119 data-nosnippet>119</a>  <span class="string">"\\NeedsTeXFormat"</span>,
+<a href=#120 id=120 data-nosnippet>120</a>  <span class="string">"\\ProvidesPackage"</span>,
+<a href=#121 id=121 data-nosnippet>121</a>  <span class="string">"\\RequirePackage"</span>,
+<a href=#122 id=122 data-nosnippet>122</a>  <span class="string">"\\ProvidesFile"</span>,
+<a href=#123 id=123 data-nosnippet>123</a>  <span class="string">"\\makeatletter"</span>,
+<a href=#124 id=124 data-nosnippet>124</a>  <span class="string">"\\makeatother"</span>,
+<a href=#125 id=125 data-nosnippet>125</a>  <span class="string">"\\begin"</span>,
+<a href=#126 id=126 data-nosnippet>126</a>  <span class="string">"\\listfiles"</span>,
+<a href=#127 id=127 data-nosnippet>127</a>  <span class="string">"\\nofiles"</span>,
+<a href=#128 id=128 data-nosnippet>128</a>  <span class="string">"\\typeout"</span>,
+<a href=#129 id=129 data-nosnippet>129</a>  <span class="string">"\\PassOptionsToPackage"</span>,
+<a href=#130 id=130 data-nosnippet>130</a>];
+<a href=#131 id=131 data-nosnippet>131</a>
+<a href=#132 id=132 data-nosnippet>132</a><span class="doccomment">/// Load `LaTeX.pool`, the way the `\@load@latex@pool` trigger primitive does.
+<a href=#133 id=133 data-nosnippet>133</a>///
+<a href=#134 id=134 data-nosnippet>134</a>/// Single definition of "pull the LaTeX format in", shared by that primitive
+<a href=#135 id=135 data-nosnippet>135</a>/// and by [`autoload_latex_kernel`], so the post-load fixups can never diverge
+<a href=#136 id=136 data-nosnippet>136</a>/// between the eager and the on-undefined route.
+<a href=#137 id=137 data-nosnippet>137</a></span><span class="kw">pub fn </span>load_latex_pool() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#138 id=138 data-nosnippet>138</a>  input_definitions(<span class="string">"LaTeX"</span>, InputDefinitionOptions {
+<a href=#139 id=139 data-nosnippet>139</a>    extension: <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"pool"</span>)),
+<a href=#140 id=140 data-nosnippet>140</a>    ..InputDefinitionOptions::default()
+<a href=#141 id=141 data-nosnippet>141</a>  })<span class="question-mark">?</span>;
+<a href=#142 id=142 data-nosnippet>142</a>  <span class="comment">// Restore our `\documentstyle` impl after the LaTeX pool load. The
+<a href=#143 id=143 data-nosnippet>143</a>  // latex_dump unconditionally redefines `\documentstyle` to the
+<a href=#144 id=144 data-nosnippet>144</a>  // kernel-style `\input{latex209.def}\documentclass`; in Perl that's
+<a href=#145 id=145 data-nosnippet>145</a>  // overridden by latex_constructs.pool.ltxml's DefConstructor, but
+<a href=#146 id=146 data-nosnippet>146</a>  // our latex_constructs.rs port doesn't redefine it. Re-Let to our
+<a href=#147 id=147 data-nosnippet>147</a>  // backup to win. See tex_job.rs `\lx@documentstyle@impl` for the
+<a href=#148 id=148 data-nosnippet>148</a>  // full diagnostic context (hep-th9912229 witness).
+<a href=#149 id=149 data-nosnippet>149</a>  </span><span class="macro">Let!</span>(<span class="string">"\\documentstyle"</span>, <span class="string">"\\lx@documentstyle@impl"</span>);
+<a href=#150 id=150 data-nosnippet>150</a>  <span class="prelude-val">Ok</span>(())
+<a href=#151 id=151 data-nosnippet>151</a>}
+<a href=#152 id=152 data-nosnippet>152</a>
+<a href=#153 id=153 data-nosnippet>153</a><span class="doccomment">/// Does loading `LaTeX.pool` define `cs`? See the module docs for why the
+<a href=#154 id=154 data-nosnippet>154</a>/// ambient kernel dump is the oracle. `false` on the degraded no-dump branch.
+<a href=#155 id=155 data-nosnippet>155</a></span><span class="kw">pub fn </span>latex_kernel_defines(cs: <span class="kw-2">&amp;</span>str) -&gt; bool {
+<a href=#156 id=156 data-nosnippet>156</a>  KERNEL_CS.with(|cell| cell.get_or_init(build_kernel_catalogue).contains(cs))
+<a href=#157 id=157 data-nosnippet>157</a>}
+<a href=#158 id=158 data-nosnippet>158</a>
+<a href=#159 id=159 data-nosnippet>159</a><span class="kw">fn </span>build_kernel_catalogue() -&gt; FxHashSet&lt;Box&lt;str&gt;&gt; {
+<a href=#160 id=160 data-nosnippet>160</a>  <span class="comment">// Same resolver `latex_dump::load_definitions` uses (env overrides, ambient
+<a href=#161 id=161 data-nosnippet>161</a>  // year, embedded fallback), so the catalogue can never name a CS from a
+<a href=#162 id=162 data-nosnippet>162</a>  // different dump than the one the pool would load. Key scan only — no record
+<a href=#163 id=163 data-nosnippet>163</a>  // is parsed and no State is touched.
+<a href=#164 id=164 data-nosnippet>164</a>  </span><span class="kw">match </span><span class="kw">crate</span>::latex_dump::resolve_dump_text() {
+<a href=#165 id=165 data-nosnippet>165</a>    <span class="prelude-val">Some</span>((content, _label, _year, _from_embedded)) =&gt; dump_reader::collect_meaning_keys(<span class="kw-2">&amp;</span>content),
+<a href=#166 id=166 data-nosnippet>166</a>    <span class="prelude-val">None </span>=&gt; FxHashSet::default(),
+<a href=#167 id=167 data-nosnippet>167</a>  }
+<a href=#168 id=168 data-nosnippet>168</a>}
+<a href=#169 id=169 data-nosnippet>169</a>
+<a href=#170 id=170 data-nosnippet>170</a><span class="doccomment">/// The `latexml_core::binding::kernel_autoload` hook: `true` means the LaTeX
+<a href=#171 id=171 data-nosnippet>171</a>/// format was just loaded *and* `token` now has a meaning, so the caller must
+<a href=#172 id=172 data-nosnippet>172</a>/// retry it; `false` means take the ordinary bounded `Error:undefined` path.
+<a href=#173 id=173 data-nosnippet>173</a></span><span class="kw">pub fn </span>autoload_latex_kernel(token: <span class="kw-2">&amp;</span>Token) -&gt; bool {
+<a href=#174 id=174 data-nosnippet>174</a>  <span class="kw">if </span>token.get_catcode() != Catcode::CS {
+<a href=#175 id=175 data-nosnippet>175</a>    <span class="kw">return </span><span class="bool-val">false</span>;
+<a href=#176 id=176 data-nosnippet>176</a>  }
+<a href=#177 id=177 data-nosnippet>177</a>  <span class="comment">// Dump-build (`--init=plain.tex` / `--init=latex.ltx`) raw-loads a format
+<a href=#178 id=178 data-nosnippet>178</a>  // file against a deliberately minimal state and writes the delta. Pulling
+<a href=#179 id=179 data-nosnippet>179</a>  // `LaTeX.pool` in from an undefined CS there would put the whole pool into
+<a href=#180 id=180 data-nosnippet>180</a>  // the snapshot — i.e. a previous run's dump would leak into the next one.
+<a href=#181 id=181 data-nosnippet>181</a>  // The dump must be built from the format file alone.
+<a href=#182 id=182 data-nosnippet>182</a>  </span><span class="kw">if </span><span class="kw-2">*</span>INI_MODE || <span class="kw">crate</span>::dump_paths::building_format() {
+<a href=#183 id=183 data-nosnippet>183</a>    <span class="kw">return </span><span class="bool-val">false</span>;
+<a href=#184 id=184 data-nosnippet>184</a>  }
+<a href=#185 id=185 data-nosnippet>185</a>  <span class="comment">// The caller has declared that undefined CSes in this stretch are expected
+<a href=#186 id=186 data-nosnippet>186</a>  // forward references that later fixups resolve (expl3-code.tex and friends).
+<a href=#187 id=187 data-nosnippet>187</a>  // Acting on one would load the format on a name that is about to be defined
+<a href=#188 id=188 data-nosnippet>188</a>  // anyway. Same gate the undefined-CS `Error!` sites use.
+<a href=#189 id=189 data-nosnippet>189</a>  </span><span class="kw">if </span>lookup_bool(<span class="string">"SUPPRESS_UNDEFINED_ERRORS"</span>) {
 <a href=#190 id=190 data-nosnippet>190</a>    <span class="kw">return </span><span class="bool-val">false</span>;
 <a href=#191 id=191 data-nosnippet>191</a>  }
-<a href=#192 id=192 data-nosnippet>192</a>  hoist_top_frame_meaning_delta(<span class="kw-2">&amp;</span>pre_keys);
-<a href=#193 id=193 data-nosnippet>193</a>  <span class="comment">// The format may still not define it (e.g. a dump key our own LaTeX pool
-<a href=#194 id=194 data-nosnippet>194</a>  // later clears). Then this was a no-op and the caller reports it undefined,
-<a href=#195 id=195 data-nosnippet>195</a>  // exactly as before.
-<a href=#196 id=196 data-nosnippet>196</a>  </span>has_meaning(token)
-<a href=#197 id=197 data-nosnippet>197</a>}
+<a href=#192 id=192 data-nosnippet>192</a>  <span class="comment">// Once the format is in, the question is moot: the CS is either defined or
+<a href=#193 id=193 data-nosnippet>193</a>  // genuinely undefined.
+<a href=#194 id=194 data-nosnippet>194</a>  </span><span class="kw">if </span>lookup_bool(<span class="string">"LaTeX.pool_loaded"</span>) {
+<a href=#195 id=195 data-nosnippet>195</a>    <span class="kw">return </span><span class="bool-val">false</span>;
+<a href=#196 id=196 data-nosnippet>196</a>  }
+<a href=#197 id=197 data-nosnippet>197</a>  <span class="kw">if </span>lookup_bool(AUTOLOAD_ATTEMPTED) {
+<a href=#198 id=198 data-nosnippet>198</a>    <span class="kw">return </span><span class="bool-val">false</span>;
+<a href=#199 id=199 data-nosnippet>199</a>  }
+<a href=#200 id=200 data-nosnippet>200</a>  <span class="comment">// A plain TeX document (`state::plain_tex_document`, arXiv AutoTeX's test) is compiled by TeX without LaTeX: there a
+<a href=#201 id=201 data-nosnippet>201</a>  // LaTeX kernel command is an undefined control sequence, as TeX and Perl report it. Loading the format on it put
+<a href=#202 id=202 data-nosnippet>202</a>  // LaTeX's `\verbatim` into plain documents (read to the end of the file: 1504.02513, 1402.1807, 1310.8121,
+<a href=#203 id=203 data-nosnippet>203</a>  // 2405.04530), LaTeX's `\title` (math9810192) and, through a `\let\big=\eightbig` of an undefined name, the whole
+<a href=#204 id=204 data-nosnippet>204</a>  // format mid-file (1901.09683). Only Perl's own triggers, held undefined there ([`LATEX_TRIGGERS`]), load it on a
+<a href=#205 id=205 data-nosnippet>205</a>  // use, as their definitions do in a LaTeX document — with or without a dump.
+<a href=#206 id=206 data-nosnippet>206</a>  </span><span class="kw">if </span>plain_tex_document() {
+<a href=#207 id=207 data-nosnippet>207</a>    <span class="kw">if </span>!token.with_cs_name(|cs| LATEX_TRIGGERS.contains(<span class="kw-2">&amp;</span>cs)) {
+<a href=#208 id=208 data-nosnippet>208</a>      <span class="kw">return </span><span class="bool-val">false</span>;
+<a href=#209 id=209 data-nosnippet>209</a>    }
+<a href=#210 id=210 data-nosnippet>210</a>  } <span class="kw">else if </span>!token.with_cs_name(latex_kernel_defines) {
+<a href=#211 id=211 data-nosnippet>211</a>    <span class="kw">return </span><span class="bool-val">false</span>;
+<a href=#212 id=212 data-nosnippet>212</a>  }
+<a href=#213 id=213 data-nosnippet>213</a>  <span class="comment">// Claim the single attempt BEFORE loading. The pool load runs arbitrary
+<a href=#214 id=214 data-nosnippet>214</a>  // definition code that can itself reach an undefined CS, and re-entering
+<a href=#215 id=215 data-nosnippet>215</a>  // here would recurse; a trigger that re-emits itself spins the gullet
+<a href=#216 id=216 data-nosnippet>216</a>  // forever, silently, with no error for `too_many_errors` to cap (witness
+<a href=#217 id=217 data-nosnippet>217</a>  // 2606.21610, see the `def_autoload` closure in `tex.rs`).
+<a href=#218 id=218 data-nosnippet>218</a>  </span>assign_value(AUTOLOAD_ATTEMPTED, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#219 id=219 data-nosnippet>219</a>  <span class="kw">let </span>cs_name = token.with_cs_name(|cs| cs.to_string());
+<a href=#220 id=220 data-nosnippet>220</a>  <span class="macro">Info!</span>(
+<a href=#221 id=221 data-nosnippet>221</a>    <span class="string">"autoload"</span>,
+<a href=#222 id=222 data-nosnippet>222</a>    <span class="string">"LaTeX"</span>,
+<a href=#223 id=223 data-nosnippet>223</a>    <span class="macro">s!</span>(<span class="string">"{cs_name} is a LaTeX kernel command — loading LaTeX.pool"</span>)
+<a href=#224 id=224 data-nosnippet>224</a>  );
+<a href=#225 id=225 data-nosnippet>225</a>  <span class="comment">// Hoist whatever the load installs at the current frame up to global: this
+<a href=#226 id=226 data-nosnippet>226</a>  // can fire at any group depth (unlike the eager triggers, which in practice
+<a href=#227 id=227 data-nosnippet>227</a>  // fire at top level), and definitions popped by the enclosing `}` would
+<a href=#228 id=228 data-nosnippet>228</a>  // leave `LaTeX.pool_loaded` set with the format gone. Same guard
+<a href=#229 id=229 data-nosnippet>229</a>  // `def_autoload` uses in `tex.rs`.
+<a href=#230 id=230 data-nosnippet>230</a>  </span><span class="kw">let </span>pre_keys = snapshot_top_frame_keys();
+<a href=#231 id=231 data-nosnippet>231</a>  <span class="kw">if let </span><span class="prelude-val">Err</span>(e) = load_latex_pool() {
+<a href=#232 id=232 data-nosnippet>232</a>    <span class="macro">Warn!</span>(
+<a href=#233 id=233 data-nosnippet>233</a>      <span class="string">"autoload"</span>,
+<a href=#234 id=234 data-nosnippet>234</a>      <span class="string">"LaTeX"</span>,
+<a href=#235 id=235 data-nosnippet>235</a>      <span class="macro">s!</span>(<span class="string">"failed to load LaTeX.pool for {cs_name}: {e}"</span>)
+<a href=#236 id=236 data-nosnippet>236</a>    );
+<a href=#237 id=237 data-nosnippet>237</a>    <span class="kw">return </span><span class="bool-val">false</span>;
+<a href=#238 id=238 data-nosnippet>238</a>  }
+<a href=#239 id=239 data-nosnippet>239</a>  hoist_top_frame_package_load(<span class="kw-2">&amp;</span>pre_keys);
+<a href=#240 id=240 data-nosnippet>240</a>  <span class="comment">// The format may still not define it (e.g. a dump key our own LaTeX pool
+<a href=#241 id=241 data-nosnippet>241</a>  // later clears). Then this was a no-op and the caller reports it undefined,
+<a href=#242 id=242 data-nosnippet>242</a>  // exactly as before.
+<a href=#243 id=243 data-nosnippet>243</a>  </span>has_meaning(token)
+<a href=#244 id=244 data-nosnippet>244</a>}
 </code></pre></div></section></main></body></html>

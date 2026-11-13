@@ -1,0 +1,144 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="K11 — a raw class’s title-page STORES reroute to the frontmatter API."><title>latexml_engine::frontmatter_stores - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc mod"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Module frontmatter_stores</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../latexml_engine/index.html">latexml_<wbr>engine</a><span class="version">0.7.0</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Module frontmatter_<wbr>stores</a></h2><h3><a href="#constants">Module Items</a></h3><ul class="block"><li><a href="#constants" title="Constants">Constants</a></li><li><a href="#functions" title="Functions">Functions</a></li></ul></section><div id="rustdoc-modnav"><h2 class="in-crate"><a href="../index.html">In crate latexml_<wbr>engine</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../index.html">latexml_engine</a></div><h1>Module <span>frontmatter_<wbr>stores</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../src/latexml_engine/frontmatter_stores.rs.html#1-8401">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>K11 — a raw class’s title-page STORES reroute to the frontmatter API.</p>
+<p>A class loaded raw keeps its title page in stores: <code>\newcommand\inst[1] {\gdef\@inst{#1}}</code> (ptptex.cls:616), <code>\long\def\abst#1{\long\gdef\@abst{#1}}</code>
+(jpsj2.cls:841-847), read only by <code>\@maketitle</code>, which LaTeXML’s locked
+<code>\maketitle</code> never runs. Perl drops every such store (its ~200 class
+bindings — and the generic <code>OmniBus.cls.ltxml:62-247</code> table, bypassed
+under raw class loading — are its only route); the Rust
+<code>\lx@deposit@maketitle</code> surpass typeset them as body paragraphs. This
+module is OmniBus’s table applied after the raw load, keyed on what the
+class actually defined — a setter a binding defined is the binding’s, even under a raw class
+that loads it (<code>latexml_core::binding::store_setters</code>): a setter is rerouted only when (a) its NAME is in
+the surveyed table (<code>~/data/pk_agents/w23/frontmatter_stores/</code>, 655 TL
+classes; an explicit synonym table, never a name pattern — <code>ead</code> matches
+<code>\setoddhead</code>, <code>date</code> matches <code>\cref@updatelabeldata</code>) and (b) its macro
+BODY is a pure store of its argument (<code>#1</code>, or <code>#2</code> of an <code>[optional]{mandatory}</code> setter) — a
+check on the tokens, never a guess.
+Everything else the class defined is left alone, but its contact setters that print their argument as a title-page
+line (<code>reroute_in_place_contact_setters</code>, after a raw class or package: OXIDIZED_DESIGN_DIVERGENCES #936); the
+kernel’s own locked <code>\title</code>/<code>\author</code>/<code>\date</code>/<code>\thanks</code> are not in the table. A store is handed
+to the API as it is set, except one that annotates a creator (an affiliation,
+address, e-mail, ORCID) or makes one (an editor, a speaker), which is read at
+<code>\maketitle</code> where the author list exists. The class’s <code>\@maketitle</code> is deposited with the handed stores read as
+empty (<code>\lx@deposit@maketitle</code>, sect05.rs), so it adds only what the
+frontmatter does not carry.</p>
+<p>The table’s keywords setters reach <code>\lx@add@keywords</code> in two more shapes a class gives them (68n), each found
+by a check on what the class defined, never a name pattern: a one-argument setter the class defines only for
+its abstract’s body (<code>abstract_setter_definitions</code>: wiley-article.cls:446-489 inside the <code>\NewEnviron</code> its
+<code>\abstract</code> becomes, astlb.cls:199-205 inside the <code>{pazhabstract}</code> its <code>\@maketitle</code> typesets the abstract in,
+mtt.cls:176-181 inside its own <code>{abstract}</code>), which the kernel’s locked <code>{abstract}</code> never runs, so <code>\keywords</code>
+was undefined (330 of 373 run-353 papers: 1706.00599, 1801.08881, 1202.2889, astro-ph0306137, 1507.06302,
+2103.05801, 1310.0585); and an environment whose begin code only typesets a heading carrying the class’s label
+(<code>label_only_begin_code</code>: paper.cls:621-627 <code>\def\keywords{\small\paragraph*{\keywordname:}}</code>), which became a
+run-in <code>&lt;paragraph&gt;</code> where OmniBus made keywords (OmniBus.cls.ltxml:126-156). OXIDIZED_DESIGN_DIVERGENCES #634.</p>
+<p>Three more shapes of the table’s stores (95d): a table name a raw file made a token register that only printed code
+prints — in a macro the title page reaches or a page style it selects (<code>toks_store</code>: googlecloud.cls’s
+<code>\newtoks\correspondingauthor</code>, printed in its <code>\fancypagestyle{firststyle}</code> foot, 2607.06973; OD #939); the table
+setters a raw PACKAGE defines, rerouted at its end as a raw class’s are, unless a raw class’s read loads it
+(<code>reroute_raw_package_stores</code>: medima.sty’s dates under elsarticle, 2307.16262; OD #940); and a table setter that
+prints a mark before its pure store (<code>table_setter_stores</code>: astlb.cls’s <code>\email</code>, 1202.2889; OD #941). A raw package’s
+setter’s own <code>\@&lt;name&gt;</code> is a store only when code that never runs here reads it
+(<code>ClassReaders::read_where_nothing_runs</code>: rlj.sty’s <code>\@keywords</code>, read by an uncalled <code>\makeCover</code>, 2605.31044);
+a date or classification is named only by a label the code its title page reaches prints, in a branch’s <code>\else</code> too
+(medima.sty’s <code>\finalformhead~\@finalform</code>), or before the test (<code>Received: \ifx…\else\@received\fi</code>), a phrase
+ending at a <code>;</code> or <code>,</code> (pazha2.cls’s <code>…; revised \@revised</code>), else by its role’s default only where that word is
+printed right before the store (wiley2sp.cls’s <code>\receivedname</code>), else unnamed (OD #940).</p>
+<p>The unclaimed-text net (98c, OD #953; FIDELITY_CHARTER §4): any other store the class’s title-page code reads that
+the document set, that the title page prints and no kept run typeset, is a note of the author block, kept only for
+lines of 3 or more words no frontmatter field holds (<code>net_candidates</code>, <code>hand_net_stores</code>; insert.rs
+<code>keep_unclaimed_net_notes</code>): copernicus’s <code>\AB@affillist</code>, read only by its own <code>\@author</code> (sect05.rs
+<code>keep_class_author_reader</code>; 0712.1312), sig-alternate’s <code>\tntoks</code>, read only by its refused <code>{abstract}</code> (1206.6940).
+Below that floor (105a) a line of addresses alone is the e-mail contacts of the note’s creator (aaskaiid.sty’s
+<code>\email@toks</code>, 2606.27706, 2607.25721), a code’s or a date’s line is kept, and any other is counted in a Warning
+naming its store and words (2103.14934).</p>
+<p>Displaced text (99b, OD #955): a raw file’s affiliation or address setter that stores its argument for its title page
+among code of its own, which K11’s pure-store test leaves (rstransa’s <code>\gdef\@address{#1\ifaffbreak…\fi}</code>, iau’s
+numbered <code>\csname affil\the\affilcount\endcsname</code>), runs under a meaning recorder recording what it stored
+(<code>reroute_displaced_setters</code>); at <code>\maketitle</code> what the title page prints of it is the creators’ contacts, taken out of
+the deposit by that record (<code>route_and_hand_displaced</code>). An in-place setter with no line break of its own (iopjournal’s
+<code>\affil</code>) is the API’s where its call stands as a line (<code>run_in_contact_setter</code>). Each line of either is placed by
+its leading label (<code>contact_line_call</code>).</p>
+</div></details><h2 id="constants" class="section-header">Constants<a href="#constants" class="anchor">§</a></h2><dl class="item-table"><dt><a class="constant" href="constant.STORE_ENTRY_FROM.html" title="constant latexml_engine::frontmatter_stores::STORE_ENTRY_FROM">STORE_<wbr>ENTRY_<wbr>FROM</a></dt><dd>The state naming the store whose frontmatter entries are being queued (<code>\lx@store@from</code>): their title-page
+provenance (<code>frontmatter_push</code>, base_utilities <code>TITLE_PAGE_ENTRY</code>: a late abstract’s run holding one the title page
+may print, <a href="fn.title_page_may_print.html" title="fn latexml_engine::frontmatter_stores::title_page_may_print"><code>title_page_may_print</code></a>, is not moved, OXIDIZED_DESIGN_DIVERGENCES #903).</dd></dl><h2 id="functions" class="section-header">Functions<a href="#functions" class="anchor">§</a></h2><dl class="item-table"><dt><a class="fn" href="fn.before_title_page_runs.html" title="fn latexml_engine::frontmatter_stores::before_title_page_runs">before_<wbr>title_<wbr>page_<wbr>runs</a></dt><dd>Before the title-page deposit and replay of a raw class’s title page (<code>\lx@deposit@maketitle</code>, sect05.rs), in the
+state they meet: what the title page prints is decided by TeX, not read off its code. Each candidate store is given
+a sentinel value and the title page is digested speculatively (<code>title_page_probe_run</code>: output discarded,
+assignments undone, diagnostics discarded), once with letters sentinels and once with digits ones
+(<code>sentinel_runs</code>); a store both of whose sentinels reach the digested text is printed there (a numeric context —
+<code>\setcounter{page}{\@fp}</code> — consumes the digits, TeX’s recovery typesets the letters). A class’s own booleans (sigplanconf.cls:87-90 <code>\def\@true{TT}</code>, :1118 <code>\if \@copyrightwanted \@copyrightspace \fi</code>: 1603.03011 <code>[preprint,nocopyrightspace]</code>), its <code>\newif</code> switches (aiaa-tc.cls:199-200 under
+<code>[handcarry]</code>), its <code>\@ifundefined</code> and <code>\ifx…\@empty</code> tests and what it only puts in a box or a running head
+(<code>\setbox</code>, <code>\markboth</code>: 1704.03582, 1508.03599) are then what they are in pdflatex. Three runs:</dd><dt><a class="fn" href="fn.copy_title_page_prints.html" title="fn latexml_engine::frontmatter_stores::copy_title_page_prints">copy_<wbr>title_<wbr>page_<wbr>prints</a></dt><dd>Does a stand-in’s copy print the store <code>store</code> (<code>\@author</code>, <code>\@date</code>, <code>\@title</code>) — on its own title page (the
+<code>\maketitle</code>/<code>\@maketitle</code> it defined, <code>state::copy_provides_title_pages</code>) or in a page style a raw file defined, and
+every macro they reach that the copy (its own version of a name the binding owns, <code>copy_provides_overlaid_meaning</code>)
+or another raw file defined, read as <code>ClassReaders</code> reads a raw class (<code>reads_of</code>: <code>\csname…\endcsname</code>,
+<code>\@nameuse</code>), under the switches it set (a branch of a <code>\newif</code>/kvoptions flag that is now false is not printed,
+<code>reads_of_branches</code>)? A title-page name it reaches with neither a copy’s nor a raw file’s meaning is the
+binding’s, which prints the frontmatter: the copy’s <code>\renewcommand\maketitle{\begingroup\@maketitle\endgroup}</code>.
+<code>None</code> when no copy defined a title page (the binding’s prints the frontmatter). atlasdoc.cls (2019, 1902.05892)
+prints <code>\@date</code> only in its <code>\ATLAS@TitleHeader</code> (:567, under <code>\ifADOC@datetop</code>), which its <code>\maketitle</code> (:716)
+calls only without <code>cernpreprint</code>; <code>\@author</code> under the title.</dd><dt><a class="fn" href="fn.frontmatter_owned_stores.html" title="fn latexml_engine::frontmatter_stores::frontmatter_owned_stores">frontmatter_<wbr>owned_<wbr>stores</a></dt><dd>The stores whose values the frontmatter owns: the kernel’s title fields (and their short forms) and the raw class’s
+stores K11 hands to the frontmatter — the rerouted table setters’ (<code>reroute_raw_class_stores</code>) and the off-table
+ones (<code>survey_off_table_stores</code>). A class command run in place after the document body began puts them back as
+they were (sect05.rs <code>sealed_storing_run</code>, silent-loss #8).</dd><dt><a class="fn" href="fn.hand_net_begin_code_stores.html" title="fn latexml_engine::frontmatter_stores::hand_net_begin_code_stores">hand_<wbr>net_<wbr>begin_<wbr>code_<wbr>stores</a></dt><dd>When the document opens a frontmatter environment after the <code>\maketitle</code> that ran the net (<code>\lx@abstract@class@setters</code>,
+right after the class’s refused begin code is replayed there): the net’s candidates only that begin code prints
+(<code>lx_sentinel_net_begin</code>, <a href="fn.before_title_page_runs.html" title="fn latexml_engine::frontmatter_stores::before_title_page_runs"><code>before_title_page_runs</code></a>), as notes of the author block, their values as they are now
+(sig-alternate.cls:736-790’s <code>\the\tntoks</code> under <code>{abstract}</code>: 1206.6940, cs0405006). Once; not after the authors
+were sealed. A document that never opens the environment, or opens it before <code>\maketitle</code>, prints none of them
+(review rev98c S1: noabs, absfirst).</dd><dt><a class="fn" href="fn.harvest_stores.html" title="fn latexml_engine::frontmatter_stores::harvest_stores">harvest_<wbr>stores</a></dt><dd>At <code>\maketitle</code> (<code>\lx@store@defaults</code>), or at the frontmatter fallback in a document without
+one (<code>at_maketitle</code> false; again at insertion, a no-op once read): hand the captured stores not yet handed on to their
+frontmatter API, once — every creator-annotating or creator-making store the document set (in
+the order it set them), every named abstract or keywords store it set (<code>labelled_api</code>: the class’s store, which
+LaTeX expands at <code>\maketitle</code>), and, only at <code>\maketitle</code> (nothing reads one otherwise), any store left
+at its class default that the title page prints (lion-msc.cls:196-203 <code>\gdef\@affiliation{Huygens-Kamerlingh Onnes Laboratory, …}</code>, which pdflatex prints; not tlp.cls:697-728’s running-head placeholders,
+<code>ClassReaders::read_by_the_title_page</code>). A blank store is skipped. The creator-making stores go
+after the annotating ones when there is an author (their annotations stay the authors’), before
+them when there is none (an affiliation then annotates the speaker); a creator-annotating store
+with no creator at all is not handed on and stays the class’s to print.</dd><dt><a class="fn" href="fn.load_definitions.html" title="fn latexml_engine::frontmatter_stores::load_definitions">load_<wbr>definitions</a></dt><dt><a class="fn" href="fn.note_author_seen.html" title="fn latexml_engine::frontmatter_stores::note_author_seen">note_<wbr>author_<wbr>seen</a></dt><dd>Records the value of <code>\@author</code> as an author is queued (<code>queue_front_matter</code>): the
+prefix a binding’s <code>\@author</code> tail follows (<code>seen_author_tail</code>). The kernel <code>\author</code>’s own record
+(<code>\lx@author@handed</code>) clears it.</dd><dt><a class="fn" href="fn.note_document_hooks.html" title="fn latexml_engine::frontmatter_stores::note_document_hooks">note_<wbr>document_<wbr>hooks</a></dt><dd>Around the begin-document hooks (sect02.rs <code>\begin{document}</code>): before them (<code>before</code>), the Document-origin
+definitions that exist and the token registers’ contents; after them — <code>\AtBeginDocument</code>‘s, and the
+<code>begindocument/end</code> hook’s, which <code>\begin{document}</code> reads after itself (<code>\lx@net@document@hooks@done</code>) —, each
+definition they made is recorded as the hooks’ (<code>lx_net_hook_&lt;name&gt;</code>), and each token register they changed has the
+contents they left as its raw default (<code>lx_net_toks_default_&lt;name&gt;</code>): a class default for the net
+(<code>net_value_changed</code>), as a class’s <code>\AtBeginDocument{\setjournal{…}}</code> filling <code>\jtoks</code> is (review rev98c S2).</dd><dt><a class="fn" href="fn.refused_environment_definition.html" title="fn latexml_engine::frontmatter_stores::refused_environment_definition">refused_<wbr>environment_<wbr>definition</a></dt><dd>An undefined <code>token</code> that an open environment defines for its body in the class’s own definition, which the
+kernel’s environment shadows: a <code>\&lt;env&gt;</code> the class (or the document) made, which <code>\begin{&lt;env&gt;}</code> never runs when the
+kernel’s <code>\begin{&lt;env&gt;}</code> constructor is defined (sect01.rs), or one the kernel’s lock refused (<code>\lx@dropped@&lt;env&gt;</code>,
+state.rs) — bmcart.cls:712-717 <code>\def\@figure[#1]{…\def\csentence##1{…}</code>
+(its captions’ lead sentence, 2305.08284, 1611.01327, 1909.07026) and :1505-1510 <code>\def\abstract@fmt[#1]{… \def\parttitle##1{…}</code> (its structured abstract’s headings, 2007.07886, 1907.07303, 2106.01700): the definition
+is made where the call stands, as the class’s environment would have made it, and the call retried
+(<a href="../prelude/binding/kernel_autoload/fn.try_refused_environment_definition.html" title="fn latexml_engine::prelude::binding::kernel_autoload::try_refused_environment_definition"><code>latexml_core::binding::kernel_autoload::try_refused_environment_definition</code></a>). Searched: the open environments
+innermost first (the kernel’s abstract, no environment frame, first inside its body; a frontmatter field’s own
+setter before them) whose class code never ran (refused, or shadowed by a constructor), each one’s definitions and
+the commands they hand control to (<code>handed_to</code>), only definitions a raw file or the document made, outside any
+conditional, at most 64 per environment. An environment whose begin code ran is not searched:
+<code>\newenvironment{myenv}{\ifshowfoo\def\foo{…}\fi}{}</code> leaves <code>\foo</code> undefined in its body, as in pdflatex. Guard:
+<code>perfect_kernel_batch68v::an_environment_whose_code_ran_is_not_searched</code>. OXIDIZED_DESIGN_DIVERGENCES #647.</dd><dt><a class="fn" href="fn.reroute_displaced_setters.html" title="fn latexml_engine::frontmatter_stores::reroute_displaced_setters">reroute_<wbr>displaced_<wbr>setters</a></dt><dd>After a raw class, or a raw package read outside a raw class’s read, loaded, and K11 and the in-place reroute had
+their pick (apa6.cls’s <code>\affiliation</code>, a pure store K11 takes at the class’s end, after ftnright.sty its read loads;
+1710.02566): each table setter of an
+affiliation or an address (<code>displaced_api</code>) the file defined that stores its argument for the title page without
+printing it (<code>displaced_setter</code>) — rstransa.cls:1154 <code>\gdef\@address{#1\ifaffbreak\relax\end{splitaddress}\fi}</code>
+(2607.20672), alta.cls:58 <code>\gdef\alta@affiliation{#1}</code> (2609.39929), eph.cls:325
+<code>\def\epl@institute{\epl@institute@makeup{#1}}</code> (nlin0310001), iau.cls:1515’s numbered <code>\protected@xdef\csname affil\the\affilcount\endcsname{#1}</code> (2510.16758, 2607.25849): a store K11’s pure-store test (<code>pure_stores</code>, a <code>\@name</code>
+store) does not take, which the kernel’s <code>\maketitle</code> deposit (sect05.rs <code>\lx@deposit@maketitle</code>) printed into the
+body under the names, every author with no contact. The setter runs as the file’s own (<code>\lx@class@displaced@&lt;name&gt;</code>),
+under a meaning recorder (<code>\lx@displaced@begin</code>, <code>\lx@displaced@end</code>; state.rs <code>begin_meaning_recorder</code>, which
+nests, unlike an assignment journal: review rev99b B4) that records, of each macro it changed, the
+part that holds the call’s argument (sect05.rs <code>assigned_parts_holding</code>): the class’s own record of the value, its
+provenance. At <code>\maketitle</code> the title page’s speculative run decides which of them it prints
+(<code>route_and_hand_displaced</code>); those are the creators’ contacts through the API, and the deposit takes them out of
+the class’s macros (<code>\lx@replay@records</code>), never by their text. OXIDIZED_DESIGN_DIVERGENCES #955.</dd><dt><a class="fn" href="fn.reroute_in_place_contact_setters.html" title="fn latexml_engine::frontmatter_stores::reroute_in_place_contact_setters">reroute_<wbr>in_<wbr>place_<wbr>contact_<wbr>setters</a></dt><dd>After a raw file is read (a class, <code>\lx@class@loaded@raw</code>; a package, <code>\lx@package@loaded@raw</code>): each Frontmatter
+API contact setter it defined (<code>IN_PLACE_CONTACT_SETTERS</code>; still its own definition, not a binding’s, nor one K11
+rerouted as a store) that sets its argument as a title-page line (<code>in_place_contact_setter</code>) is the API’s, as the
+kernel’s locked <code>\author</code> stays the kernel’s against the file’s own: the line becomes a contact of the creators,
+keyed by its printed marks, and the file’s in-place typesetting of it is not kept — in pdflatex it prints under the
+names its <code>\author</code> printed, which the kernel’s <code>\author</code> made creators. Beyond Perl, which reads no shipped file and
+gives the paper OmniBus’s setters. OXIDIZED_DESIGN_DIVERGENCES #936.</dd><dt><a class="fn" href="fn.reroute_raw_class_stores.html" title="fn latexml_engine::frontmatter_stores::reroute_raw_class_stores">reroute_<wbr>raw_<wbr>class_<wbr>stores</a></dt><dd>Reroute every table setter the raw class <code>cls</code> defined as a store; a binding’s own setter
+(acmart.cls’s <code>\copyrightyear</code>, ported as the class’s store) is not the raw class’s.</dd><dt><a class="fn" href="fn.reroute_raw_package_stores.html" title="fn latexml_engine::frontmatter_stores::reroute_raw_package_stores">reroute_<wbr>raw_<wbr>package_<wbr>stores</a></dt><dd>After a raw package <code>sty</code> was read outside a raw class’s read (<code>\lx@package@loaded@raw</code>; one a raw class loads is
+that class’s, rerouted at its end with its title page known): the table setters it defined itself
+(<code>defined_by_a_raw_file</code>), as a raw class’s are — medima.sty:300-312 redefines elsarticle’s bound <code>\received</code>,
+<code>\accepted</code> (and <code>\finalform</code>, <code>\availableonline</code>, <code>\communicated</code>) as stores only its own refused <code>\maketitle</code>
+reads, so the paper’s “Article history” was lost (2307.16262; jcomp, prletters, ycviu, yjvci, cag, jasr ship the
+same shape under elsarticle). The class’s other K11 passes (its keywords environments, kernel field setters and
+off-table stores) stay the class’s.</dd><dt><a class="fn" href="fn.title_page_may_print.html" title="fn latexml_engine::frontmatter_stores::title_page_may_print">title_<wbr>page_<wbr>may_<wbr>print</a></dt><dd>May the class’s title page print the store of <code>\&lt;name&gt;</code>, whose entry carries its title-page provenance
+(OXIDIZED_DESIGN_DIVERGENCES #903)? Unless the speculative run of the whole title page was made and its sentinel did
+not reach it (<a href="fn.before_title_page_runs.html" title="fn latexml_engine::frontmatter_stores::before_title_page_runs"><code>before_title_page_runs</code></a>, <code>lx_sentinel_printed</code>): a store the class prints elsewhere — dmtcs’s
+<code>\keywords</code> after its abstract, 0905.1102 — is not the title page’s; with no run made, it may be.</dd></dl></section></div></main></body></html>

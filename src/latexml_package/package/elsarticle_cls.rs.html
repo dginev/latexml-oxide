@@ -1,84 +1,405 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/elsarticle_cls.rs`."><title>elsarticle_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>elsarticle_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/elsarticle_cls.rs`."><title>elsarticle_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>elsarticle_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span>latexml_core::definition::origin::{DefinitionOrigin, OriginGuard};
 <a href=#2 id=2 data-nosnippet>2</a>
-<a href=#3 id=3 data-nosnippet>3</a><span class="attr">#[rustfmt::skip]
-<a href=#4 id=4 data-nosnippet>4</a></span><span class="macro">LoadDefinitions!</span>({
-<a href=#5 id=5 data-nosnippet>5</a>  <span class="comment">// Perl: elsarticle.cls.ltxml
-<a href=#6 id=6 data-nosnippet>6</a>  // Generally ignorable options
-<a href=#7 id=7 data-nosnippet>7</a>  </span><span class="kw">for </span>option <span class="kw">in </span>[<span class="string">"preprint"</span>, <span class="string">"final"</span>, <span class="string">"review"</span>, <span class="string">"5p"</span>, <span class="string">"3p"</span>, <span class="string">"1p"</span>,
-<a href=#8 id=8 data-nosnippet>8</a>    <span class="string">"12pt"</span>, <span class="string">"11pt"</span>, <span class="string">"10pt"</span>, <span class="string">"endfloat"</span>, <span class="string">"endfloats"</span>, <span class="string">"numafflabel"</span>,
-<a href=#9 id=9 data-nosnippet>9</a>    <span class="string">"doubleblind"</span>, <span class="string">"oneside"</span>, <span class="string">"twoside"</span>, <span class="string">"onecolumn"</span>, <span class="string">"twocolumn"</span>,
-<a href=#10 id=10 data-nosnippet>10</a>    <span class="string">"longtitle"</span>, <span class="string">"lefttitle"</span>, <span class="string">"centertitle"</span>, <span class="string">"reversenotenum"</span>,
-<a href=#11 id=11 data-nosnippet>11</a>    <span class="string">"nopreprintline"</span>, <span class="string">"symbold"</span>, <span class="string">"ussrhead"</span>, <span class="string">"nameyear"</span>,
-<a href=#12 id=12 data-nosnippet>12</a>    <span class="string">"doublespacing"</span>, <span class="string">"reviewcopy"</span>].iter()
-<a href=#13 id=13 data-nosnippet>13</a>  {
-<a href=#14 id=14 data-nosnippet>14</a>    <span class="macro">DeclareOption!</span>(<span class="kw-2">*</span>option, <span class="prelude-val">None</span>);
-<a href=#15 id=15 data-nosnippet>15</a>  }
-<a href=#16 id=16 data-nosnippet>16</a>  <span class="comment">// Perl L28: times option pulls in txfonts
-<a href=#17 id=17 data-nosnippet>17</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"times"</span>, {
-<a href=#18 id=18 data-nosnippet>18</a>    <span class="macro">RequirePackage!</span>(<span class="string">"txfonts"</span>);
-<a href=#19 id=19 data-nosnippet>19</a>  });
-<a href=#20 id=20 data-nosnippet>20</a>  <span class="comment">// Perl L30-32: flags for later conditional behaviour
-<a href=#21 id=21 data-nosnippet>21</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"seceqn"</span>, { assign_value(<span class="string">"@seceqn"</span>, <span class="number">1i64</span>, Scope::Global); });
-<a href=#22 id=22 data-nosnippet>22</a>  <span class="macro">DeclareOption!</span>(<span class="string">"secthm"</span>, { assign_value(<span class="string">"@secthm"</span>, <span class="number">1i64</span>, Scope::Global); });
-<a href=#23 id=23 data-nosnippet>23</a>  <span class="macro">DeclareOption!</span>(<span class="string">"amsthm"</span>, { assign_value(<span class="string">"@amsthm"</span>, <span class="number">1i64</span>, Scope::Global); });
-<a href=#24 id=24 data-nosnippet>24</a>  <span class="comment">// Perl L33-35: natbib defaults
-<a href=#25 id=25 data-nosnippet>25</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"authoryear"</span>, { assign_value(<span class="string">"@biboptions"</span>, Stored::from(<span class="string">"round,authoryear"</span>), Scope::Global); });
-<a href=#26 id=26 data-nosnippet>26</a>  <span class="macro">DeclareOption!</span>(<span class="string">"number"</span>, { assign_value(<span class="string">"@biboptions"</span>, Stored::from(<span class="string">"numbers"</span>), Scope::Global); });
-<a href=#27 id=27 data-nosnippet>27</a>  <span class="macro">DeclareOption!</span>(<span class="string">"numbers"</span>, { assign_value(<span class="string">"@biboptions"</span>, Stored::from(<span class="string">"numbers"</span>), Scope::Global); });
-<a href=#28 id=28 data-nosnippet>28</a>  <span class="comment">// Pass other options to article
-<a href=#29 id=29 data-nosnippet>29</a>  </span><span class="macro">DeclareOption!</span>(<span class="prelude-val">None</span>, {
-<a href=#30 id=30 data-nosnippet>30</a>    <span class="macro">Digest!</span>(<span class="string">"\\PassOptionsToClass{\\CurrentOption}{article}"</span>)<span class="question-mark">?</span>;
-<a href=#31 id=31 data-nosnippet>31</a>  });
-<a href=#32 id=32 data-nosnippet>32</a>  <span class="comment">// elsarticle.cls actually defines `\newif\ifpreprint` (and sets it based
-<a href=#33 id=33 data-nosnippet>33</a>  // on the [preprint]/[final] options) — but our DeclareOption loop above
-<a href=#34 id=34 data-nosnippet>34</a>  // only stubs the OPTIONS as gobblers, not the underlying conditional.
-<a href=#35 id=35 data-nosnippet>35</a>  // Without it, journal-specific .sty files like ycviu.sty (L60, L298)
-<a href=#36 id=36 data-nosnippet>36</a>  // that test `\ifpreprint ... \fi` see undefined CS and cascade.
-<a href=#37 id=37 data-nosnippet>37</a>  // Witness 2311.04591 (1→0 error).
-<a href=#38 id=38 data-nosnippet>38</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\ifpreprint"</span>);
-<a href=#39 id=39 data-nosnippet>39</a>
-<a href=#40 id=40 data-nosnippet>40</a>  <span class="macro">ProcessOptions!</span>();
-<a href=#41 id=41 data-nosnippet>41</a>  <span class="macro">LoadClass!</span>(<span class="string">"article"</span>);
-<a href=#42 id=42 data-nosnippet>42</a>  <span class="comment">// Beyond-Perl fidelity (OXIDIZED_DESIGN #50): real elsarticle.cls L47 does an
-<a href=#43 id=43 data-nosnippet>43</a>  // unconditional `\RequirePackage[T1]{fontenc}`, so `&lt;`/`&gt;`/etc. are literal in
-<a href=#44 id=44 data-nosnippet>44</a>  // the PDF. Establish T1 so we don't fall back to OT1 (`&lt;`-&gt;¡, `&gt;`-&gt;¿). Perl
-<a href=#45 id=45 data-nosnippet>45</a>  // leaves it at OT1; divergence from Perl.
-<a href=#46 id=46 data-nosnippet>46</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"fontenc"</span>, options =&gt; <span class="macro">vec!</span>[<span class="string">"T1"</span>.to_string()]);
-<a href=#47 id=47 data-nosnippet>47</a>  <span class="macro">RequirePackage!</span>(<span class="string">"elsart_support_core"</span>);
-<a href=#48 id=48 data-nosnippet>48</a>  <span class="macro">RequirePackage!</span>(<span class="string">"fleqn"</span>);
-<a href=#49 id=49 data-nosnippet>49</a>  <span class="macro">RequirePackage!</span>(<span class="string">"graphicx"</span>);
-<a href=#50 id=50 data-nosnippet>50</a>  <span class="macro">RequirePackage!</span>(<span class="string">"pifont"</span>);
-<a href=#51 id=51 data-nosnippet>51</a>  <span class="comment">// natbib with biboptions
-<a href=#52 id=52 data-nosnippet>52</a>  </span><span class="kw">let </span>natbib_opts_stored = lookup_value(<span class="string">"@biboptions"</span>);
-<a href=#53 id=53 data-nosnippet>53</a>  <span class="kw">let </span>natbib_opts = <span class="kw">match </span><span class="kw-2">&amp;</span>natbib_opts_stored {
-<a href=#54 id=54 data-nosnippet>54</a>    <span class="prelude-val">Some</span>(Stored::String(s)) =&gt; with(<span class="kw-2">*</span>s, |s| s.to_string()),
-<a href=#55 id=55 data-nosnippet>55</a>    <span class="kw">_ </span>=&gt; <span class="string">"numbers"</span>.to_string(),
-<a href=#56 id=56 data-nosnippet>56</a>  };
-<a href=#57 id=57 data-nosnippet>57</a>  <span class="kw">let </span>natbib_opt_vec: Vec&lt;String&gt; = natbib_opts.split(<span class="string">','</span>).map(|s| s.trim().to_string()).collect();
-<a href=#58 id=58 data-nosnippet>58</a>  <span class="macro">RequirePackage!</span>(<span class="string">"natbib"</span>, options =&gt; natbib_opt_vec);
-<a href=#59 id=59 data-nosnippet>59</a>  <span class="macro">RequirePackage!</span>(<span class="string">"hyperref"</span>);
-<a href=#60 id=60 data-nosnippet>60</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\biboptions{}"</span>, <span class="string">"\\setcitestyle{#1}"</span>);
-<a href=#61 id=61 data-nosnippet>61</a>
-<a href=#62 id=62 data-nosnippet>62</a>  <span class="comment">// Perl L58-67: override {enumerate}/{itemize} to accept optional arg
-<a href=#63 id=63 data-nosnippet>63</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{enumerate}[]"</span>,
-<a href=#64 id=64 data-nosnippet>64</a>    <span class="string">"&lt;ltx:enumerate xml:id='#id'&gt;#body&lt;/ltx:enumerate&gt;"</span>,
-<a href=#65 id=65 data-nosnippet>65</a>    mode =&gt; <span class="string">"internal_vertical"</span>, locked =&gt; <span class="bool-val">true</span>,
-<a href=#66 id=66 data-nosnippet>66</a>    properties =&gt; { begin_itemize(<span class="string">"enumerate"</span>, <span class="prelude-val">Some</span>(<span class="string">"enum"</span>), BeginItemizeOptions::default())<span class="question-mark">? </span>});
-<a href=#67 id=67 data-nosnippet>67</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{itemize}[]"</span>,
-<a href=#68 id=68 data-nosnippet>68</a>    <span class="string">"&lt;ltx:itemize xml:id='#id'&gt;#body&lt;/ltx:itemize&gt;"</span>,
-<a href=#69 id=69 data-nosnippet>69</a>    mode =&gt; <span class="string">"internal_vertical"</span>, locked =&gt; <span class="bool-val">true</span>,
-<a href=#70 id=70 data-nosnippet>70</a>    properties =&gt; { begin_itemize(<span class="string">"itemize"</span>, <span class="prelude-val">Some</span>(<span class="string">"enum"</span>), BeginItemizeOptions::default())<span class="question-mark">? </span>});
-<a href=#71 id=71 data-nosnippet>71</a>
-<a href=#72 id=72 data-nosnippet>72</a>  <span class="comment">// Newer elsarticle.cls (2018+) added {graphicalabstract} and {highlights}
-<a href=#73 id=73 data-nosnippet>73</a>  // for Elsevier journal submissions. Real templates wrap a TikZ figure or
-<a href=#74 id=74 data-nosnippet>74</a>  // bullet list inside these and Elsevier's typesetter renders separately
-<a href=#75 id=75 data-nosnippet>75</a>  // from the main body. For LaTeXML's HTML output, treat them as
-<a href=#76 id=76 data-nosnippet>76</a>  // semantically-tagged note blocks. Driver: 1907.06674.
-<a href=#77 id=77 data-nosnippet>77</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{graphicalabstract}"</span>,
-<a href=#78 id=78 data-nosnippet>78</a>    <span class="string">"&lt;ltx:note role='graphicalabstract'&gt;#body&lt;/ltx:note&gt;"</span>,
-<a href=#79 id=79 data-nosnippet>79</a>    mode =&gt; <span class="string">"internal_vertical"</span>, locked =&gt; <span class="bool-val">true</span>);
-<a href=#80 id=80 data-nosnippet>80</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{highlights}"</span>,
-<a href=#81 id=81 data-nosnippet>81</a>    <span class="string">"&lt;ltx:note role='highlights'&gt;#body&lt;/ltx:note&gt;"</span>,
-<a href=#82 id=82 data-nosnippet>82</a>    mode =&gt; <span class="string">"internal_vertical"</span>, locked =&gt; <span class="bool-val">true</span>);
-<a href=#83 id=83 data-nosnippet>83</a>});
+<a href=#3 id=3 data-nosnippet>3</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<a href=#4 id=4 data-nosnippet>4</a>
+<a href=#5 id=5 data-nosnippet>5</a><span class="attr">#[rustfmt::skip]
+<a href=#6 id=6 data-nosnippet>6</a></span><span class="macro">LoadDefinitions!</span>({
+<a href=#7 id=7 data-nosnippet>7</a>  <span class="comment">// Perl: elsarticle.cls.ltxml
+<a href=#8 id=8 data-nosnippet>8</a>  // Generally ignorable options
+<a href=#9 id=9 data-nosnippet>9</a>  </span><span class="kw">for </span>option <span class="kw">in </span>[
+<a href=#10 id=10 data-nosnippet>10</a>    <span class="string">"12pt"</span>, <span class="string">"11pt"</span>, <span class="string">"10pt"</span>, <span class="string">"endfloat"</span>, <span class="string">"endfloats"</span>, <span class="string">"numafflabel"</span>,
+<a href=#11 id=11 data-nosnippet>11</a>    <span class="string">"oneside"</span>, <span class="string">"twoside"</span>, <span class="string">"onecolumn"</span>, <span class="string">"twocolumn"</span>,
+<a href=#12 id=12 data-nosnippet>12</a>    <span class="string">"lefttitle"</span>, <span class="string">"centertitle"</span>, <span class="string">"reversenotenum"</span>,
+<a href=#13 id=13 data-nosnippet>13</a>    <span class="string">"symbold"</span>, <span class="string">"ussrhead"</span>, <span class="string">"nameyear"</span>,
+<a href=#14 id=14 data-nosnippet>14</a>    <span class="string">"doublespacing"</span>, <span class="string">"reviewcopy"</span>].iter()
+<a href=#15 id=15 data-nosnippet>15</a>  {
+<a href=#16 id=16 data-nosnippet>16</a>    <span class="macro">DeclareOption!</span>(<span class="kw-2">*</span>option, <span class="prelude-val">None</span>);
+<a href=#17 id=17 data-nosnippet>17</a>  }
+<a href=#18 id=18 data-nosnippet>18</a>  <span class="comment">// elsarticle.cls defines `\newif\ifpreprint`, set by its options (true for `preprint` and `review`, false for
+<a href=#19 id=19 data-nosnippet>19</a>  // `final` and the journal layouts) and true by default (`\ExecuteOptions{…,preprint,…}`, elsarticle.cls:112).
+<a href=#20 id=20 data-nosnippet>20</a>  // Journal styles test it (ycviu.sty:60, 298); without it they saw an undefined CS and cascaded (2311.04591).
+<a href=#21 id=21 data-nosnippet>21</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\ifpreprint"</span>);
+<a href=#22 id=22 data-nosnippet>22</a>  <span class="macro">Digest!</span>(<span class="string">"\\global\\preprinttrue"</span>)<span class="question-mark">?</span>;
+<a href=#23 id=23 data-nosnippet>23</a>  <span class="comment">// elsarticle.cls:40-45 declares its other conditionals, set by its options (:74, 80, 81, 110). The Elsevier journal
+<a href=#24 id=24 data-nosnippet>24</a>  // styles test them while they load — jasr.sty:327, 356 `\iflongmktitle` inside the `\if@twocolumn` branches of its
+<a href=#25 id=25 data-nosnippet>25</a>  // `\maketitle` (cnf.sty, jcomp.sty alike): undefined, they unbalanced TeX's skip of the false branch, so the other
+<a href=#26 id=26 data-nosnippet>26</a>  // branch's `\maketitle` body ran at load (2609.23725, 23732, 27838, 39431, 09773, 31741, 39502). The one exception is
+<a href=#27 id=27 data-nosnippet>27</a>  // `\ifuseexplthreefunctions`, which the class sets when expl3.sty exists (:49-51): it stays false here, as the code it
+<a href=#28 id=28 data-nosnippet>28</a>  // selects (:327-) is not read; its affiliation keys are what `\affiliation` reads (`stm_affiliation`,
+<a href=#29 id=29 data-nosnippet>29</a>  // elsart_support_core_sty.rs).
+<a href=#30 id=30 data-nosnippet>30</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\newif\ifnonatbib\newif\iflongmktitle\newif\ifnopreprintline\newif\ifdoubleblind\newif\ifuseexplthreefunctions"</span>);
+<a href=#31 id=31 data-nosnippet>31</a>  <span class="macro">DeclareOption!</span>(<span class="string">"nonatbib"</span>, { <span class="macro">Digest!</span>(<span class="string">"\\global\\nonatbibtrue"</span>)<span class="question-mark">?</span>; });
+<a href=#32 id=32 data-nosnippet>32</a>  <span class="macro">DeclareOption!</span>(<span class="string">"nopreprintline"</span>, { <span class="macro">Digest!</span>(<span class="string">"\\global\\nopreprintlinetrue"</span>)<span class="question-mark">?</span>; });
+<a href=#33 id=33 data-nosnippet>33</a>  <span class="macro">DeclareOption!</span>(<span class="string">"longtitle"</span>, { <span class="macro">Digest!</span>(<span class="string">"\\global\\longmktitletrue"</span>)<span class="question-mark">?</span>; });
+<a href=#34 id=34 data-nosnippet>34</a>  <span class="macro">DeclareOption!</span>(<span class="string">"doubleblind"</span>, { <span class="macro">Digest!</span>(<span class="string">"\\doubleblindtrue"</span>)<span class="question-mark">?</span>; });
+<a href=#35 id=35 data-nosnippet>35</a>  <span class="comment">// elsarticle.cls:211-235: `\emailauthor{&lt;email&gt;}{&lt;name&gt;}` and `\urlauthor`, which `\ead` writes to the .aux and a
+<a href=#36 id=36 data-nosnippet>36</a>  // paper may call itself (2609.09773, 31741, 39502, before or after the author it names). The class collects them into
+<a href=#37 id=37 data-nosnippet>37</a>  // the first page's "Email address:" note as "&lt;email&gt; (&lt;name&gt;)": a frontmatter note, as printed, which no author's
+<a href=#38 id=38 data-nosnippet>38</a>  // contact would place right.
+<a href=#39 id=39 data-nosnippet>39</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\emailauthor Semiverbatim {}"</span>, <span class="string">"\\@add@frontmatter{ltx:note}[role=email]{\\texttt{#1} (#2)}"</span>);
+<a href=#40 id=40 data-nosnippet>40</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\urlauthor Semiverbatim {}"</span>, <span class="string">"\\@add@frontmatter{ltx:note}[role=url]{\\texttt{#1} (#2)}"</span>);
+<a href=#41 id=41 data-nosnippet>41</a>  <span class="comment">// The Elsevier journal styles' `\KWD` (jasr.sty:666 "Keywords:"), defined only inside their first-page printer,
+<a href=#42 id=42 data-nosnippet>42</a>  // which the frontmatter replaces: the keywords keep their label (2609.23725, 23732, 27838).
+<a href=#43 id=43 data-nosnippet>43</a>  </span>def_macro_noop(<span class="string">"\\KWD"</span>)<span class="question-mark">?</span>;
+<a href=#44 id=44 data-nosnippet>44</a>  <span class="comment">// elsarticle.cls:71-87: the journal layout, `\jtype` — `\def\jtype{0}` at load, `\xdef`'d by `preprint` (0),
+<a href=#45 id=45 data-nosnippet>45</a>  // `5p`, `3p`, `1p` — declared in the class's order, so the last declared of several wins. With article's
+<a href=#46 id=46 data-nosnippet>46</a>  // `\if@twocolumn` it decides fleqn below. The macro is the class's: journal styles test it (ecrc.sty:7, 23
+<a href=#47 id=47 data-nosnippet>47</a>  // `\ifnum\jtype=1`; 170 run-329 papers, 1011.4942).
+<a href=#48 id=48 data-nosnippet>48</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\jtype"</span>, <span class="string">"0"</span>);
+<a href=#49 id=49 data-nosnippet>49</a>  <span class="macro">DeclareOption!</span>(<span class="string">"preprint"</span>, {
+<a href=#50 id=50 data-nosnippet>50</a>    <span class="macro">Digest!</span>(<span class="string">"\\xdef\\jtype{0}\\global\\preprinttrue"</span>)<span class="question-mark">?</span>;
+<a href=#51 id=51 data-nosnippet>51</a>    assign_value(<span class="string">"@elsarticle@jtype"</span>, <span class="number">0i64</span>, Scope::Global);
+<a href=#52 id=52 data-nosnippet>52</a>  });
+<a href=#53 id=53 data-nosnippet>53</a>  <span class="comment">// In the class's order (elsarticle.cls:71-76): `final` and `review` after `preprint`.
+<a href=#54 id=54 data-nosnippet>54</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"final"</span>, { <span class="macro">Digest!</span>(<span class="string">"\\global\\preprintfalse"</span>)<span class="question-mark">?</span>; });
+<a href=#55 id=55 data-nosnippet>55</a>  <span class="macro">DeclareOption!</span>(<span class="string">"review"</span>, { <span class="macro">Digest!</span>(<span class="string">"\\global\\preprinttrue"</span>)<span class="question-mark">?</span>; });
+<a href=#56 id=56 data-nosnippet>56</a>  <span class="macro">DeclareOption!</span>(<span class="string">"5p"</span>, {
+<a href=#57 id=57 data-nosnippet>57</a>    <span class="macro">Digest!</span>(<span class="string">"\\xdef\\jtype{5}\\global\\preprintfalse"</span>)<span class="question-mark">?</span>;
+<a href=#58 id=58 data-nosnippet>58</a>    assign_value(<span class="string">"@elsarticle@jtype"</span>, <span class="number">5i64</span>, Scope::Global);
+<a href=#59 id=59 data-nosnippet>59</a>  });
+<a href=#60 id=60 data-nosnippet>60</a>  <span class="macro">DeclareOption!</span>(<span class="string">"3p"</span>, {
+<a href=#61 id=61 data-nosnippet>61</a>    <span class="macro">Digest!</span>(<span class="string">"\\xdef\\jtype{3}\\global\\preprintfalse"</span>)<span class="question-mark">?</span>;
+<a href=#62 id=62 data-nosnippet>62</a>    assign_value(<span class="string">"@elsarticle@jtype"</span>, <span class="number">3i64</span>, Scope::Global);
+<a href=#63 id=63 data-nosnippet>63</a>  });
+<a href=#64 id=64 data-nosnippet>64</a>  <span class="macro">DeclareOption!</span>(<span class="string">"1p"</span>, {
+<a href=#65 id=65 data-nosnippet>65</a>    <span class="macro">Digest!</span>(<span class="string">"\\xdef\\jtype{1}\\global\\preprintfalse"</span>)<span class="question-mark">?</span>;
+<a href=#66 id=66 data-nosnippet>66</a>    assign_value(<span class="string">"@elsarticle@jtype"</span>, <span class="number">1i64</span>, Scope::Global);
+<a href=#67 id=67 data-nosnippet>67</a>  });
+<a href=#68 id=68 data-nosnippet>68</a>  <span class="comment">// Perl L28: times option pulls in txfonts
+<a href=#69 id=69 data-nosnippet>69</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"times"</span>, {
+<a href=#70 id=70 data-nosnippet>70</a>    <span class="macro">RequirePackage!</span>(<span class="string">"txfonts"</span>);
+<a href=#71 id=71 data-nosnippet>71</a>  });
+<a href=#72 id=72 data-nosnippet>72</a>  <span class="comment">// Perl L30-32: flags for later conditional behaviour
+<a href=#73 id=73 data-nosnippet>73</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"seceqn"</span>, { assign_value(<span class="string">"@seceqn"</span>, <span class="number">1i64</span>, Scope::Global); });
+<a href=#74 id=74 data-nosnippet>74</a>  <span class="macro">DeclareOption!</span>(<span class="string">"secthm"</span>, { assign_value(<span class="string">"@secthm"</span>, <span class="number">1i64</span>, Scope::Global); });
+<a href=#75 id=75 data-nosnippet>75</a>  <span class="macro">DeclareOption!</span>(<span class="string">"amsthm"</span>, { assign_value(<span class="string">"@amsthm"</span>, <span class="number">1i64</span>, Scope::Global); });
+<a href=#76 id=76 data-nosnippet>76</a>  <span class="comment">// Perl L33-35: natbib defaults
+<a href=#77 id=77 data-nosnippet>77</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"authoryear"</span>, { assign_value(<span class="string">"@biboptions"</span>, Stored::from(<span class="string">"round,authoryear"</span>), Scope::Global); });
+<a href=#78 id=78 data-nosnippet>78</a>  <span class="macro">DeclareOption!</span>(<span class="string">"number"</span>, { assign_value(<span class="string">"@biboptions"</span>, Stored::from(<span class="string">"numbers"</span>), Scope::Global); });
+<a href=#79 id=79 data-nosnippet>79</a>  <span class="macro">DeclareOption!</span>(<span class="string">"numbers"</span>, { assign_value(<span class="string">"@biboptions"</span>, Stored::from(<span class="string">"numbers"</span>), Scope::Global); });
+<a href=#80 id=80 data-nosnippet>80</a>  <span class="comment">// Pass other options to article
+<a href=#81 id=81 data-nosnippet>81</a>  </span><span class="macro">DeclareOption!</span>(<span class="prelude-val">None</span>, {
+<a href=#82 id=82 data-nosnippet>82</a>    <span class="macro">Digest!</span>(<span class="string">"\\PassOptionsToClass{\\CurrentOption}{article}"</span>)<span class="question-mark">?</span>;
+<a href=#83 id=83 data-nosnippet>83</a>  });
+<a href=#84 id=84 data-nosnippet>84</a>
+<a href=#85 id=85 data-nosnippet>85</a>  <span class="macro">ProcessOptions!</span>();
+<a href=#86 id=86 data-nosnippet>86</a>  <span class="macro">LoadClass!</span>(<span class="string">"article"</span>);
+<a href=#87 id=87 data-nosnippet>87</a>  <span class="comment">// Beyond-Perl fidelity (OXIDIZED_DESIGN #50): real elsarticle.cls L47 does an
+<a href=#88 id=88 data-nosnippet>88</a>  // unconditional `\RequirePackage[T1]{fontenc}`, so `&lt;`/`&gt;`/etc. are literal in
+<a href=#89 id=89 data-nosnippet>89</a>  // the PDF. Establish T1 so we don't fall back to OT1 (`&lt;`-&gt;¡, `&gt;`-&gt;¿). Perl
+<a href=#90 id=90 data-nosnippet>90</a>  // leaves it at OT1; divergence from Perl.
+<a href=#91 id=91 data-nosnippet>91</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"fontenc"</span>, options =&gt; <span class="macro">vec!</span>[<span class="string">"T1"</span>.to_string()]);
+<a href=#92 id=92 data-nosnippet>92</a>  <span class="macro">RequirePackage!</span>(<span class="string">"elsart_support_core"</span>);
+<a href=#93 id=93 data-nosnippet>93</a>  <span class="comment">// elsarticle.cls:1303 `\newenvironment{frontmatter}{}{\maketitle}`: the class prints its title page at
+<a href=#94 id=94 data-nosnippet>94</a>  // `\end{frontmatter}`, where the core's empty primitive runs no `\maketitle` of ours. The print is noted there for the
+<a href=#95 id=95 data-nosnippet>95</a>  // title-page check (`\lx@note@title@page`, when no `\maketitle` noted one; nothing typeset), so a word the document
+<a href=#96 id=96 data-nosnippet>96</a>  // adds to the title page after its setters is counted (2312.03765's `\subjclass`, `\gdef\@title{\@oldtitle
+<a href=#97 id=97 data-nosnippet>97</a>  // \footnotetext{…}}`; OXIDIZED_DESIGN_DIVERGENCES #953 "107d").
+<a href=#98 id=98 data-nosnippet>98</a>  </span><span class="macro">Let!</span>(<span class="string">"\\end{frontmatter}"</span>, <span class="string">"\\lx@note@title@page"</span>);
+<a href=#99 id=99 data-nosnippet>99</a>  <span class="comment">// elsarticle.cls:656-668: a labelled `\address[a]{…}` goes to the address list under the names (`\elsaddress`), an
+<a href=#100 id=100 data-nosnippet>100</a>  // unlabelled one into the names list itself (`\@address` into `\elsauthors`), printed with the names, above every
+<a href=#101 id=101 data-nosnippet>101</a>  // labelled one — its print zone the names' (`_zone=names`, OXIDIZED_DESIGN_DIVERGENCES #954; 1710.03753, where the
+<a href=#102 id=102 data-nosnippet>102</a>  // unlabelled `University of North Dakota` went after the labelled department); the core's `\address` otherwise.
+<a href=#103 id=103 data-nosnippet>103</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\address OptionalSemiverbatim {}"</span>,
+<a href=#104 id=104 data-nosnippet>104</a>    <span class="string">"\\if\\relax\\detokenize{#1}\\relax\\expandafter\\@firstoftwo\\else\\expandafter\\@secondoftwo\\fi\
+<a href=#105 id=105 data-nosnippet>105</a>     {\\lx@els@shared{\\lx@add@contact[label={},role=address,_zone=names]}\
+<a href=#106 id=106 data-nosnippet>106</a>       {\\lx@add@contact[label={},role=address,annotate=run,_zone=names]}}\
+<a href=#107 id=107 data-nosnippet>107</a>     {\\lx@els@shared{\\lx@add@contact[label={#1},role=address]}\
+<a href=#108 id=108 data-nosnippet>108</a>       {\\lx@add@contact[label={#1},role=address,annotate=run]}}{#2}"</span>);
+<a href=#109 id=109 data-nosnippet>109</a>  <span class="comment">// elsarticle.cls:1200-1236 `\newproof`: the environment steps a counter as `\newtheorem` does (`\@prf` is
+<a href=#110 id=110 data-nosnippet>110</a>  // `\refstepcounter`, so a `\label` in it names that number; `\newproof{x}[y]{…}` steps y's, `\@oprf`; `{…}[within]`
+<a href=#111 id=111 data-nosnippet>111</a>  // numbers within it, `\@xnprf`), but its head (`\@beginproof`, `\@opargbeginproof`) prints only the name, in small
+<a href=#112 id=112 data-nosnippet>112</a>  // caps with a period ("Proof.", "Proof (note)."; :1229-1233), and the body is upright. Perl lets `\newproof` be
+<a href=#113 id=113 data-nosnippet>113</a>  // `\newtheorem` (elsart_support_core.sty.ltxml:208), bold heads "Proof 1." with an italic body (1304.5109,
+<a href=#114 id=114 data-nosnippet>114</a>  // 2606.18393's own numbered `\newtheorem{proof}`; KNOWN_PERL_ERRORS #1080). Here a numbered theorem whose title
+<a href=#115 id=115 data-nosnippet>115</a>  // prints the name alone. Each form declares under `\expandafter\@ifdefinable\csname #1\endcsname` (:1205, :1213,
+<a href=#116 id=116 data-nosnippet>116</a>  // :1220): a name already defined (amsthm's `proof`, loaded first) is LaTeX's "Command \proof already defined", and
+<a href=#117 id=117 data-nosnippet>117</a>  // the first definition stays (the reviewer's probe el2: pdflatex 1 error, amsthm's "Proof."). Guards
+<a href=#118 id=118 data-nosnippet>118</a>  // `perfect_kernel_batch78n::{elsarticle_newproof_head_is_unnumbered, elsarticle_newproof_steps_its_counter,
+<a href=#119 id=119 data-nosnippet>119</a>  // elsarticle_newproof_keeps_a_defined_proof}`.
+<a href=#120 id=120 data-nosnippet>120</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\newproof {}[]{}[]"</span>, sub[(thmset, otherthmset, typ, within)] {
+<a href=#121 id=121 data-nosnippet>121</a>    <span class="kw">let </span>name = thmset.to_string();
+<a href=#122 id=122 data-nosnippet>122</a>    <span class="kw">if </span>!engine::latex_constructs::is_definable_latex(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\{name}"</span>)))<span class="question-mark">?</span>.<span class="number">0 </span>{
+<a href=#123 id=123 data-nosnippet>123</a>      <span class="kw">let </span><span class="kw-2">mut </span>refusal = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\expandafter"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\@ifdefinable"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\csname"</span>)];
+<a href=#124 id=124 data-nosnippet>124</a>      refusal.extend(<span class="macro">ExplodeText!</span>(name));
+<a href=#125 id=125 data-nosnippet>125</a>      refusal.extend([<span class="macro">T_CS!</span>(<span class="string">"\\endcsname"</span>), <span class="macro">T_BEGIN!</span>(), <span class="macro">T_END!</span>()]);
+<a href=#126 id=126 data-nosnippet>126</a>      <span class="macro">Digest!</span>(Tokens::new(refusal))<span class="question-mark">?</span>;
+<a href=#127 id=127 data-nosnippet>127</a>      <span class="kw">return </span><span class="prelude-val">Ok</span>(Vec::new());
+<a href=#128 id=128 data-nosnippet>128</a>    }
+<a href=#129 id=129 data-nosnippet>129</a>    engine::latex_constructs::define_new_theorem(
+<a href=#130 id=130 data-nosnippet>130</a>      <span class="prelude-val">None</span>,
+<a href=#131 id=131 data-nosnippet>131</a>      thmset,
+<a href=#132 id=132 data-nosnippet>132</a>      otherthmset,
+<a href=#133 id=133 data-nosnippet>133</a>      <span class="prelude-val">Some</span>(typ),
+<a href=#134 id=134 data-nosnippet>134</a>      within,
+<a href=#135 id=135 data-nosnippet>135</a>      <span class="prelude-val">Some</span>(<span class="macro">Tokenize!</span>(<span class="string">"\\rmfamily"</span>)),
+<a href=#136 id=136 data-nosnippet>136</a>    )<span class="question-mark">?</span>;
+<a href=#137 id=137 data-nosnippet>137</a>    <span class="macro">DefMacro!</span>(
+<a href=#138 id=138 data-nosnippet>138</a>      <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\format@title@{name}"</span>)),
+<a href=#139 id=139 data-nosnippet>139</a>      parse_parameters(<span class="string">"{}"</span>, <span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\format@title@{name}"</span>)), <span class="bool-val">true</span>)<span class="question-mark">?</span>,
+<a href=#140 id=140 data-nosnippet>140</a>      <span class="prelude-val">Some</span>(ExpansionBody::Tokens(mouth::tokenize_internal(TeXString::assembled(<span class="macro">s!</span>(
+<a href=#141 id=141 data-nosnippet>141</a>        <span class="string">"{{\\normalfont\\scshape\\lx@tag{{\\csname lx@name@{name}\\endcsname}}{{\\ifx.#1.\\else\\space(#1)\\fi}}.}}"
+<a href=#142 id=142 data-nosnippet>142</a>      </span>))))),
+<a href=#143 id=143 data-nosnippet>143</a>      scope =&gt; <span class="prelude-val">Some</span>(Scope::Global)
+<a href=#144 id=144 data-nosnippet>144</a>    );
+<a href=#145 id=145 data-nosnippet>145</a>  });
+<a href=#146 id=146 data-nosnippet>146</a>  <span class="comment">// DIVERGENCE from Perl (#335, KPE #305): elsarticle.cls inputs fleqn.clo
+<a href=#147 id=147 data-nosnippet>147</a>  // only for `5p`, or `3p` with `twocolumn` (elsarticle.cls:1280, 1295); the
+<a href=#148 id=148 data-nosnippet>148</a>  // default `preprint`, `1p` and one-column `3p` centre their equations.
+<a href=#149 id=149 data-nosnippet>149</a>  // Perl's binding loads fleqn for every layout (2605.05858).
+<a href=#150 id=150 data-nosnippet>150</a>  </span><span class="kw">let </span>jtype = lookup_int(<span class="string">"@elsarticle@jtype"</span>);
+<a href=#151 id=151 data-nosnippet>151</a>  <span class="kw">if </span>jtype == <span class="number">5 </span>|| (jtype == <span class="number">3 </span>&amp;&amp; if_condition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\if@twocolumn"</span>))<span class="question-mark">?</span>.unwrap_or(<span class="bool-val">false</span>)) {
+<a href=#152 id=152 data-nosnippet>152</a>    <span class="macro">RequirePackage!</span>(<span class="string">"fleqn"</span>);
+<a href=#153 id=153 data-nosnippet>153</a>  }
+<a href=#154 id=154 data-nosnippet>154</a>  <span class="comment">// elsarticle.cls:1252-1300: the journal layouts `1p`, `3p` and `5p` load geometry and set the page with it, so
+<a href=#155 id=155 data-nosnippet>155</a>  // a document may call `\geometry`, `\newgeometry` and `\restoregeometry` (witnesses 2609.13883, 2404.14059,
+<a href=#156 id=156 data-nosnippet>156</a>  // 2103.06107, 1904.12395). Perl's binding has the load commented out (elsarticle.cls.ltxml:44,
+<a href=#157 id=157 data-nosnippet>157</a>  // KNOWN_PERL_ERRORS #629). The class's page size and one-column text width (1p: 384pt; 3p: 468pt) reach the
+<a href=#158 id=158 data-nosnippet>158</a>  // geometry binding, which sizes measured SVG pictures by them (OXIDIZED_DESIGN #99); the two-column layouts
+<a href=#159 id=159 data-nosnippet>159</a>  // (5p, and 3p with `twocolumn`) keep the class default, since our geometry has no column model and a full-width
+<a href=#160 id=160 data-nosnippet>160</a>  // picture there is a column wide (OXIDIZED_DESIGN #561).
+<a href=#161 id=161 data-nosnippet>161</a>  // (`1p` is set in one column whatever the options: elsarticle.cls:1265 `\if@twocolumn\global\@twocolumnfalse\fi`,
+<a href=#162 id=162 data-nosnippet>162</a>  // and :86-87 `\AtBeginDocument{\@twocolumnfalse}`)
+<a href=#163 id=163 data-nosnippet>163</a>  </span><span class="kw">if </span>jtype == <span class="number">1 </span>{
+<a href=#164 id=164 data-nosnippet>164</a>    <span class="macro">Digest!</span>(<span class="string">"\\global\\@twocolumnfalse"</span>)<span class="question-mark">?</span>;
+<a href=#165 id=165 data-nosnippet>165</a>  }
+<a href=#166 id=166 data-nosnippet>166</a>  <span class="kw">if </span><span class="macro">matches!</span>(jtype, <span class="number">1 </span>| <span class="number">3 </span>| <span class="number">5</span>) {
+<a href=#167 id=167 data-nosnippet>167</a>    <span class="macro">RequirePackage!</span>(<span class="string">"geometry"</span>);
+<a href=#168 id=168 data-nosnippet>168</a>    <span class="kw">let </span>twocolumn = jtype == <span class="number">5 </span>|| if_condition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\if@twocolumn"</span>))<span class="question-mark">?</span>.unwrap_or(<span class="bool-val">false</span>);
+<a href=#169 id=169 data-nosnippet>169</a>    <span class="kw">if </span>!twocolumn {
+<a href=#170 id=170 data-nosnippet>170</a>      <span class="kw">let </span>(textheight, textwidth, footskip) = <span class="kw">if </span>jtype == <span class="number">1 </span>{ (<span class="string">"562pt"</span>, <span class="string">"384pt"</span>, <span class="string">"12pt"</span>) } <span class="kw">else </span>{ (<span class="string">"622pt"</span>, <span class="string">"468pt"</span>, <span class="string">"18pt"</span>) };
+<a href=#171 id=171 data-nosnippet>171</a>      <span class="macro">Digest!</span>(mouth::tokenize_internal(TeXString::assembled(<span class="macro">s!</span>(
+<a href=#172 id=172 data-nosnippet>172</a>        <span class="string">"\\geometry{{twoside,paperwidth=210mm,paperheight=297mm,textheight={textheight},\
+<a href=#173 id=173 data-nosnippet>173</a>         textwidth={textwidth},centering,headheight=50pt,headsep=12pt,footskip={footskip}}}"
+<a href=#174 id=174 data-nosnippet>174</a>      </span>))))<span class="question-mark">?</span>;
+<a href=#175 id=175 data-nosnippet>175</a>    }
+<a href=#176 id=176 data-nosnippet>176</a>  }
+<a href=#177 id=177 data-nosnippet>177</a>  <span class="comment">// The page a float's panels are set in rows against (the panel grid rule, `declare_panel_page`) in the two-column
+<a href=#178 id=178 data-nosnippet>178</a>  // layouts, which keep the class default above: as pdflatex gives it, `5p` 522pt in two 252pt columns 18pt apart
+<a href=#179 id=179 data-nosnippet>179</a>  // (elsarticle.cls:1282-1296), `3p` with `twocolumn` 468pt in two 222pt columns 2pc apart (:1268-1280), and the
+<a href=#180 id=180 data-nosnippet>180</a>  // default `preprint` with `twocolumn` article's page (`standard_class_twocolumn_page`: 469pt in two of 229.5pt on
+<a href=#181 id=181 data-nosnippet>181</a>  // letter paper, elsarticle executing no paper option of article's). The registers' 345pt read as the page made a
+<a href=#182 id=182 data-nosnippet>182</a>  // `5p` `figure*` one column wide where the PDF sets it 2.071 (review rev79c2 finding 1). The one-column layouts
+<a href=#183 id=183 data-nosnippet>183</a>  // are the geometry's page (`1p` 384pt, `3p` 468pt).
+<a href=#184 id=184 data-nosnippet>184</a>  </span><span class="kw">if </span>if_condition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\if@twocolumn"</span>))<span class="question-mark">?</span>.unwrap_or(<span class="bool-val">false</span>) || jtype == <span class="number">5 </span>{
+<a href=#185 id=185 data-nosnippet>185</a>    <span class="kw">match </span>jtype {
+<a href=#186 id=186 data-nosnippet>186</a>      <span class="number">5 </span>=&gt; declare_panel_page(<span class="number">252.0</span>, <span class="number">522.0</span>, <span class="bool-val">true</span>),
+<a href=#187 id=187 data-nosnippet>187</a>      <span class="number">3 </span>=&gt; declare_panel_page(<span class="number">222.0</span>, <span class="number">468.0</span>, <span class="bool-val">true</span>),
+<a href=#188 id=188 data-nosnippet>188</a>      <span class="number">1 </span>=&gt; {},
+<a href=#189 id=189 data-nosnippet>189</a>      <span class="kw">_ </span>=&gt; {
+<a href=#190 id=190 data-nosnippet>190</a>        <span class="kw">let </span>(column, text) = standard_class_twocolumn_page();
+<a href=#191 id=191 data-nosnippet>191</a>        declare_panel_page(column, text, <span class="bool-val">true</span>);
+<a href=#192 id=192 data-nosnippet>192</a>      },
+<a href=#193 id=193 data-nosnippet>193</a>    }
+<a href=#194 id=194 data-nosnippet>194</a>  }
+<a href=#195 id=195 data-nosnippet>195</a>  <span class="macro">RequirePackage!</span>(<span class="string">"graphicx"</span>);
+<a href=#196 id=196 data-nosnippet>196</a>  <span class="macro">RequirePackage!</span>(<span class="string">"pifont"</span>);
+<a href=#197 id=197 data-nosnippet>197</a>  <span class="comment">// natbib with biboptions, unless the `nonatbib` option (elsarticle.cls:1242-1244): those papers bring biblatex or
+<a href=#198 id=198 data-nosnippet>198</a>  // another citation package of their own (2609.05849, 20719, 26003 biblatex; 19225, 23461 apacite). Perl's binding
+<a href=#199 id=199 data-nosnippet>199</a>  // loads natbib for every paper (KNOWN_PERL_ERRORS #501).
+<a href=#200 id=200 data-nosnippet>200</a>  </span><span class="kw">let </span>nonatbib = if_condition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\ifnonatbib"</span>))<span class="question-mark">?</span>.unwrap_or(<span class="bool-val">false</span>);
+<a href=#201 id=201 data-nosnippet>201</a>  <span class="kw">if </span>!nonatbib {
+<a href=#202 id=202 data-nosnippet>202</a>    <span class="kw">let </span>natbib_opts_stored = lookup_value(<span class="string">"@biboptions"</span>);
+<a href=#203 id=203 data-nosnippet>203</a>    <span class="kw">let </span>natbib_opts = <span class="kw">match </span><span class="kw-2">&amp;</span>natbib_opts_stored {
+<a href=#204 id=204 data-nosnippet>204</a>      <span class="prelude-val">Some</span>(Stored::String(s)) =&gt; with(<span class="kw-2">*</span>s, |s| s.to_string()),
+<a href=#205 id=205 data-nosnippet>205</a>      <span class="kw">_ </span>=&gt; <span class="string">"numbers"</span>.to_string(),
+<a href=#206 id=206 data-nosnippet>206</a>    };
+<a href=#207 id=207 data-nosnippet>207</a>    <span class="kw">let </span>natbib_opt_vec: Vec&lt;String&gt; = natbib_opts.split(<span class="string">','</span>).map(|s| s.trim().to_string()).collect();
+<a href=#208 id=208 data-nosnippet>208</a>    <span class="macro">RequirePackage!</span>(<span class="string">"natbib"</span>, options =&gt; natbib_opt_vec);
+<a href=#209 id=209 data-nosnippet>209</a>    <span class="comment">// (elsarticle.cls:1243 `\RequirePackage[\@biboptions]{natbib}`: the class's own load, so a document's repeat with
+<a href=#210 id=210 data-nosnippet>210</a>    // other options is LaTeX's "Option clash" — binding/content.rs `apply_new_options_on_reload`)
+<a href=#211 id=211 data-nosnippet>211</a>    </span><span class="macro">AssignValue!</span>(<span class="string">"natbib.sty:requested_by_binding" </span>=&gt; <span class="bool-val">false</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#212 id=212 data-nosnippet>212</a>  }
+<a href=#213 id=213 data-nosnippet>213</a>  <span class="macro">RequirePackage!</span>(<span class="string">"hyperref"</span>);
+<a href=#214 id=214 data-nosnippet>214</a>  <span class="comment">// elsarticle.cls:1247-1249 writes `\biboptions` to the .spl for natbib's options on the next run; without natbib
+<a href=#215 id=215 data-nosnippet>215</a>  // they select nothing.
+<a href=#216 id=216 data-nosnippet>216</a>  </span><span class="kw">if </span>nonatbib {
+<a href=#217 id=217 data-nosnippet>217</a>    def_macro_noop(<span class="string">"\\biboptions{}"</span>)<span class="question-mark">?</span>;
+<a href=#218 id=218 data-nosnippet>218</a>  } <span class="kw">else </span>{
+<a href=#219 id=219 data-nosnippet>219</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\biboptions{}"</span>, <span class="string">"\\setcitestyle{#1}"</span>);
+<a href=#220 id=220 data-nosnippet>220</a>  }
+<a href=#221 id=221 data-nosnippet>221</a>
+<a href=#222 id=222 data-nosnippet>222</a>  <span class="comment">// Perl L58-67: override {enumerate}/{itemize} to accept optional arg
+<a href=#223 id=223 data-nosnippet>223</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{enumerate}[]"</span>,
+<a href=#224 id=224 data-nosnippet>224</a>    <span class="string">"&lt;ltx:enumerate xml:id='#id'&gt;#body&lt;/ltx:enumerate&gt;"</span>,
+<a href=#225 id=225 data-nosnippet>225</a>    mode =&gt; <span class="string">"internal_vertical"</span>, locked =&gt; <span class="bool-val">true</span>,
+<a href=#226 id=226 data-nosnippet>226</a>    properties =&gt; { begin_itemize(<span class="string">"enumerate"</span>, <span class="prelude-val">Some</span>(<span class="string">"enum"</span>), BeginItemizeOptions::default())<span class="question-mark">? </span>});
+<a href=#227 id=227 data-nosnippet>227</a>  <span class="comment">// Perl binds the itemize to the `enum` counter (elsarticle.cls.ltxml:64, "not even sure what the
+<a href=#228 id=228 data-nosnippet>228</a>  // intended effect is"), so every item printed `1.`/`(a)`; elsarticle.cls:1143-1150 labels an
+<a href=#229 id=229 data-nosnippet>229</a>  // itemize by `\labelitem\romannumeral\the\@itemdepth` like the kernel. SURPASS (OXIDIZED_DESIGN
+<a href=#230 id=230 data-nosnippet>230</a>  // #346, KNOWN_PERL_ERRORS #360), pdflatex the oracle. Repro:
+<a href=#231 id=231 data-nosnippet>231</a>  // list-structure/elsarticle_itemize_has_bullets. Its optional argument is the level's label
+<a href=#232 id=232 data-nosnippet>232</a>  // (`\@Itemize[#1]` defines `\labelitem&lt;\@itemdepth&gt;`, elsarticle.cls:1143-1147).
+<a href=#233 id=233 data-nosnippet>233</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{itemize} OptionalUndigested"</span>,
+<a href=#234 id=234 data-nosnippet>234</a>    <span class="string">"&lt;ltx:itemize xml:id='#id'&gt;#body&lt;/ltx:itemize&gt;"</span>,
+<a href=#235 id=235 data-nosnippet>235</a>    mode =&gt; <span class="string">"internal_vertical"</span>, locked =&gt; <span class="bool-val">true</span>,
+<a href=#236 id=236 data-nosnippet>236</a>    properties =&gt; { begin_itemize(<span class="string">"itemize"</span>, <span class="prelude-val">Some</span>(<span class="string">"@item"</span>), BeginItemizeOptions::default())<span class="question-mark">? </span>},
+<a href=#237 id=237 data-nosnippet>237</a>    after_digest_begin =&gt; sub[whatsit] {
+<a href=#238 id=238 data-nosnippet>238</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(arg) = whatsit.get_arg(<span class="number">1</span>) {
+<a href=#239 id=239 data-nosnippet>239</a>        set_itemization_style(arg.raw_tokens(), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#240 id=240 data-nosnippet>240</a>      }
+<a href=#241 id=241 data-nosnippet>241</a>    });
+<a href=#242 id=242 data-nosnippet>242</a>
+<a href=#243 id=243 data-nosnippet>243</a>  <span class="comment">// Newer elsarticle.cls (2018+) added {graphicalabstract} and {highlights}
+<a href=#244 id=244 data-nosnippet>244</a>  // for Elsevier journal submissions. Real templates wrap a TikZ figure or
+<a href=#245 id=245 data-nosnippet>245</a>  // bullet list inside these and Elsevier's typesetter renders separately
+<a href=#246 id=246 data-nosnippet>246</a>  // from the main body. For LaTeXML's HTML output, treat them as
+<a href=#247 id=247 data-nosnippet>247</a>  // semantically-tagged note blocks. Driver: 1907.06674.
+<a href=#248 id=248 data-nosnippet>248</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{graphicalabstract}"</span>,
+<a href=#249 id=249 data-nosnippet>249</a>    <span class="string">"&lt;ltx:note role='graphicalabstract'&gt;#body&lt;/ltx:note&gt;"</span>,
+<a href=#250 id=250 data-nosnippet>250</a>    mode =&gt; <span class="string">"internal_vertical"</span>, locked =&gt; <span class="bool-val">true</span>);
+<a href=#251 id=251 data-nosnippet>251</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{highlights}"</span>,
+<a href=#252 id=252 data-nosnippet>252</a>    <span class="string">"&lt;ltx:note role='highlights'&gt;#body&lt;/ltx:note&gt;"</span>,
+<a href=#253 id=253 data-nosnippet>253</a>    mode =&gt; <span class="string">"internal_vertical"</span>, locked =&gt; <span class="bool-val">true</span>);
+<a href=#254 id=254 data-nosnippet>254</a>  <span class="comment">// elsarticle.cls (TL 2025 :153-176), the marks and notes under `\fnref`/`\corref`, which papers call directly (run
+<a href=#255 id=255 data-nosnippet>255</a>  // 340: `\fnmark` 4 of 35 sampled papers that ship elsarticle.cls, `\cormark` 3, `\nonumnote` 3): `\fnmark[&lt;keys&gt;]`
+<a href=#256 id=256 data-nosnippet>256</a>  // and `\cormark[&lt;key&gt;]` mark the author as `\fnref`/`\corref` do (:165 `\def\fnref#1{\fnmark[#1]}`), and
+<a href=#257 id=257 data-nosnippet>257</a>  // `\nonumnote{&lt;text&gt;}` (:153-155) adds an unnumbered title-page footnote: a note. Perl's elsarticle binding lacks
+<a href=#258 id=258 data-nosnippet>258</a>  // them. Witnesses 2609.13494, 2302.09410, 2106.01129.
+<a href=#259 id=259 data-nosnippet>259</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\fnmark[]"</span>, <span class="string">"\\fnref{#1}"</span>);
+<a href=#260 id=260 data-nosnippet>260</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\cormark[]"</span>, <span class="string">"\\corref{#1}"</span>);
+<a href=#261 id=261 data-nosnippet>261</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\nonumnote{}"</span>, <span class="string">"\\@add@frontmatter{ltx:note}[role=thanks]{#1}"</span>);
+<a href=#262 id=262 data-nosnippet>262</a>  <span class="comment">// The 2020+ copies' `\newpageafter{title|author|abstract}` (16 of 35 sampled), a page break in the title block: a
+<a href=#263 id=263 data-nosnippet>263</a>  // guess a paper's own definition replaces.
+<a href=#264 id=264 data-nosnippet>264</a>  </span>{
+<a href=#265 id=265 data-nosnippet>265</a>    <span class="kw">let </span>_guess = OriginGuard::new(DefinitionOrigin::Fallback);
+<a href=#266 id=266 data-nosnippet>266</a>    <span class="macro">RawTeX!</span>(<span class="string">r"\def\newpageafter#1{\gdef\@elsarticlenewpageafter{#1}}"</span>);
+<a href=#267 id=267 data-nosnippet>267</a>  }
+<a href=#268 id=268 data-nosnippet>268</a>  <span class="comment">// elsarticle.cls (TL 2025, v3.4c) internals and setters papers call (run-347 inventory: 122 papers with one
+<a href=#269 id=269 data-nosnippet>269</a>  // undefined), as the class defines them:
+<a href=#270 id=270 data-nosnippet>270</a>  // - :145 `\tnotemark[&lt;keys&gt;]`, the title's note marks, as `\tnoteref` (:146; 10 papers; 2101.08044, 2203.02441).
+<a href=#271 id=271 data-nosnippet>271</a>  // - :1021-1027 `\myfooter[&lt;align&gt;]&lt;text&gt;␣` (its text delimited by a space, as the class's) and `\myfooterfont`, the
+<a href=#272 id=272 data-nosnippet>272</a>  //   first page's footer: page furniture, stored (15 papers; 2209.12222, 2208.12518).
+<a href=#273 id=273 data-nosnippet>273</a>  // - :671-673 `\abstracttitle{&lt;title&gt;}`, the abstract's heading (12 papers; 2204.07076, 2104.02951): the class's
+<a href=#274 id=274 data-nosnippet>274</a>  //   `{abstract}` prints `\@elsarticleabstitle` (:676; older copies a literal "Abstract"), never `\abstractname`, so the
+<a href=#275 id=275 data-nosnippet>275</a>  //   frontmatter abstract takes its name from there (`\lx@abstract@name`), and `\abstractname` stays the document's;
+<a href=#276 id=276 data-nosnippet>276</a>  //   :737-740 `\keywordtitle`/`\keywordtitlesep`, stored.
+<a href=#277 id=277 data-nosnippet>277</a>  // - `\@journal` stays empty until `\journal` sets it (elsart_support_core_sty.rs): the class's :32 "Elsevier Ltd" is
+<a href=#278 id=278 data-nosnippet>278</a>  //   only its `\ProvidesClass` line's, :1302 `\let\@journal\@empty` resets it.
+<a href=#279 id=279 data-nosnippet>279</a>  // - :192-193 `\resetTitleCounters` over the title-note counters `tnote`, `fnote`, `cnote` (:150, :157, :182; 8; 2407.02308).
+<a href=#280 id=280 data-nosnippet>280</a>  // - :670, :736 `\absbox`/`\keybox` and :755-756 `\Columnwidth`, which papers' own title code fills and reads (6; 1311.6418).
+<a href=#281 id=281 data-nosnippet>281</a>  // - :126-131 `\elsLabel`/`\Newlabel`/`\elsRef`, the class's note labels (5; 2011.11672, 2602.18725), :117 `\comma`, :249 `\@eadauthor`,
+<a href=#282 id=282 data-nosnippet>282</a>  //   :242 `\pprinttitle`, :197-198 `\hashchar`/`\underscorechar`, :1073-1076 `\elsparagraph`.
+<a href=#283 id=283 data-nosnippet>283</a>  // Perl's binding defines none of them (KNOWN_PERL_ERRORS #723).
+<a href=#284 id=284 data-nosnippet>284</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\tnotemark[]"</span>, <span class="string">"\\tnoteref{#1}"</span>);
+<a href=#285 id=285 data-nosnippet>285</a>  <span class="macro">RawTeX!</span>(
+<a href=#286 id=286 data-nosnippet>286</a>    <span class="string">r"\let\@elsarticlemyfooter\@empty
+<a href=#287 id=287 data-nosnippet>287</a>\let\@elsarticlemyfooteralign\@empty
+<a href=#288 id=288 data-nosnippet>288</a>\def\myfooter[#1]#2 {\gdef\@elsarticlemyfooteralign{#1}\gdef\@elsarticlemyfooter{#2}}
+<a href=#289 id=289 data-nosnippet>289</a>\def\myfooterfont#1{\gdef\@myfooterfont{#1}}
+<a href=#290 id=290 data-nosnippet>290</a>\myfooterfont{\footnotesize\itshape}
+<a href=#291 id=291 data-nosnippet>291</a>\def\abstracttitle#1{\gdef\@elsarticleabstitle{#1}}
+<a href=#292 id=292 data-nosnippet>292</a>\abstracttitle{Abstract}
+<a href=#293 id=293 data-nosnippet>293</a>\def\lx@abstract@name{\format@title@abstract{\@elsarticleabstitle}}
+<a href=#294 id=294 data-nosnippet>294</a>\def\keywordtitle#1{\gdef\@elsarticlekwdtitle{#1}}
+<a href=#295 id=295 data-nosnippet>295</a>\def\keywordtitlesep#1{\gdef\@elsarticlekeywordtitlesep{#1}}
+<a href=#296 id=296 data-nosnippet>296</a>\keywordtitle{Keywords}
+<a href=#297 id=297 data-nosnippet>297</a>\keywordtitlesep{:\ }
+<a href=#298 id=298 data-nosnippet>298</a>\newcounter{tnote}\newcounter{fnote}\newcounter{cnote}
+<a href=#299 id=299 data-nosnippet>299</a>\def\resetTitleCounters{\c@cnote=0
+<a href=#300 id=300 data-nosnippet>300</a>   \c@fnote=0 \c@tnote=0 \c@footnote=0}
+<a href=#301 id=301 data-nosnippet>301</a>\newbox\absbox
+<a href=#302 id=302 data-nosnippet>302</a>\newbox\keybox
+<a href=#303 id=303 data-nosnippet>303</a>\newdimen\Columnwidth
+<a href=#304 id=304 data-nosnippet>304</a>\Columnwidth=\columnwidth
+<a href=#305 id=305 data-nosnippet>305</a>\def\elsLabel#1{\@bsphack\protected@write\@auxout{}%
+<a href=#306 id=306 data-nosnippet>306</a>         {\string\Newlabel{#1}{\@currentlabel}}\@esphack}
+<a href=#307 id=307 data-nosnippet>307</a>\def\Newlabel#1#2{\expandafter\xdef\csname X@#1\endcsname{#2}}
+<a href=#308 id=308 data-nosnippet>308</a>\def\elsRef#1{\@ifundefined{X@#1}{0}{\csname X@#1\endcsname}}
+<a href=#309 id=309 data-nosnippet>309</a>\let\comma\@empty
+<a href=#310 id=310 data-nosnippet>310</a>\newtoks\@eadauthor
+<a href=#311 id=311 data-nosnippet>311</a>\def\pprinttitle{}
+<a href=#312 id=312 data-nosnippet>312</a>\def\hashchar{\expandafter\@gobble\string\~}
+<a href=#313 id=313 data-nosnippet>313</a>\def\underscorechar{\expandafter\@gobble\string\_}
+<a href=#314 id=314 data-nosnippet>314</a>\newcommand\elsparagraph{\@startsection{paragraph}{4}{0\z@}%
+<a href=#315 id=315 data-nosnippet>315</a>           {10\p@ \@plus 6\p@ \@minus 3\p@}%
+<a href=#316 id=316 data-nosnippet>316</a>           {-6\p@}%
+<a href=#317 id=317 data-nosnippet>317</a>           {\normalfont\itshape}}"
+<a href=#318 id=318 data-nosnippet>318</a>  </span>);
+<a href=#319 id=319 data-nosnippet>319</a>  <span class="comment">// The older releases papers ship (run-347 inventory: 225 papers whose own elsarticle.cls defines a command this
+<a href=#320 id=320 data-nosnippet>320</a>  // binding lacked; 100 of the 225 copies are v1.21, 2010/06/11, 54 v1.20b), as v1.21 defines them (1303.2653's and
+<a href=#321 id=321 data-nosnippet>321</a>  // 1404.3867's copies; v3.x has none of them, so they are a release's guesses the document's own definition replaces,
+<a href=#322 id=322 data-nosnippet>322</a>  // `DefinitionOrigin::Fallback`):
+<a href=#323 id=323 data-nosnippet>323</a>  // - :238-239 `\email{&lt;address&gt;}`, an e-mail line under the authors, where v3 has `\ead` (85 papers; 1305.6441,
+<a href=#324 id=324 data-nosnippet>324</a>  //   1306.0018, 1404.3867): the last author's e-mail contact, as `\ead`.
+<a href=#325 id=325 data-nosnippet>325</a>  // - :234-236 `\correspondingauthor[&lt;mark&gt;]{&lt;text&gt;}`, a footnote naming the corresponding author: a note (8).
+<a href=#326 id=326 data-nosnippet>326</a>  // - :844 `{nomenclature}`, a boxed "Nomenclature" section (12; 1411.2181, 2103.08145), set as that section; :845-863
+<a href=#327 id=327 data-nosnippet>327</a>  //   `{deflist}` with `\defitem`/`\defterm`, a hanging definition list (13; 1303.2653, 1811.08269).
+<a href=#328 id=328 data-nosnippet>328</a>  // - 1404.3867's :797-808 `\normalMode`, which takes back `\appendix`'s numbering (23 papers; 2404.00783, 1411.0092): the
+<a href=#329 id=329 data-nosnippet>329</a>  //   appendices end there (`end_appendices`, as appendix.sty's `{appendices}` ends), and the sections after it are
+<a href=#330 id=330 data-nosnippet>330</a>  //   sections again.
+<a href=#331 id=331 data-nosnippet>331</a>  // The astronomical journal abbreviations (`\apj`, `\mnras`, `\aap`… 7 to 16 papers each) are aas_macros.sty pasted
+<a href=#332 id=332 data-nosnippet>332</a>  // into individual copies (0812.4232 `\def\apj{ApJ}`, 1504.02326, 1807.02064 `\newcommand*\apj{ApJ}`, 2003.05953,
+<a href=#333 id=333 data-nosnippet>333</a>  // 2401.03908 `\newcommand\mnras{\ref@jnl{MNRAS}}`), no elsarticle release's: aas_macros' binding provides them
+<a href=#334 id=334 data-nosnippet>334</a>  // where the paper's copy defines them, and only the names still undefined
+<a href=#335 id=335 data-nosnippet>335</a>  // (`shipped_class::provide_shipped_aas_macros`, shared with PoS, svmult, svjour3 and mdpi).
+<a href=#336 id=336 data-nosnippet>336</a>  // elsarticle.cls:1342-1353 (TL 2025 v3.4c; every v1.2 to v3.x copy papers ship alike): `\appendix` numbers the
+<a href=#337 id=337 data-nosnippet>337</a>  // sections "Appendix A" (`\thesection{\appendixname~\@Alph\c@section}`, the `\ref` text; its subsections "Appendix
+<a href=#338 id=338 data-nosnippet>338</a>  // A.1"), the equations within each appendix "A.1" (`\@addtoreset{equation}{section}`), the figures and tables "A.2"
+<a href=#339 id=339 data-nosnippet>339</a>  // (the letter before the running figure number, not reset). The kernel's `\appendix` (article_cls.rs `\@appendix`)
+<a href=#340 id=340 data-nosnippet>340</a>  // runs first for the `ltx:appendix` units, their tag the section number alone ("Appendix A", not the kernel's
+<a href=#341 id=341 data-nosnippet>341</a>  // `\appendixname` before it; as iopart's, iopart_support_sty.rs). A v1.0.1 copy (2008/05/22; 22 of 297 copies,
+<a href=#342 id=342 data-nosnippet>342</a>  // 0711.2399) has no `\appendix`, so the article's stands where the paper ships one. Perl's elsarticle.cls.ltxml leaves
+<a href=#343 id=343 data-nosnippet>343</a>  // the kernel's ("A", equation 4, figure 2; 2609.03753, 2608.23563): KNOWN_PERL_ERRORS #1098. Guard
+<a href=#344 id=344 data-nosnippet>344</a>  // `perfect_kernel_batch78q::appendix_counters_elsarticle`.
+<a href=#345 id=345 data-nosnippet>345</a>  </span><span class="kw">if </span><span class="kw">crate</span>::shipped_class::shipped_class_text(<span class="string">"elsarticle"</span>)<span class="question-mark">?
+<a href=#346 id=346 data-nosnippet>346</a>    </span>.as_deref()
+<a href=#347 id=347 data-nosnippet>347</a>    .is_none_or(|text| <span class="kw">crate</span>::shipped_class::class_code_contains(text, <span class="string">"\\renewcommand\\appendix"</span>))
+<a href=#348 id=348 data-nosnippet>348</a>  {
+<a href=#349 id=349 data-nosnippet>349</a>    <span class="macro">RawTeX!</span>(<span class="string">r"\renewcommand\appendix{\@appendix\par
+<a href=#350 id=350 data-nosnippet>350</a>  \setcounter{section}{0}\setcounter{subsection}{0}\setcounter{equation}{0}%
+<a href=#351 id=351 data-nosnippet>351</a>  \gdef\thefigure{\@Alph\c@section.\arabic{figure}}\gdef\thetable{\@Alph\c@section.\arabic{table}}%
+<a href=#352 id=352 data-nosnippet>352</a>  \gdef\thesection{\appendixname~\@Alph\c@section}\@addtoreset{equation}{section}%
+<a href=#353 id=353 data-nosnippet>353</a>  \gdef\theequation{\@Alph\c@section.\arabic{equation}}%
+<a href=#354 id=354 data-nosnippet>354</a>  \gdef\fnum@appendix{\thesection}\gdef\typerefnum@appendix{\thesection}}"</span>);
+<a href=#355 id=355 data-nosnippet>355</a>  }
+<a href=#356 id=356 data-nosnippet>356</a>  <span class="kw">crate</span>::shipped_class::provide_shipped_aas_macros(<span class="string">"elsarticle"</span>)<span class="question-mark">?</span>;
+<a href=#357 id=357 data-nosnippet>357</a>  {
+<a href=#358 id=358 data-nosnippet>358</a>    <span class="kw">let </span>_guess = OriginGuard::new(DefinitionOrigin::Fallback);
+<a href=#359 id=359 data-nosnippet>359</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\email{}"</span>, <span class="string">"\\lx@add@contact[role=email]{#1}"</span>);
+<a href=#360 id=360 data-nosnippet>360</a>    <span class="macro">DefMacro!</span>(
+<a href=#361 id=361 data-nosnippet>361</a>      <span class="string">"\\correspondingauthor[]{}"</span>,
+<a href=#362 id=362 data-nosnippet>362</a>      <span class="string">"\\@add@frontmatter{ltx:note}[role=corresponding]{#2}"
+<a href=#363 id=363 data-nosnippet>363</a>    </span>);
+<a href=#364 id=364 data-nosnippet>364</a>    <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@elsarticle@endappendices"</span>, sub[document, _args, _props] {
+<a href=#365 id=365 data-nosnippet>365</a>      document.maybe_close_element(<span class="string">"ltx:appendix"</span>)<span class="question-mark">?</span>;
+<a href=#366 id=366 data-nosnippet>366</a>    },
+<a href=#367 id=367 data-nosnippet>367</a>      before_digest =&gt; {
+<a href=#368 id=368 data-nosnippet>368</a>        end_appendices();
+<a href=#369 id=369 data-nosnippet>369</a>      });
+<a href=#370 id=370 data-nosnippet>370</a>    <span class="macro">RawTeX!</span>(
+<a href=#371 id=371 data-nosnippet>371</a>      <span class="string">r"\newenvironment{nomenclature}{\par\section*{Nomenclature}}{\par}
+<a href=#372 id=372 data-nosnippet>372</a>\def\deflist{\@ifnextchar[{\@deflist}{\@deflist[]}}
+<a href=#373 id=373 data-nosnippet>373</a>\newbox\defbox%
+<a href=#374 id=374 data-nosnippet>374</a>\newdimen\defboxdimen%
+<a href=#375 id=375 data-nosnippet>375</a>\def\@deflist[#1]{%
+<a href=#376 id=376 data-nosnippet>376</a>\setbox\defbox\hbox{#1:\quad}%
+<a href=#377 id=377 data-nosnippet>377</a>\defboxdimen\wd\defbox%
+<a href=#378 id=378 data-nosnippet>378</a>\def\tempa{#1}%
+<a href=#379 id=379 data-nosnippet>379</a>\par\addvspace{12pt plus2pt minus2pt}%
+<a href=#380 id=380 data-nosnippet>380</a>\setlength\parindent{0pt}%
+<a href=#381 id=381 data-nosnippet>381</a>\def\deftitle##1{{\noindent\itshape##1}\par}%
+<a href=#382 id=382 data-nosnippet>382</a>\ifx\tempa\@empty%
+<a href=#383 id=383 data-nosnippet>383</a>\def\defitem##1{\@hangfrom{##1\ }}%
+<a href=#384 id=384 data-nosnippet>384</a>\else%
+<a href=#385 id=385 data-nosnippet>385</a>\def\defitem##1{\@hangfrom{\hbox to \defboxdimen{##1\quad}}}%
+<a href=#386 id=386 data-nosnippet>386</a>\fi%
+<a href=#387 id=387 data-nosnippet>387</a>\def\defterm##1{##1\par}
+<a href=#388 id=388 data-nosnippet>388</a>}
+<a href=#389 id=389 data-nosnippet>389</a>\def\enddeflist{\par\addvspace{8pt plus2pt minus2pt}}
+<a href=#390 id=390 data-nosnippet>390</a>\newcommand\normalMode{\par\lx@elsarticle@endappendices
+<a href=#391 id=391 data-nosnippet>391</a>  \setcounter{section}{0}%
+<a href=#392 id=392 data-nosnippet>392</a>  \setcounter{subsection}{0}%
+<a href=#393 id=393 data-nosnippet>393</a>  \setcounter{equation}{0}
+<a href=#394 id=394 data-nosnippet>394</a>  \gdef\thefigure{\@Alph\c@section.\arabic{figure}}%
+<a href=#395 id=395 data-nosnippet>395</a>  \gdef\thetable{\@Alph\c@section.\arabic{table}}%
+<a href=#396 id=396 data-nosnippet>396</a>  \gdef\thesection{\@arabic\c@section}%
+<a href=#397 id=397 data-nosnippet>397</a>  \gdef\thesubsection{\c@section.\arabic{subsection}}%
+<a href=#398 id=398 data-nosnippet>398</a>  \@addtoreset{equation}{section}%
+<a href=#399 id=399 data-nosnippet>399</a>  \gdef\theequation{\@Alph\c@section.\arabic{equation}}%
+<a href=#400 id=400 data-nosnippet>400</a>  \addtocontents{toc}{\string\let\string\numberline\string\tmptocnumberline}{}{}
+<a href=#401 id=401 data-nosnippet>401</a>}"
+<a href=#402 id=402 data-nosnippet>402</a>    </span>);
+<a href=#403 id=403 data-nosnippet>403</a>  }
+<a href=#404 id=404 data-nosnippet>404</a>});
 </code></pre></div></section></main></body></html>

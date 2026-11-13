@@ -1,0 +1,31 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="figbib.sty — figure-source lists (the bibliography end)."><title>latexml_contrib::figbib_sty - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc mod"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Module figbib_sty</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../latexml_contrib/index.html">latexml_<wbr>contrib</a><span class="version">0.5.0</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Module figbib_<wbr>sty</a></h2><h3><a href="#functions">Module Items</a></h3><ul class="block"><li><a href="#functions" title="Functions">Functions</a></li></ul></section><div id="rustdoc-modnav"><h2 class="in-crate"><a href="../index.html">In crate latexml_<wbr>contrib</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../index.html">latexml_contrib</a></div><h1>Module <span>figbib_<wbr>sty</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../src/latexml_contrib/figbib_sty.rs.html#1-58">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>figbib.sty — figure-source lists (the bibliography end).</p>
+<p><code>figbib.sty:330</code> defines <code>\fbList{bibs}</code> to write its private
+<code>\figbib@aux</code> stream and <code>\InputIfFileExists</code> the <code>\jobname.figbib.bbl</code>
+(<code>:122</code>, <code>:335</code>) that only a bibtex run produces; the per-figure <code>\fbEpsfig</code> citations (<code>:271</code>)
+go to that private stream, never the kernel’s citation set, so from
+LaTeXML’s view nothing was cited and the list vanished at 0 errors (Perl
+raw-loads the same package, 11 errors, no list). Each figure command now also
+cites its key in the kernel’s set where it stands (<code>\lx@mark@nocite</code>, the mark
+<code>\nocite</code> defers to the document’s end — the entry’s “Cited by” is the
+figure, as pdflatex’s “Fig. n (p. n)”), and the command is the kernel’s
+<code>\lx@bibliography</code> (<code>latex_constructs.pool.ltxml:3942</code>), the bibunits
+interception (OXIDIZED_DESIGN_DIVERGENCES #87): the figures used, in figure
+order, as bibtex lists them, under the list’s own header (<code>\figbibListHeader</code>,
+<code>:65</code>, the <code>\section*</code> of <code>thefigbiblist</code>, <code>:348</code>). The figures are cited in a
+list of their own (<code>figbib</code>, the bibunits mechanism, #87), which the list reads,
+so the document’s citations stay out of it. Residuals: every citation also
+reaches the main list (Scan.pm:379-380), so a regular <code>\bibliography</code> beside the
+list sees the figure keys (“Missing bibkeys”, or a figure entry listed when the
+two share a <code>.bib</code>; RED index-bib/figbib_beside_a_bibliography); a later
+<code>\bibliographystyle</code> restyles the first bibliography, the list (sect11.rs
+<code>\bibstyle</code>).</p>
+<p>An <code>@fig</code> entry’s fields are what figbib.bst writes into <code>\figbibitem</code>
+(figbib.bst:19-35; figbib.sty:365-381 prints “<code>main</code>, <code>add</code>. \figbibFrom
+<code>source</code>”), which no BibTeX handler knew, so each entry printed as its number
+alone (<code>[1] [2] [3]</code>; figbib_sample recall 54 %; Perl has no list at all): the
+entry is a <code>misc</code>, <code>main</code> its title, <code>add</code> and <code>source</code> its notes, the source
+only <code>\if@figbibsource</code> (<code>nosource</code>, <code>:104-105</code>), an empty one not at all, the
+list in citation order (figbib.bst has no SORT), as Perl’s handler dispatch
+(BibTeX.pool.ltxml:135-157) finds <code>\bib@field@fig@&lt;field&gt;</code>. Repro
+index-bib/figbib_fig_entries_print_their_fields.</p>
+</div></details><h2 id="functions" class="section-header">Functions<a href="#functions" class="anchor">§</a></h2><dl class="item-table"><dt><a class="fn" href="fn.load_definitions.html" title="fn latexml_contrib::figbib_sty::load_definitions">load_<wbr>definitions</a></dt></dl></section></div></main></body></html>

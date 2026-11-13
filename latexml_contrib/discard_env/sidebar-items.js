@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["discard_env_body"]};
+window.SIDEBAR_ITEMS = {"fn":["discard_body_until_cs","discard_env_body","read_env_body_tokens"]};

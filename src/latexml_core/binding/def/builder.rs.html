@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/binding/def/builder.rs`."><title>builder.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../../static.files/src-script-813739b1.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/binding/def/</div>builder.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! `ConstructorBuilder` — the shared lowering for `DefConstructor`.
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/binding/def/builder.rs`."><title>builder.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../../" data-static-root-path="../../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../../static.files/src-script-813739b1.js"></script><script defer src="../../../../src-files.js"></script><script defer src="../../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/binding/def/</div>builder.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! `ConstructorBuilder` — the shared lowering for `DefConstructor`.
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! Both binding front-ends target this one builder, so they cannot drift:
 <a href=#4 id=4 data-nosnippet>4</a>//! * the compile-time `DefConstructor!` macro (`latexml_engine`), and
@@ -198,67 +198,76 @@
 <a href=#198 id=198 data-nosnippet>198</a>    <span class="string">"enterHorizontal" </span>=&gt; options.enter_horizontal = value.into_bool()<span class="question-mark">?</span>,
 <a href=#199 id=199 data-nosnippet>199</a>    <span class="string">"leaveHorizontal" </span>=&gt; options.leave_horizontal = value.into_bool()<span class="question-mark">?</span>,
 <a href=#200 id=200 data-nosnippet>200</a>    <span class="string">"captureBody" </span>=&gt; options.capture_body = value.into_bool()<span class="question-mark">?</span>,
-<a href=#201 id=201 data-nosnippet>201</a>    <span class="string">"alias" </span>=&gt; options.alias = <span class="prelude-val">Some</span>(value.into_string()<span class="question-mark">?</span>),
-<a href=#202 id=202 data-nosnippet>202</a>    <span class="kw">_ </span>=&gt; <span class="macro">log::debug!</span>(<span class="string">"binding builder: ignoring unknown scalar option '{key}'"</span>),
-<a href=#203 id=203 data-nosnippet>203</a>  }
-<a href=#204 id=204 data-nosnippet>204</a>  <span class="prelude-val">Ok</span>(())
-<a href=#205 id=205 data-nosnippet>205</a>}
-<a href=#206 id=206 data-nosnippet>206</a>
-<a href=#207 id=207 data-nosnippet>207</a><span class="doccomment">/// Accumulates an environment definition and installs it via [`def_environment`]
-<a href=#208 id=208 data-nosnippet>208</a>/// — the environment analog of [`ConstructorBuilder`], sharing the same
-<a href=#209 id=209 data-nosnippet>209</a>/// option machinery. The prototype is the `DefEnvironment!` shape:
-<a href=#210 id=210 data-nosnippet>210</a>/// `"{name}"` or `"{name}{}…"` (env name in braces, then the parameter list).
-<a href=#211 id=211 data-nosnippet>211</a></span><span class="kw">pub struct </span>EnvironmentBuilder {
-<a href=#212 id=212 data-nosnippet>212</a>  name:        String,
-<a href=#213 id=213 data-nosnippet>213</a>  paramlist:   <span class="prelude-ty">Option</span>&lt;Parameters&gt;,
-<a href=#214 id=214 data-nosnippet>214</a>  replacement: <span class="prelude-ty">Option</span>&lt;ReplacementClosure&gt;,
-<a href=#215 id=215 data-nosnippet>215</a>  options:     ConstructorOptions,
-<a href=#216 id=216 data-nosnippet>216</a>}
-<a href=#217 id=217 data-nosnippet>217</a>
-<a href=#218 id=218 data-nosnippet>218</a><span class="kw">impl </span>EnvironmentBuilder {
-<a href=#219 id=219 data-nosnippet>219</a>  <span class="doccomment">/// Parse the `{name}&lt;params&gt;` prototype (mirrors the `DefEnvironmentWO!`
-<a href=#220 id=220 data-nosnippet>220</a>  /// macro: extract the braced name, parse the remainder as parameters against
-<a href=#221 id=221 data-nosnippet>221</a>  /// a synthetic `\name` control sequence).
-<a href=#222 id=222 data-nosnippet>222</a>  </span><span class="kw">pub fn </span>new(proto: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
-<a href=#223 id=223 data-nosnippet>223</a>    <span class="kw">let </span><span class="kw-2">mut </span>proto = proto.trim_start().to_string();
-<a href=#224 id=224 data-nosnippet>224</a>    <span class="kw">let </span>name = extract_bracketed(<span class="kw-2">&amp;mut </span>proto, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Delimiter::Brace)).ok_or_else(|| {
-<a href=#225 id=225 data-nosnippet>225</a>      Error::from(<span class="macro">format!</span>(
-<a href=#226 id=226 data-nosnippet>226</a>        <span class="string">"DefEnvironment prototype must start with {{name}}: {proto:?}"
-<a href=#227 id=227 data-nosnippet>227</a>      </span>))
-<a href=#228 id=228 data-nosnippet>228</a>    })<span class="question-mark">?</span>;
-<a href=#229 id=229 data-nosnippet>229</a>    <span class="kw">let </span>paramlist_str = proto.trim_start().to_string();
-<a href=#230 id=230 data-nosnippet>230</a>    <span class="kw">let </span>paramlist = <span class="kw">if </span>paramlist_str.is_empty() {
-<a href=#231 id=231 data-nosnippet>231</a>      <span class="prelude-val">None
-<a href=#232 id=232 data-nosnippet>232</a>    </span>} <span class="kw">else </span>{
-<a href=#233 id=233 data-nosnippet>233</a>      <span class="kw">let </span>cs = <span class="macro">crate::T_CS!</span>(<span class="macro">crate::s!</span>(<span class="string">"\\{}"</span>, <span class="kw-2">&amp;</span>name));
-<a href=#234 id=234 data-nosnippet>234</a>      parse_parameters(<span class="kw-2">&amp;</span>paramlist_str, <span class="kw-2">&amp;</span>cs, <span class="bool-val">true</span>)<span class="question-mark">?
-<a href=#235 id=235 data-nosnippet>235</a>    </span>};
-<a href=#236 id=236 data-nosnippet>236</a>    <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
-<a href=#237 id=237 data-nosnippet>237</a>      name,
-<a href=#238 id=238 data-nosnippet>238</a>      paramlist,
-<a href=#239 id=239 data-nosnippet>239</a>      replacement: <span class="prelude-val">None</span>,
-<a href=#240 id=240 data-nosnippet>240</a>      options: ConstructorOptions::default(),
-<a href=#241 id=241 data-nosnippet>241</a>    })
-<a href=#242 id=242 data-nosnippet>242</a>  }
-<a href=#243 id=243 data-nosnippet>243</a>
-<a href=#244 id=244 data-nosnippet>244</a>  <span class="doccomment">/// Set the XML replacement (typically referencing `#body`).
-<a href=#245 id=245 data-nosnippet>245</a>  </span><span class="kw">pub fn </span>replacement(<span class="kw-2">mut </span><span class="self">self</span>, repl: ReplacementClosure) -&gt; <span class="self">Self </span>{
-<a href=#246 id=246 data-nosnippet>246</a>    <span class="self">self</span>.replacement = <span class="prelude-val">Some</span>(repl);
-<a href=#247 id=247 data-nosnippet>247</a>    <span class="self">self
-<a href=#248 id=248 data-nosnippet>248</a>  </span>}
-<a href=#249 id=249 data-nosnippet>249</a>
-<a href=#250 id=250 data-nosnippet>250</a>  <span class="doccomment">/// Apply a **scalar** option by name (shared map: `apply_scalar_option`).
-<a href=#251 id=251 data-nosnippet>251</a>  </span><span class="kw">pub fn </span>set_option(<span class="kw-2">mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str, value: OptionValue) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
-<a href=#252 id=252 data-nosnippet>252</a>    apply_scalar_option(<span class="kw-2">&amp;mut </span><span class="self">self</span>.options, key, value)<span class="question-mark">?</span>;
-<a href=#253 id=253 data-nosnippet>253</a>    <span class="prelude-val">Ok</span>(<span class="self">self</span>)
-<a href=#254 id=254 data-nosnippet>254</a>  }
-<a href=#255 id=255 data-nosnippet>255</a>
-<a href=#256 id=256 data-nosnippet>256</a>  <span class="macro">shared_hook_setters!</span>();
-<a href=#257 id=257 data-nosnippet>257</a>
-<a href=#258 id=258 data-nosnippet>258</a>  <span class="doccomment">/// Install the accumulated environment definition.
-<a href=#259 id=259 data-nosnippet>259</a>  </span><span class="kw">pub fn </span>install(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
-<a href=#260 id=260 data-nosnippet>260</a>    def_environment(<span class="self">self</span>.name, <span class="self">self</span>.paramlist, <span class="self">self</span>.replacement, <span class="self">self</span>.options);
-<a href=#261 id=261 data-nosnippet>261</a>    <span class="prelude-val">Ok</span>(())
-<a href=#262 id=262 data-nosnippet>262</a>  }
-<a href=#263 id=263 data-nosnippet>263</a>}
+<a href=#201 id=201 data-nosnippet>201</a>    <span class="string">"texGroup" </span>=&gt; {
+<a href=#202 id=202 data-nosnippet>202</a>      <span class="kw">let </span>name = value.into_string()<span class="question-mark">?</span>;
+<a href=#203 id=203 data-nosnippet>203</a>      options.tex_group =
+<a href=#204 id=204 data-nosnippet>204</a>        <span class="kw">crate</span>::definition::constructor::TexGroup::from_name(<span class="kw-2">&amp;</span>name).ok_or_else(|| {
+<a href=#205 id=205 data-nosnippet>205</a>          Error::from(<span class="macro">format!</span>(
+<a href=#206 id=206 data-nosnippet>206</a>            <span class="string">"texGroup must be none, semi_simple or box: {name:?}"
+<a href=#207 id=207 data-nosnippet>207</a>          </span>))
+<a href=#208 id=208 data-nosnippet>208</a>        })<span class="question-mark">?
+<a href=#209 id=209 data-nosnippet>209</a>    </span>},
+<a href=#210 id=210 data-nosnippet>210</a>    <span class="string">"alias" </span>=&gt; options.alias = <span class="prelude-val">Some</span>(value.into_string()<span class="question-mark">?</span>),
+<a href=#211 id=211 data-nosnippet>211</a>    <span class="kw">_ </span>=&gt; <span class="macro">log::debug!</span>(<span class="string">"binding builder: ignoring unknown scalar option '{key}'"</span>),
+<a href=#212 id=212 data-nosnippet>212</a>  }
+<a href=#213 id=213 data-nosnippet>213</a>  <span class="prelude-val">Ok</span>(())
+<a href=#214 id=214 data-nosnippet>214</a>}
+<a href=#215 id=215 data-nosnippet>215</a>
+<a href=#216 id=216 data-nosnippet>216</a><span class="doccomment">/// Accumulates an environment definition and installs it via [`def_environment`]
+<a href=#217 id=217 data-nosnippet>217</a>/// — the environment analog of [`ConstructorBuilder`], sharing the same
+<a href=#218 id=218 data-nosnippet>218</a>/// option machinery. The prototype is the `DefEnvironment!` shape:
+<a href=#219 id=219 data-nosnippet>219</a>/// `"{name}"` or `"{name}{}…"` (env name in braces, then the parameter list).
+<a href=#220 id=220 data-nosnippet>220</a></span><span class="kw">pub struct </span>EnvironmentBuilder {
+<a href=#221 id=221 data-nosnippet>221</a>  name:        String,
+<a href=#222 id=222 data-nosnippet>222</a>  paramlist:   <span class="prelude-ty">Option</span>&lt;Parameters&gt;,
+<a href=#223 id=223 data-nosnippet>223</a>  replacement: <span class="prelude-ty">Option</span>&lt;ReplacementClosure&gt;,
+<a href=#224 id=224 data-nosnippet>224</a>  options:     ConstructorOptions,
+<a href=#225 id=225 data-nosnippet>225</a>}
+<a href=#226 id=226 data-nosnippet>226</a>
+<a href=#227 id=227 data-nosnippet>227</a><span class="kw">impl </span>EnvironmentBuilder {
+<a href=#228 id=228 data-nosnippet>228</a>  <span class="doccomment">/// Parse the `{name}&lt;params&gt;` prototype (mirrors the `DefEnvironmentWO!`
+<a href=#229 id=229 data-nosnippet>229</a>  /// macro: extract the braced name, parse the remainder as parameters against
+<a href=#230 id=230 data-nosnippet>230</a>  /// a synthetic `\name` control sequence).
+<a href=#231 id=231 data-nosnippet>231</a>  </span><span class="kw">pub fn </span>new(proto: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+<a href=#232 id=232 data-nosnippet>232</a>    <span class="kw">let </span><span class="kw-2">mut </span>proto = proto.trim_start().to_string();
+<a href=#233 id=233 data-nosnippet>233</a>    <span class="kw">let </span>name = extract_bracketed(<span class="kw-2">&amp;mut </span>proto, <span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>Delimiter::Brace)).ok_or_else(|| {
+<a href=#234 id=234 data-nosnippet>234</a>      Error::from(<span class="macro">format!</span>(
+<a href=#235 id=235 data-nosnippet>235</a>        <span class="string">"DefEnvironment prototype must start with {{name}}: {proto:?}"
+<a href=#236 id=236 data-nosnippet>236</a>      </span>))
+<a href=#237 id=237 data-nosnippet>237</a>    })<span class="question-mark">?</span>;
+<a href=#238 id=238 data-nosnippet>238</a>    <span class="kw">let </span>paramlist_str = proto.trim_start().to_string();
+<a href=#239 id=239 data-nosnippet>239</a>    <span class="kw">let </span>paramlist = <span class="kw">if </span>paramlist_str.is_empty() {
+<a href=#240 id=240 data-nosnippet>240</a>      <span class="prelude-val">None
+<a href=#241 id=241 data-nosnippet>241</a>    </span>} <span class="kw">else </span>{
+<a href=#242 id=242 data-nosnippet>242</a>      <span class="kw">let </span>cs = <span class="macro">crate::T_CS!</span>(<span class="macro">crate::s!</span>(<span class="string">"\\{}"</span>, <span class="kw-2">&amp;</span>name));
+<a href=#243 id=243 data-nosnippet>243</a>      parse_parameters(<span class="kw-2">&amp;</span>paramlist_str, <span class="kw-2">&amp;</span>cs, <span class="bool-val">true</span>)<span class="question-mark">?
+<a href=#244 id=244 data-nosnippet>244</a>    </span>};
+<a href=#245 id=245 data-nosnippet>245</a>    <span class="prelude-val">Ok</span>(<span class="self">Self </span>{
+<a href=#246 id=246 data-nosnippet>246</a>      name,
+<a href=#247 id=247 data-nosnippet>247</a>      paramlist,
+<a href=#248 id=248 data-nosnippet>248</a>      replacement: <span class="prelude-val">None</span>,
+<a href=#249 id=249 data-nosnippet>249</a>      options: ConstructorOptions::default(),
+<a href=#250 id=250 data-nosnippet>250</a>    })
+<a href=#251 id=251 data-nosnippet>251</a>  }
+<a href=#252 id=252 data-nosnippet>252</a>
+<a href=#253 id=253 data-nosnippet>253</a>  <span class="doccomment">/// Set the XML replacement (typically referencing `#body`).
+<a href=#254 id=254 data-nosnippet>254</a>  </span><span class="kw">pub fn </span>replacement(<span class="kw-2">mut </span><span class="self">self</span>, repl: ReplacementClosure) -&gt; <span class="self">Self </span>{
+<a href=#255 id=255 data-nosnippet>255</a>    <span class="self">self</span>.replacement = <span class="prelude-val">Some</span>(repl);
+<a href=#256 id=256 data-nosnippet>256</a>    <span class="self">self
+<a href=#257 id=257 data-nosnippet>257</a>  </span>}
+<a href=#258 id=258 data-nosnippet>258</a>
+<a href=#259 id=259 data-nosnippet>259</a>  <span class="doccomment">/// Apply a **scalar** option by name (shared map: `apply_scalar_option`).
+<a href=#260 id=260 data-nosnippet>260</a>  </span><span class="kw">pub fn </span>set_option(<span class="kw-2">mut </span><span class="self">self</span>, key: <span class="kw-2">&amp;</span>str, value: OptionValue) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="self">Self</span>&gt; {
+<a href=#261 id=261 data-nosnippet>261</a>    apply_scalar_option(<span class="kw-2">&amp;mut </span><span class="self">self</span>.options, key, value)<span class="question-mark">?</span>;
+<a href=#262 id=262 data-nosnippet>262</a>    <span class="prelude-val">Ok</span>(<span class="self">self</span>)
+<a href=#263 id=263 data-nosnippet>263</a>  }
+<a href=#264 id=264 data-nosnippet>264</a>
+<a href=#265 id=265 data-nosnippet>265</a>  <span class="macro">shared_hook_setters!</span>();
+<a href=#266 id=266 data-nosnippet>266</a>
+<a href=#267 id=267 data-nosnippet>267</a>  <span class="doccomment">/// Install the accumulated environment definition.
+<a href=#268 id=268 data-nosnippet>268</a>  </span><span class="kw">pub fn </span>install(<span class="self">self</span>) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#269 id=269 data-nosnippet>269</a>    def_environment(<span class="self">self</span>.name, <span class="self">self</span>.paramlist, <span class="self">self</span>.replacement, <span class="self">self</span>.options);
+<a href=#270 id=270 data-nosnippet>270</a>    <span class="prelude-val">Ok</span>(())
+<a href=#271 id=271 data-nosnippet>271</a>  }
+<a href=#272 id=272 data-nosnippet>272</a>}
 </code></pre></div></section></main></body></html>

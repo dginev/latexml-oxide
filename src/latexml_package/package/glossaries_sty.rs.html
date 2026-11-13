@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/glossaries_sty.rs`."><title>glossaries_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>glossaries_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! glossaries.sty — strict translation of Perl `glossaries.sty.ltxml` (126L).
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/glossaries_sty.rs`."><title>glossaries_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>glossaries_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! glossaries.sty — strict translation of Perl `glossaries.sty.ltxml` (126L).
 <a href=#2 id=2 data-nosnippet>2</a>//!
 <a href=#3 id=3 data-nosnippet>3</a>//! Perl raw-loads real TL glossaries.sty (~8700 lines) via
 <a href=#4 id=4 data-nosnippet>4</a>//! `InputDefinitions(noltxml=&gt;1)`, then layers surgical overrides:
@@ -15,164 +15,456 @@
 <a href=#15 id=15 data-nosnippet>15</a>  prelude::<span class="kw-2">*</span>,
 <a href=#16 id=16 data-nosnippet>16</a>};
 <a href=#17 id=17 data-nosnippet>17</a>
-<a href=#18 id=18 data-nosnippet>18</a><span class="attr">#[rustfmt::skip]
-<a href=#19 id=19 data-nosnippet>19</a></span><span class="macro">LoadDefinitions!</span>({
-<a href=#20 id=20 data-nosnippet>20</a>  <span class="comment">// Pre-define \@gls@removedoption BEFORE glossaries.sty raw-loads.
-<a href=#21 id=21 data-nosnippet>21</a>  // Real glossaries.sty L688 defines it via \newcommand and calls
-<a href=#22 id=22 data-nosnippet>22</a>  // \PackageError on the obsolete acronym-style options (footnote /
-<a href=#23 id=23 data-nosnippet>23</a>  // description / smallcaps / smaller / dua) — but this fires during
-<a href=#24 id=24 data-nosnippet>24</a>  // package option processing, which happens DURING the raw-load. So
-<a href=#25 id=25 data-nosnippet>25</a>  // a post-load override is too late.
-<a href=#26 id=26 data-nosnippet>26</a>  //
-<a href=#27 id=27 data-nosnippet>27</a>  // Pre-defining means \newcommand's check (\ifx\foo\relax-style)
-<a href=#28 id=28 data-nosnippet>28</a>  // sees a non-relax definition and skips redefining. Use \def so
-<a href=#29 id=29 data-nosnippet>29</a>  // our override is in place when option processing fires.
-<a href=#30 id=30 data-nosnippet>30</a>  //
-<a href=#31 id=31 data-nosnippet>31</a>  // The "error" is a PDF-rendering hint, not a structural failure.
-<a href=#32 id=32 data-nosnippet>32</a>  // For XML output these options are moot. Downgrade to a warning.
-<a href=#33 id=33 data-nosnippet>33</a>  // Witness 2110.10804 (\usepackage[smallcaps]{glossaries}).
-<a href=#34 id=34 data-nosnippet>34</a>  // Perl emits 0 errors on the same input.
-<a href=#35 id=35 data-nosnippet>35</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@gls@removedoption{}"</span>,
-<a href=#36 id=36 data-nosnippet>36</a>    <span class="string">"\\PackageWarning{glossaries}{obsolete package option #1 ignored}"</span>);
-<a href=#37 id=37 data-nosnippet>37</a>
-<a href=#38 id=38 data-nosnippet>38</a>  <span class="comment">// Perl L18-19.
-<a href=#39 id=39 data-nosnippet>39</a>  </span><span class="macro">InputDefinitions!</span>(<span class="string">"glossaries"</span>, extension =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"sty"</span>)), noltxml =&gt; <span class="bool-val">true</span>);
-<a href=#40 id=40 data-nosnippet>40</a>  <span class="macro">RequirePackage!</span>(<span class="string">"xspace"</span>);
-<a href=#41 id=41 data-nosnippet>41</a>
-<a href=#42 id=42 data-nosnippet>42</a>  <span class="comment">// Perl L21: Silence pointless warnings.
-<a href=#43 id=43 data-nosnippet>43</a>  </span>def_macro_noop(<span class="string">"\\glsnoidxstripaccents"</span>)<span class="question-mark">?</span>;
-<a href=#44 id=44 data-nosnippet>44</a>
-<a href=#45 id=45 data-nosnippet>45</a>  <span class="comment">// Post-load: re-apply override in case raw-load's \newcommand
-<a href=#46 id=46 data-nosnippet>46</a>  // overrode our pre-def. \newcommand errors if already defined, but
-<a href=#47 id=47 data-nosnippet>47</a>  // \def silently overrides — but to be safe, reapply after load.
-<a href=#48 id=48 data-nosnippet>48</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@gls@removedoption{}"</span>,
-<a href=#49 id=49 data-nosnippet>49</a>    <span class="string">"\\PackageWarning{glossaries}{obsolete package option #1 ignored}"</span>);
-<a href=#50 id=50 data-nosnippet>50</a>
-<a href=#51 id=51 data-nosnippet>51</a>  <span class="comment">//======================================================================
-<a href=#52 id=52 data-nosnippet>52</a>  // Perl L26-37: wrap `\@gls@link` in `&lt;ltx:glossaryref&gt;`.
-<a href=#53 id=53 data-nosnippet>53</a>  </span><span class="macro">Let!</span>(<span class="string">"\\lx@orig@glossaries@gls@link"</span>, <span class="string">"\\@gls@link"</span>);
-<a href=#54 id=54 data-nosnippet>54</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@gls@link[]{}{}"</span>,
-<a href=#55 id=55 data-nosnippet>55</a>    <span class="string">"\\lx@glossaries@gls@link{\\csname glo@#2@type\\endcsname}{#2}{\\lx@orig@glossaries@gls@link[#1]{#2}{#3}}"</span>);
-<a href=#56 id=56 data-nosnippet>56</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@glossaries@gls@link{}{}{}"</span>,
-<a href=#57 id=57 data-nosnippet>57</a>    <span class="string">"&lt;ltx:glossaryref inlist='#list' key='#2'&gt;#3&lt;/ltx:glossaryref&gt;"</span>,
-<a href=#58 id=58 data-nosnippet>58</a>    enter_horizontal =&gt; <span class="bool-val">true</span>,
-<a href=#59 id=59 data-nosnippet>59</a>    properties =&gt; sub[args] {
-<a href=#60 id=60 data-nosnippet>60</a>      <span class="comment">// Perl: $list = ToString($_[1]); $list = 'main' unless $_[1];
-<a href=#61 id=61 data-nosnippet>61</a>      </span><span class="kw">let </span>list = args[<span class="number">0</span>].as_ref().map(|t| t.to_string()).unwrap_or_default();
-<a href=#62 id=62 data-nosnippet>62</a>      <span class="kw">let </span>list = <span class="kw">if </span>list.is_empty() { <span class="string">"main"</span>.to_string() } <span class="kw">else </span>{ list };
-<a href=#63 id=63 data-nosnippet>63</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"list" </span>=&gt; list))
-<a href=#64 id=64 data-nosnippet>64</a>    });
-<a href=#65 id=65 data-nosnippet>65</a>
-<a href=#66 id=66 data-nosnippet>66</a>  <span class="comment">//======================================================================
-<a href=#67 id=67 data-nosnippet>67</a>  // Perl L40-42: skip over hyperref wrapping; we handle it.
-<a href=#68 id=68 data-nosnippet>68</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\glsdohyperlink{}{}"</span>,   <span class="string">"#2"</span>);
-<a href=#69 id=69 data-nosnippet>69</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\glsdonohyperlink{}{}"</span>, <span class="string">"#2"</span>);
-<a href=#70 id=70 data-nosnippet>70</a>  <span class="macro">RawTeX!</span>(<span class="string">"\\glsdisablehyper"</span>);
-<a href=#71 id=71 data-nosnippet>71</a>
-<a href=#72 id=72 data-nosnippet>72</a>  <span class="comment">// Perl L45: This seems necessary, although it ought to be built in???
-<a href=#73 id=73 data-nosnippet>73</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\glspostlinkhook"</span>, <span class="string">"\\xspace"</span>);
-<a href=#74 id=74 data-nosnippet>74</a>
-<a href=#75 id=75 data-nosnippet>75</a>  <span class="comment">//======================================================================
-<a href=#76 id=76 data-nosnippet>76</a>  // Perl L52-83: hook `\@newglossaryentryposthook` so each entry produces
-<a href=#77 id=77 data-nosnippet>77</a>  // a structured `&lt;ltx:glossarydefinition&gt;` with one `&lt;ltx:glossaryphrase&gt;`
-<a href=#78 id=78 data-nosnippet>78</a>  // per field. The keys mirror Perl exactly; the closing `}` is required
-<a href=#79 id=79 data-nosnippet>79</a>  // because the hook body is interpreted as a single argument group.
-<a href=#80 id=80 data-nosnippet>80</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@newglossaryentryposthook"</span>,
-<a href=#81 id=81 data-nosnippet>81</a>    <span class="string">"\\lx@glossaries@newentry{\\@glo@type}{\\glslabel}{\
-<a href=#82 id=82 data-nosnippet>82</a>name=\\@glo@name,\
-<a href=#83 id=83 data-nosnippet>83</a>description=\\@glo@desc,\
-<a href=#84 id=84 data-nosnippet>84</a>symbol=\\@glo@symbol,\
-<a href=#85 id=85 data-nosnippet>85</a>symbolplural=\\@glo@symbolplural,\
-<a href=#86 id=86 data-nosnippet>86</a>text=\\@glo@text,\
-<a href=#87 id=87 data-nosnippet>87</a>plural=\\@glo@plural,\
-<a href=#88 id=88 data-nosnippet>88</a>first=\\@glo@first,\
-<a href=#89 id=89 data-nosnippet>89</a>firstplural=\\@glo@firstplural,\
-<a href=#90 id=90 data-nosnippet>90</a>sort=\\@glo@sort,\
-<a href=#91 id=91 data-nosnippet>91</a>counter=\\@glo@counter,\
-<a href=#92 id=92 data-nosnippet>92</a>see=\\@glo@see,\
-<a href=#93 id=93 data-nosnippet>93</a>parent=\\@glo@parent,\
-<a href=#94 id=94 data-nosnippet>94</a>prefix=\\@glo@prefix,\
-<a href=#95 id=95 data-nosnippet>95</a>short=\\@glo@short,\
-<a href=#96 id=96 data-nosnippet>96</a>shortplural=\\@glo@shortpl,\
-<a href=#97 id=97 data-nosnippet>97</a>long=\\@glo@long,\
-<a href=#98 id=98 data-nosnippet>98</a>longplural=\\@glo@longpl\
-<a href=#99 id=99 data-nosnippet>99</a>}"</span>);
-<a href=#100 id=100 data-nosnippet>100</a>
-<a href=#101 id=101 data-nosnippet>101</a>  <span class="comment">// Perl L85-97: DefConstructor that emits the structured definition.
-<a href=#102 id=102 data-nosnippet>102</a>  // Iterate the keyvals in sorted-by-key order and insert one
-<a href=#103 id=103 data-nosnippet>103</a>  // `&lt;ltx:glossaryphrase&gt;` per non-empty value (matches Perl's
-<a href=#104 id=104 data-nosnippet>104</a>  // `if ToString($value)` guard).
-<a href=#105 id=105 data-nosnippet>105</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@glossaries@newentry{}{} RequiredKeyVals"</span>,
-<a href=#106 id=106 data-nosnippet>106</a>    sub[document, args, _props] {
-<a href=#107 id=107 data-nosnippet>107</a>      <span class="kw">let </span>list = args[<span class="number">0</span>].as_ref().map(|d| d.to_string()).unwrap_or_else(|| <span class="string">"main"</span>.to_string());
-<a href=#108 id=108 data-nosnippet>108</a>      <span class="kw">let </span>key  = args[<span class="number">1</span>].as_ref().map(|d| d.to_string()).unwrap_or_default();
-<a href=#109 id=109 data-nosnippet>109</a>      document.open_element(<span class="string">"ltx:glossarydefinition"</span>,
-<a href=#110 id=110 data-nosnippet>110</a>        <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(<span class="string">"key" </span>=&gt; key, <span class="string">"inlist" </span>=&gt; list)), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#111 id=111 data-nosnippet>111</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(kv_digested) = args[<span class="number">2</span>].as_ref()
-<a href=#112 id=112 data-nosnippet>112</a>        &amp;&amp; <span class="kw">let </span>DigestedData::KeyVals(<span class="kw-2">ref </span>kvs) = <span class="kw-2">*</span>kv_digested.data() {
-<a href=#113 id=113 data-nosnippet>113</a>          <span class="comment">// Sort by role (Perl: `sort keys %$hash`).
-<a href=#114 id=114 data-nosnippet>114</a>          </span><span class="kw">let </span><span class="kw-2">mut </span>pairs: Vec&lt;(String, ArgWrap)&gt; = kvs.get_pairs()
-<a href=#115 id=115 data-nosnippet>115</a>            .map(|(k, v)| (k.clone(), v.clone())).collect();
-<a href=#116 id=116 data-nosnippet>116</a>          pairs.sort_by(|a, b| a.<span class="number">0</span>.cmp(<span class="kw-2">&amp;</span>b.<span class="number">0</span>));
-<a href=#117 id=117 data-nosnippet>117</a>          <span class="kw">for </span>(role, val) <span class="kw">in </span>pairs {
-<a href=#118 id=118 data-nosnippet>118</a>            <span class="kw">let </span>val_str = val.to_string();
-<a href=#119 id=119 data-nosnippet>119</a>            <span class="kw">if </span>val_str.is_empty() { <span class="kw">continue</span>; }
-<a href=#120 id=120 data-nosnippet>120</a>            <span class="comment">// Insert &lt;ltx:glossaryphrase key=key role=role&gt;val&lt;/ltx:glossaryphrase&gt;
-<a href=#121 id=121 data-nosnippet>121</a>            </span>document.open_element(<span class="string">"ltx:glossaryphrase"</span>,
-<a href=#122 id=122 data-nosnippet>122</a>              <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(<span class="string">"key" </span>=&gt; key.clone(), <span class="string">"role" </span>=&gt; role)), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#123 id=123 data-nosnippet>123</a>            document.absorb_string(<span class="kw-2">&amp;</span>val_str, <span class="kw-2">&amp;</span>NO_PROPERTIES)<span class="question-mark">?</span>;
-<a href=#124 id=124 data-nosnippet>124</a>            document.close_element(<span class="string">"ltx:glossaryphrase"</span>)<span class="question-mark">?</span>;
-<a href=#125 id=125 data-nosnippet>125</a>          }
-<a href=#126 id=126 data-nosnippet>126</a>        }
-<a href=#127 id=127 data-nosnippet>127</a>      document.close_element(<span class="string">"ltx:glossarydefinition"</span>)<span class="question-mark">?</span>;
-<a href=#128 id=128 data-nosnippet>128</a>    }
-<a href=#129 id=129 data-nosnippet>129</a>  );
-<a href=#130 id=130 data-nosnippet>130</a>
-<a href=#131 id=131 data-nosnippet>131</a>  <span class="comment">//======================================================================
-<a href=#132 id=132 data-nosnippet>132</a>  // Perl L101-104: redefine `\printglossary` to dispatch to our constructor.
-<a href=#133 id=133 data-nosnippet>133</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\printglossary"</span>,
-<a href=#134 id=134 data-nosnippet>134</a>    <span class="string">"\\global\\let\\warn@noprintglossary\\relax\
-<a href=#135 id=135 data-nosnippet>135</a>\\@ifnextchar[{\\lx@printglossary}{\\lx@printglossary[type=main]}"</span>);
-<a href=#136 id=136 data-nosnippet>136</a>  <span class="comment">// Perl L105.
-<a href=#137 id=137 data-nosnippet>137</a>  </span><span class="macro">Let!</span>(<span class="string">"\\printnoidxglossary"</span>, <span class="string">"\\printglossary"</span>);
-<a href=#138 id=138 data-nosnippet>138</a>
-<a href=#139 id=139 data-nosnippet>139</a>  <span class="comment">// Perl L107-117: emit `&lt;ltx:glossary&gt;` placeholder with computed id,
-<a href=#140 id=140 data-nosnippet>140</a>  // list, and title. The XSLT pipeline later expands it into the actual
-<a href=#141 id=141 data-nosnippet>141</a>  // rendered glossary entries.
-<a href=#142 id=142 data-nosnippet>142</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@printglossary OptionalKeyVals"</span>,
-<a href=#143 id=143 data-nosnippet>143</a>    <span class="string">"&lt;ltx:glossary xml:id='#id' lists='#list'&gt;\
-<a href=#144 id=144 data-nosnippet>144</a>&lt;ltx:title font='#titlefont' _force_font='true'&gt;#title&lt;/ltx:title&gt;\
-<a href=#145 id=145 data-nosnippet>145</a>&lt;/ltx:glossary&gt;"</span>,
-<a href=#146 id=146 data-nosnippet>146</a>    properties =&gt; sub[args] {
-<a href=#147 id=147 data-nosnippet>147</a>      <span class="comment">// Perl L113-117 — compute type (default 'main'), title (digest
-<a href=#148 id=148 data-nosnippet>148</a>      // \@glotype@&lt;type&gt;@title), and id (docid + ".glo." + cleaned type).
-<a href=#149 id=149 data-nosnippet>149</a>      </span><span class="kw">let </span>typ = args[<span class="number">0</span>].as_ref().and_then(|d| {
-<a href=#150 id=150 data-nosnippet>150</a>        <span class="kw">if let </span>DigestedData::KeyVals(<span class="kw-2">ref </span>kvs) = <span class="kw-2">*</span>d.data() {
-<a href=#151 id=151 data-nosnippet>151</a>          kvs.get_value(<span class="string">"type"</span>).map(|v| v.to_string())
-<a href=#152 id=152 data-nosnippet>152</a>        } <span class="kw">else </span>{ <span class="prelude-val">None </span>}
-<a href=#153 id=153 data-nosnippet>153</a>      }).unwrap_or_else(|| <span class="string">"main"</span>.to_string());
-<a href=#154 id=154 data-nosnippet>154</a>      <span class="kw">let </span>title_cs = <span class="macro">s!</span>(<span class="string">"\\@glotype@{typ}@title"</span>);
-<a href=#155 id=155 data-nosnippet>155</a>      <span class="kw">let </span>title = digest(<span class="macro">T_CS!</span>(<span class="kw-2">&amp;*</span>title_cs))
-<a href=#156 id=156 data-nosnippet>156</a>        .map(|d| d.to_string()).unwrap_or_default();
-<a href=#157 id=157 data-nosnippet>157</a>      <span class="kw">let </span>docid = lookup_value(<span class="string">"thedocument@ID"</span>)
-<a href=#158 id=158 data-nosnippet>158</a>        .and_then(|v| <span class="kw">match </span>v { Stored::String(s) =&gt; <span class="prelude-val">Some</span>(to_string(s)), <span class="kw">_ </span>=&gt; <span class="prelude-val">None </span>})
-<a href=#159 id=159 data-nosnippet>159</a>        .unwrap_or_default();
-<a href=#160 id=160 data-nosnippet>160</a>      <span class="kw">let </span>cleaned = typ.chars().filter(|c| c.is_alphanumeric()).collect::&lt;String&gt;();
-<a href=#161 id=161 data-nosnippet>161</a>      <span class="kw">let </span>id = <span class="kw">if </span>docid.is_empty() {
-<a href=#162 id=162 data-nosnippet>162</a>        <span class="macro">format!</span>(<span class="string">"glo.{cleaned}"</span>)
-<a href=#163 id=163 data-nosnippet>163</a>      } <span class="kw">else </span>{
-<a href=#164 id=164 data-nosnippet>164</a>        <span class="macro">format!</span>(<span class="string">"{docid}.glo.{cleaned}"</span>)
-<a href=#165 id=165 data-nosnippet>165</a>      };
-<a href=#166 id=166 data-nosnippet>166</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"list" </span>=&gt; typ, <span class="string">"id" </span>=&gt; id, <span class="string">"title" </span>=&gt; title))
-<a href=#167 id=167 data-nosnippet>167</a>    },
-<a href=#168 id=168 data-nosnippet>168</a>    after_digest =&gt; sub[whatsit] {
-<a href=#169 id=169 data-nosnippet>169</a>      <span class="comment">// Perl L114: noteBackmatterElement(&lt;whatsit&gt;, 'ltx:glossary');
-<a href=#170 id=170 data-nosnippet>170</a>      </span>note_backmatter_element(whatsit, <span class="string">"ltx:glossary"</span>);
-<a href=#171 id=171 data-nosnippet>171</a>    },
-<a href=#172 id=172 data-nosnippet>172</a>    before_construct =&gt; sub[doc, whatsit] {
-<a href=#173 id=173 data-nosnippet>173</a>      <span class="comment">// Perl L117: adjustBackmatterElement($_[0], $_[1]);
-<a href=#174 id=174 data-nosnippet>174</a>      </span>adjust_backmatter_element(doc, whatsit)<span class="question-mark">?</span>;
-<a href=#175 id=175 data-nosnippet>175</a>    }
-<a href=#176 id=176 data-nosnippet>176</a>  );
-<a href=#177 id=177 data-nosnippet>177</a>});
+<a href=#18 id=18 data-nosnippet>18</a><span class="doccomment">/// The State key of the glossary entries referenced so far (`\gls`, `\glsadd`; global).
+<a href=#19 id=19 data-nosnippet>19</a></span><span class="kw">const </span>GLO_REFERENCED: <span class="kw-2">&amp;</span>str = <span class="string">"lx@glossaries@referenced"</span>;
+<a href=#20 id=20 data-nosnippet>20</a><span class="doccomment">/// The State key set once a glossary is printed (`\printglossary`; global).
+<a href=#21 id=21 data-nosnippet>21</a></span><span class="kw">const </span>GLO_PRINTED: <span class="kw-2">&amp;</span>str = <span class="string">"lx@glossaries@printed"</span>;
+<a href=#22 id=22 data-nosnippet>22</a>
+<a href=#23 id=23 data-nosnippet>23</a><span class="doccomment">/// The label an entry's held definition diagnostics answer to (logger.rs `defer_to_label`).
+<a href=#24 id=24 data-nosnippet>24</a></span><span class="kw">fn </span>glossary_entry_label(key: <span class="kw-2">&amp;</span>str) -&gt; String { <span class="macro">s!</span>(<span class="string">"glossary:{key}"</span>) }
+<a href=#25 id=25 data-nosnippet>25</a>
+<a href=#26 id=26 data-nosnippet>26</a><span class="doccomment">/// An entry referenced (`\gls`, `\glsadd`): a glossary printed or yet to be prints its definition, whose held
+<a href=#27 id=27 data-nosnippet>27</a>/// diagnostics are then raised (`\lx@glossaries@newentry`).
+<a href=#28 id=28 data-nosnippet>28</a></span><span class="kw">fn </span>glossary_entry_referenced(key: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#29 id=29 data-nosnippet>29</a>  <span class="kw">if </span>lookup_bool(GLO_PRINTED) {
+<a href=#30 id=30 data-nosnippet>30</a>    util::logger::note_label_use(<span class="kw-2">&amp;</span>glossary_entry_label(key), <span class="string">"glossary"</span>);
+<a href=#31 id=31 data-nosnippet>31</a>  } <span class="kw">else </span>{
+<a href=#32 id=32 data-nosnippet>32</a>    push_value(GLO_REFERENCED, Stored::from(key.to_string()))<span class="question-mark">?</span>;
+<a href=#33 id=33 data-nosnippet>33</a>  }
+<a href=#34 id=34 data-nosnippet>34</a>  <span class="prelude-val">Ok</span>(())
+<a href=#35 id=35 data-nosnippet>35</a>}
+<a href=#36 id=36 data-nosnippet>36</a>
+<a href=#37 id=37 data-nosnippet>37</a><span class="attr">#[rustfmt::skip]
+<a href=#38 id=38 data-nosnippet>38</a></span><span class="macro">LoadDefinitions!</span>({
+<a href=#39 id=39 data-nosnippet>39</a>  <span class="comment">// Pre-define \@gls@removedoption BEFORE glossaries.sty raw-loads.
+<a href=#40 id=40 data-nosnippet>40</a>  // Real glossaries.sty L688 defines it via \newcommand and calls
+<a href=#41 id=41 data-nosnippet>41</a>  // \PackageError on the obsolete acronym-style options (footnote /
+<a href=#42 id=42 data-nosnippet>42</a>  // description / smallcaps / smaller / dua) — but this fires during
+<a href=#43 id=43 data-nosnippet>43</a>  // package option processing, which happens DURING the raw-load. So
+<a href=#44 id=44 data-nosnippet>44</a>  // a post-load override is too late.
+<a href=#45 id=45 data-nosnippet>45</a>  //
+<a href=#46 id=46 data-nosnippet>46</a>  // Pre-defining means \newcommand's check (\ifx\foo\relax-style)
+<a href=#47 id=47 data-nosnippet>47</a>  // sees a non-relax definition and skips redefining. Use \def so
+<a href=#48 id=48 data-nosnippet>48</a>  // our override is in place when option processing fires.
+<a href=#49 id=49 data-nosnippet>49</a>  //
+<a href=#50 id=50 data-nosnippet>50</a>  // The "error" is a PDF-rendering hint, not a structural failure.
+<a href=#51 id=51 data-nosnippet>51</a>  // For XML output these options are moot. Downgrade to a warning.
+<a href=#52 id=52 data-nosnippet>52</a>  // Witness 2110.10804 (\usepackage[smallcaps]{glossaries}).
+<a href=#53 id=53 data-nosnippet>53</a>  // Perl emits 0 errors on the same input.
+<a href=#54 id=54 data-nosnippet>54</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@gls@removedoption{}"</span>,
+<a href=#55 id=55 data-nosnippet>55</a>    <span class="string">"\\PackageWarning{glossaries}{obsolete package option #1 ignored}"</span>);
+<a href=#56 id=56 data-nosnippet>56</a>
+<a href=#57 id=57 data-nosnippet>57</a>  <span class="comment">// Perl L18-19.
+<a href=#58 id=58 data-nosnippet>58</a>  </span><span class="macro">InputDefinitions!</span>(<span class="string">"glossaries"</span>, extension =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"sty"</span>)), noltxml =&gt; <span class="bool-val">true</span>);
+<a href=#59 id=59 data-nosnippet>59</a>  <span class="macro">RequirePackage!</span>(<span class="string">"xspace"</span>);
+<a href=#60 id=60 data-nosnippet>60</a>
+<a href=#61 id=61 data-nosnippet>61</a>  <span class="comment">// Perl L21: Silence pointless warnings.
+<a href=#62 id=62 data-nosnippet>62</a>  </span>def_macro_noop(<span class="string">"\\glsnoidxstripaccents"</span>)<span class="question-mark">?</span>;
+<a href=#63 id=63 data-nosnippet>63</a>
+<a href=#64 id=64 data-nosnippet>64</a>  <span class="comment">// Post-load: re-apply override in case raw-load's \newcommand
+<a href=#65 id=65 data-nosnippet>65</a>  // overrode our pre-def. \newcommand errors if already defined, but
+<a href=#66 id=66 data-nosnippet>66</a>  // \def silently overrides — but to be safe, reapply after load.
+<a href=#67 id=67 data-nosnippet>67</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@gls@removedoption{}"</span>,
+<a href=#68 id=68 data-nosnippet>68</a>    <span class="string">"\\PackageWarning{glossaries}{obsolete package option #1 ignored}"</span>);
+<a href=#69 id=69 data-nosnippet>69</a>
+<a href=#70 id=70 data-nosnippet>70</a>  <span class="comment">//======================================================================
+<a href=#71 id=71 data-nosnippet>71</a>  // Perl L26-37: wrap `\@gls@link` in `&lt;ltx:glossaryref&gt;`.
+<a href=#72 id=72 data-nosnippet>72</a>  // In math the term is typeset by the original alone, beside a location-only
+<a href=#73 id=73 data-nosnippet>73</a>  // reference (`\lx@glossaries@glsadd`, below) that sits after the formula. The
+<a href=#74 id=74 data-nosnippet>74</a>  // wrap there was an `XMText` atom of the formula: `alttext` and `tex=` spelled
+<a href=#75 id=75 data-nosnippet>75</a>  // `\lx@glossaries@gls@link{symbols}{v}{…}` and the term was an
+<a href=#76 id=76 data-nosnippet>76</a>  // `&lt;mtext&gt;` holding a nested `&lt;math&gt;` (`$\gls{v}=\frac{d\gls{v}}{dt}$`; Perl
+<a href=#77 id=77 data-nosnippet>77</a>  // identical, with an "XMTok isn't allowed in glossaryref" error;
+<a href=#78 id=78 data-nosnippet>78</a>  // KNOWN_PERL_ERRORS #276).
+<a href=#79 id=79 data-nosnippet>79</a>  </span><span class="macro">Let!</span>(<span class="string">"\\lx@orig@glossaries@gls@link"</span>, <span class="string">"\\@gls@link"</span>);
+<a href=#80 id=80 data-nosnippet>80</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@gls@link[]{}{}"</span>,
+<a href=#81 id=81 data-nosnippet>81</a>    <span class="string">"\\ifmmode\\expandafter\\lx@glossaries@gls@link@math\
+<a href=#82 id=82 data-nosnippet>82</a>\\else\\expandafter\\lx@glossaries@gls@link@text\\fi[#1]{#2}{#3}"</span>);
+<a href=#83 id=83 data-nosnippet>83</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@glossaries@gls@link@text[]{}{}"</span>,
+<a href=#84 id=84 data-nosnippet>84</a>    <span class="string">"\\lx@glossaries@gls@link{\\csname glo@#2@type\\endcsname}{#2}{\\lx@orig@glossaries@gls@link[#1]{#2}{#3}}"</span>);
+<a href=#85 id=85 data-nosnippet>85</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@glossaries@gls@link@math[]{}{}"</span>,
+<a href=#86 id=86 data-nosnippet>86</a>    <span class="string">"\\lx@glossaries@glsadd{\\csname glo@#2@type\\endcsname}{#2}\\lx@orig@glossaries@gls@link[#1]{#2}{#3}"</span>);
+<a href=#87 id=87 data-nosnippet>87</a>  <span class="comment">// glossaries-extra replaces `\@gls@link` with its own
+<a href=#88 id=88 data-nosnippet>88</a>  // (glossaries-extra.sty:3465 `\def\@gls@link[#1]#2#3`), which dropped this
+<a href=#89 id=89 data-nosnippet>89</a>  // wrap: no `\gls` of a glossaries-extra document made a reference, so its
+<a href=#90 id=90 data-nosnippet>90</a>  // `\printglossary` listed nothing (Perl identical). The copy is re-applied
+<a href=#91 id=91 data-nosnippet>91</a>  // over the new definition once glossaries-extra loads (below).
+<a href=#92 id=92 data-nosnippet>92</a>  </span><span class="macro">Let!</span>(<span class="string">"\\lx@glossaries@wrap@gls@link"</span>, <span class="string">"\\@gls@link"</span>);
+<a href=#93 id=93 data-nosnippet>93</a>  <span class="comment">// The entry label (arg 2) is only a `key=` string: read it as
+<a href=#94 id=94 data-nosnippet>94</a>  // ExpandedSemiverbatim, never digested, as `\label` reads its label. A
+<a href=#95 id=95 data-nosnippet>95</a>  // digested `beat_frequency` raised "_ can only appear in math mode" per entry
+<a href=#96 id=96 data-nosnippet>96</a>  // (arXiv 2605.01773: 122 underscore labels in a notations glossary, Fatal;
+<a href=#97 id=97 data-nosnippet>97</a>  // Perl's binding digests it too, glossaries.sty.ltxml:30/:89).
+<a href=#98 id=98 data-nosnippet>98</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@glossaries@gls@link{} ExpandedSemiverbatim {}"</span>,
+<a href=#99 id=99 data-nosnippet>99</a>    <span class="string">"&lt;ltx:glossaryref inlist='#list' key='#2'&gt;#3&lt;/ltx:glossaryref&gt;"</span>,
+<a href=#100 id=100 data-nosnippet>100</a>    enter_horizontal =&gt; <span class="bool-val">true</span>,
+<a href=#101 id=101 data-nosnippet>101</a>    after_digest =&gt; sub[whatsit] {
+<a href=#102 id=102 data-nosnippet>102</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(key) = whatsit.get_arg(<span class="number">2</span>) {
+<a href=#103 id=103 data-nosnippet>103</a>        glossary_entry_referenced(<span class="kw-2">&amp;</span>key.to_string())<span class="question-mark">?</span>;
+<a href=#104 id=104 data-nosnippet>104</a>      }
+<a href=#105 id=105 data-nosnippet>105</a>    },
+<a href=#106 id=106 data-nosnippet>106</a>    properties =&gt; sub[args] {
+<a href=#107 id=107 data-nosnippet>107</a>      <span class="comment">// Perl: $list = ToString($_[1]); $list = 'main' unless $_[1];
+<a href=#108 id=108 data-nosnippet>108</a>      </span><span class="kw">let </span>list = args[<span class="number">0</span>].as_ref().map(|t| t.to_string()).unwrap_or_default();
+<a href=#109 id=109 data-nosnippet>109</a>      <span class="kw">let </span>list = <span class="kw">if </span>list.is_empty() { <span class="string">"main"</span>.to_string() } <span class="kw">else </span>{ list };
+<a href=#110 id=110 data-nosnippet>110</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"list" </span>=&gt; list))
+<a href=#111 id=111 data-nosnippet>111</a>    });
+<a href=#112 id=112 data-nosnippet>112</a>
+<a href=#113 id=113 data-nosnippet>113</a>  <span class="comment">//======================================================================
+<a href=#114 id=114 data-nosnippet>114</a>  // `\glsadd[opts]{label}` (glossaries.sty:5280-5292) writes the entry to the
+<a href=#115 id=115 data-nosnippet>115</a>  // glossary file through `\@@do@wrglossary` (:6299), the writer `\gls` reaches
+<a href=#116 id=116 data-nosnippet>116</a>  // through `\@gls@link` (:3813 → :6246); `\glsaddall` (:5295) and
+<a href=#117 id=117 data-nosnippet>117</a>  // `\glsaddallunused` (:5302) call `\glsadd` per entry. makeindex lists every
+<a href=#118 id=118 data-nosnippet>118</a>  // entry that was written, and `\glsadd` prints no text. Perl wraps only
+<a href=#119 id=119 data-nosnippet>119</a>  // `\@gls@link` (glossaries.sty.ltxml:26-37), and MakeIndex lists an entry
+<a href=#120 id=120 data-nosnippet>120</a>  // only when an `ltx:glossaryref` refers to it (MakeIndex.pm:468), so an entry
+<a href=#121 id=121 data-nosnippet>121</a>  // added by `\glsadd`/`\glsaddall` alone was never listed (ualberta: its whole
+<a href=#122 id=122 data-nosnippet>122</a>  // Glossary and List of Acronyms, 243 words; Perl identical). The wrap emits a
+<a href=#123 id=123 data-nosnippet>123</a>  // location-only reference, `show='none'`: CrossRef leaves it empty and the
+<a href=#124 id=124 data-nosnippet>124</a>  // XSLT renders nothing for it (KNOWN_PERL_ERRORS #276). `\glsadd` is robust
+<a href=#125 id=125 data-nosnippet>125</a>  // (`\newrobustcmd*`), so the wrap is protected too. The reference is emitted
+<a href=#126 id=126 data-nosnippet>126</a>  // only for a defined entry; the original raises the undefined-entry error.
+<a href=#127 id=127 data-nosnippet>127</a>  // In the preamble (`\iflx@glossaries@defer`) the reference is queued with its
+<a href=#128 id=128 data-nosnippet>128</a>  // list and label EXPANDED — `\glsaddall` passes the loop variable
+<a href=#129 id=129 data-nosnippet>129</a>  // `\@glo@entry` — and emitted in the first paragraph of the body (below).
+<a href=#130 id=130 data-nosnippet>130</a>  // In math the reference is placed after the formula (see
+<a href=#131 id=131 data-nosnippet>131</a>  // `\lx@glossaries@glsadd`): an element inside it was an `XMText` atom of the
+<a href=#132 id=132 data-nosnippet>132</a>  // formula (`$\glsadd{x}a+b$` parsed as "[] * a + b").
+<a href=#133 id=133 data-nosnippet>133</a>  // glossaries-extra replaces `\glsadd` with one that calls its `\@glsadd`
+<a href=#134 id=134 data-nosnippet>134</a>  // (glossaries-extra.sty:3571-3604), as do `\glsaddeach` and `\glsstartrange`
+<a href=#135 id=135 data-nosnippet>135</a>  // (:3605, :3617), so the wrap moves to `\@glsadd` once it loads, and the
+<a href=#136 id=136 data-nosnippet>136</a>  // `\@gls@link` wrap is re-applied (above). OXIDIZED_DESIGN_DIVERGENCES #320.
+<a href=#137 id=137 data-nosnippet>137</a>  </span><span class="macro">Let!</span>(<span class="string">"\\lx@orig@glossaries@glsadd"</span>, <span class="string">"\\glsadd"</span>);
+<a href=#138 id=138 data-nosnippet>138</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\glsadd[]{}"</span>,
+<a href=#139 id=139 data-nosnippet>139</a>    <span class="string">"\\ifglsentryexists{#2}{\\lx@glossaries@glsadd@ref{#2}}{}\\lx@orig@glossaries@glsadd[#1]{#2}"</span>,
+<a href=#140 id=140 data-nosnippet>140</a>    protected =&gt; <span class="bool-val">true</span>);
+<a href=#141 id=141 data-nosnippet>141</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\def\lx@glossaries@glsadd@ref#1{\iflx@glossaries@defer
+<a href=#142 id=142 data-nosnippet>142</a>  \edef\lx@glo@add{\noexpand\lx@glossaries@glsadd{\csname glo@#1@type\endcsname}{#1}}%
+<a href=#143 id=143 data-nosnippet>143</a>  \expandafter\lx@glossaries@pushref\expandafter{\lx@glo@add}%
+<a href=#144 id=144 data-nosnippet>144</a>  \else\lx@glossaries@glsadd{\csname glo@#1@type\endcsname}{#1}\fi}%
+<a href=#145 id=145 data-nosnippet>145</a>\def\lx@glossaries@xtr@glsadd#1#2{\ifglsentryexists{#2}{\lx@glossaries@glsadd@ref{#2}}{}%
+<a href=#146 id=146 data-nosnippet>146</a>  \lx@orig@glossaries@@glsadd{#1}{#2}}%
+<a href=#147 id=147 data-nosnippet>147</a>\AddToHook{package/glossaries-extra/after}{%
+<a href=#148 id=148 data-nosnippet>148</a>  \let\lx@orig@glossaries@@glsadd\@glsadd\let\@glsadd\lx@glossaries@xtr@glsadd
+<a href=#149 id=149 data-nosnippet>149</a>  \let\lx@orig@glossaries@gls@link\@gls@link\let\@gls@link\lx@glossaries@wrap@gls@link}"</span>);
+<a href=#150 id=150 data-nosnippet>150</a>  <span class="comment">// The location-only reference. Digested in math (a `\gls` or `\glsadd` in a
+<a href=#151 id=151 data-nosnippet>151</a>  // formula), it goes where a `^` float puts an element: the nearest enclosing
+<a href=#152 id=152 data-nosnippet>152</a>  // level that admits it, after the formula (the `p` of inline math). A display
+<a href=#153 id=153 data-nosnippet>153</a>  // formula's `ltx:equation` admits no bare inline element but admits `ltx:text`,
+<a href=#154 id=154 data-nosnippet>154</a>  // so there the reference goes in a `ltx:text` of the equation, after the formula,
+<a href=#155 id=155 data-nosnippet>155</a>  // rather than an `XMText` in it; an entry named only in display math was not
+<a href=#156 id=156 data-nosnippet>156</a>  // listed (silent-loss inventory #20). It reverts to nothing, so the formula's
+<a href=#157 id=157 data-nosnippet>157</a>  // `tex=` is the term's.
+<a href=#158 id=158 data-nosnippet>158</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@glossaries@glsadd{} ExpandedSemiverbatim"</span>,
+<a href=#159 id=159 data-nosnippet>159</a>    sub[document, args, props] {
+<a href=#160 id=160 data-nosnippet>160</a>      <span class="kw">let </span>key = args[<span class="number">1</span>].as_ref().map(|d| d.to_string()).unwrap_or_default();
+<a href=#161 id=161 data-nosnippet>161</a>      <span class="kw">let </span>attrs = <span class="macro">string_map!</span>(<span class="string">"inlist" </span>=&gt; <span class="macro">prop_string!</span>(props, <span class="string">"list"</span>), <span class="string">"key" </span>=&gt; key,
+<a href=#162 id=162 data-nosnippet>162</a>        <span class="string">"show" </span>=&gt; <span class="string">"none"</span>);
+<a href=#163 id=163 data-nosnippet>163</a>      <span class="kw">if </span><span class="macro">prop_bool!</span>(props, <span class="string">"math"</span>) {
+<a href=#164 id=164 data-nosnippet>164</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>(save) = document.float_to_element(<span class="string">"ltx:glossaryref"</span>, <span class="bool-val">false</span>)<span class="question-mark">? </span>{
+<a href=#165 id=165 data-nosnippet>165</a>          document.insert_element(<span class="string">"ltx:glossaryref"</span>, Vec::new(), <span class="prelude-val">Some</span>(attrs))<span class="question-mark">?</span>;
+<a href=#166 id=166 data-nosnippet>166</a>          document.set_node(<span class="kw-2">&amp;</span>save);
+<a href=#167 id=167 data-nosnippet>167</a>        } <span class="kw">else if let </span><span class="prelude-val">Some</span>(save) = document.float_to_element(<span class="string">"ltx:text"</span>, <span class="bool-val">false</span>)<span class="question-mark">? </span>{
+<a href=#168 id=168 data-nosnippet>168</a>          document.open_element(<span class="string">"ltx:text"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#169 id=169 data-nosnippet>169</a>          document.insert_element(<span class="string">"ltx:glossaryref"</span>, Vec::new(), <span class="prelude-val">Some</span>(attrs))<span class="question-mark">?</span>;
+<a href=#170 id=170 data-nosnippet>170</a>          document.close_element(<span class="string">"ltx:text"</span>)<span class="question-mark">?</span>;
+<a href=#171 id=171 data-nosnippet>171</a>          document.set_node(<span class="kw-2">&amp;</span>save);
+<a href=#172 id=172 data-nosnippet>172</a>        }
+<a href=#173 id=173 data-nosnippet>173</a>      } <span class="kw">else </span>{
+<a href=#174 id=174 data-nosnippet>174</a>        document.insert_element(<span class="string">"ltx:glossaryref"</span>, Vec::new(), <span class="prelude-val">Some</span>(attrs))<span class="question-mark">?</span>;
+<a href=#175 id=175 data-nosnippet>175</a>      }
+<a href=#176 id=176 data-nosnippet>176</a>    },
+<a href=#177 id=177 data-nosnippet>177</a>    enter_horizontal =&gt; <span class="bool-val">true</span>,
+<a href=#178 id=178 data-nosnippet>178</a>    reversion =&gt; <span class="string">""</span>,
+<a href=#179 id=179 data-nosnippet>179</a>    after_digest =&gt; sub[whatsit] {
+<a href=#180 id=180 data-nosnippet>180</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(key) = whatsit.get_arg(<span class="number">2</span>) {
+<a href=#181 id=181 data-nosnippet>181</a>        glossary_entry_referenced(<span class="kw-2">&amp;</span>key.to_string())<span class="question-mark">?</span>;
+<a href=#182 id=182 data-nosnippet>182</a>      }
+<a href=#183 id=183 data-nosnippet>183</a>    },
+<a href=#184 id=184 data-nosnippet>184</a>    properties =&gt; sub[args] {
+<a href=#185 id=185 data-nosnippet>185</a>      <span class="kw">let </span>list = args[<span class="number">0</span>].as_ref().map(|t| t.to_string()).unwrap_or_default();
+<a href=#186 id=186 data-nosnippet>186</a>      <span class="kw">let </span>list = <span class="kw">if </span>list.is_empty() { <span class="string">"main"</span>.to_string() } <span class="kw">else </span>{ list };
+<a href=#187 id=187 data-nosnippet>187</a>      <span class="kw">let </span>math = lookup_string_from_sym(<span class="macro">pin!</span>(<span class="string">"MODE"</span>)).ends_with(<span class="string">"math"</span>);
+<a href=#188 id=188 data-nosnippet>188</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"list" </span>=&gt; list, <span class="string">"math" </span>=&gt; math))
+<a href=#189 id=189 data-nosnippet>189</a>    });
+<a href=#190 id=190 data-nosnippet>190</a>
+<a href=#191 id=191 data-nosnippet>191</a>  <span class="comment">//======================================================================
+<a href=#192 id=192 data-nosnippet>192</a>  // Perl L40-42: skip over hyperref wrapping; we handle it.
+<a href=#193 id=193 data-nosnippet>193</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\glsdohyperlink{}{}"</span>,   <span class="string">"#2"</span>);
+<a href=#194 id=194 data-nosnippet>194</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\glsdonohyperlink{}{}"</span>, <span class="string">"#2"</span>);
+<a href=#195 id=195 data-nosnippet>195</a>  <span class="comment">// Only the link half: glossaries.sty:4302-4306 `\glsdisablehyper` also turns the targets off
+<a href=#196 id=196 data-nosnippet>196</a>  // (`\@glstarget` = `\@secondoftwo`), and glossaries-extra.sty:5204-5210 turns links back on
+<a href=#197 id=197 data-nosnippet>197</a>  // when `\hyperlink` exists but restores `\@glstarget` only if it still is `\glsdohypertarget`
+<a href=#198 id=198 data-nosnippet>198</a>  // (:6558) — so every `\glshyperlink` (:5185; nlctuserguide's `\targetorhyperlink`, :2216-2228)
+<a href=#199 id=199 data-nosnippet>199</a>  // pointed at an anchor `\glstarget` never made. The target choice glossaries.sty itself made
+<a href=#200 id=200 data-nosnippet>200</a>  // (:4295-4301) is kept. Perl L42 disables both (KNOWN_PERL_ERRORS #392). Witnesses:
+<a href=#201 id=201 data-nosnippet>201</a>  // glossaries-extra-manual 1,838 dangling idrefs, datatool-user 1,235, glossaries-user 969,
+<a href=#202 id=202 data-nosnippet>202</a>  // glossariesbegin 44, mfirstuc-manual 32 — every one a destination in the golden PDF.
+<a href=#203 id=203 data-nosnippet>203</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\let\lx@glossaries@glstarget\@glstarget\glsdisablehyper\let\@glstarget\lx@glossaries@glstarget"</span>);
+<a href=#204 id=204 data-nosnippet>204</a>
+<a href=#205 id=205 data-nosnippet>205</a>  <span class="comment">// Perl L45: This seems necessary, although it ought to be built in???
+<a href=#206 id=206 data-nosnippet>206</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\glspostlinkhook"</span>, <span class="string">"\\xspace"</span>);
+<a href=#207 id=207 data-nosnippet>207</a>
+<a href=#208 id=208 data-nosnippet>208</a>  <span class="comment">//======================================================================
+<a href=#209 id=209 data-nosnippet>209</a>  // Perl L52-83: hook `\@newglossaryentryposthook` so each entry produces
+<a href=#210 id=210 data-nosnippet>210</a>  // a structured `&lt;ltx:glossarydefinition&gt;` with one `&lt;ltx:glossaryphrase&gt;`
+<a href=#211 id=211 data-nosnippet>211</a>  // per field. The keys mirror Perl exactly; the closing `}` is required
+<a href=#212 id=212 data-nosnippet>212</a>  // because the hook body is interpreted as a single argument group.
+<a href=#213 id=213 data-nosnippet>213</a>  // The field macros are copied before the keyvals are digested: they are
+<a href=#214 id=214 data-nosnippet>214</a>  // digested in key order, `description` first, and a `\gls{…}` inside a
+<a href=#215 id=215 data-nosnippet>215</a>  // description runs glossaries' `\ifglshasshort`/`\ifglshaslong`
+<a href=#216 id=216 data-nosnippet>216</a>  // (glossaries.sty:2166-2180), which `\letcs` the same `\@glo@short`/`\@glo@long`
+<a href=#217 id=217 data-nosnippet>217</a>  // to ANOTHER entry's value (undefined when it has none): "\@glo@short
+<a href=#218 id=218 data-nosnippet>218</a>  // undefined" and a wrong short form (Talbot's user guides, whose term
+<a href=#219 id=219 data-nosnippet>219</a>  // descriptions reference abbreviations).
+<a href=#220 id=220 data-nosnippet>220</a>  //
+<a href=#221 id=221 data-nosnippet>221</a>  // In the preamble (`\iflx@glossaries@defer`) the call is queued instead, with
+<a href=#222 id=222 data-nosnippet>222</a>  // the field VALUES, in the `glossaries` token queue (latex_constructs_rust_only.rs
+<a href=#223 id=223 data-nosnippet>223</a>  // §13), and the queue runs at
+<a href=#224 id=224 data-nosnippet>224</a>  // `\begin{document}`. LaTeX typesets a field only in `\printglossary`, once
+<a href=#225 id=225 data-nosnippet>225</a>  // every entry exists, so a field may name an entry defined after it:
+<a href=#226 id=226 data-nosnippet>226</a>  // `\newacronym{endc}{EN-DC}{E-UTRAN-\gls{nr} …}` before `\newacronym{nr}…`
+<a href=#227 id=227 data-nosnippet>227</a>  // (arXiv 2605.14032, 2605.21831), nlctuserguide's `\desc{… \idx{exclusion} …}`
+<a href=#228 id=228 data-nosnippet>228</a>  // before `\gidx{exclusion}` (bib2gls's `.glstex` defines all entries before
+<a href=#229 id=229 data-nosnippet>229</a>  // anything is typeset). Digested at definition each raised "Glossary entry
+<a href=#230 id=230 data-nosnippet>230</a>  // `nr' has not been defined" and lost the reference's text. Entries defined
+<a href=#231 id=231 data-nosnippet>231</a>  // in the body are emitted at once. OXIDIZED_DESIGN_DIVERGENCES #293; guard
+<a href=#232 id=232 data-nosnippet>232</a>  // `class_census::glossaries_preamble_forward_reference`. (A conversion that
+<a href=#233 id=233 data-nosnippet>233</a>  // never reaches `\begin{document}` emits no preamble definitions.)
+<a href=#234 id=234 data-nosnippet>234</a>  // (`\@glo@&lt;field&gt;` suffix, key)
+<a href=#235 id=235 data-nosnippet>235</a>  </span><span class="kw">const </span>GLO_FIELDS: [(<span class="kw-2">&amp;</span>str, <span class="kw-2">&amp;</span>str); <span class="number">17</span>] = [
+<a href=#236 id=236 data-nosnippet>236</a>    (<span class="string">"name"</span>, <span class="string">"name"</span>), (<span class="string">"desc"</span>, <span class="string">"description"</span>), (<span class="string">"symbol"</span>, <span class="string">"symbol"</span>),
+<a href=#237 id=237 data-nosnippet>237</a>    (<span class="string">"symbolplural"</span>, <span class="string">"symbolplural"</span>), (<span class="string">"text"</span>, <span class="string">"text"</span>), (<span class="string">"plural"</span>, <span class="string">"plural"</span>),
+<a href=#238 id=238 data-nosnippet>238</a>    (<span class="string">"first"</span>, <span class="string">"first"</span>), (<span class="string">"firstplural"</span>, <span class="string">"firstplural"</span>), (<span class="string">"sort"</span>, <span class="string">"sort"</span>),
+<a href=#239 id=239 data-nosnippet>239</a>    (<span class="string">"counter"</span>, <span class="string">"counter"</span>), (<span class="string">"see"</span>, <span class="string">"see"</span>), (<span class="string">"parent"</span>, <span class="string">"parent"</span>),
+<a href=#240 id=240 data-nosnippet>240</a>    (<span class="string">"prefix"</span>, <span class="string">"prefix"</span>), (<span class="string">"short"</span>, <span class="string">"short"</span>), (<span class="string">"shortpl"</span>, <span class="string">"shortplural"</span>),
+<a href=#241 id=241 data-nosnippet>241</a>    (<span class="string">"long"</span>, <span class="string">"long"</span>), (<span class="string">"longpl"</span>, <span class="string">"longplural"</span>),
+<a href=#242 id=242 data-nosnippet>242</a>  ];
+<a href=#243 id=243 data-nosnippet>243</a>  <span class="kw">let </span>snapshot: String = GLO_FIELDS.iter()
+<a href=#244 id=244 data-nosnippet>244</a>    .map(|(f, <span class="kw">_</span>)| <span class="macro">format!</span>(<span class="string">"\\let\\lx@glo@{f}\\@glo@{f}"</span>)).collect();
+<a href=#245 id=245 data-nosnippet>245</a>  <span class="kw">let </span>by_macro: Vec&lt;String&gt; = GLO_FIELDS.iter()
+<a href=#246 id=246 data-nosnippet>246</a>    .map(|(f, k)| <span class="macro">format!</span>(<span class="string">"{k}=\\lx@glo@{f}"</span>)).collect();
+<a href=#247 id=247 data-nosnippet>247</a>  <span class="kw">let </span>by_value: Vec&lt;String&gt; = GLO_FIELDS.iter()
+<a href=#248 id=248 data-nosnippet>248</a>    .map(|(f, k)| <span class="macro">format!</span>(<span class="string">"{k}={{\\unexpanded\\expandafter{{\\@glo@{f}}}}}"</span>)).collect();
+<a href=#249 id=249 data-nosnippet>249</a>  <span class="comment">// The references of a preamble `\glsadd` are queued apart and carried into the
+<a href=#250 id=250 data-nosnippet>250</a>  // first paragraph that opens, through a one-shot `\everypar` that restores the
+<a href=#251 id=251 data-nosnippet>251</a>  // one it replaced: emitted at the flush, a reference opened a paragraph LaTeX
+<a href=#252 id=252 data-nosnippet>252</a>  // does not have, an empty `ltx:para` whenever the body starts with vertical
+<a href=#253 id=253 data-nosnippet>253</a>  // material (`\maketitle`, `\section`), which shifted every later document-level
+<a href=#254 id=254 data-nosnippet>254</a>  // paragraph id. When no paragraph opens (or the `\everypar` is replaced first),
+<a href=#255 id=255 data-nosnippet>255</a>  // they are emitted at `\end{document}`. The `\everypar` is restored only
+<a href=#256 id=256 data-nosnippet>256</a>  // while it still holds just the one-shot: code that added to it meanwhile
+<a href=#257 id=257 data-nosnippet>257</a>  // (`\everypar\expandafter{\the\everypar\foo}`) keeps its addition, and the
+<a href=#258 id=258 data-nosnippet>258</a>  // one-shot left in it does nothing once it has fired.
+<a href=#259 id=259 data-nosnippet>259</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\newif\iflx@glossaries@defer
+<a href=#260 id=260 data-nosnippet>260</a>\global\lx@glossaries@defertrue
+<a href=#261 id=261 data-nosnippet>261</a>\newif\iflx@glossaries@carry
+<a href=#262 id=262 data-nosnippet>262</a>\newtoks\lx@glossaries@everypar
+<a href=#263 id=263 data-nosnippet>263</a>\def\lx@glossaries@push{\lx@queue@gpush{glossaries}}%
+<a href=#264 id=264 data-nosnippet>264</a>\def\lx@glossaries@pushref{\global\lx@glossaries@carrytrue\lx@queue@gpush{glossaries@refs}}%
+<a href=#265 id=265 data-nosnippet>265</a>\def\lx@glossaries@flush{\global\lx@glossaries@deferfalse
+<a href=#266 id=266 data-nosnippet>266</a>  \lx@queue@use{glossaries}\lx@queue@clear{glossaries}%
+<a href=#267 id=267 data-nosnippet>267</a>  \iflx@glossaries@carry
+<a href=#268 id=268 data-nosnippet>268</a>    \global\lx@glossaries@everypar\everypar\global\everypar{\lx@glossaries@parrefs}%
+<a href=#269 id=269 data-nosnippet>269</a>  \fi}%
+<a href=#270 id=270 data-nosnippet>270</a>\def\lx@glossaries@userefs{\global\lx@glossaries@carryfalse
+<a href=#271 id=271 data-nosnippet>271</a>  \lx@queue@use{glossaries@refs}\lx@queue@clear{glossaries@refs}}%
+<a href=#272 id=272 data-nosnippet>272</a>\def\lx@glossaries@parrefs{\iflx@glossaries@carry\expandafter\lx@glossaries@parrefs@fire\fi}%
+<a href=#273 id=273 data-nosnippet>273</a>\def\lx@glossaries@parrefs@only{\lx@glossaries@parrefs}%
+<a href=#274 id=274 data-nosnippet>274</a>\def\lx@glossaries@parrefs@fire{\lx@glossaries@userefs
+<a href=#275 id=275 data-nosnippet>275</a>  \edef\lx@glo@everypar{\the\everypar}%
+<a href=#276 id=276 data-nosnippet>276</a>  \ifx\lx@glo@everypar\lx@glossaries@parrefs@only
+<a href=#277 id=277 data-nosnippet>277</a>    \global\everypar\lx@glossaries@everypar\expandafter\the\expandafter\everypar
+<a href=#278 id=278 data-nosnippet>278</a>  \fi}%
+<a href=#279 id=279 data-nosnippet>279</a>\AtBeginDocument{\lx@glossaries@flush}%
+<a href=#280 id=280 data-nosnippet>280</a>\AtEndDocument{\iflx@glossaries@carry\lx@glossaries@userefs\fi}"</span>);
+<a href=#281 id=281 data-nosnippet>281</a>  <span class="comment">// The sort key recorded is the entry's own, `\\glo@&lt;label&gt;@sort` (`\\@gls@defsort`): `\\@glo@storeentry` has just
+<a href=#282 id=282 data-nosnippet>282</a>  // rewritten `\\@glo@sort` with makeindex's quote character before each special one (glossaries.sty:3204-3209,
+<a href=#283 id=283 data-nosnippet>283</a>  // `\\@gls@checkmkidxchars` :3923; xindy's `\\"` escapes), which makeindex strips again before it compares. Repro
+<a href=#284 id=284 data-nosnippet>284</a>  // index-bib/glossary_sort_key_is_its_string.
+<a href=#285 id=285 data-nosnippet>285</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@newglossaryentryposthook"</span>,
+<a href=#286 id=286 data-nosnippet>286</a>    <span class="string">"\\expandafter\\let\\expandafter\\@glo@sort\\csname glo@\\@glo@label @sort\\endcsname\
+<a href=#287 id=287 data-nosnippet>287</a>\\iflx@glossaries@defer\\expandafter\\lx@glossaries@deferentry\
+<a href=#288 id=288 data-nosnippet>288</a>\\else\\expandafter\\lx@glossaries@postentry\\fi"</span>);
+<a href=#289 id=289 data-nosnippet>289</a>  <span class="comment">// The display keys a package adds with `\\glsaddkey` (glossaries.sty:2748, each with its `\\glsentry…`
+<a href=#290 id=290 data-nosnippet>290</a>  // accessors; glosmathtools.sty:185 `descseclang`, a second-language description its glossary style prints) are
+<a href=#291 id=291 data-nosnippet>291</a>  // recorded too: each with its default, and an entry's value becomes a phrase when it differs from that default
+<a href=#292 id=292 data-nosnippet>292</a>  // (`\\ifx` of the two macros). `\\glsaddstoragekey` keys (glossaries.sty:2720-2747) hold data for code and are
+<a href=#293 id=293 data-nosnippet>293</a>  // never printed (glossaries-extra's `category`/`alias`/`seealso`, :2503-2504, :9845; glosmathtools' `dot`, whose
+<a href=#294 id=294 data-nosnippet>294</a>  // default `\\glsadd`s), so they stay unrecorded. The user-level command is wrapped: glossaries-extra replaces the
+<a href=#295 id=295 data-nosnippet>295</a>  // internal `\\@glsaddkey` (glossaries-extra.sty:4771). Perl keeps the fixed key list (glossaries.sty.ltxml:56-82;
+<a href=#296 id=296 data-nosnippet>296</a>  // KNOWN_PERL_ERRORS #442). Repro index-bib/glossary_user_keys_and_parents.
+<a href=#297 id=297 data-nosnippet>297</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\let\lx@glossaries@userkeys\@empty
+<a href=#298 id=298 data-nosnippet>298</a>\def\lx@glossaries@addkey#1#2#3{\key@ifundefined{glossentry}{#2}%
+<a href=#299 id=299 data-nosnippet>299</a>  {\csdef{lx@glo@default@#2}{#3}\appto\lx@glossaries@userkeys{,#2}}{}#1{#2}{#3}}%
+<a href=#300 id=300 data-nosnippet>300</a>\renewcommand*{\glsaddkey}{\@ifstar{\lx@glossaries@addkey\@sglsaddkey}{\lx@glossaries@addkey\@glsaddkey}}%
+<a href=#301 id=301 data-nosnippet>301</a>\def\lx@glossaries@userkv{\let\lx@glo@userkv\@empty
+<a href=#302 id=302 data-nosnippet>302</a>  \@for\lx@glo@k:=\lx@glossaries@userkeys\do{\ifx\lx@glo@k\@empty\else
+<a href=#303 id=303 data-nosnippet>303</a>    \expandafter\ifx\csname @glo@\lx@glo@k\expandafter\endcsname\csname lx@glo@default@\lx@glo@k\endcsname\else
+<a href=#304 id=304 data-nosnippet>304</a>      \eappto\lx@glo@userkv{,\lx@glo@k={\expandafter\expandonce\csname @glo@\lx@glo@k\endcsname}}\fi\fi}}"</span>);
+<a href=#305 id=305 data-nosnippet>305</a>  <span class="macro">RawTeX!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\def\\lx@glossaries@postentry{{{snapshot}\
+<a href=#306 id=306 data-nosnippet>306</a>\\lx@glossaries@userkv\\expandafter\\lx@glossaries@postentry@\\expandafter{{\\lx@glo@userkv}}}}"</span>));
+<a href=#307 id=307 data-nosnippet>307</a>  <span class="macro">RawTeX!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\def\\lx@glossaries@postentry@#1{{\
+<a href=#308 id=308 data-nosnippet>308</a>\\lx@glossaries@newentry{{\\@glo@type}}{{\\glslabel}}{{{}#1}}}}"</span>, by_macro.join(<span class="string">","</span>)));
+<a href=#309 id=309 data-nosnippet>309</a>  <span class="macro">RawTeX!</span>(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\def\\lx@glossaries@deferentry{{\\lx@glossaries@userkv\\edef\\lx@glo@entry{{\
+<a href=#310 id=310 data-nosnippet>310</a>\\noexpand\\lx@glossaries@newentry{{\\@glo@type}}{{\\glslabel}}{{{}\\unexpanded\\expandafter{{\\lx@glo@userkv}}}}}}\
+<a href=#311 id=311 data-nosnippet>311</a>\\expandafter\\lx@glossaries@push\\expandafter{{\\lx@glo@entry}}}}"</span>, by_value.join(<span class="string">","</span>)));
+<a href=#312 id=312 data-nosnippet>312</a>
+<a href=#313 id=313 data-nosnippet>313</a>  <span class="comment">// Perl L85-97: DefConstructor that emits the structured definition.
+<a href=#314 id=314 data-nosnippet>314</a>  // Iterate the keyvals in sorted-by-key order and insert one
+<a href=#315 id=315 data-nosnippet>315</a>  // `&lt;ltx:glossaryphrase&gt;` per non-empty value (matches Perl's
+<a href=#316 id=316 data-nosnippet>316</a>  // `if ToString($value)` guard).
+<a href=#317 id=317 data-nosnippet>317</a>  // Arg 2, the label `\glslabel`, is ExpandedSemiverbatim (see `\lx@glossaries@gls@link`).
+<a href=#318 id=318 data-nosnippet>318</a>  // An entry's fields are its stored data, which LaTeX typesets only where the entry is used — in a glossary
+<a href=#319 id=319 data-nosnippet>319</a>  // `\printglossary` prints, at a `\gls` (glossaries.sty:2341-2346 stores them by `\def`). The
+<a href=#320 id=320 data-nosnippet>320</a>  // definition is digested here for the glossary list the post-processor builds from it, so the diagnostics of that
+<a href=#321 id=321 data-nosnippet>321</a>  // digest are held (logger.rs `DiagnosticsHold::defer`) and raised only once a printed glossary holds the entry: a
+<a href=#322 id=322 data-nosnippet>322</a>  // referenced entry (`glossary_entry_referenced`) and a `\printglossary` (`\lx@printglossary`). An entry never used
+<a href=#323 id=323 data-nosnippet>323</a>  // raises nothing, as in pdflatex (2104.09252: `name={$J_p_p$}` unused, a "Double subscript" Error; Perl shares it,
+<a href=#324 id=324 data-nosnippet>324</a>  // KNOWN_PERL_ERRORS #1093; OXIDIZED_DESIGN_DIVERGENCES #859). A use itself typesets the field from its macros and errs there, as pdflatex does.
+<a href=#325 id=325 data-nosnippet>325</a>  // Repro index-bib/unused_glossary_entry_raises_nothing.
+<a href=#326 id=326 data-nosnippet>326</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@glossaries@newentry{}{}{}"</span>, sub[(list, key, keyvals)] {
+<a href=#327 id=327 data-nosnippet>327</a>    <span class="kw">let </span>key_text = <span class="macro">Expand!</span>(key.clone()).to_string();
+<a href=#328 id=328 data-nosnippet>328</a>    <span class="kw">let </span><span class="kw-2">mut </span>call = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\lx@glossaries@newentry@"</span>), <span class="macro">T_BEGIN!</span>()];
+<a href=#329 id=329 data-nosnippet>329</a>    call.extend(list.unlist());
+<a href=#330 id=330 data-nosnippet>330</a>    call.extend([<span class="macro">T_END!</span>(), <span class="macro">T_BEGIN!</span>()]);
+<a href=#331 id=331 data-nosnippet>331</a>    call.extend(key.unlist());
+<a href=#332 id=332 data-nosnippet>332</a>    call.extend([<span class="macro">T_END!</span>(), <span class="macro">T_BEGIN!</span>()]);
+<a href=#333 id=333 data-nosnippet>333</a>    call.extend(keyvals.unlist());
+<a href=#334 id=334 data-nosnippet>334</a>    call.push(<span class="macro">T_END!</span>());
+<a href=#335 id=335 data-nosnippet>335</a>    <span class="kw">let </span>hold = util::logger::DiagnosticsHold::begin();
+<a href=#336 id=336 data-nosnippet>336</a>    <span class="kw">let </span>digested = digest(Tokens::new(call));
+<a href=#337 id=337 data-nosnippet>337</a>    <span class="kw">if </span>hold.errors_raised() + hold.warnings_raised() == <span class="number">0 </span>{
+<a href=#338 id=338 data-nosnippet>338</a>      hold.commit();
+<a href=#339 id=339 data-nosnippet>339</a>    } <span class="kw">else if let </span><span class="prelude-val">Some</span>(deferred) = hold.defer() {
+<a href=#340 id=340 data-nosnippet>340</a>      <span class="kw">let </span>id = util::logger::keep_deferred(deferred);
+<a href=#341 id=341 data-nosnippet>341</a>      util::logger::defer_to_label(<span class="kw-2">&amp;</span>glossary_entry_label(<span class="kw-2">&amp;</span>key_text), <span class="string">"glossary"</span>, id);
+<a href=#342 id=342 data-nosnippet>342</a>    }
+<a href=#343 id=343 data-nosnippet>343</a>    <span class="prelude-val">Ok</span>(<span class="macro">vec!</span>[digested<span class="question-mark">?</span>])
+<a href=#344 id=344 data-nosnippet>344</a>  });
+<a href=#345 id=345 data-nosnippet>345</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@glossaries@newentry@{} ExpandedSemiverbatim RequiredKeyVals"</span>,
+<a href=#346 id=346 data-nosnippet>346</a>    sub[document, args, _props] {
+<a href=#347 id=347 data-nosnippet>347</a>      <span class="kw">let </span>list = args[<span class="number">0</span>].as_ref().map(|d| d.to_string()).unwrap_or_else(|| <span class="string">"main"</span>.to_string());
+<a href=#348 id=348 data-nosnippet>348</a>      <span class="kw">let </span>key  = args[<span class="number">1</span>].as_ref().map(|d| d.to_string()).unwrap_or_default();
+<a href=#349 id=349 data-nosnippet>349</a>      document.open_element(<span class="string">"ltx:glossarydefinition"</span>,
+<a href=#350 id=350 data-nosnippet>350</a>        <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(<span class="string">"key" </span>=&gt; key, <span class="string">"inlist" </span>=&gt; list)), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#351 id=351 data-nosnippet>351</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(kv_digested) = args[<span class="number">2</span>].as_ref()
+<a href=#352 id=352 data-nosnippet>352</a>        &amp;&amp; <span class="kw">let </span>DigestedData::KeyVals(<span class="kw-2">ref </span>kvs) = <span class="kw-2">*</span>kv_digested.data() {
+<a href=#353 id=353 data-nosnippet>353</a>          <span class="comment">// Sort by role (Perl: `sort keys %$hash`).
+<a href=#354 id=354 data-nosnippet>354</a>          </span><span class="kw">let </span><span class="kw-2">mut </span>pairs: Vec&lt;(String, ArgWrap)&gt; = kvs.get_pairs()
+<a href=#355 id=355 data-nosnippet>355</a>            .map(|(k, v)| (k.clone(), v.clone())).collect();
+<a href=#356 id=356 data-nosnippet>356</a>          pairs.sort_by(|a, b| a.<span class="number">0</span>.cmp(<span class="kw-2">&amp;</span>b.<span class="number">0</span>));
+<a href=#357 id=357 data-nosnippet>357</a>          <span class="kw">for </span>(role, val) <span class="kw">in </span>pairs {
+<a href=#358 id=358 data-nosnippet>358</a>            <span class="kw">let </span>val_str = val.to_string();
+<a href=#359 id=359 data-nosnippet>359</a>            <span class="kw">if </span>val_str.is_empty() { <span class="kw">continue</span>; }
+<a href=#360 id=360 data-nosnippet>360</a>            <span class="comment">// Insert &lt;ltx:glossaryphrase key=key role=role&gt;val&lt;/ltx:glossaryphrase&gt;.
+<a href=#361 id=361 data-nosnippet>361</a>            // Perl inserts the DIGESTED value (glossaries.sty.ltxml:96,
+<a href=#362 id=362 data-nosnippet>362</a>            // `insertElement('ltx:glossaryphrase', $value, …)` after
+<a href=#363 id=363 data-nosnippet>363</a>            // KeyVals::beDigested), so a `$\alpha$` name is math and an
+<a href=#364 id=364 data-nosnippet>364</a>            // `\emph` description is emphasis; absorbing `val_str` wrote the
+<a href=#365 id=365 data-nosnippet>365</a>            // TeX source (`\emph{in}`) as text. The string is the fallback.
+<a href=#366 id=366 data-nosnippet>366</a>            </span><span class="kw">let </span>digested = kvs.get_value_digested(<span class="kw-2">&amp;</span>role).cloned();
+<a href=#367 id=367 data-nosnippet>367</a>            <span class="comment">// A key outside the fixed fields is a recorded `\\glsaddkey` display key (`\\lx@glossaries@userkv`):
+<a href=#368 id=368 data-nosnippet>368</a>            // classed, so the glossary list prints it and no other phrase role.
+<a href=#369 id=369 data-nosnippet>369</a>            </span><span class="kw">let </span><span class="kw-2">mut </span>attributes = <span class="macro">string_map!</span>(<span class="string">"key" </span>=&gt; key.clone(), <span class="string">"role" </span>=&gt; role.clone());
+<a href=#370 id=370 data-nosnippet>370</a>            <span class="kw">if </span>!GLO_FIELDS.iter().any(|(<span class="kw">_</span>, field)| <span class="kw-2">*</span>field == role) {
+<a href=#371 id=371 data-nosnippet>371</a>              attributes.insert(<span class="string">"class"</span>.to_string(), <span class="string">"ltx_glossary_userkey"</span>.to_string());
+<a href=#372 id=372 data-nosnippet>372</a>            }
+<a href=#373 id=373 data-nosnippet>373</a>            document.open_element(<span class="string">"ltx:glossaryphrase"</span>, <span class="prelude-val">Some</span>(attributes), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#374 id=374 data-nosnippet>374</a>            <span class="comment">// The `sort` and `parent` values are data, compared as strings (makeindex's sort key, the parent's
+<a href=#375 id=375 data-nosnippet>375</a>            // label): their source text, not set in the font (OT1 prints the sanitized `\\` and `"` as `“` `”`). Repro
+<a href=#376 id=376 data-nosnippet>376</a>            // index-bib/glossary_sort_key_is_its_string.
+<a href=#377 id=377 data-nosnippet>377</a>            </span><span class="kw">match </span>digested {
+<a href=#378 id=378 data-nosnippet>378</a>              <span class="prelude-val">Some</span>(value) <span class="kw">if </span><span class="macro">matches!</span>(role.as_str(), <span class="string">"sort" </span>| <span class="string">"parent"</span>) =&gt; {
+<a href=#379 id=379 data-nosnippet>379</a>                document.absorb_string(<span class="kw-2">&amp;</span>value.untex()<span class="question-mark">?</span>, <span class="kw-2">&amp;</span>NO_PROPERTIES)<span class="question-mark">?</span>;
+<a href=#380 id=380 data-nosnippet>380</a>              },
+<a href=#381 id=381 data-nosnippet>381</a>              <span class="prelude-val">Some</span>(value) =&gt; document.absorb(<span class="kw-2">&amp;</span>value, <span class="prelude-val">None</span>)<span class="question-mark">?</span>,
+<a href=#382 id=382 data-nosnippet>382</a>              <span class="prelude-val">None </span>=&gt; {
+<a href=#383 id=383 data-nosnippet>383</a>                document.absorb_string(<span class="kw-2">&amp;</span>val_str, <span class="kw-2">&amp;</span>NO_PROPERTIES)<span class="question-mark">?</span>;
+<a href=#384 id=384 data-nosnippet>384</a>              },
+<a href=#385 id=385 data-nosnippet>385</a>            }
+<a href=#386 id=386 data-nosnippet>386</a>            document.close_element(<span class="string">"ltx:glossaryphrase"</span>)<span class="question-mark">?</span>;
+<a href=#387 id=387 data-nosnippet>387</a>          }
+<a href=#388 id=388 data-nosnippet>388</a>        }
+<a href=#389 id=389 data-nosnippet>389</a>      document.close_element(<span class="string">"ltx:glossarydefinition"</span>)<span class="question-mark">?</span>;
+<a href=#390 id=390 data-nosnippet>390</a>    },
+<a href=#391 id=391 data-nosnippet>391</a>    <span class="comment">// The fields are the entry's stored data, which LaTeX typesets only where the entry is used (`\gls`, the glossary
+<a href=#392 id=392 data-nosnippet>392</a>    // `\printglossary` prints): an `&amp;` in one (`\newacronym{cisa}{CISA}{Cybersecurity &amp; Infrastructure Security
+<a href=#393 id=393 data-nosnippet>393</a>    // Agency}`, never used, 2602.09131) is no alignment tab here but the character, as in an index entry
+<a href=#394 id=394 data-nosnippet>394</a>    // (sect11.rs `\@index`; ruling 2026-10-10 on stored metadata, OXIDIZED_DESIGN_DIVERGENCES #679). A use still
+<a href=#395 id=395 data-nosnippet>395</a>    // typesets the field from its macros: `\gls{cisa}` errs as pdflatex does. Perl digests them as text (KNOWN_PERL_ERRORS
+<a href=#396 id=396 data-nosnippet>396</a>    // #892). Guard `perfect_kernel_batch69a::glossary_entry_ampersand_is_stored_text`.
+<a href=#397 id=397 data-nosnippet>397</a>    </span>before_digest =&gt; {
+<a href=#398 id=398 data-nosnippet>398</a>      <span class="macro">Let!</span>(<span class="macro">T_ALIGN!</span>(), <span class="macro">T_CS!</span>(<span class="string">"\\&amp;"</span>));
+<a href=#399 id=399 data-nosnippet>399</a>      increment_align_group_count();
+<a href=#400 id=400 data-nosnippet>400</a>    },
+<a href=#401 id=401 data-nosnippet>401</a>    after_digest =&gt; {
+<a href=#402 id=402 data-nosnippet>402</a>      decrement_align_group_count();
+<a href=#403 id=403 data-nosnippet>403</a>    },
+<a href=#404 id=404 data-nosnippet>404</a>    bounded =&gt; <span class="bool-val">true
+<a href=#405 id=405 data-nosnippet>405</a>  </span>);
+<a href=#406 id=406 data-nosnippet>406</a>
+<a href=#407 id=407 data-nosnippet>407</a>  <span class="comment">//======================================================================
+<a href=#408 id=408 data-nosnippet>408</a>  // Perl L101-104: redefine `\printglossary` to dispatch to our constructor.
+<a href=#409 id=409 data-nosnippet>409</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\printglossary"</span>,
+<a href=#410 id=410 data-nosnippet>410</a>    <span class="string">"\\global\\let\\warn@noprintglossary\\relax\
+<a href=#411 id=411 data-nosnippet>411</a>\\@ifnextchar[{\\lx@printglossary}{\\lx@printglossary[type=main]}"</span>);
+<a href=#412 id=412 data-nosnippet>412</a>  <span class="comment">// Perl L105.
+<a href=#413 id=413 data-nosnippet>413</a>  </span><span class="macro">Let!</span>(<span class="string">"\\printnoidxglossary"</span>, <span class="string">"\\printglossary"</span>);
+<a href=#414 id=414 data-nosnippet>414</a>
+<a href=#415 id=415 data-nosnippet>415</a>  <span class="comment">// Perl L107-117: emit `&lt;ltx:glossary&gt;` placeholder with computed id,
+<a href=#416 id=416 data-nosnippet>416</a>  // list, and title. The XSLT pipeline later expands it into the actual
+<a href=#417 id=417 data-nosnippet>417</a>  // rendered glossary entries.
+<a href=#418 id=418 data-nosnippet>418</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@printglossary OptionalKeyVals"</span>,
+<a href=#419 id=419 data-nosnippet>419</a>    <span class="string">"&lt;ltx:glossary xml:id='#id' lists='#list'&gt;\
+<a href=#420 id=420 data-nosnippet>420</a>&lt;ltx:title font='#titlefont' _force_font='true'&gt;#title&lt;/ltx:title&gt;\
+<a href=#421 id=421 data-nosnippet>421</a>&lt;/ltx:glossary&gt;"</span>,
+<a href=#422 id=422 data-nosnippet>422</a>    properties =&gt; sub[args] {
+<a href=#423 id=423 data-nosnippet>423</a>      <span class="comment">// Perl L113-117 — compute type (default 'main'), title (digest
+<a href=#424 id=424 data-nosnippet>424</a>      // \@glotype@&lt;type&gt;@title), and id (docid + ".glo." + cleaned type).
+<a href=#425 id=425 data-nosnippet>425</a>      </span><span class="kw">let </span>keyval = |key: <span class="kw-2">&amp;</span>str| args[<span class="number">0</span>].as_ref().and_then(|d| {
+<a href=#426 id=426 data-nosnippet>426</a>        <span class="kw">if let </span>DigestedData::KeyVals(<span class="kw-2">ref </span>kvs) = <span class="kw-2">*</span>d.data() {
+<a href=#427 id=427 data-nosnippet>427</a>          kvs.get_value(key).map(|v| v.revert().unwrap_or_default())
+<a href=#428 id=428 data-nosnippet>428</a>        } <span class="kw">else </span>{ <span class="prelude-val">None </span>}
+<a href=#429 id=429 data-nosnippet>429</a>      });
+<a href=#430 id=430 data-nosnippet>430</a>      <span class="kw">let </span>typ = keyval(<span class="string">"type"</span>).map(|v| v.to_string()).unwrap_or_else(|| <span class="string">"main"</span>.to_string());
+<a href=#431 id=431 data-nosnippet>431</a>      <span class="comment">// glossaries.sty:7546-7548: `title=` sets `\glossarytitle`, which the heading prints instead of the type's
+<a href=#432 id=432 data-nosnippet>432</a>      // title (:6529-6552; glosmathtools `\printglossary[title=...]`). Perl reads only `type` (SHARED).
+<a href=#433 id=433 data-nosnippet>433</a>      </span><span class="kw">let </span>title_tokens = keyval(<span class="string">"title"</span>).unwrap_or_else(|| <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\@glotype@{typ}@title"</span>))));
+<a href=#434 id=434 data-nosnippet>434</a>      <span class="kw">let </span>title = digest(title_tokens)
+<a href=#435 id=435 data-nosnippet>435</a>        .map(|d| d.to_string()).unwrap_or_default();
+<a href=#436 id=436 data-nosnippet>436</a>      <span class="kw">let </span>docid = lookup_value(<span class="string">"thedocument@ID"</span>)
+<a href=#437 id=437 data-nosnippet>437</a>        .and_then(|v| <span class="kw">match </span>v { Stored::String(s) =&gt; <span class="prelude-val">Some</span>(to_string(s)), <span class="kw">_ </span>=&gt; <span class="prelude-val">None </span>})
+<a href=#438 id=438 data-nosnippet>438</a>        .unwrap_or_default();
+<a href=#439 id=439 data-nosnippet>439</a>      <span class="kw">let </span>cleaned = typ.chars().filter(|c| c.is_alphanumeric()).collect::&lt;String&gt;();
+<a href=#440 id=440 data-nosnippet>440</a>      <span class="kw">let </span>id = <span class="kw">if </span>docid.is_empty() {
+<a href=#441 id=441 data-nosnippet>441</a>        <span class="macro">format!</span>(<span class="string">"glo.{cleaned}"</span>)
+<a href=#442 id=442 data-nosnippet>442</a>      } <span class="kw">else </span>{
+<a href=#443 id=443 data-nosnippet>443</a>        <span class="macro">format!</span>(<span class="string">"{docid}.glo.{cleaned}"</span>)
+<a href=#444 id=444 data-nosnippet>444</a>      };
+<a href=#445 id=445 data-nosnippet>445</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"list" </span>=&gt; typ, <span class="string">"id" </span>=&gt; id, <span class="string">"title" </span>=&gt; title))
+<a href=#446 id=446 data-nosnippet>446</a>    },
+<a href=#447 id=447 data-nosnippet>447</a>    after_digest =&gt; sub[whatsit] {
+<a href=#448 id=448 data-nosnippet>448</a>      <span class="comment">// Perl L114: noteBackmatterElement(&lt;whatsit&gt;, 'ltx:glossary');
+<a href=#449 id=449 data-nosnippet>449</a>      </span>note_backmatter_element(whatsit, <span class="string">"ltx:glossary"</span>);
+<a href=#450 id=450 data-nosnippet>450</a>      <span class="comment">// the entries referenced so far (and every later one) are printed: their definitions' held diagnostics are raised
+<a href=#451 id=451 data-nosnippet>451</a>      </span><span class="kw">if </span>!lookup_bool(GLO_PRINTED) {
+<a href=#452 id=452 data-nosnippet>452</a>        assign_value(GLO_PRINTED, <span class="bool-val">true</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#453 id=453 data-nosnippet>453</a>        <span class="kw">for </span>key <span class="kw">in </span>lookup_vecdeque(GLO_REFERENCED).unwrap_or_default() {
+<a href=#454 id=454 data-nosnippet>454</a>          util::logger::note_label_use(<span class="kw-2">&amp;</span>glossary_entry_label(<span class="kw-2">&amp;</span>key.to_string()), <span class="string">"glossary"</span>);
+<a href=#455 id=455 data-nosnippet>455</a>        }
+<a href=#456 id=456 data-nosnippet>456</a>      }
+<a href=#457 id=457 data-nosnippet>457</a>    },
+<a href=#458 id=458 data-nosnippet>458</a>    before_construct =&gt; sub[doc, whatsit] {
+<a href=#459 id=459 data-nosnippet>459</a>      <span class="comment">// Perl L117: adjustBackmatterElement($_[0], $_[1]);
+<a href=#460 id=460 data-nosnippet>460</a>      </span>adjust_backmatter_element(doc, whatsit)<span class="question-mark">?</span>;
+<a href=#461 id=461 data-nosnippet>461</a>    }
+<a href=#462 id=462 data-nosnippet>462</a>  );
+<a href=#463 id=463 data-nosnippet>463</a>
+<a href=#464 id=464 data-nosnippet>464</a>  <span class="comment">// glossaries-extra's label-prefix commands are NOT stubbed here: the raw
+<a href=#465 id=465 data-nosnippet>465</a>  // glossaries-extra-bib2gls.sty (:430-452) defines them, and `\dgls`
+<a href=#466 id=466 data-nosnippet>466</a>  // (:564-576) resolves a label through the list they build. No-op stubs here
+<a href=#467 id=467 data-nosnippet>467</a>  // (batch 22) kept that list empty, so every `\dgls`/`\idx` reference of the
+<a href=#468 id=468 data-nosnippet>468</a>  // Talbot manuals fell back to "??" (nlctuserguide's `\idx` = `\dgls`).
+<a href=#469 id=469 data-nosnippet>469</a></span>});
 </code></pre></div></section></main></body></html>

@@ -1,0 +1,386 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/base_utilities/frontmatter/observer/separators.rs`."><title>separators.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../../../static.files/src-script-813739b1.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/base_utilities/frontmatter/observer/</div>separators.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! A binding's query on an argument's author separators, by meaning (Option C step P2-0, OXIDIZED_DESIGN_DIVERGENCES #995):
+<a href=#2 id=2 data-nosnippet>2</a>//! the `\and`-family separators an argument holds at its own level, as the rehearsal digests it to events
+<a href=#3 id=3 data-nosnippet>3</a>//! (`EventKind::Sep(SepKind::And)` at nest 0: literal, held in a macro of the document's, a `\let` copy, a `\csname
+<a href=#4 id=4 data-nosnippet>4</a>//! and\endcsname`), each with whether its meaning *is* the kernel separator's. The rehearsal binds `\and`, `\And` and
+<a href=#5 id=5 data-nosnippet>5</a>//! `\AND` to its separator event whatever they mean here (`rehearsal::ALWAYS_BOUND`), so a `Sep` alone does not say the
+<a href=#6 id=6 data-nosnippet>6</a>//! class parts names there (trap T8 of the P2 plan): a class's `\and` defined where the binding calls may print a word or
+<a href=#7 id=7 data-nosnippet>7</a>//! a `&amp;` (smfart's, 2508.07946), and a binding's own definition stands for whatever its class prints. The meaning is read
+<a href=#8 id=8 data-nosnippet>8</a>//! outside the rehearsal, the one in force at the call site, where the binding calls the query (at `\author`,
+<a href=#9 id=9 data-nosnippet>9</a>//! `\institute`): a class that defines or `\let`s `\and` only inside its title macro is read as the kernel's there, as
+<a href=#10 id=10 data-nosnippet>10</a>//! `frontmatter_stores::kernel_and_list` reads it — jmlr.cls's word `\and` (jmlr.cls:336, inside `\jmlrpreauthor`,
+<a href=#11 id=11 data-nosnippet>11</a>//! which its `\maketitle` runs) answers `kernel` before `\maketitle` (RED repro `separators_query_jmlr_title_time_and_red`;
+<a href=#12 id=12 data-nosnippet>12</a>//! a reading of the title-time meaning is a mechanism of its own). The query rehearses from its own allowance (`rehearsal::for_a_query`),
+<a href=#13 id=13 data-nosnippet>13</a>//! never the reading's budget nor its count of calls left out.
+<a href=#14 id=14 data-nosnippet>14</a>//!
+<a href=#15 id=15 data-nosnippet>15</a>//! Two front-ends of the one query: [`argument_separators`] for a binding's Rust code, and `\lx@fm@separators{&lt;tokens&gt;}`
+<a href=#16 id=16 data-nosnippet>16</a>//! for a binding's macro text, expanding to the meanings' names in order, comma-separated (`kernel`, `binding`, `raw`),
+<a href=#17 id=17 data-nosnippet>17</a>//! empty for none, `unread` where no rehearsal could be made or it left a group open.
+<a href=#18 id=18 data-nosnippet>18</a>
+<a href=#19 id=19 data-nosnippet>19</a></span><span class="kw">use </span>latexml_core::{definition::origin::DefinitionOrigin, token::AUTHOR_PROV_POS_MASK};
+<a href=#20 id=20 data-nosnippet>20</a>
+<a href=#21 id=21 data-nosnippet>21</a><span class="kw">use super</span>::{
+<a href=#22 id=22 data-nosnippet>22</a>  events::{Event, EventKind, SepKind, lex_events},
+<a href=#23 id=23 data-nosnippet>23</a>  field_notes::EnvironmentStep,
+<a href=#24 id=24 data-nosnippet>24</a>  ledger::field_stamped,
+<a href=#25 id=25 data-nosnippet>25</a>  policy::TitleMarks,
+<a href=#26 id=26 data-nosnippet>26</a>  rehearsal::{Rehearsal, for_a_query, rehearse},
+<a href=#27 id=27 data-nosnippet>27</a>  <span class="kw-2">*</span>,
+<a href=#28 id=28 data-nosnippet>28</a>};
+<a href=#29 id=29 data-nosnippet>29</a>
+<a href=#30 id=30 data-nosnippet>30</a><span class="doccomment">/// What a separator means where the query is made.
+<a href=#31 id=31 data-nosnippet>31</a></span><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+<a href=#32 id=32 data-nosnippet>32</a></span><span class="kw">pub enum </span>SepMeaning {
+<a href=#33 id=33 data-nosnippet>33</a>  <span class="doccomment">/// the kernel's `\and` (`latex_constructs::sect05`'s constructor, which `\And` and `\AND` are `\let` to there, as are a
+<a href=#34 id=34 data-nosnippet>34</a>  /// binding's `\let` copies: `inst_support_sty.rs:66` `\AND`, `ijcai_sty.rs:33-34` `\AND`/`\And`, `epl_cls.rs:109`
+<a href=#35 id=35 data-nosnippet>35</a>  /// `\And` — their definition is `\and`'s own, so they read `Kernel`, not `Binding`): the
+<a href=#36 id=36 data-nosnippet>36</a>  /// kernel's author-line column, which the blocks' readings part names at. The definition must be `\and`'s own (its
+<a href=#37 id=37 data-nosnippet>37</a>  /// `get_cs()`), a kernel layer's: narrower than the pool-constructor test `frontmatter_stores::kernel_and_list` made
+<a href=#38 id=38 data-nosnippet>38</a>  /// before P2-6, which now asks this (`texvc_sty.rs:132`'s `\let\and\land` is `raw`, no kernel separator; that test
+<a href=#39 id=39 data-nosnippet>39</a>  /// is the gate's reading only where the query answers `None`)
+<a href=#40 id=40 data-nosnippet>40</a>  </span>Kernel,
+<a href=#41 id=41 data-nosnippet>41</a>  <span class="doccomment">/// a binding's own definition (its code, a fallback class's, a stand-in's or a borrowing's,
+<a href=#42 id=42 data-nosnippet>42</a>  /// `DefinitionOrigin::is_binding_made`), whatever it prints: aas_support's real `\and` (`aas_support_sty.rs:358`), the
+<a href=#43 id=43 data-nosnippet>43</a>  /// stand-ins for a class's column break printing a space or nothing (colm2025's `\And`/`\AND`, jmlr's and jmlr2e's
+<a href=#44 id=44 data-nosnippet>44</a>  /// `\And`, jair's `\hskip`, neurips's no-ops), a word (ims_support's `\AND`), a `&amp;` (elsart_support's `\AND`), and
+<a href=#45 id=45 data-nosnippet>45</a>  /// amsmath's math `\And` (no separator at all). So `Binding` alone says neither "a separator" nor "none": the P2
+<a href=#46 id=46 data-nosnippet>46</a>  /// callers' gates ask kernel or not (`kernel_and_list`'s swap, aa, l_aa, ecai, authblk), which needs no split; a caller
+<a href=#47 id=47 data-nosnippet>47</a>  /// that must tell them apart reads its own binding's definition
+<a href=#48 id=48 data-nosnippet>48</a>  </span>Binding,
+<a href=#49 id=49 data-nosnippet>49</a>  <span class="doccomment">/// anything else: a raw class's, a package's or the document's own definition (a word, a `&amp;`, a space), or no
+<a href=#50 id=50 data-nosnippet>50</a>  /// separator's meaning at all (`\relax`, undefined)
+<a href=#51 id=51 data-nosnippet>51</a>  </span>Raw,
+<a href=#52 id=52 data-nosnippet>52</a>}
+<a href=#53 id=53 data-nosnippet>53</a>
+<a href=#54 id=54 data-nosnippet>54</a><span class="kw">impl </span>SepMeaning {
+<a href=#55 id=55 data-nosnippet>55</a>  <span class="doccomment">/// The name `\lx@fm@separators` gives it.
+<a href=#56 id=56 data-nosnippet>56</a>  </span><span class="kw">pub fn </span>name(<span class="self">self</span>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str {
+<a href=#57 id=57 data-nosnippet>57</a>    <span class="kw">match </span><span class="self">self </span>{
+<a href=#58 id=58 data-nosnippet>58</a>      SepMeaning::Kernel =&gt; <span class="string">"kernel"</span>,
+<a href=#59 id=59 data-nosnippet>59</a>      SepMeaning::Binding =&gt; <span class="string">"binding"</span>,
+<a href=#60 id=60 data-nosnippet>60</a>      SepMeaning::Raw =&gt; <span class="string">"raw"</span>,
+<a href=#61 id=61 data-nosnippet>61</a>    }
+<a href=#62 id=62 data-nosnippet>62</a>  }
+<a href=#63 id=63 data-nosnippet>63</a>}
+<a href=#64 id=64 data-nosnippet>64</a>
+<a href=#65 id=65 data-nosnippet>65</a><span class="doccomment">/// One separator of an argument at its own level ([`argument_separators`]).
+<a href=#66 id=66 data-nosnippet>66</a></span><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+<a href=#67 id=67 data-nosnippet>67</a></span><span class="kw">pub struct </span>ArgSeparator {
+<a href=#68 id=68 data-nosnippet>68</a>  <span class="doccomment">/// the command of the family the rehearsal read (`\and`, `\And`, `\AND`: `SepKind::And`)
+<a href=#69 id=69 data-nosnippet>69</a>  </span><span class="kw">pub </span>command: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
+<a href=#70 id=70 data-nosnippet>70</a>  <span class="doccomment">/// the meaning of the token that printed it, where the query is made
+<a href=#71 id=71 data-nosnippet>71</a>  </span><span class="kw">pub </span>meaning: SepMeaning,
+<a href=#72 id=72 data-nosnippet>72</a>  <span class="doccomment">/// its own tokens in the argument, `start..end` (a literal `\and`, a macro holding only the separator, a `\let` copy,
+<a href=#73 id=73 data-nosnippet>73</a>  /// a `\csname and\endcsname`; a `\relax` before it, which prints nothing; never an environment closed right before
+<a href=#74 id=74 data-nosnippet>74</a>  /// it — an `\end{tabular}`, `\end{minipage}`, a nested table, a user environment — which is the environment's,
+<a href=#75 id=75 data-nosnippet>75</a>  /// `own_run`), where they print nothing else: no name, mark, contact or note's span meets them, the
+<a href=#76 id=76 data-nosnippet>76</a>  /// criterion of the emitter's cut (`emit::cut_at_separators`, #993). `None` where the span is unread or the tokens
+<a href=#77 id=77 data-nosnippet>77</a>  /// print ink too (a macro holding names and the separator together, `\newcommand\aut{Ann \and Bob}`): no cut by
+<a href=#78 id=78 data-nosnippet>78</a>  /// tokens parts them, the reading's cut does. Its callers part an argument there: P2-4's eptcs cells
+<a href=#79 id=79 data-nosnippet>79</a>  /// (OXIDIZED_DESIGN_DIVERGENCES #991 (8)) and the queue's name reader (`queue_reading::entry_names`, #993 P2-1b)
+<a href=#80 id=80 data-nosnippet>80</a>  </span><span class="kw">pub </span>span:    <span class="prelude-ty">Option</span>&lt;(usize, usize)&gt;,
+<a href=#81 id=81 data-nosnippet>81</a>}
+<a href=#82 id=82 data-nosnippet>82</a>
+<a href=#83 id=83 data-nosnippet>83</a><span class="doccomment">/// The kinds of meaning a definition origin says, for a meaning that is not the kernel separator's.
+<a href=#84 id=84 data-nosnippet>84</a></span><span class="kw">fn </span>made_by(origin: DefinitionOrigin) -&gt; SepMeaning {
+<a href=#85 id=85 data-nosnippet>85</a>  <span class="kw">if </span>origin.is_binding_made() {
+<a href=#86 id=86 data-nosnippet>86</a>    SepMeaning::Binding
+<a href=#87 id=87 data-nosnippet>87</a>  } <span class="kw">else </span>{
+<a href=#88 id=88 data-nosnippet>88</a>    SepMeaning::Raw
+<a href=#89 id=89 data-nosnippet>89</a>  }
+<a href=#90 id=90 data-nosnippet>90</a>}
+<a href=#91 id=91 data-nosnippet>91</a>
+<a href=#92 id=92 data-nosnippet>92</a><span class="doccomment">/// The kernel layer's separator, `latex_constructs/sect05.rs`'s `\and` constructor: the definition a kernel meaning must be
+<a href=#93 id=93 data-nosnippet>93</a>/// (`\And` and `\AND` are `\let` to it), the one `frontmatter_stores::kernel_and_list` asks for (P2-6).
+<a href=#94 id=94 data-nosnippet>94</a></span><span class="kw">const </span>KERNEL_SEPARATOR: <span class="kw-2">&amp;</span>str = <span class="string">"\\and"</span>;
+<a href=#95 id=95 data-nosnippet>95</a>
+<a href=#96 id=96 data-nosnippet>96</a><span class="doccomment">/// Whether `definition` is [`KERNEL_SEPARATOR`]'s (a `\let` copy's too: its own cs) — a whatsit of it prints no text
+<a href=#97 id=97 data-nosnippet>97</a>/// (`util_text::printed_own_text`). It reads the cs alone, so a binding's `\and` constructor counts too (`meaning_of`
+<a href=#98 id=98 data-nosnippet>98</a>/// adds the origin).
+<a href=#99 id=99 data-nosnippet>99</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>is_kernel_separator(definition: <span class="kw-2">&amp;</span><span class="kw">dyn </span>Definition) -&gt; bool {
+<a href=#100 id=100 data-nosnippet>100</a>  <span class="kw-2">*</span>definition.get_cs() == <span class="macro">T_CS!</span>(KERNEL_SEPARATOR)
+<a href=#101 id=101 data-nosnippet>101</a>}
+<a href=#102 id=102 data-nosnippet>102</a>
+<a href=#103 id=103 data-nosnippet>103</a><span class="doccomment">/// What `token` means now ([`SepMeaning`]): the kernel separator is the [`KERNEL_SEPARATOR`] constructor a kernel layer
+<a href=#104 id=104 data-nosnippet>104</a>/// made (a pool, a dump, a format: `is_latexml_owned` and not `is_binding_made`).
+<a href=#105 id=105 data-nosnippet>105</a></span><span class="kw">fn </span>meaning_of(token: <span class="kw-2">&amp;</span>Token) -&gt; SepMeaning {
+<a href=#106 id=106 data-nosnippet>106</a>  <span class="kw">match </span>lookup_meaning(token) {
+<a href=#107 id=107 data-nosnippet>107</a>    <span class="prelude-val">Some</span>(Stored::Constructor(defn)) =&gt; {
+<a href=#108 id=108 data-nosnippet>108</a>      <span class="kw">let </span>kernel = defn.origin.is_latexml_owned() &amp;&amp; !defn.origin.is_binding_made();
+<a href=#109 id=109 data-nosnippet>109</a>      <span class="kw">if </span>kernel &amp;&amp; is_kernel_separator(defn.as_ref()) {
+<a href=#110 id=110 data-nosnippet>110</a>        SepMeaning::Kernel
+<a href=#111 id=111 data-nosnippet>111</a>      } <span class="kw">else </span>{
+<a href=#112 id=112 data-nosnippet>112</a>        made_by(defn.origin)
+<a href=#113 id=113 data-nosnippet>113</a>      }
+<a href=#114 id=114 data-nosnippet>114</a>    },
+<a href=#115 id=115 data-nosnippet>115</a>    <span class="prelude-val">Some</span>(Stored::Expandable(defn)) =&gt; made_by(defn.get_origin()),
+<a href=#116 id=116 data-nosnippet>116</a>    <span class="prelude-val">Some</span>(Stored::Primitive(defn)) =&gt; made_by(defn.origin),
+<a href=#117 id=117 data-nosnippet>117</a>    <span class="prelude-val">Some</span>(Stored::Conditional(defn)) =&gt; made_by(defn.origin),
+<a href=#118 id=118 data-nosnippet>118</a>    <span class="kw">_ </span>=&gt; SepMeaning::Raw,
+<a href=#119 id=119 data-nosnippet>119</a>  }
+<a href=#120 id=120 data-nosnippet>120</a>}
+<a href=#121 id=121 data-nosnippet>121</a>
+<a href=#122 id=122 data-nosnippet>122</a><span class="doccomment">/// The token whose meaning a separator has, its own run `span` ([`own_run`]): the one token the span covers (a literal `\and`,
+<a href=#123 id=123 data-nosnippet>123</a>/// a `\let` copy, an active character) where it is no macro; else the family's command the rehearsal read (`command`) —
+<a href=#124 id=124 data-nosnippet>124</a>/// a macro holding the separator, whose call the span covers (`\newcommand\aut{Ann \and Bob}`), a class's macro `\and`
+<a href=#125 id=125 data-nosnippet>125</a>/// itself or a copy of it (`rehearsal::let_copies_of_bound_commands` binds a copy only where it means what the command
+<a href=#126 id=126 data-nosnippet>126</a>/// means), a `\csname and\endcsname` (which names the command), a span not read.
+<a href=#127 id=127 data-nosnippet>127</a></span><span class="kw">fn </span>printing_token(content: <span class="kw-2">&amp;</span>[Token], span: <span class="prelude-ty">Option</span>&lt;(u16, u16)&gt;, command: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str) -&gt; Token {
+<a href=#128 id=128 data-nosnippet>128</a>  <span class="kw">let </span>run = span.and_then(|(s, t)| content.get(usize::from(s)..usize::from(t)));
+<a href=#129 id=129 data-nosnippet>129</a>  <span class="kw">match </span>run {
+<a href=#130 id=130 data-nosnippet>130</a>    <span class="prelude-val">Some</span>([one]) <span class="kw">if </span>!<span class="macro">matches!</span>(lookup_meaning(one), <span class="prelude-val">Some</span>(Stored::Expandable(<span class="kw">_</span>))) =&gt; <span class="kw-2">*</span>one,
+<a href=#131 id=131 data-nosnippet>131</a>    <span class="kw">_ </span>=&gt; <span class="macro">T_CS!</span>(command),
+<a href=#132 id=132 data-nosnippet>132</a>  }
+<a href=#133 id=133 data-nosnippet>133</a>}
+<a href=#134 id=134 data-nosnippet>134</a>
+<a href=#135 id=135 data-nosnippet>135</a><span class="doccomment">/// A separator's span `span` past the environments closed right before it (`environments`, the rehearsal's steps): its
+<a href=#136 id=136 data-nosnippet>136</a>/// own run of the argument. An invocation making no box leaves its cover for the next box (core
+<a href=#137 id=137 data-nosnippet>137</a>/// `token::field_cover_pending_merge`, OD #715), so a separator's box covers an `\end{tabular}` glued to it
+<a href=#138 id=138 data-nosnippet>138</a>/// (`\end{tabular}\and`, `\end{tabular}%⏎\and`; `\end{tabular}\relax\and` covers the `\relax` too, which is the
+<a href=#139 id=139 data-nosnippet>139</a>/// separator's as a font switch before a name is the name's). Those tokens close the table and are the environment's,
+<a href=#140 id=140 data-nosnippet>140</a>/// as the emitter's balanced runs take them (`emitter::Field::balanced`), not the separator's. A step reaching the span's
+<a href=#141 id=141 data-nosnippet>141</a>/// end leaves it whole: the separator keeps a token.
+<a href=#142 id=142 data-nosnippet>142</a></span><span class="kw">fn </span>own_run(environments: <span class="kw-2">&amp;</span>[EnvironmentStep], span: <span class="prelude-ty">Option</span>&lt;(u16, u16)&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;(u16, u16)&gt; {
+<a href=#143 id=143 data-nosnippet>143</a>  <span class="kw">let </span>(<span class="kw-2">mut </span>s, t) = span<span class="question-mark">?</span>;
+<a href=#144 id=144 data-nosnippet>144</a>  <span class="kw">while let </span><span class="prelude-val">Some</span>(step) = environments
+<a href=#145 id=145 data-nosnippet>145</a>    .iter()
+<a href=#146 id=146 data-nosnippet>146</a>    .find(|step| !step.opens &amp;&amp; step.start &lt;= s &amp;&amp; s &lt; step.end &amp;&amp; step.end &lt; t)
+<a href=#147 id=147 data-nosnippet>147</a>  {
+<a href=#148 id=148 data-nosnippet>148</a>    s = step.end;
+<a href=#149 id=149 data-nosnippet>149</a>  }
+<a href=#150 id=150 data-nosnippet>150</a>  <span class="prelude-val">Some</span>((s, t))
+<a href=#151 id=151 data-nosnippet>151</a>}
+<a href=#152 id=152 data-nosnippet>152</a>
+<a href=#153 id=153 data-nosnippet>153</a><span class="doccomment">/// A separator's own run `run` ([`own_run`]) as positions, where no ink event's span meets it — no name, mark, contact
+<a href=#154 id=154 data-nosnippet>154</a>/// or note prints from its tokens ([`ArgSeparator::span`]).
+<a href=#155 id=155 data-nosnippet>155</a></span><span class="kw">fn </span>own_tokens(events: <span class="kw-2">&amp;</span>[Event], run: <span class="prelude-ty">Option</span>&lt;(u16, u16)&gt;) -&gt; <span class="prelude-ty">Option</span>&lt;(usize, usize)&gt; {
+<a href=#156 id=156 data-nosnippet>156</a>  <span class="kw">let </span>(s, t) = run<span class="question-mark">?</span>;
+<a href=#157 id=157 data-nosnippet>157</a>  <span class="kw">let </span>inks = |e: &amp;&amp;Event| {
+<a href=#158 id=158 data-nosnippet>158</a>    <span class="macro">matches!</span>(
+<a href=#159 id=159 data-nosnippet>159</a>      e.kind,
+<a href=#160 id=160 data-nosnippet>160</a>      EventKind::Name | EventKind::Mark | EventKind::Contact | EventKind::Note
+<a href=#161 id=161 data-nosnippet>161</a>    )
+<a href=#162 id=162 data-nosnippet>162</a>  };
+<a href=#163 id=163 data-nosnippet>163</a>  <span class="kw">let </span>met = events
+<a href=#164 id=164 data-nosnippet>164</a>    .iter()
+<a href=#165 id=165 data-nosnippet>165</a>    .filter(inks)
+<a href=#166 id=166 data-nosnippet>166</a>    .any(|ink| ink.span.is_some_and(|(a, b)| a &lt; t &amp;&amp; b &gt; s));
+<a href=#167 id=167 data-nosnippet>167</a>  (!met).then_some((usize::from(s), usize::from(t)))
+<a href=#168 id=168 data-nosnippet>168</a>}
+<a href=#169 id=169 data-nosnippet>169</a>
+<a href=#170 id=170 data-nosnippet>170</a><span class="doccomment">/// The `\and`-family separators `arg` holds at its own level (nest 0: not one a layout container of it holds, a
+<a href=#171 id=171 data-nosnippet>171</a>/// `tabular`, a `\parbox`, nor a note's), in order, each with what it means where the query is made ([`SepMeaning`]).
+<a href=#172 id=172 data-nosnippet>172</a>/// `None` where no rehearsal could be made — a call inside one (no journal opens), over the queries' allowance, an
+<a href=#173 id=173 data-nosnippet>173</a>/// argument past the field's positions, a run whose assignments could not be undone (`Rehearsal::Skipped`) — or where
+<a href=#174 id=174 data-nosnippet>174</a>/// the run left a group open (a `\begingroup` with no `\endgroup`: no kernel author line holds one, so its separators
+<a href=#175 id=175 data-nosnippet>175</a>/// are unknown, not a list). What a rehearsal leaves for the reading, each put back (by reading `rehearse`'s writes to
+<a href=#176 id=176 data-nosnippet>176</a>/// its thread-locals and its global assignments): the reads it spends and the calls it leaves out
+<a href=#177 id=177 data-nosnippet>177</a>/// (`READS_LEFT`, `LEFT_OUT`: the queries' own allowance instead, `rehearsal::for_a_query`), the footnote steps it carries
+<a href=#178 id=178 data-nosnippet>178</a>/// for the next block's rehearsal (`lx_fm_obs_counter_seen`, `lx_fm_obs_steps_carried`, restored here), its flags and its
+<a href=#179 id=179 data-nosnippet>179</a>/// assignments (restored and rolled back by `rehearse`; a run whose assignments could not be undone keeps them, as every
+<a href=#180 id=180 data-nosnippet>180</a>/// rehearsal's does, `SkipReason::NotUndone`, and answers `None`).
+<a href=#181 id=181 data-nosnippet>181</a>/// OXIDIZED_DESIGN_DIVERGENCES #995.
+<a href=#182 id=182 data-nosnippet>182</a></span><span class="kw">pub fn </span>argument_separators(arg: <span class="kw-2">&amp;</span>Tokens) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;ArgSeparator&gt;&gt;&gt; {
+<a href=#183 id=183 data-nosnippet>183</a>  separators_of(arg, <span class="bool-val">false</span>)
+<a href=#184 id=184 data-nosnippet>184</a>}
+<a href=#185 id=185 data-nosnippet>185</a>
+<a href=#186 id=186 data-nosnippet>186</a><span class="doccomment">/// [`argument_separators`] at every level of `arg`, a layout container's too (an `\mbox`, a `\parbox`, a note's): the
+<a href=#187 id=187 data-nosnippet>187</a>/// `\and`s a class runs wherever they stand. llncs's `\institute` gate (`llncs_cls.rs` `\lx@llncs@institute@dispatch`,
+<a href=#188 id=188 data-nosnippet>188</a>/// Option C P2-3): `\institutename` numbers an institute at every `\and` it runs, one inside a box too
+<a href=#189 id=189 data-nosnippet>189</a>/// (llncs.cls:870-886; `Univ A \mbox{(North \and South)}` prints "1 Univ A (North ²South)").
+<a href=#190 id=190 data-nosnippet>190</a></span><span class="kw">pub fn </span>argument_separators_at_every_level(arg: <span class="kw-2">&amp;</span>Tokens) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;ArgSeparator&gt;&gt;&gt; {
+<a href=#191 id=191 data-nosnippet>191</a>  separators_of(arg, <span class="bool-val">true</span>)
+<a href=#192 id=192 data-nosnippet>192</a>}
+<a href=#193 id=193 data-nosnippet>193</a>
+<a href=#194 id=194 data-nosnippet>194</a><span class="doccomment">/// An argument as a query's rehearsal reads it ([`read_argument`]): its events and the environments it opens and closes.
+<a href=#195 id=195 data-nosnippet>195</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">struct </span>ArgumentReading {
+<a href=#196 id=196 data-nosnippet>196</a>  <span class="kw">pub </span>events:       Vec&lt;Event&gt;,
+<a href=#197 id=197 data-nosnippet>197</a>  <span class="kw">pub </span>environments: Vec&lt;EnvironmentStep&gt;,
+<a href=#198 id=198 data-nosnippet>198</a>}
+<a href=#199 id=199 data-nosnippet>199</a>
+<a href=#200 id=200 data-nosnippet>200</a><span class="doccomment">/// The one rehearsal of an argument the queries read (separators, marks; OXIDIZED_DESIGN_DIVERGENCES #995, Option C
+<a href=#201 id=201 data-nosnippet>201</a>/// F0): `None` where no rehearsal could be made or the run left a group open ([`argument_separators`]).
+<a href=#202 id=202 data-nosnippet>202</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>read_argument(arg: <span class="kw-2">&amp;</span>Tokens) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;ArgumentReading&gt;&gt; {
+<a href=#203 id=203 data-nosnippet>203</a>  <span class="kw">let </span>content = arg.unlist_ref();
+<a href=#204 id=204 data-nosnippet>204</a>  <span class="kw">if </span>content.len() &gt; usize::from(AUTHOR_PROV_POS_MASK) {
+<a href=#205 id=205 data-nosnippet>205</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
+<a href=#206 id=206 data-nosnippet>206</a>  }
+<a href=#207 id=207 data-nosnippet>207</a>  <span class="kw">const </span>CARRIED: [<span class="kw-2">&amp;</span>str; <span class="number">2</span>] = [<span class="string">"lx_fm_obs_counter_seen"</span>, <span class="string">"lx_fm_obs_steps_carried"</span>];
+<a href=#208 id=208 data-nosnippet>208</a>  <span class="kw">let </span>carried = CARRIED.map(lookup_int);
+<a href=#209 id=209 data-nosnippet>209</a>  <span class="comment">// (from the queries' own allowance, never the reading's budget nor its count of calls left out: `for_a_query`)
+<a href=#210 id=210 data-nosnippet>210</a>  </span><span class="kw">let </span>read = for_a_query(|| {
+<a href=#211 id=211 data-nosnippet>211</a>    rehearse(
+<a href=#212 id=212 data-nosnippet>212</a>      field_stamped(<span class="number">2</span>, <span class="number">0</span>, content),
+<a href=#213 id=213 data-nosnippet>213</a>      TitleMarks::Fnsymbol,
+<a href=#214 id=214 data-nosnippet>214</a>      <span class="kw-2">&amp;</span>[],
+<a href=#215 id=215 data-nosnippet>215</a>      lex_events,
+<a href=#216 id=216 data-nosnippet>216</a>    )
+<a href=#217 id=217 data-nosnippet>217</a>  })<span class="question-mark">?</span>;
+<a href=#218 id=218 data-nosnippet>218</a>  <span class="kw">for </span>(key, value) <span class="kw">in </span>CARRIED.iter().zip(carried) {
+<a href=#219 id=219 data-nosnippet>219</a>    <span class="kw">if </span>lookup_int(key) != value {
+<a href=#220 id=220 data-nosnippet>220</a>      assign_value(key, Stored::from(value), <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#221 id=221 data-nosnippet>221</a>    }
+<a href=#222 id=222 data-nosnippet>222</a>  }
+<a href=#223 id=223 data-nosnippet>223</a>  <span class="comment">// (a run that left a group open read no event past where it opened — `\begingroup` and no `\endgroup`: unknown, not
+<a href=#224 id=224 data-nosnippet>224</a>  // "no separator")
+<a href=#225 id=225 data-nosnippet>225</a>  </span><span class="kw">let </span>Rehearsal::Done {
+<a href=#226 id=226 data-nosnippet>226</a>    value: events,
+<a href=#227 id=227 data-nosnippet>227</a>    left_open: <span class="bool-val">false</span>,
+<a href=#228 id=228 data-nosnippet>228</a>    environments,
+<a href=#229 id=229 data-nosnippet>229</a>    ..
+<a href=#230 id=230 data-nosnippet>230</a>  } = read
+<a href=#231 id=231 data-nosnippet>231</a>  <span class="kw">else </span>{
+<a href=#232 id=232 data-nosnippet>232</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
+<a href=#233 id=233 data-nosnippet>233</a>  };
+<a href=#234 id=234 data-nosnippet>234</a>  <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(ArgumentReading { events, environments }))
+<a href=#235 id=235 data-nosnippet>235</a>}
+<a href=#236 id=236 data-nosnippet>236</a>
+<a href=#237 id=237 data-nosnippet>237</a><span class="doccomment">/// [`argument_separators`], at `arg`'s own level or (`every_level`) at all of them.
+<a href=#238 id=238 data-nosnippet>238</a></span><span class="kw">fn </span>separators_of(arg: <span class="kw-2">&amp;</span>Tokens, every_level: bool) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;ArgSeparator&gt;&gt;&gt; {
+<a href=#239 id=239 data-nosnippet>239</a>  <span class="kw">let </span><span class="prelude-val">Some</span>(ArgumentReading { events, environments }) = read_argument(arg)<span class="question-mark">? </span><span class="kw">else </span>{
+<a href=#240 id=240 data-nosnippet>240</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
+<a href=#241 id=241 data-nosnippet>241</a>  };
+<a href=#242 id=242 data-nosnippet>242</a>  <span class="kw">let </span>content = arg.unlist_ref();
+<a href=#243 id=243 data-nosnippet>243</a>  <span class="kw">let </span>separators = events.iter().filter_map(|e| <span class="kw">match </span>e.kind {
+<a href=#244 id=244 data-nosnippet>244</a>    EventKind::Sep(SepKind::And(command)) <span class="kw">if </span>every_level || e.nest == <span class="number">0 </span>=&gt; {
+<a href=#245 id=245 data-nosnippet>245</a>      <span class="kw">let </span>run = own_run(<span class="kw-2">&amp;</span>environments, e.span);
+<a href=#246 id=246 data-nosnippet>246</a>      <span class="prelude-val">Some</span>(ArgSeparator {
+<a href=#247 id=247 data-nosnippet>247</a>        command,
+<a href=#248 id=248 data-nosnippet>248</a>        meaning: meaning_of(<span class="kw-2">&amp;</span>printing_token(content, run, command)),
+<a href=#249 id=249 data-nosnippet>249</a>        span: own_tokens(<span class="kw-2">&amp;</span>events, run),
+<a href=#250 id=250 data-nosnippet>250</a>      })
+<a href=#251 id=251 data-nosnippet>251</a>    },
+<a href=#252 id=252 data-nosnippet>252</a>    <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#253 id=253 data-nosnippet>253</a>  });
+<a href=#254 id=254 data-nosnippet>254</a>  <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(separators.collect()))
+<a href=#255 id=255 data-nosnippet>255</a>}
+<a href=#256 id=256 data-nosnippet>256</a>
+<a href=#257 id=257 data-nosnippet>257</a><span class="doccomment">/// The TeX front-end, `\lx@fm@separators{&lt;tokens&gt;}`: [`argument_separators`]' meanings by name, comma-separated.
+<a href=#258 id=258 data-nosnippet>258</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>load() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#259 id=259 data-nosnippet>259</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@fm@separators{}"</span>, sub[(arg)] {
+<a href=#260 id=260 data-nosnippet>260</a>    <span class="kw">let </span>arg: Tokens = arg;
+<a href=#261 id=261 data-nosnippet>261</a>    <span class="kw">let </span>names = <span class="kw">match </span>argument_separators(<span class="kw-2">&amp;</span>arg)<span class="question-mark">? </span>{
+<a href=#262 id=262 data-nosnippet>262</a>      <span class="prelude-val">Some</span>(separators) =&gt; separators
+<a href=#263 id=263 data-nosnippet>263</a>        .iter()
+<a href=#264 id=264 data-nosnippet>264</a>        .map(|separator| separator.meaning.name())
+<a href=#265 id=265 data-nosnippet>265</a>        .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
+<a href=#266 id=266 data-nosnippet>266</a>        .join(<span class="string">","</span>),
+<a href=#267 id=267 data-nosnippet>267</a>      <span class="prelude-val">None </span>=&gt; String::from(<span class="string">"unread"</span>),
+<a href=#268 id=268 data-nosnippet>268</a>    };
+<a href=#269 id=269 data-nosnippet>269</a>    <span class="prelude-val">Ok</span>(mouth::tokenize_internal(TeXString::assembled(names)))
+<a href=#270 id=270 data-nosnippet>270</a>  });
+<a href=#271 id=271 data-nosnippet>271</a>  <span class="prelude-val">Ok</span>(())
+<a href=#272 id=272 data-nosnippet>272</a>}
+<a href=#273 id=273 data-nosnippet>273</a>
+<a href=#274 id=274 data-nosnippet>274</a><span class="doccomment">/// The own runs ([`ArgSeparator::span`]) of `arg`'s separators that mean the kernel's `\and` ([`SepMeaning::Kernel`]):
+<a href=#275 id=275 data-nosnippet>275</a>/// written, held in a macro of the document's that holds only the separator, or a `\let` copy, as the query reads them
+<a href=#276 id=276 data-nosnippet>276</a>/// by meaning ([`argument_separators`]), each a run of whole units of `arg`'s top level (no group or environment holds
+<a href=#277 id=277 data-nosnippet>277</a>/// it, [`tokens_unit_end`]), in order and apart; `None` where the query reads nothing (no rehearsal made, over its allowance, a
+<a href=#278 id=278 data-nosnippet>278</a>/// group left open), for which a caller cuts by spelling. A separator of another meaning — a class's, a binding's or the
+<a href=#279 id=279 data-nosnippet>279</a>/// document's renewed `\and`, amsmath's `\And` — is no run here (trap T8: what it prints is its caller's to say), nor
+<a href=#280 id=280 data-nosnippet>280</a>/// one a macro holds together with ink (no span: the reading cuts that one at its `Sep(And)`, #993). The cut two bindings'
+<a href=#281 id=281 data-nosnippet>281</a>/// routes share (Option C P2, OXIDIZED_DESIGN_DIVERGENCES #995): eptcs's cells (P2-4, `eptcs_cls.rs`), the
+<a href=#282 id=282 data-nosnippet>282</a>/// `\institute` lists of inst_support, aa and llncs and llncs's marked `\author` list ([`split_at_kernel_separators`],
+<a href=#283 id=283 data-nosnippet>283</a>/// P2-2, P2-3).
+<a href=#284 id=284 data-nosnippet>284</a></span><span class="kw">pub fn </span>kernel_separator_runs(arg: <span class="kw-2">&amp;</span>Tokens) -&gt; <span class="prelude-ty">Result</span>&lt;<span class="prelude-ty">Option</span>&lt;Vec&lt;(usize, usize)&gt;&gt;&gt; {
+<a href=#285 id=285 data-nosnippet>285</a>  <span class="kw">let </span><span class="prelude-val">Some</span>(separators) = argument_separators(arg)<span class="question-mark">? </span><span class="kw">else </span>{
+<a href=#286 id=286 data-nosnippet>286</a>    <span class="kw">return </span><span class="prelude-val">Ok</span>(<span class="prelude-val">None</span>);
+<a href=#287 id=287 data-nosnippet>287</a>  };
+<a href=#288 id=288 data-nosnippet>288</a>  <span class="kw">let </span>tokens = arg.unlist_ref();
+<a href=#289 id=289 data-nosnippet>289</a>  <span class="kw">let </span>units = tokens_top_level_units(tokens);
+<a href=#290 id=290 data-nosnippet>290</a>  <span class="kw">let </span><span class="kw-2">mut </span>runs = Vec::new();
+<a href=#291 id=291 data-nosnippet>291</a>  <span class="kw">let </span><span class="kw-2">mut </span>from = <span class="number">0</span>;
+<a href=#292 id=292 data-nosnippet>292</a>  <span class="kw">for </span>(start, end) <span class="kw">in </span>separators
+<a href=#293 id=293 data-nosnippet>293</a>    .iter()
+<a href=#294 id=294 data-nosnippet>294</a>    .filter(|found| found.meaning == SepMeaning::Kernel)
+<a href=#295 id=295 data-nosnippet>295</a>    .filter_map(|found| found.span)
+<a href=#296 id=296 data-nosnippet>296</a>  {
+<a href=#297 id=297 data-nosnippet>297</a>    <span class="kw">if </span>start &lt; from || !units.contains(<span class="kw-2">&amp;</span>start) || !units.contains(<span class="kw-2">&amp;</span>end) {
+<a href=#298 id=298 data-nosnippet>298</a>      <span class="kw">continue</span>;
+<a href=#299 id=299 data-nosnippet>299</a>    }
+<a href=#300 id=300 data-nosnippet>300</a>    runs.push((start, end));
+<a href=#301 id=301 data-nosnippet>301</a>    from = end;
+<a href=#302 id=302 data-nosnippet>302</a>  }
+<a href=#303 id=303 data-nosnippet>303</a>  <span class="prelude-val">Ok</span>(<span class="prelude-val">Some</span>(runs))
+<a href=#304 id=304 data-nosnippet>304</a>}
+<a href=#305 id=305 data-nosnippet>305</a>
+<a href=#306 id=306 data-nosnippet>306</a><span class="doccomment">/// `arg` split as [`split_tokens_delimited`] splits it at `delims`, cut first at each [`kernel_separator_runs`] run:
+<a href=#307 id=307 data-nosnippet>307</a>/// each segment between the runs split by spelling as it is, never a token rewritten (a run is cut where it stands,
+<a href=#308 id=308 data-nosnippet>308</a>/// eptcs's cells' way), the segment a run ends keeping its last piece even when empty ([`split_tokens_segment`]: the
+<a href=#309 id=309 data-nosnippet>309</a>/// split of the whole list keeps a piece a delimiter ends) and each segment's first piece the run before it as its
+<a href=#310 id=310 data-nosnippet>310</a>/// delimiter; and the number of runs cut that hold no delimiter of `delims` by spelling (`split_tokens`' match,
+<a href=#311 id=311 data-nosnippet>311</a>/// [`delimiter_token_matches`]): the cuts by meaning alone — a macro holding only `\and`, a `\let` copy of the kernel's
+<a href=#312 id=312 data-nosnippet>312</a>/// `\and` where the document renewed `\and`. A run is cut inside balanced parentheses too, which the spelling split
+<a href=#313 id=313 data-nosnippet>313</a>/// protects, as TeX's column break parts them (`Univ A (North \myand South)` after a document's `\let\myand\and`), and
+<a href=#314 id=314 data-nosnippet>314</a>/// a run the spelling also cuts is cut once. The spelling's cuts in the segments stay, whatever their token means (a
+<a href=#315 id=315 data-nosnippet>315</a>/// document's renewed `\and`, an undefined `\And`: trap T8, the cut the split made before, which aa.cls's own
+<a href=#316 id=316 data-nosnippet>316</a>/// title-time `\and` keeps, aa.cls:866), as do its trimming and its protections inside a segment. Where the query reads
+<a href=#317 id=317 data-nosnippet>317</a>/// nothing or finds no run, the spelling split of `arg` alone. Option C P2-2, P2-3 (OXIDIZED_DESIGN_DIVERGENCES #995):
+<a href=#318 id=318 data-nosnippet>318</a>/// the `\institute` lists of inst_support (`\lx@splitting@by@meaning`), aa (`aa_cls.rs` `\lx@aa@institute@dispatch`)
+<a href=#319 id=319 data-nosnippet>319</a>/// and llncs (`llncs_cls.rs` `\lx@llncs@institute@dispatch`), one contact call per piece, and llncs's marked `\author`
+<a href=#320 id=320 data-nosnippet>320</a>/// list (`\lx@llncs@author@split`), one author entry per piece.
+<a href=#321 id=321 data-nosnippet>321</a></span><span class="kw">pub fn </span>split_at_kernel_separators(
+<a href=#322 id=322 data-nosnippet>322</a>  arg: Tokens,
+<a href=#323 id=323 data-nosnippet>323</a>  delims: Vec&lt;SplitDelim&gt;,
+<a href=#324 id=324 data-nosnippet>324</a>) -&gt; <span class="prelude-ty">Result</span>&lt;(DelimitedPieces, usize)&gt; {
+<a href=#325 id=325 data-nosnippet>325</a>  <span class="kw">let </span>runs = kernel_separator_runs(<span class="kw-2">&amp;</span>arg)<span class="question-mark">?</span>.unwrap_or_default();
+<a href=#326 id=326 data-nosnippet>326</a>  <span class="prelude-val">Ok</span>(split_at_runs(arg, delims, runs))
+<a href=#327 id=327 data-nosnippet>327</a>}
+<a href=#328 id=328 data-nosnippet>328</a>
+<a href=#329 id=329 data-nosnippet>329</a><span class="doccomment">/// [`split_at_kernel_separators`] at the kernel separator runs `runs` a caller kept.
+<a href=#330 id=330 data-nosnippet>330</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>split_at_runs(
+<a href=#331 id=331 data-nosnippet>331</a>  arg: Tokens,
+<a href=#332 id=332 data-nosnippet>332</a>  delims: Vec&lt;SplitDelim&gt;,
+<a href=#333 id=333 data-nosnippet>333</a>  runs: Vec&lt;(usize, usize)&gt;,
+<a href=#334 id=334 data-nosnippet>334</a>) -&gt; (DelimitedPieces, usize) {
+<a href=#335 id=335 data-nosnippet>335</a>  <span class="kw">if </span>runs.is_empty() {
+<a href=#336 id=336 data-nosnippet>336</a>    <span class="kw">return </span>(split_tokens_delimited(arg, delims), <span class="number">0</span>);
+<a href=#337 id=337 data-nosnippet>337</a>  }
+<a href=#338 id=338 data-nosnippet>338</a>  <span class="kw">let </span>spelled = |t: <span class="kw-2">&amp;</span>Token| {
+<a href=#339 id=339 data-nosnippet>339</a>    delims
+<a href=#340 id=340 data-nosnippet>340</a>      .iter()
+<a href=#341 id=341 data-nosnippet>341</a>      .any(|d| <span class="macro">matches!</span>(d, SplitDelim::Token(d) <span class="kw">if </span>delimiter_token_matches(d, t)))
+<a href=#342 id=342 data-nosnippet>342</a>  };
+<a href=#343 id=343 data-nosnippet>343</a>  <span class="kw">let </span>tokens = arg.unlist_ref();
+<a href=#344 id=344 data-nosnippet>344</a>  <span class="kw">let </span><span class="kw-2">mut </span>pieces = Vec::new();
+<a href=#345 id=345 data-nosnippet>345</a>  <span class="kw">let </span><span class="kw-2">mut </span>by_meaning = <span class="number">0</span>;
+<a href=#346 id=346 data-nosnippet>346</a>  <span class="kw">let </span><span class="kw-2">mut </span>before: Vec&lt;Token&gt; = Vec::new();
+<a href=#347 id=347 data-nosnippet>347</a>  <span class="kw">let </span><span class="kw-2">mut </span>from = <span class="number">0</span>;
+<a href=#348 id=348 data-nosnippet>348</a>  <span class="comment">// (each run, then the end of the list)
+<a href=#349 id=349 data-nosnippet>349</a>  </span><span class="kw">for </span>run <span class="kw">in </span>runs.into_iter().map(<span class="prelude-val">Some</span>).chain([<span class="prelude-val">None</span>]) {
+<a href=#350 id=350 data-nosnippet>350</a>    <span class="kw">let </span>(to, ended_by_cut) = run.map_or((tokens.len(), <span class="bool-val">false</span>), |(start, <span class="kw">_</span>)| (start, <span class="bool-val">true</span>));
+<a href=#351 id=351 data-nosnippet>351</a>    <span class="kw">let </span>segment = Tokens::new(tokens[from..to].to_vec());
+<a href=#352 id=352 data-nosnippet>352</a>    <span class="kw">let </span><span class="kw-2">mut </span>split = split_tokens_segment(segment, delims.clone(), ended_by_cut);
+<a href=#353 id=353 data-nosnippet>353</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>((first, <span class="kw">_</span>)) = split.first_mut() {
+<a href=#354 id=354 data-nosnippet>354</a>      <span class="kw-2">*</span>first = std::mem::take(<span class="kw-2">&amp;mut </span>before);
+<a href=#355 id=355 data-nosnippet>355</a>    }
+<a href=#356 id=356 data-nosnippet>356</a>    pieces.extend(split);
+<a href=#357 id=357 data-nosnippet>357</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>((start, end)) = run {
+<a href=#358 id=358 data-nosnippet>358</a>      <span class="kw">if </span>!tokens[start..end].iter().any(spelled) {
+<a href=#359 id=359 data-nosnippet>359</a>        by_meaning += <span class="number">1</span>;
+<a href=#360 id=360 data-nosnippet>360</a>      }
+<a href=#361 id=361 data-nosnippet>361</a>      before = tokens[start..end].to_vec();
+<a href=#362 id=362 data-nosnippet>362</a>      from = end;
+<a href=#363 id=363 data-nosnippet>363</a>    }
+<a href=#364 id=364 data-nosnippet>364</a>  }
+<a href=#365 id=365 data-nosnippet>365</a>  (pieces, by_meaning)
+<a href=#366 id=366 data-nosnippet>366</a>}
+<a href=#367 id=367 data-nosnippet>367</a>
+<a href=#368 id=368 data-nosnippet>368</a><span class="doccomment">/// Whether `arg` holds a token its spelled `delims` do not match that could mean the kernel's `\and` here: a copy of it
+<a href=#369 id=369 data-nosnippet>369</a>/// ([`SepMeaning::Kernel`]) or a macro no binding made (the kernel's `\csname` too). Without one,
+<a href=#370 id=370 data-nosnippet>370</a>/// [`kernel_separator_runs`] finds no run the spelling does not cut, and no rehearsal is needed.
+<a href=#371 id=371 data-nosnippet>371</a></span><span class="kw">pub</span>(<span class="kw">in </span><span class="kw">crate</span>::base_utilities) <span class="kw">fn </span>may_hold_kernel_separator(
+<a href=#372 id=372 data-nosnippet>372</a>  arg: <span class="kw-2">&amp;</span>Tokens,
+<a href=#373 id=373 data-nosnippet>373</a>  delims: <span class="kw-2">&amp;</span>[SplitDelim],
+<a href=#374 id=374 data-nosnippet>374</a>) -&gt; bool {
+<a href=#375 id=375 data-nosnippet>375</a>  arg.unlist_ref().iter().any(|t| {
+<a href=#376 id=376 data-nosnippet>376</a>    <span class="macro">matches!</span>(t.get_catcode(), Catcode::CS | Catcode::ACTIVE)
+<a href=#377 id=377 data-nosnippet>377</a>      &amp;&amp; !delims
+<a href=#378 id=378 data-nosnippet>378</a>        .iter()
+<a href=#379 id=379 data-nosnippet>379</a>        .any(|d| <span class="macro">matches!</span>(d, SplitDelim::Token(d) <span class="kw">if </span>delimiter_token_matches(d, t)))
+<a href=#380 id=380 data-nosnippet>380</a>      &amp;&amp; <span class="kw">match </span>lookup_meaning(t) {
+<a href=#381 id=381 data-nosnippet>381</a>        <span class="prelude-val">Some</span>(Stored::Expandable(defn)) =&gt; !defn.get_origin().is_binding_made(),
+<a href=#382 id=382 data-nosnippet>382</a>        <span class="kw">_ </span>=&gt; meaning_of(t) == SepMeaning::Kernel,
+<a href=#383 id=383 data-nosnippet>383</a>      }
+<a href=#384 id=384 data-nosnippet>384</a>  })
+<a href=#385 id=385 data-nosnippet>385</a>}
+</code></pre></div></section></main></body></html>

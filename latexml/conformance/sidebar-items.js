@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"enum":["Arg","Mismatch","Severity"],"fn":["audit_package","compare","real_views","view_of"],"struct":["Audit","Diagnostics","Finding","Prologue","View"]};

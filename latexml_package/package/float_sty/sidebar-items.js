@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["add_float_frames","define_float_environment","load_definitions","reposition_caption_top"]};
+window.SIDEBAR_ITEMS = {"fn":["add_float_frames","define_float_environment","load_definitions","record_float_style","reposition_caption_top"]};

@@ -1,0 +1,414 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/base_utilities/frontmatter/observer/policy.rs`."><title>policy.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../../../" data-static-root-path="../../../../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../../../static.files/src-script-813739b1.js"></script><script defer src="../../../../../src-files.js"></script><script defer src="../../../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/base_utilities/frontmatter/observer/</div>policy.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! The observer's conventions (Layer B of the design note's §2; OXIDIZED_DESIGN_DIVERGENCES #837): the association
+<a href=#2 id=2 data-nosnippet>2</a>//! conventions a binding family applies on top of the class-independent resolver (`resolver/`, Layer C). Each binding
+<a href=#3 id=3 data-nosnippet>3</a>//! declares its own at load ([`declare_frontmatter_conventions`], user ruling 2026-10-28 "in each binding", superseding
+<a href=#4 id=4 data-nosnippet>4</a>//! the design note's decision 2, "no policy keyval in the binding files"): the declaration is kept in the state under
+<a href=#5 id=5 data-nosnippet>5</a>//! the binding's file name, keyed on (binding, hook) as the ledger records them at the call — the binding owning the
+<a href=#6 id=6 data-nosnippet>6</a>//! `\author` meaning (`ledger::author_binding`, or the class's binding with a declaration, `ledger::policy_binding`)
+<a href=#7 id=7 data-nosnippet>7</a>//! and the `\lx@add@authors*` hook it called. Each declaration reproduces a convention the binding's family already
+<a href=#8 id=8 data-nosnippet>8</a>//! had and cites the OXIDIZED_DESIGN_DIVERGENCES entry or the witness it reproduces. The kernel's own blocks (`\author`
+<a href=#9 id=9 data-nosnippet>9</a>//! still LaTeXML's, under `article` or any class whose bindings declare none) take [`KERNEL`] (Perl's `@authorsplits`
+<a href=#10 id=10 data-nosnippet>10</a>//! reading, Base_Utility.pool.ltxml:676-700, OD #925); a binding owning `\author` that declares none takes the same
+<a href=#11 id=11 data-nosnippet>11</a>//! reading, `UNDECLARED` (OD #948). Every family is read and emitted: the `written` flag that gated the S2b writer per
+<a href=#12 id=12 data-nosnippet>12</a>//! family went with the writer (DEL4).
+<a href=#13 id=13 data-nosnippet>13</a>
+<a href=#14 id=14 data-nosnippet>14</a></span><span class="kw">use </span>std::rc::Rc;
+<a href=#15 id=15 data-nosnippet>15</a>
+<a href=#16 id=16 data-nosnippet>16</a><span class="kw">use super</span>::{events::BreakKind, <span class="kw-2">*</span>};
+<a href=#17 id=17 data-nosnippet>17</a>
+<a href=#18 id=18 data-nosnippet>18</a><span class="doccomment">/// How an e-mail no mark of its own places is owned.
+<a href=#19 id=19 data-nosnippet>19</a></span><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+<a href=#20 id=20 data-nosnippet>20</a></span><span class="kw">pub enum </span>EmailOwner {
+<a href=#21 id=21 data-nosnippet>21</a>  <span class="doccomment">/// FIDELITY_CHARTER §4 (2026-10-21): the author it spells; else the group's only author; else the one author marked
+<a href=#22 id=22 data-nosnippet>22</a>  /// as the corresponding author; else the block.
+<a href=#23 id=23 data-nosnippet>23</a>  </span>Chain,
+<a href=#24 id=24 data-nosnippet>24</a>  <span class="doccomment">/// The class's address list printed apart from the names (`owner=sequence`): the author it spells; else, in a list
+<a href=#25 id=25 data-nosnippet>25</a>  /// with one address per author that every spelled address agrees with, the author at its place; else the chain
+<a href=#26 id=26 data-nosnippet>26</a>  /// (OXIDIZED_DESIGN_DIVERGENCES #805, #806, #808, #809).
+<a href=#27 id=27 data-nosnippet>27</a>  </span>SpelledElseOrder,
+<a href=#28 id=28 data-nosnippet>28</a>}
+<a href=#29 id=29 data-nosnippet>29</a>
+<a href=#30 id=30 data-nosnippet>30</a><span class="doccomment">/// What a bare `\footnotemark` in the block prints when no binding declared the title's marks (the kernel hook
+<a href=#31 id=31 data-nosnippet>31</a>/// `\lx@title@thefootnote`, `latex_constructs::TITLE_THEFOOTNOTE`, which wins when defined).
+<a href=#32 id=32 data-nosnippet>32</a></span><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+<a href=#33 id=33 data-nosnippet>33</a></span><span class="kw">pub enum </span>TitleMarks {
+<a href=#34 id=34 data-nosnippet>34</a>  <span class="doccomment">/// The kernel `\maketitle`'s `\@fnsymbol\c@footnote` (article.cls:203-205).
+<a href=#35 id=35 data-nosnippet>35</a>  </span>Fnsymbol,
+<a href=#36 id=36 data-nosnippet>36</a>  <span class="doccomment">/// The class's own `\thefootnote`, as its title page prints the notes: report and book under `titlepage`, their
+<a href=#37 id=37 data-nosnippet>37</a>  /// default (report.cls:211, book.cls:217 change `\thefootnote` only in the `\if@titlepage` false branch), arabic.
+<a href=#38 id=38 data-nosnippet>38</a>  </span>Body,
+<a href=#39 id=39 data-nosnippet>39</a>}
+<a href=#40 id=40 data-nosnippet>40</a>
+<a href=#41 id=41 data-nosnippet>41</a><span class="doccomment">/// What a class's title page prints for its authors, as the binding owning `\author` declares it (a binding's page is
+<a href=#42 id=42 data-nosnippet>42</a>/// not run: the title-page reading stands article.cls's in for it, `latex_constructs::title_page_reading`).
+<a href=#43 id=43 data-nosnippet>43</a></span><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+<a href=#44 id=44 data-nosnippet>44</a></span><span class="kw">pub enum </span>AuthorPage {
+<a href=#45 id=45 data-nosnippet>45</a>  <span class="doccomment">/// `\@author` as LaTeX's page prints it, with what a document appends to it (article.cls:247), when LaTeX's `\author`
+<a href=#46 id=46 data-nosnippet>46</a>  /// is in force; under a binding's `\author`, unknown
+<a href=#47 id=47 data-nosnippet>47</a>  </span>Kernel,
+<a href=#48 id=48 data-nosnippet>48</a>  <span class="doccomment">/// `\@author` and what a document appends to it, though this binding's `\author` stores nothing there: authblk's own
+<a href=#49 id=49 data-nosnippet>49</a>  /// `\@author` is its block (authblk.sty:167-171), llncs's `\@maketitle` prints `\@author` (llncs.cls:1035). The tail
+<a href=#50 id=50 data-nosnippet>50</a>  /// appended after the value `\@author` held as the authors were queued is the block's (`frontmatter_stores`
+<a href=#51 id=51 data-nosnippet>51</a>  /// `seen_author_tail`, OXIDIZED_DESIGN_DIVERGENCES #996: 2511.15315)
+<a href=#52 id=52 data-nosnippet>52</a>  </span>Block,
+<a href=#53 id=53 data-nosnippet>53</a>  <span class="doccomment">/// the binding's own author list, never `\@author`, on the title page of these document classes (their bindings' file
+<a href=#54 id=54 data-nosnippet>54</a>  /// names), so what a document appends to `\@author` prints nowhere: amsart's, amsproc's and amsbook's `\authors`
+<a href=#55 id=55 data-nosnippet>55</a>  /// (amsart.cls:460-476, :638, :815-817; amsproc.cls :613, :752-754; amsbook.cls :1356; ams_support.sty), elsarticle's
+<a href=#56 id=56 data-nosnippet>56</a>  /// `\elsauthors` (elsarticle.cls:247-288, :805, :848; elsart_support_core.sty), acmart's `\addresses`
+<a href=#57 id=57 data-nosnippet>57</a>  /// (acmart.cls:1619-1643, :2240, :2631). The title-page check reports a lost word only such a tail prints as one the
+<a href=#58 id=58 data-nosnippet>58</a>  /// page annotates, an Info (OXIDIZED_DESIGN_DIVERGENCES #953, FX27), where every other binding's stays a Warning. Keyed
+<a href=#59 id=59 data-nosnippet>59</a>  /// to the document class, not the binding alone, which other classes load whose page may print the tail (OmniBus's
+<a href=#60 id=60 data-nosnippet>60</a>  /// autoload of ams_support.sty, old elsart.cls's elsart_support_core.sty)
+<a href=#61 id=61 data-nosnippet>61</a>  </span>Own(<span class="kw-2">&amp;</span><span class="lifetime">'static </span>[<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str]),
+<a href=#62 id=62 data-nosnippet>62</a>}
+<a href=#63 id=63 data-nosnippet>63</a>
+<a href=#64 id=64 data-nosnippet>64</a><span class="doccomment">/// A binding's declaration of its class's title page ([`Policy::title_page`]).
+<a href=#65 id=65 data-nosnippet>65</a></span><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+<a href=#66 id=66 data-nosnippet>66</a></span><span class="kw">pub struct </span>TitlePageDecl {
+<a href=#67 id=67 data-nosnippet>67</a>  <span class="doccomment">/// what it prints for the authors
+<a href=#68 id=68 data-nosnippet>68</a>  </span><span class="kw">pub </span>author:         AuthorPage,
+<a href=#69 id=69 data-nosnippet>69</a>  <span class="doccomment">/// the document classes whose title page sets an `\and` of its own where it prints the authors, each with the line
+<a href=#70 id=70 data-nosnippet>70</a>  /// that sets it (aa.cls:866, svjour3.cls:608): the separator's meaning at the print, which the call site's is not.
+<a href=#71 id=71 data-nosnippet>71</a>  /// Recorded for the separator query (TP2); empty: the meaning the document gives it (article.cls never sets `\and`)
+<a href=#72 id=72 data-nosnippet>72</a>  </span><span class="kw">pub </span>title_and:      <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[(<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str)],
+<a href=#73 id=73 data-nosnippet>73</a>  <span class="doccomment">/// the document classes (their bindings' file names) whose `\maketitle` runs `\@maketitle` ([`MaketitleRuns`]), each
+<a href=#74 id=74 data-nosnippet>74</a>  /// with the line that shows it: where it runs it, a `\@maketitle` the document or a package defines is the title page
+<a href=#75 id=75 data-nosnippet>75</a>  /// in force, as pdflatex prints it (TP1b, OXIDIZED_DESIGN_DIVERGENCES #953); where it does not, article.cls's stand-in
+<a href=#76 id=76 data-nosnippet>76</a>  /// stands for the class's page, and the declaration ([`Self::author`]) answers. A class no declaration names is
+<a href=#77 id=77 data-nosnippet>77</a>  /// unknown: a document's `\@maketitle` is not taken for its page (`ledger::class_maketitle_runs`)
+<a href=#78 id=78 data-nosnippet>78</a>  </span><span class="kw">pub </span>maketitle_runs: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[(<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, MaketitleRuns, <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str)],
+<a href=#79 id=79 data-nosnippet>79</a>}
+<a href=#80 id=80 data-nosnippet>80</a>
+<a href=#81 id=81 data-nosnippet>81</a><span class="doccomment">/// Whether a class's `\maketitle` runs `\@maketitle` ([`TitlePageDecl::maketitle_runs`]).
+<a href=#82 id=82 data-nosnippet>82</a></span><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+<a href=#83 id=83 data-nosnippet>83</a></span><span class="kw">pub enum </span>MaketitleRuns {
+<a href=#84 id=84 data-nosnippet>84</a>  <span class="doccomment">/// always (amsart.cls:600-610, IEEEtran.cls:4753-4775)
+<a href=#85 id=85 data-nosnippet>85</a>  </span>Always,
+<a href=#86 id=86 data-nosnippet>86</a>  <span class="doccomment">/// never (elsarticle.cls:918-989, acmart.cls:2226-2379)
+<a href=#87 id=87 data-nosnippet>87</a>  </span>Never,
+<a href=#88 id=88 data-nosnippet>88</a>  <span class="doccomment">/// only while the class's `\if@titlepage` is false, as it is at `\maketitle` (article.cls:169-219, report.cls:175-225,
+<a href=#89 id=89 data-nosnippet>89</a>  /// book.cls:181-231: `\if@titlepage \newcommand\maketitle{\begin{titlepage}…` prints its own page, which prints
+<a href=#90 id=90 data-nosnippet>90</a>  /// `\@author` and runs no `\@maketitle`, `\else` one that runs it; TP1c)
+<a href=#91 id=91 data-nosnippet>91</a>  </span>WithoutTitlepage,
+<a href=#92 id=92 data-nosnippet>92</a>}
+<a href=#93 id=93 data-nosnippet>93</a>
+<a href=#94 id=94 data-nosnippet>94</a><span class="doccomment">/// One family's association conventions, as its binding declares them ([`declare_frontmatter_conventions`]).
+<a href=#95 id=95 data-nosnippet>95</a></span><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+<a href=#96 id=96 data-nosnippet>96</a></span><span class="kw">pub struct </span>Policy {
+<a href=#97 id=97 data-nosnippet>97</a>  <span class="doccomment">/// the declaration's name (reported with every decision it made)
+<a href=#98 id=98 data-nosnippet>98</a>  </span><span class="kw">pub </span>name:              <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
+<a href=#99 id=99 data-nosnippet>99</a>  <span class="doccomment">/// the declaring binding's file name, as the BINDINGS registry gives it (`&lt;name&gt;.&lt;extension&gt;`), and the hook
+<a href=#100 id=100 data-nosnippet>100</a>  /// (`\lx@add@authors@append`) it applies to: `*` any
+<a href=#101 id=101 data-nosnippet>101</a>  </span><span class="kw">pub </span>binding:           <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
+<a href=#102 id=102 data-nosnippet>102</a>  <span class="kw">pub </span>hook:              <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
+<a href=#103 id=103 data-nosnippet>103</a>  <span class="doccomment">/// an `\inst` mark (the convention's own, the rehearsal's `\lx@fm@obs@mark`) after a comma is the name's before the
+<a href=#104 id=104 data-nosnippet>104</a>  /// comma, glued or not (llncs.cls:894-896 and aa.cls:759-760 `\def\inst#1{\unskip$^{#1}$}`; OD #807, 2401.16957);
+<a href=#105 id=105 data-nosnippet>105</a>  /// any other mark after a comma is the name's before only when glued to the comma
+<a href=#106 id=106 data-nosnippet>106</a>  </span><span class="kw">pub </span>inst_after_comma:  bool,
+<a href=#107 id=107 data-nosnippet>107</a>  <span class="doccomment">/// `\and` is inline text joining the names of one row, not a column (llncs.cls:1013-1018 `\def\and{\unskip,…}`
+<a href=#108 id=108 data-nosnippet>108</a>  /// in `\@maketitle`; OD #792: `Ann Able \and Bob Baker\\ University of Somewhere` is both names')
+<a href=#109 id=109 data-nosnippet>109</a>  </span><span class="kw">pub </span>and_inline:        bool,
+<a href=#110 id=110 data-nosnippet>110</a>  <span class="doccomment">/// the `\\` lines of the class's `\author` paragraph are read as the binding's own split read them before the block
+<a href=#111 id=111 data-nosnippet>111</a>  /// went to the reading whole (llncs's `\lx@llncs@author` until Z18e, OXIDIZED_DESIGN_DIVERGENCES #984: its
+<a href=#112 id=112 data-nosnippet>112</a>  /// `reads_as_affiliation` per line): under a row's affiliation line, a line reading as no institution over one reading
+<a href=#113 id=113 data-nosnippet>113</a>  /// as one starts a new row of names, and a line whose name carries an ORCID is names. Off for the kernel, whose `\\`
+<a href=#114 id=114 data-nosnippet>114</a>  /// lines keep their affiliation reading (an article's "Einstein Drive" over an address line, hep-th0212274)
+<a href=#115 id=115 data-nosnippet>115</a>  </span><span class="kw">pub </span>author_lines:      bool,
+<a href=#116 id=116 data-nosnippet>116</a>  <span class="doccomment">/// every `\\` line of the class's `\author` paragraph is names, as its title page sets them (webofc.cls:497-552:
+<a href=#117 id=117 data-nosnippet>117</a>  /// `\@author` a paragraph whose lines are names, the institutes apart: the template's `\\The SND Collaboration` a
+<a href=#118 id=118 data-nosnippet>118</a>  /// creator, 1609.01040), the binding's spelling split at `\\` until P2-1 (OD #993). Off for the kernel, whose
+<a href=#119 id=119 data-nosnippet>119</a>  /// `\\` lines under names keep their affiliation reading
+<a href=#120 id=120 data-nosnippet>120</a>  </span><span class="kw">pub </span>break_parts_names: bool,
+<a href=#121 id=121 data-nosnippet>121</a>  <span class="doccomment">/// a `labelseq=&lt;role&gt;` entry is labelled by its place among the entries of that role (llncs's and aa's
+<a href=#122 id=122 data-nosnippet>122</a>  /// `\institute{A \and B}`, numbered 1, 2 as the class prints them: OD #791, #159)
+<a href=#123 id=123 data-nosnippet>123</a>  </span><span class="kw">pub </span>label_sequence:    bool,
+<a href=#124 id=124 data-nosnippet>124</a>  <span class="kw">pub </span>email_owner:       EmailOwner,
+<a href=#125 id=125 data-nosnippet>125</a>  <span class="doccomment">/// each call is an author group of its own (an e-mail nothing else places is the group's only author's: iopart's
+<a href=#126 id=126 data-nosnippet>126</a>  /// `\author`, OD #808)
+<a href=#127 id=127 data-nosnippet>127</a>  </span><span class="kw">pub </span>call_is_group:     bool,
+<a href=#128 id=128 data-nosnippet>128</a>  <span class="kw">pub </span>title_marks:       TitleMarks,
+<a href=#129 id=129 data-nosnippet>129</a>  <span class="doccomment">/// authblk's notes (authblk.sty:114-118, 148-151): an unlabelled `\author` shows `\AB@thenote`, the `affil` counter
+<a href=#130 id=130 data-nosnippet>130</a>  /// stepped at the first `\author` after an `\affil`, and an unlabelled `\affil` is labelled by it; the marks show
+<a href=#131 id=131 data-nosnippet>131</a>  /// when a label is given or the counter passes `\c@Maxaffil` (`state_counter`), else the affiliations print under
+<a href=#132 id=132 data-nosnippet>132</a>  /// the run of authors (block mode)
+<a href=#133 id=133 data-nosnippet>133</a>  </span><span class="kw">pub </span>thenote:           bool,
+<a href=#134 id=134 data-nosnippet>134</a>  <span class="doccomment">/// a counter the policy reads at each block's call (the ledger's `counter`)
+<a href=#135 id=135 data-nosnippet>135</a>  </span><span class="kw">pub </span>state_counter:     <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str&gt;,
+<a href=#136 id=136 data-nosnippet>136</a>  <span class="doccomment">/// `\and` inside an annotation prints the word "and" (amsart.cls:599 `\def\and{\unskip{ }\@@and{ }\ignorespaces}`):
+<a href=#137 id=137 data-nosnippet>137</a>  /// the entry's text holds it
+<a href=#138 id=138 data-nosnippet>138</a>  </span><span class="kw">pub </span>and_word:          bool,
+<a href=#139 id=139 data-nosnippet>139</a>  <span class="doccomment">/// the title's notes print no mark (IEEEtran.cls:4756 `\def\thefootnote{}` in `\maketitle`, "the \thanks{} mark type
+<a href=#140 id=140 data-nosnippet>140</a>  /// is empty"): a note stands beside a name only by its place, so its inner contacts are a name's only by spelling
+<a href=#141 id=141 data-nosnippet>141</a>  /// (main-session decision 2 of 2026-10-22, user ruling 2026-10-20 #4)
+<a href=#142 id=142 data-nosnippet>142</a>  </span><span class="kw">pub </span>unmarked_notes:    bool,
+<a href=#143 id=143 data-nosnippet>143</a>  <span class="doccomment">/// the class's `\email` prints its address where it is called (llncs.cls:897 `\def\email#1{{\tt#1}}`, aa.cls:824
+<a href=#144 id=144 data-nosnippet>144</a>  /// `e-mail: {\aa@emailfont #1}`, svjour3.cls:303, svmult.cls:2304, svjour.cls:256): one inside a document's note
+<a href=#145 id=145 data-nosnippet>145</a>  /// (`\offprints{O. Kochukhov, \email{…}}`, a `\thanks`) prints in the note, after the name the note gives, which
+<a href=#146 id=146 data-nosnippet>146</a>  /// designates its owner — while the `\email` meaning is one of the class's bindings' (`ledger::email_meaning`, read at
+<a href=#147 id=147 data-nosnippet>147</a>  /// the call; `Resolver::answer_document_notes`). Not amsart's (amsart.cls:538 `\def\email` stores the address for
+<a href=#148 id=148 data-nosnippet>148</a>  /// the author's address block) nor REVTeX's (the author's footnote): there the address is the call's current
+<a href=#149 id=149 data-nosnippet>149</a>  /// author's, as the binding routes it
+<a href=#150 id=150 data-nosnippet>150</a>  </span><span class="kw">pub </span>email_in_place:    bool,
+<a href=#151 id=151 data-nosnippet>151</a>  <span class="doccomment">/// a call's `label=` is a key, never printed: the class prints the entry's place in its list instead
+<a href=#152 id=152 data-nosnippet>152</a>  /// (elsarticle.cls:656-662 `\theaffn`, elsart.cls v2.18 :1135-1164 `\theaddress`), so no footnote's mark answers it,
+<a href=#153 id=153 data-nosnippet>153</a>  /// a symbol's neither (FIDELITY_CHARTER §4 R1: an author whose keys request affiliations takes none by another route;
+<a href=#154 id=154 data-nosnippet>154</a>  /// 1108.0201's `\address[*]{current address}` under `M.~Pesce-Rollins\footnotemark[1]`) — an author's own keys
+<a href=#155 id=155 data-nosnippet>155</a>  /// (`annotations=` of `\author[a,b]`) and a mark typed by hand do, the places keys in order spell (0907.5014's
+<a href=#156 id=156 data-nosnippet>156</a>  /// `Denes Molnar$^{a,b}$`)
+<a href=#157 id=157 data-nosnippet>157</a>  </span><span class="kw">pub </span>keyed_labels:      bool,
+<a href=#158 id=158 data-nosnippet>158</a>  <span class="doccomment">/// the commands that part a block's lines or columns whatever they print here, as the class's title page does, each declared by
+<a href=#159 id=159 data-nosnippet>159</a>  /// the binding owning the `\author` they stand in: OmniBus's no-op `\alignauthor` a column (inst_support_sty.rs; what sig-alternate.cls,
+<a href=#160 id=160 data-nosnippet>160</a>  /// sigchi.cls print, whose `\alignauthor` read raw is the tabular it makes), ijcai's `\affiliations` and `\emails` a section
+<a href=#161 id=161 data-nosnippet>161</a>  /// (ijcai19.sty:124-130). A rehearsal notes their calls beside the block's events (`Outcome::Events` `breaks`), which they do
+<a href=#162 id=162 data-nosnippet>162</a>  /// not part; no reading reads them yet
+<a href=#163 id=163 data-nosnippet>163</a>  </span><span class="kw">pub </span>block_breaks:      <span class="kw-2">&amp;</span><span class="lifetime">'static </span>[(<span class="kw-2">&amp;</span><span class="lifetime">'static </span>str, BreakKind)],
+<a href=#164 id=164 data-nosnippet>164</a>  <span class="doccomment">/// what the class's title page prints that the stand-in for article.cls's page (sect05.rs `title_page_print_tokens`)
+<a href=#165 id=165 data-nosnippet>165</a>  /// cannot know: [`TitlePageDecl`]
+<a href=#166 id=166 data-nosnippet>166</a>  </span><span class="kw">pub </span>title_page:        TitlePageDecl,
+<a href=#167 id=167 data-nosnippet>167</a>  <span class="doccomment">/// what the declaration reproduces
+<a href=#168 id=168 data-nosnippet>168</a>  </span><span class="kw">pub </span>cite:              <span class="kw-2">&amp;</span><span class="lifetime">'static </span>str,
+<a href=#169 id=169 data-nosnippet>169</a>}
+<a href=#170 id=170 data-nosnippet>170</a>
+<a href=#171 id=171 data-nosnippet>171</a><span class="doccomment">/// The kernel's conventions: the blocks of the kernel's `\author` under a class whose bindings declare none (`article`
+<a href=#172 id=172 data-nosnippet>172</a>/// and every class without a frontmatter binding of its own, OD #925); and the template a declaration completes
+<a href=#173 id=173 data-nosnippet>173</a>/// (`..KERNEL`).
+<a href=#174 id=174 data-nosnippet>174</a></span><span class="kw">pub const </span>KERNEL: Policy = Policy {
+<a href=#175 id=175 data-nosnippet>175</a>  name:              <span class="string">"kernel"</span>,
+<a href=#176 id=176 data-nosnippet>176</a>  binding:           <span class="string">"*"</span>,
+<a href=#177 id=177 data-nosnippet>177</a>  hook:              <span class="string">"*"</span>,
+<a href=#178 id=178 data-nosnippet>178</a>  inst_after_comma:  <span class="bool-val">false</span>,
+<a href=#179 id=179 data-nosnippet>179</a>  and_inline:        <span class="bool-val">false</span>,
+<a href=#180 id=180 data-nosnippet>180</a>  author_lines:      <span class="bool-val">false</span>,
+<a href=#181 id=181 data-nosnippet>181</a>  break_parts_names: <span class="bool-val">false</span>,
+<a href=#182 id=182 data-nosnippet>182</a>  label_sequence:    <span class="bool-val">true</span>,
+<a href=#183 id=183 data-nosnippet>183</a>  email_owner:       EmailOwner::Chain,
+<a href=#184 id=184 data-nosnippet>184</a>  call_is_group:     <span class="bool-val">false</span>,
+<a href=#185 id=185 data-nosnippet>185</a>  title_marks:       TitleMarks::Fnsymbol,
+<a href=#186 id=186 data-nosnippet>186</a>  thenote:           <span class="bool-val">false</span>,
+<a href=#187 id=187 data-nosnippet>187</a>  state_counter:     <span class="prelude-val">None</span>,
+<a href=#188 id=188 data-nosnippet>188</a>  and_word:          <span class="bool-val">false</span>,
+<a href=#189 id=189 data-nosnippet>189</a>  unmarked_notes:    <span class="bool-val">false</span>,
+<a href=#190 id=190 data-nosnippet>190</a>  email_in_place:    <span class="bool-val">false</span>,
+<a href=#191 id=191 data-nosnippet>191</a>  keyed_labels:      <span class="bool-val">false</span>,
+<a href=#192 id=192 data-nosnippet>192</a>  block_breaks:      <span class="kw-2">&amp;</span>[],
+<a href=#193 id=193 data-nosnippet>193</a>  title_page:        TitlePageDecl {
+<a href=#194 id=194 data-nosnippet>194</a>    author:         AuthorPage::Kernel,
+<a href=#195 id=195 data-nosnippet>195</a>    title_and:      <span class="kw-2">&amp;</span>[],
+<a href=#196 id=196 data-nosnippet>196</a>    <span class="comment">// (the standard classes' `\maketitle` runs `\@maketitle` only without `titlepage`, keyed on their `\if@titlepage`:
+<a href=#197 id=197 data-nosnippet>197</a>    // article.cls:50-51 defaults it false, report.cls:50-51 and book.cls:50-51 true; `titlepage`/`notitlepage` set it,
+<a href=#198 id=198 data-nosnippet>198</a>    // article.cls:91-93, report.cls:92-94, book.cls:93-95)
+<a href=#199 id=199 data-nosnippet>199</a>    </span>maketitle_runs: <span class="kw-2">&amp;</span>[
+<a href=#200 id=200 data-nosnippet>200</a>      (
+<a href=#201 id=201 data-nosnippet>201</a>        <span class="string">"article.cls"</span>,
+<a href=#202 id=202 data-nosnippet>202</a>        MaketitleRuns::WithoutTitlepage,
+<a href=#203 id=203 data-nosnippet>203</a>        <span class="string">"article.cls:169-219"</span>,
+<a href=#204 id=204 data-nosnippet>204</a>      ),
+<a href=#205 id=205 data-nosnippet>205</a>      (
+<a href=#206 id=206 data-nosnippet>206</a>        <span class="string">"report.cls"</span>,
+<a href=#207 id=207 data-nosnippet>207</a>        MaketitleRuns::WithoutTitlepage,
+<a href=#208 id=208 data-nosnippet>208</a>        <span class="string">"report.cls:175-225"</span>,
+<a href=#209 id=209 data-nosnippet>209</a>      ),
+<a href=#210 id=210 data-nosnippet>210</a>      (
+<a href=#211 id=211 data-nosnippet>211</a>        <span class="string">"book.cls"</span>,
+<a href=#212 id=212 data-nosnippet>212</a>        MaketitleRuns::WithoutTitlepage,
+<a href=#213 id=213 data-nosnippet>213</a>        <span class="string">"book.cls:181-231"</span>,
+<a href=#214 id=214 data-nosnippet>214</a>      ),
+<a href=#215 id=215 data-nosnippet>215</a>      <span class="comment">// extsizes' copies keep the standard classes' choice and defaults (extarticle.cls:28 false, extreport.cls:28 and
+<a href=#216 id=216 data-nosnippet>216</a>      // extbook.cls:12 true; their options :64-65, extbook :49-50); review revTP1c, which found them undeclared
+<a href=#217 id=217 data-nosnippet>217</a>      </span>(
+<a href=#218 id=218 data-nosnippet>218</a>        <span class="string">"extarticle.cls"</span>,
+<a href=#219 id=219 data-nosnippet>219</a>        MaketitleRuns::WithoutTitlepage,
+<a href=#220 id=220 data-nosnippet>220</a>        <span class="string">"extarticle.cls:196-281"</span>,
+<a href=#221 id=221 data-nosnippet>221</a>      ),
+<a href=#222 id=222 data-nosnippet>222</a>      (
+<a href=#223 id=223 data-nosnippet>223</a>        <span class="string">"extreport.cls"</span>,
+<a href=#224 id=224 data-nosnippet>224</a>        MaketitleRuns::WithoutTitlepage,
+<a href=#225 id=225 data-nosnippet>225</a>        <span class="string">"extreport.cls:198-283"</span>,
+<a href=#226 id=226 data-nosnippet>226</a>      ),
+<a href=#227 id=227 data-nosnippet>227</a>      (
+<a href=#228 id=228 data-nosnippet>228</a>        <span class="string">"extbook.cls"</span>,
+<a href=#229 id=229 data-nosnippet>229</a>        MaketitleRuns::WithoutTitlepage,
+<a href=#230 id=230 data-nosnippet>230</a>        <span class="string">"extbook.cls:191-276"</span>,
+<a href=#231 id=231 data-nosnippet>231</a>      ),
+<a href=#232 id=232 data-nosnippet>232</a>    ],
+<a href=#233 id=233 data-nosnippet>233</a>  },
+<a href=#234 id=234 data-nosnippet>234</a>  cite:              <span class="string">"Perl Base_Utility.pool.ltxml:676-700 (@authorsplits, positionOf); FIDELITY_CHARTER §4; OD #925"</span>,
+<a href=#235 id=235 data-nosnippet>235</a>};
+<a href=#236 id=236 data-nosnippet>236</a>
+<a href=#237 id=237 data-nosnippet>237</a><span class="doccomment">/// The conventions of a binding owning the `\author` meaning that declares none of its own (JHEP.cls, aas_support.sty,
+<a href=#238 id=238 data-nosnippet>238</a>/// sn-jnl.cls, …; elsart_support_core.sty declares its own since 97e r2), or of a meaning no binding owns (the
+<a href=#239 id=239 data-nosnippet>239</a>/// document's own, a file read raw, the fallback class's): the kernel's reading (OD #948).
+<a href=#240 id=240 data-nosnippet>240</a></span><span class="kw">pub const </span>UNDECLARED: Policy = Policy {
+<a href=#241 id=241 data-nosnippet>241</a>  name: <span class="string">"undeclared"</span>,
+<a href=#242 id=242 data-nosnippet>242</a>  cite: <span class="string">"Perl Base_Utility.pool.ltxml:676-700 (@authorsplits, positionOf); OD #925"</span>,
+<a href=#243 id=243 data-nosnippet>243</a>  ..KERNEL
+<a href=#244 id=244 data-nosnippet>244</a>};
+<a href=#245 id=245 data-nosnippet>245</a>
+<a href=#246 id=246 data-nosnippet>246</a><span class="doccomment">/// The owner name the ledger gives the kernel's `\author` (`ledger::meaning_owner`, `ledger::policy_binding`).
+<a href=#247 id=247 data-nosnippet>247</a></span><span class="kw">pub const </span>KERNEL_BINDING: <span class="kw-2">&amp;</span>str = <span class="string">"kernel"</span>;
+<a href=#248 id=248 data-nosnippet>248</a>
+<a href=#249 id=249 data-nosnippet>249</a><span class="doccomment">/// The conventions for a block of `binding` when it declared none: the kernel's for the kernel's own blocks, else
+<a href=#250 id=250 data-nosnippet>250</a>/// `UNDECLARED`.
+<a href=#251 id=251 data-nosnippet>251</a></span><span class="kw">fn </span>undeclared(binding: <span class="kw-2">&amp;</span>str) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Policy {
+<a href=#252 id=252 data-nosnippet>252</a>  <span class="kw">if </span>binding == KERNEL_BINDING {
+<a href=#253 id=253 data-nosnippet>253</a>    <span class="kw-2">&amp;</span>KERNEL
+<a href=#254 id=254 data-nosnippet>254</a>  } <span class="kw">else </span>{
+<a href=#255 id=255 data-nosnippet>255</a>    <span class="kw-2">&amp;</span>UNDECLARED
+<a href=#256 id=256 data-nosnippet>256</a>  }
+<a href=#257 id=257 data-nosnippet>257</a>}
+<a href=#258 id=258 data-nosnippet>258</a>
+<a href=#259 id=259 data-nosnippet>259</a><span class="doccomment">/// The prefix of the state key a binding's declarations are kept under.
+<a href=#260 id=260 data-nosnippet>260</a></span><span class="kw">const </span>DECLARATIONS: <span class="kw-2">&amp;</span>str = <span class="string">"frontmatter_conventions:"</span>;
+<a href=#261 id=261 data-nosnippet>261</a>
+<a href=#262 id=262 data-nosnippet>262</a><span class="doccomment">/// The state key a binding's declarations are kept under ([`DECLARATIONS`]).
+<a href=#263 id=263 data-nosnippet>263</a></span><span class="kw">fn </span>declarations_key(binding: <span class="kw-2">&amp;</span>str) -&gt; String { <span class="macro">s!</span>(<span class="string">"{DECLARATIONS}{binding}"</span>) }
+<a href=#264 id=264 data-nosnippet>264</a>
+<a href=#265 id=265 data-nosnippet>265</a><span class="doccomment">/// The declarations `binding` made, in declaration order, if any. The key probed, not formatted nor interned: a
+<a href=#266 id=266 data-nosnippet>266</a>/// rehearsal's e-mail binding asks it of each class binding (`ledger::email_meaning`; 1901.01540's 2,637 rehearsals).
+<a href=#267 id=267 data-nosnippet>267</a></span><span class="kw">fn </span>declared(binding: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;Rc&lt;Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>Policy&gt;&gt;&gt; {
+<a href=#268 id=268 data-nosnippet>268</a>  <span class="kw">let </span>key = get_suffixed(DECLARATIONS, binding)<span class="question-mark">?</span>;
+<a href=#269 id=269 data-nosnippet>269</a>  with_value_sym(key, |v| <span class="kw">match </span>v {
+<a href=#270 id=270 data-nosnippet>270</a>    <span class="prelude-val">Some</span>(Stored::Opaque(payload)) =&gt; Rc::clone(payload).downcast::&lt;Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>Policy&gt;&gt;().ok(),
+<a href=#271 id=271 data-nosnippet>271</a>    <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#272 id=272 data-nosnippet>272</a>  })
+<a href=#273 id=273 data-nosnippet>273</a>}
+<a href=#274 id=274 data-nosnippet>274</a>
+<a href=#275 id=275 data-nosnippet>275</a><span class="doccomment">/// Declare a binding's frontmatter conventions (the binding's load, before anything else it defines): kept in the
+<a href=#276 id=276 data-nosnippet>276</a>/// state, globally, under `conventions.binding` for the hook `conventions.hook` (`*` any); a binding may declare one
+<a href=#277 id=277 data-nosnippet>277</a>/// per hook (the first matching, in declaration order, applies), and a later declaration for the same hook replaces the
+<a href=#278 id=278 data-nosnippet>278</a>/// earlier in its place (a binding loaded again declares the same). What `policy_for` reads.
+<a href=#279 id=279 data-nosnippet>279</a></span><span class="kw">pub fn </span>declare_frontmatter_conventions(conventions: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Policy) {
+<a href=#280 id=280 data-nosnippet>280</a>  <span class="macro">debug_assert!</span>(
+<a href=#281 id=281 data-nosnippet>281</a>    !conventions.binding.is_empty() &amp;&amp; conventions.binding != <span class="string">"*"</span>,
+<a href=#282 id=282 data-nosnippet>282</a>    <span class="string">"{}: conventions are declared for the declaring binding's file"</span>,
+<a href=#283 id=283 data-nosnippet>283</a>    conventions.name
+<a href=#284 id=284 data-nosnippet>284</a>  );
+<a href=#285 id=285 data-nosnippet>285</a>  <span class="macro">debug_assert!</span>(
+<a href=#286 id=286 data-nosnippet>286</a>    conventions.cite.contains(<span class="string">"OD #"</span>) || conventions.cite.contains(<span class="string">".ltxml"</span>),
+<a href=#287 id=287 data-nosnippet>287</a>    <span class="string">"{}: a declaration cites the entry or the Perl binding it reproduces"</span>,
+<a href=#288 id=288 data-nosnippet>288</a>    conventions.name
+<a href=#289 id=289 data-nosnippet>289</a>  );
+<a href=#290 id=290 data-nosnippet>290</a>  <span class="kw">let </span><span class="kw-2">mut </span>all: Vec&lt;<span class="kw-2">&amp;</span><span class="lifetime">'static </span>Policy&gt; =
+<a href=#291 id=291 data-nosnippet>291</a>    declared(conventions.binding).map_or_else(Vec::new, |d| d.to_vec());
+<a href=#292 id=292 data-nosnippet>292</a>  <span class="kw">match </span>all.iter_mut().find(|p| p.hook == conventions.hook) {
+<a href=#293 id=293 data-nosnippet>293</a>    <span class="prelude-val">Some</span>(earlier) =&gt; <span class="kw-2">*</span>earlier = conventions,
+<a href=#294 id=294 data-nosnippet>294</a>    <span class="prelude-val">None </span>=&gt; all.push(conventions),
+<a href=#295 id=295 data-nosnippet>295</a>  }
+<a href=#296 id=296 data-nosnippet>296</a>  assign_value(
+<a href=#297 id=297 data-nosnippet>297</a>    <span class="kw-2">&amp;</span>declarations_key(conventions.binding),
+<a href=#298 id=298 data-nosnippet>298</a>    Stored::Opaque(Rc::new(all)),
+<a href=#299 id=299 data-nosnippet>299</a>    <span class="prelude-val">Some</span>(Scope::Global),
+<a href=#300 id=300 data-nosnippet>300</a>  );
+<a href=#301 id=301 data-nosnippet>301</a>}
+<a href=#302 id=302 data-nosnippet>302</a>
+<a href=#303 id=303 data-nosnippet>303</a><span class="doccomment">/// Whether a binding declared conventions of its own (the class fallback's test, `ledger::policy_binding`).
+<a href=#304 id=304 data-nosnippet>304</a></span><span class="kw">pub fn </span>has_entry(binding: <span class="kw-2">&amp;</span>str) -&gt; bool { declared(binding).is_some() }
+<a href=#305 id=305 data-nosnippet>305</a>
+<a href=#306 id=306 data-nosnippet>306</a><span class="doccomment">/// Whether a binding declared that its class's `\email` prints in place ([`Policy::email_in_place`], any of its hooks).
+<a href=#307 id=307 data-nosnippet>307</a></span><span class="kw">pub fn </span>declares_email_in_place(binding: <span class="kw-2">&amp;</span>str) -&gt; bool {
+<a href=#308 id=308 data-nosnippet>308</a>  declared(binding).is_some_and(|d| d.iter().any(|p| p.email_in_place))
+<a href=#309 id=309 data-nosnippet>309</a>}
+<a href=#310 id=310 data-nosnippet>310</a>
+<a href=#311 id=311 data-nosnippet>311</a><span class="doccomment">/// Whether `binding` declared that the `\maketitle` of `class` (its binding's file name) runs `\@maketitle`
+<a href=#312 id=312 data-nosnippet>312</a>/// ([`TitlePageDecl::maketitle_runs`], any of its hooks), `None` when it declared nothing for it.
+<a href=#313 id=313 data-nosnippet>313</a></span><span class="kw">pub fn </span>declared_maketitle_runs(binding: <span class="kw-2">&amp;</span>str, class: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;MaketitleRuns&gt; {
+<a href=#314 id=314 data-nosnippet>314</a>  declared(binding).and_then(|d| {
+<a href=#315 id=315 data-nosnippet>315</a>    d.iter().find_map(|p| {
+<a href=#316 id=316 data-nosnippet>316</a>      p.title_page
+<a href=#317 id=317 data-nosnippet>317</a>        .maketitle_runs
+<a href=#318 id=318 data-nosnippet>318</a>        .iter()
+<a href=#319 id=319 data-nosnippet>319</a>        .find(|(name, ..)| <span class="kw-2">*</span>name == class)
+<a href=#320 id=320 data-nosnippet>320</a>        .map(|(<span class="kw">_</span>, runs, <span class="kw">_</span>)| <span class="kw-2">*</span>runs)
+<a href=#321 id=321 data-nosnippet>321</a>    })
+<a href=#322 id=322 data-nosnippet>322</a>  })
+<a href=#323 id=323 data-nosnippet>323</a>}
+<a href=#324 id=324 data-nosnippet>324</a>
+<a href=#325 id=325 data-nosnippet>325</a><span class="doccomment">/// What `binding` declared its class's title page prints for the authors ([`TitlePageDecl::author`]: the first of its
+<a href=#326 id=326 data-nosnippet>326</a>/// hooks' declarations that says more than the kernel's), `None` when it declared nothing.
+<a href=#327 id=327 data-nosnippet>327</a></span><span class="kw">pub fn </span>declared_author_page(binding: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Option</span>&lt;AuthorPage&gt; {
+<a href=#328 id=328 data-nosnippet>328</a>  declared(binding).and_then(|d| {
+<a href=#329 id=329 data-nosnippet>329</a>    d.iter()
+<a href=#330 id=330 data-nosnippet>330</a>      .map(|p| p.title_page.author)
+<a href=#331 id=331 data-nosnippet>331</a>      .find(|page| <span class="kw-2">*</span>page != AuthorPage::Kernel)
+<a href=#332 id=332 data-nosnippet>332</a>  })
+<a href=#333 id=333 data-nosnippet>333</a>}
+<a href=#334 id=334 data-nosnippet>334</a>
+<a href=#335 id=335 data-nosnippet>335</a><span class="doccomment">/// The conventions among `declared` for a block recorded under `binding` (the `\author` owner) and `hook`: the first
+<a href=#336 id=336 data-nosnippet>336</a>/// declaration whose binding and hook match (`*` any), else the kernel's for the kernel's own blocks, `UNDECLARED`
+<a href=#337 id=337 data-nosnippet>337</a>/// for any other — `policy_for`'s rule, for a caller holding
+<a href=#338 id=338 data-nosnippet>338</a>/// the declarations itself (the deleted `ab_audit fmshadow --re-resolve`).
+<a href=#339 id=339 data-nosnippet>339</a></span><span class="kw">pub fn </span>conventions_among&lt;<span class="lifetime">'a</span>&gt;(
+<a href=#340 id=340 data-nosnippet>340</a>  declared: <span class="kw">impl </span>IntoIterator&lt;Item = <span class="kw-2">&amp;</span><span class="lifetime">'a </span><span class="kw-2">&amp;</span><span class="lifetime">'static </span>Policy&gt;,
+<a href=#341 id=341 data-nosnippet>341</a>  binding: <span class="kw-2">&amp;</span>str,
+<a href=#342 id=342 data-nosnippet>342</a>  hook: <span class="kw-2">&amp;</span>str,
+<a href=#343 id=343 data-nosnippet>343</a>) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Policy {
+<a href=#344 id=344 data-nosnippet>344</a>  declared
+<a href=#345 id=345 data-nosnippet>345</a>    .into_iter()
+<a href=#346 id=346 data-nosnippet>346</a>    .copied()
+<a href=#347 id=347 data-nosnippet>347</a>    .find(|p| p.binding == binding &amp;&amp; (p.hook == <span class="string">"*" </span>|| p.hook == hook))
+<a href=#348 id=348 data-nosnippet>348</a>    .unwrap_or_else(|| undeclared(binding))
+<a href=#349 id=349 data-nosnippet>349</a>}
+<a href=#350 id=350 data-nosnippet>350</a>
+<a href=#351 id=351 data-nosnippet>351</a><span class="doccomment">/// The conventions for a block recorded under `binding` (the `\author` owner) and `hook`: the first that binding
+<a href=#352 id=352 data-nosnippet>352</a>/// declared whose hook matches (`*` any), else the kernel's for the kernel's own blocks, `UNDECLARED` for any other.
+<a href=#353 id=353 data-nosnippet>353</a></span><span class="kw">pub fn </span>policy_for(binding: <span class="kw-2">&amp;</span>str, hook: <span class="kw-2">&amp;</span>str) -&gt; <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Policy {
+<a href=#354 id=354 data-nosnippet>354</a>  declared(binding).map_or_else(
+<a href=#355 id=355 data-nosnippet>355</a>    || undeclared(binding),
+<a href=#356 id=356 data-nosnippet>356</a>    |d| conventions_among(d.iter(), binding, hook),
+<a href=#357 id=357 data-nosnippet>357</a>  )
+<a href=#358 id=358 data-nosnippet>358</a>}
+<a href=#359 id=359 data-nosnippet>359</a>
+<a href=#360 id=360 data-nosnippet>360</a><span class="attr">#[cfg(test)]
+<a href=#361 id=361 data-nosnippet>361</a></span><span class="kw">mod </span>tests {
+<a href=#362 id=362 data-nosnippet>362</a>  <span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#363 id=363 data-nosnippet>363</a>
+<a href=#364 id=364 data-nosnippet>364</a>  <span class="doccomment">/// A synthetic binding's declarations: one for every hook, one for a hook of its own (declared first, so it wins
+<a href=#365 id=365 data-nosnippet>365</a>  /// for that hook, as the first matching declaration does).
+<a href=#366 id=366 data-nosnippet>366</a>  </span><span class="kw">const </span>ANY_HOOK: Policy = Policy {
+<a href=#367 id=367 data-nosnippet>367</a>    name: <span class="string">"synthetic"</span>,
+<a href=#368 id=368 data-nosnippet>368</a>    binding: <span class="string">"synthetic_binding"</span>,
+<a href=#369 id=369 data-nosnippet>369</a>    and_inline: <span class="bool-val">true</span>,
+<a href=#370 id=370 data-nosnippet>370</a>    cite: <span class="string">"OD #837 (a synthetic binding: the declaration's lookup)"</span>,
+<a href=#371 id=371 data-nosnippet>371</a>    ..KERNEL
+<a href=#372 id=372 data-nosnippet>372</a>  };
+<a href=#373 id=373 data-nosnippet>373</a>  <span class="kw">const </span>APPEND_HOOK: Policy = Policy {
+<a href=#374 id=374 data-nosnippet>374</a>    name: <span class="string">"synthetic_append"</span>,
+<a href=#375 id=375 data-nosnippet>375</a>    hook: <span class="string">"\\lx@add@authors@append"</span>,
+<a href=#376 id=376 data-nosnippet>376</a>    and_word: <span class="bool-val">true</span>,
+<a href=#377 id=377 data-nosnippet>377</a>    ..ANY_HOOK
+<a href=#378 id=378 data-nosnippet>378</a>  };
+<a href=#379 id=379 data-nosnippet>379</a>
+<a href=#380 id=380 data-nosnippet>380</a>  <span class="attr">#[test]
+<a href=#381 id=381 data-nosnippet>381</a>  </span><span class="kw">fn </span>a_declaration_is_read_and_an_undeclared_family_takes_the_kernel() {
+<a href=#382 id=382 data-nosnippet>382</a>    <span class="macro">assert_eq!</span>(
+<a href=#383 id=383 data-nosnippet>383</a>      policy_for(<span class="string">"synthetic_binding"</span>, <span class="string">"\\lx@add@author@split"</span>).name,
+<a href=#384 id=384 data-nosnippet>384</a>      <span class="string">"undeclared"
+<a href=#385 id=385 data-nosnippet>385</a>    </span>);
+<a href=#386 id=386 data-nosnippet>386</a>    <span class="macro">assert!</span>(!has_entry(<span class="string">"synthetic_binding"</span>));
+<a href=#387 id=387 data-nosnippet>387</a>    declare_frontmatter_conventions(<span class="kw-2">&amp;</span>APPEND_HOOK);
+<a href=#388 id=388 data-nosnippet>388</a>    declare_frontmatter_conventions(<span class="kw-2">&amp;</span>ANY_HOOK);
+<a href=#389 id=389 data-nosnippet>389</a>    <span class="macro">assert!</span>(has_entry(<span class="string">"synthetic_binding"</span>));
+<a href=#390 id=390 data-nosnippet>390</a>    <span class="macro">assert_eq!</span>(
+<a href=#391 id=391 data-nosnippet>391</a>      policy_for(<span class="string">"synthetic_binding"</span>, <span class="string">"\\lx@add@authors@append"</span>).name,
+<a href=#392 id=392 data-nosnippet>392</a>      <span class="string">"synthetic_append"
+<a href=#393 id=393 data-nosnippet>393</a>    </span>);
+<a href=#394 id=394 data-nosnippet>394</a>    <span class="macro">assert_eq!</span>(
+<a href=#395 id=395 data-nosnippet>395</a>      policy_for(<span class="string">"synthetic_binding"</span>, <span class="string">"\\lx@add@author@split"</span>).name,
+<a href=#396 id=396 data-nosnippet>396</a>      <span class="string">"synthetic"
+<a href=#397 id=397 data-nosnippet>397</a>    </span>);
+<a href=#398 id=398 data-nosnippet>398</a>    <span class="macro">assert_eq!</span>(
+<a href=#399 id=399 data-nosnippet>399</a>      policy_for(<span class="string">"kernel"</span>, <span class="string">"\\lx@add@authors@adaptive"</span>).name,
+<a href=#400 id=400 data-nosnippet>400</a>      <span class="string">"kernel"
+<a href=#401 id=401 data-nosnippet>401</a>    </span>);
+<a href=#402 id=402 data-nosnippet>402</a>    <span class="macro">assert_eq!</span>(
+<a href=#403 id=403 data-nosnippet>403</a>      policy_for(<span class="string">"undeclared_binding"</span>, <span class="string">"\\lx@add@authors@append"</span>).name,
+<a href=#404 id=404 data-nosnippet>404</a>      <span class="string">"undeclared"
+<a href=#405 id=405 data-nosnippet>405</a>    </span>);
+<a href=#406 id=406 data-nosnippet>406</a>    <span class="comment">// (a declaration again for a hook replaces the earlier in its place: a binding loaded again)
+<a href=#407 id=407 data-nosnippet>407</a>    </span>declare_frontmatter_conventions(<span class="kw-2">&amp;</span>APPEND_HOOK);
+<a href=#408 id=408 data-nosnippet>408</a>    <span class="macro">assert_eq!</span>(
+<a href=#409 id=409 data-nosnippet>409</a>      policy_for(<span class="string">"synthetic_binding"</span>, <span class="string">"\\lx@add@authors@append"</span>).name,
+<a href=#410 id=410 data-nosnippet>410</a>      <span class="string">"synthetic_append"
+<a href=#411 id=411 data-nosnippet>411</a>    </span>);
+<a href=#412 id=412 data-nosnippet>412</a>  }
+<a href=#413 id=413 data-nosnippet>413</a>}
+</code></pre></div></section></main></body></html>

@@ -1,0 +1,42 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="abntex2cite.sty — ABNT citations (Brazilian standard), the bibliography end."><title>latexml_contrib::abntex2cite_sty - Rust</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../sidebar-items.js"></script><script defer src="../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc mod"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><rustdoc-topbar><h2><a href="#">Module abntex2cite_sty</a></h2></rustdoc-topbar><nav class="sidebar"><div class="sidebar-crate"><h2><a href="../../latexml_contrib/index.html">latexml_<wbr>contrib</a><span class="version">0.5.0</span></h2></div><div class="sidebar-elems"><section id="rustdoc-toc"><h2 class="location"><a href="#">Module abntex2cite_<wbr>sty</a></h2><h3><a href="#functions">Module Items</a></h3><ul class="block"><li><a href="#functions" title="Functions">Functions</a></li></ul></section><div id="rustdoc-modnav"><h2 class="in-crate"><a href="../index.html">In crate latexml_<wbr>contrib</a></h2></div></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><div class="width-limiter"><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><div class="rustdoc-breadcrumbs"><a href="../index.html">latexml_contrib</a></div><h1>Module <span>abntex2cite_<wbr>sty</span>&nbsp;<button id="copy-path" title="Copy item path to clipboard">Copy item path</button></h1><rustdoc-toolbar></rustdoc-toolbar><span class="sub-heading"><a class="src" href="../../src/latexml_contrib/abntex2cite_sty.rs.html#1-150">Source</a> </span></div><details class="toggle top-doc" open><summary class="hideme"><span>Expand description</span></summary><div class="docblock"><p>abntex2cite.sty — ABNT citations (Brazilian standard), the bibliography end.</p>
+<p>The raw package is loaded with the document’s options (<code>num</code>/<code>alf</code>,
+<code>foot</code>, …; abntex2cite.sty:158-174); its <code>\bibliography</code> redefinition is
+refused by the kernel’s lock and its <code>\cite</code> handed back to the kernel:
+abntex2cite.sty:375 redefines <code>\bibliography</code> to write <code>\bibdata</code> to the <code>.aux</code> and
+<code>\@input@{\jobname.bbl}</code> — a file only a bibtex run produces, which LaTeXML
+never has, so the reference list vanished at 0 errors (abntex2cite’s manual
+is half bibliography; abntex2cite-alf and unbtex share it). The native
+<code>\bibliography</code> (latex_constructs.pool.ltxml:3895; sect11.rs) prefers a
+shipped <code>.bbl</code> and otherwise runs the <code>.bib</code> session at post
+(<code>\lx@ifusebbl</code>), and the <code>.bib</code> list is live only here, in the
+command’s argument — the same interception Perl makes for bibunits’
+<code>\bibliography</code> wrapper (bibunits.sty.ltxml; OXIDIZED_DESIGN_DIVERGENCES
+#87); since batch 56cx the kernel macro is locked against that
+redefinition (OXIDIZED_DESIGN_DIVERGENCES #236). Perl has no abntex2cite
+binding and loses the list too. The
+package’s own <code>\cite</code> (abntex2cite.sty:748/:862, a <code>\DeclareRobustCommand</code>
+resolving numbers from the <code>.aux</code>) typeset <code>(??)</code> and registered no
+citation, so no entry was ever selected; <code>\cite</code> and <code>\citeonline</code> (the
+textual form) keep the kernel’s citation constructor, which the
+bibliography stage resolves.</p>
+<p>57cm (rc131 root-cause of abntex2cite, 80.5 % recall, bibliography-only):</p>
+<ul>
+<li>the package’s <code>\bibliographystyle</code> (:409-417) only writes to the <code>.aux</code>, and its
+<code>\AtEndDocument</code> default (:420-424) goes through it, so no style ever reached the
+bibliography (<code>bibstyle</code> unset: URLs printed as “Link”). It now forwards to the
+kernel’s, and the package’s default, <code>abntex2-\AbntCitetype</code>, is recorded at load;</li>
+<li>abntex2’s own <code>.bib</code> fields, which its <code>.bst</code>s print (abntex2-num.bst:26-49,
+:585-602, :997-1000, :1399-1400, :1645), were kept as unprinted <code>ltx:bib-data</code>;</li>
+<li><code>\citeyear</code>/<code>\citeauthoronline</code> (:927, :1019) read values only a real BibTeX run
+leaves in the <code>.aux</code> and printed “??”; they are the kernel’s bibrefs now, as
+natbib’s (natbib_sty.rs), and in <code>alf</code> mode <code>\citeauthor</code> too (in <code>num</code> mode the
+package’s own, :1343-1344, builds on them). <code>\citetext</code> (a whole reference)
+still prints “??”: no bibref show mode prints a whole entry yet.</li>
+</ul>
+<p>57cm.1 (review): a shipped <code>.bbl</code> carries each entry’s author and year in
+<code>\abntrefinfo</code> (abntex2-num.bst:1375), which now tags the bibitem, so a bibref shows them
+there too; in <code>alf</code> mode <code>\citen</code>/<code>\citenum</code> are the textual form (:722-723; <code>num</code> mode has
+neither); <code>alf</code> citations of several works are separated by “;” (<code>\ABCIcitecolondefault</code>, :453). A
+<code>\bibliographystyle</code> inside a group, or before the package, loses to the recorded
+default (BibTeX keeps the first <code>\bibstyle</code> line).</p>
+</div></details><h2 id="functions" class="section-header">Functions<a href="#functions" class="anchor">§</a></h2><dl class="item-table"><dt><a class="fn" href="fn.load_definitions.html" title="fn latexml_contrib::abntex2cite_sty::load_definitions">load_<wbr>definitions</a></dt></dl></section></div></main></body></html>

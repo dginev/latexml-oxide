@@ -1,0 +1,438 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_core/src/definition/origin.rs`."><title>origin.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_core" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_core/definition/</div>origin.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Definition provenance — K1 of the generalized kernel-capability program
+<a href=#2 id=2 data-nosnippet>2</a>//! (`docs/perfect_kernel/KERNEL_CAPABILITIES.md`).
+<a href=#3 id=3 data-nosnippet>3</a>//!
+<a href=#4 id=4 data-nosnippet>4</a>//! Every definition records WHO made it: LaTeXML's own layers (the format
+<a href=#5 id=5 data-nosnippet>5</a>//! dumps, the Rust pools, a compiled binding, the raw format files) or the
+<a href=#6 id=6 data-nosnippet>6</a>//! document's world (a raw `.sty`/`.cls`/`.def` the document loaded, or the
+<a href=#7 id=7 data-nosnippet>7</a>//! document itself). The origin is captured at construction from a
+<a href=#8 id=8 data-nosnippet>8</a>//! thread-local set by the loader seams, the same moment a definition's
+<a href=#9 id=9 data-nosnippet>9</a>//! locator is, and travels with the object through `\let`.
+<a href=#10 id=10 data-nosnippet>10</a>//!
+<a href=#11 id=11 data-nosnippet>11</a>//! Its first consumer is the l3/ltcmd "already defined" leniency
+<a href=#12 id=12 data-nosnippet>12</a>//! (`\lx@if@pooldefined`): real LaTeX keeps `\section`, `\thepage`,
+<a href=#13 id=13 data-nosnippet>13</a>//! `{figure}`… in article.cls, our pool pre-defines them for class-less
+<a href=#14 id=14 data-nosnippet>14</a>//! robustness, so a standalone class redeclaring them is not an error —
+<a href=#15 id=15 data-nosnippet>15</a>//! while a genuine double declaration between two raw files still is.
+<a href=#16 id=16 data-nosnippet>16</a></span><span class="kw">use </span>std::cell::{Cell, RefCell};
+<a href=#17 id=17 data-nosnippet>17</a>
+<a href=#18 id=18 data-nosnippet>18</a><span class="doccomment">/// Who made a definition.
+<a href=#19 id=19 data-nosnippet>19</a></span><span class="attr">#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+<a href=#20 id=20 data-nosnippet>20</a></span><span class="kw">pub enum </span>DefinitionOrigin {
+<a href=#21 id=21 data-nosnippet>21</a>  <span class="doccomment">/// Made before any loader seam set an origin (engine bootstrap) — ours.
+<a href=#22 id=22 data-nosnippet>22</a>  </span>Unknown,
+<a href=#23 id=23 data-nosnippet>23</a>  <span class="doccomment">/// The PLAIN layer: restored from the plain format dump (embedded or a
+<a href=#24 id=24 data-nosnippet>24</a>  /// `plain.YYYY.dump.txt` on disk), or made by a plain pool (`plain_*`). Perl
+<a href=#25 id=25 data-nosnippet>25</a>  /// tells the same layer by its definitions' source (`isDefinableLaTeX`,
+<a href=#26 id=26 data-nosnippet>26</a>  /// latex_constructs.pool.ltxml:2512-2517: `getShortSource =~ /^plain/`): LaTeX's
+<a href=#27 id=27 data-nosnippet>27</a>  /// `\newcommand`/`\@ifdefinable` may redefine what plain defined.
+<a href=#28 id=28 data-nosnippet>28</a>  </span>Plain,
+<a href=#29 id=29 data-nosnippet>29</a>  <span class="doccomment">/// Restored from the LaTeX format dump (`&lt;embedded:latex&gt;`).
+<a href=#30 id=30 data-nosnippet>30</a>  </span>LatexDump,
+<a href=#31 id=31 data-nosnippet>31</a>  <span class="doccomment">/// A Rust pool (`InnerPool!`/`LoadPool!`: TeX.pool, LaTeX.pool, constructs).
+<a href=#32 id=32 data-nosnippet>32</a>  </span>Pool,
+<a href=#33 id=33 data-nosnippet>33</a>  <span class="doccomment">/// A compiled binding's own code (`DefMacro!`/`RawTeX!` in a `*_sty.rs`).
+<a href=#34 id=34 data-nosnippet>34</a>  </span>Binding,
+<a href=#35 id=35 data-nosnippet>35</a>  <span class="doccomment">/// The guess of a fallback class — OmniBus, loaded for a class with no binding: what it defines is a
+<a href=#36 id=36 data-nosnippet>36</a>  /// convenience the real class may not have, so a document's own `\newcommand` (and `\providecommand`,
+<a href=#37 id=37 data-nosnippet>37</a>  /// `\newenvironment`, `\@ifdefinable`) of the name wins over it, unless it is locked
+<a href=#38 id=38 data-nosnippet>38</a>  /// (`state::is_fallback_meaning`).
+<a href=#39 id=39 data-nosnippet>39</a>  </span>Fallback,
+<a href=#40 id=40 data-nosnippet>40</a>  <span class="doccomment">/// A kernel stand-in for a name a class or style defines only where the document cannot reach it (aaai's
+<a href=#41 id=41 data-nosnippet>41</a>  /// `\equalcontrib`, set inside its `\@maketitle`): yields as `Fallback` does, and to a raw class's or package's own
+<a href=#42 id=42 data-nosnippet>42</a>  /// `\newcommand` of the name too, since the real file does define it (copernicus.cls:1673 `\equalcontrib[1]`).
+<a href=#43 id=43 data-nosnippet>43</a>  </span>Stub,
+<a href=#44 id=44 data-nosnippet>44</a>  <span class="doccomment">/// What a binding borrows from a package the real one does not load (`binding::content::require_package_borrowed`:
+<a href=#45 id=45 data-nosnippet>45</a>  /// theorem.sty's and ntheorem.sty's bindings borrow amsthm's): in LaTeX the names do not exist, so they yield as
+<a href=#46 id=46 data-nosnippet>46</a>  /// `Fallback` does, and to every raw file's own definition too — TeX Live's or the author's (cc.cls's ccproof.sty:56
+<a href=#47 id=47 data-nosnippet>47</a>  /// `\newenvironment{proof}` after theorem.sty; 1507.02955).
+<a href=#48 id=48 data-nosnippet>48</a>  </span>Borrowed,
+<a href=#49 id=49 data-nosnippet>49</a>  <span class="doccomment">/// A raw format file read as definitions (latex.ltx, plain.tex, expl3-code.tex).
+<a href=#50 id=50 data-nosnippet>50</a>  </span>Format,
+<a href=#51 id=51 data-nosnippet>51</a>  <span class="doccomment">/// A raw `.sty`/`.cls`/`.def`/`.tex` the document loaded as definitions.
+<a href=#52 id=52 data-nosnippet>52</a>  </span>File,
+<a href=#53 id=53 data-nosnippet>53</a>  <span class="doccomment">/// The document's own preamble or body.
+<a href=#54 id=54 data-nosnippet>54</a>  </span>Document,
+<a href=#55 id=55 data-nosnippet>55</a>}
+<a href=#56 id=56 data-nosnippet>56</a>
+<a href=#57 id=57 data-nosnippet>57</a><span class="kw">impl </span>DefinitionOrigin {
+<a href=#58 id=58 data-nosnippet>58</a>  <span class="doccomment">/// Is this definition LaTeXML's own — a pool, dump, binding or format layer —
+<a href=#59 id=59 data-nosnippet>59</a>  /// rather than the document's? The l3/ltcmd declarators tolerate
+<a href=#60 id=60 data-nosnippet>60</a>  /// redefinition of our own pre-definitions (the class-level names real
+<a href=#61 id=61 data-nosnippet>61</a>  /// LaTeX keeps in article.cls) and report genuine double declarations.
+<a href=#62 id=62 data-nosnippet>62</a>  </span><span class="kw">pub fn </span>is_latexml_owned(<span class="self">self</span>) -&gt; bool {
+<a href=#63 id=63 data-nosnippet>63</a>    !<span class="macro">matches!</span>(<span class="self">self</span>, DefinitionOrigin::File | DefinitionOrigin::Document)
+<a href=#64 id=64 data-nosnippet>64</a>  }
+<a href=#65 id=65 data-nosnippet>65</a>
+<a href=#66 id=66 data-nosnippet>66</a>  <span class="doccomment">/// Is this definition a binding's — its own code, a fallback class's guess, a stand-in, a borrowing — rather than the
+<a href=#67 id=67 data-nosnippet>67</a>  /// kernel's (a pool, a dump, a format) or the document's (`state::note_dropped_argument`)?
+<a href=#68 id=68 data-nosnippet>68</a>  </span><span class="kw">pub fn </span>is_binding_made(<span class="self">self</span>) -&gt; bool {
+<a href=#69 id=69 data-nosnippet>69</a>    <span class="macro">matches!</span>(
+<a href=#70 id=70 data-nosnippet>70</a>      <span class="self">self</span>,
+<a href=#71 id=71 data-nosnippet>71</a>      DefinitionOrigin::Binding
+<a href=#72 id=72 data-nosnippet>72</a>        | DefinitionOrigin::Fallback
+<a href=#73 id=73 data-nosnippet>73</a>        | DefinitionOrigin::Stub
+<a href=#74 id=74 data-nosnippet>74</a>        | DefinitionOrigin::Borrowed
+<a href=#75 id=75 data-nosnippet>75</a>    )
+<a href=#76 id=76 data-nosnippet>76</a>  }
+<a href=#77 id=77 data-nosnippet>77</a>}
+<a href=#78 id=78 data-nosnippet>78</a>
+<a href=#79 id=79 data-nosnippet>79</a><span class="macro">thread_local!</span> {
+<a href=#80 id=80 data-nosnippet>80</a>  <span class="kw">static </span>CURRENT_ORIGIN: Cell&lt;DefinitionOrigin&gt; = <span class="kw">const </span>{ Cell::new(DefinitionOrigin::Document) };
+<a href=#81 id=81 data-nosnippet>81</a>}
+<a href=#82 id=82 data-nosnippet>82</a>
+<a href=#83 id=83 data-nosnippet>83</a><span class="doccomment">/// The origin a definition constructed now will carry.
+<a href=#84 id=84 data-nosnippet>84</a></span><span class="kw">pub fn </span>current_origin() -&gt; DefinitionOrigin { CURRENT_ORIGIN.with(|c| c.get()) }
+<a href=#85 id=85 data-nosnippet>85</a>
+<a href=#86 id=86 data-nosnippet>86</a><span class="doccomment">/// RAII guard: definitions made while it lives carry `origin`; the previous
+<a href=#87 id=87 data-nosnippet>87</a>/// origin is restored on drop (loaders nest: a binding raw-loading its `.sty`
+<a href=#88 id=88 data-nosnippet>88</a>/// yields `File` for that file's definitions and `Binding` for its own).
+<a href=#89 id=89 data-nosnippet>89</a></span><span class="kw">pub struct </span>OriginGuard(DefinitionOrigin);
+<a href=#90 id=90 data-nosnippet>90</a>
+<a href=#91 id=91 data-nosnippet>91</a><span class="kw">impl </span>OriginGuard {
+<a href=#92 id=92 data-nosnippet>92</a>  <span class="kw">pub fn </span>new(origin: DefinitionOrigin) -&gt; <span class="self">Self </span>{
+<a href=#93 id=93 data-nosnippet>93</a>    OriginGuard(CURRENT_ORIGIN.with(|c| c.replace(origin)))
+<a href=#94 id=94 data-nosnippet>94</a>  }
+<a href=#95 id=95 data-nosnippet>95</a>}
+<a href=#96 id=96 data-nosnippet>96</a>
+<a href=#97 id=97 data-nosnippet>97</a><span class="kw">impl </span>Drop <span class="kw">for </span>OriginGuard {
+<a href=#98 id=98 data-nosnippet>98</a>  <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) { CURRENT_ORIGIN.with(|c| c.set(<span class="self">self</span>.<span class="number">0</span>)); }
+<a href=#99 id=99 data-nosnippet>99</a>}
+<a href=#100 id=100 data-nosnippet>100</a>
+<a href=#101 id=101 data-nosnippet>101</a><span class="macro">thread_local!</span> {
+<a href=#102 id=102 data-nosnippet>102</a>  <span class="kw">static </span>PROVIDE_ONLY: Cell&lt;bool&gt; = <span class="kw">const </span>{ Cell::new(<span class="bool-val">false</span>) };
+<a href=#103 id=103 data-nosnippet>103</a>}
+<a href=#104 id=104 data-nosnippet>104</a>
+<a href=#105 id=105 data-nosnippet>105</a><span class="doccomment">/// Is a provide-only load in progress ([`ProvideOnlyGuard`])?
+<a href=#106 id=106 data-nosnippet>106</a></span><span class="kw">pub fn </span>provide_only() -&gt; bool { PROVIDE_ONLY.with(|c| c.get()) }
+<a href=#107 id=107 data-nosnippet>107</a>
+<a href=#108 id=108 data-nosnippet>108</a><span class="doccomment">/// RAII guard: while it lives, a load only provides — a binding's definition (the fallback class OmniBus, or any binding it
+<a href=#109 id=109 data-nosnippet>109</a>/// requires) of a name defined before the guard began is dropped, as a `\providecommand` of it is
+<a href=#110 id=110 data-nosnippet>110</a>/// (`state::provide_only_declines`); the previous mode is restored on drop.
+<a href=#111 id=111 data-nosnippet>111</a></span><span class="kw">pub struct </span>ProvideOnlyGuard(bool);
+<a href=#112 id=112 data-nosnippet>112</a>
+<a href=#113 id=113 data-nosnippet>113</a><span class="kw">impl </span>ProvideOnlyGuard {
+<a href=#114 id=114 data-nosnippet>114</a>  <span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{
+<a href=#115 id=115 data-nosnippet>115</a>    <span class="kw">crate</span>::state::reset_provide_only_assigned();
+<a href=#116 id=116 data-nosnippet>116</a>    ProvideOnlyGuard(PROVIDE_ONLY.with(|c| c.replace(<span class="bool-val">true</span>)))
+<a href=#117 id=117 data-nosnippet>117</a>  }
+<a href=#118 id=118 data-nosnippet>118</a>}
+<a href=#119 id=119 data-nosnippet>119</a>
+<a href=#120 id=120 data-nosnippet>120</a><span class="kw">impl </span>Default <span class="kw">for </span>ProvideOnlyGuard {
+<a href=#121 id=121 data-nosnippet>121</a>  <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{ <span class="self">Self</span>::new() }
+<a href=#122 id=122 data-nosnippet>122</a>}
+<a href=#123 id=123 data-nosnippet>123</a>
+<a href=#124 id=124 data-nosnippet>124</a><span class="kw">impl </span>Drop <span class="kw">for </span>ProvideOnlyGuard {
+<a href=#125 id=125 data-nosnippet>125</a>  <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+<a href=#126 id=126 data-nosnippet>126</a>    PROVIDE_ONLY.with(|c| c.set(<span class="self">self</span>.<span class="number">0</span>));
+<a href=#127 id=127 data-nosnippet>127</a>    <span class="kw">if </span>!<span class="self">self</span>.<span class="number">0 </span>{
+<a href=#128 id=128 data-nosnippet>128</a>      <span class="kw">crate</span>::state::end_provide_only();
+<a href=#129 id=129 data-nosnippet>129</a>    }
+<a href=#130 id=130 data-nosnippet>130</a>  }
+<a href=#131 id=131 data-nosnippet>131</a>}
+<a href=#132 id=132 data-nosnippet>132</a>
+<a href=#133 id=133 data-nosnippet>133</a><span class="macro">thread_local!</span> {
+<a href=#134 id=134 data-nosnippet>134</a>  <span class="doccomment">/// The stand-in copy whose provides-mode is in force (`0`: none), and the modes it interrupted.
+<a href=#135 id=135 data-nosnippet>135</a>  </span><span class="kw">static </span>COPY_PROVIDES: Cell&lt;u32&gt; = <span class="kw">const </span>{ Cell::new(<span class="number">0</span>) };
+<a href=#136 id=136 data-nosnippet>136</a>  <span class="kw">static </span>COPY_PROVIDES_STACK: RefCell&lt;Vec&lt;u32&gt;&gt; = <span class="kw">const </span>{ RefCell::new(Vec::new()) };
+<a href=#137 id=137 data-nosnippet>137</a>}
+<a href=#138 id=138 data-nosnippet>138</a>
+<a href=#139 id=139 data-nosnippet>139</a><span class="doccomment">/// The stand-in copy whose read is in force — "a stand-in's copy provides" (`state::note_copy_provides_assignment`): the
+<a href=#140 id=140 data-nosnippet>140</a>/// 1-based number of the paper's copy of an author file a stand-in binding answers
+<a href=#141 id=141 data-nosnippet>141</a>/// (`binding::content::read_stand_in_copy`), while that copy is read, while a hook it registered runs, or `0`.
+<a href=#142 id=142 data-nosnippet>142</a></span><span class="kw">pub fn </span>copy_provides() -&gt; u32 { COPY_PROVIDES.with(|c| c.get()) }
+<a href=#143 id=143 data-nosnippet>143</a>
+<a href=#144 id=144 data-nosnippet>144</a><span class="doccomment">/// Enter copy `id`'s provides-mode (`0`: suspend it, for a file the copy loads), until the matching
+<a href=#145 id=145 data-nosnippet>145</a>/// [`leave_copy_provides`]. A stack, not a guard: the scope markers `\lx@copy@provides@begin{N}` and
+<a href=#146 id=146 data-nosnippet>146</a>/// `\lx@copy@provides@end` wrapped around a hook the copy registers bracket a token run, not a Rust call. Entering
+<a href=#147 id=147 data-nosnippet>147</a>/// from no mode (or leaving to none) puts `\AddToHook`'s registration seam in place (or back out,
+<a href=#148 id=148 data-nosnippet>148</a>/// `state::swap_copy_provides_hook_seam`).
+<a href=#149 id=149 data-nosnippet>149</a></span><span class="kw">pub fn </span>enter_copy_provides(id: u32) {
+<a href=#150 id=150 data-nosnippet>150</a>  <span class="kw">let </span>previous = COPY_PROVIDES.with(|c| c.get());
+<a href=#151 id=151 data-nosnippet>151</a>  COPY_PROVIDES_STACK.with(|s| s.borrow_mut().push(previous));
+<a href=#152 id=152 data-nosnippet>152</a>  <span class="kw">crate</span>::state::enter_copy_provides_frame(id, previous);
+<a href=#153 id=153 data-nosnippet>153</a>  <span class="kw">if </span>(previous == <span class="number">0</span>) != (id == <span class="number">0</span>) {
+<a href=#154 id=154 data-nosnippet>154</a>    <span class="kw">crate</span>::state::swap_copy_provides_hook_seam(id != <span class="number">0</span>);
+<a href=#155 id=155 data-nosnippet>155</a>  }
+<a href=#156 id=156 data-nosnippet>156</a>  <span class="comment">// (the copy's code is a file's: locked, as a raw read is, `load_tex_definitions` — also when its
+<a href=#157 id=157 data-nosnippet>157</a>  // `\AtEndOfClass` code runs inside `\documentclass`'s unlocked after-digestion)
+<a href=#158 id=158 data-nosnippet>158</a>  </span><span class="kw">if </span>id != <span class="number">0 </span>{
+<a href=#159 id=159 data-nosnippet>159</a>    <span class="kw">crate</span>::common::local_assignments::local_state_unlocked(<span class="bool-val">false</span>);
+<a href=#160 id=160 data-nosnippet>160</a>  }
+<a href=#161 id=161 data-nosnippet>161</a>  COPY_PROVIDES.with(|c| c.set(id));
+<a href=#162 id=162 data-nosnippet>162</a>}
+<a href=#163 id=163 data-nosnippet>163</a>
+<a href=#164 id=164 data-nosnippet>164</a><span class="doccomment">/// Leave the provides-mode [`enter_copy_provides`] entered: the interrupted one is in force again. An unmatched leave
+<a href=#165 id=165 data-nosnippet>165</a>/// is ignored.
+<a href=#166 id=166 data-nosnippet>166</a></span><span class="kw">pub fn </span>leave_copy_provides() {
+<a href=#167 id=167 data-nosnippet>167</a>  <span class="kw">let </span><span class="prelude-val">Some</span>(previous) = COPY_PROVIDES_STACK.with(|s| s.borrow_mut().pop()) <span class="kw">else </span>{
+<a href=#168 id=168 data-nosnippet>168</a>    <span class="kw">return</span>;
+<a href=#169 id=169 data-nosnippet>169</a>  };
+<a href=#170 id=170 data-nosnippet>170</a>  <span class="kw">let </span>current = COPY_PROVIDES.with(|c| c.replace(previous));
+<a href=#171 id=171 data-nosnippet>171</a>  <span class="kw">if </span>current != <span class="number">0 </span>{
+<a href=#172 id=172 data-nosnippet>172</a>    <span class="kw">crate</span>::common::local_assignments::expire_state_unlocked();
+<a href=#173 id=173 data-nosnippet>173</a>  }
+<a href=#174 id=174 data-nosnippet>174</a>  <span class="kw">crate</span>::state::leave_copy_provides_frame();
+<a href=#175 id=175 data-nosnippet>175</a>  <span class="kw">if </span>(previous == <span class="number">0</span>) != (current == <span class="number">0</span>) {
+<a href=#176 id=176 data-nosnippet>176</a>    <span class="kw">crate</span>::state::swap_copy_provides_hook_seam(previous != <span class="number">0</span>);
+<a href=#177 id=177 data-nosnippet>177</a>  }
+<a href=#178 id=178 data-nosnippet>178</a>}
+<a href=#179 id=179 data-nosnippet>179</a>
+<a href=#180 id=180 data-nosnippet>180</a><span class="doccomment">/// RAII form of [`enter_copy_provides`]/[`leave_copy_provides`], for a Rust-bracketed scope (the copy's read, a
+<a href=#181 id=181 data-nosnippet>181</a>/// nested load's suspension).
+<a href=#182 id=182 data-nosnippet>182</a></span><span class="kw">pub struct </span>CopyProvidesGuard;
+<a href=#183 id=183 data-nosnippet>183</a>
+<a href=#184 id=184 data-nosnippet>184</a><span class="kw">impl </span>CopyProvidesGuard {
+<a href=#185 id=185 data-nosnippet>185</a>  <span class="kw">pub fn </span>new(id: u32) -&gt; <span class="self">Self </span>{
+<a href=#186 id=186 data-nosnippet>186</a>    enter_copy_provides(id);
+<a href=#187 id=187 data-nosnippet>187</a>    CopyProvidesGuard
+<a href=#188 id=188 data-nosnippet>188</a>  }
+<a href=#189 id=189 data-nosnippet>189</a>}
+<a href=#190 id=190 data-nosnippet>190</a>
+<a href=#191 id=191 data-nosnippet>191</a><span class="kw">impl </span>Drop <span class="kw">for </span>CopyProvidesGuard {
+<a href=#192 id=192 data-nosnippet>192</a>  <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) { leave_copy_provides(); }
+<a href=#193 id=193 data-nosnippet>193</a>}
+<a href=#194 id=194 data-nosnippet>194</a>
+<a href=#195 id=195 data-nosnippet>195</a><span class="macro">thread_local!</span> {
+<a href=#196 id=196 data-nosnippet>196</a>  <span class="kw">static </span>STAND_IN_LOADING: Cell&lt;u32&gt; = <span class="kw">const </span>{ Cell::new(<span class="number">0</span>) };
+<a href=#197 id=197 data-nosnippet>197</a>  <span class="kw">static </span>STAND_IN_OWN_CODE: Cell&lt;bool&gt; = <span class="kw">const </span>{ Cell::new(<span class="bool-val">false</span>) };
+<a href=#198 id=198 data-nosnippet>198</a>  <span class="kw">static </span>STAND_IN_LOADER_OWN_CODE: Cell&lt;bool&gt; = <span class="kw">const </span>{ Cell::new(<span class="bool-val">false</span>) };
+<a href=#199 id=199 data-nosnippet>199</a>  <span class="kw">static </span>STAND_IN_BASE_CLASS: Cell&lt;bool&gt; = <span class="kw">const </span>{ Cell::new(<span class="bool-val">false</span>) };
+<a href=#200 id=200 data-nosnippet>200</a>  <span class="doccomment">/// Which setter watches are on: [`COPY_DEFAULT_WATCH`] and the title-page check's (one flag, read at every macro call).
+<a href=#201 id=201 data-nosnippet>201</a>  </span><span class="kw">static </span>SETTER_WATCH: Cell&lt;u8&gt; = <span class="kw">const </span>{ Cell::new(<span class="number">0</span>) };
+<a href=#202 id=202 data-nosnippet>202</a>}
+<a href=#203 id=203 data-nosnippet>203</a>
+<a href=#204 id=204 data-nosnippet>204</a><span class="doccomment">/// [`watch_setter_calls`]' watch: a stand-in copy stored a default of the setters' fields.
+<a href=#205 id=205 data-nosnippet>205</a></span><span class="kw">const </span>COPY_DEFAULT_WATCH: u8 = <span class="number">1</span>;
+<a href=#206 id=206 data-nosnippet>206</a><span class="doccomment">/// [`watch_document_calls`]' watch: the title-page check's (`state::note_document_call`).
+<a href=#207 id=207 data-nosnippet>207</a></span><span class="kw">const </span>DOCUMENT_CALL_WATCH: u8 = <span class="number">4</span>;
+<a href=#208 id=208 data-nosnippet>208</a><span class="doccomment">/// [`watch_dropped_arguments`]' watch: the title-page check's (`state::note_dropped_argument`).
+<a href=#209 id=209 data-nosnippet>209</a></span><span class="kw">const </span>DROPPED_ARGUMENT_WATCH: u8 = <span class="number">8</span>;
+<a href=#210 id=210 data-nosnippet>210</a><span class="doccomment">/// [`watch_store_calls`]' watch: the title-page check's (`state::note_store_call`).
+<a href=#211 id=211 data-nosnippet>211</a></span><span class="kw">const </span>STORE_CALL_WATCH: u8 = <span class="number">16</span>;
+<a href=#212 id=212 data-nosnippet>212</a>
+<a href=#213 id=213 data-nosnippet>213</a><span class="doccomment">/// Is a setter watch on ([`watch_setter_calls`], [`watch_document_calls`], [`watch_dropped_arguments`],
+<a href=#214 id=214 data-nosnippet>214</a>/// [`watch_store_calls`])? Read at every macro call, so a flag.
+<a href=#215 id=215 data-nosnippet>215</a></span><span class="kw">pub fn </span>setter_watch() -&gt; bool { SETTER_WATCH.with(|c| c.get()) != <span class="number">0 </span>}
+<a href=#216 id=216 data-nosnippet>216</a>
+<a href=#217 id=217 data-nosnippet>217</a><span class="doccomment">/// What a macro's call must be for one of the watches on to see it, read at every macro call: `None` when no watch is on,
+<a href=#218 id=218 data-nosnippet>218</a>/// `Some(true)` when only [`watch_document_calls`]' and [`watch_store_calls`]' are, which see only a macro with parameters
+<a href=#219 id=219 data-nosnippet>219</a>/// that LaTeXML or a raw class's own file made. Those two stay on from a conversion's start until its title page, or to
+<a href=#220 id=220 data-nosnippet>220</a>/// its end in a document with none, so a package's macro calls in the document's text would otherwise all pay for the
+<a href=#221 id=221 data-nosnippet>221</a>/// watch's cold path.
+<a href=#222 id=222 data-nosnippet>222</a></span><span class="attr">#[inline(always)]
+<a href=#223 id=223 data-nosnippet>223</a></span><span class="kw">pub fn </span>call_watch() -&gt; <span class="prelude-ty">Option</span>&lt;bool&gt; {
+<a href=#224 id=224 data-nosnippet>224</a>  <span class="kw">let </span>watches = SETTER_WATCH.with(|c| c.get());
+<a href=#225 id=225 data-nosnippet>225</a>  (watches != <span class="number">0</span>).then_some(watches &amp; !(DOCUMENT_CALL_WATCH | STORE_CALL_WATCH) == <span class="number">0</span>)
+<a href=#226 id=226 data-nosnippet>226</a>}
+<a href=#227 id=227 data-nosnippet>227</a>
+<a href=#228 id=228 data-nosnippet>228</a><span class="doccomment">/// Is [`watch_setter_calls`]' watch on?
+<a href=#229 id=229 data-nosnippet>229</a></span><span class="kw">pub fn </span>copy_default_watch() -&gt; bool { SETTER_WATCH.with(|c| c.get()) &amp; COPY_DEFAULT_WATCH != <span class="number">0 </span>}
+<a href=#230 id=230 data-nosnippet>230</a>
+<a href=#231 id=231 data-nosnippet>231</a><span class="doccomment">/// Is [`watch_document_calls`]' watch on?
+<a href=#232 id=232 data-nosnippet>232</a></span><span class="kw">pub fn </span>document_call_watch() -&gt; bool { SETTER_WATCH.with(|c| c.get()) &amp; DOCUMENT_CALL_WATCH != <span class="number">0 </span>}
+<a href=#233 id=233 data-nosnippet>233</a>
+<a href=#234 id=234 data-nosnippet>234</a><span class="doccomment">/// Is [`watch_dropped_arguments`]' watch on?
+<a href=#235 id=235 data-nosnippet>235</a></span><span class="kw">pub fn </span>dropped_argument_watch() -&gt; bool {
+<a href=#236 id=236 data-nosnippet>236</a>  SETTER_WATCH.with(|c| c.get()) &amp; DROPPED_ARGUMENT_WATCH != <span class="number">0
+<a href=#237 id=237 data-nosnippet>237</a></span>}
+<a href=#238 id=238 data-nosnippet>238</a>
+<a href=#239 id=239 data-nosnippet>239</a><span class="doccomment">/// Is [`watch_store_calls`]' watch on, the gullet reading the document's text?
+<a href=#240 id=240 data-nosnippet>240</a></span><span class="kw">pub fn </span>store_call_watch() -&gt; bool { SETTER_WATCH.with(|c| c.get()) &amp; STORE_CALL_WATCH != <span class="number">0 </span>}
+<a href=#241 id=241 data-nosnippet>241</a>
+<a href=#242 id=242 data-nosnippet>242</a><span class="doccomment">/// Observe (`true`) or stop observing the required arguments a binding's macro drops (`state::note_dropped_argument`):
+<a href=#243 id=243 data-nosnippet>243</a>/// while a frontmatter entry the document gave is digested (latexml_engine `title_page_check`); the watch it replaces.
+<a href=#244 id=244 data-nosnippet>244</a></span><span class="kw">pub fn </span>watch_dropped_arguments(on: bool) -&gt; bool {
+<a href=#245 id=245 data-nosnippet>245</a>  SETTER_WATCH.with(|c| {
+<a href=#246 id=246 data-nosnippet>246</a>    <span class="kw">let </span>was = c.get() &amp; DROPPED_ARGUMENT_WATCH != <span class="number">0</span>;
+<a href=#247 id=247 data-nosnippet>247</a>    c.set(<span class="kw">if </span>on {
+<a href=#248 id=248 data-nosnippet>248</a>      c.get() | DROPPED_ARGUMENT_WATCH
+<a href=#249 id=249 data-nosnippet>249</a>    } <span class="kw">else </span>{
+<a href=#250 id=250 data-nosnippet>250</a>      c.get() &amp; !DROPPED_ARGUMENT_WATCH
+<a href=#251 id=251 data-nosnippet>251</a>    });
+<a href=#252 id=252 data-nosnippet>252</a>    was
+<a href=#253 id=253 data-nosnippet>253</a>  })
+<a href=#254 id=254 data-nosnippet>254</a>}
+<a href=#255 id=255 data-nosnippet>255</a>
+<a href=#256 id=256 data-nosnippet>256</a><span class="macro">thread_local!</span> {
+<a href=#257 id=257 data-nosnippet>257</a>  <span class="doccomment">/// Whether [`watch_document_calls`] is on, and whether the gullet reads a mouth of the document's text now
+<a href=#258 id=258 data-nosnippet>258</a>  /// ([`note_document_mouth`]): the watch flag is set only while both hold, so no macro a package, a class or a
+<a href=#259 id=259 data-nosnippet>259</a>  /// binding's own text calls takes the watched path.
+<a href=#260 id=260 data-nosnippet>260</a>  </span><span class="kw">static </span>DOCUMENT_CALLS_WATCHED: Cell&lt;(bool, bool)&gt; = <span class="kw">const </span>{ Cell::new((<span class="bool-val">false</span>, <span class="bool-val">false</span>)) };
+<a href=#261 id=261 data-nosnippet>261</a>  <span class="doccomment">/// Whether [`watch_store_calls`] is on: the watch flag is set only while the gullet reads a mouth of the document's
+<a href=#262 id=262 data-nosnippet>262</a>  /// text too, and it is off from the title page on, so a call in the body pays nothing.
+<a href=#263 id=263 data-nosnippet>263</a>  </span><span class="kw">static </span>STORE_CALLS_WATCHED: Cell&lt;bool&gt; = <span class="kw">const </span>{ Cell::new(<span class="bool-val">false</span>) };
+<a href=#264 id=264 data-nosnippet>264</a>  <span class="doccomment">/// Whether a raw class or a raw file of the document's own directory is being read ([`note_reading_own_file`]).
+<a href=#265 id=265 data-nosnippet>265</a>  </span><span class="kw">static </span>READING_OWN_FILE: Cell&lt;bool&gt; = <span class="kw">const </span>{ Cell::new(<span class="bool-val">false</span>) };
+<a href=#266 id=266 data-nosnippet>266</a>}
+<a href=#267 id=267 data-nosnippet>267</a>
+<a href=#268 id=268 data-nosnippet>268</a><span class="doccomment">/// Set the watch flag of [`watch_document_calls`] from `DOCUMENT_CALLS_WATCHED`.
+<a href=#269 id=269 data-nosnippet>269</a></span><span class="kw">fn </span>sync_document_call_watch() {
+<a href=#270 id=270 data-nosnippet>270</a>  <span class="kw">let </span>(on, document_mouth) = DOCUMENT_CALLS_WATCHED.with(Cell::get);
+<a href=#271 id=271 data-nosnippet>271</a>  <span class="kw">let </span>stores = STORE_CALLS_WATCHED.with(Cell::get);
+<a href=#272 id=272 data-nosnippet>272</a>  SETTER_WATCH.with(|c| {
+<a href=#273 id=273 data-nosnippet>273</a>    <span class="kw">let </span><span class="kw-2">mut </span>flags = c.get() &amp; !(DOCUMENT_CALL_WATCH | STORE_CALL_WATCH);
+<a href=#274 id=274 data-nosnippet>274</a>    <span class="kw">if </span>on &amp;&amp; document_mouth {
+<a href=#275 id=275 data-nosnippet>275</a>      flags |= DOCUMENT_CALL_WATCH;
+<a href=#276 id=276 data-nosnippet>276</a>    }
+<a href=#277 id=277 data-nosnippet>277</a>    <span class="kw">if </span>stores &amp;&amp; document_mouth {
+<a href=#278 id=278 data-nosnippet>278</a>      flags |= STORE_CALL_WATCH;
+<a href=#279 id=279 data-nosnippet>279</a>    }
+<a href=#280 id=280 data-nosnippet>280</a>    c.set(flags);
+<a href=#281 id=281 data-nosnippet>281</a>  });
+<a href=#282 id=282 data-nosnippet>282</a>}
+<a href=#283 id=283 data-nosnippet>283</a>
+<a href=#284 id=284 data-nosnippet>284</a><span class="doccomment">/// Observe (`true`) or stop observing the calls of LaTeXML's own macros the document's text makes, their arguments read
+<a href=#285 id=285 data-nosnippet>285</a>/// from it (`state::note_document_call`): the title-page check's second source, what the document gave a binding's
+<a href=#286 id=286 data-nosnippet>286</a>/// frontmatter commands (latexml_engine `base_utilities::frontmatter::title_page_check`). On from a conversion's
+<a href=#287 id=287 data-nosnippet>287</a>/// start until its frontmatter is sealed; observed only while the gullet reads the document's text
+<a href=#288 id=288 data-nosnippet>288</a>/// ([`note_document_mouth`]).
+<a href=#289 id=289 data-nosnippet>289</a></span><span class="kw">pub fn </span>watch_document_calls(on: bool) {
+<a href=#290 id=290 data-nosnippet>290</a>  DOCUMENT_CALLS_WATCHED.with(|c| c.set((on, c.get().<span class="number">1</span>)));
+<a href=#291 id=291 data-nosnippet>291</a>  sync_document_call_watch();
+<a href=#292 id=292 data-nosnippet>292</a>}
+<a href=#293 id=293 data-nosnippet>293</a>
+<a href=#294 id=294 data-nosnippet>294</a><span class="doccomment">/// Observe (`true`) or stop observing the calls of the setters a raw class or a raw file of the document's own directory
+<a href=#295 id=295 data-nosnippet>295</a>/// made (`state::note_store_call`): the title-page check's third source (latexml_engine
+<a href=#296 id=296 data-nosnippet>296</a>/// `base_utilities::frontmatter::title_page_check`). On from a conversion's start until the title page; observed only
+<a href=#297 id=297 data-nosnippet>297</a>/// while the gullet reads the document's text ([`note_document_mouth`]).
+<a href=#298 id=298 data-nosnippet>298</a></span><span class="kw">pub fn </span>watch_store_calls(on: bool) {
+<a href=#299 id=299 data-nosnippet>299</a>  STORE_CALLS_WATCHED.with(|c| c.set(on));
+<a href=#300 id=300 data-nosnippet>300</a>  sync_document_call_watch();
+<a href=#301 id=301 data-nosnippet>301</a>}
+<a href=#302 id=302 data-nosnippet>302</a>
+<a href=#303 id=303 data-nosnippet>303</a><span class="doccomment">/// A raw file starts being read as definitions: is it a class or a file of the document's own directory
+<a href=#304 id=304 data-nosnippet>304</a>/// (`binding::content::load_tex_definitions`)? What it says before the load is read, for its end. What a `\def` makes
+<a href=#305 id=305 data-nosnippet>305</a>/// meanwhile is such a file's ([`crate::definition::expandable::Expandable::made_in_own_file`]): definitions record no
+<a href=#306 id=306 data-nosnippet>306</a>/// source file of their own (their `locator` is a stub, Expandable.pm's is unported).
+<a href=#307 id=307 data-nosnippet>307</a></span><span class="kw">pub fn </span>note_reading_own_file(own: bool) -&gt; bool { READING_OWN_FILE.with(|c| c.replace(own)) }
+<a href=#308 id=308 data-nosnippet>308</a>
+<a href=#309 id=309 data-nosnippet>309</a><span class="doccomment">/// Is a raw class or a raw file of the document's own directory being read ([`note_reading_own_file`])?
+<a href=#310 id=310 data-nosnippet>310</a></span><span class="kw">pub fn </span>reading_own_file() -&gt; bool { READING_OWN_FILE.with(Cell::get) }
+<a href=#311 id=311 data-nosnippet>311</a>
+<a href=#312 id=312 data-nosnippet>312</a><span class="doccomment">/// The gullet's current mouth changed: does it read the document's own text (`Mouth::is_document_text`)?
+<a href=#313 id=313 data-nosnippet>313</a></span><span class="kw">pub fn </span>note_document_mouth(document_text: bool) {
+<a href=#314 id=314 data-nosnippet>314</a>  <span class="kw">if </span>DOCUMENT_CALLS_WATCHED.with(Cell::get).<span class="number">1 </span>!= document_text {
+<a href=#315 id=315 data-nosnippet>315</a>    DOCUMENT_CALLS_WATCHED.with(|c| c.set((c.get().<span class="number">0</span>, document_text)));
+<a href=#316 id=316 data-nosnippet>316</a>    sync_document_call_watch();
+<a href=#317 id=317 data-nosnippet>317</a>  }
+<a href=#318 id=318 data-nosnippet>318</a>}
+<a href=#319 id=319 data-nosnippet>319</a>
+<a href=#320 id=320 data-nosnippet>320</a><span class="doccomment">/// Observe the calls of the setters `names` from now on (`state::note_setter_call`): a stand-in's copy stored a
+<a href=#321 id=321 data-nosnippet>321</a>/// default of their field, which the document's own call replaces whatever its value.
+<a href=#322 id=322 data-nosnippet>322</a></span><span class="kw">pub fn </span>watch_setter_calls(names: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>str]) {
+<a href=#323 id=323 data-nosnippet>323</a>  <span class="kw">crate</span>::state::watch_setters(names);
+<a href=#324 id=324 data-nosnippet>324</a>  SETTER_WATCH.with(|c| c.set(c.get() | COPY_DEFAULT_WATCH));
+<a href=#325 id=325 data-nosnippet>325</a>}
+<a href=#326 id=326 data-nosnippet>326</a>
+<a href=#327 id=327 data-nosnippet>327</a><span class="doccomment">/// Is a binding that stands in for an author's file loading ([`StandInLoadGuard`]), itself or a file it loads?
+<a href=#328 id=328 data-nosnippet>328</a></span><span class="kw">pub fn </span>stand_in_loading() -&gt; bool { STAND_IN_LOADING.with(|c| c.get()) != <span class="number">0 </span>}
+<a href=#329 id=329 data-nosnippet>329</a>
+<a href=#330 id=330 data-nosnippet>330</a><span class="doccomment">/// Is the code running now a stand-in binding's own ([`StandInLoadGuard::new`]), not a file it loads
+<a href=#331 id=331 data-nosnippet>331</a>/// ([`StandInLoadGuard::suspend`])?
+<a href=#332 id=332 data-nosnippet>332</a></span><span class="kw">pub fn </span>stand_in_own_code() -&gt; bool { STAND_IN_OWN_CODE.with(|c| c.get()) }
+<a href=#333 id=333 data-nosnippet>333</a>
+<a href=#334 id=334 data-nosnippet>334</a><span class="doccomment">/// Did a stand-in binding's own code request the file now loading ([`StandInLoadGuard::suspend`] keeps the flag it
+<a href=#335 id=335 data-nosnippet>335</a>/// suspended)? A stand-in binding that file is joins the loading binding's command set only then
+<a href=#336 id=336 data-nosnippet>336</a>/// ([`StandInLoadGuard::loaded_by`]).
+<a href=#337 id=337 data-nosnippet>337</a></span><span class="kw">pub fn </span>stand_in_loader_own_code() -&gt; bool { STAND_IN_LOADER_OWN_CODE.with(|c| c.get()) }
+<a href=#338 id=338 data-nosnippet>338</a>
+<a href=#339 id=339 data-nosnippet>339</a><span class="doccomment">/// Is the code running now a class a stand-in binding loads ([`StandInLoadGuard::suspend_for`]: its base class, the
+<a href=#340 id=340 data-nosnippet>340</a>/// pool's article, report or book, or the OmniBus guess built on them), not the binding's own code nor a package?
+<a href=#341 id=341 data-nosnippet>341</a>/// The text defaults such a class assigns (`\refname`, `\bibname`, `\abstractname`) are not the binding's
+<a href=#342 id=342 data-nosnippet>342</a>/// (`state::State::stand_in_base_defaults`).
+<a href=#343 id=343 data-nosnippet>343</a></span><span class="kw">pub fn </span>stand_in_base_class() -&gt; bool { STAND_IN_BASE_CLASS.with(|c| c.get()) }
+<a href=#344 id=344 data-nosnippet>344</a>
+<a href=#345 id=345 data-nosnippet>345</a><span class="doccomment">/// RAII guard: while a binding that stands in for an author's file loads (`binding::content::input_definitions`),
+<a href=#346 id=346 data-nosnippet>346</a>/// every name assigned is recorded as that binding's (`state::State::stand_in_meanings`), whatever made it — its
+<a href=#347 id=347 data-nosnippet>347</a>/// `DefMacro!`s, its `Let!`s and `RawTeX`, the bindings it requires — so the paper's copy read after it only provides
+<a href=#348 id=348 data-nosnippet>348</a>/// them (`state::note_copy_provides_assignment`). The names its own code assigns, not a file it loads
+<a href=#349 id=349 data-nosnippet>349</a>/// ([`StandInLoadGuard::suspend`]: OmniBus, natbib, a nested stand-in's own), are also its command set
+<a href=#350 id=350 data-nosnippet>350</a>/// (`state::State::stand_in_last_load`), which the copy must define to be the file the binding stands in for
+<a href=#351 id=351 data-nosnippet>351</a>/// (`binding::content` `copy_is_the_stood_in_file`).
+<a href=#352 id=352 data-nosnippet>352</a></span><span class="kw">pub struct </span>StandInLoadGuard {
+<a href=#353 id=353 data-nosnippet>353</a>  own_code: bool,
+<a href=#354 id=354 data-nosnippet>354</a>  load:     bool,
+<a href=#355 id=355 data-nosnippet>355</a>  <span class="doccomment">/// (a load: its names join the stand-in binding loading it, whose own code requested it; a suspension: the loader
+<a href=#356 id=356 data-nosnippet>356</a>  /// flag it replaced)
+<a href=#357 id=357 data-nosnippet>357</a>  </span>from_own: bool,
+<a href=#358 id=358 data-nosnippet>358</a>  <span class="doccomment">/// (the base-class flag replaced: [`stand_in_base_class`])
+<a href=#359 id=359 data-nosnippet>359</a>  </span>base:     bool,
+<a href=#360 id=360 data-nosnippet>360</a>}
+<a href=#361 id=361 data-nosnippet>361</a>
+<a href=#362 id=362 data-nosnippet>362</a><span class="kw">impl </span>StandInLoadGuard {
+<a href=#363 id=363 data-nosnippet>363</a>  <span class="doccomment">/// A stand-in binding the code running now requests (`binding::content::input`'s `.tex` route): it joins the command
+<a href=#364 id=364 data-nosnippet>364</a>  /// set of a stand-in binding loading it when that is the binding's own code.
+<a href=#365 id=365 data-nosnippet>365</a>  </span><span class="kw">pub fn </span>new() -&gt; <span class="self">Self </span>{ <span class="self">Self</span>::loaded_by(stand_in_own_code()) }
+<a href=#366 id=366 data-nosnippet>366</a>
+<a href=#367 id=367 data-nosnippet>367</a>  <span class="doccomment">/// A stand-in binding loads, requested by a stand-in binding's own code when `from_own_code`
+<a href=#368 id=368 data-nosnippet>368</a>  /// (`binding::content::input_definitions`, [`stand_in_loader_own_code`]): its names join that binding's command set
+<a href=#369 id=369 data-nosnippet>369</a>  /// at its end (`state::end_stand_in_load`) — the diagrams binding's diagrams.tex (hep-ph9609379) —, and not when a
+<a href=#370 id=370 data-nosnippet>370</a>  /// file the outer binding loads requested it: OmniBus's `RequirePackage!("aas_macros")` (omnibus_cls.rs:71) under
+<a href=#371 id=371 data-nosnippet>371</a>  /// asme2ej (2309.12017), nature-pre (2102.01782, 2111.09589), cimart (2412.00032).
+<a href=#372 id=372 data-nosnippet>372</a>  </span><span class="kw">pub fn </span>loaded_by(from_own_code: bool) -&gt; <span class="self">Self </span>{
+<a href=#373 id=373 data-nosnippet>373</a>    STAND_IN_LOADING.with(|c| c.set(c.get() + <span class="number">1</span>));
+<a href=#374 id=374 data-nosnippet>374</a>    <span class="kw">crate</span>::state::begin_stand_in_load();
+<a href=#375 id=375 data-nosnippet>375</a>    StandInLoadGuard {
+<a href=#376 id=376 data-nosnippet>376</a>      own_code: STAND_IN_OWN_CODE.with(|c| c.replace(<span class="bool-val">true</span>)),
+<a href=#377 id=377 data-nosnippet>377</a>      load:     <span class="bool-val">true</span>,
+<a href=#378 id=378 data-nosnippet>378</a>      from_own: from_own_code,
+<a href=#379 id=379 data-nosnippet>379</a>      base:     STAND_IN_BASE_CLASS.with(|c| c.replace(<span class="bool-val">false</span>)),
+<a href=#380 id=380 data-nosnippet>380</a>    }
+<a href=#381 id=381 data-nosnippet>381</a>  }
+<a href=#382 id=382 data-nosnippet>382</a>
+<a href=#383 id=383 data-nosnippet>383</a>  <span class="doccomment">/// A file a stand-in binding loads (`binding::content::input_definitions`): its names are the binding's to own, but
+<a href=#384 id=384 data-nosnippet>384</a>  /// not the binding's command set, until the guard drops.
+<a href=#385 id=385 data-nosnippet>385</a>  </span><span class="kw">pub fn </span>suspend() -&gt; <span class="self">Self </span>{ <span class="self">Self</span>::suspend_for(<span class="bool-val">false</span>) }
+<a href=#386 id=386 data-nosnippet>386</a>
+<a href=#387 id=387 data-nosnippet>387</a>  <span class="doccomment">/// [`StandInLoadGuard::suspend`] for a file that is a class (`class`, a `.cls`) or not: a class the binding's own
+<a href=#388 id=388 data-nosnippet>388</a>  /// code loads is its base class ([`stand_in_base_class`]), and so is every class that class loads; a package any of
+<a href=#389 id=389 data-nosnippet>389</a>  /// them loads is not (the bindings a binding requires stay its own).
+<a href=#390 id=390 data-nosnippet>390</a>  </span><span class="kw">pub fn </span>suspend_for(class: bool) -&gt; <span class="self">Self </span>{
+<a href=#391 id=391 data-nosnippet>391</a>    <span class="kw">let </span>own_code = STAND_IN_OWN_CODE.with(|c| c.replace(<span class="bool-val">false</span>));
+<a href=#392 id=392 data-nosnippet>392</a>    <span class="kw">let </span>base = STAND_IN_BASE_CLASS.with(|c| c.replace(class &amp;&amp; (own_code || c.get())));
+<a href=#393 id=393 data-nosnippet>393</a>    StandInLoadGuard {
+<a href=#394 id=394 data-nosnippet>394</a>      own_code,
+<a href=#395 id=395 data-nosnippet>395</a>      load: <span class="bool-val">false</span>,
+<a href=#396 id=396 data-nosnippet>396</a>      from_own: STAND_IN_LOADER_OWN_CODE.with(|c| c.replace(own_code)),
+<a href=#397 id=397 data-nosnippet>397</a>      base,
+<a href=#398 id=398 data-nosnippet>398</a>    }
+<a href=#399 id=399 data-nosnippet>399</a>  }
+<a href=#400 id=400 data-nosnippet>400</a>}
+<a href=#401 id=401 data-nosnippet>401</a>
+<a href=#402 id=402 data-nosnippet>402</a><span class="kw">impl </span>Default <span class="kw">for </span>StandInLoadGuard {
+<a href=#403 id=403 data-nosnippet>403</a>  <span class="kw">fn </span>default() -&gt; <span class="self">Self </span>{ <span class="self">Self</span>::new() }
+<a href=#404 id=404 data-nosnippet>404</a>}
+<a href=#405 id=405 data-nosnippet>405</a>
+<a href=#406 id=406 data-nosnippet>406</a><span class="kw">impl </span>Drop <span class="kw">for </span>StandInLoadGuard {
+<a href=#407 id=407 data-nosnippet>407</a>  <span class="kw">fn </span>drop(<span class="kw-2">&amp;mut </span><span class="self">self</span>) {
+<a href=#408 id=408 data-nosnippet>408</a>    STAND_IN_OWN_CODE.with(|c| c.set(<span class="self">self</span>.own_code));
+<a href=#409 id=409 data-nosnippet>409</a>    STAND_IN_BASE_CLASS.with(|c| c.set(<span class="self">self</span>.base));
+<a href=#410 id=410 data-nosnippet>410</a>    <span class="kw">if </span><span class="self">self</span>.load {
+<a href=#411 id=411 data-nosnippet>411</a>      STAND_IN_LOADING.with(|c| c.set(c.get().saturating_sub(<span class="number">1</span>)));
+<a href=#412 id=412 data-nosnippet>412</a>      <span class="kw">crate</span>::state::end_stand_in_load(<span class="self">self</span>.from_own);
+<a href=#413 id=413 data-nosnippet>413</a>    } <span class="kw">else </span>{
+<a href=#414 id=414 data-nosnippet>414</a>      STAND_IN_LOADER_OWN_CODE.with(|c| c.set(<span class="self">self</span>.from_own));
+<a href=#415 id=415 data-nosnippet>415</a>    }
+<a href=#416 id=416 data-nosnippet>416</a>  }
+<a href=#417 id=417 data-nosnippet>417</a>}
+<a href=#418 id=418 data-nosnippet>418</a>
+<a href=#419 id=419 data-nosnippet>419</a><span class="doccomment">/// Forget every provides-mode: a new conversion starts with none (`reset_thread_engine`).
+<a href=#420 id=420 data-nosnippet>420</a></span><span class="kw">pub fn </span>reset_copy_provides() {
+<a href=#421 id=421 data-nosnippet>421</a>  STAND_IN_LOADING.with(|c| c.set(<span class="number">0</span>));
+<a href=#422 id=422 data-nosnippet>422</a>  STAND_IN_OWN_CODE.with(|c| c.set(<span class="bool-val">false</span>));
+<a href=#423 id=423 data-nosnippet>423</a>  STAND_IN_LOADER_OWN_CODE.with(|c| c.set(<span class="bool-val">false</span>));
+<a href=#424 id=424 data-nosnippet>424</a>  STAND_IN_BASE_CLASS.with(|c| c.set(<span class="bool-val">false</span>));
+<a href=#425 id=425 data-nosnippet>425</a>  <span class="comment">// (the title-page check's watches are its own, set at its resets: `watch_document_calls`, `watch_dropped_arguments`,
+<a href=#426 id=426 data-nosnippet>426</a>  // `watch_store_calls`)
+<a href=#427 id=427 data-nosnippet>427</a>  </span>SETTER_WATCH
+<a href=#428 id=428 data-nosnippet>428</a>    .with(|c| c.set(c.get() &amp; (DOCUMENT_CALL_WATCH | DROPPED_ARGUMENT_WATCH | STORE_CALL_WATCH)));
+<a href=#429 id=429 data-nosnippet>429</a>  COPY_PROVIDES.with(|c| c.set(<span class="number">0</span>));
+<a href=#430 id=430 data-nosnippet>430</a>  COPY_PROVIDES_STACK.with(|s| s.borrow_mut().clear());
+<a href=#431 id=431 data-nosnippet>431</a>}
+<a href=#432 id=432 data-nosnippet>432</a>
+<a href=#433 id=433 data-nosnippet>433</a><span class="doccomment">/// Run `f` with `origin` as the current definition origin.
+<a href=#434 id=434 data-nosnippet>434</a></span><span class="kw">pub fn </span>with_origin&lt;R&gt;(origin: DefinitionOrigin, f: <span class="kw">impl </span>FnOnce() -&gt; R) -&gt; R {
+<a href=#435 id=435 data-nosnippet>435</a>  <span class="kw">let </span>_guard = OriginGuard::new(origin);
+<a href=#436 id=436 data-nosnippet>436</a>  f()
+<a href=#437 id=437 data-nosnippet>437</a>}
+</code></pre></div></section></main></body></html>

@@ -1,202 +1,461 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/sn_jnl_cls.rs`."><title>sn_jnl_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>sn_jnl_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Stub for sn-jnl.cls (Springer Nature journal class).
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/sn_jnl_cls.rs`."><title>sn_jnl_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>sn_jnl_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! Stub for sn-jnl.cls (Springer Nature journal class).
 <a href=#2 id=2 data-nosnippet>2</a></span><span class="kw">use </span>latexml_package::prelude::<span class="kw-2">*</span>;
 <a href=#3 id=3 data-nosnippet>3</a>
-<a href=#4 id=4 data-nosnippet>4</a><span class="macro">LoadDefinitions!</span>({
-<a href=#5 id=5 data-nosnippet>5</a>  <span class="macro">LoadClass!</span>(<span class="string">"OmniBus"</span>);
-<a href=#6 id=6 data-nosnippet>6</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amsmath"</span>);
-<a href=#7 id=7 data-nosnippet>7</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amsthm"</span>);
-<a href=#8 id=8 data-nosnippet>8</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amssymb"</span>);
-<a href=#9 id=9 data-nosnippet>9</a>  <span class="comment">// Do NOT eager-load xcolor (Perl ships no sn-jnl binding → OmniBus, no
-<a href=#10 id=10 data-nosnippet>10</a>  // preload). A preloaded xcolor makes a later `\usepackage[table]{xcolor}`
-<a href=#11 id=11 data-nosnippet>11</a>  // a no-op → colortbl/array never load → array `m{}`/`b{}` columns are
-<a href=#12 id=12 data-nosnippet>12</a>  // "Unrecognized tabular template" → "Extra alignment tab". The document
-<a href=#13 id=13 data-nosnippet>13</a>  // loads xcolor with its own options; `\color`/`\definecolor` stay
-<a href=#14 id=14 data-nosnippet>14</a>  // available via hyperref→color. See ifacconf_cls.rs / SYNC_STATUS.
-<a href=#15 id=15 data-nosnippet>15</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"hyperref"</span>);
-<a href=#16 id=16 data-nosnippet>16</a>  <span class="macro">RequirePackage!</span>(<span class="string">"graphicx"</span>);
-<a href=#17 id=17 data-nosnippet>17</a>  <span class="comment">// Real sn-jnl.cls loads geometry for page setup — papers commonly
-<a href=#18 id=18 data-nosnippet>18</a>  // call \\geometry{margin=2cm} without an explicit usepackage.
-<a href=#19 id=19 data-nosnippet>19</a>  // Witness 2503.06846.
-<a href=#20 id=20 data-nosnippet>20</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"geometry"</span>);
-<a href=#21 id=21 data-nosnippet>21</a>  <span class="comment">// sn-jnl.cls L615-618 raw-loads algorithm + algorithmicx +
-<a href=#22 id=22 data-nosnippet>22</a>  // algpseudocode so papers can use `\begin{algorithm}` and
-<a href=#23 id=23 data-nosnippet>23</a>  // `\begin{algorithmic}` (along with `\State`/`\If`/`\For`/`\While`)
-<a href=#24 id=24 data-nosnippet>24</a>  // without an explicit `\usepackage{...}`. Witness 2201.08889.
-<a href=#25 id=25 data-nosnippet>25</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"algorithm"</span>);
-<a href=#26 id=26 data-nosnippet>26</a>  <span class="macro">RequirePackage!</span>(<span class="string">"algorithmicx"</span>);
-<a href=#27 id=27 data-nosnippet>27</a>  <span class="macro">RequirePackage!</span>(<span class="string">"algpseudocode"</span>);
-<a href=#28 id=28 data-nosnippet>28</a>  <span class="comment">// Real sn-jnl.cls L298/301/302 raw-loads multirow, mathrsfs and
-<a href=#29 id=29 data-nosnippet>29</a>  // `[figuresright]{rotating}`. Because this binding short-circuits the
-<a href=#30 id=30 data-nosnippet>30</a>  // unbound-class dependency scan (a real `.cls` binding is responsible for
-<a href=#31 id=31 data-nosnippet>31</a>  // its own `\RequirePackage`s), those deps would otherwise stay unloaded:
-<a href=#32 id=32 data-nosnippet>32</a>  // a paper using `\begin{sidewaystable}` (rotating) then hits
-<a href=#33 id=33 data-nosnippet>33</a>  // `undefined:{sidewaystable}` + `\caption outside any known float`, where
-<a href=#34 id=34 data-nosnippet>34</a>  // Perl — which ships NO sn-jnl binding and so OmniBus-dep-scans the raw
-<a href=#35 id=35 data-nosnippet>35</a>  // .cls — loads rotating and is clean. `rotating`'s `figuresright` option
-<a href=#36 id=36 data-nosnippet>36</a>  // is pure figure-orientation (no XML signal). Add the three benign,
-<a href=#37 id=37 data-nosnippet>37</a>  // commonly-used deps (NOT xcolor — see the option-conflict note above).
-<a href=#38 id=38 data-nosnippet>38</a>  // Witness 2101.02753 (`\begin{sidewaystable}` ×2).
-<a href=#39 id=39 data-nosnippet>39</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"multirow"</span>);
-<a href=#40 id=40 data-nosnippet>40</a>  <span class="macro">RequirePackage!</span>(<span class="string">"mathrsfs"</span>);
-<a href=#41 id=41 data-nosnippet>41</a>  <span class="macro">RequirePackage!</span>(<span class="string">"rotating"</span>);
-<a href=#42 id=42 data-nosnippet>42</a>
-<a href=#43 id=43 data-nosnippet>43</a>  <span class="comment">// Real sn-jnl.cls loads natbib for EVERY reference style (L1649/1652/1662/
-<a href=#44 id=44 data-nosnippet>44</a>  // 1669/1677: `\usepackage[numbers,sort&amp;compress]{natbib}` for the numeric
-<a href=#45 id=45 data-nosnippet>45</a>  // styles, `\usepackage[authoryear]{natbib}` for the author-year ones).
-<a href=#46 id=46 data-nosnippet>46</a>  // OmniBus only `def_autoload`s natbib off `\citet`/`\citep`/`\citeyear`/…
-<a href=#47 id=47 data-nosnippet>47</a>  // — deliberately NOT off `\cite`, which the kernel already defines. So a
-<a href=#48 id=48 data-nosnippet>48</a>  // paper that cites solely via natbib's TWO-optional `\cite[pre][post]{keys}`
-<a href=#49 id=49 data-nosnippet>49</a>  // never triggers the autoload, and the kernel's single-optional
-<a href=#50 id=50 data-nosnippet>50</a>  // `\cite[] Semiverbatim` reads `[` as the whole key list: the real keys are
-<a href=#51 id=51 data-nosnippet>51</a>  // dropped (never cited, silently absent from the References) and `]{keys}`
-<a href=#52 id=52 data-nosnippet>52</a>  // leaks as body text. Requiring natbib here mirrors the real class and also
-<a href=#53 id=53 data-nosnippet>53</a>  // spares these papers the autoload dance. Options are left at natbib's
-<a href=#54 id=54 data-nosnippet>54</a>  // default (numbers) — same as what the autoload path already produced, so
-<a href=#55 id=55 data-nosnippet>55</a>  // no rendering change for papers that did trigger it; the per-refstyle
-<a href=#56 id=56 data-nosnippet>56</a>  // numbers-vs-authoryear mapping needs class-option processing this stub
-<a href=#57 id=57 data-nosnippet>57</a>  // doesn't do yet. Witness 2605.23484 (sn-mathphys-num), 2606.10002
-<a href=#58 id=58 data-nosnippet>58</a>  // (sn-basic), 2606.10215, 2606.11534.
-<a href=#59 id=59 data-nosnippet>59</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"natbib"</span>);
-<a href=#60 id=60 data-nosnippet>60</a>
-<a href=#61 id=61 data-nosnippet>61</a>  <span class="comment">// sn-jnl.cls reference styles select the bibliography package by class
-<a href=#62 id=62 data-nosnippet>62</a>  // option (sn-jnl.cls L1656-1694): the numeric/author-year styles use natbib
-<a href=#63 id=63 data-nosnippet>63</a>  // (loaded above), but the `sn-apa` style loads apacite —
-<a href=#64 id=64 data-nosnippet>64</a>  // `\if@APA@refstyle \usepackage[natbibapa]{apacite} \fi` (L1683-1685,
-<a href=#65 id=65 data-nosnippet>65</a>  // guarded by `\DeclareOption{sn-apa}{\@APA@refstyletrue}` L111). Without it,
-<a href=#66 id=66 data-nosnippet>66</a>  // an `sn-apa` paper's apacite-formatted `.bbl` (`\APACinsertmetastar`,
-<a href=#67 id=67 data-nosnippet>67</a>  // `\BOthers`, `\BDBL`, `{APACrefauthors}`, `\APACrefYearMonthDay`,
-<a href=#68 id=68 data-nosnippet>68</a>  // `\PrintBackRefs`, …) hits our apacite binding UNLOADED, so every one of
-<a href=#69 id=69 data-nosnippet>69</a>  // those macros floods `Error:undefined:` and the References render as raw
-<a href=#70 id=70 data-nosnippet>70</a>  // macro names. Mirror the class: fire apacite when `sn-apa` is passed.
-<a href=#71 id=71 data-nosnippet>71</a>  // (natbib above stays unconditional — the existing simplification; apacite
-<a href=#72 id=72 data-nosnippet>72</a>  // requires natbib anyway, so loading both under `sn-apa` is harmless.)
-<a href=#73 id=73 data-nosnippet>73</a>  // Perl ships no sn-jnl / apacite binding at all → Rust surpasses.
-<a href=#74 id=74 data-nosnippet>74</a>  // arXiv/html_feedback#1261, witness 2404.15224
-<a href=#75 id=75 data-nosnippet>75</a>  // (`\documentclass[referee,sn-apa,pdflatex,natbib]{sn-jnl}`).
-<a href=#76 id=76 data-nosnippet>76</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"sn-apa"</span>, {
-<a href=#77 id=77 data-nosnippet>77</a>    <span class="macro">RequirePackage!</span>(<span class="string">"apacite"</span>);
-<a href=#78 id=78 data-nosnippet>78</a>  });
-<a href=#79 id=79 data-nosnippet>79</a>  <span class="macro">ProcessOptions!</span>();
-<a href=#80 id=80 data-nosnippet>80</a>
-<a href=#81 id=81 data-nosnippet>81</a>  <span class="comment">// sn-jnl frontmatter — gobble layout-only / preserve author text.
-<a href=#82 id=82 data-nosnippet>82</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\bmhead{}"</span>, <span class="string">"\\subsubsection*{#1}"</span>);
-<a href=#83 id=83 data-nosnippet>83</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bmsection{}"</span>, <span class="string">"\\section*{#1}"</span>);
-<a href=#84 id=84 data-nosnippet>84</a>  <span class="comment">// \sectiontitle{text} carries an author-typed section title used in
-<a href=#85 id=85 data-nosnippet>85</a>  // sn-jnl's TOC/running-head pipeline. Preserve as ltx:note rather
-<a href=#86 id=86 data-nosnippet>86</a>  // than silently dropping the words. Content-preserving.
-<a href=#87 id=87 data-nosnippet>87</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#88 id=88 data-nosnippet>88</a>    <span class="string">"\\sectiontitle{}"</span>,
-<a href=#89 id=89 data-nosnippet>89</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=sectiontitle]{#1}"
-<a href=#90 id=90 data-nosnippet>90</a>  </span>);
-<a href=#91 id=91 data-nosnippet>91</a>  <span class="comment">// \headtype{...} / \extralength{...} are layout knobs (no author body).
-<a href=#92 id=92 data-nosnippet>92</a>  </span>def_macro_noop(<span class="string">"\\headtype{}"</span>)<span class="question-mark">?</span>;
-<a href=#93 id=93 data-nosnippet>93</a>  def_macro_noop(<span class="string">"\\extralength{}"</span>)<span class="question-mark">?</span>;
-<a href=#94 id=94 data-nosnippet>94</a>  <span class="comment">// \theHfigure / \theHtable are hyperref H-counter overrides (no body).
-<a href=#95 id=95 data-nosnippet>95</a>  </span>def_macro_noop(<span class="string">"\\theHfigure{}"</span>)<span class="question-mark">?</span>;
-<a href=#96 id=96 data-nosnippet>96</a>  def_macro_noop(<span class="string">"\\theHtable{}"</span>)<span class="question-mark">?</span>;
-<a href=#97 id=97 data-nosnippet>97</a>
-<a href=#98 id=98 data-nosnippet>98</a>  <span class="comment">// Author-block — attach author names, affiliations and emails to structured
-<a href=#99 id=99 data-nosnippet>99</a>  // `&lt;ltx:creator&gt;`/`&lt;ltx:contact&gt;` frontmatter, NOT loose top-level notes.
-<a href=#100 id=100 data-nosnippet>100</a>  // Mirrors jheppub_sty.rs (the Perl PR #2767 labeled-affiliation pattern).
-<a href=#101 id=101 data-nosnippet>101</a>  //
-<a href=#102 id=102 data-nosnippet>102</a>  // sn-jnl.cls (the witness cls) defines `\author*[N]{name}` (`\@ifstar` →
-<a href=#103 id=103 data-nosnippet>103</a>  // corresponding vs regular; the optional `[N]` is the affiliation-id list) and
-<a href=#104 id=104 data-nosnippet>104</a>  // `\affil*[N]{text}`. We collapse the corresponding-vs-regular star (both
-<a href=#105 id=105 data-nosnippet>105</a>  // become role=author) — we don't distinguish it in the output.
-<a href=#106 id=106 data-nosnippet>106</a>  //
-<a href=#107 id=107 data-nosnippet>107</a>  // `OptionalMatch:*` (not a literal `\author*`): our DefMacro prototype parser
-<a href=#108 id=108 data-nosnippet>108</a>  // treats a `*` immediately after `\author` as a literal Token parameter, not a
-<a href=#109 id=109 data-nosnippet>109</a>  // CS suffix, so `\author*[]{}` would force a mandatory star and (via a naive
-<a href=#110 id=110 data-nosnippet>110</a>  // self-forwarding body) recurse forever on a plain `\author{X}` — the
-<a href=#111 id=111 data-nosnippet>111</a>  // root-cause for 2306.11901. `OptionalMatch:*` makes the star optional, and the
-<a href=#112 id=112 data-nosnippet>112</a>  // body forwards to `\lx@add@creator` (never re-enters `\author`). The optional
-<a href=#113 id=113 data-nosnippet>113</a>  // `[N]` becomes the creator's `annotations` (the affiliation ids it references).
-<a href=#114 id=114 data-nosnippet>114</a>  </span><span class="macro">DefMacro!</span>(
-<a href=#115 id=115 data-nosnippet>115</a>    <span class="string">"\\author OptionalMatch:* []{}"</span>,
-<a href=#116 id=116 data-nosnippet>116</a>    <span class="string">"\\lx@add@creator[annotations={#2}]{#3}"
-<a href=#117 id=117 data-nosnippet>117</a>  </span>);
-<a href=#118 id=118 data-nosnippet>118</a>  <span class="comment">// `\affil*[N]{text}`: attach as a structured `ltx:contact[role=affiliation]`
-<a href=#119 id=119 data-nosnippet>119</a>  // ON the author creators, not an orphaned top-level `ltx:note`. The numbered
-<a href=#120 id=120 data-nosnippet>120</a>  // form links by id (contact label &lt;-&gt; the author's annotations); the
-<a href=#121 id=121 data-nosnippet>121</a>  // unnumbered shared form (a single `\affil` for all authors — the witness's
-<a href=#122 id=122 data-nosnippet>122</a>  // shape) uses `annotate=all` to attach to every preceding creator.
-<a href=#123 id=123 data-nosnippet>123</a>  // arXiv/html_feedback#534, witness 2204.04741.
-<a href=#124 id=124 data-nosnippet>124</a>  </span><span class="macro">RawTeX!</span>(
-<a href=#125 id=125 data-nosnippet>125</a>    <span class="string">r#"\def\lx@sn@affil#1#2{\def\lx@sn@affil@id{#1}%
-<a href=#126 id=126 data-nosnippet>126</a>\ifx\lx@sn@affil@id\@empty\lx@add@contact[role=affiliation,annotate=all]{#2}%
-<a href=#127 id=127 data-nosnippet>127</a>\else\lx@add@contact[role=affiliation,label={#1}]{#2}\fi}"#
-<a href=#128 id=128 data-nosnippet>128</a>  </span>);
-<a href=#129 id=129 data-nosnippet>129</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\affil OptionalMatch:* []{}"</span>, <span class="string">"\\lx@sn@affil{#2}{#3}"</span>);
-<a href=#130 id=130 data-nosnippet>130</a>  <span class="macro">DefMacro!</span>(
-<a href=#131 id=131 data-nosnippet>131</a>    <span class="string">"\\equalcont{}"</span>,
-<a href=#132 id=132 data-nosnippet>132</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=equal-contributors]{#1}"
-<a href=#133 id=133 data-nosnippet>133</a>  </span>);
-<a href=#134 id=134 data-nosnippet>134</a>  <span class="macro">DefMacro!</span>(
-<a href=#135 id=135 data-nosnippet>135</a>    <span class="string">"\\presentaddress{}"</span>,
-<a href=#136 id=136 data-nosnippet>136</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=present-address]{#1}"
-<a href=#137 id=137 data-nosnippet>137</a>  </span>);
-<a href=#138 id=138 data-nosnippet>138</a>  <span class="comment">// sn-jnl.cls L1788: \gdef\orcid#1{\href{#1}{\orcidlogo}} (ORCID-logo
-<a href=#139 id=139 data-nosnippet>139</a>  // hyperlink, used INLINE inside \author{...\orcid{id}}). Render as an inline
-<a href=#140 id=140 data-nosnippet>140</a>  // ORCID link showing the id (content-preserving: the id stays in the output,
-<a href=#141 id=141 data-nosnippet>141</a>  // both as visible text and the proper orcid.org href; the real cls's logo
-<a href=#142 id=142 data-nosnippet>142</a>  // image Orcidlogo.eps isn't shipped). A frontmatter note does NOT work here —
-<a href=#143 id=143 data-nosnippet>143</a>  // it fires inside the author-name digestion and is dropped. Was undefined →
-<a href=#144 id=144 data-nosnippet>144</a>  // error (Perl defines it). Witness 2211.09693.
-<a href=#145 id=145 data-nosnippet>145</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\orcid{}"</span>, <span class="string">"\\href{https://orcid.org/#1}{#1}"</span>);
-<a href=#146 id=146 data-nosnippet>146</a>  <span class="comment">// \sep — elsarticle-family keyword separator (`\def\sep{\unskip, }`). sn-jnl
-<a href=#147 id=147 data-nosnippet>147</a>  // papers use it in keyword lists (`kw1 \sep kw2 \sep ...`); the sn-jnl cls
-<a href=#148 id=148 data-nosnippet>148</a>  // doesn't define it but Perl provides it (elsarticle convention). Render as a
-<a href=#149 id=149 data-nosnippet>149</a>  // comma separator. Was undefined → error. Witness 2309.06763.
-<a href=#150 id=150 data-nosnippet>150</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\sep"</span>, <span class="string">"\\unskip, "</span>);
-<a href=#151 id=151 data-nosnippet>151</a>  <span class="comment">// Name part helpers (first-name, surname) — emit inline.
-<a href=#152 id=152 data-nosnippet>152</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\fnm{}"</span>, <span class="string">"#1"</span>);
-<a href=#153 id=153 data-nosnippet>153</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\sur{}"</span>, <span class="string">"#1"</span>);
-<a href=#154 id=154 data-nosnippet>154</a>  <span class="comment">// sn-jnl.cls L599-606: \orgdiv / \orgname / \orgaddress / \street /
-<a href=#155 id=155 data-nosnippet>155</a>  // \postcode / \city / \state / \country — affiliation-element helpers
-<a href=#156 id=156 data-nosnippet>156</a>  // that pass through their argument as inline text. The paper-bundled
-<a href=#157 id=157 data-nosnippet>157</a>  // class file defines all of them as `\newcommand{\foo}[1]{#1}` (plain
-<a href=#158 id=158 data-nosnippet>158</a>  // pass-through). Our raw-load path doesn't always invoke them, so
-<a href=#159 id=159 data-nosnippet>159</a>  // bind explicitly. Without these stubs, papers using the standard
-<a href=#160 id=160 data-nosnippet>160</a>  // sn-jnl `\affil*[1]{\orgdiv{...}, \orgname{...}, \orgaddress{...}}`
-<a href=#161 id=161 data-nosnippet>161</a>  // pattern report undefined CS cascade. Witness 2311.09249, 2311.08387.
-<a href=#162 id=162 data-nosnippet>162</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\orgdiv{}"</span>, <span class="string">"#1"</span>);
-<a href=#163 id=163 data-nosnippet>163</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\orgname{}"</span>, <span class="string">"#1"</span>);
-<a href=#164 id=164 data-nosnippet>164</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\orgaddress{}"</span>, <span class="string">"#1"</span>);
-<a href=#165 id=165 data-nosnippet>165</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\street{}"</span>, <span class="string">"#1"</span>);
-<a href=#166 id=166 data-nosnippet>166</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\postcode{}"</span>, <span class="string">"#1"</span>);
-<a href=#167 id=167 data-nosnippet>167</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\city{}"</span>, <span class="string">"#1"</span>);
-<a href=#168 id=168 data-nosnippet>168</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\state{}"</span>, <span class="string">"#1"</span>);
-<a href=#169 id=169 data-nosnippet>169</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\country{}"</span>, <span class="string">"#1"</span>);
-<a href=#170 id=170 data-nosnippet>170</a>  <span class="comment">// sn-jnl.cls defines \botrule as a bottom-rule table separator
-<a href=#171 id=171 data-nosnippet>171</a>  // (similar shape to \toprule / \midrule from booktabs). Authors use
-<a href=#172 id=172 data-nosnippet>172</a>  // it inside \begin{tabular}...\end{tabular} for Springer-Nature
-<a href=#173 id=173 data-nosnippet>173</a>  // bottom rules. Map to \hline so the table still renders.
-<a href=#174 id=174 data-nosnippet>174</a>  // Witness 2402.17342.
-<a href=#175 id=175 data-nosnippet>175</a>  </span><span class="macro">Let!</span>(<span class="string">"\\botrule"</span>, <span class="string">"\\hline"</span>);
-<a href=#176 id=176 data-nosnippet>176</a>
-<a href=#177 id=177 data-nosnippet>177</a>  <span class="comment">// Do NOT override `\abstract` or the `{abstract}` environment here. The
-<a href=#178 id=178 data-nosnippet>178</a>  // kernel's `\abstract` (latex_constructs `\abstract`, L5153) is `locked`: the
-<a href=#179 id=179 data-nosnippet>179</a>  // brace form routes to the *deferred* `\lx@add@abstract` frontmatter
-<a href=#180 id=180 data-nosnippet>180</a>  // accumulator, so `\maketitle` flushes it in schema-canonical order (document
-<a href=#181 id=181 data-nosnippet>181</a>  // `&lt;title&gt;` first, `&lt;abstract&gt;` after). Perl relies on exactly this lock — the
-<a href=#182 id=182 data-nosnippet>182</a>  // raw sn-jnl.cls's `\long\def\abstract#1{\def\@abstract{...}}` (deferred store,
-<a href=#183 id=183 data-nosnippet>183</a>  // emitted by `\@maketitle`'s `\printabstract` AFTER title+authors) cannot pull
-<a href=#184 id=184 data-nosnippet>184</a>  // the core `\abstract` back to an immediate emit. A binding-level
-<a href=#185 id=185 data-nosnippet>185</a>  // `DefEnvironment!("{abstract}", &lt;ltx:abstract&gt;...)` + `\abstract{}` forwarder
-<a href=#186 id=186 data-nosnippet>186</a>  // bypasses that lock and emits `&lt;ltx:abstract&gt;` at the *call site* — which in
-<a href=#187 id=187 data-nosnippet>187</a>  // every sn-jnl paper is BEFORE `\maketitle`, so the abstract lands ahead of the
-<a href=#188 id=188 data-nosnippet>188</a>  // still-deferred title. That is the abstract-before-title regression; letting
-<a href=#189 id=189 data-nosnippet>189</a>  // the locked kernel macro run fixes it and keeps the env properly bounded
-<a href=#190 id=190 data-nosnippet>190</a>  // (`\begin{abstract}`→`\lx@begin@abstract`, `\end{abstract}`→`\lx@end@abstract`
-<a href=#191 id=191 data-nosnippet>191</a>  // both deferred). arXiv/html_feedback#3436, witnesses 2411.11158, 2306.11901.
-<a href=#192 id=192 data-nosnippet>192</a>  //
-<a href=#193 id=193 data-nosnippet>193</a>  // Frontmatter envs — internal_vertical mode for multi-paragraph bodies
-<a href=#194 id=194 data-nosnippet>194</a>  // (declarations especially carries author prose with \par separators). Without
-<a href=#195 id=195 data-nosnippet>195</a>  // explicit mode, restricted_horizontal default trips Endgroup mismatch on
-<a href=#196 id=196 data-nosnippet>196</a>  // \par-containing bodies.
-<a href=#197 id=197 data-nosnippet>197</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{declarations}"</span>, <span class="string">"&lt;ltx:acknowledgements name='declarations'&gt;#body&lt;/ltx:acknowledgements&gt;"</span>,
-<a href=#198 id=198 data-nosnippet>198</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
-<a href=#199 id=199 data-nosnippet>199</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{appendices}"</span>, <span class="string">"&lt;ltx:appendix&gt;#body&lt;/ltx:appendix&gt;"</span>,
-<a href=#200 id=200 data-nosnippet>200</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
-<a href=#201 id=201 data-nosnippet>201</a>});
+<a href=#4 id=4 data-nosnippet>4</a><span class="kw">use </span><span class="kw">crate</span>::shipped_class::{class_code_argument, class_code_contains, shipped_class_text};
+<a href=#5 id=5 data-nosnippet>5</a>
+<a href=#6 id=6 data-nosnippet>6</a><span class="macro">LoadDefinitions!</span>({
+<a href=#7 id=7 data-nosnippet>7</a>  <span class="macro">LoadClass!</span>(<span class="string">"OmniBus"</span>);
+<a href=#8 id=8 data-nosnippet>8</a>  <span class="comment">// sn-jnl.cls loads amsmath in some versions only (140 of 799 copies in a 1/20 arXiv sample; 2509.03559's none):
+<a href=#9 id=9 data-nosnippet>9</a>  // amsmath's commands for papers that use them unloaded, its "Old form" error once the paper loads it; the paper's
+<a href=#10 id=10 data-nosnippet>10</a>  // copy decides (`amsmath_sty::require_amsmath_beyond_original`, KNOWN_PERL_ERRORS #993).
+<a href=#11 id=11 data-nosnippet>11</a>  </span>amsmath_sty::require_amsmath_beyond_original(
+<a href=#12 id=12 data-nosnippet>12</a>    latexml_package::shipped_class::shipped_copy_loads(<span class="string">"cls"</span>, <span class="string">"amsmath"</span>)<span class="question-mark">?</span>,
+<a href=#13 id=13 data-nosnippet>13</a>    <span class="kw-2">&amp;</span>[],
+<a href=#14 id=14 data-nosnippet>14</a>  )<span class="question-mark">?</span>;
+<a href=#15 id=15 data-nosnippet>15</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amsthm"</span>);
+<a href=#16 id=16 data-nosnippet>16</a>  <span class="macro">RequirePackage!</span>(<span class="string">"amssymb"</span>);
+<a href=#17 id=17 data-nosnippet>17</a>  <span class="comment">// xcolor is not preloaded here: it comes from the class's own
+<a href=#18 id=18 data-nosnippet>18</a>  // `\usepackage{xcolor}` through the dependency scan below, as in Perl, and a
+<a href=#19 id=19 data-nosnippet>19</a>  // paper's later `\usepackage[table]{xcolor}` still loads colortbl (xcolor
+<a href=#20 id=20 data-nosnippet>20</a>  // keeps its `table` option handler for a repeat load, xcolor_sty.rs), so its
+<a href=#21 id=21 data-nosnippet>21</a>  // array `m{}`/`b{}` columns work. See ifacconf_cls.rs.
+<a href=#22 id=22 data-nosnippet>22</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"hyperref"</span>);
+<a href=#23 id=23 data-nosnippet>23</a>  <span class="macro">RequirePackage!</span>(<span class="string">"graphicx"</span>);
+<a href=#24 id=24 data-nosnippet>24</a>  <span class="comment">// Real sn-jnl.cls loads geometry for page setup — papers commonly
+<a href=#25 id=25 data-nosnippet>25</a>  // call \\geometry{margin=2cm} without an explicit usepackage.
+<a href=#26 id=26 data-nosnippet>26</a>  // Witness 2503.06846.
+<a href=#27 id=27 data-nosnippet>27</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"geometry"</span>);
+<a href=#28 id=28 data-nosnippet>28</a>  <span class="comment">// The packages the shipped class names. Perl ships no sn-jnl binding, so
+<a href=#29 id=29 data-nosnippet>29</a>  // OmniBus runs `maybeRequireDependencies` over the raw class
+<a href=#30 id=30 data-nosnippet>30</a>  // (Package.pm:2776-2813): every `\RequirePackage`/`\usepackage`/`\LoadClass`
+<a href=#31 id=31 data-nosnippet>31</a>  // name that has a binding is loaded, with its options. This binding bypasses
+<a href=#32 id=32 data-nosnippet>32</a>  // that fallback, so it runs the same scan itself — booktabs's `\toprule`,
+<a href=#33 id=33 data-nosnippet>33</a>  // wrapfig, listings, appendix, rotating's `{sidewaystable}` (2101.02753),
+<a href=#34 id=34 data-nosnippet>34</a>  // algorithm/algorithmicx/algpseudocode only when this version names them
+<a href=#35 id=35 data-nosnippet>35</a>  // (older copies L308-310, witness 2201.08889: forcing algorithmicx on a newer
+<a href=#36 id=36 data-nosnippet>36</a>  // one defines `\algorithmic`, and the paper's own `\usepackage{algorithmic}`
+<a href=#37 id=37 data-nosnippet>37</a>  // is then refused — algorithmic_sty.rs, Perl algorithmic.sty.ltxml:20-23 — a
+<a href=#38 id=38 data-nosnippet>38</a>  // flood of undefined `\STATE` into `Fatal:TooManyErrors`, 2605.00003,
+<a href=#39 id=39 data-nosnippet>39</a>  // 2605.10685). Witness 2606.00121: `\toprule`/`\midrule`/`\bottomrule`
+<a href=#40 id=40 data-nosnippet>40</a>  // undefined. Not from the scan: article, which OmniBus has loaded — the
+<a href=#41 id=41 data-nosnippet>41</a>  // class's `\LoadClass[twoside,fleqn]{article}` re-load would apply a
+<a href=#42 id=42 data-nosnippet>42</a>  // leftover `fleqn` handler and set every display equation flush left, where
+<a href=#43 id=43 data-nosnippet>43</a>  // pdflatex centres them (the option is article's alone, and amsmath's
+<a href=#44 id=44 data-nosnippet>44</a>  // `\if@fleqn` stays false); and natbib and apacite (chosen by reference style,
+<a href=#45 id=45 data-nosnippet>45</a>  // below). program, which the older copies load (L311, 1812.02207's; L621,
+<a href=#46 id=46 data-nosnippet>46</a>  // 1911.08756's; 106 of 148 sampled copies), comes from the scan as the class
+<a href=#47 id=47 data-nosnippet>47</a>  // has it: its `\gt`, `\lt`, `\union`, `\normalbaroutside` (program.sty:124,
+<a href=#48 id=48 data-nosnippet>48</a>  // 713-722) were undefined in 138 papers of run 353 that use them (2010.12415,
+<a href=#49 id=49 data-nosnippet>49</a>  // 2102.03176, 2104.02781). With it `;` is active in math (program.sty:67-76),
+<a href=#50 id=50 data-nosnippet>50</a>  // as in pdflatex. This port binds program (a raw load) and Perl does not, so
+<a href=#51 id=51 data-nosnippet>51</a>  // Perl's scan skips it.
+<a href=#52 id=52 data-nosnippet>52</a>  </span>require_dependencies_except(<span class="string">"sn-jnl"</span>, <span class="string">"cls"</span>, <span class="kw-2">&amp;</span>[<span class="string">"article"</span>, <span class="string">"natbib"</span>, <span class="string">"apacite"</span>]);
+<a href=#53 id=53 data-nosnippet>53</a>  <span class="comment">// program.sty:175-176 also makes `\(`…`\)` a `{programbox}` (a `\textwidth`
+<a href=#54 id=54 data-nosnippet>54</a>  // minipage around a `{program}`), which the papers of these copies write as
+<a href=#55 id=55 data-nosnippet>55</a>  // inline maths and pdflatex sets in the line (2112.05038, on 413 lines: "For a
+<a href=#56 id=56 data-nosnippet>56</a>  // domain Y ⊂ Rn, there exists…"); its raw emulation here made each an
+<a href=#57 id=57 data-nosnippet>57</a>  // inline-block holding a one-item list (1331 in 2112.05038). They stay the
+<a href=#58 id=58 data-nosnippet>58</a>  // kernel's inline maths (OXIDIZED_DESIGN_DIVERGENCES #597, approved 2026-10-15;
+<a href=#59 id=59 data-nosnippet>59</a>  // program loaded under another class keeps the programbox).
+<a href=#60 id=60 data-nosnippet>60</a>  </span><span class="kw">if </span>package_loaded(<span class="string">"program"</span>) {
+<a href=#61 id=61 data-nosnippet>61</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\("</span>, <span class="string">"\\lx@begin@inline@math"</span>);
+<a href=#62 id=62 data-nosnippet>62</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\)"</span>, <span class="string">"\\lx@end@inline@math"</span>);
+<a href=#63 id=63 data-nosnippet>63</a>  }
+<a href=#64 id=64 data-nosnippet>64</a>  <span class="comment">// The proof mark: the class's begin-document code (sn-jnl.cls:1571-1575 of 1907.11468's copy, in all 138 copies
+<a href=#65 id=65 data-nosnippet>65</a>  // of the run-353 sn-jnl papers) declares `\opensquare` (msa "03, □) and makes it the `\qedsymbol`, over
+<a href=#66 id=66 data-nosnippet>66</a>  // program.sty:971-973's `\let\qedsymbol=\blacksquare`, so pdflatex ends a proof with □ ("Proof Trivial. □";
+<a href=#67 id=67 data-nosnippet>67</a>  // 1907.11468, 2210.16458). This binding does not run the class body, so it runs these three lines of that hook
+<a href=#68 id=68 data-nosnippet>68</a>  // itself, where the copy has them (or the paper ships none: the class as distributed). The same hook then makes
+<a href=#69 id=69 data-nosnippet>69</a>  // `\proof` its `{spiproof}` (`\let\proof\spiproof\let\endproof\endspiproof`), a copy of amsthm's interface
+<a href=#70 id=70 data-nosnippet>70</a>  // (`[1][\proofname]`, `\pushQED{\qed}`), over program.sty:928's `\def\proof` (a head of its own, "Proof:", which the
+<a href=#71 id=71 data-nosnippet>71</a>  // proof lock lets through, 67ps). A copy is the binding's `&lt;ltx:proof&gt;` (OXIDIZED_DESIGN_DIVERGENCES #596), so the
+<a href=#72 id=72 data-nosnippet>72</a>  // hook's `\let` puts the binding's proof back, where the copy has it.
+<a href=#73 id=73 data-nosnippet>73</a>  // Without program the mark is amsthm's `\qed`, which does not read `\qedsymbol` (amsthm_sty.rs).
+<a href=#74 id=74 data-nosnippet>74</a>  </span><span class="kw">let </span>class_text = shipped_class_text(<span class="string">"sn-jnl"</span>)<span class="question-mark">?</span>;
+<a href=#75 id=75 data-nosnippet>75</a>  <span class="kw">if </span>class_text
+<a href=#76 id=76 data-nosnippet>76</a>    .as_deref()
+<a href=#77 id=77 data-nosnippet>77</a>    .is_none_or(|text| class_code_contains(text, <span class="string">"\\def\\qedsymbol{\\opensquare}"</span>))
+<a href=#78 id=78 data-nosnippet>78</a>  {
+<a href=#79 id=79 data-nosnippet>79</a>    <span class="macro">RawTeX!</span>(
+<a href=#80 id=80 data-nosnippet>80</a>      <span class="string">r#"\AtBeginDocument{\DeclareSymbolFont{AMSa}{U}{msa}{m}{n}\DeclareMathSymbol{\opensquare}{\mathord}{AMSa}{"03}\def\qedsymbol{\opensquare}}"#
+<a href=#81 id=81 data-nosnippet>81</a>    </span>);
+<a href=#82 id=82 data-nosnippet>82</a>  }
+<a href=#83 id=83 data-nosnippet>83</a>  <span class="comment">// The hook's `\let` runs with or without program: a paper that clears the class's proof in its preamble
+<a href=#84 id=84 data-nosnippet>84</a>  // (`\let\proof\relax\let\endproof\relax` before its own `\usepackage{amsthm}`, a no-op as the class loaded amsthm)
+<a href=#85 id=85 data-nosnippet>85</a>  // has it back at `\begin{document}` (2211.03599, 2501.00469, whose copies load no program; 2009.01631, 2301.05288).
+<a href=#86 id=86 data-nosnippet>86</a>  </span><span class="kw">if </span>class_text
+<a href=#87 id=87 data-nosnippet>87</a>    .as_deref()
+<a href=#88 id=88 data-nosnippet>88</a>    .is_none_or(|text| class_code_contains(text, <span class="string">"\\let\\proof\\spiproof"</span>))
+<a href=#89 id=89 data-nosnippet>89</a>  {
+<a href=#90 id=90 data-nosnippet>90</a>    <span class="macro">RawTeX!</span>(<span class="string">r#"\AtBeginDocument{\let\proof\@proof\let\endproof\end@proof}"#</span>);
+<a href=#91 id=91 data-nosnippet>91</a>  }
+<a href=#92 id=92 data-nosnippet>92</a>
+<a href=#93 id=93 data-nosnippet>93</a>  <span class="comment">// Real sn-jnl.cls loads natbib for EVERY reference style (L1649/1652/1662/
+<a href=#94 id=94 data-nosnippet>94</a>  // 1669/1677: `\usepackage[numbers,sort&amp;compress]{natbib}` for the numeric
+<a href=#95 id=95 data-nosnippet>95</a>  // styles, `\usepackage[authoryear]{natbib}` for the author-year ones).
+<a href=#96 id=96 data-nosnippet>96</a>  // OmniBus only `def_autoload`s natbib off `\citet`/`\citep`/`\citeyear`/…
+<a href=#97 id=97 data-nosnippet>97</a>  // — deliberately NOT off `\cite`, which the kernel already defines. So a
+<a href=#98 id=98 data-nosnippet>98</a>  // paper that cites solely via natbib's TWO-optional `\cite[pre][post]{keys}`
+<a href=#99 id=99 data-nosnippet>99</a>  // never triggers the autoload, and the kernel's single-optional
+<a href=#100 id=100 data-nosnippet>100</a>  // `\cite[] Semiverbatim` reads `[` as the whole key list: the real keys are
+<a href=#101 id=101 data-nosnippet>101</a>  // dropped (never cited, silently absent from the References) and `]{keys}`
+<a href=#102 id=102 data-nosnippet>102</a>  // leaks as body text. Requiring natbib here mirrors the real class and also
+<a href=#103 id=103 data-nosnippet>103</a>  // spares these papers the autoload dance. Options are left at natbib's
+<a href=#104 id=104 data-nosnippet>104</a>  // default (numbers) — same as what the autoload path already produced, so
+<a href=#105 id=105 data-nosnippet>105</a>  // no rendering change for papers that did trigger it; the per-refstyle
+<a href=#106 id=106 data-nosnippet>106</a>  // numbers-vs-authoryear mapping needs class-option processing this stub
+<a href=#107 id=107 data-nosnippet>107</a>  // doesn't do yet. Witness 2605.23484 (sn-mathphys-num), 2606.10002
+<a href=#108 id=108 data-nosnippet>108</a>  // (sn-basic), 2606.10215, 2606.11534.
+<a href=#109 id=109 data-nosnippet>109</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"natbib"</span>);
+<a href=#110 id=110 data-nosnippet>110</a>
+<a href=#111 id=111 data-nosnippet>111</a>  <span class="comment">// sn-jnl.cls reference styles select the bibliography package by class
+<a href=#112 id=112 data-nosnippet>112</a>  // option (sn-jnl.cls L1656-1694): the numeric/author-year styles use natbib
+<a href=#113 id=113 data-nosnippet>113</a>  // (loaded above), but the `sn-apa` style loads apacite —
+<a href=#114 id=114 data-nosnippet>114</a>  // `\if@APA@refstyle \usepackage[natbibapa]{apacite} \fi` (L1683-1685,
+<a href=#115 id=115 data-nosnippet>115</a>  // guarded by `\DeclareOption{sn-apa}{\@APA@refstyletrue}` L111). Without it,
+<a href=#116 id=116 data-nosnippet>116</a>  // an `sn-apa` paper's apacite-formatted `.bbl` (`\APACinsertmetastar`,
+<a href=#117 id=117 data-nosnippet>117</a>  // `\BOthers`, `\BDBL`, `{APACrefauthors}`, `\APACrefYearMonthDay`,
+<a href=#118 id=118 data-nosnippet>118</a>  // `\PrintBackRefs`, …) hits our apacite binding UNLOADED, so every one of
+<a href=#119 id=119 data-nosnippet>119</a>  // those macros floods `Error:undefined:` and the References render as raw
+<a href=#120 id=120 data-nosnippet>120</a>  // macro names. Mirror the class: fire apacite when `sn-apa` is passed.
+<a href=#121 id=121 data-nosnippet>121</a>  // (natbib above stays unconditional — the existing simplification; apacite
+<a href=#122 id=122 data-nosnippet>122</a>  // requires natbib anyway, so loading both under `sn-apa` is harmless.)
+<a href=#123 id=123 data-nosnippet>123</a>  // Perl ships no sn-jnl / apacite binding at all → Rust surpasses.
+<a href=#124 id=124 data-nosnippet>124</a>  // arXiv/html_feedback#1261, witness 2404.15224
+<a href=#125 id=125 data-nosnippet>125</a>  // (`\documentclass[referee,sn-apa,pdflatex,natbib]{sn-jnl}`).
+<a href=#126 id=126 data-nosnippet>126</a>  // With the class's `natbibapa` option, as the class loads it: natbib's own `\cite` (textual without notes), not
+<a href=#127 id=127 data-nosnippet>127</a>  // apacite's classic parenthetical one (apacite_sty.rs, apacite.sty:93-100).
+<a href=#128 id=128 data-nosnippet>128</a>  </span><span class="macro">DeclareOption!</span>(<span class="string">"sn-apa"</span>, {
+<a href=#129 id=129 data-nosnippet>129</a>    <span class="macro">RequirePackage!</span>(<span class="string">"apacite"</span>, options =&gt; <span class="macro">vec!</span>[<span class="macro">s!</span>(<span class="string">"natbibapa"</span>)]);
+<a href=#130 id=130 data-nosnippet>130</a>  });
+<a href=#131 id=131 data-nosnippet>131</a>  <span class="comment">// sn-jnl.cls:67, :102 `\if@pdflatex`, set by the `pdflatex` option
+<a href=#132 id=132 data-nosnippet>132</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\newif\if@pdflatex\global\@pdflatexfalse"</span>);
+<a href=#133 id=133 data-nosnippet>133</a>  <span class="macro">DeclareOption!</span>(<span class="string">"pdflatex"</span>, {
+<a href=#134 id=134 data-nosnippet>134</a>    <span class="macro">RawTeX!</span>(<span class="string">r"\global\@pdflatextrue"</span>);
+<a href=#135 id=135 data-nosnippet>135</a>  });
+<a href=#136 id=136 data-nosnippet>136</a>  <span class="macro">ProcessOptions!</span>();
+<a href=#137 id=137 data-nosnippet>137</a>  <span class="comment">// sn-jnl.cls:1462-1467 `\breakurldefns`: without the `pdflatex` option the class loads breakurl and makes `\href`
+<a href=#138 id=138 data-nosnippet>138</a>  // its `\burlalt` — the first argument shown, the second the link (breakurl.sty:50-51). That `\let` is not made
+<a href=#139 id=139 data-nosnippet>139</a>  // (OXIDIZED_DESIGN_DIVERGENCES #654, a surpass): the authors write hyperref's `\href{url}{text}` (10 of 12 sampled
+<a href=#140 id=140 data-nosnippet>140</a>  // papers: 2405.04967, 2207.12959, 2603.09685), which the swap turns into the URL shown and the text linked; the
+<a href=#141 id=141 data-nosnippet>141</a>  // template's own swapped order (`\href{here.}{https://…/Datasets_-_RMSC/…}`, 2401.05832) is the exception. breakurl
+<a href=#142 id=142 data-nosnippet>142</a>  // is still loaded, as the class does.
+<a href=#143 id=143 data-nosnippet>143</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\if@pdflatex\else\RequirePackage[hyphenbreaks]{breakurl}\fi"</span>);
+<a href=#144 id=144 data-nosnippet>144</a>
+<a href=#145 id=145 data-nosnippet>145</a>  <span class="comment">// sn-jnl frontmatter — gobble layout-only / preserve author text.
+<a href=#146 id=146 data-nosnippet>146</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\bmhead{}"</span>, <span class="string">"\\subsubsection*{#1}"</span>);
+<a href=#147 id=147 data-nosnippet>147</a>  <span class="comment">// sn-jnl.cls:877-878: numbered or unnumbered sections from here on (2609.05015).
+<a href=#148 id=148 data-nosnippet>148</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#149 id=149 data-nosnippet>149</a>    <span class="string">r"\def\numbered{\setcounter{secnumdepth}{3}}\def\unnumbered{\setcounter{secnumdepth}{0}}"
+<a href=#150 id=150 data-nosnippet>150</a>  </span>);
+<a href=#151 id=151 data-nosnippet>151</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bmsection{}"</span>, <span class="string">"\\section*{#1}"</span>);
+<a href=#152 id=152 data-nosnippet>152</a>  <span class="comment">// \sectiontitle{text} carries an author-typed section title used in
+<a href=#153 id=153 data-nosnippet>153</a>  // sn-jnl's TOC/running-head pipeline. Preserve as ltx:note rather
+<a href=#154 id=154 data-nosnippet>154</a>  // than silently dropping the words. Content-preserving.
+<a href=#155 id=155 data-nosnippet>155</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#156 id=156 data-nosnippet>156</a>    <span class="string">"\\sectiontitle{}"</span>,
+<a href=#157 id=157 data-nosnippet>157</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=sectiontitle]{#1}"
+<a href=#158 id=158 data-nosnippet>158</a>  </span>);
+<a href=#159 id=159 data-nosnippet>159</a>  <span class="comment">// \headtype{...} / \extralength{...} are layout knobs (no author body).
+<a href=#160 id=160 data-nosnippet>160</a>  </span>def_macro_noop(<span class="string">"\\headtype{}"</span>)<span class="question-mark">?</span>;
+<a href=#161 id=161 data-nosnippet>161</a>  def_macro_noop(<span class="string">"\\extralength{}"</span>)<span class="question-mark">?</span>;
+<a href=#162 id=162 data-nosnippet>162</a>  <span class="comment">// \theHfigure / \theHtable: the kernel's (every counter has its `\theH&lt;counter&gt;`, counter/dialect.rs), which
+<a href=#163 id=163 data-nosnippet>163</a>  // hyperref's `\hyper@makecurrent` reads inside an `\xdef` — not argument-taking stubs, which took its `}`.
+<a href=#164 id=164 data-nosnippet>164</a>
+<a href=#165 id=165 data-nosnippet>165</a>  // Author-block — attach author names, affiliations and emails to structured
+<a href=#166 id=166 data-nosnippet>166</a>  // `&lt;ltx:creator&gt;`/`&lt;ltx:contact&gt;` frontmatter, NOT loose top-level notes.
+<a href=#167 id=167 data-nosnippet>167</a>  // Mirrors jheppub_sty.rs (the Perl PR #2767 labeled-affiliation pattern).
+<a href=#168 id=168 data-nosnippet>168</a>  //
+<a href=#169 id=169 data-nosnippet>169</a>  // sn-jnl.cls (the witness cls) defines `\author*[N]{name}` (`\@ifstar` →
+<a href=#170 id=170 data-nosnippet>170</a>  // corresponding vs regular; the optional `[N]` is the affiliation-id list) and
+<a href=#171 id=171 data-nosnippet>171</a>  // `\affil*[N]{text}`. We collapse the corresponding-vs-regular star (both
+<a href=#172 id=172 data-nosnippet>172</a>  // become role=author) — we don't distinguish it in the output.
+<a href=#173 id=173 data-nosnippet>173</a>  //
+<a href=#174 id=174 data-nosnippet>174</a>  // `OptionalMatch:*` (not a literal `\author*`): our DefMacro prototype parser
+<a href=#175 id=175 data-nosnippet>175</a>  // treats a `*` immediately after `\author` as a literal Token parameter, not a
+<a href=#176 id=176 data-nosnippet>176</a>  // CS suffix, so `\author*[]{}` would force a mandatory star and (via a naive
+<a href=#177 id=177 data-nosnippet>177</a>  // self-forwarding body) recurse forever on a plain `\author{X}` — the
+<a href=#178 id=178 data-nosnippet>178</a>  // root-cause for 2306.11901. `OptionalMatch:*` makes the star optional, and the
+<a href=#179 id=179 data-nosnippet>179</a>  // body forwards to `\lx@add@creator` (never re-enters `\author`). The optional
+<a href=#180 id=180 data-nosnippet>180</a>  // `[N]` becomes the creator's `annotations` (the affiliation ids it references).
+<a href=#181 id=181 data-nosnippet>181</a>  // (a name list in one `\author` is several people, read as the per-author classes read theirs: Perl, with no sn-jnl
+<a href=#182 id=182 data-nosnippet>182</a>  // binding, splits it with the kernel's `\author`; 2312.04825, 2501.00473, 2504.09158)
+<a href=#183 id=183 data-nosnippet>183</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#184 id=184 data-nosnippet>184</a>    <span class="string">"\\author OptionalMatch:* []{}"</span>,
+<a href=#185 id=185 data-nosnippet>185</a>    <span class="string">"\\lx@add@authors@append[annotations={#2}]{#3}"
+<a href=#186 id=186 data-nosnippet>186</a>  </span>);
+<a href=#187 id=187 data-nosnippet>187</a>  <span class="comment">// `\affil*[N]{text}`: attach as a structured `ltx:contact[role=affiliation]`
+<a href=#188 id=188 data-nosnippet>188</a>  // ON the author creators, not an orphaned top-level `ltx:note`. The numbered
+<a href=#189 id=189 data-nosnippet>189</a>  // form links by id (contact label &lt;-&gt; the author's annotations); the
+<a href=#190 id=190 data-nosnippet>190</a>  // unnumbered shared form (a single `\affil` for all authors — the witness's
+<a href=#191 id=191 data-nosnippet>191</a>  // shape) uses `annotate=all` to attach to every preceding creator.
+<a href=#192 id=192 data-nosnippet>192</a>  // arXiv/html_feedback#534, witness 2204.04741.
+<a href=#193 id=193 data-nosnippet>193</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#194 id=194 data-nosnippet>194</a>    <span class="string">r#"\def\lx@sn@affil#1#2{\def\lx@sn@affil@id{#1}%
+<a href=#195 id=195 data-nosnippet>195</a>\ifx\lx@sn@affil@id\@empty\lx@add@contact[role=affiliation,annotate=all]{#2}%
+<a href=#196 id=196 data-nosnippet>196</a>\else\lx@add@contact[role=affiliation,label={#1}]{#2}\fi}"#
+<a href=#197 id=197 data-nosnippet>197</a>  </span>);
+<a href=#198 id=198 data-nosnippet>198</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\affil OptionalMatch:* []{}"</span>, <span class="string">"\\lx@sn@affil{#2}{#3}"</span>);
+<a href=#199 id=199 data-nosnippet>199</a>  <span class="macro">DefMacro!</span>(
+<a href=#200 id=200 data-nosnippet>200</a>    <span class="string">"\\equalcont{}"</span>,
+<a href=#201 id=201 data-nosnippet>201</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=equal-contributors]{#1}"
+<a href=#202 id=202 data-nosnippet>202</a>  </span>);
+<a href=#203 id=203 data-nosnippet>203</a>  <span class="macro">DefMacro!</span>(
+<a href=#204 id=204 data-nosnippet>204</a>    <span class="string">"\\presentaddress{}"</span>,
+<a href=#205 id=205 data-nosnippet>205</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=present-address]{#1}"
+<a href=#206 id=206 data-nosnippet>206</a>  </span>);
+<a href=#207 id=207 data-nosnippet>207</a>  <span class="comment">// sn-jnl.cls L1788: \gdef\orcid#1{\href{#1}{\orcidlogo}} (ORCID-logo
+<a href=#208 id=208 data-nosnippet>208</a>  // hyperlink, used INLINE inside \author{...\orcid{id}}). Render as an inline
+<a href=#209 id=209 data-nosnippet>209</a>  // ORCID link showing the id (content-preserving: the id stays in the output,
+<a href=#210 id=210 data-nosnippet>210</a>  // both as visible text and the proper orcid.org href; the real cls's logo
+<a href=#211 id=211 data-nosnippet>211</a>  // image Orcidlogo.eps isn't shipped). A frontmatter note does NOT work here —
+<a href=#212 id=212 data-nosnippet>212</a>  // it fires inside the author-name digestion and is dropped. Was undefined →
+<a href=#213 id=213 data-nosnippet>213</a>  // error (Perl defines it). Witness 2211.09693.
+<a href=#214 id=214 data-nosnippet>214</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\orcid{}"</span>, <span class="string">"\\href{https://orcid.org/#1}{#1}"</span>);
+<a href=#215 id=215 data-nosnippet>215</a>  <span class="comment">// \sep — elsarticle-family keyword separator (`\def\sep{\unskip, }`). sn-jnl
+<a href=#216 id=216 data-nosnippet>216</a>  // papers use it in keyword lists (`kw1 \sep kw2 \sep ...`); the sn-jnl cls
+<a href=#217 id=217 data-nosnippet>217</a>  // doesn't define it but Perl provides it (elsarticle convention). Render as a
+<a href=#218 id=218 data-nosnippet>218</a>  // comma separator. Was undefined → error. Witness 2309.06763.
+<a href=#219 id=219 data-nosnippet>219</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\sep"</span>, <span class="string">"\\unskip, "</span>);
+<a href=#220 id=220 data-nosnippet>220</a>  <span class="comment">// Name part helpers (first-name, surname) — emit inline.
+<a href=#221 id=221 data-nosnippet>221</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\fnm{}"</span>, <span class="string">"#1"</span>);
+<a href=#222 id=222 data-nosnippet>222</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\sur{}"</span>, <span class="string">"#1"</span>);
+<a href=#223 id=223 data-nosnippet>223</a>  <span class="comment">// sn-jnl.cls L599-606: \orgdiv / \orgname / \orgaddress / \street /
+<a href=#224 id=224 data-nosnippet>224</a>  // \postcode / \city / \state / \country — affiliation-element helpers
+<a href=#225 id=225 data-nosnippet>225</a>  // that pass through their argument as inline text. The paper-bundled
+<a href=#226 id=226 data-nosnippet>226</a>  // class file defines all of them as `\newcommand{\foo}[1]{#1}` (plain
+<a href=#227 id=227 data-nosnippet>227</a>  // pass-through). Our raw-load path doesn't always invoke them, so
+<a href=#228 id=228 data-nosnippet>228</a>  // bind explicitly. Without these stubs, papers using the standard
+<a href=#229 id=229 data-nosnippet>229</a>  // sn-jnl `\affil*[1]{\orgdiv{...}, \orgname{...}, \orgaddress{...}}`
+<a href=#230 id=230 data-nosnippet>230</a>  // pattern report undefined CS cascade. Witness 2311.09249, 2311.08387.
+<a href=#231 id=231 data-nosnippet>231</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\orgdiv{}"</span>, <span class="string">"#1"</span>);
+<a href=#232 id=232 data-nosnippet>232</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\orgname{}"</span>, <span class="string">"#1"</span>);
+<a href=#233 id=233 data-nosnippet>233</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\orgaddress{}"</span>, <span class="string">"#1"</span>);
+<a href=#234 id=234 data-nosnippet>234</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\street{}"</span>, <span class="string">"#1"</span>);
+<a href=#235 id=235 data-nosnippet>235</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\postcode{}"</span>, <span class="string">"#1"</span>);
+<a href=#236 id=236 data-nosnippet>236</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\city{}"</span>, <span class="string">"#1"</span>);
+<a href=#237 id=237 data-nosnippet>237</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\state{}"</span>, <span class="string">"#1"</span>);
+<a href=#238 id=238 data-nosnippet>238</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\country{}"</span>, <span class="string">"#1"</span>);
+<a href=#239 id=239 data-nosnippet>239</a>  <span class="comment">// sn-jnl.cls defines \botrule as a bottom-rule table separator
+<a href=#240 id=240 data-nosnippet>240</a>  // (similar shape to \toprule / \midrule from booktabs). Authors use
+<a href=#241 id=241 data-nosnippet>241</a>  // it inside \begin{tabular}...\end{tabular} for Springer-Nature
+<a href=#242 id=242 data-nosnippet>242</a>  // bottom rules. Map to \hline so the table still renders.
+<a href=#243 id=243 data-nosnippet>243</a>  // Witness 2402.17342.
+<a href=#244 id=244 data-nosnippet>244</a>  </span><span class="macro">Let!</span>(<span class="string">"\\botrule"</span>, <span class="string">"\\hline"</span>);
+<a href=#245 id=245 data-nosnippet>245</a>
+<a href=#246 id=246 data-nosnippet>246</a>  <span class="comment">// The class's own commands the papers use, as sn-jnl.cls defines them (1802.08831's copy, line numbers of it unless
+<a href=#247 id=247 data-nosnippet>247</a>  // said; 2006.16202's, 2203.15424's, 2404.03266's, 2603.28334's the same where they have them).
+<a href=#248 id=248 data-nosnippet>248</a>  // :550 `\let\nomail\relax`, written in place of an e-mail (34 papers of the inventory: 2111.06962).
+<a href=#249 id=249 data-nosnippet>249</a>  // :454-461 the title-page fonts and :1231-1235 the table and :1201 (2402.15353's copy) the figure-caption fonts
+<a href=#250 id=250 data-nosnippet>250</a>  // (`\Titlefont` 6 papers, 2210.01472; `\tablebodyfont` 7, 2307.08421; `\figurecaptionfont` 3, 2402.15353), with the
+<a href=#251 id=251 data-nosnippet>251</a>  // `\titraggedcenter` setting they end with (:443-444).
+<a href=#252 id=252 data-nosnippet>252</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#253 id=253 data-nosnippet>253</a>    <span class="string">r"\let\nomail\relax
+<a href=#254 id=254 data-nosnippet>254</a>\def\titraggedcenter{\leftskip=12pt plus 0.5fil\rightskip=12pt plus 0.5fil\parfillskip=0pt\let\hb=\break}
+<a href=#255 id=255 data-nosnippet>255</a>\def\absraggedcenter{\leftskip=24pt plus 0.5fil\rightskip=24pt plus 0.5fil\parfillskip=0pt\let\hb=\break}
+<a href=#256 id=256 data-nosnippet>256</a>\def\Artcatfont{\reset@font\fontsize{8bp}{10bp}\selectfont}
+<a href=#257 id=257 data-nosnippet>257</a>\def\Titlefont{\reset@font\fontsize{17bp}{22.5bp}\selectfont\titraggedcenter}
+<a href=#258 id=258 data-nosnippet>258</a>\def\SubTitlefont{\reset@font\fontsize{14bp}{16.5bp}\selectfont\titraggedcenter}
+<a href=#259 id=259 data-nosnippet>259</a>\def\Authorfont{\reset@font\fontsize{12bp}{14.5bp}\selectfont\boldmath\titraggedcenter}
+<a href=#260 id=260 data-nosnippet>260</a>\def\addressfont{\reset@font\fontsize{11bp}{13.5bp}\selectfont\titraggedcenter}
+<a href=#261 id=261 data-nosnippet>261</a>\def\abstractheadfont{\reset@font\fontsize{9bp}{11bp}\bfseries\selectfont\titraggedcenter}
+<a href=#262 id=262 data-nosnippet>262</a>\def\abstractsubheadfont{\reset@font\fontsize{9bp}{11bp}\bfseries\selectfont}
+<a href=#263 id=263 data-nosnippet>263</a>\def\abstractfont{\reset@font\fontsize{9bp}{11bp}\selectfont\leftskip=24pt\rightskip=24pt}
+<a href=#264 id=264 data-nosnippet>264</a>\def\tablecaptionfont{\reset@font\fontsize{8bp}{9.5bp}\selectfont}
+<a href=#265 id=265 data-nosnippet>265</a>\def\tablebodyfont{\reset@font\fontsize{8bp}{9.5bp}\selectfont}
+<a href=#266 id=266 data-nosnippet>266</a>\def\tablecolheadfont{\reset@font\fontsize{8bp}{9.5bp}\selectfont\bfseries\boldmath}
+<a href=#267 id=267 data-nosnippet>267</a>\def\tablefootnotefont{\reset@font\fontsize{8bp}{9.5bp}\selectfont}
+<a href=#268 id=268 data-nosnippet>268</a>\def\figurecaptionfont{\reset@font\fontfamily{\rmdefault}\fontsize{8}{9.5}\selectfont}"
+<a href=#269 id=269 data-nosnippet>269</a>  </span>);
+<a href=#270 id=270 data-nosnippet>270</a>  <span class="comment">// :1280-1292 `{tablenotes}`, a one-item list of the notes under a table, and `\tnote{a}`, a superscript mark (20 and 4
+<a href=#271 id=271 data-nosnippet>271</a>  // papers: 2102.13454, 2108.07431). The table rules: the class as distributed loads booktabs (:307), the copies
+<a href=#272 id=272 data-nosnippet>272</a>  // that do not (2006.16202's, :1292-1309) define its `\toprule`/`\midrule` themselves (13 and 12 papers had them
+<a href=#273 id=273 data-nosnippet>273</a>  // undefined: 2006.16202).
+<a href=#274 id=274 data-nosnippet>274</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#275 id=275 data-nosnippet>275</a>    <span class="string">r"\newenvironment{tablenotes}{\list{}{\setlength{\labelsep}{0pt}\setlength{\labelwidth}{0pt}\setlength{\leftmargin}{0pt}\setlength{\rightmargin}{0pt}\setlength{\topsep}{-6pt}\setlength{\itemsep}{2pt}\setlength{\partopsep}{0pt}\setlength{\listparindent}{0em}\setlength{\parsep}{0pt}}\item\relax}{\endlist}
+<a href=#276 id=276 data-nosnippet>276</a>\def\tnote#1{$^{#1}$}"
+<a href=#277 id=277 data-nosnippet>277</a>  </span>);
+<a href=#278 id=278 data-nosnippet>278</a>  <span class="macro">RequirePackage!</span>(<span class="string">"booktabs"</span>);
+<a href=#279 id=279 data-nosnippet>279</a>  <span class="comment">// :1361-1364 `\sidewaystablefn` (74 papers: 1802.08831, 2012.15392, 2102.04394) makes `\footnotetext[a]{text}` in the
+<a href=#280 id=280 data-nosnippet>280</a>  // `{sidewaystable}` print its text in the float under a superscript mark, as the class's renewed `{table}` does in
+<a href=#281 id=281 data-nosnippet>281</a>  // every table (:1341-1349). This binding keeps the kernel's `{table}`, where the note is the kernel's footnote; the
+<a href=#282 id=282 data-nosnippet>282</a>  // sideways one is the same, so `\sidewaystablefn` changes nothing here.
+<a href=#283 id=283 data-nosnippet>283</a>  </span>def_macro_noop(<span class="string">"\\sidewaystablefn"</span>)<span class="question-mark">?</span>;
+<a href=#284 id=284 data-nosnippet>284</a>  <span class="comment">// :631-638 `\artnote{text}` and `\miscnote{text}` (8 and 3 papers: 2203.15424, 2605.14802), a note `\maketitle`
+<a href=#285 id=285 data-nosnippet>285</a>  // prints as the title's footnote (:816-817); 2404.03266's copy :639-646 `\ackno{text}`, acknowledgments the title page
+<a href=#286 id=286 data-nosnippet>286</a>  // prints under the abstract (3 papers).
+<a href=#287 id=287 data-nosnippet>287</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#288 id=288 data-nosnippet>288</a>    <span class="string">"\\artnote{}"</span>,
+<a href=#289 id=289 data-nosnippet>289</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=artnote]{#1}"
+<a href=#290 id=290 data-nosnippet>290</a>  </span>);
+<a href=#291 id=291 data-nosnippet>291</a>  <span class="macro">DefMacro!</span>(
+<a href=#292 id=292 data-nosnippet>292</a>    <span class="string">"\\miscnote{}"</span>,
+<a href=#293 id=293 data-nosnippet>293</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=miscnote]{#1}"
+<a href=#294 id=294 data-nosnippet>294</a>  </span>);
+<a href=#295 id=295 data-nosnippet>295</a>  <span class="macro">DefMacro!</span>(
+<a href=#296 id=296 data-nosnippet>296</a>    <span class="string">"\\ackno{}"</span>,
+<a href=#297 id=297 data-nosnippet>297</a>    <span class="string">"\\@add@frontmatter{ltx:acknowledgements}[name=Acknowledgments]{#1}"
+<a href=#298 id=298 data-nosnippet>298</a>  </span>);
+<a href=#299 id=299 data-nosnippet>299</a>  <span class="comment">// 2603.28334's copy :575-600 (2307.08214's :591-595, 2501.01157's :579-593): the further author notes beside
+<a href=#300 id=300 data-nosnippet>300</a>  // `\equalcont`, each marking the authors before it and printed under the title page's addresses —
+<a href=#301 id=301 data-nosnippet>301</a>  // `\intern` (3 papers; printed by 2606.24824's copy :770 `\ifintern{\par$^{\ddagger}$\@interntext\par}\fi`, where
+<a href=#302 id=302 data-nosnippet>302</a>  // 2307.08214's comments the print out, :764, as it does `\equalcont`'s, :765), `\equalsup` (3), `\equaladv` (2),
+<a href=#303 id=303 data-nosnippet>303</a>  // `\equalcontribution` (2206.10381) — the switches they set (`\equalconttrue`, 2 papers) and
+<a href=#304 id=304 data-nosnippet>304</a>  // `\presentaddresstxt{label}`, the heading of `\presentaddress` (2 papers). The author's text is kept as a note
+<a href=#305 id=305 data-nosnippet>305</a>  // either way. A copy may take the text as an optional argument whose default is the class's text, which the
+<a href=#306 id=306 data-nosnippet>306</a>  // paper sets with `\interntxt`/`\equalcontxt` (2606.24824's :598-601 `\newcommand{\intern}[1][\@interntxt]`, its
+<a href=#307 id=307 data-nosnippet>307</a>  // default "Work done as an intern at Westlake University.", the paper's `\intern{}`; 2504.21788's :615-617
+<a href=#308 id=308 data-nosnippet>308</a>  // `\equalcont`, "These authors contributed equally to this work.", the paper's bare `\equalcont`): there the
+<a href=#309 id=309 data-nosnippet>309</a>  // command reads the copy's form, with the copy's default.
+<a href=#310 id=310 data-nosnippet>310</a>  </span><span class="kw">let </span>optional_form = |command: <span class="kw-2">&amp;</span>str, store: <span class="kw-2">&amp;</span>str| {
+<a href=#311 id=311 data-nosnippet>311</a>    class_text
+<a href=#312 id=312 data-nosnippet>312</a>      .as_deref()
+<a href=#313 id=313 data-nosnippet>313</a>      .filter(|text| class_code_contains(text, <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\newcommand{{\\{command}}}[1][\\{store}]"</span>)))
+<a href=#314 id=314 data-nosnippet>314</a>  };
+<a href=#315 id=315 data-nosnippet>315</a>  <span class="kw">for </span>(command, setter, store, role) <span class="kw">in </span>[
+<a href=#316 id=316 data-nosnippet>316</a>    (
+<a href=#317 id=317 data-nosnippet>317</a>      <span class="string">"equalcont"</span>,
+<a href=#318 id=318 data-nosnippet>318</a>      <span class="string">"equalcontxt"</span>,
+<a href=#319 id=319 data-nosnippet>319</a>      <span class="string">"@equalconttxt"</span>,
+<a href=#320 id=320 data-nosnippet>320</a>      <span class="string">"equal-contributors"</span>,
+<a href=#321 id=321 data-nosnippet>321</a>    ),
+<a href=#322 id=322 data-nosnippet>322</a>    (<span class="string">"intern"</span>, <span class="string">"interntxt"</span>, <span class="string">"@interntxt"</span>, <span class="string">"intern"</span>),
+<a href=#323 id=323 data-nosnippet>323</a>  ] {
+<a href=#324 id=324 data-nosnippet>324</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(text) = optional_form(command, store) {
+<a href=#325 id=325 data-nosnippet>325</a>      <span class="kw">let </span>default = class_code_argument(text, <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"\\{setter}"</span>)).unwrap_or_default();
+<a href=#326 id=326 data-nosnippet>326</a>      raw_tex(
+<a href=#327 id=327 data-nosnippet>327</a>        <span class="kw-2">&amp;</span>[
+<a href=#328 id=328 data-nosnippet>328</a>          <span class="string">r"\def\"</span>,
+<a href=#329 id=329 data-nosnippet>329</a>          setter,
+<a href=#330 id=330 data-nosnippet>330</a>          <span class="string">r"#1{\gdef\"</span>,
+<a href=#331 id=331 data-nosnippet>331</a>          store,
+<a href=#332 id=332 data-nosnippet>332</a>          <span class="string">r"{#1}}\"</span>,
+<a href=#333 id=333 data-nosnippet>333</a>          setter,
+<a href=#334 id=334 data-nosnippet>334</a>          <span class="string">"{"</span>,
+<a href=#335 id=335 data-nosnippet>335</a>          <span class="kw-2">&amp;</span>default,
+<a href=#336 id=336 data-nosnippet>336</a>          <span class="string">"}"</span>,
+<a href=#337 id=337 data-nosnippet>337</a>          <span class="string">r"\def\"</span>,
+<a href=#338 id=338 data-nosnippet>338</a>          command,
+<a href=#339 id=339 data-nosnippet>339</a>          <span class="string">r"{\@ifnextchar[{\lx@sn@note{"</span>,
+<a href=#340 id=340 data-nosnippet>340</a>          role,
+<a href=#341 id=341 data-nosnippet>341</a>          <span class="string">r"}}{\lx@sn@note{"</span>,
+<a href=#342 id=342 data-nosnippet>342</a>          role,
+<a href=#343 id=343 data-nosnippet>343</a>          <span class="string">r"}[\"</span>,
+<a href=#344 id=344 data-nosnippet>344</a>          store,
+<a href=#345 id=345 data-nosnippet>345</a>          <span class="string">"]}}"</span>,
+<a href=#346 id=346 data-nosnippet>346</a>        ]
+<a href=#347 id=347 data-nosnippet>347</a>        .concat(),
+<a href=#348 id=348 data-nosnippet>348</a>      )<span class="question-mark">?</span>;
+<a href=#349 id=349 data-nosnippet>349</a>    } <span class="kw">else if </span>command == <span class="string">"intern" </span>{
+<a href=#350 id=350 data-nosnippet>350</a>      <span class="macro">DefMacro!</span>(
+<a href=#351 id=351 data-nosnippet>351</a>        <span class="string">"\\intern{}"</span>,
+<a href=#352 id=352 data-nosnippet>352</a>        <span class="string">"\\@add@frontmatter{ltx:note}[role=intern]{#1}"
+<a href=#353 id=353 data-nosnippet>353</a>      </span>);
+<a href=#354 id=354 data-nosnippet>354</a>    }
+<a href=#355 id=355 data-nosnippet>355</a>  }
+<a href=#356 id=356 data-nosnippet>356</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\def\lx@sn@note#1[#2]{\@add@frontmatter{ltx:note}[role=#1]{#2}}"</span>);
+<a href=#357 id=357 data-nosnippet>357</a>  <span class="macro">DefMacro!</span>(
+<a href=#358 id=358 data-nosnippet>358</a>    <span class="string">"\\equalsup{}"</span>,
+<a href=#359 id=359 data-nosnippet>359</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=equal-supervision]{#1}"
+<a href=#360 id=360 data-nosnippet>360</a>  </span>);
+<a href=#361 id=361 data-nosnippet>361</a>  <span class="macro">DefMacro!</span>(
+<a href=#362 id=362 data-nosnippet>362</a>    <span class="string">"\\equaladv{}"</span>,
+<a href=#363 id=363 data-nosnippet>363</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=equal-advising]{#1}"
+<a href=#364 id=364 data-nosnippet>364</a>  </span>);
+<a href=#365 id=365 data-nosnippet>365</a>  <span class="macro">DefMacro!</span>(
+<a href=#366 id=366 data-nosnippet>366</a>    <span class="string">"\\equalcontribution{}"</span>,
+<a href=#367 id=367 data-nosnippet>367</a>    <span class="string">"\\@add@frontmatter{ltx:note}[role=equal-contributors]{#1}"
+<a href=#368 id=368 data-nosnippet>368</a>  </span>);
+<a href=#369 id=369 data-nosnippet>369</a>  <span class="macro">RawTeX!</span>(
+<a href=#370 id=370 data-nosnippet>370</a>    <span class="string">r"\newif\ifequalcont\newif\ifpresentaddress\newif\ifintern\newif\ifequalsup\newif\ifequaladv
+<a href=#371 id=371 data-nosnippet>371</a>\def\presentaddresstxt#1{\gdef\@presentaddresstxt{#1:}}\presentaddresstxt{Present Address}"
+<a href=#372 id=372 data-nosnippet>372</a>  </span>);
+<a href=#373 id=373 data-nosnippet>373</a>  <span class="comment">// 2307.08421's copy :491-492: `\Newlabel{key}{value}`, the class's cross-reference record a paper's `.aux` replays
+<a href=#374 id=374 data-nosnippet>374</a>  // (3 papers), and `\jmkLabel` that writes it.
+<a href=#375 id=375 data-nosnippet>375</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#376 id=376 data-nosnippet>376</a>    <span class="string">r"\def\jmkLabel#1{\@bsphack\protected@write\@auxout{}{\string\Newlabel{#1}{\@currentlabel}}\@esphack}
+<a href=#377 id=377 data-nosnippet>377</a>\def\Newlabel#1#2{\expandafter\xdef\csname X@#1\endcsname{#2}}"
+<a href=#378 id=378 data-nosnippet>378</a>  </span>);
+<a href=#379 id=379 data-nosnippet>379</a>  <span class="comment">// 2303.09648's copy :1084-1116 `{unenumerate}[widest]`, an enumerate whose items print no label (4 papers).
+<a href=#380 id=380 data-nosnippet>380</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#381 id=381 data-nosnippet>381</a>    <span class="string">r"\def\unenumerate{\@ifnextchar[{\@unenumerate}{\@unenumerate[0.]}}
+<a href=#382 id=382 data-nosnippet>382</a>\def\@unenumerate[#1]{\par\ifnum \@enumdepth &gt;3 \@toodeep\else\advance\@enumdepth \@ne\edef\@enumctr{enum\romannumeral\the\@enumdepth}\list{}{\setlength{\leftmargin}{\csname leftmargin\romannumeral\the\@enumdepth\endcsname}\usecounter{\@enumctr}\settowidth\labelwidth{#1}\def\makelabel##1{\hss\llap{##1}}}\fi}
+<a href=#383 id=383 data-nosnippet>383</a>\let\endunenumerate\endlist"
+<a href=#384 id=384 data-nosnippet>384</a>  </span>);
+<a href=#385 id=385 data-nosnippet>385</a>  <span class="comment">// :1529-1547 `{biography}{photo}{text}`: the author's photo beside the opening text, then the body; `\author{name}`
+<a href=#386 id=386 data-nosnippet>386</a>  // inside sets the name bold (5 papers: 2310.14485). The photo is set inline before the text, not wrapped. The
+<a href=#387 id=387 data-nosnippet>387</a>  // kernel's `\author` is locked against a file's redefinition, so the binding makes it the bold name (unlocked, as
+<a href=#388 id=388 data-nosnippet>388</a>  // before-digest code runs, Primitive.pm:44), in the environment's group; a primitive, which adds nothing to the
+<a href=#389 id=389 data-nosnippet>389</a>  // document.
+<a href=#390 id=390 data-nosnippet>390</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@sn@biography@author"</span>, <span class="prelude-val">None</span>,
+<a href=#391 id=391 data-nosnippet>391</a>  before_digest =&gt; {
+<a href=#392 id=392 data-nosnippet>392</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\author{}"</span>, <span class="string">"{\\bfseries #1}"</span>);
+<a href=#393 id=393 data-nosnippet>393</a>  });
+<a href=#394 id=394 data-nosnippet>394</a>  <span class="macro">RawTeX!</span>(
+<a href=#395 id=395 data-nosnippet>395</a>    <span class="string">r"\newenvironment{biography}[2]{\par\lx@sn@biography@author\noindent#1{#2\par}\par}{\par}"
+<a href=#396 id=396 data-nosnippet>396</a>  </span>);
+<a href=#397 id=397 data-nosnippet>397</a>  <span class="comment">// 2512.12101's copy :1796-1802: `\orcidlogo`, the iD logo `\orcid` links (2 papers); the logo image is the class's
+<a href=#398 id=398 data-nosnippet>398</a>  // `Orcidlogo` graphic, here the kernel's iD glyph.
+<a href=#399 id=399 data-nosnippet>399</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\orcidlogo"</span>, <span class="string">"\\lx@orcidlogo"</span>);
+<a href=#400 id=400 data-nosnippet>400</a>  <span class="comment">// Commands some copies add under common names, defined only where the paper's copy has them, so a paper whose copy
+<a href=#401 id=401 data-nosnippet>401</a>  // does not can define its own (2206.00975's :317-318, 2301.12731, 2407.15443: `\abs`, 3 papers; `\argmin`).
+<a href=#402 id=402 data-nosnippet>402</a>  </span><span class="kw">if let </span><span class="prelude-val">Some</span>(text) = class_text.as_deref() {
+<a href=#403 id=403 data-nosnippet>403</a>    <span class="kw">if </span>class_code_contains(
+<a href=#404 id=404 data-nosnippet>404</a>      text,
+<a href=#405 id=405 data-nosnippet>405</a>      <span class="string">"\\newcommand{\\abs}[1]{\\left\\lvert #1 \\right\\rvert}"</span>,
+<a href=#406 id=406 data-nosnippet>406</a>    ) {
+<a href=#407 id=407 data-nosnippet>407</a>      <span class="macro">RawTeX!</span>(<span class="string">r"\newcommand{\abs}[1]{\left\lvert #1 \right\rvert}"</span>);
+<a href=#408 id=408 data-nosnippet>408</a>    }
+<a href=#409 id=409 data-nosnippet>409</a>    <span class="kw">if </span>class_code_contains(text, <span class="string">"\\DeclareMathOperator*{\\argmin}{argmin}"</span>) {
+<a href=#410 id=410 data-nosnippet>410</a>      <span class="macro">RawTeX!</span>(<span class="string">r"\DeclareMathOperator*{\argmin}{argmin}"</span>);
+<a href=#411 id=411 data-nosnippet>411</a>    }
+<a href=#412 id=412 data-nosnippet>412</a>  }
+<a href=#413 id=413 data-nosnippet>413</a>
+<a href=#414 id=414 data-nosnippet>414</a>  <span class="comment">// Do NOT override `\abstract` or the `{abstract}` environment here. The
+<a href=#415 id=415 data-nosnippet>415</a>  // kernel's `\abstract` (latex_constructs `\abstract`, L5153) is `locked`: the
+<a href=#416 id=416 data-nosnippet>416</a>  // brace form routes to the *deferred* `\lx@add@abstract` frontmatter
+<a href=#417 id=417 data-nosnippet>417</a>  // accumulator, so `\maketitle` flushes it in schema-canonical order (document
+<a href=#418 id=418 data-nosnippet>418</a>  // `&lt;title&gt;` first, `&lt;abstract&gt;` after). Perl relies on exactly this lock — the
+<a href=#419 id=419 data-nosnippet>419</a>  // raw sn-jnl.cls's `\long\def\abstract#1{\def\@abstract{...}}` (deferred store,
+<a href=#420 id=420 data-nosnippet>420</a>  // emitted by `\@maketitle`'s `\printabstract` AFTER title+authors) cannot pull
+<a href=#421 id=421 data-nosnippet>421</a>  // the core `\abstract` back to an immediate emit. A binding-level
+<a href=#422 id=422 data-nosnippet>422</a>  // `DefEnvironment!("{abstract}", &lt;ltx:abstract&gt;...)` + `\abstract{}` forwarder
+<a href=#423 id=423 data-nosnippet>423</a>  // bypasses that lock and emits `&lt;ltx:abstract&gt;` at the *call site* — which in
+<a href=#424 id=424 data-nosnippet>424</a>  // every sn-jnl paper is BEFORE `\maketitle`, so the abstract lands ahead of the
+<a href=#425 id=425 data-nosnippet>425</a>  // still-deferred title. That is the abstract-before-title regression; letting
+<a href=#426 id=426 data-nosnippet>426</a>  // the locked kernel macro run fixes it and keeps the env properly bounded
+<a href=#427 id=427 data-nosnippet>427</a>  // (`\begin{abstract}`→`\lx@begin@abstract`, `\end{abstract}`→`\lx@end@abstract`
+<a href=#428 id=428 data-nosnippet>428</a>  // both deferred). arXiv/html_feedback#3436, witnesses 2411.11158, 2306.11901.
+<a href=#429 id=429 data-nosnippet>429</a>  //
+<a href=#430 id=430 data-nosnippet>430</a>  // `{appendices}`: appendix.sty's environment, as the class loads it (sn-jnl.cls:1365 `\usepackage[title]{appendix}`
+<a href=#431 id=431 data-nosnippet>431</a>  // of 2609.33801's copy, in all 164 copies of the census; from the dependency scan above, here where the paper ships
+<a href=#432 id=432 data-nosnippet>432</a>  // none; the class's own copy of appendix.sty's `{appendices}` at :1369-1407 is the appendix binding's), re-dressed
+<a href=#433 id=433 data-nosnippet>433</a>  // where it is loaded (:1367 `\@ifpackageloaded{appendix}`) by the class's begin-document code (:1409-1426): the
+<a href=#434 id=434 data-nosnippet>434</a>  // environment resets the figure, table and equation counters and numbers them by the appendix letter,
+<a href=#435 id=435 data-nosnippet>435</a>  // `\@Alph\c@section\arabic{figure}` — "Fig. A1", "Table A1", "(A1)" (2609.24634, 2609.11123, 2609.04047; audit
+<a href=#436 id=436 data-nosnippet>436</a>  // #363). The hook's `\end{oldappendices}` calls `\endoldappendices`, which the class never defines (it saves
+<a href=#437 id=437 data-nosnippet>437</a>  // `\oldendappendices`), so appendix.sty's closing `\@ppsaveapp\@pprestoresec` does not run: the section counter goes
+<a href=#438 id=438 data-nosnippet>438</a>  // on, and only the group's end restores the section form `\@resets@pp` set locally — a section after the
+<a href=#439 id=439 data-nosnippet>439</a>  // environment is "3 After", its figure "Fig. C2", in pdflatex. That restore is the appendix binding's end
+<a href=#440 id=440 data-nosnippet>440</a>  // (`\lx@pp@appendix@end`, which ends the appendices and leaves the counter), run after the class's no-op. (No
+<a href=#441 id=441 data-nosnippet>441</a>  // `{declarations}`: no sn-jnl.cls defines one — 0 of 206 shipped copies, 2021-25 — and no paper of ~23,000 sampled,
+<a href=#442 id=442 data-nosnippet>442</a>  // 2019-25, uses it; the Springer template writes `\section*{Declarations}`/`\bmhead`, so a binding environment was
+<a href=#443 id=443 data-nosnippet>443</a>  // speculative, rev78c.)
+<a href=#444 id=444 data-nosnippet>444</a>  </span><span class="kw">if </span>!package_loaded(<span class="string">"appendix"</span>)
+<a href=#445 id=445 data-nosnippet>445</a>    &amp;&amp; class_text
+<a href=#446 id=446 data-nosnippet>446</a>      .as_deref()
+<a href=#447 id=447 data-nosnippet>447</a>      .is_none_or(|text| <span class="kw">crate</span>::shipped_class::class_text_loads(text, <span class="string">"appendix"</span>))
+<a href=#448 id=448 data-nosnippet>448</a>  {
+<a href=#449 id=449 data-nosnippet>449</a>    <span class="macro">RequirePackage!</span>(<span class="string">"appendix"</span>, options =&gt; <span class="macro">vec!</span>[<span class="macro">s!</span>(<span class="string">"title"</span>)]);
+<a href=#450 id=450 data-nosnippet>450</a>  }
+<a href=#451 id=451 data-nosnippet>451</a>  <span class="kw">if </span>class_text
+<a href=#452 id=452 data-nosnippet>452</a>    .as_deref()
+<a href=#453 id=453 data-nosnippet>453</a>    .is_none_or(|text| class_code_contains(text, <span class="string">"\\let\\oldappendices\\appendices"</span>))
+<a href=#454 id=454 data-nosnippet>454</a>  {
+<a href=#455 id=455 data-nosnippet>455</a>    <span class="macro">RawTeX!</span>(
+<a href=#456 id=456 data-nosnippet>456</a>      <span class="string">r"\@ifpackageloaded{appendix}{\AtBeginDocument{\let\oldappendices\appendices\let\oldendappendices\endappendices
+<a href=#457 id=457 data-nosnippet>457</a>\renewenvironment{appendices}{\setcounter{figure}{0}\setcounter{table}{0}\setcounter{equation}{0}\begin{oldappendices}\gdef\thefigure{\@Alph\c@section\arabic{figure}}\gdef\thetable{\@Alph\c@section\arabic{table}}\gdef\theequation{\@Alph\c@section\arabic{equation}}}{\end{oldappendices}\lx@pp@appendix@end}}}{}"
+<a href=#458 id=458 data-nosnippet>458</a>    </span>);
+<a href=#459 id=459 data-nosnippet>459</a>  }
+<a href=#460 id=460 data-nosnippet>460</a>});
 </code></pre></div></section></main></body></html>

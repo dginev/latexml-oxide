@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["TagContent","TagOptionName"],"struct":["TagData","TagOptions"],"type":["RawFrontmatter","TagAttrs","TagConstructionClosure"]};
+window.SIDEBAR_ITEMS = {"constant":["BLOCK_CREATOR"],"enum":["TagContent","TagOptionName"],"struct":["AutoOpen","EntryMut","TagData","TagList","TagOptions"],"type":["RawFrontmatter","TagAttrs","TagConstructionClosure"]};

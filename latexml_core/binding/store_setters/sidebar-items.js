@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"constant":["STORE_SETTERS"],"fn":["defined_by_a_binding","defined_by_a_raw_file","in_a_raw_class_read","mark_bound","mark_raw","snapshot"],"struct":["RawClassRead"]};

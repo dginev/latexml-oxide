@@ -1,0 +1,1647 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/base_utilities/frontmatter/observer/resolver/blocks.rs`."><title>blocks.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../../../../" data-static-root-path="../../../../../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../../../../static.files/src-script-813739b1.js"></script><script defer src="../../../../../../src-files.js"></script><script defer src="../../../../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/base_utilities/frontmatter/observer/resolver/</div>blocks.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-4"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! The resolver's owner chain for an author block (OXIDIZED_DESIGN_DIVERGENCES #837; the module's rules 5-9): the
+<a href=#2 id=2 data-nosnippet>2</a>//! block's lines by type, labelled entries to the names requesting them, unlabelled lines to the row above, a
+<a href=#3 id=3 data-nosnippet>3</a>//! line's contacts by their own mark, spelling, order, the group's only author or elimination, and its notes.
+<a href=#4 id=4 data-nosnippet>4</a>
+<a href=#5 id=5 data-nosnippet>5</a></span><span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#6 id=6 data-nosnippet>6</a>
+<a href=#7 id=7 data-nosnippet>7</a><span class="doccomment">/// The chain [`Resolver::place_line_contacts`] places a print's addresses by.
+<a href=#8 id=8 data-nosnippet>8</a></span><span class="attr">#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+<a href=#9 id=9 data-nosnippet>9</a></span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">enum </span>Chain&lt;<span class="lifetime">'a</span>&gt; {
+<a href=#10 id=10 data-nosnippet>10</a>  <span class="doccomment">/// A line of a block (or an entry's e-mail call): the spelled addresses first, then — the one address left, and
+<a href=#11 id=11 data-nosnippet>11</a>  /// the one candidate left without an address — by elimination (R10), then the rest of the chain.
+<a href=#12 id=12 data-nosnippet>12</a>  </span>Line,
+<a href=#13 id=13 data-nosnippet>13</a>  <span class="doccomment">/// A document's own note (`ltx:pubnote`, `answer_document_notes`): FIDELITY_CHARTER §4 exactly — the author it
+<a href=#14 id=14 data-nosnippet>14</a>  /// spells, the authors' order, the only author, the corresponding author, the block; no elimination, so an address
+<a href=#15 id=15 data-nosnippet>15</a>  /// that spells no one is not guessed onto an author (review rev92a_r1 B2: aa's `\offprints{the editors,
+<a href=#16 id=16 data-nosnippet>16</a>  /// \email{office@y.org}}`). `named` is the creators the name the note prints before the address names, when the
+<a href=#17 id=17 data-nosnippet>17</a>  /// class prints the address in the note after it ([`Resolver::note_named`], `Policy::email_in_place`): A&amp;A's "Send
+<a href=#18 id=18 data-nosnippet>18</a>  /// offprint requests to: O. Kochukhov, e-mail: …" designates the corresponding author (main-session decision on 92a
+<a href=#19 id=19 data-nosnippet>19</a>  /// r1 question a, 0903.3512), so one creator named is the corresponding step's owner, and none or several the
+<a href=#20 id=20 data-nosnippet>20</a>  /// block's — prose naming no one ("Supported by NSF.") too (an open design point, OD #913); a note printing nothing
+<a href=#21 id=21 data-nosnippet>21</a>  /// before the address (`named` `None`) leaves the step to the creators' own "Corresponding author" notes. (A call
+<a href=#22 id=22 data-nosnippet>22</a>  /// the class prints elsewhere, routed, is one author's whole call and never reaches the chain: review rev92a_r4 S1.)
+<a href=#23 id=23 data-nosnippet>23</a>  </span>DocumentNote { named: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span><span class="lifetime">'a </span>[usize]&gt; },
+<a href=#24 id=24 data-nosnippet>24</a>}
+<a href=#25 id=25 data-nosnippet>25</a>
+<a href=#26 id=26 data-nosnippet>26</a><span class="kw">impl </span>Resolver {
+<a href=#27 id=27 data-nosnippet>27</a>  <span class="doccomment">/// Contacts of `text` (one per printed address, ruling 3; the text whole when it holds none), owned by `chain`; each
+<a href=#28 id=28 data-nosnippet>28</a>  /// rule led by `api:document-note` for a document's note.
+<a href=#29 id=29 data-nosnippet>29</a>  </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>place_line_contacts(
+<a href=#30 id=30 data-nosnippet>30</a>    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+<a href=#31 id=31 data-nosnippet>31</a>    text: <span class="kw-2">&amp;</span>str,
+<a href=#32 id=32 data-nosnippet>32</a>    role: <span class="kw-2">&amp;</span>str,
+<a href=#33 id=33 data-nosnippet>33</a>    candidates: <span class="kw-2">&amp;</span>[usize],
+<a href=#34 id=34 data-nosnippet>34</a>    source: (usize, <span class="prelude-ty">Option</span>&lt;(u16, u16)&gt;),
+<a href=#35 id=35 data-nosnippet>35</a>    anchor: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>Assoc&gt;,
+<a href=#36 id=36 data-nosnippet>36</a>    chain: Chain&lt;<span class="lifetime">'_</span>&gt;,
+<a href=#37 id=37 data-nosnippet>37</a>  ) {
+<a href=#38 id=38 data-nosnippet>38</a>    <span class="kw">let </span>led = |rule: String| <span class="kw">match </span>chain {
+<a href=#39 id=39 data-nosnippet>39</a>      Chain::Line =&gt; rule,
+<a href=#40 id=40 data-nosnippet>40</a>      Chain::DocumentNote { .. } =&gt; <span class="macro">s!</span>(<span class="string">"api:document-note {rule}"</span>),
+<a href=#41 id=41 data-nosnippet>41</a>    };
+<a href=#42 id=42 data-nosnippet>42</a>    <span class="comment">// (by the address reader, which reads a list of local parts sharing one domain where it opens the line or a part
+<a href=#43 id=43 data-nosnippet>43</a>    // spells an author: `{\it
+<a href=#44 id=44 data-nosnippet>44</a>    // pzou94, ozel, suresh@gwu.edu}` under three names, 2003.14069 — two of them nameless notes; spelling assigns them,
+<a href=#45 id=45 data-nosnippet>45</a>    // position where it fails, below)
+<a href=#46 id=46 data-nosnippet>46</a>    </span><span class="kw">let </span>addresses = addresses_in(text);
+<a href=#47 id=47 data-nosnippet>47</a>    <span class="kw">let </span>addresses = {
+<a href=#48 id=48 data-nosnippet>48</a>      <span class="kw">let </span>spells = |local: <span class="kw-2">&amp;</span>str| <span class="self">self</span>.spelled(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{local}@x.org"</span>), candidates).is_some();
+<a href=#49 id=49 data-nosnippet>49</a>      <span class="kw">let </span>read: Vec&lt;String&gt; = address_runs(text, <span class="kw-2">&amp;</span>spells)
+<a href=#50 id=50 data-nosnippet>50</a>        .into_iter()
+<a href=#51 id=51 data-nosnippet>51</a>        .flat_map(|run| run.addresses)
+<a href=#52 id=52 data-nosnippet>52</a>        .collect();
+<a href=#53 id=53 data-nosnippet>53</a>      <span class="comment">// (where it reads every address the plain reading does and more; a tagged address it leaves where it prints,
+<a href=#54 id=54 data-nosnippet>54</a>      // `ann@a.org (Ann)`, is one all the same)
+<a href=#55 id=55 data-nosnippet>55</a>      </span><span class="kw">if </span>read.len() &gt; addresses.len() &amp;&amp; addresses.iter().all(|a| read.contains(a)) {
+<a href=#56 id=56 data-nosnippet>56</a>        read
+<a href=#57 id=57 data-nosnippet>57</a>      } <span class="kw">else </span>{
+<a href=#58 id=58 data-nosnippet>58</a>        addresses
+<a href=#59 id=59 data-nosnippet>59</a>      }
+<a href=#60 id=60 data-nosnippet>60</a>    };
+<a href=#61 id=61 data-nosnippet>61</a>    <span class="kw">if </span>addresses.is_empty() {
+<a href=#62 id=62 data-nosnippet>62</a>      <span class="kw">let </span>(owner, rule) = <span class="kw">match </span>candidates {
+<a href=#63 id=63 data-nosnippet>63</a>        [only] =&gt; (<span class="prelude-val">Some</span>(<span class="kw-2">*</span>only), <span class="string">"owner:only-author"</span>),
+<a href=#64 id=64 data-nosnippet>64</a>        <span class="kw">_ </span>=&gt; (<span class="prelude-val">None</span>, <span class="string">"owner:block"</span>),
+<a href=#65 id=65 data-nosnippet>65</a>      };
+<a href=#66 id=66 data-nosnippet>66</a>      <span class="self">self</span>.attach(
+<a href=#67 id=67 data-nosnippet>67</a>        owner,
+<a href=#68 id=68 data-nosnippet>68</a>        Assoc {
+<a href=#69 id=69 data-nosnippet>69</a>          role:   role.to_string(),
+<a href=#70 id=70 data-nosnippet>70</a>          text:   text.to_string(),
+<a href=#71 id=71 data-nosnippet>71</a>          label:  <span class="prelude-val">None</span>,
+<a href=#72 id=72 data-nosnippet>72</a>          rule:   led(rule.into()),
+<a href=#73 id=73 data-nosnippet>73</a>          source: <span class="prelude-val">Some</span>(source),
+<a href=#74 id=74 data-nosnippet>74</a>          target: <span class="prelude-val">None</span>,
+<a href=#75 id=75 data-nosnippet>75</a>        },
+<a href=#76 id=76 data-nosnippet>76</a>        <span class="bool-val">false</span>,
+<a href=#77 id=77 data-nosnippet>77</a>      );
+<a href=#78 id=78 data-nosnippet>78</a>      <span class="kw">return</span>;
+<a href=#79 id=79 data-nosnippet>79</a>    }
+<a href=#80 id=80 data-nosnippet>80</a>    <span class="kw">let </span>spelled: Vec&lt;<span class="prelude-ty">Option</span>&lt;usize&gt;&gt; = addresses
+<a href=#81 id=81 data-nosnippet>81</a>      .iter()
+<a href=#82 id=82 data-nosnippet>82</a>      .map(|a| <span class="self">self</span>.spelled(a, candidates))
+<a href=#83 id=83 data-nosnippet>83</a>      .collect();
+<a href=#84 id=84 data-nosnippet>84</a>    <span class="kw">let </span>unspelled = spelled.iter().filter(|s| s.is_none()).count();
+<a href=#85 id=85 data-nosnippet>85</a>    <span class="kw">let </span>left: Vec&lt;usize&gt; = candidates
+<a href=#86 id=86 data-nosnippet>86</a>      .iter()
+<a href=#87 id=87 data-nosnippet>87</a>      .copied()
+<a href=#88 id=88 data-nosnippet>88</a>      .filter(|c| !spelled.contains(<span class="kw-2">&amp;</span><span class="prelude-val">Some</span>(<span class="kw-2">*</span>c)))
+<a href=#89 id=89 data-nosnippet>89</a>      .filter(|<span class="kw-2">&amp;</span>c| {
+<a href=#90 id=90 data-nosnippet>90</a>        !<span class="self">self</span>.out.creators[c]
+<a href=#91 id=91 data-nosnippet>91</a>          .contacts
+<a href=#92 id=92 data-nosnippet>92</a>          .iter()
+<a href=#93 id=93 data-nosnippet>93</a>          .any(|a| a.role == <span class="string">"email"</span>)
+<a href=#94 id=94 data-nosnippet>94</a>      })
+<a href=#95 id=95 data-nosnippet>95</a>      .collect();
+<a href=#96 id=96 data-nosnippet>96</a>    <span class="comment">// (a list with one address per author that every spelled address agrees with is in author order: FIDELITY_CHARTER
+<a href=#97 id=97 data-nosnippet>97</a>    // §4, 2026-10-21, OD #805 — `{qkv, riven, jiyicheng.cs, lihuan.cs, cwang85}@zju.edu.cn` under five names, 2603.19610;
+<a href=#98 id=98 data-nosnippet>98</a>    // 2512.22629, 2305.12998, 2105.11174, 2412.09666)
+<a href=#99 id=99 data-nosnippet>99</a>    // (and no address the block prints elsewhere spells one of them: `\{xx,yy\}@x.edu` under two names, one of whom
+<a href=#100 id=100 data-nosnippet>100</a>    // `ann.able@gmail.com` on the next line spells, is no one-per-author list — three addresses for two authors, the
+<a href=#101 id=101 data-nosnippet>101</a>    // two unspelled the block's, as the old reader's 77p r9 held them)
+<a href=#102 id=102 data-nosnippet>102</a>    </span><span class="kw">let </span>in_order = addresses.len() == candidates.len()
+<a href=#103 id=103 data-nosnippet>103</a>      &amp;&amp; candidates.len() &gt;= <span class="number">2
+<a href=#104 id=104 data-nosnippet>104</a>      </span>&amp;&amp; spelled
+<a href=#105 id=105 data-nosnippet>105</a>        .iter()
+<a href=#106 id=106 data-nosnippet>106</a>        .zip(candidates)
+<a href=#107 id=107 data-nosnippet>107</a>        .all(|(s, c)| s.is_none_or(|s| s == <span class="kw-2">*</span>c))
+<a href=#108 id=108 data-nosnippet>108</a>      &amp;&amp; <span class="self">self
+<a href=#109 id=109 data-nosnippet>109</a>        </span>.block_addresses
+<a href=#110 id=110 data-nosnippet>110</a>        .iter()
+<a href=#111 id=111 data-nosnippet>111</a>        .filter(|a| !addresses.contains(a))
+<a href=#112 id=112 data-nosnippet>112</a>        .all(|a| <span class="self">self</span>.spelled(a, candidates).is_none());
+<a href=#113 id=113 data-nosnippet>113</a>    <span class="kw">let </span>address_count = addresses.len();
+<a href=#114 id=114 data-nosnippet>114</a>    <span class="comment">// (a link printing one address: its anchor the contact's text, its address the target — position 2, review
+<a href=#115 id=115 data-nosnippet>115</a>    // revfms2a2_9 finding 5; 1607.00911's `\href{mailto: edremets@…}{* edremets@…}`)
+<a href=#116 id=116 data-nosnippet>116</a>    </span><span class="kw">let </span>anchor = anchor.filter(|<span class="kw">_</span>| address_count == <span class="number">1</span>);
+<a href=#117 id=117 data-nosnippet>117</a>    <span class="kw">for </span>(at, (address, spelled)) <span class="kw">in </span>addresses.into_iter().zip(spelled).enumerate() {
+<a href=#118 id=118 data-nosnippet>118</a>      <span class="kw">let </span>(owner, rule) = <span class="kw">match </span>spelled {
+<a href=#119 id=119 data-nosnippet>119</a>        <span class="comment">// (a document's note: the chain's first step, a ruling's change of today's — `api:note-spelled`)
+<a href=#120 id=120 data-nosnippet>120</a>        </span><span class="prelude-val">Some</span>(owner) <span class="kw">if </span><span class="macro">matches!</span>(chain, Chain::DocumentNote { .. }) =&gt; {
+<a href=#121 id=121 data-nosnippet>121</a>          (<span class="prelude-val">Some</span>(owner), <span class="string">"owner:spelled api:note-spelled"</span>)
+<a href=#122 id=122 data-nosnippet>122</a>        },
+<a href=#123 id=123 data-nosnippet>123</a>        <span class="prelude-val">Some</span>(owner) =&gt; (<span class="prelude-val">Some</span>(owner), <span class="string">"owner:spelled"</span>),
+<a href=#124 id=124 data-nosnippet>124</a>        <span class="prelude-val">None </span><span class="kw">if </span>in_order =&gt; (<span class="prelude-val">Some</span>(candidates[at]), <span class="string">"owner:order"</span>),
+<a href=#125 id=125 data-nosnippet>125</a>        <span class="prelude-val">None
+<a href=#126 id=126 data-nosnippet>126</a>          </span><span class="kw">if </span>chain == Chain::Line &amp;&amp; unspelled == <span class="number">1 </span>&amp;&amp; candidates.len() &gt; <span class="number">1 </span>&amp;&amp; left.len() == <span class="number">1 </span>=&gt;
+<a href=#127 id=127 data-nosnippet>127</a>        {
+<a href=#128 id=128 data-nosnippet>128</a>          (<span class="prelude-val">Some</span>(left[<span class="number">0</span>]), <span class="string">"owner:elimination"</span>)
+<a href=#129 id=129 data-nosnippet>129</a>        },
+<a href=#130 id=130 data-nosnippet>130</a>        <span class="prelude-val">None </span>=&gt; <span class="kw">match </span>candidates {
+<a href=#131 id=131 data-nosnippet>131</a>          [only] =&gt; (<span class="prelude-val">Some</span>(<span class="kw-2">*</span>only), <span class="string">"owner:only-author"</span>),
+<a href=#132 id=132 data-nosnippet>132</a>          <span class="comment">// (an address pattern, `\{FirstName.LastName\}@SIT.Fraunhofer.de` under three names, is every author's
+<a href=#133 id=133 data-nosnippet>133</a>          // address and no one's own: the block's, as today's — not the corresponding author's, 2006.12418; where
+<a href=#134 id=134 data-nosnippet>134</a>          // order or elimination places it, as today's too, 2110.05663)
+<a href=#135 id=135 data-nosnippet>135</a>          </span><span class="kw">_ if </span>is_pattern_address(<span class="kw-2">&amp;</span>address) =&gt; (<span class="prelude-val">None</span>, <span class="string">"owner:pattern"</span>),
+<a href=#136 id=136 data-nosnippet>136</a>          <span class="comment">// (the corresponding author's address is one printed alone: an address left over in a print of several is
+<a href=#137 id=137 data-nosnippet>137</a>          // another author's — `{hong3924.cs10, evan20010126.cs12, …}@nycu.edu.tw` under a corresponding Ching-Chun
+<a href=#138 id=138 data-nosnippet>138</a>          // Huang, 2512.08223; `{congjing, ryanflin}@uw.edu chris20030909@gmail.com`, 2602.04785; 2604.14972)
+<a href=#139 id=139 data-nosnippet>139</a>          </span><span class="kw">_ if </span>address_count &gt; <span class="number">1 </span>=&gt; (<span class="prelude-val">None</span>, <span class="string">"owner:block"</span>),
+<a href=#140 id=140 data-nosnippet>140</a>          <span class="comment">// (an address two or more names spell is the corresponding author's, or the author a document's note names,
+<a href=#141 id=141 data-nosnippet>141</a>          // only where they are one of them, else the block's, as the old reader held it for both
+<a href=#142 id=142 data-nosnippet>142</a>          // (`author_block/email_block_calls.rs` `spelled`, `owners.marked`, deleted at Z18l): `wang@x.org` under X. Wang, Y. Wang and a
+<a href=#143 id=143 data-nosnippet>143</a>          // corresponding Z. Li — `perfect_kernel_batch64::marked_block_email_line_owner`, 77p r4; A&amp;A's
+<a href=#144 id=144 data-nosnippet>144</a>          // `\offprints{Z. Li, \email{wang@x.org}}` —
+<a href=#145 id=145 data-nosnippet>145</a>          // `perfect_kernel_batchnl1::an_address_others_spell_is_not_the_named_authors`)
+<a href=#146 id=146 data-nosnippet>146</a>          </span><span class="kw">_ </span>=&gt; {
+<a href=#147 id=147 data-nosnippet>147</a>            <span class="kw">let </span>found = <span class="kw">match </span>chain {
+<a href=#148 id=148 data-nosnippet>148</a>              Chain::DocumentNote { named: <span class="prelude-val">Some</span>(named) } =&gt; <span class="kw">match </span>named {
+<a href=#149 id=149 data-nosnippet>149</a>                [one] <span class="kw">if </span>candidates.len() &gt; <span class="number">1 </span>=&gt; (<span class="prelude-val">Some</span>(<span class="kw-2">*</span>one), <span class="string">"owner:corresponding api:note-name"</span>),
+<a href=#150 id=150 data-nosnippet>150</a>                <span class="kw">_ </span>=&gt; (<span class="prelude-val">None</span>, <span class="string">"owner:block"</span>),
+<a href=#151 id=151 data-nosnippet>151</a>              },
+<a href=#152 id=152 data-nosnippet>152</a>              <span class="kw">_ </span>=&gt; <span class="self">self</span>.corresponding(candidates),
+<a href=#153 id=153 data-nosnippet>153</a>            };
+<a href=#154 id=154 data-nosnippet>154</a>            <span class="kw">let </span>spellers = <span class="self">self</span>.spellers(<span class="kw-2">&amp;</span>address, candidates);
+<a href=#155 id=155 data-nosnippet>155</a>            <span class="kw">match </span>found {
+<a href=#156 id=156 data-nosnippet>156</a>              (<span class="prelude-val">Some</span>(c), <span class="kw">_</span>) <span class="kw">if </span>spellers.len() &gt;= <span class="number">2 </span>&amp;&amp; !spellers.contains(<span class="kw-2">&amp;</span>c) =&gt; {
+<a href=#157 id=157 data-nosnippet>157</a>                (<span class="prelude-val">None</span>, <span class="string">"owner:block"</span>)
+<a href=#158 id=158 data-nosnippet>158</a>              },
+<a href=#159 id=159 data-nosnippet>159</a>              found =&gt; found,
+<a href=#160 id=160 data-nosnippet>160</a>            }
+<a href=#161 id=161 data-nosnippet>161</a>          },
+<a href=#162 id=162 data-nosnippet>162</a>        },
+<a href=#163 id=163 data-nosnippet>163</a>      };
+<a href=#164 id=164 data-nosnippet>164</a>      <span class="self">self</span>.attach(
+<a href=#165 id=165 data-nosnippet>165</a>        owner,
+<a href=#166 id=166 data-nosnippet>166</a>        Assoc {
+<a href=#167 id=167 data-nosnippet>167</a>          role:   <span class="string">"email"</span>.into(),
+<a href=#168 id=168 data-nosnippet>168</a>          text:   anchor.map_or_else(|| address.clone(), |a| a.text.clone()),
+<a href=#169 id=169 data-nosnippet>169</a>          label:  <span class="prelude-val">None</span>,
+<a href=#170 id=170 data-nosnippet>170</a>          rule:   led(<span class="macro">s!</span>(<span class="string">"{rule} ruling3:one-per-print"</span>)),
+<a href=#171 id=171 data-nosnippet>171</a>          source: <span class="prelude-val">Some</span>(source),
+<a href=#172 id=172 data-nosnippet>172</a>          target: anchor.and_then(|a| a.target.clone()),
+<a href=#173 id=173 data-nosnippet>173</a>        },
+<a href=#174 id=174 data-nosnippet>174</a>        <span class="bool-val">false</span>,
+<a href=#175 id=175 data-nosnippet>175</a>      );
+<a href=#176 id=176 data-nosnippet>176</a>    }
+<a href=#177 id=177 data-nosnippet>177</a>  }
+<a href=#178 id=178 data-nosnippet>178</a>
+<a href=#179 id=179 data-nosnippet>179</a>  <span class="doccomment">/// Resolve one block (its events under `policy`).
+<a href=#180 id=180 data-nosnippet>180</a>  </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>block(
+<a href=#181 id=181 data-nosnippet>181</a>    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+<a href=#182 id=182 data-nosnippet>182</a>    index: usize,
+<a href=#183 id=183 data-nosnippet>183</a>    policy: <span class="kw-2">&amp;</span><span class="lifetime">'static </span>Policy,
+<a href=#184 id=184 data-nosnippet>184</a>    cautious: bool,
+<a href=#185 id=185 data-nosnippet>185</a>    keyvals: <span class="prelude-ty">Option</span>&lt;<span class="kw-2">&amp;</span>str&gt;,
+<a href=#186 id=186 data-nosnippet>186</a>    events: <span class="kw-2">&amp;</span>[Event],
+<a href=#187 id=187 data-nosnippet>187</a>  ) {
+<a href=#188 id=188 data-nosnippet>188</a>    <span class="self">self</span>.out.policies.push((index, policy.name));
+<a href=#189 id=189 data-nosnippet>189</a>    <span class="self">self</span>.notes_marked = !policy.unmarked_notes;
+<a href=#190 id=190 data-nosnippet>190</a>    <span class="kw">let </span>and_inline = policy.and_inline;
+<a href=#191 id=191 data-nosnippet>191</a>    <span class="comment">// (an IJCAI sectioned block's address section, from the marker its rehearsal held an Error at before the addresses
+<a href=#192 id=192 data-nosnippet>192</a>    // it prints (`Input::Block`'s `markers`: `\emails`, defined only inside the class's `\author`): the class's own split
+<a href=#193 id=193 data-nosnippet>193</a>    // reads it, its addresses the API's as off's are, so the reading ends there and no entry goes on over it — it
+<a href=#194 id=194 data-nosnippet>194</a>    // continued `$^2$Univ B` onto the e-mail line, and wrote "Univ B" twice (the entry by its text, the split's call)
+<a href=#195 id=195 data-nosnippet>195</a>    // and the addresses as an affiliation, 2501.02356)
+<a href=#196 id=196 data-nosnippet>196</a>    </span><span class="kw">let </span>events = <span class="kw">match </span>address_section(<span class="kw-2">&amp;</span><span class="self">self</span>.block_markers, events) {
+<a href=#197 id=197 data-nosnippet>197</a>      <span class="prelude-val">Some</span>(end) =&gt; <span class="kw-2">&amp;</span>events[..end],
+<a href=#198 id=198 data-nosnippet>198</a>      <span class="prelude-val">None </span>=&gt; events,
+<a href=#199 id=199 data-nosnippet>199</a>    };
+<a href=#200 id=200 data-nosnippet>200</a>    <span class="kw">let </span>events = <span class="kw-2">&amp;</span>read_events(events);
+<a href=#201 id=201 data-nosnippet>201</a>    <span class="kw">let </span>lines = lines_of(events, and_inline);
+<a href=#202 id=202 data-nosnippet>202</a>    <span class="kw">let </span>block_requests: Vec&lt;String&gt; = keyvals
+<a href=#203 id=203 data-nosnippet>203</a>      .and_then(|kv| attr_value(kv, <span class="string">"annotations"</span>))
+<a href=#204 id=204 data-nosnippet>204</a>      .map(|labels| {
+<a href=#205 id=205 data-nosnippet>205</a>        labels
+<a href=#206 id=206 data-nosnippet>206</a>          .split(<span class="string">','</span>)
+<a href=#207 id=207 data-nosnippet>207</a>          .map(|l| l.trim().to_string())
+<a href=#208 id=208 data-nosnippet>208</a>          .filter(|l| !l.is_empty())
+<a href=#209 id=209 data-nosnippet>209</a>          .collect()
+<a href=#210 id=210 data-nosnippet>210</a>      })
+<a href=#211 id=211 data-nosnippet>211</a>      .unwrap_or_default();
+<a href=#212 id=212 data-nosnippet>212</a>    <span class="kw">let </span>group = index;
+<a href=#213 id=213 data-nosnippet>213</a>    <span class="kw">let </span>block_creators_start = <span class="self">self</span>.out.creators.len();
+<a href=#214 id=214 data-nosnippet>214</a>    <span class="self">self</span>.block_addresses = lines
+<a href=#215 id=215 data-nosnippet>215</a>      .iter()
+<a href=#216 id=216 data-nosnippet>216</a>      .flat_map(|line| addresses_in(<span class="kw-2">&amp;</span>events_text(<span class="kw-2">&amp;</span>line.events)))
+<a href=#217 id=217 data-nosnippet>217</a>      .collect();
+<a href=#218 id=218 data-nosnippet>218</a>    <span class="comment">// (the lines whose leading marks are their names' requests, read as a names line, their notes the names' (revtex's
+<a href=#219 id=219 data-nosnippet>219</a>    // `\author{$^{1}$Masashi Kimura and $^{2,3}$Takahiro Tanaka}`, 1805.08625; 1405.2400, 2001.00788; `$^{1}$José Edgar
+<a href=#220 id=220 data-nosnippet>220</a>    // Madriz Aguilar\thanks{…}`, 0710.4115, gr-qc0606119), not labelled affiliations (`names_led_by_marks`)
+<a href=#221 id=221 data-nosnippet>221</a>    </span><span class="kw">let </span>(led_names, name_shaped) = names_led_by_marks(<span class="kw-2">&amp;</span>lines, <span class="kw-2">&amp;</span><span class="self">self</span>.outside_labels);
+<a href=#222 id=222 data-nosnippet>222</a>    <span class="comment">// per column: the creators of its last names row
+<a href=#223 id=223 data-nosnippet>223</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>row_above: Vec&lt;(usize, Vec&lt;usize&gt;)&gt; = Vec::new();
+<a href=#224 id=224 data-nosnippet>224</a>    <span class="comment">// per column: the creators of its run of names rows, each directly under the one before with no line answering it
+<a href=#225 id=225 data-nosnippet>225</a>    // (an unmarked institution under them is every name's of the run, user ruling R12: `A$^{1}$, B$^{2}$\\ C$^{3}$\\
+<a href=#226 id=226 data-nosnippet>226</a>    // Univ` gives Univ to all three, as today's splitter does — 1511.01102's four rows over `(The Nearby Supernova
+<a href=#227 id=227 data-nosnippet>227</a>    // Factory)`)
+<a href=#228 id=228 data-nosnippet>228</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>run_above: Vec&lt;(usize, Vec&lt;usize&gt;)&gt; = Vec::new();
+<a href=#229 id=229 data-nosnippet>229</a>    <span class="comment">// the entry the previous line ended with, which an unmarked line under it continues (an address's second line:
+<a href=#230 id=230 data-nosnippet>230</a>    // `$^1$Dept of X \\ 1-1-1 Street, City`, 0803.3589; one affiliation, as today's `\\`-joined contact)
+<a href=#231 id=231 data-nosnippet>231</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>continues: <span class="prelude-ty">Option</span>&lt;Continued&gt; = <span class="prelude-val">None</span>;
+<a href=#232 id=232 data-nosnippet>232</a>    <span class="kw">let </span><span class="kw-2">mut </span>first_in_column: Vec&lt;usize&gt; = Vec::new();
+<a href=#233 id=233 data-nosnippet>233</a>    <span class="comment">// the columns whose last line is a names row ending in a separator (a comma, "and"), which the next line continues
+<a href=#234 id=234 data-nosnippet>234</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>open_rows: Vec&lt;usize&gt; = Vec::new();
+<a href=#235 id=235 data-nosnippet>235</a>    <span class="comment">// the columns whose names row has a line under it already (its affiliation)
+<a href=#236 id=236 data-nosnippet>236</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>answered_rows: Vec&lt;usize&gt; = Vec::new();
+<a href=#237 id=237 data-nosnippet>237</a>    <span class="comment">// the columns whose last line was labelled entries, and how many entries it held
+<a href=#238 id=238 data-nosnippet>238</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>labelled_last: Vec&lt;(usize, usize)&gt; = Vec::new();
+<a href=#239 id=239 data-nosnippet>239</a>    <span class="comment">// an unmarked line's affiliation whose group runs on past the line (its places, where the group ends)
+<a href=#240 id=240 data-nosnippet>240</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>open_group: <span class="prelude-ty">Option</span>&lt;(u16, Vec&lt;(usize, usize)&gt;)&gt; = <span class="prelude-val">None</span>;
+<a href=#241 id=241 data-nosnippet>241</a>    <span class="comment">// the places of the unmarked affiliation the line before made, which a line after a break inside the same braced
+<a href=#242 id=242 data-nosnippet>242</a>    // group continues
+<a href=#243 id=243 data-nosnippet>243</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>unmarked_before: <span class="prelude-ty">Option</span>&lt;Vec&lt;(usize, usize)&gt;&gt; = <span class="prelude-val">None</span>;
+<a href=#244 id=244 data-nosnippet>244</a>    <span class="comment">// the last line an address list read on to (`place_line_contacts` over the lines of one list)
+<a href=#245 id=245 data-nosnippet>245</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>skip_to = <span class="number">0usize</span>;
+<a href=#246 id=246 data-nosnippet>246</a>    <span class="comment">// the URL lines under every name so far, each with those names: the block's if no name comes after them
+<a href=#247 id=247 data-nosnippet>247</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>block_links: Vec&lt;(<span class="kw-2">&amp;</span>Event, Vec&lt;usize&gt;)&gt; = Vec::new();
+<a href=#248 id=248 data-nosnippet>248</a>    <span class="comment">// the last column holding a line that reads as names: a column after it opening with an institution holds no name
+<a href=#249 id=249 data-nosnippet>249</a>    // of its own, and is the shared affiliation of every name above it (read on first need: only a column's first line
+<a href=#250 id=250 data-nosnippet>250</a>    // past column 0 asks, so a one-column block never reads every line as names — 1507.02068's 200-name `\author`)
+<a href=#251 id=251 data-nosnippet>251</a>    </span><span class="kw">let </span>last_named_once = std::cell::OnceCell::new();
+<a href=#252 id=252 data-nosnippet>252</a>    <span class="kw">let </span>last_named = || {
+<a href=#253 id=253 data-nosnippet>253</a>      <span class="kw-2">*</span>last_named_once.get_or_init(|| {
+<a href=#254 id=254 data-nosnippet>254</a>        lines
+<a href=#255 id=255 data-nosnippet>255</a>          .iter()
+<a href=#256 id=256 data-nosnippet>256</a>          .filter(|line| reads_as_names(<span class="kw-2">&amp;</span>events_text(<span class="kw-2">&amp;</span>line.events)))
+<a href=#257 id=257 data-nosnippet>257</a>          .map(|line| line.column)
+<a href=#258 id=258 data-nosnippet>258</a>          .max()
+<a href=#259 id=259 data-nosnippet>259</a>      })
+<a href=#260 id=260 data-nosnippet>260</a>    };
+<a href=#261 id=261 data-nosnippet>261</a>    <span class="kw">for </span>(n, line) <span class="kw">in </span>lines.iter().enumerate() {
+<a href=#262 id=262 data-nosnippet>262</a>      <span class="kw">if </span>n &gt; <span class="number">0 </span>&amp;&amp; n &lt;= skip_to {
+<a href=#263 id=263 data-nosnippet>263</a>        <span class="kw">continue</span>;
+<a href=#264 id=264 data-nosnippet>264</a>      }
+<a href=#265 id=265 data-nosnippet>265</a>      <span class="self">self</span>.line_column = <span class="prelude-val">Some</span>((index, line.column));
+<a href=#266 id=266 data-nosnippet>266</a>      <span class="kw">for </span>span <span class="kw">in </span>line.events.iter().filter_map(|e| e.span) {
+<a href=#267 id=267 data-nosnippet>267</a>        <span class="self">self</span>.entry_column.insert((index, span.<span class="number">0</span>), line.column);
+<a href=#268 id=268 data-nosnippet>268</a>      }
+<a href=#269 id=269 data-nosnippet>269</a>      <span class="kw">let </span>unmarked_above = unmarked_before.take();
+<a href=#270 id=270 data-nosnippet>270</a>      <span class="kw">let </span>unmarked_line_above = unmarked_above.is_some();
+<a href=#271 id=271 data-nosnippet>271</a>      <span class="kw">let </span>continued = open_rows.contains(<span class="kw-2">&amp;</span>line.column);
+<a href=#272 id=272 data-nosnippet>272</a>      open_rows.retain(|c| <span class="kw-2">*</span>c != line.column);
+<a href=#273 id=273 data-nosnippet>273</a>      <span class="comment">// (the line before in the column was labelled entries: an unmarked name under two or more of them is a new row's —
+<a href=#274 id=274 data-nosnippet>274</a>      // SYNC row 46, `$^\dagger$Univ A \quad $^\ddagger$Univ B \\ Cat Cole \\ Physics`; a line under one entry goes on
+<a href=#275 id=275 data-nosnippet>275</a>      // with it, the old reader's N5 (the deleted `add_authors_calls_sectioned`'s unmarked line appended to the entry above), whatever
+<a href=#276 id=276 data-nosnippet>276</a>      // its words read as: `$^1$The Graduate Center, CUNY\\ Computer Science\\ New York, USA`, 2501.04046; `$^{1}$Institute
+<a href=#277 id=277 data-nosnippet>277</a>      // of …, Ionosphere and\\ Radio Wave Propagation\\ RAS, …`, hep-ph0511130 — each line one affiliation's)
+<a href=#278 id=278 data-nosnippet>278</a>      </span><span class="kw">let </span>entries_above = labelled_last
+<a href=#279 id=279 data-nosnippet>279</a>        .iter()
+<a href=#280 id=280 data-nosnippet>280</a>        .find(|(c, <span class="kw">_</span>)| <span class="kw-2">*</span>c == line.column)
+<a href=#281 id=281 data-nosnippet>281</a>        .map(|<span class="kw-2">&amp;</span>(<span class="kw">_</span>, entries)| entries);
+<a href=#282 id=282 data-nosnippet>282</a>      <span class="kw">let </span>after_labelled = entries_above.is_some();
+<a href=#283 id=283 data-nosnippet>283</a>      <span class="kw">let </span>after_labelled_list = entries_above.is_some_and(|entries| entries &gt;= <span class="number">2</span>);
+<a href=#284 id=284 data-nosnippet>284</a>      labelled_last.retain(|(c, <span class="kw">_</span>)| <span class="kw-2">*</span>c != line.column);
+<a href=#285 id=285 data-nosnippet>285</a>      <span class="kw">let </span>under_affiliation = answered_rows.contains(<span class="kw-2">&amp;</span>line.column);
+<a href=#286 id=286 data-nosnippet>286</a>      <span class="comment">// (a line that is no names row answers the row above; a names row below takes this back)
+<a href=#287 id=287 data-nosnippet>287</a>      </span><span class="kw">if </span>!answered_rows.contains(<span class="kw-2">&amp;</span>line.column) &amp;&amp; row_above.iter().any(|(c, <span class="kw">_</span>)| <span class="kw-2">*</span>c == line.column) {
+<a href=#288 id=288 data-nosnippet>288</a>        answered_rows.push(line.column);
+<a href=#289 id=289 data-nosnippet>289</a>      }
+<a href=#290 id=290 data-nosnippet>290</a>      <span class="comment">// (punctuation before a mark does not lead the line: `($^1$) LSIIT …`, 1004.4809)
+<a href=#291 id=291 data-nosnippet>291</a>      </span><span class="kw">let </span>first_ink = line_first_ink(<span class="kw-2">&amp;</span>line.events);
+<a href=#292 id=292 data-nosnippet>292</a>      <span class="kw">let </span>column_first = !first_in_column.contains(<span class="kw-2">&amp;</span>line.column);
+<a href=#293 id=293 data-nosnippet>293</a>      <span class="kw">if </span>column_first {
+<a href=#294 id=294 data-nosnippet>294</a>        first_in_column.push(line.column);
+<a href=#295 id=295 data-nosnippet>295</a>      }
+<a href=#296 id=296 data-nosnippet>296</a>      <span class="comment">// (a column holding no name of its own after the last name is the shared affiliation of every name above it, under
+<a href=#297 id=297 data-nosnippet>297</a>      // every name as a link printing an institution is: sig-alternate's `\sharedaffiliation` (`\end{tabular}
+<a href=#298 id=298 data-nosnippet>298</a>      // \begin{tabular}{c}`, a column, `observer::rehearsal`) under its `\alignauthor` columns, the PDF centring it under
+<a href=#299 id=299 data-nosnippet>299</a>      // all of them — 0712.1016, 1704.03168, the last author's alone before; written inline, `A One \and Bob Two
+<a href=#300 id=300 data-nosnippet>300</a>      // \end{tabular}\begin{tabular}{c} Univ Shared`, "Univ Shared" a third creator, review revG3 findings 1 and Q3)
+<a href=#301 id=301 data-nosnippet>301</a>      // (a column naming a collaboration or a team, whole or as the remark on a name speaking for it, is none — the
+<a href=#302 id=302 data-nosnippet>302</a>      // old reader's collaboration reading, `reads_as_collaboration`, keeps it as the line reads: `\and \\the Solar
+<a href=#303 id=303 data-nosnippet>303</a>      // Orbiter EPD and Parker Solar Probe ISIS teams`, 2408.02330; `\and Shuang-Nan Zhang\inst{23} on behalf of the
+<a href=#304 id=304 data-nosnippet>304</a>      // \textit{SVOM} collaboration\inst{24}.`, 2607.01090 — each every author's affiliation before)
+<a href=#305 id=305 data-nosnippet>305</a>      // (read on the column's own ink, not the text of a contact a call in it adds — `\and Bob Baker\institute{Univ
+<a href=#306 id=306 data-nosnippet>306</a>      // B}`, OmniBus's whole list one block since P2-1, OD #993: "Bob Baker" is the column's name, "Univ B" his contact;
+<a href=#307 id=307 data-nosnippet>307</a>      // read with the contact the line was "Bob Baker Univ B", an institution, and Bob every name's affiliation —
+<a href=#308 id=308 data-nosnippet>308</a>      // nucl-th0308018's `\and Bertrand BOURIQUET \address{…}`; a column of contacts alone, `\and \institute{Univ
+<a href=#309 id=309 data-nosnippet>309</a>      // B}`, is read on them. The rule is the reading's, not OmniBus's: the kernel `article` route with a document's
+<a href=#310 id=310 data-nosnippet>310</a>      // `\institute` reads the same way, revP21d)
+<a href=#311 id=311 data-nosnippet>311</a>      </span><span class="kw">let </span>shared_column = column_first
+<a href=#312 id=312 data-nosnippet>312</a>        &amp;&amp; line.column &gt; <span class="number">0
+<a href=#313 id=313 data-nosnippet>313</a>        </span>&amp;&amp; last_named().is_some_and(|named| line.column &gt; named)
+<a href=#314 id=314 data-nosnippet>314</a>        &amp;&amp; <span class="self">self</span>.out.creators.len() &gt; block_creators_start
+<a href=#315 id=315 data-nosnippet>315</a>        &amp;&amp; {
+<a href=#316 id=316 data-nosnippet>316</a>          <span class="kw">let </span>own = column_own_text(<span class="kw-2">&amp;</span>line.events);
+<a href=#317 id=317 data-nosnippet>317</a>          is_institution(<span class="kw-2">&amp;</span>own) &amp;&amp; !names_collaboration(<span class="kw-2">&amp;</span>own)
+<a href=#318 id=318 data-nosnippet>318</a>        };
+<a href=#319 id=319 data-nosnippet>319</a>      <span class="kw">if </span>shared_column {
+<a href=#320 id=320 data-nosnippet>320</a>        <span class="kw">let </span>every: Vec&lt;usize&gt; = (block_creators_start..<span class="self">self</span>.out.creators.len()).collect();
+<a href=#321 id=321 data-nosnippet>321</a>        run_above.push((line.column, every.clone()));
+<a href=#322 id=322 data-nosnippet>322</a>        row_above.push((line.column, every));
+<a href=#323 id=323 data-nosnippet>323</a>        <span class="comment">// (the names row it answers: the lines under it go on with the affiliation)
+<a href=#324 id=324 data-nosnippet>324</a>        </span>answered_rows.push(line.column);
+<a href=#325 id=325 data-nosnippet>325</a>      }
+<a href=#326 id=326 data-nosnippet>326</a>      <span class="kw">let </span>above = row_above
+<a href=#327 id=327 data-nosnippet>327</a>        .iter()
+<a href=#328 id=328 data-nosnippet>328</a>        .rev()
+<a href=#329 id=329 data-nosnippet>329</a>        .find(|(c, <span class="kw">_</span>)| <span class="kw-2">*</span>c == line.column)
+<a href=#330 id=330 data-nosnippet>330</a>        .map(|(<span class="kw">_</span>, r)| r.clone());
+<a href=#331 id=331 data-nosnippet>331</a>      <span class="kw">let </span>above = above
+<a href=#332 id=332 data-nosnippet>332</a>        .or_else(|| row_above.last().map(|(<span class="kw">_</span>, r)| r.clone()))
+<a href=#333 id=333 data-nosnippet>333</a>        .unwrap_or_default();
+<a href=#334 id=334 data-nosnippet>334</a>      <span class="kw">let </span>run = run_above
+<a href=#335 id=335 data-nosnippet>335</a>        .iter()
+<a href=#336 id=336 data-nosnippet>336</a>        .rev()
+<a href=#337 id=337 data-nosnippet>337</a>        .find(|(c, <span class="kw">_</span>)| <span class="kw-2">*</span>c == line.column)
+<a href=#338 id=338 data-nosnippet>338</a>        .or_else(|| run_above.last())
+<a href=#339 id=339 data-nosnippet>339</a>        .map(|(<span class="kw">_</span>, r)| r.clone())
+<a href=#340 id=340 data-nosnippet>340</a>        .unwrap_or_default();
+<a href=#341 id=341 data-nosnippet>341</a>      <span class="kw">let </span>carried = continues.take();
+<a href=#342 id=342 data-nosnippet>342</a>      <span class="comment">// (a line a glyph leads — no superscript, `(\S) Inst…` — whose mark no name requests is no labelled line: Perl's
+<a href=#343 id=343 data-nosnippet>343</a>      // block reader splits at superscripts alone (`positionOf($line, @authorsup_markers)`, Base_Utility.pool.ltxml:
+<a href=#344 id=344 data-nosnippet>344</a>      // 699-707), so such a line continues the entry above it, as an unmarked line does (`line:continued`), and a printed
+<a href=#345 id=345 data-nosnippet>345</a>      // mark no name requests is no label (FIDELITY_CHARTER §4) — cond-mat0309053's translators' `(\S)`, `(\dag)`,
+<a href=#346 id=346 data-nosnippet>346</a>      // `(\ddag)` institutes, no author's marks, stay in the authors' affiliation as before, not a nameless creator's)
+<a href=#347 id=347 data-nosnippet>347</a>      // (only where an entry is open above it, which the line continues — Perl's `if (@entries)`; else, an e-mail
+<a href=#348 id=348 data-nosnippet>348</a>      // entry above or none, it stays the symbol line it was: `*Corresponding Author: Ayodeji Olalekan Salau (…)` under
+<a href=#349 id=349 data-nosnippet>349</a>      // the `\textsuperscript{7}\texttt{…}` addresses is no names row, 2510.01302)
+<a href=#350 id=350 data-nosnippet>350</a>      </span><span class="kw">let </span>unrequested_glyph = carried.is_some()
+<a href=#351 id=351 data-nosnippet>351</a>        &amp;&amp; first_ink.is_some_and(|e| {
+<a href=#352 id=352 data-nosnippet>352</a>          e.kind == EventKind::Mark
+<a href=#353 id=353 data-nosnippet>353</a>            &amp;&amp; e.role.as_deref() == <span class="prelude-val">Some</span>(<span class="string">"text"</span>)
+<a href=#354 id=354 data-nosnippet>354</a>            &amp;&amp; !entries_of(<span class="kw-2">&amp;</span>line.events)
+<a href=#355 id=355 data-nosnippet>355</a>              .iter()
+<a href=#356 id=356 data-nosnippet>356</a>              .flat_map(|entry| <span class="kw-2">&amp;</span>entry.labels)
+<a href=#357 id=357 data-nosnippet>357</a>              .any(|label| {
+<a href=#358 id=358 data-nosnippet>358</a>                block_requests.iter().any(|r| label_matches(r, label))
+<a href=#359 id=359 data-nosnippet>359</a>                  || <span class="self">self
+<a href=#360 id=360 data-nosnippet>360</a>                    </span>.out
+<a href=#361 id=361 data-nosnippet>361</a>                    .creators
+<a href=#362 id=362 data-nosnippet>362</a>                    .iter()
+<a href=#363 id=363 data-nosnippet>363</a>                    .any(|c| c.requests.iter().any(|r| label_matches(r, label)))
+<a href=#364 id=364 data-nosnippet>364</a>              })
+<a href=#365 id=365 data-nosnippet>365</a>        });
+<a href=#366 id=366 data-nosnippet>366</a>      <span class="kw">if </span>unrequested_glyph &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(carried) = carried {
+<a href=#367 id=367 data-nosnippet>367</a>        <span class="kw">let </span>notes = line
+<a href=#368 id=368 data-nosnippet>368</a>          .events
+<a href=#369 id=369 data-nosnippet>369</a>          .iter()
+<a href=#370 id=370 data-nosnippet>370</a>          .copied()
+<a href=#371 id=371 data-nosnippet>371</a>          .filter(|e| e.kind == EventKind::Note);
+<a href=#372 id=372 data-nosnippet>372</a>        <span class="self">self</span>.continue_line(
+<a href=#373 id=373 data-nosnippet>373</a>          index,
+<a href=#374 id=374 data-nosnippet>374</a>          <span class="kw-2">&amp;</span>carried,
+<a href=#375 id=375 data-nosnippet>375</a>          <span class="kw-2">&amp;</span>events_text(<span class="kw-2">&amp;</span>line.events),
+<a href=#376 id=376 data-nosnippet>376</a>          notes,
+<a href=#377 id=377 data-nosnippet>377</a>          above.last().copied(),
+<a href=#378 id=378 data-nosnippet>378</a>        );
+<a href=#379 id=379 data-nosnippet>379</a>        continues = <span class="prelude-val">Some</span>(carried);
+<a href=#380 id=380 data-nosnippet>380</a>        <span class="kw">continue</span>;
+<a href=#381 id=381 data-nosnippet>381</a>      }
+<a href=#382 id=382 data-nosnippet>382</a>      <span class="kw">match </span>first_ink.map(|e| <span class="kw-2">&amp;</span>e.kind) {
+<a href=#383 id=383 data-nosnippet>383</a>        <span class="prelude-val">Some</span>(EventKind::Mark) <span class="kw">if </span>!led_names[n] =&gt; {
+<a href=#384 id=384 data-nosnippet>384</a>          <span class="kw">let </span>entries = entries_of(<span class="kw-2">&amp;</span>line.events);
+<a href=#385 id=385 data-nosnippet>385</a>          labelled_last.push((line.column, entries.len()));
+<a href=#386 id=386 data-nosnippet>386</a>          continues = <span class="self">self</span>.labelled_entries(index, entries, <span class="string">""</span>);
+<a href=#387 id=387 data-nosnippet>387</a>        },
+<a href=#388 id=388 data-nosnippet>388</a>        <span class="prelude-val">Some</span>(<span class="kw">_</span>) =&gt; {
+<a href=#389 id=389 data-nosnippet>389</a>          <span class="kw">let </span>text = events_text(<span class="kw-2">&amp;</span>line.events);
+<a href=#390 id=390 data-nosnippet>390</a>          <span class="kw">let </span>only_contacts = line
+<a href=#391 id=391 data-nosnippet>391</a>            .events
+<a href=#392 id=392 data-nosnippet>392</a>            .iter()
+<a href=#393 id=393 data-nosnippet>393</a>            .filter(|e| inked(e))
+<a href=#394 id=394 data-nosnippet>394</a>            .all(|e| e.kind == EventKind::Contact);
+<a href=#395 id=395 data-nosnippet>395</a>          <span class="comment">// (a line printing a membership grade and notes alone, right under the names, is the name's the grade follows,
+<a href=#396 id=396 data-nosnippet>396</a>          // the last above, never a row's: `and~Cy Coe,\\~\IEEEmembership{Member,~IEEE,}\thanks{…}`, 2202.10869; under an
+<a href=#397 id=397 data-nosnippet>397</a>          // affiliation line it follows no name, revP5a S1)
+<a href=#398 id=398 data-nosnippet>398</a>          </span><span class="kw">let </span>grade_line = |e: &amp;&amp;Event| {
+<a href=#399 id=399 data-nosnippet>399</a>            e.kind == EventKind::Note
+<a href=#400 id=400 data-nosnippet>400</a>              || (e.kind == EventKind::Contact &amp;&amp; e.role.as_deref() == <span class="prelude-val">Some</span>(<span class="string">"membership"</span>))
+<a href=#401 id=401 data-nosnippet>401</a>          };
+<a href=#402 id=402 data-nosnippet>402</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>last) = above.last()
+<a href=#403 id=403 data-nosnippet>403</a>            &amp;&amp; !under_affiliation
+<a href=#404 id=404 data-nosnippet>404</a>            &amp;&amp; line
+<a href=#405 id=405 data-nosnippet>405</a>              .events
+<a href=#406 id=406 data-nosnippet>406</a>              .iter()
+<a href=#407 id=407 data-nosnippet>407</a>              .any(|e| e.role.as_deref() == <span class="prelude-val">Some</span>(<span class="string">"membership"</span>))
+<a href=#408 id=408 data-nosnippet>408</a>            &amp;&amp; line.events.iter().filter(|e| inked(e)).all(grade_line)
+<a href=#409 id=409 data-nosnippet>409</a>          {
+<a href=#410 id=410 data-nosnippet>410</a>            <span class="kw">for </span>event <span class="kw">in </span><span class="kw-2">&amp;</span>line.events {
+<a href=#411 id=411 data-nosnippet>411</a>              <span class="kw">match </span>event.kind {
+<a href=#412 id=412 data-nosnippet>412</a>                EventKind::Note =&gt; <span class="self">self</span>.note(index, event, <span class="prelude-val">Some</span>(last), <span class="string">"note:adjacent"</span>),
+<a href=#413 id=413 data-nosnippet>413</a>                EventKind::Contact =&gt; {
+<a href=#414 id=414 data-nosnippet>414</a>                  <span class="self">self</span>.contact_event(index, event, <span class="kw-2">&amp;</span>[last], <span class="string">"line:contact membership:name-above"</span>)
+<a href=#415 id=415 data-nosnippet>415</a>                },
+<a href=#416 id=416 data-nosnippet>416</a>                <span class="kw">_ </span>=&gt; {},
+<a href=#417 id=417 data-nosnippet>417</a>              }
+<a href=#418 id=418 data-nosnippet>418</a>            }
+<a href=#419 id=419 data-nosnippet>419</a>            <span class="kw">continue</span>;
+<a href=#420 id=420 data-nosnippet>420</a>          }
+<a href=#421 id=421 data-nosnippet>421</a>          <span class="comment">// (a column's first line that is one link printing a name is that name: `\href{https://orcid.org/…}
+<a href=#422 id=422 data-nosnippet>422</a>          // {\includegraphics{orcid}\hspace{1mm}Amanda A. Howard}`, 2311.06483)
+<a href=#423 id=423 data-nosnippet>423</a>          </span><span class="kw">if </span>column_first &amp;&amp; only_contacts {
+<a href=#424 id=424 data-nosnippet>424</a>            <span class="kw">let </span>links: Vec&lt;<span class="kw-2">&amp;</span>Event&gt; = line
+<a href=#425 id=425 data-nosnippet>425</a>              .events
+<a href=#426 id=426 data-nosnippet>426</a>              .iter()
+<a href=#427 id=427 data-nosnippet>427</a>              .copied()
+<a href=#428 id=428 data-nosnippet>428</a>              .filter(|e| e.kind == EventKind::Contact)
+<a href=#429 id=429 data-nosnippet>429</a>              .collect();
+<a href=#430 id=430 data-nosnippet>430</a>            <span class="kw">if let </span>[link] = links.as_slice()
+<a href=#431 id=431 data-nosnippet>431</a>              &amp;&amp; link.role.as_deref() == <span class="prelude-val">Some</span>(<span class="string">"url"</span>)
+<a href=#432 id=432 data-nosnippet>432</a>              &amp;&amp; reads_as_names(<span class="kw-2">&amp;</span>link.text)
+<a href=#433 id=433 data-nosnippet>433</a>            {
+<a href=#434 id=434 data-nosnippet>434</a>              <span class="kw">let </span>c = <span class="self">self</span>.new_creator(
+<a href=#435 id=435 data-nosnippet>435</a>                link.text.clone(),
+<a href=#436 id=436 data-nosnippet>436</a>                <span class="string">"line:names link-text"</span>,
+<a href=#437 id=437 data-nosnippet>437</a>                index,
+<a href=#438 id=438 data-nosnippet>438</a>                block_requests.clone(),
+<a href=#439 id=439 data-nosnippet>439</a>                group,
+<a href=#440 id=440 data-nosnippet>440</a>              );
+<a href=#441 id=441 data-nosnippet>441</a>              answered_rows.retain(|c| <span class="kw-2">*</span>c != line.column);
+<a href=#442 id=442 data-nosnippet>442</a>              run_above.push((line.column, <span class="macro">vec!</span>[c]));
+<a href=#443 id=443 data-nosnippet>443</a>              row_above.push((line.column, <span class="macro">vec!</span>[c]));
+<a href=#444 id=444 data-nosnippet>444</a>              <span class="kw">continue</span>;
+<a href=#445 id=445 data-nosnippet>445</a>            }
+<a href=#446 id=446 data-nosnippet>446</a>          }
+<a href=#447 id=447 data-nosnippet>447</a>          <span class="comment">// (a later line is more names when each of its pieces reads as a name: `Triantafyllos Afouras\quad\quad
+<a href=#448 id=448 data-nosnippet>448</a>          // Himel Chowdhury …` under the first row, 2111.03635; the classify helpers on each piece, not the run of them)
+<a href=#449 id=449 data-nosnippet>449</a>          // (a line of e-mail addresses alone is never names, a column's first line too: `\And
+<a href=#450 id=450 data-nosnippet>450</a>          // \{sagghosh, …, niranjan\}@cs.stonybrook.edu`, 2210.05991)
+<a href=#451 id=451 data-nosnippet>451</a>          // (nor one whose address an undefined command glued a word's ink onto, before its `@`, which no word of the
+<a href=#452 id=452 data-nosnippet>452</a>          // source spells: `\and Bob\email{b@x.org}` reads "Bobb@x.org" — a name, as Perl's creator holds it, never the author
+<a href=#453 id=453 data-nosnippet>453</a>          // before's e-mail; an undefined command never changes the segmentation, `Event::glued_undef`)
+<a href=#454 id=454 data-nosnippet>454</a>          </span><span class="kw">let </span>address_line =
+<a href=#455 id=455 data-nosnippet>455</a>            prints_only_addresses(<span class="kw-2">&amp;</span>text) &amp;&amp; !line.events.iter().any(|e| e.glued_undef);
+<a href=#456 id=456 data-nosnippet>456</a>          <span class="kw">let </span>names_line = led_names[n]
+<a href=#457 id=457 data-nosnippet>457</a>            || !only_contacts
+<a href=#458 id=458 data-nosnippet>458</a>              &amp;&amp; !address_line
+<a href=#459 id=459 data-nosnippet>459</a>              &amp;&amp; ((column_first &amp;&amp; !shared_column)
+<a href=#460 id=460 data-nosnippet>460</a>              <span class="comment">// (every line of a class whose `\\` parts names, `Policy::break_parts_names`: webofc's)
+<a href=#461 id=461 data-nosnippet>461</a>              </span>|| policy.break_parts_names
+<a href=#462 id=462 data-nosnippet>462</a>              || later_line_is_names(
+<a href=#463 id=463 data-nosnippet>463</a>                line,
+<a href=#464 id=464 data-nosnippet>464</a>                continued,
+<a href=#465 id=465 data-nosnippet>465</a>                under_affiliation,
+<a href=#466 id=466 data-nosnippet>466</a>                after_labelled_list,
+<a href=#467 id=467 data-nosnippet>467</a>                policy.author_lines,
+<a href=#468 id=468 data-nosnippet>468</a>                <span class="comment">// (a line reading as no institution over the next line of its column reading as one, under a binding
+<a href=#469 id=469 data-nosnippet>469</a>                // reading its `\\` lines as its own split did, `Policy::author_lines`; the kernel's keep their
+<a href=#470 id=470 data-nosnippet>470</a>                // affiliation reading: an article's "Einstein Drive" (hep-th0212274), "James Clerk Maxwell Building"
+<a href=#471 id=471 data-nosnippet>471</a>                // (math-ph9903017), "IIIT Delhi" (1910.07154) over an address line are no names)
+<a href=#472 id=472 data-nosnippet>472</a>                </span>policy.author_lines &amp;&amp; {
+<a href=#473 id=473 data-nosnippet>473</a>                  <span class="kw">let </span>institution = |l: <span class="kw-2">&amp;</span>Line&lt;<span class="lifetime">'_</span>&gt;| is_institution(<span class="kw-2">&amp;</span>events_text(<span class="kw-2">&amp;</span>l.events));
+<a href=#474 id=474 data-nosnippet>474</a>                  !institution(line)
+<a href=#475 id=475 data-nosnippet>475</a>                    &amp;&amp; lines[n + <span class="number">1</span>..]
+<a href=#476 id=476 data-nosnippet>476</a>                      .iter()
+<a href=#477 id=477 data-nosnippet>477</a>                      .find(|below| below.column == line.column)
+<a href=#478 id=478 data-nosnippet>478</a>                      .is_some_and(institution)
+<a href=#479 id=479 data-nosnippet>479</a>                },
+<a href=#480 id=480 data-nosnippet>480</a>              ));
+<a href=#481 id=481 data-nosnippet>481</a>          <span class="kw">if </span>names_line {
+<a href=#482 id=482 data-nosnippet>482</a>            answered_rows.retain(|c| <span class="kw-2">*</span>c != line.column);
+<a href=#483 id=483 data-nosnippet>483</a>            <span class="comment">// (a separator glyph before the line's contact parts the name from it, and ends no row: `Chiara Simeoni --
+<a href=#484 id=484 data-nosnippet>484</a>            // \url{…}`, 2511.07187 — only one the line ends with opens it)
+<a href=#485 id=485 data-nosnippet>485</a>            </span><span class="kw">let </span>ends_open = |e: &amp;&amp;Event| <span class="kw">match </span><span class="kw-2">&amp;</span>e.kind {
+<a href=#486 id=486 data-nosnippet>486</a>              EventKind::Sep(SepKind::Comma) =&gt; <span class="bool-val">true</span>,
+<a href=#487 id=487 data-nosnippet>487</a>              <span class="comment">// (an inline `\and` the line ends in, more names to come after the break: llncs's `Vatche Isahagian \and
+<a href=#488 id=488 data-nosnippet>488</a>              // \\ Vinod Muthusamy`, 2207.10648 — the old split's `\and`-then-`\\` piece; "Vinod Muthusamy" had become the
+<a href=#489 id=489 data-nosnippet>489</a>              // row's affiliation)
+<a href=#490 id=490 data-nosnippet>490</a>              </span>EventKind::Sep(SepKind::And(<span class="kw">_</span>)) =&gt; and_inline,
+<a href=#491 id=491 data-nosnippet>491</a>              EventKind::Sep(SepKind::Word(word)) =&gt; {
+<a href=#492 id=492 data-nosnippet>492</a>                !events::is_separator_word(word)
+<a href=#493 id=493 data-nosnippet>493</a>                  || line
+<a href=#494 id=494 data-nosnippet>494</a>                    .events
+<a href=#495 id=495 data-nosnippet>495</a>                    .iter()
+<a href=#496 id=496 data-nosnippet>496</a>                    .rev()
+<a href=#497 id=497 data-nosnippet>497</a>                    .find(|e| e.kind != EventKind::Layout)
+<a href=#498 id=498 data-nosnippet>498</a>                    .is_some_and(|last| std::ptr::eq(<span class="kw-2">*</span>last, <span class="kw-2">*</span>e))
+<a href=#499 id=499 data-nosnippet>499</a>              },
+<a href=#500 id=500 data-nosnippet>500</a>              <span class="kw">_ </span>=&gt; <span class="bool-val">false</span>,
+<a href=#501 id=501 data-nosnippet>501</a>            };
+<a href=#502 id=502 data-nosnippet>502</a>            <span class="kw">if </span>line
+<a href=#503 id=503 data-nosnippet>503</a>              .events
+<a href=#504 id=504 data-nosnippet>504</a>              .iter()
+<a href=#505 id=505 data-nosnippet>505</a>              .rev()
+<a href=#506 id=506 data-nosnippet>506</a>              .find(|e| {
+<a href=#507 id=507 data-nosnippet>507</a>                !<span class="macro">matches!</span>(
+<a href=#508 id=508 data-nosnippet>508</a>                  e.kind,
+<a href=#509 id=509 data-nosnippet>509</a>                  EventKind::Layout | EventKind::Contact | EventKind::Note
+<a href=#510 id=510 data-nosnippet>510</a>                )
+<a href=#511 id=511 data-nosnippet>511</a>              })
+<a href=#512 id=512 data-nosnippet>512</a>              .is_some_and(ends_open)
+<a href=#513 id=513 data-nosnippet>513</a>            {
+<a href=#514 id=514 data-nosnippet>514</a>              open_rows.push(line.column);
+<a href=#515 id=515 data-nosnippet>515</a>            }
+<a href=#516 id=516 data-nosnippet>516</a>            <span class="self">self</span>.marks_lead = led_names[n];
+<a href=#517 id=517 data-nosnippet>517</a>            <span class="kw">let </span>made = <span class="self">self</span>.names_line(index, policy, cautious, line, <span class="kw-2">&amp;</span>block_requests, group);
+<a href=#518 id=518 data-nosnippet>518</a>            <span class="self">self</span>.marks_lead = <span class="bool-val">false</span>;
+<a href=#519 id=519 data-nosnippet>519</a>            <span class="kw">if </span>led_names[n] {
+<a href=#520 id=520 data-nosnippet>520</a>              <span class="kw">for </span><span class="kw-2">&amp;</span>c <span class="kw">in </span><span class="kw-2">&amp;</span>made.creators {
+<a href=#521 id=521 data-nosnippet>521</a>                <span class="self">self</span>.out.creators[c].rule.push_str(<span class="string">" mark:prefix"</span>);
+<a href=#522 id=522 data-nosnippet>522</a>              }
+<a href=#523 id=523 data-nosnippet>523</a>            }
+<a href=#524 id=524 data-nosnippet>524</a>            <span class="comment">// (a later column's first name is parted from the name before by the `\and` (or `&amp;`) that opened the
+<a href=#525 id=525 data-nosnippet>525</a>            // column: `Chris Kapulkin \arxivortac{\and}{and} Peter LeFanu Lumsdaine`, 2006.13694)
+<a href=#526 id=526 data-nosnippet>526</a>            </span><span class="kw">if </span>line.column &gt; <span class="number">0
+<a href=#527 id=527 data-nosnippet>527</a>              </span>&amp;&amp; column_first
+<a href=#528 id=528 data-nosnippet>528</a>              &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span>first) = made.creators.first()
+<a href=#529 id=529 data-nosnippet>529</a>              &amp;&amp; !<span class="self">self</span>.out.creators[first].rule.contains(<span class="string">"sep:"</span>)
+<a href=#530 id=530 data-nosnippet>530</a>            {
+<a href=#531 id=531 data-nosnippet>531</a>              <span class="self">self</span>.out.creators[first].rule.push_str(<span class="string">" sep:column"</span>);
+<a href=#532 id=532 data-nosnippet>532</a>            }
+<a href=#533 id=533 data-nosnippet>533</a>            <span class="comment">// (a names row directly under the column's last, no line between answering it, goes on with its run)
+<a href=#534 id=534 data-nosnippet>534</a>            </span><span class="kw">let </span><span class="kw-2">mut </span>names_run = <span class="kw">if </span>under_affiliation {
+<a href=#535 id=535 data-nosnippet>535</a>              Vec::new()
+<a href=#536 id=536 data-nosnippet>536</a>            } <span class="kw">else </span>{
+<a href=#537 id=537 data-nosnippet>537</a>              run_above
+<a href=#538 id=538 data-nosnippet>538</a>                .iter()
+<a href=#539 id=539 data-nosnippet>539</a>                .rev()
+<a href=#540 id=540 data-nosnippet>540</a>                .find(|(c, <span class="kw">_</span>)| <span class="kw-2">*</span>c == line.column)
+<a href=#541 id=541 data-nosnippet>541</a>                .map(|(<span class="kw">_</span>, r)| r.clone())
+<a href=#542 id=542 data-nosnippet>542</a>                .unwrap_or_default()
+<a href=#543 id=543 data-nosnippet>543</a>            };
+<a href=#544 id=544 data-nosnippet>544</a>            names_run.extend(made.creators.iter().copied());
+<a href=#545 id=545 data-nosnippet>545</a>            run_above.push((line.column, names_run));
+<a href=#546 id=546 data-nosnippet>546</a>            row_above.push((line.column, made.creators));
+<a href=#547 id=547 data-nosnippet>547</a>            <span class="kw">continue</span>;
+<a href=#548 id=548 data-nosnippet>548</a>          }
+<a href=#549 id=549 data-nosnippet>549</a>          <span class="kw">if </span>only_contacts {
+<a href=#550 id=550 data-nosnippet>550</a>            <span class="kw">for </span>contact <span class="kw">in </span>line.events.iter().filter(|e| e.kind == EventKind::Contact) {
+<a href=#551 id=551 data-nosnippet>551</a>              <span class="comment">// (a grade no name comes before is no one's, never the row's: dropped, the content check counts it — revP5a B1)
+<a href=#552 id=552 data-nosnippet>552</a>              </span><span class="kw">if </span>contact.role.as_deref() == <span class="prelude-val">Some</span>(<span class="string">"membership"</span>) {
+<a href=#553 id=553 data-nosnippet>553</a>                <span class="kw">continue</span>;
+<a href=#554 id=554 data-nosnippet>554</a>              }
+<a href=#555 id=555 data-nosnippet>555</a>              <span class="comment">// (an in-block contact printing addresses alone is a line of addresses, whatever command made it: e-mails by
+<a href=#556 id=556 data-nosnippet>556</a>              // the owner chain among the block's names — `\IEEEauthorblockA{hanxinchi@sjtu.edu.cn, …}` under 17 names of
+<a href=#557 id=557 data-nosnippet>557</a>              // 17 `\and`-columns, 2603.28168, no affiliation of the last column's)
+<a href=#558 id=558 data-nosnippet>558</a>              </span><span class="kw">if </span>contact.label.is_none()
+<a href=#559 id=559 data-nosnippet>559</a>                &amp;&amp; contact.role.as_deref() == <span class="prelude-val">Some</span>(<span class="string">"affiliation"</span>)
+<a href=#560 id=560 data-nosnippet>560</a>                &amp;&amp; prints_only_addresses(<span class="kw-2">&amp;</span>contact.text)
+<a href=#561 id=561 data-nosnippet>561</a>              {
+<a href=#562 id=562 data-nosnippet>562</a>                <span class="kw">let </span>candidates: Vec&lt;usize&gt; =
+<a href=#563 id=563 data-nosnippet>563</a>                  (block_creators_start..<span class="self">self</span>.out.creators.len()).collect();
+<a href=#564 id=564 data-nosnippet>564</a>                <span class="kw">let </span>source = (index, contact.span);
+<a href=#565 id=565 data-nosnippet>565</a>                <span class="self">self</span>.place_line_contacts(
+<a href=#566 id=566 data-nosnippet>566</a>                  <span class="kw-2">&amp;</span>contact.text,
+<a href=#567 id=567 data-nosnippet>567</a>                  <span class="string">"email"</span>,
+<a href=#568 id=568 data-nosnippet>568</a>                  <span class="kw-2">&amp;</span>candidates,
+<a href=#569 id=569 data-nosnippet>569</a>                  source,
+<a href=#570 id=570 data-nosnippet>570</a>                  <span class="prelude-val">None</span>,
+<a href=#571 id=571 data-nosnippet>571</a>                  Chain::Line,
+<a href=#572 id=572 data-nosnippet>572</a>                );
+<a href=#573 id=573 data-nosnippet>573</a>                <span class="kw">continue</span>;
+<a href=#574 id=574 data-nosnippet>574</a>              }
+<a href=#575 id=575 data-nosnippet>575</a>              <span class="comment">// (a URL line under every name of the document's author list is the block's, its shared creator (OD #159,
+<a href=#576 id=576 data-nosnippet>576</a>              // `addresses:block`): a project's page, `Ann Able, Bob Baker \\ Univ A \\ \url{…}` — the old reader's
+<a href=#577 id=577 data-nosnippet>577</a>              // `LinkOwner::Block`, the old driver's `dispatch` (deleted, DEL2) and `link_line_owner`, user ruling 2026-10-20, batch 77p r7:
+<a href=#578 id=578 data-nosnippet>578</a>              // 2605.06223, 2602.08439, 2604.12896, 2604.20841, 2601.17879; FIDELITY_CHARTER §4 amended 2026-11-05.
+<a href=#579 id=579 data-nosnippet>579</a>              // Whether no names come after it is known at the block's end: decided there. A link printing an
+<a href=#580 id=580 data-nosnippet>580</a>              // institution is the names' affiliation, as the old rule's exception gives it every author:
+<a href=#581 id=581 data-nosnippet>581</a>              // `\href{https://www.google.com}{Google}`, `dispatch.rs`'s `link_prints_an_institution` (`href_prints_an_institution`), user ruling R12
+<a href=#582 id=582 data-nosnippet>582</a>              // 2026-10-20, the r5 re-review's u38, review revFB2a finding 3. A lone name's URL is its own, the group's
+<a href=#583 id=583 data-nosnippet>583</a>              // only author's — FIDELITY_CHARTER §4)
+<a href=#584 id=584 data-nosnippet>584</a>              </span><span class="kw">if </span><span class="self">self</span>.block_replaces
+<a href=#585 id=585 data-nosnippet>585</a>                &amp;&amp; above.len() &gt; <span class="number">1
+<a href=#586 id=586 data-nosnippet>586</a>                </span>&amp;&amp; contact_parts(contact).<span class="number">0 </span>== <span class="string">"url"
+<a href=#587 id=587 data-nosnippet>587</a>                </span>&amp;&amp; above
+<a href=#588 id=588 data-nosnippet>588</a>                  .iter()
+<a href=#589 id=589 data-nosnippet>589</a>                  .copied()
+<a href=#590 id=590 data-nosnippet>590</a>                  .eq(block_creators_start..<span class="self">self</span>.out.creators.len())
+<a href=#591 id=591 data-nosnippet>591</a>              {
+<a href=#592 id=592 data-nosnippet>592</a>                <span class="kw">if </span>contact
+<a href=#593 id=593 data-nosnippet>593</a>                  .target
+<a href=#594 id=594 data-nosnippet>594</a>                  .as_deref()
+<a href=#595 id=595 data-nosnippet>595</a>                  .is_some_and(|target| href_prints_an_institution(target, <span class="kw-2">&amp;</span>contact.text))
+<a href=#596 id=596 data-nosnippet>596</a>                {
+<a href=#597 id=597 data-nosnippet>597</a>                  <span class="kw">let </span>affiliation = Event {
+<a href=#598 id=598 data-nosnippet>598</a>                    role: <span class="prelude-val">Some</span>(<span class="string">"affiliation"</span>.into()),
+<a href=#599 id=599 data-nosnippet>599</a>                    ..(<span class="kw-2">*</span>contact).clone()
+<a href=#600 id=600 data-nosnippet>600</a>                  };
+<a href=#601 id=601 data-nosnippet>601</a>                  <span class="self">self</span>.contact_event(index, <span class="kw-2">&amp;</span>affiliation, <span class="kw-2">&amp;</span>above, <span class="string">"line:contact R12:row-above"</span>);
+<a href=#602 id=602 data-nosnippet>602</a>                } <span class="kw">else </span>{
+<a href=#603 id=603 data-nosnippet>603</a>                  block_links.push((contact, above.clone()));
+<a href=#604 id=604 data-nosnippet>604</a>                }
+<a href=#605 id=605 data-nosnippet>605</a>                <span class="kw">continue</span>;
+<a href=#606 id=606 data-nosnippet>606</a>              }
+<a href=#607 id=607 data-nosnippet>607</a>              <span class="self">self</span>.contact_event(index, contact, <span class="kw-2">&amp;</span>above, <span class="string">"line:contact R12:row-above"</span>);
+<a href=#608 id=608 data-nosnippet>608</a>            }
+<a href=#609 id=609 data-nosnippet>609</a>            <span class="kw">continue</span>;
+<a href=#610 id=610 data-nosnippet>610</a>          }
+<a href=#611 id=611 data-nosnippet>611</a>          <span class="comment">// (a line whose marks trail their text is labelled entries: `Nanyang Technological University$^1$,
+<a href=#612 id=612 data-nosnippet>612</a>          // Amazon$^2$`, 2507.05750)
+<a href=#613 id=613 data-nosnippet>613</a>          // (each of its marks one a name shows on another line: a symbol after an affiliation, `Harvard
+<a href=#614 id=614 data-nosnippet>614</a>          // University$^{*}$`, points to a note, 2307.02318)
+<a href=#615 id=615 data-nosnippet>615</a>          // (shown on a name: a mark another address line prints is no name's — aistats's `\aistatsaddress{Univ A$^*$
+<a href=#616 id=616 data-nosnippet>616</a>          // \And Univ B \And Univ A$^*$}` under names showing no `*` pairs each address with its column's name, as
+<a href=#617 id=617 data-nosnippet>617</a>          // the class prints column i under author i, 77o's `aistats_note_marked_address_still_pairs_by_column`)
+<a href=#618 id=618 data-nosnippet>618</a>          </span><span class="kw">let </span>trailing = trailing_entries(<span class="kw-2">&amp;</span>line.events);
+<a href=#619 id=619 data-nosnippet>619</a>          <span class="kw">let </span>shown_elsewhere = |label: <span class="kw-2">&amp;</span>String| {
+<a href=#620 id=620 data-nosnippet>620</a>            <span class="self">self</span>.out.creators[block_creators_start..]
+<a href=#621 id=621 data-nosnippet>621</a>              .iter()
+<a href=#622 id=622 data-nosnippet>622</a>              .any(|c| c.requests.iter().any(|r| label_matches(r, label)))
+<a href=#623 id=623 data-nosnippet>623</a>          };
+<a href=#624 id=624 data-nosnippet>624</a>          <span class="kw">if </span>!trailing.is_empty()
+<a href=#625 id=625 data-nosnippet>625</a>            &amp;&amp; trailing
+<a href=#626 id=626 data-nosnippet>626</a>              .iter()
+<a href=#627 id=627 data-nosnippet>627</a>              .all(|e| e.labels.iter().any(shown_elsewhere))
+<a href=#628 id=628 data-nosnippet>628</a>          {
+<a href=#629 id=629 data-nosnippet>629</a>            continues = <span class="self">self</span>.labelled_entries(index, trailing, <span class="string">" mark:trailing"</span>);
+<a href=#630 id=630 data-nosnippet>630</a>            <span class="kw">continue</span>;
+<a href=#631 id=631 data-nosnippet>631</a>          }
+<a href=#632 id=632 data-nosnippet>632</a>          <span class="comment">// an unmarked line under names: an address line by the owner chain, else the row above's affiliation
+<a href=#633 id=633 data-nosnippet>633</a>          </span><span class="kw">let </span>source = (
+<a href=#634 id=634 data-nosnippet>634</a>            index,
+<a href=#635 id=635 data-nosnippet>635</a>            line.events.iter().find(|e| inked(e)).and_then(|e| e.span),
+<a href=#636 id=636 data-nosnippet>636</a>          );
+<a href=#637 id=637 data-nosnippet>637</a>          <span class="kw">let </span>notes: Vec&lt;<span class="kw-2">&amp;</span>Event&gt; = line
+<a href=#638 id=638 data-nosnippet>638</a>            .events
+<a href=#639 id=639 data-nosnippet>639</a>            .iter()
+<a href=#640 id=640 data-nosnippet>640</a>            .copied()
+<a href=#641 id=641 data-nosnippet>641</a>            .filter(|e| e.kind == EventKind::Note)
+<a href=#642 id=642 data-nosnippet>642</a>            .collect();
+<a href=#643 id=643 data-nosnippet>643</a>          <span class="comment">// (a line of notes only mixing notes a name's mark requests with one no mark labels: the requested notes their
+<a href=#644 id=644 data-nosnippet>644</a>          // names', the other the block's, no name's by its place — as the old reader joins such a line, OD #957
+<a href=#645 id=645 data-nosnippet>645</a>          // `notes_the_names_request`: `\\ \thanks{$^{1}$Univ A}\thanks{This work was funded by …}`, 2609.17106,
+<a href=#646 id=646 data-nosnippet>646</a>          // review rev100c S1; a line of unrequested notes alone stays the line owner's, as today's, SYNC_STATUS 100c)
+<a href=#647 id=647 data-nosnippet>647</a>          </span><span class="kw">if </span>text.is_empty() {
+<a href=#648 id=648 data-nosnippet>648</a>            <span class="kw">let </span>live = <span class="self">self</span>.live();
+<a href=#649 id=649 data-nosnippet>649</a>            <span class="kw">let </span>requested = |note: <span class="kw-2">&amp;</span>Event| {
+<a href=#650 id=650 data-nosnippet>650</a>              leading_mark(note).is_some_and(|(labels, <span class="kw">_</span>)| {
+<a href=#651 id=651 data-nosnippet>651</a>                labels
+<a href=#652 id=652 data-nosnippet>652</a>                  .iter()
+<a href=#653 id=653 data-nosnippet>653</a>                  .any(|l| !label_owners(<span class="kw-2">&amp;</span><span class="self">self</span>.out.creators, <span class="kw-2">&amp;</span>live, l).is_empty())
+<a href=#654 id=654 data-nosnippet>654</a>              })
+<a href=#655 id=655 data-nosnippet>655</a>            };
+<a href=#656 id=656 data-nosnippet>656</a>            <span class="kw">let </span>asked: Vec&lt;bool&gt; = notes.iter().map(|note| requested(note)).collect();
+<a href=#657 id=657 data-nosnippet>657</a>            <span class="kw">let </span>mixed = asked.contains(<span class="kw-2">&amp;</span><span class="bool-val">true</span>);
+<a href=#658 id=658 data-nosnippet>658</a>            <span class="comment">// (a line of notes under a labelled entry is that entry's line, as today's one `\\`-joined contact: its notes
+<a href=#659 id=659 data-nosnippet>659</a>            // the block's, as Perl digests them in the contact (`\lx@add@pubnote@thanks`), one `&lt;pubnote&gt;` each — `$^{2}$Univ
+<a href=#660 id=660 data-nosnippet>660</a>            // B, City\\ \thanks{Equal contribution.}` gave the last name the thanks, review revLO2 base)
+<a href=#661 id=661 data-nosnippet>661</a>            </span><span class="kw">let </span>entry_line = <span class="macro">matches!</span>(carried, <span class="prelude-val">Some</span>(Continued::Pending(<span class="kw">_</span>)));
+<a href=#662 id=662 data-nosnippet>662</a>            <span class="kw">for </span>(note, asked) <span class="kw">in </span>notes.into_iter().zip(asked) {
+<a href=#663 id=663 data-nosnippet>663</a>              <span class="kw">if </span>mixed &amp;&amp; !asked {
+<a href=#664 id=664 data-nosnippet>664</a>                <span class="self">self</span>.note(index, note, <span class="prelude-val">None</span>, <span class="string">"note:line-owner note:unrequested"</span>);
+<a href=#665 id=665 data-nosnippet>665</a>              } <span class="kw">else if </span>entry_line {
+<a href=#666 id=666 data-nosnippet>666</a>                <span class="self">self</span>.note(index, note, <span class="prelude-val">None</span>, <span class="string">"note:line-owner note:entry"</span>);
+<a href=#667 id=667 data-nosnippet>667</a>              } <span class="kw">else </span>{
+<a href=#668 id=668 data-nosnippet>668</a>                <span class="self">self</span>.note(index, note, above.last().copied(), <span class="string">"note:line-owner"</span>);
+<a href=#669 id=669 data-nosnippet>669</a>              }
+<a href=#670 id=670 data-nosnippet>670</a>            }
+<a href=#671 id=671 data-nosnippet>671</a>            <span class="kw">continue</span>;
+<a href=#672 id=672 data-nosnippet>672</a>          }
+<a href=#673 id=673 data-nosnippet>673</a>          <span class="comment">// (an unmarked line under a labelled entry continues it, as today's one `\\`-joined contact — a line holding an
+<a href=#674 id=674 data-nosnippet>674</a>          // address beside other text too: `$^{(1)}$Dept \\ Univ \\ City. \{ann,bob\}@upc.edu`, 2509.12185; a line of
+<a href=#675 id=675 data-nosnippet>675</a>          // addresses alone is e-mails by the owner chain, below: `$^1$Dept \\ landi@univ.trieste.it`, 0801.3376, 0810.3062)
+<a href=#676 id=676 data-nosnippet>676</a>          // (a line inside the group an unmarked line above opened is that affiliation's: `\\ \small{\textit{Dept …,
+<a href=#677 id=677 data-nosnippet>677</a>          // and\\ Institute …,\\ Facultad …}}`, one print unit, as today's one contact — 1012.1813)
+<a href=#678 id=678 data-nosnippet>678</a>          // (a line after a break inside the braced group the unmarked line above is in continues its affiliation, one
+<a href=#679 id=679 data-nosnippet>679</a>          // print unit, as today's one contact: `Xuhui Peng \\ {\em\tiny College of Mathematics …,\\ Changsha, Hunan
+<a href=#680 id=680 data-nosnippet>680</a>          // 410081, P. R. China}`, 1710.07902; `\textsl{Pure Mathematics\\University of Waterloo\\…}`, math0610612 — no
+<a href=#681 id=681 data-nosnippet>681</a>          // line of addresses alone)
+<a href=#682 id=682 data-nosnippet>682</a>          </span><span class="kw">if </span>line.group_break
+<a href=#683 id=683 data-nosnippet>683</a>            &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(places) = unmarked_above
+<a href=#684 id=684 data-nosnippet>684</a>            &amp;&amp; !prints_only_addresses(<span class="kw-2">&amp;</span>text)
+<a href=#685 id=685 data-nosnippet>685</a>          {
+<a href=#686 id=686 data-nosnippet>686</a>            <span class="self">self</span>.continue_entry(<span class="kw-2">&amp;</span>Continued::Joined(places.clone()), <span class="kw-2">&amp;</span>text);
+<a href=#687 id=687 data-nosnippet>687</a>            <span class="kw">for </span>note <span class="kw">in </span>notes {
+<a href=#688 id=688 data-nosnippet>688</a>              <span class="self">self</span>.note(index, note, above.last().copied(), <span class="string">"note:line-owner"</span>);
+<a href=#689 id=689 data-nosnippet>689</a>            }
+<a href=#690 id=690 data-nosnippet>690</a>            unmarked_before = <span class="prelude-val">Some</span>(places);
+<a href=#691 id=691 data-nosnippet>691</a>            <span class="kw">continue</span>;
+<a href=#692 id=692 data-nosnippet>692</a>          }
+<a href=#693 id=693 data-nosnippet>693</a>          <span class="comment">// (a line under one name, the only name of its run of rows, that is the collaboration it speaks for is the
+<a href=#694 id=694 data-nosnippet>694</a>          // name's collaboration contact, no part of the name and no affiliation (row C5, the old reader's
+<a href=#695 id=695 data-nosnippet>695</a>          // `collaboration_line_before`; FIDELITY_CHARTER §4, OXIDIZED_DESIGN_DIVERGENCES #946): `{\slshape Maxime
+<a href=#696 id=696 data-nosnippet>696</a>          // Defurne$^1$}\\ {\footnotesize for the Hall A DVCS collaboration}`, 1502.03246 (review rev94a S6 joined it to
+<a href=#697 id=697 data-nosnippet>697</a>          // the name, as Perl's one personname); `Carolyn Brown$^1$\\ on behalf of the Bcool project team`, 1310.6507;
+<a href=#698 id=698 data-nosnippet>698</a>          // a bracketed line under rows of names is theirs, R12: `(The Nearby Supernova Factory)`, 1511.01102)
+<a href=#699 id=699 data-nosnippet>699</a>          </span><span class="kw">if </span>speaks_for(<span class="kw-2">&amp;</span>text)
+<a href=#700 id=700 data-nosnippet>700</a>            &amp;&amp; <span class="kw">let </span>[c] = above[..]
+<a href=#701 id=701 data-nosnippet>701</a>            &amp;&amp; run.iter().all(|<span class="kw-2">&amp;</span>r| r == c)
+<a href=#702 id=702 data-nosnippet>702</a>            &amp;&amp; <span class="self">self</span>.out.creators[c].affiliations.is_empty()
+<a href=#703 id=703 data-nosnippet>703</a>            &amp;&amp; <span class="self">self</span>.out.creators[c].contacts.is_empty()
+<a href=#704 id=704 data-nosnippet>704</a>          {
+<a href=#705 id=705 data-nosnippet>705</a>            <span class="comment">// (sourced at the line's ink, its first inked event to its last: the emitter writes it in the markup it prints
+<a href=#706 id=706 data-nosnippet>706</a>            // in, `{\footnotesize …}`'s size — review revNL1 S3)
+<a href=#707 id=707 data-nosnippet>707</a>            </span><span class="kw">let </span><span class="kw-2">mut </span>inked_spans = line
+<a href=#708 id=708 data-nosnippet>708</a>              .events
+<a href=#709 id=709 data-nosnippet>709</a>              .iter()
+<a href=#710 id=710 data-nosnippet>710</a>              .filter(|e| inked(e))
+<a href=#711 id=711 data-nosnippet>711</a>              .filter_map(|e| e.span);
+<a href=#712 id=712 data-nosnippet>712</a>            <span class="kw">let </span>span = inked_spans
+<a href=#713 id=713 data-nosnippet>713</a>              .clone()
+<a href=#714 id=714 data-nosnippet>714</a>              .next()
+<a href=#715 id=715 data-nosnippet>715</a>              .zip(inked_spans.next_back())
+<a href=#716 id=716 data-nosnippet>716</a>              .map(|((start, <span class="kw">_</span>), (<span class="kw">_</span>, end))| (start, end));
+<a href=#717 id=717 data-nosnippet>717</a>            <span class="self">self</span>.collaboration(index, span, <span class="kw-2">&amp;</span>[c], text.trim());
+<a href=#718 id=718 data-nosnippet>718</a>            <span class="kw">for </span>note <span class="kw">in </span>notes {
+<a href=#719 id=719 data-nosnippet>719</a>              <span class="self">self</span>.note(index, note, <span class="prelude-val">Some</span>(c), <span class="string">"note:line-owner"</span>);
+<a href=#720 id=720 data-nosnippet>720</a>            }
+<a href=#721 id=721 data-nosnippet>721</a>            <span class="kw">continue</span>;
+<a href=#722 id=722 data-nosnippet>722</a>          }
+<a href=#723 id=723 data-nosnippet>723</a>          <span class="kw">let </span>starts = source.<span class="number">1</span>.map(|(start, <span class="kw">_</span>)| start);
+<a href=#724 id=724 data-nosnippet>724</a>          <span class="kw">match </span>open_group.take() {
+<a href=#725 id=725 data-nosnippet>725</a>            <span class="prelude-val">Some</span>((until, places)) <span class="kw">if </span>starts.is_some_and(|start| start &lt; until) =&gt; {
+<a href=#726 id=726 data-nosnippet>726</a>              <span class="self">self</span>.continue_entry(<span class="kw-2">&amp;</span>Continued::Joined(places.clone()), <span class="kw-2">&amp;</span>text);
+<a href=#727 id=727 data-nosnippet>727</a>              open_group = <span class="prelude-val">Some</span>((until, places));
+<a href=#728 id=728 data-nosnippet>728</a>              <span class="kw">continue</span>;
+<a href=#729 id=729 data-nosnippet>729</a>            },
+<a href=#730 id=730 data-nosnippet>730</a>            <span class="kw">_ </span>=&gt; {},
+<a href=#731 id=731 data-nosnippet>731</a>          }
+<a href=#732 id=732 data-nosnippet>732</a>          <span class="comment">// (a line of addresses alone, placed below, leaves the entry open: the unmarked line after it is the entry's, as
+<a href=#733 id=733 data-nosnippet>733</a>          // today's one `\\`-joined contact, no affiliation of every name — `$^2$CNRS, LAB \\ email \tt{…} \\ To appear in …`,
+<a href=#734 id=734 data-nosnippet>734</a>          // 1209.0869; 2606.23976, 0910.1386, 1411.2744)
+<a href=#735 id=735 data-nosnippet>735</a>          </span><span class="kw">let </span>carried = <span class="kw">if </span>!prints_only_addresses(<span class="kw-2">&amp;</span>text) {
+<a href=#736 id=736 data-nosnippet>736</a>            <span class="kw">if let </span><span class="prelude-val">Some</span>(carried) = carried {
+<a href=#737 id=737 data-nosnippet>737</a>              <span class="self">self</span>.continue_line(index, <span class="kw-2">&amp;</span>carried, <span class="kw-2">&amp;</span>text, notes, above.last().copied());
+<a href=#738 id=738 data-nosnippet>738</a>              continues = <span class="prelude-val">Some</span>(carried);
+<a href=#739 id=739 data-nosnippet>739</a>              <span class="kw">continue</span>;
+<a href=#740 id=740 data-nosnippet>740</a>            }
+<a href=#741 id=741 data-nosnippet>741</a>            <span class="prelude-val">None
+<a href=#742 id=742 data-nosnippet>742</a>          </span>} <span class="kw">else </span>{
+<a href=#743 id=743 data-nosnippet>743</a>            carried
+<a href=#744 id=744 data-nosnippet>744</a>          };
+<a href=#745 id=745 data-nosnippet>745</a>          <span class="comment">// (an institution line with its address beside it is an unmarked line, the address in its text, as a continued
+<a href=#746 id=746 data-nosnippet>746</a>          // line's is — `1. Chester F. Carlson Center …, NY 14623; JHK's email: jhk@cis.rit.edu` under marked names,
+<a href=#747 id=747 data-nosnippet>747</a>          // astro-ph0202139, whose institutions the address branch lost; its hand-written `1.` stays unread, OPEN_ROWS
+<a href=#748 id=748 data-nosnippet>748</a>          // FM-24)
+<a href=#749 id=749 data-nosnippet>749</a>          </span><span class="kw">let </span>beside: String = text
+<a href=#750 id=750 data-nosnippet>750</a>            .split_whitespace()
+<a href=#751 id=751 data-nosnippet>751</a>            .filter(|w| !w.contains(<span class="string">'@'</span>))
+<a href=#752 id=752 data-nosnippet>752</a>            .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
+<a href=#753 id=753 data-nosnippet>753</a>            .join(<span class="string">" "</span>);
+<a href=#754 id=754 data-nosnippet>754</a>          <span class="comment">// (an address decides only its own ink: the line's other text, its label word aside, is the item it continues —
+<a href=#755 id=755 data-nosnippet>755</a>          // the unmarked line above, of its column, ending in a comma — or, under one names row and no column, every
+<a href=#756 id=756 data-nosnippet>756</a>          // author's of the row, an unmarked line as any, the address taken out of its text by the chain
+<a href=#757 id=757 data-nosnippet>757</a>          // (`take_out_entry_addresses`), as today's gives the line to them all: `Ann Able and Bob Baker\\ Institute of
+<a href=#758 id=758 data-nosnippet>758</a>          // Things, Univ.\ A,\\ Dresden, Saxony 01062, Germany (bob.baker@a.org)`, whose city went to Bob alone; 1605.03019's
+<a href=#759 id=759 data-nosnippet>759</a>          // `\quad`-parted names over `\small{IDSIA, 6928 Manno, Switzerland}{\{adam, samuli, monaldo\}@idsia.ch}`,
+<a href=#760 id=760 data-nosnippet>760</a>          // whose institute went to no one; 2203.10777)
+<a href=#761 id=761 data-nosnippet>761</a>          </span><span class="kw">let </span>runs = address_runs(<span class="kw-2">&amp;</span>text, <span class="kw-2">&amp;</span>|<span class="kw">_</span>| <span class="bool-val">false</span>);
+<a href=#762 id=762 data-nosnippet>762</a>          <span class="kw">let </span>labels: Vec&lt;String&gt; = runs
+<a href=#763 id=763 data-nosnippet>763</a>            .iter()
+<a href=#764 id=764 data-nosnippet>764</a>            .filter_map(|run| run.label.as_deref())
+<a href=#765 id=765 data-nosnippet>765</a>            .flat_map(printed_words)
+<a href=#766 id=766 data-nosnippet>766</a>            .map(str::to_lowercase)
+<a href=#767 id=767 data-nosnippet>767</a>            .collect();
+<a href=#768 id=768 data-nosnippet>768</a>          <span class="comment">// (the address reader's runs out, and any address it leaves where it prints — a tagged one, `ann@a.org (Ann)`)
+<a href=#769 id=769 data-nosnippet>769</a>          </span><span class="kw">let </span>rest = strip_address_runs(<span class="kw-2">&amp;</span>text, <span class="kw-2">&amp;</span>runs)
+<a href=#770 id=770 data-nosnippet>770</a>            .split_whitespace()
+<a href=#771 id=771 data-nosnippet>771</a>            .filter(|w| !w.contains(<span class="string">'@'</span>))
+<a href=#772 id=772 data-nosnippet>772</a>            .collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()
+<a href=#773 id=773 data-nosnippet>773</a>            .join(<span class="string">" "</span>);
+<a href=#774 id=774 data-nosnippet>774</a>          <span class="kw">let </span>addresses = addresses_in(<span class="kw-2">&amp;</span>text);
+<a href=#775 id=775 data-nosnippet>775</a>          <span class="kw">let </span>other_ink = !reads_as_email_label(<span class="kw-2">&amp;</span>rest)
+<a href=#776 id=776 data-nosnippet>776</a>            &amp;&amp; printed_words(<span class="kw-2">&amp;</span>rest).any(|word| !labels.contains(<span class="kw-2">&amp;</span>word.to_lowercase()));
+<a href=#777 id=777 data-nosnippet>777</a>          <span class="kw">let </span>continues_above = unmarked_line_above
+<a href=#778 id=778 data-nosnippet>778</a>            &amp;&amp; n &gt; <span class="number">0
+<a href=#779 id=779 data-nosnippet>779</a>            </span>&amp;&amp; lines[n - <span class="number">1</span>].column == line.column
+<a href=#780 id=780 data-nosnippet>780</a>            &amp;&amp; lines[n - <span class="number">1</span>]
+<a href=#781 id=781 data-nosnippet>781</a>              .events
+<a href=#782 id=782 data-nosnippet>782</a>              .iter()
+<a href=#783 id=783 data-nosnippet>783</a>              .rev()
+<a href=#784 id=784 data-nosnippet>784</a>              .find(|e| !<span class="macro">matches!</span>(e.kind, EventKind::Layout))
+<a href=#785 id=785 data-nosnippet>785</a>              .is_some_and(|e| <span class="macro">matches!</span>(e.kind, EventKind::Sep(SepKind::Comma)));
+<a href=#786 id=786 data-nosnippet>786</a>          <span class="comment">// (its addresses spelling one author, the line is that author's, its other inks with it: `POC: A. Able
+<a href=#787 id=787 data-nosnippet>787</a>          // (ann.able@a.org)`, 2110.03506; `ann.able@a.org (corresponding)`, `Written::lost_inks`)
+<a href=#788 id=788 data-nosnippet>788</a>          </span><span class="kw">let </span>owners: std::collections::BTreeSet&lt;<span class="prelude-ty">Option</span>&lt;usize&gt;&gt; = addresses
+<a href=#789 id=789 data-nosnippet>789</a>            .iter()
+<a href=#790 id=790 data-nosnippet>790</a>            .map(|address| <span class="self">self</span>.spelled(address, <span class="kw-2">&amp;</span>run))
+<a href=#791 id=791 data-nosnippet>791</a>            .collect();
+<a href=#792 id=792 data-nosnippet>792</a>          <span class="kw">let </span>one_owner = <span class="macro">matches!</span>(owners.iter().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;()[..], [<span class="prelude-val">Some</span>(<span class="kw">_</span>)]);
+<a href=#793 id=793 data-nosnippet>793</a>          <span class="comment">// (nor is a name its own address spells, a name the reading lost, any row's: `Ann Able ann@a.org\\ Bob Baker
+<a href=#794 id=794 data-nosnippet>794</a>          // bob@b.org`, the block written whole for it, `LostInk::names_fail`)
+<a href=#795 id=795 data-nosnippet>795</a>          </span><span class="kw">let </span>own_name = addresses
+<a href=#796 id=796 data-nosnippet>796</a>            .iter()
+<a href=#797 id=797 data-nosnippet>797</a>            .any(|address| spelled_name(<span class="kw-2">&amp;</span>[rest.as_str()], address).is_some());
+<a href=#798 id=798 data-nosnippet>798</a>          <span class="kw">let </span>one_row =
+<a href=#799 id=799 data-nosnippet>799</a>            !run.is_empty() &amp;&amp; lines.iter().all(|l| l.column == <span class="number">0</span>) &amp;&amp; !after_labelled &amp;&amp; !one_owner;
+<a href=#800 id=800 data-nosnippet>800</a>          <span class="kw">let </span>row_line =
+<a href=#801 id=801 data-nosnippet>801</a>            other_ink &amp;&amp; !own_name &amp;&amp; !only_addresses(<span class="kw-2">&amp;</span>text) &amp;&amp; (continues_above || one_row);
+<a href=#802 id=802 data-nosnippet>802</a>          <span class="kw">if </span>!addresses_in(<span class="kw-2">&amp;</span>text).is_empty()
+<a href=#803 id=803 data-nosnippet>803</a>            &amp;&amp; !row_line
+<a href=#804 id=804 data-nosnippet>804</a>            &amp;&amp; (only_addresses(<span class="kw-2">&amp;</span>text) || !is_institution(<span class="kw-2">&amp;</span>beside))
+<a href=#805 id=805 data-nosnippet>805</a>          {
+<a href=#806 id=806 data-nosnippet>806</a>            <span class="comment">// (a list of addresses running on over the next lines — the line ending in a comma, each next line addresses
+<a href=#807 id=807 data-nosnippet>807</a>            // alone — is one print: `E-mails: 202010106047@mail.scut.edu.cn, \\ scbingli@scut.edu.cn`, whose second
+<a href=#808 id=808 data-nosnippet>808</a>            // address spells Bing Li, leaving the first to Bo Wang by elimination, 2312.05446)
+<a href=#809 id=809 data-nosnippet>809</a>            </span><span class="kw">let </span><span class="kw-2">mut </span>text = text.clone();
+<a href=#810 id=810 data-nosnippet>810</a>            <span class="kw">let </span><span class="kw-2">mut </span>last = n;
+<a href=#811 id=811 data-nosnippet>811</a>            <span class="kw">while </span>lines[last]
+<a href=#812 id=812 data-nosnippet>812</a>              .events
+<a href=#813 id=813 data-nosnippet>813</a>              .iter()
+<a href=#814 id=814 data-nosnippet>814</a>              .rev()
+<a href=#815 id=815 data-nosnippet>815</a>              .find(|e| !<span class="macro">matches!</span>(e.kind, EventKind::Layout))
+<a href=#816 id=816 data-nosnippet>816</a>              .is_some_and(|e| <span class="macro">matches!</span>(e.kind, EventKind::Sep(SepKind::Comma)))
+<a href=#817 id=817 data-nosnippet>817</a>              &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(next) = lines.get(last + <span class="number">1</span>)
+<a href=#818 id=818 data-nosnippet>818</a>              &amp;&amp; next.column == line.column
+<a href=#819 id=819 data-nosnippet>819</a>            {
+<a href=#820 id=820 data-nosnippet>820</a>              <span class="kw">let </span>next_text = events_text(<span class="kw-2">&amp;</span>next.events);
+<a href=#821 id=821 data-nosnippet>821</a>              <span class="kw">if </span>!prints_only_addresses(<span class="kw-2">&amp;</span>next_text) {
+<a href=#822 id=822 data-nosnippet>822</a>                <span class="kw">break</span>;
+<a href=#823 id=823 data-nosnippet>823</a>              }
+<a href=#824 id=824 data-nosnippet>824</a>              text = <span class="macro">s!</span>(<span class="string">"{text} {next_text}"</span>);
+<a href=#825 id=825 data-nosnippet>825</a>              last += <span class="number">1</span>;
+<a href=#826 id=826 data-nosnippet>826</a>            }
+<a href=#827 id=827 data-nosnippet>827</a>            skip_to = last;
+<a href=#828 id=828 data-nosnippet>828</a>            continues = carried;
+<a href=#829 id=829 data-nosnippet>829</a>            <span class="kw">let </span>candidates: Vec&lt;usize&gt; = (block_creators_start..<span class="self">self</span>.out.creators.len()).collect();
+<a href=#830 id=830 data-nosnippet>830</a>            <span class="self">self</span>.place_line_contacts(<span class="kw-2">&amp;</span>text, <span class="string">"email"</span>, <span class="kw-2">&amp;</span>candidates, source, <span class="prelude-val">None</span>, Chain::Line);
+<a href=#831 id=831 data-nosnippet>831</a>            <span class="comment">// (the notes of the list's lines are the block's: a line of addresses is no one name's, so no place makes
+<a href=#832 id=832 data-nosnippet>832</a>            // its note a name's — the lines read on to were skipped after, and their notes went unread, review
+<a href=#833 id=833 data-nosnippet>833</a>            // revfms2a2_5 finding 6; 2406.07529's `\vphantom{\thanks{Equal contribution.}}` after the last address,
+<a href=#834 id=834 data-nosnippet>834</a>            // which today's XML loses. Their Contact events' addresses are the list's text, placed above)
+<a href=#835 id=835 data-nosnippet>835</a>            </span><span class="kw">let </span>notes: Vec&lt;<span class="kw-2">&amp;</span>Event&gt; = lines[n..=last]
+<a href=#836 id=836 data-nosnippet>836</a>              .iter()
+<a href=#837 id=837 data-nosnippet>837</a>              .flat_map(|l| l.events.iter().copied())
+<a href=#838 id=838 data-nosnippet>838</a>              .filter(|e| e.kind == EventKind::Note)
+<a href=#839 id=839 data-nosnippet>839</a>              .collect();
+<a href=#840 id=840 data-nosnippet>840</a>            <span class="kw">for </span>note <span class="kw">in </span>notes {
+<a href=#841 id=841 data-nosnippet>841</a>              <span class="self">self</span>.note(index, note, <span class="prelude-val">None</span>, <span class="string">"note:address-line"</span>);
+<a href=#842 id=842 data-nosnippet>842</a>            }
+<a href=#843 id=843 data-nosnippet>843</a>            <span class="kw">continue</span>;
+<a href=#844 id=844 data-nosnippet>844</a>          }
+<a href=#845 id=845 data-nosnippet>845</a>          <span class="comment">// (each unmarked line its own contact, as each `\\` line is today's: 0707.1113, 1404.0431; ruling 3 — but under a
+<a href=#846 id=846 data-nosnippet>846</a>          // names row whose names show marks no line answers, the lines are one affiliation of every name, as today's
+<a href=#847 id=847 data-nosnippet>847</a>          // `\\`-joined contact: `Riemann$^1$, … \\ 1- DESY in Zeuthen \\ Platanenallee 6, …`, 0903.2366, 2303.09899; a
+<a href=#848 id=848 data-nosnippet>848</a>          // footnote symbol is no such mark, `Marciniak$^{*}$ \\ Department … \\ Campus …` stays a contact a line,
+<a href=#849 id=849 data-nosnippet>849</a>          // 0707.1113)
+<a href=#850 id=850 data-nosnippet>850</a>          </span><span class="kw">let </span>joined = run.iter().any(|<span class="kw-2">&amp;</span>c| {
+<a href=#851 id=851 data-nosnippet>851</a>            <span class="self">self</span>.out.creators[c]
+<a href=#852 id=852 data-nosnippet>852</a>              .requests
+<a href=#853 id=853 data-nosnippet>853</a>              .iter()
+<a href=#854 id=854 data-nosnippet>854</a>              .any(|r| !is_symbol_label(r))
+<a href=#855 id=855 data-nosnippet>855</a>          });
+<a href=#856 id=856 data-nosnippet>856</a>          <span class="comment">// (an address decides only its own ink, its holder too: a line the row holds whose addresses spell one of the
+<a href=#857 id=857 data-nosnippet>857</a>          // row is that one's e-mail, the line's other text the row's, as the old driver placed it — 2203.10777's
+<a href=#858 id=858 data-nosnippet>858</a>          // `Dresden, Saxony 01062, Germany (martin.waltz@tu-dresden.de)` under Martin Waltz, written whole with the
+<a href=#859 id=859 data-nosnippet>859</a>          // address on int146a's LO1 (review revLO1 1); `Ann Able and Bob Baker\\ Univ A\\ Present address: Dept X, Univ Y
+<a href=#860 id=860 data-nosnippet>860</a>          // (ann.able@y.org)`, Ann's e-mail and both authors' text without it (revLO1 2). Only an address printed last on
+<a href=#861 id=861 data-nosnippet>861</a>          // its line, so the emitter cuts the rest from its tokens)
+<a href=#862 id=862 data-nosnippet>862</a>          // (every address printed last: no other ink between or after them — `Dresden, Germany (bob.baker@a.org); Leipzig
+<a href=#863 id=863 data-nosnippet>863</a>          // (bob@b.org)` keeps its reading, review revLO2 3; the emitter's cut ends at the first one, `prefix_tokens`)
+<a href=#864 id=864 data-nosnippet>864</a>          </span><span class="kw">let </span>own_ink = || {
+<a href=#865 id=865 data-nosnippet>865</a>            <span class="kw">let </span>cuts = address_cuts(<span class="kw-2">&amp;</span>text, <span class="kw-2">&amp;</span>runs);
+<a href=#866 id=866 data-nosnippet>866</a>            <span class="kw">let </span><span class="kw-2">mut </span>read: Vec&lt;<span class="kw-2">&amp;</span>String&gt; = runs.iter().flat_map(|r| <span class="kw-2">&amp;</span>r.addresses).collect();
+<a href=#867 id=867 data-nosnippet>867</a>            read.sort_unstable();
+<a href=#868 id=868 data-nosnippet>868</a>            read.dedup();
+<a href=#869 id=869 data-nosnippet>869</a>            <span class="kw">let </span>inkless =
+<a href=#870 id=870 data-nosnippet>870</a>              |from: usize, to: usize| !text[from..to].chars().any(char::is_alphanumeric);
+<a href=#871 id=871 data-nosnippet>871</a>            cuts
+<a href=#872 id=872 data-nosnippet>872</a>              .last()
+<a href=#873 id=873 data-nosnippet>873</a>              .filter(|&amp;&amp;(<span class="kw">_</span>, end)| inkless(end, text.len()))
+<a href=#874 id=874 data-nosnippet>874</a>              .filter(|<span class="kw">_</span>| cuts.windows(<span class="number">2</span>).all(|pair| inkless(pair[<span class="number">0</span>].<span class="number">1</span>, pair[<span class="number">1</span>].<span class="number">0</span>)))
+<a href=#875 id=875 data-nosnippet>875</a>              .filter(|<span class="kw">_</span>| {
+<a href=#876 id=876 data-nosnippet>876</a>                read.len() == addresses.len() &amp;&amp; addresses.iter().all(|a| read.contains(<span class="kw-2">&amp;</span>a))
+<a href=#877 id=877 data-nosnippet>877</a>              })
+<a href=#878 id=878 data-nosnippet>878</a>              .map(|<span class="kw">_</span>| strip_address_runs(<span class="kw-2">&amp;</span>text, <span class="kw-2">&amp;</span>runs))
+<a href=#879 id=879 data-nosnippet>879</a>              .filter(|rest| rest.chars().any(char::is_alphanumeric))
+<a href=#880 id=880 data-nosnippet>880</a>          };
+<a href=#881 id=881 data-nosnippet>881</a>          <span class="kw">let </span>held = (one_owner &amp;&amp; other_ink &amp;&amp; !own_name)
+<a href=#882 id=882 data-nosnippet>882</a>            .then(own_ink)
+<a href=#883 id=883 data-nosnippet>883</a>            .flatten();
+<a href=#884 id=884 data-nosnippet>884</a>          <span class="kw">let </span>text = <span class="kw">match </span>(owners.iter().next(), held) {
+<a href=#885 id=885 data-nosnippet>885</a>            (<span class="prelude-val">Some</span>(<span class="kw-2">&amp;</span><span class="prelude-val">Some</span>(owner)), <span class="prelude-val">Some</span>(rest)) =&gt; {
+<a href=#886 id=886 data-nosnippet>886</a>              <span class="kw">for </span>address <span class="kw">in </span><span class="kw-2">&amp;</span>addresses {
+<a href=#887 id=887 data-nosnippet>887</a>                <span class="comment">// (where the address prints as a contact of its own, its span: the emitter writes its tokens)
+<a href=#888 id=888 data-nosnippet>888</a>                </span><span class="kw">let </span>span = line
+<a href=#889 id=889 data-nosnippet>889</a>                  .events
+<a href=#890 id=890 data-nosnippet>890</a>                  .iter()
+<a href=#891 id=891 data-nosnippet>891</a>                  .find(|e| e.kind == EventKind::Contact &amp;&amp; e.text.contains(address.as_str()))
+<a href=#892 id=892 data-nosnippet>892</a>                  .and_then(|e| e.span)
+<a href=#893 id=893 data-nosnippet>893</a>                  .or(source.<span class="number">1</span>);
+<a href=#894 id=894 data-nosnippet>894</a>                <span class="self">self</span>.attach(
+<a href=#895 id=895 data-nosnippet>895</a>                  <span class="prelude-val">Some</span>(owner),
+<a href=#896 id=896 data-nosnippet>896</a>                  Assoc {
+<a href=#897 id=897 data-nosnippet>897</a>                    role:   <span class="string">"email"</span>.into(),
+<a href=#898 id=898 data-nosnippet>898</a>                    text:   address.clone(),
+<a href=#899 id=899 data-nosnippet>899</a>                    label:  <span class="prelude-val">None</span>,
+<a href=#900 id=900 data-nosnippet>900</a>                    rule:   <span class="string">"line:row-address owner:spelled"</span>.into(),
+<a href=#901 id=901 data-nosnippet>901</a>                    source: <span class="prelude-val">Some</span>((index, span)),
+<a href=#902 id=902 data-nosnippet>902</a>                    target: <span class="prelude-val">None</span>,
+<a href=#903 id=903 data-nosnippet>903</a>                  },
+<a href=#904 id=904 data-nosnippet>904</a>                  <span class="bool-val">false</span>,
+<a href=#905 id=905 data-nosnippet>905</a>                );
+<a href=#906 id=906 data-nosnippet>906</a>              }
+<a href=#907 id=907 data-nosnippet>907</a>              rest
+<a href=#908 id=908 data-nosnippet>908</a>            },
+<a href=#909 id=909 data-nosnippet>909</a>            <span class="kw">_ </span>=&gt; text,
+<a href=#910 id=910 data-nosnippet>910</a>          };
+<a href=#911 id=911 data-nosnippet>911</a>          <span class="kw">let </span><span class="kw-2">mut </span>places = Vec::new();
+<a href=#912 id=912 data-nosnippet>912</a>          <span class="kw">for </span>owner <span class="kw">in </span><span class="kw-2">&amp;</span>run {
+<a href=#913 id=913 data-nosnippet>913</a>            places.push((<span class="kw-2">*</span>owner, <span class="self">self</span>.out.creators[<span class="kw-2">*</span>owner].affiliations.len()));
+<a href=#914 id=914 data-nosnippet>914</a>            <span class="self">self</span>.attach(
+<a href=#915 id=915 data-nosnippet>915</a>              <span class="prelude-val">Some</span>(<span class="kw-2">*</span>owner),
+<a href=#916 id=916 data-nosnippet>916</a>              Assoc {
+<a href=#917 id=917 data-nosnippet>917</a>                role:   <span class="string">"affiliation"</span>.into(),
+<a href=#918 id=918 data-nosnippet>918</a>                text:   text.clone(),
+<a href=#919 id=919 data-nosnippet>919</a>                label:  <span class="prelude-val">None</span>,
+<a href=#920 id=920 data-nosnippet>920</a>                rule:   <span class="kw">if </span>joined {
+<a href=#921 id=921 data-nosnippet>921</a>                  <span class="string">"line:unmarked-joined R12:row-above"</span>.into()
+<a href=#922 id=922 data-nosnippet>922</a>                } <span class="kw">else </span>{
+<a href=#923 id=923 data-nosnippet>923</a>                  <span class="string">"line:unmarked R12:row-above"</span>.into()
+<a href=#924 id=924 data-nosnippet>924</a>                },
+<a href=#925 id=925 data-nosnippet>925</a>                source: <span class="prelude-val">Some</span>(source),
+<a href=#926 id=926 data-nosnippet>926</a>                target: <span class="prelude-val">None</span>,
+<a href=#927 id=927 data-nosnippet>927</a>              },
+<a href=#928 id=928 data-nosnippet>928</a>              <span class="bool-val">false</span>,
+<a href=#929 id=929 data-nosnippet>929</a>            );
+<a href=#930 id=930 data-nosnippet>930</a>          }
+<a href=#931 id=931 data-nosnippet>931</a>          <span class="kw">let </span>line_end = line
+<a href=#932 id=932 data-nosnippet>932</a>            .events
+<a href=#933 id=933 data-nosnippet>933</a>            .iter()
+<a href=#934 id=934 data-nosnippet>934</a>            .rev()
+<a href=#935 id=935 data-nosnippet>935</a>            .find_map(|e| e.span)
+<a href=#936 id=936 data-nosnippet>936</a>            .map(|(<span class="kw">_</span>, end)| end);
+<a href=#937 id=937 data-nosnippet>937</a>          <span class="kw">let </span>group_end = line
+<a href=#938 id=938 data-nosnippet>938</a>            .events
+<a href=#939 id=939 data-nosnippet>939</a>            .iter()
+<a href=#940 id=940 data-nosnippet>940</a>            .filter_map(|e| e.span)
+<a href=#941 id=941 data-nosnippet>941</a>            .map(|(<span class="kw">_</span>, end)| end)
+<a href=#942 id=942 data-nosnippet>942</a>            .max();
+<a href=#943 id=943 data-nosnippet>943</a>          <span class="kw">if let </span>(<span class="prelude-val">Some</span>(line_end), <span class="prelude-val">Some</span>(group_end)) = (line_end, group_end)
+<a href=#944 id=944 data-nosnippet>944</a>            &amp;&amp; group_end &gt; line_end
+<a href=#945 id=945 data-nosnippet>945</a>            &amp;&amp; !places.is_empty()
+<a href=#946 id=946 data-nosnippet>946</a>          {
+<a href=#947 id=947 data-nosnippet>947</a>            open_group = <span class="prelude-val">Some</span>((group_end, places.clone()));
+<a href=#948 id=948 data-nosnippet>948</a>          }
+<a href=#949 id=949 data-nosnippet>949</a>          <span class="kw">if </span>!places.is_empty() {
+<a href=#950 id=950 data-nosnippet>950</a>            unmarked_before = <span class="prelude-val">Some</span>(places.clone());
+<a href=#951 id=951 data-nosnippet>951</a>          }
+<a href=#952 id=952 data-nosnippet>952</a>          <span class="kw">if </span>joined &amp;&amp; !places.is_empty() {
+<a href=#953 id=953 data-nosnippet>953</a>            continues = <span class="prelude-val">Some</span>(Continued::Joined(places));
+<a href=#954 id=954 data-nosnippet>954</a>          }
+<a href=#955 id=955 data-nosnippet>955</a>          <span class="kw">if </span>above.is_empty() {
+<a href=#956 id=956 data-nosnippet>956</a>            <span class="self">self</span>.attach(
+<a href=#957 id=957 data-nosnippet>957</a>              <span class="prelude-val">None</span>,
+<a href=#958 id=958 data-nosnippet>958</a>              Assoc {
+<a href=#959 id=959 data-nosnippet>959</a>                role:   <span class="string">"affiliation"</span>.into(),
+<a href=#960 id=960 data-nosnippet>960</a>                text:   text.clone(),
+<a href=#961 id=961 data-nosnippet>961</a>                label:  <span class="prelude-val">None</span>,
+<a href=#962 id=962 data-nosnippet>962</a>                rule:   <span class="string">"line:unmarked owner:block"</span>.into(),
+<a href=#963 id=963 data-nosnippet>963</a>                source: <span class="prelude-val">Some</span>(source),
+<a href=#964 id=964 data-nosnippet>964</a>                target: <span class="prelude-val">None</span>,
+<a href=#965 id=965 data-nosnippet>965</a>              },
+<a href=#966 id=966 data-nosnippet>966</a>              <span class="bool-val">false</span>,
+<a href=#967 id=967 data-nosnippet>967</a>            );
+<a href=#968 id=968 data-nosnippet>968</a>          }
+<a href=#969 id=969 data-nosnippet>969</a>          <span class="kw">for </span>note <span class="kw">in </span>notes {
+<a href=#970 id=970 data-nosnippet>970</a>            <span class="self">self</span>.note(index, note, above.last().copied(), <span class="string">"note:line-owner"</span>);
+<a href=#971 id=971 data-nosnippet>971</a>          }
+<a href=#972 id=972 data-nosnippet>972</a>        },
+<a href=#973 id=973 data-nosnippet>973</a>        <span class="prelude-val">None </span>=&gt; {},
+<a href=#974 id=974 data-nosnippet>974</a>      }
+<a href=#975 id=975 data-nosnippet>975</a>    }
+<a href=#976 id=976 data-nosnippet>976</a>    <span class="comment">// (a block making no name whose mark-led lines read as names: they are an unnamed creator's affiliations, counted)
+<a href=#977 id=977 data-nosnippet>977</a>    </span><span class="kw">let </span>unread = (<span class="number">0</span>..lines.len())
+<a href=#978 id=978 data-nosnippet>978</a>      .filter(|<span class="kw-2">&amp;</span>n| name_shaped[n] &amp;&amp; !led_names[n])
+<a href=#979 id=979 data-nosnippet>979</a>      .count();
+<a href=#980 id=980 data-nosnippet>980</a>    <span class="kw">if </span>unread &gt; <span class="number">0 </span>&amp;&amp; <span class="self">self</span>.out.creators.len() == block_creators_start {
+<a href=#981 id=981 data-nosnippet>981</a>      warn_mark_led_names_unread(index, unread);
+<a href=#982 id=982 data-nosnippet>982</a>    }
+<a href=#983 id=983 data-nosnippet>983</a>    <span class="kw">for </span>(contact, above) <span class="kw">in </span>block_links {
+<a href=#984 id=984 data-nosnippet>984</a>      <span class="kw">let </span>names = block_creators_start..<span class="self">self</span>.out.creators.len();
+<a href=#985 id=985 data-nosnippet>985</a>      <span class="kw">let </span>owners = <span class="kw">if </span>above.iter().copied().eq(names) {
+<a href=#986 id=986 data-nosnippet>986</a>        <span class="kw-2">&amp;</span>[][..]
+<a href=#987 id=987 data-nosnippet>987</a>      } <span class="kw">else </span>{
+<a href=#988 id=988 data-nosnippet>988</a>        <span class="kw-2">&amp;</span>above[..]
+<a href=#989 id=989 data-nosnippet>989</a>      };
+<a href=#990 id=990 data-nosnippet>990</a>      <span class="self">self</span>.contact_event(index, contact, owners, <span class="string">"line:contact R12:row-above"</span>);
+<a href=#991 id=991 data-nosnippet>991</a>    }
+<a href=#992 id=992 data-nosnippet>992</a>    <span class="self">self</span>.line_column = <span class="prelude-val">None</span>;
+<a href=#993 id=993 data-nosnippet>993</a>    <span class="self">self</span>.block_addresses.clear();
+<a href=#994 id=994 data-nosnippet>994</a>  }
+<a href=#995 id=995 data-nosnippet>995</a>
+<a href=#996 id=996 data-nosnippet>996</a>  <span class="doccomment">/// A labelled line's entries, each pending its requests (ruling 1; ruling 2 for a symbol): an e-mail entry one
+<a href=#997 id=997 data-nosnippet>997</a>  /// contact per address, any other one affiliation or legend. The entry an unmarked line under it continues.
+<a href=#998 id=998 data-nosnippet>998</a>  </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>labelled_entries(
+<a href=#999 id=999 data-nosnippet>999</a>    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+<a href=#1000 id=1000 data-nosnippet>1000</a>    index: usize,
+<a href=#1001 id=1001 data-nosnippet>1001</a>    entries: Vec&lt;Entry&lt;<span class="lifetime">'_</span>&gt;&gt;,
+<a href=#1002 id=1002 data-nosnippet>1002</a>    extra: <span class="kw-2">&amp;</span>str,
+<a href=#1003 id=1003 data-nosnippet>1003</a>  ) -&gt; <span class="prelude-ty">Option</span>&lt;Continued&gt; {
+<a href=#1004 id=1004 data-nosnippet>1004</a>    <span class="kw">let </span><span class="kw-2">mut </span>continues = <span class="prelude-val">None</span>;
+<a href=#1005 id=1005 data-nosnippet>1005</a>    <span class="kw">for </span>entry <span class="kw">in </span>entries {
+<a href=#1006 id=1006 data-nosnippet>1006</a>      <span class="comment">// (the closing half of a bracketed mark is no text of the entry: `($^1$) Univ A`, 1004.4809)
+<a href=#1007 id=1007 data-nosnippet>1007</a>      </span><span class="kw">let </span>text = events_text(<span class="kw-2">&amp;</span>entry.events)
+<a href=#1008 id=1008 data-nosnippet>1008</a>        .trim_start_matches(|c: char| <span class="string">")]-.:"</span>.contains(c) || c.is_whitespace())
+<a href=#1009 id=1009 data-nosnippet>1009</a>        .to_string();
+<a href=#1010 id=1010 data-nosnippet>1010</a>      <span class="comment">// (the entry's span is its every event's, its first's start to its last ink's end, as a joined name's
+<a href=#1011 id=1011 data-nosnippet>1011</a>      // (`joined_single_name`): the writer cuts the entry by it, its letters the entry's text — an entry of several
+<a href=#1012 id=1012 data-nosnippet>1012</a>      // events, its words split at an inner `and` or comma, was its first piece's span alone, so the cut failed ("a block
+<a href=#1013 id=1013 data-nosnippet>1013</a>      // line does not cut") and the whole line went to the first mark's name: `$^{1}$Univ of Science and
+<a href=#1014 id=1014 data-nosnippet>1014</a>      // Technology~~~~$^{3}$Univ C`, dev20k 2111.07950, 1503.06795, 2504.05692, 2008.02300, 2404.01856)
+<a href=#1015 id=1015 data-nosnippet>1015</a>      // (a note after the entry's last other ink is the block's, no name's: Perl digests it inside the entry's contact,
+<a href=#1016 id=1016 data-nosnippet>1016</a>      // where `\thanks` is `\lx@add@pubnote@thanks` (Base_Utility.pool.ltxml:332), and prints it once, a `&lt;pubnote&gt;` held by
+<a href=#1017 id=1017 data-nosnippet>1017</a>      // no author — 2504.09745's `$^{\ddagger}$Ericsson Canada\thanks{This work was supported …}`; the old driver printed it
+<a href=#1018 id=1018 data-nosnippet>1018</a>      // once per author its contact is relocated to (two pubnotes there), the emitter's switch on before this a nameless
+<a href=#1019 id=1019 data-nosnippet>1019</a>      // creator's note and the entry written with the note in it (review revLO2 1). The entry's span ends before it)
+<a href=#1020 id=1020 data-nosnippet>1020</a>      </span><span class="kw">let </span>trailing = entry
+<a href=#1021 id=1021 data-nosnippet>1021</a>        .events
+<a href=#1022 id=1022 data-nosnippet>1022</a>        .iter()
+<a href=#1023 id=1023 data-nosnippet>1023</a>        .rev()
+<a href=#1024 id=1024 data-nosnippet>1024</a>        .take_while(|e| !inked(e) || e.kind == EventKind::Note)
+<a href=#1025 id=1025 data-nosnippet>1025</a>        .filter(|e| e.kind == EventKind::Note)
+<a href=#1026 id=1026 data-nosnippet>1026</a>        .count();
+<a href=#1027 id=1027 data-nosnippet>1027</a>      <span class="comment">// (an entry of notes alone keeps them, as before)
+<a href=#1028 id=1028 data-nosnippet>1028</a>      </span><span class="kw">let </span>trailing = <span class="kw">if </span>trailing &lt; entry.events.iter().filter(|e| inked(e)).count() {
+<a href=#1029 id=1029 data-nosnippet>1029</a>        trailing
+<a href=#1030 id=1030 data-nosnippet>1030</a>      } <span class="kw">else </span>{
+<a href=#1031 id=1031 data-nosnippet>1031</a>        <span class="number">0
+<a href=#1032 id=1032 data-nosnippet>1032</a>      </span>};
+<a href=#1033 id=1033 data-nosnippet>1033</a>      <span class="kw">let </span>notes: Vec&lt;<span class="kw-2">&amp;</span>Event&gt; = entry
+<a href=#1034 id=1034 data-nosnippet>1034</a>        .events
+<a href=#1035 id=1035 data-nosnippet>1035</a>        .iter()
+<a href=#1036 id=1036 data-nosnippet>1036</a>        .rev()
+<a href=#1037 id=1037 data-nosnippet>1037</a>        .filter(|e| e.kind == EventKind::Note)
+<a href=#1038 id=1038 data-nosnippet>1038</a>        .take(trailing)
+<a href=#1039 id=1039 data-nosnippet>1039</a>        .copied()
+<a href=#1040 id=1040 data-nosnippet>1040</a>        .collect();
+<a href=#1041 id=1041 data-nosnippet>1041</a>      <span class="kw">let </span>span = <span class="kw">match </span>(
+<a href=#1042 id=1042 data-nosnippet>1042</a>        entry.events.first().and_then(|e| e.span),
+<a href=#1043 id=1043 data-nosnippet>1043</a>        entry
+<a href=#1044 id=1044 data-nosnippet>1044</a>          .events
+<a href=#1045 id=1045 data-nosnippet>1045</a>          .iter()
+<a href=#1046 id=1046 data-nosnippet>1046</a>          .rev()
+<a href=#1047 id=1047 data-nosnippet>1047</a>          .filter(|e| inked(e))
+<a href=#1048 id=1048 data-nosnippet>1048</a>          .nth(trailing)
+<a href=#1049 id=1049 data-nosnippet>1049</a>          .and_then(|e| e.span),
+<a href=#1050 id=1050 data-nosnippet>1050</a>      ) {
+<a href=#1051 id=1051 data-nosnippet>1051</a>        (<span class="prelude-val">Some</span>((start, <span class="kw">_</span>)), <span class="prelude-val">Some</span>((<span class="kw">_</span>, end))) <span class="kw">if </span>end &gt;= start =&gt; <span class="prelude-val">Some</span>((start, end)),
+<a href=#1052 id=1052 data-nosnippet>1052</a>        (first, <span class="kw">_</span>) =&gt; first,
+<a href=#1053 id=1053 data-nosnippet>1053</a>      };
+<a href=#1054 id=1054 data-nosnippet>1054</a>      <span class="comment">// (an entry a `\footnotemark` leads: what a name's footnote mark answers, `mark:footnote` — 1607.07280)
+<a href=#1055 id=1055 data-nosnippet>1055</a>      </span><span class="kw">let </span>footnote = entry
+<a href=#1056 id=1056 data-nosnippet>1056</a>        .events
+<a href=#1057 id=1057 data-nosnippet>1057</a>        .iter()
+<a href=#1058 id=1058 data-nosnippet>1058</a>        .find(|e| e.kind == EventKind::Mark)
+<a href=#1059 id=1059 data-nosnippet>1059</a>        .is_some_and(|e| printed_by_footnotemark(e));
+<a href=#1060 id=1060 data-nosnippet>1060</a>      <span class="kw">let </span>extra = <span class="kw">if </span>footnote {
+<a href=#1061 id=1061 data-nosnippet>1061</a>        <span class="macro">s!</span>(<span class="string">"{extra} mark:footnote"</span>)
+<a href=#1062 id=1062 data-nosnippet>1062</a>      } <span class="kw">else </span>{
+<a href=#1063 id=1063 data-nosnippet>1063</a>        extra.to_string()
+<a href=#1064 id=1064 data-nosnippet>1064</a>      };
+<a href=#1065 id=1065 data-nosnippet>1065</a>      <span class="kw">let </span>rule = <span class="kw">if </span>entry.symbol {
+<a href=#1066 id=1066 data-nosnippet>1066</a>        <span class="macro">s!</span>(<span class="string">"ruling2:symbol-line{extra}"</span>)
+<a href=#1067 id=1067 data-nosnippet>1067</a>      } <span class="kw">else </span>{
+<a href=#1068 id=1068 data-nosnippet>1068</a>        <span class="macro">s!</span>(<span class="string">"ruling1:request{extra}"</span>)
+<a href=#1069 id=1069 data-nosnippet>1069</a>      };
+<a href=#1070 id=1070 data-nosnippet>1070</a>      <span class="kw">let </span>contacts: Vec&lt;<span class="kw-2">&amp;</span>Event&gt; = entry
+<a href=#1071 id=1071 data-nosnippet>1071</a>        .events
+<a href=#1072 id=1072 data-nosnippet>1072</a>        .iter()
+<a href=#1073 id=1073 data-nosnippet>1073</a>        .copied()
+<a href=#1074 id=1074 data-nosnippet>1074</a>        .filter(|e| e.kind == EventKind::Contact)
+<a href=#1075 id=1075 data-nosnippet>1075</a>        .collect();
+<a href=#1076 id=1076 data-nosnippet>1076</a>      <span class="comment">// (an entry of addresses alone is e-mails; one with other text beside its address is that text's affiliation, the
+<a href=#1077 id=1077 data-nosnippet>1077</a>      // address in it, as a continued line's is — `1. Chester F. Carlson Center …, NY 14623; JHK's email:
+<a href=#1078 id=1078 data-nosnippet>1078</a>      // jhk@cis.rit.edu`, astro-ph0202139, whose institutions were lost)
+<a href=#1079 id=1079 data-nosnippet>1079</a>      </span><span class="kw">let </span>role = <span class="kw">if </span>prints_only_addresses(<span class="kw-2">&amp;</span>text)
+<a href=#1080 id=1080 data-nosnippet>1080</a>        &amp;&amp; contacts
+<a href=#1081 id=1081 data-nosnippet>1081</a>          .iter()
+<a href=#1082 id=1082 data-nosnippet>1082</a>          .all(|c| c.role.as_deref() != <span class="prelude-val">Some</span>(<span class="string">"affiliation"</span>))
+<a href=#1083 id=1083 data-nosnippet>1083</a>      {
+<a href=#1084 id=1084 data-nosnippet>1084</a>        <span class="string">"email"
+<a href=#1085 id=1085 data-nosnippet>1085</a>      </span><span class="comment">// (a legend's mark is a symbol: a footnote symbol, or a mark glyph of no `\@fnsymbol` kind — `${\star}$ to whom
+<a href=#1086 id=1086 data-nosnippet>1086</a>      // correspondence should be addressed` under `Pace,$^{2,\star}$`, 2401.00056, FM S2a.2 r7; an entry of no label
+<a href=#1087 id=1087 data-nosnippet>1087</a>      // has none, review revfms2a2_7 finding 7)
+<a href=#1088 id=1088 data-nosnippet>1088</a>      </span>} <span class="kw">else if </span>is_legend_text(<span class="kw-2">&amp;</span>text)
+<a href=#1089 id=1089 data-nosnippet>1089</a>        &amp;&amp; (entry.symbol
+<a href=#1090 id=1090 data-nosnippet>1090</a>          || (!entry.labels.is_empty()
+<a href=#1091 id=1091 data-nosnippet>1091</a>            &amp;&amp; entry
+<a href=#1092 id=1092 data-nosnippet>1092</a>              .labels
+<a href=#1093 id=1093 data-nosnippet>1093</a>              .iter()
+<a href=#1094 id=1094 data-nosnippet>1094</a>              .all(|l| !l.is_empty() &amp;&amp; !l.chars().any(char::is_alphanumeric))))
+<a href=#1095 id=1095 data-nosnippet>1095</a>      {
+<a href=#1096 id=1096 data-nosnippet>1096</a>        <span class="string">"legend"
+<a href=#1097 id=1097 data-nosnippet>1097</a>      </span>} <span class="kw">else </span>{
+<a href=#1098 id=1098 data-nosnippet>1098</a>        <span class="string">"affiliation"
+<a href=#1099 id=1099 data-nosnippet>1099</a>      </span>};
+<a href=#1100 id=1100 data-nosnippet>1100</a>      <span class="kw">if </span>role == <span class="string">"email" </span>{
+<a href=#1101 id=1101 data-nosnippet>1101</a>        <span class="kw">for </span>address <span class="kw">in </span>addresses_in(<span class="kw-2">&amp;</span>text) {
+<a href=#1102 id=1102 data-nosnippet>1102</a>          <span class="self">self
+<a href=#1103 id=1103 data-nosnippet>1103</a>            </span>.pending
+<a href=#1104 id=1104 data-nosnippet>1104</a>            .push((entry.labels.clone(), entry.symbol, Assoc {
+<a href=#1105 id=1105 data-nosnippet>1105</a>              role:   <span class="string">"email"</span>.into(),
+<a href=#1106 id=1106 data-nosnippet>1106</a>              text:   address,
+<a href=#1107 id=1107 data-nosnippet>1107</a>              label:  entry.labels.first().cloned(),
+<a href=#1108 id=1108 data-nosnippet>1108</a>              rule:   rule.clone(),
+<a href=#1109 id=1109 data-nosnippet>1109</a>              source: <span class="prelude-val">Some</span>((index, span)),
+<a href=#1110 id=1110 data-nosnippet>1110</a>              target: <span class="prelude-val">None</span>,
+<a href=#1111 id=1111 data-nosnippet>1111</a>            }));
+<a href=#1112 id=1112 data-nosnippet>1112</a>        }
+<a href=#1113 id=1113 data-nosnippet>1113</a>        continues = <span class="prelude-val">None</span>;
+<a href=#1114 id=1114 data-nosnippet>1114</a>      } <span class="kw">else </span>{
+<a href=#1115 id=1115 data-nosnippet>1115</a>        <span class="comment">// (a line led by one mark printing distinct footnote symbols together names the names carrying them all:
+<a href=#1116 id=1116 data-nosnippet>1116</a>        // `$^{\dagger\ddagger}$ Project lead` under `Ann Able$^{\dagger}$` and `Bob Baker$^{\dagger\ddagger}$` is Bob
+<a href=#1117 id=1117 data-nosnippet>1117</a>        // Baker's alone, 2602.19190 — the old reader's 77p r10 rule; `$^{\dagger,\ddagger}$`, two marks, is either's)
+<a href=#1118 id=1118 data-nosnippet>1118</a>        </span><span class="kw">let </span>compound = entry.symbol &amp;&amp; entry.compound &amp;&amp; {
+<a href=#1119 id=1119 data-nosnippet>1119</a>          <span class="kw">let </span><span class="kw-2">mut </span>symbols: Vec&lt;<span class="kw-2">&amp;</span>String&gt; = entry.labels.iter().collect();
+<a href=#1120 id=1120 data-nosnippet>1120</a>          symbols.sort_unstable();
+<a href=#1121 id=1121 data-nosnippet>1121</a>          symbols.dedup();
+<a href=#1122 id=1122 data-nosnippet>1122</a>          symbols.len() &gt; <span class="number">1 </span>&amp;&amp; symbols.iter().all(|l| is_symbol_label(l))
+<a href=#1123 id=1123 data-nosnippet>1123</a>        };
+<a href=#1124 id=1124 data-nosnippet>1124</a>        <span class="self">self
+<a href=#1125 id=1125 data-nosnippet>1125</a>          </span>.pending
+<a href=#1126 id=1126 data-nosnippet>1126</a>          .push((entry.labels.clone(), entry.symbol, Assoc {
+<a href=#1127 id=1127 data-nosnippet>1127</a>            role: role.into(),
+<a href=#1128 id=1128 data-nosnippet>1128</a>            text,
+<a href=#1129 id=1129 data-nosnippet>1129</a>            label: entry.labels.first().cloned(),
+<a href=#1130 id=1130 data-nosnippet>1130</a>            rule: rule.clone(),
+<a href=#1131 id=1131 data-nosnippet>1131</a>            source: <span class="prelude-val">Some</span>((index, span)),
+<a href=#1132 id=1132 data-nosnippet>1132</a>            target: <span class="prelude-val">None</span>,
+<a href=#1133 id=1133 data-nosnippet>1133</a>          }));
+<a href=#1134 id=1134 data-nosnippet>1134</a>        <span class="kw">if </span>compound {
+<a href=#1135 id=1135 data-nosnippet>1135</a>          <span class="self">self</span>.compound.push(<span class="self">self</span>.pending.len() - <span class="number">1</span>);
+<a href=#1136 id=1136 data-nosnippet>1136</a>        }
+<a href=#1137 id=1137 data-nosnippet>1137</a>        continues = <span class="prelude-val">Some</span>(Continued::Pending(<span class="self">self</span>.pending.len() - <span class="number">1</span>));
+<a href=#1138 id=1138 data-nosnippet>1138</a>      }
+<a href=#1139 id=1139 data-nosnippet>1139</a>      <span class="kw">for </span>note <span class="kw">in </span>notes.into_iter().rev() {
+<a href=#1140 id=1140 data-nosnippet>1140</a>        <span class="self">self</span>.note(index, note, <span class="prelude-val">None</span>, <span class="string">"note:entry"</span>);
+<a href=#1141 id=1141 data-nosnippet>1141</a>      }
+<a href=#1142 id=1142 data-nosnippet>1142</a>    }
+<a href=#1143 id=1143 data-nosnippet>1143</a>    continues
+<a href=#1144 id=1144 data-nosnippet>1144</a>  }
+<a href=#1145 id=1145 data-nosnippet>1145</a>
+<a href=#1146 id=1146 data-nosnippet>1146</a>  <span class="doccomment">/// A line continuing the entry above it, an unmarked one or one a glyph no name requests leads: its text the entry's
+<a href=#1147 id=1147 data-nosnippet>1147</a>  /// ([`Self::continue_entry`]); its notes, under a labelled entry, the block's, as a line of notes alone under it
+<a href=#1148 id=1148 data-nosnippet>1148</a>  /// (`$^{2}$Univ B\\ Funded by X.\thanks{Grant 5.}`, review revLO2 base), else the name's above it.
+<a href=#1149 id=1149 data-nosnippet>1149</a>  </span><span class="kw">fn </span>continue_line&lt;<span class="lifetime">'e</span>&gt;(
+<a href=#1150 id=1150 data-nosnippet>1150</a>    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+<a href=#1151 id=1151 data-nosnippet>1151</a>    index: usize,
+<a href=#1152 id=1152 data-nosnippet>1152</a>    carried: <span class="kw-2">&amp;</span>Continued,
+<a href=#1153 id=1153 data-nosnippet>1153</a>    text: <span class="kw-2">&amp;</span>str,
+<a href=#1154 id=1154 data-nosnippet>1154</a>    notes: <span class="kw">impl </span>IntoIterator&lt;Item = <span class="kw-2">&amp;</span><span class="lifetime">'e </span>Event&gt;,
+<a href=#1155 id=1155 data-nosnippet>1155</a>    above: <span class="prelude-ty">Option</span>&lt;usize&gt;,
+<a href=#1156 id=1156 data-nosnippet>1156</a>  ) {
+<a href=#1157 id=1157 data-nosnippet>1157</a>    <span class="self">self</span>.continue_entry(carried, text);
+<a href=#1158 id=1158 data-nosnippet>1158</a>    <span class="kw">let </span>(owner, rule) = <span class="kw">if </span><span class="macro">matches!</span>(carried, Continued::Pending(<span class="kw">_</span>)) {
+<a href=#1159 id=1159 data-nosnippet>1159</a>      (<span class="prelude-val">None</span>, <span class="string">"note:line-owner note:entry"</span>)
+<a href=#1160 id=1160 data-nosnippet>1160</a>    } <span class="kw">else </span>{
+<a href=#1161 id=1161 data-nosnippet>1161</a>      (above, <span class="string">"note:line-owner"</span>)
+<a href=#1162 id=1162 data-nosnippet>1162</a>    };
+<a href=#1163 id=1163 data-nosnippet>1163</a>    <span class="kw">for </span>note <span class="kw">in </span>notes {
+<a href=#1164 id=1164 data-nosnippet>1164</a>      <span class="self">self</span>.note(index, note, owner, rule);
+<a href=#1165 id=1165 data-nosnippet>1165</a>    }
+<a href=#1166 id=1166 data-nosnippet>1166</a>  }
+<a href=#1167 id=1167 data-nosnippet>1167</a>
+<a href=#1168 id=1168 data-nosnippet>1168</a>  <span class="doccomment">/// An unmarked line continuing the entry before it: its text appended, and the entry's lines kept
+<a href=#1169 id=1169 data-nosnippet>1169</a>  /// ([`Resolved::continued`]).
+<a href=#1170 id=1170 data-nosnippet>1170</a>  </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>continue_entry(<span class="kw-2">&amp;mut </span><span class="self">self</span>, carried: <span class="kw-2">&amp;</span>Continued, text: <span class="kw-2">&amp;</span>str) {
+<a href=#1171 id=1171 data-nosnippet>1171</a>    <span class="kw">let </span><span class="kw-2">mut </span>sources: Vec&lt;(<span class="prelude-ty">Option</span>&lt;Source&gt;, String)&gt; = Vec::new();
+<a href=#1172 id=1172 data-nosnippet>1172</a>    <span class="kw">let </span><span class="kw-2">mut </span>extend = |assoc: <span class="kw-2">&amp;mut </span>Assoc| {
+<a href=#1173 id=1173 data-nosnippet>1173</a>      <span class="kw">if </span>!sources.iter().any(|(s, <span class="kw">_</span>)| <span class="kw-2">*</span>s == assoc.source) {
+<a href=#1174 id=1174 data-nosnippet>1174</a>        sources.push((assoc.source, assoc.text.clone()));
+<a href=#1175 id=1175 data-nosnippet>1175</a>      }
+<a href=#1176 id=1176 data-nosnippet>1176</a>      assoc.text = <span class="macro">s!</span>(<span class="string">"{} {text}"</span>, assoc.text);
+<a href=#1177 id=1177 data-nosnippet>1177</a>      <span class="kw">if </span>!assoc.rule.contains(<span class="string">"line:continued"</span>) {
+<a href=#1178 id=1178 data-nosnippet>1178</a>        assoc.rule.push_str(<span class="string">" line:continued"</span>);
+<a href=#1179 id=1179 data-nosnippet>1179</a>      }
+<a href=#1180 id=1180 data-nosnippet>1180</a>    };
+<a href=#1181 id=1181 data-nosnippet>1181</a>    <span class="kw">match </span>carried {
+<a href=#1182 id=1182 data-nosnippet>1182</a>      Continued::Pending(at) =&gt; {
+<a href=#1183 id=1183 data-nosnippet>1183</a>        <span class="kw">if let </span><span class="prelude-val">Some</span>((<span class="kw">_</span>, <span class="kw">_</span>, assoc)) = <span class="self">self</span>.pending.get_mut(<span class="kw-2">*</span>at) {
+<a href=#1184 id=1184 data-nosnippet>1184</a>          extend(assoc);
+<a href=#1185 id=1185 data-nosnippet>1185</a>        }
+<a href=#1186 id=1186 data-nosnippet>1186</a>      },
+<a href=#1187 id=1187 data-nosnippet>1187</a>      Continued::Joined(places) =&gt; {
+<a href=#1188 id=1188 data-nosnippet>1188</a>        <span class="kw">for </span><span class="kw-2">&amp;</span>(c, i) <span class="kw">in </span>places {
+<a href=#1189 id=1189 data-nosnippet>1189</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(assoc) = <span class="self">self</span>.out.creators[c].affiliations.get_mut(i) {
+<a href=#1190 id=1190 data-nosnippet>1190</a>            extend(assoc);
+<a href=#1191 id=1191 data-nosnippet>1191</a>          }
+<a href=#1192 id=1192 data-nosnippet>1192</a>        }
+<a href=#1193 id=1193 data-nosnippet>1193</a>      },
+<a href=#1194 id=1194 data-nosnippet>1194</a>    }
+<a href=#1195 id=1195 data-nosnippet>1195</a>    <span class="kw">for </span>(source, before) <span class="kw">in </span>sources {
+<a href=#1196 id=1196 data-nosnippet>1196</a>      <span class="kw">let </span><span class="prelude-val">Some</span>(source) = source <span class="kw">else </span>{
+<a href=#1197 id=1197 data-nosnippet>1197</a>        <span class="kw">continue</span>;
+<a href=#1198 id=1198 data-nosnippet>1198</a>      };
+<a href=#1199 id=1199 data-nosnippet>1199</a>      <span class="kw">match </span><span class="self">self</span>.continued.iter_mut().find(|(s, <span class="kw">_</span>)| <span class="kw-2">*</span>s == source) {
+<a href=#1200 id=1200 data-nosnippet>1200</a>        <span class="prelude-val">Some</span>((<span class="kw">_</span>, lines)) =&gt; lines.push(text.to_string()),
+<a href=#1201 id=1201 data-nosnippet>1201</a>        <span class="prelude-val">None </span>=&gt; <span class="self">self
+<a href=#1202 id=1202 data-nosnippet>1202</a>          </span>.continued
+<a href=#1203 id=1203 data-nosnippet>1203</a>          .push((source, <span class="macro">vec!</span>[before, text.to_string()])),
+<a href=#1204 id=1204 data-nosnippet>1204</a>      }
+<a href=#1205 id=1205 data-nosnippet>1205</a>    }
+<a href=#1206 id=1206 data-nosnippet>1206</a>  }
+<a href=#1207 id=1207 data-nosnippet>1207</a>
+<a href=#1208 id=1208 data-nosnippet>1208</a>  <span class="doccomment">/// A Contact event (an `\email`, `\url`, an in-block `\affil`): a labelled one waits for its requests; an e-mail by
+<a href=#1209 id=1209 data-nosnippet>1209</a>  /// the owner chain among `owners`; any other to `owners` (the name before, the row above).
+<a href=#1210 id=1210 data-nosnippet>1210</a>  </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>contact_event(
+<a href=#1211 id=1211 data-nosnippet>1211</a>    <span class="kw-2">&amp;mut </span><span class="self">self</span>,
+<a href=#1212 id=1212 data-nosnippet>1212</a>    index: usize,
+<a href=#1213 id=1213 data-nosnippet>1213</a>    contact: <span class="kw-2">&amp;</span>Event,
+<a href=#1214 id=1214 data-nosnippet>1214</a>    owners: <span class="kw-2">&amp;</span>[usize],
+<a href=#1215 id=1215 data-nosnippet>1215</a>    rule: <span class="kw-2">&amp;</span>str,
+<a href=#1216 id=1216 data-nosnippet>1216</a>  ) {
+<a href=#1217 id=1217 data-nosnippet>1217</a>    <span class="kw">let </span>(role, text) = contact_parts(contact);
+<a href=#1218 id=1218 data-nosnippet>1218</a>    <span class="kw">let </span>assoc = Assoc {
+<a href=#1219 id=1219 data-nosnippet>1219</a>      role: role.clone(),
+<a href=#1220 id=1220 data-nosnippet>1220</a>      text,
+<a href=#1221 id=1221 data-nosnippet>1221</a>      label: contact.label.clone(),
+<a href=#1222 id=1222 data-nosnippet>1222</a>      rule: rule.to_string(),
+<a href=#1223 id=1223 data-nosnippet>1223</a>      source: <span class="prelude-val">Some</span>((index, contact.span)),
+<a href=#1224 id=1224 data-nosnippet>1224</a>      target: link_target(contact),
+<a href=#1225 id=1225 data-nosnippet>1225</a>    };
+<a href=#1226 id=1226 data-nosnippet>1226</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(label) = contact.label.as_deref().filter(|<span class="kw">_</span>| role == <span class="string">"affiliation"</span>) {
+<a href=#1227 id=1227 data-nosnippet>1227</a>      <span class="self">self</span>.pending.push((mark_labels(label), <span class="bool-val">false</span>, Assoc {
+<a href=#1228 id=1228 data-nosnippet>1228</a>        rule: <span class="string">"ruling1:request"</span>.into(),
+<a href=#1229 id=1229 data-nosnippet>1229</a>        ..assoc
+<a href=#1230 id=1230 data-nosnippet>1230</a>      }));
+<a href=#1231 id=1231 data-nosnippet>1231</a>      <span class="kw">return</span>;
+<a href=#1232 id=1232 data-nosnippet>1232</a>    }
+<a href=#1233 id=1233 data-nosnippet>1233</a>    <span class="comment">// (a membership grade is the name's it follows, never the block's: one after no name is dropped, counted by the content
+<a href=#1234 id=1234 data-nosnippet>1234</a>    // check — revP5a B1)
+<a href=#1235 id=1235 data-nosnippet>1235</a>    </span><span class="kw">if </span>owners.is_empty() &amp;&amp; role == <span class="string">"membership" </span>{
+<a href=#1236 id=1236 data-nosnippet>1236</a>      <span class="kw">return</span>;
+<a href=#1237 id=1237 data-nosnippet>1237</a>    }
+<a href=#1238 id=1238 data-nosnippet>1238</a>    <span class="kw">if </span>owners.is_empty() {
+<a href=#1239 id=1239 data-nosnippet>1239</a>      <span class="self">self</span>.attach(
+<a href=#1240 id=1240 data-nosnippet>1240</a>        <span class="prelude-val">None</span>,
+<a href=#1241 id=1241 data-nosnippet>1241</a>        Assoc {
+<a href=#1242 id=1242 data-nosnippet>1242</a>          rule: <span class="string">"owner:block"</span>.into(),
+<a href=#1243 id=1243 data-nosnippet>1243</a>          ..assoc
+<a href=#1244 id=1244 data-nosnippet>1244</a>        },
+<a href=#1245 id=1245 data-nosnippet>1245</a>        <span class="bool-val">false</span>,
+<a href=#1246 id=1246 data-nosnippet>1246</a>      );
+<a href=#1247 id=1247 data-nosnippet>1247</a>      <span class="kw">return</span>;
+<a href=#1248 id=1248 data-nosnippet>1248</a>    }
+<a href=#1249 id=1249 data-nosnippet>1249</a>    <span class="comment">// (an e-mail given to a row of names, or printing several addresses, is placed address by address by the owner
+<a href=#1250 id=1250 data-nosnippet>1250</a>    // chain, ruling 3 — `\email{sfranco@kitp.ucsb.edu, ahanany@imperial.ac.uk}` under four names, 0809.3237)
+<a href=#1251 id=1251 data-nosnippet>1251</a>    // (a link to an address by its address, not the anchor it prints: `\href{mailto:…}{…}`, FM S2a.2 r9 — only a
+<a href=#1252 id=1252 data-nosnippet>1252</a>    // `mailto:` link's: an `\href{http://…}{a@x.org}` is read by the address its text prints, review revfms2a2_9 finding
+<a href=#1253 id=1253 data-nosnippet>1253</a>    // 5; a link printing one address keeps its anchor as the text, as the single-owner path does)
+<a href=#1254 id=1254 data-nosnippet>1254</a>    </span><span class="kw">let </span>mailto = contact.target.as_deref().and_then(mailto_address);
+<a href=#1255 id=1255 data-nosnippet>1255</a>    <span class="kw">let </span>addresses = mailto.unwrap_or(<span class="kw-2">&amp;</span>assoc.text);
+<a href=#1256 id=1256 data-nosnippet>1256</a>    <span class="kw">if </span>role == <span class="string">"email" </span>&amp;&amp; (owners.len() &gt; <span class="number">1 </span>|| addresses_in(addresses).len() &gt; <span class="number">1</span>) {
+<a href=#1257 id=1257 data-nosnippet>1257</a>      <span class="kw">let </span>anchor = mailto.is_some().then_some(<span class="kw-2">&amp;</span>assoc);
+<a href=#1258 id=1258 data-nosnippet>1258</a>      <span class="self">self</span>.place_line_contacts(
+<a href=#1259 id=1259 data-nosnippet>1259</a>        addresses,
+<a href=#1260 id=1260 data-nosnippet>1260</a>        <span class="string">"email"</span>,
+<a href=#1261 id=1261 data-nosnippet>1261</a>        owners,
+<a href=#1262 id=1262 data-nosnippet>1262</a>        (index, contact.span),
+<a href=#1263 id=1263 data-nosnippet>1263</a>        anchor,
+<a href=#1264 id=1264 data-nosnippet>1264</a>        Chain::Line,
+<a href=#1265 id=1265 data-nosnippet>1265</a>      );
+<a href=#1266 id=1266 data-nosnippet>1266</a>      <span class="kw">return</span>;
+<a href=#1267 id=1267 data-nosnippet>1267</a>    }
+<a href=#1268 id=1268 data-nosnippet>1268</a>    <span class="kw">for </span><span class="kw-2">&amp;</span>owner <span class="kw">in </span>owners {
+<a href=#1269 id=1269 data-nosnippet>1269</a>      <span class="self">self</span>.attach(<span class="prelude-val">Some</span>(owner), assoc.clone(), <span class="bool-val">false</span>);
+<a href=#1270 id=1270 data-nosnippet>1270</a>    }
+<a href=#1271 id=1271 data-nosnippet>1271</a>  }
+<a href=#1272 id=1272 data-nosnippet>1272</a>
+<a href=#1273 id=1273 data-nosnippet>1273</a>  <span class="doccomment">/// A Note event: its inner contacts to its owner when they spell it or are its only link (decision 2), the rest left in
+<a href=#1274 id=1274 data-nosnippet>1274</a>  /// its text — its e-mails and urls placed once every name is read, to the author they spell (`answer_note_links`); the
+<a href=#1275 id=1275 data-nosnippet>1275</a>  /// note itself, its whole text, unless its contacts emptied it and were all taken out (ruling 4), decided there when
+<a href=#1276 id=1276 data-nosnippet>1276</a>  /// its links may empty it. The mark it shows on the name it is beside, its request of an entry led by the same
+<a href=#1277 id=1277 data-nosnippet>1277</a>  /// `\footnotemark` (`note_marks`, 1607.07280).
+<a href=#1278 id=1278 data-nosnippet>1278</a>  </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>note(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index: usize, note: <span class="kw-2">&amp;</span>Event, owner: <span class="prelude-ty">Option</span>&lt;usize&gt;, rule: <span class="kw-2">&amp;</span>str) {
+<a href=#1279 id=1279 data-nosnippet>1279</a>    <span class="kw">if </span>rule == <span class="string">"note:adjacent"
+<a href=#1280 id=1280 data-nosnippet>1280</a>      </span>&amp;&amp; <span class="self">self</span>.notes_marked
+<a href=#1281 id=1281 data-nosnippet>1281</a>      &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(at) = owner
+<a href=#1282 id=1282 data-nosnippet>1282</a>      &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(shows) = note_shows(note)
+<a href=#1283 id=1283 data-nosnippet>1283</a>    {
+<a href=#1284 id=1284 data-nosnippet>1284</a>      <span class="kw">for </span>label <span class="kw">in </span>mark_labels(shows) {
+<a href=#1285 id=1285 data-nosnippet>1285</a>        <span class="self">self</span>.note_marks.push((at, label));
+<a href=#1286 id=1286 data-nosnippet>1286</a>      }
+<a href=#1287 id=1287 data-nosnippet>1287</a>    }
+<a href=#1288 id=1288 data-nosnippet>1288</a>    <span class="comment">// (what is left of its text once its contacts are taken out decides only whether they emptied it: the note keeps
+<a href=#1289 id=1289 data-nosnippet>1289</a>    // its whole text, "Codebase is available at https://…" — review revfms2a2 finding 1; 2401.17399, 1607.05792,
+<a href=#1290 id=1290 data-nosnippet>1290</a>    // 2603.01292)
+<a href=#1291 id=1291 data-nosnippet>1291</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>rest = note.text.clone();
+<a href=#1292 id=1292 data-nosnippet>1292</a>    <span class="kw">let </span>contacts: Vec&lt;<span class="kw-2">&amp;</span>Event&gt; = note
+<a href=#1293 id=1293 data-nosnippet>1293</a>      .inner
+<a href=#1294 id=1294 data-nosnippet>1294</a>      .iter()
+<a href=#1295 id=1295 data-nosnippet>1295</a>      .filter(|e| e.kind == EventKind::Contact)
+<a href=#1296 id=1296 data-nosnippet>1296</a>      .collect();
+<a href=#1297 id=1297 data-nosnippet>1297</a>    <span class="comment">// (main-session decision 2 of 2026-10-22, user ruling 2026-10-20 #4 — no guessing: a note's inner contact is its
+<a href=#1298 id=1298 data-nosnippet>1298</a>    // owner's only when it spells the owner, or is the note's only link with the note's mark shown on the owner; the rest
+<a href=#1299 id=1299 data-nosnippet>1299</a>    // stay in the note's text. A note holding several links names others or the paper as often as its owner — a
+<a href=#1300 id=1300 data-nosnippet>1300</a>    // co-author's homepage, a video, data records, four co-authors' ORCIDs all went to the last author: 2001.02600,
+<a href=#1301 id=1301 data-nosnippet>1301</a>    // 1803.04996, 2504.08644, 2602.13176 —, and a class printing no note marks places a note by position alone,
+<a href=#1302 id=1302 data-nosnippet>1302</a>    // `Policy::unmarked_notes`)
+<a href=#1303 id=1303 data-nosnippet>1303</a>    // (a note no name holds — a line's, an address list's — has no owner to fall back to: its link goes to the author it
+<a href=#1304 id=1304 data-nosnippet>1304</a>    // spells, or stays in its text, never the block's — main-session decision 4 on FM S2a.2 r7, review revfms2a2_7
+<a href=#1305 id=1305 data-nosnippet>1305</a>    // finding 2; the block's url went on to a sole author by `sole_author_takes_the_block`)
+<a href=#1306 id=1306 data-nosnippet>1306</a>    </span><span class="kw">let </span>fallback = contacts.len() == <span class="number">1 </span>&amp;&amp; <span class="self">self</span>.notes_marked &amp;&amp; owner.is_some();
+<a href=#1307 id=1307 data-nosnippet>1307</a>    <span class="comment">// (each link with its target, `Assoc::target`: a url's page is what says whose it is, an e-mail link's address,
+<a href=#1308 id=1308 data-nosnippet>1308</a>    // `place_note_link`)
+<a href=#1309 id=1309 data-nosnippet>1309</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>links: Vec&lt;(Assoc, bool)&gt; = Vec::new();
+<a href=#1310 id=1310 data-nosnippet>1310</a>    <span class="kw">let </span><span class="kw-2">mut </span>all_taken = <span class="bool-val">true</span>;
+<a href=#1311 id=1311 data-nosnippet>1311</a>    <span class="kw">for </span>inner <span class="kw">in </span><span class="kw-2">&amp;</span>contacts {
+<a href=#1312 id=1312 data-nosnippet>1312</a>      <span class="comment">// (an e-mail call of a binding's meaning is no guess: its code routes the address to the current author, the note's
+<a href=#1313 id=1313 data-nosnippet>1313</a>      // owner, as Perl's API does, `\lx@add@email`, and the note written prints it nowhere — siamart's `\thanks{…,
+<a href=#1314 id=1314 data-nosnippet>1314</a>      // \email{wning@vt.edu}, \email{amiedlar@vt.edu}.}`, 2511.14713; REVTeX's; main-session ruling 2026-11-08)
+<a href=#1315 id=1315 data-nosnippet>1315</a>      </span><span class="kw">let </span>routed = owner.is_some()
+<a href=#1316 id=1316 data-nosnippet>1316</a>        &amp;&amp; inner.role.as_deref() == <span class="prelude-val">Some</span>(<span class="string">"email"</span>)
+<a href=#1317 id=1317 data-nosnippet>1317</a>        &amp;&amp; inner.meaning == EmailMeaning::Binding;
+<a href=#1318 id=1318 data-nosnippet>1318</a>      <span class="kw">let </span>(role, text) = contact_parts(inner);
+<a href=#1319 id=1319 data-nosnippet>1319</a>      <span class="kw">let </span>assoc = Assoc {
+<a href=#1320 id=1320 data-nosnippet>1320</a>        role,
+<a href=#1321 id=1321 data-nosnippet>1321</a>        text,
+<a href=#1322 id=1322 data-nosnippet>1322</a>        label: inner.label.clone(),
+<a href=#1323 id=1323 data-nosnippet>1323</a>        rule: <span class="macro">s!</span>(<span class="string">"{rule} ruling4:inner-contact"</span>),
+<a href=#1324 id=1324 data-nosnippet>1324</a>        source: <span class="prelude-val">Some</span>((index, inner.span)),
+<a href=#1325 id=1325 data-nosnippet>1325</a>        target: link_target(inner),
+<a href=#1326 id=1326 data-nosnippet>1326</a>      };
+<a href=#1327 id=1327 data-nosnippet>1327</a>      <span class="comment">// (an e-mail or a url goes to the author it spells before the one the note is on — charter §4, by evidence:
+<a href=#1328 id=1328 data-nosnippet>1328</a>      // `Chauvet\thanks{… jocelyn.chauvet@…; xavier.bry@…}`, 1908.04020; 2304.00435; a co-author's homepage, 2001.02600
+<a href=#1329 id=1329 data-nosnippet>1329</a>      // — read once every name is, `answer_note_links`: the names after the note in its block are not read yet)
+<a href=#1330 id=1330 data-nosnippet>1330</a>      </span><span class="kw">let </span>link = <span class="macro">matches!</span>(assoc.role.as_str(), <span class="string">"email" </span>| <span class="string">"url"</span>);
+<a href=#1331 id=1331 data-nosnippet>1331</a>      <span class="kw">if </span>link {
+<a href=#1332 id=1332 data-nosnippet>1332</a>        links.push((assoc, fallback || routed));
+<a href=#1333 id=1333 data-nosnippet>1333</a>      } <span class="kw">else if </span>fallback {
+<a href=#1334 id=1334 data-nosnippet>1334</a>        <span class="self">self</span>.attach(owner, assoc, <span class="bool-val">false</span>);
+<a href=#1335 id=1335 data-nosnippet>1335</a>      } <span class="kw">else </span>{
+<a href=#1336 id=1336 data-nosnippet>1336</a>        all_taken = <span class="bool-val">false</span>;
+<a href=#1337 id=1337 data-nosnippet>1337</a>        <span class="kw">continue</span>;
+<a href=#1338 id=1338 data-nosnippet>1338</a>      }
+<a href=#1339 id=1339 data-nosnippet>1339</a>      <span class="kw">if </span>!inner.text.is_empty() {
+<a href=#1340 id=1340 data-nosnippet>1340</a>        rest = rest.replacen(inner.text.as_str(), <span class="string">""</span>, <span class="number">1</span>);
+<a href=#1341 id=1341 data-nosnippet>1341</a>      }
+<a href=#1342 id=1342 data-nosnippet>1342</a>    }
+<a href=#1343 id=1343 data-nosnippet>1343</a>    <span class="kw">let </span>emptiable = !contacts.is_empty() &amp;&amp; all_taken &amp;&amp; rest.chars().all(|c| !c.is_alphanumeric());
+<a href=#1344 id=1344 data-nosnippet>1344</a>    <span class="kw">if </span>emptiable &amp;&amp; !links.is_empty() {
+<a href=#1345 id=1345 data-nosnippet>1345</a>      <span class="comment">// (whether its links all become contacts, and it is dropped, once every name is read)
+<a href=#1346 id=1346 data-nosnippet>1346</a>      </span><span class="self">self</span>.note_links.push(NoteLink::Note {
+<a href=#1347 id=1347 data-nosnippet>1347</a>        index,
+<a href=#1348 id=1348 data-nosnippet>1348</a>        note: Box::new(note.clone()),
+<a href=#1349 id=1349 data-nosnippet>1349</a>        owner,
+<a href=#1350 id=1350 data-nosnippet>1350</a>        rule: rule.to_string(),
+<a href=#1351 id=1351 data-nosnippet>1351</a>        links,
+<a href=#1352 id=1352 data-nosnippet>1352</a>      });
+<a href=#1353 id=1353 data-nosnippet>1353</a>      <span class="kw">return</span>;
+<a href=#1354 id=1354 data-nosnippet>1354</a>    }
+<a href=#1355 id=1355 data-nosnippet>1355</a>    <span class="kw">for </span>(assoc, fallback) <span class="kw">in </span>links {
+<a href=#1356 id=1356 data-nosnippet>1356</a>      <span class="self">self
+<a href=#1357 id=1357 data-nosnippet>1357</a>        </span>.note_links
+<a href=#1358 id=1358 data-nosnippet>1358</a>        .push(NoteLink::Link { owner, assoc, fallback });
+<a href=#1359 id=1359 data-nosnippet>1359</a>    }
+<a href=#1360 id=1360 data-nosnippet>1360</a>    <span class="kw">if </span>emptiable {
+<a href=#1361 id=1361 data-nosnippet>1361</a>      <span class="self">self</span>.drop_emptied_note(index, note, rule);
+<a href=#1362 id=1362 data-nosnippet>1362</a>      <span class="kw">return</span>;
+<a href=#1363 id=1363 data-nosnippet>1363</a>    }
+<a href=#1364 id=1364 data-nosnippet>1364</a>    <span class="self">self</span>.keep_note(index, note, owner, rule);
+<a href=#1365 id=1365 data-nosnippet>1365</a>  }
+<a href=#1366 id=1366 data-nosnippet>1366</a>
+<a href=#1367 id=1367 data-nosnippet>1367</a>  <span class="doccomment">/// A note its contacts emptied, all taken out (ruling 4): dropped, its text kept for the comparison.
+<a href=#1368 id=1368 data-nosnippet>1368</a>  </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>drop_emptied_note(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index: usize, note: <span class="kw-2">&amp;</span>Event, rule: <span class="kw-2">&amp;</span>str) {
+<a href=#1369 id=1369 data-nosnippet>1369</a>    <span class="self">self</span>.out.dropped.push(Assoc {
+<a href=#1370 id=1370 data-nosnippet>1370</a>      role:   <span class="string">"note"</span>.into(),
+<a href=#1371 id=1371 data-nosnippet>1371</a>      text:   note.text.trim().to_string(),
+<a href=#1372 id=1372 data-nosnippet>1372</a>      label:  note.label.clone(),
+<a href=#1373 id=1373 data-nosnippet>1373</a>      rule:   <span class="macro">s!</span>(<span class="string">"{rule} ruling4:emptied"</span>),
+<a href=#1374 id=1374 data-nosnippet>1374</a>      source: <span class="prelude-val">Some</span>((index, note.span)),
+<a href=#1375 id=1375 data-nosnippet>1375</a>      target: <span class="prelude-val">None</span>,
+<a href=#1376 id=1376 data-nosnippet>1376</a>    });
+<a href=#1377 id=1377 data-nosnippet>1377</a>  }
+<a href=#1378 id=1378 data-nosnippet>1378</a>
+<a href=#1379 id=1379 data-nosnippet>1379</a>  <span class="doccomment">/// A note kept: a legend of the label its leading mark names, else a note of `owner`, its whole text. A note nothing
+<a href=#1380 id=1380 data-nosnippet>1380</a>  /// in which prints is none (ruling 4 as the user's rulings of 2026-10-30 extend it, OXIDIZED_DESIGN_DIVERGENCES #916:
+<a href=#1381 id=1381 data-nosnippet>1381</a>  /// `\thanks{}`, `\thanks{~}`, as the XML drops it): dropped, as an emptied one is.
+<a href=#1382 id=1382 data-nosnippet>1382</a>  </span><span class="kw">pub</span>(<span class="kw">super</span>) <span class="kw">fn </span>keep_note(<span class="kw-2">&amp;mut </span><span class="self">self</span>, index: usize, note: <span class="kw-2">&amp;</span>Event, owner: <span class="prelude-ty">Option</span>&lt;usize&gt;, rule: <span class="kw-2">&amp;</span>str) {
+<a href=#1383 id=1383 data-nosnippet>1383</a>    <span class="kw">if </span>note.inkless {
+<a href=#1384 id=1384 data-nosnippet>1384</a>      <span class="self">self</span>.out.dropped.push(Assoc {
+<a href=#1385 id=1385 data-nosnippet>1385</a>        role:   <span class="string">"note"</span>.into(),
+<a href=#1386 id=1386 data-nosnippet>1386</a>        text:   note.text.trim().to_string(),
+<a href=#1387 id=1387 data-nosnippet>1387</a>        label:  note.label.clone(),
+<a href=#1388 id=1388 data-nosnippet>1388</a>        rule:   <span class="macro">s!</span>(<span class="string">"{rule} ruling4:inkless"</span>),
+<a href=#1389 id=1389 data-nosnippet>1389</a>        source: <span class="prelude-val">Some</span>((index, note.span)),
+<a href=#1390 id=1390 data-nosnippet>1390</a>        target: <span class="prelude-val">None</span>,
+<a href=#1391 id=1391 data-nosnippet>1391</a>      });
+<a href=#1392 id=1392 data-nosnippet>1392</a>      <span class="kw">return</span>;
+<a href=#1393 id=1393 data-nosnippet>1393</a>    }
+<a href=#1394 id=1394 data-nosnippet>1394</a>    <span class="kw">let </span>live = <span class="self">self</span>.live();
+<a href=#1395 id=1395 data-nosnippet>1395</a>    <span class="kw">let </span>numbered = !note.footnote &amp;&amp; numbered_thanks(note);
+<a href=#1396 id=1396 data-nosnippet>1396</a>    <span class="comment">// (one such `\thanks` holding several marked entries, `\thanks{$^{1}$UC Berkeley, $^{2}$Toyota Motor North America,
+<a href=#1397 id=1397 data-nosnippet>1397</a>    // $^{3}$Princeton university}`: each its own entry by its mark, as the old driver cut it — 2509.19480, 2206.07648,
+<a href=#1398 id=1398 data-nosnippet>1398</a>    // where the whole stayed one note of the last name. Its lexed text cut before each top-level mark (`mark_led_pieces`, the API
+<a href=#1399 id=1399 data-nosnippet>1399</a>    // reader's cut, not the old driver's `split_marked_pieces`), so an entry's own comma stays its text, `$^{1}$Dept A, Univ A,
+<a href=#1400 id=1400 data-nosnippet>1400</a>    // $^{2}$Univ B`; each piece led by raised marks with labels, else it stays one note, as before. Each piece is sourced at
+<a href=#1401 id=1401 data-nosnippet>1401</a>    // its own span, its first event's start to its last's end (a mark's formula whole), so the writer writes the reading's cut, not a cut of its own:
+<a href=#1402 id=1402 data-nosnippet>1402</a>    // `$^{1}$Univ A; $^{2}$Univ B. $^{*}$Corresponding author.`, whose third piece the writer's re-cut of the whole note lost,
+<a href=#1403 id=1403 data-nosnippet>1403</a>    // review revG5 1)
+<a href=#1404 id=1404 data-nosnippet>1404</a>    </span><span class="kw">if </span>numbered {
+<a href=#1405 id=1405 data-nosnippet>1405</a>      <span class="kw">let </span>pieces = mark_led_pieces(<span class="kw-2">&amp;</span>note.body);
+<a href=#1406 id=1406 data-nosnippet>1406</a>      <span class="kw">let </span>entries: <span class="prelude-ty">Option</span>&lt;Vec&lt;MarkedEntry&gt;&gt; = pieces
+<a href=#1407 id=1407 data-nosnippet>1407</a>        .iter()
+<a href=#1408 id=1408 data-nosnippet>1408</a>        .map(|piece| {
+<a href=#1409 id=1409 data-nosnippet>1409</a>          <span class="kw">let </span>(start, end) = events::leading_marks(piece);
+<a href=#1410 id=1410 data-nosnippet>1410</a>          <span class="kw">let </span>marks: Vec&lt;<span class="kw-2">&amp;</span>Event&gt; = piece[start..end]
+<a href=#1411 id=1411 data-nosnippet>1411</a>            .iter()
+<a href=#1412 id=1412 data-nosnippet>1412</a>            .filter(|e| e.kind == EventKind::Mark)
+<a href=#1413 id=1413 data-nosnippet>1413</a>            .collect();
+<a href=#1414 id=1414 data-nosnippet>1414</a>          <span class="kw">let </span>labels: Vec&lt;String&gt; = marks
+<a href=#1415 id=1415 data-nosnippet>1415</a>            .iter()
+<a href=#1416 id=1416 data-nosnippet>1416</a>            .flat_map(|mark| mark_labels(mark.label.as_deref().unwrap_or(<span class="string">""</span>)))
+<a href=#1417 id=1417 data-nosnippet>1417</a>            .collect();
+<a href=#1418 id=1418 data-nosnippet>1418</a>          (!marks.is_empty() &amp;&amp; marks.iter().all(|e| raised_mark(e)) &amp;&amp; !labels.is_empty()).then(
+<a href=#1419 id=1419 data-nosnippet>1419</a>            || {
+<a href=#1420 id=1420 data-nosnippet>1420</a>              <span class="kw">let </span>text = events_text(<span class="kw-2">&amp;</span>piece[end..].iter().collect::&lt;Vec&lt;<span class="kw">_</span>&gt;&gt;());
+<a href=#1421 id=1421 data-nosnippet>1421</a>              <span class="kw">let </span>first = piece.iter().find_map(Event::extent);
+<a href=#1422 id=1422 data-nosnippet>1422</a>              <span class="kw">let </span>last = piece.iter().rev().find_map(Event::extent);
+<a href=#1423 id=1423 data-nosnippet>1423</a>              <span class="kw">let </span>span = first.zip(last).map(|(first, last)| (first.<span class="number">0</span>, last.<span class="number">1</span>));
+<a href=#1424 id=1424 data-nosnippet>1424</a>              (labels, text.trim().to_string(), span.or(note.span))
+<a href=#1425 id=1425 data-nosnippet>1425</a>            },
+<a href=#1426 id=1426 data-nosnippet>1426</a>          )
+<a href=#1427 id=1427 data-nosnippet>1427</a>        })
+<a href=#1428 id=1428 data-nosnippet>1428</a>        .collect();
+<a href=#1429 id=1429 data-nosnippet>1429</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(entries) = entries.filter(|entries| entries.len() &gt; <span class="number">1</span>) {
+<a href=#1430 id=1430 data-nosnippet>1430</a>        <span class="comment">// (the separator words the cut drops between two entries are the cut's, no entry's text, as an API call's
+<a href=#1431 id=1431 data-nosnippet>1431</a>        // (`$^{1}$Univ A, $^{2}$Univ B and $^{3}$Univ C`): recorded dropped, so no word of the note reads as unwritten)
+<a href=#1432 id=1432 data-nosnippet>1432</a>        </span><span class="kw">let </span>word = |e: <span class="kw-2">&amp;</span>Event| <span class="kw">match </span><span class="kw-2">&amp;</span>e.kind {
+<a href=#1433 id=1433 data-nosnippet>1433</a>          EventKind::Sep(SepKind::Word(word)) =&gt; <span class="prelude-val">Some</span>(word.clone()),
+<a href=#1434 id=1434 data-nosnippet>1434</a>          <span class="kw">_ </span>=&gt; <span class="prelude-val">None</span>,
+<a href=#1435 id=1435 data-nosnippet>1435</a>        };
+<a href=#1436 id=1436 data-nosnippet>1436</a>        <span class="kw">let </span><span class="kw-2">mut </span>cut: Vec&lt;String&gt; = note.body.iter().filter_map(word).collect();
+<a href=#1437 id=1437 data-nosnippet>1437</a>        <span class="kw">for </span>kept <span class="kw">in </span>pieces.iter().flatten().filter_map(word) {
+<a href=#1438 id=1438 data-nosnippet>1438</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(at) = cut.iter().position(|w| <span class="kw-2">*</span>w == kept) {
+<a href=#1439 id=1439 data-nosnippet>1439</a>            cut.remove(at);
+<a href=#1440 id=1440 data-nosnippet>1440</a>          }
+<a href=#1441 id=1441 data-nosnippet>1441</a>        }
+<a href=#1442 id=1442 data-nosnippet>1442</a>        <span class="kw">if </span>!cut.is_empty() {
+<a href=#1443 id=1443 data-nosnippet>1443</a>          <span class="self">self</span>.out.dropped.push(Assoc {
+<a href=#1444 id=1444 data-nosnippet>1444</a>            role:   <span class="string">"separator"</span>.into(),
+<a href=#1445 id=1445 data-nosnippet>1445</a>            text:   cut.join(<span class="string">" "</span>),
+<a href=#1446 id=1446 data-nosnippet>1446</a>            label:  <span class="prelude-val">None</span>,
+<a href=#1447 id=1447 data-nosnippet>1447</a>            rule:   <span class="macro">s!</span>(<span class="string">"{rule} note:split-by-marks"</span>),
+<a href=#1448 id=1448 data-nosnippet>1448</a>            source: <span class="prelude-val">Some</span>((index, note.span)),
+<a href=#1449 id=1449 data-nosnippet>1449</a>            target: <span class="prelude-val">None</span>,
+<a href=#1450 id=1450 data-nosnippet>1450</a>          });
+<a href=#1451 id=1451 data-nosnippet>1451</a>        }
+<a href=#1452 id=1452 data-nosnippet>1452</a>        <span class="kw">for </span>(labels, text, span) <span class="kw">in </span>entries {
+<a href=#1453 id=1453 data-nosnippet>1453</a>          <span class="kw">let </span>role = <span class="kw">if </span>is_legend_text(<span class="kw-2">&amp;</span>text) {
+<a href=#1454 id=1454 data-nosnippet>1454</a>            <span class="string">"legend"
+<a href=#1455 id=1455 data-nosnippet>1455</a>          </span>} <span class="kw">else </span>{
+<a href=#1456 id=1456 data-nosnippet>1456</a>            <span class="string">"affiliation"
+<a href=#1457 id=1457 data-nosnippet>1457</a>          </span>};
+<a href=#1458 id=1458 data-nosnippet>1458</a>          <span class="self">self</span>.pending.push((labels.clone(), <span class="bool-val">false</span>, Assoc {
+<a href=#1459 id=1459 data-nosnippet>1459</a>            role: role.into(),
+<a href=#1460 id=1460 data-nosnippet>1460</a>            text,
+<a href=#1461 id=1461 data-nosnippet>1461</a>            label: labels.first().cloned(),
+<a href=#1462 id=1462 data-nosnippet>1462</a>            rule: <span class="macro">s!</span>(<span class="string">"{rule} note:legend ruling1:request note:split-by-marks"</span>),
+<a href=#1463 id=1463 data-nosnippet>1463</a>            source: <span class="prelude-val">Some</span>((index, span)),
+<a href=#1464 id=1464 data-nosnippet>1464</a>            target: <span class="prelude-val">None</span>,
+<a href=#1465 id=1465 data-nosnippet>1465</a>          }));
+<a href=#1466 id=1466 data-nosnippet>1466</a>        }
+<a href=#1467 id=1467 data-nosnippet>1467</a>        <span class="kw">return</span>;
+<a href=#1468 id=1468 data-nosnippet>1468</a>      }
+<a href=#1469 id=1469 data-nosnippet>1469</a>    }
+<a href=#1470 id=1470 data-nosnippet>1470</a>    <span class="comment">// (a note opening with a Mark some name requests is that label's legend: `\thanks{$^{1}$ Canizaro … Center}`
+<a href=#1471 id=1471 data-nosnippet>1471</a>    // under `Newaz$^{1,2,*}$`, 2311.16145 — the mark it prints, its leading Mark event; its owners by ruling 1)
+<a href=#1472 id=1472 data-nosnippet>1472</a>    // (one whose text holds a later mark of other requested labels, none of the first's, is the legends of several
+<a href=#1473 id=1473 data-nosnippet>1473</a>    // entries, no one label's: IEEEtran's `\IEEEcompsocitemizethanks{\IEEEcompsocthanksitem \Mark{1}College …
+<a href=#1474 id=1474 data-nosnippet>1474</a>    // \IEEEcompsocthanksitem \Mark{2}College …}` was given whole to the authors of mark 1, 1802.03043 — a note of the
+<a href=#1475 id=1475 data-nosnippet>1475</a>    // name before, as today's; a later `\textsuperscript{1,2}` sharing the first's label keeps the first's reading, as
+<a href=#1476 id=1476 data-nosnippet>1476</a>    // today's, 2507.07006)
+<a href=#1477 id=1477 data-nosnippet>1477</a>    </span><span class="kw">if let </span><span class="prelude-val">Some</span>((labels, legend)) = leading_mark(note)
+<a href=#1478 id=1478 data-nosnippet>1478</a>      &amp;&amp; labels
+<a href=#1479 id=1479 data-nosnippet>1479</a>        .iter()
+<a href=#1480 id=1480 data-nosnippet>1480</a>        .any(|l| !label_owners(<span class="kw-2">&amp;</span><span class="self">self</span>.out.creators, <span class="kw-2">&amp;</span>live, l).is_empty())
+<a href=#1481 id=1481 data-nosnippet>1481</a>      &amp;&amp; !note
+<a href=#1482 id=1482 data-nosnippet>1482</a>        .inner
+<a href=#1483 id=1483 data-nosnippet>1483</a>        .iter()
+<a href=#1484 id=1484 data-nosnippet>1484</a>        <span class="comment">// (in a re-routed `\thanks`, its raised marks alone: a glyph is its text, `*Corresponding authors` closing
+<a href=#1485 id=1485 data-nosnippet>1485</a>        // `$^{4}$ Department of Mechanical Engineering, …`, 2505.06451)
+<a href=#1486 id=1486 data-nosnippet>1486</a>        </span>.filter(|e| e.kind == EventKind::Mark &amp;&amp; !e.line_first &amp;&amp; (!numbered || raised_mark(e)))
+<a href=#1487 id=1487 data-nosnippet>1487</a>        .map(|e| mark_labels(e.label.as_deref().unwrap_or(<span class="string">""</span>)))
+<a href=#1488 id=1488 data-nosnippet>1488</a>        .any(|later| {
+<a href=#1489 id=1489 data-nosnippet>1489</a>          !later.is_empty()
+<a href=#1490 id=1490 data-nosnippet>1490</a>            &amp;&amp; later.iter().all(|l| !labels.contains(l))
+<a href=#1491 id=1491 data-nosnippet>1491</a>            &amp;&amp; later
+<a href=#1492 id=1492 data-nosnippet>1492</a>              .iter()
+<a href=#1493 id=1493 data-nosnippet>1493</a>              .any(|l| !label_owners(<span class="kw-2">&amp;</span><span class="self">self</span>.out.creators, <span class="kw-2">&amp;</span>live, l).is_empty())
+<a href=#1494 id=1494 data-nosnippet>1494</a>        })
+<a href=#1495 id=1495 data-nosnippet>1495</a>    {
+<a href=#1496 id=1496 data-nosnippet>1496</a>      <span class="kw">let </span>symbol = labels.iter().all(|l| is_symbol_label(l));
+<a href=#1497 id=1497 data-nosnippet>1497</a>      <span class="comment">// (the old driver's procedure's kind, in its order (P2 NT; ported strictly, P2r2): a
+<a href=#1498 id=1498 data-nosnippet>1498</a>      // `\footnote` is a note (`\lx@add@note`, frontmatter_fields.rs); a `\thanks` is an affiliation only where
+<a href=#1499 id=1499 data-nosnippet>1499</a>      // `\lx@add@thanks` re-routes it, its content opening with `$^` or `\textsuperscript` whose first character is an
+<a href=#1500 id=1500 data-nosnippet>1500</a>      // ASCII digit (`starts_with_affiliation_mark`, OXIDIZED_DESIGN #52) — here the note's leading Mark, a superscript
+<a href=#1501 id=1501 data-nosnippet>1501</a>      // whose printed text opens with a digit —, else a note; an affiliation whose whole text is a legend is then a note
+<a href=#1502 id=1502 data-nosnippet>1502</a>      // (the Kind step for a legend, `insert::kind_legend_contacts`; here `is_legend_text`). The note goes to its mark's
+<a href=#1503 id=1503 data-nosnippet>1503</a>      // carriers, not the name before it (FIDELITY_CHARTER §4: a symbol-led line goes to the authors carrying the
+<a href=#1504 id=1504 data-nosnippet>1504</a>      // symbol, affiliation or legend alike): `\thanks{\IEEEauthorrefmark{2} Also with …}`, 1107.5730; `\thanks{$\diamond$
+<a href=#1505 id=1505 data-nosnippet>1505</a>      // Work conducted during an internship …}`, 2205.02029. One departure, the reading's own entry kept: a note that
+<a href=#1506 id=1506 data-nosnippet>1506</a>      // prints e-mail addresses and is no legend stays the entry the reading made it, whose addresses go each to the
+<a href=#1507 id=1507 data-nosnippet>1507</a>      // carrier it spells (FIDELITY_CHARTER §4's symbol-line rule; the old driver's note keeps them in its text, every
+<a href=#1508 id=1508 data-nosnippet>1508</a>      // address on the note's owner): IEEEtran journal's `\thanks{\IEEEauthorrefmark{1}The authors are with …, E-mails:
+<a href=#1509 id=1509 data-nosnippet>1509</a>      // a@, b@, c@}`, 1610.05419, 2405.06709 — review revP2 finding 1)
+<a href=#1510 id=1510 data-nosnippet>1510</a>      </span><span class="kw">let </span>role =
+<a href=#1511 id=1511 data-nosnippet>1511</a>        <span class="kw">if </span>(!numbered &amp;&amp; addresses_in(<span class="kw-2">&amp;</span>legend).is_empty()) || is_legend_text(<span class="kw-2">&amp;</span>legend) || symbol {
+<a href=#1512 id=1512 data-nosnippet>1512</a>          <span class="string">"legend"
+<a href=#1513 id=1513 data-nosnippet>1513</a>        </span>} <span class="kw">else </span>{
+<a href=#1514 id=1514 data-nosnippet>1514</a>          <span class="string">"affiliation"
+<a href=#1515 id=1515 data-nosnippet>1515</a>        </span>};
+<a href=#1516 id=1516 data-nosnippet>1516</a>      <span class="self">self</span>.pending.push((labels.clone(), symbol, Assoc {
+<a href=#1517 id=1517 data-nosnippet>1517</a>        role:   role.into(),
+<a href=#1518 id=1518 data-nosnippet>1518</a>        text:   legend.clone(),
+<a href=#1519 id=1519 data-nosnippet>1519</a>        label:  labels.first().cloned(),
+<a href=#1520 id=1520 data-nosnippet>1520</a>        rule:   <span class="macro">s!</span>(<span class="string">"{rule} note:legend ruling1:request"</span>),
+<a href=#1521 id=1521 data-nosnippet>1521</a>        source: <span class="prelude-val">Some</span>((index, note.span)),
+<a href=#1522 id=1522 data-nosnippet>1522</a>        target: <span class="prelude-val">None</span>,
+<a href=#1523 id=1523 data-nosnippet>1523</a>      }));
+<a href=#1524 id=1524 data-nosnippet>1524</a>      <span class="kw">return</span>;
+<a href=#1525 id=1525 data-nosnippet>1525</a>    }
+<a href=#1526 id=1526 data-nosnippet>1526</a>    <span class="kw">let </span>role = note
+<a href=#1527 id=1527 data-nosnippet>1527</a>      .role
+<a href=#1528 id=1528 data-nosnippet>1528</a>      .as_deref()
+<a href=#1529 id=1529 data-nosnippet>1529</a>      .unwrap_or(<span class="string">"thanks"</span>)
+<a href=#1530 id=1530 data-nosnippet>1530</a>      .split(<span class="string">' '</span>)
+<a href=#1531 id=1531 data-nosnippet>1531</a>      .next()
+<a href=#1532 id=1532 data-nosnippet>1532</a>      .unwrap_or(<span class="string">"thanks"</span>)
+<a href=#1533 id=1533 data-nosnippet>1533</a>      .to_string();
+<a href=#1534 id=1534 data-nosnippet>1534</a>    <span class="kw">let </span>rule = rule.to_string();
+<a href=#1535 id=1535 data-nosnippet>1535</a>    <span class="self">self</span>.attach(
+<a href=#1536 id=1536 data-nosnippet>1536</a>      owner,
+<a href=#1537 id=1537 data-nosnippet>1537</a>      Assoc {
+<a href=#1538 id=1538 data-nosnippet>1538</a>        role,
+<a href=#1539 id=1539 data-nosnippet>1539</a>        text: note.text.trim().to_string(),
+<a href=#1540 id=1540 data-nosnippet>1540</a>        label: note.label.clone(),
+<a href=#1541 id=1541 data-nosnippet>1541</a>        rule,
+<a href=#1542 id=1542 data-nosnippet>1542</a>        source: <span class="prelude-val">Some</span>((index, note.span)),
+<a href=#1543 id=1543 data-nosnippet>1543</a>        target: <span class="prelude-val">None</span>,
+<a href=#1544 id=1544 data-nosnippet>1544</a>      },
+<a href=#1545 id=1545 data-nosnippet>1545</a>      <span class="bool-val">true</span>,
+<a href=#1546 id=1546 data-nosnippet>1546</a>    );
+<a href=#1547 id=1547 data-nosnippet>1547</a>  }
+<a href=#1548 id=1548 data-nosnippet>1548</a>}
+<a href=#1549 id=1549 data-nosnippet>1549</a>
+<a href=#1550 id=1550 data-nosnippet>1550</a><span class="doccomment">/// A raised mark: a superscript or `\textsuperscript`, what Perl's readers split at (`@authorsup_markers`).
+<a href=#1551 id=1551 data-nosnippet>1551</a></span><span class="kw">fn </span>raised_mark(e: <span class="kw-2">&amp;</span>Event) -&gt; bool {
+<a href=#1552 id=1552 data-nosnippet>1552</a>  e.kind == EventKind::Mark
+<a href=#1553 id=1553 data-nosnippet>1553</a>    &amp;&amp; e
+<a href=#1554 id=1554 data-nosnippet>1554</a>      .role
+<a href=#1555 id=1555 data-nosnippet>1555</a>      .as_deref()
+<a href=#1556 id=1556 data-nosnippet>1556</a>      .is_some_and(|r| r.starts_with(<span class="string">"sup"</span>) || r.starts_with(<span class="string">"math"</span>))
+<a href=#1557 id=1557 data-nosnippet>1557</a>}
+<a href=#1558 id=1558 data-nosnippet>1558</a>
+<a href=#1559 id=1559 data-nosnippet>1559</a><span class="doccomment">/// A `\thanks` whose text opens with a raised number: what `\lx@add@thanks` re-routes as affiliations, each segment
+<a href=#1560 id=1560 data-nosnippet>1560</a>/// its raised marks part it into an `\lx@affiliation@withsup` entry labelled by its mark (frontmatter_fields.rs
+<a href=#1561 id=1561 data-nosnippet>1561</a>/// `\lx@add@thanks`, `starts_with_affiliation_mark`, OXIDIZED_DESIGN #52; `split_wrapped_affiliation_marks`).
+<a href=#1562 id=1562 data-nosnippet>1562</a></span><span class="kw">fn </span>numbered_thanks(note: <span class="kw-2">&amp;</span>Event) -&gt; bool {
+<a href=#1563 id=1563 data-nosnippet>1563</a>  note
+<a href=#1564 id=1564 data-nosnippet>1564</a>    .inner
+<a href=#1565 id=1565 data-nosnippet>1565</a>    .iter()
+<a href=#1566 id=1566 data-nosnippet>1566</a>    .find(|e| e.kind == EventKind::Mark &amp;&amp; e.line_first)
+<a href=#1567 id=1567 data-nosnippet>1567</a>    .is_some_and(|mark| {
+<a href=#1568 id=1568 data-nosnippet>1568</a>      raised_mark(mark)
+<a href=#1569 id=1569 data-nosnippet>1569</a>        &amp;&amp; mark
+<a href=#1570 id=1570 data-nosnippet>1570</a>          .text
+<a href=#1571 id=1571 data-nosnippet>1571</a>          .trim_start()
+<a href=#1572 id=1572 data-nosnippet>1572</a>          .starts_with(|c: char| c.is_ascii_digit())
+<a href=#1573 id=1573 data-nosnippet>1573</a>    })
+<a href=#1574 id=1574 data-nosnippet>1574</a>}
+<a href=#1575 id=1575 data-nosnippet>1575</a>
+<a href=#1576 id=1576 data-nosnippet>1576</a><span class="doccomment">/// One entry of a marked `\thanks` the reading cuts ([`Resolver::keep_note`]): its mark's labels, its text, its own span.
+<a href=#1577 id=1577 data-nosnippet>1577</a></span><span class="kw">type </span>MarkedEntry = (Vec&lt;String&gt;, String, <span class="prelude-ty">Option</span>&lt;(u16, u16)&gt;);
+<a href=#1578 id=1578 data-nosnippet>1578</a>
+<a href=#1579 id=1579 data-nosnippet>1579</a><span class="doccomment">/// Whether a line's text names a collaboration or a team, as the old reader's collaboration reading reads one
+<a href=#1580 id=1580 data-nosnippet>1580</a>/// ([`reads_as_collaboration`]): whole (`the Solar Orbiter EPD and Parker Solar Probe ISIS teams`, 2408.02330) or as
+<a href=#1581 id=1581 data-nosnippet>1581</a>/// the remark a name speaks for ([`remark_start`]: `Shuang-Nan Zhang on behalf of the SVOM collaboration .`, the mark
+<a href=#1582 id=1582 data-nosnippet>1582</a>/// after it taken out, 2607.01090) — the punctuation closing the line no part of the name. A line of its own, it is
+<a href=#1583 id=1583 data-nosnippet>1583</a>/// framed as the old reader's line under the names is ([`collaboration_framing`]'s `line`, as
+<a href=#1584 id=1584 data-nosnippet>1584</a>/// [`collaboration_line_framing`]): a collaboration word suffices, a team word only by more than a bare "the" or listed
+<a href=#1585 id=1585 data-nosnippet>1585</a>/// with "and" (the 2408.02330 line) — `The Theory Group`, `the Applied Mathematics Group` over an address are an
+<a href=#1586 id=1586 data-nosnippet>1586</a>/// institution's, every name's affiliation (review revH5 finding 1).
+<a href=#1587 id=1587 data-nosnippet>1587</a></span><span class="kw">fn </span>names_collaboration(text: <span class="kw-2">&amp;</span>str) -&gt; bool {
+<a href=#1588 id=1588 data-nosnippet>1588</a>  <span class="kw">let </span>t = text.trim_end_matches(|c: char| c.is_whitespace() || <span class="string">".,;"</span>.contains(c));
+<a href=#1589 id=1589 data-nosnippet>1589</a>  <span class="kw">let </span>listed = t.split_whitespace().any(|w| <span class="macro">matches!</span>(w, <span class="string">"and" </span>| <span class="string">"&amp;"</span>));
+<a href=#1590 id=1590 data-nosnippet>1590</a>  <span class="kw">let </span>reads = |s: <span class="kw-2">&amp;</span>str| collaboration_framing(s, listed, <span class="bool-val">true</span>).is_some();
+<a href=#1591 id=1591 data-nosnippet>1591</a>  reads(t) || remark_start(t).is_some_and(|at| reads(<span class="kw-2">&amp;</span>t[at..]))
+<a href=#1592 id=1592 data-nosnippet>1592</a>}
+<a href=#1593 id=1593 data-nosnippet>1593</a>
+<a href=#1594 id=1594 data-nosnippet>1594</a><span class="doccomment">/// The text a column's line prints by its own ink, the contacts its calls add aside (`Bob Baker\institute{Univ B}` reads
+<a href=#1595 id=1595 data-nosnippet>1595</a>/// "Bob Baker"); a line printing nothing but contacts reads as their text (`\institute{Univ B}` alone, "Univ B").
+<a href=#1596 id=1596 data-nosnippet>1596</a></span><span class="kw">fn </span>column_own_text(events: <span class="kw-2">&amp;</span>[<span class="kw-2">&amp;</span>Event]) -&gt; String {
+<a href=#1597 id=1597 data-nosnippet>1597</a>  <span class="kw">let </span>own: Vec&lt;<span class="kw-2">&amp;</span>Event&gt; = events
+<a href=#1598 id=1598 data-nosnippet>1598</a>    .iter()
+<a href=#1599 id=1599 data-nosnippet>1599</a>    .copied()
+<a href=#1600 id=1600 data-nosnippet>1600</a>    .filter(|e| e.kind != EventKind::Contact)
+<a href=#1601 id=1601 data-nosnippet>1601</a>    .collect();
+<a href=#1602 id=1602 data-nosnippet>1602</a>  <span class="kw">match </span>events_text(<span class="kw-2">&amp;</span>own) {
+<a href=#1603 id=1603 data-nosnippet>1603</a>    text <span class="kw">if </span>text.is_empty() =&gt; events_text(events),
+<a href=#1604 id=1604 data-nosnippet>1604</a>    text =&gt; text,
+<a href=#1605 id=1605 data-nosnippet>1605</a>  }
+<a href=#1606 id=1606 data-nosnippet>1606</a>}
+<a href=#1607 id=1607 data-nosnippet>1607</a>
+<a href=#1608 id=1608 data-nosnippet>1608</a><span class="doccomment">/// Where a sectioned block's address section starts in `events`: the first of the section `markers` (positions, ascending)
+<a href=#1609 id=1609 data-nosnippet>1609</a>/// whose events, up to the next one, print an address (an `@` in their text) — its `\emails`, not its `\affiliations`.
+<a href=#1610 id=1610 data-nosnippet>1610</a></span><span class="kw">fn </span>address_section(markers: <span class="kw-2">&amp;</span>[u16], events: <span class="kw-2">&amp;</span>[Event]) -&gt; <span class="prelude-ty">Option</span>&lt;usize&gt; {
+<a href=#1611 id=1611 data-nosnippet>1611</a>  <span class="kw">let </span>at = |marker: u16| {
+<a href=#1612 id=1612 data-nosnippet>1612</a>    events
+<a href=#1613 id=1613 data-nosnippet>1613</a>      .iter()
+<a href=#1614 id=1614 data-nosnippet>1614</a>      .position(|e| e.span.is_some_and(|(start, <span class="kw">_</span>)| start &gt;= marker))
+<a href=#1615 id=1615 data-nosnippet>1615</a>      .unwrap_or(events.len())
+<a href=#1616 id=1616 data-nosnippet>1616</a>  };
+<a href=#1617 id=1617 data-nosnippet>1617</a>  markers.iter().enumerate().find_map(|(n, <span class="kw-2">&amp;</span>marker)| {
+<a href=#1618 id=1618 data-nosnippet>1618</a>    <span class="kw">let </span>(from, to) = (
+<a href=#1619 id=1619 data-nosnippet>1619</a>      at(marker),
+<a href=#1620 id=1620 data-nosnippet>1620</a>      markers.get(n + <span class="number">1</span>).map_or(events.len(), |<span class="kw-2">&amp;</span>next| at(next)),
+<a href=#1621 id=1621 data-nosnippet>1621</a>    );
+<a href=#1622 id=1622 data-nosnippet>1622</a>    <span class="kw">let </span>section: Vec&lt;<span class="kw-2">&amp;</span>Event&gt; = events[from..to.max(from)].iter().collect();
+<a href=#1623 id=1623 data-nosnippet>1623</a>    events_text(<span class="kw-2">&amp;</span>section).contains(<span class="string">'@'</span>).then_some(from)
+<a href=#1624 id=1624 data-nosnippet>1624</a>  })
+<a href=#1625 id=1625 data-nosnippet>1625</a>}
+<a href=#1626 id=1626 data-nosnippet>1626</a>
+<a href=#1627 id=1627 data-nosnippet>1627</a><span class="doccomment">/// The State mapping of the blocks [`warn_mark_led_names_unread`] counted: once each, whatever flush reads it again.
+<a href=#1628 id=1628 data-nosnippet>1628</a></span><span class="kw">const </span>COUNTED_BLOCKS: <span class="kw-2">&amp;</span>str = <span class="string">"lx_fm_mark_led_names_counted"</span>;
+<a href=#1629 id=1629 data-nosnippet>1629</a>
+<a href=#1630 id=1630 data-nosnippet>1630</a><span class="doccomment">/// Count a block whose lines its marks lead read as names but as no names row (`names_led_by_marks`): the names its
+<a href=#1631 id=1631 data-nosnippet>1631</a>/// lines print are affiliations of an unnamed creator.
+<a href=#1632 id=1632 data-nosnippet>1632</a></span><span class="kw">fn </span>warn_mark_led_names_unread(index: usize, lines: usize) {
+<a href=#1633 id=1633 data-nosnippet>1633</a>  <span class="kw">let </span>once = <span class="macro">s!</span>(<span class="string">"{index}"</span>);
+<a href=#1634 id=1634 data-nosnippet>1634</a>  <span class="kw">if </span>lookup_mapping(COUNTED_BLOCKS, <span class="kw-2">&amp;</span>once).is_some() {
+<a href=#1635 id=1635 data-nosnippet>1635</a>    <span class="kw">return</span>;
+<a href=#1636 id=1636 data-nosnippet>1636</a>  }
+<a href=#1637 id=1637 data-nosnippet>1637</a>  assign_mapping(COUNTED_BLOCKS, <span class="kw-2">&amp;</span>once, <span class="prelude-val">Some</span>(Stored::Bool(<span class="bool-val">true</span>)));
+<a href=#1638 id=1638 data-nosnippet>1638</a>  <span class="macro">Warn!</span>(
+<a href=#1639 id=1639 data-nosnippet>1639</a>    <span class="string">"unexpected"</span>,
+<a href=#1640 id=1640 data-nosnippet>1640</a>    <span class="string">"frontmatter"</span>,
+<a href=#1641 id=1641 data-nosnippet>1641</a>    <span class="macro">s!</span>(
+<a href=#1642 id=1642 data-nosnippet>1642</a>      <span class="string">"The frontmatter reading makes no name of an author block whose {lines} line(s) led by marks read as names: they \
+<a href=#1643 id=1643 data-nosnippet>1643</a>       are read as labelled affiliations"
+<a href=#1644 id=1644 data-nosnippet>1644</a>    </span>)
+<a href=#1645 id=1645 data-nosnippet>1645</a>  );
+<a href=#1646 id=1646 data-nosnippet>1646</a>}
+</code></pre></div></section></main></body></html>

@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/appendix_sty.rs`."><title>appendix_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>appendix_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/appendix_sty.rs`."><title>appendix_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>appendix_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a><span class="attr">#[rustfmt::skip]
 <a href=#4 id=4 data-nosnippet>4</a></span><span class="macro">LoadDefinitions!</span>({
@@ -23,63 +23,85 @@
 <a href=#23 id=23 data-nosnippet>23</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@dotitletoc@pp"</span>);
 <a href=#24 id=24 data-nosnippet>24</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@dohead@pp"</span>);
 <a href=#25 id=25 data-nosnippet>25</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@dopage@pp"</span>);
-<a href=#26 id=26 data-nosnippet>26</a>
-<a href=#27 id=27 data-nosnippet>27</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\appendixtocon"</span>,       <span class="string">"\\@dotoc@pptrue"</span>);
-<a href=#28 id=28 data-nosnippet>28</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\appendixtocoff"</span>,      <span class="string">"\\@dotoc@ppfalse"</span>);
-<a href=#29 id=29 data-nosnippet>29</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\appendixpageon"</span>,      <span class="string">"\\@dopage@pptrue"</span>);
-<a href=#30 id=30 data-nosnippet>30</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\appendixpageoff"</span>,     <span class="string">"\\@dopage@ppfalse"</span>);
-<a href=#31 id=31 data-nosnippet>31</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\appendixtitleon"</span>,     <span class="string">"\\@dotitle@pptrue"</span>);
-<a href=#32 id=32 data-nosnippet>32</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\appendixtitleoff"</span>,    <span class="string">"\\@dotitle@ppfalse"</span>);
-<a href=#33 id=33 data-nosnippet>33</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\appendixtitletocon"</span>,  <span class="string">"\\@dotitletoc@pptrue"</span>);
-<a href=#34 id=34 data-nosnippet>34</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\appendixtitletocoff"</span>, <span class="string">"\\@dotitletoc@ppfalse"</span>);
-<a href=#35 id=35 data-nosnippet>35</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\appendixheaderon"</span>,    <span class="string">"\\@dohead@pptrue"</span>);
-<a href=#36 id=36 data-nosnippet>36</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\appendixheaderoff"</span>,   <span class="string">"\\@dohead@ppfalse"</span>);
-<a href=#37 id=37 data-nosnippet>37</a>
-<a href=#38 id=38 data-nosnippet>38</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\setthesection"</span>,    <span class="string">"\\Alph{section}"</span>);
-<a href=#39 id=39 data-nosnippet>39</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\setthesubsection"</span>, <span class="string">"\\thesection.\\Alph{subsection}"</span>);
-<a href=#40 id=40 data-nosnippet>40</a>
-<a href=#41 id=41 data-nosnippet>41</a>  <span class="comment">// \appendixpage and \addappheadtotoc are layout-only — they
-<a href=#42 id=42 data-nosnippet>42</a>  // typeset a "page break" page-header in the printed paper. No XML
-<a href=#43 id=43 data-nosnippet>43</a>  // analog; no-op stubs. (Perl L28-30 leaves them commented out;
-<a href=#44 id=44 data-nosnippet>44</a>  // matching by stubbing keeps the diagnostics quiet.)
-<a href=#45 id=45 data-nosnippet>45</a>  // Witnesses 2406.01767, 2406.13839.
-<a href=#46 id=46 data-nosnippet>46</a>  </span>def_macro_noop(<span class="string">"\\appendixpage"</span>)<span class="question-mark">?</span>;
-<a href=#47 id=47 data-nosnippet>47</a>  def_macro_noop(<span class="string">"\\addappheadtotoc"</span>)<span class="question-mark">?</span>;
-<a href=#48 id=48 data-nosnippet>48</a>
-<a href=#49 id=49 data-nosnippet>49</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@pp@appendix@begin"</span>, {
-<a href=#50 id=50 data-nosnippet>50</a>    <span class="kw">if </span>lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\c@chapter"</span>)).ok().flatten().is_some() {
-<a href=#51 id=51 data-nosnippet>51</a>      begin_appendices(<span class="string">"chapter"</span>);
-<a href=#52 id=52 data-nosnippet>52</a>    } <span class="kw">else </span>{
-<a href=#53 id=53 data-nosnippet>53</a>      begin_appendices(<span class="string">"section"</span>);
-<a href=#54 id=54 data-nosnippet>54</a>    }
-<a href=#55 id=55 data-nosnippet>55</a>  });
-<a href=#56 id=56 data-nosnippet>56</a>
-<a href=#57 id=57 data-nosnippet>57</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@pp@appendix@end"</span>, sub[document, _args, _props] {
-<a href=#58 id=58 data-nosnippet>58</a>    document.maybe_close_element(<span class="string">"ltx:appendix"</span>)<span class="question-mark">?</span>;
-<a href=#59 id=59 data-nosnippet>59</a>  },
-<a href=#60 id=60 data-nosnippet>60</a>    before_digest =&gt; {
-<a href=#61 id=61 data-nosnippet>61</a>      end_appendices();
-<a href=#62 id=62 data-nosnippet>62</a>    }
-<a href=#63 id=63 data-nosnippet>63</a>  );
-<a href=#64 id=64 data-nosnippet>64</a>
-<a href=#65 id=65 data-nosnippet>65</a>  <span class="comment">// Adjust numbering!!!
-<a href=#66 id=66 data-nosnippet>66</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@pp@subappendix@begin"</span>, {
-<a href=#67 id=67 data-nosnippet>67</a>    <span class="kw">if </span>lookup_definition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\c@chapter"</span>)).ok().flatten().is_some() {
-<a href=#68 id=68 data-nosnippet>68</a>      begin_appendices(<span class="string">"section"</span>);
-<a href=#69 id=69 data-nosnippet>69</a>    } <span class="kw">else </span>{
-<a href=#70 id=70 data-nosnippet>70</a>      begin_appendices(<span class="string">"subsection"</span>);
-<a href=#71 id=71 data-nosnippet>71</a>    }
-<a href=#72 id=72 data-nosnippet>72</a>  });
-<a href=#73 id=73 data-nosnippet>73</a>
-<a href=#74 id=74 data-nosnippet>74</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\appendices"</span>,
-<a href=#75 id=75 data-nosnippet>75</a>    <span class="string">r"\lx@pp@appendix@begin\if@dotoc@pp\addappheadtotoc\fi\if@dopage@pp\appendixpage\fi\if@dotitle@pp\def\fnum@appendix{\lx@refnum@compose{\appendixname}{\lx@the@@{appendix}}}\fi\if@dotitle@pp\def\fnum@toc@appendix{\lx@refnum@compose{\appendixname}{\lx@the@@{appendix}}}\fi"
-<a href=#76 id=76 data-nosnippet>76</a>  </span>);
-<a href=#77 id=77 data-nosnippet>77</a>
-<a href=#78 id=78 data-nosnippet>78</a>  <span class="comment">// These must END appendices!!!!
-<a href=#79 id=79 data-nosnippet>79</a>  // AND CLOSE an open appendix!
-<a href=#80 id=80 data-nosnippet>80</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\endappendices"</span>, <span class="string">"\\lx@pp@appendix@end"</span>);
-<a href=#81 id=81 data-nosnippet>81</a>
-<a href=#82 id=82 data-nosnippet>82</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\subappendices"</span>,    <span class="string">"\\lx@pp@subappendix@begin"</span>);
-<a href=#83 id=83 data-nosnippet>83</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endsubappendices"</span>, <span class="string">"\\lx@pp@appendix@end"</span>);
-<a href=#84 id=84 data-nosnippet>84</a>});
+<a href=#26 id=26 data-nosnippet>26</a>  <span class="comment">// appendix.sty:36-40 (whether the class has chapters) and the internals that classes copying its `appendices`
+<a href=#27 id=27 data-nosnippet>27</a>  // call when they re-dress it (sn-jnl.cls; wlscirep.cls:221-245, 2606.09094): `\clear@ppage` (:100-101, a page
+<a href=#28 id=28 data-nosnippet>28</a>  // break: nothing here) and `\@resets@pp`/`\@resets@ppsub` (:181-205, :246-264), the counter resets and letter
+<a href=#29 id=29 data-nosnippet>29</a>  // numbering `\appendices`/`\subappendices` make too; their saved-section and hyperref steps have no XML
+<a href=#30 id=30 data-nosnippet>30</a>  // counterpart.
+<a href=#31 id=31 data-nosnippet>31</a>  </span><span class="macro">DefConditional!</span>(<span class="string">"\\if@chapter@pp"</span>);
+<a href=#32 id=32 data-nosnippet>32</a>  <span class="macro">RawTeX!</span>(<span class="string">r"\@ifundefined{chapter}{}{\@chapter@pptrue}
+<a href=#33 id=33 data-nosnippet>33</a>\newcounter{@pps}
+<a href=#34 id=34 data-nosnippet>34</a>\newcommand{\@resets@pp}{\par\stepcounter{@pps}\setcounter{section}{0}%
+<a href=#35 id=35 data-nosnippet>35</a>  \if@chapter@pp\setcounter{chapter}{0}\renewcommand\@chapapp{\appendixname}\renewcommand\thechapter{\@Alph\c@chapter}%
+<a href=#36 id=36 data-nosnippet>36</a>  \else\setcounter{subsection}{0}\renewcommand\thesection{\@Alph\c@section}\fi}
+<a href=#37 id=37 data-nosnippet>37</a>\newcommand{\@resets@ppsub}{\par\stepcounter{@pps}%
+<a href=#38 id=38 data-nosnippet>38</a>  \if@chapter@pp\setcounter{section}{0}\renewcommand{\thesection}{\setthesection}%
+<a href=#39 id=39 data-nosnippet>39</a>  \else\setcounter{subsection}{0}\renewcommand{\thesubsection}{\setthesubsection}\fi}"</span>);
+<a href=#40 id=40 data-nosnippet>40</a>  def_macro_noop(<span class="string">"\\clear@ppage"</span>)<span class="question-mark">?</span>;
+<a href=#41 id=41 data-nosnippet>41</a>
+<a href=#42 id=42 data-nosnippet>42</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\appendixtocon"</span>,       <span class="string">"\\@dotoc@pptrue"</span>);
+<a href=#43 id=43 data-nosnippet>43</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\appendixtocoff"</span>,      <span class="string">"\\@dotoc@ppfalse"</span>);
+<a href=#44 id=44 data-nosnippet>44</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\appendixpageon"</span>,      <span class="string">"\\@dopage@pptrue"</span>);
+<a href=#45 id=45 data-nosnippet>45</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\appendixpageoff"</span>,     <span class="string">"\\@dopage@ppfalse"</span>);
+<a href=#46 id=46 data-nosnippet>46</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\appendixtitleon"</span>,     <span class="string">"\\@dotitle@pptrue"</span>);
+<a href=#47 id=47 data-nosnippet>47</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\appendixtitleoff"</span>,    <span class="string">"\\@dotitle@ppfalse"</span>);
+<a href=#48 id=48 data-nosnippet>48</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\appendixtitletocon"</span>,  <span class="string">"\\@dotitletoc@pptrue"</span>);
+<a href=#49 id=49 data-nosnippet>49</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\appendixtitletocoff"</span>, <span class="string">"\\@dotitletoc@ppfalse"</span>);
+<a href=#50 id=50 data-nosnippet>50</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\appendixheaderon"</span>,    <span class="string">"\\@dohead@pptrue"</span>);
+<a href=#51 id=51 data-nosnippet>51</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\appendixheaderoff"</span>,   <span class="string">"\\@dohead@ppfalse"</span>);
+<a href=#52 id=52 data-nosnippet>52</a>
+<a href=#53 id=53 data-nosnippet>53</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\setthesection"</span>,    <span class="string">"\\Alph{section}"</span>);
+<a href=#54 id=54 data-nosnippet>54</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\setthesubsection"</span>, <span class="string">"\\thesection.\\Alph{subsection}"</span>);
+<a href=#55 id=55 data-nosnippet>55</a>
+<a href=#56 id=56 data-nosnippet>56</a>  <span class="comment">// \appendixpage and \addappheadtotoc are layout-only — they
+<a href=#57 id=57 data-nosnippet>57</a>  // typeset a "page break" page-header in the printed paper. No XML
+<a href=#58 id=58 data-nosnippet>58</a>  // analog; no-op stubs. (Perl L28-30 leaves them commented out;
+<a href=#59 id=59 data-nosnippet>59</a>  // matching by stubbing keeps the diagnostics quiet.)
+<a href=#60 id=60 data-nosnippet>60</a>  // Witnesses 2406.01767, 2406.13839.
+<a href=#61 id=61 data-nosnippet>61</a>  </span>def_macro_noop(<span class="string">"\\appendixpage"</span>)<span class="question-mark">?</span>;
+<a href=#62 id=62 data-nosnippet>62</a>  def_macro_noop(<span class="string">"\\addappheadtotoc"</span>)<span class="question-mark">?</span>;
+<a href=#63 id=63 data-nosnippet>63</a>
+<a href=#64 id=64 data-nosnippet>64</a>  <span class="comment">// (by the class's chapters, as appendix.sty:38's `\@ifundefined{chapter}` — not a `chapter` counter alone, which
+<a href=#65 id=65 data-nosnippet>65</a>  // WileyNJD-v2.cls:2410, WileyNJDv5.cls:5728 and MRM.cls:2160 declare with no `\chapter`: "Appendix A";
+<a href=#66 id=66 data-nosnippet>66</a>  // `state::class_defines_chapter`, OXIDIZED_DESIGN #179)
+<a href=#67 id=67 data-nosnippet>67</a>  // The environment never calls `\appendix`, which is all cleveref patches (cleveref.sty:174-176), so a `\cref` to its
+<a href=#68 id=68 data-nosnippet>68</a>  // sections prints their counter's name, "Sec. A" (2507.16108, 2511.19260; also 2203.14452, 2502.21249, 2508.04603,
+<a href=#69 id=69 data-nosnippet>69</a>  // 2608.04513), unless the document called `\appendix` before or inside it (1810.06583, 1904.07153, 2112.09636,
+<a href=#70 id=70 data-nosnippet>70</a>  // 2208.03406: "appendix A"); cleveref_sty.rs `cref_type`.
+<a href=#71 id=71 data-nosnippet>71</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@pp@appendix@begin"</span>, {
+<a href=#72 id=72 data-nosnippet>72</a>    <span class="kw">if </span>has_chapter_counter() &amp;&amp; class_defines_chapter() {
+<a href=#73 id=73 data-nosnippet>73</a>      begin_appendices(<span class="string">"chapter"</span>);
+<a href=#74 id=74 data-nosnippet>74</a>    } <span class="kw">else </span>{
+<a href=#75 id=75 data-nosnippet>75</a>      begin_appendices(<span class="string">"section"</span>);
+<a href=#76 id=76 data-nosnippet>76</a>    }
+<a href=#77 id=77 data-nosnippet>77</a>  });
+<a href=#78 id=78 data-nosnippet>78</a>
+<a href=#79 id=79 data-nosnippet>79</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@pp@appendix@end"</span>, sub[document, _args, _props] {
+<a href=#80 id=80 data-nosnippet>80</a>    document.maybe_close_element(<span class="string">"ltx:appendix"</span>)<span class="question-mark">?</span>;
+<a href=#81 id=81 data-nosnippet>81</a>  },
+<a href=#82 id=82 data-nosnippet>82</a>    before_digest =&gt; {
+<a href=#83 id=83 data-nosnippet>83</a>      end_appendices();
+<a href=#84 id=84 data-nosnippet>84</a>    }
+<a href=#85 id=85 data-nosnippet>85</a>  );
+<a href=#86 id=86 data-nosnippet>86</a>
+<a href=#87 id=87 data-nosnippet>87</a>  <span class="comment">// Adjust numbering!!!
+<a href=#88 id=88 data-nosnippet>88</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@pp@subappendix@begin"</span>, {
+<a href=#89 id=89 data-nosnippet>89</a>    <span class="kw">if </span>has_chapter_counter() &amp;&amp; class_defines_chapter() {
+<a href=#90 id=90 data-nosnippet>90</a>      begin_appendices(<span class="string">"section"</span>);
+<a href=#91 id=91 data-nosnippet>91</a>    } <span class="kw">else </span>{
+<a href=#92 id=92 data-nosnippet>92</a>      begin_appendices(<span class="string">"subsection"</span>);
+<a href=#93 id=93 data-nosnippet>93</a>    }
+<a href=#94 id=94 data-nosnippet>94</a>  });
+<a href=#95 id=95 data-nosnippet>95</a>
+<a href=#96 id=96 data-nosnippet>96</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\appendices"</span>,
+<a href=#97 id=97 data-nosnippet>97</a>    <span class="string">r"\lx@pp@appendix@begin\if@dotoc@pp\addappheadtotoc\fi\if@dopage@pp\appendixpage\fi\if@dotitle@pp\def\fnum@appendix{\lx@refnum@compose{\appendixname}{\lx@the@@{appendix}}}\fi\if@dotitle@pp\def\fnum@toc@appendix{\lx@refnum@compose{\appendixname}{\lx@the@@{appendix}}}\fi"
+<a href=#98 id=98 data-nosnippet>98</a>  </span>);
+<a href=#99 id=99 data-nosnippet>99</a>
+<a href=#100 id=100 data-nosnippet>100</a>  <span class="comment">// These must END appendices!!!!
+<a href=#101 id=101 data-nosnippet>101</a>  // AND CLOSE an open appendix!
+<a href=#102 id=102 data-nosnippet>102</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\endappendices"</span>, <span class="string">"\\lx@pp@appendix@end"</span>);
+<a href=#103 id=103 data-nosnippet>103</a>
+<a href=#104 id=104 data-nosnippet>104</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\subappendices"</span>,    <span class="string">"\\lx@pp@subappendix@begin"</span>);
+<a href=#105 id=105 data-nosnippet>105</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\endsubappendices"</span>, <span class="string">"\\lx@pp@appendix@end"</span>);
+<a href=#106 id=106 data-nosnippet>106</a>});
 </code></pre></div></section></main></body></html>

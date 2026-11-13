@@ -1,0 +1,192 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/kluwer_cls.rs`."><title>kluwer_cls.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>kluwer_cls.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! kluwer.cls (Kluwer Academic Publishers' LaTeX 2e class, TeX Live `tex/latex/kluwer`). A paper is
+<a href=#2 id=2 data-nosnippet>2</a>//! `\begin{article}…\end{article}` and its title page `\begin{opening}…\end{opening}`, whose end makes the title
+<a href=#3 id=3 data-nosnippet>3</a>//! (kluwer.cls:707-738; `\maketitle` is `\endopening`, :723). Each `\author{…}` names one author, and an
+<a href=#4 id=4 data-nosnippet>4</a>//! `\institute{…}` belongs to the authors given since the previous one (:766-769). OmniBus supplies the article-like
+<a href=#5 id=5 data-nosnippet>5</a>//! rest. Run 349: `{article}` 384, `{opening}` 344, `\surname` 335, `\newdisplay` 128 papers undefined under
+<a href=#6 id=6 data-nosnippet>6</a>//! OmniBus alone (witnesses astro-ph0001217, astro-ph0001398, astro-ph0002435).
+<a href=#7 id=7 data-nosnippet>7</a></span><span class="kw">use </span>latexml_package::prelude::<span class="kw-2">*</span>;
+<a href=#8 id=8 data-nosnippet>8</a>
+<a href=#9 id=9 data-nosnippet>9</a><span class="macro">LoadDefinitions!</span>({
+<a href=#10 id=10 data-nosnippet>10</a>  <span class="macro">LoadClass!</span>(<span class="string">"OmniBus"</span>);
+<a href=#11 id=11 data-nosnippet>11</a>  <span class="comment">// kluwer.cls's own dependencies.
+<a href=#12 id=12 data-nosnippet>12</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"amssymb"</span>);
+<a href=#13 id=13 data-nosnippet>13</a>  <span class="macro">RequirePackage!</span>(<span class="string">"wasysym"</span>);
+<a href=#14 id=14 data-nosnippet>14</a>  <span class="comment">// :124-125 `\if@thms`, set by the `thms` option only: the class's theorem and display environments (:2411-2432)
+<a href=#15 id=15 data-nosnippet>15</a>  // exist only under it, so a paper's own `\case`, `\rem` or `\Note` is its own otherwise. The class's `\rmtheorem`
+<a href=#16 id=16 data-nosnippet>16</a>  // (:2365, :2422-2426) sets {alg}, {defn} and {exmp} upright; here they are defined under an upright
+<a href=#17 id=17 data-nosnippet>17</a>  // `\thm@bodyfont`, which each theorem keeps from its definition. A paper's own later `\rmtheorem{x}` is accepted and
+<a href=#18 id=18 data-nosnippet>18</a>  // changes nothing: a theorem keeps its style from `\newtheorem`. Divergence kept: kluwer's appended `\rmfamily`
+<a href=#19 id=19 data-nosnippet>19</a>  // hides the optional `[Note]` of these three (printed as text, "DEFINITION 2. [Foo]"); ours reads it as the title.
+<a href=#20 id=20 data-nosnippet>20</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\newif\if@thms"</span>);
+<a href=#21 id=21 data-nosnippet>21</a>  <span class="macro">DeclareOption!</span>(<span class="string">"thms"</span>, <span class="string">"\\@thmstrue"</span>);
+<a href=#22 id=22 data-nosnippet>22</a>  <span class="comment">// :110-114: author-year references unless `numreferences`.
+<a href=#23 id=23 data-nosnippet>23</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\newif\if@numreferences"</span>);
+<a href=#24 id=24 data-nosnippet>24</a>  <span class="macro">DeclareOption!</span>(<span class="string">"namedreferences"</span>, <span class="string">"\\@numreferencesfalse"</span>);
+<a href=#25 id=25 data-nosnippet>25</a>  <span class="macro">DeclareOption!</span>(<span class="string">"numreferences"</span>, <span class="string">"\\@numreferencestrue"</span>);
+<a href=#26 id=26 data-nosnippet>26</a>  <span class="comment">// :135-136 `\if@chapterdef`, set by the `chapter` option: the class's chapters (:2464-2503 `\newcommand{\chapter}`,
+<a href=#27 id=27 data-nosnippet>27</a>  // :2704-2708 `\newcounter{chapter}`, `\newcounter{section}[chapter]`, `\thesection` `\thechapter.\arabic{section}`),
+<a href=#28 id=28 data-nosnippet>28</a>  // so a package's `\@ifundefined{chapter}` and a `\chapter` call see them (OXIDIZED_DESIGN #179 (b): the counter
+<a href=#29 id=29 data-nosnippet>29</a>  // keeps the kernel's `\chapter`).
+<a href=#30 id=30 data-nosnippet>30</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\newif\if@chapterdef"</span>);
+<a href=#31 id=31 data-nosnippet>31</a>  <span class="macro">DeclareOption!</span>(<span class="string">"chapter"</span>, <span class="string">"\\@chapterdeftrue"</span>);
+<a href=#32 id=32 data-nosnippet>32</a>  <span class="macro">DeclareOption!</span>(<span class="prelude-val">None</span>, {});
+<a href=#33 id=33 data-nosnippet>33</a>  <span class="macro">ProcessOptions!</span>();
+<a href=#34 id=34 data-nosnippet>34</a>  <span class="comment">// The section is declared within the chapter, ids too (`Ch1.S1`, as book_cls.rs), and the class's `\appendix`
+<a href=#35 id=35 data-nosnippet>35</a>  // (:2780-2787 under `\if@chapterdef`) letters the chapters, "Appendix A", as report's.
+<a href=#36 id=36 data-nosnippet>36</a>  </span><span class="kw">if </span>if_condition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\if@chapterdef"</span>))<span class="question-mark">?</span>.unwrap_or(<span class="bool-val">false</span>) {
+<a href=#37 id=37 data-nosnippet>37</a>    <span class="macro">NewCounter!</span>(<span class="string">"chapter"</span>, <span class="string">"document"</span>, idprefix =&gt; <span class="string">"Ch"</span>, nested =&gt; <span class="macro">vec!</span>[<span class="string">"section"</span>]);
+<a href=#38 id=38 data-nosnippet>38</a>    <span class="macro">NewCounter!</span>(<span class="string">"section"</span>, <span class="string">"chapter"</span>, idprefix =&gt; <span class="string">"S"</span>, nested =&gt; <span class="macro">vec!</span>[<span class="string">"subsection"</span>]);
+<a href=#39 id=39 data-nosnippet>39</a>    <span class="macro">RawTeX!</span>(<span class="string">r"\def\thesection{\thechapter.\arabic{section}}\def\@chapapp{\chaptername}"</span>);
+<a href=#40 id=40 data-nosnippet>40</a>    <span class="macro">DefMacro!</span>(<span class="string">"\\appendix"</span>, <span class="string">"\\@appendix\\gdef\\@chapapp{\\appendixname}"</span>);
+<a href=#41 id=41 data-nosnippet>41</a>    <span class="macro">DefPrimitive!</span>(<span class="string">"\\@appendix"</span>, {
+<a href=#42 id=42 data-nosnippet>42</a>      start_appendices(<span class="string">"chapter"</span>);
+<a href=#43 id=43 data-nosnippet>43</a>    });
+<a href=#44 id=44 data-nosnippet>44</a>  }
+<a href=#45 id=45 data-nosnippet>45</a>  <span class="macro">RawTeX!</span>(
+<a href=#46 id=46 data-nosnippet>46</a>    <span class="string">r"\newcounter{article}
+<a href=#47 id=47 data-nosnippet>47</a>\newenvironment{article}{\stepcounter{article}}{}
+<a href=#48 id=48 data-nosnippet>48</a>\def\opening{}
+<a href=#49 id=49 data-nosnippet>49</a>\def\endopening{\maketitle}
+<a href=#50 id=50 data-nosnippet>50</a>\def\author#1{\lx@add@authors@append{#1}}
+<a href=#51 id=51 data-nosnippet>51</a>\def\institute#1{\lx@add@contact[role=affiliation,annotate=new]{#1}}
+<a href=#52 id=52 data-nosnippet>52</a>\def\surname#1{#1}
+<a href=#53 id=53 data-nosnippet>53</a>\def\rmtheorem#1{}
+<a href=#54 id=54 data-nosnippet>54</a>\def\orf#1{#1}
+<a href=#55 id=55 data-nosnippet>55</a>\def\nodagger{}
+<a href=#56 id=56 data-nosnippet>56</a>\def\received#1{\lx@add@date[role=received]{#1}}
+<a href=#57 id=57 data-nosnippet>57</a>\def\revised#1{\lx@add@date[role=revised]{#1}}
+<a href=#58 id=58 data-nosnippet>58</a>\def\accepted#1{\lx@add@date[role=accepted]{#1}}
+<a href=#59 id=59 data-nosnippet>59</a>\def\subtitle#1{\lx@add@subtitle{#1}}
+<a href=#60 id=60 data-nosnippet>60</a>\def\dedication#1{\lx@add@frontmatter{ltx:note}[role=dedication]{#1}}
+<a href=#61 id=61 data-nosnippet>61</a>\def\translation#1{\lx@add@frontmatter{ltx:note}[role=translation]{#1}}
+<a href=#62 id=62 data-nosnippet>62</a>\def\arttype#1{\lx@add@frontmatter{ltx:note}[role=articletype]{#1}}
+<a href=#63 id=63 data-nosnippet>63</a>\def\runningtitle#1{\gdef\@runningtitle{#1}}
+<a href=#64 id=64 data-nosnippet>64</a>\def\runningauthor#1{\gdef\@runningauthor{#1}}
+<a href=#65 id=65 data-nosnippet>65</a>\providecommand{\keywordsname}{Keywords}
+<a href=#66 id=66 data-nosnippet>66</a>\providecommand{\abbreviationsname}{Abbreviations}
+<a href=#67 id=67 data-nosnippet>67</a>\long\def\keywords#1{\lx@add@keywords[name={\keywordsname:~}]{#1}}
+<a href=#68 id=68 data-nosnippet>68</a>\def\abbrevnamefont{\bf}
+<a href=#69 id=69 data-nosnippet>69</a>\long\def\abbreviations#1{\lx@add@frontmatter{ltx:note}[role=abbreviations]{{\abbrevnamefont \abbreviationsname:~}#1}}
+<a href=#70 id=70 data-nosnippet>70</a>\def\abbrev#1#2{#1 -- #2}
+<a href=#71 id=71 data-nosnippet>71</a>\long\def\classification#1#2{\lx@add@classification[scheme={#1}]{#2}}
+<a href=#72 id=72 data-nosnippet>72</a>\newdimen\maxfloatwidth
+<a href=#73 id=73 data-nosnippet>73</a>\def\newdisplay{\newtheorem}
+<a href=#74 id=74 data-nosnippet>74</a>\if@thms
+<a href=#75 id=75 data-nosnippet>75</a>  \newtheorem{thm}{THEOREM}
+<a href=#76 id=76 data-nosnippet>76</a>  \newtheorem{cor}[thm]{COROLLARY}
+<a href=#77 id=77 data-nosnippet>77</a>  \newtheorem{lem}[thm]{LEMMA}
+<a href=#78 id=78 data-nosnippet>78</a>  \newtheorem{claim}[thm]{CLAIM}
+<a href=#79 id=79 data-nosnippet>79</a>  \newtheorem{conj}[thm]{CONJECTURE}
+<a href=#80 id=80 data-nosnippet>80</a>  \newtheorem{prop}[thm]{PROPOSITION}
+<a href=#81 id=81 data-nosnippet>81</a>  \newtheorem{exer}[thm]{EXERCISE}
+<a href=#82 id=82 data-nosnippet>82</a>  \newtheorem{REM}[thm]{REMARK}
+<a href=#83 id=83 data-nosnippet>83</a>  \newtheorem{prob}[thm]{PROBLEM}
+<a href=#84 id=84 data-nosnippet>84</a>  {\thm@bodyfont{\rmfamily\upshape}%
+<a href=#85 id=85 data-nosnippet>85</a>  \newtheorem{alg}{ALGORITHM}
+<a href=#86 id=86 data-nosnippet>86</a>  \newtheorem{defn}[thm]{DEFINITION}
+<a href=#87 id=87 data-nosnippet>87</a>  \newtheorem{exmp}[thm]{EXAMPLE}}
+<a href=#88 id=88 data-nosnippet>88</a>  \newdisplay{crit}{Criterion}
+<a href=#89 id=89 data-nosnippet>89</a>  \newdisplay{rem}{Remark}
+<a href=#90 id=90 data-nosnippet>90</a>  \newdisplay{Note}{Note}
+<a href=#91 id=91 data-nosnippet>91</a>  \newdisplay{summ}{Summary}
+<a href=#92 id=92 data-nosnippet>92</a>  \newdisplay{case}{Case}
+<a href=#93 id=93 data-nosnippet>93</a>\fi
+<a href=#94 id=94 data-nosnippet>94</a>\def\pr@@f#1{\par\noindent{\itshape #1.\/}\ \ignorespaces}
+<a href=#95 id=95 data-nosnippet>95</a>\def\endpr@@f{\par}
+<a href=#96 id=96 data-nosnippet>96</a>\def\newproof#1#2{\expandafter\def\csname #1\endcsname{\pr@@f{#2}}%
+<a href=#97 id=97 data-nosnippet>97</a>  \expandafter\def\csname end#1\endcsname{\endpr@@f}}
+<a href=#98 id=98 data-nosnippet>98</a>\newproof{pf}{Proof}
+<a href=#99 id=99 data-nosnippet>99</a>\newenvironment{pf*}[1]{\pr@@f{#1}}{\endpr@@f}"
+<a href=#100 id=100 data-nosnippet>100</a>  </span>);
+<a href=#101 id=101 data-nosnippet>101</a>  <span class="comment">// The class's own commands papers call (run-347 inventory: 140 kluwer.cls papers with one undefined), its lines
+<a href=#102 id=102 data-nosnippet>102</a>  // verbatim:
+<a href=#103 id=103 data-nosnippet>103</a>  // - :2007-2065, :2128-2145 the citation forms: under `numreferences` all are `\cite`; under the default named
+<a href=#104 id=104 data-nosnippet>104</a>  //   references `\cite{x}` is "(Author, Year)", `\inlinecite{x}` "Author (Year)", `\opencite{x}` "Author, Year",
+<a href=#105 id=105 data-nosnippet>105</a>  //   `\shortcite{x}` "(Year)", `\cite*{x}` "Year" (:2125 `\def\cite{\@ifstar{\citeyear}{\klu@cite}}`), over the
+<a href=#106 id=106 data-nosnippet>106</a>  //   `\citeauthoryear` labels kluwer.bst writes (`\inlinecite` 64, `\opencite` 48 papers; 1306.4881, 1408.6262,
+<a href=#107 id=107 data-nosnippet>107</a>  //   astro-ph0001448, 0802.0687, astro-ph0307528). kluwer.cls has its own author-year code, natbib's in all but name,
+<a href=#108 id=108 data-nosnippet>108</a>  //   and never loads natbib: natbib stands for it here, borrowed (`\@ifpackageloaded{natbib}` stays false, as the
+<a href=#109 id=109 data-nosnippet>109</a>  //   endnotes below), as `\citep`, `\citet`, `\citealp`, `\citeyear` and `\citeyearpar`, before the class's forms are
+<a href=#110 id=110 data-nosnippet>110</a>  //   set (natbib's own `\shortcite` is `\cite`, natbib_sty.rs).
+<a href=#111 id=111 data-nosnippet>111</a>  // - :1909-1975 the endnotes, endnotes.sty's interface (klunote.sty) without loading it: borrowed (`\theendnotes`
+<a href=#112 id=112 data-nosnippet>112</a>  //   31 papers; 0910.2393, 0711.4475, 0904.2540).
+<a href=#113 id=113 data-nosnippet>113</a>  // - :147 `\I` (bold I); :162-176 the math symbols, which the class composes from overprinted glyphs (`\dR` is
+<a href=#114 id=114 data-nosnippet>114</a>  //   `I \! \! R`, `\lsim` a raised `&lt;` over a `\sim`): here the symbols they draw, as the astronomy bindings set
+<a href=#115 id=115 data-nosnippet>115</a>  //   `\la`/`\ga` (aa_support_sty.rs) — ≲ ≳ ≢ and the double-struck ℂ ℙ ℕ ℝ ℤ ℚ (`\gsim`/`\lsim` 14/13 papers;
+<a href=#116 id=116 data-nosnippet>116</a>  //   astro-ph0309194, astro-ph0510296, astro-ph0401471; `\dZ`, `\dR`, `\dC`, `\dN`, `\dQ`, `\dP`, `\nequiv`;
+<a href=#117 id=117 data-nosnippet>117</a>  //   math0308074, math0212055, astro-ph0410557). Their boxes made two letters of `\dZ` in the formula
+<a href=#118 id=118 data-nosnippet>118</a>  //   (OXIDIZED_DESIGN_DIVERGENCES #598).
+<a href=#119 id=119 data-nosnippet>119</a>  // - :1508, :1571, :1758 the caption fonts and dot (`\tabcapfont` 13 papers).
+<a href=#120 id=120 data-nosnippet>120</a>  // - :2292-2307 `{subequation}` (9 papers), :2343-2348 `\qed` (8), :1862-1864 `{kaprotate}`.
+<a href=#121 id=121 data-nosnippet>121</a>  // - :955-960 `\nomenclature` (a title-page note, as `\abbreviations`, :950-953) and `\nomen`: each note keeps the
+<a href=#122 id=122 data-nosnippet>122</a>  //   heading the class prints before it, bold (`\nomennamefont`/`\abbrevnamefont`, :929-930): "Abbreviations:~" run
+<a href=#123 id=123 data-nosnippet>123</a>  //   in; "Nomenclature:" is on a line of its own in the PDF, run in here, as a `\par` in a frontmatter note pulls the
+<a href=#124 id=124 data-nosnippet>124</a>  //   formula after it into the heading's text (RED repro sectioning-frontmatter/frontmatter_note_par_then_math).
+<a href=#125 id=125 data-nosnippet>125</a>  // - :966-983 `{motto}`, set as a quote where it stands (its box went to the title block).
+<a href=#126 id=126 data-nosnippet>126</a>  // - :1097 `\crline` (the copyright line: page furniture), :1487-1488 `\rcline`, `\lcline`, `\lrcline`, `\rlcline`
+<a href=#127 id=127 data-nosnippet>127</a>  //   (rules over part of a row, as `\cline`), :48 `\filedate`.
+<a href=#128 id=128 data-nosnippet>128</a>  </span>require_package_borrowed(<span class="string">"endnotes"</span>)<span class="question-mark">?</span>;
+<a href=#129 id=129 data-nosnippet>129</a>  <span class="macro">DefMath!</span>(<span class="string">"\\lsim"</span>, <span class="string">"\u{2272}"</span>, role =&gt; <span class="string">"RELOP"</span>, meaning =&gt; <span class="string">"less-than-or-similar-to"</span>);
+<a href=#130 id=130 data-nosnippet>130</a>  <span class="macro">DefMath!</span>(<span class="string">"\\gsim"</span>, <span class="string">"\u{2273}"</span>, role =&gt; <span class="string">"RELOP"</span>, meaning =&gt; <span class="string">"greater-than-or-similar-to"</span>);
+<a href=#131 id=131 data-nosnippet>131</a>  <span class="macro">DefMath!</span>(<span class="string">"\\nequiv"</span>, <span class="string">"\u{2262}"</span>, role =&gt; <span class="string">"RELOP"</span>, meaning =&gt; <span class="string">"not-equivalent-to"</span>);
+<a href=#132 id=132 data-nosnippet>132</a>  <span class="macro">DefMath!</span>(<span class="string">"\\dC"</span>, <span class="string">"\u{2102}"</span>, role =&gt; <span class="string">"ID"</span>, meaning =&gt; <span class="string">"complexes"</span>);
+<a href=#133 id=133 data-nosnippet>133</a>  <span class="macro">DefMath!</span>(<span class="string">"\\dP"</span>, <span class="string">"\u{2119}"</span>, role =&gt; <span class="string">"ID"</span>);
+<a href=#134 id=134 data-nosnippet>134</a>  <span class="macro">DefMath!</span>(<span class="string">"\\dN"</span>, <span class="string">"\u{2115}"</span>, role =&gt; <span class="string">"ID"</span>, meaning =&gt; <span class="string">"natural-numbers"</span>);
+<a href=#135 id=135 data-nosnippet>135</a>  <span class="macro">DefMath!</span>(<span class="string">"\\dR"</span>, <span class="string">"\u{211D}"</span>, role =&gt; <span class="string">"ID"</span>, meaning =&gt; <span class="string">"reals"</span>);
+<a href=#136 id=136 data-nosnippet>136</a>  <span class="macro">DefMath!</span>(<span class="string">"\\dZ"</span>, <span class="string">"\u{2124}"</span>, role =&gt; <span class="string">"ID"</span>, meaning =&gt; <span class="string">"integers"</span>);
+<a href=#137 id=137 data-nosnippet>137</a>  <span class="macro">DefMath!</span>(<span class="string">"\\dQ"</span>, <span class="string">"\u{211A}"</span>, role =&gt; <span class="string">"ID"</span>, meaning =&gt; <span class="string">"rationals"</span>);
+<a href=#138 id=138 data-nosnippet>138</a>  <span class="kw">if </span>!if_condition(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\if@numreferences"</span>))<span class="question-mark">?</span>.unwrap_or(<span class="bool-val">false</span>) {
+<a href=#139 id=139 data-nosnippet>139</a>    require_package_borrowed(<span class="string">"natbib"</span>)<span class="question-mark">?</span>;
+<a href=#140 id=140 data-nosnippet>140</a>  }
+<a href=#141 id=141 data-nosnippet>141</a>  <span class="macro">RawTeX!</span>(
+<a href=#142 id=142 data-nosnippet>142</a>    <span class="string">r"\if@numreferences
+<a href=#143 id=143 data-nosnippet>143</a>  \let\shortcite\cite
+<a href=#144 id=144 data-nosnippet>144</a>  \let\inlinecite\cite
+<a href=#145 id=145 data-nosnippet>145</a>  \let\opencite\cite
+<a href=#146 id=146 data-nosnippet>146</a>\else
+<a href=#147 id=147 data-nosnippet>147</a>  \def\cite{\@ifstar{\citeyear}{\citep}}%
+<a href=#148 id=148 data-nosnippet>148</a>  \def\shortcite{\citeyearpar}%
+<a href=#149 id=149 data-nosnippet>149</a>  \def\opencite{\citealp}%
+<a href=#150 id=150 data-nosnippet>150</a>  \def\inlinecite{\citet}%
+<a href=#151 id=151 data-nosnippet>151</a>\fi
+<a href=#152 id=152 data-nosnippet>152</a>\def\filedate{2000/04/29}
+<a href=#153 id=153 data-nosnippet>153</a>\def\I{{\bf I}}
+<a href=#154 id=154 data-nosnippet>154</a>\def\figtabdot{.}
+<a href=#155 id=155 data-nosnippet>155</a>\def\tabcapfont{\footnotesize }
+<a href=#156 id=156 data-nosnippet>156</a>\def\figcapfont{\footnotesize}
+<a href=#157 id=157 data-nosnippet>157</a>\def\subequation{\@ifnextchar[{\@subequation}{\@subequation[alph]}}
+<a href=#158 id=158 data-nosnippet>158</a>\def\@subequation[#1]{\refstepcounter{equation}%
+<a href=#159 id=159 data-nosnippet>159</a>  \def\@testoption{arabic}%
+<a href=#160 id=160 data-nosnippet>160</a>  \def\@testparam{#1}%
+<a href=#161 id=161 data-nosnippet>161</a>  \edef\old@equation{\the\c@equation}%
+<a href=#162 id=162 data-nosnippet>162</a>  \edef\old@theequation{\theequation}%
+<a href=#163 id=163 data-nosnippet>163</a>  \setcounter{equation}{0}%
+<a href=#164 id=164 data-nosnippet>164</a>  \ifx\@testoption\@testparam
+<a href=#165 id=165 data-nosnippet>165</a>    \def\theequation{\old@theequation.\csname #1\endcsname{equation}}%
+<a href=#166 id=166 data-nosnippet>166</a>  \else
+<a href=#167 id=167 data-nosnippet>167</a>    \def\theequation{\old@theequation\csname #1\endcsname{equation}}%
+<a href=#168 id=168 data-nosnippet>168</a>  \fi}
+<a href=#169 id=169 data-nosnippet>169</a>\def\endsubequation{%
+<a href=#170 id=170 data-nosnippet>170</a>  \setcounter{equation}{\old@equation}%
+<a href=#171 id=171 data-nosnippet>171</a>  \global\@ignoretrue
+<a href=#172 id=172 data-nosnippet>172</a>}
+<a href=#173 id=173 data-nosnippet>173</a>\def\qed{\relax
+<a href=#174 id=174 data-nosnippet>174</a>     \ifmmode
+<a href=#175 id=175 data-nosnippet>175</a>       ~\hfill\Box
+<a href=#176 id=176 data-nosnippet>176</a>     \else
+<a href=#177 id=177 data-nosnippet>177</a>        \unskip\nobreak ~\hfill$\Box$%
+<a href=#178 id=178 data-nosnippet>178</a>      \fi \par}
+<a href=#179 id=179 data-nosnippet>179</a>\newif\if@kaprotate \@kaprotatefalse
+<a href=#180 id=180 data-nosnippet>180</a>\def\kaprotate{\global\@kaprotatetrue}
+<a href=#181 id=181 data-nosnippet>181</a>\def\endkaprotate{\global\@kaprotatefalse}
+<a href=#182 id=182 data-nosnippet>182</a>\providecommand{\nomenclaturename}{Nomenclature}
+<a href=#183 id=183 data-nosnippet>183</a>\def\nomen#1#2{#1 -- #2}
+<a href=#184 id=184 data-nosnippet>184</a>\def\nomennamefont{\bf}
+<a href=#185 id=185 data-nosnippet>185</a>\long\def\nomenclature#1{\lx@add@frontmatter{ltx:note}[role=nomenclature]{{\nomennamefont\nomenclaturename:} #1}}
+<a href=#186 id=186 data-nosnippet>186</a>\newenvironment{motto}[1][]{\begin{quote}\footnotesize}{\end{quote}}
+<a href=#187 id=187 data-nosnippet>187</a>\def\crline#1{\gdef\@crline{#1}}
+<a href=#188 id=188 data-nosnippet>188</a>\let\rcline\cline \let\lcline\cline
+<a href=#189 id=189 data-nosnippet>189</a>\let\lrcline\cline \let\rlcline\cline"
+<a href=#190 id=190 data-nosnippet>190</a>  </span>);
+<a href=#191 id=191 data-nosnippet>191</a>});
+</code></pre></div></section></main></body></html>

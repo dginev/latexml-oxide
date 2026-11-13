@@ -1,0 +1,663 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_engine/src/latex_constructs/sect09.rs`."><title>sect09.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_engine" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_engine/latex_constructs/</div>sect09.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! `latex_constructs` section 9: C.9 Figures and Other Floating Bodies
+<a href=#2 id=2 data-nosnippet>2</a>//!
+<a href=#3 id=3 data-nosnippet>3</a>//! Split verbatim from the single `LoadDefinitions!` body (2026-09-03); the
+<a href=#4 id=4 data-nosnippet>4</a>//! definitions run in the original order from `super::load_definitions`.
+<a href=#5 id=5 data-nosnippet>5</a>
+<a href=#6 id=6 data-nosnippet>6</a></span><span class="kw">use super</span>::<span class="kw-2">*</span>;
+<a href=#7 id=7 data-nosnippet>7</a>
+<a href=#8 id=8 data-nosnippet>8</a><span class="attr">#[rustfmt::skip]
+<a href=#9 id=9 data-nosnippet>9</a></span><span class="kw">pub</span>(<span class="kw">crate</span>) <span class="kw">fn </span>load() -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#10 id=10 data-nosnippet>10</a>  <span class="comment">// ======================================================================
+<a href=#11 id=11 data-nosnippet>11</a>  // C.9 Figures and Other Floating Bodies
+<a href=#12 id=12 data-nosnippet>12</a>  // ======================================================================
+<a href=#13 id=13 data-nosnippet>13</a>
+<a href=#14 id=14 data-nosnippet>14</a>  //======================================================================
+<a href=#15 id=15 data-nosnippet>15</a>  // C.9.1 Figures and Tables
+<a href=#16 id=16 data-nosnippet>16</a>  //======================================================================
+<a href=#17 id=17 data-nosnippet>17</a>
+<a href=#18 id=18 data-nosnippet>18</a>  // Note that, the number is associated with the caption.
+<a href=#19 id=19 data-nosnippet>19</a>  // (to allow multiple figures per figure environment?).
+<a href=#20 id=20 data-nosnippet>20</a>  // Whatever reason, that causes complications: We can only increment
+<a href=#21 id=21 data-nosnippet>21</a>  // counters with the caption, but then have to arrange for the counters,
+<a href=#22 id=22 data-nosnippet>22</a>  // refnums, ids, get passed on to the figure, table when needed.
+<a href=#23 id=23 data-nosnippet>23</a>  // AND, as soon as possible, since other items may base their id's on the id of the table!
+<a href=#24 id=24 data-nosnippet>24</a>
+<a href=#25 id=25 data-nosnippet>25</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\figurename"</span>, <span class="string">"Figure"</span>);
+<a href=#26 id=26 data-nosnippet>26</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\figuresname"</span>, <span class="string">"Figures"</span>); <span class="comment">// Never used?
+<a href=#27 id=27 data-nosnippet>27</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\tablename"</span>, <span class="string">"Table"</span>);
+<a href=#28 id=28 data-nosnippet>28</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\tablesname"</span>, <span class="string">"Tables"</span>);
+<a href=#29 id=29 data-nosnippet>29</a>
+<a href=#30 id=30 data-nosnippet>30</a>  <span class="comment">// Let the fonts for float be the default for all floats, figures, tables, etc.
+<a href=#31 id=31 data-nosnippet>31</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\fnum@font@float"</span>, <span class="string">"\\@empty"</span>);
+<a href=#32 id=32 data-nosnippet>32</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\format@title@font@float"</span>, <span class="string">"\\@empty"</span>);
+<a href=#33 id=33 data-nosnippet>33</a>
+<a href=#34 id=34 data-nosnippet>34</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\fnum@font@figure"</span>, <span class="string">"\\fnum@font@float"</span>);
+<a href=#35 id=35 data-nosnippet>35</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\fnum@font@table"</span>, <span class="string">"\\fnum@font@float"</span>);
+<a href=#36 id=36 data-nosnippet>36</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\format@title@font@figure"</span>, <span class="string">"\\format@title@font@float"</span>);
+<a href=#37 id=37 data-nosnippet>37</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\format@title@font@table"</span>, <span class="string">"\\format@title@font@float"</span>);
+<a href=#38 id=38 data-nosnippet>38</a>
+<a href=#39 id=39 data-nosnippet>39</a>  <span class="comment">// Could perhaps parameterize further with a separator?
+<a href=#40 id=40 data-nosnippet>40</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#41 id=41 data-nosnippet>41</a>    <span class="string">"\\format@title@figure{}"</span>,
+<a href=#42 id=42 data-nosnippet>42</a>    <span class="string">"\\lx@tag[][: ]{\\lx@fnum@@{figure}}#1"
+<a href=#43 id=43 data-nosnippet>43</a>  </span>);
+<a href=#44 id=44 data-nosnippet>44</a>  <span class="macro">DefMacro!</span>(
+<a href=#45 id=45 data-nosnippet>45</a>    <span class="string">"\\format@title@table{}"</span>,
+<a href=#46 id=46 data-nosnippet>46</a>    <span class="string">"\\lx@tag[][: ]{\\lx@fnum@@{table}}#1"
+<a href=#47 id=47 data-nosnippet>47</a>  </span>);
+<a href=#48 id=48 data-nosnippet>48</a>
+<a href=#49 id=49 data-nosnippet>49</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ext@figure"</span>, <span class="string">"lof"</span>);
+<a href=#50 id=50 data-nosnippet>50</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ext@table"</span>, <span class="string">"lot"</span>);
+<a href=#51 id=51 data-nosnippet>51</a>
+<a href=#52 id=52 data-nosnippet>52</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\iflx@donecaption"</span>);
+<a href=#53 id=53 data-nosnippet>53</a>  <span class="comment">// latex.ltx:17391-17400 hands `\@caption` its `[short]` through `\@dblarg`, always: a package's
+<a href=#54 id=54 data-nosnippet>54</a>  // `\let\@caption\TPT@caption` (3parttable, `#1[#2]#3`) scanned for the `[` to the end of the file
+<a href=#55 id=55 data-nosnippet>55</a>  // ("Missing argument Until:[", cond-mat0307356; Perl's `\@caption{\@captype}`, pool:3166, alike).
+<a href=#56 id=56 data-nosnippet>56</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#57 id=57 data-nosnippet>57</a>    <span class="string">"\\caption"</span>,
+<a href=#58 id=58 data-nosnippet>58</a>    <span class="string">r"\lx@donecaptiontrue\@ifundefined{@captype}{\@@generic@caption}{\expandafter\@dblarg\expandafter{\expandafter\@caption\expandafter{\@captype}}}"
+<a href=#59 id=59 data-nosnippet>59</a>  </span>);
+<a href=#60 id=60 data-nosnippet>60</a>  <span class="comment">// The kernel `\caption` under a name of its own, for a binding that interprets a class raw and puts it back
+<a href=#61 id=61 data-nosnippet>61</a>  // (pasj00_cls.rs: PASJ's own `\caption` bypasses `\@caption`, the one path that builds `&lt;caption&gt;`; 1310.7069).
+<a href=#62 id=62 data-nosnippet>62</a>  </span><span class="macro">Let!</span>(<span class="string">"\\lx@caption"</span>, <span class="string">"\\caption"</span>);
+<a href=#63 id=63 data-nosnippet>63</a>  <span class="comment">// First, check for trailing \label, move it into the caption as a standard position
+<a href=#64 id=64 data-nosnippet>64</a>  // NOTE: If one day we want to unlock \@caption, make sure to test against arXiv:cond-mat/0001395
+<a href=#65 id=65 data-nosnippet>65</a>  // for a passing build.
+<a href=#66 id=66 data-nosnippet>66</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#67 id=67 data-nosnippet>67</a>    <span class="string">"\\@caption{}[]{}"</span>,
+<a href=#68 id=68 data-nosnippet>68</a>    <span class="string">r"\@ifnextchar\label{\@caption@postlabel{#1}{#2}{#3}}{\@caption@{#1}{#2}{#3}}"</span>,
+<a href=#69 id=69 data-nosnippet>69</a>    locked=&gt;<span class="bool-val">true
+<a href=#70 id=70 data-nosnippet>70</a>  </span>);
+<a href=#71 id=71 data-nosnippet>71</a>  <span class="comment">// Check for trailing \label, move it into the caption
+<a href=#72 id=72 data-nosnippet>72</a>  // cleveref's `\label[type]{key}` (cleveref.sty `\label` takes an optional type) gives its `[type]` here too: read as
+<a href=#73 id=73 data-nosnippet>73</a>  // the key, `[` became the label and the key was typeset (2404.11739; OXIDIZED_DESIGN #552). The type goes on as
+<a href=#74 id=74 data-nosnippet>74</a>  // `\lx@label@type` (sect11.rs `typed_label`), which cleveref's binding makes the labelled object's reference type
+<a href=#75 id=75 data-nosnippet>75</a>  // (77s). Guards `perfect_kernel_batch65m::cleveref_label_type_after_caption`,
+<a href=#76 id=76 data-nosnippet>76</a>  // `perfect_kernel_batch77s::cleveref_label_type_names_the_reference`.
+<a href=#77 id=77 data-nosnippet>77</a>  // The label goes in front of the caption's material: a `\label` after `\caption` names what the caption's
+<a href=#78 id=78 data-nosnippet>78</a>  // `\refstepcounter` stepped (latex.ltx:17391-17393), the float, and an unnumbered display in the caption steps
+<a href=#79 id=79 data-nosnippet>79</a>  // nothing; the caption's paragraph (`PBoxContents`) ends with that display's `ltx:equation` open, which a `\label`
+<a href=#80 id=80 data-nosnippet>80</a>  // at the end took (2310.11556, 1404.2359; Perl puts it at the end, latex_constructs.pool.ltxml:3175;
+<a href=#81 id=81 data-nosnippet>81</a>  // OXIDIZED_DESIGN_DIVERGENCES #769). It is `\lx@caption@postlabel`, not `\label`, so the scan below for the
+<a href=#82 id=82 data-nosnippet>82</a>  // caption's own labels does not take the caption's text as its argument, where a stray `\fi` in it would close
+<a href=#83 id=83 data-nosnippet>83</a>  // that scan's `\ifx` (KNOWN_PERL_ERRORS #641); the toc copy drops it.
+<a href=#84 id=84 data-nosnippet>84</a>  </span><span class="macro">DefMacro!</span>(<span class="string">r"\@caption@postlabel{}{}{} SkipMatch:\label [] Semiverbatim"</span>, sub[(captype, short, caption, ty, key)] {
+<a href=#85 id=85 data-nosnippet>85</a>    <span class="kw">let </span><span class="kw-2">mut </span>tokens = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\lx@note@caption@label"</span>), <span class="macro">T_BEGIN!</span>()];
+<a href=#86 id=86 data-nosnippet>86</a>    tokens.extend(key.clone().unlist());
+<a href=#87 id=87 data-nosnippet>87</a>    tokens.extend([<span class="macro">T_END!</span>(), <span class="macro">T_CS!</span>(<span class="string">"\\@caption@"</span>)]);
+<a href=#88 id=88 data-nosnippet>88</a>    <span class="kw">for </span>arg <span class="kw">in </span>[captype, short] {
+<a href=#89 id=89 data-nosnippet>89</a>      tokens.push(<span class="macro">T_BEGIN!</span>());
+<a href=#90 id=90 data-nosnippet>90</a>      tokens.extend(arg.unlist());
+<a href=#91 id=91 data-nosnippet>91</a>      tokens.push(<span class="macro">T_END!</span>());
+<a href=#92 id=92 data-nosnippet>92</a>    }
+<a href=#93 id=93 data-nosnippet>93</a>    tokens.push(<span class="macro">T_BEGIN!</span>());
+<a href=#94 id=94 data-nosnippet>94</a>    tokens.extend(typed_label(<span class="macro">T_CS!</span>(<span class="string">"\\lx@caption@postlabel"</span>), ty, key));
+<a href=#95 id=95 data-nosnippet>95</a>    tokens.extend(caption.unlist());
+<a href=#96 id=96 data-nosnippet>96</a>    tokens.push(<span class="macro">T_END!</span>());
+<a href=#97 id=97 data-nosnippet>97</a>    Tokens::new(tokens)
+<a href=#98 id=98 data-nosnippet>98</a>  });
+<a href=#99 id=99 data-nosnippet>99</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@caption@postlabel"</span>, <span class="string">"\\lx@label"</span>);
+<a href=#100 id=100 data-nosnippet>100</a>  <span class="macro">DefMacro!</span>(
+<a href=#101 id=101 data-nosnippet>101</a>    <span class="string">r"\@caption@{}{}{}"</span>,
+<a href=#102 id=102 data-nosnippet>102</a>    <span class="string">r"\@hack@caption@{#1}{#2}{}#3\label\endcaption"
+<a href=#103 id=103 data-nosnippet>103</a>  </span>);
+<a href=#104 id=104 data-nosnippet>104</a>  <span class="comment">// The test closes before either branch runs, as latex.ltx's `\expandafter\@firstoftwo\else\expandafter\@secondoftwo\fi`
+<a href=#105 id=105 data-nosnippet>105</a>  // idiom does: Perl's form (latex_constructs.pool.ltxml:3178-3180) digests the caption inside `\ifx.#5. … \else …
+<a href=#106 id=106 data-nosnippet>106</a>  // \fi`, so a stray `\fi` in the caption (listings' `basicstyle=\lst@ifdisplaystyle\small\fi` with `@` not a letter,
+<a href=#107 id=107 data-nosnippet>107</a>  // in an `\lstinline`: 2012.08626, 2210.17505) or an `\if` without its `\fi` (0807.3034's `\def\arcs{\ifmmode …
+<a href=#108 id=108 data-nosnippet>108</a>  // \else …}`; 1904.11818, 1602.01884) took the wrapper's own `\else`/`\fi`, and the `\label` scan read to the end of
+<a href=#109 id=109 data-nosnippet>109</a>  // the file (Fatal `Mouth:EoF`; Perl the same, KNOWN_PERL_ERRORS #641). OXIDIZED_DESIGN #570; guards
+<a href=#110 id=110 data-nosnippet>110</a>  // `perfect_kernel_batch66d::caption_hoist_*`.
+<a href=#111 id=111 data-nosnippet>111</a>  // The branch is a control sequence, not a braced argument: a caption that is a one-token box argument
+<a href=#112 id=112 data-nosnippet>112</a>  // (`\parbox[b]{9cm}` then `\caption{…}`, mn2e astro-ph0107461) brings the box's `}` along as the `\@xdblarg`
+<a href=#113 id=113 data-nosnippet>113</a>  // argument (Perl's readArg returns a lone `}` too, Gullet.pm:732-744), and that `}` closed a braced branch early,
+<a href=#114 id=114 data-nosnippet>114</a>  // so the other branch ran and its `\label` scan read to the end of the file (16 run-345 papers; Perl: one "Attempt
+<a href=#115 id=115 data-nosnippet>115</a>  // to close" Error). Guard `perfect_kernel_batch66h::caption_one_token_box_argument`.
+<a href=#116 id=116 data-nosnippet>116</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#117 id=117 data-nosnippet>117</a>    <span class="string">r"\@hack@caption@{}{}{} Until:\label Until:\endcaption"</span>,
+<a href=#118 id=118 data-nosnippet>118</a>    <span class="string">r"\ifx.#5.\expandafter\lx@caption@nolabel\else\expandafter\@@@hack@caption@\fi{#1}{#2}{#3#4}#5\endcaption"
+<a href=#119 id=119 data-nosnippet>119</a>  </span>);
+<a href=#120 id=120 data-nosnippet>120</a>  <span class="macro">DefMacro!</span>(<span class="string">r"\lx@caption@nolabel{}{} Until:\endcaption"</span>, <span class="string">r"\@caption@@@{#1}{#2}{#3}"</span>);
+<a href=#121 id=121 data-nosnippet>121</a>  <span class="comment">// A `\label` in the caption's text reads cleveref's optional type as `\@caption@postlabel` does (typed_label):
+<a href=#122 id=122 data-nosnippet>122</a>  // read as the key, `\caption{Foo\label[appendixtable]{tin}}` labelled the float `[` and printed
+<a href=#123 id=123 data-nosnippet>123</a>  // "Fooappendixtable]tin" (pdflatex: "appendix table 1"; the 2404.11739 mechanism, KNOWN_PERL_ERRORS #998;
+<a href=#124 id=124 data-nosnippet>124</a>  // 1412.3542, 1901.00405, 2008.03354, 2201.04036). Without cleveref the type is read too (OXIDIZED_DESIGN #552).
+<a href=#125 id=125 data-nosnippet>125</a>  // Guard `perfect_kernel_batch77s::label_type_in_caption_text`.
+<a href=#126 id=126 data-nosnippet>126</a>  </span><span class="macro">DefMacro!</span>(
+<a href=#127 id=127 data-nosnippet>127</a>    <span class="string">r"\@@@hack@caption@{}{}{} [] Semiverbatim Until:\label Until:\endcaption"</span>,
+<a href=#128 id=128 data-nosnippet>128</a>    sub[(captype, short, text, ty, key, after, rest)] {
+<a href=#129 id=129 data-nosnippet>129</a>      <span class="kw">let </span><span class="kw-2">mut </span>tokens = <span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\lx@note@caption@label"</span>), <span class="macro">T_BEGIN!</span>()];
+<a href=#130 id=130 data-nosnippet>130</a>      tokens.extend(key.clone().unlist());
+<a href=#131 id=131 data-nosnippet>131</a>      tokens.extend([<span class="macro">T_END!</span>(), <span class="macro">T_CS!</span>(<span class="string">"\\@hack@caption@"</span>)]);
+<a href=#132 id=132 data-nosnippet>132</a>      <span class="kw">for </span>arg <span class="kw">in </span>[captype, short] {
+<a href=#133 id=133 data-nosnippet>133</a>        tokens.push(<span class="macro">T_BEGIN!</span>());
+<a href=#134 id=134 data-nosnippet>134</a>        tokens.extend(arg.unlist());
+<a href=#135 id=135 data-nosnippet>135</a>        tokens.push(<span class="macro">T_END!</span>());
+<a href=#136 id=136 data-nosnippet>136</a>      }
+<a href=#137 id=137 data-nosnippet>137</a>      tokens.push(<span class="macro">T_BEGIN!</span>());
+<a href=#138 id=138 data-nosnippet>138</a>      tokens.extend(text.unlist());
+<a href=#139 id=139 data-nosnippet>139</a>      tokens.extend(typed_label(<span class="macro">T_CS!</span>(<span class="string">"\\label"</span>), ty, key));
+<a href=#140 id=140 data-nosnippet>140</a>      tokens.extend(after.unlist());
+<a href=#141 id=141 data-nosnippet>141</a>      tokens.extend([<span class="macro">T_END!</span>(), <span class="macro">T_CS!</span>(<span class="string">"\\label"</span>)]);
+<a href=#142 id=142 data-nosnippet>142</a>      tokens.extend(rest.unlist());
+<a href=#143 id=143 data-nosnippet>143</a>      tokens.push(<span class="macro">T_CS!</span>(<span class="string">"\\endcaption"</span>));
+<a href=#144 id=144 data-nosnippet>144</a>      Tokens::new(tokens)
+<a href=#145 id=145 data-nosnippet>145</a>    }
+<a href=#146 id=146 data-nosnippet>146</a>  );
+<a href=#147 id=147 data-nosnippet>147</a>
+<a href=#148 id=148 data-nosnippet>148</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@note@caption@label{}"</span>, sub[(label)] {
+<a href=#149 id=149 data-nosnippet>149</a>    <span class="kw">let </span>label = label.to_string();
+<a href=#150 id=150 data-nosnippet>150</a>    maybe_note_label(<span class="kw-2">&amp;</span>label); });
+<a href=#151 id=151 data-nosnippet>151</a>
+<a href=#152 id=152 data-nosnippet>152</a>  <span class="comment">// OXIDIZED_DESIGN #182 (PLANS P16 ii): a `\caption` whose `\@captype` is set
+<a href=#153 id=153 data-nosnippet>153</a>  // but which sits in a box that is NOT a float — tufte-common.def:1110-1133
+<a href=#154 id=154 data-nosnippet>154</a>  // `marginfigure` (`\marginpar{\usebox{…}}` around a minipage), raw tocbasic
+<a href=#155 id=155 data-nosnippet>155</a>  // `\captionaboveof{table}` at top level — has no ancestor that can hold an
+<a href=#156 id=156 data-nosnippet>156</a>  // `ltx:caption`, so the float+tag form errored once per caption
+<a href=#157 id=157 data-nosnippet>157</a>  // (`&lt;ltx:caption&gt; isn't allowed in &lt;ltx:block&gt;` + the `ltx:toccaption`
+<a href=#158 id=158 data-nosnippet>158</a>  // sibling: pgfornament ornaments 40+40, memman 46+46, xltabular). Degrade to
+<a href=#159 id=159 data-nosnippet>159</a>  // the inline `\@@generic@caption` shape (an `ltx:text class="ltx_caption"`,
+<a href=#160 id=160 data-nosnippet>160</a>  // no counter tag, no toc entry) — what Perl's own no-`\@captype` path emits.
+<a href=#161 id=161 data-nosnippet>161</a>  // Guard: `perfect_kernel_batch54::caption_outside_a_float_becomes_its_float`.
+<a href=#162 id=162 data-nosnippet>162</a>  // The caption's material goes through `\lx@setfloatcapt`, caption.sty's `\caption@setfloatcapt`
+<a href=#163 id=163 data-nosnippet>163</a>  // (:622, default `\@firstofone`): a package that lays its floats out itself captures it there —
+<a href=#164 id=164 data-nosnippet>164</a>  // floatrow sets `\@floatcapt` from it (`floatrow_sty.rs`, floatrow.sty:85-102), as LaTeX's
+<a href=#165 id=165 data-nosnippet>165</a>  // `\@makecaption` would. The counter steps outside it, as `\refstepcounter\@captype` precedes
+<a href=#166 id=166 data-nosnippet>166</a>  // `\@makecaption` (latex.ltx:17391-17399). Perl emits directly (latex_constructs.pool.ltxml:3187).
+<a href=#167 id=167 data-nosnippet>167</a>  // Guard `perfect_kernel_batch58::floatrow_floatfoot_keeps_its_text`.
+<a href=#168 id=168 data-nosnippet>168</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@kernel@setfloatcapt{}"</span>, <span class="string">"#1"</span>);
+<a href=#169 id=169 data-nosnippet>169</a>  <span class="macro">Let!</span>(<span class="string">"\\lx@setfloatcapt"</span>, <span class="string">"\\lx@kernel@setfloatcapt"</span>);
+<a href=#170 id=170 data-nosnippet>170</a>  <span class="comment">// The list entry is the `[short]`, or the caption when it is empty (`\caption[]{…}`) or the caption itself
+<a href=#171 id=171 data-nosnippet>171</a>  // (`\lx@toc@copy@text`, which marks that copy a re-read), told by its tokens, and chosen without expanding either:
+<a href=#172 id=172 data-nosnippet>172</a>  // Perl's `\ifx.#2.#3\else#2\fi` (pool:3189) saw a `[short]` only a document gave, and `\@dblarg` now always gives
+<a href=#173 id=173 data-nosnippet>173</a>  // one, the caption itself, whose opening conditional `\ifx` took as its second token, leaving the caption's `\fi` to
+<a href=#174 id=174 data-nosnippet>174</a>  // close the `\ifx` ("Extra \else", then the file ended scanning for `\endcaption`: `\caption{\ifdefined\x\color{blue}\fi
+<a href=#175 id=175 data-nosnippet>175</a>  // …}`, 2609.27590, 2609.28438; KNOWN_PERL_ERRORS #468).
+<a href=#176 id=176 data-nosnippet>176</a>  // A float's caption is its type's title (`\lx@format@title@@`), unless a package formats captions itself: caption's
+<a href=#177 id=177 data-nosnippet>177</a>  // label formats, separators and fonts (caption_sty.rs, caption3.sty:1661-1715), as latex.ltx's `\@makecaption` is
+<a href=#178 id=178 data-nosnippet>178</a>  // what caption.sty replaces (caption.sty:206). longtable's caption takes it too (caption.sty:1167).
+<a href=#179 id=179 data-nosnippet>179</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@format@caption@@{}{}"</span>, <span class="string">r"\lx@format@title@@{#1}{#2}"</span>);
+<a href=#180 id=180 data-nosnippet>180</a>  <span class="comment">// A starred caption (`\caption*`, caption.sty:210-227; longtable's, longtable.sty:471-474) is its text alone, which
+<a href=#181 id=181 data-nosnippet>181</a>  // the kernel leaves as written; caption formats it with the caption's fonts and text format, the label suppressed
+<a href=#182 id=182 data-nosnippet>182</a>  // (caption_sty.rs `caption_star_format_tokens`).
+<a href=#183 id=183 data-nosnippet>183</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\lx@format@scaption@@{}{}"</span>, <span class="string">"#2"</span>);
+<a href=#184 id=184 data-nosnippet>184</a>  <span class="macro">DefMacro!</span>(
+<a href=#185 id=185 data-nosnippet>185</a>    <span class="string">"\\@caption@@@{}{}{}"</span>,
+<a href=#186 id=186 data-nosnippet>186</a>    <span class="string">r"\@@add@caption@counters\lx@setfloatcapt{\@@toccaption{\lx@format@toctitle@@{#1}{\lx@toc@copy@text{#2}{#3}}}\lx@@caption{\lx@format@caption@@{#1}{#3}}}"
+<a href=#187 id=187 data-nosnippet>187</a>  </span>);
+<a href=#188 id=188 data-nosnippet>188</a>
+<a href=#189 id=189 data-nosnippet>189</a>  <span class="comment">// Note that the counters only get incremented by \caption, NOT by \table, \figure, etc.
+<a href=#190 id=190 data-nosnippet>190</a>  // Perl: latex_constructs.pool.ltxml L3250-3258
+<a href=#191 id=191 data-nosnippet>191</a>  // Checks PREINCREMENTED_ first (set by beforeFloat with preincrement option).
+<a href=#192 id=192 data-nosnippet>192</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\@@add@caption@counters"</span>, {
+<a href=#193 id=193 data-nosnippet>193</a>    <span class="comment">// Perl: $type = ToString(Digest(T_CS('\@captype')))
+<a href=#194 id=194 data-nosnippet>194</a>    // Rust port had used `stomach::digest`, but stomach::digest's
+<a href=#195 id=195 data-nosnippet>195</a>    // `read_x_token` loop in vmode (figure-environment body is vmode)
+<a href=#196 id=196 data-nosnippet>196</a>    // can leak a trailing `\par` token into the result when the captype
+<a href=#197 id=197 data-nosnippet>197</a>    // expansion completes — the digester continues reading beyond the
+<a href=#198 id=198 data-nosnippet>198</a>    // expansion and picks up an environment-emitted `\par`. Use
+<a href=#199 id=199 data-nosnippet>199</a>    // `do_expand` instead: it expands the macro one level (`\@captype`
+<a href=#200 id=200 data-nosnippet>200</a>    // → "figure" letter tokens) and stops, mirroring Perl's `ToString`
+<a href=#201 id=201 data-nosnippet>201</a>    // of the captype's body without invoking stomach digestion.
+<a href=#202 id=202 data-nosnippet>202</a>    // Witness: math0010095 BoxedEPS+figure+caption produced
+<a href=#203 id=203 data-nosnippet>203</a>    // `\thefigure\par` undefined errors when captype was "figure\par".
+<a href=#204 id=204 data-nosnippet>204</a>    </span><span class="kw">let </span>captype = do_expand(<span class="macro">T_CS!</span>(<span class="string">"\\@captype"</span>))<span class="question-mark">?</span>.to_string();
+<a href=#205 id=205 data-nosnippet>205</a>    <span class="kw">let </span>prekey = <span class="macro">s!</span>(<span class="string">"PREINCREMENTED_{captype}"</span>);
+<a href=#206 id=206 data-nosnippet>206</a>    <span class="kw">let </span>props = <span class="kw">match </span>remove_value(<span class="kw-2">&amp;</span>prekey) {
+<a href=#207 id=207 data-nosnippet>207</a>      <span class="prelude-val">Some</span>(Stored::HashStored(pre)) =&gt; pre,
+<a href=#208 id=208 data-nosnippet>208</a>      <span class="kw">_ </span>=&gt; step_float_counter(<span class="kw-2">&amp;</span>captype)<span class="question-mark">?</span>,
+<a href=#209 id=209 data-nosnippet>209</a>    };
+<a href=#210 id=210 data-nosnippet>210</a>    <span class="comment">// The list's extension, read as `\@captype` is above: digested, its letters began a paragraph in the float's
+<a href=#211 id=211 data-nosnippet>211</a>    // vertical list, whose horizontal mode outlived the counters, and the caption's box then ended that paragraph with
+<a href=#212 id=212 data-nosnippet>212</a>    // a `\par` (an aas `\references` entry in a table, `perfect_kernel_batch64x::bibitem_after_a_float_reopens_the_list`).
+<a href=#213 id=213 data-nosnippet>213</a>    </span><span class="kw">let </span>inlist = do_expand(<span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\ext@{}"</span>, captype)))<span class="question-mark">?</span>.to_string();
+<a href=#214 id=214 data-nosnippet>214</a>    assign_value(
+<a href=#215 id=215 data-nosnippet>215</a>      <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{}_tags"</span>, captype),
+<a href=#216 id=216 data-nosnippet>216</a>      props.get(<span class="string">"tags"</span>),
+<a href=#217 id=217 data-nosnippet>217</a>      <span class="prelude-val">Some</span>(Scope::Global),
+<a href=#218 id=218 data-nosnippet>218</a>    );
+<a href=#219 id=219 data-nosnippet>219</a>    <span class="comment">// A sectioning unit in the float's body fixed the float's id first (`pin_float_id_before_its_sectioning`).
+<a href=#220 id=220 data-nosnippet>220</a>    </span><span class="kw">let </span>pinned = remove_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"lx@float@pinned@id@{captype}"</span>));
+<a href=#221 id=221 data-nosnippet>221</a>    assign_value(
+<a href=#222 id=222 data-nosnippet>222</a>      <span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{}_id"</span>, captype),
+<a href=#223 id=223 data-nosnippet>223</a>      pinned.as_ref().or(props.get(<span class="string">"id"</span>)),
+<a href=#224 id=224 data-nosnippet>224</a>      <span class="prelude-val">Some</span>(Scope::Global),
+<a href=#225 id=225 data-nosnippet>225</a>    );
+<a href=#226 id=226 data-nosnippet>226</a>    assign_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{}_inlist"</span>, captype), inlist, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#227 id=227 data-nosnippet>227</a>    <span class="comment">// How many captions of the type were made, for a box that holds one (`end_caption_box`).
+<a href=#228 id=228 data-nosnippet>228</a>    </span><span class="kw">let </span>count = <span class="macro">s!</span>(<span class="string">"{CAPTION_COUNT_PREFIX}{captype}"</span>);
+<a href=#229 id=229 data-nosnippet>229</a>    assign_value(<span class="kw-2">&amp;</span>count, lookup_int(<span class="kw-2">&amp;</span>count) + <span class="number">1</span>, <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#230 id=230 data-nosnippet>230</a>  });
+<a href=#231 id=231 data-nosnippet>231</a>
+<a href=#232 id=232 data-nosnippet>232</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\@@generic@caption[]{}"</span>, <span class="string">"&lt;ltx:text class='ltx_caption'&gt;#2&lt;/ltx:text&gt;"</span>,
+<a href=#233 id=233 data-nosnippet>233</a>  before_digest =&gt; {
+<a href=#234 id=234 data-nosnippet>234</a>    <span class="macro">Error!</span>(<span class="string">"unexpected"</span>, <span class="string">"\\caption"</span>, <span class="string">"Use of \\caption outside any known float"</span>); });
+<a href=#235 id=235 data-nosnippet>235</a>
+<a href=#236 id=236 data-nosnippet>236</a>  <span class="comment">// A forced `\linebreak` (`\linebreak[4]`, its default: latex.ltx `\@no@lnbk`'s `\penalty-\@M`) between a float's
+<a href=#237 id=237 data-nosnippet>237</a>  // panels ends their row (`note_panel_separator`, the panel grid rule; OXIDIZED_DESIGN_DIVERGENCES #885): the float's
+<a href=#238 id=238 data-nosnippet>238</a>  // begin lets `\linebreak` to `\lx@panel@linebreak` while it has the kernel's meaning.
+<a href=#239 id=239 data-nosnippet>239</a>  // `\linebreak` directly in the float's own group (as `\hspace`'s glue, latex_constructs sect12.rs): elsewhere — a
+<a href=#240 id=240 data-nosnippet>240</a>  // caption, a cell, a box — it stays the no-op it is (sect12.rs `\linebreak[]`), so nothing joins their material.
+<a href=#241 id=241 data-nosnippet>241</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@panel@linebreak[]"</span>, sub[(priority)] {
+<a href=#242 id=242 data-nosnippet>242</a>    <span class="kw">let </span>forced = priority.as_ref().is_none_or(|n| {
+<a href=#243 id=243 data-nosnippet>243</a>      <span class="kw">let </span>n = n.to_string();
+<a href=#244 id=244 data-nosnippet>244</a>      n.trim().is_empty() || n.trim() == <span class="string">"4"
+<a href=#245 id=245 data-nosnippet>245</a>    </span>});
+<a href=#246 id=246 data-nosnippet>246</a>    <span class="kw">if </span>forced
+<a href=#247 id=247 data-nosnippet>247</a>      &amp;&amp; !lookup_bool(<span class="string">"IN_MATH"</span>)
+<a href=#248 id=248 data-nosnippet>248</a>      &amp;&amp; <span class="macro">matches!</span>(lookup_value(<span class="string">"lx@float@frame"</span>), <span class="prelude-val">Some</span>(Stored::Number(n)) <span class="kw">if </span>n.<span class="number">0 </span><span class="kw">as </span>u64 == current_frame_id())
+<a href=#249 id=249 data-nosnippet>249</a>    {
+<a href=#250 id=250 data-nosnippet>250</a>      unread_vec(<span class="macro">vec!</span>[<span class="macro">T_CS!</span>(<span class="string">"\\lx@panel@linebreak@mark"</span>)]);
+<a href=#251 id=251 data-nosnippet>251</a>    }
+<a href=#252 id=252 data-nosnippet>252</a>  });
+<a href=#253 id=253 data-nosnippet>253</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@panel@linebreak@mark"</span>, sub[document, _args, _props] {
+<a href=#254 id=254 data-nosnippet>254</a>    note_panel_separator(document, <span class="string">"break"</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#255 id=255 data-nosnippet>255</a>  },
+<a href=#256 id=256 data-nosnippet>256</a>  sizer =&gt; { <span class="prelude-val">Ok</span>((Dimension::default(), Dimension::default(), Dimension::default())) },
+<a href=#257 id=257 data-nosnippet>257</a>  reversion =&gt; <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\linebreak"</span>)));
+<a href=#258 id=258 data-nosnippet>258</a>
+<a href=#259 id=259 data-nosnippet>259</a>  <span class="comment">// Note that even without \caption, we'd probably like to have xml:id.
+<a href=#260 id=260 data-nosnippet>260</a>  // Perl: BuildPanelsAndID + collapseFloat (afterClose hooks)
+<a href=#261 id=261 data-nosnippet>261</a>  </span><span class="macro">Tag!</span>(<span class="string">"ltx:figure"</span>, after_close =&gt; sub[document, node, whatsit] {
+<a href=#262 id=262 data-nosnippet>262</a>    document.generate_id(node, <span class="string">"fig"</span>)<span class="question-mark">?</span>;
+<a href=#263 id=263 data-nosnippet>263</a>    <span class="kw">let </span>layout = arrange_panels(document, node, whatsit)<span class="question-mark">?</span>;
+<a href=#264 id=264 data-nosnippet>264</a>    collapse_float(document, node)<span class="question-mark">?</span>;
+<a href=#265 id=265 data-nosnippet>265</a>    annotate_panel_grid(document, node, <span class="kw-2">&amp;</span>layout)<span class="question-mark">?</span>;
+<a href=#266 id=266 data-nosnippet>266</a>  });
+<a href=#267 id=267 data-nosnippet>267</a>  <span class="macro">Tag!</span>(<span class="string">"ltx:table"</span>,  after_close =&gt; sub[document, node, whatsit] {
+<a href=#268 id=268 data-nosnippet>268</a>    document.generate_id(node, <span class="string">"tab"</span>)<span class="question-mark">?</span>;
+<a href=#269 id=269 data-nosnippet>269</a>    <span class="kw">let </span>layout = arrange_panels(document, node, whatsit)<span class="question-mark">?</span>;
+<a href=#270 id=270 data-nosnippet>270</a>    collapse_float(document, node)<span class="question-mark">?</span>;
+<a href=#271 id=271 data-nosnippet>271</a>    annotate_panel_grid(document, node, <span class="kw-2">&amp;</span>layout)<span class="question-mark">?</span>;
+<a href=#272 id=272 data-nosnippet>272</a>  });
+<a href=#273 id=273 data-nosnippet>273</a>  <span class="macro">Tag!</span>(<span class="string">"ltx:float"</span>,  after_close =&gt; sub[document, node, whatsit] {
+<a href=#274 id=274 data-nosnippet>274</a>    document.generate_id(node, <span class="string">"tab"</span>)<span class="question-mark">?</span>;
+<a href=#275 id=275 data-nosnippet>275</a>    <span class="kw">let </span>layout = arrange_panels(document, node, whatsit)<span class="question-mark">?</span>;
+<a href=#276 id=276 data-nosnippet>276</a>    collapse_float(document, node)<span class="question-mark">?</span>;
+<a href=#277 id=277 data-nosnippet>277</a>    annotate_panel_grid(document, node, <span class="kw-2">&amp;</span>layout)<span class="question-mark">?</span>;
+<a href=#278 id=278 data-nosnippet>278</a>  });
+<a href=#279 id=279 data-nosnippet>279</a>
+<a href=#280 id=280 data-nosnippet>280</a>  <span class="comment">// # These may need to float up to where they're allowed,
+<a href=#281 id=281 data-nosnippet>281</a>  // # or they may need to close &lt;p&gt; or similar.
+<a href=#282 id=282 data-nosnippet>282</a>  // Perl: latex_constructs.pool.ltxml L3423-3427
+<a href=#283 id=283 data-nosnippet>283</a>  // ^^ prefix means "float up" in LaTeXML's document model
+<a href=#284 id=284 data-nosnippet>284</a>  // OXIDIZED_DESIGN #182 (PLANS P16 ii): a `\caption` whose `\@captype` is set
+<a href=#285 id=285 data-nosnippet>285</a>  // but which sits in a box that is NOT a float — tufte-common.def:1110-1133
+<a href=#286 id=286 data-nosnippet>286</a>  // `marginfigure` (`\marginpar{\usebox{…}}` around a minipage), raw tocbasic
+<a href=#287 id=287 data-nosnippet>287</a>  // `\captionaboveof{table}` at top level — has no ancestor that can hold an
+<a href=#288 id=288 data-nosnippet>288</a>  // `ltx:caption`, so the float form errored once per caption
+<a href=#289 id=289 data-nosnippet>289</a>  // (`&lt;ltx:caption&gt; isn't allowed in &lt;ltx:block&gt;`, plus its `ltx:toccaption`
+<a href=#290 id=290 data-nosnippet>290</a>  // sibling and the `ltx:tag`: pgfornament ornaments 40+40, memman 46+46).
+<a href=#291 id=291 data-nosnippet>291</a>  // When a float of the caption's type can be placed, the caption becomes that
+<a href=#292 id=292 data-nosnippet>292</a>  // float (56gs, below); otherwise degrade to the inline shape Perl's own
+<a href=#293 id=293 data-nosnippet>293</a>  // no-`\@captype` path emits — an
+<a href=#294 id=294 data-nosnippet>294</a>  // `ltx:text class="ltx_caption"` holding the title, minus the counter tag
+<a href=#295 id=295 data-nosnippet>295</a>  // (which no inline element may carry) — and drop the toc entry. Guard:
+<a href=#296 id=296 data-nosnippet>296</a>  // `perfect_kernel_batch54::caption_outside_a_float_becomes_its_float`.
+<a href=#297 id=297 data-nosnippet>297</a>  // Perl names this constructor `\@@caption` (latex_constructs.pool.ltxml:3368), a name LaTeX leaves to classes:
+<a href=#298 id=298 data-nosnippet>298</a>  // the Cambridge University Press classes keep `\caption` there for their `\contcaption` (fac.cls:803-805,
+<a href=#299 id=299 data-nosnippet>299</a>  // ijsipaper.cls:876-878, mscs.cls:794-795), and with the kernel's `\@caption@@@` calling `\@@caption` every
+<a href=#300 id=300 data-nosnippet>300</a>  // caption then called itself (Perl `deep_recursion`, ours `Stomach:Recursion`; witnesses 1209.5152, 1311.2960,
+<a href=#301 id=301 data-nosnippet>301</a>  // 1410.5131, 1610.02500, 2205.14586, 2212.13027, 1604.04575, 2112.07588). The constructor is `\lx@@caption`, which
+<a href=#302 id=302 data-nosnippet>302</a>  // the kernel and the bindings call; `\@@caption` stays its alias, so a class's own meaning for the name is the
+<a href=#303 id=303 data-nosnippet>303</a>  // class's (OXIDIZED_DESIGN #566, KNOWN_PERL_ERRORS #637). Guard `perfect_kernel_batch66b::cup_contcaption_keeps_its_caption`.
+<a href=#304 id=304 data-nosnippet>304</a>  // The material is a paragraph of a vertical box (`PBoxContents`, as Perl's `\@@caption PBoxContents`,
+<a href=#305 id=305 data-nosnippet>305</a>  // latex_constructs.pool.ltxml:3368), so a `$$…$$` in it is display math (1005.1555, 1907.01498, 2310.11556,
+<a href=#306 id=306 data-nosnippet>306</a>  // 1404.2359; OXIDIZED_DESIGN_DIVERGENCES #769); `\@@toccaption` below alike.
+<a href=#307 id=307 data-nosnippet>307</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@@caption PBoxContents"</span>, sub[document, args, props] {
+<a href=#308 id=308 data-nosnippet>308</a>    <span class="kw">let </span>body = args[<span class="number">0</span>].clone();
+<a href=#309 id=309 data-nosnippet>309</a>    <span class="comment">// The list entry `\@@toccaption` could not place (below), for the float this caption may become.
+<a href=#310 id=310 data-nosnippet>310</a>    </span><span class="kw">let </span>unplaced_toccaption = remove_value(<span class="string">"lx@unplaced@toccaption"</span>);
+<a href=#311 id=311 data-nosnippet>311</a>    <span class="comment">// A caption whose `\@captype` is set in a box that is not a float
+<a href=#312 id=312 data-nosnippet>312</a>    // (tufte-common.def:1110-1133 `marginfigure`: a minipage with `\def\@captype
+<a href=#313 id=313 data-nosnippet>313</a>    // {figure}` inside `\marginpar`; the `\def\@captype{figure}` minipage idiom)
+<a href=#314 id=314 data-nosnippet>314</a>    // IS that type's caption in LaTeX — numbered "Figure 1:", the target of a
+<a href=#315 id=315 data-nosnippet>315</a>    // following `\label` — so it becomes one: a float element of its type at the
+<a href=#316 id=316 data-nosnippet>316</a>    // nearest ancestor that admits it (the minipage's `inline-logical-block`, whose
+<a href=#317 id=317 data-nosnippet>317</a>    // model is `Para.model`), carrying the counter tags and id the caption stepped,
+<a href=#318 id=318 data-nosnippet>318</a>    // the shape `\captionof` already gives (OXIDIZED_DESIGN #89). Before, #182
+<a href=#319 id=319 data-nosnippet>319</a>    // degraded it to `ltx:text class="ltx_caption"`: no number, and a `\ref` to
+<a href=#320 id=320 data-nosnippet>320</a>    // its `\label` dangled (pgfornament ornaments ×40, the tufte manuals). Guard:
+<a href=#321 id=321 data-nosnippet>321</a>    // `perfect_kernel_batch54::caption_outside_a_float_becomes_its_float`.
+<a href=#322 id=322 data-nosnippet>322</a>    // A sub-float's caption (`\subcaption`'s `\@captype` is `sub&lt;type&gt;`, one prefix: Perl subcaption.sty.ltxml:50-53)
+<a href=#323 id=323 data-nosnippet>323</a>    // becomes the element of its parent type, as `{subfigure}` is an `ltx:figure` (subcaption.sty.ltxml:60-68;
+<a href=#324 id=324 data-nosnippet>324</a>    // 2609.33998's teaser).
+<a href=#325 id=325 data-nosnippet>325</a>    </span><span class="kw">let </span>float_tag = props.get(<span class="string">"captype"</span>).map(|t| {
+<a href=#326 id=326 data-nosnippet>326</a>      <span class="kw">let </span>captype = t.to_string();
+<a href=#327 id=327 data-nosnippet>327</a>      <span class="kw">match </span>captype.strip_prefix(<span class="string">"sub"</span>).unwrap_or(<span class="kw-2">&amp;</span>captype) {
+<a href=#328 id=328 data-nosnippet>328</a>        <span class="string">"figure" </span>=&gt; <span class="string">"ltx:figure"</span>,
+<a href=#329 id=329 data-nosnippet>329</a>        <span class="string">"table" </span>=&gt; <span class="string">"ltx:table"</span>,
+<a href=#330 id=330 data-nosnippet>330</a>        <span class="kw">_ </span>=&gt; <span class="string">"ltx:float"</span>,
+<a href=#331 id=331 data-nosnippet>331</a>      }
+<a href=#332 id=332 data-nosnippet>332</a>    });
+<a href=#333 id=333 data-nosnippet>333</a>    <span class="kw">if </span>!caption_can_float(document, <span class="string">"ltx:caption"</span>)
+<a href=#334 id=334 data-nosnippet>334</a>      &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(float_tag) = float_tag
+<a href=#335 id=335 data-nosnippet>335</a>      &amp;&amp; <span class="kw">let </span><span class="prelude-val">Some</span>(Stored::String(id)) = props.get(<span class="string">"float_id"</span>)
+<a href=#336 id=336 data-nosnippet>336</a>      &amp;&amp; caption_can_float(document, float_tag)
+<a href=#337 id=337 data-nosnippet>337</a>    {
+<a href=#338 id=338 data-nosnippet>338</a>      <span class="kw">let </span>save = document.float_to_element(float_tag, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
+<a href=#339 id=339 data-nosnippet>339</a>      <span class="kw">let </span><span class="kw-2">mut </span>attrs = <span class="macro">string_map!</span>(<span class="string">"xml:id" </span>=&gt; with(<span class="kw-2">*</span>id, |s| s.to_string()));
+<a href=#340 id=340 data-nosnippet>340</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(inlist) = props.get(<span class="string">"float_inlist"</span>) {
+<a href=#341 id=341 data-nosnippet>341</a>        <span class="kw">let </span>inlist = inlist.to_string();
+<a href=#342 id=342 data-nosnippet>342</a>        <span class="kw">if </span>!inlist.trim().is_empty() {
+<a href=#343 id=343 data-nosnippet>343</a>          attrs.insert(<span class="string">"inlist"</span>.to_string(), inlist);
+<a href=#344 id=344 data-nosnippet>344</a>        }
+<a href=#345 id=345 data-nosnippet>345</a>      }
+<a href=#346 id=346 data-nosnippet>346</a>      document.open_element(float_tag, <span class="prelude-val">Some</span>(attrs), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#347 id=347 data-nosnippet>347</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(tags)) = props.get(<span class="string">"float_tags"</span>) {
+<a href=#348 id=348 data-nosnippet>348</a>        document.absorb(tags, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#349 id=349 data-nosnippet>349</a>      }
+<a href=#350 id=350 data-nosnippet>350</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(Stored::Digested(toccaption)) = unplaced_toccaption {
+<a href=#351 id=351 data-nosnippet>351</a>        document.open_element(<span class="string">"ltx:toccaption"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#352 id=352 data-nosnippet>352</a>        document.absorb(<span class="kw-2">&amp;</span>toccaption, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#353 id=353 data-nosnippet>353</a>        document.close_element(<span class="string">"ltx:toccaption"</span>)<span class="question-mark">?</span>;
+<a href=#354 id=354 data-nosnippet>354</a>      }
+<a href=#355 id=355 data-nosnippet>355</a>      document.open_element(<span class="string">"ltx:caption"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#356 id=356 data-nosnippet>356</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>body) = body {
+<a href=#357 id=357 data-nosnippet>357</a>        document.absorb(body, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#358 id=358 data-nosnippet>358</a>      }
+<a href=#359 id=359 data-nosnippet>359</a>      document.close_element(<span class="string">"ltx:caption"</span>)<span class="question-mark">?</span>;
+<a href=#360 id=360 data-nosnippet>360</a>      document.close_element(float_tag)<span class="question-mark">?</span>;
+<a href=#361 id=361 data-nosnippet>361</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(save) = save {
+<a href=#362 id=362 data-nosnippet>362</a>        document.set_node(<span class="kw-2">&amp;</span>save);
+<a href=#363 id=363 data-nosnippet>363</a>      }
+<a href=#364 id=364 data-nosnippet>364</a>    } <span class="kw">else if </span>caption_can_float(document, <span class="string">"ltx:caption"</span>) {
+<a href=#365 id=365 data-nosnippet>365</a>      <span class="comment">// `^^`: float up, closing what can be closed on the way.
+<a href=#366 id=366 data-nosnippet>366</a>      </span><span class="kw">let </span>save = document.float_to_element(<span class="string">"ltx:caption"</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
+<a href=#367 id=367 data-nosnippet>367</a>      document.open_element(<span class="string">"ltx:caption"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#368 id=368 data-nosnippet>368</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>body) = body {
+<a href=#369 id=369 data-nosnippet>369</a>        document.absorb(body, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#370 id=370 data-nosnippet>370</a>      }
+<a href=#371 id=371 data-nosnippet>371</a>      document.close_element(<span class="string">"ltx:caption"</span>)<span class="question-mark">?</span>;
+<a href=#372 id=372 data-nosnippet>372</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(save) = save {
+<a href=#373 id=373 data-nosnippet>373</a>        document.set_node(<span class="kw-2">&amp;</span>save);
+<a href=#374 id=374 data-nosnippet>374</a>      }
+<a href=#375 id=375 data-nosnippet>375</a>    } <span class="kw">else </span>{
+<a href=#376 id=376 data-nosnippet>376</a>      <span class="kw">let </span>node = document.open_element(
+<a href=#377 id=377 data-nosnippet>377</a>        <span class="string">"ltx:text"</span>,
+<a href=#378 id=378 data-nosnippet>378</a>        <span class="prelude-val">Some</span>(<span class="macro">string_map!</span>(<span class="string">"class" </span>=&gt; <span class="string">"ltx_caption"</span>)),
+<a href=#379 id=379 data-nosnippet>379</a>        <span class="prelude-val">None</span>,
+<a href=#380 id=380 data-nosnippet>380</a>      )<span class="question-mark">?</span>;
+<a href=#381 id=381 data-nosnippet>381</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>body) = body {
+<a href=#382 id=382 data-nosnippet>382</a>        absorb_without_tags(document, body)<span class="question-mark">?</span>;
+<a href=#383 id=383 data-nosnippet>383</a>      }
+<a href=#384 id=384 data-nosnippet>384</a>      document.maybe_close_node(<span class="kw-2">&amp;</span>node)<span class="question-mark">?</span>;
+<a href=#385 id=385 data-nosnippet>385</a>    }
+<a href=#386 id=386 data-nosnippet>386</a>  },
+<a href=#387 id=387 data-nosnippet>387</a>  <span class="comment">// Outside any float (`before_float`'s scoped `lx@in@float` absent), the
+<a href=#388 id=388 data-nosnippet>388</a>  // caption TAKES the counter values `\@@add@caption@counters` just stored — no
+<a href=#389 id=389 data-nosnippet>389</a>  // float's `after_float` will, and a later caption-less float would otherwise
+<a href=#390 id=390 data-nosnippet>390</a>  // rescue them and repeat this caption's id.
+<a href=#391 id=391 data-nosnippet>391</a>  </span>properties =&gt; sub[_args] {
+<a href=#392 id=392 data-nosnippet>392</a>    <span class="kw">let </span><span class="kw-2">mut </span>map = <span class="macro">stored_map!</span>();
+<a href=#393 id=393 data-nosnippet>393</a>    <span class="kw">if </span>!lookup_bool(<span class="string">"lx@in@float"</span>) &amp;&amp; lookup_meaning(<span class="kw-2">&amp;</span><span class="macro">T_CS!</span>(<span class="string">"\\@captype"</span>)).is_some() {
+<a href=#394 id=394 data-nosnippet>394</a>      <span class="comment">// Keyed exactly as `\@@add@caption@counters` stores them (untrimmed).
+<a href=#395 id=395 data-nosnippet>395</a>      </span><span class="kw">let </span>captype = do_expand(<span class="macro">T_CS!</span>(<span class="string">"\\@captype"</span>))<span class="question-mark">?</span>.to_string();
+<a href=#396 id=396 data-nosnippet>396</a>      <span class="kw">if </span>!captype.trim().is_empty() {
+<a href=#397 id=397 data-nosnippet>397</a>        <span class="kw">for </span>(prop, suffix) <span class="kw">in </span>[(<span class="string">"float_tags"</span>, <span class="string">"tags"</span>), (<span class="string">"float_id"</span>, <span class="string">"id"</span>), (<span class="string">"float_inlist"</span>, <span class="string">"inlist"</span>)] {
+<a href=#398 id=398 data-nosnippet>398</a>          <span class="kw">if let </span><span class="prelude-val">Some</span>(value) = remove_value(<span class="kw-2">&amp;</span><span class="macro">s!</span>(<span class="string">"{captype}_{suffix}"</span>)) {
+<a href=#399 id=399 data-nosnippet>399</a>            map.insert(prop, value);
+<a href=#400 id=400 data-nosnippet>400</a>          }
+<a href=#401 id=401 data-nosnippet>401</a>        }
+<a href=#402 id=402 data-nosnippet>402</a>        map.insert(<span class="string">"captype"</span>, Stored::String(pin(captype.trim())));
+<a href=#403 id=403 data-nosnippet>403</a>      }
+<a href=#404 id=404 data-nosnippet>404</a>    }
+<a href=#405 id=405 data-nosnippet>405</a>    <span class="prelude-val">Ok</span>(map)
+<a href=#406 id=406 data-nosnippet>406</a>  });
+<a href=#407 id=407 data-nosnippet>407</a>  <span class="macro">Let!</span>(<span class="string">"\\@@caption"</span>, <span class="string">"\\lx@@caption"</span>);
+<a href=#408 id=408 data-nosnippet>408</a>  <span class="comment">// With no ancestor to hold it, the entry waits for the `\lx@@caption` that follows: a caption in a box that is not a
+<a href=#409 id=409 data-nosnippet>409</a>  // float becomes that float (above), whose list entry it is — LaTeX's `\caption` writes the `\addcontentsline` there
+<a href=#410 id=410 data-nosnippet>410</a>  // too (latex.ltx:17391-17399), and without it the list of figures showed the float's number alone
+<a href=#411 id=411 data-nosnippet>411</a>  // (`\captionsetup{type=figure}` or `\def\@captype{figure}` in a minipage, the tufte margin figures; 2609.06557,
+<a href=#412 id=412 data-nosnippet>412</a>  // 32742).
+<a href=#413 id=413 data-nosnippet>413</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\@@toccaption PBoxContents"</span>, sub[document, args] {
+<a href=#414 id=414 data-nosnippet>414</a>    <span class="kw">let </span>body = args[<span class="number">0</span>].clone();
+<a href=#415 id=415 data-nosnippet>415</a>    <span class="kw">if </span>caption_can_float(document, <span class="string">"ltx:toccaption"</span>) {
+<a href=#416 id=416 data-nosnippet>416</a>      <span class="kw">let </span>save = document.float_to_element(<span class="string">"ltx:toccaption"</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
+<a href=#417 id=417 data-nosnippet>417</a>      document.open_element(<span class="string">"ltx:toccaption"</span>, <span class="prelude-val">None</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#418 id=418 data-nosnippet>418</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(<span class="kw-2">ref </span>body) = body {
+<a href=#419 id=419 data-nosnippet>419</a>        document.absorb(body, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#420 id=420 data-nosnippet>420</a>      }
+<a href=#421 id=421 data-nosnippet>421</a>      document.close_element(<span class="string">"ltx:toccaption"</span>)<span class="question-mark">?</span>;
+<a href=#422 id=422 data-nosnippet>422</a>      <span class="kw">if let </span><span class="prelude-val">Some</span>(save) = save {
+<a href=#423 id=423 data-nosnippet>423</a>        document.set_node(<span class="kw-2">&amp;</span>save);
+<a href=#424 id=424 data-nosnippet>424</a>      }
+<a href=#425 id=425 data-nosnippet>425</a>    } <span class="kw">else if let </span><span class="prelude-val">Some</span>(body) = body {
+<a href=#426 id=426 data-nosnippet>426</a>      assign_value(<span class="string">"lx@unplaced@toccaption"</span>, Stored::Digested(body), <span class="prelude-val">Some</span>(Scope::Global));
+<a href=#427 id=427 data-nosnippet>427</a>    }
+<a href=#428 id=428 data-nosnippet>428</a>  });
+<a href=#429 id=429 data-nosnippet>429</a>
+<a href=#430 id=430 data-nosnippet>430</a>  <span class="comment">// Perl: latex_constructs.pool.ltxml L3450-3458
+<a href=#431 id=431 data-nosnippet>431</a>  // Uses beforeFloat('figure') / afterFloat — sets LAST_FLOATTYPE, rescues counters.
+<a href=#432 id=432 data-nosnippet>432</a>  // The floats carry the `^^` float-up marker (`float_to_element` with
+<a href=#433 id=433 data-nosnippet>433</a>  // close-if-possible, Perl `floatToElement($tag,1)`): auto-closable
+<a href=#434 id=434 data-nosnippet>434</a>  // ancestors (`ltx:p`, `ltx:para`) are CLOSED so reading order is kept
+<a href=#435 id=435 data-nosnippet>435</a>  // (cprotect golden), and only a real Block container (`quote`, a list
+<a href=#436 id=436 data-nosnippet>436</a>  // item, a box) is escaped to the nearest ancestor that may hold the float,
+<a href=#437 id=437 data-nosnippet>437</a>  // as a LaTeX float escapes its environment to the page.
+<a href=#438 id=438 data-nosnippet>438</a>  // Without it the float sat in `&lt;ltx:quote&gt;` ("`&lt;ltx:figure&gt;` isn't allowed
+<a href=#439 id=439 data-nosnippet>439</a>  // in `&lt;ltx:quote&gt;`"; isorot/rotman, bashful; Perl pool:3394 identical,
+<a href=#440 id=440 data-nosnippet>440</a>  // pdflatex clean). A top-level float's para already accepts it: no move.
+<a href=#441 id=441 data-nosnippet>441</a>  // Guard: `perfect_kernel_batch54::floats_escape_block_containers`.
+<a href=#442 id=442 data-nosnippet>442</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{figure}[]"</span>,
+<a href=#443 id=443 data-nosnippet>443</a>    <span class="string">"^^&lt;ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1')&gt;\
+<a href=#444 id=444 data-nosnippet>444</a>    #tags\
+<a href=#445 id=445 data-nosnippet>445</a>    #body\
+<a href=#446 id=446 data-nosnippet>446</a>    &lt;/ltx:figure&gt;"</span>,
+<a href=#447 id=447 data-nosnippet>447</a>    properties   =&gt; { <span class="macro">stored_map!</span>(<span class="string">"layout" </span>=&gt; <span class="string">"vertical"</span>) },
+<a href=#448 id=448 data-nosnippet>448</a>    <span class="comment">// The begin code opens a TeX group of its own: `\@float` -&gt; `\@xfloat`'s `\color@vbox` (latex.ltx:17421, :17479).
+<a href=#449 id=449 data-nosnippet>449</a>    </span>tex_group =&gt; { TexGroup::Box },
+<a href=#450 id=450 data-nosnippet>450</a>    before_digest =&gt; { before_float(<span class="string">"figure"</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>; reset_float_box()<span class="question-mark">?</span>; },
+<a href=#451 id=451 data-nosnippet>451</a>    after_digest  =&gt; sub[whatsit] { after_float(whatsit); },
+<a href=#452 id=452 data-nosnippet>452</a>    mode =&gt; <span class="string">"internal_vertical"
+<a href=#453 id=453 data-nosnippet>453</a>  </span>);
+<a href=#454 id=454 data-nosnippet>454</a>  <span class="comment">// Perl: latex_constructs.pool.ltxml line 3460
+<a href=#455 id=455 data-nosnippet>455</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{figure*}[]"</span>,
+<a href=#456 id=456 data-nosnippet>456</a>    <span class="string">"^^&lt;ltx:figure xml:id='#id' inlist='#inlist' ?#1(placement='#1')&gt;\
+<a href=#457 id=457 data-nosnippet>457</a>    #tags\
+<a href=#458 id=458 data-nosnippet>458</a>    #body\
+<a href=#459 id=459 data-nosnippet>459</a>    &lt;/ltx:figure&gt;"</span>,
+<a href=#460 id=460 data-nosnippet>460</a>    properties   =&gt; { <span class="macro">stored_map!</span>(<span class="string">"layout" </span>=&gt; <span class="string">"vertical"</span>) },
+<a href=#461 id=461 data-nosnippet>461</a>    <span class="comment">// The begin code opens a TeX group of its own: `\@float` -&gt; `\@xfloat`'s `\color@vbox` (latex.ltx:17421, :17479).
+<a href=#462 id=462 data-nosnippet>462</a>    </span>tex_group =&gt; { TexGroup::Box },
+<a href=#463 id=463 data-nosnippet>463</a>    before_digest =&gt; { before_float_ex(<span class="string">"figure"</span>, <span class="prelude-val">None</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>; reset_float_box()<span class="question-mark">?</span>; }, <span class="comment">// double=true for *
+<a href=#464 id=464 data-nosnippet>464</a>    </span>after_digest  =&gt; sub[whatsit] { after_float(whatsit); },
+<a href=#465 id=465 data-nosnippet>465</a>    mode =&gt; <span class="string">"internal_vertical"
+<a href=#466 id=466 data-nosnippet>466</a>  </span>);
+<a href=#467 id=467 data-nosnippet>467</a>  <span class="comment">// Perl: latex_constructs.pool.ltxml L3469-3477
+<a href=#468 id=468 data-nosnippet>468</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{table}[]"</span>,
+<a href=#469 id=469 data-nosnippet>469</a>    <span class="string">"^^&lt;ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')&gt;#tags#body&lt;/ltx:table&gt;"</span>,
+<a href=#470 id=470 data-nosnippet>470</a>    properties   =&gt; { <span class="macro">stored_map!</span>(<span class="string">"layout" </span>=&gt; <span class="string">"vertical"</span>) },
+<a href=#471 id=471 data-nosnippet>471</a>    <span class="comment">// The begin code opens a TeX group of its own: `\@float` -&gt; `\@xfloat`'s `\color@vbox` (latex.ltx:17421, :17479).
+<a href=#472 id=472 data-nosnippet>472</a>    </span>tex_group =&gt; { TexGroup::Box },
+<a href=#473 id=473 data-nosnippet>473</a>    before_digest =&gt; { before_float(<span class="string">"table"</span>, <span class="prelude-val">None</span>)<span class="question-mark">?</span>; reset_float_box()<span class="question-mark">?</span>; },
+<a href=#474 id=474 data-nosnippet>474</a>    after_digest  =&gt; sub[whatsit] { after_float(whatsit); },
+<a href=#475 id=475 data-nosnippet>475</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
+<a href=#476 id=476 data-nosnippet>476</a>  <span class="comment">// Perl: latex_constructs.pool.ltxml line 3478
+<a href=#477 id=477 data-nosnippet>477</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{table*}[]"</span>,
+<a href=#478 id=478 data-nosnippet>478</a>    <span class="string">"^^&lt;ltx:table xml:id='#id' inlist='#inlist' ?#1(placement='#1')&gt;#tags#body&lt;/ltx:table&gt;"</span>,
+<a href=#479 id=479 data-nosnippet>479</a>    properties   =&gt; { <span class="macro">stored_map!</span>(<span class="string">"layout" </span>=&gt; <span class="string">"vertical"</span>) },
+<a href=#480 id=480 data-nosnippet>480</a>    <span class="comment">// The begin code opens a TeX group of its own: `\@float` -&gt; `\@xfloat`'s `\color@vbox` (latex.ltx:17421, :17479).
+<a href=#481 id=481 data-nosnippet>481</a>    </span>tex_group =&gt; { TexGroup::Box },
+<a href=#482 id=482 data-nosnippet>482</a>    before_digest =&gt; { before_float_ex(<span class="string">"table"</span>, <span class="prelude-val">None</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>; reset_float_box()<span class="question-mark">?</span>; }, <span class="comment">// double=true for *
+<a href=#483 id=483 data-nosnippet>483</a>    </span>after_digest  =&gt; sub[whatsit] { after_float(whatsit); },
+<a href=#484 id=484 data-nosnippet>484</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
+<a href=#485 id=485 data-nosnippet>485</a>
+<a href=#486 id=486 data-nosnippet>486</a>  <span class="comment">// Perl: latex_constructs.pool.ltxml L3199-3212 — internal @float/@dblfloat
+<a href=#487 id=487 data-nosnippet>487</a>  // Used by raw TeX packages (e.g., nips_2017.sty) via \@float{type}[placement]
+<a href=#488 id=488 data-nosnippet>488</a>  // Since the float type arg isn't known at compile time, we use a properties
+<a href=#489 id=489 data-nosnippet>489</a>  // closure to call beforeFloat dynamically.
+<a href=#490 id=490 data-nosnippet>490</a>  </span><span class="macro">DefEnvironment!</span>(<span class="string">"{@float}{}[]"</span>,
+<a href=#491 id=491 data-nosnippet>491</a>    <span class="string">"&lt;ltx:float xml:id='#id' inlist='#inlist' ?#2(placement='#2') class='ltx_float_#1'&gt;\
+<a href=#492 id=492 data-nosnippet>492</a>    #tags#body\
+<a href=#493 id=493 data-nosnippet>493</a>    &lt;/ltx:float&gt;"</span>,
+<a href=#494 id=494 data-nosnippet>494</a>    properties =&gt; sub[args] {
+<a href=#495 id=495 data-nosnippet>495</a>      <span class="kw">let </span>float_type = args.first().and_then(|a| a.as_ref())
+<a href=#496 id=496 data-nosnippet>496</a>        .map(|d| d.to_string()).unwrap_or_default();
+<a href=#497 id=497 data-nosnippet>497</a>      before_float(<span class="kw-2">&amp;</span>float_type, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#498 id=498 data-nosnippet>498</a>      reset_float_box()<span class="question-mark">?</span>;
+<a href=#499 id=499 data-nosnippet>499</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"layout" </span>=&gt; <span class="string">"vertical"</span>))
+<a href=#500 id=500 data-nosnippet>500</a>    },
+<a href=#501 id=501 data-nosnippet>501</a>    <span class="comment">// The begin code opens a TeX group of its own: `\@xfloat`'s `\color@vbox` (latex.ltx:17421, :17479).
+<a href=#502 id=502 data-nosnippet>502</a>    </span>tex_group =&gt; { TexGroup::Box },
+<a href=#503 id=503 data-nosnippet>503</a>    after_digest  =&gt; sub[whatsit] { after_float(whatsit); },
+<a href=#504 id=504 data-nosnippet>504</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
+<a href=#505 id=505 data-nosnippet>505</a>  <span class="macro">DefEnvironment!</span>(<span class="string">"{@dblfloat}{}[]"</span>,
+<a href=#506 id=506 data-nosnippet>506</a>    <span class="string">"&lt;ltx:float xml:id='#id' inlist='#inlist' ?#2(placement='#2') class='ltx_float_#1'&gt;\
+<a href=#507 id=507 data-nosnippet>507</a>    #tags#body\
+<a href=#508 id=508 data-nosnippet>508</a>    &lt;/ltx:float&gt;"</span>,
+<a href=#509 id=509 data-nosnippet>509</a>    properties =&gt; sub[args] {
+<a href=#510 id=510 data-nosnippet>510</a>      <span class="kw">let </span>float_type = args.first().and_then(|a| a.as_ref())
+<a href=#511 id=511 data-nosnippet>511</a>        .map(|d| d.to_string()).unwrap_or_default();
+<a href=#512 id=512 data-nosnippet>512</a>      before_float_ex(<span class="kw-2">&amp;</span>float_type, <span class="prelude-val">None</span>, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
+<a href=#513 id=513 data-nosnippet>513</a>      reset_float_box()<span class="question-mark">?</span>;
+<a href=#514 id=514 data-nosnippet>514</a>      <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"layout" </span>=&gt; <span class="string">"vertical"</span>))
+<a href=#515 id=515 data-nosnippet>515</a>    },
+<a href=#516 id=516 data-nosnippet>516</a>    <span class="comment">// The begin code opens a TeX group of its own: `\@xfloat`'s `\color@vbox` (latex.ltx:17421, :17479).
+<a href=#517 id=517 data-nosnippet>517</a>    </span>tex_group =&gt; { TexGroup::Box },
+<a href=#518 id=518 data-nosnippet>518</a>    after_digest  =&gt; sub[whatsit] { after_float(whatsit); },
+<a href=#519 id=519 data-nosnippet>519</a>    mode =&gt; <span class="string">"internal_vertical"</span>);
+<a href=#520 id=520 data-nosnippet>520</a>
+<a href=#521 id=521 data-nosnippet>521</a>  <span class="comment">// `\flushbottom`/`\suppressfloats` are latex_base.pool's (latex_base.rs:434,
+<a href=#522 id=522 data-nosnippet>522</a>  // the NODUMP branch only); latex.ltx:18330 declares `\flushbottom` a robust
+<a href=#523 id=523 data-nosnippet>523</a>  // MACRO and the dump carries it. Re-declaring it a primitive here (after
+<a href=#524 id=524 data-nosnippet>524</a>  // the dump) made scrlttr2.cls:5053 `\g@addto@macro\flushbottom{…}` capture
+<a href=#525 id=525 data-nosnippet>525</a>  // the unexpandable token literally — `\flushbottom` expanding into itself
+<a href=#526 id=526 data-nosnippet>526</a>  // (scrlttr2copy letter-copy-test; RUST-ONLY, Perl keeps the dump's macro).
+<a href=#527 id=527 data-nosnippet>527</a>  // The NODUMP branch still gets latex_base.rs's primitives (Perl-faithful there).
+<a href=#528 id=528 data-nosnippet>528</a>  // Guard: `perfect_kernel_batch56::flushbottom_stays_the_kernel_macro`.
+<a href=#529 id=529 data-nosnippet>529</a>
+<a href=#530 id=530 data-nosnippet>530</a>  </span><span class="macro">NewCounter!</span>(<span class="string">"topnumber"</span>);
+<a href=#531 id=531 data-nosnippet>531</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\topfraction"</span>, <span class="string">"0.25"</span>);
+<a href=#532 id=532 data-nosnippet>532</a>  <span class="macro">NewCounter!</span>(<span class="string">"bottomnumber"</span>);
+<a href=#533 id=533 data-nosnippet>533</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\bottomfraction"</span>, <span class="string">"0.25"</span>);
+<a href=#534 id=534 data-nosnippet>534</a>  <span class="macro">NewCounter!</span>(<span class="string">"totalnumber"</span>);
+<a href=#535 id=535 data-nosnippet>535</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\textfraction"</span>, <span class="string">"0.25"</span>);
+<a href=#536 id=536 data-nosnippet>536</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\floatpagefraction"</span>, <span class="string">"0.25"</span>);
+<a href=#537 id=537 data-nosnippet>537</a>  <span class="macro">NewCounter!</span>(<span class="string">"dbltopnumber"</span>);
+<a href=#538 id=538 data-nosnippet>538</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\dbltopfraction"</span>, <span class="string">"0.7"</span>);
+<a href=#539 id=539 data-nosnippet>539</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\dblfloatpagefraction"</span>, <span class="string">"0.25"</span>);
+<a href=#540 id=540 data-nosnippet>540</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\floatsep"         </span>=&gt; <span class="macro">Glue!</span>(<span class="string">"12.0pt plus 2.0pt minus 2.0pt"</span>));
+<a href=#541 id=541 data-nosnippet>541</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\textfloatsep"     </span>=&gt; <span class="macro">Glue!</span>(<span class="string">"20.0pt plus 2.0pt minus 4.0pt"</span>));
+<a href=#542 id=542 data-nosnippet>542</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\intextsep"        </span>=&gt; <span class="macro">Glue!</span>(<span class="string">"12.0pt plus 2.0pt minus 2.0pt"</span>));
+<a href=#543 id=543 data-nosnippet>543</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\dblfloatsep"      </span>=&gt; <span class="macro">Glue!</span>(<span class="string">"12.0pt plus 2.0pt minus 2.0pt"</span>));
+<a href=#544 id=544 data-nosnippet>544</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\dbltextfloatsep"  </span>=&gt; <span class="macro">Glue!</span>(<span class="string">"20.0pt plus 2.0pt minus 4.0pt"</span>));
+<a href=#545 id=545 data-nosnippet>545</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@maxsep"          </span>=&gt; Dimension::new(<span class="number">0</span>));
+<a href=#546 id=546 data-nosnippet>546</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@dblmaxsep"       </span>=&gt; Dimension::new(<span class="number">0</span>));
+<a href=#547 id=547 data-nosnippet>547</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@fptop"           </span>=&gt; Glue::new(<span class="number">0</span>));
+<a href=#548 id=548 data-nosnippet>548</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@fpsep"           </span>=&gt; Glue::new(<span class="number">0</span>));
+<a href=#549 id=549 data-nosnippet>549</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@fpbot"           </span>=&gt; Glue::new(<span class="number">0</span>));
+<a href=#550 id=550 data-nosnippet>550</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@dblfptop"        </span>=&gt; Glue::new(<span class="number">0</span>));
+<a href=#551 id=551 data-nosnippet>551</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@dblfpsep"        </span>=&gt; Glue::new(<span class="number">0</span>));
+<a href=#552 id=552 data-nosnippet>552</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\@dblfpbot"        </span>=&gt; Glue::new(<span class="number">0</span>));
+<a href=#553 id=553 data-nosnippet>553</a>  <span class="comment">// Perl LaTeX.pool.ltxml L3648-3649 defines these in the BASE (not only in
+<a href=#554 id=554 data-nosnippet>554</a>  // article.cls.ltxml), so they are available under ANY document class. The
+<a href=#555 id=555 data-nosnippet>555</a>  // prior Rust comment ("not in Perl engine") was mistaken — it saw only the
+<a href=#556 id=556 data-nosnippet>556</a>  // article.cls copy. A paper on a custom class that does NOT load article
+<a href=#557 id=557 data-nosnippet>557</a>  // (e.g. `\documentclass{style/vldb}`, witness 1703.00080) then hit
+<a href=#558 id=558 data-nosnippet>558</a>  // `undefined:\abovecaptionskip` on `\setlength{\abovecaptionskip}{…}`.
+<a href=#559 id=559 data-nosnippet>559</a>  // Define them here too (Glue 0, exactly Perl), as a base fallback that
+<a href=#560 id=560 data-nosnippet>560</a>  // article/book/ams_support still override with their own values.
+<a href=#561 id=561 data-nosnippet>561</a>  </span><span class="macro">DefRegister!</span>(<span class="string">"\\abovecaptionskip" </span>=&gt; Glue::new(<span class="number">0</span>));
+<a href=#562 id=562 data-nosnippet>562</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\belowcaptionskip" </span>=&gt; Glue::new(<span class="number">0</span>));
+<a href=#563 id=563 data-nosnippet>563</a>  <span class="macro">Let!</span>(<span class="string">"\\topfigrule"</span>, <span class="string">"\\relax"</span>);
+<a href=#564 id=564 data-nosnippet>564</a>  <span class="macro">Let!</span>(<span class="string">"\\botfigrule"</span>, <span class="string">"\\relax"</span>);
+<a href=#565 id=565 data-nosnippet>565</a>  <span class="macro">Let!</span>(<span class="string">"\\dblfigrule"</span>, <span class="string">"\\relax"</span>);
+<a href=#566 id=566 data-nosnippet>566</a>
+<a href=#567 id=567 data-nosnippet>567</a>  <span class="comment">// \figurename / \figuresname / \tablename / \tablesname already defined
+<a href=#568 id=568 data-nosnippet>568</a>  // earlier in this file (figure/table caption block); avoid identical
+<a href=#569 id=569 data-nosnippet>569</a>  // re-definitions here.
+<a href=#570 id=570 data-nosnippet>570</a>
+<a href=#571 id=571 data-nosnippet>571</a>  </span><span class="macro">Let!</span>(<span class="string">"\\outer@nobreak"</span>, <span class="string">"\\@empty"</span>);
+<a href=#572 id=572 data-nosnippet>572</a>  <span class="comment">// latex.ltx:17538 `\@endfloatbox` ends with `\egroup\color@endbox`, closing the
+<a href=#573 id=573 data-nosnippet>573</a>  // `\color@vbox` + `\vbox\bgroup` that `\@xfloat` opens (:17478-17481). The
+<a href=#574 id=574 data-nosnippet>574</a>  // `{@float}`/`{@dblfloat}` bindings above open one mode frame instead and never run
+<a href=#575 id=575 data-nosnippet>575</a>  // `\@xfloat`, so on the binding's own frame (`lx@float@frame`, set by `begin_float`)
+<a href=#576 id=576 data-nosnippet>576</a>  // the closers go with the opener: a raw float end that calls `\@endfloatbox`
+<a href=#577 id=577 data-nosnippet>577</a>  // (floatrow.sty:421/:436 `\float@end`/`\float@dblend` for a `\DeclareNewFloatType`)
+<a href=#578 id=578 data-nosnippet>578</a>  // no longer pops the binding's frame (3 errors per float). A box a raw opener made on
+<a href=#579 id=579 data-nosnippet>579</a>  // top of it (examplep.sty:1794-1807 `\vbox\bgroup`…`\@floatboxreset`) is closed as
+<a href=#580 id=580 data-nosnippet>580</a>  // LaTeX closes it. The body keeps latex.ltx's tokens, so `\patchcmd` (lltjcore.sty:227)
+<a href=#581 id=581 data-nosnippet>581</a>  // and `\appdef` (ltxgrid.sty:1120) still meet them; only the closers are the hook
+<a href=#582 id=582 data-nosnippet>582</a>  // `\lx@endfloatbox@close`. RUST-ONLY: Perl keeps the raw `\@endfloatbox` from its dump
+<a href=#583 id=583 data-nosnippet>583</a>  // (latex_dump.pool.ltxml:1993) and binds none, so it errs the same. Witness
+<a href=#584 id=584 data-nosnippet>584</a>  // kaytannollista-latexia. Guard: `perfect_kernel_batch59::floatrow_new_float_type_closes_its_box`.
+<a href=#585 id=585 data-nosnippet>585</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@endfloatbox"</span>,
+<a href=#586 id=586 data-nosnippet>586</a>    <span class="string">"\\par\\vskip\\z@skip\\@minipagefalse\\outer@nobreak\\lx@endfloatbox@close"</span>);
+<a href=#587 id=587 data-nosnippet>587</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@endfloatbox@close"</span>, sub[_args] {
+<a href=#588 id=588 data-nosnippet>588</a>    <span class="kw">let </span>on_the_float = <span class="macro">matches!</span>(lookup_value(<span class="string">"lx@float@frame"</span>),
+<a href=#589 id=589 data-nosnippet>589</a>      <span class="prelude-val">Some</span>(Stored::Number(n)) <span class="kw">if </span>n.<span class="number">0 </span><span class="kw">as </span>u64 == current_frame_id());
+<a href=#590 id=590 data-nosnippet>590</a>    <span class="prelude-val">Ok</span>(<span class="kw">if </span>on_the_float {
+<a href=#591 id=591 data-nosnippet>591</a>      <span class="comment">// The raw end code closes `\@xfloat`'s box group here, as TeX does: a
+<a href=#592 id=592 data-nosnippet>592</a>      // closer that meets the binding's frame afterwards no longer meets a box
+<a href=#593 id=593 data-nosnippet>593</a>      // group (stomach.rs `close_environment_frame`; 2106.02397).
+<a href=#594 id=594 data-nosnippet>594</a>      </span><span class="kw">if </span>is_value_bound(<span class="string">"lx@env@tex@group"</span>, <span class="prelude-val">Some</span>(<span class="number">0</span>)) {
+<a href=#595 id=595 data-nosnippet>595</a>        assign_frame_value(<span class="string">"lx@env@tex@group"</span>, TexGroup::None.as_str());
+<a href=#596 id=596 data-nosnippet>596</a>      }
+<a href=#597 id=597 data-nosnippet>597</a>      Tokens::default()
+<a href=#598 id=598 data-nosnippet>598</a>    } <span class="kw">else </span>{
+<a href=#599 id=599 data-nosnippet>599</a>      <span class="macro">Tokens!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\egroup"</span>), <span class="macro">T_CS!</span>(<span class="string">"\\color@endbox"</span>))
+<a href=#600 id=600 data-nosnippet>600</a>    })
+<a href=#601 id=601 data-nosnippet>601</a>  });
+<a href=#602 id=602 data-nosnippet>602</a>  def_macro_identity(<span class="string">"\\@dbflt{}"</span>)<span class="question-mark">?</span>;
+<a href=#603 id=603 data-nosnippet>603</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@xdblfloat{}[]"</span>, <span class="string">"\\@xfloat{#1}[#2]"</span>);
+<a href=#604 id=604 data-nosnippet>604</a>  def_macro_noop(<span class="string">"\\@floatplacement"</span>)<span class="question-mark">?</span>;
+<a href=#605 id=605 data-nosnippet>605</a>  def_macro_noop(<span class="string">"\\@dblfloatplacement"</span>)<span class="question-mark">?</span>;
+<a href=#606 id=606 data-nosnippet>606</a>
+<a href=#607 id=607 data-nosnippet>607</a>  <span class="macro">DefConditional!</span>(<span class="string">"\\if@reversemargin"</span>);
+<a href=#608 id=608 data-nosnippet>608</a>  <span class="macro">Let!</span>(<span class="string">"\\reversemarginpar"</span>, <span class="string">"\\@reversemargintrue"</span>);
+<a href=#609 id=609 data-nosnippet>609</a>  <span class="macro">Let!</span>(<span class="string">"\\normalmarginpar"</span>, <span class="string">"\\@reversemarginfalse"</span>);
+<a href=#610 id=610 data-nosnippet>610</a>  <span class="comment">// Perl: latex_constructs.pool.ltxml lines 3543-3546
+<a href=#611 id=611 data-nosnippet>611</a>  // `bounded =&gt; true` scopes font/catcode changes inside the margin note to the
+<a href=#612 id=612 data-nosnippet>612</a>  // note itself. This is an INTENTIONAL surpass-Perl divergence (OXIDIZED_DESIGN
+<a href=#613 id=613 data-nosnippet>613</a>  // #39, KNOWN_PERL_ERRORS): upstream Perl LaTeXML's `\marginpar` is NOT bounded,
+<a href=#614 id=614 data-nosnippet>614</a>  // so a `\marginpar{\Large …}` leaks the size switch into the body text after
+<a href=#615 id=615 data-nosnippet>615</a>  // it (real pdflatex scopes it to the margin box — the leak is a LaTeXML bug,
+<a href=#616 id=616 data-nosnippet>616</a>  // shared by both engines). Mirrors `\mbox`'s `bounded =&gt; true`. Witness:
+<a href=#617 id=617 data-nosnippet>617</a>  // mhchem.tex `\marginpar{\Large !}` made the entire manual render at 144%.
+<a href=#618 id=618 data-nosnippet>618</a>  // latex.ltx:11216 `\long\def\marginpar{\@ifnextchar[\@xmpar\@ympar}` — the
+<a href=#619 id=619 data-nosnippet>619</a>  // TeX-visible MACRO shape packages patch by expansion (marginfix.sty:91
+<a href=#620 id=620 data-nosnippet>620</a>  // `\edef\marginpar{…\expandafter\unexpanded\expandafter{\marginpar}}`,
+<a href=#621 id=621 data-nosnippet>621</a>  // which with a Constructor here captured the bare `\marginpar` token and
+<a href=#622 id=622 data-nosnippet>622</a>  // re-expanded itself without end: sidenotes/caesar_example, "Box-list
+<a href=#623 id=623 data-nosnippet>623</a>  // runaway"; Perl's Constructor loops the same way; pdflatex clean). The
+<a href=#624 id=624 data-nosnippet>624</a>  // constructor lives under `\lx@marginpar`. Guard:
+<a href=#625 id=625 data-nosnippet>625</a>  // `perfect_kernel_batch54::marginpar_is_a_macro_over_its_constructor`.
+<a href=#626 id=626 data-nosnippet>626</a>  // The dispatch targets are LaTeXML-PRIVATE, not the kernel's `\@xmpar`/
+<a href=#627 id=627 data-nosnippet>627</a>  // `\@ympar`: latex.ltx:17570-17591 allocates `\@currbox` and `\@marbox`
+<a href=#628 id=628 data-nosnippet>628</a>  // from `\@freelist` before dispatching, and classes customise marginal
+<a href=#629 id=629 data-nosnippet>629</a>  // notes by redefining `\@ympar` with the kernel idiom `\@savemarbox\@marbox
+<a href=#630 id=630 data-nosnippet>630</a>  // {…}\@xympar` (caesar_book.cls:84-87). Dispatching to the kernel names let
+<a href=#631 id=631 data-nosnippet>631</a>  // that redefinition hijack `\marginpar` into the raw float machinery with no
+<a href=#632 id=632 data-nosnippet>632</a>  // `\@marbox` (undefined `\@marbox`, 24 unclosed `\vbox`es, the `\@captype`
+<a href=#633 id=633 data-nosnippet>633</a>  // residue: sidenotes caesar_example, 42 errors). Perl's `\marginpar`
+<a href=#634 id=634 data-nosnippet>634</a>  // constructor (latex_constructs.pool.ltxml:3487) never consults `\@ympar`.
+<a href=#635 id=635 data-nosnippet>635</a>  // The kernel-named aliases below stay for direct callers. Guard:
+<a href=#636 id=636 data-nosnippet>636</a>  // `perfect_kernel_batch56::marginpar_ignores_a_class_redefined_ympar`.
+<a href=#637 id=637 data-nosnippet>637</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\marginpar"</span>, <span class="string">"\\@ifnextchar[\\lx@xmpar\\lx@ympar"</span>);
+<a href=#638 id=638 data-nosnippet>638</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@xmpar[]{}"</span>, <span class="string">"\\lx@marginpar[{#1}]{#2}"</span>);
+<a href=#639 id=639 data-nosnippet>639</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\lx@ympar{}"</span>, <span class="string">"\\lx@marginpar{#1}"</span>);
+<a href=#640 id=640 data-nosnippet>640</a>  <span class="comment">// latex.ltx:17591 `\@xmpar[#1]#2` uses `#1` as a brace group
+<a href=#641 id=641 data-nosnippet>641</a>  // (`\@savemarbox\@marbox{#1}`); re-passed UNBRACED, an optional holding
+<a href=#642 id=642 data-nosnippet>642</a>  // its own brackets (`\marginpar[{\lipsum[1][1-4]}]{…}`, Test-flexipage) was
+<a href=#643 id=643 data-nosnippet>643</a>  // cut at the inner `]` by `\lx@marginpar`'s `[]` reader ("readBalanced ran
+<a href=#644 id=644 data-nosnippet>644</a>  // out of input", a 55a regression). Guard:
+<a href=#645 id=645 data-nosnippet>645</a>  // `perfect_kernel_batch54::marginpar_optional_keeps_its_own_brackets`.
+<a href=#646 id=646 data-nosnippet>646</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\@xmpar[]{}"</span>, <span class="string">"\\lx@marginpar[{#1}]{#2}"</span>);
+<a href=#647 id=647 data-nosnippet>647</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@ympar{}"</span>, <span class="string">"\\lx@marginpar{#1}"</span>);
+<a href=#648 id=648 data-nosnippet>648</a>  <span class="comment">// The note's text is set in a box of its own (latex.ltx `\@xympar` → `\@savemarbox`: `\vtop{… #2}`, internal vertical
+<a href=#649 id=649 data-nosnippet>649</a>  // mode), so it is text wherever `\marginpar` is called: a `$…$` in a note called from a formula opens math there, as
+<a href=#650 id=650 data-nosnippet>650</a>  // `\lx@note`'s body does (sect03.rs). Perl's constructor (latex_constructs.pool.ltxml:3487) takes no mode, so a note
+<a href=#651 id=651 data-nosnippet>651</a>  // called from math digested `$#1$` as the formula's own `$`s: the next formula of the paragraph met its scripts in
+<a href=#652 id=652 data-nosnippet>652</a>  // text (2002.06461's `\newcommand{\defineNotation}[1]{#1\marginnote{$#1$}}` inside `$…$`; KNOWN_PERL_ERRORS #661).
+<a href=#653 id=653 data-nosnippet>653</a>  // Guard: `perfect_kernel_batch66l::marginnote_formula_called_from_math`.
+<a href=#654 id=654 data-nosnippet>654</a>  </span><span class="macro">DefConstructor!</span>(<span class="string">"\\lx@marginpar[]{}"</span>, <span class="string">r###"?#1(&lt;ltx:note role='margin' class='ltx_marginpar_left'&gt;&lt;ltx:inline-logical-block&gt;#1&lt;/ltx:inline-logical-block&gt;&lt;/ltx:note&gt;?#2(&lt;ltx:note role='margin' class='ltx_marginpar_right'&gt;&lt;ltx:inline-logical-block&gt;#2&lt;/ltx:inline-logical-block&gt;&lt;/ltx:note&gt;))(&lt;ltx:note role='margin' class='ltx_marginpar'&gt;&lt;ltx:inline-logical-block&gt;#2&lt;/ltx:inline-logical-block&gt;&lt;/ltx:note&gt;)"###</span>,
+<a href=#655 id=655 data-nosnippet>655</a>    mode =&gt; <span class="string">"inline_internal_vertical"</span>,
+<a href=#656 id=656 data-nosnippet>656</a>    bounded =&gt; <span class="bool-val">true</span>, reversion =&gt; <span class="string">r"\marginpar[#1]{#2}"</span>,
+<a href=#657 id=657 data-nosnippet>657</a>    sizer =&gt; sub[_whatsit] { <span class="prelude-val">Ok</span>(out_of_line_size()) });
+<a href=#658 id=658 data-nosnippet>658</a>
+<a href=#659 id=659 data-nosnippet>659</a>  <span class="macro">DefRegister!</span>(<span class="string">"\\marginparpush"</span>, Dimension::new(<span class="number">0</span>));
+<a href=#660 id=660 data-nosnippet>660</a>
+<a href=#661 id=661 data-nosnippet>661</a>  <span class="prelude-val">Ok</span>(())
+<a href=#662 id=662 data-nosnippet>662</a>}
+</code></pre></div></section></main></body></html>

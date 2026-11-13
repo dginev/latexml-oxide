@@ -1,0 +1,76 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/luacode_sty.rs`."><title>luacode_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>luacode_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! luacode.sty — Lua-in-LaTeX helpers (Manuel Pégourié-Gonnard), implemented
+<a href=#2 id=2 data-nosnippet>2</a>//! on the engine's `\directlua` texlua bridge (`latexml_engine::lua_bridge`;
+<a href=#3 id=3 data-nosnippet>3</a>//! user directive 2026-08-31 on first-principles LuaTeX-escape support).
+<a href=#4 id=4 data-nosnippet>4</a>//!
+<a href=#5 id=5 data-nosnippet>5</a>//! The real package aborts on non-LuaTeX engines ("LuaTeX is required"), so
+<a href=#6 id=6 data-nosnippet>6</a>//! raw-loading is impossible by design — this binding stands in, mapping the
+<a href=#7 id=7 data-nosnippet>7</a>//! public API onto `\directlua`, which is exactly how the real package
+<a href=#8 id=8 data-nosnippet>8</a>//! implements it on LuaTeX (luacode.sty: `\luacode@dbg@exec` →
+<a href=#9 id=9 data-nosnippet>9</a>//! `\directlua`). The catcode-taming differences between the variants are
+<a href=#10 id=10 data-nosnippet>10</a>//! faithfully reduced to their observable effect: how much expansion the
+<a href=#11 id=11 data-nosnippet>11</a>//! body sees before reaching Lua.
+<a href=#12 id=12 data-nosnippet>12</a></span><span class="kw">use </span>latexml_package::prelude::<span class="kw-2">*</span>;
+<a href=#13 id=13 data-nosnippet>13</a>
+<a href=#14 id=14 data-nosnippet>14</a><span class="macro">LoadDefinitions!</span>({
+<a href=#15 id=15 data-nosnippet>15</a>  <span class="comment">// \luadirect{&lt;lua&gt;}: \directlua with luacode's debug wrapper — same
+<a href=#16 id=16 data-nosnippet>16</a>  // evaluation. \luaexec{&lt;lua&gt;}: additionally makes \\, \%, \# usable;
+<a href=#17 id=17 data-nosnippet>17</a>  // the expansion path already yields their character forms.
+<a href=#18 id=18 data-nosnippet>18</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\luadirect{}"</span>, <span class="string">"\\lx@directlua{#1}"</span>);
+<a href=#19 id=19 data-nosnippet>19</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\luaexec{}"</span>, <span class="string">"\\lx@directlua{#1}"</span>);
+<a href=#20 id=20 data-nosnippet>20</a>
+<a href=#21 id=21 data-nosnippet>21</a>  <span class="comment">// \luastring{&lt;text&gt;}   — full expansion, then a quoted Lua string literal;
+<a href=#22 id=22 data-nosnippet>22</a>  // \luastringO{&lt;text&gt;}  — expand once;
+<a href=#23 id=23 data-nosnippet>23</a>  // \luastringN{&lt;text&gt;}  — no expansion (detokenized literal).
+<a href=#24 id=24 data-nosnippet>24</a>  // All three reduce to "…escaped…" via the engine's \luaescapestring.
+<a href=#25 id=25 data-nosnippet>25</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\luastring{}"</span>, <span class="string">"\"\\lx@luaescapestring{#1}\""</span>);
+<a href=#26 id=26 data-nosnippet>26</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\luastringO{}"</span>, <span class="string">"\"\\lx@luaescapestring{#1}\""</span>);
+<a href=#27 id=27 data-nosnippet>27</a>  <span class="macro">DefMacro!</span>(
+<a href=#28 id=28 data-nosnippet>28</a>    <span class="string">"\\luastringN{}"</span>,
+<a href=#29 id=29 data-nosnippet>29</a>    <span class="string">"\"\\lx@luaescapestring{\\detokenize{#1}}\""
+<a href=#30 id=30 data-nosnippet>30</a>  </span>);
+<a href=#31 id=31 data-nosnippet>31</a>
+<a href=#32 id=32 data-nosnippet>32</a>  <span class="comment">// Debug-log toggles: affect console tracing only.
+<a href=#33 id=33 data-nosnippet>33</a>  </span>def_macro_noop(<span class="string">"\\LuaCodeDebugOn"</span>)<span class="question-mark">?</span>;
+<a href=#34 id=34 data-nosnippet>34</a>  def_macro_noop(<span class="string">"\\LuaCodeDebugOff"</span>)<span class="question-mark">?</span>;
+<a href=#35 id=35 data-nosnippet>35</a>
+<a href=#36 id=36 data-nosnippet>36</a>  <span class="comment">// {luacode} / {luacode*}: the body is Lua source, read RAW line-by-line to
+<a href=#37 id=37 data-nosnippet>37</a>  // the matching \end (luacode* fully verbatim; plain luacode allows macros
+<a href=#38 id=38 data-nosnippet>38</a>  // in the body — the corpus's bodies are Lua either way, and any TeX macro
+<a href=#39 id=39 data-nosnippet>39</a>  // in them would have been flattened by \directlua's expansion too), then
+<a href=#40 id=40 data-nosnippet>40</a>  // executed as ONE chunk; whatever it tex.print()s re-enters the input
+<a href=#41 id=41 data-nosnippet>41</a>  // stream here. Mirrors the filecontents capture shape (the \begin group is
+<a href=#42 id=42 data-nosnippet>42</a>  // closed manually, standing in for the consumed \end).
+<a href=#43 id=43 data-nosnippet>43</a>  </span><span class="kw">fn </span>run_luacode_env(env: <span class="kw-2">&amp;</span>str) -&gt; <span class="prelude-ty">Result</span>&lt;()&gt; {
+<a href=#44 id=44 data-nosnippet>44</a>    <span class="kw">let </span>end_marker = <span class="macro">s!</span>(<span class="string">"\\end{{{env}}}"</span>);
+<a href=#45 id=45 data-nosnippet>45</a>    read_raw_line(); <span class="comment">// remainder of the \begin{...} line — not Lua
+<a href=#46 id=46 data-nosnippet>46</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>lines: Vec&lt;String&gt; = Vec::new();
+<a href=#47 id=47 data-nosnippet>47</a>    <span class="kw">loop </span>{
+<a href=#48 id=48 data-nosnippet>48</a>      <span class="kw">match </span>read_raw_line() {
+<a href=#49 id=49 data-nosnippet>49</a>        <span class="prelude-val">Some</span>(line) <span class="kw">if </span>!line.contains(end_marker.as_str()) =&gt; lines.push(line),
+<a href=#50 id=50 data-nosnippet>50</a>        <span class="kw">_ </span>=&gt; <span class="kw">break</span>,
+<a href=#51 id=51 data-nosnippet>51</a>      }
+<a href=#52 id=52 data-nosnippet>52</a>    }
+<a href=#53 id=53 data-nosnippet>53</a>    <span class="kw">let </span>chunk = lines.join(<span class="string">"\n"</span>);
+<a href=#54 id=54 data-nosnippet>54</a>    <span class="comment">// Re-inject the consumed `\end{...}` so the normal environment-close
+<a href=#55 id=55 data-nosnippet>55</a>    // machinery balances the `\begin` (raw capture ate the whole line), then
+<a href=#56 id=56 data-nosnippet>56</a>    // the chunk's output ABOVE it so the printed tokens are read first.
+<a href=#57 id=57 data-nosnippet>57</a>    </span>unread(<span class="macro">Tokenize!</span>(TeXString::assembled(<span class="macro">s!</span>(<span class="string">"\\end{{{env}}}"</span>))));
+<a href=#58 id=58 data-nosnippet>58</a>    <span class="kw">match </span>latexml_engine::lua_bridge::lua_exec(<span class="kw-2">&amp;</span>chunk) {
+<a href=#59 id=59 data-nosnippet>59</a>      <span class="prelude-val">Ok</span>(out) <span class="kw">if </span>!out.is_empty() =&gt; {
+<a href=#60 id=60 data-nosnippet>60</a>        unread(<span class="macro">Tokenize!</span>(TeXString::assembled(out)));
+<a href=#61 id=61 data-nosnippet>61</a>      },
+<a href=#62 id=62 data-nosnippet>62</a>      <span class="prelude-val">Ok</span>(<span class="kw">_</span>) =&gt; {},
+<a href=#63 id=63 data-nosnippet>63</a>      <span class="prelude-val">Err</span>(msg) =&gt; {
+<a href=#64 id=64 data-nosnippet>64</a>        <span class="macro">Info!</span>(<span class="string">"lua"</span>, env, <span class="macro">s!</span>(<span class="string">"{{{env}}} chunk not evaluated: {msg}"</span>));
+<a href=#65 id=65 data-nosnippet>65</a>      },
+<a href=#66 id=66 data-nosnippet>66</a>    }
+<a href=#67 id=67 data-nosnippet>67</a>    <span class="prelude-val">Ok</span>(())
+<a href=#68 id=68 data-nosnippet>68</a>  }
+<a href=#69 id=69 data-nosnippet>69</a>  <span class="macro">DefPrimitive!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\luacode"</span>), <span class="prelude-val">None</span>, {
+<a href=#70 id=70 data-nosnippet>70</a>    run_luacode_env(<span class="string">"luacode"</span>)<span class="question-mark">?</span>;
+<a href=#71 id=71 data-nosnippet>71</a>  });
+<a href=#72 id=72 data-nosnippet>72</a>  <span class="macro">DefPrimitive!</span>(<span class="macro">T_CS!</span>(<span class="string">"\\luacode*"</span>), <span class="prelude-val">None</span>, {
+<a href=#73 id=73 data-nosnippet>73</a>    run_luacode_env(<span class="string">"luacode*"</span>)<span class="question-mark">?</span>;
+<a href=#74 id=74 data-nosnippet>74</a>  });
+<a href=#75 id=75 data-nosnippet>75</a>});
+</code></pre></div></section></main></body></html>

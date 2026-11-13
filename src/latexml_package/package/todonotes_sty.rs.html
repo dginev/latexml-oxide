@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/todonotes_sty.rs`."><title>todonotes_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>todonotes_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/todonotes_sty.rs`."><title>todonotes_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>todonotes_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a><span class="attr">#[rustfmt::skip]
 <a href=#4 id=4 data-nosnippet>4</a></span><span class="macro">LoadDefinitions!</span>({
@@ -7,26 +7,49 @@
 <a href=#7 id=7 data-nosnippet>7</a>  <span class="macro">RequirePackage!</span>(<span class="string">"xkeyval"</span>);
 <a href=#8 id=8 data-nosnippet>8</a>  <span class="macro">RequirePackage!</span>(<span class="string">"xcolor"</span>);
 <a href=#9 id=9 data-nosnippet>9</a>  <span class="macro">RequirePackage!</span>(<span class="string">"tikz"</span>);
-<a href=#10 id=10 data-nosnippet>10</a>  <span class="macro">RequirePackage!</span>(<span class="string">"calc"</span>);
-<a href=#11 id=11 data-nosnippet>11</a>
-<a href=#12 id=12 data-nosnippet>12</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ext@todo"</span>, <span class="string">"todo"</span>);
-<a href=#13 id=13 data-nosnippet>13</a>  <span class="macro">NewCounter!</span>(<span class="string">"todo"</span>);
-<a href=#14 id=14 data-nosnippet>14</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\todotyperefname"</span>,   <span class="string">"ToDo"</span>);
-<a href=#15 id=15 data-nosnippet>15</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\todo"</span>,              <span class="string">"\\lx@note{todo}"</span>);
-<a href=#16 id=16 data-nosnippet>16</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\missingfigure[]{}"</span>, <span class="string">"[Missing Figure: #2]"</span>);
-<a href=#17 id=17 data-nosnippet>17</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\todototoc"</span>,         <span class="prelude-val">None</span>);
-<a href=#18 id=18 data-nosnippet>18</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\listoftodos"</span>,       <span class="prelude-val">None</span>);
-<a href=#19 id=19 data-nosnippet>19</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@todo[]{}"</span>,         <span class="prelude-val">None</span>);
-<a href=#20 id=20 data-nosnippet>20</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\setuptodonotes{}"</span>,  <span class="prelude-val">None</span>);
-<a href=#21 id=21 data-nosnippet>21</a>
-<a href=#22 id=22 data-nosnippet>22</a>  <span class="macro">DeclareOption!</span>(<span class="string">"disable"</span>, {
-<a href=#23 id=23 data-nosnippet>23</a>    <span class="comment">// Perl todonotes.sty.ltxml L22-23: `disable` replaces \todo with
-<a href=#24 id=24 data-nosnippet>24</a>    // an empty macro and locks it so that subsequent \renewcommand
-<a href=#25 id=25 data-nosnippet>25</a>    // \todo from user code or further loads can't re-enable the todo
-<a href=#26 id=26 data-nosnippet>26</a>    // notes. Without the lock the suppression silently un-applies.
-<a href=#27 id=27 data-nosnippet>27</a>    </span><span class="macro">DefMacro!</span>(<span class="string">"\\todo[]{}"</span>, <span class="prelude-val">None</span>, locked =&gt; <span class="bool-val">true</span>);
-<a href=#28 id=28 data-nosnippet>28</a>  });
-<a href=#29 id=29 data-nosnippet>29</a>
-<a href=#30 id=30 data-nosnippet>30</a>  <span class="macro">ProcessOptions!</span>();
-<a href=#31 id=31 data-nosnippet>31</a>});
+<a href=#10 id=10 data-nosnippet>10</a>  <span class="comment">// todonotes.sty:32 (Perl's binding has it commented out, todonotes.sty.ltxml:29, KNOWN_PERL_ERRORS #943): its
+<a href=#11 id=11 data-nosnippet>11</a>  // documents draw with positioning's keys (`on grid`: 1807.00512, 2107.03711). Guard
+<a href=#12 id=12 data-nosnippet>12</a>  // `perfect_kernel_batch71a::todonotes_loads_positioning`.
+<a href=#13 id=13 data-nosnippet>13</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\usetikzlibrary{positioning}"</span>);
+<a href=#14 id=14 data-nosnippet>14</a>  <span class="macro">RequirePackage!</span>(<span class="string">"calc"</span>);
+<a href=#15 id=15 data-nosnippet>15</a>
+<a href=#16 id=16 data-nosnippet>16</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\ext@todo"</span>, <span class="string">"todo"</span>);
+<a href=#17 id=17 data-nosnippet>17</a>  <span class="macro">NewCounter!</span>(<span class="string">"todo"</span>);
+<a href=#18 id=18 data-nosnippet>18</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\todotyperefname"</span>, <span class="string">"\\lx@latin@name{ToDo}"</span>);
+<a href=#19 id=19 data-nosnippet>19</a>  <span class="comment">// todonotes.sty:561 `\todo[&lt;options&gt;]{&lt;text&gt;}`: the optional argument is the note's keys (`inline`, `color=…`,
+<a href=#20 id=20 data-nosnippet>20</a>  // a `\todostyle` name), never its mark; the note is numbered as any (19 papers' `\todo[inline]`; witnesses
+<a href=#21 id=21 data-nosnippet>21</a>  // 2407.14906, 2409.03694, 2410.02385). Perl's `\todo` is `\lx@note{todo}`, whose `[&lt;mark&gt;]` took the keys as the mark
+<a href=#22 id=22 data-nosnippet>22</a>  // (KNOWN_PERL_ERRORS #1007). The keys only style the note, which this binding does not draw.
+<a href=#23 id=23 data-nosnippet>23</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\todo[]{}"</span>,          <span class="string">"\\lx@note{todo}{#2}"</span>);
+<a href=#24 id=24 data-nosnippet>24</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\missingfigure[]{}"</span>, <span class="string">"[Missing Figure: #2]"</span>);
+<a href=#25 id=25 data-nosnippet>25</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\todototoc"</span>,         <span class="prelude-val">None</span>);
+<a href=#26 id=26 data-nosnippet>26</a>  <span class="comment">// todonotes.sty:323 `\listoftodos[1][\@todonotes@todolistname]`: the optional is the list's
+<a href=#27 id=27 data-nosnippet>27</a>  // heading; the list itself is not built, as in Perl (L38), whose no-argument macro printed the
+<a href=#28 id=28 data-nosnippet>28</a>  // `[heading]` (KPE #372).
+<a href=#29 id=29 data-nosnippet>29</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\listoftodos[]"</span>,     <span class="prelude-val">None</span>);
+<a href=#30 id=30 data-nosnippet>30</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\@todo[]{}"</span>,         <span class="prelude-val">None</span>);
+<a href=#31 id=31 data-nosnippet>31</a>  <span class="macro">DefMacro!</span>(<span class="string">"\\setuptodonotes{}"</span>,  <span class="prelude-val">None</span>);
+<a href=#32 id=32 data-nosnippet>32</a>  <span class="comment">// todonotes.sty:581-583 `\todostyle{&lt;name&gt;}{&lt;keys&gt;}` defines the `\todo` key `&lt;name&gt;` as those keys (27 papers:
+<a href=#33 id=33 data-nosnippet>33</a>  // 2407.14906, 2409.03694, 2410.02385); `\todo` reads its keys as a note's options here, so the style key is
+<a href=#34 id=34 data-nosnippet>34</a>  // declared and unused. :46-49: at the document's start todonotes provides an empty `\phantomsection` when hyperref
+<a href=#35 id=35 data-nosnippet>35</a>  // has not defined one (12 papers: 1308.6029, 2103.09181, 2208.10521). Perl's binding defines neither
+<a href=#36 id=36 data-nosnippet>36</a>  // (KNOWN_PERL_ERRORS #805).
+<a href=#37 id=37 data-nosnippet>37</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\newcommand*{\todostyle}[2]{\define@key{todonotes}{#1}[]{\setkeys{todonotes}{#2}}}
+<a href=#38 id=38 data-nosnippet>38</a>\AtBeginDocument{\ifx\undefined\phantomsection\newcommand{\phantomsection}{}\fi}"</span>);
+<a href=#39 id=39 data-nosnippet>39</a>
+<a href=#40 id=40 data-nosnippet>40</a>  <span class="comment">// todonotes.sty:159-160 `\if@todonotes@disabled`, set by `disable`, which papers test to define their own note
+<a href=#41 id=41 data-nosnippet>41</a>  // commands (2606.13443); the `obeyDraft`/`obeyFinal` modes that also set it (:206-218) are not modeled.
+<a href=#42 id=42 data-nosnippet>42</a>  </span><span class="macro">RawTeX!</span>(<span class="string">r"\newif\if@todonotes@disabled"</span>);
+<a href=#43 id=43 data-nosnippet>43</a>  <span class="macro">DeclareOption!</span>(<span class="string">"disable"</span>, {
+<a href=#44 id=44 data-nosnippet>44</a>    <span class="macro">Digest!</span>(<span class="string">r"\@todonotes@disabledtrue"</span>)<span class="question-mark">?</span>;
+<a href=#45 id=45 data-nosnippet>45</a>    <span class="comment">// Perl todonotes.sty.ltxml L22-23: `disable` replaces \todo with
+<a href=#46 id=46 data-nosnippet>46</a>    // an empty macro and locks it so that subsequent \renewcommand
+<a href=#47 id=47 data-nosnippet>47</a>    // \todo from user code or further loads can't re-enable the todo
+<a href=#48 id=48 data-nosnippet>48</a>    // notes. Without the lock the suppression silently un-applies.
+<a href=#49 id=49 data-nosnippet>49</a>    </span><span class="macro">DefMacro!</span>(<span class="string">"\\todo[]{}"</span>, <span class="prelude-val">None</span>, locked =&gt; <span class="bool-val">true</span>);
+<a href=#50 id=50 data-nosnippet>50</a>  });
+<a href=#51 id=51 data-nosnippet>51</a>
+<a href=#52 id=52 data-nosnippet>52</a>  <span class="comment">// todonotes.sty:206 reads its options with `\ProcessOptionsX`: `\@curroptions` stays as it was.
+<a href=#53 id=53 data-nosnippet>53</a>  </span><span class="macro">ProcessKeyOptions!</span>();
+<a href=#54 id=54 data-nosnippet>54</a>});
 </code></pre></div></section></main></body></html>

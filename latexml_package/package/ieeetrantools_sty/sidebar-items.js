@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_definitions"]};
+window.SIDEBAR_ITEMS = {"fn":["define_eqnarraybox","define_ied_lists","define_ieeeeqnarray","define_ieeeproof","load_definitions"]};

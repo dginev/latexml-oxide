@@ -1,74 +1,131 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/newfloat_sty.rs`."><title>newfloat_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-203241e4.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.100.0-nightly (c54751567 2026-08-22)" data-channel="nightly" data-search-js="search-b167f383.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-170eb4bf.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-1814ead3.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-9f56287d.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>newfloat_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_package/src/package/newfloat_sty.rs`."><title>newfloat_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../../" data-static-root-path="../../../static.files/" data-current-crate="latexml_package" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../../static.files/storage-41dd4d93.js"></script><script defer src="../../../static.files/src-script-813739b1.js"></script><script defer src="../../../src-files.js"></script><script defer src="../../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_package/package/</div>newfloat_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-3"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="kw">use </span><span class="kw">crate</span>::prelude::<span class="kw-2">*</span>;
 <a href=#2 id=2 data-nosnippet>2</a>
 <a href=#3 id=3 data-nosnippet>3</a><span class="macro">LoadDefinitions!</span>({
-<a href=#4 id=4 data-nosnippet>4</a>  <span class="comment">// Perl: DefPrimitive('\SetupFloatingEnvironment OptionalKeyVals {}', sub { ... })
-<a href=#5 id=5 data-nosnippet>5</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\SetupFloatingEnvironment OptionalKeyVals {}"</span>, sub[(options, ftype)] {
-<a href=#6 id=6 data-nosnippet>6</a>    <span class="kw">let </span>ftype = ftype.to_string();
-<a href=#7 id=7 data-nosnippet>7</a>    <span class="kw">let </span>within = options.as_ref()
-<a href=#8 id=8 data-nosnippet>8</a>      .and_then(|o| o.get_value(<span class="string">"within"</span>))
-<a href=#9 id=9 data-nosnippet>9</a>      .map(|v| v.to_string())
-<a href=#10 id=10 data-nosnippet>10</a>      .unwrap_or_default();
-<a href=#11 id=11 data-nosnippet>11</a>    new_counter(<span class="kw-2">&amp;</span>ftype, <span class="kw-2">&amp;</span>within, <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#12 id=12 data-nosnippet>12</a>    <span class="kw">let </span>inlist = options.as_ref()
-<a href=#13 id=13 data-nosnippet>13</a>      .and_then(|o| o.get_value(<span class="string">"fileext"</span>))
-<a href=#14 id=14 data-nosnippet>14</a>      .map(|v| v.to_string())
-<a href=#15 id=15 data-nosnippet>15</a>      .unwrap_or_else(|| <span class="macro">s!</span>(<span class="string">"lo{ftype}"</span>));
-<a href=#16 id=16 data-nosnippet>16</a>    <span class="kw">let </span>ext_cs = <span class="macro">s!</span>(<span class="string">"\\ext@{ftype}"</span>);
-<a href=#17 id=17 data-nosnippet>17</a>    def_macro(<span class="macro">T_CS!</span>(ext_cs), <span class="prelude-val">None</span>, Tokens::new(<span class="macro">ExplodeText!</span>(inlist)), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#18 id=18 data-nosnippet>18</a>    <span class="kw">let </span>name = options.as_ref()
-<a href=#19 id=19 data-nosnippet>19</a>      .and_then(|o| o.get_value(<span class="string">"listname"</span>))
-<a href=#20 id=20 data-nosnippet>20</a>      .map(|v| v.to_string())
-<a href=#21 id=21 data-nosnippet>21</a>      .unwrap_or_else(|| <span class="macro">s!</span>(<span class="string">"List of {ftype}s"</span>));
-<a href=#22 id=22 data-nosnippet>22</a>    <span class="kw">let </span>name_cs = <span class="macro">s!</span>(<span class="string">"\\{ftype}name"</span>);
-<a href=#23 id=23 data-nosnippet>23</a>    def_macro(<span class="macro">T_CS!</span>(name_cs), <span class="prelude-val">None</span>, Tokens::new(<span class="macro">ExplodeText!</span>(name)), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#24 id=24 data-nosnippet>24</a>  });
-<a href=#25 id=25 data-nosnippet>25</a>
-<a href=#26 id=26 data-nosnippet>26</a>  <span class="comment">// Perl: DefPrimitive('\DeclareFloatingEnvironment OptionalKeyVals {}', sub { ... })
-<a href=#27 id=27 data-nosnippet>27</a>  //
-<a href=#28 id=28 data-nosnippet>28</a>  // Perl L64-80 creates both the `$type` and `$type*` envs with
-<a href=#29 id=29 data-nosnippet>29</a>  // `beforeDigest =&gt; sub { beforeFloat($type [, double =&gt; 1]) }`. Rust
-<a href=#30 id=30 data-nosnippet>30</a>  // delegates to `float_sty::define_float_environment` which calls
-<a href=#31 id=31 data-nosnippet>31</a>  // `create_float_env` twice (once for `$type`, once for `$type*`, the
-<a href=#32 id=32 data-nosnippet>32</a>  // latter with `is_double=true`). Both envs get a `before_float_ex`
-<a href=#33 id=33 data-nosnippet>33</a>  // before_digest closure inside the helper (float_sty.rs:174-180).
-<a href=#34 id=34 data-nosnippet>34</a>  // Audit breadcrumb: count-diff shows 2 Perl beforeDigest vs 0 here,
-<a href=#35 id=35 data-nosnippet>35</a>  // but the hooks live in the shared helper — not a gap.
-<a href=#36 id=36 data-nosnippet>36</a>  </span><span class="macro">DefPrimitive!</span>(<span class="string">"\\DeclareFloatingEnvironment OptionalKeyVals {}"</span>, sub[(options, ftype)] {
-<a href=#37 id=37 data-nosnippet>37</a>    <span class="kw">let </span>ftype = ftype.to_string();
-<a href=#38 id=38 data-nosnippet>38</a>    <span class="kw">let </span>within = options.as_ref()
-<a href=#39 id=39 data-nosnippet>39</a>      .and_then(|o| o.get_value(<span class="string">"within"</span>))
-<a href=#40 id=40 data-nosnippet>40</a>      .map(|v| v.to_string())
-<a href=#41 id=41 data-nosnippet>41</a>      .unwrap_or_default();
-<a href=#42 id=42 data-nosnippet>42</a>    <span class="kw">let </span>inlist = options.as_ref()
-<a href=#43 id=43 data-nosnippet>43</a>      .and_then(|o| o.get_value(<span class="string">"fileext"</span>))
-<a href=#44 id=44 data-nosnippet>44</a>      .map(|v| v.to_string())
-<a href=#45 id=45 data-nosnippet>45</a>      .unwrap_or_else(|| <span class="macro">s!</span>(<span class="string">"lo{ftype}"</span>));
-<a href=#46 id=46 data-nosnippet>46</a>    <span class="kw">let </span>name = options.as_ref()
-<a href=#47 id=47 data-nosnippet>47</a>      .and_then(|o| o.get_value(<span class="string">"listname"</span>))
-<a href=#48 id=48 data-nosnippet>48</a>      .map(|v| v.to_string())
-<a href=#49 id=49 data-nosnippet>49</a>      .unwrap_or_else(|| <span class="macro">s!</span>(<span class="string">"List of {ftype}s"</span>));
-<a href=#50 id=50 data-nosnippet>50</a>
-<a href=#51 id=51 data-nosnippet>51</a>    <span class="comment">// Use shared float environment helper from float.sty
-<a href=#52 id=52 data-nosnippet>52</a>    </span>float_sty::define_float_environment(<span class="kw-2">&amp;</span>ftype, <span class="kw-2">&amp;</span>inlist, <span class="kw-2">&amp;</span>within)<span class="question-mark">?</span>;
-<a href=#53 id=53 data-nosnippet>53</a>
-<a href=#54 id=54 data-nosnippet>54</a>    <span class="comment">// Perl also defines the name macro
-<a href=#55 id=55 data-nosnippet>55</a>    </span><span class="kw">let </span>name_cs = <span class="macro">s!</span>(<span class="string">"\\{ftype}name"</span>);
-<a href=#56 id=56 data-nosnippet>56</a>    def_macro(<span class="macro">T_CS!</span>(name_cs), <span class="prelude-val">None</span>, Tokens::new(<span class="macro">ExplodeText!</span>(name)), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
-<a href=#57 id=57 data-nosnippet>57</a>
-<a href=#58 id=58 data-nosnippet>58</a>    <span class="comment">// Perl: fnum@font@ and format@title@font@ default to float versions
-<a href=#59 id=59 data-nosnippet>59</a>    </span><span class="kw">let </span>fnum_font_cs = <span class="macro">s!</span>(<span class="string">"\\fnum@font@{ftype}"</span>);
-<a href=#60 id=60 data-nosnippet>60</a>    def_macro(
-<a href=#61 id=61 data-nosnippet>61</a>      <span class="macro">T_CS!</span>(fnum_font_cs), <span class="prelude-val">None</span>,
-<a href=#62 id=62 data-nosnippet>62</a>      mouth::tokenize_internal(<span class="string">"\\fnum@font@float"</span>), <span class="prelude-val">None</span>,
-<a href=#63 id=63 data-nosnippet>63</a>    )<span class="question-mark">?</span>;
-<a href=#64 id=64 data-nosnippet>64</a>    <span class="kw">let </span>ftf_cs = <span class="macro">s!</span>(<span class="string">"\\format@title@font@{ftype}"</span>);
-<a href=#65 id=65 data-nosnippet>65</a>    def_macro(
-<a href=#66 id=66 data-nosnippet>66</a>      <span class="macro">T_CS!</span>(ftf_cs), <span class="prelude-val">None</span>,
-<a href=#67 id=67 data-nosnippet>67</a>      mouth::tokenize_internal(<span class="string">"\\format@title@font@float"</span>), <span class="prelude-val">None</span>,
-<a href=#68 id=68 data-nosnippet>68</a>    )<span class="question-mark">?</span>;
-<a href=#69 id=69 data-nosnippet>69</a>  });
-<a href=#70 id=70 data-nosnippet>70</a>
-<a href=#71 id=71 data-nosnippet>71</a>  def_macro_noop(<span class="string">"\\ForEachFloatingEnvironment{}"</span>)<span class="question-mark">?</span>;
-<a href=#72 id=72 data-nosnippet>72</a>  def_macro_noop(<span class="string">"\\PrepareListOf{}{}"</span>)<span class="question-mark">?</span>;
-<a href=#73 id=73 data-nosnippet>73</a>});
+<a href=#4 id=4 data-nosnippet>4</a>  <span class="comment">// newfloat.sty:304-306 `\SetupFloatingEnvironment{type}{options}` sets an existing type's options
+<a href=#5 id=5 data-nosnippet>5</a>  // (`\newfloat@setoptions`, :149-167, keys :173-271): `name` (`\newfloat@setname`, which babel's `\captions&lt;language&gt;`
+<a href=#6 id=6 data-nosnippet>6</a>  // keeps, :179-188), `listname`, `fileext`, `autorefname`, `legendname`, `placement`, `within`/`without` (the counter
+<a href=#7 id=7 data-nosnippet>7</a>  // reset and `\the&lt;type&gt;`, :210-245) and `chapterlistsgaps` (list spacing, nothing here). Perl's binding has
+<a href=#8 id=8 data-nosnippet>8</a>  // `\SetupFloatingEnvironment OptionalKeyVals {}`, a second `\DeclareFloatingEnvironment` that read the type from the
+<a href=#9 id=9 data-nosnippet>9</a>  // options' place, so `\SetupFloatingEnvironment{listing}{name=Prog}` printed "name=Prog" and the name was unchanged
+<a href=#10 id=10 data-nosnippet>10</a>  // (KNOWN_PERL_ERRORS #1138; 2306.12224, 2405.15425, 2411.16612 "List.", 2507.09840, 2510.09447 "Listagem"; review
+<a href=#11 id=11 data-nosnippet>11</a>  // rev78s2 probe sf). newfloat.sty:48 loads keyval.
+<a href=#12 id=12 data-nosnippet>12</a>  </span><span class="macro">RequirePackage!</span>(<span class="string">"keyval"</span>);
+<a href=#13 id=13 data-nosnippet>13</a>  <span class="macro">RawTeX!</span>(
+<a href=#14 id=14 data-nosnippet>14</a>    <span class="string">r"\def\SetupFloatingEnvironment#1#2{\def\newfloat@type{#1}%
+<a href=#15 id=15 data-nosnippet>15</a>\let\newfloat@within@value\@undefined\setkeys{@newfloat}{#2}%
+<a href=#16 id=16 data-nosnippet>16</a>\ifx\newfloat@within@value\@undefined\else
+<a href=#17 id=17 data-nosnippet>17</a>\edef\@tempa{\noexpand\lx@newfloat@setwithin{#1}{\newfloat@within@value}}\@tempa\fi}
+<a href=#18 id=18 data-nosnippet>18</a>\def\newfloat@setname#1#2{\newfloat@@setname{#1}{#2}\begingroup
+<a href=#19 id=19 data-nosnippet>19</a>\ifcsname languagename\endcsname\ifcsname captions\languagename\endcsname
+<a href=#20 id=20 data-nosnippet>20</a>\expandafter\g@addto@macro\csname captions\languagename\endcsname{\newfloat@@setname{#1}{#2}}\fi\fi
+<a href=#21 id=21 data-nosnippet>21</a>\endgroup}
+<a href=#22 id=22 data-nosnippet>22</a>\def\newfloat@@setname#1#2{\@namedef{#1name}{#2}}
+<a href=#23 id=23 data-nosnippet>23</a>\define@key{@newfloat}{fileext}{\@namedef{ext@\newfloat@type}{#1}}
+<a href=#24 id=24 data-nosnippet>24</a>\define@key{@newfloat}{listname}{\@namedef{list\newfloat@type name}{#1}}
+<a href=#25 id=25 data-nosnippet>25</a>\define@key{@newfloat}{name}{\expandafter\newfloat@setname\expandafter{\newfloat@type}{#1}}
+<a href=#26 id=26 data-nosnippet>26</a>\define@key{@newfloat}{autorefname}{\@namedef{\newfloat@type autorefname}{#1}}
+<a href=#27 id=27 data-nosnippet>27</a>\define@key{@newfloat}{legendname}{\@namedef{fleg\newfloat@type}{#1}}
+<a href=#28 id=28 data-nosnippet>28</a>\define@key{@newfloat}{placement}{\@namedef{fps@\newfloat@type}{#1}}
+<a href=#29 id=29 data-nosnippet>29</a>\define@key{@newfloat}{within}{\def\newfloat@within@value{#1}}
+<a href=#30 id=30 data-nosnippet>30</a>\define@key{@newfloat}{without}[]{\def\newfloat@within@value{none}}
+<a href=#31 id=31 data-nosnippet>31</a>\define@key{@newfloat}{chapterlistsgaps}{}
+<a href=#32 id=32 data-nosnippet>32</a>\def\lx@newfloat@setwithin#1#2{\ifcsname c@chapter\endcsname\@removefromreset{#1}{chapter}\fi
+<a href=#33 id=33 data-nosnippet>33</a>\@removefromreset{#1}{section}\edef\@tempa{#2}\ifx\@tempa\@empty\def\@tempa{none}\fi
+<a href=#34 id=34 data-nosnippet>34</a>\def\@tempb{none}\ifx\@tempa\@tempb
+<a href=#35 id=35 data-nosnippet>35</a>  \lx@newfloat@@setwithin{#1}{}%
+<a href=#36 id=36 data-nosnippet>36</a>\else\def\@tempb{chapter}\ifx\@tempa\@tempb
+<a href=#37 id=37 data-nosnippet>37</a>  \@addtoreset{#1}{chapter}\lx@newfloat@@setwithin{#1}{\ifnum\c@chapter&gt;\z@ \thechapter.\fi}%
+<a href=#38 id=38 data-nosnippet>38</a>\else\def\@tempb{section}\ifx\@tempa\@tempb
+<a href=#39 id=39 data-nosnippet>39</a>  \@addtoreset{#1}{section}%
+<a href=#40 id=40 data-nosnippet>40</a>  \ifcsname c@chapter\endcsname\@addtoreset{#1}{chapter}\lx@newfloat@@setwithin{#1}{\thesection.}%
+<a href=#41 id=41 data-nosnippet>41</a>  \else\lx@newfloat@@setwithin{#1}{\ifnum\c@section&gt;\z@ \thesection.\fi}\fi
+<a href=#42 id=42 data-nosnippet>42</a>\else\PackageError{newfloat}{Invalid value `#2' for option `within'}\@ehc
+<a href=#43 id=43 data-nosnippet>43</a>\fi\fi\fi}
+<a href=#44 id=44 data-nosnippet>44</a>\def\lx@newfloat@@setwithin#1#2{\expandafter\gdef\csname the#1\endcsname{#2\arabic{#1}}}"
+<a href=#45 id=45 data-nosnippet>45</a>  </span>);
+<a href=#46 id=46 data-nosnippet>46</a>  <span class="comment">// Perl: DefPrimitive('\DeclareFloatingEnvironment OptionalKeyVals {}', sub { ... })
+<a href=#47 id=47 data-nosnippet>47</a>  //
+<a href=#48 id=48 data-nosnippet>48</a>  // Perl L64-80 creates both the `$type` and `$type*` envs with
+<a href=#49 id=49 data-nosnippet>49</a>  // `beforeDigest =&gt; sub { beforeFloat($type [, double =&gt; 1]) }`. Rust
+<a href=#50 id=50 data-nosnippet>50</a>  // delegates to `float_sty::define_float_environment` which calls
+<a href=#51 id=51 data-nosnippet>51</a>  // `create_float_env` twice (once for `$type`, once for `$type*`, the
+<a href=#52 id=52 data-nosnippet>52</a>  // latter with `is_double=true`). Both envs get a `before_float_ex`
+<a href=#53 id=53 data-nosnippet>53</a>  // before_digest closure inside the helper (float_sty.rs:174-180).
+<a href=#54 id=54 data-nosnippet>54</a>  // Audit breadcrumb: count-diff shows 2 Perl beforeDigest vs 0 here,
+<a href=#55 id=55 data-nosnippet>55</a>  // but the hooks live in the shared helper — not a gap.
+<a href=#56 id=56 data-nosnippet>56</a>  // newfloat.sty:59-125: `\DeclareFloatingEnvironment[opts]{type}[singular]
+<a href=#57 id=57 data-nosnippet>57</a>  // [listname]` — the two TRAILING optionals (`\newfloat@DFE@setname`,
+<a href=#58 id=58 data-nosnippet>58</a>  // `\newfloat@DFE@setlistname`, :117-125) set `\&lt;type&gt;name` and
+<a href=#59 id=59 data-nosnippet>59</a>  // `\list&lt;type&gt;name`; without them `[Listagem][Lista de listagens]`
+<a href=#60 id=60 data-nosnippet>60</a>  // (pygmentex.sty:23 via `\DeclareCaptionType`) leaked into the text as a
+<a href=#61 id=61 data-nosnippet>61</a>  // paragraph in both engines. The primitive keeps the declaration; the
+<a href=#62 id=62 data-nosnippet>62</a>  // macro layer reads the tail.
+<a href=#63 id=63 data-nosnippet>63</a>  </span><span class="macro">RawTeX!</span>(
+<a href=#64 id=64 data-nosnippet>64</a>    <span class="string">r"\def\DeclareFloatingEnvironment{\@ifnextchar[\lx@newfloat@DFE{\lx@newfloat@DFE[]}}
+<a href=#65 id=65 data-nosnippet>65</a>\def\lx@newfloat@DFE[#1]#2{\lx@newfloat@declare[#1]{#2}\@ifnextchar[\newfloat@DFE@setname\relax}
+<a href=#66 id=66 data-nosnippet>66</a>\def\newfloat@DFE@setname[#1]{\expandafter\def\csname\lx@newfloat@current name\endcsname{#1}%
+<a href=#67 id=67 data-nosnippet>67</a>  \@ifnextchar[\newfloat@DFE@setlistname\relax}
+<a href=#68 id=68 data-nosnippet>68</a>\def\newfloat@DFE@setlistname[#1]{\expandafter\def\csname list\lx@newfloat@current name\endcsname{#1}}"
+<a href=#69 id=69 data-nosnippet>69</a>  </span>);
+<a href=#70 id=70 data-nosnippet>70</a>  <span class="macro">DefPrimitive!</span>(<span class="string">"\\lx@newfloat@declare OptionalKeyVals {}"</span>, sub[(options, ftype)] {
+<a href=#71 id=71 data-nosnippet>71</a>    <span class="kw">let </span>ftype = ftype.to_string();
+<a href=#72 id=72 data-nosnippet>72</a>    def_macro(<span class="macro">T_CS!</span>(<span class="string">"\\lx@newfloat@current"</span>), <span class="prelude-val">None</span>, Tokens::new(<span class="macro">ExplodeText!</span>(ftype.clone())), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#73 id=73 data-nosnippet>73</a>    <span class="kw">let </span>within = options.as_ref()
+<a href=#74 id=74 data-nosnippet>74</a>      .and_then(|o| o.get_value(<span class="string">"within"</span>))
+<a href=#75 id=75 data-nosnippet>75</a>      .map(|v| v.to_string())
+<a href=#76 id=76 data-nosnippet>76</a>      .unwrap_or_default();
+<a href=#77 id=77 data-nosnippet>77</a>    <span class="kw">let </span>inlist = options.as_ref()
+<a href=#78 id=78 data-nosnippet>78</a>      .and_then(|o| o.get_value(<span class="string">"fileext"</span>))
+<a href=#79 id=79 data-nosnippet>79</a>      .map(|v| v.to_string())
+<a href=#80 id=80 data-nosnippet>80</a>      .unwrap_or_else(|| <span class="macro">s!</span>(<span class="string">"lo{ftype}"</span>));
+<a href=#81 id=81 data-nosnippet>81</a>    <span class="comment">// newfloat.sty:87-111: `name=` → `\&lt;type&gt;name` (default: the type,
+<a href=#82 id=82 data-nosnippet>82</a>    // capitalized), `listname=` → `\list&lt;type&gt;name` (default "List of &lt;Type&gt;s").
+<a href=#83 id=83 data-nosnippet>83</a>    </span><span class="kw">let </span><span class="kw-2">mut </span>type_name: String = ftype.chars().take(<span class="number">1</span>).flat_map(char::to_uppercase)
+<a href=#84 id=84 data-nosnippet>84</a>      .chain(ftype.chars().skip(<span class="number">1</span>)).collect();
+<a href=#85 id=85 data-nosnippet>85</a>    <span class="kw">if let </span><span class="prelude-val">Some</span>(v) = options.as_ref().and_then(|o| o.get_value(<span class="string">"name"</span>)) {
+<a href=#86 id=86 data-nosnippet>86</a>      type_name = v.to_string();
+<a href=#87 id=87 data-nosnippet>87</a>    }
+<a href=#88 id=88 data-nosnippet>88</a>    <span class="kw">let </span>list_name = options.as_ref()
+<a href=#89 id=89 data-nosnippet>89</a>      .and_then(|o| o.get_value(<span class="string">"listname"</span>))
+<a href=#90 id=90 data-nosnippet>90</a>      .map(|v| v.to_string())
+<a href=#91 id=91 data-nosnippet>91</a>      .unwrap_or_else(|| <span class="macro">s!</span>(<span class="string">"List of {type_name}s"</span>));
+<a href=#92 id=92 data-nosnippet>92</a>
+<a href=#93 id=93 data-nosnippet>93</a>    <span class="comment">// Use shared float environment helper from float.sty
+<a href=#94 id=94 data-nosnippet>94</a>    </span>float_sty::define_float_environment(<span class="kw-2">&amp;</span>ftype, <span class="kw-2">&amp;</span>inlist, <span class="kw-2">&amp;</span>within)<span class="question-mark">?</span>;
+<a href=#95 id=95 data-nosnippet>95</a>
+<a href=#96 id=96 data-nosnippet>96</a>    <span class="comment">// Perl also defines the name macro
+<a href=#97 id=97 data-nosnippet>97</a>    </span><span class="kw">let </span>name_cs = <span class="macro">s!</span>(<span class="string">"\\{ftype}name"</span>);
+<a href=#98 id=98 data-nosnippet>98</a>    def_macro(<span class="macro">T_CS!</span>(name_cs), <span class="prelude-val">None</span>, Tokens::new(<span class="macro">ExplodeText!</span>(type_name)), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#99 id=99 data-nosnippet>99</a>    <span class="kw">let </span>list_cs = <span class="macro">s!</span>(<span class="string">"\\list{ftype}name"</span>);
+<a href=#100 id=100 data-nosnippet>100</a>    def_macro(<span class="macro">T_CS!</span>(list_cs), <span class="prelude-val">None</span>, Tokens::new(<span class="macro">ExplodeText!</span>(list_name)), <span class="prelude-val">None</span>)<span class="question-mark">?</span>;
+<a href=#101 id=101 data-nosnippet>101</a>
+<a href=#102 id=102 data-nosnippet>102</a>    <span class="comment">// Perl: fnum@font@ and format@title@font@ default to float versions
+<a href=#103 id=103 data-nosnippet>103</a>    </span><span class="kw">let </span>fnum_font_cs = <span class="macro">s!</span>(<span class="string">"\\fnum@font@{ftype}"</span>);
+<a href=#104 id=104 data-nosnippet>104</a>    def_macro(
+<a href=#105 id=105 data-nosnippet>105</a>      <span class="macro">T_CS!</span>(fnum_font_cs), <span class="prelude-val">None</span>,
+<a href=#106 id=106 data-nosnippet>106</a>      mouth::tokenize_internal(<span class="string">"\\fnum@font@float"</span>), <span class="prelude-val">None</span>,
+<a href=#107 id=107 data-nosnippet>107</a>    )<span class="question-mark">?</span>;
+<a href=#108 id=108 data-nosnippet>108</a>    <span class="kw">let </span>ftf_cs = <span class="macro">s!</span>(<span class="string">"\\format@title@font@{ftype}"</span>);
+<a href=#109 id=109 data-nosnippet>109</a>    def_macro(
+<a href=#110 id=110 data-nosnippet>110</a>      <span class="macro">T_CS!</span>(ftf_cs), <span class="prelude-val">None</span>,
+<a href=#111 id=111 data-nosnippet>111</a>      mouth::tokenize_internal(<span class="string">"\\format@title@font@float"</span>), <span class="prelude-val">None</span>,
+<a href=#112 id=112 data-nosnippet>112</a>    )<span class="question-mark">?</span>;
+<a href=#113 id=113 data-nosnippet>113</a>    <span class="comment">// newfloat.sty:59-125 makes the type a kernel float (`\@float`), whose `\caption` is the class's `\@makecaption`
+<a href=#114 id=114 data-nosnippet>114</a>    // (`\lx@makecaption`, latex_constructs_rust_only.rs): the kernel's "Listing 1: text" (latex.ltx `\sbox\@tempboxa{#1:
+<a href=#115 id=115 data-nosnippet>115</a>    // #2}`), amsart's "Listing 1. text", IEEEtran's figure format "Listing 1. text" (the minted
+<a href=#116 id=116 data-nosnippet>116</a>    // `newfloat` route). Perl's newfloat.sty.ltxml defines none, so the tag closed with a space, "Listing 1 text",
+<a href=#117 id=117 data-nosnippet>117</a>    // beside "Table 1: text" in the same paper (2411.16612; KNOWN_PERL_ERRORS #1124). Guards
+<a href=#118 id=118 data-nosnippet>118</a>    // `perfect_kernel_batch78s::newfloat_caption_tag_closes_with_a_colon`,
+<a href=#119 id=119 data-nosnippet>119</a>    // `perfect_kernel_batch78y::{ieeetran_*, amsart_newfloat_caption_takes_the_class_format}`.
+<a href=#120 id=120 data-nosnippet>120</a>    </span><span class="kw">let </span>format_cs = <span class="macro">T_CS!</span>(<span class="macro">s!</span>(<span class="string">"\\format@title@{ftype}"</span>));
+<a href=#121 id=121 data-nosnippet>121</a>    <span class="kw">let </span>format_params = parse_parameters(<span class="string">"{}"</span>, <span class="kw-2">&amp;</span>format_cs, <span class="bool-val">true</span>)<span class="question-mark">?</span>;
+<a href=#122 id=122 data-nosnippet>122</a>    def_macro(
+<a href=#123 id=123 data-nosnippet>123</a>      format_cs, format_params,
+<a href=#124 id=124 data-nosnippet>124</a>      mouth::tokenize_internal(TeXString::assembled(<span class="macro">s!</span>(<span class="string">"\\lx@makecaption{{{ftype}}}{{#1}}"</span>))), <span class="prelude-val">None</span>,
+<a href=#125 id=125 data-nosnippet>125</a>    )<span class="question-mark">?</span>;
+<a href=#126 id=126 data-nosnippet>126</a>  });
+<a href=#127 id=127 data-nosnippet>127</a>
+<a href=#128 id=128 data-nosnippet>128</a>  def_macro_noop(<span class="string">"\\ForEachFloatingEnvironment{}"</span>)<span class="question-mark">?</span>;
+<a href=#129 id=129 data-nosnippet>129</a>  def_macro_noop(<span class="string">"\\PrepareListOf{}{}"</span>)<span class="question-mark">?</span>;
+<a href=#130 id=130 data-nosnippet>130</a>});
 </code></pre></div></section></main></body></html>

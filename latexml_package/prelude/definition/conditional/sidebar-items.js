@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"enum":["ConditionalType"],"struct":["Conditional","ConditionalOptions","IfFrame"]};
+window.SIDEBAR_ITEMS = {"enum":["ConditionalType"],"fn":["if_stack_depth"],"struct":["Conditional","ConditionalOptions","IfFrame"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_definitions","pgfmathparse_eval"]};
+window.SIDEBAR_ITEMS = {"fn":["load_definitions"]};

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"fn":["load_definitions"]};
+window.SIDEBAR_ITEMS = {"constant":["FRONTMATTER_CONVENTIONS"],"fn":["ams_class_caption_format","ams_size_default","amsart_author_storage","amsart_class_internals","amsart_uppercase_nonmath","declare_ams_size_options","load_definitions"]};

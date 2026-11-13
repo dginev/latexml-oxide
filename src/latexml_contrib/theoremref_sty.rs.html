@@ -1,0 +1,46 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><meta name="generator" content="rustdoc"><meta name="description" content="Source of the Rust file `latexml_contrib/src/theoremref_sty.rs`."><title>theoremref_sty.rs - source</title><script>if(window.location.protocol!=="file:")document.head.insertAdjacentHTML("beforeend","SourceSerif4-Regular-6b053e98.ttf.woff2,FiraSans-Italic-81dc35de.woff2,FiraSans-Regular-0fe48ade.woff2,FiraSans-MediumItalic-ccf7e434.woff2,FiraSans-Medium-e1aa3f0a.woff2,SourceCodePro-Regular-8badfe75.ttf.woff2,SourceCodePro-Semibold-aa29a496.ttf.woff2".split(",").map(f=>`<link rel="preload" as="font" type="font/woff2"href="../../static.files/${f}">`).join(""))</script><link rel="stylesheet" href="../../static.files/normalize-9960930a.css"><link rel="stylesheet" href="../../static.files/rustdoc-1f5a765c.css"><meta name="rustdoc-vars" data-root-path="../../" data-static-root-path="../../static.files/" data-current-crate="latexml_contrib" data-themes="" data-resource-suffix="" data-rustdoc-version="1.102.0-nightly (8eb778d04 2026-11-12)" data-channel="nightly" data-search-js="search-69faa2c4.js" data-stringdex-js="stringdex-b5109af9.js" data-settings-js="settings-9b351432.js" ><script src="../../static.files/storage-41dd4d93.js"></script><script defer src="../../static.files/src-script-813739b1.js"></script><script defer src="../../src-files.js"></script><script defer src="../../static.files/main-419f3a3f.js"></script><noscript><link rel="stylesheet" href="../../static.files/noscript-101b5a15.css"></noscript><link rel="alternate icon" type="image/png" href="../../static.files/favicon-32x32-eab170b8.png"><link rel="icon" type="image/svg+xml" href="../../static.files/favicon-044be391.svg"></head><body class="rustdoc src"><a class="skip-main-content" href="#main-content">Skip to main content</a><!--[if lte IE 11]><div class="warning">This old browser is unsupported and will most likely display funky things.</div><![endif]--><nav class="sidebar"><div class="src-sidebar-title"><h2>Files</h2></div></nav><div class="sidebar-resizer" title="Drag to resize sidebar"></div><main><section id="main-content" class="content" tabindex="-1"><div class="main-heading"><h1><div class="sub-heading">latexml_contrib/</div>theoremref_sty.rs</h1><rustdoc-toolbar></rustdoc-toolbar></div><div class="example-wrap digits-2"><pre class="rust"><code><a href=#1 id=1 data-nosnippet>1</a><span class="doccomment">//! theoremref.sty binding (no Perl binding).
+<a href=#2 id=2 data-nosnippet>2</a>//!
+<a href=#3 id=3 data-nosnippet>3</a>//! theoremref names a theorem by its environment where it is referred to: `\thlabel{key}` writes
+<a href=#4 id=4 data-nosnippet>4</a>//! `\newlabel{key}{{\@currentlabel}{&lt;theorem name&gt;}}` to the `.aux` file (theoremref.sty:23-26) and `\thref{key,…}`
+<a href=#5 id=5 data-nosnippet>5</a>//! prints each name with its number, read from that record on the next run (:47-66). Raw-loaded, `\thlabel` labelled
+<a href=#6 id=6 data-nosnippet>6</a>//! nothing the document holds: every `\thref` printed "?THM?" and a missing label where pdflatex prints "Theorem 1.1"
+<a href=#7 id=7 data-nosnippet>7</a>//! (1211.4329). `\thlabel` labels the theorem as `\label` does, and `\thref` refers to it by the type and number its
+<a href=#8 id=8 data-nosnippet>8</a>//! tags give (`typerefnum`, ntheorem's `\thref`, ntheorem_sty.rs). theoremref's grouping of a run of references to one
+<a href=#9 id=9 data-nosnippet>9</a>//! environment under its plural ("Lemmas 5.7.7 and 2.1.5") is not made: each reference names its own.
+<a href=#10 id=10 data-nosnippet>10</a></span><span class="kw">use </span>latexml_package::prelude::<span class="kw-2">*</span>;
+<a href=#11 id=11 data-nosnippet>11</a>
+<a href=#12 id=12 data-nosnippet>12</a><span class="macro">LoadDefinitions!</span>({
+<a href=#13 id=13 data-nosnippet>13</a>  <span class="comment">// The options and `\thnameref`.
+<a href=#14 id=14 data-nosnippet>14</a>  </span><span class="macro">InputDefinitions!</span>(<span class="string">"theoremref"</span>, noltxml =&gt; <span class="bool-val">true</span>, extension =&gt; <span class="prelude-val">Some</span>(Cow::Borrowed(<span class="string">"sty"</span>)));
+<a href=#15 id=15 data-nosnippet>15</a>  <span class="comment">// The theorem's label. theoremref's own record names the environment by `\thmref@currname`, which its `\@thm`
+<a href=#16 id=16 data-nosnippet>16</a>  // patch sets and our theorem environments never run, so `\thnameref` (one census paper) still prints "?THM?".
+<a href=#17 id=17 data-nosnippet>17</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\thlabel{}"</span>, <span class="string">"\\label{#1}"</span>, locked =&gt; <span class="bool-val">true</span>);
+<a href=#18 id=18 data-nosnippet>18</a>  <span class="comment">// `\thref{a,b,c}`: "A 1, B 2, and C 3", "A 1 and B 2" (`\thmref@flush` with each key of its own environment).
+<a href=#19 id=19 data-nosnippet>19</a>  </span><span class="macro">DefMacro!</span>(<span class="string">"\\thref{}"</span>, sub[(keys)] {
+<a href=#20 id=20 data-nosnippet>20</a>    <span class="kw">let </span>keys = keys.to_string();
+<a href=#21 id=21 data-nosnippet>21</a>    <span class="kw">let </span>keys: Vec&lt;<span class="kw-2">&amp;</span>str&gt; = keys.split(<span class="string">','</span>).map(str::trim).filter(|key| !key.is_empty()).collect();
+<a href=#22 id=22 data-nosnippet>22</a>    <span class="kw">let </span><span class="kw-2">mut </span>tokens = Vec::new();
+<a href=#23 id=23 data-nosnippet>23</a>    <span class="kw">for </span>(i, key) <span class="kw">in </span>keys.iter().enumerate() {
+<a href=#24 id=24 data-nosnippet>24</a>      <span class="kw">if </span>i &gt; <span class="number">0 </span>{
+<a href=#25 id=25 data-nosnippet>25</a>        <span class="kw">let </span>separator = <span class="kw">match </span>(keys.len(), i + <span class="number">1 </span>== keys.len()) {
+<a href=#26 id=26 data-nosnippet>26</a>          (<span class="number">2</span>, <span class="kw">_</span>) =&gt; <span class="string">" and "</span>,
+<a href=#27 id=27 data-nosnippet>27</a>          (<span class="kw">_</span>, <span class="bool-val">true</span>) =&gt; <span class="string">", and "</span>,
+<a href=#28 id=28 data-nosnippet>28</a>          <span class="kw">_ </span>=&gt; <span class="string">", "</span>,
+<a href=#29 id=29 data-nosnippet>29</a>        };
+<a href=#30 id=30 data-nosnippet>30</a>        tokens.extend(<span class="macro">ExplodeText!</span>(separator));
+<a href=#31 id=31 data-nosnippet>31</a>      }
+<a href=#32 id=32 data-nosnippet>32</a>      tokens.extend([<span class="macro">T_CS!</span>(<span class="string">"\\lx@thref"</span>), <span class="macro">T_BEGIN!</span>()]);
+<a href=#33 id=33 data-nosnippet>33</a>      tokens.extend(<span class="macro">ExplodeText!</span>(<span class="kw-2">*</span>key));
+<a href=#34 id=34 data-nosnippet>34</a>      tokens.push(<span class="macro">T_END!</span>());
+<a href=#35 id=35 data-nosnippet>35</a>    }
+<a href=#36 id=36 data-nosnippet>36</a>    <span class="prelude-val">Ok</span>(Tokens::new(tokens))
+<a href=#37 id=37 data-nosnippet>37</a>  }, locked =&gt; <span class="bool-val">true</span>);
+<a href=#38 id=38 data-nosnippet>38</a>  <span class="macro">DefConstructor!</span>(<span class="string">"\\lx@thref Semiverbatim"</span>,
+<a href=#39 id=39 data-nosnippet>39</a>  <span class="string">"&lt;ltx:ref labelref='#label' show='typerefnum' _force_font='true'/&gt;"</span>,
+<a href=#40 id=40 data-nosnippet>40</a>  enter_horizontal =&gt; <span class="bool-val">true</span>,
+<a href=#41 id=41 data-nosnippet>41</a>  properties =&gt; sub[args] {
+<a href=#42 id=42 data-nosnippet>42</a>    <span class="kw">let </span>key = args[<span class="number">0</span>].as_ref().map(|a| a.to_string()).unwrap_or_default();
+<a href=#43 id=43 data-nosnippet>43</a>    <span class="prelude-val">Ok</span>(<span class="macro">stored_map!</span>(<span class="string">"label" </span>=&gt; clean_label(<span class="kw-2">&amp;</span>key, <span class="prelude-val">None</span>).into_owned()))
+<a href=#44 id=44 data-nosnippet>44</a>  });
+<a href=#45 id=45 data-nosnippet>45</a>});
+</code></pre></div></section></main></body></html>

@@ -1,1 +1,1 @@
-window.SIDEBAR_ITEMS = {"mod":["char_cursor","image","logger","text"]};
+window.SIDEBAR_ITEMS = {"mod":["char_cursor","image","logger","private_files","text","thread"]};
