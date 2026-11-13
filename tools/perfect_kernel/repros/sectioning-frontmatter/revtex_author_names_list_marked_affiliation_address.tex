@@ -1,0 +1,17 @@
+% mechanism: REVTeX's one `\author` call of two marked names and one `\affiliation` cut at its marks, each entry printing
+%   an address no name spells: the address is the author's showing that entry's mark (affiliations.rs
+%   `place_address_runs`'s `_bymark`, resolver `entry_owners`; the sibling of ieeetran_author_names_list_marked_block_address)
+% witness: synthetic (the 2510.10414 mechanism through the kernel's names call)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able1 and Bob Baker2", then "1 Univ X, C, D / chteng@x.org"
+%   and "2 Univ Y, E, F / idbj.real@y.org"
+% engines: int169a: both addresses on a nameless creator below the authors, 0 warnings
+% expect:  0 errors, 0 warnings; Ann Able (1 Univ X, C, D; chteng@x.org), Bob Baker (2 Univ Y, E, F; idbj.real@y.org)
+% status:  RED (int169a) -> GREEN (P28m3; guard perfect_kernel_batchp28)
+\documentclass{revtex4-2}
+\begin{document}
+\title{T}
+\author{Ann Able$^1$ and Bob Baker$^2$}
+\affiliation{$^1$Univ X, C, D\\chteng@x.org\\ $^2$Univ Y, E, F\\idbj.real@y.org}
+\maketitle
+Text.
+\end{document}

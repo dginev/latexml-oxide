@@ -564,17 +564,17 @@ fn place_address_runs(
       // `owners::entry_address_owners`, OXIDIZED_DESIGN_DIVERGENCES #956; it no longer stays in the entry's text,
       // 2609.19448's one address under one author's affiliation still that author's)
       Some((entry, at)) if under_affiliations => {
-        let requesting =
-          entry_mark(&entries[entry]).map_or(Ok(Vec::new()), |m| queued_requesters(&m))?;
+        let label = entry_mark(&entries[entry]).map_or(Ok(None), |m| mark_set_label(&m))?;
+        let requesting = queued_label_requesters(label.as_deref().unwrap_or_default())?;
         // (one address under an affiliation one author requests is that author's, its line made the contact here: an
         // e-mail command a raw class's store holds, `\email{hyf@…}` under `\inst{1}`'s institute, prints nowhere if
-        // left in the entry — astro-ph0701846)
-        if let ([author], 1) = (requesting.as_slice(), total) {
+        // left in the entry — astro-ph0701846), with the mark that placed it: a call the reading parts into several
+        // names gives it to the one showing that mark (`Resolver::entry_owners`; IEEEtran's one names block, 2510.10414)
+        if let (Some(label), [author], 1) = (label, requesting.as_slice(), total) {
+          let by_mark = mouth::tokenize_internal(TeXString::assembled(s!("_bymark={{{label}}}")));
           for (_, line) in run.lines {
-            calls.extend(email_line_calls(
-              line,
-              AddressPlacement::Authors(vec![*author]),
-            )?);
+            let placed = email_line_calls(line, AddressPlacement::Authors(vec![*author]))?;
+            calls.extend(optioned_email_calls(placed, by_mark.unlist_ref()));
           }
         } else {
           let continuation: Vec<Token> = run

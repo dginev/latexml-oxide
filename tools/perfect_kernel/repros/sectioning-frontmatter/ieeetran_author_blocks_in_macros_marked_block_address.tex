@@ -1,0 +1,25 @@
+% mechanism: IEEEtran's author and affiliation blocks built in macros (`\g@addto@macro`) and called from a macro after
+%   `\begin{document}`: read as the written blocks (`blocks_as_printed`), each affiliation block's address the authors'
+%   showing its mark (affiliations.rs `place_address_runs`'s `_bymark`, resolver `entry_owners`)
+% witness: 2510.10414 (Ben-Jian Dong's idbj.real@foxmail.com)
+% oracle:  pdflatex (TL 2025, -no-shell-escape) 0 errors: "Ann Able* Bob Baker†", then "*Univ X, C, D / chteng@x.org"
+%   and "†Univ Y, E, F / idbj.real@y.org"
+% engines: int168a: Bob Baker both affiliations and chteng@x.org too, idbj.real@y.org on a nameless creator, 1 warning;
+%   int169a: both addresses on a nameless creator below the authors, 0 warnings
+% expect:  0 errors, 0 warnings; Ann Able (*Univ X, C, D; chteng@x.org), Bob Baker (†Univ Y, E, F; idbj.real@y.org)
+% status:  RED (int168a, int169a) -> GREEN (P28m3; guard perfect_kernel_batchp28)
+\documentclass[conference]{IEEEtran}
+\makeatletter
+\def\varAuthors{}\def\varInstitutions{}
+\newcommand{\addAuthor}[2]{\g@addto@macro\varAuthors{#1\IEEEauthorrefmark{#2} }}
+\newcommand{\addInst}[2]{\g@addto@macro\varInstitutions{ \IEEEauthorblockA{\IEEEauthorrefmark{#1}#2}}}
+\makeatother
+\newcommand{\insertTopmatter}{\title{T}\author{\IEEEauthorblockN{\varAuthors}\varInstitutions}\maketitle}
+\addAuthor{Ann Able}{1}
+\addAuthor{Bob Baker}{2}
+\addInst{1}{Univ X, C, D\\chteng@x.org}
+\addInst{2}{Univ Y, E, F\\idbj.real@y.org}
+\begin{document}
+\insertTopmatter
+Text.
+\end{document}
