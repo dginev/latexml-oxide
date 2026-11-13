@@ -36,6 +36,13 @@ DefMacro("\\codes", || { AssignSFcode("Q", 1001); AssignMathcode("Q", 0x7151, "g
   [LookupMathcode("a"), LookupLCcode("A"), LookupUCcode("a"), LookupSFcode("A"),
    LookupSFcode("Q"), LookupMathcode("Q"), LookupLCcode("Q"), LookupUCcode("q"), LookupDelcode("Q"),
    if LookupLCcode("\u2603") == () { "undef" } else { "def" }].reduce(|s, x| if s == () { `${x}` } else { s + "," + x }) });
+DefConstructor("\\propT", "<ltx:text class='#t'>#t</ltx:text>", #{properties: || #{ t: LookupValue("lxrb:t") }});
+DefConstructor("\\propA", "<ltx:text class='#a'>#a</ltx:text>", #{properties: || #{ a: ReadArg() }});
+PushValue("lxrb:l", "a");
+DefPrimitive("\\pushx", || { let o = LookupValue("lxrb:l"); o.push("x"); AssignValue("lxrb:l", o);
+  AssignValue("lxrb:h", #{k: "v", n: 2}); AssignMapping("lxrb:m2", "arr", ["p", T_CS("\\q")]); });
+DefMacro("\\listx", || { let o = LookupValue("lxrb:l"); let h = LookupValue("lxrb:h"); let a = LookupMapping("lxrb:m2", "arr");
+  `${type_of(o)}:${o.len()}:${o[0]}${o[1]},${type_of(h)}:${h.k}${h.n},${type_of(a)}:${type_of(a[1])}` });
 "#;
 
 const LXRB_TEX: &str = r"\documentclass{article}
@@ -52,6 +59,10 @@ const LXRB_TEX: &str = r"\documentclass{article}
 \catcode`\!=11 \def\a!b{AB}\rdx{\a!b}\catcode`\!=12 \rdu x. \rdo[o] \rdo
 
 \codes
+
+\propT \propA{\textit{q}}
+
+\pushx\listx
 \end{document}
 ";
 
@@ -66,6 +77,10 @@ const LXRB_TEX: &str = r"\documentclass{article}
 /// p5: `ReadArg`/`ReadUntil`/`ReadOptional` return Tokens: `\a!b` read under catcode 11 stays one control sequence
 /// (was re-tokenized as `\a` `!b`, an undefined-macro Error); an absent optional is `()` (Perl undef).
 /// p6: the Mathcode/Delcode/LCcode/UCcode/SFcode lookups and assigns (was "Function not found").
+/// p7 (revW3e, red on f528beee1fb: the Rust type name `latexml_core::tokens::Tokens`): a properties value holding
+/// Tokens (a stored value, a `ReadArg()`) is its ToString, as Perl's (`\textbf{T}`; `class=` is our CSS-token form).
+/// p8 (revW3e, red on f528beee1fb: the array stored as its printed string, `h.k` an Error): an array pushed onto and
+/// assigned back stays a list, a map a hash, an array of Tokens keeps its items (Perl's arrayref/hashref).
 #[test]
 fn rhai_values_keep_their_types() {
   let (log, xml) = convert_files_with(LXRB_TEX, &[("lxrb.sty.rhai", LXRB)], None);
@@ -89,6 +104,14 @@ fn rhai_values_keep_their_types() {
     (
       "p6",
       r#"<para xml:id="p6"><p>29025,97,65,999,1001,29009,114,82,291,undef</p></para>"#,
+    ),
+    (
+      "p7",
+      r#"<para xml:id="p7"><p><text class="textbfT">\textbf{T}</text><text class="textitq">\textit{q}</text></p></para>"#,
+    ),
+    (
+      "p8",
+      r#"<para xml:id="p8"><p>array:2:ax,map:v2,array:Token</p></para>"#,
     ),
   ] {
     assert_element(&xml, "para", &[&format!("xml:id=\"{id}\"")], para);

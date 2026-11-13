@@ -404,10 +404,10 @@ pub(super) fn make_engine() -> Engine {
       .map_or(Dynamic::UNIT, |cc| Dynamic::from(cc as i64))
   });
   engine.register_fn("AssignCatcode", |c: &str, code: i64| {
-    assign_code(assign_catcode, c, code, "")
+    assign_code("AssignCatcode", assign_catcode, 15, c, code, "")
   });
   engine.register_fn("AssignCatcode", |c: &str, code: i64, scope: &str| {
-    assign_code(assign_catcode, c, code, scope)
+    assign_code("AssignCatcode", assign_catcode, 15, c, code, scope)
   });
   engine.register_fn("LookupMathcode", |c: &str| {
     code_of(latexml_core::state::lookup_mathcode(c))
@@ -440,11 +440,12 @@ pub(super) fn make_engine() -> Engine {
     ),
     ("AssignDelcode", latexml_core::state::assign_delcode::<u16>),
   ] {
+    let max = i64::from(u16::MAX);
     engine.register_fn(name, move |c: &str, code: i64| {
-      assign_code(assign, c, code, "")
+      assign_code(name, assign, max, c, code, "")
     });
     engine.register_fn(name, move |c: &str, code: i64, scope: &str| {
-      assign_code(assign, c, code, scope)
+      assign_code(name, assign, max, c, code, scope)
     });
   }
   // StartSemiverbatim/EndSemiverbatim (Perl `Package.pm` exports, L1002-1008):
@@ -2238,11 +2239,31 @@ fn assign_catcode(ch: char, code: u16, scope: Option<Scope>) {
   latexml_core::state::assign_catcode(ch, Catcode::from(code as u8), scope);
 }
 
-/// An `Assign*code(char, code[, scope])` call, as its macro (Package.pm :299-381).
-fn assign_code(assign: fn(char, u16, Option<Scope>), c: &str, code: i64, scope: &str) {
-  if let (Some(ch), Ok(code)) = (char_of(c), u16::try_from(code)) {
-    assign(ch, code, scope_of(scope));
+/// An `Assign*code(char, code[, scope])` call, as its macro (Package.pm :299-381). A code above `max` (a catcode
+/// above 15, TeX's "Invalid code"; a code the u16 table cannot hold) or a missing char is an Error, never dropped.
+fn assign_code(
+  call: &str,
+  assign: fn(char, u16, Option<Scope>),
+  max: i64,
+  c: &str,
+  code: i64,
+  scope: &str,
+) -> RhaiResult<()> {
+  match (char_of(c), u16::try_from(code)) {
+    (Some(ch), Ok(n)) if code <= max => assign(ch, n, scope_of(scope)),
+    _ => {
+      let res: Result<()> = (|| {
+        latexml_core::Error!(
+          "unexpected",
+          call,
+          format!("{call}({c:?}, {code}): the code must be 0..={max} and the char one character")
+        );
+        Ok(())
+      })();
+      res.map_err(rhai_err)?;
+    },
   }
+  Ok(())
 }
 
 /// A handle on the gullet (thread-local state, so the handle carries nothing): the receiver of Perl's

@@ -563,10 +563,8 @@ fn font_from_rhai_map(opts: Map) -> latexml_core::common::font::Font {
   font
 }
 
-/// Convert a Rhai object map into a whatsit property map. `Digested` handles
-/// (from `DigestText`, `RefStepCounter`, …) pass through as `Stored::Digested`;
-/// a `Digested` under the `font` key contributes its FONT (the IEEEproof
-/// "titlefont" idiom); everything else lands as its string form.
+/// Convert a Rhai object map into a whatsit property map, each value with its type ([`dynamic_to_stored`]); a
+/// `Digested` under the `font` key contributes its FONT (the IEEEproof "titlefont" idiom).
 fn rhai_map_to_props(map: Map) -> SymHashMap<Stored> {
   let mut props: SymHashMap<Stored> = SymHashMap::default();
   for (k, v) in map {
@@ -580,8 +578,11 @@ fn rhai_map_to_props(map: Map) -> SymHashMap<Stored> {
         }
         props.insert(k.as_str(), Stored::Digested(d));
       },
-      _ => {
-        props.insert(k.as_str(), dynamic_to_string(v).into());
+      // A constructor reads a token property as its ToString, as Perl's absorb (Object.pm:169) and attributes do.
+      _ => match dynamic_to_stored(v) {
+        Stored::Tokens(t) => props.insert(k.as_str(), t.to_string().into()),
+        Stored::Token(t) => props.insert(k.as_str(), t.to_string().into()),
+        stored => props.insert(k.as_str(), stored),
       },
     }
   }
@@ -647,8 +648,9 @@ fn scope_of(scope: &str) -> Option<Scope> {
 
 /// Marshal a `Stored` out to a Rhai value with its type (Perl hands back the stored object, Package.pm
 /// LookupValue :257, LookupMapping :283): a string, bool, int, float, `Token`, `Tokens` or digested handle as
-/// itself, a list value as an array of such (Perl's arrayref, #315), `None` as `()` (undef). A value with no
-/// Rhai type yet (Dimension, Glue, …: round C) is its string form. The inverse of [`dynamic_to_stored`].
+/// itself, a list value as an array of such (Perl's arrayref, #315), a hash as a map, a char or catcode as its int,
+/// `None` as `()` (undef). A register value (Dimension, Glue, …: round C) is its TeX string; a kind with no script
+/// form (a node, a font map, a stash) is the placeholder `Stored[??]`. The inverse of [`dynamic_to_stored`].
 fn stored_to_dynamic(v: Stored) -> Dynamic {
   match v {
     Stored::None => Dynamic::UNIT,
@@ -668,14 +670,30 @@ fn stored_to_dynamic(v: Stored) -> Dynamic {
     Stored::VecDequeStored(items) => {
       Dynamic::from_array(items.into_iter().map(stored_to_dynamic).collect())
     },
+    Stored::VecDigested(items) => {
+      Dynamic::from_array(items.into_iter().map(Dynamic::from).collect())
+    },
+    Stored::HashStored(h) => Dynamic::from_map(
+      h.0
+        .into_iter()
+        .map(|(k, v)| (arena::to_string(k).into(), stored_to_dynamic(v)))
+        .collect(),
+    ),
+    Stored::HashString(h) => Dynamic::from_map(
+      h.into_iter()
+        .map(|(k, v)| (k.into(), Dynamic::from(v)))
+        .collect(),
+    ),
+    Stored::Charcode(c) => Dynamic::from(i64::from(c)),
+    Stored::Catcode(c) => Dynamic::from(c as i64),
     other => Dynamic::from(other.to_string()),
   }
 }
 
 /// Marshal a Rhai value INTO a `Stored` (Perl's value table is untyped, Package.pm AssignValue :261,
 /// AssignMapping :287, PushValue): string, int, float, bool, `Token`, `Tokens` and a digested handle keep their
-/// type, `()` is `None` (undef); anything else falls back to its string form (#540). The inverse of
-/// [`stored_to_dynamic`].
+/// type, an array is a list and a map a hash of such (Perl's arrayref/hashref), `()` is `None` (undef); anything
+/// else falls back to its string form (#540). The inverse of [`stored_to_dynamic`].
 fn dynamic_to_stored(v: Dynamic) -> Stored {
   if v.is_unit() {
     Stored::None
@@ -693,6 +711,19 @@ fn dynamic_to_stored(v: Dynamic) -> Stored {
     Stored::Token(token)
   } else if let Some(digested) = v.clone().try_cast::<Digested>() {
     Stored::Digested(digested)
+  } else if v.is_array() {
+    Stored::VecDequeStored(
+      v.cast::<rhai::Array>()
+        .into_iter()
+        .map(dynamic_to_stored)
+        .collect(),
+    )
+  } else if v.is_map() {
+    let mut hash = SymHashMap::default();
+    for (k, v) in v.cast::<Map>() {
+      hash.insert(k.as_str(), dynamic_to_stored(v));
+    }
+    Stored::HashStored(hash)
   } else {
     v.to_string().into()
   }
@@ -716,10 +747,17 @@ fn dynamic_to_tokens(d: Dynamic) -> Tokens {
 /// as its TeX-source string (authors parse it in-script as needed).
 fn arg_to_dynamic(arg: ArgWrap) -> Dynamic { Dynamic::from(arg.to_string()) }
 
-/// Read a Rhai return value back as a string (the TeX-source of the expansion).
+/// Read a Rhai value back as a string: a `Token`/`Tokens` is its TeX source (`UnTeX`), a digested handle its
+/// `ToString` (Rhai's own printing gives a custom type's Rust name).
 fn dynamic_to_string(d: Dynamic) -> String {
   if d.is_string() {
     d.into_string().unwrap_or_default()
+  } else if let Some(tokens) = d.clone().try_cast::<Tokens>() {
+    tokens.untex()
+  } else if let Some(token) = d.clone().try_cast::<Token>() {
+    Tokens::new(vec![token]).untex()
+  } else if let Some(digested) = d.clone().try_cast::<Digested>() {
+    digested.to_string()
   } else {
     d.to_string()
   }

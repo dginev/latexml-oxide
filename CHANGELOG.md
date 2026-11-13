@@ -84,7 +84,13 @@
   - **New Rhai calls:** `LookupMathcode`/`AssignMathcode`, `LookupSFcode`/`AssignSFcode`,
     `LookupLCcode`/`AssignLCcode`, `LookupUCcode`/`AssignUCcode`,
     `LookupDelcode`/`AssignDelcode` (each Assign* with an optional scope), and
-    `LookupMappingKeys` (sorted, as Perl's).
+    `LookupMappingKeys` (sorted, as Perl's). A code the table cannot hold (a catcode
+    above 15, a code outside 0..65535) is an Error naming the call, not dropped.
+  - **Rhai arrays and maps are stored as lists and hashes** (`AssignValue`, `AssignMapping`,
+    `PushValue`): `let o = LookupValue(k); o.push(x); AssignValue(k, o)` round-trips, where
+    the array was stored as its printed text. A `Token`/`Tokens` given where a string is
+    read (a `properties` value, an option) is its TeX source, where it was the Rust type
+    name (revW3e).
 
   - **`post::PostOptions::nodefaultresources` is now `default_resources`, with the
     meaning inverted.** The double negative (`nodefaultresources: false`) is gone.

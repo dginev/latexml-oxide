@@ -614,6 +614,7 @@ mod perfect_kernel_batchunc;
 mod perfect_kernel_batchvarw;
 mod perfect_kernel_batchw3ra;
 mod perfect_kernel_batchw3rb;
+mod perfect_kernel_batchw3rd;
 mod perfect_kernel_batchz1;
 mod perfect_kernel_batchz14;
 mod perfect_kernel_batchz18c;
