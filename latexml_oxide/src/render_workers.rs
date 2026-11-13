@@ -153,6 +153,9 @@ pub(crate) struct ParallelResult {
   pub(crate) main_output:    Option<String>,
   /// Total pages written, summed from the workers' `Status:pages:` lines.
   pub(crate) pages_rendered: usize,
+  /// A worker's MathML/XSLT step died (`Status:discard:1`): the pages written are removed and
+  /// the render leaves no output (#782).
+  pub(crate) discarded:      bool,
 }
 
 /// Remove the per-run handoff artifacts (db + WAL sidecars + manifests).
@@ -199,6 +202,8 @@ struct ChildReport {
   pages:   usize,
   /// `Status:discard:1`: a MathML/XSLT step died, so no page of the run is kept (#782).
   discard: bool,
+  /// `Status:written:<path>`: the pages this worker wrote, the only ones a discard removes.
+  written: Vec<String>,
 }
 
 fn parse_child_report(stderr_text: &str) -> ChildReport {
@@ -207,6 +212,7 @@ fn parse_child_report(stderr_text: &str) -> ChildReport {
   let mut status = None;
   let mut pages = 0usize;
   let mut discard = false;
+  let mut written = Vec::new();
   for line in stderr_text.lines() {
     if let Some(rest) = line.strip_prefix("Status:counts:") {
       let mut it = rest.split(',').map(|v| v.trim().parse::<usize>().ok());
@@ -232,6 +238,8 @@ fn parse_child_report(stderr_text: &str) -> ChildReport {
       pages = rest.trim().parse::<usize>().unwrap_or(0);
     } else if let Some(rest) = line.strip_prefix("Status:discard:") {
       discard = rest.trim() == "1";
+    } else if let Some(path) = line.strip_prefix("Status:written:") {
+      written.push(path.to_string());
     } else {
       log.push_str(line);
       log.push('\n');
@@ -243,6 +251,7 @@ fn parse_child_report(stderr_text: &str) -> ChildReport {
     status,
     pages,
     discard,
+    written,
   }
 }
 
@@ -375,6 +384,7 @@ pub(crate) fn parallel_render(
     return Some(ParallelResult {
       main_output:    None,
       pages_rendered: 0,
+      discarded:      false,
     });
   }
 
@@ -449,6 +459,7 @@ pub(crate) fn parallel_render(
   // the parent LOG_BUFFER/REPORT, and flag anything that did not report.
   let mut pages_rendered = 0usize;
   let mut discard = false;
+  let mut written: Vec<String> = Vec::new();
   for (i, p) in pending.into_iter().enumerate() {
     match p {
       Pending::Failed(e) => {
@@ -487,6 +498,7 @@ pub(crate) fn parallel_render(
           });
           pages_rendered += report.pages;
           discard |= report.discard;
+          written.extend(report.written);
           match report.status {
             None => {
               // No status line = the child died before its final report (or
@@ -519,30 +531,35 @@ pub(crate) fn parallel_render(
   // so read it back. A missing/unreadable file leaves `None` and the caller's
   // fallback applies — the diagnostics above already flagged the failure.
   if discard {
-    let all: Vec<&String> = pages
-      .iter()
-      .filter_map(|p| p.destination.as_ref())
-      .collect();
-    crate::post::remove_pages(&all);
+    // Only this run's pages: a stale page of an earlier run in the destination stays.
+    crate::post::remove_pages(&written);
     cleanup_handoff(&dbfile, &manifest_paths);
     return Some(ParallelResult {
       main_output:    None,
       pages_rendered: 0,
+      discarded:      true,
     });
   }
   let main_output = first_destination.and_then(|d| std::fs::read_to_string(&d).ok());
   cleanup_handoff(&dbfile, &manifest_paths);
-  Some(ParallelResult { main_output, pages_rendered })
+  Some(ParallelResult {
+    main_output,
+    pages_rendered,
+    discarded: false,
+  })
 }
 
 /// Print the worker's canonical trailing status report (the LAST lines on
-/// stderr): `Status:pages:`, then `Status:counts:`, then `Status:conversion:`
-/// — the parent parses them positionally-independently by prefix. Returns the
-/// process exit code (0 below fatal, 1 at fatal).
-fn print_status_report(pages: usize, discard: bool) -> i32 {
+/// stderr): `Status:pages:`, `Status:written:` per page, then `Status:counts:`, then
+/// `Status:conversion:` — the parent parses them positionally-independently by prefix. Returns
+/// the process exit code (0 below fatal, 1 at fatal).
+fn print_status_report(written: &[String], discard: bool) -> i32 {
   let c = snapshot_report_counts();
   let status = get_status_code();
-  eprintln!("Status:pages:{pages}");
+  eprintln!("Status:pages:{}", written.len());
+  for path in written {
+    eprintln!("Status:written:{path}");
+  }
   if discard {
     eprintln!("Status:discard:1");
   }
@@ -576,7 +593,7 @@ pub fn worker_main(manifest_path: &str) -> i32 {
         "render_worker",
         &format!("cannot read the render manifest {manifest_path}: {e}"),
       );
-      return print_status_report(0, false);
+      return print_status_report(&[], false);
     },
   };
   // Mirror `api.rs::on_worker`: a 256 MiB-stack thread for deeply nested
@@ -585,8 +602,8 @@ pub fn worker_main(manifest_path: &str) -> i32 {
   std::thread::Builder::new()
     .stack_size(256 * 1024 * 1024)
     .spawn(move || {
-      let (pages, discard) = render_manifest_pages(manifest);
-      let code = print_status_report(pages, discard);
+      let (written, discard) = render_manifest_pages(manifest);
+      let code = print_status_report(&written, discard);
       latexml_core::reset_thread_engine();
       code
     })
@@ -599,8 +616,8 @@ pub fn worker_main(manifest_path: &str) -> i32 {
 /// the parent's `run_post_processing_inner` performs (same MathML
 /// primary/secondary parallel model, same XSLT wiring, same error paths) —
 /// then render every page in the manifest's range through the shared
-/// [`crate::post::render_spilled_page`]. Returns the number of pages written.
-fn render_manifest_pages(m: RenderManifest) -> (usize, bool) {
+/// [`crate::post::render_spilled_page`]. Returns the pages written, and whether a Fatal discards them.
+fn render_manifest_pages(m: RenderManifest) -> (Vec<String>, bool) {
   use latexml_post::{
     crossref::{CrossRef, UrlStyle},
     processor::Processor,
@@ -616,7 +633,7 @@ fn render_manifest_pages(m: RenderManifest) -> (usize, bool) {
         "render_worker",
         &format!("cannot attach the render db {}: {e}", m.dbfile.display()),
       );
-      return (0, false);
+      return (Vec::new(), false);
     },
   };
   let url_style = UrlStyle::from_cli(&m.url_style).unwrap_or(UrlStyle::File);
@@ -686,12 +703,12 @@ fn render_manifest_pages(m: RenderManifest) -> (usize, bool) {
     post,
     processors,
   };
-  let mut pages_written = 0usize;
+  let mut written: Vec<String> = Vec::new();
   for job in &m.pages {
     // Same OS give-back cadence as the serial render loop: each page cycles a
     // DOM + XSLT result through the C heap, and a chunk can be tens of
     // thousands of pages.
-    if pages_written > 0 && pages_written.is_multiple_of(512) {
+    if !written.is_empty() && written.len().is_multiple_of(512) {
       #[cfg(target_os = "linux")]
       unsafe {
         libc::malloc_trim(0);
@@ -716,7 +733,7 @@ fn render_manifest_pages(m: RenderManifest) -> (usize, bool) {
             {
               let _ = std::fs::create_dir_all(parent);
             }
-            pages_written += 1;
+            written.push(path.to_string());
             if let Err(e) = std::fs::write(path, &output) {
               emit_error(
                 "post",
@@ -732,10 +749,10 @@ fn render_manifest_pages(m: RenderManifest) -> (usize, bool) {
       // folded error + the fatal-bearing status this worker will report).
       Err(crate::post::PageFailure::Error) => break,
       // The parent removes every page of the run (#782).
-      Err(crate::post::PageFailure::Fatal) => return (pages_written, true),
+      Err(crate::post::PageFailure::Fatal) => return (written, true),
     }
   }
-  (pages_written, false)
+  (written, false)
 }
 
 #[cfg(test)]
@@ -744,9 +761,11 @@ mod tests {
 
   #[test]
   fn child_report_parses_status_lines_and_keeps_log() {
-    let stderr_text = "Warning:post:x something odd\nInfo:post:y fine\nStatus:pages:41\nStatus:counts:0,2,1,3,1\nStatus:conversion:3\n";
+    let stderr_text = "Warning:post:x something odd\nInfo:post:y fine\nStatus:pages:41\nStatus:written:/d/S1.html\nStatus:discard:1\nStatus:counts:0,2,1,3,1\nStatus:conversion:3\n";
     let r = parse_child_report(stderr_text);
     assert_eq!(r.pages, 41);
+    assert_eq!(r.written, vec!["/d/S1.html"]);
+    assert!(r.discard);
     assert_eq!(r.status, Some(3));
     let c = r.counts.expect("counts parsed");
     assert_eq!((c.debug, c.info, c.warning, c.error), (0, 2, 1, 3));

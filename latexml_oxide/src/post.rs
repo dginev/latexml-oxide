@@ -1231,8 +1231,8 @@ fn run_post_processing_inner(input: PostInput, opts: &PostOptions) -> String {
         )
       );
       drop(page_spill);
-      // A worker's Fatal leaves no output, as the serial render's does (#782).
-      if latexml_core::common::error::get_status_code() >= 3 {
+      // A worker's post Fatal leaves no output, as the serial render's does (#782).
+      if result.discarded {
         return String::new();
       }
       return result.main_output.unwrap_or_else(fallback);

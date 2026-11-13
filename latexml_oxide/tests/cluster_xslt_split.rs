@@ -551,7 +551,8 @@ mod xslt_failure_is_fatal {
   }
 
   /// The parallel page render (`LATEXML_RENDER_JOBS`, 64+ pages): a worker's Fatal removes every
-  /// page the other workers wrote, and the CLI exits 1.
+  /// page the workers wrote, never a stale page of an earlier run (`S70.html`, planned but unwritten
+  /// here), and the CLI exits 1.
   #[test]
   fn a_parallel_split_render_that_dies_keeps_no_page() {
     let dir = tempfile::tempdir().expect("tempdir");
@@ -563,6 +564,7 @@ mod xslt_failure_is_fatal {
     }
     tex.push_str("\\end{document}\n");
     std::fs::write(dir.path().join("a.tex"), tex).unwrap();
+    std::fs::write(dir.path().join("S70.html"), "STALE").unwrap();
     let out = Command::new(env!("CARGO_BIN_EXE_latexml_oxide"))
       .args([
         &format!("--stylesheet={xsl}"),
@@ -581,7 +583,11 @@ mod xslt_failure_is_fatal {
     );
     assert_eq!(out.status.code(), Some(1), "{stderr}");
     assert_eq!(stderr.matches("Fatal:post:convert").count(), 1, "{stderr}");
-    assert_eq!(html_files(dir.path()), Vec::<String>::new(), "{stderr}");
+    assert_eq!(html_files(dir.path()), vec!["S70.html"], "{stderr}");
+    assert_eq!(
+      std::fs::read_to_string(dir.path().join("S70.html")).unwrap(),
+      "STALE"
+    );
   }
 
   /// The CLI exits 1 and writes no `.html`.

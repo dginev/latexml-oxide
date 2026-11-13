@@ -181,10 +181,11 @@ fn html_post_options(default_resources: bool) -> post::PostOptions<'static> {
   }
 }
 
-/// The HTML, or post's log when post-processing died (`Fatal:post:convert`, #782): as Perl's
-/// convert, a Fatal returns no document.
+/// The HTML, or post's log when post-processing died (`Fatal:post:convert`, #782) and left no
+/// document, the CLI's test. The status also counts core's: a core Fatal's rescued document is
+/// post-processed and returned, as in Perl's convert (LaTeXML.pm L277-337).
 fn post_result(post: post::PostOutcome) -> Result<String, String> {
-  if post.status_code >= 3 {
+  if post.html.is_empty() && post.status_code >= 3 {
     Err(format!("post-processing failed:\n{}", post.log))
   } else {
     Ok(post.html)
@@ -233,6 +234,42 @@ mod tests {
     });
     let log = result.expect_err("a post Fatal is an Err");
     assert_eq!(log.matches("Fatal:post:convert").count(), 1, "{log}");
+  }
+
+  /// A core Fatal that keeps its partial document (too many errors) is still post-processed and
+  /// returned, as Perl's convert and the CLI do (LaTeXML.pm L277-337); the Fatal is in the core log.
+  #[test]
+  fn a_core_fatal_keeps_its_rescued_document() {
+    let tex = format!(
+      "\\documentclass{{article}}\\begin{{document}}Kept text.\n\n{}\\end{{document}}",
+      (0..101u8)
+        .map(|i| format!(
+          "\\nosuch{}{} ",
+          (b'a' + i / 26) as char,
+          (b'a' + i % 26) as char
+        ))
+        .collect::<String>()
+    );
+    let (core_log, result) = on_worker(move || {
+      let opts = library_config(OutputFormat::HTML5);
+      let mut converter = Converter::from_config(opts.clone());
+      converter.prepare_session(&opts).expect("session");
+      let response = converter.convert(format!("literal:{tex}"));
+      let xml = response.result.expect("the rescued document");
+      let post = post_result(post::run_post_processing_logged(
+        &xml,
+        &html_post_options(false),
+      ));
+      ((response.status_code, response.log), post)
+    });
+    assert_eq!(core_log.0, 3, "{}", core_log.1);
+    assert!(
+      core_log.1.contains("101 errors; 1 fatal error;"),
+      "{}",
+      core_log.1
+    );
+    let html = result.expect("a core Fatal's rescued document is Ok");
+    assert!(html.contains("Kept text."), "{html}");
   }
 
   #[test]

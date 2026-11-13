@@ -17,10 +17,13 @@
     `Error:post:convert`, exited 0 and wrote the untransformed XML under the `.html`
     name. A MathML or XSLT step that fails now stops post-processing with
     `Fatal:post:convert` and nothing is written, as a die in Perl's ProcessChain does:
-    with `--split`, the pages rendered before the failing one are removed, serially and
-    under `LATEXML_RENDER_JOBS`; `api::convert_to_html` returns `Err` with the log. A stylesheet that cannot be found
-    stays an Error, as in Perl. Guards `xslt_failure_is_fatal` (in `cluster_xslt_split`)
-    and `api::tests::a_post_fatal_is_an_err`.
+    with `--split`, the pages this run rendered before the failing one are removed, serially
+    and under `LATEXML_RENDER_JOBS` (a page an earlier run left in the destination stays);
+    `api::convert_to_html` returns `Err` with the log. A core Fatal that keeps its partial
+    document is still post-processed and returned, as in Perl. A stylesheet that cannot be
+    found stays an Error, as in Perl. Guards `xslt_failure_is_fatal` (in
+    `cluster_xslt_split`), `api::tests::a_post_fatal_is_an_err` and
+    `api::tests::a_core_fatal_keeps_its_rescued_document`.
 
   - **Split pages keep the document's processing instructions** (#795). With `--split`,
     only the main page carried the `<?latexml …?>` PIs; the other pages lost them, so a
@@ -49,7 +52,9 @@
     existing file now loads that file, and so does an engine-named stylesheet it imports from
     beside it; `urn:x-LaTeXML:XSLT:` imports and the default stylesheet always come from the
     binary, whatever `resources/XSLT/` or `LaTeXML-*.xsl` files sit in the working or source
-    directory. Guards `xslt::local_stylesheet_tests`, `xslt_custom_stylesheet::stray_engine_sheets_do_not_replace_the_default`.
+    directory. A `%` in a plain path is a character (`/w/100%/LaTeXML-html5.xsl`); only a
+    `file:` URL is percent-decoded. Guards `xslt::local_stylesheet_tests`,
+    `xslt_custom_stylesheet::stray_engine_sheets_do_not_replace_the_default`.
 
   - **`post::PostOptions::nodefaultresources` is now `default_resources`, with the
     meaning inverted.** The double negative (`nodefaultresources: false`) is gone.

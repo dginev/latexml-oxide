@@ -276,6 +276,33 @@ mod local_stylesheet_tests {
     ] {
       assert!(super::embedded_xslt::resolve(&url).is_none(), "{url}");
     }
+    // A literal `%` in a plain path is not an escape: the user's engine-named sheet and its sibling.
+    for name in ["100%", "%41"] {
+      let pct = dir.path().join(name);
+      std::fs::create_dir(&pct).unwrap();
+      let html5 = pct.join("LaTeXML-html5.xsl");
+      std::fs::write(&html5, marker_xsl("PCT-HTML5")).unwrap();
+      assert!(apply(&html5).contains("<out>PCT-HTML5</out>"), "{name}");
+      std::fs::write(pct.join("LaTeXML-common.xsl"), marker_xsl("PCT-COMMON")).unwrap();
+      std::fs::copy(&mine, pct.join("mine.xsl")).unwrap();
+      assert!(
+        apply(&pct.join("mine.xsl")).contains("<out>PCT-COMMON</out>"),
+        "{name}"
+      );
+      // In a `file:` URL the `%` is escaped.
+      let url = format!("file://{}", html5.to_str().unwrap().replace('%', "%25"));
+      assert_eq!(super::embedded_xslt::disk_path(&url), Some(html5), "{url}");
+    }
+    // A host other than localhost is a UNC share, which only Windows paths can name.
+    let unc = format!(
+      "file://server{}",
+      common.to_str().unwrap().replace(' ', "%20")
+    );
+    assert_eq!(
+      super::embedded_xslt::disk_path(&unc).is_some(),
+      cfg!(windows),
+      "{unc}"
+    );
     // Relative to this crate's directory, where the engine's own sources sit.
     for url in [
       "resources/XSLT/LaTeXML-all-xhtml.xsl",
@@ -1166,17 +1193,28 @@ mod embedded_xslt {
   }
 
   /// The file an absolute path or a `file:` URL (`file:///p`, `file://localhost/p`, `file:/p`,
-  /// percent-encoded) names, when it exists.
+  /// percent-encoded; `file://server/share/p` on Windows) names, when it exists. A plain path is
+  /// taken as written: its `%` is a character, not an escape (`/w/100%/LaTeXML-html5.xsl`).
   pub fn disk_path(url: &str) -> Option<std::path::PathBuf> {
-    let path = match url.strip_prefix("file://") {
-      Some(rest) => rest.strip_prefix("localhost").unwrap_or(rest),
-      None => url.strip_prefix("file:").unwrap_or(url),
-    };
-    let path = percent_decode(path)?;
-    // `file:///C:/x` names `C:/x`.
-    let path = match path.strip_prefix('/') {
-      Some(rest) if cfg!(windows) && rest.as_bytes().get(1) == Some(&b':') => rest.to_string(),
-      _ => path,
+    let path = match url.strip_prefix("file:") {
+      None => url.to_string(),
+      Some(rest) => {
+        let path = match rest.strip_prefix("//") {
+          Some(auth) => match auth.strip_prefix("localhost").unwrap_or(auth) {
+            local if local.starts_with('/') => local,
+            // `file://server/share/p` is the UNC path `//server/share/p`.
+            _ if cfg!(windows) => rest,
+            _ => return None,
+          },
+          None => rest,
+        };
+        let path = percent_decode(path)?;
+        // `file:///C:/x` names `C:/x`.
+        match path.strip_prefix('/') {
+          Some(rest) if cfg!(windows) && rest.as_bytes().get(1) == Some(&b':') => rest.to_string(),
+          _ => path,
+        }
+      },
     };
     let path = std::path::PathBuf::from(path);
     (path.is_absolute() && path.is_file()).then_some(path)
