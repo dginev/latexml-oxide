@@ -73,7 +73,15 @@ pub(super) fn make_engine() -> Engine {
   engine.register_fn(
     "DefPrimitive",
     |proto: &str, body: FnPtr, opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
-      wire_now(|e, a| wire_primitive(e, a, proto, body, primitive_options_from_map(opts, e, a)))
+      wire_now(|e, a| {
+        wire_primitive(
+          e,
+          a,
+          proto,
+          body,
+          primitive_options_from_map(proto, opts, e, a)?,
+        )
+      })
     },
   );
   // Class/package option. Mirrors the `DeclareOption!` macro's lowering
@@ -990,19 +998,48 @@ pub(super) fn make_engine() -> Engine {
       // Loading-script handles for the digest-hook trampolines (DefMath doesn't
       // route through `wire_now`, so fetch them directly like `wire_now` does).
       let (engine, ast) = current_script()?;
-      let options = math_options_from_map(opts, &engine, &ast).map_err(rhai_err)?;
+      let options = math_options_from_map(proto, opts, &engine, &ast).map_err(rhai_err)?;
       latexml_core::binding::def::dialect::def_math(cs, params, presentation.to_string(), options)
         .map_err(rhai_err)
     },
   );
-  // DefConditional: the test is a Rhai closure receiving args as strings and
-  // returning a bool.
+  // DefConditional: the test is a Rhai closure receiving its args as Tokens and returning a
+  // bool; without a test (or with `()`), the `\newif` form driven by `SetCondition`.
   engine.register_fn(
     "DefConditional",
     |proto: &str, test: FnPtr| -> std::result::Result<(), Box<EvalAltResult>> {
-      wire_now(|e, a| wire_conditional(e, a, proto, test))
+      wire_now(|e, a| wire_conditional(e, a, proto, Some(test), Map::new()))
     },
   );
+  engine.register_fn(
+    "DefConditional",
+    |proto: &str, test: FnPtr, opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
+      wire_now(|e, a| wire_conditional(e, a, proto, Some(test), opts))
+    },
+  );
+  engine.register_fn(
+    "DefConditional",
+    |proto: &str| -> std::result::Result<(), Box<EvalAltResult>> {
+      wire_now(|e, a| wire_conditional(e, a, proto, None, Map::new()))
+    },
+  );
+  engine.register_fn(
+    "DefConditional",
+    |proto: &str, _test: (), opts: Map| -> std::result::Result<(), Box<EvalAltResult>> {
+      wire_now(|e, a| wire_conditional(e, a, proto, None, opts))
+    },
+  );
+  // SetCondition (Package.pm:1255): `\iffoo` to `\iftrue`/`\iffalse`, for a test-less conditional.
+  engine.register_fn("SetCondition", |cs: Dynamic, value: bool| {
+    let cs = token_arg("SetCondition", cs)?;
+    latexml_core::binding::content::set_condition(&cs, value, None);
+    Ok::<(), Box<EvalAltResult>>(())
+  });
+  engine.register_fn("SetCondition", |cs: Dynamic, value: bool, scope: &str| {
+    let cs = token_arg("SetCondition", cs)?;
+    latexml_core::binding::content::set_condition(&cs, value, scope_of(scope));
+    Ok::<(), Box<EvalAltResult>>(())
+  });
   // DefColumnType: "<char><params>" prototype; the body returns the column's
   // rewrite expansion (installs `\NC@rewrite@<char>`, as the macro does).
   engine.register_fn(

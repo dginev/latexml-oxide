@@ -475,7 +475,7 @@ fn pool_surface_definition_forms() {
       DefKeyVal("WB", "color", "");
       DefLigature("ff", "F");
       DefMath("\\wbsum", "∑", #{ role: "SUMOP", meaning: "sum" });
-      DefConditional("\\ifwb{}", |x| x == "on");
+      DefConditional("\\ifwb{}", |x| UnTeX(x) == "on"); // the test is given Tokens, as Perl's
       DefMacro("\\wbprobe{}", |x| "\\ifwb{" + x + "}YES\\else NO\\fi");
     "##,
   )

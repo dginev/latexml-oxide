@@ -45,6 +45,22 @@
     provide-only binding load declines it. Guards `script_bindings::tests::let_takes_a_scope`,
     `script_bindings::tests::let_takes_any_token`.
 
+  - **Rhai Def* option bags follow Perl's option tables** (PR #829 round A). Each of
+    `DefMacro`, `DefPrimitive`, `DefConstructor`, `DefEnvironment`, `DefMath` and
+    `DefConditional` checks its bag against Perl's key table (Package.pm `CheckOptions`);
+    a key outside it is one `Error:misdefined` ("… does not accept options:bogusopt"),
+    where it was ignored. `DefPrimitive`'s `nargs`, `DefMath`'s `mode`, `bounded`,
+    `requireMath`, `forbidMath`, `isPrefix`, `DefMacro`'s `alias` and the
+    environment-only hooks on `DefConstructor` are now such keys, as in Perl. Newly
+    honoured: `locked`, `scope`, `robust` and `nargs` on `DefConstructor`/`DefEnvironment`,
+    `font` and `alias` on `DefPrimitive`, `font`, `reversion`, `sizer`, `decl_id`,
+    `operator_scriptpos` and `scope` on `DefMath`, `nopackParameters` on `DefMacro`.
+    A Perl key the core cannot carry yet (`outer`/`long` on `DefPrimitive`/`DefConstructor`,
+    `attributeForm`, a closure `skipper`, a string `sizer`) is a `Warning:unsupported`.
+    `DefConditional` takes an option bag and has its test-less `\newif` form
+    (`DefConditional("\\iffoo")`, with `SetCondition`); its test receives Tokens.
+    Guard `cluster_package_guards::perfect_kernel_batchw3ra`.
+
   - **`post::PostOptions::nodefaultresources` is now `default_resources`, with the
     meaning inverted.** The double negative (`nodefaultresources: false`) is gone.
     The positive name is Perl's option name (`Config.pm:120` `defaultresources!`),

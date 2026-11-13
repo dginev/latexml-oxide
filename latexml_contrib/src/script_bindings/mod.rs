@@ -41,6 +41,10 @@ use latexml_core::{
   binding::def::{
     builder::{ConstructorBuilder, EnvironmentBuilder, OptionValue},
     dialect::{def_conditional, def_macro, def_primitive},
+    options::{
+      CONDITIONAL_OPTIONS, CONSTRUCTOR_OPTIONS, ENVIRONMENT_OPTIONS, MACRO_OPTIONS, MATH_OPTIONS,
+      PRIMITIVE_OPTIONS, check_options, unsupported_option,
+    },
     replacement,
   },
   common::{

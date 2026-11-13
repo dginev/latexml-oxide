@@ -741,6 +741,13 @@ const DOCS: &[(&str, Doc)] = &[
     ),
   ),
   (
+    "SetCondition",
+    Doc::Rust(
+      "Set a test-less conditional (`\\newif` style) to true or false.",
+      "latexml_core::binding::content::set_condition",
+    ),
+  ),
+  (
     "ShiftValue",
     Doc::Rust(
       "Remove and return the first value of a value-table list, type preserved (`()` if empty).",

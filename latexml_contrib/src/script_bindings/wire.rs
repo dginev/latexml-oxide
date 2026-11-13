@@ -98,7 +98,7 @@ pub(super) fn wire_macro_string_opts(proto: &str, body: &str, opts: Map) -> Resu
     ExpansionBody::Tokens(mouth::tokenize_internal(TeXString::assembled(
       body.to_string(),
     ))),
-    Some(expandable_options_from_map(opts)),
+    Some(expandable_options_from_map(proto, opts)?),
   )?;
   Ok(())
 }
@@ -193,8 +193,15 @@ pub(super) fn wire_constructor_opts(
       closure_replacement(b, engine.clone(), ast.clone(), proto.to_string())
     },
   };
+  let operation = format!("DefConstructor ({proto})");
+  let opts = checked_opts(
+    &operation,
+    CONSTRUCTOR_OPTIONS,
+    &["outer", "long", "attributeForm"],
+    opts,
+  )?;
   let builder = ConstructorBuilder::new(proto)?.replacement(replacement);
-  apply_opts(builder, opts, engine, ast)?.install()
+  apply_opts(&operation, builder, opts, engine, ast)?.install()
 }
 
 /// Install one `DefEnvironment` registration (template or imperative body, with
@@ -213,8 +220,10 @@ pub(super) fn wire_environment(
       closure_replacement(b, engine.clone(), ast.clone(), proto.to_string())
     },
   };
+  let operation = format!("DefEnvironment ({proto})");
+  let opts = checked_opts(&operation, ENVIRONMENT_OPTIONS, &["attributeForm"], opts)?;
   let builder = EnvironmentBuilder::new(proto)?.replacement(replacement);
-  apply_opts(builder, opts, engine, ast)?.install()
+  apply_opts(&operation, builder, opts, engine, ast)?.install()
 }
 
 /// The builder surface the option-bag loop needs — implemented for both core
@@ -273,11 +282,35 @@ macro_rules! impl_binding_builder {
 impl_binding_builder!(ConstructorBuilder);
 impl_binding_builder!(EnvironmentBuilder);
 
+/// Perl's `CheckOptions` over a Rhai option bag (`options::check_options`): the returned bag keeps
+/// the keys `allowed` lists, less those in `unsupported` (Perl keys the core cannot honour yet),
+/// each of which is warned when set rather than dropped silently.
+pub(super) fn checked_opts(
+  operation: &str,
+  allowed: &[&str],
+  unsupported: &[&str],
+  mut opts: Map,
+) -> Result<Map> {
+  check_options(operation, allowed, opts.keys().map(|k| k.as_str()))?;
+  opts.retain(|key, val| {
+    if unsupported.contains(&key.as_str()) {
+      if val.is::<FnPtr>() || dynamic_to_bool(val) {
+        unsupported_option(operation, key);
+      }
+      false
+    } else {
+      allowed.contains(&key.as_str())
+    }
+  });
+  Ok(opts)
+}
+
 /// Apply a Rhai option bag onto a builder: closure options become trampolines
 /// (typed setters), `properties` also accepts a static map, scalars route
 /// through the builder's single-source `set_option`. Shared by the constructor
 /// and environment front-ends.
 pub(super) fn apply_opts<B: BindingBuilder>(
+  operation: &str,
   mut builder: B,
   opts: Map,
   engine: &Rc<Engine>,
@@ -329,9 +362,8 @@ pub(super) fn apply_opts<B: BindingBuilder>(
             builder =
               builder.after_construct(construction_trampoline(fp, engine.clone(), ast.clone()));
           },
-          // Unknown closure options are silently ignored (forgiving, like Perl
-          // %options; the builder's set_option does the same for scalars).
-          _ => {},
+          // A closure for a key that takes a value (`nargs`, `mode`, …).
+          other => unsupported_option(operation, &format!("{other} as a closure")),
         }
       },
       _ => {
@@ -348,6 +380,9 @@ pub(super) fn apply_opts<B: BindingBuilder>(
           // Partial-font directive (`font => { family => 'typewriter', … }`).
           let font = font_from_rhai_map(val.cast::<Map>());
           builder = builder.font(FontDirective::Asset(Rc::new(font)));
+        } else if matches!(key.as_str(), "sizer" | "properties" | "font") {
+          // A string sizer (Perl's `sizer => '#1'`) or a non-map font/properties.
+          unsupported_option(operation, &format!("{key} as a {}", val.type_name()));
         } else if let Some(ov) = dynamic_to_option_value(&val) {
           // Scalar option → the builder's generic, single-source `set_option`.
           builder = builder.set_option(key.as_str(), ov)?;
@@ -696,15 +731,15 @@ pub(super) fn wire_macro_opts(
     cs,
     paramlist,
     ExpansionBody::Closure(closure),
-    Some(expandable_options_from_map(opts)),
+    Some(expandable_options_from_map(proto, opts)?),
   )?;
   Ok(())
 }
 
-/// Map a Rhai option bag onto `ExpandableOptions` (the `DefMacro!` scalar set).
-pub(super) fn expandable_options_from_map(opts: Map) -> ExpandableOptions {
+/// Map a Rhai option bag onto `ExpandableOptions`, checked against Perl's `$macro_options`.
+pub(super) fn expandable_options_from_map(proto: &str, opts: Map) -> Result<ExpandableOptions> {
   let mut o = ExpandableOptions::default();
-  for (key, val) in opts {
+  for (key, val) in checked_opts(&format!("DefMacro ({proto})"), MACRO_OPTIONS, &[], opts)? {
     let b = dynamic_to_bool(&val);
     match key.as_str() {
       "locked" => o.locked = b,
@@ -714,11 +749,11 @@ pub(super) fn expandable_options_from_map(opts: Map) -> ExpandableOptions {
       "mathactive" => o.mathactive = b,
       "robust" => o.robust = b,
       "scope" => o.scope = scope_of(&dynamic_to_string(val.clone())),
-      "alias" => o.alias = Some(dynamic_to_string(val.clone())),
+      "nopackParameters" => o.nopack_parameters = b,
       _ => {},
     }
   }
-  o
+  Ok(o)
 }
 
 /// Map a Rhai option bag onto `PrimitiveOptions` — the full `DefPrimitive!` set:
@@ -726,14 +761,16 @@ pub(super) fn expandable_options_from_map(opts: Map) -> ExpandableOptions {
 /// trampolines the constructor option-bag uses (the compile-time `DefPrimitive!`
 /// macro accepts these via `defi_opts!`'s generic digest-hook arms, so the two
 /// front-ends match). `engine`/`ast` are the loading script's handles, captured by
-/// the hook trampolines. Unknown keys are ignored (Perl `%options` forgiveness).
+/// the hook trampolines. The keys are checked against Perl's `$primitive_options`.
 pub(super) fn primitive_options_from_map(
+  proto: &str,
   opts: Map,
   engine: &Rc<Engine>,
   ast: &Rc<AST>,
-) -> PrimitiveOptions {
+) -> Result<PrimitiveOptions> {
   let mut o = PrimitiveOptions::default();
-  for (key, val) in opts {
+  let operation = format!("DefPrimitive ({proto})");
+  for (key, val) in checked_opts(&operation, PRIMITIVE_OPTIONS, &["outer", "long"], opts)? {
     let b = dynamic_to_bool(&val);
     match key.as_str() {
       "bounded" => o.bounded = b,
@@ -746,7 +783,11 @@ pub(super) fn primitive_options_from_map(
       "leaveHorizontal" => o.leave_horizontal = b,
       "scope" => o.scope = scope_of(&dynamic_to_string(val.clone())),
       "mode" => o.mode = Some(dynamic_to_string(val.clone())),
-      "nargs" => o.nargs = val.as_int().ok().map(|i| i as usize),
+      "alias" => o.alias = Some(dynamic_to_string(val.clone())),
+      "font" => match val.clone().try_cast::<Map>() {
+        Some(map) => o.font = Some(FontDirective::Asset(Rc::new(font_from_rhai_map(map)))),
+        None => unsupported_option(&operation, "font as a string"),
+      },
       "beforeDigest" => {
         if let Some(fp) = val.clone().try_cast::<FnPtr>() {
           o.before_digest
@@ -762,29 +803,50 @@ pub(super) fn primitive_options_from_map(
       _ => {},
     }
   }
-  o
+  Ok(o)
 }
 
-/// Install one `DefConditional` registration: the Rhai test closure receives
-/// each argument as its TeX-source string and must return a bool (mirrors the
-/// `DefConditional!` macro's `sub` test → `def_conditional`).
+/// Install one `DefConditional` registration (Perl Package.pm:1187-1236): the Rhai test closure
+/// receives each argument as Tokens (a Token, or its string for a non-token argument) and returns
+/// a bool; with no test, the `\newif` form (`\footrue`/`\foofalse`, `SetCondition`).
 pub(super) fn wire_conditional(
   engine: &Rc<Engine>,
   ast: &Rc<AST>,
   proto: &str,
-  test: FnPtr,
+  test: Option<FnPtr>,
+  opts: Map,
 ) -> Result<()> {
+  let operation = format!("DefConditional ({proto})");
+  let mut options = ConditionalOptions::default();
+  for (key, val) in checked_opts(&operation, CONDITIONAL_OPTIONS, &["skipper"], opts)? {
+    match key.as_str() {
+      "scope" => options.scope = scope_of(&dynamic_to_string(val)),
+      "locked" => options.locked = Some(dynamic_to_bool(&val)),
+      _ => {},
+    }
+  }
   let (cs, paramlist) = parse_prototype(proto, true)?;
   let cs_name = cs.to_string();
   let engine = engine.clone();
   let ast = ast.clone();
-  let closure: ConditionalClosure = Rc::new(move |args: Vec<ArgWrap>| -> Result<bool> {
-    let dyn_args: Vec<Dynamic> = args.into_iter().map(arg_to_dynamic).collect();
-    let ret: Dynamic = call_deferred_body(&engine, &ast, &test, dyn_args)
-      .or_else(|e| contain(&format!("conditional {cs_name}"), e, Dynamic::FALSE))?;
-    Ok(ret.as_bool().unwrap_or(false))
+  let closure = test.map(|test| -> ConditionalClosure {
+    Rc::new(move |args: Vec<ArgWrap>| -> Result<bool> {
+      let dyn_args: Vec<Dynamic> = args.into_iter().map(arg_to_tokens_dynamic).collect();
+      let ret: Dynamic = call_deferred_body(&engine, &ast, &test, dyn_args)
+        .or_else(|e| contain(&format!("conditional {cs_name}"), e, Dynamic::FALSE))?;
+      Ok(ret.as_bool().unwrap_or(false))
+    })
   });
-  def_conditional(cs, paramlist, Some(closure), ConditionalOptions::default())
+  def_conditional(cs, paramlist, closure, options)
+}
+
+/// A conditional's argument as Perl hands it to the test: a token argument as `Tokens`/`Token`.
+fn arg_to_tokens_dynamic(arg: ArgWrap) -> Dynamic {
+  match arg {
+    ArgWrap::Tokens(tokens) => Dynamic::from(tokens),
+    ArgWrap::Token(token) => Dynamic::from(token),
+    other => arg_to_dynamic(other),
+  }
 }
 
 /// Install one `DefColumnType` registration: `"<char><params>"` →
@@ -828,14 +890,16 @@ pub(super) fn wire_columntype(
 /// scalars PLUS the `beforeDigest`/`afterDigest` closures (a `MathPrimitive` runs
 /// only the digest pair; its construct fields are never executed). Wired through
 /// the same trampolines as the other front-ends, so the Rhai and compile-time
-/// surfaces match. Unknown keys are ignored (Perl %options forgiveness).
+/// surfaces match. The keys are checked against Perl's `$math_options`.
 pub(super) fn math_options_from_map(
+  proto: &str,
   opts: Map,
   engine: &Rc<Engine>,
   ast: &Rc<AST>,
 ) -> Result<MathPrimitiveOptions> {
   let mut o = MathPrimitiveOptions::default();
-  for (key, val) in opts {
+  let operation = format!("DefMath ({proto})");
+  for (key, val) in checked_opts(&operation, MATH_OPTIONS, &[], opts)? {
     let s = || dynamic_to_string(val.clone());
     let b = || dynamic_to_bool(&val);
     match key.as_str() {
@@ -846,13 +910,33 @@ pub(super) fn math_options_from_map(
       "operator_role" => o.operator_role = Some(s()),
       "mathstyle" => o.mathstyle = Some(s()),
       "scriptpos" => o.scriptpos = Some(s()),
-      "mode" => o.mode = Some(s()),
+      "decl_id" => o.decl_id = Some(s()),
       "alias" => o.alias = Some(s()),
+      "scope" => o.scope = scope_of(&s()),
+      "operator_scriptpos" => o.operator_scriptpos = val.as_int().ok().map(|i| i as usize),
+      "font" => match val.clone().try_cast::<Map>() {
+        Some(map) => o.font = Some(FontDirective::Asset(Rc::new(font_from_rhai_map(map)))),
+        None => unsupported_option(&operation, "font as a string"),
+      },
+      "reversion" => match val.clone().try_cast::<FnPtr>() {
+        Some(fp) => {
+          o.reversion = Some(Reversion::Closure(reversion_trampoline(
+            fp,
+            engine.clone(),
+            ast.clone(),
+          )))
+        },
+        None => {
+          o.reversion = Some(Reversion::Tokens(mouth::tokenize_internal(
+            TeXString::assembled(s()),
+          )))
+        },
+      },
+      "sizer" => match val.clone().try_cast::<FnPtr>() {
+        Some(fp) => o.sizer = Some(sizer_trampoline(fp, engine.clone(), ast.clone())),
+        None => unsupported_option(&operation, "sizer as a string"),
+      },
       "revert_as" => o.revert_as = Some(std::borrow::Cow::Owned(s())),
-      "bounded" => o.bounded = b(),
-      "requireMath" => o.require_math = b(),
-      "forbidMath" => o.forbid_math = b(),
-      "isPrefix" => o.is_prefix = b(),
       "reorder" => o.reorder = b(),
       "dual" => o.dual = b(),
       "nogroup" => o.nogroup = b(),
