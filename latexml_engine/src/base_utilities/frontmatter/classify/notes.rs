@@ -855,7 +855,8 @@ pub(in crate::base_utilities) fn takes_arguments(cs: &Token) -> bool {
 
 /// Whether `cs` before a brace is the group's wrapper, which a piece cut inside the group takes again: the command reading
 /// it as its argument ([`takes_arguments`], a text font command) or a declaration setting its font ([`sets_font`]) —
-/// never a note, made twice, nor a macro printing text (`\univ{…}` with `\newcommand\univ{Univ}`).
+/// never a note, made twice, nor a parameterless macro printing text (`\univ{…}` with `\newcommand\univ{Univ}`); a macro
+/// with parameters that prints text around its argument is kept (revSBX2F: no duplication found).
 pub(in crate::base_utilities) fn wraps_group(cs: &Token) -> bool {
   cs.get_catcode() == Catcode::CS
     && (is_text_font_command(cs)
