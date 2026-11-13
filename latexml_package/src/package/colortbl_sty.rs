@@ -220,15 +220,14 @@ LoadDefinitions!({
   );
   // colortbl.sty:119-135: `\CT@start` saves the rule colours as a `\@tabarray` table (our `\@tabular@bindings`,
   // `\@array@bindings`) starts, `\CT@end` restores them after the alignment closes, its last row included; a longtable
-  // or IEEEeqnarraybox keeps the change, as in pdflatex. A `|` is `\xdef`ed into the preamble (colortbl.sty:166,
-  // array.sty:54): a colour set then is frozen (`\lx@CT@pre@arc`), an unset one read as the rule is drawn. OD #1025.
+  // or IEEEeqnarraybox keeps the change, as in pdflatex. The request is local to the table's group. OD #1025.
   RawTeX!(
     r"\def\CT@start{\let\CT@arc@save\CT@arc@ \let\CT@drsc@save\CT@drsc@}
 \def\CT@end{\global\let\CT@arc@\CT@arc@save \global\let\CT@drsc@\CT@drsc@save}
-\def\lx@CT@begin@plain{\let\lx@CT@pre@arc\CT@arc@ \let\lx@CT@restore\@empty}
-\def\lx@CT@begin@save{\lx@CT@begin@plain\CT@start\let\lx@CT@restore\CT@end\global\let\lx@CT@begin\lx@CT@begin@plain}
-\let\lx@CT@begin\lx@CT@begin@plain \let\lx@CT@restore\@empty \let\lx@CT@pre@arc\relax
-\def\lx@CT@tabarray{\global\let\lx@CT@begin\lx@CT@begin@save}
+\def\lx@CT@begin@plain{\let\lx@CT@restore\@empty}
+\def\lx@CT@begin@save{\CT@start\let\lx@CT@restore\CT@end\let\lx@CT@begin\lx@CT@begin@plain}
+\let\lx@CT@begin\lx@CT@begin@plain \let\lx@CT@restore\@empty
+\def\lx@CT@tabarray{\let\lx@CT@begin\lx@CT@begin@save}
 \let\lx@CT@tabular@bindings\@tabular@bindings \def\@tabular@bindings{\lx@CT@tabarray\lx@CT@tabular@bindings}
 \let\lx@CT@array@bindings\@array@bindings \def\@array@bindings{\lx@CT@tabarray\lx@CT@array@bindings}
 \let\lx@CT@begin@alignment\lx@begin@alignment \def\lx@begin@alignment{\lx@CT@begin\lx@CT@begin@alignment}
@@ -243,34 +242,52 @@ LoadDefinitions!({
     r"\def\arrayrulecolor#1#{\CT@arc{#1}}\def\CT@arc#1#2{\lx@hidden@noalign{\gdef\CT@arc@{\color#1{#2}}}}
 \def\doublerulesepcolor#1#{\CT@drs{#1}}\def\CT@drs#1#2{\lx@hidden@noalign{\gdef\CT@drsc@{\color#1{#2}}}}"
   );
-  // colortbl.sty:166-192 draws `\hline`, `\cline` and `|` as `{\CT@arc@ <rule>}`: here the colour `\CT@arc@` gives
-  // is the next rule's border colour (`alignment::RULE_COLOR`), the default black none. A cell's left `|` is drawn as
-  // the cell starts (`alignment::LEFT_RULE_COLOR`), its right one as it ends, after the cell's template; a
-  // `\multicolumn` builds its own preamble, freezing the colour then. Beyond Perl (a no-op, colortbl.sty.ltxml:85):
-  // OD #1025 (#773).
+  // colortbl.sty:166-192 draws `\hline` and `\cline` as `{\CT@arc@ <rule>}`: the colour `\CT@arc@` gives is the
+  // rule's border colour (`alignment::RULE_COLOR`, local to the rule's `\noalign`), the default black none.
+  // Beyond Perl (a no-op, colortbl.sty.ltxml:85): OD #1025 (#773).
   DefPrimitive!("\\lx@CT@arc@draw", {
-    arc_draw(alignment::RULE_COLOR, "\\CT@arc@")?;
-  });
-  DefPrimitive!("\\lx@CT@vline@draw", {
-    arc_draw(alignment::RULE_COLOR, "\\lx@CT@pre@arc")?;
-  });
-  DefPrimitive!("\\lx@CT@vline@draw@left", {
-    arc_draw(alignment::LEFT_RULE_COLOR, "\\lx@CT@pre@arc")?;
+    if let Some(color) = arc_color(&T_CS!("\\CT@arc@"))? {
+      assign_value(
+        alignment::RULE_COLOR,
+        Stored::String(pin(&color)),
+        Some(Scope::Local),
+      );
+    }
   });
   RawTeX!(
     r"\let\lx@CT@hline\@@alignment@hline \def\@@alignment@hline{\lx@CT@arc@draw\lx@CT@hline}
-\let\lx@CT@cline\lx@cline \def\lx@cline{\lx@CT@arc@draw\lx@CT@cline}
-\let\lx@CT@multicolumn\multicolumn
-\long\def\multicolumn#1#2#3{\lx@CT@multicolumn{#1}{#2}{\let\lx@CT@pre@arc\CT@arc@
-  \lx@CT@vline@draw@left#3\lx@CT@vline@draw}}"
+\let\lx@CT@cline\lx@cline \def\lx@cline{\lx@CT@arc@draw\lx@CT@cline}"
   );
-  for (hook, cs) in [
-    ("\\lx@alignment@column@before", "\\lx@CT@vline@draw@left"),
-    ("\\lx@alignment@column@after", "\\lx@CT@vline@draw"),
-  ] {
-    let (hook, tokens) = (T_CS!(hook), Tokens!(T_CS!(cs)));
-    AddToMacro!(hook, tokens);
-  }
+  // colortbl.sty:166 `\def\@arrayrule{\@addtopreamble{{\CT@arc@\vline}}}`: only a `|` takes the rule colour, `\xdef`ed
+  // into the preamble (array.sty:54) as it is built, a `\multicolumn`'s too; an unset `\CT@arc@` (`\relax`) stays,
+  // read as the rule is drawn. A `!{\vrule}` or a typed `\vline` keeps the default ink.
+  DefColumnType!("|", {
+    let arc = T_CS!("\\CT@arc@");
+    let arc = if arc.defined_as(&T_RELAX!()) {
+      arc
+    } else {
+      let n = lookup_int("lx@CT@arc@frozen") + 1;
+      assign_value("lx@CT@arc@frozen", n, Some(Scope::Global));
+      let frozen = T_CS!(s!("\\lx@CT@arc@{n}"));
+      let_i(&frozen, &arc, Some(Scope::Global));
+      frozen
+    };
+    with_building_template(|template| {
+      template.add_between_column(vec![T_CS!("\\lx@CT@vrule"), arc])
+    });
+  });
+  // The `|` rule: a `\vrule` carrying its colour as `border_color`, which the cell's border takes (`tex_tables.rs`
+  // `extract_alignment_column`).
+  DefPrimitive!("\\lx@CT@vrule Token", sub[(arc)] {
+    let color = arc_color(&arc)?;
+    let mut rule = digest(Tokens!(T_CS!("\\vrule")))?.unlist();
+    if let Some(color) = color {
+      for rule in rule.iter_mut().filter(|rule| rule.get_property_bool("isVerticalRule")) {
+        rule.set_property("border_color", Stored::String(pin(&color)));
+      }
+    }
+    Ok(rule)
+  });
 
   // Perl L93: \minrowclearance
   DefRegister!("\\minrowclearance", Dimension::new(0));
@@ -293,27 +310,17 @@ LoadDefinitions!({
   );
 });
 
-/// Stores the colour `arc` gives (colortbl.sty:161-192 `\CT@arc@`, or the preamble's frozen copy) under `key`, for
-/// the rule drawn next; black is none. A frozen copy that is `\relax` reads the live `\CT@arc@`.
-fn arc_draw(key: &str, arc: &str) -> Result<()> {
-  let relax = T_CS!("\\relax");
-  let mut arc = T_CS!(arc);
-  if arc.defined_as(&relax) {
-    arc = T_CS!("\\CT@arc@");
+/// The colour `arc` gives (colortbl.sty:161-192 `\CT@arc@`, or a preamble's frozen copy); black and `\relax` none.
+fn arc_color(arc: &Token) -> Result<Option<String>> {
+  if arc.defined_as(&T_RELAX!()) {
+    return Ok(None);
   }
-  let mut color = None;
-  if !arc.defined_as(&relax) {
-    bgroup();
-    digest(Tokens!(arc))?;
-    color = lookup_font()
-      .and_then(|font| font.color)
-      .map(|color| color.to_attribute())
-      .filter(|color| *color != common::color::BLACK.to_attribute());
-    egroup()?;
-  }
-  if color.is_some() || lookup_value(key).is_some() {
-    let value = color.map_or(Stored::None, |color| Stored::String(pin(&color)));
-    assign_value(key, value, Some(Scope::Global));
-  }
-  Ok(())
+  bgroup();
+  digest(Tokens!(*arc))?;
+  let color = lookup_font()
+    .and_then(|font| font.color)
+    .map(|color| color.to_attribute())
+    .filter(|color| *color != common::color::BLACK.to_attribute());
+  egroup()?;
+  Ok(color)
 }

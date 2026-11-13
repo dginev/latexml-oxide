@@ -11,7 +11,7 @@ fn squash(xml: &str) -> String { xml.split_whitespace().collect::<Vec<_>>().join
 /// Every repro's bordered cells, whole and in order; no other element carries a `cssstyle`.
 #[test]
 fn arrayrulecolor_colours_the_rules_drawn_under_it() {
-  let rows: [(&str, &str, &[&str]); 6] = [
+  let rows: [(&str, &str, &[&str]); 8] = [
     // the preamble's colour on every rule (#773's shape)
     (
       "borders",
@@ -95,6 +95,34 @@ fn arrayrulecolor_colours_the_rules_drawn_under_it() {
         r#"<td align="left" border="r t" cssstyle="border-right-color:#FF0000" xml:id="p1.1.1.2">b</td>"#,
         r#"<td align="left" border="l r t" cssstyle="border-top-color:#FF0000;border-left-color:#FF0000;border-right-color:#FF0000" thead="row" vattach="top" xml:id="p1.1.2.1">"#,
         r#"<td align="left" border="r t" cssstyle="border-top-color:#FF0000;border-right-color:#0000FF" xml:id="p1.1.2.2">d</td>"#,
+      ],
+    ),
+    // only a `|` takes the colour, not a `!{\vrule}` or a typed `\vline` (b8a67fad06 coloured a's and c's left sides)
+    (
+      "bar-only",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/alignment-bindings/arrayrulecolor_colours_only_the_bar_rule.tex"
+      ),
+      &[
+        r#"<td align="left" border="ll t" cssstyle="border-top-color:#FF0000" thead="row" xml:id="p1.1.1.1">"#,
+        r#"<td align="right" border="rr t" cssstyle="border-top-color:#FF0000;border-right-color:#FF0000" xml:id="p1.1.1.2">"#,
+        r#"<td align="left" border="l t" cssstyle="border-top-color:#FF0000" thead="row" xml:id="p1.1.2.1">"#,
+        r#"<td align="right" border="r t" cssstyle="border-top-color:#FF0000;border-right-color:#FF0000" xml:id="p1.1.2.2">d</td>"#,
+      ],
+    ),
+    // a nested table leaves the outer cell's rules their colour (b8a67fad06 dropped y's left one)
+    (
+      "nested",
+      include_str!(
+        "../../../tools/perfect_kernel/repros/alignment-bindings/arrayrulecolor_nested_table_keeps_the_cell_rule.tex"
+      ),
+      &[
+        r#"<td align="center" border="l r t" cssstyle="border-top-color:#FF0000;border-left-color:#FF0000;border-right-color:#FF0000" xml:id="p1.1.1.1">a</td>"#,
+        r#"<td align="center" border="r t" cssstyle="border-top-color:#FF0000;border-right-color:#FF0000" xml:id="p1.1.1.2">"#,
+        r#"<td align="center" xml:id="p1.1.1.2.1.1.1">x</td>"#,
+        r#"<td align="center" border="b l r t" cssstyle="border-top-color:#FF0000;border-bottom-color:#FF0000;border-left-color:#FF0000;border-right-color:#FF0000" xml:id="p1.1.2.1">"#,
+        r#"<td align="center" xml:id="p1.1.2.1.1.1.1">y</td>"#,
+        r#"<td align="center" border="b r t" cssstyle="border-top-color:#FF0000;border-bottom-color:#FF0000;border-right-color:#FF0000" xml:id="p1.1.2.2">d</td>"#,
       ],
     ),
     // no `\arrayrulecolor`: the ambient text colour is no rule colour (the base's output)

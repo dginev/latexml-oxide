@@ -54,7 +54,7 @@ pub struct Cell {
   pub y:                   Option<Dimension>,
   pub border:              String,
   /// The colour of each side's rule when it was drawn (colortbl's `\arrayrulecolor`, the
-  /// `RULE_COLOR` value), by [`BorderSpec`]: top, bottom, left, right; `None` is the default ink.
+  /// `RULE_COLOR`, or a `|` rule box's `border_color`), by [`BorderSpec`]: top, bottom, left, right; `None` the default ink.
   pub border_color:        [Option<String>; 4],
   /// Perl: $$colspec{tabskip} — intercolumn glue from \halign template
   pub tabskip:             Option<Glue>,

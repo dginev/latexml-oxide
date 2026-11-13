@@ -1679,12 +1679,24 @@ fn template_after_fill_defeated(after: &Option<Tokens>) -> bool {
       || s.contains("intercol")
       || s == "\\lx@column@trimright"
       || s == "\\vrule"
+      // colortbl's `|`: `\lx@CT@vrule` and its colour, `\CT@arc@` or a frozen `\lx@CT@arc@<n>` (colortbl_sty.rs)
+      || s == "\\lx@CT@vrule"
+      || s == "\\CT@arc@"
+      || s.starts_with("\\lx@CT@arc@")
       || s == "\\relax"
       || s == "\\hfil"
       || s == "\\hfill"
       || s == "\\hskip"
       || s.trim().is_empty())
   })
+}
+
+/// The colour a rule box carries for its border (`border_color`: colortbl's `|`), `None` the default ink.
+fn rule_border_color(rule: &Digested) -> Option<String> {
+  match rule.get_property("border_color").as_deref() {
+    Some(Stored::String(color)) => Some(with(*color, str::to_string)),
+    _ => None,
+  }
 }
 
 pub fn extract_alignment_column(
@@ -1734,6 +1746,7 @@ pub fn extract_alignment_column(
 
   let mut align = initial_align;
   let mut border = String::new();
+  let (mut left_color, mut right_color) = (None, None);
   let mut saveleft = VecDeque::new();
   let mut saveright = VecDeque::new();
   let mut lspaces: Vec<Digested> = Vec::new();
@@ -1795,6 +1808,8 @@ pub fn extract_alignment_column(
       },
       _ if front_box.get_property("isVerticalRule").is_some() => {
         border.push('l');
+        // the rule drawn last is on top: its own colour (colortbl's `|`, colortbl_sty.rs) is the side's
+        left_color = rule_border_color(&front_box);
         // Perl L487-489: space before | ? move lspaces to previous column's rspaces
         if !lspaces.is_empty() {
           prev_rspaces_transfer = Some(std::mem::take(&mut lspaces));
@@ -1841,6 +1856,9 @@ pub fn extract_alignment_column(
         break;
       },
       _ if last_box.get_property("isVerticalRule").is_some() => {
+        if !border.contains('r') {
+          right_color = rule_border_color(&last_box);
+        }
         border.push('r');
         rspaces.clear(); // Perl L508: discard spacing after rule
       },
@@ -1904,8 +1922,6 @@ pub fn extract_alignment_column(
 
   // --- Write phase: apply to current column ---
   let in_thead = alignment.is_in_tabular_head();
-  let rule_color = alignment::take_rule_color();
-  let left_rule_color = alignment::take_left_rule_color();
   {
     let colspec = alignment.get_column(n0).unwrap();
     let is_justify = align == Align::Justify;
@@ -1915,8 +1931,8 @@ pub fn extract_alignment_column(
     }
     colspec.border = old_border;
     let (left, right): (String, String) = border.chars().partition(|c| matches!(c, 'l' | 'L'));
-    colspec.add_border(&left, left_rule_color.as_deref());
-    colspec.add_border(&right, rule_color.as_deref());
+    colspec.add_border(&left, left_color.as_deref());
+    colspec.add_border(&right, right_color.as_deref());
     colspec.boxes = Some(digested_out.clone());
     // Perl L526-527: store lspaces/rspaces
     if !lspaces.is_empty() {

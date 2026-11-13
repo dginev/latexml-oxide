@@ -48,24 +48,16 @@ use crate::{
   tokens::Tokens,
 };
 
-/// The colour the next table rule is drawn in, as colortbl's `\CT@arc@` evaluates when the rule is drawn
-/// (colortbl.sty:161-192): set by the binding before a rule, taken by its border ([`take_rule_color`]).
+/// The colour of the horizontal rule being drawn, as colortbl's `\CT@arc@` gives it (colortbl.sty:166-192): set by
+/// the binding in the rule's group, taken by [`Alignment::add_line`].
 pub const RULE_COLOR: &str = "lx@alignment@rule@color";
 
-/// The colour of a cell's left `|`, set as the cell starts, where colortbl's template draws it (colortbl.sty:166).
-pub const LEFT_RULE_COLOR: &str = "lx@alignment@rule@color@left";
-
 /// Takes the colour [`RULE_COLOR`] holds for the rule being drawn (`None`: the default ink).
-pub fn take_rule_color() -> Option<String> { take_color(RULE_COLOR) }
-
-/// Takes the colour [`LEFT_RULE_COLOR`] holds for the current cell's left rule (`None`: the default ink).
-pub fn take_left_rule_color() -> Option<String> { take_color(LEFT_RULE_COLOR) }
-
-fn take_color(key: &str) -> Option<String> {
-  let Some(Stored::String(color)) = lookup_value(key) else {
+pub fn take_rule_color() -> Option<String> {
+  let Some(Stored::String(color)) = lookup_value(RULE_COLOR) else {
     return None;
   };
-  assign_value(key, Stored::None, Some(Scope::Global));
+  assign_value(RULE_COLOR, Stored::None, Some(Scope::Local));
   Some(crate::common::arena::with(color, str::to_string))
 }
 
@@ -1378,6 +1370,9 @@ fn intercol_reachable_in_before(tokens: &Option<Tokens>) -> bool {
       }
       // These are skippable by the left-scan in Perl's extractAlignmentColumn
       if s == "\\vrule"
+        || s == "\\lx@CT@vrule"
+        || s.starts_with("\\lx@CT@arc@")
+        || s == "\\CT@arc@"
         || s == "\\relax"
         || s == "\\hfil"
         || s == "\\hfill"
