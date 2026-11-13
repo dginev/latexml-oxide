@@ -9,7 +9,10 @@
 
 use std::borrow::Cow;
 
-use latexml::util::test::{convert_files_with, error_count, warning_count};
+use latexml::util::test::{
+  RequirementTable, Requirements, check_table, convert_files_with, current_test_name, error_count,
+  warning_count,
+};
 use regex::Regex;
 
 use super::perfect_kernel_batchz4::creators_xml;
@@ -69,6 +72,12 @@ pub(super) fn whole_creators(xml: &str) -> Vec<String> {
     .collect()
 }
 
+/// The rows' `requires` (Perl's per-test table), keyed by repro: T5 (Vietnamese) is texlive-lang-other's.
+const ROW_REQUIRES: &RequirementTable = &[(
+  "class-bindings/author_one_block/article_author_foreignlanguage_declaration_reads_its_arguments",
+  Requirements::packages(&["t5enc.def"]),
+)];
+
 /// Each row converted once: its counts, its log lines, its creators. Every row's failures collected, then one panic;
 /// a row's found creators are printed as the literals the row would hold.
 #[track_caller]
@@ -82,6 +91,9 @@ pub(super) fn assert_rows(rows: &[Row]) {
     creators,
   } in rows
   {
+    if !check_table(&current_test_name(), name, Some(ROW_REQUIRES)) {
+      continue;
+    }
     let (log, xml) = convert_files_with(tex, files, Some("ar5iv.sty"));
     let found_counts = (error_count(&log), warning_count(&log));
     if found_counts != *counts {

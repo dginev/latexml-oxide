@@ -747,6 +747,9 @@ mod tests {
     assert!(paper_dir(root, "A", &paper_key("../etc")).is_err());
   }
 
+  // Unix only: creating a symlink on Windows needs Developer Mode or
+  // SeCreateSymbolicLinkPrivilege, which a CI runner or user box may lack.
+  #[cfg(unix)]
   #[test]
   fn a_symlinked_side_directory_is_refused() {
     let base = std::env::temp_dir().join(format!("ab_audit_tag_{}", std::process::id()));

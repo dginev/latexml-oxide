@@ -2,6 +2,8 @@
 % oracle:  pdflatex with TL 2025's oup-authoring-template.cls (clean; :1054 `\vol`, :1117-1119 `\boxedtext`)
 % engines: rust 68d2 = 3 errors (undefined `\vol`, `\boxedtext`, `\secsize`)
 % expect:  0 errors, 0 warnings; the volume and the boxed statement as frontmatter notes
+% note:    v1.2 (2026-01-02, cls:1263-1264) reads `\boxedtext{heading}{text}`: there the one-argument call swallows
+%   `\keywords` (pdflatex prints "-8pt"), and the guard calls `\boxedtext{Key Messages}{...}` (pdflatex 0 `!`)
 % status:  RED (68d2) -> GREEN (67z)
 % preload: ar5iv.sty
 \documentclass[unnumsec,webpdf,contemporary,large]{oup-authoring-template}

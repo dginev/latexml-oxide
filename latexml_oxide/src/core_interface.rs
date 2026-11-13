@@ -1562,6 +1562,7 @@ impl DigestionAPI for Core {
       let bounded_mode = stomach::fragment_yield_count() > 0;
       if !finishing || bounded_mode {
         let t_spill = std::time::Instant::now();
+        #[cfg(target_os = "linux")]
         let trace_spill = std::env::var_os("LXML_TRACE_NODE_BOXES").is_some();
         #[cfg(target_os = "linux")]
         let c_live_before = if trace_spill {

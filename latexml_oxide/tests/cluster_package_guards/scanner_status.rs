@@ -6,7 +6,7 @@
 //! enclosing input then goes on. Error counts and text are pdflatex's.
 //! Repros `tools/perfect_kernel/repros/expansion-primitives/file_end_*.tex`;
 //! the definition cases with an `\edef` are `vfs_file_end::*`.
-use latexml::util::test::{assert_element, dump_available};
+use latexml::util::test::{Requirements, assert_element};
 
 use super::perfect_kernel_batch46::{convert, error_count, warning_count};
 
@@ -342,10 +342,7 @@ q}
 /// pdftex: "Paragraph ended before" \textindent and \loop, "Too many }'s", "A" / "bB" / "C".
 #[test]
 fn a_format_macro_argument_ends_at_a_par() {
-  if !dump_available() {
-    eprintln!(
-      "SKIP a_format_macro_argument_ends_at_a_par: no kernel dump in resources/dumps/ (run tools/make_formats.sh)"
-    );
+  if !Requirements::default().format_dump().met() {
     return;
   }
   let (stderr, xml) = convert(

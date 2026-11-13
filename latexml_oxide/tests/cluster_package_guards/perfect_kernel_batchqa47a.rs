@@ -6,7 +6,9 @@
 //! oracle (pdflatex `!` count and text, Perl's) is in its repro header; the RED shapes stay catalog repros
 //! (`command_hook_on_an_optional_argument_command_red`, `command_hook_on_a_tex_primitive_red`,
 //! `command_hook_on_makecaption_caption_repeat_without_options_red`).
-use latexml::util::test::{assert_element, convert_with};
+use latexml::util::test::{
+  RequirementTable, Requirements, assert_element, check_table, convert_with, current_test_name,
+};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -248,12 +250,78 @@ const ROWS: &[Row] = &[
       r#"<p xml:id="p1.1">A <emph font="italic" xml:id="p1.1.1">b</emph> 0<note mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>N</note>.</p>"#,
     )],
   },
+  // A hook added from `begindocument/end` patches before its code is stored: each store decided by its owner at
+  // lthooks' store step, a package's an Info, the document's (after a package's too) a Warning, on any TeX Live (red on
+  // KOMA1's base: 3 warnings; KOMA-Script 3.49 scrartcl.cls:3306-3313 +1 Warning on every KOMA document).
+  Row {
+    name:     "command_hook_added_at_begindocument_end",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/command_hook_added_at_begindocument_end.tex"
+    ),
+    counts:   (0, 2),
+    messages: &[
+      r"Info:hook:cmd/@startsection/before LaTeXML's binding of \@startsection takes no generic hook; its code does not run",
+      r"Warning:hook:cmd/footnote/before LaTeXML's binding of \footnote takes no generic hook; its code does not run",
+      r"Warning:hook:cmd/emph/before LaTeXML's binding of \emph takes no generic hook; its code does not run",
+      r"Info:hook:cmd/footnote/before LaTeXML's binding of \footnote takes no generic hook; its code does not run",
+    ],
+    elements: &[(
+      "p",
+      "xml:id=\"S1.p1.1\"",
+      r#"<p xml:id="S1.p1.1">A<note mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>N</note> <emph font="italic" xml:id="S1.p1.1.1">b</emph> c.</p>"#,
+    )],
+  },
+  // Code stored into a hook whose patch was already declined (the hook usable, no second patch, latex.ltx:5458-5466):
+  // the document's body `\AddToHook` and `\AddToHookNext` a Warning each, the package's an Info (red on KOMA1: the
+  // document's "Y" lost with only the package's Info; revKOMA1 p1).
+  Row {
+    name:     "command_hook_stored_after_its_patch",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/command_hook_stored_after_its_patch.tex"
+    ),
+    counts:   (0, 2),
+    messages: &[
+      r"Info:hook:cmd/footnote/before LaTeXML's binding of \footnote takes no generic hook; its code does not run",
+      r"Warning:hook:cmd/footnote/before LaTeXML's binding of \footnote takes no generic hook; its code does not run",
+    ],
+    elements: &[(
+      "p",
+      "xml:id=\"p1.1\"",
+      r#"<p xml:id="p1.1">A<note mark="1" role="footnote" xml:id="footnote1"><tags><tag>1</tag><tag role="refnum">1</tag><tag role="typerefnum">footnote 1</tag></tags>N</note> c.</p>"#,
+    )],
+  },
+  // A package's hook first added in the body: the patch comes before the store, the label read at the store, an Info
+  // (QAHK; red on KOMA1: a Warning; projlib-author.sty's `cmd/@author/…`).
+  Row {
+    name:     "command_hook_a_package_adds_in_the_body",
+    tex:      include_str!(
+      "../../../tools/perfect_kernel/repros/macro-state/command_hook_a_package_adds_in_the_body.tex"
+    ),
+    counts:   (0, 0),
+    messages: &[
+      r"Info:hook:cmd/emph/before LaTeXML's binding of \emph takes no generic hook; its code does not run",
+    ],
+    elements: &[(
+      "p",
+      "xml:id=\"p1.1\"",
+      r#"<p xml:id="p1.1">A <emph font="italic" xml:id="p1.1.1">b</emph>.</p>"#,
+    )],
+  },
 ];
 
 /// Every row converted once, in-process: exact counts, the whole diagnostic lines, the whole elements.
+/// The rows' `requires` (Perl's per-test table): babel-spanish is texlive-lang-spanish's.
+const REQUIRES: &RequirementTable = &[(
+  "command_hook_on_makecaption_under_caption",
+  Requirements::packages(&["spanish.ldf"]),
+)];
+
 #[test]
 fn batchqa47a_command_hook_rows() {
   for row in ROWS {
+    if !check_table(&current_test_name(), row.name, Some(REQUIRES)) {
+      continue;
+    }
     let (log, xml) = convert_with(row.tex, Some("ar5iv.sty"));
     let name = row.name;
     assert_eq!(error_count(&log), row.counts.0, "{name}: errors\n{log}");

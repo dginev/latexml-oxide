@@ -1,11 +1,16 @@
 //! Red/green guards for perfect-kernel phase-61 batches: G3 residual slices 7a/7b (T1/T2 ASCII slots, the Unicode
 //! profiles' OpenType flag, `\pdfsetmatrix`'s matrix, copyright lines a class prints only in a page foot).
-use latexml::util::test::{assert_element, convert_files_with, convert_with, xml_element};
+use latexml::util::test::{
+  assert_element, check_requirements, convert_files_with, convert_with, loads, xml_element,
+};
 
 use super::{
   perfect_kernel_batch46::{convert_with_then, error_count, warning_count},
   perfect_kernel_batch57::{RAW, assert_elements},
 };
+
+/// bfhpub.cls (koma-script based) and the fonts it loads (texlive-fonts-extra).
+const BFH: &[&str] = &["bfhpub.cls", "nunito.sty", "sourceserifpro.sty"];
 
 /// 61c: T1 and T2A/T2B/T2C put `\textasciicircum`/`\textasciitilde` in slots 94/126 (t1enc.def:141-142,
 /// t2aenc.def:83,88); the fontmaps decoded them as the spacing accents ˆ ˜ (Perl t1.fontmap.ltxml:30,34 alike), so a
@@ -225,6 +230,9 @@ fn keyval_unknown_keys_follow_kv_errx() {
 /// sectioning-frontmatter/bfh_title_footer_is_frontmatter.
 #[test]
 fn bfh_title_footer_is_frontmatter() {
+  if !check_requirements(BFH) {
+    return;
+  }
   let xml = super::perfect_kernel_batch57::assert_elements_with(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/bfh_title_footer_is_frontmatter.tex"
@@ -256,6 +264,9 @@ fn bfh_title_footer_is_frontmatter() {
 /// sectioning-frontmatter/bfh_thesis_stores_stay_affiliations.
 #[test]
 fn bfh_thesis_stores_stay_affiliations() {
+  if !check_requirements(BFH) {
+    return;
+  }
   let xml = super::perfect_kernel_batch57::assert_elements_with(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/bfh_thesis_stores_stay_affiliations.tex"
@@ -3580,6 +3591,9 @@ See \ref{fb} and \ref{lr}.
 /// there and nowhere else. pdflatex, each case.
 #[test]
 fn textcomp_symbols_follow_the_encoding() {
+  if !check_requirements(loads::LY1) {
+    return;
+  }
   for (preamble, body, result) in [
     (
       r"\usepackage[LGR,T1]{fontenc}\usepackage[english,greek]{babel}",
@@ -6177,7 +6191,7 @@ fn marked_affiliation_continuation_lines_stay_with_it() {
 /// pdflatex: "Ann Able1, 2 and Bob Baker2", "1Univ A", "2Univ B", "Author Note", "Correspondence to Ann.".
 #[test]
 fn apa7_author_block_maps_onto_the_frontmatter() {
-  if !latexml::util::test::kpse_has("apa7.cls") {
+  if !check_requirements(&["apa7.cls"]) {
     return;
   }
   let body = r"\title{A Title}

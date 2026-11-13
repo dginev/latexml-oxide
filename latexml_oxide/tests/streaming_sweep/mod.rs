@@ -10,7 +10,10 @@
 //! scale). Splitting per suite keeps each process a few GB under the cap.
 #![allow(dead_code)]
 
-use latexml::converter::Converter;
+use latexml::{
+  converter::Converter,
+  util::test::{check_table, fixtures},
+};
 use latexml_core::common::{Config, OutputFormat};
 
 /// A suite's binding dispatcher. A plain `fn` pointer, not an `Rc`, because it
@@ -213,6 +216,15 @@ pub fn sweep_dir_shard_with(dir: &str, shard: usize, nshards: usize, dispatch: D
       continue;
     }
     let src = path.to_string_lossy().into_owned();
+    // The directory's `requires` table, as its `tex_tests!` binary reads it: a fixture the host tree cannot load is
+    // skipped visibly.
+    let name = path
+      .file_stem()
+      .map(|n| n.to_string_lossy().into_owned())
+      .unwrap_or_default();
+    if !check_table(dir, &name, fixtures::table(dir)) {
+      continue;
+    }
     let (eager_xml, eager_errs) = convert_with(&src, None, dispatch);
     let (streamed_xml, streamed_errs) = convert_with(&src, Some(3), dispatch);
     // A swept fixture converts cleanly: an error means it is degraded here (a missing dispatcher

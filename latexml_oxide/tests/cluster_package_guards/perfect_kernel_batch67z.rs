@@ -251,10 +251,23 @@ fn sagej_sm_heading_follows_the_copy() {
 }
 
 /// oup-authoring-template.cls (TL 2025): `\vol` and `\boxedtext` frontmatter notes (the box's heading leading its
-/// text, TL 2025's "Key Messages"), `\secsize`.
+/// text, TL 2025's "Key Messages"), `\secsize`. The tree's v1.2 (2026-01-02, cls:1263-1264) takes the heading as a first
+/// argument (the one-argument call swallows `\keywords`, pdflatex prints "-8pt"): the repro says it there.
 #[test]
 fn oup_authoring_template_class_commands() {
-  let xml = clean!("oup_authoring_template_class_commands.tex");
+  let tex = include_str!(
+    "../../../tools/perfect_kernel/repros/class-bindings/oup_authoring_template_class_commands.tex"
+  );
+  let two_args = latexml::util::test::kpse_text("oup-authoring-template.cls")
+    .is_some_and(|cls| cls.contains(r"\newcommand{\@@boxedtext}[2]"));
+  let tex = if two_args {
+    tex.replace(r"\boxedtext{", r"\boxedtext{Key Messages}{")
+  } else {
+    tex.to_string()
+  };
+  let (log, xml) = convert_with(&tex, Some("ar5iv.sty"));
+  assert_eq!((error_count(&log), warning_count(&log)), (0, 0), "{log}");
+  let xml = squash(&xml);
   assert!(
     xml.contains(r#"<note role="volume" xml:id="id5">12</note>"#),
     "{xml}"

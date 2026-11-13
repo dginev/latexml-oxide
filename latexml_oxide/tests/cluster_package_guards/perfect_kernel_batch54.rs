@@ -3,20 +3,14 @@
 //! reproduction distilled during triage; the doc-comment names the
 //! ORIGINAL corpus witness (TeX Live doc corpus) whose larger conversion
 //! was vetted separately.
+use latexml::util::test::{check_all_requirements, check_requirements, loads};
+
 use super::{
   perfect_kernel_batch40_43::convert_with_files,
   perfect_kernel_batch46::{convert, convert_with, error_count, warning_count},
   perfect_kernel_batch53::convert_with_sty,
   perfect_kernel_batch57::{RAW, assert_elements},
 };
-
-fn kpsewhich_has(name: &str) -> bool {
-  std::process::Command::new("kpsewhich")
-    .arg(name)
-    .output()
-    .map(|o| o.status.success() && !o.stdout.is_empty())
-    .unwrap_or(false)
-}
 
 /// biblatex.sty:4407-4425 defines `\DeclareIndex{Name,List,Field}Format`
 /// through the same `\blx@defformat` as their non-Index siblings, and
@@ -1617,6 +1611,9 @@ fn chemmacros_raw_load_keeps_chemformula_ch() {
 /// `D:YYYYMMDD…` stamp (pdfTeX manual §8.11; datetime2.sty:46-48).
 #[test]
 fn datetime2_raw_dates_render() {
+  if !check_requirements(&["datetime2.sty", "tracklang.sty"]) {
+    return;
+  }
   let tex = r"\documentclass{article}
 \usepackage[en-GB]{datetime2}
 \begin{document}
@@ -2775,7 +2772,7 @@ fn tabu_init_lets_rule_styles_and_starred_environments() {
 fn xkeyval_sets_the_loaded_sentinel() {
   // Host-portability: skip when the exercised package is absent from this
   // TeX Live tree (the behavior under test needs the real file).
-  if !kpsewhich_has("expex.sty") {
+  if !check_requirements(&["expex.sty"]) {
     return;
   }
   let tex = r"\documentclass{article}
@@ -4624,6 +4621,9 @@ fn sections_inside_floats_keep_number_id_and_ref() {
 /// carries the mechanism.
 #[test]
 fn math_content_in_a_ref_gets_an_inline_math() {
+  if !check_requirements(loads::GLOSSARIES) {
+    return;
+  }
   let tex = r"\documentclass{article}
 \usepackage{hyperref}
 \usepackage{glossaries}
@@ -5028,7 +5028,7 @@ fn l3draw_surface_keeps_box_content() {
 fn installed_ldf_outranks_the_language_stub() {
   // Host-portability: skip when the exercised package is absent from this
   // TeX Live tree (the behavior under test needs the real file).
-  if !kpsewhich_has("spanish.ldf") || !kpsewhich_has("czech.ldf") {
+  if !check_requirements(&["spanish.ldf", "czech.ldf"]) {
     return;
   }
   let tex = r"\documentclass{article}
@@ -5676,6 +5676,9 @@ x
 /// the same spurious error over the same tree).
 #[test]
 fn capture_box_closes_its_descendants() {
+  if !check_all_requirements(&[&["numberedblock.sty"], loads::LISTOFITEMS]) {
+    return;
+  }
   let tex = r"\documentclass{article}
 \usepackage{numberedblock}
 \begin{document}

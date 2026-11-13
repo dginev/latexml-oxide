@@ -11,6 +11,7 @@ use cluster::{
   convert_to_xml, convert_to_xml_ar5iv, convert_to_xml_contrib, convert_to_xml_contrib_clean,
   convert_to_xml_contrib_clean_logging, post_with,
 };
+use latexml::util::test::check_requirements;
 
 /// bbl/bib precedence matrix for `\lx@ifusebbl` (latex_constructs.rs) — the
 /// decision seam behind `\bibliography`. The clauses are arbitrary tokens, so
@@ -3604,7 +3605,7 @@ fn refsection_optional_argument_registers_its_resources() {
 /// `\lx@ifusebbl` route, as Perl does for bibunits (#87). Whole `<bibitem>`.
 #[test]
 fn abntex2cite_bibliography_runs_the_bib_session() {
-  if !latexml::util::test::kpse_has("abntex2cite.sty") {
+  if !check_requirements(&["abntex2cite.sty"]) {
     return;
   }
   let x = convert_and_post_contrib_clean("tests/cluster_regressions/abntex2cite_family.tex");
@@ -3636,7 +3637,7 @@ fn abntex2cite_bibliography_runs_the_bib_session() {
 /// (recall 80.5 → 87.9 %). Whole `<bibitem>`s and `<para>`.
 #[test]
 fn abntex2cite_prints_its_fields_and_year_citations() {
-  if !latexml::util::test::kpse_has("abntex2cite.sty") {
+  if !check_requirements(&["abntex2cite.sty"]) {
     return;
   }
   let x = convert_and_post_contrib_clean("tests/cluster_regressions/abntex2cite_fields.tex");
@@ -3668,7 +3669,7 @@ fn abntex2cite_prints_its_fields_and_year_citations() {
 /// `<bibitem>`s and `<para>`.
 #[test]
 fn abntex2cite_bbl_carries_author_and_year() {
-  if !latexml::util::test::kpse_has("abntex2cite.sty") {
+  if !check_requirements(&["abntex2cite.sty"]) {
     return;
   }
   let x = convert_and_post_contrib_clean("tests/cluster_regressions/abntex2cite_bbl.tex");
@@ -3699,7 +3700,7 @@ fn abntex2cite_bbl_carries_author_and_year() {
 /// residuals: the upper-case parenthetical author, "and" for "e". Whole `<para>`.
 #[test]
 fn abntex2cite_alf_cites_author_and_year() {
-  if !latexml::util::test::kpse_has("abntex2cite.sty") {
+  if !check_requirements(&["abntex2cite.sty"]) {
     return;
   }
   let x = convert_and_post_contrib_clean("tests/cluster_regressions/abntex2cite_alf_fields.tex");
@@ -3717,7 +3718,7 @@ fn abntex2cite_alf_cites_author_and_year() {
 /// address list, directory.sty:321 `\nodir{*}`). Whole `<bibitem>`.
 #[test]
 fn directory_lists_every_entry_from_its_bib() {
-  if !latexml::util::test::kpse_has("directory.sty") {
+  if !check_requirements(&["directory.sty"]) {
     return;
   }
   let x = convert_and_post_contrib_clean("tests/cluster_regressions/directory_family.tex");
@@ -3733,7 +3734,7 @@ fn directory_lists_every_entry_from_its_bib() {
 /// "Figure `dir1' … undefined" warning, from its next-run `.aux` data, is figbib's own.)
 #[test]
 fn figbib_lists_the_cited_figure_sources_from_its_bib() {
-  if !latexml::util::test::kpse_has("figbib.sty") {
+  if !check_requirements(&["figbib.sty"]) {
     return;
   }
   let x = convert_and_post_contrib_clean("tests/cluster_regressions/figbib_family.tex");
@@ -3831,7 +3832,7 @@ const ALL_ENTRIES_BIBITEM: &str = r##"<bibitem class="ltx_bib_article" fragid="b
 /// exactly one bibliography for the two `\printbibliography` calls.
 #[test]
 fn nmbib_prints_the_saved_bib_list_once() {
-  if !latexml::util::test::kpse_has("nmbib.sty") {
+  if !check_requirements(&["nmbib.sty"]) {
     return;
   }
   let x = convert_and_post_contrib_clean("tests/cluster_regressions/nmbib_family.tex");

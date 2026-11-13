@@ -16,7 +16,9 @@
 //! fence; the tlp guard rejects any `<date`.
 //!
 //! Every repro is checked against pdflatex (its header holds the oracle).
-use latexml::util::test::{assert_element, convert_files_with, error_count, warning_count};
+use latexml::util::test::{
+  assert_element, check_requirements, convert_files_with, error_count, warning_count,
+};
 
 use super::perfect_kernel_batch57::{RAW, assert_elements, assert_elements_with};
 
@@ -25,6 +27,9 @@ use super::perfect_kernel_batch57::{RAW, assert_elements, assert_elements_with};
 /// Subtitle"). Before 68u r3 a bold paragraph; 68u r3 by an explicit call in the binding, 68x by the one rule.
 #[test]
 fn a_class_a_binding_reads_raw_reroutes_its_stores() {
+  if !check_requirements(&["lni.cls", "newtxtt.sty"]) {
+    return;
+  }
   let xml = assert_elements(
     include_str!(
       "../../../tools/perfect_kernel/repros/class-bindings/lni_subtitle_through_k11.tex"
@@ -159,6 +164,14 @@ fn babel_iflanguage_expands_in_an_edef() {
 /// 68x all three were lost (2608.13762); the "." and the classification since 68x r2.
 #[test]
 fn cjs_rcs_abstracts_and_keywords_are_frontmatter() {
+  if !check_requirements(&[
+    "cjs-rcs-article.cls",
+    "FiraMono.sty",
+    "FiraSans.sty",
+    "tracklang.sty",
+  ]) {
+    return;
+  }
   // (the three Warnings are memoir.cls's, which the class loads: :5454 `\newif \@iffirstamp`, :7811
   // `\addtodef{\endthebibliography}` — its deprecation warning pdflatex prints too — on a kernel environment end; its
   // two hooks on bound commands, :5832-5833 `cmd/end@float/before`, `cmd/end@dblfloat/before`, are Infos, QA47A)
@@ -206,19 +219,18 @@ fn cjs_rcs_abstracts_and_keywords_are_frontmatter() {
 /// Before 68x both authors without them (2609.02711).
 #[test]
 fn projlib_author_lines_are_the_authors_contacts() {
+  if !check_requirements(&["ProjLib.sty", "newpxtext.sty"]) {
+    return;
+  }
   // (colorist-fancy's `\setlist`, as before; the packages' five hooks on bound commands do not run (QA47A): Infos for
-  // colorist-fancy's `cmd/printindex/before`, `cmd/maketitle/after` and projlib-author's `cmd/maketitle/before`; its
-  // author lines in `cmd/@author/before`/`after`, added in the body, stay Warnings until the label is read there (RED
-  // `macro-state/command_hook_a_package_adds_in_the_body_red`) — the binding carries them as the authors' contacts)
+  // colorist-fancy's `cmd/printindex/before`, `cmd/maketitle/after` and projlib-author's `cmd/maketitle/before`, and
+  // for its author lines in `cmd/@author/before`/`after`, added in the body and decided when stored (KOMA1F, QAHK;
+  // Warnings before) — the binding carries them as the authors' contacts)
   let xml = assert_elements_with(
     include_str!("../../../tools/perfect_kernel/repros/class-bindings/projlib_author_address.tex"),
     RAW,
-    (0, 3),
-    &[
-      "Missing number (Dimension)",
-      r"Warning:hook:cmd/@author/before LaTeXML's binding of \@author takes no generic hook",
-      r"Warning:hook:cmd/@author/after LaTeXML's binding of \@author takes no generic hook",
-    ],
+    (0, 1),
+    &["Missing number (Dimension)"],
     &[],
   );
   assert_element(

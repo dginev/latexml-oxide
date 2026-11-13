@@ -10,7 +10,8 @@
 //!   (OXIDIZED_DESIGN #551);
 //! - cleveref's `\label[type]{key}` after `\caption` gives its type, not its key, to the optional (OXIDIZED_DESIGN #552).
 use latexml::util::test::{
-  assert_element, convert_files_with, convert_with, rng_error_count, warning_count,
+  assert_element, check_requirements, convert_files_with, convert_with, loads, rng_error_count,
+  warning_count,
 };
 
 use super::perfect_kernel_batch46::error_count;
@@ -150,6 +151,9 @@ fn imsart_bdoi_is_gobbled() {
 /// class-bindings/achemso_email_is_an_address.
 #[test]
 fn file_arguments_are_not_typeset() {
+  if !check_requirements(loads::FEYNMF) {
+    return;
+  }
   let xml = convert_counted(
     include_str!(
       "../../../tools/perfect_kernel/repros/graphics-tikz/feynmp_fmffile_name_is_not_typeset.tex"

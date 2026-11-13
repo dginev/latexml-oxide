@@ -17,6 +17,12 @@
     `..Default::default()`, so a setting added later leaves callers compiling. The
     tests use it through `util::test::convert_to_html_page`, so a test run no
     longer leaves `LaTeXML.css`/`ltx-*.css` in `latexml_oxide/`.
+  - **A symbolic link among the cached format dumps is never trusted on macOS.**
+    `private_to_user` rejected a link by its mode bits, which are `0o777` on
+    Linux but follow the umask on macOS, so a link to another file passed there.
+    It now rejects links by file type. Guard
+    `only_this_users_files_no_one_else_can_write_are_trusted`, red on macOS
+    before.
 
   - **The XSLT recursion cap now applies in the statically linked release
     binaries.** `xsltMaxDepth = 1000` (Perl `XML::LibXSLT->max_depth(1000)`) was

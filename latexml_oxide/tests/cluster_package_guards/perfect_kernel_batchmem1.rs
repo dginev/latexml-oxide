@@ -4,6 +4,8 @@
 //! `\@starttoc` (notoccite.sty), oblivoir's renewed `\newlistof` (ob-toclof.sty), a document's own title printers.
 //! Each row's oracle (pdflatex, Perl) is in its repro header.
 
+use latexml::util::test::{RequirementTable, Requirements, check_table, current_test_name};
+
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
 macro_rules! repro {
@@ -84,10 +86,19 @@ fn front(xml: &str) -> &str {
   &xml[start..end]
 }
 
+/// The rows' `requires` (Perl's per-test table): oblivoir is texlive-lang-korean's.
+const REQUIRES: &RequirementTable = &[(
+  "oblivoir_lists_are_kernel_lists",
+  Requirements::packages(&["oblivoir.cls"]),
+)];
+
 #[test]
 fn batchmem1_memoir_list_rows() {
   let mut failures = Vec::new();
   for &((name, tex), errors, warnings, expected) in ROWS {
+    if !check_table(&current_test_name(), name, Some(REQUIRES)) {
+      continue;
+    }
     let (log, xml) = latexml::util::test::convert_with(tex, Some("ar5iv.sty"));
     let got = front(&xml);
     if (error_count(&log), warning_count(&log)) != (errors, warnings) || got != expected {

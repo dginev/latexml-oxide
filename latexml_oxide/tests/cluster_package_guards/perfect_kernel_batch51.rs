@@ -4,20 +4,14 @@
 //! ORIGINAL corpus witness (TeX Live doc corpus) whose larger conversion
 //! was vetted separately.
 
+use latexml::util::test::check_requirements;
+
 use super::perfect_kernel_batch46::{convert, error_count};
 
 /// Like [`convert`] (raw preload), but first drops extra `(name, content)`
 /// files into the tempdir so the snippet can `\input` them.
 pub(super) fn convert_with_files(tex: &str, files: &[(&str, &str)]) -> (String, String) {
   super::perfect_kernel_batch46::convert_files(tex, files)
-}
-
-pub(super) fn kpsewhich_has(name: &str) -> bool {
-  std::process::Command::new("kpsewhich")
-    .arg(name)
-    .output()
-    .map(|o| o.status.success() && !o.stdout.is_empty())
-    .unwrap_or(false)
 }
 
 /// P15 (file side): eTeX §362 begins the `\everyeof` token list at the end
@@ -70,7 +64,7 @@ Tail.
 fn new_ifnextchar_keeps_space() {
   // Host-portability: skip when the exercised package is absent from this
   // TeX Live tree (the behavior under test needs the real file).
-  if !kpsewhich_has("bibleref.sty") {
+  if !check_requirements(&["bibleref.sty"]) {
     return;
   }
   let (stderr, xml) = convert(

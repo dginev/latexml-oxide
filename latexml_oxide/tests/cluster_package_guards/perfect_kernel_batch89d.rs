@@ -8,6 +8,8 @@
 //! family-keyed bbold map (bbold_sty.rs; font.rs `decoding_map`, mathchar.rs `decode_in_font`, sect13.rs
 //! `nfss_selected_font`), each in process and from the binary, eager and `--streaming`; each repro is under
 //! `tools/perfect_kernel/repros/fonts-nfss/`, pdflatex-checked.
+use latexml::util::test::{check_requirements, loads};
+
 use super::perfect_kernel_batch89c::{check_everywhere, squash};
 
 macro_rules! repro {
@@ -29,6 +31,9 @@ macro_rules! repro {
 /// saying so once. 89c printed all eleven U+FFFD with 3 Warnings.
 #[test]
 fn package_accent_decodes_by_its_name() {
+  if !check_requirements(loads::NEWTXSF) {
+    return;
+  }
   let fffd = |name: &str| format!("<XMTok name=\"{name}\" role=\"OVERACCENT\">\u{FFFD}</XMTok>");
   let expected_tokens = [
     fffd("myhat"),

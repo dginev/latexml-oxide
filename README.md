@@ -278,6 +278,18 @@ $ cargo doc --workspace --no-deps --open
 Test fixtures (`[name].tex` + `[name].xml` pairs) are discovered at compile time: after
 adding one, run `cargo clean` so the build finds it.
 
+A test that needs something outside the base TeX Live set — a package or class that some
+TeX Live installs lack (a distro's partial package set, an older year), a minimal TeX Live
+year, a program such as `jing` — declares it, and is skipped where it is not met. This is
+Perl LaTeXML's `requires` (`LaTeXML/Util/Test.pm`, `check_requirements`): a fixture
+directory's `tex_tests!` takes a table of `(test, Requirements)` rows (`"*"` for every
+test), and a guard starts with `if !check_requirements(&["tcolorbox.sty"]) { return; }`, listing
+every file of its load set a TeX Live may lack (or with
+`Requirements::packages(…).texlive_min(2021).programs(&["jing"]).met()`). Files are looked
+up the way the conversion finds them. A skip prints `Skip: <reason>` and appends
+`<test>\t<reason>` to `test-skips.log` in the cargo target directory (or
+`$LATEXML_TEST_SKIP_LOG`), which CI lists after the tests; a met requirement runs the test.
+
 ### Build features
 
 Cargo features, and what the shipped binary turns on. The releases are built with
@@ -288,7 +300,7 @@ deliberately **keeps** the Rhai runtime bindings below.
 |---|---|---|---|
 | `runtime-bindings` | `latexml` → `latexml_contrib` | **yes** (also a default) | Embeds the [Rhai](https://rhai.rs) interpreter so you can add or override TeX package/class bindings **at runtime** — no Rust toolchain, no recompile. See below. |
 | `kpathsea` | `latexml_core` | **yes** (a default) | Resolves `.sty`/`.cls`/`.tfm` from your TeX tree via libkpathsea in-process, falling back to the `kpsewhich` subprocess when the library is absent (e.g. MacTeX). |
-| `test-utils` | `latexml` | no (dropped) | Test-suite discovery helpers; drops `phf` + `glob` and 4 transitive crates from the distribution build. |
+| `test-utils` | `latexml` | no (dropped) | Test-suite discovery helpers; drops `glob` and the A/B comparator's `roxmltree` + `similar` from the distribution build. |
 | `token-locators` | `latexml` (+4 crates) | no | Widens `Token` from 8 to 12 bytes so each token carries its exact source offset through expansion into digestion — the precision build behind `--source-map`. Off everywhere else so normal conversions don't pay. |
 | `cortex` | `latexml` | no (worker image only) | The `cortex_worker` binary for the arXiv-scale fleet. |
 | `jemalloc`, `dhat-heap` | `latexml` | no | Allocator swap / heap profiling, for performance work. |

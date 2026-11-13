@@ -2826,9 +2826,8 @@ mod tests {
   // `EnvGuard` (env mutation, serialised + restored) and `TempDir` (unique
   // name, removed on drop including on panic) are shared with
   // `graphics_cache::tests`; see that module for the rationale. `EnvGuard` is
-  // only referenced by the `#[cfg(unix)]` density test below, so gate its
-  // import the same way or it reads as unused on Windows (`-D warnings`).
-  #[cfg(unix)]
+  // used by the `#[cfg(unix)]` density test and by the platform-independent
+  // raster crop test, so its import is ungated (the Windows `cargo check`).
   use crate::test_env::EnvGuard;
   use crate::test_env::TempDir;
 

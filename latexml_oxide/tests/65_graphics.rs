@@ -12,20 +12,22 @@
 // — a strict no-op for files it doesn't recognise — to stay consistent with the
 // other suites.
 //
-// A previous hand-written version registered a REQUIRES map gating
-// `colors` / `xcolors` on the presence of `dvipsnam.def`. The
-// `validate_requirements` runtime helper is currently a TODO stub
-// returning `true` unconditionally (see `util/test.rs:100`), so the
-// map was cosmetic. If REQUIRES gating is ever implemented, it will
-// need to be reintroduced here — probably as an `ignored_if_missing!`
-// macro invoked from inside the generated tests, not as a static
-// directory-level attribute.
 use std::rc::Rc;
 
-use latexml::tex_tests;
+use latexml::{
+  tex_tests,
+  util::test::{RequirementTable, Requirements},
+};
+
+// Perl t/65_graphics.t.
+static REQUIRES: &RequirementTable = &[
+  ("colors", Requirements::packages(&["dvipsnam.def"])),
+  ("xcolors", Requirements::packages(&["dvipsnam.def"])),
+  ("xytest", Requirements::packages(&["xy.sty"])),
+];
 
 tex_tests!(
   "tests/graphics",
-  None,
+  Some(REQUIRES),
   Some(Rc::new(latexml_contrib::dispatch))
 );

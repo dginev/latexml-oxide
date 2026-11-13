@@ -2,19 +2,12 @@
 //! \SetCatcodeRange / \setcatcoderange / \@setrangecatcode, \lstloadaspects,
 //! \DeclareTCBListing nested inside \NewDocumentEnvironment with bare
 //! environment invocation and outer listing scanning, and unicode-math table loading).
+use latexml::util::test::{check_all_requirements, check_requirements, loads};
+
 use super::perfect_kernel_batch46::{
   convert, convert_args, convert_files, convert_files_with, convert_html, convert_with,
   convert_with_then, error_count, warning_count,
 };
-
-/// Self-skip helper: is this file in the host TeX tree?
-fn kpsewhich_has(name: &str) -> bool {
-  std::process::Command::new("kpsewhich")
-    .arg(name)
-    .output()
-    .map(|o| o.status.success() && !o.stdout.is_empty())
-    .unwrap_or(false)
-}
 
 /// Perl `State.pm:113-115` letters only ASCII and pdfTeX never letters a
 /// non-ASCII char (utf8.def makes the bytes active), so under the default
@@ -507,6 +500,9 @@ After.
 /// undefined (witnesses elteikthesis ×3, elteiktdk ×2; RUST-ONLY).
 #[test]
 fn caption_lsep_default_keeps_magyar_off_the_removed_internal() {
+  if !check_requirements(&["magyar.ldf"]) {
+    return;
+  }
   let tex = r"\documentclass{article}
 \usepackage[hungarian]{babel}
 \usepackage{caption}
@@ -2084,6 +2080,9 @@ fn beamer_loads_translator() {
 /// missing-font `\ClassErrorNoLine` branch (asmeconf/asmejour templates).
 #[test]
 fn font_exists_test_is_case_insensitive() {
+  if !check_requirements(&["fontspec.sty", "TeXGyreTermesX-Regular.otf"]) {
+    return;
+  }
   let tex = r"\documentclass{article}
 \usepackage{fontspec}
 \begin{document}
@@ -2393,7 +2392,7 @@ fn raw_double_declaration_still_errors() {
 fn unbalanced_expansion_is_fatal() {
   // Host-portability: skip when the exercised package is absent from this
   // TeX Live tree (the behavior under test needs the real file).
-  if !kpsewhich_has("jarticle.cls") {
+  if !check_requirements(&["jarticle.cls"]) {
     return;
   }
   // `\hour`/`\minute` are pLaTeX-format registers jarticle.cls:26-28 uses (the parked pTeX
@@ -2420,7 +2419,7 @@ Hello
 fn japanese_otf_kanji_scanners_bail_fast() {
   // Host-portability: skip when the exercised package is absent from this
   // TeX Live tree (the behavior under test needs the real file).
-  if !kpsewhich_has("otf.sty") {
+  if !check_requirements(&["otf.sty"]) {
     return;
   }
   let tex = r"\documentclass{article}
@@ -3113,6 +3112,9 @@ fn class_and_datetime_definitions_exist() {
 /// `\lefthand`.
 #[test]
 fn binding_internals_reached_by_raw_code() {
+  if !check_requirements(loads::FOURIER) {
+    return;
+  }
   let tex = r"\documentclass{article}
 \usepackage{lastpage}
 \usepackage{geometry}
@@ -3802,6 +3804,9 @@ $1\over2$ and $a\atop b$.
 /// expkv-bundle 13 errors, Perl omits the space too).
 #[test]
 fn meaning_prints_delimiter_control_words_with_a_space() {
+  if !check_all_requirements(&[loads::EXPKV, &["expkv-cs.sty", "expkv-def.sty"]]) {
+    return;
+  }
   let tex = r"\documentclass{article}
 \begin{document}
 \def\x#1\foo#2{Q}\def\y a\bar{R}
@@ -4053,7 +4058,7 @@ fn iffontchar_bounds_unicodefonttable_to_font_coverage() {
   // but font_index (TEXMFDIST+TEXMFLOCAL) does not — so `\iffontchar` coverage
   // is empty and the row bound this test asserts does not apply.
   if latexml_core::common::font::coverage::font_file_path("lmsans10-regular.otf").is_none()
-    || !kpsewhich_has("unicodefonttable.sty")
+    || !check_requirements(&["unicodefonttable.sty"])
   {
     return;
   }
@@ -4078,7 +4083,7 @@ fn iffontchar_bounds_unicodefonttable_to_font_coverage() {
 /// encodings' .def files (montex: `\MyTogrog` from lmcenc.def).
 #[test]
 fn fontenc_reloads_with_new_encodings() {
-  if !kpsewhich_has("lmcenc.def") {
+  if !check_requirements(&["lmcenc.def"]) {
     return;
   }
   let tex = "\\documentclass{article}\n\\usepackage[T1]{fontenc}\n\\usepackage[LMC,T1]{fontenc}\n\\makeatletter\n\\begin{document}\n\\typeout{FE:\\@ifpackageloaded{fontenc}{loaded}{unloaded}}\nTogrog: \\MyTogrog\\ done.\n\\end{document}\n";
@@ -4123,7 +4128,7 @@ fn fontenc_keeps_preloaded_encoding() {
 /// pstricks-add: dsptricks 101 errors).
 #[test]
 fn psset_dispatches_family_key_bodies() {
-  if !kpsewhich_has("pstricks-add.sty") {
+  if !check_requirements(&["pstricks-add.sty"]) {
     return;
   }
   let tex = "\\documentclass{article}\n\\usepackage{pstricks-add}\n\\begin{document}\n\\begin{psmatrix}\n  A & B \\\\\n  C & D\n\\end{psmatrix}\n\\end{document}\n";
@@ -4203,7 +4208,7 @@ fn utf8_input_keeps_latin1_code_points_other() {
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(stderr.contains("CC:12:"), "{stderr}");
   assert!(xml.contains("café café"), "{xml}");
-  if kpsewhich_has("bibarts.sty") {
+  if check_requirements(&["bibarts.sty"]) {
     let tex = "\\documentclass[12pt,a4paper]{article}\n\\usepackage{bibarts}\\bacaptionsgerman\n\\usepackage{ngerman}\n\\usepackage[utf8]{inputenc}\n\\usepackage[T1]{fontenc}\n\\begin{document}\n\\textsc{\\hy á}\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -4241,7 +4246,7 @@ fn kernel_env_hooks_fire_around_environments() {
 /// hard `ltx:block` rejecting it (heria-proposal, rubik).
 #[test]
 fn caption_in_inline_parbox_floats_to_figure() {
-  if !kpsewhich_has("tcolorbox.sty") {
+  if !check_requirements(&["tcolorbox.sty"]) {
     return;
   }
   let tex = "\\documentclass{article}\n\\usepackage{graphicx}\n\\usepackage[raster]{tcolorbox}\n\\begin{document}\n\\begin{figure}[hbt]\n\\rotatebox{90}{\\parbox{10cm}{%\n\\begin{tcbraster}[raster columns=2]\n\\begin{tcolorbox}[title=A]x\\end{tcolorbox}\n\\begin{tcolorbox}[title=B]y\\end{tcolorbox}\n\\end{tcbraster}\n\\caption{Cap}\\label{fig:x}\n}}\n\\end{figure}\n\\end{document}\n";
@@ -4300,7 +4305,7 @@ fn trailing_multicolumn_row_closes_the_alignment() {
 /// `{picture}`: pagelayout, xebaposter) auto-closed it already.
 #[test]
 fn environment_close_after_content_autoclose_is_not_an_error() {
-  if !kpsewhich_has("tcolorbox.sty") {
+  if !check_requirements(&["tcolorbox.sty"]) {
     return;
   }
   let tex = "\\documentclass{article}\n\\usepackage{tcolorbox}\n\\begin{document}\n\\setlength{\\unitlength}{1pt}\n\\begin{picture}(200,200)\n\\begin{tcolorbox}A box directly in a picture.\\par Second para.\\end{tcolorbox}\n\\end{picture}\n\\end{document}\n";
@@ -4317,7 +4322,7 @@ fn environment_close_after_content_autoclose_is_not_an_error() {
 /// `\psk@angleA` undefined (sweep #48 flips: hexgame, xcolor2, seminar).
 #[test]
 fn psset_angle_keys_run_the_raw_helpers() {
-  if !kpsewhich_has("pst-coil.sty") || !kpsewhich_has("pst-node.sty") {
+  if !check_requirements(&["pst-coil.sty", "pst-node.sty"]) {
     return;
   }
   let tex = "\\documentclass{article}\n\\usepackage{pstricks,pst-node,pst-coil}\n\\psset{angleA=45,arcangleA=10,coilaspect=30,linewidth=1.5pt}\n\\makeatletter\n\\begin{document}\nA:\\psk@angleA;B:\\psk@arcangleA;C:\\psk@coilaspect.\n\\end{document}\n";
@@ -4352,7 +4357,7 @@ fn at_nil_is_undefined_for_ifx_sentinels() {
   let (stderr, xml) = convert(tex, false);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("NE;SAME."), "{xml}");
-  if kpsewhich_has("polynom.sty") {
+  if check_requirements(&["polynom.sty"]) {
     let tex = "\\documentclass{article}\n\\usepackage{polynom}\n\\begin{document}\n\\[\\polyhornerscheme[x=-2,stage=8]{x^3+x^2-1}\\]\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -4373,7 +4378,7 @@ fn cjk_unicode_inserts_the_code_point() {
   let (stderr, xml) = convert(tex, false);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("[\u{b7}\u{2d9}]"), "{xml}");
-  if kpsewhich_has("kotex.sty") && kpsewhich_has("cjkutf8-ko.sty") {
+  if check_requirements(&["kotex.sty", "cjkutf8-ko.sty"]) {
     let tex = "\\documentclass{article}\n\\usepackage[cjk,hangul,usedotemph]{kotex}\n\\begin{document}\n\\dotemph{ABC}\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -4401,7 +4406,7 @@ fn ifpdf_delegates_to_iftex() {
   let (stderr, xml) = convert(&dvi, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("DVI;DVI."), "{xml}");
-  if kpsewhich_has("tikzrput.sty") && kpsewhich_has("tufte-handout.cls") {
+  if check_requirements(&["tikzrput.sty", "tufte-handout.cls"]) {
     let tex = "\\RequirePackage{luatex85}\n\\documentclass{tufte-handout}\n\\usepackage{tikz}\n\\usepackage{tikzrput}\n\\begin{document}\n\\rput(0,0){X}\n\\end{document}\n";
     let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -4431,7 +4436,7 @@ fn setcaptiondefault_binds_the_default() {
   let (stderr, xml) = convert(tex, false);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("[BAR]"), "{xml}");
-  if kpsewhich_has("bicaption.sty") {
+  if check_requirements(&["bicaption.sty"]) {
     let tex = "\\documentclass{article}\n\\usepackage{keyval,caption}\n\\usepackage{bicaption}\n\\begin{document}\nx\n\\end{document}\n";
     let (stderr, _) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -4525,7 +4530,7 @@ fn raw_tabular_scaffold_closes_and_template_expands() {
 /// frontmatter time (witness ryethesis ryesample; Perl 0, Rust 1).
 #[test]
 fn class_redefined_abstract_defers_its_argument() {
-  if !kpsewhich_has("glossaries.sty") {
+  if !check_requirements(loads::GLOSSARIES) {
     return;
   }
   let cls = "\\ProvidesClass{deferabs}\n\\LoadClass{report}\n\\newcommand{\\abstract}[1]{\\gdef\\my@theabstract{#1}}\n";
@@ -4551,7 +4556,7 @@ fn class_redefined_abstract_defers_its_argument() {
 /// \addthumb" (:573; witness thumbs-example).
 #[test]
 fn thumbs_loads_in_its_own_hide_mode() {
-  if !kpsewhich_has("thumbs.sty") {
+  if !check_requirements(&["thumbs.sty"]) {
     return;
   }
   let tex = "\\documentclass[twoside]{article}\n\\usepackage{thumbs}\n\\begin{document}\n\\section{A}\n\\addthumb{F mark}{\\Huge F}{magenta}{black}\nSome text.\n\\newpage\n\\thumbnewcolumn\n\\addthumb{New column}{\\Huge NC}{magenta}{black}\nThere.\n\\end{document}\n";
@@ -4617,7 +4622,7 @@ fn raw_multicolumn_redefinition_is_dropped() {
   let (stderr, xml) = convert(tex, false);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("<td align=\"center\">X</td>"), "{xml}");
-  if kpsewhich_has("aguplus.cls") && kpsewhich_has("agupp.sty") {
+  if check_requirements(&["aguplus.cls", "agupp.sty"]) {
     let tex = "\\documentclass[twoside,agupp]{aguplus}\n\\begin{document}\n\\begin{tabular}{l@{~$\\Rightarrow$~}l}\na & b\\\\\n\\multicolumn{1}{c}{X} & c\\\\\n\\end{tabular}\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -4698,7 +4703,7 @@ fn xcolor_internal_api_matches_the_real_contract() {
     xml.contains("color=\"#0000FF\"") && xml.contains(">B<"),
     "{xml}"
   );
-  if kpsewhich_has("lua-ul.sty") && kpsewhich_has("luacolor.sty") {
+  if check_requirements(&["lua-ul.sty", "luacolor.sty"]) {
     let tex = "\\documentclass{article}\n\\usepackage{luacolor,lua-ul}\n\\begin{document}\n\\underLine{under} and \\highLight[yellow]{high}.\n\\end{document}\n";
     let (stderr, xml) = convert_with(tex, Some("[rawstyles,rawclasses,luatex]latexml.sty"));
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -4757,7 +4762,7 @@ fn pgf_scope_straddling_a_box_is_not_a_tex_group() {
   // msc's `\end{msc}` title node (`\pgf@maketext`) crosses driver scopes;
   // an instance (`\declinst`) still trips the parked fused mode-frame family
   // (DIFFICULT_CASES D12), so the guard stops at the empty chart.
-  if kpsewhich_has("msc.sty") {
+  if check_requirements(&["msc.sty"]) {
     let tex = "\\documentclass{article}\n\\usepackage{msc}\n\\begin{document}\n\\begin{msc}{Chart}\n\\end{msc}\nAfter.\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -4778,7 +4783,7 @@ fn eqno_digests_its_tag_material() {
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(xml.matches("<tags>").count(), 2, "{xml}");
   assert!(xml.contains("After."), "{xml}");
-  if kpsewhich_has("mhequ.sty") {
+  if check_requirements(&["mhequ.sty"]) {
     let tex = "\\documentclass{article}\n\\usepackage{amsmath}\n\\usepackage{mhequ}\n\\begin{document}\n\\begin{equ}[onelab]\n\te^{i\\pi} + 1 = 0 \\;.\n\\end{equ}\nAfter: a \\\\ b.\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -4800,7 +4805,7 @@ fn load_class_with_options_forwards_the_calling_options() {
   )]);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("TWO-F"), "{xml}");
-  if kpsewhich_has("oblivoir.cls") {
+  if check_requirements(&["oblivoir.cls"]) {
     let tex = "\\documentclass[amsmath]{oblivoir}\n\\begin{document}\n$\\text{hello}$ $\\binom{n}{k}$\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -4861,7 +4866,7 @@ fn pgfmath_min_max_fold_over_every_argument() {
     xml.contains("A35.") && xml.contains("B30.") && xml.contains("C0.") && xml.contains("D35."),
     "{xml}"
   );
-  if kpsewhich_has("ribbonproofs.sty") {
+  if check_requirements(&["ribbonproofs.sty"]) {
     let tex = "\\documentclass{article}\n\\usepackage{ribbonproofs}\n\\begin{document}\n\\begin{ribbonproof}[start ribbons={c/{left=35,right=53},e/{left=74,right=86}}]\n\\startblock[extra left=33,fit ribbons={c,e},start ribbons={d/{left=55,right=70}}]{if}\\\\\n\\jus[finish ribbons={c,d}]{u}\n\\com[finish ribbons={e},start ribbons={e/{}}]{x}\\\\\n\\moveribbons{e/{left=4}}\\\\\n\\continueblock[repeat labels,start ribbons={d/{}}]{else}\n\\end{ribbonproof}\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -4882,7 +4887,7 @@ fn line_and_arc_intersection_is_closed_form() {
   let (stderr, xml) = convert(tex, false);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert_eq!(xml.matches("<svg:path").count(), 4, "{xml}");
-  if kpsewhich_has("tikzlibraryzx-calculus.code.tex") {
+  if check_requirements(&["tikzlibraryzx-calculus.code.tex"]) {
     let tex = "\\documentclass{article}\n\\usepackage{tikz}\n\\usetikzlibrary{zx-calculus}\n\\begin{document}\n\\zx{\\zxX{\\alpha} \\zxLoopAboveDots{}}\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -4928,7 +4933,7 @@ fn atenddocument_closer_reaches_the_galley_box() {
     xml.contains("Body.") && xml.contains("TAIL") && xml.contains("</document>"),
     "{xml}"
   );
-  if kpsewhich_has("morewrites.sty") {
+  if check_requirements(&["morewrites.sty"]) {
     let tex = "\\documentclass{article}\n\\usepackage{morewrites}\n\\begin{document}\n\\newwrite\\w\\immediate\\openout\\w=t-extra.txt\\immediate\\write\\w{x}\nBody.\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -4962,7 +4967,7 @@ fn tikzcd_matrix_inside_an_amsmath_cell_closes_its_math() {
     xml.contains("<equation") && xml.contains("<svg:g") && xml.contains("After."),
     "{xml}"
   );
-  if kpsewhich_has("tikzlibraryzx-calculus.code.tex") {
+  if check_requirements(&["tikzlibraryzx-calculus.code.tex"]) {
     let tex = "\\documentclass{article}\n\\usepackage{amsmath}\n\\usepackage{tikz}\n\\usetikzlibrary{zx-calculus}\n\\begin{document}\n\\begin{align}\n  \\zx{\\zxZ{}} &= \\zx{\\zxX{}}\n\\end{align}\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -4976,7 +4981,7 @@ fn tikzcd_matrix_inside_an_amsmath_cell_closes_its_math() {
 /// `\pseudocode` (zx-calculus manual; Perl identical, pdflatex clean).
 #[test]
 fn amsmath_maxcolumn_widths_is_initialized() {
-  if kpsewhich_has("cryptocode.sty") {
+  if check_requirements(&["cryptocode.sty"]) {
     let tex = "\\documentclass{article}\n\\usepackage{amsmath}\n\\usepackage{cryptocode}\n\\begin{document}\n\\[ \\pseudocode{a \\gets b \\\\ c \\gets d} \\]\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -5004,7 +5009,7 @@ fn choicekey_bin_macro_keeps_letter_catcodes() {
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("[same][1][same]"), "{xml}");
-  if kpsewhich_has("powerdot.cls") {
+  if check_requirements(&["powerdot.cls"]) {
     let tex = "\\documentclass{powerdot}\n\\begin{document}\n\\title{T}\\author{A}\\date{}\n\\maketitle\n\\begin{slide}{S}\nx\n\\end{slide}\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert!(!stderr.contains("pd@@"), "{stderr}");
@@ -5021,7 +5026,7 @@ fn choicekey_bin_macro_keeps_letter_catcodes() {
 fn newpsstyle_defines_the_custom_style_psset_consults() {
   // Host-portability: skip when the exercised package is absent from this
   // TeX Live tree (the behavior under test needs the real file).
-  if !kpsewhich_has("pstricks.sty") {
+  if !check_requirements(&["pstricks.sty"]) {
     return;
   }
   let tex = "\\documentclass{article}\n\\usepackage{pstricks}\n\\newpsstyle{september}{linewidth=2pt}\n\\begin{document}\nTop: \\psset{style=september}\n\\begin{pspicture}(0,0)(2,2)\n\\rput(1,1){\\psset{style=september}\\psframe(0,0)(1,1)}\n\\end{pspicture}\n\\end{document}\n";
@@ -5070,7 +5075,7 @@ fn at_roman_family_expands_inside_csname() {
 /// `default` mapping needs no extra font package. Batch 56ax.
 #[test]
 fn chemnum_loads_chemgreek() {
-  if !kpsewhich_has("chemgreek.sty") {
+  if !check_requirements(&["chemgreek.sty"]) {
     return;
   }
   let tex = "\\documentclass{article}\n\\usepackage{chemnum}\n\\activatechemgreekmapping{default}\n\\begin{document}\n\\cmpd{a} and \\chemalpha\n\\end{document}\n";
@@ -5085,7 +5090,7 @@ fn chemnum_loads_chemgreek() {
 /// unknown"; substances-index ×50, schulmathematik). Batch 56ay.
 #[test]
 fn xfrac_keeps_the_kernel_declareinstance() {
-  if !kpsewhich_has("tasks.sty") {
+  if !check_requirements(&["tasks.sty"]) {
     return;
   }
   let tex = "\\documentclass{article}\n\\usepackage{xfrac}\n\\usepackage{tasks}\n\\begin{document}\n\\begin{tasks}(2)\\task A\\task B\\end{tasks}\n$\\sfrac{1}{2}$\n\\end{document}\n";
@@ -5101,7 +5106,7 @@ fn xfrac_keeps_the_kernel_declareinstance() {
 /// chemformula-manual ×50) and knew no `chemformula/*` key.
 #[test]
 fn chemformula_ch_is_the_real_parser() {
-  if !kpsewhich_has("chemformula.sty") {
+  if !check_requirements(&["chemformula.sty"]) {
     return;
   }
   let tex = "\\documentclass{article}\n\\usepackage{chemformula}\n\\setchemformula{format=\\sffamily}\n\\begin{document}\n\\ch{\"text\" O2 + 2 H2 -> 2 H2O}\n\\end{document}\n";
@@ -5198,7 +5203,7 @@ fn endtrivlist_closes_only_its_own_list() {
 /// "undefined" + "expected a Variable" (pb-manual). Batch 56bf.
 #[test]
 fn pb_diagram_raw_loads_its_registers() {
-  if !kpsewhich_has("pb-diagram.sty") {
+  if !check_requirements(&["pb-diagram.sty"]) {
     return;
   }
   let tex = "\\documentclass{article}\n\\usepackage{pb-diagram}\n\\begin{document}\n\\divide\\dgARROWLENGTH by2\nL:\\the\\dgARROWLENGTH.\n\\begin{diagram}\\node{A}\\arrow{e}\\node{B}\\end{diagram}\nAfter.\n\\end{document}\n";
@@ -5313,7 +5318,7 @@ fn item_in_a_captured_box_gets_an_itemize() {
 fn kotexutf_runs_under_the_byte_mouth() {
   // Host-portability: skip when the exercised package is absent from this
   // TeX Live tree (the behavior under test needs the real file).
-  if !kpsewhich_has("kotexutf.sty") {
+  if !check_requirements(&["kotexutf.sty"]) {
     return;
   }
   let tex = "\\documentclass{article}\n\\usepackage{kotexutf}\n\\begin{document}\n한글\\은 문서\\를 café 만든다.\n\\end{document}\n";
@@ -5330,7 +5335,7 @@ fn kotexutf_runs_under_the_byte_mouth() {
 fn dhucs_trivcj_takes_the_byte_branch() {
   // Host-portability: skip when the exercised package is absent from this
   // TeX Live tree (the behavior under test needs the real file).
-  if !kpsewhich_has("dhucs-trivcj.sty") {
+  if !check_requirements(&["dhucs-trivcj.sty"]) {
     return;
   }
   let tex = "\\documentclass{article}\n\\usepackage{kotexutf}\n\\usepackage{dhucs-trivcj}\n\\begin{document}\n\\begin{japanese}日本語\\end{japanese} 한글\n\\end{document}\n";
@@ -5347,7 +5352,7 @@ fn dhucs_trivcj_takes_the_byte_branch() {
 fn cjk_octet_readers_emit_the_character() {
   // Host-portability: skip when the exercised package is absent from this
   // TeX Live tree (the behavior under test needs the real file).
-  if !kpsewhich_has("UTF8.bdg") {
+  if !check_requirements(&["UTF8.bdg"]) {
     return;
   }
   let tex = "\\documentclass{article}\n\\usepackage{CJKutf8}\n\\makeatletter\n\\begingroup\\CJK@input{UTF8.bdg}\\endgroup\n\\makeatother\n\\begin{document}\n\\begin{CJK}{UTF8}{mj}한글 café\\end{CJK}\n\\end{document}\n";
@@ -5454,6 +5459,9 @@ fn whitespace_padded_color_name_resolves() {
 /// and stubbed the lookahead name (chinesechess, sweep 70).
 #[test]
 fn package_options_are_stored_by_protected_xdef() {
+  if !check_requirements(&["ctex.sty"]) {
+    return;
+  }
   // chinesechess itself reduced to a package that stores its options (`lxopt.sty`); ctex's
   // `fontset=none` keeps the fontset check (pdflatex: "fandol is unavailable") out. Note
   // (2026-09-28): a full expansion in `protected_xdef_options` no longer turns this, or the
@@ -5657,6 +5665,9 @@ fn accent_inner_survives_a_scantokens_round_trip() {
 /// unbalanced the molecule (chemexec/chemnum, sweep 74).
 #[test]
 fn delimited_read_keeps_a_groups_own_close_token() {
+  if !check_requirements(&["chemfig.sty", "simplekv.tex"]) {
+    return;
+  }
   let tex = "\\documentclass{article}\n\\usepackage{chemfig}\n\\begin{document}\n\\chemfig{A(-B)(-C)D}\n\\end{document}\n";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -5686,6 +5697,9 @@ fn scantokens_everyeof_is_the_files_last_tokens() {
 /// every `sum(...)` cell re-pushed itself forever (spreadtab-en/-fr, 420 s).
 #[test]
 fn spreadtab_function_cell_evaluates() {
+  if !check_requirements(&["spreadtab.sty", "simplekv.sty"]) {
+    return;
+  }
   let tex = "\\documentclass{article}\n\\usepackage{spreadtab}\n\\begin{document}\n\\begin{spreadtab}{{tabular}{c|c|c}}\n1 & 2 & :={sum(a1:b1)} \\\\\n\\end{spreadtab}\n\\end{document}\n";
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -6052,7 +6066,7 @@ fn package_keys_the_bindings_accept() {
 /// errors, titles and abbrevs 0 → 97 % PDF recall).
 #[test]
 fn compsci_code_is_verbatim() {
-  if !kpsewhich_has("compsci.sty") {
+  if !check_requirements(&["compsci.sty"]) {
     return;
   }
   let tex =
@@ -6127,7 +6141,7 @@ fn font_defaults_are_locked() {
     true,
   );
   assert!(xml.contains("<p>[cmr]</p>"), "{xml}");
-  if !kpsewhich_has("nunito.sty") {
+  if !check_requirements(&["nunito.sty"]) {
     return;
   }
   let tex = include_str!(
@@ -6167,7 +6181,7 @@ fn xetex_only_packages_load_under_the_default_persona() {
   let (stderr, xml) = convert(tex, false);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("<p>A abc B 日本 C no.</p>"), "{xml}");
-  if kpsewhich_has("ucharclasses.sty") {
+  if check_requirements(&["ucharclasses.sty"]) {
     let tex = "\\documentclass{article}\n\\usepackage{ucharclasses}\n\\begin{document}\nText \\ifx\\XeTeXcharclass\\undefined no\\else yes\\fi.\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -6253,7 +6267,7 @@ Body.
   );
   // The real class, where the tree has it: its `{titlepage}` fields follow the
   // frontmatter (no `ltx:titlepage` — see the next guard).
-  if kpsewhich_has("ryethesis.cls") {
+  if check_requirements(&["ryethesis.cls"]) {
     let tex = r"\documentclass{ryethesis}
 \title{T}\author{A. E. Ryerson}
 \degreeName{Doctor of Philosophy}\degreeYear{1847}\program{Education}
@@ -6577,7 +6591,7 @@ Body.
 /// delimiter and the statements leaked (cahierprof-doc 11 errors).
 #[test]
 fn microtype_babel_kerning_switches_off_french_shorthands() {
-  if !kpsewhich_has("tikzlibrarymath.code.tex") {
+  if !check_requirements(&["tikzlibrarymath.code.tex"]) {
     return;
   }
   let tex = r"\documentclass[french]{article}
@@ -6614,7 +6628,7 @@ x
 /// babel has no options of its own.
 #[test]
 fn bare_babel_takes_the_class_language() {
-  if !kpsewhich_has("blindtext.sty") {
+  if !check_requirements(&["blindtext.sty"]) {
     return;
   }
   let tex = r"\documentclass[ngerman]{article}
@@ -6662,6 +6676,9 @@ x
 /// bracket leaked into the verbatim and the size was lost (readarray.tex:440).
 #[test]
 fn verbatim_start_runs_a_prepended_command() {
+  if !check_all_requirements(&[&["verbatimbox.sty"], loads::LISTOFITEMS]) {
+    return;
+  }
   let tex = r"\documentclass{article}
 \usepackage{verbatim}
 \newcommand\vbi[1][]{}
@@ -6679,7 +6696,7 @@ hello world
     xml.contains("<verbatim font=\"typewriter\">hello world\n</verbatim>"),
     "{xml}"
   );
-  if !kpsewhich_has("verbatimbox.sty") {
+  if !check_requirements(&["verbatimbox.sty"]) {
     return;
   }
   let tex = r"\documentclass{article}
@@ -6738,7 +6755,7 @@ fn relax_after_a_prefix_keeps_the_prefix() {
 /// than put to" warnings (983 corpus manuals).
 #[test]
 fn file_hooks_keep_the_file_name_stack() {
-  if !kpsewhich_has("scrlfile-hook.sty") {
+  if !check_requirements(&["scrlfile-hook.sty"]) {
     return;
   }
   let tex = r"\documentclass{article}
@@ -6762,7 +6779,7 @@ x
 /// document (retomatematico-ejemplo, recall 53 %).
 #[test]
 fn verbatim_environment_wrapper_ends_minted() {
-  if !kpsewhich_has("minted.sty") {
+  if !check_requirements(&["minted.sty"]) {
     return;
   }
   let tex = r"\documentclass{article}
@@ -6790,7 +6807,7 @@ After.
 /// `\def\part`) is untouched.
 #[test]
 fn koma_part_is_a_part() {
-  if !kpsewhich_has("scrartcl.cls") {
+  if !check_requirements(&["scrartcl.cls"]) {
     return;
   }
   let gaps = regex::Regex::new(r">\s+<").unwrap();
@@ -6829,7 +6846,7 @@ Text.
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("<part") && xml.contains("<chapter"), "{xml}");
-  if !kpsewhich_has("exam.cls") {
+  if !check_requirements(&["exam.cls"]) {
     return;
   }
   let tex = r"\documentclass{exam}
@@ -6857,7 +6874,7 @@ Text.
 /// PDF mode, whose l3backend-pdftex never runs the hook.
 #[test]
 fn dvips_backend_pagecount_reads_back_the_count() {
-  if !kpsewhich_has("notebeamer.sty") {
+  if !check_requirements(&["notebeamer.sty"]) {
     return;
   }
   let tex = r"\pdfoutput=0
@@ -6905,7 +6922,7 @@ fn everypar_reads_the_token_that_started_the_paragraph() {
 /// errors; arXiv 2605.07451 ended in `Fatal:Timeout:PushbackLimit`).
 #[test]
 fn everypar_grammar_survives_vertical_material_between_productions() {
-  if !kpsewhich_has("syntax.sty") {
+  if !check_requirements(&["syntax.sty"]) {
     return;
   }
   let tex = include_str!(
@@ -6980,7 +6997,7 @@ Text. \mathversion{myver} more. \mathversion{other} end.
 /// the deposit's braces ("Attempt to close boxing group", immigration-bill).
 #[test]
 fn class_maketitle_deposit_relaxes_the_setters() {
-  if !kpsewhich_has("memoir.cls") {
+  if !check_requirements(&["memoir.cls"]) {
     return;
   }
   let tex = r"\documentclass{memoir}
@@ -7011,7 +7028,7 @@ Body text.
 /// (ltx-talk-code, 20 warnings; Perl `ResetCounter` shares it).
 #[test]
 fn reset_list_skips_a_missing_un_companion() {
-  if !kpsewhich_has("l3doc.cls") {
+  if !check_requirements(&["l3doc.cls"]) {
     return;
   }
   let tex = r"\documentclass{l3doc}
@@ -7057,7 +7074,7 @@ Body.
   assert_eq!(warning_count(&stderr), 0, "{stderr}");
   assert_eq!(xml.matches("Field Line").count(), 1, "{xml}");
   assert_eq!(xml.matches("The abstract.").count(), 1, "{xml}");
-  if !kpsewhich_has("environ.sty") {
+  if !check_requirements(&["environ.sty"]) {
     return;
   }
   let cls = r"\ProvidesClass{envthesis}
@@ -7103,7 +7120,7 @@ A\NoHyper B\endNoHyper C
 /// PDF-to-XML recall 0 %). The statement, its link and the license image survive.
 #[test]
 fn doclicense_statement_reaches_the_xml() {
-  if !kpsewhich_has("doclicense.sty") {
+  if !check_requirements(&["doclicense.sty", "ccicons.sty"]) {
     return;
   }
   let tex = r"\documentclass{article}
@@ -7254,7 +7271,7 @@ fn unwound_titlepage_rehomes_a_printed_paragraph() {
 /// printed-paragraph case is [`unwound_titlepage_rehomes_a_printed_paragraph`].
 #[test]
 fn unwound_titlepage_rehomes_its_paragraphs() {
-  if !kpsewhich_has("jlreq.cls") {
+  if !check_requirements(&["jlreq.cls"]) {
     return;
   }
   let tex = r"\documentclass[luatex,fontsize=10pt,paper=b5]{jlreq}
@@ -7468,7 +7485,7 @@ See \ref{sec:b} [\lineA].
 /// schema errors). Witnesses arXiv:2009.10518, arXiv:1804.06350.
 #[test]
 fn refstyle_loads_raw_with_its_internals() {
-  if !kpsewhich_has("refstyle.sty") {
+  if !check_requirements(&["refstyle.sty"]) {
     return;
   }
   let tex = r"\documentclass{article}
@@ -7508,7 +7525,7 @@ See \secref{a} and \eqref{e}.
 /// `<ERROR>` stranded the frontmatter, 4 schema errors).
 #[test]
 fn make_special_short_verb_is_defined() {
-  if !kpsewhich_has("newverbs.sty") {
+  if !check_requirements(&["newverbs.sty"]) {
     return;
   }
   let tex = r#"\documentclass{article}
@@ -7646,7 +7663,7 @@ fn pdfximage_reports_the_pdf_page_count() {
   let (stderr, xml) = convert_files(tex, &[("three.pdf", pdf)]);
   assert_eq!(error_count(&stderr), 0, "{stderr}");
   assert!(xml.contains("A=3;N=1;"), "{xml}");
-  if kpsewhich_has("example-image-a4.pdf") {
+  if check_requirements(&["example-image-a4.pdf"]) {
     assert!(xml.contains("B=1;N=2."), "{xml}");
   }
 }
@@ -7698,7 +7715,7 @@ fn pspicture_is_a_picture_and_rput_keeps_its_body() {
 /// pst-all.sty:17-32 define.
 #[test]
 fn pst_plot_and_pst_all_consume_their_arguments() {
-  if kpsewhich_has("pst-all.sty") && kpsewhich_has("pst-plot.tex") && kpsewhich_has("multido.sty") {
+  if check_requirements(&["pst-all.sty", "pst-plot.tex", "multido.sty"]) {
     let tex = "\\documentclass{article}\n\\usepackage{pst-all}\n\\begin{document}\nBefore.\n\\begin{pspicture}(4,3)\\psaxes{->}(0,0)(4,3)\\psplot[linecolor=red]{0}{4}{x 2 div}\\parametricplot{0}{360}{t cos t sin}\\multido{\\i=1+1}{2}{\\psline(\\i,0)(\\i,1)}\\rput(1,1){R}\\end{pspicture}\nAfter.\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -7743,7 +7760,7 @@ fn batchmode_terminal_read_halts_the_job() {
     "{stderr}"
   );
   assert_eq!(error_count(&stderr), 1, "{stderr}");
-  if kpsewhich_has("iftex.sty") {
+  if check_requirements(&["iftex.sty"]) {
     // A non-Unicode-native engine still halts (`\RequireXeTeX` passes: see
     // `xetex_only_packages_load_under_the_default_persona`).
     let (stderr, _) = convert(
@@ -7784,7 +7801,7 @@ fn batchmode_terminal_read_halts_the_job() {
 /// their text.
 #[test]
 fn datetime_named_dates_and_mdframed_subtitles_are_kept() {
-  if kpsewhich_has("datetime.sty") && kpsewhich_has("mdframed.sty") {
+  if check_requirements(&["datetime.sty", "mdframed.sty"]) {
     let tex = "\\documentclass{article}\n\\usepackage{datetime}\n\\usepackage{mdframed}\n\\begin{document}\n\\newdate{lx}{5}{9}{2026}Date: \\displaydate{lx}.\n\\begin{mdframed}\nBody.\n\\mdfsubtitle{Sub Title}\nMore.\n\\end{mdframed}\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -7803,7 +7820,7 @@ fn datetime_named_dates_and_mdframed_subtitles_are_kept() {
 /// close a group that switched to mode horizontal"; biblatex-apa-test:1203-1208).
 #[test]
 fn refsection_takes_only_an_optional_resource_list() {
-  if kpsewhich_has("biblatex.sty") && kpsewhich_has("babel.sty") {
+  if check_requirements(&["biblatex.sty", "babel.sty"]) {
     let tex = "\\documentclass{article}\n\\usepackage[ngerman,american]{babel}\n\\usepackage[style=apa]{biblatex}\n\\begin{document}\n\\begin{refsection}[foo.bib]\n\\begin{otherlanguage}{ngerman}\nx\n\\end{otherlanguage}\n\\end{refsection}\nAfter.\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -7854,7 +7871,7 @@ fn refsection_takes_only_an_optional_resource_list() {
 /// KNOWN_PERL_ERRORS #212, DIVERGENCES #219.
 #[test]
 fn xkeyval_empty_family_is_searched_by_psset() {
-  if kpsewhich_has("pstricks.sty") {
+  if check_requirements(&["pstricks.sty"]) {
     let tex = "\\documentclass{article}\n\\usepackage{pstricks}\n\\makeatletter\n\\define@key[psset]{}{lxfoo}{\\gdef\\lxres{GOT-#1}}\n\\makeatother\n\\begin{document}\n\\psset{lxfoo=42,dash=3pt 2pt}\\lxres\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -7876,8 +7893,7 @@ fn xkeyval_empty_family_is_searched_by_psset() {
 /// 56af). DIVERGENCES #218.
 #[test]
 fn pst_grad_binding_loads_the_gradient_fill_styles() {
-  if kpsewhich_has("pst-grad.tex") && kpsewhich_has("pst-char.sty") && kpsewhich_has("pst-fill.sty")
-  {
+  if check_requirements(&["pst-grad.tex", "pst-char.sty", "pst-fill.sty"]) {
     let tex = "\\documentclass{article}\n\\usepackage[tiling]{pst-fill}\n\\usepackage{pst-text,pst-char,pst-grad}\n\\begin{document}\nBefore.\n\\psboxfill{\\small x}\n\\begin{pspicture}(0,0)(6,2)\n\\pscharpath[linestyle=none,gradbegin=magenta,gradend=cyan,fillstyle=gradient,gradangle=-30,gradmidpoint=0.5,addfillstyle=boxfill]{\\rput[b](1,0){\\Huge Word}}\n\\end{pspicture}\nAfter.\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -7892,7 +7908,7 @@ fn pst_grad_binding_loads_the_gradient_fill_styles() {
 /// alignment's own cell frame (dsptricks 98; every psmatrix).
 #[test]
 fn pst_object_dispatches_to_the_object_body() {
-  if kpsewhich_has("pstricks-add.sty") {
+  if check_requirements(&["pstricks-add.sty"]) {
     let tex = "\\documentclass{article}\n\\usepackage{pstricks-add}\n\\makeatletter\n\\def\\lxfoo@i{FOO-\\pst@par-END}\n\\makeatother\n\\begin{document}\n\\makeatletter\\pst@object{lxfoo}[linewidth=2pt]\\makeatother\n\\begin{psmatrix} A & B \\\\ C & D \\end{psmatrix}\nAfter.\n\\end{document}\n";
     let (stderr, xml) = convert(tex, true);
     assert_eq!(error_count(&stderr), 0, "{stderr}");
@@ -8022,8 +8038,7 @@ fn newif_with_an_empty_name_lets_if_to_iffalse() {
 /// synthetic nested-`\text` fixture below does not, so this is the guard.
 #[test]
 fn glosmathtools_sample_is_not_emptied_by_the_math_rebuild() {
-  if !kpsewhich_has("glosmathtools.sty") || !kpsewhich_has("ulthese.cls") {
-    eprintln!("skipping: glosmathtools.sty / ulthese.cls not in the host TeX tree");
+  if !check_all_requirements(&[loads::GLOSSARIES, &["glosmathtools.sty", "ulthese.cls"]]) {
     return;
   }
   let tex = include_str!("../cluster_regressions/glosmathtools/sample_glosmathtools_en.tex");
@@ -9549,6 +9564,9 @@ fn verbatim_decodes_the_input_encoding() {
 /// `{pspicture}` it is a framed group.
 #[test]
 fn psframebox_keeps_its_body() {
+  if !check_requirements(loads::PSTRICKS) {
+    return;
+  }
   let tex = include_str!("../../../tools/perfect_kernel/repros/graphics-tikz/psframebox_body.tex");
   let (stderr, xml) = convert(tex, true);
   assert_eq!(error_count(&stderr), 0, "{stderr}");

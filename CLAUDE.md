@@ -168,7 +168,7 @@ specifically need a publish-grade canvas measurement or a Perl-parity baseline
 
 **Distribution build** ships `--profile maxperf --no-default-features --features
 runtime-bindings`: `--no-default-features` drops the `test-utils` feature (removing
-`phf` + `glob` and 4 transitive crates), while `runtime-bindings` keeps the runtime
+`glob`, `roxmltree` and `similar`), while `runtime-bindings` keeps the runtime
 contributed-bindings front-end (runtime opt-in, so default conversions are
 unaffected). This is the recipe `tools/make_release.sh` uses. `maxperf` sets
 `panic = "abort"` — production-only, since canvas sweeps depend on `catch_unwind` for

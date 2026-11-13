@@ -3,7 +3,7 @@
 //! leaking out of its heading (the same manual's TOC title; `\refname`), a caption in a rotated `\parbox` nesting a
 //! figure in an inline block (heria/heria-proposal), and an ASCE membership grade read as an author (ascelike/
 //! ascexmpl). Repros under `tools/perfect_kernel/repros/`.
-use latexml::util::test::assert_element;
+use latexml::util::test::{JING, Requirements, assert_element};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -50,6 +50,9 @@ const RECIPE_CLASS: &str =
 /// sectioning-frontmatter/class_title_after_the_body_typesets_in_place.
 #[test]
 fn sealed_title_runs_the_class_title_in_place() {
+  if !JING.met() {
+    return;
+  }
   let xml = convert_clean_files(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/class_title_after_the_body_typesets_in_place.tex"
@@ -186,6 +189,12 @@ Later text.
 /// explicit optional argument is its label.
 #[test]
 fn author_after_section_text_joins_the_units_front_matter() {
+  if !Requirements::packages(&["fltpoint.sty"])
+    .programs(&["jing"])
+    .met()
+  {
+    return;
+  }
   let xml = convert_clean_files(
     r"\documentclass{recipemini}
 \begin{document}
@@ -417,6 +426,9 @@ Text \cite{a}.
 /// captions-floats/caption_in_a_rotated_parbox_stays_with_its_figure.
 #[test]
 fn caption_in_a_rotated_parbox_stays_with_its_figure() {
+  if !JING.met() {
+    return;
+  }
   let xml = convert_clean(include_str!(
     "../../../tools/perfect_kernel/repros/captions-floats/caption_in_a_rotated_parbox_stays_with_its_figure.tex"
   ));
@@ -739,6 +751,9 @@ fn caption_hoist_never_moves_content_beside_the_box() {
 /// width), keeps Perl's container: the caption stays in its panel inside the transform, the tabular after it.
 #[test]
 fn caption_hoist_through_an_environment_holding_only_the_transform() {
+  if !JING.met() {
+    return;
+  }
   let xml = convert_clean(
     r"\documentclass{article}
 \usepackage{graphicx}

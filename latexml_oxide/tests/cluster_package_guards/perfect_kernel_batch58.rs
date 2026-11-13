@@ -1,6 +1,6 @@
 //! Red/green guards for perfect-kernel phase-58 batches: the reledmac and floatrow kernel roots
 //! (58a) found in the 57cp review.
-use latexml::util::test::assert_element;
+use latexml::util::test::{assert_element, check_requirements, loads};
 
 use super::{
   perfect_kernel_batch46::{error_count, warning_count},
@@ -437,6 +437,9 @@ fn line_font_char_has_its_tfm_width() {
 /// fonts-nfss/raw_font_scales_by_design_size.
 #[test]
 fn raw_font_scales_by_design_size() {
+  if !check_requirements(&["manfnt.tfm", "bbm17.tfm"]) {
+    return;
+  }
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/fonts-nfss/raw_font_scales_by_design_size.tex"
   );
@@ -793,6 +796,9 @@ fn floatrow_subcaption_stays_in_its_panel() {
 /// 68q: the caption spliced into floatrow's `\vtop` (floatrow.sty:393) is `vattach="top"` (tex.web §1110).
 #[test]
 fn floatrow_keeps_an_object_it_measures_empty() {
+  if !check_requirements(loads::PSTRICKS) {
+    return;
+  }
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/captions-floats/floatrow_keeps_an_object_it_measures_empty.tex"
   );
@@ -829,6 +835,9 @@ fn floatrow_drops_an_empty_object() {
 /// so `\settowidth` and `\resizebox` read it. Repro boxes-groups/pspicture_has_its_declared_size.
 #[test]
 fn pspicture_has_its_declared_size() {
+  if !check_requirements(loads::PSTRICKS) {
+    return;
+  }
   let tex = include_str!(
     "../../../tools/perfect_kernel/repros/boxes-groups/pspicture_has_its_declared_size.tex"
   );

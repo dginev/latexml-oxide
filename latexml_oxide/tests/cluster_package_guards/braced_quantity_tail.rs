@@ -5,7 +5,7 @@
 //! it (KNOWN_PERL_ERRORS #275). Assignments scan by the register's type, and
 //! with calc a length is evaluated whole (calc.sty:51-56, 86). OXIDIZED_DESIGN
 //! #317. Repros in `tools/perfect_kernel/repros/expansion-primitives/`.
-use latexml::util::test::assert_element;
+use latexml::util::test::{assert_element, check_requirements};
 
 use super::perfect_kernel_batch46::{convert, error_count, warning_count};
 
@@ -543,15 +543,6 @@ fn package_registers_are_dimens() {
   assert_para(&xml, "p2", "<p>[2.5pt][1.5pt]</p>");
 }
 
-/// Self-skip helper: is this file in the host TeX tree?
-fn kpsewhich_has(name: &str) -> bool {
-  std::process::Command::new("kpsewhich")
-    .arg(name)
-    .output()
-    .map(|o| o.status.success() && !o.stdout.is_empty())
-    .unwrap_or(false)
-}
-
 /// multido's Number variable starts as written and steps in fixed point
 /// (multido.tex:193-197, 215-283): `\n=1+1` is `1`, whose calc `\y*\n` has no
 /// `.0` to report; `2.00+-3.05` keeps two decimals. pdflatex's output
@@ -576,7 +567,7 @@ fn multido_number_variable_starts_as_written() {
 /// `\pstMarkAngle`: `(F)(A_1)` and a "Script _" error in 56jr).
 #[test]
 fn pstricks_angle_argument_is_read_whole() {
-  if !kpsewhich_has("pstricks.sty") {
+  if !check_requirements(&["pstricks.sty"]) {
     return;
   }
   let tex = include_str!(

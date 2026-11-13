@@ -1,6 +1,6 @@
 //! Red/green guards for perfect-kernel phase-59 batches: the TikZ performance levers (59a) and
 //! the wheelchart pgfmath roots (59b).
-use latexml::util::test::assert_element;
+use latexml::util::test::{assert_element, check_all_requirements, loads};
 
 use super::perfect_kernel_batch57::{RAW, assert_elements, assert_elements_with};
 
@@ -916,6 +916,9 @@ fn discarded_replay_takes_back_its_stubs() {
 /// lfe_text_symbols_are_farsi_letters}, one conversion each.
 #[test]
 fn arabi_text_symbols_are_arabic_letters() {
+  if !check_all_requirements(&[loads::LAE, &["arabic.ldf"]]) {
+    return;
+  }
   assert_elements(
     include_str!(
       "../../../tools/perfect_kernel/repros/fonts-nfss/lae_text_symbols_are_arabic_letters.tex"
@@ -1084,6 +1087,9 @@ fn listings_linerange_and_literate_keys_select_and_replace() {
 /// and note (nomentbl.sty:136-142; contrib nomentbl_sty.rs). Repro index/glossary_title_and_nomentbl_columns.
 #[test]
 fn glossary_title_and_nomentbl_columns_are_kept() {
+  if !check_all_requirements(&[loads::GLOSSARIES, &["nomentbl.sty"]]) {
+    return;
+  }
   assert_elements(
     include_str!(
       "../../../tools/perfect_kernel/repros/index/glossary_title_and_nomentbl_columns.tex"

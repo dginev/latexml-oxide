@@ -192,7 +192,15 @@ jobs:
       - name: run tests
         # `hash:` assigns each test by its own name, so a filter and a
         # partition compose: every guard lands in exactly one guards shard.
+        env:
+          LATEXML_TEST_SKIP_LOG: ${{ github.workspace }}/target/test-skips.log
         run: cargo nextest run --cargo-profile ci --profile ci --workspace -E '${{ matrix.part == 'guards' && 'test(/^perfect_kernel_/)' || 'not test(/^perfect_kernel_/)' }}' --partition hash:${{ matrix.shard }}/${{ matrix.of }}
+
+      - name: skipped tests (requirements not met)
+        # `check_requirements` skips (Perl's check_requirements); no log = none skipped.
+        if: always()
+        shell: bash
+        run: bash tools/test_skip_summary.sh
 
   # COMPILE ONLY. No TeX Live, no dumps, no tests — just enough to prove the
   # Windows arms still typecheck against the crates we pin. This is the job

@@ -10,10 +10,16 @@
 // the refactor clean.
 use std::rc::Rc;
 
-use latexml::tex_tests;
+use latexml::{
+  tex_tests,
+  util::test::{RequirementTable, Requirements},
+};
+
+// Perl t/32_keyval.t.
+static REQUIRES: &RequirementTable = &[("xkeyvalview", Requirements::packages(&["xkvview.sty"]))];
 
 tex_tests!(
   "tests/keyval",
-  None,
+  Some(REQUIRES),
   Some(Rc::new(latexml_contrib::dispatch))
 );

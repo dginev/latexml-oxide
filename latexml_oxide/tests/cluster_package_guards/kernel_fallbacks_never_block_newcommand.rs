@@ -8,12 +8,13 @@
 //! affiliation into the body before `\maketitle`, and the stored
 //! `<title>`/`<creator>` frontmatter landed after that paragraph — manptp's
 //! three jing lines (RUST-ONLY; Perl 0 errors, frontmatter first).
+use latexml::util::test::check_requirements;
 
 /// The frontmatter is the document's first content: no `<para>` precedes
 /// the `<title>`, and the title element is whole.
 #[test]
 fn ptptex_inst_store_keeps_the_frontmatter_first() {
-  if !latexml::util::test::kpse_has("ptptex.cls") {
+  if !check_requirements(&["ptptex.cls"]) {
     return;
   }
   let tex = std::fs::read_to_string("tests/cluster_regressions/ptptex_inst_store_frontmatter.tex")

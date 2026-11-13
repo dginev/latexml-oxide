@@ -3,7 +3,7 @@
 //! (sect02.rs `\lx@end@open@frontmatter`; was an empty `<document/>` with 0 errors), and a refused `\title` replays for
 //! its side effects as `\author`'s does (sect05.rs `\title`, the support bindings' `\title`; OXIDIZED_DESIGN #482). Each
 //! green asserts the three targets: the log's tally, the authored text, and the element that carries it.
-use latexml::util::test::{convert_files_with, convert_with};
+use latexml::util::test::{check_requirements, convert_files_with, convert_with, loads};
 
 use super::perfect_kernel_batch46::{error_count, warning_count};
 
@@ -386,6 +386,9 @@ fn aastex_figcaption_outside_a_figure_is_its_caption() {
 /// equation after the formula (glossaries_sty.rs `\lx@glossaries@glsadd`; silent-loss inventory #20).
 #[test]
 fn gls_only_in_display_math_is_listed() {
+  if !check_requirements(loads::GLOSSARIES) {
+    return;
+  }
   let (log, xml, (html, post_log)) = latexml::util::test::convert_bytes_files_then(
     include_bytes!(
       "../../../tools/perfect_kernel/repros/index-bib/gls_only_in_display_math_is_listed.tex"
@@ -409,19 +412,26 @@ fn gls_only_in_display_math_is_listed() {
 
 /// asmejour's `\keywords`, stored for the abstract's coffin the locked `{abstract}` never builds, are the document's
 /// keywords under the class's label; the class's own date footnote keeps `\date` (asmejour_cls.rs; 2510.10694).
+/// asmejour 2025/11/30 (cls:1105-1128) plugs the `caption/label` socket on a 2025-11-01 kernel that declares none:
+/// pdflatex's 2 `!` "Socket 'caption/label' undeclared", ours the same 2 Errors, the only ones.
 #[test]
 fn asmejour_keywords_are_kept() {
-  if !latexml::util::test::kpse_has("asmejour.cls") {
-    eprintln!("skipped: asmejour.cls is not installed");
+  if !check_requirements(&["asmejour.cls", "inconsolata.sty"]) {
     return;
   }
+  let cls = latexml::util::test::kpse_text("asmejour.cls").unwrap_or_default();
   let (log, xml) = convert_with(
     include_str!(
       "../../../tools/perfect_kernel/repros/sectioning-frontmatter/class_notes/asmejour_keywords_kept.tex"
     ),
     Some("ar5iv.sty"),
   );
-  assert_eq!(error_count(&log), 0, "{log}");
+  // (none on a kernel older than 2025-11-01, where the class's `\IfFormatAtLeastTF` skips the plug, or one declaring it)
+  let socket = "Socket 'caption/label' undeclared!";
+  let sockets = log.lines().filter(|l| l.ends_with(socket)).count();
+  assert_eq!(error_count(&log), sockets, "{log}");
+  let plugs = cls.contains(r"\NewSocketPlug{caption/label}");
+  assert!(sockets == 0 || (plugs && sockets == 2), "{log}");
   let xml = squash(&xml);
   assert!(
     xml.contains(r#"<keywords name="Keywords: ">alpha, beta</keywords>"#),
@@ -566,8 +576,7 @@ fn an_without_its_class_warns() {
 /// title page's `\note` (apa6_cls.rs `define_notes`). The one warning is the class's, as pdflatex's.
 #[test]
 fn apa_acknowledgements_are_kept_in_every_mode() {
-  if !latexml::util::test::kpse_has("apa.cls") {
-    eprintln!("skipped: apa.cls is not installed");
+  if !check_requirements(&["apa.cls"]) {
     return;
   }
   let tex = include_str!(
@@ -612,8 +621,7 @@ fn apa_acknowledgements_are_kept_in_every_mode() {
 /// three warnings are cc's two and a "has changed" one, as pdflatex's three.
 #[test]
 fn cclayout_abstract_and_subject_are_kept() {
-  if !latexml::util::test::kpse_has("cc.cls") {
-    eprintln!("skipped: cc.cls is not installed");
+  if !check_requirements(&["cc.cls"]) {
     return;
   }
   let (log, xml) = convert_with(
