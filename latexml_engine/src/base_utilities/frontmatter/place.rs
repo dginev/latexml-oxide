@@ -147,14 +147,11 @@ pub(in crate::base_utilities) fn sequenced_contact_labels(
   Ok(labels)
 }
 
-/// Where the flush's e-mails printed in a block several names share go (FIDELITY_CHARTER §4, ownership by evidence):
-/// an e-mail entry, or a note holding one, after a run of two or more names with no entry between them is the block's,
-/// so its one address goes to the name of the run it spells — acmart's `\author{X}\author{Y}\affiliation{…}\email{x@}
-/// \email{y@}` (2310.06444, 2601.17008, 1907.07581, 2504.00797), a Wiley `\corres{… \email{…}}` after the names
-/// (2311.07985, 2407.08541, 2505.23112, 2503.06763); an entry after one name is that name's own call, kept whatever it
-/// spells (2208.05647, 2306.14314, 2609.11148), as is an address two own calls give (2205.01906, 2211.05700). The rule
-/// of the reading's `Resolver::respell_emails`, for a flush it does not write (`emit_commands`): per queued entry, the
-/// address and the `author:N` label placing it, read in `\lx@annotate@frontmatter@now` ([`ENTRY_RESPELL`]).
+/// The flush's e-mails printed in a block several names share, for a flush the reading does not write (OD #970 G6): an
+/// e-mail entry, or a note holding one, after a run of ≥ 2 names goes to the name it spells — acmart (2310.06444,
+/// 2601.17008, 1907.07581, 2504.00797), Wiley `\corres` (2311.07985, 2407.08541, 2505.23112, 2503.06763); one after a
+/// single name stays its own (2208.05647, 2306.14314, 2609.11148), as does an address two own calls give (2205.01906,
+/// 2211.05700). Read per entry in `\lx@annotate@frontmatter@now` ([`ENTRY_RESPELL`]).
 pub(in crate::base_utilities) fn shared_block_email_labels(
   commands: &[RawFrontmatter],
   emitted: bool,
@@ -670,6 +667,7 @@ pub fn digest_front_matter() -> Result<()> {
       );
       digest_queued_entry(entry)?;
     }
+    assign_value(ENTRY_RESPELL, Stored::String(pin("")), Some(Scope::Local));
   }
   // (an entry a late block's flush set after this queue's own, `defer_to_flush_end`: a title, subtitle or date read
   // in a block this outermost flush digests — `\title{…\author{…\date{One}}}` — placed here, at the end of the
