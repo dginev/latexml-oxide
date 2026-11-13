@@ -995,9 +995,10 @@ const API_KEYS_OUTSIDE_PERLS: &[(&str, usize)] = &[
   ("[mark] lmcs_cls.rs", 1),
   ("[mark] package/iopart_support_sty.rs", 1),
   ("_answers= base_utilities/defs/frontmatter_fields.rs", 1),
-  // (P28m3: the mark an address under a marked affiliation was placed by, for a names call the reading parts; 2510.10414)
+  // (P28m3: a new key, distinct from `\lx@sup@setlabel@affiliation`'s `_bymark` (revP28m3): the mark an address under a
+  // marked affiliation was placed by, for a names call the reading parts; 2510.10414)
   (
-    "_bymark= base_utilities/defs/frontmatter_api/affiliations.rs",
+    "_placedbymark= base_utilities/defs/frontmatter_api/affiliations.rs",
     1,
   ),
   ("_group= base_utilities/defs/frontmatter_fields.rs", 1),

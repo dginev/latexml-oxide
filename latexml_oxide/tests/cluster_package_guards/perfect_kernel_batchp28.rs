@@ -158,7 +158,7 @@ fn ieee_author_body_read_at_the_flush() {
 }
 
 /// An address printed in an affiliation block led by a reference mark, under a names call the reading parts into several
-/// names, is the one name's showing that mark (P28m3, `_bymark`, `Resolver::entry_owners`): IEEEtran's one names block
+/// names, is the one name's showing that mark (P28m3, `_placedbymark`, `Resolver::entry_owners`): IEEEtran's one names block
 /// listing marked names, written or held in macros (2510.10414), and REVTeX's one `\author` call (RED on int169a: the
 /// addresses no name spells on a nameless creator below the authors).
 #[test]

@@ -571,7 +571,7 @@ fn place_address_runs(
         // left in the entry — astro-ph0701846), with the mark that placed it: a call the reading parts into several
         // names gives it to the one showing that mark (`Resolver::entry_owners`; IEEEtran's one names block, 2510.10414)
         if let (Some(label), [author], 1) = (label, requesting.as_slice(), total) {
-          let by_mark = mouth::tokenize_internal(TeXString::assembled(s!("_bymark={{{label}}}")));
+          let by_mark = mouth::tokenize_internal(TeXString::assembled(s!("_placedbymark={{{label}}}")));
           for (_, line) in run.lines {
             let placed = email_line_calls(line, AddressPlacement::Authors(vec![*author]))?;
             calls.extend(optioned_email_calls(placed, by_mark.unlist_ref()));

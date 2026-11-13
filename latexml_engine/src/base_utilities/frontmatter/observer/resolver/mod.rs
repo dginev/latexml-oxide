@@ -607,7 +607,7 @@ struct Resolver {
   annotated:          Vec<(usize, Vec<usize>)>,
   /// the pending entries whose marked line the binding attached by its group rule (`_grouped=true` at the call)
   grouped:            Vec<usize>,
-  /// the pending addresses a call placed by the mark of the affiliation they print under (`_bymark=<label>`), with
+  /// the pending addresses a call placed by the mark of the affiliation they print under (`_placedbymark=<label>`), with
   /// that label: `Resolver::entry_owners`
   by_mark:            Vec<(usize, String)>,
   /// the pending entries labelled by a leading mark whose `annotate=new` placement (`piled`) is its run's stopgap alone:

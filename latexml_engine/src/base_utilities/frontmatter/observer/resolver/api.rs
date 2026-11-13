@@ -870,7 +870,7 @@ impl Resolver {
           },
           ..assoc
         }));
-        if let Some(mark) = attr_value(attrs, "_bymark") {
+        if let Some(mark) = attr_value(attrs, "_placedbymark") {
           self
             .by_mark
             .push((self.pending.len() - 1, mark.to_string()));

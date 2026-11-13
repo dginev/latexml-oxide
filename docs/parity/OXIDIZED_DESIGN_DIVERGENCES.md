@@ -1879,7 +1879,8 @@ position (an explicit `author:N` label; `labelseq=author` counts every earlier e
 with no name):
 - **The list puts addresses under its affiliations** (it has one marked affiliation, or a run sits above another
   that is not a footnote-symbol legend such as `$^\dagger$ Corresponding author`; 2609.19448) → one address under an affiliation exactly one author requests is that author's,
-  carrying the mark that placed it (`_bymark`): where the reading parts that call into several names
+  carrying the mark that placed it (`_placedbymark`, distinct from the set side's `_bymark` mark keys):
+  where the reading parts that call into several names
   (`\IEEEauthorblockN{Ann Able\IEEEauthorrefmark{1} Bob Baker\IEEEauthorrefmark{2}}`, REVTeX's `\author{A$^1$ and
   B$^2$}`), an address none of them spells is the one's showing that mark (`Resolver::entry_owners`; it had gone to a
   nameless creator: 2510.10414, P28m3), the block's still where several show it; any other run under
