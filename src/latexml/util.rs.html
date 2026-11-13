@@ -6,7 +6,7 @@
 <a href=#6 id=6 data-nosnippet>6</a><span class="doccomment">/// Integration-test harness. Gated behind the `test-utils` feature
 <a href=#7 id=7 data-nosnippet>7</a>/// (default on) so the distribution build (`cargo build
 <a href=#8 id=8 data-nosnippet>8</a>/// --no-default-features --profile maxperf --bin latexml_oxide`)
-<a href=#9 id=9 data-nosnippet>9</a>/// drops `glob` / `phf` from the dependency graph (audit DEP-02).
+<a href=#9 id=9 data-nosnippet>9</a>/// drops `glob` from the dependency graph (audit DEP-02).
 <a href=#10 id=10 data-nosnippet>10</a></span><span class="attr">#[cfg(feature = <span class="string">"test-utils"</span>)]
 <a href=#11 id=11 data-nosnippet>11</a>#[macro_use]
 <a href=#12 id=12 data-nosnippet>12</a></span><span class="kw">pub mod </span>test;

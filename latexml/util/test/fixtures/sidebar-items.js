@@ -1,0 +1,1 @@
+window.SIDEBAR_ITEMS = {"fn":["table"],"static":["CLUSTER_REGRESSIONS","STRUCTURE"]};
