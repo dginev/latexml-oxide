@@ -18,8 +18,7 @@
     name. A MathML or XSLT step that fails now stops post-processing with
     `Fatal:post:convert` and nothing is written, as a die in Perl's ProcessChain does:
     with `--split`, the pages rendered before the failing one are removed, serially and
-    under `LATEXML_RENDER_JOBS`; `api::convert_to_html` returns `Err` with the log, and the
-    editor server reports the Fatal with its status. A stylesheet that cannot be found
+    under `LATEXML_RENDER_JOBS`; `api::convert_to_html` returns `Err` with the log. A stylesheet that cannot be found
     stays an Error, as in Perl. Guards `xslt_failure_is_fatal` (in `cluster_xslt_split`)
     and `api::tests::a_post_fatal_is_an_err`.
 
