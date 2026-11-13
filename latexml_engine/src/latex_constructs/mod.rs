@@ -1905,6 +1905,21 @@ fn after_digest_verbatim(starred: bool, whatsit: &mut Whatsit) -> Result<()> {
   } else {
     ("\\end{verbatim}", ' ')
   };
+  // latex.ltx `\@verbatim` runs `\@noligs`, whose active `'`/`` ` `` print as it says: upquote.sty:17-27 appends
+  // `\let'\textquotesingle` (or `\def'{\char13 }` in OT1 cmtt), upright, where the font's own are curly (issue #801).
+  let mut upquotes: Vec<(char, String)> = Vec::new();
+  for c in ['\'', '`'] {
+    let typeset = Tokens::new(vec![
+      T_CS!("\\hbox"),
+      T_BEGIN!(),
+      T_CS!("\\@noligs"),
+      T_ACTIVE!(c),
+      T_END!(),
+    ]);
+    let mut printed = String::new();
+    crate::base_utilities::ink_text(&digest(typeset)?, &mut printed);
+    upquotes.push((c, printed));
+  }
   let mut lines: Vec<_> = Vec::new();
   // The body is decoded through the document's 8-bit input encoding (inputenc's
   // active upper-half characters keep their meaning: latex.ltx:15441-15459
@@ -1960,6 +1975,8 @@ fn after_digest_verbatim(starred: bool, whatsit: &mut Whatsit) -> Result<()> {
     for c in line.chars() {
       if c == ' ' || c == '\t' {
         decoded_line.push(space);
+      } else if let Some((_, typeset)) = upquotes.iter().find(|(q, t)| *q == c && !t.is_empty()) {
+        decoded_line.push_str(typeset);
       } else {
         let decoded_c = font::decode_string(pin_char(c), Some("OT1_typewriter"), true);
         with(decoded_c, |c_str| decoded_line.push_str(c_str));

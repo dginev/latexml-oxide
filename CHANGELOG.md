@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+  - **`{verbatim}` honours upquote (#801).** With `\usepackage{upquote}`, the
+    `verbatim` and `verbatim*` environments now print `'` and `` ` `` upright, as
+    fancyvrb's `Verbatim` and `\verb` already did and as pdflatex prints all of
+    them. Without upquote they keep the typewriter font's curly quotes.
   - **The standard classes' size options set `\textwidth` (#779).** In one column,
     `article`, `report` and `book` now set `\textwidth` as their size file does
     (`size1x.clo`/`bk1x.clo`): the paper's width less 2in, at most 345pt (10pt),

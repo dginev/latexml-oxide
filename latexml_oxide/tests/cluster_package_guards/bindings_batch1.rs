@@ -59,3 +59,39 @@ fn standard_class_size_option_sets_textwidth() {
     );
   }
 }
+
+/// The verbatim lines `x=…` of `xml`, in order.
+fn verbatim_lines(xml: &str) -> Vec<&str> {
+  xml
+    .match_indices("x=")
+    .map(|(at, _)| &xml[at..at + xml[at..].find(['<', '\n']).unwrap_or(0)])
+    .collect()
+}
+
+/// Issue #801: under upquote, `{verbatim}` and `{verbatim*}` print ' and ` upright as `\@noligs` makes them, like
+/// fancyvrb's Verbatim and `\verb` (pdflatex: all four upright). Without upquote they stay the typewriter font's curly
+/// quotes, as pdflatex prints them (`\verb` keeps its ASCII, OXIDIZED_DESIGN #144). Red: the last two curly.
+#[test]
+fn verbatim_quotes_follow_upquote() {
+  if !kpse_has("upquote.sty") || !kpse_has("fancyvrb.sty") {
+    return;
+  }
+  let tex = repro!("package-bindings", "verbatim_quotes_follow_upquote.tex");
+  let xml = clean(tex);
+  assert_eq!(
+    verbatim_lines(&xml),
+    ["x='s' `b`", "x='s' `b`", "x='s' `b`", "x='s'\u{2423}`b`"],
+    "{xml}"
+  );
+  let xml = clean(&tex.replace("\\usepackage{upquote}\n", ""));
+  assert_eq!(
+    verbatim_lines(&xml),
+    [
+      "x=\u{2019}s\u{2019} \u{2018}b\u{2018}",
+      "x='s' `b`",
+      "x=\u{2019}s\u{2019} \u{2018}b\u{2018}",
+      "x=\u{2019}s\u{2019}\u{2423}\u{2018}b\u{2018}"
+    ],
+    "{xml}"
+  );
+}

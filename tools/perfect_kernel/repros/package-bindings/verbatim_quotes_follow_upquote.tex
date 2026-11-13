@@ -1,0 +1,23 @@
+% issue #801: latex.ltx `\@verbatim` runs `\@noligs`, and upquote.sty:17-27 appends upright quotes to it, so
+% `{verbatim}` prints ' and ` upright as fancyvrb's Verbatim and `\verb` do; the kernel's line reader decoded them
+% through the typewriter font (curly). Without upquote they stay the font's (pdflatex: cmtt's curly quote).
+% witness: synthetic (issue #801: `x='this is string'` in Verbatim, \verb and verbatim)
+% oracle:  pdflatex 0 errors: x='s' `b` four times (pdftotext)
+% engines: rust=0 perl=0 (2026-11-13, {verbatim} and {verbatim*} curly; Perl all four curly)
+% expect:  0 errors; every line x='s' `b`
+% status:  GREEN
+\documentclass{article}
+\usepackage{fancyvrb}
+\usepackage{upquote}
+\begin{document}
+\begin{Verbatim}
+x='s' `b`
+\end{Verbatim}
+\verb|x='s' `b`|
+\begin{verbatim}
+x='s' `b`
+\end{verbatim}
+\begin{verbatim*}
+x='s' `b`
+\end{verbatim*}
+\end{document}
